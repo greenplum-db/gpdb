@@ -499,9 +499,9 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 						opaque->btpo_flags |= BTP_HAS_GARBAGE;
 						/* be sure to mark the proper buffer dirty... */
 						if (nbuf != InvalidBuffer)
-							MarkBufferDirtyHint(nbuf, rel);
+							MarkBufferDirtyHint(nbuf);
 						else
-							MarkBufferDirtyHint(buf, rel);
+							MarkBufferDirtyHint(buf);
 					}
 				}
 			}

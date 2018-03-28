@@ -532,7 +532,8 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 804) ?
 			 "" : ", 'pg_largeobject_metadata', 'pg_largeobject_metadata_oid_index'",
 	/* see the comment at the top of old_8_3_create_sequence_script() */
-			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 803) ?
+			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 803
+			  && GET_MAJOR_VERSION(ctx->new.major_version) >= 804) ?
 			 "" : ", 'S'",
 			 (GET_MAJOR_VERSION(ctx->old.major_version) <= 802) ?
 			 "" : " AND i.indisvalid IS DISTINCT FROM false AND i.indisready IS DISTINCT FROM false "
@@ -854,7 +855,8 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 		}
 
 		if (relstorage == 'h' && /* RELSTORAGE_HEAP */
-			(relkind == 'r' || relkind == 't')) /* RELKIND_RELATION or RELKIND_TOASTVALUE */
+			(relkind == 'r' || relkind == 't' || relkind == 'S'))
+			/* RELKIND_RELATION, RELKIND_TOASTVALUE, or RELKIND_SEQUENCE */
 		{
 			char		hquery[QUERY_ALLOC];
 			PGresult   *hres;

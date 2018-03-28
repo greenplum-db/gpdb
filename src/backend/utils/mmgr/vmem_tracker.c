@@ -370,6 +370,13 @@ VmemTracker_ConvertVmemChunksToBytes(int chunks)
 	return CHUNKS_TO_BYTES(chunks);
 }
 
+/* Converts bytes to chunks */
+int32
+VmemTracker_ConvertVmemBytesToChunks(int64 bytes)
+{
+	return BYTES_TO_CHUNKS(bytes);
+}
+
 /*
  * Returns the maximum vmem consumed by current process in "chunks" unit.
  */

@@ -89,7 +89,7 @@ where ordinal_position = 20;
  pg_catalog         | pg_proc              | proargnames        |               20
  pg_catalog         | pg_class             | relhasoids         |               20
  pg_catalog         | pg_constraint        | conexclop          |               20
- pg_catalog         | pg_am                | amendscan          |               20
+ pg_catalog         | pg_am                | ammarkpos          |               20
  information_schema | columns              | collation_catalog  |               20
  information_schema | domains              | udt_catalog        |               20
  information_schema | parameters           | numeric_scale      |               20

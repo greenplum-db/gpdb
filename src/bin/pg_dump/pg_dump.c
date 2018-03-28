@@ -291,7 +291,6 @@ static bool
 isGPDB4300OrLater(void)
 {
 	static int	value = -1;		/* -1 = not known yet, 0 = no, 1 = yes */
-	bool	retValue = false;
 
 	/* Query the server on first call, and cache the result */
 	if (value == -1)
@@ -319,7 +318,7 @@ isGPDB4300OrLater(void)
 			value = 0;
 	}
 
-	return retValue;
+	return (value == 1) ? true : false;
 }
 
 /*
@@ -359,7 +358,7 @@ isGPDB5000OrLater(void)
 		return false;		/* Not Greenplum at all. */
 
 	/* GPDB 5 is based on PostgreSQL 8.3 */
-	return g_fout->remoteVersion >= 80400;
+	return g_fout->remoteVersion >= 80300;
 }
 
 
@@ -3816,7 +3815,8 @@ getTables(int *numTables)
 						  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = c.reltablespace) AS reltablespace, "
 						"array_to_string(c.reloptions, ', ') AS reloptions, "
 						  "array_to_string(array(SELECT 'toast.' || x FROM unnest(tc.reloptions) x), ', ') AS toast_reloptions "
-						  ", p.parrelid as parrelid "
+						  ", p.parrelid as parrelid, "
+						  " pl.parlevel as parlevel "
 						  "FROM pg_class c "
 						  "LEFT JOIN pg_depend d ON "
 						  "(c.relkind = '%c' AND "
@@ -3826,6 +3826,7 @@ getTables(int *numTables)
 					   "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid) "
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid "
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid "
+						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0)"
 						  "WHERE c.relkind in ('%c', '%c', '%c', '%c') "
 						  "AND c.oid NOT IN (SELECT p.parchildrelid FROM pg_partition_rule p LEFT "
 						  "JOIN pg_exttable e ON p.parchildrelid=e.reloid WHERE e.reloid IS NULL)"
@@ -3894,7 +3895,7 @@ getTables(int *numTables)
 						  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = c.reltablespace) AS reltablespace, "
 						"array_to_string(c.reloptions, ', ') AS reloptions, "
 						  "p.parrelid as parrelid, "
-						  "p.parlevel as parlevel "
+						  "pl.parlevel as parlevel, "
 						  "NULL AS toast_reloptions "
 						  "FROM pg_class c "
 						  "LEFT JOIN pg_depend d ON "
@@ -11341,7 +11342,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			options = "";
 
 			if (command && strlen(command) > 0)
-				on_clause = command;
+				on_clause = urilocations;
 			else
 				on_clause = NULL;
 		}

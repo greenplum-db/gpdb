@@ -2209,20 +2209,11 @@ CreateCommandTag(Node *parsetree)
 		case T_AlterTableStmt:
 			switch (((AlterTableStmt *) parsetree)->relkind)
 			{
-				AlterTableStmt *stmt = (AlterTableStmt *) parsetree;
-
-				/*
-				 * We might be supporting ALTER INDEX here, so set the
-				 * completion tag appropriately. Catch all other possibilities
-				 * with ALTER TABLE
-				 */
-
-				if (stmt->relkind == OBJECT_INDEX)
-					tag = "ALTER INDEX";
-				else if (stmt->relkind == OBJECT_EXTTABLE)
-					tag = "ALTER EXTERNAL TABLE";
 				case OBJECT_TABLE:
 					tag = "ALTER TABLE";
+					break;
+				case OBJECT_EXTTABLE:
+					tag = "ALTER EXTERNAL TABLE";
 					break;
 				case OBJECT_INDEX:
 					tag = "ALTER INDEX";

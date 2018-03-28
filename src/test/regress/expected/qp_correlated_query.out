@@ -3537,33 +3537,64 @@ select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) or
 (0 rows)
 
 -- start_ignore
-DROP TABLE IF EXISTS foo;
-NOTICE:  table "foo" does not exist, skipping
-DROP TABLE IF EXISTS bar;
-NOTICE:  table "bar" does not exist, skipping
-CREATE TABLE foo(a int, b int);
+DROP TABLE IF EXISTS qp_tab1;
+NOTICE:  table "qp_tab1" does not exist, skipping
+DROP TABLE IF EXISTS qp_tab2;
+NOTICE:  table "qp_tab2" does not exist, skipping
+DROP TABLE IF EXISTS qp_tab3;
+NOTICE:  table "qp_tab3" does not exist, skipping
+CREATE TABLE qp_tab1(a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE TABLE bar(c int, d int);
+CREATE TABLE qp_tab2(c int, d int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE qp_tab3(e int, f int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO qp_tab1 VALUES (1,2);
+INSERT INTO qp_tab2 VALUES (3,4);
+INSERT INTO qp_tab3 VALUES (4,5);
 -- end_ignore
-EXPLAIN SELECT a FROM foo f1 LEFT JOIN bar on a=c WHERE NOT EXISTS(SELECT 1 FROM foo f2 WHERE f1.a = f2.a);
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=4074.50..1712216.48 rows=7414 width=4)
-   ->  Hash Anti Join  (cost=4074.50..1712216.48 rows=2472 width=4)
+EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELECT 1 FROM qp_tab1 f2 WHERE f1.a = f2.a);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.04..3.14 rows=4 width=4)
+   ->  Hash Anti Join  (cost=2.04..3.14 rows=2 width=4)
          Hash Cond: f1.a = f2.a
-         ->  Hash Left Join  (cost=2037.25..95878.62 rows=2471070 width=4)
-               Hash Cond: f1.a = bar.c
-               ->  Seq Scan on foo f1  (cost=0.00..961.00 rows=28700 width=4)
-               ->  Hash  (cost=961.00..961.00 rows=28700 width=4)
-                     ->  Seq Scan on bar  (cost=0.00..961.00 rows=28700 width=4)
-         ->  Hash  (cost=961.00..961.00 rows=28700 width=4)
-               ->  Seq Scan on foo f2  (cost=0.00..961.00 rows=28700 width=4)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(12 rows)
+         ->  Hash Left Join  (cost=1.02..2.07 rows=2 width=4)
+               Hash Cond: f1.a = qp_tab2.c
+               ->  Seq Scan on qp_tab1 f1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+                     ->  Seq Scan on qp_tab2  (cost=0.00..1.01 rows=1 width=4)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+               ->  Seq Scan on qp_tab1 f2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: legacy query optimizer
+(11 rows)
+
+EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=3.08..3.09 rows=1 width=4)
+   ->  HashAggregate  (cost=3.08..3.09 rows=1 width=4)
+         Group Key: qp_tab1.a
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..2.07 rows=4 width=0)
+                 ->  Hash Semi Join  (cost=1.02..2.07 rows=2 width=0)
+                       Hash Cond: qp_tab2.c = qp_tab3.e
+                       ->  Seq Scan on qp_tab2  (cost=0.00..1.01 rows=1 width=4)
+                       ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+                             ->  Seq Scan on qp_tab3  (cost=0.00..1.01 rows=1 width=4)
+         ->  Result  (cost=0.00..1.01 rows=1 width=4)
+               One-Time Filter: NOT $0
+               ->  Seq Scan on qp_tab1  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: legacy query optimizer
+(14 rows)
+
+SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
+ a 
+---
+(0 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

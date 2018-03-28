@@ -11,54 +11,54 @@
       Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
-   [<b>-backup-dir</b> <varname>directory</varname>]
-   [<b>-create-db</b>]
-   [<b>-debug</b>]
-   [<b>-exclude-schema</b> <varname>schema_name</varname>]
-   [<b>-exclude-table</b> <varname>schema.table</varname>]
-   [<b>-exclude-table-file</b> <varname>file_name</varname>]
-   [<b>-include-schema</b> <varname>schema_name</varname>]
-   [<b>-include-table</b> <varname>schema.table</varname>]
-   [<b>-include-table-file</b> <varname>file_name</varname>]
-   [<b>-jobs</b> <varname>int</varname>]
-   [<b>-quiet</b>]
-   [<b>-redirect-db</b> <varname>database_name</varname>]
-   [<b>-verbose</b>]
-   [<b>-version</b>]
-   [<b>-with-globals</b>]
-   [<b>-with-stats</b>]</codeblock>
+      <codeblock><b>gprestore --timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
+   [<b>--backup-dir</b> <varname>directory</varname>]
+   [<b>--create-db</b>]
+   [<b>--debug</b>]
+   [<b>--exclude-schema</b> <varname>schema_name</varname>]
+   [<b>--exclude-table</b> <varname>schema.table</varname>]
+   [<b>--exclude-table-file</b> <varname>file_name</varname>]
+   [<b>--include-schema</b> <varname>schema_name</varname>]
+   [<b>--include-table</b> <varname>schema.table</varname>]
+   [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--jobs</b> <varname>int</varname>]
+   [<b>--quiet</b>]
+   [<b>--redirect-db</b> <varname>database_name</varname>]
+   [<b>--verbose</b>]
+   [<b>--version</b>]
+   [<b>--with-globals</b>]
+   [<b>--with-stats</b>]</codeblock>
     </section>
     <section>
       <title>Description</title>
       <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must include the
-          <codeph>-timestamp</codeph> option to specify the exact timestamp value
+          <codeph>--timestamp</codeph> option to specify the exact timestamp value
           (<codeph>YYYYMMDDHHMMSS</codeph>) of the backup set to restore. If you specified a custom
-          <codeph>-backup-dir</codeph> to consolidate the backup files, include the same
-          <codeph>-backup-dir</codeph> option with <codeph>gprestore</codeph> to locate the backup
+          <codeph>--backup-dir</codeph> to consolidate the backup files, include the same
+          <codeph>--backup-dir</codeph> option with <codeph>gprestore</codeph> to locate the backup
         files.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
         same name as the name specified when creating the backup set. If the target database exists
         and a table being restored exists in the database, the restore operation fails. Include the
-          <codeph>-create-db</codeph> option if the target database does not exist in the cluster.
+          <codeph>--create-db</codeph> option if the target database does not exist in the cluster.
         You can optionally restore a backup set to a different database by using the
-          <codeph>-redirect-db</codeph> option.</p>
+          <codeph>--redirect-db</codeph> option.</p>
       <p>When restoring a backup set that contains data from some leaf partitions of a partitioned
         tables, the partitioned table is restored along with the data for the leaf partitions. For
         example, you create a backup with the <codeph>gpbackup</codeph> option
-          <codeph>-include-table-file</codeph> and the text file lists some leaf partitions of a
+          <codeph>--include-table-file</codeph> and the text file lists some leaf partitions of a
         partitioned table. Restoring the backup creates the partitioned table and restores the data
         only for the leaf partitions listed in the file. </p>
       <p>Greenplum Database system objects are automatically included in a <codeph>gpbackup</codeph>
         backup set, but these objects are only restored if you include the
-          <codeph>-with-globals</codeph> option to <codeph>gprestore</codeph>. Similarly, if you
-        backed up query plan statistics using the <codeph>-with-stats</codeph> option, you can
-        restore those statistics by providing <codeph>-with-stats</codeph> to
+          <codeph>--with-globals</codeph> option to <codeph>gprestore</codeph>. Similarly, if you
+        backed up query plan statistics using the <codeph>--with-stats</codeph> option, you can
+        restore those statistics by providing <codeph>--with-stats</codeph> to
           <codeph>gprestore</codeph>. By default, only database objects in the backup set are
         restored.</p>
       <p>Performance of restore operations can be improved by creating multiple parallel connections
         to restore table data. By default <codeph>gprestore</codeph> uses 1 connection, but you can
-        increase this number with the <codeph>-jobs</codeph> option for large restore
+        increase this number with the <codeph>--jobs</codeph> option for large restore
         operations.</p>
       <p>When a restore operation completes, <codeph>gprestore</codeph> returns a status code. See
           <xref href="#topic_phj_g5j_tbb/return_codes" format="dita"/>.</p>
@@ -72,7 +72,7 @@
       <title>Options</title>
       <parml>
         <plentry>
-          <pt><b>-timestamp</b>
+          <pt><b>--timestamp</b>
             <varname>YYYYMMDDHHMMSS</varname></pt>
           <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
             restore. By default <codeph>gprestore</codeph> tries to locate metadata files for the
@@ -85,7 +85,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-backup-dir</b>
+          <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
           <pd>Optional. Sources all backup files (metadata files and data files) from the specified
             directory. You must specify <varname>directory</varname> as an absolute path (not
@@ -100,7 +100,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-create-db</b></pt>
+          <pt><b>--create-db</b></pt>
           <pd>Optional. Creates the database before restoring the database object metadata.</pd>
           <pd>The database is created by cloning the empty standard system database
               <codeph>template0</codeph>.</pd>
@@ -108,21 +108,21 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-debug</b></pt>
+          <pt><b>--debug</b></pt>
           <pd>Optional. Displays verbose debug messages during operation.</pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-exclude-schema</b>
+          <pt><b>--exclude-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to exclude from the restore operation. You can
             specify this option multiple times to exclude multiple schemas. You cannot combine this
-            option with the option <codeph>-include-schema</codeph>, or a table filtering option
-            such as <codeph>-include-table</codeph>. </pd>
+            option with the option <codeph>--include-schema</codeph>, or a table filtering option
+            such as <codeph>--include-table</codeph>. </pd>
         </plentry>
         <plentry>
-          <pt><b>-exclude-table</b>
+          <pt><b>--exclude-table</b>
             <varname>schema.table</varname></pt>
           <pd>Optional. Specifies a table to exclude from the restore operation. The table must be
             in the format <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema
@@ -130,11 +130,11 @@
             character, then you must include that name in double quotes. You can specify this option
             multiple times. If the table is not in the backup set, the restore operation fails. You
             cannot specify a leaf partition of a partitioned table.</pd>
-          <pd>You cannot combine this option with the option <codeph>-exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>-include-table</codeph>.</pd>
+          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
+            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
         </plentry>
         <plentry>
-          <pt><b>-exclude-table-file</b>
+          <pt><b>--exclude-table-file</b>
             <varname>file_name</varname></pt>
           <pd>Optional. Specifies a text file containing a list of tables to exclude from the
             restore operation. Each line in the text file must define a single table using the
@@ -143,18 +143,18 @@
             letter, number, or an underscore character, then you must include that name in double
             quotes. If a table is not in the backup set, the restore operation fails. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>You cannot combine this option with the option <codeph>-exclude-schema</codeph>, or
-            another a table filtering option such as <codeph>-include-table</codeph>.</pd>
+          <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
+            another a table filtering option such as <codeph>--include-table</codeph>.</pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-include-schema</b>
+          <pt><b>--include-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to restore. You can specify this option multiple
             times to include multiple schemas. If you specify this option, any schemas that you
             specify must be available in the backup set. Any schemas that are not included in
-            subsequent <codeph>-include-schema</codeph> options are omitted from the restore
+            subsequent <codeph>--include-schema</codeph> options are omitted from the restore
             operation. </pd>
           <pd>If a schema that you specify for inclusion exists in the database, the utility issues
             an error and continues the operation. The utility fails if a table being restored exists
@@ -165,7 +165,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-include-table</b>
+          <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
           <pd>Optional. Specifies a table to restore. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
@@ -173,11 +173,11 @@
             must include that name in double quotes. You can specify this option multiple times. You
             cannot specify a leaf partition of a partitioned table.</pd>
           <pd>You cannot combine this option with a schema filtering option such as
-              <codeph>-include-schema</codeph>, or another table filtering option such as
-              <codeph>-exclude-table-file</codeph>.</pd>
+              <codeph>--include-schema</codeph>, or another table filtering option such as
+              <codeph>--exclude-table-file</codeph>.</pd>
         </plentry>
         <plentry>
-          <pt><b>-include-table-file</b>
+          <pt><b>--include-table-file</b>
             <varname>file_name</varname></pt>
           <pd>Optional. Specifies a text file containing a list of tables to restore. Each line in
             the text file must define a single table using the format
@@ -186,7 +186,7 @@
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the restore operation. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>If you use the <codeph>-include-table-file</codeph> option, <codeph>gprestore</codeph>
+          <pd>If you use the <codeph>--include-table-file</codeph> option, <codeph>gprestore</codeph>
             does not create roles or set the owner of the tables. The utility restores table indexes
             and rules. Triggers are also restored but are not supported in Greenplum Database.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
@@ -195,25 +195,25 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-jobs</b>
+          <pt><b>--jobs</b>
             <varname>int</varname></pt>
           <pd>Optional. Specifies the number of parallel connections to use when restoring table
             data. By default, <codeph>gprestore</codeph> uses 1 connection. Increasing this number
             can improve the speed of restoring data.<note>If you used the <codeph>gpbackup
-                -single-data-file</codeph> option to combine table backups into a single file per
-              segment, you cannot set <codeph>-jobs</codeph> to a value higher than 1 to perform a
+                --single-data-file</codeph> option to combine table backups into a single file per
+              segment, you cannot set <codeph>--jobs</codeph> to a value higher than 1 to perform a
               parallel restore operation.</note></pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-quiet</b></pt>
+          <pt><b>--quiet</b></pt>
           <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-redirect-db</b>
+          <pt><b>--redirect-db</b>
             <varname>database_name</varname></pt>
           <pd>Optional. Restore to the specified <varname>database_name</varname> instead of to the
             database that was backed up.</pd>
@@ -221,19 +221,19 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-verbose</b></pt>
+          <pt><b>--verbose</b></pt>
           <pd>Optional. Print verbose log messages.</pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-version</b></pt>
+          <pt><b>--version</b></pt>
           <pd>Optional. Print the version number and exit.</pd>
         </plentry>
       </parml>
       <parml>
         <plentry>
-          <pt><b>-with-globals</b></pt>
+          <pt><b>--with-globals</b></pt>
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
@@ -241,7 +241,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-with-stats</b></pt>
+          <pt><b>--with-stats</b></pt>
           <pd>Optional. Restore query plan statistics from the backup set.</pd>
         </plentry>
       </parml>
@@ -261,20 +261,20 @@
       <p>Create the demo database and restore all schemas and tables in the backup set for the
         indicated
         timestamp:<codeblock>$ dropdb demo
-$ gprestore -timestamp 20171103152558 -create-db</codeblock></p>
+$ gprestore --timestamp 20171103152558 --create-db</codeblock></p>
       <p>Restore the backup set to the "demo2" database instead of the "demo" database that was
         backed
         up:<codeblock>$ createdb demo2
-$ gprestore -timestamp 20171103152558 -redirect-db demo2</codeblock></p>
+$ gprestore --timestamp 20171103152558 --redirect-db demo2</codeblock></p>
       <p>Restore global Greenplum Database metadata and query plan statistics in addition to the
         database
-        objects:<codeblock>$ gprestore -timestamp 20171103152558 -create-db -with-globals -with-stats</codeblock></p>
+        objects:<codeblock>$ gprestore --timestamp 20171103152558 --create-db --with-globals --with-stats</codeblock></p>
       <p>Restore, using backup files that were created in the
           <filepath>/home/gpadmin/backup</filepath> directory, creating 8 parallel
-        connections:<codeblock>$ gprestore -backup-dir /home/gpadmin/backups/ -timestamp 20171103153156 -create-db -jobs 8</codeblock></p>
+        connections:<codeblock>$ gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db --jobs 8</codeblock></p>
       <p>Restore only the "wikipedia" schema included in the backup
         set:<codeblock>$ dropdb demo
-$ gprestore -include-schema wikipedia -backup-dir /home/gpadmin/backups/ -timestamp 20171103153156 -create-db</codeblock></p>
+$ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</codeblock></p>
     </section>
     <section id="section9">
       <title>See Also</title>

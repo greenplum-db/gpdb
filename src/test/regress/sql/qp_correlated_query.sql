@@ -834,14 +834,22 @@ select rnum, c1, c2 from qp_tjoin2 where 75 > all ( select c2 from qp_tjoin1) or
 select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) order by rnum;
 
 -- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
+DROP TABLE IF EXISTS qp_tab1;
+DROP TABLE IF EXISTS qp_tab2;
+DROP TABLE IF EXISTS qp_tab3;
 
-CREATE TABLE foo(a int, b int);
-CREATE TABLE bar(c int, d int);
+CREATE TABLE qp_tab1(a int, b int);
+CREATE TABLE qp_tab2(c int, d int);
+CREATE TABLE qp_tab3(e int, f int);
+INSERT INTO qp_tab1 VALUES (1,2);
+INSERT INTO qp_tab2 VALUES (3,4);
+INSERT INTO qp_tab3 VALUES (4,5);
 -- end_ignore
 
-EXPLAIN SELECT a FROM foo f1 LEFT JOIN bar on a=c WHERE NOT EXISTS(SELECT 1 FROM foo f2 WHERE f1.a = f2.a);
+EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELECT 1 FROM qp_tab1 f2 WHERE f1.a = f2.a);
+
+EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
+SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

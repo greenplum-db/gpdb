@@ -1764,17 +1764,18 @@ GRANT SELECT ON gp_toolkit.gp_resqueue_status TO public;
 
 CREATE VIEW gp_toolkit.gp_resgroup_config AS
     SELECT
-        G.oid       AS groupid,
-        G.rsgname   AS groupname,
-        T1.value    AS concurrency,
-        T1.proposed AS proposed_concurrency,
-        T2.value    AS cpu_rate_limit,
-        T3.value    AS memory_limit,
-        T3.proposed AS proposed_memory_limit,
-        T4.value    AS memory_shared_quota,
-        T4.proposed AS proposed_memory_shared_quota,
-        T5.value    AS memory_spill_ratio,
-        T5.proposed AS proposed_memory_spill_ratio
+        G.oid        AS groupid,
+        G.rsgname    AS groupname,
+        G.memauditor AS memauditor,
+        T1.value     AS concurrency,
+        T1.proposed  AS proposed_concurrency,
+        T2.value     AS cpu_rate_limit,
+        T3.value     AS memory_limit,
+        T3.proposed  AS proposed_memory_limit,
+        T4.value     AS memory_shared_quota,
+        T4.proposed  AS proposed_memory_shared_quota,
+        T5.value     AS memory_spill_ratio,
+        T5.proposed  AS proposed_memory_spill_ratio
     FROM
         pg_resgroup G,
         pg_resgroupcapability T1,

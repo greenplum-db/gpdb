@@ -1,4 +1,4 @@
-# currently published as pivotaldata/pgadmin:gpdb-5
+# currently published as pivotaldata/gpdb5:latest
 
 FROM ubuntu:16.04
 
@@ -6,53 +6,41 @@ EXPOSE 5432
 
 # explicitly set user/group IDs
 RUN groupadd -r postgres --gid=999 && useradd -m -r -g postgres --uid=999 postgres
-RUN apt-get update && apt-get install -y dirmngr
 
-# grab gosu for easy step-down from root
-ENV GOSU_VERSION 1.7
-RUN set -x \
-  && apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists/* \
-  && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
-  && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
-  && export GNUPGHOME="$(mktemp -d)" \
-  && gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
-  && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
-  && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
-  && chmod +x /usr/local/bin/gosu \
-  && gosu nobody true
+# Install initial dependencies
+RUN apt-get update \
+ && apt-get install -y dirmngr software-properties-common python-software-properties less ssh sudo
 
-RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+# Install GreenPlum
+RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+ && add-apt-repository ppa:greenplum/db \
+ && apt update \
+ && apt install -y greenplum-db-oss \
+ && locale-gen en_US.utf8 
 
-RUN apt update
-RUN apt install -y software-properties-common python-software-properties less
-RUN add-apt-repository ppa:greenplum/db
-RUN apt update
-RUN apt install -y greenplum-db-oss
-RUN . /opt/gpdb/greenplum_path.sh
+# Create GreenPlum data folders and copy/edit configuration to use a single node
+RUN mkdir /data \
+ && mkdir /data/data1 \
+ && mkdir /data/data2 \
+ && mkdir /data/master \
+ && . /opt/gpdb/greenplum_path.sh && cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode /data/ \
+ && sed -i 's/gpdata1/data\/data1/g' /data/gpinitsystem_singlenode \
+ && sed -i 's/gpdata2/data\/data2/g' /data/gpinitsystem_singlenode \
+ && sed -i 's/gpmaster/data\/master/g' /data/gpinitsystem_singlenode
 
-RUN locale-gen en_US.utf8
-RUN mkdir /gpdata
-RUN mkdir /gpdata/gpdata1
-RUN mkdir /gpdata/gpdata2
-RUN mkdir /gpdata/gpmaster
-RUN . /opt/gpdb/greenplum_path.sh && cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode /gpdata/
-RUN sed -i 's/gpdata1/gpdata\/gpdata1/g' /gpdata/gpinitsystem_singlenode
-RUN sed -i 's/gpdata2/gpdata\/gpdata2/g' /gpdata/gpinitsystem_singlenode
-RUN sed -i 's/gpmaster/gpdata\/gpmaster/g' /gpdata/gpinitsystem_singlenode
-RUN apt install -y ssh
-
-RUN useradd -md /home/gp/ gp
-RUN chown gp -R /gpdata
-RUN echo "source /opt/gpdb/greenplum_path.sh" > /home/gp/.bash_profile && chown gp:gp /home/gp/.bash_profile
-RUN su - gp bash -c 'mkdir /home/gp/.ssh'
-
-ADD install_and_start_gpdb.sh /home/gp/install_and_start_gpdb.sh
-RUN chown gp:gp /home/gp/install_and_start_gpdb.sh
-RUN chmod a+x /home/gp/install_and_start_gpdb.sh
-RUN apt-get install -y sudo
-RUN echo "gp ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-RUN echo "root ALL=NOPASSWD: ALL" >> /etc/sudoers
+# Create gpadmin user and add the user to the sudoers
+RUN useradd -md /home/gpadmin/ gpadmin \
+ && chown gpadmin -R /data \
+ && echo "source /opt/gpdb/greenplum_path.sh" > /home/gpadmin/.bash_profile && chown gpadmin:gpadmin /home/gpadmin/.bash_profile \
+ && su - gpadmin bash -c 'mkdir /home/gpadmin/.ssh' \
+ && echo "gpadmin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
+ && echo "root ALL=NOPASSWD: ALL" >> /etc/sudoers
 
 
-CMD sudo su - gp bash -c /home/gp/install_and_start_gpdb.sh && tail -f /dev/null
+## Add setup and start script to run when the container starts
+ADD install_and_start_gpdb.sh /home/gpadmin/install_and_start_gpdb.sh
+RUN chown gpadmin:gpadmin /home/gpadmin/install_and_start_gpdb.sh \
+ && chmod a+x /home/gpadmin/install_and_start_gpdb.sh
+
+CMD sudo su - gpadmin bash -c /home/gpadmin/install_and_start_gpdb.sh && tail -f /dev/null
 

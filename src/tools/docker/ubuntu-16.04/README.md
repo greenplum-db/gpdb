@@ -1,9 +1,9 @@
-# Docker container with Version 5.4 of GPDB running
+# Docker container running the latest GPDB version available for ubuntu
 
 ## Build your own container
 
 ```
-docker build -t pivotaldata/gpdb:5.4 ubuntu-16.04
+docker build -t pivotaldata/gpdb5:latest ubuntu-16.04
 ```
 
 ## Run the container
@@ -12,7 +12,7 @@ The container will keep running forever until it is stopped and the GreenPlum da
 will be listenning in the port `localhost:5433`
 
 ```
-docker run -dp 127.0.0.1:5433:5432 pivotaldata/gpdb:5.4
+docker run -dp 127.0.0.1:5433:5432 pivotaldata/gpdb5:latest
 ```
 _The container takes around 30 seconds to instantiate and start the new GP Instance_
 

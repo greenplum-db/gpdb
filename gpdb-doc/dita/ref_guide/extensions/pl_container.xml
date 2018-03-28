@@ -1029,10 +1029,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                       <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
                         <pd>Optional. The value specifies the amount of memory, in MB, that a
-                          container is allowed to use. Each container is started with this amount of
-                          RAM and twice the amount of swap space. The container memory consumption
-                          is limited by the host system <codeph>cgroups</codeph> configuration,
-                          which means in case of memory overcommit, the container is killed by the
+                          container is allowed to use. Each container starts with this amount of RAM
+                          and twice the amount of swap space. The container memory consumption is
+                          limited by the host system <codeph>cgroups</codeph> configuration, which
+                          means in case of memory overcommit, the container is terminated by the
                           system.</pd>
                       </plentry>
                       <plentry>
@@ -1117,6 +1117,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               container.<note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph>
               value, might affect performance due to resource issues. The parameter also controls
               the freeing of Greenplum Database resources other than Docker containers.</note></li>
+          <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
+            terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
+            that are configured with Docker version 1.7.1, the out of memory warning is also
+            displayed if the PL/Container Docker container main program (PID 1) is terminated.</li>
           <li>In some cases, when PL/Container is running in a high concurrency environment, the
             Docker daemon hangs with log entries that indicate a memory shortage. This can happen
             even when the system seems to have adequate free memory.<p>The issue seems to be

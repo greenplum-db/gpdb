@@ -56,7 +56,7 @@ You must explicitly initialize the PXF service instance. This one-time initializ
 Before initializing PXF in your Greenplum Database cluster, ensure that you have:
 
 - Installed and configured the required Hadoop clients on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
-- Granted the `gpadmin` operating system user read permission on the relevant portions of your HDFS file system.
+- Granted read permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database. If user impersonation is enabled (the default), you must grant this permission to each Greenplum Database user/role name that will use external tables that reference the HDFS files. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
  
 ### <a id="init-pxf-steps"></a>Procedure
 
@@ -113,7 +113,7 @@ Perform the following procedure to start PXF on each segment host in your Greenp
 
 ## <a id="stop_pxf"></a>Stopping PXF
 
-You must explicitly stop PXF on each segment host in your Greenplum Database cluster when you upgrade PXF. Only the `gpadmin` user can stop the PXF service.
+If you must stop PXF, for example if you are upgrading PXF, you must explicitly stop PXF on each segment host in your Greenplum Database cluster. Only the `gpadmin` user can stop the PXF service.
 
 Perform the following procedure to stop PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
 
@@ -124,10 +124,10 @@ Perform the following procedure to stop PXF on each segment host in your Greenpl
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-3. Run the `pxf start` command to start PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+3. Run the `pxf stop` command to stop PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf start"
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf stop"
     ```
 
 ## <a id="pxf_svc_mgmt"></a>PXF Service Management

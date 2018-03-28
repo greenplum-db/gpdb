@@ -321,16 +321,6 @@ select count(*) from testhstore where h ?& ARRAY['public','disabled'];
 select count(*) from (select (each(h)).key from testhstore) as wow ;
 select key, count(*) from (select (each(h)).key from testhstore) as wow group by key order by count desc, key;
 
--- start_ignore
--- GPDB_90_MERGE_FIXME: These queries don't work with ORCA. ORCA produces a
--- plan with Redistribute Motion on the hstore attribute, but that doesn't
--- work because hstore is not a "GPDB hashable" type. You get an error like:
--- ERROR:  Type 40963 is not hashable.
---
--- That seems like an ORCA bug that we should fix.
-set optimizer=off;
--- end_ignore
-
 -- sort/hash
 select count(distinct h) from testhstore;
 set enable_hashagg = false;
@@ -340,10 +330,6 @@ set enable_sort = false;
 select count(*) from (select h from (select * from testhstore union all select * from testhstore) hs group by h) hs2;
 select distinct * from (values (hstore '' || ''),('')) v(h);
 set enable_sort = true;
-
--- start_ignore
-reset optimizer;
--- end_ignore
 
 -- btree
 drop index hidx;

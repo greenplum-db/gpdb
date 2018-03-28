@@ -396,13 +396,13 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 	if (not_clause(node))
 	{
 		/* If the immediate argument of NOT is EXISTS, try to convert */
-		SubLink    *sublink = (SubLink *) get_notclausearg((Expr *) node);
 		Node	   *arg = (Node *) get_notclausearg((Expr *) node);
 		JoinExpr   *j;
 		Relids		child_rels;
 
-		if (sublink && IsA(sublink, SubLink))
+		if (arg && IsA(arg, SubLink))
 		{
+			SubLink    *sublink = (SubLink *) arg;
 			if (sublink->subLinkType == EXISTS_SUBLINK)
 			{
 				Node* subst;
@@ -440,17 +440,18 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 			 *		 NOT val op ANY (subq)	 =>  val op' ALL (subq)
 			 *		 NOT val op ALL (subq)	 =>  val op' ANY (subq)
 			 */
-			else if (sublink->subLinkType == ANY_SUBLINK)
+			else if (sublink->subLinkType == ANY_SUBLINK || sublink->subLinkType == ALL_SUBLINK)
 			{
-				sublink->subLinkType = ALL_SUBLINK;
+				sublink->subLinkType = (sublink->subLinkType == ANY_SUBLINK) ? ALL_SUBLINK : ANY_SUBLINK;
 				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr));
+				return pull_up_sublinks_qual_recurse(root, (Node *) sublink, available_rels, jtlink);
 			}
-			else if (sublink->subLinkType == ALL_SUBLINK)
-			{
-				sublink->subLinkType = ANY_SUBLINK;
-				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr));
-			}
-			return pull_up_sublinks_qual_recurse(root, (Node *) sublink, available_rels, jtlink);
+
+			/*
+			 * Return the node unmodified for "NOT (subq)"
+			 * This subquery will get pulled up later during preprocess_qual_conditions()
+			 */
+			return node;
 		}
 
 		else if (not_clause(arg))

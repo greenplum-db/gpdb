@@ -1,0 +1,27 @@
+---
+title: Using the PXF Java SDK
+---
+The Greenplum Platform Extension Framework (PXF) SDK provides the Java classes and interfaces that you use to create connectors to new external data sources, data formats, and data access APIs from Greenplum Database. You can extend PXF functionality *without changing Greenplum Database* when you use the PXF Java SDK.
+
+PXF in Greenplum Database is based on [PXF](https://cwiki.apache.org/confluence/display/HAWQ/PXF) from the open source Apache HAWQ (incubating) project. You can contribute to PXF development via the [Greenplum Database](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) and the [Apache HAWQ (incubating)](https://github.com/apache/incubator-hawq/tree/master/pxf) open source `github` repositories. 
+
+## <a id="prereqs"></a>Topic Overview
+
+Topics in this guide include:
+
+-  **[PXF Developer Concepts](dev_concepts.html)**
+
+    This topic introduces important concepts for PXF developers including external tables, connectors, and plug-ins, and how PXF uses these entities within Greenplum Database to access external data sources.
+
+-  **[Introducing the PXF API](pxfapi.html)**
+
+    This topic introduces the PXF API.
+
+-  **[Building a Connector](build_conn.html)**
+
+    This topic describes the process to build a connector. This topic also introduces the *Demo* connector, an example PXF connector to the local file system, and includes an exercise to build this connector.
+
+-  **[Deploying a Connector](deploy_conn.html)**
+
+    This topic describes the process required to register and deploy a connector to a Greenplum Database cluster. It also includes an exercise to deploy the *Demo* connector and verify that the connector was deployed successfully.
+

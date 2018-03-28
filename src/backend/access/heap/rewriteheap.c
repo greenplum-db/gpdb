@@ -671,10 +671,3 @@ raw_heap_insert(RewriteState state, HeapTuple tup)
 	if (heaptup != tup)
 		heap_freetuple(heaptup);
 }
-
-TransactionId
-get_rewrite_freeze_xid(RewriteState state)
-{
-	Assert(state != NULL);
-	return state->rs_freeze_xid;
-}

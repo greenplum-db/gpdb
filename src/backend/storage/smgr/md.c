@@ -943,17 +943,11 @@ mdnblocks(SMgrRelation reln, ForkNumber forknum)
  */
 void
 mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
-		   bool isTemp, bool allowNotFound)
+		   bool isTemp)
 {
 	MdfdVec    *v;
 	BlockNumber curnblk;
 	BlockNumber priorblocks;
-
-	if (allowNotFound)
-	{
-		if (mdopen(reln, forknum, EXTENSION_RETURN_NULL) == NULL)
-			return;
-	}
 
 	/*
 	 * NOTE: mdnblocks makes sure we have opened all active segments, so that
@@ -963,7 +957,7 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 	if (nblocks > curnblk)
 	{
 		/* Bogus request ... but no complaint if InRecovery */
-		if (InRecovery || allowNotFound)
+		if (InRecovery)
 			return;
 		ereport(ERROR,
 				(errmsg("could not truncate file \"%s\" to %u blocks: it's only %u blocks now",

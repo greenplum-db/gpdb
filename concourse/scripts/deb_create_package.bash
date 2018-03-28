@@ -26,6 +26,6 @@ popd
 # yes | mk-build-deps -i ${SRC_DIR}/debian/control
 
 pushd ${SRC_DIR}
-    debuild -us -uc -b > debuild.log
+    DEB_BUILD_OPTIONS='nocheck parallel=6' debuild -us -uc -b > debuild.log
 popd
 cp greenplum-db*.deb deb_package_ubuntu16/greenplum-db.deb

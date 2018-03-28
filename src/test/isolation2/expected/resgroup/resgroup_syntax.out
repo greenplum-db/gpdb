@@ -80,10 +80,10 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-6438   |admin_group  |2          |2                   |10            |10          |10                   |50                 |50                          |20                |20                         
+groupid|groupname    |memauditor|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+-------------+----------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+6437   |default_group|0         |20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
+6438   |admin_group  |0         |2          |2                   |10            |10          |10                   |50                 |50                          |20                |20                         
 (2 rows)
 
 -- negative
@@ -169,6 +169,12 @@ CREATE RESOURCE GROUP rg_test_group WITH (concurrency=-1, cpu_rate_limit=10, mem
 ERROR:  concurrency range is [0, 'max_connections']
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_rate_limit=10, memory_limit=10);
 ERROR:  concurrency range is [0, 'max_connections']
+-- negative: memory_auditor should be 'vmtracker' or 'cgroup'
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="randomtext");
+ERROR:  memory_auditor should be "vmtracker" or "cgroup"
+-- negative: concurrency should be zero for cgroup audited resource group
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+ERROR:  resource group concurrency must be 0 when group memory_auditor is cgroup
 
 -- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
@@ -238,6 +244,11 @@ CREATE
 DROP RESOURCE GROUP rg1_test_group;
 DROP
 DROP RESOURCE GROUP rg2_test_group;
+DROP
+-- positive: concurrency should be zero for cgroup audited resource group
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+CREATE
+DROP RESOURCE GROUP rg_test_group;
 DROP
 
 -- memory_spill_ratio range is [0, 100]
@@ -368,3 +379,18 @@ DROP
 DROP RESOURCE GROUP rg2_test_group;
 DROP
 
+CREATE RESOURCE GROUP cgroup_audited_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+CREATE
+-- negative: memory_auditor cannot be altered
+ALTER RESOURCE GROUP cgroup_audited_group SET MEMORY_AUDITOR "default";
+ERROR:  syntax error at or near "MEMORY_AUDITOR"
+LINE 1: ALTER RESOURCE GROUP cgroup_audited_group SET MEMORY_AUDITOR...
+                                                      ^
+-- negative: concurrency should be zero for cgroup audited resource group
+ALTER RESOURCE GROUP cgroup_audited_group SET CONCURRENCY 10;
+ERROR:  resource group concurrency must be 0 when group memory_auditor is cgroup
+-- negative: role should not be assigned to a cgroup audited resource group
+CREATE ROLE cgroup_audited_role RESOURCE GROUP cgroup_audited_group;
+ERROR:  You cannot assign a role to this resource group because the memory_auditor property for this group is not the default.
+DROP RESOURCE GROUP cgroup_audited_group;
+DROP

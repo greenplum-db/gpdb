@@ -1888,9 +1888,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 												groupColIdx,
 												groupOperators,
 												numGroups,
-												/* GPDB_84_MERGE_FIXME: What would be
-												 * appropriate values for these extra
-												 * arguments? */
 												0, /* num_nullcols */
 												0, /* input_grouping */
 												0, /* grouping */
@@ -3483,10 +3480,14 @@ choose_hashed_grouping(PlannerInfo *root,
 	 * work_mem.
 	 */
 
-	/* Estimate per-hash-entry space at tuple width... */
+	/* 
+	 * Note that HashAgg uses a HHashTable for performing the aggregations. So
+	 * estimate the hash table size using GPDB specific methods.
+	 */
 	hashentrysize = agg_hash_entrywidth(agg_counts->numAggs,
-							   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
-							   agg_counts->transitionSpace);
+								/* The following estimate is very rough but good enough for planning. */
+								sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
+								agg_counts->transitionSpace);
 
 	if (!calcHashAggTableSizes(global_work_mem(root),
 							   dNumGroups,
@@ -3627,6 +3628,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	List	   *needed_pathkeys;
 	Path		hashed_p;
 	Path		sorted_p;
+	HashAggTableSizes hash_info;
 
 	/*
 	 * If we have a sortable DISTINCT ON clause, we always use sorting. This
@@ -3660,10 +3662,25 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * Don't do it if it doesn't look like the hashtable will fit into
 	 * work_mem.
 	 */
-	hashentrysize = MAXALIGN(path_width) + MAXALIGN(sizeof(MinimalTupleData));
 
-	if (hashentrysize * dNumDistinctRows > work_mem * 1024L)
+	/* 
+	 * Note that HashAgg uses a HHashTable for performing the aggregations. So
+	 * estimate the hash table size using GPDB specific methods.
+	 */
+	hashentrysize = agg_hash_entrywidth(0 /* numaggs */,
+									/* The following estimate is very rough but good enough for planning. */
+									sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
+									0 /* transitionSpace */);
+
+	if (!calcHashAggTableSizes(global_work_mem(root),
+							   dNumDistinctRows,
+							   hashentrysize,
+							   false,
+							   &hash_info))
+	{
 		return false;
+	}
+
 
 	/*
 	 * See if the estimated cost is no more than doing it the other way. While
@@ -3682,11 +3699,9 @@ choose_hashed_distinct(PlannerInfo *root,
 			 numDistinctCols, dNumDistinctRows,
 			 cheapest_startup_cost, cheapest_total_cost,
 			 path_rows,
-			 /* GPDB_84_MERGE_FIXME: What would be appropriate values for these extra
-			  * arguments? */
-			 0, /* input_width */
-			 0, /* hash_batches */
-			 0, /* hashentry_width */
+			 hash_info.workmem_per_entry,
+			 hash_info.nbatches,
+			 hash_info.hashentry_width,
 			 false /* hash_streaming */);
 
 	/*

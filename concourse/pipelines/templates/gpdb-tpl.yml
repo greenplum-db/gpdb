@@ -50,16 +50,13 @@ groups:
 {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_icw_start
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - QP_memory-accounting
-{% endif %}
-{% if 'centos6' in os_types or 'ubuntu16' in os_types %}
-  - icw_extensions_gpcloud
+  - icw_extensions_gpcloud_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
@@ -72,6 +69,7 @@ groups:
 {% if "ubuntu16" in os_types %}
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
+  - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 {% if "ubuntu16" in os_types %}
   - test_gpdb_debian_package
@@ -170,16 +168,13 @@ groups:
 
 - name: G:ICW
   jobs:
-  - gate_icw_start
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - QP_memory-accounting
-{% endif %}
-{% if 'centos6' in os_types or 'ubuntu16' in os_types %}
-  - icw_extensions_gpcloud
+  - icw_extensions_gpcloud_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
@@ -195,6 +190,7 @@ groups:
 {% endif %}
 {% if "ubuntu16" in os_types %}
   - test_gpdb_debian_package
+  - icw_extensions_gpcloud_ubuntu16
 {% endif %}
   - gate_icw_end
 
@@ -600,18 +596,19 @@ resources:
 ##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
 ## ======================================================================
 
-ccp_create_params_anchor: &ccp_default_params
+anchors:
+- &ccp_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
   terraform_source: ccp_src/aws/
 
-ccp_vars_anchor: &ccp_default_vars
+- &ccp_default_vars
   aws_instance-node-instance_type: t2.medium
   aws_ebs_volume_type: standard
   platform: centos6
 
-ccp_destroy_anchor: &ccp_destroy
+- &ccp_destroy
   put: terraform
   tags: ["ccp"]
   params:
@@ -624,7 +621,7 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
-ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
+- &ccp_destroy_two_clusters
   do:
   - *ccp_destroy
   - put: terraform2
@@ -639,14 +636,14 @@ ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
     get_params:
       action: destroy
 
-ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
+- &ccp_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: clusters/
   BUCKET_NAME: {{tf-bucket-name}}
 
-set_failed_anchor: &set_failed
+- &set_failed
   do:
   - task: on_failure_set_failed
     tags: ["ccp"]
@@ -669,7 +666,7 @@ set_failed_anchor: &set_failed
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
 
-set_failed_anchor_two_clusters: &set_failed_two_clusters
+- &set_failed_two_clusters
   do:
   - *set_failed
   - task: on_failure_set_failed
@@ -692,12 +689,8 @@ set_failed_anchor_two_clusters: &set_failed_two_clusters
         AWS_DEFAULT_REGION: {{tf-machine-region}}
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
-pulse_properties_anchor: &pulse_properties
-  PULSE_URL: {{pulse_url}}
-  PULSE_USERNAME: {{pulse_username}}
-  PULSE_PASSWORD: {{pulse_password}}
 
-cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
+- &cs_ccp_aggregate_dpm_start
   - get: gpdb_src
     tags: ["ccp"]
     passed: [gate_dpm_start]
@@ -711,7 +704,7 @@ cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
   - get: centos-gpdb-dev-6
     tags: ["ccp"]
 
-cs_ccp_aggregate_cluster_start_anchor: &cs_ccp_aggregate_cluster_start
+- &cs_ccp_aggregate_cluster_start
   - get: gpdb_src
     tags: ["ccp"]
     passed: [gate_cs_start]
@@ -725,12 +718,12 @@ cs_ccp_aggregate_cluster_start_anchor: &cs_ccp_aggregate_cluster_start
   - get: centos-gpdb-dev-6
     tags: ["ccp"]
 
-cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
+- &cs_ccp_terraform_vars
   aws_instance-node-instance_type: m4.large
   aws_ebs_volume_type: gp2
   number_of_nodes: 1
 
-cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
+- &cs_ccp_terraform_params
   tags: ["ccp"]
   params:
     <<: *ccp_default_params
@@ -738,13 +731,13 @@ cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
       <<: *ccp_default_vars
       <<: *cs_ccp_terraform_vars
 
-cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
+- &cs_ccp_gen_cluster_params
   tags: ["ccp"]
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
 
-cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
+- &cs_ccp_run_tests_params
   tags: ["ccp"]
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6
@@ -1152,52 +1145,18 @@ jobs:
 ## |___\____|  \_/\_/   
 ## ======================================================================
 
-- name: gate_icw_start
-  plan:
-    - aggregate:
-      - get: gpdb_src
-        passed:
-        - gate_compile_end
-        trigger: true
-{% if "sles" in os_types %}
-      - get: bin_gpdb_sles11
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "centos7" in os_types %}
-      - get: bin_gpdb_centos7
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "centos6" in os_types %}
-      - get: binary_swap_gpdb_centos6
-        passed:
-        - gate_compile_end
-      - get: bin_gpdb_centos6
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "ubuntu16" in os_types %}
-      - get: compiled_bits_ubuntu16
-        passed:
-        - gate_compile_end
-      - get: deb_package_ubuntu16
-        passed:
-        - gate_compile_end
-{% endif %}
-
 {% if "centos6" in os_types %}
 - name: icw_planner_centos6
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: binary_swap_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_binary_swap_centos6]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
@@ -1214,10 +1173,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1232,10 +1191,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1251,10 +1210,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1268,10 +1227,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: memory-accounting
@@ -1289,10 +1248,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos7]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos7]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-7
   - task: ic_gpdb
@@ -1309,10 +1268,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: [[ test_trigger ]]
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
@@ -1326,11 +1285,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
       tags: ["ccp"]
@@ -1370,11 +1329,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
       tags: ["ccp"]
@@ -1415,9 +1374,9 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
     - get: compiled_bits_ubuntu16
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
       trigger: [[ test_trigger ]]
     - get: ubuntu-gpdb-dev-16
   - task: ic_gpdb
@@ -1433,9 +1392,9 @@ jobs:
     - get: gpdb_src
       params:
         submodules: none
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
       resource: compiled_bits_ubuntu16
       trigger: [[ test_trigger ]]
     - get: ubuntu-gpdb-dev-16
@@ -1450,11 +1409,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_icw_start
+      - compile_gpdb_ubuntu16
     - get: ubuntu-gpdb-debian-dev-16
     - get: deb_package_ubuntu16
       passed:
-      - gate_icw_start
+      - compile_gpdb_ubuntu16
       trigger: [[ test_trigger ]]
   - task: test_gpdb_deb_package
     file: gpdb_src/concourse/tasks/deb_test_package.yml
@@ -1463,27 +1422,17 @@ jobs:
       DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if 'centos6' in os_types or 'ubuntu16' in os_types %}
-- name: icw_extensions_gpcloud
+{% if 'centos6' in os_types%}
+- name: icw_extensions_gpcloud_centos6
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
-{% if "centos6" in os_types %}
     - get: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: centos-gpdb-dev-6
-{% endif %}
-{% if "ubuntu16" in os_types %}
-    - get: compiled_bits_ubuntu16
-      passed: [gate_icw_start]
-{% endif %}
-{% if "ubuntu16" in os_types %}
-    - get: ubuntu-gpdb-dev-16
-{% endif %}
   - aggregate:
-{% if "centos6" in os_types %}
     - task: unit_tests_gpcloud
       file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
       image: centos-gpdb-dev-6
@@ -1508,7 +1457,18 @@ jobs:
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
         TARGET_OS: centos
 {% endif %}
-{% if "ubuntu16" in os_types %}
+
+{% if 'ubuntu16' in os_types %}
+- name: icw_extensions_gpcloud_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_ubuntu16]
+      trigger: [[ test_trigger ]]
+    - get: compiled_bits_ubuntu16
+      passed: [compile_gpdb_ubuntu16]
+    - get: ubuntu-gpdb-dev-16
+  - aggregate:
     - task: regression_tests_gpcloud_ubuntu
       input_mapping:
         bin_gpdb: compiled_bits_ubuntu16
@@ -1520,7 +1480,6 @@ jobs:
         TARGET_OS: ubuntu
 {% endif %}
 
-{% endif %}
 - name: gate_icw_end
   plan:
   - aggregate:
@@ -1532,7 +1491,7 @@ jobs:
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
       - QP_memory-accounting
-      - icw_extensions_gpcloud
+      - icw_extensions_gpcloud_centos6
 {% endif %}
     - get: gpdb_src
       passed:
@@ -1542,9 +1501,10 @@ jobs:
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
       - QP_memory-accounting
+      - icw_extensions_gpcloud_centos6
 {% endif %}
-{% if 'centos6' in os_types or 'ubuntu16' in os_types %}
-      - icw_extensions_gpcloud
+{% if 'ubuntu16' in os_types %}
+      - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 {% if "centos7" in os_types %}
       - icw_gporca_centos7
@@ -1812,7 +1772,7 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: mpp_interconnect
-    # ccp_destroy should be part of *cs_ccp_run_tests_params_anchor
+    # ccp_destroy should be part of *cs_ccp_run_tests_params
   ensure:
     <<: *set_failed
 
@@ -2523,7 +2483,8 @@ jobs:
     - icw_gporca_conan_ubuntu16
     - test_gpdb_debian_package
     - icw_planner_ictcp_centos6
-    - icw_extensions_gpcloud
+    - icw_extensions_gpcloud_centos6
+    - icw_extensions_gpcloud_ubuntu16
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
     - mpp_resource_group_centos7

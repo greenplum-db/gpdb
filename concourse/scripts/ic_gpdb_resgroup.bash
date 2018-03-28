@@ -42,7 +42,7 @@ make_cgroups_dir() {
     local basedir=$CGROUP_BASEDIR
 
     ssh -t $gpdb_host_alias sudo bash -ex <<EOF
-        for comp in cpu cpuacct; do
+        for comp in cpu cpuacct memory; do
             chmod -R 777 $basedir/\$comp
             mkdir -p $basedir/\$comp/gpdb
             chown -R gpadmin:gpadmin $basedir/\$comp/gpdb
@@ -83,7 +83,7 @@ DIFF FILE: \$diff
 ----------------------------------------------------------------------
 
 EOF1
-                head -1000 \$diff
+                cat \$diff
               done
             exit \$errcode
         )

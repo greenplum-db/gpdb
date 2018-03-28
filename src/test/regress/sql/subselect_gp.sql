@@ -727,3 +727,8 @@ EXPLAIN select count(distinct ss.ten) from
 EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+
+--
+-- Ensure that NOT is not lost during subquery pull-up
+--
+SELECT 1 AS col1 WHERE NOT (SELECT 1 = 1);

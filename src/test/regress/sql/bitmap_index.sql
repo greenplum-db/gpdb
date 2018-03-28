@@ -81,10 +81,6 @@ select a.t from bm_test a where d in(select d from bm_test b where a.g=b.g);
 -- functional and predicate indexes
 select t from bm_test where upper(t3) = 'FOO';
 select t from bm_test where n ISNULL;
--- bitmap index builds do not support concurrent building (even with
--- gp_create_index_concurrently=on), test for this
-set gp_create_index_concurrently=true;
-create index concurrently should_not_work on bm_test using bitmap(a);
 -- test updates
 update bm_test set i4 = 3;
 -- should return nothing

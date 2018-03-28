@@ -2557,9 +2557,22 @@ pgstat_fetch_resgroup_queue_timestamp(void)
  * NB: this *must* be able to survive being called before MyBEEntry has been
  * initialized.
  * ----------
+ *
+ * In GPDB, this interface is modified to accept a reason for waiting while in
+ * upstream, it just accepts a boolean value.  The interface is renamed in GPDB
+ * to "gpstat_report_waiting(char waiting)" in order to catch future uses of
+ * the interface when merged from upstream.
  */
+#if 0
 void
-pgstat_report_waiting(char waiting)
+pgstat_report_waiting(bool waiting)
+{
+	Assert(false);
+}
+#endif
+
+void
+gpstat_report_waiting(char reason)
 {
 	volatile PgBackendStatus *beentry = MyBEEntry;
 
@@ -2571,7 +2584,7 @@ pgstat_report_waiting(char waiting)
 	 * may modify, there seems no need to bother with the st_changecount
 	 * protocol.  The update must appear atomic in any case.
 	 */
-	beentry->st_waiting = waiting;
+	beentry->st_waiting = reason;
 }
 
 /* ----------

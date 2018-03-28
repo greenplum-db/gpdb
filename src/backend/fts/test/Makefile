@@ -19,6 +19,7 @@ ftsmessagehandler.t: \
 
 ftsprobe.t: \
     $(MOCK_DIR)/backend/fts/fts_mock.o \
+    $(MOCK_DIR)/backend/cdb/cdbfts_mock.o \
     $(MOCK_DIR)/backend/libpq/fe-exec_mock.o \
     $(MOCK_DIR)/backend/libpq/fe-connect_mock.o \
     $(MOCK_DIR)/backend/access/transam/xact_mock.o \

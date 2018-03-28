@@ -101,7 +101,7 @@ ResGroupOps_AssignGroup(Oid group, int pid)
  * ResGroupOps_UnLockGroup() to unblock it.
  */
 int
-ResGroupOps_LockGroup(Oid group, bool block)
+ResGroupOps_LockGroup(Oid group, const char *comp, bool block)
 {
 	unsupported_system();
 	return -1;
@@ -130,11 +130,57 @@ ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit)
 }
 
 /*
+ * Set the memory limit for the OS group by rate.
+ *
+ * memory_limit should be within [0, 100].
+ */
+void
+ResGroupOps_SetMemoryLimit(Oid group, int memory_limit)
+{
+	unsupported_system();
+}
+
+/*
+ * Set the memory limit for the OS group by value.
+ *
+ * memory_limit is the limit value in chunks
+ */
+void
+ResGroupOps_SetMemoryLimitByValue(Oid group, int32 memory_limit)
+{
+	unsupported_system();
+}
+
+/*
  * Get the cpu usage of the OS group, that is the total cpu time obtained
  * by this OS group, in nano seconds.
  */
 int64
 ResGroupOps_GetCpuUsage(Oid group)
+{
+	unsupported_system();
+	return 0;
+}
+
+/*
+ * Get the memory usage of the OS group
+ *
+ * memory usage is returned in chunks
+ */
+int32
+ResGroupOps_GetMemoryUsage(Oid group)
+{
+	unsupported_system();
+	return 0;
+}
+
+/*
+ * Get the memory limit of the OS group
+ *
+ * memory limit is returned in chunks
+ */
+int32
+ResGroupOps_GetMemoryLimit(Oid group)
 {
 	unsupported_system();
 	return 0;

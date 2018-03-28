@@ -1472,13 +1472,6 @@ initTM(void)
 			 */
 			PG_TRY();
 			{
-				/*
-				 * FtsNotifyProber could throw ERROR, so we should catch it if
-				 * it happens.
-				 */
-				if (!first)
-					FtsNotifyProber();
-
 				initTM_recover_as_needed();
 				succeeded = true;
 			}
@@ -2333,33 +2326,7 @@ getMaxDistributedXid(void)
 static void
 recoverTM(void)
 {
-	bool		dtmRecoveryDeferred;
-
-	/* intialize fts sync count */
-	verifyFtsSyncCount();
-
 	elog(DTM_DEBUG3, "Starting to Recover DTM...");
-
-	/*
-	 * do not do recovery if read only mode is set. in this case, there may be
-	 * in-doubt transaction in down segdb , which will not be resolved at this
-	 * time.
-	 */
-	if (isFtsReadOnlySet())
-	{
-		elog(DTM_DEBUG3, "FTS is Read Only.  Defer DTM recovery till later.");
-		if (currentGxact != NULL)
-		{
-			elog(DTM_DEBUG5,
-				 "recoverTM setting currentGxact to NULL for gid = %s (index = %d)",
-				 currentGxact->gid, currentGxact->debugIndex);
-		}
-		currentGxact = NULL;
-
-		dtmRecoveryDeferred = true;
-	}
-	else
-		dtmRecoveryDeferred = false;
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
@@ -2367,19 +2334,14 @@ recoverTM(void)
 		return;
 	}
 
-	if (!dtmRecoveryDeferred)
-	{
-		/*
-		 * Attempt to recover all in-doubt transactions.
-		 *
-		 * first resolve all in-doubt transactions from the DTM's perspective
-		 * and then resolve any remaining in-doubt transactions that the RMs
-		 * have.
-		 */
-		recoverInDoubtTransactions();
-	}
-	else
-		elog(LOG, "DTM starting in readonly-mode: deferring recovery");
+	/*
+	 * Attempt to recover all in-doubt transactions.
+	 *
+	 * first resolve all in-doubt transactions from the DTM's perspective
+	 * and then resolve any remaining in-doubt transactions that the RMs
+	 * have.
+	 */
+	recoverInDoubtTransactions();
 
 	/* finished recovery successfully. */
 

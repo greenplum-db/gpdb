@@ -149,6 +149,9 @@ host2_name,host2_ipaddr
       <p>Transferring small or empty tables can be unexpectedly slow. There is significant fixed
         overhead in setting up external tables and communications processes for parallel data
         loading between segments that occurs whether or not there is actual data to transfer.</p>
+      <p>When transferring data between databases, you can run only one instance of
+          <codeph>gptransfer</codeph> at a time.<ph otherprops="op-pivotal"> Running multiple,
+          concurrent instances of <codeph>gptransfer</codeph> is not supported.</ph></p>
     </section>
     <section>
       <title>Full Mode and Table Mode</title>

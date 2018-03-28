@@ -13,6 +13,7 @@
 #include "postgres.h"
 
 #include "pgtime.h"
+#include "cdb/cdbvars.h"
 #include "replication/gp_replication.h"
 #include "replication/walreceiver.h"
 #include "replication/walsender_private.h"
@@ -20,13 +21,6 @@
 
 /* Set at database system is ready to accept connections */
 extern pg_time_t PMAcceptingConnectionsStartTime;
-
-/*
- * If mirror disconnects and re-connects between this period, or just takes
- * this much time during initial connection of cluster start, it will not get
- * reported as down to FTS.
- */
-#define FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD 30 /* secs */
 
 /*
  * Check the WalSndCtl to obtain if mirror is up or down, if the wal sender is
@@ -71,11 +65,11 @@ GetMirrorStatus(FtsResponse *response)
 			 * glitch. During this period, request FTS to probe again.
 			 *
 			 * If the delta is negative, then it's overflowed, meaning it's
-			 * over FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD since either last
+			 * over gp_fts_mark_mirror_down_grace_period since either last
 			 * database accepting connections or last time wal sender
 			 * died. Then, we can safely mark the mirror is down.
 			 */
-			if (delta < FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD && delta >= 0)
+			if (delta < gp_fts_mark_mirror_down_grace_period && delta >= 0)
 			{
 				ereport(LOG,
 						(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),

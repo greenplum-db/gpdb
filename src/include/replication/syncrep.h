@@ -27,7 +27,6 @@
 #define NUM_SYNC_REP_WAIT_MODE	2
 
 /* syncRepState */
-#define SYNC_REP_DISABLED			-1
 #define SYNC_REP_NOT_WAITING		0
 #define SYNC_REP_WAITING			1
 #define SYNC_REP_WAIT_COMPLETE		2

@@ -489,6 +489,7 @@ extern bool optimizer_parallel_union;
 extern bool optimizer_array_constraints;
 extern bool optimizer_cte_inlining;
 extern bool optimizer_enable_space_pruning;
+extern bool optimizer_enable_associativity;
 
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;

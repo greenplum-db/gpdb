@@ -1471,7 +1471,8 @@ heap_create_with_catalog(const char *relname,
 		 */
 		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 		{
-			new_array_oid = GetPreassignedOidForType(relnamespace, relarrayname);
+			new_array_oid = GetPreassignedOidForType(relnamespace, relarrayname,
+													 true);
 
 			if (new_array_oid == InvalidOid && IsBinaryUpgrade)
 				new_array_oid = GetNewOid(pg_type);

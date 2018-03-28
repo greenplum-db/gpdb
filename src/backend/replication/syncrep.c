@@ -84,9 +84,8 @@ static bool SyncRepQueueIsOrderedByLSN(int mode);
 void
 SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 {
-	const char	*old_status;
-	char		*old_status_saved = NULL;
-	int			len=0;
+	char	   *new_status = NULL;
+	const char *old_status;
 	int			mode = SyncRepWaitMode;
 	bool		syncStandbyPresent = false;
 	int			i = 0;
@@ -113,21 +112,6 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	{
 		elogif(debug_walrepl_syncrep, LOG,
 				"syncrep wait -- Not waiting for syncrep as this process is a walsender.");
-		return;
-	}
-
-	/*
-	 * XXX: Some processes (e.g. auxiliary processes) don't need even
-	 * check the walsenders.  We just stay away from any of the shared
-	 * memory values.  When we move to fully-synchronous replication,
-	 * any xlog change needs to be considered to be synchronous,
-	 * but for now this is acceptable.
-	 */
-	if (MyProc->syncRepState == SYNC_REP_DISABLED)
-	{
-		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep as synrep state for this process is disabled.");
-
 		return;
 	}
 
@@ -219,20 +203,23 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	/* Alter ps display to show waiting for sync rep. */
 	if (update_process_title)
 	{
-		char		activitymsg[35];
+		int			len;
 
-		snprintf(activitymsg, sizeof(activitymsg), " waiting for %X/%X replication",
+		old_status = get_real_act_ps_display(&len);
+		/*
+		 * The 32 represents the bytes in the string " waiting for %X/%X", as
+		 * in upstream.  The 12 represents GPDB specific " replication" suffix.
+		 */
+		new_status = (char *) palloc(len + 32 + 12 + 1);
+		memcpy(new_status, old_status, len);
+		sprintf(new_status + len, " waiting for %X/%X replication",
 				XactCommitLSN.xlogid, XactCommitLSN.xrecoff);
-
-		old_status = get_ps_display(&len);
-		old_status_saved = (char *) palloc(len + 1);
-		Assert (old_status_saved);
-		memcpy(old_status_saved, old_status, len);
-		set_ps_display(activitymsg, false);
+		set_ps_display(new_status, false);
+		new_status[len] = '\0'; /* truncate off " waiting ..." */
 	}
 
 	/* Inform this backend is waiting for replication to pg_stat_activity */
-	pgstat_report_waiting(PGBE_WAITING_REPLICATION);
+	gpstat_report_waiting(PGBE_WAITING_REPLICATION);
 
 	/*
 	 * Wait for specified LSN to be confirmed.
@@ -355,15 +342,15 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	MyProc->waitLSN.xlogid = 0;
 	MyProc->waitLSN.xrecoff = 0;
 
-	if (update_process_title)
+	if (new_status)
 	{
-		Assert(old_status_saved);
-		set_ps_display(old_status_saved, false);
-		pfree(old_status_saved);
+		/* Reset ps display */
+		set_ps_display(new_status, false);
+		pfree(new_status);
 	}
 
 	/* Now inform no more waiting for replication */
-	pgstat_report_waiting(PGBE_WAITING_NONE);
+	gpstat_report_waiting(PGBE_WAITING_NONE);
 }
 
 /*

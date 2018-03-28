@@ -55,7 +55,7 @@ static char * buildPath(Oid group, const char *base, const char *comp, const cha
 static int lockDir(const char *path, bool block);
 static void unassignGroup(Oid group, const char *comp, int fddir);
 static bool createDir(Oid group, const char *comp);
-static bool removeDir(Oid group, const char *comp, bool unassign);
+static bool removeDir(Oid group, const char *comp, const char *prop, bool unassign);
 static int getCpuCores(void);
 static size_t readData(const char *path, char *data, size_t datasize);
 static void writeData(const char *path, char *data, size_t datasize);
@@ -66,9 +66,11 @@ static void getMemoryInfo(unsigned long *ram, unsigned long *swap);
 static void getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw);
 static int getOvercommitRatio(void);
 static void detectCgroupMountPoint(void);
+static void detectCgroupMemSwap(void);
 
 static Oid currentGroupIdInCGroup = InvalidOid;
 static char cgdir[MAXPGPATH];
+static bool cgmemswap = false;
 
 /*
  * Build path string with parameters.
@@ -240,7 +242,7 @@ lockDir(const char *path, bool block)
 	}
 
 	int flags = LOCK_EX;
-	if (block)
+	if (!block)
 		flags |= LOCK_NB;
 
 	while (flock(fddir, flags))
@@ -318,7 +320,7 @@ createDir(Oid group, const char *comp)
  * - if unassign is true then unassign all the processes first before removal;
  */
 static bool
-removeDir(Oid group, const char *comp, bool unassign)
+removeDir(Oid group, const char *comp, const char *prop, bool unassign)
 {
 	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
@@ -337,6 +339,12 @@ removeDir(Oid group, const char *comp, bool unassign)
 		/* the dir is already removed */
 		return true;
 	}
+
+	/*
+	 * Reset the corresponding control file to zero
+	 */
+	if (prop)
+		writeInt64(group, NULL, comp, prop, 0);
 
 	while (++retry <= MAX_RETRY)
 	{
@@ -545,6 +553,18 @@ checkPermission(Oid group, bool report)
 	__CHECK("cpuacct.usage", R_OK);
 	__CHECK("cpuacct.stat", R_OK);
 
+	comp = "memory";
+
+	__CHECK("", R_OK | W_OK | X_OK);
+	__CHECK("memory.limit_in_bytes", R_OK | W_OK);
+	__CHECK("memory.usage_in_bytes", R_OK);
+
+	if (cgmemswap)
+	{
+		__CHECK("memory.memsw.limit_in_bytes", R_OK | W_OK);
+		__CHECK("memory.memsw.usage_in_bytes", R_OK);
+	}
+
 #undef __CHECK
 
 	return true;
@@ -607,6 +627,24 @@ getOvercommitRatio(void)
 	return ratio;
 }
 
+/*
+ * detect if cgroup supports swap memory limit
+ */
+static void
+detectCgroupMemSwap(void)
+{
+	char path[MAXPGPATH];
+	size_t pathsize = sizeof(path);
+
+	buildPath(RESGROUP_ROOT_ID, "",
+			"memory", "memory.memsw.limit_in_bytes", path, pathsize);
+
+	if (access(path, F_OK))
+		cgmemswap = false;
+	else
+		cgmemswap = true;
+}
+
 /* detect cgroup mount point */
 static void
 detectCgroupMountPoint(void)
@@ -664,6 +702,7 @@ ResGroupOps_Bless(void)
 		return;
 
 	detectCgroupMountPoint();
+	detectCgroupMemSwap();
 	checkPermission(RESGROUP_ROOT_ID, true);
 
 	/*
@@ -725,7 +764,9 @@ ResGroupOps_CreateGroup(Oid group)
 {
 	int retry = 0;
 
-	if (!createDir(group, "cpu") || !createDir(group, "cpuacct"))
+	if (!createDir(group, "cpu")
+		|| !createDir(group, "cpuacct")
+		|| !createDir(group, "memory"))
 	{
 		CGROUP_ERROR("can't create cgroup for resgroup '%d': %s",
 					 group, strerror(errno));
@@ -756,7 +797,9 @@ ResGroupOps_CreateGroup(Oid group)
 void
 ResGroupOps_DestroyGroup(Oid group)
 {
-	if (!removeDir(group, "cpu", true) || !removeDir(group, "cpuacct", true))
+	if (!removeDir(group, "cpu", "cpu.shares", true)
+		|| !removeDir(group, "cpuacct", NULL, true)
+		|| !removeDir(group, "memory", "memory.limit_in_bytes", true))
 	{
 		CGROUP_ERROR("can't remove cgroup for resgroup '%d': %s",
 			 group, strerror(errno));
@@ -779,6 +822,10 @@ ResGroupOps_AssignGroup(Oid group, int pid)
 	writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
 	writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
 
+	/*
+	 * Do not assign the process to cgroup/memory for now.
+	 */
+
 	currentGroupIdInCGroup = group;
 }
 
@@ -793,12 +840,12 @@ ResGroupOps_AssignGroup(Oid group, int pid)
  * ResGroupOps_UnLockGroup() to unblock it.
  */
 int
-ResGroupOps_LockGroup(Oid group, bool block)
+ResGroupOps_LockGroup(Oid group, const char *comp, bool block)
 {
 	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 
-	buildPath(group, NULL, "cpu", "", path, pathsize);
+	buildPath(group, NULL, comp, "", path, pathsize);
 
 	return lockDir(path, block);
 }
@@ -832,6 +879,73 @@ ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit)
 }
 
 /*
+ * Set the memory limit for the OS group by rate.
+ *
+ * memory_limit should be within [0, 100].
+ */
+void
+ResGroupOps_SetMemoryLimit(Oid group, int memory_limit)
+{
+	int fd;
+	int32 memory_limit_in_chunks;
+
+	memory_limit_in_chunks = ResGroupGetVmemLimitChunks() * memory_limit / 100;
+	memory_limit_in_chunks *= ResGroupGetSegmentNum();
+
+	fd = ResGroupOps_LockGroup(group, "memory", true);
+	ResGroupOps_SetMemoryLimitByValue(group, memory_limit_in_chunks);
+	ResGroupOps_UnLockGroup(group, fd);
+}
+
+/*
+ * Set the memory limit for the OS group by value.
+ *
+ * memory_limit is the limit value in chunks
+ *
+ * If cgroup supports memory swap, we will write the same limit to
+ * memory.memsw.limit and memory.limit.
+ */
+void
+ResGroupOps_SetMemoryLimitByValue(Oid group, int32 memory_limit)
+{
+	const char *comp = "memory";
+	int64 memory_limit_in_bytes;
+
+	memory_limit_in_bytes = VmemTracker_ConvertVmemChunksToBytes(memory_limit);
+
+	if (cgmemswap == false)
+	{
+		writeInt64(group, NULL, comp, "memory.limit_in_bytes",
+				memory_limit_in_bytes);
+	}
+	else
+	{
+		int64 memory_limit_in_bytes_old;
+
+		memory_limit_in_bytes_old = readInt64(group, NULL,
+				comp, "memory.limit_in_bytes");
+
+		if (memory_limit_in_bytes == memory_limit_in_bytes_old)
+			return;
+
+		if (memory_limit_in_bytes > memory_limit_in_bytes_old)
+		{
+			writeInt64(group, NULL, comp, "memory.memsw.limit_in_bytes",
+					memory_limit_in_bytes);
+			writeInt64(group, NULL, comp, "memory.limit_in_bytes",
+					memory_limit_in_bytes);
+		}
+		else
+		{
+			writeInt64(group, NULL, comp, "memory.limit_in_bytes",
+					memory_limit_in_bytes);
+			writeInt64(group, NULL, comp, "memory.memsw.limit_in_bytes",
+					memory_limit_in_bytes);
+		}
+	}
+}
+
+/*
  * Get the cpu usage of the OS group, that is the total cpu time obtained
  * by this OS group, in nano seconds.
  */
@@ -841,6 +955,42 @@ ResGroupOps_GetCpuUsage(Oid group)
 	const char *comp = "cpuacct";
 
 	return readInt64(group, NULL, comp, "cpuacct.usage");
+}
+
+/*
+ * Get the memory usage of the OS group
+ *
+ * memory usage is returned in chunks
+ */
+int32
+ResGroupOps_GetMemoryUsage(Oid group)
+{
+	const char *comp = "memory";
+	int64 memory_usage_in_bytes;
+	char *prop;
+
+	prop = cgmemswap ? "memory.memsw.usage_in_bytes" : "memory.usage_in_bytes";
+
+	memory_usage_in_bytes = readInt64(group, NULL, comp, prop);
+
+	return VmemTracker_ConvertVmemBytesToChunks(memory_usage_in_bytes);
+}
+
+/*
+ * Get the memory limit of the OS group
+ *
+ * memory limit is returned in chunks
+ */
+int32
+ResGroupOps_GetMemoryLimit(Oid group)
+{
+	const char *comp = "memory";
+	int64 memory_limit_in_bytes;
+
+	memory_limit_in_bytes = readInt64(group, NULL,
+			comp, "memory.limit_in_bytes");
+
+	return VmemTracker_ConvertVmemBytesToChunks(memory_limit_in_bytes);
 }
 
 /*

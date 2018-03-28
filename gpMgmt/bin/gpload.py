@@ -2745,7 +2745,7 @@ class gpload:
                                          stderr=subprocess.PIPE)
 
                     else:
-                        os.kill(a.pid, signal.SIGTERM)
+                        os.kill(a.pid, signal.SIGKILL)
                 except OSError:
                     pass
         self.log(self.LOG, 'terminating all threads')

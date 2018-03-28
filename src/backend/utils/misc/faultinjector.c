@@ -719,38 +719,6 @@ FaultInjector_NewHashEntry(
 		
 		goto exit;
 	}
-	
-	if (entry->faultInjectorType == FaultInjectorTypeSkip)
-	{
-		switch (entry->faultInjectorIdentifier)
-		{
-			case Checkpoint:
-			case FsyncCounter:
-			case BgBufferSyncDefaultLogic:
-
-			case InterconnectStopAckIsLost:
-			case SendQEDetailsInitBackend:
-			case ExecutorRunHighProcessed:
-			case FtsProbe:
-			case AppendOnlySkipCompression:
-			case SyncRepQueryCancel:
-
-				break;
-			default:
-				
-				FiLockRelease();
-				status = STATUS_ERROR;
-				ereport(WARNING,
-						(errmsg("could not insert fault injection, fault type not supported"
-								"fault name:'%s' fault type:'%s' ",
-								entry->faultName,
-								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
-				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
-						 "could not insert fault injection, fault type not supported");
-				
-				goto exit;
-		}
-	}
 
 	entryLocal = FaultInjector_InsertHashEntry(entry->faultName, &exists);
 		

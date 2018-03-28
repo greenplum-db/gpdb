@@ -1022,14 +1022,14 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 	/* Report change to waiting status */
 	if (update_process_title)
 	{
-		old_status = get_ps_display(&len);
+		old_status = get_real_act_ps_display(&len);
 		new_status = (char *) palloc(len + 8 + 1);
 		memcpy(new_status, old_status, len);
 		strcpy(new_status + len, " queuing");
 		set_ps_display(new_status, false);		/* truncate off " queuing" */
 		new_status[len] = '\0';
 	}
-	pgstat_report_waiting(PGBE_WAITING_LOCK);
+	gpstat_report_waiting(PGBE_WAITING_LOCK);
 
 	awaitedLock = locallock;
 	awaitedOwner = owner;
@@ -1056,7 +1056,7 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 		set_ps_display(new_status, false);
 		pfree(new_status);
 	}
-	pgstat_report_waiting(PGBE_WAITING_NONE);
+	gpstat_report_waiting(PGBE_WAITING_NONE);
 
 	return;
 }
@@ -1360,7 +1360,7 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 		if (lock->nRequested > lock->nGranted)
 		{
 			/* we're no longer waiting. */
-			pgstat_report_waiting(PGBE_WAITING_NONE);
+			gpstat_report_waiting(PGBE_WAITING_NONE);
 			ResGrantLock(lock, proclock);
 			ResLockUpdateLimit(lock, proclock, incrementSet, true, true);
 		}

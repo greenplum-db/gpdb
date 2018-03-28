@@ -26,6 +26,5 @@ extern void end_heap_rewrite(RewriteState state);
 extern void rewrite_heap_tuple(RewriteState state, HeapTuple oldTuple,
 				   HeapTuple newTuple);
 extern void rewrite_heap_dead_tuple(RewriteState state, HeapTuple oldTuple);
-extern TransactionId get_rewrite_freeze_xid(RewriteState state);
 
 #endif   /* REWRITE_HEAP_H */

@@ -99,7 +99,7 @@ typedef struct CdbComponentDatabases
 	int			my_dbid;		/* the dbid of this database */
 	int			my_segindex;	/* the content of this database */
 	bool		my_isprimary;	/* the isprimary flag of this database */
-	int		fts_version;	/* the version of fts */
+	uint8		fts_version;	/* the version of fts */
 } CdbComponentDatabases;
 
 /*

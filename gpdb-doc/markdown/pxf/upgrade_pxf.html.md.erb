@@ -71,7 +71,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     
 3. Initialize PXF on each segment host as described in [Initializing PXF](cfginitstart_pxf.html#init_pxf).
 
-4. If you updated any of the `pxf-profiles.xml`, `pxf-log4j.properties`, `pxf-private.classpath`, or `pxf-public.classpath` configuration files in your *PXF.from* installation, re-apply those changes and copy the updated file(s) to all segment hosts. Refer to Step 2 above for a similar `gpscp` command.
+4. If you updated any of the `pxf-profiles.xml`, `pxf-log4j.properties`, `pxf-private.classpath`, or `pxf-public.classpath` configuration files in your *PXF.from* installation, re-apply those changes and copy the updated file(s) to all segment hosts. Refer to Step 3 above for a similar `gpscp` command.
 
 5. If you added additional JAR files to your *PXF.from* installation, copy them to the corresponding directory in your *PXF.to* installation **on each segment host**.
  

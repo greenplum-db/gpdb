@@ -767,7 +767,10 @@ extern void pgstat_bestart(void);
 
 extern void pgstat_report_activity(const char *cmd_str);
 extern void pgstat_report_txn_timestamp(TimestampTz tstamp);
-extern void pgstat_report_waiting(char reason);
+#if 0
+extern void pgstat_report_waiting(bool waiting);
+#endif
+extern void gpstat_report_waiting(char reason);
 
 extern void pgstat_report_appname(const char *appname);
 extern void pgstat_report_xact_timestamp(TimestampTz tstamp);

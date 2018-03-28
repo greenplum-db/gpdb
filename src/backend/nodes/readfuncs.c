@@ -2151,8 +2151,7 @@ _readRangeTblEntry(void)
 	READ_BITMAPSET_FIELD(modifiedCols);
 
 	READ_BOOL_FIELD(forceDistRandom);
-	READ_NODE_FIELD(pseudocols);
-
+	/* 'pseudocols' is intentionally missing, see out function */
 	READ_DONE();
 }
 #endif /* COMPILING_BINARY_FUNCS */

@@ -72,6 +72,7 @@
 /* maximum number of segments */
 #define MAX_NUM_OF_SEGMENTS  32768
 
+bool am_ftsprobe = false;
 bool am_ftshandler = false;
 
 #define GpConfigHistoryRelName    "gp_configuration_history"
@@ -81,11 +82,10 @@ bool am_ftshandler = false;
  * STATIC VARIABLES
  */
 
-static bool am_ftsprobe = false;
 static bool skipFtsProbe = false;
 
 static volatile bool shutdown_requested = false;
-static volatile bool fullscan_requested = false;
+static volatile bool probe_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
 static char *probeDatabase = "postgres";
@@ -187,7 +187,7 @@ sigHupHandler(SIGNAL_ARGS)
 static void
 sigIntHandler(SIGNAL_ARGS)
 {
-	fullscan_requested = true;
+	probe_requested = true;
 }
 
 /*
@@ -343,9 +343,6 @@ ftsMain(int argc, char *argv[])
 	/* close the transaction we started above */
 	CommitTransactionCommand();
 
-	/* shmem: publish probe pid */
-	ftsProbeInfo->fts_probePid = MyProcPid;
-
 	/* main loop */
 	FtsLoop();
 
@@ -378,7 +375,13 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
 
-	ftsProbeInfo->fts_status_initialized = true;
+	/*
+	 * Initialize fts_stausVersion after populating the config details in
+	 * shared memory for the first time after FTS startup.
+	 */
+	if (ftsProbeInfo->fts_statusVersion == 0)
+		ftsProbeInfo->fts_statusVersion++;
+
 	return cdbs;
 }
 
@@ -496,13 +499,10 @@ void FtsLoop()
 										 ALLOCSET_DEFAULT_INITSIZE,	/* always have some memory */
 										 ALLOCSET_DEFAULT_INITSIZE,
 										 ALLOCSET_DEFAULT_MAXSIZE);
-
-	for (;;)
+	while (!shutdown_requested)
 	{
 		bool		has_mirrors;
 
-		if (shutdown_requested)
-			break;
 		/* no need to live on if postmaster has died */
 		if (!PostmasterIsAlive(true))
 			exit(1);
@@ -514,32 +514,6 @@ void FtsLoop()
 		}
 
 		probe_start_time = time(NULL);
-
-		skipFtsProbe = false;
-
-#ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(FtsProbe) == FaultInjectorTypeSkip)
-			skipFtsProbe = true;
-#endif
-
-		/* make sure the probeScanRequested is set before SIGINT sent to FTS */
-		AssertImply(fullscan_requested,
-					ftsProbeInfo->fts_probeScanRequested ==
-					ftsProbeInfo->fts_statusVersion);
-
-		if (skipFtsProbe)
-		{
-			if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-				elog(LOG, "skipping FTS probes");
-			if (fullscan_requested)
-			{
-				ftsProbeInfo->fts_statusVersion++;
-				fullscan_requested = false;
-				if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-					elog(LOG, "skipping fullscan, since probe is skipped.");
-			}
-			goto prober_sleep;
-		}
 
 		if (cdbs != NULL)
 		{
@@ -558,64 +532,57 @@ void FtsLoop()
 		/* close the transaction we started above */
 		CommitTransactionCommand();
 
-		if (!has_mirrors)
+		/* Reset this as we are performing the probe */
+		probe_requested = false;
+		skipFtsProbe = false;
+
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR(FtsProbe) == FaultInjectorTypeSkip)
+			skipFtsProbe = true;
+#endif
+
+		if (skipFtsProbe || !has_mirrors)
 		{
-			/* The dispatcher could have requested a scan so just ignore it and unblock the dispatcher */
-			if (fullscan_requested)
-			{
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "skipping FTS probes due to %s",
+				   !has_mirrors ? "no mirrors" : "fts_probe fault");
+		}
+		else
+		{
+			elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+				   "FTS: starting %s scan with %d segments and %d contents",
+				   (probe_requested ? "full " : ""),
+				   cdbs->total_segment_dbs,
+				   cdbs->total_segments);
+			/*
+			 * We probe in a special context, some of the heap access
+			 * stuff palloc()s internally
+			 */
+			oldContext = MemoryContextSwitchTo(probeContext);
+
+			updated_probe_state = FtsWalRepMessageSegments(cdbs);
+
+			MemoryContextSwitchTo(oldContext);
+
+			/* free any pallocs we made inside probeSegments() */
+			MemoryContextReset(probeContext);
+			cdbs = NULL;
+
+			/* Bump the version if configuration was updated. */
+			if (updated_probe_state)
 				ftsProbeInfo->fts_statusVersion++;
-				fullscan_requested = false;
-			}
-			goto prober_sleep;
 		}
+		/* Notify any waiting backends about probe cycle completion. */
+		ftsProbeInfo->probeTick++;
 
-		elog(DEBUG3, "FTS: starting %s scan with %d segments and %d contents",
-			 (fullscan_requested ? "full " : ""),
-			 cdbs->total_segment_dbs,
-			 cdbs->total_segments);
-
-		/*
-		 * We probe in a special context, some of the heap access
-		 * stuff palloc()s internally
-		 */
-		oldContext = MemoryContextSwitchTo(probeContext);
-
-		updated_probe_state = FtsWalRepMessageSegments(cdbs);
-
-		MemoryContextSwitchTo(oldContext);
-
-		/* free any pallocs we made inside probeSegments() */
-		MemoryContextReset(probeContext);
-		cdbs = NULL;
-
-		if (!FtsIsActive())
+		/* check if we need to sleep before starting next iteration */
+		elapsed = time(NULL) - probe_start_time;
+		if (elapsed < gp_fts_probe_interval && !shutdown_requested)
 		{
-			if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-				elog(LOG, "FTS: skipping probe, FTS is paused or shutting down.");
-			goto prober_sleep;
-		}
-
-		/*
-		 * bump the version (this also serves as an acknowledgement to
-		 * a probe-request).
-		 */
-		if (updated_probe_state || fullscan_requested)
-		{
-			ftsProbeInfo->fts_statusVersion++;
-			fullscan_requested = false;
-		}
-
-	prober_sleep:
-		{
-
-			/* check if we need to sleep before starting next iteration */
-			elapsed = time(NULL) - probe_start_time;
-			if (elapsed < gp_fts_probe_interval && !shutdown_requested)
-			{
+			if (!probe_requested)
 				pg_usleep((gp_fts_probe_interval - elapsed) * USECS_PER_SEC);
 
-				CHECK_FOR_INTERRUPTS();
-			}
+			CHECK_FOR_INTERRUPTS();
 		}
 	} /* end server loop */
 

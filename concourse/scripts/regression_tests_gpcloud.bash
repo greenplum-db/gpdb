@@ -22,7 +22,7 @@ source gpdemo/gpdemo-env.sh
 cd "\${GPDB_SRC_DIR}/gpAux/extensions/gpcloud/regress"
 make installcheck pgxs_dir=\$INSTALL_DIR/lib/postgresql/pgxs
 
-[ -s regression.diffs ] && head -1000 regression.diffs && exit 1
+[ -s regression.diffs ] && cat regression.diffs && exit 1
 exit 0
 
 EOF

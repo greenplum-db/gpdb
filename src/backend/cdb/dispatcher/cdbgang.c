@@ -372,7 +372,7 @@ getComponentDatabases(void)
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 	Assert(GangContext != NULL);
 
-	uint64		ftsVersion = getFtsVersion();
+	uint8		ftsVersion = getFtsVersion();
 	MemoryContext oldContext = MemoryContextSwitchTo(GangContext);
 
 	if (cdb_component_dbs == NULL)
@@ -537,7 +537,7 @@ buildGangDefinition(GangType type, int gang_id, int size, int content)
 
 			if (size != segCount)
 			{
-				FtsReConfigureMPP(false);
+				DisconnectAndDestroyAllGangs(true);
 				elog(ERROR, "Not all primary segment instances are active and connected");
 			}
 			break;
@@ -1223,6 +1223,13 @@ DisconnectAndDestroyAllGangs(bool resetSession)
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangs");
 
+	/* Destroy CurrentGangCreating before GangContext is reset */
+	if (CurrentGangCreating != NULL)
+	{
+		DisconnectAndDestroyGang(CurrentGangCreating);
+		CurrentGangCreating = NULL;
+	}
+
 	/* for now, destroy all readers, regardless of the portal that owns them */
 	disconnectAndDestroyAllReaderGangs(true);
 
@@ -1310,7 +1317,7 @@ cleanupGang(Gang *gp)
 			return false;
 
 		/* if segment is down, the gang can not be reused */
-		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
+		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
 			return false;
 
 		/* Note, we cancel all "still running" queries */
@@ -1820,7 +1827,7 @@ GangOK(Gang *gp)
 
 		if (cdbconn_isBadConnection(segdbDesc))
 			return false;
-		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
+		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
 			return false;
 	}
 

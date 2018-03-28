@@ -54,8 +54,6 @@ SELECT * FROM viewtest;
 CREATE OR REPLACE VIEW viewtest AS
 	SELECT a, b FROM viewtest_tbl WHERE a > 5 ORDER BY b DESC;
 
--- GPDB_84_MERGE_FIXME: If the rows come out in wrong order from the
--- view, does gpdiff mask that problem?
 SELECT * FROM viewtest;
 
 -- should fail

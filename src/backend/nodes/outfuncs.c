@@ -2189,21 +2189,6 @@ _outIndexOptInfo(StringInfo str, IndexOptInfo *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
-_outCdbRelColumnInfo(StringInfo str, CdbRelColumnInfo *node)
-{
-	WRITE_NODE_TYPE("CdbRelColumnInfo");
-
-    WRITE_INT_FIELD(pseudoattno);
-    WRITE_INT_FIELD(targetresno);
-	WRITE_INT_FIELD(attr_width);
-	WRITE_BITMAPSET_FIELD(where_needed);
-    WRITE_STRING_FIELD(colname);
-	WRITE_NODE_FIELD(defexpr);
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-#ifndef COMPILING_BINARY_FUNCS
-static void
 _outEquivalenceClass(StringInfo str, EquivalenceClass *node)
 {
 	/*
@@ -3781,9 +3766,6 @@ _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 	 * pseudocols is intentionally not serialized. It's only used in the planning
 	 * stage, so no need to transfer it to the QEs.
 	 */
-	/* GPDB_84_MERGE_FIXME: um, pick either "serialized" or "not serialized".
-	   Then update the fast serialization functions to match. */
-    WRITE_NODE_FIELD(pseudocols);                                       /*CDB*/
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -4798,9 +4780,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_IndexOptInfo:
 				_outIndexOptInfo(str, obj);
-				break;
-			case T_CdbRelColumnInfo:
-				_outCdbRelColumnInfo(str, obj);
 				break;
 			case T_EquivalenceClass:
 				_outEquivalenceClass(str, obj);

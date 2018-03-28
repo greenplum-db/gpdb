@@ -43,6 +43,7 @@ typedef struct FtsResponse
 	bool RequestRetry;
 } FtsResponse;
 
+extern bool am_ftsprobe;
 extern bool am_ftshandler;
 extern bool am_mirror;
 

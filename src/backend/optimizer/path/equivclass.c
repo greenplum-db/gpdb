@@ -401,6 +401,14 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 	EquivalenceMember *newem;
 	ListCell   *lc1;
 	MemoryContext oldcontext;
+	Expr *sort_expr = expr;
+	Oid sort_datatype = expr_datatype;
+
+	if (IsA(sort_expr, RelabelType))
+	{
+		sort_expr = ((RelabelType *) sort_expr)->arg;
+		sort_datatype = exprType((Node *) sort_expr);
+	}
 
 	/*
 	 * Scan through the existing EquivalenceClasses for a match
@@ -424,6 +432,8 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 		foreach(lc2, cur_ec->ec_members)
 		{
 			EquivalenceMember *cur_em = (EquivalenceMember *) lfirst(lc2);
+			Expr	*em_expr = cur_em->em_expr;
+			Oid	em_datatype = cur_em->em_datatype;
 
 			/*
 			 * If below an outer join, don't match constants: they're not as
@@ -433,8 +443,14 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 				cur_em->em_is_const)
 				continue;
 
-			if (expr_datatype == cur_em->em_datatype &&
-				equal(expr, cur_em->em_expr))
+			if (IsA(em_expr, RelabelType))
+			{
+				em_expr = ((RelabelType *) em_expr)->arg;
+				em_datatype = exprType((Node *) em_expr);
+			}
+
+			if (sort_datatype == em_datatype &&
+				equal(sort_expr, em_expr))
 				return cur_ec;	/* Match! */
 		}
 	}

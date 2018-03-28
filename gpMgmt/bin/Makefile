@@ -32,7 +32,7 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: core lockfile paramiko pycrypto stream psutil
+install: core lockfile paramiko ecdsa pycrypto stream psutil
 else
 install: core stream
 endif
@@ -79,13 +79,24 @@ pygresql:
 #
 # PARAMIKO
 #
-PARAMIKO_VERSION=1.7.6-9
+PARAMIKO_VERSION=1.18.4
 PARAMIKO_DIR=paramiko-$(PARAMIKO_VERSION)
 paramiko:
 	@echo "--- paramiko"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib*/paramiko $(PYLIB_DIR)/
+
+#
+# ecdsa
+#
+ECDSA_VERSION=0.13
+ECDSA_DIR=ecdsa-$(ECDSA_VERSION)
+ecdsa:
+	@echo "--- ecdsa"
+	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(ECDSA_DIR).tar.gz
+	cd $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/ && python setup.py build
+	cp -r $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/build/lib*/ecdsa $(PYLIB_DIR)/
 
 #
 # LOCKFILE

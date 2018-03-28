@@ -277,11 +277,12 @@ InitProcess(void)
 	int			i;
 
 	/*
-	 * Autovacuum, WAL sender and FTS handler processes are marked as
-	 * GP_ROLE_UTILITY to prevent unwanted GP_ROLE_DISPATCH MyProc settings
+	 * Autovacuum, WAL sender, FTS handler and FTS daemon processes are marked
+	 * as GP_ROLE_UTILITY to prevent unwanted GP_ROLE_DISPATCH MyProc settings
 	 * such as mppSessionId being valid and mppIsWriter set to true.
 	 */
-	if (IsAutoVacuumWorkerProcess() || am_walsender || am_ftshandler)
+	if (IsAutoVacuumWorkerProcess() || am_walsender || am_ftshandler ||
+		am_ftsprobe)
 		Gp_role = GP_ROLE_UTILITY;
 
 	/*
@@ -596,13 +597,6 @@ InitAuxiliaryProcess(void)
 	MyProc->waitProcLock = NULL;
 	for (i = 0; i < NUM_LOCK_PARTITIONS; i++)
 		SHMQueueInit(&(MyProc->myProcLocks[i]));
-
-	/*
-	 * Auxiliary process doesn't bother with sync rep.  Though it was
-	 * originally supposed to not do transaction work, but it does in GPDB,
-	 * we mark it and avoid sync rep work.
-	 */
-	MyProc->syncRepState = SYNC_REP_DISABLED;
 
 	/*
 	 * Acquire ownership of the PGPROC's latch, so that we can use WaitLatch.

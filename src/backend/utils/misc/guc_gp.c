@@ -445,6 +445,7 @@ bool 		optimizer_parallel_union;
 bool		optimizer_array_constraints;
 bool		optimizer_cte_inlining;
 bool		optimizer_enable_space_pruning;
+bool		optimizer_enable_associativity;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -1041,16 +1042,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_fts_transition_parallel", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Activate parallel segment transition."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_fts_transition_parallel,
-		true, NULL, NULL
-	},
-
-	{
 		{"gp_debug_pgproc", PGC_POSTMASTER, DEVELOPER_OPTIONS,
 			gettext_noop("Print debug info relevant to PGPROC."),
 			NULL /* long description */ ,
@@ -1147,16 +1138,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_cost_hashjoin_chainwalk,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_set_read_only", PGC_SUSET, GP_ARRAY_CONFIGURATION,
-			gettext_noop("Sets the system read only"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_set_read_only,
 		false, NULL, NULL
 	},
 
@@ -2836,6 +2817,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"optimizer_enable_associativity", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables Join Associativity in optimizer"),
+			NULL
+		},
+		&optimizer_enable_associativity,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -3483,7 +3473,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_retries", PGC_POSTMASTER, GP_ARRAY_TUNING,
+		{"gp_fts_probe_retries", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
@@ -3493,7 +3483,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_timeout", PGC_USERSET, GP_ARRAY_TUNING,
+		{"gp_fts_probe_timeout", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Maximum time (in seconds) allowed for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
 			GUC_UNIT_S
@@ -3503,13 +3493,23 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+		{"gp_fts_probe_interval", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("A complete probe of all segments starts each time a timer with this period expires."),
 			gettext_noop("Used by the fts-probe process. "),
 			GUC_UNIT_S
 		},
 		&gp_fts_probe_interval,
 		60, 10, 3600, NULL, NULL
+	},
+
+	{
+		{"gp_fts_mark_mirror_down_grace_period", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Time (in seconds) allowed to mirror after disconnection, to reconnect before being marked as down in configuration by FTS."),
+			gettext_noop("Used by the fts-probe process."),
+			GUC_UNIT_S
+		},
+		&gp_fts_mark_mirror_down_grace_period,
+		30, 0, 3600, NULL, NULL
 	},
 
 	{

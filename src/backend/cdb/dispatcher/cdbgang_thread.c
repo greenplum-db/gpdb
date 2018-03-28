@@ -223,6 +223,7 @@ create_gang_retry:
 
 	/* there'er failed connections */
 
+	FtsNotifyProber();
 	/* FTS shows some segment DBs are down, destroy all gangs. */
 	if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
 	{

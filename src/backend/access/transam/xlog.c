@@ -9734,7 +9734,7 @@ RequestXLogSwitch(void)
  * i.e. those for which buffer_std == true
  */
 XLogRecPtr
-XLogSaveBufferForHint(Buffer buffer, Relation relation)
+XLogSaveBufferForHint(Buffer buffer) 
 {
 	XLogRecPtr recptr = InvalidXLogRecPtr;
 	XLogRecPtr lsn;

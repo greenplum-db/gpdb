@@ -148,6 +148,21 @@ struct ResGroupSlotData
 };
 
 /*
+ * Resource group operations for memory.
+ *
+ * Groups with different memory auditor will have different
+ * operations.
+ */
+typedef struct ResGroupMemOperations
+{
+	void (*group_mem_on_create) (Oid groupId, ResGroupData *group);
+	void (*group_mem_on_alter) (Oid groupId, ResGroupData *group);
+	void (*group_mem_on_drop) (Oid groupId, ResGroupData *group);
+	void (*group_mem_on_notify) (ResGroupData *group);
+	void (*group_mem_on_dump) (ResGroupData *group, StringInfo str);
+} ResGroupMemOperations;
+
+/*
  * Resource group information.
  */
 struct ResGroupData
@@ -162,6 +177,16 @@ struct ResGroupData
 
 	bool		lockedForDrop;  /* true if resource group is dropped but not committed yet */
 
+	/*
+	 * memGap is calculated as:
+	 * 	(memory limit (before alter) - memory expected (after alter))
+	 *
+	 * It stands for how many memory (in chunks) this group should
+	 * give back to MEM POOL.
+	 */
+	int32       memGap;
+	int32		memAuditor;
+
 	int32		memExpected;		/* expected memory chunks according to current caps */
 	int32		memQuotaGranted;	/* memory chunks for quota part */
 	int32		memSharedGranted;	/* memory chunks for shared part */
@@ -175,6 +200,11 @@ struct ResGroupData
 	 */
 	int32		memUsage;
 	int32		memSharedUsage;
+
+	/*
+	 * operation functions for resource group
+	 */
+	const ResGroupMemOperations *groupMemOps;
 };
 
 struct ResGroupControl
@@ -233,14 +263,15 @@ static int32 slotGetMemQuotaExpected(const ResGroupCaps *caps);
 static int32 slotGetMemQuotaOnQE(const ResGroupCaps *caps, ResGroupData *group);
 static int32 slotGetMemSpill(const ResGroupCaps *caps);
 static void wakeupSlots(ResGroupData *group, bool grant);
-static void wakeupGroups(Oid skipGroupId);
+static void notifyGroupsOnMem(Oid skipGroupId);
 static int32 mempoolAutoRelease(ResGroupData *group);
 static int32 mempoolAutoReserve(ResGroupData *group, const ResGroupCaps *caps);
 static ResGroupData *groupHashNew(Oid groupId);
 static ResGroupData *groupHashFind(Oid groupId, bool raise);
-static void groupHashRemove(Oid groupId);
+static ResGroupData *groupHashRemove(Oid groupId);
 static void waitOnGroup(ResGroupData *group);
-static ResGroupData *createGroup(Oid groupId, const ResGroupCaps *caps);
+static ResGroupData *createGroup(Oid groupId, const ResGroupOptions *groupOptions);
+static void removeGroup(Oid groupId);
 static void AtProcExit_ResGroup(int code, Datum arg);
 static void groupWaitCancel(void);
 static int32 groupReserveMemQuota(ResGroupData *group);
@@ -296,6 +327,19 @@ static void sessionSetSlot(ResGroupSlotData *slot);
 static ResGroupSlotData *sessionGetSlot(void);
 static void sessionResetSlot(void);
 
+static void bindGroupOperation(ResGroupData *group);
+static void groupMemOnAlterForVmtracker(Oid groupId, ResGroupData *group);
+static void groupMemOnDropForVmtracker(Oid groupId, ResGroupData *group);
+static void groupMemOnNotifyForVmtracker(ResGroupData *group);
+static void groupMemOnDumpForVmtracker(ResGroupData *group, StringInfo str);
+
+static void groupMemOnAlterForCgroup(Oid groupId, ResGroupData *group);
+static void groupMemOnDropForCgroup(Oid groupId, ResGroupData *group);
+static void groupMemOnNotifyForCgroup(ResGroupData *group);
+static void groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str);
+static void groupApplyCgroupMemInc(ResGroupData *group);
+static void groupApplyCgroupMemDec(ResGroupData *group);
+
 #ifdef USE_ASSERT_CHECKING
 static bool selfHasGroup(void);
 static bool selfHasSlot(void);
@@ -305,6 +349,28 @@ static bool slotIsInUse(const ResGroupSlotData *slot);
 static bool groupIsNotDropped(const ResGroupData *group);
 static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
 #endif /* USE_ASSERT_CHECKING */
+
+/*
+ * Operations of memory for resource groups with vmtracker memory auditor.
+ */
+static const ResGroupMemOperations resgroup_memory_operations_vmtracker = {
+	.group_mem_on_create	= NULL,
+	.group_mem_on_alter		= groupMemOnAlterForVmtracker,
+	.group_mem_on_drop		= groupMemOnDropForVmtracker,
+	.group_mem_on_notify	= groupMemOnNotifyForVmtracker,
+	.group_mem_on_dump		= groupMemOnDumpForVmtracker,
+};
+
+/*
+ * Operations of memory for resource groups with cgroup memory auditor.
+ */
+static const ResGroupMemOperations resgroup_memory_operations_cgroup = {
+	.group_mem_on_create	= NULL,
+	.group_mem_on_alter		= groupMemOnAlterForCgroup,
+	.group_mem_on_drop		= groupMemOnDropForCgroup,
+	.group_mem_on_notify	= groupMemOnNotifyForCgroup,
+	.group_mem_on_dump		= groupMemOnDumpForCgroup,
+};
 
 /*
  * Estimate size the resource group structures will need in
@@ -401,13 +467,13 @@ error_out:
  * Allocate a resource group entry from a hash table
  */
 void
-AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
+AllocResGroupEntry(Oid groupId, const ResGroupOptions *groupOptions)
 {
 	ResGroupData	*group;
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = createGroup(groupId, caps);
+	group = createGroup(groupId, groupOptions);
 	Assert(group != NULL);
 
 	LWLockRelease(ResGroupLock);
@@ -426,7 +492,6 @@ InitResGroups(void)
 	int			numGroups;
 	CdbComponentDatabases *cdbComponentDBs;
 	CdbComponentDatabaseInfo *qdinfo;
-	ResGroupCaps		caps;
 	Relation			relResGroup;
 	Relation			relResGroupCapability;
 
@@ -482,17 +547,19 @@ InitResGroups(void)
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		ResGroupData	*group;
-		int cpuRateLimit;
+		ResGroupOptions groupOptions;
 		Oid groupId = HeapTupleGetOid(tuple);
 
-		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
-		cpuRateLimit = caps.cpuRateLimit;
+		groupOptions.memAuditor = GetResGroupMemAuditorFromTuple(relResGroup, tuple);
 
-		group = createGroup(groupId, &caps);
+		GetResGroupCapabilities(relResGroupCapability, groupId, &groupOptions.caps);
+
+		group = createGroup(groupId, &groupOptions);
 		Assert(group != NULL);
 
 		ResGroupOps_CreateGroup(groupId);
-		ResGroupOps_SetCpuRateLimit(groupId, cpuRateLimit);
+		ResGroupOps_SetCpuRateLimit(groupId, groupOptions.caps.cpuRateLimit);
+		ResGroupOps_SetMemoryLimit(groupId, groupOptions.caps.memLimit);
 
 		numGroups++;
 		Assert(numGroups <= MaxResourceGroups);
@@ -581,7 +648,7 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 
 		if (isCommit)
 		{
-			groupHashRemove(groupId);
+			removeGroup(groupId);
 			ResGroupOps_DestroyGroup(groupId);
 		}
 	}
@@ -618,7 +685,7 @@ ResGroupCreateOnAbort(Oid groupId)
 	PG_TRY();
 	{
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
-		groupHashRemove(groupId);
+		removeGroup(groupId);
 		/* remove the os dependent part for this resource group */
 		ResGroupOps_DestroyGroup(groupId);
 	}
@@ -645,10 +712,10 @@ ResGroupCreateOnAbort(Oid groupId)
 void
 ResGroupAlterOnCommit(Oid groupId,
 					  ResGroupLimitType limittype,
-					  const ResGroupCaps *caps)
+					  const ResGroupCaps *caps,
+					  ResGroupCap memLimitGap)
 {
 	ResGroupData	*group;
-	bool			shouldWakeUp;
 	volatile int	savedInterruptHoldoffCount;
 
 	Assert(caps != NULL);
@@ -668,11 +735,12 @@ ResGroupAlterOnCommit(Oid groupId,
 		}
 		else if (limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 		{
-			shouldWakeUp = groupApplyMemCaps(group);
+			Assert(pResGroupControl->totalChunks > 0);
+			group->memGap += pResGroupControl->totalChunks * memLimitGap / 100;
 
-			wakeupSlots(group, true);
-			if (shouldWakeUp)
-				wakeupGroups(groupId);
+			Assert(group->groupMemOps != NULL);
+			if (group->groupMemOps->group_mem_on_alter)
+				group->groupMemOps->group_mem_on_alter(groupId, group);
 		}
 	}
 	PG_CATCH();
@@ -762,6 +830,15 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 	return result;
 }
 
+/*
+ * Get the number of primary segments on this host
+ */
+int
+ResGroupGetSegmentNum()
+{
+	return (Gp_role == GP_ROLE_EXECUTE ? host_segments : pResGroupControl->segmentsOnMaster);
+}
+
 static char *
 groupDumpMemUsage(ResGroupData *group)
 {
@@ -769,33 +846,9 @@ groupDumpMemUsage(ResGroupData *group)
 
 	initStringInfo(&memUsage);
 
-	appendStringInfo(&memUsage, "{");
-	appendStringInfo(&memUsage, "\"used\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(group->memUsage));
-	appendStringInfo(&memUsage, "\"available\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(
-						group->memQuotaGranted + group->memSharedGranted - group->memUsage));
-	appendStringInfo(&memUsage, "\"quota_used\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(group->memQuotaUsed));
-	appendStringInfo(&memUsage, "\"quota_available\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(
-						group->memQuotaGranted - group->memQuotaUsed));
-	appendStringInfo(&memUsage, "\"quota_granted\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(group->memQuotaGranted));
-	appendStringInfo(&memUsage, "\"quota_proposed\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(
-						groupGetMemQuotaExpected(&group->caps)));
-	appendStringInfo(&memUsage, "\"shared_used\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(group->memSharedUsage));
-	appendStringInfo(&memUsage, "\"shared_available\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(
-						group->memSharedGranted - group->memSharedUsage));
-	appendStringInfo(&memUsage, "\"shared_granted\":%d, ",
-					 VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted));
-	appendStringInfo(&memUsage, "\"shared_proposed\":%d",
-					 VmemTracker_ConvertVmemChunksToMB(
-						groupGetMemSharedExpected(&group->caps)));
-	appendStringInfo(&memUsage, "}");
+	Assert(group->groupMemOps != NULL);
+	if (group->groupMemOps->group_mem_on_dump)
+		group->groupMemOps->group_mem_on_dump(group, &memUsage);
 
 	return memUsage.data;
 }
@@ -959,6 +1012,28 @@ ResourceGroupGetQueryMemoryLimit(void)
 }
 
 /*
+ * removeGroup -- remove resource group from share memory and
+ * reclaim the group's memory back to MEM POOL.
+ */
+static void
+removeGroup(Oid groupId)
+{
+	ResGroupData *group;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(OidIsValid(groupId));
+
+	group = groupHashRemove(groupId);
+
+	Assert(group->groupMemOps != NULL);
+	if (group->groupMemOps->group_mem_on_drop)
+		group->groupMemOps->group_mem_on_drop(groupId, group);
+
+	group->groupId = InvalidOid;
+	notifyGroupsOnMem(groupId);
+}
+
+/*
  * createGroup -- initialize the elements for a resource group.
  *
  * Notes:
@@ -966,7 +1041,7 @@ ResourceGroupGetQueryMemoryLimit(void)
  *	calling this - unless we are the startup process.
  */
 static ResGroupData *
-createGroup(Oid groupId, const ResGroupCaps *caps)
+createGroup(Oid groupId, const ResGroupOptions *groupOptions)
 {
 	ResGroupData	*group;
 	int32			chunks;
@@ -978,25 +1053,48 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	Assert(group != NULL);
 
 	group->groupId = groupId;
-	group->caps = *caps;
+	group->caps = groupOptions->caps;
 	group->nRunning = 0;
 	ProcQueueInit(&group->waitProcs);
 	group->totalExecuted = 0;
 	group->totalQueued = 0;
+	group->memGap = 0;
+	group->memAuditor = groupOptions->memAuditor;
 	group->memUsage = 0;
 	group->memSharedUsage = 0;
 	group->memQuotaUsed = 0;
+	group->groupMemOps = NULL;
 	memset(&group->totalQueuedTime, 0, sizeof(group->totalQueuedTime));
 	group->lockedForDrop = false;
 
 	group->memQuotaGranted = 0;
 	group->memSharedGranted = 0;
-	group->memExpected = groupGetMemExpected(caps);
+	group->memExpected = groupGetMemExpected(&groupOptions->caps);
 
 	chunks = mempoolReserve(groupId, group->memExpected);
-	groupRebalanceQuota(group, chunks, caps);
+	groupRebalanceQuota(group, chunks, &groupOptions->caps);
+
+	bindGroupOperation(group);
 
 	return group;
+}
+
+/*
+ * Bind operation to resource group according to memory auditor.
+ */
+static void
+bindGroupOperation(ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	if (group->memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER)
+		group->groupMemOps = &resgroup_memory_operations_vmtracker;
+	else if (group->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
+		group->groupMemOps = &resgroup_memory_operations_cgroup;
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid memory auditor: %d", group->memAuditor)));
 }
 
 /*
@@ -1257,7 +1355,7 @@ groupPutSlot(ResGroupData *group, ResGroupSlotData *slot)
 	/* And finally release the overused memory quota */
 	released = mempoolAutoRelease(group);
 	if (released > 0)
-		wakeupGroups(group->groupId);
+		notifyGroupsOnMem(group->groupId);
 
 	/*
 	 * Once we have waken up other groups then the slot we just released
@@ -1700,23 +1798,22 @@ wakeupSlots(ResGroupData *group, bool grant)
 }
 
 /*
- * When a group returns chunks to MEM POOL, we need to wake up
- * the transactions waiting on other groups for memory quota.
+ * When a group returns chunks to MEM POOL, we need to:
+ * 1. For groups with vmtracker memory auditor, wake up the
+ *    transactions waiting on them for memory quota.
+ * 2. For groups with cgroup memory auditor, increase their
+ *    memory limit if needed.
  */
 static void
-wakeupGroups(Oid skipGroupId)
+notifyGroupsOnMem(Oid skipGroupId)
 {
 	int				i;
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-		return;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
 	for (i = 0; i < MaxResourceGroups; i++)
 	{
 		ResGroupData	*group = &pResGroupControl->groups[i];
-		int32			delta;
 
 		if (group->groupId == InvalidOid)
 			continue;
@@ -1724,17 +1821,9 @@ wakeupGroups(Oid skipGroupId)
 		if (group->groupId == skipGroupId)
 			continue;
 
-		if (group->lockedForDrop)
-			continue;
-
-		if (groupWaitQueueIsEmpty(group))
-			continue;
-
-		delta = group->memExpected - group->memQuotaGranted - group->memSharedGranted;
-		if (delta <= 0)
-			continue;
-
-		wakeupSlots(group, true);
+		Assert(group->groupMemOps != NULL);
+		if (group->groupMemOps->group_mem_on_notify)
+			group->groupMemOps->group_mem_on_notify(group);
 
 		if (!pResGroupControl->freeChunks)
 			break;
@@ -2080,6 +2169,8 @@ UnassignResGroup(void)
 	}
 	else if (slot->nProcs == 0)
 	{
+		int32 released;
+
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 
 		group->memQuotaUsed -= slot->memQuota;
@@ -2094,7 +2185,10 @@ UnassignResGroup(void)
 		group->nRunning--;
 
 		/* And finally release the overused memory quota */
-		mempoolAutoRelease(group);
+		released = mempoolAutoRelease(group);
+		if (released > 0)
+			notifyGroupsOnMem(group->groupId);
+
 	}
 
 	LWLockRelease(ResGroupLock);
@@ -2218,7 +2312,7 @@ waitOnGroup(ResGroupData *group)
 
 	groupAwaited = NULL;
 
-	pgstat_report_waiting(PGBE_WAITING_NONE);
+	gpstat_report_waiting(PGBE_WAITING_NONE);
 }
 
 /*
@@ -2298,7 +2392,7 @@ groupHashFind(Oid groupId, bool raise)
  *	The resource group lightweight lock (ResGroupLock) *must* be held for
  *	this operation.
  */
-static void
+static ResGroupData *
 groupHashRemove(Oid groupId)
 {
 	bool		found;
@@ -2318,12 +2412,8 @@ groupHashRemove(Oid groupId)
 						groupId)));
 
 	group = &pResGroupControl->groups[entry->index];
-	mempoolRelease(groupId, group->memQuotaGranted + group->memSharedGranted);
-	group->memQuotaGranted = 0;
-	group->memSharedGranted = 0;
-	group->groupId = InvalidOid;
 
-	wakeupGroups(groupId);
+	return group;
 }
 
 /* Process exit without waiting for slot or received SIGTERM */
@@ -2415,7 +2505,7 @@ groupWaitCancel(void)
 	LWLockRelease(ResGroupLock);
 
 	groupAwaited = NULL;
-	pgstat_report_waiting(PGBE_WAITING_NONE);
+	gpstat_report_waiting(PGBE_WAITING_NONE);
 }
 
 static void
@@ -3111,4 +3201,231 @@ sessionResetSlot(void)
 	Assert(MySessionState->resGroupSlot != NULL);
 
 	MySessionState->resGroupSlot = NULL;
+}
+
+/*
+ * Operation for resource groups with vmtracker memory auditor
+ * when alter its memory limit.
+ */
+static void
+groupMemOnAlterForVmtracker(Oid groupId, ResGroupData *group)
+{
+	bool shouldNotify;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	shouldNotify = groupApplyMemCaps(group);
+
+	wakeupSlots(group, true);
+	if (shouldNotify)
+		notifyGroupsOnMem(groupId);
+}
+
+/*
+ * Operation for resource groups with vmtracker memory auditor
+ * when reclaiming its memory back to MEM POOL.
+ */
+static void
+groupMemOnDropForVmtracker(Oid groupId, ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	mempoolRelease(groupId, group->memQuotaGranted + group->memSharedGranted);
+	group->memQuotaGranted = 0;
+	group->memSharedGranted = 0;
+}
+
+/*
+ * Operation for resource groups with vmtracker memory auditor
+ * when memory in MEM POOL is increased.
+ */
+static void
+groupMemOnNotifyForVmtracker(ResGroupData *group)
+{
+	int32			delta;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
+	if (group->lockedForDrop)
+		return;
+
+	if (groupWaitQueueIsEmpty(group))
+		return;
+
+	delta = group->memExpected - group->memQuotaGranted - group->memSharedGranted;
+	if (delta <= 0)
+		return;
+
+	wakeupSlots(group, true);
+}
+
+/*
+ * Operation for resource groups with vmtracker memory auditor
+ * when dump memory statistics.
+ */
+static void
+groupMemOnDumpForVmtracker(ResGroupData *group, StringInfo str)
+{
+	appendStringInfo(str, "{");
+	appendStringInfo(str, "\"used\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(group->memUsage));
+	appendStringInfo(str, "\"available\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(
+				group->memQuotaGranted + group->memSharedGranted - group->memUsage));
+	appendStringInfo(str, "\"quota_used\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(group->memQuotaUsed));
+	appendStringInfo(str, "\"quota_available\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(
+				group->memQuotaGranted - group->memQuotaUsed));
+	appendStringInfo(str, "\"quota_granted\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(group->memQuotaGranted));
+	appendStringInfo(str, "\"quota_proposed\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(
+				groupGetMemQuotaExpected(&group->caps)));
+	appendStringInfo(str, "\"shared_used\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(group->memSharedUsage));
+	appendStringInfo(str, "\"shared_available\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(
+				group->memSharedGranted - group->memSharedUsage));
+	appendStringInfo(str, "\"shared_granted\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted));
+	appendStringInfo(str, "\"shared_proposed\":%d",
+			VmemTracker_ConvertVmemChunksToMB(
+				groupGetMemSharedExpected(&group->caps)));
+	appendStringInfo(str, "}");
+}
+
+/*
+ * Operation for resource groups with cgroup memory auditor
+ * when alter its memory limit.
+ */
+static void
+groupMemOnAlterForCgroup(Oid groupId, ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	/*
+	 * If memGap is positive, it indicates this group should
+	 * give back these many memory back to MEM POOL.
+	 *
+	 * If memGap is negative, it indicates this group should
+	 * retrieve these many memory from MEM POOL.
+	 *
+	 * If memGap is zero, this group is holding the same memory
+	 * as it expects.
+	 */
+	if (group->memGap == 0)
+		return;
+
+	if (group->memGap > 0)
+		groupApplyCgroupMemDec(group);
+	else
+		groupApplyCgroupMemInc(group);
+}
+
+/*
+ * Increase a resource group's cgroup memory limit
+ *
+ * This may not take effect immediately.
+ */
+static void
+groupApplyCgroupMemInc(ResGroupData *group)
+{
+	int32 memory_limit;
+	int32 memory_inc;
+	int fd;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(group->memGap < 0);
+
+	memory_inc = mempoolReserve(group->groupId, group->memGap * -1);
+
+	if (memory_inc <= 0)
+		return;
+
+	fd = ResGroupOps_LockGroup(group->groupId, "memory", true);
+	memory_limit = ResGroupOps_GetMemoryLimit(group->groupId);
+	ResGroupOps_SetMemoryLimitByValue(group->groupId, memory_limit + memory_inc);
+	ResGroupOps_UnLockGroup(group->groupId, fd);
+
+	group->memGap += memory_inc;
+}
+
+/*
+ * Decrease a resource group's cgroup memory limit
+ *
+ * This will take effect immediately for now.
+ */
+static void
+groupApplyCgroupMemDec(ResGroupData *group)
+{
+	int32 memory_limit;
+	int32 memory_dec;
+	int fd;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(group->memGap > 0);
+
+	fd = ResGroupOps_LockGroup(group->groupId, "memory", true);
+	memory_limit = ResGroupOps_GetMemoryLimit(group->groupId);
+	Assert(memory_limit > group->memGap);
+
+	memory_dec = group->memGap;
+
+	ResGroupOps_SetMemoryLimitByValue(group->groupId, memory_limit - memory_dec);
+	ResGroupOps_UnLockGroup(group->groupId, fd);
+
+	mempoolRelease(group->groupId, memory_dec);
+	notifyGroupsOnMem(group->groupId);
+
+	group->memGap -= memory_dec;
+}
+
+/*
+ * Operation for resource groups with cgroup memory auditor
+ * when reclaiming its memory back to MEM POOL.
+ */
+static void
+groupMemOnDropForCgroup(Oid groupId, ResGroupData *group)
+{
+	int32 memory_expected;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	memory_expected = groupGetMemExpected(&group->caps);
+
+	mempoolRelease(groupId, memory_expected + group->memGap);
+}
+
+/*
+ * Operation for resource groups with cgroup memory auditor
+ * when memory in MEM POOL is increased.
+ */
+static void
+groupMemOnNotifyForCgroup(ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	if (group->memGap < 0)
+		groupApplyCgroupMemInc(group);
+}
+
+/*
+ * Operation for resource groups with cgroup memory auditor
+ * when dump memory statistics.
+ */
+static void
+groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
+{
+	appendStringInfo(str, "{");
+	appendStringInfo(str, "\"usage\":%d, ",
+			VmemTracker_ConvertVmemChunksToMB(
+				ResGroupOps_GetMemoryUsage(group->groupId) / ResGroupGetSegmentNum()));
+	appendStringInfo(str, "\"limit\":%d",
+			VmemTracker_ConvertVmemChunksToMB(
+				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetSegmentNum()));
+	appendStringInfo(str, "}");
 }

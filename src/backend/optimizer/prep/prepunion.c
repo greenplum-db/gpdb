@@ -810,14 +810,11 @@ make_union_unique(SetOperationStmt *op, Plan *plan,
 													   plan->targetlist),
 								 extract_grouping_ops(groupList),
 								 numGroups,
-								 /* GPDB_84_MERGE_FIXME: What would be
-								  * appropriate values for these extra
-								  * arguments? */
 								 0, /* num_nullcols */
 								 0, /* input_grouping */
 								 0, /* grouping */
 								 0, /* rollupGSTimes */
-								 0,
+								 0, /* numAggs */
 								 0, /* transSpace */
 								 plan);
 		/* Hashed aggregation produces randomly-ordered results */
@@ -881,6 +878,12 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 	 * Don't do it if it doesn't look like the hashtable will fit into
 	 * work_mem.
 	 */
+
+	/*
+	 * Note that SetOp uses a TupleHashTable and not GPDB's HHashTable for
+	 * performing set operations. So, use the hash entry size calculations from
+	 * upstream.
+	 */
 	hashentrysize = MAXALIGN(input_plan->plan_width) + MAXALIGN(sizeof(MinimalTupleData));
 
 	if (hashentrysize * dNumGroups > work_mem * 1024L)
@@ -901,11 +904,9 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 			 numGroupCols, dNumGroups,
 			 input_plan->startup_cost, input_plan->total_cost,
 			 input_plan->plan_rows,
-			 /* GPDB_84_MERGE_FIXME: What would be appropriate values for these extra
-			  * arguments? */
-			 0, /* input_width */
-			 0, /* hash_batches */
-			 0, /* hashentry_width */
+			 hashentrysize, /* input_width */
+			 0, /* hash_batches - so spilling expected with TupleHashTable */
+			 hashentrysize, /* hashentry_width */
 			 false /* hash_streaming */);
 
 	/*

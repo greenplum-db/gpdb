@@ -2567,7 +2567,7 @@ process_term_signal(int sig,short event,void* arg)
 			{
 				closesocket(gcb.listen_socks[i]);
 			}
-		exit(1);
+		_exit(1);
 }
 
 

@@ -36,6 +36,8 @@ $$
 declare
 	i int;
 	checkpoint_locs text[];
+	replay_locs text[];
+	failed_for_segment text[];
 	r record;
 	all_caught_up bool;
 begin
@@ -63,17 +65,15 @@ begin
 	loop
 		all_caught_up = true;
 		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
-			-- XXX: Using text comparison to compare XLOG positions
-			-- is not quite right. Comparing 10/12345678 with
-			-- 9/12345678 would yield incorrect result, for
-			-- example. Ignore that for now, because this test is
-			-- executed in a fresh test cluster, which surely
-			-- hasn't written enough WAL yet to hit that problem.
-			-- With WAL positions smaller than 10/00000000, this
-			-- should work. PostgreSQL 9.4 got a pg_lsn datatype
-			-- that we could use here, once we merge up to 9.4.
-			if r.loc < checkpoint_locs[r.gp_segment_id] then
+			-- PostgreSQL 9.4 got a pg_lsn datatype that we could
+			-- use here, once we merge up to 9.4. Till then using
+			-- GPDB type gpxlogloc.
+			replay_locs[r.gp_segment_id] = r.loc;
+			if ('(' || r.loc || ')')::gpxlogloc < ('(' || checkpoint_locs[r.gp_segment_id] || ')')::gpxlogloc then
 				all_caught_up = false;
+				failed_for_segment[r.gp_segment_id] = 1;
+			else
+				failed_for_segment[r.gp_segment_id] = 0;
 			end if;
 		end loop;
 
@@ -82,6 +82,9 @@ begin
 		end if;
 
 		if i >= retries then
+			RAISE INFO 'checkpoint_locs:    %', checkpoint_locs;
+			RAISE INFO 'replay_locs:        %', replay_locs;
+			RAISE INFO 'failed_for_segment: %', failed_for_segment;
 			return false;
 		end if;
 		perform pg_sleep(0.1);
@@ -110,7 +113,7 @@ end;
 $$ language plpgsql;
 
 -- checkpoint to ensure clean xlog replication before bring down mirror
-select checkpoint_and_wait_for_replication_replay(200);
+select checkpoint_and_wait_for_replication_replay(500);
 
 create extension if not exists gp_inject_fault;
 -- Prevent FTS from probing segments as we don't want a change in
@@ -137,14 +140,14 @@ select move_xlog((select datadir || '/pg_xlog' from gp_segment_configuration c w
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
 
 -- check the view, we expect to see error
-select wait_for_replication_error('walread', 0, 200);
+select wait_for_replication_error('walread', 0, 500);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
 
 -- bring the missing xlog back on segment 0
 select move_xlog('/tmp/missing_xlog', (select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0));
 
 -- the error should go away
-select wait_for_replication_error('none', 0, 200);
+select wait_for_replication_error('none', 0, 500);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
 
 -- Resume FTS probes and perform a probe scan.

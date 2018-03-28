@@ -1,0 +1,5 @@
+Jinja2==2.10
+pexpect==4.4.0
+PSI==0.3b2
+pysql==0.16
+PyYAML==3.12

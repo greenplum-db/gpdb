@@ -19,11 +19,7 @@
 #include "parser/parse_node.h"
 #include "catalog/indexing.h"
 
-/*
- * GPDB_84_MERGE_FIXME: the new constraints work in tablecmds use RawColumnDefault
- * which has been removed from GPDB in the past. Re-added for now but perhaps
- * there is a bigger rewrite looming in tablecmds.c
- */
+
 typedef struct RawColumnDefault
 {
 	AttrNumber	attnum;			/* attribute to attach default to */

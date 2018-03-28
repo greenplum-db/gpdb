@@ -180,7 +180,6 @@ static Dllist *BackendList;
 typedef enum pmsub_type
 {
 	SeqServerProc = 0,
-	WalRedoServerProc,
 	FtsProbeProc,
 	PerfmonProc,
 	BackoffProc,
@@ -377,6 +376,8 @@ static PMSubProc PMSubProcList[MaxPMSubType] =
 	(PMSubStartCallback*)&perfmon_segmentinfo_start,
 	"stats sender process", PMSUBPROC_FLAG_QD_AND_QE, true},
 };
+
+static PMSubProc *FTSSubProc = &PMSubProcList[FtsProbeProc];
 
 static bool ReachedNormalRunning = false;		/* T if we've reached PM_RUN */
 
@@ -2216,8 +2217,7 @@ retry1:
 					 errmsg("sorry, too many clients already")));
 			break;
 		case CAC_WAITBACKUP:
-			/* GPDB_84_MERGE_FIXME: we don't have a WAITBACKUP state. 
-			 * Do we want to just remove this case entirely? */
+			/* Greenplum does not currently use WAITBACKUP state. */
 			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
 		case CAC_MIRROR_READY:
@@ -2911,7 +2911,6 @@ reaper(SIGNAL_ARGS)
 			if (subProc->pid != 0 && pid == subProc->pid)
 			{
 				subProc->pid = 0;
-
 				if (!EXIT_STATUS_0(exitstatus))
 					LogChildExit(LOG, subProc->procName, pid, exitstatus);
 
@@ -4994,6 +4993,12 @@ sigusr1_handler(SIGNAL_ARGS)
 	{
 		/* The autovacuum launcher wants us to start a worker process. */
 		StartAutovacuumWorker();
+	}
+
+	Assert(FTSSubProc->procType == FtsProbeProc);
+	if (CheckPostmasterSignal(PMSIGNAL_WAKEN_FTS) && FTSSubProc->pid != 0)
+	{
+		signal_child(FTSSubProc->pid, SIGINT);
 	}
 
 	/*

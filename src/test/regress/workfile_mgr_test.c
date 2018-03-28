@@ -116,7 +116,7 @@ static test_def test_defns[] = {
 		{"syncrefhashtable_test_concurrency_non_overlap", syncrefhashtable_test_concurrency_non_overlap},
 		{"syncrefhashtable_test_error_cases", syncrefhashtable_test_error_cases},
 		{"syncrefhashtable_test_full_table", syncrefhashtable_test_full_table},
-		{"cache_test_aquire", cache_test_acquire},
+		{"cache_test_acquire", cache_test_acquire},
 		{"cache_test_insert", cache_test_insert},
 		{"cache_test_remove", cache_test_remove},
 		{"cache_test_concurrency", cache_test_concurrency},

@@ -2793,9 +2793,11 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 		/* Lookup the parser object name cache */
 		nameCache = parser_get_namecache(masterpstate);
 
-		/* Loop over all partition children */
-		/* GPDB_84_MERGE_FIXME: do we need another lock here, or did the above
-		 * heap_openrv() take care of it? */
+		/*
+		 * Loop over all partition children. The lock on the root partition
+		 * table above will prevent any ALTER TABLE operations from changing
+		 * the child partition list we get here.
+		 */
 		children = find_inheritance_children(RelationGetRelid(rel), NoLock);
 
 		foreach(l, children)

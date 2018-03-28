@@ -766,8 +766,6 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 
 /*
  * Check if any segment DB down is detected by FTS.
- *
- * Issue a FTS probe every 1 minute.
  */
 static void
 checkSegmentAlive(CdbDispatchCmdAsync *pParms)
@@ -776,8 +774,7 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 	bool		forceScan = true;
 
 	/*
-	 * check the connection still valid, set 1 min time interval this may
-	 * affect performance, should turn it off if required.
+	 * check the connection still valid
 	 */
 	for (i = 0; i < pParms->dispatchCount; i++)
 	{
@@ -799,7 +796,13 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 		ELOG_DISPATCHER_DEBUG("FTS testing connection %d of %d (%s)",
 							  i + 1, pParms->dispatchCount, segdbDesc->whoami);
 
-		if (!FtsTestConnection(segdbDesc->segment_database_info, forceScan))
+		if (forceScan)
+		{
+			FtsNotifyProber();
+			forceScan = false;
+		}
+
+		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
 		{
 			char	   *msg = PQerrorMessage(segdbDesc->conn);
 
@@ -815,8 +818,6 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 			PQfinish(segdbDesc->conn);
 			segdbDesc->conn = NULL;
 		}
-
-		forceScan = false;
 	}
 }
 

@@ -1710,3 +1710,11 @@ SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk
  t
 (1 row)
 
+--
+-- Ensure that NOT is not lost during subquery pull-up
+--
+SELECT 1 AS col1 WHERE NOT (SELECT 1 = 1);
+ col1 
+------
+(0 rows)
+

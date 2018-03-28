@@ -702,7 +702,7 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				ResLockWaitCancel();
 		
 				/* Change status to no longer waiting for lock */
-				pgstat_report_waiting(PGBE_WAITING_NONE);
+				gpstat_report_waiting(PGBE_WAITING_NONE);
 
 				/* If we had acquired the resource queue lock, release it and clean up */	
 				ResLockRelease(&tag, portal->portalId);
@@ -813,7 +813,7 @@ ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit)
 			ResLockWaitCancel();
 
 			/* Change status to no longer waiting for lock */
-			pgstat_report_waiting(PGBE_WAITING_NONE);
+			gpstat_report_waiting(PGBE_WAITING_NONE);
 
 			/* If we had acquired the resource queue lock, release it and clean up */
 			ResLockRelease(&tag, portal->portalId);

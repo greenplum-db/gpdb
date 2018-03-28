@@ -57,6 +57,15 @@ typedef struct ResGroupCaps
 } ResGroupCaps;
 
 /*
+ * Resource group options
+ */
+typedef struct ResGroupOptions
+{
+	ResGroupCaps caps;
+	int32 memAuditor;
+} ResGroupOptions;
+
+/*
  * GUC variables.
  */
 extern char                		*gp_resgroup_memory_policy_str;
@@ -99,7 +108,7 @@ extern void ResGroupControlInit(void);
 /* Load resource group information from catalog */
 extern void	InitResGroups(void);
 
-extern void AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps);
+extern void AllocResGroupEntry(Oid groupId, const ResGroupOptions *groupOptions);
 
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
@@ -127,7 +136,8 @@ extern void ResGroupDropFinish(Oid groupId, bool isCommit);
 extern void ResGroupCreateOnAbort(Oid groupId);
 extern void ResGroupAlterOnCommit(Oid groupId,
 								  ResGroupLimitType limittype,
-								  const ResGroupCaps *caps);
+								  const ResGroupCaps *caps,
+								  ResGroupCap memLimitGap);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
 
 extern int32 ResGroupGetVmemLimitChunks(void);
@@ -140,6 +150,8 @@ extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
 extern int64 ResourceGroupGetQueryMemoryLimit(void);
 
 extern void ResGroupDumpInfo(StringInfo str);
+
+extern int ResGroupGetSegmentNum(void);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

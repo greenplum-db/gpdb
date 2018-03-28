@@ -9,7 +9,7 @@
 - If you want to link cmake3 to cmake, run:
 
   ```bash
-    ln -sf ../../bin/cmake3 /usr/local/bin/cmake
+    sudo ln -sf ../../bin/cmake3 /usr/local/bin/cmake
   ```
 
 - Make sure that you add `/usr/local/lib` and `/usr/local/lib64` to
@@ -77,8 +77,8 @@ then run command `ldconfig`.
    
    ```
    ssh-keygen
-   cp ~/.ssh/id_rsa.pub authorized_keys
-   chmod 600 authorized_keys
+   cp ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+   chmod 600 ~/.ssh/authorized_keys
    ```
 
 1. Verify that you can ssh to your machine name without a password
@@ -91,7 +91,7 @@ then run command `ldconfig`.
 
   ```bash
 
-  cat >> /etc/sysctl.conf <<-EOF
+  sudo bash -c 'cat >> /etc/sysctl.conf <<-EOF
   kernel.shmmax = 500000000
   kernel.shmmni = 4096
   kernel.shmall = 4000000000
@@ -113,19 +113,19 @@ then run command `ldconfig`.
   net.core.wmem_max = 2097152
   vm.overcommit_memory = 2
 
-  EOF
+  EOF'
 
-  cat >> /etc/security/limits.conf <<-EOF
+  sudo bash -c 'cat >> /etc/security/limits.conf <<-EOF
   * soft nofile 65536
   * hard nofile 65536
   * soft nproc 131072
   * hard nproc 131072
 
-  EOF
+  EOF'
 
-  cat >> /etc/ld.so.conf <<-EOF
+  sudo bash -c 'cat >> /etc/ld.so.conf <<-EOF
   /usr/local/lib
 
-  EOF
+  EOF'
 
   ```

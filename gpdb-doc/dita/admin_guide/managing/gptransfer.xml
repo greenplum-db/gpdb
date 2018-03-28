@@ -159,6 +159,9 @@ host2_name,host2_ipaddr
         be more efficient to transfer the schema and smaller tables to the destination database
         using other methods, then use <codeph>gptransfer</codeph> with the <codeph>-t</codeph>
         option to transfer large tables.</p>
+      <p>When transferring data between databases, you can run only one instance of
+          <codeph>gptransfer</codeph> at a time.<ph otherprops="op-pivotal"> Running multiple,
+          concurrent instances of <codeph>gptransfer</codeph> is not supported.</ph></p>
     </section>
     <section>
       <title>Full Mode and Table Mode</title>

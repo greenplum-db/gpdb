@@ -339,6 +339,36 @@ select * from foo where a not in (select c from bar where c <= 5);
 set enable_nestloop to off;
 set enable_hashjoin to on;
 set enable_mergejoin to off;
+CREATE TABLE R(a varchar(20), b int) DISTRIBUTED BY (a);
+CREATE TABLE S(a varchar(20), b int) DISTRIBUTED BY (a);
+-- Make sure there is no motion to redistribute or broadcast any table,
+-- because the join keys are also the distribution key of the 2 tables.
+EXPLAIN SELECT * FROM R, S WHERE R.a = S.a;
+                                        QUERY PLAN
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=898.75..171576.25 rows=1260250 width=124)
+   ->  Hash Join  (cost=898.75..171576.25 rows=420084 width=124)
+         Hash Cond: r.a::text = s.a::text
+         ->  Seq Scan on r  (cost=0.00..455.00 rows=11834 width=62)
+         ->  Hash  (cost=455.00..455.00 rows=11834 width=62)
+               ->  Seq Scan on s  (cost=0.00..455.00 rows=11834 width=62)
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(8 rows)
+
+EXPLAIN SELECT * FROM R LEFT OUTER JOIN S ON R.a = S.a;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=898.75..171576.25 rows=1260250 width=124)
+   ->  Hash Left Join  (cost=898.75..171576.25 rows=420084 width=124)
+         Hash Cond: r.a::text = s.a::text
+         ->  Seq Scan on r  (cost=0.00..455.00 rows=11834 width=62)
+         ->  Hash  (cost=455.00..455.00 rows=11834 width=62)
+               ->  Seq Scan on s  (cost=0.00..455.00 rows=11834 width=62)
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(8 rows)
+
 create table dept
 (
 	id int,

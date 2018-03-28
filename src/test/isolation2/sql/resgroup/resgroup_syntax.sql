@@ -90,6 +90,10 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=1.9);
 -- negative: concurrency should be in [1, max_connections]
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=-1, cpu_rate_limit=10, memory_limit=10);
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_rate_limit=10, memory_limit=10);
+-- negative: memory_auditor should be 'vmtracker' or 'cgroup'
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="randomtext");
+-- negative: concurrency should be zero for cgroup audited resource group
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
 
 -- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
@@ -128,6 +132,9 @@ CREATE RESOURCE GROUP rg1_test_group WITH (concurrency=1, cpu_rate_limit=30, mem
 CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_rate_limit=30, memory_limit=30);
 DROP RESOURCE GROUP rg1_test_group;
 DROP RESOURCE GROUP rg2_test_group;
+-- positive: concurrency should be zero for cgroup audited resource group
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+DROP RESOURCE GROUP rg_test_group;
 
 -- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
@@ -189,3 +196,11 @@ ALTER RESOURCE GROUP rg2_test_group SET CPU_RATE_LIMIT 30;
 DROP RESOURCE GROUP rg1_test_group;
 DROP RESOURCE GROUP rg2_test_group;
 
+CREATE RESOURCE GROUP cgroup_audited_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+-- negative: memory_auditor cannot be altered
+ALTER RESOURCE GROUP cgroup_audited_group SET MEMORY_AUDITOR "default";
+-- negative: concurrency should be zero for cgroup audited resource group
+ALTER RESOURCE GROUP cgroup_audited_group SET CONCURRENCY 10;
+-- negative: role should not be assigned to a cgroup audited resource group
+CREATE ROLE cgroup_audited_role RESOURCE GROUP cgroup_audited_group;
+DROP RESOURCE GROUP cgroup_audited_group;

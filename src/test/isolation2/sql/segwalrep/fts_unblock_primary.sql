@@ -43,6 +43,7 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 -- synchronous_standby_names should be set to '*' by default on primary 2, since
 -- we have a working/sync'd mirror
 2U: show synchronous_standby_names;
+2U: show gp_fts_mark_mirror_down_grace_period;
 
 -- create table and show commits are not blocked
 create table fts_unblock_primary (a int) distributed by (a);
@@ -71,7 +72,18 @@ insert into fts_unblock_primary values (3);
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);
 
---trigger fts probe and check to see primary marked n/u and mirror n/d
+-- trigger fts probe and check to see primary marked n/u and mirror still n/u as
+-- still should be in mirror down grace period.
+select gp_request_fts_probe_scan();
+select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
+
+-- set mirror down grace period to zero to instantly mark mirror down
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
+!\retcode gpstop -u;
+
+2U: show gp_fts_mark_mirror_down_grace_period;
+
+-- trigger fts probe and check to see primary marked n/u and mirror n/d
 select gp_request_fts_probe_scan();
 select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
 
@@ -91,3 +103,7 @@ insert into fts_unblock_primary select i from generate_series(1,10)i;
 
 -- synchronous_standby_names should be back to its original value on the primary
 2U: show synchronous_standby_names;
+
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+!\retcode gpstop -u;
+2U: show gp_fts_mark_mirror_down_grace_period;
