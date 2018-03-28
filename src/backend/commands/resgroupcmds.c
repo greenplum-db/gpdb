@@ -529,7 +529,12 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 }
 
 
-int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode)
+/*
+ * GetResGroupMemAuditorForId -- Return the resource group memory auditor
+ * for a groupId
+ */
+int32
+GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode)
 {
 	ResGroupCaps		caps;
 	Relation pg_resgroupcapability_rel = heap_open(
