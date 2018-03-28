@@ -11232,75 +11232,75 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		if (gpdb5OrLater)
 		{
 			appendPQExpBuffer(query,
-						  "SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
-								  "x.rejectlimit, x.rejectlimittype, "
-						      "(SELECT relname "
-						          "FROM pg_catalog.pg_class "
-								  "WHERE Oid=x.fmterrtbl) AS errtblname, "
-								  "x.fmterrtbl = x.reloid AS errortofile , "
-								  "pg_catalog.pg_encoding_to_char(x.encoding), "
-								  "x.writable, "
-								  "array_to_string(ARRAY( "
-								  "SELECT pg_catalog.quote_ident(option_name) || ' ' || "
-								  "pg_catalog.quote_literal(option_value) "
-								  "FROM pg_options_to_table(x.options) "
-								  "ORDER BY option_name"
-								  "), E',\n    ') AS options "
-						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-						  "WHERE x.reloid = c.oid AND c.oid = '%u'::oid ", tbinfo->dobj.catId.oid);
+					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
+						   "x.rejectlimit, x.rejectlimittype, "
+						   "(SELECT relname "
+							"FROM pg_catalog.pg_class "
+							"WHERE Oid=x.fmterrtbl) AS errtblname, "
+						   "x.fmterrtbl = x.reloid AS errortofile , "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), "
+						   "x.writable, "
+						   "array_to_string(ARRAY( "
+						   "SELECT pg_catalog.quote_ident(option_name) || ' ' || "
+						   "pg_catalog.quote_literal(option_value) "
+						   "FROM pg_options_to_table(x.options) "
+						   "ORDER BY option_name"
+						   "), E',\n    ') AS options "
+					"FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+					"WHERE x.reloid = c.oid AND c.oid = '%u'::oid ", tbinfo->dobj.catId.oid);
 		}
 		else if (g_fout->remoteVersion >= 80214)
 		{
 			appendPQExpBuffer(query,
-					   "SELECT x.location, "
-							  "CASE WHEN x.command <> '' THEN x.location "
-								   "ELSE '{ALL_SEGMENTS}' "
-							  "END AS execlocation, "
-							  "x.fmttype, x.fmtopts, x.command, "
-							  "x.rejectlimit, x.rejectlimittype, "
-						 "n.nspname AS errnspname, d.relname AS errtblname, "
-					"pg_catalog.pg_encoding_to_char(x.encoding), x.writable "
-							  "FROM pg_catalog.pg_class c "
-					 "JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
-				"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
-							  "LEFT JOIN pg_catalog.pg_namespace n ON ( n.oid = d.relnamespace ) "
-							  "WHERE c.oid = '%u'::oid ",
-							  tbinfo->dobj.catId.oid);
+					"SELECT x.location, "
+						   "CASE WHEN x.command <> '' THEN x.location "
+								"ELSE '{ALL_SEGMENTS}' "
+						   "END AS execlocation, "
+						   "x.fmttype, x.fmtopts, x.command, "
+						   "x.rejectlimit, x.rejectlimittype, "
+						   "n.nspname AS errnspname, d.relname AS errtblname, "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), x.writable "
+					"FROM pg_catalog.pg_class c "
+					"JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
+					"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
+					"LEFT JOIN pg_catalog.pg_namespace n ON ( n.oid = d.relnamespace ) "
+					"WHERE c.oid = '%u'::oid ",
+					tbinfo->dobj.catId.oid);
 		}
 		else if (g_fout->remoteVersion >= 80205)
 		{
 
 			appendPQExpBuffer(query,
-					   "SELECT x.location, "
-							  "CASE WHEN x.command <> '' THEN x.location "
-								   "ELSE '{ALL_SEGMENTS}' "
-							  "END AS execlocation, "
-							  "x.fmttype, x.fmtopts, x.command, "
-							  "x.rejectlimit, x.rejectlimittype, "
-						 "n.nspname AS errnspname, d.relname AS errtblname, "
-			  "pg_catalog.pg_encoding_to_char(x.encoding), null as writable "
-							  "FROM pg_catalog.pg_class c "
-					 "JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
-				"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
-							  "LEFT JOIN pg_catalog.pg_namespace n ON ( n.oid = d.relnamespace ) "
-							  "WHERE c.oid = '%u'::oid ",
-							  tbinfo->dobj.catId.oid);
+					"SELECT x.location, "
+						   "CASE WHEN x.command <> '' THEN x.location "
+								"ELSE '{ALL_SEGMENTS}' "
+						   "END AS execlocation, "
+						   "x.fmttype, x.fmtopts, x.command, "
+						   "x.rejectlimit, x.rejectlimittype, "
+						   "n.nspname AS errnspname, d.relname AS errtblname, "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), null as writable "
+					"FROM pg_catalog.pg_class c "
+					"JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
+					"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
+					"LEFT JOIN pg_catalog.pg_namespace n ON ( n.oid = d.relnamespace ) "
+					"WHERE c.oid = '%u'::oid ",
+					tbinfo->dobj.catId.oid);
 		}
 		else
 		{
 			/* not SREH and encoding colums yet */
 			appendPQExpBuffer(query,
-					   "SELECT x.location, "
-							  "CASE WHEN x.command <> '' THEN x.location "
-								   "ELSE '{ALL_SEGMENTS}' "
-							  "END AS execlocation, "
-							  "x.fmttype, x.fmtopts, x.command, "
-							  "-1 as rejectlimit, null as rejectlimittype,"
-							  "null as errnspname, null as errtblname, "
-							  "null as encoding, null as writable "
-					  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-							  "WHERE x.reloid = c.oid AND c.oid = '%u'::oid",
-							  tbinfo->dobj.catId.oid);
+					"SELECT x.location, "
+						   "CASE WHEN x.command <> '' THEN x.location "
+								"ELSE '{ALL_SEGMENTS}' "
+						   "END AS execlocation, "
+						   "x.fmttype, x.fmtopts, x.command, "
+						   "-1 as rejectlimit, null as rejectlimittype,"
+						   "null as errnspname, null as errtblname, "
+						   "null as encoding, null as writable "
+					"FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+					"WHERE x.reloid = c.oid AND c.oid = '%u'::oid",
+					tbinfo->dobj.catId.oid);
 		}
 
 		res = PQexec(g_conn, query->data);
