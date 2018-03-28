@@ -223,7 +223,7 @@ SessionState_ShmemSize()
 {
 	SessionStateArrayEntryCount = MaxBackends;
 
-	Size size = offsetof(SessionStateArray, data);
+	Size size = offsetof(SessionStateArray, sessions);
 	size = add_size(size, mul_size(sizeof(SessionState),
 			SessionStateArrayEntryCount));
 
@@ -252,23 +252,21 @@ SessionState_ShmemInit()
 		AllSessionStateEntries->numSession = 0;
 		AllSessionStateEntries->maxSession = SessionStateArrayEntryCount;
 
-		AllSessionStateEntries->sessions = (SessionState *)&AllSessionStateEntries->data;
-
 		/* Every entry of the array is free at this time */
-		AllSessionStateEntries->freeList = AllSessionStateEntries->sessions;
+		AllSessionStateEntries->freeList = (SessionState *) &AllSessionStateEntries->sessions[0];
 		AllSessionStateEntries->usedList = NULL;
 
 		/*
 		 * Set all the entries' sessionId to invalid. Also, set the next pointer
 		 * to point to the next entry in the array.
 		 */
-		SessionState *prev = &AllSessionStateEntries->sessions[0];
+		SessionState *prev = (SessionState *) &AllSessionStateEntries->sessions[0];
 		prev->sessionId = INVALID_SESSION_ID;
 		prev->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;
 
 		for (int i = 1; i < AllSessionStateEntries->maxSession; i++)
 		{
-			SessionState *cur = &AllSessionStateEntries->sessions[i];
+			SessionState *cur = (SessionState *) &AllSessionStateEntries->sessions[i];
 
 			cur->sessionId = INVALID_SESSION_ID;
 			cur->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;

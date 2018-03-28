@@ -115,10 +115,9 @@ typedef struct SessionStateArray
 	SessionState *freeList;
 	/* Head of the list of used entries */
 	SessionState *usedList;
-	/* Pointer to the head of the entries */
-	SessionState	   *sessions;
-	/* Placeholder to find the address where the array of entries begin */
-	void *data;
+
+	/* Head of the entries */
+	SessionState sessions[1];		/* VARIABLE LENGTH ARRAY */
 } SessionStateArray;
 
 extern volatile SessionState *MySessionState;
