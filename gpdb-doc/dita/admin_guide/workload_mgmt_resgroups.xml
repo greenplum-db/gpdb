@@ -668,9 +668,9 @@ gpstart
           <li><b>Why is CPU usage lower than the <codeph>CPU_RATE_LIMIT</codeph> configured for the resource group?</b>
             <p>You may run into this situation when a low number of queries and slices are running in the resource group, and these processes are not utilizing all of the cores on the system.</p></li>
           <li><b>Why is CPU usage for the resource group higher than the configured <codeph>CPU_RATE_LIMIT</codeph>?</b>
-            <p>This situation may occur in the following circumstances:<ul>
-              <li>A resource group may utilize more CPU than its <codeph>CPU_RATE_LIMIT</codeph> when other resource groups are idle. In this situation, Greenplum Database may allocate the CPU resource of an idle resource group to a busier one. This resource group feature is called CPU burst.</li>
-              <li>The operating system CPU scheduler may cause CPU usage to spike, then drop down. Calculate the average CPU usage within a given period of time (for example, 5 seconds) and use that average to determine if CPU usage is higher than the configured limit.</li>
+            <p>This situation can occur in the following circumstances:<ul>
+              <li>A resource group may utilize more CPU than its <codeph>CPU_RATE_LIMIT</codeph> when other resource groups are idle. In this situation, Greenplum Database allocates the CPU resource of an idle resource group to a busier one. This resource group feature is called CPU burst.</li>
+              <li>The operating system CPU scheduler may cause CPU usage to spike, then drop down. If you believe this might be occurring, calculate the average CPU usage within a given period of time (for example, 5 seconds) and use that average to determine if CPU usage is higher than the configured limit.</li>
             </ul></p></li>
         </ul>
         <p></p>
