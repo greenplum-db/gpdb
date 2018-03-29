@@ -856,6 +856,20 @@ typedef struct ExternalPath
 	/* for now it's pretty plain.. */
 } ExternalPath;
 
+/*
+ * PartitionSelectorPath is used for injection of partition selectors
+ */
+typedef struct PartitionSelectorPath
+{
+	Path		path;
+
+	Path	   *subpath;
+
+	DynamicScanInfo *dsinfo;
+	List	   *partKeyExprs;
+	List	   *partKeyAttnos;
+} PartitionSelectorPath;
+
 
 /*----------
  * IndexPath represents an index scan over a single index.

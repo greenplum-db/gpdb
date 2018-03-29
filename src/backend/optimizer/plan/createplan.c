@@ -53,7 +53,6 @@
 #include "cdb/cdbvars.h"
 
 
-static Plan *create_subplan(PlannerInfo *root, Path *best_path);		/* CDB */
 static Plan *create_scan_plan(PlannerInfo *root, Path *best_path);
 static bool use_physical_tlist(PlannerInfo *root, RelOptInfo *rel);
 static void disuse_physical_tlist(Plan *plan, Path *path);
@@ -250,6 +249,9 @@ create_subplan(PlannerInfo *root, Path *best_path)
 			break;
 		case T_Motion:
 			plan = create_motion_plan(root, (CdbMotionPath *) best_path);
+			break;
+		case T_PartitionSelector:
+			plan = create_partition_selector_plan(root, (PartitionSelectorPath *) best_path);
 			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d",
@@ -620,20 +622,14 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	Plan	   *plan;
 	bool		partition_selector_created;
 
-	Assert(best_path->outerjoinpath);
-	Assert(best_path->innerjoinpath);
-
-	inner_plan = create_subplan(root, best_path->innerjoinpath);
-
 	/*
 	 * Try to inject Partition Selectors.
 	 */
 	partition_selector_created =
-		inject_partition_selectors_for_join(root,
-												best_path,
-												&inner_plan);
+		inject_partition_selectors_for_join(root, best_path);
 
 	outer_plan = create_subplan(root, best_path->outerjoinpath);
+	inner_plan = create_subplan(root, best_path->innerjoinpath);
 
 	switch (best_path->path.pathtype)
 	{
@@ -2807,48 +2803,50 @@ create_nestloop_plan(PlannerInfo *root,
 	 * NOTE: materialize_finished_plan() does *almost* what we want -- except
 	 * we aren't finished.
 	 */
-	if (!IsA(best_path->innerjoinpath, MaterialPath) &&
-		(best_path->innerjoinpath->motionHazard ||
-		 !best_path->innerjoinpath->rescannable))
+	if (best_path->innerjoinpath->motionHazard ||
+		!best_path->innerjoinpath->rescannable)
 	{
+		Plan	   *p;
 		Material   *mat;
-		Path		matpath;	/* dummy for cost fixup */
 
-		mat = make_material(inner_plan);
+		p = inner_plan;
+		while (IsA(p, PartitionSelector))
+			p = p->lefttree;
+		if (IsA(p, Material))
+		{
+			mat = (Material *) p;
+		}
+		else
+		{
+			Path		matpath;	/* dummy for cost fixup */
 
-		/* Set cost data */
-		cost_material(&matpath,
-					  root,
-					  inner_plan->startup_cost,
-					  inner_plan->total_cost,
-					  inner_plan->plan_rows,
-					  inner_plan->plan_width);
-		mat->plan.startup_cost = matpath.startup_cost;
-		mat->plan.total_cost = matpath.total_cost;
-		mat->plan.plan_rows = inner_plan->plan_rows;
-		mat->plan.plan_width = inner_plan->plan_width;
+			/* Set cost data */
+			cost_material(&matpath,
+						  root,
+						  inner_plan->startup_cost,
+						  inner_plan->total_cost,
+						  inner_plan->plan_rows,
+						  inner_plan->plan_width);
 
+			mat = make_material(inner_plan);
+
+			mat->plan.startup_cost = matpath.startup_cost;
+			mat->plan.total_cost = matpath.total_cost;
+			mat->plan.plan_rows = inner_plan->plan_rows;
+			mat->plan.plan_width = inner_plan->plan_width;
+
+			inner_plan = (Plan *) mat;
+		}
+
+		/*
+		 * MPP-1657: Even if there is already a materialize here, we
+		 * may need to update its strictness.
+		 */
 		if (best_path->outerjoinpath->motionHazard)
 		{
 			mat->cdb_strict = true;
 			prefetch = true;
 		}
-
-		inner_plan = (Plan *) mat;
-	}
-
-	/*
-	 * MPP-1657: if there is already a materialize here, we may need to update
-	 * its strictness.
-	 */
-	else if (IsA(best_path->innerjoinpath, MaterialPath) &&
-			 best_path->innerjoinpath->motionHazard &&
-			 best_path->outerjoinpath->motionHazard)
-	{
-		Material   *mat = (Material *) inner_plan;
-
-		prefetch = true;
-		mat->cdb_strict = true;
 	}
 
 	/*
