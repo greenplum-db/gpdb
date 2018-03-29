@@ -7660,22 +7660,22 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			{
 				if (!reloptions)
 				{
-					appendStringInfoString(&sid1, ", appendonly=false ");
+					appendStringInfoString(&sid1, ", appendonly=false");
 				}
 				else
 				{
 					if (!strstr(reloptions, "appendonly="))
-						appendStringInfoString(&sid1, ", appendonly=false ");
+						appendStringInfoString(&sid1, ", appendonly=false");
 
 					if ((!strstr(reloptions, "orientation=")) &&
 						strstr(reloptions, "appendonly=true"))
-						appendStringInfoString(&sid1, ", orientation=row ");
+						appendStringInfoString(&sid1, ", orientation=row");
 				}
 			}
 
 			if (reloptions)
 			{
-				appendStringInfo(&sid1, ", %s ", reloptions);
+				appendStringInfo(&sid1, ", %s", reloptions);
 
 				pfree(reloptions);
 			}
