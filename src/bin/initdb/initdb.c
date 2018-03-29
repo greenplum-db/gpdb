@@ -65,8 +65,6 @@
 #ifndef HAVE_INT_OPTRESET
 int			optreset;
 #endif
-/* Ideally this would be in a .h file, but it hardly seems worth the trouble */
-extern const char *select_default_timezone(const char *share_path);
 
 
 /* version string we expect back from postgres */
@@ -1319,9 +1317,8 @@ static void
 setup_config(void)
 {
 	char	  **conflines;
-	char		repltok[TZ_STRLEN_MAX + 100];
+	char		repltok[100];
 	char		path[MAXPGPATH];
-	const char *default_timezone;
 
 	fputs(_("creating configuration files ... "), stdout);
 	fflush(stdout);
@@ -1380,17 +1377,6 @@ setup_config(void)
 	conflines = replace_token(conflines,
 						 "#default_text_search_config = 'pg_catalog.simple'",
 							  repltok);
-
-	default_timezone = select_default_timezone(share_path);
-	if (default_timezone)
-	{
-		snprintf(repltok, sizeof(repltok), "timezone = '%s'",
-				 escape_quotes(default_timezone));
-		conflines = replace_token(conflines, "#timezone = 'GMT'", repltok);
-		snprintf(repltok, sizeof(repltok), "log_timezone = '%s'",
-				 escape_quotes(default_timezone));
-		conflines = replace_token(conflines, "#log_timezone = 'GMT'", repltok);
-	}
 
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 

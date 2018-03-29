@@ -2258,98 +2258,6 @@ cdb_tidy_message(ErrorData *edata)
 	}
 }							   /* cdb_tidy_message */
 
-static void
-write_console(const char *line, int len)
-{
-#ifdef WIN32
-	/*
-	 * WriteConsoleW() will fail of stdout is redirected, so just fall through
-	 * to writing unconverted to the logfile in this case.
-	 */
-	if (GetDatabaseEncoding() != GetPlatformEncoding() &&
-		!in_error_recursion_trouble() &&
-		!redirection_done)
-	{
-		WCHAR	   *utf16;
-		int			utf16len;
-
-		utf16 = pgwin32_toUTF16(line, len, &utf16len);
-		if (utf16 != NULL)
-		{
-			HANDLE		stdHandle;
-			DWORD		written;
-
-			stdHandle = GetStdHandle(STD_ERROR_HANDLE);
-			if (WriteConsoleW(stdHandle, utf16, utf16len, &written, NULL))
-			{
-				pfree(utf16);
-				return;
-			}
-
-			/*
-			 * In case WriteConsoleW() failed, fall back to writing the message
-			 * unconverted.
-			 */
-			pfree(utf16);
-		}
-	}
-#else
-	/*
-	 * Conversion on non-win32 platform is not implemented yet.
-	 * It requires non-throw version of pg_do_encoding_conversion(),
-	 * that converts unconvertable characters to '?' without errors.
-	 */
-#endif
-
-	write(fileno(stderr), line, len);
-}
-
-/*
- * setup formatted_log_time, for consistent times between CSV and regular logs
- */
-static void
-setup_formatted_log_time(void)
-{
-	struct timeval tv;
-	pg_time_t	stamp_time;
-	char		msbuf[8];
-
-	gettimeofday(&tv, NULL);
-	stamp_time = (pg_time_t) tv.tv_sec;
-
-	/*
-	 * Note: we expect that guc.c will ensure that log_timezone is set up
-	 * (at least with a minimal GMT value) before Log_line_prefix can become
-	 * nonempty or CSV mode can be selected.
-	 */
-	pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
-				/* leave room for microseconds... */
-				"%Y-%m-%d %H:%M:%S        %Z",
-				pg_localtime(&stamp_time, log_timezone));
-
-	/* 'paste' microseconds into place... */
-	sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
-	strncpy(formatted_log_time + 19, msbuf, 4);
-}
-
-/*
- * setup formatted_start_time
- */
-static void
-setup_formatted_start_time(void)
-{
-	pg_time_t	stamp_time = (pg_time_t) MyStartTime;
-
-	/*
-	 * Note: we expect that guc.c will ensure that log_timezone is set up
-	 * (at least with a minimal GMT value) before Log_line_prefix can become
-	 * nonempty or CSV mode can be selected.
-	 */
-	pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
-				"%Y-%m-%d %H:%M:%S %Z",
-				pg_localtime(&stamp_time, log_timezone));
-}
-
 /*
  * Format tag info for log lines; append to the provided buffer.
  */
@@ -2480,11 +2388,14 @@ log_line_prefix(StringInfo buf)
 			case 't':
 				{
 					pg_time_t	stamp_time = (pg_time_t) time(NULL);
+					pg_tz	   *tz;
 					char		strfbuf[128];
+
+					tz = log_timezone ? log_timezone : gmt_timezone;
 
 					pg_strftime(strfbuf, sizeof(strfbuf),
 								"%Y-%m-%d %H:%M:%S %Z",
-								pg_localtime(&stamp_time, log_timezone));
+								pg_localtime(&stamp_time, tz));
 					appendStringInfoString(buf, strfbuf);
 				}
 				break;

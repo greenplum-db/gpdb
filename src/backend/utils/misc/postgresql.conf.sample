@@ -288,7 +288,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #log_temp_files = -1			# Log temporary files equal or larger
 					# than the specified number of kilobytes.
 					# -1 disables;  0 logs all temp files
-#log_timezone = 'GMT'			# actually, defaults to TZ environment
+#log_timezone = unknown			# actually, defaults to TZ environment
 					# setting
 
 #------------------------------------------------------------------------------
@@ -435,8 +435,8 @@ log_autostats=off	# print additional autostats information
 # - Locale and Formatting -
 
 #datestyle = 'iso, mdy'
-#intervalstyle = 'postgres'
-#timezone = 'GMT'
+#timezone = unknown			# actually, defaults to TZ environment
+					# setting
 #timezone_abbreviations = 'Default'     # Select the set of available time zone
 					# abbreviations.  Currently, there are
 					#   Default

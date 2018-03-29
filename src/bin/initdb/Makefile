@@ -14,9 +14,9 @@ subdir = src/bin/initdb
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-override CPPFLAGS := -DFRONTEND -I$(libpq_srcdir) -I$(top_srcdir)/src/timezone $(CPPFLAGS)
+override CPPFLAGS := -DFRONTEND -I$(libpq_srcdir) $(CPPFLAGS)
 
-OBJS=	initdb.o findtimezone.o localtime.o encnames.o pqsignal.o $(WIN32RES)
+OBJS=	initdb.o encnames.o pqsignal.o $(WIN32RES)
 
 all: submake-libpgport initdb
 
@@ -38,11 +38,6 @@ encnames.c: % : $(top_srcdir)/src/backend/utils/mb/%
 pqsignal.c: % : $(top_srcdir)/src/interfaces/libpq/%
 	rm -f $@ && $(LN_S) $< .
 
-# Likewise, pull in localtime.c from src/timezones
-
-localtime.c: % : $(top_srcdir)/src/timezone/%
-	rm -f $@ && $(LN_S) $< .
-
 install: all installdirs
 	$(INSTALL_PROGRAM) initdb$(X) '$(DESTDIR)$(bindir)/initdb$(X)'
 
@@ -53,7 +48,7 @@ uninstall:
 	rm -f '$(DESTDIR)$(bindir)/initdb$(X)'
 
 clean distclean maintainer-clean:
-	rm -f initdb$(X) $(OBJS) encnames.c pqsignal.c localtime.c
+	rm -f initdb$(X) $(OBJS) encnames.c pqsignal.c
 
 
 # ensure that changes in datadir propagate into object file
