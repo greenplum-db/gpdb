@@ -10016,13 +10016,44 @@ create table foo(a int, b int) distributed by (a);
 set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
-select count(*) from foo group by cube(a,b);
-LOG:  2016-08-19 10:46:53:360703 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
+explain select count(*) from foo group by cube(a,b);
+LOG:  2018-03-29 10:22:52:869837 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
- count 
--------
-(0 rows)
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=10489.33..21118.58 rows=40897 width=28)
+   ->  Append  (cost=10489.33..21118.58 rows=13633 width=28)
+         ->  HashAggregate  (cost=10489.33..10909.06 rows=9328 width=28)
+               Group Key: "rollup".unnamed_attr_2, "rollup".unnamed_attr_1, "rollup"."grouping", "rollup"."group_id"
+               ->  Subquery Scan on "rollup"  (cost=8552.10..10424.75 rows=1435 width=28)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=8552.10..10381.70 rows=1435 width=28)
+                           Hash Key: "rollup".unnamed_attr_2, "rollup".unnamed_attr_1, (Grouping), group_id()
+                           ->  GroupAggregate  (cost=8552.10..10295.60 rows=1435 width=28)
+                                 Group Key: "rollup"."grouping", "rollup"."group_id"
+                                 ->  Subquery Scan on "rollup"  (cost=8552.10..10134.17 rows=2153 width=28)
+                                       ->  GroupAggregate  (cost=8552.10..10069.60 rows=2153 width=28)
+                                             Group Key: "rollup".unnamed_attr_2, "rollup"."grouping", "rollup"."group_id"
+                                             ->  Subquery Scan on "rollup"  (cost=8552.10..9843.60 rows=2870 width=28)
+                                                   ->  GroupAggregate  (cost=8552.10..9757.50 rows=2870 width=28)
+                                                         Group Key: share0_ref1.b, share0_ref1.a
+                                                         ->  Sort  (cost=8552.10..8767.35 rows=28700 width=8)
+                                                               Sort Key: share0_ref1.b, share0_ref1.a
+                                                               ->  Shared Scan (share slice:id 1:0)  (cost=1391.50..1494.60 rows=28700 width=8)
+                                                                     ->  Materialize  (cost=0.00..1391.50 rows=28700 width=8)
+                                                                           ->  Seq Scan on foo  (cost=0.00..961.00 rows=28700 width=8)
+         ->  HashAggregate  (cost=9886.65..10080.37 rows=4305 width=28)
+               Group Key: "rollup".unnamed_attr_1, "rollup".unnamed_attr_2, "rollup"."grouping", "rollup"."group_id"
+               ->  Subquery Scan on "rollup"  (cost=8552.10..9822.07 rows=1435 width=28)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=8552.10..9779.02 rows=1435 width=28)
+                           Hash Key: share0_ref2.a, share0_ref2.b, (Grouping), group_id()
+                           ->  GroupAggregate  (cost=8552.10..9692.92 rows=1435 width=28)
+                                 Group Key: share0_ref2.a
+                                 ->  Sort  (cost=8552.10..8767.35 rows=28700 width=8)
+                                       Sort Key: share0_ref2.a, share0_ref2.b
+                                       ->  Shared Scan (share slice:id 2:0)  (cost=1391.50..1494.60 rows=28700 width=8)
+ Optimizer: legacy query optimizer
+(31 rows)
 
 reset client_min_messages;
 reset log_statement;
