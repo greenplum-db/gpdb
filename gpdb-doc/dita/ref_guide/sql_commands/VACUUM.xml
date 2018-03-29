@@ -97,15 +97,20 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
     <section id="section6">
       <title id="er144900">Notes</title>
       <p><codeph>VACUUM</codeph> cannot be executed inside a transaction block.</p>
-      <p>Vacuum active databases frequently (at least
-        nightly), in order to remove expired rows. After adding or deleting a large number of rows,
-        running the <codeph>VACUUM ANALYZE</codeph> command for the affected table might be useful.
-        This updates the system catalogs with the results of all recent changes, and allows the
-        Greenplum Database query optimizer to make better choices in planning queries.</p>
-      <note type="important">Regular PostgreSQL has a separate optional server process called the
+      <p>Vacuum active databases frequently (at least nightly), in order to remove expired rows.
+        After adding or deleting a large number of rows, running the <codeph>VACUUM ANALYZE</codeph>
+        command for the affected table might be useful. This updates the system catalogs with the
+        results of all recent changes, and allows the Greenplum Database query optimizer to make
+        better choices in planning queries.</p>
+      <note type="important">PostgreSQL has a separate optional server process called the
           <i>autovacuum daemon</i>, whose purpose is to automate the execution of
-          <codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> commands. This feature is currently
-        disabled in Greenplum Database. </note>
+          <codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> commands. Greenplum Database enables
+        the autovacuum daemon to perform <codeph>VACUUM</codeph> operations only on the Greenplum
+        Database template database <codeph>template0</codeph>. The autovacuum daemon performs
+          <codeph>VACUUM</codeph> operations on <codeph>template0</codeph> to manage transaction IDs
+        (XIDs) and help avoid database transaction age issues in <codeph>template0</codeph>. Manual
+          <codeph>VACUUM</codeph> operations must be performed in user-defined databases to manage
+        transaction IDs (XIDs) in those database.</note>
       <p><codeph>VACUUM</codeph> causes a substantial increase in I/O traffic, which can cause poor
         performance for other active sessions. Therefore, it is advisable to vacuum the database at
         low usage times.</p>
@@ -116,7 +121,8 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
       <p><codeph>VACUUM</codeph> commands skip external tables.</p>
       <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, however it requires an
         exclusive lock on each table being processed, is a very expensive operation, and might take
-        a long time to complete on large, distributed Greenplum Database tables. Perform <codeph>VACUUM FULL</codeph> operations during database maintenance periods. </p>
+        a long time to complete on large, distributed Greenplum Database tables. Perform
+          <codeph>VACUUM FULL</codeph> operations during database maintenance periods. </p>
       <p>As an alternative to <codeph>VACUUM FULL</codeph>, you can re-create the table with a
           <codeph>CREATE TABLE AS</codeph> statement and drop the old table. </p>
       <p>Size the free space map appropriately. You configure the free space map using the following
