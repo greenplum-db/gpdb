@@ -91,6 +91,43 @@ restore_cluster()
 	fi
 }
 
+# Test for a nasty regression -- if VACUUM FREEZE doesn't work correctly during
+# upgrade, things fail later in mysterious ways. As a litmus test, check to make
+# sure that catalog tables have been frozen. (We use gp_segment_configuration
+# because the upgrade shouldn't have touched it after the freeze.)
+check_vacuum_worked()
+{
+	local datadir=$1
+	local contentid=$2
+
+	echo "Verifying VACUUM FREEZE using gp_segment_configuration xmins..."
+
+	# Start the instance using the same pg_ctl invocation used by pg_upgrade.
+	"${NEW_BINDIR}/pg_ctl" -w -l /dev/null -D "${datadir}" \
+		-o "-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
+		start
+
+	# Query for the xmin ages.
+	local xmin_ages=$( \
+		PGOPTIONS='-c gp_session_role=utility' \
+		psql -c 'SELECT age(xmin) FROM pg_catalog.gp_segment_configuration GROUP BY age(xmin);' \
+			 -p 5432 -t -A template1 \
+	)
+
+	# Stop the instance.
+	"${NEW_BINDIR}/pg_ctl" -l /dev/null -D "${datadir}" stop
+
+	# Check to make sure all the xmins are frozen (maximum age).
+	while read age; do
+		if [ "$age" -ne 2147483647 ]; then
+			echo "ERROR: gp_segment_configuration has an entry of age $age"
+			return 1
+		fi
+	done <<< "$xmin_ages"
+
+	return 0
+}
+
 upgrade_qd()
 {
 	mkdir -p $1
@@ -103,6 +140,11 @@ upgrade_qd()
 		exit 1
 	fi
 	popd
+
+	if ! check_vacuum_worked "$3" -1; then
+		echo "ERROR: VACUUM FREEZE appears to have failed during QD upgrade"
+		exit 1
+	fi
 
 	# Remember where we were when we upgraded the QD node. pg_upgrade generates
 	# some files there that we need to copy to QE nodes.
@@ -124,6 +166,10 @@ upgrade_segment()
 		exit 1
 	fi
 	popd
+
+	# TODO: run check_vacuum_worked on each segment, too, once we have a good
+	# candidate catalog table (gp_segment_configuration doesn't exist on
+	# segments).
 }
 
 usage()
