@@ -12006,13 +12006,16 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 						 * Do for all descendants of a partition table.
 						 * No hurt if this is not a table with partitions.
 						 */
-						appendPQExpBuffer(q, "\n  AND attrelid IN (SELECT %u UNION "
-										  "SELECT pr.parchildrelid FROM "
+						appendPQExpBuffer(q, "\n  AND attrelid IN (SELECT ");
+						appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+						appendPQExpBuffer(q, "::pg_catalog.regclass ");
+						appendPQExpBuffer(q, "UNION SELECT pr.parchildrelid FROM "
 										  "pg_catalog.pg_partition_rule pr, "
 										  "pg_catalog.pg_partition p WHERE "
 										  "pr.parchildrelid != 0 AND "
-										  "pr.paroid = p.oid AND p.parrelid=%u);\n",
-										  tbinfo->dobj.catId.oid, tbinfo->dobj.catId.oid);
+										  "pr.paroid = p.oid AND p.parrelid = ");
+						appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+						appendPQExpBuffer(q, "::pg_catalog.regclass);\n");
 					}
 					else
 					{
