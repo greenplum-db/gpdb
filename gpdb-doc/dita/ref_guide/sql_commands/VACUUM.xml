@@ -106,11 +106,13 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
           <i>autovacuum daemon</i>, whose purpose is to automate the execution of
           <codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> commands. Greenplum Database enables
         the autovacuum daemon to perform <codeph>VACUUM</codeph> operations only on the Greenplum
-        Database template database <codeph>template0</codeph>. The autovacuum daemon performs
-          <codeph>VACUUM</codeph> operations on <codeph>template0</codeph> to manage transaction IDs
-        (XIDs) and help avoid database transaction age issues in <codeph>template0</codeph>. Manual
-          <codeph>VACUUM</codeph> operations must be performed in user-defined databases to manage
-        transaction IDs (XIDs) in those database.</note>
+        Database template database <codeph>template0</codeph>. Autovacuum is enabled for
+          <codeph>template0</codeph> because connections are not allowed to
+          <codeph>template0</codeph>. The autovacuum daemon performs <codeph>VACUUM</codeph>
+        operations on <codeph>template0</codeph> to manage transaction IDs (XIDs) and help avoid
+        transaction ID wraparound issues in <codeph>template0</codeph>. <p>Manual
+            <codeph>VACUUM</codeph> operations must be performed in user-defined databases to manage
+          transaction IDs (XIDs) in those databases.</p></note>
       <p><codeph>VACUUM</codeph> causes a substantial increase in I/O traffic, which can cause poor
         performance for other active sessions. Therefore, it is advisable to vacuum the database at
         low usage times.</p>
