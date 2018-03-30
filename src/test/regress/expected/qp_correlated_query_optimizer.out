@@ -1445,6 +1445,31 @@ select * from A where A.i in (select C.j from C,B where B.i in (select i from C)
  1 | 1
 (2 rows)
 
+explain select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=8)
+   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: a.i = c.i
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  GroupAggregate  (cost=0.00..431.00 rows=2 width=4)
+                     Group Key: c.i
+                     ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                           Sort Key: c.i
+                           ->  Table Scan on c  (cost=0.00..431.00 rows=2 width=4)
+                                 Filter: i > 3
+ Optimizer: PQO version 2.55.13
+(12 rows)
+
+select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
+ i  | j 
+----+---
+  1 | 1
+  1 | 1
+ 19 | 5
+(3 rows)
+
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
 -- ----------------------------------------------------------------------
