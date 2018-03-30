@@ -30,6 +30,7 @@
 
 #include "access/xact.h"
 #include "cdb/cdbutil.h"
+#include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
 #include "postmaster/fts.h"
 #include "storage/spin.h"
@@ -273,6 +274,16 @@ FaultInjector_InjectFaultNameIfSet(
 	int						ii = 0;
 	int cnt = 3600;
 	FaultInjectorType_e retvalue = FaultInjectorTypeNotSpecified;
+
+	/*
+	 * Auto-vacuum worker and launcher process, may run at unpredictable times
+	 * while running tests. So, skip setting any faults for auto-vacuum
+	 * launcher or worker. If anytime in future need to test these processes
+	 * using fault injector framework, this restriction needs to be lifted and
+	 * some other mechanism needs to be placed to avoid flaky failures.
+	 */
+	if (IsAutoVacuumLauncherProcess() || IsAutoVacuumWorkerProcess())
+		return FaultInjectorTypeNotSpecified;
 
 	/*
 	 * Return immediately if no fault has been injected ever.  It is
