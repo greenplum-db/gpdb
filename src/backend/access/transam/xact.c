@@ -2177,13 +2177,6 @@ StartTransaction(void)
 					 DtxContextToString(DistributedTransactionContext));
 			}
 
-			if (SharedLocalSnapshotSlot != NULL)
-			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-				SharedLocalSnapshotSlot->ready = false;
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-			}
-
 			/*
 			 * MPP: we're a QE Writer.
 			 *
@@ -2220,6 +2213,7 @@ StartTransaction(void)
 			{
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
+				SharedLocalSnapshotSlot->ready = false;
 				SharedLocalSnapshotSlot->xid = s->transactionId;
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
