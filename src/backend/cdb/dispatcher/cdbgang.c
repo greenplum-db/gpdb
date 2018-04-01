@@ -650,34 +650,6 @@ makeOptions(void)
 	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->hostip);
 	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->port);
 
-	/*
-	 * Transactions are tricky. Here is the copy and pasted code, and we know
-	 * they are working. The problem, is that QE may ends up with different
-	 * iso level, but postgres really does not have read uncommited and
-	 * repeated read. (is this true?) and they are mapped.
-	 *
-	 * Put these two gucs in the generic framework works (pass make
-	 * installcheck-good) if we make assign_defaultxactisolevel and
-	 * assign_XactIsoLevel correct take string "readcommitted" etc.	(space
-	 * stripped).  However, I do not want to change this piece of code unless
-	 * I know it is broken.
-	 */
-	if (DefaultXactIsoLevel != XACT_READ_COMMITTED)
-	{
-		if (DefaultXactIsoLevel == XACT_REPEATABLE_READ)
-			appendStringInfo(&string, " -c default_transaction_isolation=repeatable\\ read");
-		else if (DefaultXactIsoLevel == XACT_SERIALIZABLE)
-			appendStringInfo(&string, " -c default_transaction_isolation=serializable");
-	}
-
-	if (XactIsoLevel != XACT_READ_COMMITTED)
-	{
-		if (XactIsoLevel == XACT_REPEATABLE_READ)
-			appendStringInfo(&string, " -c transaction_isolation=repeatable\\ read");
-		else if (XactIsoLevel == XACT_SERIALIZABLE)
-			appendStringInfo(&string, " -c transaction_isolation=serializable");
-	}
-
 	for (i = 0; i < ngucs; ++i)
 	{
 		struct config_generic *guc = gucs[i];

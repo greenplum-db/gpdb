@@ -332,7 +332,6 @@ extern void verify_shared_snapshot_ready(void);
 int			mppTxnOptions(bool needTwoPhase);
 int			mppTxOptions_IsoLevel(int txnOptions);
 bool		isMppTxOptions_ReadOnly(int txnOptions);
-void		unpackMppTxnOptions(int txnOptions, int *isoLevel, bool *readOnly);
 bool		isMppTxOptions_NeedTwoPhase(int txnOptions);
 bool		isMppTxOptions_ExplicitBegin(int txnOptions);
 

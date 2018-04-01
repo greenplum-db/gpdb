@@ -342,6 +342,21 @@ select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
 select * from gp_dist_random('gp_id')
 	where gpname > (select * from repeat('sssss', 10000000));
 
+-- Cover all transaction isolation levels to ensure that a gang can be
+-- created.  Connect again so that existing gangs are destroyed.
+\connect
+begin isolation level serializable;
+end;
+\connect
+begin isolation level repeatable read;
+end;
+\connect
+begin isolation level read committed;
+end;
+\connect
+begin isolation level read uncommitted;
+end;
+
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);
 

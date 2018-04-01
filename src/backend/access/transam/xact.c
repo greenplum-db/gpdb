@@ -2116,6 +2116,13 @@ StartTransaction(void)
 	AtStart_ResourceOwner();
 
 	/*
+	 * Transactions may be started while recovery is in progress, if
+	 * hot standby is enabled.  This mode is not supported in
+	 * Greenplum yet.
+	 */
+	AssertImply(DistributedTransactionContext != DTX_CONTEXT_LOCAL_ONLY,
+				!s->startedInRecovery);
+	/*
 	 * MPP Modification
 	 *
 	 * If we're an executor and don't have a valid QDSentXID, then we're starting
@@ -2176,6 +2183,18 @@ StartTransaction(void)
 					 "distributed transaction id is invalid in context %s",
 					 DtxContextToString(DistributedTransactionContext));
 			}
+
+			/*
+			 * Snapshot must not be created before setting transaction
+			 * isolation level.
+			 */
+			Assert(!FirstSnapshotSet);
+
+			/* Assume transaction characteristics as sent by QD */
+			XactIsoLevel = mppTxOptions_IsoLevel(
+				QEDtxContextInfo.distributedTxnOptions);
+			XactReadOnly = isMppTxOptions_ReadOnly(
+				QEDtxContextInfo.distributedTxnOptions);
 
 			/*
 			 * MPP: we're a QE Writer.
@@ -2246,6 +2265,18 @@ StartTransaction(void)
 			 */
 			Assert (SharedLocalSnapshotSlot != NULL);
 			currentDistribXid = QEDtxContextInfo.distributedXid;
+
+			/*
+			 * Snapshot must not be created before setting transaction
+			 * isolation level.
+			 */
+			Assert(!FirstSnapshotSet);
+
+			/* Assume transaction characteristics as sent by QD */
+			XactIsoLevel = mppTxOptions_IsoLevel(
+				QEDtxContextInfo.distributedTxnOptions);
+			XactReadOnly = isMppTxOptions_ReadOnly(
+				QEDtxContextInfo.distributedTxnOptions);
 
 			ereportif(Debug_print_full_dtm, LOG,
 					  (errmsg("qExec reader: distributedXid %d currcid %d "
@@ -2360,8 +2391,10 @@ StartTransaction(void)
 	ShowTransactionState("StartTransaction");
 
 	ereportif(Debug_print_full_dtm, LOG,
-			  (errmsg("StartTransaction in DTX Context = '%s', %s",
+			  (errmsg("StartTransaction in DTX Context = '%s', "
+					  "isolation level %s, read-only = %d, %s",
 					  DtxContextToString(DistributedTransactionContext),
+					  IsoLevelAsUpperString(XactIsoLevel), XactReadOnly,
 					  LocalDistribXact_DisplayString(MyProc))));
 }
 
