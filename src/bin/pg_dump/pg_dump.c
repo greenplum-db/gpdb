@@ -11235,9 +11235,9 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		if (gpdb6OrLater)
 		{
 			appendPQExpBuffer(query,
-					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, x.logerrors, "
+					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
 						   "x.rejectlimit, x.rejectlimittype, "
-						   "null as errnspname, null as errtblname, "
+						   "CASE WHEN x.logerrors THEN true ELSE null END AS logerrors, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
 						   "x.writable, "
 						   "array_to_string(ARRAY( "
@@ -11253,12 +11253,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		{
 			appendPQExpBuffer(query,
 					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
-						   "CASE WHEN x.fmterrtbl = x.reloid THEN true ELSE false END AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
-						   "(SELECT relname "
-							"FROM pg_catalog.pg_class "
-							"WHERE Oid=x.fmterrtbl) AS errtblname, "
-						   "x.fmterrtbl = x.reloid AS errortofile , "
+						   "x.fmterrtbl AS logerrors, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
 						   "x.writable, "
 						   "array_to_string(ARRAY( "
@@ -11278,9 +11274,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
-						   "false AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
-						   "n.nspname AS errnspname, d.relname AS errtblname, "
+						   "d.relname AS logerrors, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
 						   "x.writable, null AS options "
 					"FROM pg_catalog.pg_class c "
@@ -11299,9 +11294,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
-						   "false AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
-						   "n.nspname AS errnspname, d.relname AS errtblname, "
+						   "d.relname AS logerrors, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
 						   "null as writable, null as options "
 					"FROM pg_catalog.pg_class c "
@@ -11320,9 +11314,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
-						   "false as logerrors, "
 						   "-1 as rejectlimit, null as rejectlimittype,"
-						   "null as errnspname, null as errtblname, "
+						   "null as logerrors, "
 						   "null as encoding, null as writable, "
 						   "null as options "
 					"FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
@@ -11353,14 +11346,12 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		fmttype = PQgetvalue(res, 0, 2);
 		fmtopts = PQgetvalue(res, 0, 3);
 		command = PQgetvalue(res, 0, 4);
-		logerrors = PQgetvalue(res, 0, 5);
-		rejlim = PQgetvalue(res, 0, 6);
-		rejlimtype = PQgetvalue(res, 0, 7);
-		errnspname = PQgetvalue(res, 0, 8);
-		errtblname = PQgetvalue(res, 0, 9);
-		extencoding = PQgetvalue(res, 0, 10);
-		writable = PQgetvalue(res, 0, 11);
-		options = PQgetvalue(res, 0, 12);
+		rejlim = PQgetvalue(res, 0, 5);
+		rejlimtype = PQgetvalue(res, 0, 6);
+		logerrors = PQgetvalue(res, 0, 7);
+		extencoding = PQgetvalue(res, 0, 8);
+		writable = PQgetvalue(res, 0, 9);
+		options = PQgetvalue(res, 0, 10);
 
 		on_clause = execlocations;
 
@@ -11525,12 +11516,10 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				appendPQExpBufferChar(q, '\n');
 
 				/*
-				 * Error tables were removed in 5.0 and replaced with file
-				 * error logging. The catalog syntax for identifying error
-				 * logging is however still using the pg_exttable.fmterrtbl
-				 * attribute so we use the errtblname for emitting LOG ERRORS.
+				 * Error tables were removed and replaced with file error
+				 * logging.
 				 */
-				if ((errtblname && strlen(errtblname) > 0) || (logerrors && logerrors[0] == 't'))
+				if (logerrors && strlen(logerrors) > 0)
 					appendPQExpBufferStr(q, "LOG ERRORS ");
 
 				/* reject limit */
