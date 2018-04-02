@@ -15,7 +15,7 @@
       <p><codeph>pg_dump</codeph> is a standard PostgreSQL utility for backing up a database, and is
         also supported in Greenplum Database. It creates a single (non-parallel) dump file. For
         routine backups of Greenplum Database, it is better to use the Greenplum Database backup
-        utility, <codeph><xref href="../admin_utilities/gpcrondump.xml#topic1"/></codeph>, for the
+        utility, <codeph><xref href="../admin_utilities/gpbackup.xml#topic1"/></codeph>, for the
         best performance.</p>
       <p>Use <codeph>pg_dump</codeph> if you are migrating your data to another database vendor's
         system, or to another Greenplum Database system with a different segment configuration (for

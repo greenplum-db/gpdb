@@ -526,7 +526,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                             or as required by your backup plan</p><p>Severity:
                                             CRITICAL</p></entry>
                                     <entry>
-                                        <ph>Run the <codeph>gpcrondump</codeph>
+                                        <ph>Run the <codeph>gpbackup</codeph>
                                             utility to create a backup of the master and segment
                                             databases in parallel.</ph>
                                     </entry>

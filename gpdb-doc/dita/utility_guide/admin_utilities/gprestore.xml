@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_phj_g5j_tbb">
+<topic id="topic1">
   <title>gprestore</title>
   <body>
     <p>Restore a Greenplum Database backup that was created using the <codeph>gpbackup</codeph>
@@ -61,7 +61,7 @@
         increase this number with the <codeph>--jobs</codeph> option for large restore
         operations.</p>
       <p>When a restore operation completes, <codeph>gprestore</codeph> returns a status code. See
-          <xref href="#topic_phj_g5j_tbb/return_codes" format="dita"/>.</p>
+          <xref href="#topic1/return_codes" format="dita"/>.</p>
       <p><codeph>gprestore</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
         configuration file. See <xref

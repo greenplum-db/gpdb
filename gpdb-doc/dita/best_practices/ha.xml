@@ -192,14 +192,8 @@
       <p>Backups are recommended for Greenplum Database databases unless the data in the database
         can be easily and cleanly regenerated from source data. Backups protect from operational,
         software, or hardware errors.</p>
-      <p>The <codeph>gpcrondump</codeph> utility makes backups in parallel across the segments, so
+      <p>The <codeph>gpbackup</codeph> utility makes backups in parallel across the segments, so
         that backups scale as the cluster grows in hardware size. </p>
-      <p>Incremental backups can significantly reduce backup sizes in some cases. An incremental
-        backup saves all heap tables, but only the append-optimized and column-oriented partitions
-        that have changed since the previous backup. When the database has large fact tables with
-        many partitions and modifications are confined to one or a few partitions in a time period,
-        incremental backups can save a large amount of disk space. Conversely, a database with
-        large, unpartitioned fact tables is a poor application for incremental backups. </p>
       <p>A backup strategy must consider where the backups will be written and where they will be
         stored. Backups can be taken to the local cluster disks, but they should not be stored there
         permanently. If the database and its backup are on the same storage, they can be lost
@@ -207,12 +201,12 @@
         operations. After performing a local backup, the files should be copied to a safe,
         off-cluster location. </p>
       <p>An alternative is to back up directly to an NFS mount. If each host in the cluster has an
-        NFS mount, ghe backups can be written directly to NFS storage. A scale-out NFS solution is
+        NFS mount, the backups can be written directly to NFS storage. A scale-out NFS solution is
         recommended to ensure that backups do not bottleneck on the IO throughput of the NFS device.
         Dell EMC Isilon is an example of this type of solution and can scale alongside the Greenplum
         cluster. </p>
       <p>Finally, through native API integration, Greenplum Database can stream backups directly to
-        Dell EMC Data Domain or Veritas NetBackup enterprise backup platforms. </p>
+        the Dell EMC Data Domain enterprise backup platform. </p>
       <section>
         <title>Best Practices</title>
         <p>
@@ -222,34 +216,19 @@
                 from sources.</p>
             </li>
             <li dir="ltr">
-              <p dir="ltr">Use the <codeph>gpcrondump</codeph>
-                <codeph>-s</codeph>, <codeph>-S</codeph>, <codeph>-t</codeph>, or
-                  <codeph>-T</codeph> options to specify only the schema and tables that need to be
+              <p dir="ltr">Use the <codeph>gpbackup</codeph>
+                  command to specify only the schema and tables that you want
                 backed up. See the <xref
-                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/admin_utilities/gpcrondump.html"
-                  format="html" scope="external">gpcrondump</xref> reference in the <cite>Greenplum
+                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/admin_utilities/gpbackup.html"
+                  format="html" scope="external">gpbackup</xref> reference in the <cite>Greenplum
                   Database Utility Reference Guide</cite> for more information.</p>
             </li>
             <li dir="ltr">
-              <p dir="ltr">Back up one schema at a time to reduce the length of time the
-                  <codeph>pg_class</codeph> table is locked.</p>
-              <p dir="ltr">At the start of the backup, <codeph>gpcrondump</codeph> places an
-                EXCLUSIVE lock on the <codeph>pg_class</codeph> table, which prevents creating,
-                altering, or dropping tables. This lock is held while <codeph>gpcrondump</codeph>
-                computes the set of tables to back up and then places SHARED ACCESS locks on the
-                tables. Once the tables are locked and backup processes started on the segments, the
-                EXCLUSIVE lock on <codeph>pg_class</codeph> is released. In a database with many
-                objects the duration of the EXCLUSIVE lock may be disruptive. Backing up one schema
-                at a time can reduce the duration of the EXCLUSIVE lock. Backups with fewer tables
-                are also more efficient for selectively restoring schemas and tables, since
-                  <codeph>gpdbrestore</codeph> does not have to search through the entire database.
-                See <xref
-                  href="http://gpdb.docs.pivotal.io/latest/admin_guide/managing/backup-locks.html"
-                  format="html" scope="external">Backup Process and Locks</xref> for more
-                information. </p>
+              <p dir="ltr"><codeph>gpbackup</codeph> places SHARED ACCESS locks on the set of
+                tables to back up.  Backups with fewer tables
+                are more efficient for selectively restoring schemas and tables, since
+                  <codeph>gprestore</codeph> does not have to search through the entire database.</p>
             </li>
-            <li dir="ltr">Use incremental backups when heap tables are relatively small and few
-              append-optimized or column-oriented partitions are modified between backups. </li>
             <li dir="ltr">If backups are saved to local cluster storage, move the files to a safe,
               off-cluster location when the backup is complete. Backup files and database files that
               reside on the same storage can be lost simultaneously.</li>
@@ -258,8 +237,7 @@
                 Dell EMC Isilon to prevent IO bottlenecks.</p>
             </li>
             <li dir="ltr" otherprops="pivotal">Consider using Pivotal Greenplum Database integration
-              to stream backups to the Dell EMC Data Domain or Veritas NetBackup enterprise backup
-              platforms.</li>
+              to stream backups to the Dell EMC Data Domain enterprise backup platform.</li>
           </ul>
         </p>
       </section>

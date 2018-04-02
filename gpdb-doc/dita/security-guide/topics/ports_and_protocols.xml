@@ -134,7 +134,7 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
           <row>
             <entry>Backup completion notification</entry>
             <entry>TCP 25, TCP 587, SMTP</entry>
-            <entry>The gpcrondump backup utility can optionally send email to a list of email
+            <entry>The <codeph>gpbackup</codeph> backup utility can optionally send email to a list of email
               addresses at completion of a backup. The SMTP service must be enabled on the Greenplum
               master host. </entry>
           </row>
@@ -194,15 +194,6 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
             <entry>Used when replication is configured on the Data Domain system. This port can be
               configured using the <codeph>replication modify</codeph> command on the Data Domain
               server.</entry>
-          </row>
-          <row>
-            <entry morerows="1">Symantec NetBackup</entry>
-            <entry>TCP/UDB 1556, veritas-pbx</entry>
-            <entry>The Symantec NetBackup client network port. </entry>
-          </row>
-          <row>
-            <entry>TCP 13724, vnetd</entry>
-            <entry>Symantec NetBackup vnetd communication port.</entry>
           </row>
           <row>
             <entry>Pgbouncer connection pooler</entry>

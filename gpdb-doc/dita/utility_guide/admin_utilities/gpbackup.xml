@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_dyz_d5j_tbb">
+<topic id="topic1">
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
@@ -51,7 +51,7 @@
         SEGMENT</codeph>command performs the backup task in parallel on each segment host. The
         backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is backed
         up.</p>When a back up operation completes, <codeph>gpbackup</codeph> returns a status code.
-      See <xref href="#topic_dyz_d5j_tbb/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph>
+      See <xref href="#topic1/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph>
         can send status email notifications after a back up operation completes. You specify when
         the utility sends the mail and the email recipients in a configuration file. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"

@@ -362,14 +362,11 @@
           additional query processing throughput. </li>
         <li>Backup Greenplum databases regularly unless the data is easily restored from
           sources.</li>
-        <li>Use incremental backups if heap tables are relatively small and few append-optimized or
-          column-oriented partitions are modified between backups.</li>
         <li>If backups are saved to local cluster storage, move the files to a safe, off-cluster
           location when the backup is complete. </li>
         <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to
           prevent IO bottlenecks.</li>
-        <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain or
-          Veritas NetBackup enterprise backup platforms.</li>
+        <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain enterprise backup platform.</li>
       </ul>
       <p>See <xref href="ha.xml#topic_q5g_pmj_s4"/>.</p>
     </section>
