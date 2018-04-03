@@ -132,7 +132,7 @@ groups:
 {% endif %}
 ## ======================================================================
 
-- name: G:Compile
+- name: Compile
   jobs:
   - gate_compile_start
 {% if "centos6" in os_types %}
@@ -161,7 +161,7 @@ groups:
 {% if "ICW" in test_sections %}
 ## ======================================================================
 
-- name: G:ICW
+- name: ICW
   jobs:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
@@ -193,7 +193,7 @@ groups:
 {% if "CS" in test_sections %}
 ## ======================================================================
 
-- name: G:CS
+- name: CS
   jobs:
   - gate_cs_start
 {% for test_name in cs_walrep_suites +
@@ -206,7 +206,7 @@ groups:
 {% if "MPP" in test_sections %}
 ## ======================================================================
 
-- name: G:MPP
+- name: MPP
   jobs:
   - gate_mpp_start
   - mpp_interconnect
@@ -222,7 +222,7 @@ groups:
 {% if "MM" in test_sections %}
 ## ======================================================================
 
-- name: G:MM
+- name: MM
   jobs:
   - gate_mm_start
 {% for test_name in MM_1_suites +
@@ -238,7 +238,7 @@ groups:
 {% if "DPM" in test_sections %}
 ## ======================================================================
 
-- name: G:DPM
+- name: DPM
   jobs:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
@@ -248,7 +248,7 @@ groups:
 {% if "UD" in test_sections %}
 ## ======================================================================
 
-- name: G:UD
+- name: UD
   jobs:
   - gate_ud_start
   - regression_tests_pxf

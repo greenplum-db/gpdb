@@ -100,7 +100,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:Compile
+- name: Compile
   jobs:
   - gate_compile_start
   - compile_gpdb_centos6
@@ -116,7 +116,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:ICW
+- name: ICW
   jobs:
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
@@ -136,7 +136,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:CS
+- name: CS
   jobs:
   - gate_cs_start
   - cs_walrep_1
@@ -146,7 +146,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:MPP
+- name: MPP
   jobs:
   - gate_mpp_start
   - mpp_interconnect
@@ -156,7 +156,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:MM
+- name: MM
   jobs:
   - gate_mm_start
   - MM_gprecoverseg
@@ -173,7 +173,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:DPM
+- name: DPM
   jobs:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
@@ -181,7 +181,7 @@ groups:
 
 ## ======================================================================
 
-- name: G:UD
+- name: UD
   jobs:
   - gate_ud_start
   - regression_tests_pxf
