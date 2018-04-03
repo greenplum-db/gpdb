@@ -171,8 +171,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 
 	systable_endscan(scan);
 
-	/* MPP-6929: metadata tracking */
-	/* GPDB_90_MERGE_FIXME: What should we report for database-role-combinations? */
+	/* update pg_stat_last_shoperation for metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		char	   *alter_subtype;
@@ -183,8 +182,10 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 			alter_subtype = "RESET";
 		else
 			alter_subtype = "SET";
+
+		/* roleoid is only valid for ALTER ROLE */
 		MetaTrackUpdObject(DatabaseRelationId,
-						   databaseid,
+						   OidIsValid(roleid) ? roleid : databaseid,
 						   GetUserId(),
 						   "ALTER", alter_subtype);
 	}
