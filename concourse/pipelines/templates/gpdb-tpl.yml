@@ -84,7 +84,6 @@ groups:
   - cs_[[ test_name ]]
 {% endfor %}
   - segwalrep_mirrorless_centos6
-  - gate_cs_end
 {% endif %}
 {% if "MPP" in test_sections %}
   ## --------------------------------------------------------------------
@@ -97,7 +96,6 @@ groups:
 {% if "sles" in os_types %}
   - mpp_resource_group_sles12
 {% endif %}
-  - gate_mpp_end
 {% endif %}
 {% if "MM" in test_sections %}
   ## --------------------------------------------------------------------
@@ -110,21 +108,18 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
-  - gate_mm_end
 {% endif %}
 {% if "DPM" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - gate_dpm_end
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
-  - gate_ud_end
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -206,7 +201,6 @@ groups:
   - cs_[[ test_name ]]
 {% endfor %}
   - segwalrep_mirrorless_centos6
-  - gate_cs_end
 
 {% endif %}
 {% if "MPP" in test_sections %}
@@ -223,7 +217,6 @@ groups:
 {% if "sles" in os_types %}
   - mpp_resource_group_sles12
 {% endif %}
-  - gate_mpp_end
 
 {% endif %}
 {% if "MM" in test_sections %}
@@ -240,7 +233,6 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
-  - gate_mm_end
 
 {% endif %}
 {% if "DPM" in test_sections %}
@@ -251,7 +243,6 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - gate_dpm_end
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -262,7 +253,6 @@ groups:
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
-  - gate_ud_end
 
 {% endif %}
 ## ======================================================================
@@ -1654,18 +1644,6 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags}}
       WITH_MIRRORS: false
 
-- name: gate_cs_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: &gate_cs_passed
-{% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites %}
-      - cs_[[ test_name ]]
-{% endfor %}
-      - segwalrep_mirrorless_centos6
-      trigger: true
-
 {% endif %}
 {% if "MPP" in test_sections %}
 ## ======================================================================
@@ -1861,20 +1839,6 @@ jobs:
     <<: *set_failed
 
 {% endif %}
-- name: gate_mpp_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - mpp_interconnect
-      - mpp_resource_group_centos6
-{% if "centos7" in os_types %}
-      - mpp_resource_group_centos7
-{% endif %}
-{% if "sles" in os_types %}
-      - mpp_resource_group_sles12
-{% endif %}
-      trigger: true
 
 {% endif %}
 {% if "MM" in test_sections %}
@@ -2085,21 +2049,6 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-- name: gate_mm_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-{% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
-      - MM_[[ test_name ]]
-{% endfor %}
-      - MM_gpcheck
-      - MM_gppkg
-      - MU_check_centos
-
-      trigger: true
 
 {% endif %}
 {% if "DPM" in test_sections %}
@@ -2340,15 +2289,6 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: gate_dpm_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      trigger: true
-      passed:
-      - DPM_gptransfer_43x_to_master
-      - DPM_gptransfer
-
 {% endif %}
 {% if "UD" in test_sections %}
 ## ======================================================================
@@ -2426,15 +2366,6 @@ jobs:
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-
-- name: gate_ud_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - regression_tests_pxf
-      - regression_tests_gphdfs_centos
-      trigger: true
 
 {% endif %}
 {% if pipeline_type == "prod" %}

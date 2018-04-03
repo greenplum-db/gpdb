@@ -64,14 +64,12 @@ groups:
   - cs_walrep_2
   - cs_pg_twophase
   - segwalrep_mirrorless_centos6
-  - gate_cs_end
   ## --------------------------------------------------------------------
   - gate_mpp_start
   - mpp_interconnect
   - mpp_resource_group_centos6
   - mpp_resource_group_centos7
   - mpp_resource_group_sles12
-  - gate_mpp_end
   ## --------------------------------------------------------------------
   - gate_mm_start
   - MM_gprecoverseg
@@ -85,17 +83,14 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
-  - gate_mm_end
   ## --------------------------------------------------------------------
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - gate_dpm_end
   ## --------------------------------------------------------------------
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
-  - gate_ud_end
 
 ## ======================================================================
 
@@ -148,7 +143,6 @@ groups:
   - cs_walrep_2
   - cs_pg_twophase
   - segwalrep_mirrorless_centos6
-  - gate_cs_end
 
 ## ======================================================================
 
@@ -159,7 +153,6 @@ groups:
   - mpp_resource_group_centos6
   - mpp_resource_group_centos7
   - mpp_resource_group_sles12
-  - gate_mpp_end
 
 ## ======================================================================
 
@@ -177,7 +170,6 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
-  - gate_mm_end
 
 ## ======================================================================
 
@@ -186,7 +178,6 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - gate_dpm_end
 
 ## ======================================================================
 
@@ -195,7 +186,6 @@ groups:
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
-  - gate_ud_end
 
 ## ======================================================================
 ##                                           _
@@ -1490,17 +1480,6 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags}}
       WITH_MIRRORS: false
 
-- name: gate_cs_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: &gate_cs_passed
-      - cs_walrep_1
-      - cs_walrep_2
-      - cs_pg_twophase
-      - segwalrep_mirrorless_centos6
-      trigger: true
-
 ## ======================================================================
 ##  __  __ ____  ____
 ## |  \/  |  _ \|  _ \
@@ -1684,16 +1663,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: gate_mpp_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - mpp_interconnect
-      - mpp_resource_group_centos6
-      - mpp_resource_group_centos7
-      - mpp_resource_group_sles12
-      trigger: true
 
 ## ======================================================================
 ##  __  __ __  __
@@ -1992,24 +1961,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: gate_mm_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - MM_gprecoverseg
-      - MM_gpcheckcat
-      - MM_analyzedb
-      - MM_gpperfmon
-      - MM_gpinitsystem
-      - MM_gpinitstandby
-      - MM_gpexpand_1
-      - MM_gpexpand_2
-      - MM_gpcheck
-      - MM_gppkg
-      - MU_check_centos
-
-      trigger: true
 
 ## ======================================================================
 ##  ____  ____  __  __
@@ -2246,15 +2197,6 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: gate_dpm_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      trigger: true
-      passed:
-      - DPM_gptransfer_43x_to_master
-      - DPM_gptransfer
-
 ## ======================================================================
 ##  _   _ ____
 ## | | | |  _ \
@@ -2326,15 +2268,6 @@ jobs:
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-
-- name: gate_ud_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - regression_tests_pxf
-      - regression_tests_gphdfs_centos
-      trigger: true
 
 ## ======================================================================
 ##  ____      _
