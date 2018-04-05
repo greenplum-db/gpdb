@@ -26,7 +26,9 @@
    [<b>--single-data-file]</b>
    [<b>--verbose</b>]
    [<b>--version</b>]
-   [<b>--with-stats</b>]</codeblock>
+   [<b>--with-stats</b>]
+
+<b>gpbackup --help</b> </codeblock>
     </section>
     <section><title>Description</title><p>The <codeph>gpbackup</codeph> utility backs up the
         contents of a database into a collection of metadata files and data files that can be used
@@ -64,8 +66,7 @@
             <varname>database_name</varname></pt>
           <pd>Required. Specifies the database to back up.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
@@ -79,8 +80,7 @@
             specify a custom backup directory, files are copied to these paths in subdirectories of
             the backup directory.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--compression-level</b>
             <varname>level</varname></pt>
@@ -88,21 +88,18 @@
             files. The default is 1. Note that <codeph>gpbackup</codeph> uses compression by
             default.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--data-only</b></pt>
           <pd>Optional. Backs up only the table data into CSV files, but does not backup metadata
             files needed to recreate the tables and other database objects.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--debug</b></pt>
           <pd>Optional. Displays verbose debug messages during operation.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--exclude-schema</b>
             <varname>schema_name</varname></pt>
@@ -128,8 +125,7 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--exclude-table-file</b>
             <varname>file_name</varname></pt>
@@ -147,22 +143,20 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--include-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to include in the backup. You can specify this
             option multiple times to include multiple schemas. If you specify this option, any
-            schemas that are not included in subsequent <codeph>--include-schema</codeph> options are
-            omitted from the backup set. You cannot combine this option with the options
+            schemas that are not included in subsequent <codeph>--include-schema</codeph> options
+            are omitted from the backup set. You cannot combine this option with the options
               <codeph>--exclude-schema</codeph>, <codeph>--include-table</codeph>, or
               <codeph>--include-table-file</codeph>. See <xref
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
             information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
@@ -180,8 +174,7 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--include-table-file</b>
             <varname>file_name</varname></pt>
@@ -200,37 +193,33 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--leaf-partition-data</b></pt>
           <pd>Optional. For partitioned tables, creates one data file per leaf partition instead of
             one data file for the entire table (the default). Using this option also enables you to
             specify individual leaf partitions to include in a backup, with the
-              <codeph>--include-table-file</codeph> option. You cannot use this option in combination
-            with <codeph>--exclude-table-file</codeph> or <codeph>--exclude-table</codeph>.</pd>
+              <codeph>--include-table-file</codeph> option. You cannot use this option in
+            combination with <codeph>--exclude-table-file</codeph> or
+              <codeph>--exclude-table</codeph>.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--metadata-only</b></pt>
           <pd>Optional. Creates only the metadata files (DDL) needed to recreate the database
             objects, but does not back up the actual table data.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--no-compression</b></pt>
           <pd>Optional. Do not compress the table data CSV files.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--quiet</b></pt>
           <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--single-data-file</b></pt>
           <pd>Optional. Create a single data file on each segment host for all tables backed up on
@@ -241,23 +230,24 @@
                 <codeph>-jobs</codeph> to a value higher than 1 to perform a parallel restore
               operation.</note></pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--verbose</b></pt>
           <pd>Optional. Print verbose log messages.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--version</b></pt>
           <pd>Optional. Print the version number and exit.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--with-stats</b></pt>
           <pd>Optional. Include query plan statistics in the backup set.</pd>
+        </plentry>
+        <plentry>
+          <pt>--help</pt>
+          <pd>Displays the online help.</pd>
         </plentry>
       </parml>
     </section>
@@ -283,8 +273,8 @@
         system objects and query statistics, and copy all backup files to the
           <filepath>/home/gpadmin/backup</filepath>
         directory:<codeblock>$ gpbackup -dbname demo --with-stats --backup-dir /home/gpadmin/backup</codeblock></p>
-      <p>This example uses <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph> to
-        back up a schema except for a single table. </p>
+      <p>This example uses <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph>
+        to back up a schema except for a single table. </p>
       <codeblock>$ gpbackup -dbname demo --include-schema mydata --exclude-table mydata.addresses</codeblock>
       <p>You cannot use the option <codeph>--exclude-schema</codeph> with a table filtering option
         such as <codeph>--include-table</codeph>.</p>

@@ -27,7 +27,9 @@
    [<b>--verbose</b>]
    [<b>--version</b>]
    [<b>--with-globals</b>]
-   [<b>--with-stats</b>]</codeblock>
+   [<b>--with-stats</b>]
+
+<b>gprestore --help</b></codeblock>
     </section>
     <section>
       <title>Description</title>
@@ -82,8 +84,7 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory of each
             segment host.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
@@ -97,22 +98,19 @@
             this option when you specify a custom backup directory with
             <codeph>gpbackup</codeph>.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--create-db</b></pt>
           <pd>Optional. Creates the database before restoring the database object metadata.</pd>
           <pd>The database is created by cloning the empty standard system database
               <codeph>template0</codeph>.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--debug</b></pt>
           <pd>Optional. Displays verbose debug messages during operation.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--exclude-schema</b>
             <varname>schema_name</varname></pt>
@@ -146,8 +144,7 @@
           <pd>You cannot combine this option with the option <codeph>--exclude-schema</codeph>, or
             another a table filtering option such as <codeph>--include-table</codeph>.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--include-schema</b>
             <varname>schema_name</varname></pt>
@@ -162,8 +159,7 @@
           <pd>You cannot use this option if objects in the backup set have dependencies on multiple
             schemas.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
@@ -186,14 +182,14 @@
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the restore operation. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>If you use the <codeph>--include-table-file</codeph> option, <codeph>gprestore</codeph>
-            does not create roles or set the owner of the tables. The utility restores table indexes
-            and rules. Triggers are also restored but are not supported in Greenplum Database.</pd>
+          <pd>If you use the <codeph>--include-table-file</codeph> option,
+              <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
+            utility restores table indexes and rules. Triggers are also restored but are not
+            supported in Greenplum Database.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--jobs</b>
             <varname>int</varname></pt>
@@ -204,45 +200,43 @@
               segment, you cannot set <codeph>--jobs</codeph> to a value higher than 1 to perform a
               parallel restore operation.</note></pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--quiet</b></pt>
           <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--redirect-db</b>
             <varname>database_name</varname></pt>
           <pd>Optional. Restore to the specified <varname>database_name</varname> instead of to the
             database that was backed up.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--verbose</b></pt>
           <pd>Optional. Print verbose log messages.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--version</b></pt>
           <pd>Optional. Print the version number and exit.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--with-globals</b></pt>
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
         </plentry>
-      </parml>
-      <parml>
+
         <plentry>
           <pt><b>--with-stats</b></pt>
           <pd>Optional. Restore query plan statistics from the backup set.</pd>
+        </plentry>
+        <plentry>
+          <pt>--help</pt>
+          <pd>Displays the online help.</pd>
         </plentry>
       </parml>
     </section>
