@@ -40,7 +40,6 @@ groups:
   - compile_gpdb_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
-  - gate_compile_end
   - client_loader_remote_test_aix
   ## --------------------------------------------------------------------
   - icw_gporca_centos6
@@ -111,8 +110,14 @@ groups:
   - compile_gpdb_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
+
+## ======================================================================
+
+- name: CL
+  jobs:
+  - compile_gpdb_windows_cl
+  - compile_gpdb_aix7_remote
   - client_loader_remote_test_aix
-  - gate_compile_end
 
 ## ======================================================================
 
@@ -124,14 +129,19 @@ groups:
   - icw_planner_ictcp_centos6
   - QP_memory-accounting
   - icw_extensions_gpcloud_centos6
+  - compile_gpdb_centos6
   - icw_gporca_centos7
-  - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
+  - compile_gpdb_centos7
   - icw_gporca_sles11
   - icw_gporca_sles12
   - icw_planner_sles12
+  - compile_gpdb_sles11
+  - icw_planner_ubuntu16
+  - icw_gporca_conan_ubuntu16
+  - compile_gpdb_ubuntu16
   - test_gpdb_debian_package
   - icw_extensions_gpcloud_ubuntu16
+  - compile_gpdb_ubuntu16
   - gate_icw_end
 
 ## ======================================================================
@@ -143,6 +153,7 @@ groups:
   - cs_walrep_2
   - cs_pg_twophase
   - segwalrep_mirrorless_centos6
+  - compile_gpdb_centos6
 
 ## ======================================================================
 
@@ -151,8 +162,11 @@ groups:
   - gate_mpp_start
   - mpp_interconnect
   - mpp_resource_group_centos6
+  - compile_gpdb_centos6
   - mpp_resource_group_centos7
+  - compile_gpdb_centos7
   - mpp_resource_group_sles12
+  - compile_gpdb_sles11
 
 ## ======================================================================
 
@@ -170,6 +184,7 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
+  - compile_gpdb_centos6
 
 ## ======================================================================
 
@@ -178,6 +193,7 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
+  - compile_gpdb_centos6
 
 ## ======================================================================
 
@@ -186,6 +202,7 @@ groups:
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
+  - compile_gpdb_centos6
 
 ## ======================================================================
 ##                                           _
@@ -938,35 +955,6 @@ jobs:
       - put: aix_environments
         params: {release: aix_environments}
 
-- name: gate_compile_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_centos6
-      - compile_gpdb_open_source_centos6
-      - compile_gpdb_centos7
-      - compile_gpdb_sles11
-      - compile_gpdb_ubuntu16
-      trigger: true
-    - get: bin_gpdb_sles11
-      passed:
-      - compile_gpdb_sles11
-    - get: binary_swap_gpdb_centos6
-      passed:
-      - compile_gpdb_binary_swap_centos6
-    - get: bin_gpdb_centos6
-      passed:
-      - compile_gpdb_centos6
-    - get: bin_gpdb_centos7
-      passed:
-      - compile_gpdb_centos7
-    - get: compiled_bits_ubuntu16
-      passed:
-      - compile_gpdb_ubuntu16
-    - get: deb_package_ubuntu16
-      passed:
-      - compile_gpdb_ubuntu16
 
 ## ======================================================================
 ##  ___ ______        __
@@ -1346,20 +1334,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
-    - get: bin_gpdb_sles11
-      passed:
-      - gate_compile_end
-    - get: binary_swap_gpdb_centos6
-      passed:
-      - gate_compile_end
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 - name: cs_walrep_1
   plan:
@@ -1504,16 +1483,19 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_sles11
+      - compile_gpdb_centos6
+      - compile_gpdb_centos7
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
     - get: bin_gpdb_centos7
-      passed: [gate_compile_end]
+      passed:
+      - compile_gpdb_centos7
     - get: bin_gpdb_sles11
       passed:
-      - gate_compile_end
+      - compile_gpdb_sles11
 
 - name: mpp_interconnect
   plan:
@@ -1688,17 +1670,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-    - get: bin_gpdb_sles11
-      passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 - name: MM_gppkg
   plan:
@@ -1986,11 +1962,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 - name: DPM_gptransfer_43x_to_master
   plan:
@@ -2221,14 +2197,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 - name: regression_tests_pxf
   plan:

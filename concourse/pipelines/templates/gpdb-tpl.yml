@@ -44,7 +44,6 @@ groups:
 {% if "aix7" in os_types %}
   - compile_gpdb_aix7_remote
 {% endif %}
-  - gate_compile_end
 {% if "aix7" in os_types %}
   - client_loader_remote_test_aix
 {% endif %}
@@ -154,9 +153,19 @@ groups:
 {% endif %}
 {% if "aix7" in os_types %}
   - compile_gpdb_aix7_remote
+{% endif %}
+
+## ======================================================================
+
+- name: CL
+  jobs:
+{% if "win" in os_types %}
+  - compile_gpdb_windows_cl
+{% endif %}
+{% if "aix7" in os_types %}
+  - compile_gpdb_aix7_remote
   - client_loader_remote_test_aix
 {% endif %}
-  - gate_compile_end
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -170,22 +179,25 @@ groups:
   - icw_planner_ictcp_centos6
   - QP_memory-accounting
   - icw_extensions_gpcloud_centos6
+  - compile_gpdb_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
-{% endif %}
-{% if "ubuntu16" in os_types %}
-  - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
+  - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
   - icw_gporca_sles12
   - icw_planner_sles12
+  - compile_gpdb_sles11
 {% endif %}
 {% if "ubuntu16" in os_types %}
+  - icw_planner_ubuntu16
+  - icw_gporca_conan_ubuntu16
+  - compile_gpdb_ubuntu16
   - test_gpdb_debian_package
   - icw_extensions_gpcloud_ubuntu16
+  - compile_gpdb_ubuntu16
 {% endif %}
   - gate_icw_end
 
@@ -201,6 +213,7 @@ groups:
   - cs_[[ test_name ]]
 {% endfor %}
   - segwalrep_mirrorless_centos6
+  - compile_gpdb_centos6
 
 {% endif %}
 {% if "MPP" in test_sections %}
@@ -211,11 +224,14 @@ groups:
   - gate_mpp_start
   - mpp_interconnect
   - mpp_resource_group_centos6
+  - compile_gpdb_centos6
 {% if "centos7" in os_types %}
   - mpp_resource_group_centos7
+  - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
   - mpp_resource_group_sles12
+  - compile_gpdb_sles11
 {% endif %}
 
 {% endif %}
@@ -233,6 +249,7 @@ groups:
   - MM_gpcheck
   - MM_gppkg
   - MU_check_centos
+  - compile_gpdb_centos6
 
 {% endif %}
 {% if "DPM" in test_sections %}
@@ -243,6 +260,7 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
+  - compile_gpdb_centos6
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -253,6 +271,7 @@ groups:
   - gate_ud_start
   - regression_tests_pxf
   - regression_tests_gphdfs_centos
+  - compile_gpdb_centos6
 
 {% endif %}
 ## ======================================================================
@@ -1079,51 +1098,6 @@ jobs:
         params: {release: aix_environments}
 
 {% endif %}
-- name: gate_compile_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-{% if "centos6" in os_types %}
-      - compile_gpdb_centos6
-      - compile_gpdb_open_source_centos6
-{% endif %}
-{% if "centos7" in os_types %}
-      - compile_gpdb_centos7
-{% endif %}
-{% if "sles" in os_types %}
-      - compile_gpdb_sles11
-{% endif %}
-{% if "ubuntu16" in os_types %}
-      - compile_gpdb_ubuntu16
-{% endif %}
-      trigger: true
-{% if "sles" in os_types %}
-    - get: bin_gpdb_sles11
-      passed:
-      - compile_gpdb_sles11
-{% endif %}
-{% if "centos6" in os_types %}
-    - get: binary_swap_gpdb_centos6
-      passed:
-      - compile_gpdb_binary_swap_centos6
-    - get: bin_gpdb_centos6
-      passed:
-      - compile_gpdb_centos6
-{% endif %}
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-      - compile_gpdb_centos7
-{% endif %}
-{% if "ubuntu16" in os_types %}
-    - get: compiled_bits_ubuntu16
-      passed:
-      - compile_gpdb_ubuntu16
-    - get: deb_package_ubuntu16
-      passed:
-      - compile_gpdb_ubuntu16
-{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1534,24 +1508,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
-{% if "sles" in os_types %}
-    - get: bin_gpdb_sles11
-      passed:
-      - gate_compile_end
-{% endif %}
-    - get: binary_swap_gpdb_centos6
-      passed:
-      - gate_compile_end
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-{% endif %}
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 {% for test_name in cs_walrep_suites %}
 - name: cs_[[ test_name ]]
@@ -1672,19 +1633,22 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_sles11
+      - compile_gpdb_centos6
+      - compile_gpdb_centos7
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 {% if "centos7" in os_types %}
     - get: bin_gpdb_centos7
-      passed: [gate_compile_end]
+      passed: 
+      - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
     - get: bin_gpdb_sles11
       passed:
-      - gate_compile_end
+      - compile_gpdb_sles11
 {% endif %}
 
 - name: mpp_interconnect
@@ -1868,21 +1832,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-{% endif %}
-{% if "sles" in os_types %}
-    - get: bin_gpdb_sles11
-      passed:
-      - gate_compile_end
-{% endif %}
+      - compile_gpdb_centos6
 
 - name: MM_gppkg
   plan:
@@ -2078,11 +2032,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
 
 - name: DPM_gptransfer_43x_to_master
   plan:
@@ -2317,16 +2271,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_end
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
-      - gate_compile_end
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-{% endif %}
+      - compile_gpdb_centos6
 
 - name: regression_tests_pxf
   plan:

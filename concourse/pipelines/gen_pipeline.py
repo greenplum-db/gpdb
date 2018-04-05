@@ -47,9 +47,9 @@ TEMPLATE_ENVIRONMENT = Environment(
 
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
-JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end', 'gate_icw_start',
-                    'gate_icw_end', 'gate_cs_start', 'gate_mpp_start', 'gate_mm_start', 
-                    'gate_dpm_start', 'gate_ud_start']
+JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_icw_start', 'gate_icw_end', 
+                       'gate_cs_start', 'gate_mpp_start', 'gate_mm_start', 
+                       'gate_dpm_start', 'gate_ud_start']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'icw_gporca_centos6_gpos_memory'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 
