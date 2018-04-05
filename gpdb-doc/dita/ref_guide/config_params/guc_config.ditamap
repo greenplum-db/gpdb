@@ -5,7 +5,26 @@
     <topicref href="guc_config.xml" navtitle="Server Configuration Parameters" linking="targetonly">
         <topicref href="guc_config.xml#topic_vsn_22l_z4"/>
         <topicref href="guc_config.xml#topic_cyz_p2l_z4"/>
-        <topicref href="guc_category-list.xml" linking="none"/>
+        <topicref href="guc_category-list.xml" linking="none">
+            <topicref href="guc_category-list.xml#topic12"/>
+            <topicref href="guc_category-list.xml#topic15"/>
+            <topicref href="guc_category-list.xml#topic57"/>
+            <topicref href="guc_category-list.xml#topic21"/>
+            <topicref href="guc_category-list.xml#topic29"/>
+            <topicref href="guc_category-list.xml#topic33"/>
+            <topicref href="guc_category-list.xml#topic37"/>
+            <topicref href="guc_category-list.xml#topic38"/>
+            <topicref href="guc_category-list.xml#topic39"/>
+            <topicref href="guc_category-list.xml#topic43"/>
+            <topicref href="guc_category-list.xml#topic44"/>
+            <topicref href="guc_category-list.xml#topic444"/>
+            <topicref href="guc_category-list.xml#topic45"/>
+            <topicref href="guc_category-list.xml#topic46"/>
+            <topicref href="guc_category-list.xml#topic48"/>
+            <topicref href="guc_category-list.xml#topic49"/>
+            <topicref href="guc_category-list.xml#topic55"/>
+            <topicref href="guc_category-list.xml#topic56"/>
+        </topicref>
         <topicref href="guc-list.xml" linking="none">
             <topicref href="guc-list.xml#add_missing_from"/>
             <topicref href="guc-list.xml#application_name"/>
