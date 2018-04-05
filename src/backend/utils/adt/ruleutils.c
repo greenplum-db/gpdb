@@ -6235,7 +6235,7 @@ get_const_expr(Const *constval, deparse_context *context, int showtype)
 
 		case BITOID:
 		case VARBITOID:
-			appendStringInfo(buf, "B'%s'", extval);
+			appendStringInfo(buf, "'%s'", extval);
 			break;
 
 		case BOOLOID:
