@@ -31,6 +31,7 @@
 #include "access/distributedlog.h"
 #include "access/slru.h"
 #include "access/transam.h"
+#include "cdb/cdbtm.h"
 #include "storage/shmem.h"
 #include "utils/guc.h"
 
@@ -93,7 +94,7 @@ static void DistributedLog_SetCommitted(TransactionId localXid,
 							DistributedTransactionId distribXid,
 							bool isRedo);
 static int	DistributedLog_ZeroPage(int page, bool writeXlog);
-static void DistributedLog_Truncate(void);
+static void DistributedLog_Truncate(TransactionId oldestXmin);
 static bool DistributedLog_PagePrecedes(int page1, int page2);
 static void DistributedLog_WriteZeroPageXlogRec(int page);
 static void DistributedLog_WriteTruncateXlogRec(int page);
@@ -187,6 +188,8 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 	DistributedLogEntry *entries = NULL;
 	TransactionId oldOldestXmin;
 
+	Assert(DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE);
+
 	if (!TransactionIdIsNormal(oldestLocalXmin))
 		elog(ERROR, "invalid oldest xmin: %u", oldestLocalXmin);
 
@@ -205,10 +208,6 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		 * Fortunately, that only happens on the first call. But if that
 		 * ever becomes a problem, we could persist the value across
 		 * server restarts e.g. in the checkpoint record.
-		 *
-		 * We must release DistributedLogControlLock first, to avoid deadlock.
-		 * (GetNewTransactionId() can call DistributedLog_Truncate(), while
-		 * already holding XidGenLock)
 		 */
 		DistributedLog_InitOldestXmin(oldestLocalXmin);
 		oldestXmin = DistributedLogShared->oldestXmin;
@@ -257,21 +256,43 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 			break;
 	}
 
-	DistributedLogShared->oldestXmin = oldestXmin;
+	/* Truncate DistributedLog, if possible. */
+	DistributedLog_Truncate(oldestXmin);
 
-	/*
-	 * Done. But if we crossed an SLRU segment boundary, we can now remove
-	 * some old segments.
-	 */
-	if (oldOldestXmin % (ENTRIES_PER_PAGE * SLRU_PAGES_PER_SEGMENT) !=
-		oldestXmin % (ENTRIES_PER_PAGE * SLRU_PAGES_PER_SEGMENT))
-	{
-		DistributedLog_Truncate();
-	}
+	DistributedLogShared->oldestXmin = oldestXmin;
 
 	LWLockRelease(DistributedLogControlLock);
 
 	return oldestXmin;
+}
+
+/*
+ * Maintain "oldest xmin" among distributed snapshots on QD.
+ *
+ * On QD, all distributed transactions are represented in ProcArray (unlike
+ * QEs).  Therefore, oldest xmin among distributed snapshots on QD is the same
+ * as RecentGlobalXmin.  Furthermore, HeapTupleSatisfiesMVCC ignores
+ * distributed snapshot on QD, relying solely on local snapshots.  Maintaining
+ * oldest xmin in shared memory is still helpful on QD because it allows
+ * reusing the logic to agressively truncate distributed log that's applied on
+ * QEs.  On the flip side, a point of contention that can be avoided on QD is
+ * introduced.  If this turns out to be a bottleneck, atomic operations may
+ * come to rescue.
+ */
+void
+DistributedLog_AdvanceOldestXminOnQD(TransactionId oldestLocalXmin)
+{
+	Assert(DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE);
+
+	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
+	TransactionId oldOldestXmin = DistributedLogShared->oldestXmin;
+	if (TransactionIdPrecedes(oldOldestXmin, oldestLocalXmin))
+	{
+		/* Truncate DistributedLog, if possible. */
+		DistributedLog_Truncate(oldestLocalXmin);
+		DistributedLogShared->oldestXmin = oldestLocalXmin;
+	}
+	LWLockRelease(DistributedLogControlLock);
 }
 
 /*
@@ -777,6 +798,10 @@ DistributedLog_Extend(TransactionId newestXact)
 
 /*
  * Remove all DistributedLog segments that are no longer needed.
+ * DistributedLog is consulted for transactions that are committed but appear
+ * as in-progress to a snapshot.  Segments that hold status of transactions
+ * older than the oldest xmin of all distributed snapshots are no longer
+ * needed.
  *
  * Before removing any DistributedLog data, we must flush XLOG to disk, to
  * ensure that any recently-emitted HEAP_FREEZE records have reached disk;
@@ -796,21 +821,26 @@ DistributedLog_Extend(TransactionId newestXact)
  * NOTE: The caller should hold DistributedLogControlLock in exclusive mode.
  */
 static void
-DistributedLog_Truncate(void)
+DistributedLog_Truncate(TransactionId oldestXmin)
 {
 	int			cutoffPage;
-	TransactionId oldestXmin;
+	TransactionId oldOldestXmin = DistributedLogShared->oldestXmin;
 
 	Assert(LWLockHeldByMe(DistributedLogControlLock));
 
-	/*
-	 * Get the current oldestXmin value. Anything older than that can be
-	 * removed.
-	 */
-	oldestXmin = DistributedLogShared->oldestXmin;
-	if (oldestXmin == InvalidTransactionId)
+	if (oldOldestXmin == InvalidTransactionId)
 	{
 		/* not initialized yet */
+		return;
+	}
+
+	if (oldOldestXmin % (ENTRIES_PER_PAGE * SLRU_PAGES_PER_SEGMENT) ==
+		oldestXmin % (ENTRIES_PER_PAGE * SLRU_PAGES_PER_SEGMENT))
+	{
+		/*
+		 * If newly computed oldestXmin falls on the same SLRU segment, we
+		 * cannot truncate anything.
+		 */
 		return;
 	}
 
