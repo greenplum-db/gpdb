@@ -178,3 +178,13 @@ insert into ao_t1 select i, i from generate_series(1, 10000) i;
 update ao_t1 set b = b + 1;
 vacuum full ao_t1;
 drop table ao_t1;
+
+-- superuser must be able to vacuum analyze the table
+CREATE ROLE r_priv_test;
+CREATE SCHEMA s_priv_test;
+CREATE TABLE s_priv_test.t_priv_table(a INT);
+INSERT INTO s_priv_test.t_priv_table SELECT i FROM generate_series(1, 10)i;
+ALTER TABLE s_priv_test.t_priv_table OWNER TO r_priv_test;
+VACUUM ANALYZE s_priv_test.t_priv_table;
+DROP SCHEMA s_priv_test CASCADE;
+DROP ROLE r_priv_test;
