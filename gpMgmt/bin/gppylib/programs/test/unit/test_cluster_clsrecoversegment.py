@@ -216,29 +216,29 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         assert not self.subject.logger.warn.called
 
     def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self):
-        self.execSqlResult.fetchall.return_value = [[3], [1]]
+        self.execSqlResult.fetchall.return_value = [[0, 3], [0, 1]]
         gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock(spec=GpDB)
-        segment_mock.getSegmentContentId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        segment_mock = 0
+        states_mock = {0: [3, 1]}
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, states_mock, segment_mock)
         self.assertTrue(mismatched)
 
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self):
-        self.execSqlResult.fetchall.return_value = [[3]]
+        self.execSqlResult.fetchall.return_value = [[0, 3]]
         gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock(spec=GpDB)
-        segment_mock.getSegmentContentId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        segment_mock = 0
+        states_mock = {0: [3]}
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, states_mock, segment_mock)
         self.assertFalse(mismatched)
 
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self):
         gparray_mock = Mock(spec=GpArray)
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
-        segment_mock = Mock(spec=GpDB)
-        segment_mock.getSegmentDbId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
+        segment_mock = 0
+        states_mock = {0: []}
+        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, states_mock, segment_mock)
         self.assertFalse(mismatched)
 
     def test__run__when_no_replication_is_setup__raises(self):

@@ -40,6 +40,8 @@ class GpRecoversegTestCase(GpTestCase):
             config_file.write("")
 
         self.conn = Mock()
+        # We need to explicitly mock __enter__ and __exit__ to be able to use self.conn in with statements
+        self.conn.__enter__, self.conn.__exit__ = self.conn.open, self.conn.close
         self.cursor = FakeCursor()
         self.db_singleton = Mock()
 
