@@ -40,8 +40,8 @@ select age(datfrozenxid) > 200 * 1000000 from pg_database where datname=current_
 -- There is a limit of one billion transactions due to xid_stop_limit
 -- Let's vacuum to clean up after ourselves to make future tests or multiple runs more reliable.
 \c regression;
-VACUUM;
+VACUUM FREEZE;
 \c template1;
-VACUUM;
+VACUUM FREEZE;
 \c postgres;
-VACUUM;
+VACUUM FREEZE;
