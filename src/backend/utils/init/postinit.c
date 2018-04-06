@@ -793,6 +793,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		MyDatabaseTableSpace = dbform->dattablespace;
 		/* take database name from the caller, just for paranoia */
 		strlcpy(dbname, in_dbname, sizeof(dbname));
+		IsMyDatabaseTemplate0 = strcmp(dbname, TEMPLATE0_DATABASE_NAME) == 0;
 		pfree(tuple);
 	}
 	else
