@@ -590,39 +590,7 @@ anchors:
         BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
 
-- &cs_ccp_aggregate_dpm_start
-  - get: gpdb_src
-    passed: [gate_dpm_start]
-  - get: gpdb_binary
-    resource: bin_gpdb_centos6
-    passed: [gate_dpm_start]
-    trigger: ((reduced-frequency-trigger-flag))
-  - get: ccp_src
-  - get: centos-gpdb-dev-6
-
-- &cs_ccp_aggregate_cluster_start
-  - get: gpdb_src
-    passed: [gate_cs_start]
-  - get: gpdb_binary
-    resource: bin_gpdb_centos6
-    passed: [gate_cs_start]
-    trigger: true
-  - get: ccp_src
-  - get: centos-gpdb-dev-6
-
-- &cs_ccp_terraform_vars
-  aws_instance-node-instance_type: m4.large
-  aws_ebs_volume_type: gp2
-  number_of_nodes: 1
-
-- &cs_ccp_terraform_params
-  params:
-    <<: *ccp_default_params
-    vars:
-      <<: *ccp_default_vars
-      <<: *cs_ccp_terraform_vars
-
-- &cs_ccp_gen_cluster_params
+cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
