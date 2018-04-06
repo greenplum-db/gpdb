@@ -3,13 +3,13 @@
                            'walrep_2'] %}
 {% set cs_pg_twophase_suites = ['pg_twophase'] %}
 
-{% set MM_1_suites = ['gprecoverseg',
+{% set CM_1_suites = ['gprecoverseg',
                       'gpcheckcat'] %}
-{% set MM_2_suites = ['analyzedb',
+{% set CM_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem',
                       'gpinitstandby'] %}
-{% set MM_gpexpand_suites = ['gpexpand_1',
+{% set CM_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
@@ -96,23 +96,23 @@ groups:
   - mpp_resource_group_sles12
 {% endif %}
 {% endif %}
-{% if "MM" in test_sections %}
+{% if "CM" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_mm_start
-{% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
-  - MM_[[ test_name ]]
+  - gate_cm_start
+{% for test_name in CM_1_suites +
+                    CM_2_suites +
+                    CM_gpexpand_suites %}
+  - CM_[[ test_name ]]
 {% endfor %}
-  - MM_gpcheck
-  - MM_gppkg
+  - CM_gpcheck
+  - CM_gppkg
   - MU_check_centos
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "DP" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_dpm_start
-  - DPM_gptransfer_43x_to_master
-  - DPM_gptransfer
+  - gate_dp_start
+  - DP_gptransfer_43x_to_master
+  - DP_gptransfer
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
@@ -235,31 +235,31 @@ groups:
 {% endif %}
 
 {% endif %}
-{% if "MM" in test_sections %}
+{% if "CM" in test_sections %}
 ## ======================================================================
 
-- name: MM
+- name: CM
   jobs:
-  - gate_mm_start
-{% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
-  - MM_[[ test_name ]]
+  - gate_cm_start
+{% for test_name in CM_1_suites +
+                    CM_2_suites +
+                    CM_gpexpand_suites %}
+  - CM_[[ test_name ]]
 {% endfor %}
-  - MM_gpcheck
-  - MM_gppkg
+  - CM_gpcheck
+  - CM_gppkg
   - MU_check_centos
   - compile_gpdb_centos6
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "DP" in test_sections %}
 ## ======================================================================
 
-- name: DPM
+- name: DP
   jobs:
-  - gate_dpm_start
-  - DPM_gptransfer_43x_to_master
-  - DPM_gptransfer
+  - gate_dp_start
+  - DP_gptransfer_43x_to_master
+  - DP_gptransfer
   - compile_gpdb_centos6
 
 {% endif %}
@@ -299,9 +299,9 @@ resource_types:
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "CS"      in test_sections or
-      "DPM"     in test_sections or
+      "DP"     in test_sections or
       "MPP"     in test_sections or
-      "MM"      in test_sections %}
+      "CM"      in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -331,7 +331,7 @@ resources:
 
 {% endif %}
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "DP" in test_sections %}
 # a second cluster for gptransfer tests
 - name: terraform2
   type: terraform
@@ -542,7 +542,7 @@ resources:
     regexp: windows-cl/greenplum-loaders-(.*)-WinXP-x86_32.msi
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "DP" in test_sections %}
 - name: bin_gpdb4_centos6
   type: s3
   source:
@@ -584,7 +584,7 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
+{% if 'DP' in test_sections + os_types or 'aix7' in test_sections + os_types %}
 - name: nightly-trigger
   type: time
   source:
@@ -1773,16 +1773,16 @@ jobs:
 {% endif %}
 
 {% endif %}
-{% if "MM" in test_sections %}
+{% if "CM" in test_sections %}
 ## ======================================================================
-##  __  __ __  __
-## |  \/  |  \/  |
-## | |\/| | |\/| |
-## | |  | | |  | |
-## |_|  |_|_|  |_|
+##   ____ __  __
+##  / ___|  \/  |
+## | |   | |\/| |
+## | |___| |  | |
+##  \____|_|  |_|
 ## ======================================================================
 
-- name: gate_mm_start
+- name: gate_cm_start
   plan:
 {% if stagger_sections %}
   # stagger starts on prod pipelines
@@ -1806,17 +1806,17 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-- name: MM_gppkg
+- name: CM_gppkg
   plan:
   - aggregate:
     - get: gpdb_src
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1845,18 +1845,18 @@ jobs:
   ensure:
     <<: *set_failed
 
-{% for test_name in MM_1_suites %}
-- name: MM_[[ test_name ]]
+{% for test_name in CM_1_suites %}
+- name: CM_[[ test_name ]]
   plan:
   - aggregate:
     - get: gpdb_src
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1882,17 +1882,17 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-- name: MM_gpcheck
+- name: CM_gpcheck
   plan:
   - aggregate: &gets_for_behave
     - get: gpdb_src
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: gpcheck_as_gpadmin
@@ -1902,8 +1902,8 @@ jobs:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
 
-{% for test_name in MM_2_suites %}
-- name: MM_[[ test_name ]]
+{% for test_name in CM_2_suites %}
+- name: CM_[[ test_name ]]
   plan:
   - aggregate: *gets_for_behave
   - task: [[ test_name ]]
@@ -1917,10 +1917,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: MU_check_centos
@@ -1929,18 +1929,18 @@ jobs:
     params:
       TEST_OS: centos
 
-{% for test_name in MM_gpexpand_suites %}
-- name: MM_[[ test_name ]]
+{% for test_name in CM_gpexpand_suites %}
+- name: CM_[[ test_name ]]
   plan:
   - aggregate:
     - get: gpdb_src
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
+      passed: [gate_cm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1973,16 +1973,24 @@ jobs:
 {% endfor %}
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "DP" in test_sections %}
 ## ======================================================================
+<<<<<<< HEAD
 ##  ____  ____  __  __
 ## |  _ \|  _ \|  \/  |
 ## | | | | |_) | |\/| |
 ## | |_| |  __/| |  | |
 ## |____/|_|   |_|  |_|
+=======
+##  ____  ____
+## |  _ \|  _ \
+## | | | | |_) |
+## | |_| |  __/
+## |____/|_|
+>>>>>>> ci: rename DPM and MM to DP and CM
 ## ======================================================================
 
-- name: gate_dpm_start
+- name: gate_dp_start
   plan:
 {% if stagger_sections %}
   # stagger starts on prod pipelines
@@ -2006,16 +2014,16 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-- name: DPM_gptransfer_43x_to_master
+- name: DP_gptransfer_43x_to_master
   plan:
   - get: nightly-trigger
     trigger: ((nightly-trigger-flag))
   - aggregate:
     - get: gpdb_src
-      passed: [gate_dpm_start]
+      passed: [gate_dp_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
+      passed: [gate_dp_start]
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb4_binary
       resource: bin_gpdb4_centos6
@@ -2111,14 +2119,14 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: DPM_gptransfer
+- name: DP_gptransfer
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_dpm_start]
+      passed: [gate_dp_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
+      passed: [gate_dp_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -2330,15 +2338,15 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
     - regression_tests_pxf
-{% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
-    - MM_[[ test_name ]]
+{% for test_name in CM_1_suites +
+                    CM_2_suites +
+                    CM_gpexpand_suites %}
+    - CM_[[ test_name ]]
 {% endfor %}
-    - MM_gpcheck
-    - MM_gppkg
+    - CM_gpcheck
+    - CM_gppkg
     - MU_check_centos
-    - DPM_gptransfer_43x_to_master
-    - DPM_gptransfer
+    - DP_gptransfer_43x_to_master
+    - DP_gptransfer
     - mpp_interconnect
 {% endif %}

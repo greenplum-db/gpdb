@@ -48,8 +48,8 @@ TEMPLATE_ENVIRONMENT = Environment(
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
 JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_icw_start', 'gate_icw_end', 
-                       'gate_cs_start', 'gate_mpp_start', 'gate_mm_start', 
-                       'gate_dpm_start', 'gate_ud_start']
+                       'gate_cs_start', 'gate_mpp_start', 'gate_cm_start', 
+                       'gate_dp_start', 'gate_ud_start']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'icw_gporca_centos6_gpos_memory'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     PARSER.add_argument('-a', '--test_sections',
                         action='store',
                         dest='test_sections',
-                        choices=['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD'],
+                        choices=['ICW', 'CS', 'MPP', 'CM', 'DP', 'UD'],
                         default=['ICW'],
                         nargs='+',
                         help='Select tests sections to run')
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-        ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD']
+        ARGS.test_sections = ['ICW', 'CS', 'MPP', 'CM', 'DP', 'UD']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:
