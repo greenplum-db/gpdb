@@ -92,10 +92,6 @@ def create_pipeline():
     else:
         test_trigger = "false"
 
-    stagger_sections = False
-    if ARGS.pipeline_type == "prod" or len(ARGS.test_sections) > 2:
-        stagger_sections = True
-
     context = {
         'template_filename': ARGS.template_filename,
         'generator_filename': os.path.basename(__file__),
@@ -103,7 +99,6 @@ def create_pipeline():
         'os_types': ARGS.os_types,
         'test_sections': ARGS.test_sections,
         'pipeline_type': ARGS.pipeline_type,
-        'stagger_sections': stagger_sections,
         'test_trigger': test_trigger
     }
 

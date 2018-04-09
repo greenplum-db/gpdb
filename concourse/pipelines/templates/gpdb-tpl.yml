@@ -1461,19 +1461,6 @@ jobs:
 
 - name: gate_cs_start
   plan:
-{% if stagger_sections %}
-  # stagger starts on prod pipelines
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 1 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -1643,19 +1630,6 @@ jobs:
 
 - name: gate_res_start
   plan:
-{% if stagger_sections %}
-  # stagger starts on prod pipelines
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 2 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -1797,19 +1771,6 @@ jobs:
 
 - name: gate_cli_start
   plan:
-{% if stagger_sections %}
-  # stagger starts on prod pipelines
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 3 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -2201,19 +2162,6 @@ jobs:
 
 - name: gate_ud_start
   plan:
-{% if stagger_sections %}
-  # stagger starts on prod pipelines
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 5 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
