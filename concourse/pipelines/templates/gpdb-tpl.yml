@@ -69,7 +69,7 @@ groups:
   - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 {% if "ubuntu16" in os_types %}
-  - test_gpdb_debian_package
+  - gpdb_packaging_ubuntu16
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -191,7 +191,7 @@ groups:
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - compile_gpdb_ubuntu16
-  - test_gpdb_debian_package
+  - gpdb_packaging_ubuntu16
   - icw_extensions_gpcloud_ubuntu16
   - compile_gpdb_ubuntu16
 {% endif %}
@@ -1274,7 +1274,7 @@ jobs:
     params:
       TEST_SUITE: "icw"
 
-- name: test_gpdb_debian_package
+- name: gpdb_packaging_ubuntu16
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2186,7 +2186,7 @@ jobs:
     - icw_planner_sles12
     - icw_planner_ubuntu16
     - icw_gporca_conan_ubuntu16
-    - test_gpdb_debian_package
+    - gpdb_packaging_ubuntu16
     - icw_planner_ictcp_centos6
     - icw_extensions_gpcloud_centos6
     - icw_extensions_gpcloud_ubuntu16
