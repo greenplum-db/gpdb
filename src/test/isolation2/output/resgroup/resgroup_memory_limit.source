@@ -3,376 +3,892 @@ DROP ROLE IF EXISTS role1_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
 ERROR:  resource group "rg1_memory_test" does not exist
+DROP RESOURCE GROUP rg2_memory_test;
+ERROR:  resource group "rg2_memory_test" does not exist
 -- end_ignore
 
-CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
+CREATE OR REPLACE FUNCTION repeatPalloc(int, int) RETURNS int AS '/home/gpadmin/workspace/gpdb5/src/test/isolation2/../regress/regress.so', 'repeatPalloc' LANGUAGE C READS SQL DATA;
 CREATE
 
-CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
+CREATE OR REPLACE FUNCTION hold_memory(int, int) RETURNS int AS $$ SELECT * FROM repeatPalloc($1, $2) $$ LANGUAGE sql;
 CREATE
 
---
--- first create the resgroup with memory_shared_quota == 0.
--- so each resgroup slot gets a fixed memory quota of 0.5.
---
+CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
+CREATE
 
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=50, memory_shared_quota=0);
+CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, memory_usage from gp_toolkit.gp_resgroup_status;
+CREATE
+
+--	1) single allocation
+--	Group Share Quota = 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 52 / 100 => 354
+--	rg1's slot quota: 354 / 2 * 2 => 354
+--	rg1's single slot quota: 354 / 2 => 177
+--	rg1's shared quota: 354 - 354 => 0
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*52/100 => 56
+--	memory available to one slot in rg1: 354/2 + 0 + 56 => 233
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=0);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
 
--- 1) on QD only with memory_shared_quota == 0
-
+--	1a) on QD
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(100,1);
+hold_memory
+-----------
+0          
 (1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(100,1);
+hold_memory
+-----------
+0          
 (1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory(100,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
 1: SET ROLE TO role1_memory_test;
 SET
 1: BEGIN;
 BEGIN
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(100,1);
+hold_memory
+-----------
+0          
 (1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(100,1);
+hold_memory
+-----------
+0          
 (1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory(100,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT hold_memory_by_percent(1,0.45);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-1: SELECT hold_memory_by_percent(1,0.45);
+1: SELECT hold_memory(300,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
+--	1b) on QEs
 1: SET ROLE TO role1_memory_test;
 SET
-1: BEGIN;
-BEGIN
-1: SELECT hold_memory_by_percent(1,0.45);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-1: SELECT hold_memory_by_percent(1,0.45);
-ERROR:  Out of memory
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-1q: ... <quitting>
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT hold_memory_by_percent(1,0.55);
-ERROR:  Out of memory
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-1q: ... <quitting>
-
--- 2) on QEs with memory_shared_quota == 0
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(100,1)=0;
 count
 -----
 0    
 (1 row)
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(100,1)=0;
 count
 -----
 0    
 (1 row)
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158454)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(100,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=8992)
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.45)=0;
-count
------
-0    
-(1 row)
-1q: ... <quitting>
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.55)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158468)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(300,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=9001)
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
-
---
--- now recreate the resgroup with memory_shared_quota > 0.
--- so each resgroup slot gets a fixed memory quota of 0.3,
--- there is also a shared memory pool of 0.4, so the actual
--- memory usage in each slot can be 0.3~0.7.
---
 
 DROP ROLE role1_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
 DROP
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=10, memory_shared_quota=40);
+
+--	2) single allocation
+--	Group Share Quota > 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 52 / 100 => 354
+--	rg1's slot quota: 354 * 60 /100 => 212
+--	rg1's single slot quota: 212 / 2 => 106
+--	rg1's shared quota: 354 - 212 => 142
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*52/100 => 56
+--	memory available to one slot in rg1: 106 + 142 + 56 => 304
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=40);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 CREATE
 
--- 3) on QD with memory_shared_quota > 0
-
+--	2a) on QD
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT hold_memory_by_percent(1,0.65);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
 (1 row)
-1q: ... <quitting>
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT hold_memory_by_percent(1,0.75);
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(90,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-1: SELECT hold_memory_by_percent(1,0.2);
-ERROR:  Out of memory
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-1q: ... <quitting>
-
--- 4) on QEs with memory_shared_quota > 0
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-count
------
-0    
-(1 row)
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-count
------
-0    
-(1 row)
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-count
------
-0    
-(1 row)
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158496)
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-1q: ... <quitting>
-
--- 5) QD: concurrent transactions in same group with memory_shared_quota > 0
 
 1: SET ROLE TO role1_memory_test;
 SET
 1: BEGIN;
 BEGIN
-1: SELECT hold_memory_by_percent(1,0.6);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
 (1 row)
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT hold_memory_by_percent(1,0.3);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
 (1 row)
-2q: ... <quitting>
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT hold_memory_by_percent(1,0.3);
-hold_memory_by_percent
-----------------------
-0                     
+1: SELECT hold_memory(90,1);
+hold_memory
+-----------
+0          
 (1 row)
-2: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory(90,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-2q: ... <quitting>
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
-
--- 6) QE: concurrent transactions in same group with memory_shared_quota > 0
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: BEGIN;
-BEGIN
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
-count
------
-0    
-(1 row)
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
-count
------
-0    
-(1 row)
-2q: ... <quitting>
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
-count
------
-0    
-(1 row)
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158538)
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-2q: ... <quitting>
-1q: ... <quitting>
-
--- 7) QD: concurrent transactions in same group with memory_shared_quota = 100
-
-ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
-ALTER
-
-1: SET ROLE TO role1_memory_test;
-SET
-1: BEGIN;
-BEGIN
-1: SELECT hold_memory_by_percent(1,0.6);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT hold_memory_by_percent(1,0.3);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-2q: ... <quitting>
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT hold_memory_by_percent(1,0.3);
-hold_memory_by_percent
-----------------------
-0                     
-(1 row)
-2: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory(360,1);
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-2q: ... <quitting>
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
--- 8) QE: concurrent transactions in same group with memory_shared_quota = 100
-
-ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
-ALTER
+--	2b) on QEs
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(90,1)=0;
+count
+-----
+0    
+(1 row)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(90,1)=0;
+count
+-----
+0    
+(1 row)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(90,1)=0;
+count
+-----
+0    
+(1 row)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(90,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=9037)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: BEGIN;
-BEGIN
-1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
-count
------
-0    
-(1 row)
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
-count
------
-0    
-(1 row)
-2q: ... <quitting>
-2: SET ROLE TO role1_memory_test;
-SET
-2: BEGIN;
-BEGIN
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
-count
------
-0    
-(1 row)
-2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 192.168.99.102:25432 pid=18476)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(360,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=9046)
 DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory_by_percent" statement 1
-2q: ... <quitting>
+CONTEXT:  SQL function "hold_memory" statement 1
 1q: ... <quitting>
 
--- cleanup
 DROP ROLE role1_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
 DROP
+
+--	3) single allocation
+--	Group Share Quota > 0
+--	Global Share Quota > 0
+--	Slot Quota = 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 52 / 100 => 354
+--	rg1's slot quota: 0
+--	rg1's shared quota: 354
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*52/100 => 56
+--	memory available to one slot in rg1: 354 + 56 => 410
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=100);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+--	3a) on QD
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(150,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1: SELECT hold_memory(150,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory(450,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+--	3b) on QEs
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+count
+-----
+0    
+(1 row)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+count
+-----
+0    
+(1 row)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=9082)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(450,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=9091)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+
+--	4) multi allocation in one group
+--	Group Share Quota = 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 52 / 100 => 354
+--	rg1's slot quota: 354 / 2 * 2 => 354
+--	rg1's single slot quota: 354 / 2 => 177
+--	rg1's shared quota: 0
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*52/100 => 56
+--	memory available to one slot in rg1: 177 + 56 => 233
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=0);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+--	4a) on QD
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(200,1);
+hold_memory
+-----------
+0          
+(1 row)
+2: SELECT hold_memory(200,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(220,1);
+hold_memory
+-----------
+0          
+(1 row)
+2: SELECT hold_memory(220,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(220,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2: SELECT hold_memory(220,1);
+hold_memory
+-----------
+0          
+(1 row)
+2q: ... <quitting>
+
+--	4b) on QEs
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(220,1)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(220,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=2562)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(220,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(220,1)=0;
+count
+-----
+0    
+(1 row)
+2q: ... <quitting>
+
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+
+--	5) multi allocation in one group
+--	Group Share Quota > 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 52 / 100 => 354
+--	rg1's slot quota: 354 * 50 / 100 => 177
+--	rg1's single slot quota: 177 / 2 => 88
+--	rg1's shared quota: 354 - 88 * 2 => 178
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*52/100 => 56
+--	memory available to one slot in rg1: 88 + 178 + 56 => 322
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=50);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+--	5a) on QD
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+-- reserve all the group shared quota
+1: SELECT hold_memory(270,1);
+hold_memory
+-----------
+0          
+(1 row)
+-- must allocate from global share
+2: SELECT hold_memory(140,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(270,1);
+hold_memory
+-----------
+0          
+(1 row)
+2: SELECT hold_memory(270,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(270,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2: SELECT hold_memory(270,1);
+hold_memory
+-----------
+0          
+(1 row)
+2q: ... <quitting>
+
+--	5b) on QEs
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+-- reserve all the group shared quota
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(270,1)=0;
+count
+-----
+0    
+(1 row)
+-- must allocate from global share
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(140,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(270,1)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(270,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=3581)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(270,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(270,1)=0;
+count
+-----
+0    
+(1 row)
+2q: ... <quitting>
+
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+
+--	6) multi allocation in different group
+--	Group Share Quota > 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 20 / 100 => 136
+--	rg1's slot quota: 136 * 60 / 100 / 2 * 2 => 80
+--	rg1's single slot quota: 80 / 2 => 40
+--	rg1's shared quota: 136 - 40 * 2 => 56
+--	rg2 same as rg1
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*20/100 - 682*20/100 => 138
+--	memory available to one slot in rg1/rg2: 40 + 56 + 138 => 234
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=40);
+CREATE
+CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=40);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+CREATE ROLE role2_memory_test RESOURCE GROUP rg2_memory_test;
+CREATE
+
+--	6a) on QD
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+2: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(200,1);
+hold_memory
+-----------
+0          
+(1 row)
+2: SELECT hold_memory(200,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT hold_memory(200,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+2: SELECT hold_memory(200,1);
+hold_memory
+-----------
+0          
+(1 row)
+2q: ... <quitting>
+
+--	6b) on QEs
+--	not exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	exceed the global share
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=4663)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+2q: ... <quitting>
+
+--	allocate serially
+1: SET ROLE TO role1_memory_test;
+SET
+2: SET ROLE TO role2_memory_test;
+SET
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(200,1)=0;
+count
+-----
+0    
+(1 row)
+2q: ... <quitting>
+
+DROP ROLE role1_memory_test;
+DROP
+DROP ROLE role2_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+DROP RESOURCE GROUP rg2_memory_test;
+DROP
+
+--	7) DBA can increase global shared memory by decreasing
+--		any existing group_memory_limit
+--	-----------------------
+
+--	we assume system total chunks is 682
+--	rg1's expected: 682 * 30 / 100 => 204
+--	rg1's slot quota: 204
+--	rg1's single slot quota: 204 / 2 => 102
+--	rg1's shared quota: 0
+--	rg2 same as rg1
+--	system free chunks: 682 - 682*10/100 - 682*30/100 - 682*30/100 - 682*30/100 => 2
+--	memory available to one slot in rg1/rg2: 102 + 0 + 2 => 104
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0);
+CREATE
+CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+CREATE ROLE role2_memory_test RESOURCE GROUP rg2_memory_test;
+CREATE
+
+--	7a) on QD
+--	not enough memory
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory(150,1);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+-- alter rg2 memory_limit so last query has enough memory
+ALTER RESOURCE GROUP rg2_memory_test SET memory_limit 20;
+ALTER
+--  system free chunks: 682 - 682*10/100 - 682*30/100 - 682*30/100 - 682*20/100 => 70
+--  memory available to one slot in rg1/rg2: 102 + 0 + 70 => 172
+
+--	enough memory for allocating
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory(150,1);
+hold_memory
+-----------
+0          
+(1 row)
+1q: ... <quitting>
+
+--	7b) on QEs
+--	not enough memory
+ALTER RESOURCE GROUP rg2_memory_test SET memory_limit 30;
+ALTER
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=5794)
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory" statement 1
+1q: ... <quitting>
+
+-- alter rg2 memory_limit so last query has enough memory
+ALTER RESOURCE GROUP rg2_memory_test SET memory_limit 20;
+ALTER
+--  system free chunks: 682 - 682*10/100 - 682*30/100 - 682*30/100 - 682*20/100 => 70
+--  memory available to one slot in rg1/rg2: 102 + 0 + 70 => 172
+
+--	enough memory for allocating
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory(150,1)=0;
+count
+-----
+0    
+(1 row)
+1q: ... <quitting>
+
+DROP ROLE role1_memory_test;
+DROP
+DROP ROLE role2_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+DROP RESOURCE GROUP rg2_memory_test;
+DROP
+
