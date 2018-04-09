@@ -79,7 +79,7 @@ static bool recurse_pushdown_safe(Node *setOp, Query *topquery,
 					  bool *differentTypes);
 static void compare_tlist_datatypes(List *tlist, List *colTypes,
 						bool *differentTypes);
-static bool qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
+static bool qual_is_pushdown_safe(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual,
 					  bool *differentTypes);
 static void subquery_push_qual(Query *subquery,
 				   RangeTblEntry *rte, Index rti, Node *qual);
@@ -1358,7 +1358,7 @@ push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 			Node	   *clause = (Node *) rinfo->clause;
 
 			if (!rinfo->pseudoconstant &&
-				qual_is_pushdown_safe(subquery, rti, clause, differentTypes))
+				qual_is_pushdown_safe(subquery, rte, rti, clause, differentTypes))
 			{
 				/* Push it down */
 				subquery_push_qual(subquery, rte, rti, clause);
@@ -1389,19 +1389,23 @@ push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
  * 1. If the subquery has a LIMIT clause, we must not push down any quals,
  * since that could change the set of rows returned.
  *
- * 2. If the subquery contains any window functions, we can't push quals
- * into it, because that would change the results.
- *
- * 3. If the subquery contains EXCEPT or EXCEPT ALL set ops we cannot push
+ * 2. If the subquery contains EXCEPT or EXCEPT ALL set ops we cannot push
  * quals into it, because that would change the results.
  *
- * 4. For subqueries using UNION/UNION ALL/INTERSECT/INTERSECT ALL, we can
+ * 3. For subqueries using UNION/UNION ALL/INTERSECT/INTERSECT ALL, we can
  * push quals into each component query, but the quals can only reference
  * subquery columns that suffer no type coercions in the set operation.
  * Otherwise there are possible semantic gotchas.  So, we check the
  * component queries to see if any of them have different output types;
  * differentTypes[k] is set true if column k has different type in any
  * component.
+ *
+ * 4. If the subquery target list has expressions containing calls to
+ * window functions, we must not push down any quals since this could
+ * change the meaning of the query.  At runtime, window functions refer
+ * to the executor state of their Window node.  If a pushed-down qual
+ * removed a tuple, the state seen by later tuples (hence the values
+ * of window functions) could be affected.
  *
  * 5. Do not push down quals if the subquery is a grouping extension
  * query, since this may change the meaning of the query.
@@ -1414,10 +1418,6 @@ subquery_is_pushdown_safe(Query *subquery, Query *topquery,
 
 	/* Check point 1 */
 	if (subquery->limitOffset != NULL || subquery->limitCount != NULL)
-		return false;
-
-	/* Check point 2 */
-	if (subquery->hasWindFuncs)
 		return false;
 
 	/* Targetlist must not contain SRF */
@@ -1523,6 +1523,71 @@ compare_tlist_datatypes(List *tlist, List *colTypes,
 }
 
 
+
+/*
+ * does qual include a reference to windowref node?
+ */
+static bool
+qual_contains_winref(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual)
+{
+	bool result = false;
+	if (NULL != subquery && NIL != subquery->windowClause)
+	{
+		 /*
+		  * qual needs to be resolved first to map qual columns
+		  * to the underlying set of produced columns,
+		  * e.g., if we work on a setop child
+		 */
+		Node *qualNew = ResolveNew(qual, rti, 0, rte,
+								subquery->targetList,
+								CMD_SELECT, 0);
+
+		result = contain_windowref(qualNew, NULL);
+		pfree(qualNew);
+	}
+
+	return result;
+}
+
+
+/*
+ * is a particular qual safe to push down under set operation?
+ * if the qual contains references to windowref node, its not 
+ * safe to push it down.
+ */
+static bool
+qual_is_pushdown_safe_set_operation(RangeTblEntry *rte, Index rti, Node *qual)
+{
+
+	Query *subquery = rte->subquery;
+	Assert(subquery);
+
+	SetOperationStmt *setop = (SetOperationStmt *)subquery->setOperations;
+	Assert(setop);
+
+	/*
+	 * for queries of the form:
+	 *   SELECT * from (SELECT max(i) over () as w from X Union Select 1 as w) as foo where w > 0
+	 * the qual (w > 0) is not push_down_safe since it uses a window ref
+	 *
+	 * we check if this is the case for either left or right set operation inputs.
+	 * The check for window function is only at the top level of the set
+	 * operation inputs. It does not recurse deep inside the set operation
+	 * child for resolving the qual reference for queries of the form:
+	 *  SELECT w FROM ( (SELECT w FROM Y, Z, (SELECT max(i) over () as w from X) AS bar) UNION SELECT 1 AS w) AS foo WHERE w > 0;
+	 *
+	 */
+	RangeTblEntry *rteLeft = rt_fetch(((RangeTblRef *)setop->larg)->rtindex, subquery->rtable);
+	RangeTblEntry *rteRight = rt_fetch(((RangeTblRef *)setop->rarg)->rtindex, subquery->rtable);
+	if (qual_contains_winref(rteLeft->subquery, rte, rti, qual) ||
+		qual_contains_winref(rteRight->subquery, rte, rti, qual))
+	{
+		return false;
+	}
+
+	return true;
+}
+
 /*
  * qual_is_pushdown_safe - is a particular qual safe to push down?
  *
@@ -1562,7 +1627,7 @@ compare_tlist_datatypes(List *tlist, List *colTypes,
  * to multiple evaluation of a volatile function.
  */
 static bool
-qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
+qual_is_pushdown_safe(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual,
 					  bool *differentTypes)
 {
 	bool		safe = true;
@@ -1575,11 +1640,15 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		return false;
 
 	/*
-	 * It would be unsafe to push down window function calls, but at least for
-	 * the moment we could never see any in a qual anyhow.  (The same applies
-	 * to aggregates, which we check for in pull_var_clause below.)
+	 * (point 2)
+	 * if we try to push quals below set operation, make
+	 * sure that qual is pushable to below set operation children
 	 */
-	Assert(!contain_window_functions(qual));
+	if (NULL != subquery->setOperations &&
+		!qual_is_pushdown_safe_set_operation(rte, rti, qual))
+	{
+		return false;
+	}
 
 	/*
 	 * Examine all Vars used in clause; since it's a restriction clause, all
