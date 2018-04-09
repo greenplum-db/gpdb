@@ -12,9 +12,8 @@
       local disk storage to store the entire database. </p>
     <section>
       <title>Parallel Backup with gpbackup and gprestore</title>
-      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are utilities that are
-        designed to improve the performance, functionality, and reliability of backups.
-        <codeph>gpbackup</codeph>
+      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are the Greenplum Database
+        backup and restore utilities. <codeph>gpbackup</codeph>
         utilizes <codeph>ACCESS SHARE</codeph> locks at the individual table level, instead of
           <codeph>EXCLUSIVE</codeph> locks on the <codeph>pg_class</codeph> catalog table. This
         enables you to execute DML statements during the backup, such as <codeph>CREATE</codeph>,
