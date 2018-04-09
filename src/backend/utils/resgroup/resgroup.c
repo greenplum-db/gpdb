@@ -169,7 +169,7 @@ struct ResGroupData
 {
 	Oid			groupId;		/* Id for this group */
 	ResGroupCaps	caps;		/* capabilities of this group */
-	int			nRunning;		/* number of running trans */
+	volatile int			nRunning;		/* number of running trans */
 	PROC_QUEUE	waitProcs;		/* list of PGPROC objects waiting on this group */
 	int			totalExecuted;	/* total number of executed trans */
 	int			totalQueued;	/* total number of queued trans	*/
@@ -191,15 +191,15 @@ struct ResGroupData
 	int32		memQuotaGranted;	/* memory chunks for quota part */
 	int32		memSharedGranted;	/* memory chunks for shared part */
 
-	int32		memQuotaUsed;		/* memory chunks assigned to all the running slots */
+	volatile int32	memQuotaUsed;	/* memory chunks assigned to all the running slots */
 
 	/*
 	 * memory usage of this group, should always equal to the
 	 * sum of session memory(session_state->sessionVmem) that
 	 * belongs to this group
 	 */
-	int32		memUsage;
-	int32		memSharedUsage;
+	volatile int32	memUsage;
+	volatile int32	memSharedUsage;
 
 	/*
 	 * operation functions for resource group
@@ -219,7 +219,9 @@ struct ResGroupControl
 	bool			loaded;
 
 	int32			totalChunks;	/* total memory chunks on this segment */
-	int32			freeChunks;		/* memory chunks not allocated to any group */
+	volatile int32	freeChunks;		/* memory chunks not allocated to any group,
+									will be used for the query which group share
+									memory is not enough*/
 
 	int32			chunkSizeInBits;
 
@@ -279,9 +281,9 @@ static void groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot);
 static int32 groupIncMemUsage(ResGroupData *group,
 							  ResGroupSlotData *slot,
 							  int32 chunks);
-static void groupDecMemUsage(ResGroupData *group,
-							 ResGroupSlotData *slot,
-							 int32 chunks);
+static int32 groupDecMemUsage(ResGroupData *group,
+							  ResGroupSlotData *slot,
+							  int32 chunks);
 static void initSlot(ResGroupSlotData *slot, ResGroupData *group,
 					 int32 slotMemQuota);
 static void selfAttachResGroup(ResGroupData *group, ResGroupSlotData *slot);
@@ -948,24 +950,27 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 	overuseMem = groupIncMemUsage(group, slot, memoryChunks);
 
 	/* then check whether there is over usage */
-	if (CritSectionCount == 0 && overuseMem > overuseChunks)
+	if (CritSectionCount == 0)
 	{
-		/* if the over usage is larger than allowed then revert the change */
-		groupDecMemUsage(group, slot, memoryChunks);
+		if (overuseMem > overuseChunks)
+		{
+			/* if the over usage is larger than allowed then revert the change */
+			groupDecMemUsage(group, slot, memoryChunks);
 
-		/* also revert in proc */
-		self->memUsage -= memoryChunks;
-		Assert(self->memUsage >= 0);
+			/* also revert in proc */
+			self->memUsage -= memoryChunks;
+			Assert(self->memUsage >= 0);
 
-		if (overuseChunks == 0)
-			ResGroupDumpMemoryInfo();
+			if (overuseChunks == 0)
+				ResGroupDumpMemoryInfo();
 
-		return false;
-	}
-	else if (CritSectionCount == 0 && overuseMem > 0)
-	{
-		/* the over usage is within the allowed threshold */
-		*waiverUsed = true;
+			return false;
+		}
+		else if (overuseMem > 0)
+		{
+			/* the over usage is within the allowed threshold */
+			*waiverUsed = true;
+		}
 	}
 
 	return true;
@@ -1100,14 +1105,15 @@ bindGroupOperation(ResGroupData *group)
 /*
  * Add chunks into group and slot memory usage.
  *
- * Return the over used chunks.
+ * Return the total over used chunks of global share
  */
 static int32
 groupIncMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 {
-	int32			slotMemUsage;
-	int32			sharedMemUsage;
-	int32			overuseMem = 0;
+	int32			slotMemUsage;	/* the memory current slot has been used */
+	int32			sharedMemUsage;	/* the total shared memory usage,
+										sum of group share and global share */
+	int32			globalOveruse = 0;	/* the total over used chunks of global share*/
 
 	/* Add the chunks to memUsage in slot */
 	slotMemUsage = pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &slot->memUsage,
@@ -1117,30 +1123,40 @@ groupIncMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 	sharedMemUsage = slotMemUsage - slot->memQuota;
 	if (sharedMemUsage > 0)
 	{
-		int32			total;
-
 		/* Decide how many chunks should be counted as shared memory */
-		sharedMemUsage = Min(sharedMemUsage, chunks);
+		int32 deltaSharedMemUsage = Min(sharedMemUsage, chunks);
 
-		/* Add these chunks to memSharedUsage in group */
-		total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->memSharedUsage,
-										sharedMemUsage);
+		/* Add these chunks to memSharedUsage in group, 
+		 * and record the old value*/
+		int32 oldSharedUsage = pg_atomic_fetch_add_u32((pg_atomic_uint32 *)
+													   &group->memSharedUsage,
+													   deltaSharedMemUsage);
+		/* the free space of group share */
+		int32 oldSharedFree = Max(0, group->memSharedGranted - oldSharedUsage);
 
-		/* Calculate the over used chunks */
-		overuseMem = Max(0, total - group->memSharedGranted);
+		/* Calculate the global over used chunks */
+		int32 deltaGlobalSharedMemUsage = Max(0, deltaSharedMemUsage - oldSharedFree);
+
+		/* freeChunks -= deltaGlobalSharedMemUsage and get the new value */
+		int32 newFreeChunks = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)
+													  &pResGroupControl->freeChunks,
+													  deltaGlobalSharedMemUsage);
+		/* calculate the total over used chunks of global share */
+		globalOveruse = Max(0, 0 - newFreeChunks);
 	}
 
 	/* Add the chunks to memUsage in group */
 	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->memUsage,
 							chunks);
 
-	return overuseMem;
+	return globalOveruse;
 }
 
 /*
- * Sub chunks from group and slot memory usage.
+ * Sub chunks from group ,slot memory usage and global shared memory.
+ * return memory chunks of global shared released this time
  */
-static void
+static int32 
 groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 {
 	int32			value;
@@ -1162,13 +1178,25 @@ groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 	if (sharedMemUsage > 0)
 	{
 		/* Decide how many chunks should be counted as shared memory */
-		sharedMemUsage = Min(sharedMemUsage, chunks);
+		int32 deltaSharedMemUsage = Min(sharedMemUsage, chunks);
 
 		/* Sub chunks from memSharedUsage in group */
-		value = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &group->memSharedUsage,
-										sharedMemUsage);
-		Assert(value >= 0);
+		int32 oldSharedUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *) &group->memSharedUsage,
+										deltaSharedMemUsage);
+		Assert(oldSharedUsage >= deltaSharedMemUsage);
+
+		/* record the total global share usage of current group */
+		int32 grpTotalGlobalUsage = Max(0, oldSharedUsage - group->memSharedGranted);
+		/* calculate the global share usage of current release */
+		int32 deltaGlobalSharedMemUsage = Min(grpTotalGlobalUsage, deltaSharedMemUsage);
+		/* add chunks to global shared memory */
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *)
+								&pResGroupControl->freeChunks,
+								deltaGlobalSharedMemUsage);
+		return deltaGlobalSharedMemUsage;
 	}
+
+	return 0;
 }
 
 /*
@@ -1587,18 +1615,34 @@ groupApplyMemCaps(ResGroupData *group)
 static int32
 mempoolReserve(Oid groupId, int32 chunks)
 {
+	int32 oldFreeChunks;
+	int32 newFreeChunks;
+	int32 reserved = 0;
+
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
+	/* Compare And Save to avoid concurrency problem without using lock */
+	while (true)
+	{
+		oldFreeChunks = pg_atomic_read_u32((pg_atomic_uint32 *)
+										   &pResGroupControl->freeChunks);
+		reserved = Min(Max(0, oldFreeChunks), chunks);
+		newFreeChunks = oldFreeChunks - reserved;
+		if (reserved == 0)
+			break;
+		if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)
+										   &pResGroupControl->freeChunks,
+										   (uint32 *) &oldFreeChunks,
+										   (uint32) newFreeChunks))
+			break;
+	}
+
 	LOG_RESGROUP_DEBUG(LOG, "allocate %u out of %u chunks to group %d",
-					   chunks, pResGroupControl->freeChunks, groupId);
+					   reserved, oldFreeChunks, groupId);
 
-	chunks = Min(pResGroupControl->freeChunks, chunks);
-	pResGroupControl->freeChunks -= chunks;
+	Assert(newFreeChunks <= pResGroupControl->totalChunks);
 
-	Assert(pResGroupControl->freeChunks >= 0);
-	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
-
-	return chunks;
+	return reserved;
 }
 
 /*
@@ -1607,16 +1651,19 @@ mempoolReserve(Oid groupId, int32 chunks)
 static void
 mempoolRelease(Oid groupId, int32 chunks)
 {
-	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
-					   chunks, pResGroupControl->freeChunks, groupId);
+	int32 newFreeChunks;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(chunks >= 0);
 
-	pResGroupControl->freeChunks += chunks;
+	newFreeChunks = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)
+											&pResGroupControl->freeChunks,
+											chunks);
 
-	Assert(pResGroupControl->freeChunks >= 0);
-	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
+	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
+					   chunks, newFreeChunks - chunks, groupId);
+
+	Assert(newFreeChunks <= pResGroupControl->totalChunks);
 }
 
 /*

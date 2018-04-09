@@ -20,12 +20,7 @@ DROP RESOURCE GROUP rg_spill_test;
 DROP
 
 CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=-1);
-ERROR:  memory_spill_ratio range is [0, 100]
-DROP RESOURCE GROUP rg_spill_test;
-ERROR:  resource group "rg_spill_test" does not exist
-
-CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=101);
-ERROR:  memory_spill_ratio range is [0, 100]
+ERROR:  memory_spill_ratio range is [0, 2147483647]
 DROP RESOURCE GROUP rg_spill_test;
 ERROR:  resource group "rg_spill_test" does not exist
 
@@ -40,9 +35,9 @@ ALTER
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 100;
 ALTER
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
-ERROR:  memory_spill_ratio range is [0, 100]
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
-ERROR:  memory_spill_ratio range is [0, 100]
+ERROR:  memory_spill_ratio range is [0, 2147483647]
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 10000;
+ALTER
 
 DROP RESOURCE GROUP rg_spill_test;
 DROP
@@ -91,7 +86,7 @@ SELECT 1;
 (1 row)
 
 SET MEMORY_SPILL_RATIO TO -1;
-ERROR:  -1 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
+ERROR:  -1 is outside the valid range for parameter "memory_spill_ratio" (0 .. 2147483647)
 SHOW MEMORY_SPILL_RATIO;
 memory_spill_ratio
 ------------------
@@ -103,12 +98,12 @@ SELECT 1;
 1       
 (1 row)
 
-SET MEMORY_SPILL_RATIO TO 101;
-ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
+SET MEMORY_SPILL_RATIO TO 10000;
+SET
 SHOW MEMORY_SPILL_RATIO;
 memory_spill_ratio
 ------------------
-100               
+10000             
 (1 row)
 SELECT 1;
 ?column?
