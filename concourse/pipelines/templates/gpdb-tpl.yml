@@ -84,13 +84,13 @@ groups:
 {% endfor %}
   - segwalrep_mirrorless_centos6
 {% endif %}
-{% if "INT" in test_sections %}
+{% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
   - mpp_interconnect
 {% endif %}
-{% if "RES" in test_sections %}
+{% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_res_start
+  - gate_resource_groups_start
   - mpp_resource_group_centos6
 {% if "centos7" in os_types %}
   - mpp_resource_group_centos7
@@ -215,7 +215,7 @@ groups:
   - compile_gpdb_centos6
 
 {% endif %}
-{% if "INT" in test_sections %}
+{% if "Interconnect" in test_sections %}
 ## ======================================================================
 
 {% if "centos6" in os_types %}
@@ -226,12 +226,12 @@ groups:
 {% endif %}
 
 {% endif %}
-{% if "RES" in test_sections %}
+{% if "ResourceGroups" in test_sections %}
 ## ======================================================================
 
 - name: ResourceGroups
   jobs:
-  - gate_res_start
+  - gate_resource_groups_start
   - mpp_resource_group_centos6
   - compile_gpdb_centos6
 {% if "centos7" in os_types %}
@@ -300,8 +300,8 @@ resource_types:
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "CS"      in test_sections or
-      "RES"     in test_sections or
-      "INT"     in test_sections or
+      "ResourceGroups"     in test_sections or
+      "Interconnect"     in test_sections or
       "CLI"      in test_sections %}
 - name: ccp_src
   type: git
@@ -1562,7 +1562,7 @@ jobs:
       WITH_MIRRORS: false
 
 {% endif %}
-{% if "INT" in test_sections %}
+{% if "Interconnect" in test_sections %}
 ## ======================================================================
 ##  ___ _   _ _____ _____ ____   ____ ___  _   _ _   _ _____ ____ _____
 ## |_ _| \ | |_   _| ____|  _ \ / ___/ _ \| \ | | \ | | ____/ ___|_   _|
@@ -1618,7 +1618,7 @@ jobs:
 {% endif %}
 
 {% endif %}
-{% if "RES" in test_sections %}
+{% if "ResourceGroups" in test_sections %}
 ## ======================================================================
 ##  ____                                     ____
 ## |  _ \ ___  ___  ___  _   _ _ __ ___ ___ / ___|_ __ ___  _   _ _ __  ___
@@ -1628,7 +1628,7 @@ jobs:
 ##                                                               |_|
 ## ======================================================================
 
-- name: gate_res_start
+- name: gate_resource_groups_start
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1655,10 +1655,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1689,10 +1689,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos7
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1725,10 +1725,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
     - get: gpdb_binary
       resource: bin_gpdb_sles11
-      passed: [gate_res_start]
+      passed: [gate_resource_groups_start]
       trigger: true
     - get: ccp_src
     - get: centos-gpdb-dev-6
