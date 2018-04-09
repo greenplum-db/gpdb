@@ -18,14 +18,11 @@ sudo yum install -y \
     libxml2-devel \
     perl-ExtUtils-Embed \
     python-devel \
-    python-paramiko \
     python-pip \
-    python-psutil \
-    python-setuptools \
     readline-devel \
     xerces-c-devel \
     zlib-devel
 
-
-# Install lockfile with pip because the yum package `python-pip` is too old (0.8).
-sudo pip install lockfile conan
+sudo pip install conan
+sudo pip install -r python-dependencies.txt
+sudo pip install -r python-developer-dependencies.txt

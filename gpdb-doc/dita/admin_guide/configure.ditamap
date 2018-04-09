@@ -15,60 +15,6 @@
          </topicref>
       </topicref>
       <topicref href="topics/g-viewing-server-configuration-parameter-settings.xml" type="topic"/>
-      <topicref href="topics/g-configuration-parameter-categories.xml" type="topic">
-         <topicref href="topics/g-connection-and-authentication-parameters.xml" type="topic">
-            <topicref href="topics/g-connection-parameters.xml" type="topic"/>
-            <topicref href="topics/g-security-and-authentication-parameters.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-system-resource-consumption-parameters.xml" type="topic">
-            <topicref href="topics/g-memory-consumption-parameters.xml" type="topic"/>
-            <topicref href="topics/g-free-space-map-parameters.xml" type="topic"/>
-            <topicref href="topics/g-os-resource-parameters.xml" type="topic"/>
-            <topicref href="topics/g-cost-based-vacuum-delay-parameters.xml" type="topic"/>
-            <topicref href="topics/g-transaction-id-management-parameters.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-query-tuning-parameters.xml" type="topic">
-            <topicref href="topics/gporca-parameters.xml" type="topic"/>
-            <topicref href="topics/g-query-plan-operator-control-parameters.xml" type="topic"/>
-            <topicref href="topics/g-query-planner-costing-parameters.xml" type="topic"/>
-            <topicref href="topics/g-database-statistics-sampling-parameters.xml" type="topic"/>
-            <topicref href="topics/g-sort-operator-configuration-parameters.xml" type="topic"/>
-            <topicref href="topics/g-aggregate-operator-configuration-parameters.xml" type="topic"/>
-            <topicref href="topics/g-join-operator-configuration-parameters.xml" type="topic"/>
-            <topicref href="topics/g-other-query-planner-configuration-parameters.xml" type="topic"
-            />
-         </topicref>
-         <topicref href="topics/g-error-reporting-and-logging-parameters.xml" type="topic">
-            <topicref href="topics/g-log-rotation.xml" type="topic"/>
-            <topicref href="topics/g-when-to-log.xml" type="topic"/>
-            <topicref href="topics/g-what-to-log.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-system-monitoring-parameters.xml" type="topic">
-            <topicref href="topics/g-snmp-alerts.xml" type="topic"/>
-            <topicref href="topics/g-email-alerts.xml" type="topic"/>
-            <topicref href="topics/g-greenplum-command-center-agent.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-runtime-statistics-collection-parameters.xml" type="topic"/>
-         <topicref href="topics/g-automatic-statistics-collection-parameters.xml" type="topic"/>
-         <topicref href="topics/g-client-connection-default-parameters.xml" type="topic">
-            <topicref href="topics/g-statement-behavior-parameters.xml" type="topic"/>
-            <topicref href="topics/g-locale-and-formatting-parameters.xml" type="topic"/>
-            <topicref href="topics/g-other-client-default-parameters.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-lock-management-parameters.xml" type="topic"/>
-         <topicref href="topics/g-workload-management-parameters.xml" type="topic"/>
-         <topicref href="topics/g-external-table-parameters.xml" type="topic"/>
-         <topicref href="topics/g-append-optimized-table-parameters.xml" type="topic"/>
-         <topicref href="topics/g-past-postgresql-version-compatibility-parameters.xml" type="topic"/>
-         <topicref href="topics/g-greenplum-array-configuration-parameters.xml" type="topic">
-            <topicref href="topics/g-interconnect-configuration-parameters.xml" type="topic"/>
-            <topicref href="topics/g-dispatch-configuration-parameters.xml" type="topic"/>
-            <topicref href="topics/g-fault-operation-parameters.xml" type="topic"/>
-            <topicref href="topics/g-distributed-transaction-management-parameters.xml" type="topic"/>
-            <topicref href="topics/g-read-only-parameters.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-greenplum-master-mirroring-parameters.xml" type="topic"/>
-         <topicref href="topics/g-greenplum-extension-parameters.xml" type="topic"/>
-      </topicref>
+      <topicref href="topics/g-configuration-parameter-categories.xml" type="topic"/>
    </topicref>
 </map>

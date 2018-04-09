@@ -6,6 +6,7 @@ test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
+test: invalidated_toast_index
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

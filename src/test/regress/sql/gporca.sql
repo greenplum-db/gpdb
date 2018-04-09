@@ -1353,7 +1353,7 @@ create table foo(a int, b int) distributed by (a);
 set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
-select count(*) from foo group by cube(a,b);
+explain select count(*) from foo group by cube(a,b);
 reset client_min_messages;
 reset log_statement;
 reset log_min_duration_statement;

@@ -313,20 +313,22 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 * CDB: Acquire ExclusiveLock if it is a distributed relation and we are
 	 * doing UPDATE or DELETE activity
 	 *
-	 * GPDB_84_MERGE_FIXME: Why can't we just always call parserOpenTable here?
+	 * We should use heap_openrv instead of parserOpenTable for inserts because
+	 * parserOpenTable upgrades the lock to Exclusive mode for distributed
+	 * tables.
 	 */
-	setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
 	if (pstate->p_is_insert && !pstate->p_is_update)
 	{
+		setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
 		pstate->p_target_relation = heap_openrv(relation, RowExclusiveLock);
+		cancel_parser_errposition_callback(&pcbstate);
 	}
 	else
 	{
-    	pstate->p_target_relation = CdbOpenRelationRv(relation, 
-													  RowExclusiveLock, 
-													  false, NULL);
+
+		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock,
+													false, NULL);
 	}
-	cancel_parser_errposition_callback(&pcbstate);
 
 	/*
 	 * Now build an RTE.

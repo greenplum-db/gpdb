@@ -11,43 +11,9 @@
       restricting I/O to one host, non-parallel backup requires that the master have sufficient
       local disk storage to store the entire database. </p>
     <section>
-      <title>Parallel Backup with gpcrondump and gpdbrestore</title>
-      <p>The Greenplum Database parallel dump utility <codeph>gpcrondump</codeph> backs up the
-        Greenplum master instance and each active segment instance at the same time. </p>
-      <p>By default, <codeph>gpcrondump</codeph> creates dump files in the <codeph>db_dumps</codeph>
-        subdirectory of each segment instance. On the master, <codeph>gpcrondump</codeph> creates
-        several dump files, containing database information such as DDL statements, the system
-        catalog tables, and metadata files. On each segment, <codeph>gpcrondump</codeph> creates one
-        dump file, which contains commands to recreate the data on that segment. Each file created
-        for a backup begins with a 14-digit timestamp key that identifies the backup set the file
-        belongs to. </p>
-      <fig id="kk155499">
-        <title>Parallel Backups in Greenplum Database</title>
-        <image href="../graphics/gp_dump.jpg" placement="break" width="402px" height="226px"
-          id="image_bh4_jhx_yq"/>
-      </fig>
-      <p>The <codeph>gpdbrestore</codeph> parallel restore utility takes the timestamp key generated
-        by <codeph>gpcrondump</codeph>, validates the backup set, and restores the database objects
-        and data into a distributed database. Parallel restore operations require a complete backup
-        set created by <codeph>gpcrondump</codeph>, a full backup, and any required incremental
-        backups. As the following figure illustrates, all segments restore data from local backup
-        files simultaneously.</p>
-      <fig id="kk157614">
-        <title>Parallel Restores in Greenplum Database</title>
-        <image href="../graphics/gp_restore.jpg" placement="break" width="437px" height="241px"
-          id="image_zxw_4hx_yq"/>
-      </fig>
-      <p id="kk156487">The <codeph>gpdbrestore</codeph> utility provides flexibility and
-        verification options for use with the automated backup files produced by
-          <codeph>gpcrondump</codeph> or with backup files moved from the Greenplum cluster to an
-        alternate location. See <xref href="restore-parallel.xml" type="topic" format="dita"/>.
-          <codeph>gpdbrestore</codeph> can also be used to copy files to the alternate location.</p>
-    </section>
-    <section>
       <title>Parallel Backup with gpbackup and gprestore</title>
-      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that are
-        designed to improve the performance, functionality, and reliability of backups as compared
-        to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. <codeph>gpbackup</codeph>
+      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are the Greenplum Database
+        backup and restore utilities. <codeph>gpbackup</codeph>
         utilizes <codeph>ACCESS SHARE</codeph> locks at the individual table level, instead of
           <codeph>EXCLUSIVE</codeph> locks on the <codeph>pg_class</codeph> catalog table. This
         enables you to execute DML statements during the backup, such as <codeph>CREATE</codeph>,
@@ -75,8 +41,7 @@
         not be optimal. For details, see <codeph>CREATE TABLE</codeph> in the <i>Greenplum Database
           Reference Guide</i>.</p>
       <p>To perform a non-parallel restore using parallel backup files, you can copy the backup
-        files from each segment host to the master host, and then load them through the master. See
-          <xref href="restore-diff-system.xml" type="topic" format="dita"/>.</p>
+        files from each segment host to the master host, and then load them through the master.</p>
       <fig id="kk156418">
         <title>Non-parallel Restore Using Parallel Backup Files</title>
         <image href="../graphics/nonpar_restore.jpg" placement="break" width="390px"

@@ -386,11 +386,10 @@ GRANT SELECT ON sales TO guest;
               <li>Adding or dropping constraints.</li>
               <li>Splitting an external partition.</li>
             </ul></li>
-        </ul>
-        <ul id="ul_asb_c3g_ct">
-          <li>The Greenplum Database utility <codeph>gpcrondump</codeph> does not back up data from
-            a leaf child partition of a partitioned table if the leaf child partition is a readable
-            external table. </li>
+          <li> The Greenplum Database <codeph>gpbackup</codeph> utility does not back up
+            data from a leaf child partition of a partitioned table if the leaf child
+            partition is a readable external table.
+          </li>
         </ul>
       </body>
     </topic>

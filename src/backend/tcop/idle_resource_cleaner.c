@@ -18,7 +18,7 @@
 #include "tcop/idle_resource_cleaner.h"
 
 int			IdleSessionGangTimeout = 18000;
-int			IdleSessionTimeoutCached = 0;
+int			IdleSessionTimeoutCached = IDLE_RESOURCES_NEVER_TIME_OUT;
 
 int			(*get_idle_session_timeout_hook) (void) = NULL;
 void		(*idle_session_timeout_action_hook) (void) = NULL;
@@ -32,10 +32,26 @@ static enum
 static int
 get_idle_gang_timeout(void)
 {
-	if (IdleSessionGangTimeout == 0 || !GangsExist())
-		return 0;
+	if (IdleSessionGangTimeout <= 0 || !GangsExist())
+		return IDLE_RESOURCES_NEVER_TIME_OUT;
 
 	return IdleSessionGangTimeout;
+}
+
+static int
+get_idle_session_timeout(void)
+{
+	int idleSessionTimeout = IDLE_RESOURCES_NEVER_TIME_OUT;
+
+	if (get_idle_session_timeout_hook)
+	{
+		idleSessionTimeout = (*get_idle_session_timeout_hook)();
+		if (idleSessionTimeout <= 0) {
+			return IDLE_RESOURCES_NEVER_TIME_OUT;
+		}
+	}
+
+	return idleSessionTimeout;
 }
 
 static void
@@ -69,17 +85,16 @@ void
 StartIdleResourceCleanupTimers()
 {
 	/* get_idle_session_timeout_hook() may return different values later */
-	IdleSessionTimeoutCached =
-		get_idle_session_timeout_hook ? (*get_idle_session_timeout_hook) () : 0;
+	IdleSessionTimeoutCached = get_idle_session_timeout();
 	const int	idleGangTimeout = get_idle_gang_timeout();
 
-	if (idleGangTimeout > 0)
+	if (idleGangTimeout != IDLE_RESOURCES_NEVER_TIME_OUT)
 	{
 		NextTimeoutAction = GANG_TIMEOUT;
 		if (!enable_sig_alarm(idleGangTimeout, false))
 			elog(FATAL, "could not set itimer for idle gang timeout");
 	}
-	else if (IdleSessionTimeoutCached > 0)
+	else if (IdleSessionTimeoutCached != IDLE_RESOURCES_NEVER_TIME_OUT)
 	{
 		elog(DEBUG2, "Setting IdleSessionTimeout");
 		NextTimeoutAction = IDLE_SESSION_TIMEOUT;
@@ -119,7 +134,7 @@ DoIdleResourceCleanup(void)
 			elog(DEBUG2, "DoIdleResourceCleanup: idle gang timeout reached; killing gangs");
 			idle_gang_timeout_action();
 
-			if (IdleSessionTimeoutCached <= 0)
+			if (IdleSessionTimeoutCached == IDLE_RESOURCES_NEVER_TIME_OUT)
 				return;
 
 			if (IdleSessionGangTimeout < IdleSessionTimeoutCached)

@@ -96,20 +96,18 @@ typedef struct InDoubtDtx
  * PQsendGpQuery
  */
 
-/* bit 1 is for statement wants DTX transaction
- *
- * bits 2-3 for iso level  00 read-committed
- *						   01 read-uncommitted
- *						   10 repeatable-read
- *						   11 serializable
- * bit 4 is for read-only
+/*
+ * bit 1 is for statement wants DTX transaction
+ * bits 2-4 for iso level
+ * bit 5 is for read-only
  */
 #define GP_OPT_NEED_TWO_PHASE                           0x0001
 
-#define GP_OPT_READ_COMMITTED    						0x0002
-#define GP_OPT_READ_UNCOMMITTED  						0x0004
-#define GP_OPT_REPEATABLE_READ   						0x0006
-#define GP_OPT_SERIALIZABLE 	  						0x0008
+#define GP_OPT_ISOLATION_LEVEL_MASK   					0x000E
+#define GP_OPT_READ_UNCOMMITTED							(1 << 1)
+#define GP_OPT_READ_COMMITTED							(2 << 1)
+#define GP_OPT_REPEATABLE_READ							(3 << 1)
+#define GP_OPT_SERIALIZABLE								(4 << 1)
 
 #define GP_OPT_READ_ONLY         						0x0010
 
@@ -141,7 +139,7 @@ static void doNotifyingAbort(void);
 static void retryAbortPrepared(void);
 static bool doNotifyCommittedInDoubt(char *gid);
 static void doAbortInDoubt(char *gid);
-static void doQEDistributedExplicitBegin(int txnOptions);
+static void doQEDistributedExplicitBegin();
 
 static bool isDtxQueryDispatcher(void);
 static void UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log);
@@ -1622,6 +1620,8 @@ mppTxnOptions(bool needTwoPhase)
 		options |= GP_OPT_REPEATABLE_READ;
 	else if (XactIsoLevel == XACT_SERIALIZABLE)
 		options |= GP_OPT_SERIALIZABLE;
+	else if (XactIsoLevel == XACT_READ_UNCOMMITTED)
+		options |= GP_OPT_READ_UNCOMMITTED;
 
 	if (XactReadOnly)
 		options |= GP_OPT_READ_ONLY;
@@ -1642,14 +1642,16 @@ mppTxnOptions(bool needTwoPhase)
 int
 mppTxOptions_IsoLevel(int txnOptions)
 {
-	if ((txnOptions & GP_OPT_SERIALIZABLE) == GP_OPT_SERIALIZABLE)
+	if ((txnOptions & GP_OPT_ISOLATION_LEVEL_MASK) == GP_OPT_SERIALIZABLE)
 		return XACT_SERIALIZABLE;
-	else if ((txnOptions & GP_OPT_REPEATABLE_READ) == GP_OPT_REPEATABLE_READ)
+	else if ((txnOptions & GP_OPT_ISOLATION_LEVEL_MASK) == GP_OPT_REPEATABLE_READ)
 		return XACT_REPEATABLE_READ;
-	else if ((txnOptions & GP_OPT_READ_COMMITTED) == GP_OPT_READ_COMMITTED)
+	else if ((txnOptions & GP_OPT_ISOLATION_LEVEL_MASK) == GP_OPT_READ_COMMITTED)
 		return XACT_READ_COMMITTED;
-	else
+	else if ((txnOptions & GP_OPT_ISOLATION_LEVEL_MASK) == GP_OPT_READ_UNCOMMITTED)
 		return XACT_READ_UNCOMMITTED;
+	/* QD must set transaction isolation level */
+	elog(ERROR, "transaction options from QD did not include isolation level");
 }
 
 bool
@@ -1658,24 +1660,6 @@ isMppTxOptions_ReadOnly(int txnOptions)
 	return ((txnOptions & GP_OPT_READ_ONLY) != 0);
 }
 
-
-
-/* unpackMppTxnOptions:
- * Unpack an int containing the appropriate flags to direct the remote
- * segdb QE process to perform any needed transaction commands before or
- * after the statement.
- */
-void
-unpackMppTxnOptions(int txnOptions, int *isoLevel, bool *readOnly)
-{
-	*isoLevel = mppTxOptions_IsoLevel(txnOptions);
-
-	*readOnly = isMppTxOptions_ReadOnly(txnOptions);
-}
-
-/* isMppTxOptions_StatementWantsDtxTransaction:
- * Return the NeedTwoPhase flag.
- */
 bool
 isMppTxOptions_NeedTwoPhase(int txnOptions)
 {
@@ -2641,11 +2625,8 @@ assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source __attri
 }
 
 static void
-doQEDistributedExplicitBegin(int txnOptions)
+doQEDistributedExplicitBegin()
 {
-	int			ExplicitIsoLevel;
-	bool		ExplicitReadOnly;
-
 	/*
 	 * Start a command.
 	 */
@@ -2654,21 +2635,11 @@ doQEDistributedExplicitBegin(int txnOptions)
 	/* Here is the explicit BEGIN. */
 	BeginTransactionBlock();
 
-	unpackMppTxnOptions(txnOptions,
-						&ExplicitIsoLevel, &ExplicitReadOnly);
-
-	XactIsoLevel = ExplicitIsoLevel;
-	XactReadOnly = ExplicitReadOnly;
-
-	elog(DTM_DEBUG5, "doQEDistributedExplicitBegin setting XactIsoLevel = %s and XactReadOnly = %s",
-		 IsoLevelAsUpperString(XactIsoLevel), (XactReadOnly ? "true" : "false"));
-
 	/*
 	 * Finish the BEGIN command.  It will leave the explict transaction
 	 * in-progress.
 	 */
 	CommitTransactionCommand();
-
 }
 
 static bool
@@ -2919,7 +2890,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 					 */
 					setDistributedTransactionContext(DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER);
 
-					doQEDistributedExplicitBegin(txnOptions);
+					doQEDistributedExplicitBegin();
 				}
 				else
 				{

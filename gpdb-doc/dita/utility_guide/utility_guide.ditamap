@@ -13,8 +13,6 @@
             <topicref href="admin_utilities/gpcheckcat.xml"/>
             <topicref href="admin_utilities/gpcheckperf.xml"/>
             <topicref href="admin_utilities/gpconfig.xml"/>
-            <topicref href="admin_utilities/gpcrondump.xml"/>
-            <topicref href="admin_utilities/gpdbrestore.xml"/>
             <topicref href="admin_utilities/gpdeletesystem.xml"/>
             <topicref href="admin_utilities/gpexpand.xml"/>
             <topicref href="admin_utilities/gpfdist.xml"/>
@@ -23,7 +21,6 @@
             <topicref href="admin_utilities/gpload.xml"/>
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
-            <topicref href="admin_utilities/gpmfr.xml"/>
             <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
 -->
