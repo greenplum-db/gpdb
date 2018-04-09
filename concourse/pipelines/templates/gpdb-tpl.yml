@@ -22,8 +22,6 @@
 groups:
 - name: all
   jobs:
-  ## --------------------------------------------------------------------
-  - gate_compile_start
 {% if "centos6" in os_types %}
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
@@ -132,7 +130,6 @@ groups:
 
 - name: Compile
   jobs:
-  - gate_compile_start
 {% if "centos6" in os_types %}
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
@@ -741,42 +738,16 @@ jobs:
 ##                      |_|
 ## ======================================================================
 
-- name: gate_compile_start
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      trigger: true
-    - get: gpaddon_src
-      trigger: true
-{% if "centos6" in os_types %}
-    - get: gpdb_src_binary_swap
-      trigger: true
-    - get: centos-gpdb-dev-6
-{% endif %}
-{% if "centos7" in os_types %}
-    - get: centos-gpdb-dev-7
-{% endif %}
-{% if "win" in os_types %}
-    - get: centos-mingw
-{% endif %}
-{% if "ubuntu16" in os_types %}
-    - get: ubuntu-gpdb-dev-16
-    - get: ubuntu-gpdb-debian-dev-16
-{% endif %}
-
 {% if "centos6" in os_types %}
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
-      passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -802,13 +773,9 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
-      passed: [gate_compile_start]
     - get: gpaddon_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-7
-      passed: [gate_compile_start]
   - task: compile_gpdb
     image: centos-gpdb-dev-7
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -834,10 +801,8 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
     params:
@@ -861,13 +826,9 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
-      passed: [gate_compile_start]
     - get: ubuntu-gpdb-debian-dev-16
-      passed:
-      - gate_compile_start
     - get: debian_release
   - aggregate:
     - task: compile_gpdb
@@ -898,10 +859,8 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: centos-gpdb-dev-6
-      passed: [gate_compile_start]
   - task: compile_gpdb
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_centos.yml
@@ -920,11 +879,8 @@ jobs:
     - get: gpdb_src
       resource: gpdb_src_binary_swap
       trigger: true
-      passed: [gate_compile_start]
     - get: gpaddon_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
-      passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -950,13 +906,10 @@ jobs:
       tags: ["wix"]
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
-      passed: [gate_compile_start]
       tags: ["wix"]
     - get: gpaddon_src
-      passed: [gate_compile_start]
       tags: ["wix"]
     - get: centos-mingw
-      passed: [gate_compile_start]
       tags: ["wix"]
   - task: compile_gpdb
     tags: ["wix"]
@@ -992,12 +945,8 @@ jobs:
     - get: nightly-trigger
       trigger: true
     - get: gpdb_src
-      passed: [gate_compile_start]
     - get: gpaddon_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
-      passed:
-      - gate_compile_start
   - task: compile_gpdb_aix7_remote
     file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
     image: centos-gpdb-dev-6
@@ -1025,7 +974,6 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_compile_start
       - compile_gpdb_aix7_remote
       - compile_gpdb_centos6
     - get: installer_aix7_gpdb_clients
@@ -1040,8 +988,6 @@ jobs:
       - compile_gpdb_centos6
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
-      passed:
-      - gate_compile_start
     - put: aix_environments
       params: {acquire: true}
   - task: ic_gpdb_cl
