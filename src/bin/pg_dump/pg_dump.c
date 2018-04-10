@@ -2827,6 +2827,7 @@ dumpDatabase(Archive *fout)
 	PGresult   *res;
 	int			i_tableoid,
 				i_oid,
+				i_datname,
 				i_dba,
 				i_encoding,
 				i_collate,
@@ -2846,16 +2847,13 @@ dumpDatabase(Archive *fout)
 				minmxid;
 	char	   *qdatname;
 
-	datname = PQdb(conn);
-	qdatname = pg_strdup(fmtId(datname));
-
 	if (g_verbose)
 		write_msg(NULL, "saving database definition\n");
 
-	/* Get the database owner and parameters from pg_database */
+	/* Get the database owner and parameters for this database */
 	if (fout->remoteVersion >= 90300)
 	{
-		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
+		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, datname, "
 						  "(%s datdba) AS dba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 						  "datcollate, datctype, datfrozenxid, datminmxid, "
@@ -2863,13 +2861,12 @@ dumpDatabase(Archive *fout)
 					  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
+						  "WHERE datname = current_database()",
 						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
 	}
 	else if (fout->remoteVersion >= 80400)
 	{
-		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
+		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, datname, "
 						  "(%s datdba) AS dba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 						  "datcollate, datctype, datfrozenxid, 0 AS datminmxid, "
@@ -2877,13 +2874,12 @@ dumpDatabase(Archive *fout)
 					  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
+						  "WHERE datname = current_database()",
 						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
 	}
 	else if (fout->remoteVersion >= 80200)
 	{
-		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
+		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, datname, "
 						  "(%s datdba) AS dba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 					   "NULL AS datcollate, NULL AS datctype, datfrozenxid, 0 AS datminmxid, "
@@ -2891,9 +2887,8 @@ dumpDatabase(Archive *fout)
 					  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
+						  "WHERE datname = current_database()",
 						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
 	}
 	else
 	{
@@ -2904,6 +2899,7 @@ dumpDatabase(Archive *fout)
 
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
+	i_datname = PQfnumber(res, "datname");
 	i_dba = PQfnumber(res, "dba");
 	i_encoding = PQfnumber(res, "encoding");
 	i_collate = PQfnumber(res, "datcollate");
@@ -2914,6 +2910,7 @@ dumpDatabase(Archive *fout)
 
 	dbCatId.tableoid = atooid(PQgetvalue(res, 0, i_tableoid));
 	dbCatId.oid = atooid(PQgetvalue(res, 0, i_oid));
+	datname = PQgetvalue(res, 0, i_datname);
 	dba = PQgetvalue(res, 0, i_dba);
 	encoding = PQgetvalue(res, 0, i_encoding);
 	collate = PQgetvalue(res, 0, i_collate);
@@ -2922,6 +2919,14 @@ dumpDatabase(Archive *fout)
 	minmxid = atooid(PQgetvalue(res, 0, i_minmxid));
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
+	qdatname = pg_strdup(fmtId(datname));
+
+	/*
+	 * Prepare the CREATE DATABASE command.  We must specify encoding, locale,
+	 * and tablespace since those can't be altered later.  Other DB properties
+	 * are left to the DATABASE PROPERTIES entry, so that they can be applied
+	 * after reconnecting to the target DB.
+	 */
 	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  qdatname);
 	if (strlen(encoding) > 0)
