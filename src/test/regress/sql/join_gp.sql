@@ -173,13 +173,6 @@ set enable_nestloop to off;
 set enable_hashjoin to on;
 set enable_mergejoin to off;
 
-CREATE TABLE R(a varchar(20), b int) DISTRIBUTED BY (a);
-CREATE TABLE S(a varchar(20), b int) DISTRIBUTED BY (a);
--- Make sure there is no motion to redistribute or broadcast any table,
--- because the join keys are also the distribution key of the 2 tables.
-EXPLAIN SELECT * FROM R, S WHERE R.a = S.a;
-EXPLAIN SELECT * FROM R LEFT OUTER JOIN S ON R.a = S.a;
-
 create table dept
 (
 	id int,

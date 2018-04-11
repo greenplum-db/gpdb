@@ -350,35 +350,6 @@ select * from foo where a not in (select c from bar where c <= 5);
 set enable_nestloop to off;
 set enable_hashjoin to on;
 set enable_mergejoin to off;
-CREATE TABLE R(a varchar(20), b int) DISTRIBUTED BY (a);
-CREATE TABLE S(a varchar(20), b int) DISTRIBUTED BY (a);
--- Make sure there is no motion to redistribute or broadcast any table,
--- because the join keys are also the distribution key of the 2 tables.
-EXPLAIN SELECT * FROM R, S WHERE R.a = S.a;
-                                       QUERY PLAN
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=24)
-   ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
-         Hash Cond: r.a::text = s.a::text
-         ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=12)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-               ->  Table Scan on s  (cost=0.00..431.00 rows=1 width=12)
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on
- Optimizer status: PQO version 2.53.4
-(8 rows)
-
-EXPLAIN SELECT * FROM R LEFT OUTER JOIN S ON R.a = S.a;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
-   ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=24)
-         Hash Cond: r.a::text = s.a::text
-         ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=12)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-               ->  Table Scan on s  (cost=0.00..431.00 rows=1 width=12)
- Optimizer: PQO version 2.55.10
-(7 rows)
-
 create table dept
 (
 	id int,
