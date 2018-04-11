@@ -1,15 +1,13 @@
 ## ======================================================================
-{% set cs_walrep_suites = ['walrep_1',
+{% set walrep_suites = ['walrep_1',
                            'walrep_2'] %}
-{% set cs_pg_twophase_suites = ['pg_twophase'] %}
-
-{% set CM_1_suites = ['gprecoverseg',
+{% set CLI_1_suites = ['gprecoverseg',
                       'gpcheckcat'] %}
-{% set CM_2_suites = ['analyzedb',
+{% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem',
                       'gpinitstandby'] %}
-{% set CM_gpexpand_suites = ['gpexpand_1',
+{% set CLI_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
@@ -73,43 +71,42 @@ groups:
 {% endif %}
   - gate_icw_end
 {% endif %}
-{% if "CS" in test_sections %}
+{% if "Replication" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_cs_start
-{% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites %}
-  - cs_[[ test_name ]]
-{% endfor %}
+  - gate_replication_start
+  - walrep_1
+  - walrep_2
+  - pg_twophase
   - segwalrep_mirrorless_centos6
 {% endif %}
 {% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
-  - mpp_interconnect
+  - interconnect
 {% endif %}
 {% if "ResourceGroups" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_resource_groups_start
-  - mpp_resource_group_centos6
+  - resource_group_centos6
 {% if "centos7" in os_types %}
-  - mpp_resource_group_centos7
+  - resource_group_centos7
 {% endif %}
 {% if "sles" in os_types %}
-  - mpp_resource_group_sles12
+  - resource_group_sles12
 {% endif %}
 {% endif %}
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test_name in CM_1_suites +
-                    CM_2_suites +
-                    CM_gpexpand_suites %}
-  - CM_[[ test_name ]]
+{% for test_name in CLI_1_suites +
+                    CLI_2_suites +
+                    CLI_gpexpand_suites %}
+  - [[ test_name ]]
 {% endfor %}
-  - CM_gpcheck
-  - CM_gppkg
-  - MU_check_centos
-  - DP_gptransfer_43x_to_master
-  - DP_gptransfer
+  - gpcheck
+  - gppkg
+  - check_centos
+  - gptransfer_43x_to_master
+  - gptransfer
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
@@ -153,7 +150,7 @@ groups:
 
 ## ======================================================================
 
-- name: CL
+- name: ClientsLoaders
   jobs:
 {% if "win" in os_types %}
   - compile_gpdb_windows_cl
@@ -198,16 +195,15 @@ groups:
   - gate_icw_end
 
 {% endif %}
-{% if "CS" in test_sections %}
+{% if "Replication" in test_sections %}
 ## ======================================================================
 
-- name: CS
+- name: Replication
   jobs:
-  - gate_cs_start
-{% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites %}
-  - cs_[[ test_name ]]
-{% endfor %}
+  - gate_replication_start
+  - walrep_1
+  - walrep_2
+  - pg_twophase
   - segwalrep_mirrorless_centos6
   - compile_gpdb_centos6
 
@@ -219,7 +215,7 @@ groups:
 - name: Interconnect
   jobs:
   - compile_gpdb_centos6
-  - mpp_interconnect
+  - interconnect
 {% endif %}
 
 {% endif %}
@@ -229,14 +225,14 @@ groups:
 - name: ResourceGroups
   jobs:
   - gate_resource_groups_start
-  - mpp_resource_group_centos6
+  - resource_group_centos6
   - compile_gpdb_centos6
 {% if "centos7" in os_types %}
-  - mpp_resource_group_centos7
+  - resource_group_centos7
   - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
-  - mpp_resource_group_sles12
+  - resource_group_sles12
   - compile_gpdb_sles11
 {% endif %}
 
@@ -247,17 +243,17 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test_name in CM_1_suites +
-                    CM_2_suites +
-                    CM_gpexpand_suites %}
-  - CM_[[ test_name ]]
+{% for test_name in CLI_1_suites +
+                    CLI_2_suites +
+                    CLI_gpexpand_suites %}
+  - [[ test_name ]]
 {% endfor %}
-  - CM_gpcheck
-  - CM_gppkg
-  - MU_check_centos
+  - gpcheck
+  - gppkg
+  - check_centos
   - compile_gpdb_centos6
-  - DP_gptransfer_43x_to_master
-  - DP_gptransfer
+  - gptransfer_43x_to_master
+  - gptransfer
   - compile_gpdb_centos6
 
 {% endif %}
@@ -296,7 +292,7 @@ resource_types:
 
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
-      "CS"      in test_sections or
+      "Replication"      in test_sections or
       "ResourceGroups"     in test_sections or
       "Interconnect"     in test_sections or
       "CLI"      in test_sections %}
@@ -707,12 +703,12 @@ anchors:
         BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
 
-cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
+replication_ccp_gen_cluster_params_anchor: &replication_ccp_gen_cluster_params
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
 
-- &cs_ccp_run_tests_params
+replication_ccp_run_tests_params_anchor: &replication_ccp_run_tests_params
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6
   on_success:
@@ -1396,16 +1392,17 @@ jobs:
 {% endif %}
 
 {% endif %}
-{% if "CS" in test_sections %}
+{% if "Replication" in test_sections %}
 ## ======================================================================
-##   ____ ____
-##  / ___/ ___|
-## | |   \___ \
-## | |___ ___) |
-##  \____|____/
+##  ____            _ _           _   _
+## |  _ \ ___ _ __ | (_) ___ __ _| |_(_) ___  _ __
+## | |_) / _ \ '_ \| | |/ __/ _` | __| |/ _ \| '_ \
+## |  _ <  __/ |_) | | | (_| (_| | |_| | (_) | | | |
+## |_| \_\___| .__/|_|_|\___\__,_|\__|_|\___/|_| |_|
+##           |_|
 ## ======================================================================
 
-- name: gate_cs_start
+- name: gate_replication_start
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1416,15 +1413,15 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-{% for test_name in cs_walrep_suites %}
-- name: cs_[[ test_name ]]
+{% for test_name in walrep_suites %}
+- name: [[ test_name ]]
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1450,15 +1447,14 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-{% for test_name in cs_pg_twophase_suites %}
-- name: cs_[[ test_name ]]
+- name: pg_twophase
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
@@ -1480,22 +1476,20 @@ jobs:
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
-      TINC_TARGET: test_[[ test_name ]]
+      TINC_TARGET: test_pg_twophase
     on_success:
       <<: *ccp_destroy
   ensure:
     <<: *set_failed
 
-{% endfor %}
-
 - name: segwalrep_mirrorless_centos6
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
+      passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1517,7 +1511,7 @@ jobs:
 ## |___|_| \_| |_| |_____|_| \_\\____\___/|_| \_|_| \_|_____\____| |_|
 ## ======================================================================
 {% if "centos6" in os_types %}
-- name: mpp_interconnect
+- name: interconnect
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1534,7 +1528,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    <<: *cs_ccp_gen_cluster_params
+    <<: *replication_ccp_gen_cluster_params
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: pre_run_test_setup
@@ -1555,10 +1549,10 @@ jobs:
             sudo yum --cacheonly list installed kernel-devel-$(uname -r)
           SSH_CMD
   - task: run_tests
-    <<: *cs_ccp_run_tests_params
+    <<: *replication_ccp_run_tests_params
     params:
       TINC_TARGET: mpp_interconnect
-    # ccp_destroy should be part of *cs_ccp_run_tests_params
+    # ccp_destroy should be part of *replication_ccp_run_tests_params
   ensure:
     <<: *set_failed
 {% endif %}
@@ -1597,7 +1591,7 @@ jobs:
       - compile_gpdb_sles11
 {% endif %}
 
-- name: mpp_resource_group_centos6
+- name: resource_group_centos6
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1631,7 +1625,7 @@ jobs:
     <<: *set_failed
 
 {% if "centos7" in os_types %}
-- name: mpp_resource_group_centos7
+- name: resource_group_centos7
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1667,7 +1661,7 @@ jobs:
 
 {% endif %}
 {% if "sles" in os_types %}
-- name: mpp_resource_group_sles12
+- name: resource_group_sles12
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1726,7 +1720,7 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-- name: CM_gppkg
+- name: gppkg
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1765,8 +1759,8 @@ jobs:
   ensure:
     <<: *set_failed
 
-{% for test_name in CM_1_suites %}
-- name: CM_[[ test_name ]]
+{% for test_name in CLI_1_suites %}
+- name: [[ test_name ]]
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1802,7 +1796,7 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-- name: CM_gpcheck
+- name: gpcheck
   plan:
   - aggregate: &gets_for_behave
     - get: gpdb_src
@@ -1822,8 +1816,8 @@ jobs:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
 
-{% for test_name in CM_2_suites %}
-- name: CM_[[ test_name ]]
+{% for test_name in CLI_2_suites %}
+- name: [[ test_name ]]
   plan:
   - aggregate: *gets_for_behave
   - task: [[ test_name ]]
@@ -1833,7 +1827,7 @@ jobs:
       BEHAVE_TAGS: [[ test_name ]]
 
 {% endfor %}
-- name: MU_check_centos
+- name: check_centos
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1843,14 +1837,14 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
-  - task: MU_check_centos
+  - task: check_centos
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
     image: centos-gpdb-dev-6
     params:
       TEST_OS: centos
 
-{% for test_name in CM_gpexpand_suites %}
-- name: CM_[[ test_name ]]
+{% for test_name in CLI_gpexpand_suites %}
+- name: [[ test_name ]]
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1891,7 +1885,7 @@ jobs:
     <<: *set_failed
 {% endfor %}
 
-- name: DP_gptransfer_43x_to_master
+- name: gptransfer_43x_to_master
   plan:
   - get: nightly-trigger
     trigger: ((nightly-trigger-flag))
@@ -1996,7 +1990,7 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: DP_gptransfer
+- name: gptransfer
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2191,26 +2185,25 @@ jobs:
     - icw_extensions_gpcloud_centos6
     - icw_extensions_gpcloud_ubuntu16
     - client_loader_remote_test_aix
-    - mpp_resource_group_centos6
-    - mpp_resource_group_centos7
-    - mpp_resource_group_sles12
+    - resource_group_centos6
+    - resource_group_centos7
+    - resource_group_sles12
     - segwalrep_mirrorless_centos6
-{% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites %}
-    - cs_[[ test_name ]]
-{% endfor %}
+    - walrep_1
+    - walrep_2
+    - pg_twophase
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
     - regression_tests_pxf
-{% for test_name in CM_1_suites +
-                    CM_2_suites +
-                    CM_gpexpand_suites %}
-    - CM_[[ test_name ]]
+{% for test_name in CLI_1_suites +
+                    CLI_2_suites +
+                    CLI_gpexpand_suites %}
+    - [[ test_name ]]
 {% endfor %}
-    - CM_gpcheck
-    - CM_gppkg
-    - MU_check_centos
-    - DP_gptransfer_43x_to_master
-    - DP_gptransfer
-    - mpp_interconnect
+    - gpcheck
+    - gppkg
+    - check_centos
+    - gptransfer_43x_to_master
+    - gptransfer
+    - interconnect
 {% endif %}
