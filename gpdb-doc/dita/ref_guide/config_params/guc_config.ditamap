@@ -144,6 +144,7 @@
             <topicref href="guc-list.xml#gp_max_local_distributed_cache"/>
             <topicref href="guc-list.xml#gp_max_packet_size"/>
             <topicref href="guc-list.xml#gp_max_plan_size"/>
+            <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
             <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
