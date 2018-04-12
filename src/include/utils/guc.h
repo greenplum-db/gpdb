@@ -236,7 +236,7 @@ extern bool gp_appendonly_compaction;
  * 0 indicates compact whenever there is hidden data.
  * 10 indicates that a segment should be compacted when more than
  * 10% of the tuples are hidden.
- */ 
+ */
 extern int  gp_appendonly_compaction_threshold;
 extern bool gp_heap_require_relhasoids_match;
 extern bool	Debug_appendonly_rezero_quicklz_compress_scratch;
@@ -517,7 +517,7 @@ extern char  *gp_email_from;
 extern char  *gp_email_to;
 extern int   gp_email_connect_timeout;
 extern int   gp_email_connect_failures;
-extern int   gp_email_connect_avoid_duration; 
+extern int   gp_email_connect_avoid_duration;
 
 #if USE_SNMP
 extern char   *gp_snmp_community;
@@ -541,6 +541,9 @@ extern char  *gp_default_storage_options;
 extern bool gp_enable_segment_copy_checking;
 
 extern int writable_external_table_bufsize;
+
+/* Enable passing of query constraints to external table providers */
+extern bool enable_filter_pushdown;
 
 typedef enum
 {

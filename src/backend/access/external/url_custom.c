@@ -38,7 +38,7 @@ static int32 InvokeExtProtocol(void *ptr, size_t nbytes, URL_CUSTOM_FILE *file, 
 								bool last_call);
 
 URL_FILE *
-url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
+url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter_quals)
 {
 	/* we're using a custom protocol */
 	URL_CUSTOM_FILE   *file;
@@ -79,7 +79,7 @@ url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 										  ALLOCSET_DEFAULT_MAXSIZE);
 
 	oldcontext = MemoryContextSwitchTo(file->protcxt);
-		
+
 	file->protocol_udf = palloc(sizeof(FmgrInfo));
 	file->extprotocol = (ExtProtocolData *) palloc (sizeof(ExtProtocolData));
 
@@ -92,6 +92,7 @@ url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	file->extprotocol->prot_last_call = false;
 	file->extprotocol->prot_url = NULL;
 	file->extprotocol->prot_databuf = NULL;
+	file->extprotocol->filter_quals = filter_quals;
 
 	pfree(prot_name);
 
@@ -154,20 +155,20 @@ InvokeExtProtocol(void *ptr, size_t nbytes, URL_CUSTOM_FILE *file, CopyState pst
 
 	/* must have been created during url_fopen() */
 	Assert(extprotocol);
-	
+
 	extprotocol->type = T_ExtProtocolData;
 	extprotocol->prot_url = file->common.url;
 	extprotocol->prot_relation = (last_call ? NULL : pstate->rel);
 	extprotocol->prot_databuf  = (last_call ? NULL : (char *)ptr);
 	extprotocol->prot_maxbytes = nbytes;
 	extprotocol->prot_last_call = last_call;
-	
+
 	InitFunctionCallInfoData(/* FunctionCallInfoData */ fcinfo,
 							 /* FmgrInfo */ extprotocol_udf,
 							 /* nArgs */ 0,
 							 /* Call Context */ (Node *) extprotocol,
 							 /* ResultSetInfo */ NULL);
-	
+
 	/* invoke the protocol within a designated memory context */
 	oldcontext = MemoryContextSwitchTo(file->protcxt);
 	d = FunctionCallInvoke(&fcinfo);

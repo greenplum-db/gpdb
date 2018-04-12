@@ -196,6 +196,7 @@ add_querydata_to_http_headers(gphadoop_context *context)
 	inputData.headers = context->churl_headers;
 	inputData.gphduri = context->gphd_uri;
 	inputData.rel = context->relation;
+	inputData.filterstr = context->filterstr;
 	build_http_headers(&inputData);
 }
 

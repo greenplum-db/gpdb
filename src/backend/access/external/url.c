@@ -30,7 +30,7 @@ int readable_external_table_timeout = 0;
  * On error, ereport()s
  */
 URL_FILE *
-url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
+url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter_quals)
 {
 	/*
 	 * if 'url' starts with "execute:" then it's a command to execute and
@@ -43,7 +43,7 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	else if (IS_HTTP_URI(url) || IS_GPFDIST_URI(url) || IS_GPFDISTS_URI(url))
 		return url_curl_fopen(url, forwrite, ev, pstate);
 	else
-		return url_custom_fopen(url, forwrite, ev, pstate);
+		return url_custom_fopen(url, forwrite, ev, pstate, filter_quals);
 }
 
 /*
@@ -83,7 +83,7 @@ url_fclose(URL_FILE *file, bool failOnError, const char *relname)
 		case CFTYPE_CUSTOM:
 			url_custom_fclose(file, failOnError, relname);
 			break;
-			
+
 		default: /* unknown or unsupported type - oh dear */
 			elog(ERROR, "unrecognized external table type: %d", file->type);
 			break;
@@ -151,7 +151,7 @@ url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 
 		case CFTYPE_CUSTOM:
 			return url_custom_fread(ptr, size, file, pstate);
-				
+
 		default: /* unknown or supported type */
 			elog(ERROR, "unrecognized external table type: %d", file->type);
     }
@@ -174,7 +174,7 @@ url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 
 		case CFTYPE_CUSTOM:
 			return url_custom_fwrite(ptr, size, file, pstate);
-			
+
 		default: /* unknown or unsupported type */
 			elog(ERROR, "unrecognized external table type: %d", file->type);
     }

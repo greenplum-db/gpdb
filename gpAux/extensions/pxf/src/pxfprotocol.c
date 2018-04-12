@@ -21,9 +21,11 @@
 #include "pxfbridge.h"
 #include "pxffragment.h"
 #include "pxfutils.h"
+#include "pxffilters.h"
 
 #include "access/extprotocol.h"
 #include "nodes/pg_list.h"
+#include "utils/elog.h"
 
 /* define magic module unless run as a part of test cases */
 #ifndef UNIT_TESTING
@@ -156,9 +158,16 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	GPHDUri    *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
 	Relation	relation = EXTPROTOCOL_GET_RELATION(fcinfo);
 
+	List *filter_quals = EXTPROTOCOL_GET_FILTER_QUALS(fcinfo);
+	char* filterstr = NULL;
+	if (filter_quals != NULL) {
+		elog(DEBUG1, "create_context: filter_quals is provided");
+		filterstr = serializePxfFilterQuals(filter_quals);
+	}
+
 	if (is_import) {
 		/* fetch data fragments */
-		get_fragments(uri, relation);
+		get_fragments(uri, relation, filterstr);
 	}
 
 	/* set context */
@@ -168,6 +177,7 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	initStringInfo(&context->uri);
 	initStringInfo(&context->write_file_name);
 	context->relation = relation;
+	context->filterstr = filterstr;
 
 	return context;
 }
