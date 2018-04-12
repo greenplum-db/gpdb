@@ -24,6 +24,7 @@
 #include "access/tuptoaster.h"
 
 #include "catalog/pg_attribute_encoding.h"
+#include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "cdb/cdbappendonlystoragelayer.h"
 #include "cdb/cdbappendonlystorageread.h"
@@ -369,7 +370,8 @@ init_datumstream_info(
 	/*
 	 * Adjust maxsz for Append-Only Storage.
 	 */
-	*maxAoBlockSize = AppendOnlyStorage_GetUsableBlockSize(maxsz);
+	Assert(maxsz <= MAX_APPENDONLY_BLOCK_SIZE);
+	*maxAoBlockSize = maxsz;
 
 	/*
 	 * Assume the folowing unless modified below.
