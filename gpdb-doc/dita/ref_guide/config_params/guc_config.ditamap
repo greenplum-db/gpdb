@@ -286,6 +286,7 @@
             <topicref href="guc-list.xml#vacuum_cost_page_miss"/>
             <topicref href="guc-list.xml#vacuum_freeze_min_age"/>
             <topicref href="guc-list.xml#validate_previous_free_tid"/>
+            <topicref href="guc-list.xml#verify_gpfdists_cert"/>
             <topicref href="guc-list.xml#vmem_process_interrupt"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>

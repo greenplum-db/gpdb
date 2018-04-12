@@ -50,5 +50,14 @@
     </ul>
     <p>For an example of loading data into an external table security, see <xref
         href="g-example-3-multiple-gpfdists-instances.xml#topic47"/>.</p>
+    <p>The server configuration parameter <codeph><xref
+          href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
+          >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
+      enabled when the external table communicates with the <codeph>gpfdist</codeph> utility to
+      either read data from or write data to an external data source. You can set the this parameter
+      to <codeph>false</codeph> to disable authentication when testing the communication between the
+      Greenplum Database external table and the <codeph>gpfdist</codeph> utility that is serving the
+      external data.<note type="warning">Disabling SSL certificate authentication exposes a security
+        risk by not validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
   </body>
 </topic>

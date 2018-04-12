@@ -873,6 +873,7 @@
             <li>
               <xref href="#validate_previous_free_tid"/>
             </li>
+            <li><xref href="#verify_gpfdists_cert"/></li>
             <li><xref href="#vmem_process_interrupt" type="section"
               >vmem_process_interrupt</xref></li>
             <li>
@@ -9852,6 +9853,48 @@
         failed. Greenplum Database attempts to execute the queries. </p>
       <note otherprops="pivotal">If a warning is returned, please contact Pivotal Support.</note>
       <table id="table_fkc_4pb_1w">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="verify_gpfdists_cert">
+    <title>verify_gpfdists_cert</title>
+    <body>
+      <p dir="ltr">When a Greenplum Database external table is defined with the
+          <codeph>gpfdists</codeph> protocol to use SSL security, this parameter controls whether
+        SSL certificate authentication is enabled. The default is <codeph>true</codeph>, SSL
+        authentication is enabled when the external table communicates with the
+          <codeph>gpfdist</codeph> utility to either read data from or write data to an external
+        data source.</p>
+      <p>The value <codeph>false</codeph> disables SSL certificate authentication. You can set the
+        this parameter to <codeph>false</codeph> to disable authentication when testing the
+        communication between the Greenplum Database external table and the <codeph>gpfdist</codeph>
+        utility that is serving the external data.</p>
+      <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
+        validating the <codeph>gpfdists</codeph> SSL certificate. </note>
+      <p>For information about <codeph>gpfdists</codeph> protocol, see <xref
+          href="../../admin_guide/external/g-gpfdists-protocol.xml">gpfdists:// Protocol</xref>. For
+        information about running the <codeph>gpfdist</codeph> utility, see <xref
+          href="../../utility_guide/admin_utilities/gpfdist.xml"/>. </p>
+      <table id="table_ncx_n1h_ldb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>

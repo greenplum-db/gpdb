@@ -185,18 +185,24 @@
         </plentry>
       </parml>
     </section>
-    <section>
-      <title>Note</title>
-      <p>If the <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you
-        can generate a core dump the next time a hang occurs to help debug the issue. Set the
+    <section><title>Notes</title>The server configuration parameter <codeph><xref
+          href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
+          >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
+      enabled when the external table communicates with the <codeph>gpfdist</codeph> utility to
+      either read data from or write data to an external data source. You can set the this parameter
+      to <codeph>false</codeph> to disable authentication when testing the communication between the
+      Greenplum Database external table and the <codeph>gpfdist</codeph> utility that is serving the
+      external data.<note type="warning">Disabling SSL certificate authentication exposes a security
+        risk by not validating the <codeph>gpfdists</codeph> SSL certificate. </note><p>If the
+          <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you can
+        generate a core dump the next time a hang occurs to help debug the issue. Set the
         environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no
         activity to wait before <codeph>gpfdist</codeph> is forced to exit. When the environment
         variable is set and <codeph>gpfidst</codeph> hangs, the utility aborts after the specified
-        number of seconds, creates a core dump, and sends abort information to the log file.</p>
-      <p>This example sets the environment variable on a Linux system so that
+        number of seconds, creates a core dump, and sends abort information to the log
+        file.</p><p>This example sets the environment variable on a Linux system so that
           <codeph>gpfdist</codeph> exits after 300 seconds (5 minutes) of no
-        activity.<codeblock>export GPFDIST_WATCHDOG_TIMER=300</codeblock></p>
-    </section>
+        activity.<codeblock>export GPFDIST_WATCHDOG_TIMER=300</codeblock></p></section>
     <section id="section6">
       <title>Examples</title>
       <p>To serve files from a specified directory using port 8081 (and start
