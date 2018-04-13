@@ -9886,8 +9886,8 @@
         data source.</p>
       <p>The value <codeph>false</codeph> disables SSL certificate authentication. These SSL
         exceptions are ignored:<ul id="ul_ygd_1lj_mdb">
-          <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> that is not
-            trusted by Greenplum Database</li>
+          <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> is not
+            trusted by Greenplum Database.</li>
           <li>The host name contained in the SSL certificate does not match the host name that is
             running <codeph>gpfdist</codeph>.</li>
         </ul></p>
