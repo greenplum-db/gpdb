@@ -9881,16 +9881,22 @@
       <p dir="ltr">When a Greenplum Database external table is defined with the
           <codeph>gpfdists</codeph> protocol to use SSL security, this parameter controls whether
         SSL certificate authentication is enabled. The default is <codeph>true</codeph>, SSL
-        authentication is enabled when the external table communicates with the
+        authentication is enabled when Greenplum Database communicates with the
           <codeph>gpfdist</codeph> utility to either read data from or write data to an external
         data source.</p>
-      <p>The value <codeph>false</codeph> disables SSL certificate authentication. You can set the
-        this parameter to <codeph>false</codeph> to disable authentication when testing the
+      <p>The value <codeph>false</codeph> disables SSL certificate authentication. These SSL
+        exceptions are ignored:<ul id="ul_ygd_1lj_mdb">
+          <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> that is not
+            trusted by Greenplum Database</li>
+          <li>The host name contained in the SSL certificate does not match the host name that is
+            running <codeph>gpfdist</codeph>.</li>
+        </ul></p>
+      <p>You can set the value to <codeph>false</codeph> to disable authentication when testing the
         communication between the Greenplum Database external table and the <codeph>gpfdist</codeph>
-        utility that is serving the external data.</p>
-      <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
-        validating the <codeph>gpfdists</codeph> SSL certificate. </note>
-      <p>For information about <codeph>gpfdists</codeph> protocol, see <xref
+        utility that is serving the external data.<note type="warning">Disabling SSL certificate
+          authentication exposes a security risk by not validating the <codeph>gpfdists</codeph> SSL
+          certificate. </note></p>
+      <p>For information about the <codeph>gpfdists</codeph> protocol, see <xref
           href="../../admin_guide/external/g-gpfdists-protocol.xml">gpfdists:// Protocol</xref>. For
         information about running the <codeph>gpfdist</codeph> utility, see <xref
           href="../../utility_guide/admin_utilities/gpfdist.xml"/>. </p>
