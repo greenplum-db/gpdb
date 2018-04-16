@@ -686,6 +686,19 @@
         </simpletable>
       </body>
     </topic>
+    <topic id="topic_qtf_qth_ndb">
+      <title>Query Plan Execution</title>
+      <body>
+        <p>Control the query plan execution.</p>
+        <simpletable frame="none" id="simpletable_rtf_qth_ndb">
+          <strow>
+            <stentry>
+              <p><xref href="guc-list.xml#gp_max_slices">gp_max_slices</xref></p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
   </topic>
   <topic id="topic29" xml:lang="en">
     <title id="kh155046">Error Reporting and Logging Parameters</title>
