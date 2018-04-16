@@ -28,6 +28,7 @@ where group_attribute is:
    [ CONCURRENCY=integer ]
    [ MEMORY_SHARED_QUOTA=integer ]
    [ MEMORY_SPILL_RATIO=integer ]
+   [ MEMORY_AUDITOR= {vmtracker | cgroup} ]
 
 </synopsis>
  </refsynopsisdiv>
