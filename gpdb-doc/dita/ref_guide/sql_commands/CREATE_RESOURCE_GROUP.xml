@@ -13,23 +13,29 @@
 MEMORY_LIMIT=<varname>integer</varname>
 [ CONCURRENCY=<varname>integer</varname> ]
 [ MEMORY_SHARED_QUOTA=<varname>integer</varname> ]
-[ MEMORY_SPILL_RATIO=<varname>integer</varname> ]</codeblock>
+[ MEMORY_SPILL_RATIO=<varname>integer</varname> ]
+[ MEMORY_AUDITOR= {vmtracker | cgroup} ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>Creates a new resource group for Greenplum Database resource management. A resource
-         group is assigned to one or more roles and identifies concurrent transaction, memory,
-         and CPU limits for the role when resource groups are enabled.</p>
+      <p>Creates a new resource group for Greenplum Database resource management. You can create resource groups to manage resources for roles or 
+        to manage the resources of a Greenplum Database external component such as PL/Container.</p>
+       <p>A resource
+         group that you create to manage a user role identifies concurrent transaction, memory,
+         and CPU limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.</p>
+      <p>A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups to manage both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign PL/Container resource groups when you configure a PL/Container runtime. You cannot assign a resource group that you create for an external component a role.</p>
       <p>You must have <codeph>SUPERUSER</codeph> privileges to create a resource group. The maximum number of resource groups allowed in your Greenplum Database cluster is 100.</p>
       <p>Greenplum Database pre-defines two default resource groups: <codeph>admin_group</codeph>
          and <codeph>default_group</codeph>. These group names, as well as the group name <codeph>none</codeph>, are reserved.</p>
       <p>
         To set appropriate limits for resource groups, the Greenplum Database administrator must
-        be familiar with the queries typically executed on the system, as well as the users/roles executing those queries.</p>
+        be familiar with the queries typically executed on the system, as well as the users/roles executing those queries and the external components they may be using, such as PL/Containers.</p>
       <p>
-        After creating a resource group, assign the group to one or more roles using the <codeph><xref
+        After creating a resource group for a role, assign the group to one or more roles using the <codeph><xref
             href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
             href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> commands.</p>
+      <p>
+        After you create a resource group to manage the CPU and memory resources of an external component, configure the external component to use the resource group. For example, configure the PL/Container runtime <codeph>resource_group_id</codeph>.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -42,8 +48,8 @@ MEMORY_LIMIT=<varname>integer</varname>
         </plentry>
         <plentry>
           <pt>CONCURRENCY <varname>integer</varname></pt>
-          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The <codeph>CONCURRENCY</codeph> value must be an integer in the range [0 .. <codeph>max_connections</codeph>]. The default <codeph>CONCURRENCY</codeph> value is 20.
-            </pd>
+          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The <codeph>CONCURRENCY</codeph> value must be an integer in the range [0 .. <codeph>max_connections</codeph>]. The default <codeph>CONCURRENCY</codeph> value  for resource groups defined for roles is 20.</pd>
+          <pd>You must set <codeph>CONCURRENCY</codeph> to zero (0) for resource groups that you create for external components.</pd>
           <pd><note>You cannot set the <codeph>CONCURRENCY</codeph> value for the <codeph>admin_group</codeph> to zero (0).</note></pd>
         </plentry>
         <plentry>
@@ -63,6 +69,11 @@ MEMORY_LIMIT=<varname>integer</varname>
           <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
           <pd>The memory usage threshold for memory-intensive operators in a transaction. When the transaction reaches this threshold, it spills to disk. The minimum memory spill ratio percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SPILL_RATIO</codeph> value is 20.</pd>
         </plentry>
+        <plentry>
+          <pt>MEMORY_AUDITOR {vmtracker | cgroup}</pt>
+          <pd>The memory auditor for the resource group. Greenplum Database employs virtual memory tracking for role resources and cgroup memory tracking for resources used by external components. The default <codeph>MEMORY_AUDITOR</codeph> is <codeph>vmtracker</codeph>. When you create a resource group with <codeph>vmtracker</codeph> memory auditing, Greenplum Database tracks memory used by that resource group internally.</pd>
+          <pd>When you create a resource group specifying the <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>, Greenplum Database defers the accounting of memory used by that resource group to cgroups. <codeph>CONCURRENCY</codeph> must be zero (0) for a resource group that you create for an external component such as PL/Container. You cannot assign a resource group that you create for an external component to a Greenplum Database role.</pd>
+        </plentry>
       </parml>
     </section>
     <section id="section5"><title>Notes</title>
@@ -75,9 +86,12 @@ MEMORY_LIMIT=<varname>integer</varname>
       <title>Examples</title>
       <p>Create a resource group with CPU and memory limit percentages of 35: </p>
       <codeblock>CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35);</codeblock>
-      <p>Create a resource group with a concurrent transaction limit of 30, a memory limit of 15, and a CPU limit of 25:</p>
+      <p>Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:</p>
       <codeblock>CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
   MEMORY_LIMIT=15, CPU_RATE_LIMIT=25);</codeblock>
+      <p>Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:</p>
+      <codeblock>CREATE RESOURCE GROUP plc_run1 WITH ( MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
+  MEMORY_AUDITOR=cgroup);</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>
