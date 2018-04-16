@@ -1779,6 +1779,7 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
                 WHEN T6.value='1'     THEN 'cgroup'
                 ELSE 'unknown'
            END         AS memory_auditor
+         , T7.value    AS cpuset
     FROM pg_resgroup G
          JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1
          JOIN pg_resgroupcapability T2 ON G.oid = T2.resgroupid AND T2.reslimittype = 2
@@ -1786,6 +1787,7 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
          JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
          JOIN pg_resgroupcapability T5 ON G.oid = T5.resgroupid AND T5.reslimittype = 5
     LEFT JOIN pg_resgroupcapability T6 ON G.oid = T6.resgroupid AND T6.reslimittype = 6
+    LEFT JOIN pg_resgroupcapability T7 ON G.oid = T7.resgroupid AND T7.reslimittype = 7
     ;
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;

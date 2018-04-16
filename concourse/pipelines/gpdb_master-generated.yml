@@ -1462,6 +1462,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         PLATFORM: centos7
+        instance_type: n1-standard-2
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1496,6 +1497,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         PLATFORM: sles12
+        instance_type: n1-standard-2
         default_image_user: root
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml

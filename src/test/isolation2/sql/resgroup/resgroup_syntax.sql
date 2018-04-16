@@ -53,14 +53,46 @@ CREATE RESOURCE GROUP none WITH (cpu_rate_limit=10, memory_limit=10);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10);
 DROP RESOURCE GROUP rg_test_group;
--- must specify both memory_limit and cpu_rate_limit
+-- must specify both memory_limit and (cpu_rate_limit or cpuset)
 CREATE RESOURCE GROUP rg_test_group WITH (memory_limit=10);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 -- can't specify the resource limit type multiple times
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=5, memory_limit=5, concurrency=1);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, cpu_rate_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_shared_quota=70, memory_shared_quota=80);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpuset='0', memory_limit=5);
+-- can't specify both cpu_rate_limit and cpuset
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, cpuset='0', memory_limit=5);
+-- can't specify invalid cpuset
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset=',', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='-', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='a', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='12a', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0-,', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='-1', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='3-1', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset=' 0 ', memory_limit=5);
+---- suppose the core numbered 1024 is not exist
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='1024', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,', memory_limit=5);
+-- can't alter to invalid cpuset
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', memory_limit=5);
+ALTER RESOURCE GROUP rg_test_group set CPUSET '';
+ALTER RESOURCE GROUP rg_test_group set CPUSET ',';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '-';
+ALTER RESOURCE GROUP rg_test_group set CPUSET 'a';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '12a';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '0-';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '-1';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '3-1';
+ALTER RESOURCE GROUP rg_test_group set CPUSET ' 0 ';
+---- suppose the core numbered 1024 is not exist
+ALTER RESOURCE GROUP rg_test_group set CPUSET '1024';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,';
+DROP RESOURCE GROUP rg_test_group;
 -- can't drop non-exist resource group
 DROP RESOURCE GROUP non_exist_group;
 -- can't drop reserved resource groups
@@ -72,7 +104,7 @@ DROP RESOURCE GROUP none;
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10);
 SELECT groupname,concurrency,proposed_concurrency,cpu_rate_limit,memory_limit,proposed_memory_limit,memory_shared_quota,memory_spill_ratio FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_shared_quota=70, memory_spill_ratio=30);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpuset='0', memory_limit=10, memory_shared_quota=70, memory_spill_ratio=30);
 SELECT groupname,concurrency,proposed_concurrency,cpu_rate_limit,memory_limit,proposed_memory_limit,memory_shared_quota,memory_spill_ratio FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
 
@@ -81,6 +113,12 @@ DROP RESOURCE GROUP rg_test_group;
 -- ----------------------------------------------------------------------
 
 -- negative: cpu_rate_limit & memory_limit should be in [1, 100]
+-- if cpu_rate_limit equals -1, it will not be involved in sum
+CREATE RESOURCE GROUP rg_test_group1 WITH (memory_limit=10, cpuset='0');
+CREATE RESOURCE GROUP rg_test_group2 WITH (cpu_rate_limit=60, memory_limit=10);
+CREATE RESOURCE GROUP rg_test_group3 WITH (cpu_rate_limit=1, memory_limit=10);
+DROP RESOURCE GROUP rg_test_group1;
+DROP RESOURCE GROUP rg_test_group2;
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=61, memory_limit=10);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=61);
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=0, memory_limit=10);
@@ -94,6 +132,10 @@ CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_rate_limit=10, mem
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="randomtext");
 -- negative: concurrency should be zero for cgroup audited resource group
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
+-- negative: the cores of cpuset in different groups mustn't overlap
+CREATE RESOURCE GROUP rg_test_group1 WITH (cpuset='0', memory_limit=10);
+CREATE RESOURCE GROUP rg_test_group2 WITH (cpuset='0', memory_limit=10);
+DROP RESOURCE GROUP rg_test_group1;
 
 -- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
@@ -195,6 +237,15 @@ ALTER RESOURCE GROUP rg1_test_group SET CPU_RATE_LIMIT 30;
 ALTER RESOURCE GROUP rg2_test_group SET CPU_RATE_LIMIT 30;
 DROP RESOURCE GROUP rg1_test_group;
 DROP RESOURCE GROUP rg2_test_group;
+-- positive: cpuset and cpu_rate_limit are exclusive,
+-- if cpu_rate_limit is set, cpuset is empty
+-- if cpuset is set, cpuset is -1
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10);
+ALTER RESOURCE GROUP rg_test_group SET CPUSET '0';
+SELECT groupname,cpu_rate_limit,memory_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 10;
+SELECT groupname,cpu_rate_limit,memory_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+DROP RESOURCE GROUP rg_test_group;
 
 CREATE RESOURCE GROUP cgroup_audited_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
 -- negative: memory_auditor cannot be altered

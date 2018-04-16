@@ -6,3 +6,4 @@ enable_resgroup_validate.out
 resgroup_cpu_rate_limit.out
 resgroup_alter_memory.out
 pt_io_in_progress_deadlock.out
+resgroup_cpuset.out

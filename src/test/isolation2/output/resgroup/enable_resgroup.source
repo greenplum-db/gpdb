@@ -3,13 +3,17 @@
 
 ! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
 
+! rmdir @cgroup_mnt_point@/cpuset/gpdb;
+
 ! mkdir @cgroup_mnt_point@/cpu/gpdb;
 
 ! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
 
-! chmod 755 @cgroup_mnt_point@/cpu/gpdb;
+! mkdir @cgroup_mnt_point@/cpuset/gpdb;
 
-! chmod 755 @cgroup_mnt_point@/cpuacct/gpdb;
+! cat @cgroup_mnt_point@/cpuset/cpuset.cpus > @cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus;
+
+! cat @cgroup_mnt_point@/cpuset/cpuset.mems > @cgroup_mnt_point@/cpuset/gpdb/cpuset.mems;
 
 -- end_ignore
 

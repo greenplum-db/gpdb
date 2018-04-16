@@ -343,6 +343,11 @@ static void groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str);
 static void groupApplyCgroupMemInc(ResGroupData *group);
 static void groupApplyCgroupMemDec(ResGroupData *group);
 
+static void cpusetOperation(char *cpuset1,
+							const char *cpuset2,
+							int len,
+							bool sub);
+
 #ifdef USE_ASSERT_CHECKING
 static bool selfHasGroup(void);
 static bool selfHasSlot(void);
@@ -498,6 +503,8 @@ InitResGroups(void)
 	ResGroupCaps		caps;
 	Relation			relResGroup;
 	Relation			relResGroupCapability;
+	char		cpuset[MaxCpuSetLength] = {0};
+	int			defaultCore = -1;
 
 	on_shmem_exit(AtProcExit_ResGroup, 0);
 
@@ -546,6 +553,13 @@ InitResGroups(void)
 
 	ResGroupOps_Init();
 
+	/* Get cpuset from cpuset/gpdb, and transform it into bitset */
+	ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
+	Bitmapset *bmsDefault = CpusetToBitset(cpuset, MaxCpuSetLength);
+	/* get the minimum core number, in case of the zero core is not exist */
+	defaultCore = bms_first_from(bmsDefault, 0);
+	Assert(defaultCore >= 0);
+
 	numGroups = 0;
 	sscan = systable_beginscan(relResGroup, InvalidOid, false, SnapshotNow, 0, NULL);
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
@@ -561,14 +575,62 @@ InitResGroups(void)
 		Assert(group != NULL);
 
 		ResGroupOps_CreateGroup(groupId);
-		ResGroupOps_SetCpuRateLimit(groupId, cpuRateLimit);
 		ResGroupOps_SetMemoryLimit(groupId, caps.memLimit);
+		
+		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
+		{
+			Assert(strcmp(caps.cpuset, "") == 0);
+			ResGroupOps_SetCpuRateLimit(groupId, caps.cpuRateLimit);
+		}
+		else
+		{
+			Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+			Assert(strcmp(caps.cpuset, "") != 0);
+
+			bool allCoreAvailable = true;
+			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset, MaxCpuSetLength);
+			allCoreAvailable = bms_is_subset(bmsCurrent, bmsDefault);
+			if (allCoreAvailable)
+			{
+				/*
+				 * write cpus to corresponding file
+				 * if all the cores are available
+				 */
+				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+				bmsDefault = bms_del_members(bmsDefault, bmsCurrent);
+			}
+			else
+			{
+				/*
+				 * if some of the cores are unavailable, just set defaultCore to
+				 * this group and send a warning message, so the system can
+				 * startup, then DBA can fix it
+				 */
+				snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+				ResGroupOps_SetCpuSet(groupId, cpuset);
+				ereport(WARNING,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("some of the cpu cores are unavailable in group(%d), \
+								using core(%d) instead",
+								groupId,
+								defaultCore)));
+			}
+		}
 
 		numGroups++;
 		Assert(numGroups <= MaxResourceGroups);
 	}
 	systable_endscan(sscan);
-
+	/* 
+	 * set default cpuset
+	 */
+	BitsetToCpuset(bmsDefault, cpuset, MaxCpuSetLength);
+	if (CpusetIsEmpty(cpuset))
+	{
+		snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+	}
+	ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+	
 	pResGroupControl->loaded = true;
 	LOG_RESGROUP_DEBUG(LOG, "initialized %d resource groups", numGroups);
 
@@ -631,7 +693,8 @@ ResGroupCheckForDrop(Oid groupId, char *name)
  * This function is called in the callback function of DROP RESOURCE GROUP.
  */
 void
-ResGroupDropFinish(Oid groupId, bool isCommit)
+ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
+				   bool isCommit)
 {
 	ResGroupData	*group;
 	volatile int	savedInterruptHoldoffCount;
@@ -642,7 +705,7 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 	{
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
 
-		group = groupHashFind(groupId, true);
+		group = groupHashFind(callbackCtx->groupid, true);
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -657,9 +720,17 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 			/* Only migrate processes out of vmtracker groups */
 			migrate = group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER;
 
-			removeGroup(groupId);
+			removeGroup(callbackCtx->groupid);
+			if (!CpusetIsEmpty(group->caps.cpuset))
+			{
+				/* reset default group, add cpu cores to it */
+				char cpuset[MaxCpuSetLength];
+				ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset, MaxCpuSetLength);
+				CpusetUnion(cpuset, group->caps.cpuset, MaxCpuSetLength);
+				ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+			}
 
-			ResGroupOps_DestroyGroup(groupId, migrate);
+			ResGroupOps_DestroyGroup(callbackCtx->groupid, migrate);
 		}
 	}
 	PG_CATCH();
@@ -687,7 +758,7 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
  * This function is called in the callback function of CREATE RESOURCE GROUP.
  */
 void
-ResGroupCreateOnAbort(Oid groupId)
+ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx)
 {
 	volatile int savedInterruptHoldoffCount;
 
@@ -695,9 +766,22 @@ ResGroupCreateOnAbort(Oid groupId)
 	PG_TRY();
 	{
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
-		removeGroup(groupId);
+		removeGroup(callbackCtx->groupid);
 		/* remove the os dependent part for this resource group */
-		ResGroupOps_DestroyGroup(groupId, true);
+		ResGroupOps_DestroyGroup(callbackCtx->groupid, true);
+
+		if (!CpusetIsEmpty(callbackCtx->caps.cpuset))
+		{
+			/* return cpu cores to default group */
+			char defaultGroupCpuset[MaxCpuSetLength];
+			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+								  defaultGroupCpuset,
+								  MaxCpuSetLength);
+			CpusetUnion(defaultGroupCpuset,
+						callbackCtx->caps.cpuset,
+						MaxCpuSetLength);
+			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
+		}
 	}
 	PG_CATCH();
 	{
@@ -720,37 +804,59 @@ ResGroupCreateOnAbort(Oid groupId)
  * Apply the new resgroup caps.
  */
 void
-ResGroupAlterOnCommit(Oid groupId,
-					  ResGroupLimitType limittype,
-					  const ResGroupCaps *caps,
-					  ResGroupCap memLimitGap)
+ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 {
 	ResGroupData	*group;
 	volatile int	savedInterruptHoldoffCount;
-
-	Assert(caps != NULL);
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
 	PG_TRY();
 	{
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
-		group = groupHashFind(groupId, true);
+		group = groupHashFind(callbackCtx->groupid, true);
 
-		group->caps = *caps;
+		group->caps = callbackCtx->caps;
 
-		if (limittype == RESGROUP_LIMIT_TYPE_CPU)
+		if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
-			ResGroupOps_SetCpuRateLimit(groupId, caps->cpuRateLimit);
+			ResGroupOps_SetCpuRateLimit(callbackCtx->groupid,
+										callbackCtx->caps.cpuRateLimit);
 		}
-		else if (limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
+		{
+			ResGroupOps_SetCpuSet(callbackCtx->groupid,
+								  callbackCtx->caps.cpuset);
+		}
+		else if (callbackCtx->limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 		{
 			Assert(pResGroupControl->totalChunks > 0);
+			ResGroupCap	memLimitGap = 0;
+			if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_MEMORY)
+				memLimitGap = callbackCtx->oldCaps.memLimit - callbackCtx->caps.memLimit;
 			group->memGap += pResGroupControl->totalChunks * memLimitGap / 100;
 
 			Assert(group->groupMemOps != NULL);
 			if (group->groupMemOps->group_mem_on_alter)
-				group->groupMemOps->group_mem_on_alter(groupId, group);
+				group->groupMemOps->group_mem_on_alter(callbackCtx->groupid, group);
+		}
+		/* reset default group if cpuset has changed */
+		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset))
+		{
+			char defaultCpusetGroup[MaxCpuSetLength];
+			/* get current default group value */
+			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+								  defaultCpusetGroup,
+								  MaxCpuSetLength);
+			/* Add old value to default group
+			 * sub new value from default group */
+			CpusetUnion(defaultCpusetGroup,
+							callbackCtx->oldCaps.cpuset,
+							MaxCpuSetLength);
+			CpusetDifference(defaultCpusetGroup,
+							callbackCtx->caps.cpuset,
+							MaxCpuSetLength);
+			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
 		}
 	}
 	PG_CATCH();
@@ -2050,16 +2156,14 @@ void
 SerializeResGroupInfo(StringInfo str)
 {
 	int i;
-	int tmp;
-	ResGroupCaps caps0;
-	ResGroupCap *caps;
+	ResGroupCap	tmp;
+	ResGroupCaps	caps;
 
 	if (selfIsAssigned())
-		caps = (ResGroupCap *) &self->caps;
+		caps = self->caps;
 	else
 	{
-		MemSet(&caps0, 0, sizeof(caps0));
-		caps = (ResGroupCap *) &caps0;
+		MemSet(&caps, 0, sizeof(caps));
 	}
 
 	tmp = htonl(self->groupId);
@@ -2067,8 +2171,35 @@ SerializeResGroupInfo(StringInfo str)
 
 	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
 	{
-		tmp = htonl(caps[i]);
-		appendBinaryStringInfo(str, (char *) &tmp, sizeof(caps[i]));
+		if (i == RESGROUP_LIMIT_TYPE_CPUSET)
+		{
+			appendBinaryStringInfo(str, caps.cpuset, sizeof(caps.cpuset));
+		}
+		else
+		{
+			switch (i)
+			{
+				case RESGROUP_LIMIT_TYPE_CONCURRENCY:
+					tmp = htonl(caps.concurrency);
+					break;
+				case RESGROUP_LIMIT_TYPE_CPU:
+					tmp = htonl(caps.cpuRateLimit);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY:
+					tmp = htonl(caps.memLimit);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
+					tmp = htonl(caps.memSharedQuota);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
+					tmp = htonl(caps.memSpillRatio);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
+					tmp = htonl(caps.memAuditor);
+					break;
+			}
+			appendBinaryStringInfo(str, (char *) &tmp, sizeof(ResGroupCap));
+		}
 	}
 }
 
@@ -2082,9 +2213,8 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 						int len)
 {
 	int			i;
-	int			tmp;
+	ResGroupCap	tmp;
 	const char	*ptr = buf;
-	ResGroupCap *caps = (ResGroupCap *) capsOut;
 
 	Assert(len > 0);
 
@@ -2094,9 +2224,37 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 
 	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
 	{
-		memcpy(&tmp, ptr, sizeof(caps[i]));
-		caps[i] = ntohl(tmp);
-		ptr += sizeof(caps[i]);
+		if (i == RESGROUP_LIMIT_TYPE_CPUSET)
+		{
+			memcpy(capsOut->cpuset, ptr, sizeof(capsOut->cpuset));
+			ptr += sizeof(capsOut->cpuset);
+		}
+		else
+		{
+			memcpy(&tmp, ptr, sizeof(ResGroupCap));
+			switch (i)
+			{
+				case RESGROUP_LIMIT_TYPE_CONCURRENCY:
+					capsOut->concurrency = ntohl(tmp);
+					break;
+				case RESGROUP_LIMIT_TYPE_CPU:
+					capsOut->cpuRateLimit = ntohl(tmp);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY:
+					capsOut->memLimit = ntohl(tmp);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
+					capsOut->memSharedQuota = ntohl(tmp);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
+					capsOut->memSpillRatio = ntohl(tmp);
+					break;
+				case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
+					capsOut->memAuditor = ntohl(tmp);
+					break;
+			}
+			ptr += sizeof(ResGroupCap);
+		}
 	}
 
 	Assert(len == ptr - buf);
@@ -2180,7 +2338,7 @@ AssignResGroupOnMaster(void)
 		SIMPLE_FAULT_INJECTOR(ResGroupAssignedOnMaster);
 
 		/* Add into cgroup */
-		ResGroupOps_AssignGroup(self->groupId, MyProcPid);
+		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
 
 		/* Set spill guc */
 		groupSetMemorySpillRatio(&slot->caps);
@@ -2275,7 +2433,13 @@ SwitchResGroupOnSegment(const char *buf, int len)
 	{
 		/* it's not the first dispatch in the same transaction */
 		Assert(self->groupId == newGroupId);
-		Assert(!memcmp((void*)&self->caps, (void*)&caps, sizeof(caps)));
+		Assert(self->caps.concurrency == caps.concurrency);
+		Assert(self->caps.cpuRateLimit == caps.cpuRateLimit);
+		Assert(self->caps.memLimit == caps.memLimit);
+		Assert(self->caps.memSharedQuota == caps.memSharedQuota);
+		Assert(self->caps.memSpillRatio == caps.memSpillRatio);
+		Assert(self->caps.memAuditor == caps.memAuditor);
+		Assert(!strcmp(self->caps.cpuset, caps.cpuset));
 		return;
 	}
 
@@ -2317,7 +2481,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 	Assert(selfIsAssigned());
 
 	/* Add into cgroup */
-	ResGroupOps_AssignGroup(self->groupId, MyProcPid);
+	ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
 }
 
 /*
@@ -3482,4 +3646,251 @@ groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 			VmemTracker_ConvertVmemChunksToMB(
 				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetSegmentNum()));
 	appendStringInfo(str, "}");
+}
+
+/*
+ * Parse cpuset to bitset
+ * if onlyCheck is true, the function only check whether cpuset is valid
+ * If cpuset is "1,3-5", Bitmapset 1,3,4,5 are set.
+ */
+Bitmapset *
+CpusetToBitset(const char *cpuset, int len)
+{
+	int	pos = 0, num1 = 0, num2 = 0;
+	enum Status
+	{
+		Initial,
+		Begin,
+		Number,
+		Interval,
+		Number2
+	};
+	enum Status	s = Initial;
+
+	Bitmapset	*bms = NULL;
+	if (cpuset == NULL || len <= 0)
+		return bms;
+	while (pos < len && cpuset[pos])
+	{
+		char c = cpuset[pos++];
+		if (c == ',')
+		{
+			if (s == Initial || s == Begin)
+			{
+				continue;
+			}
+			else if (s == Interval)
+			{
+				goto error_logic;
+			}
+			else if (s == Number)
+			{
+				bms = bms_union(bms, bms_make_singleton(num1));
+				num1 = 0;
+				s = Begin;
+			}
+			else if (s == Number2)
+			{
+				if (num1 > num2)
+				{
+					goto error_logic;
+				}
+				for (int i = num1; i <= num2; ++i)
+				{
+					bms = bms_union(bms, bms_make_singleton(i));
+				}
+				num1 = num2 = 0;
+				s = Begin;
+			}
+		}
+		else if (c == '-')
+		{
+			if (s != Number)
+			{
+				goto error_logic;
+			}
+			s = Interval;
+		}
+		else if (isdigit(c))
+		{
+			if (s == Initial || s == Begin)
+			{
+				s = Number;
+			}
+			else if (s == Interval)
+			{
+				s = Number2;
+			}
+			if (s == Number)
+			{
+				num1 = num1 * 10 + (c - '0');
+			}
+			else if (s == Number2)
+			{
+				num2 = num2 * 10 + (c - '0');
+			}
+		}
+		else if (c == '\n')
+		{
+			break;
+		}
+		else
+		{
+			goto error_logic;
+		}
+	}
+	if (s == Number)
+	{
+		bms = bms_union(bms, bms_make_singleton(num1));
+	}
+	else if (s == Number2)
+	{
+		if (num1 > num2)
+		{
+			goto error_logic;
+		}
+		for (int i = num1; i <= num2; ++i)
+		{
+			bms = bms_union(bms, bms_make_singleton(i));
+		}
+	}
+	else if (s == Initial || s == Interval)
+	{
+		goto error_logic;
+	}
+	return bms;
+error_logic:
+	return NULL;
+}
+
+/*
+ * Check the value of cpuset is empty or not
+ */
+bool CpusetIsEmpty(const char *cpuset)
+{
+	return strcmp(cpuset, "") == 0;
+}
+
+/*
+ * Transform bitset to cpuset
+ * if the bit is set to 1, the corresponding core number must exist in cpuset
+ */
+void
+BitsetToCpuset(const Bitmapset *bms,
+			   char *cpuset,
+			   int cpusetSize)
+{
+	int len = 0;
+	int lastContinuousBit = -1;
+	int	intervalStart = -1;
+	int num;
+	char buffer[32] = {0};
+	bms_foreach(num, bms)
+	{
+		if (lastContinuousBit == -1)
+		{
+			intervalStart = lastContinuousBit = num;
+		}
+		else
+		{
+			if (num != lastContinuousBit + 1)
+			{
+				if (intervalStart == lastContinuousBit)
+				{
+					snprintf(buffer, sizeof(buffer), "%d,", intervalStart);
+				}
+				else
+				{
+					snprintf(buffer, sizeof(buffer), "%d-%d,", intervalStart, lastContinuousBit);
+				}
+				if (len + strlen(buffer) >= cpusetSize)
+				{
+					return ;
+				}
+				strcpy(cpuset + len, buffer);
+				len += strlen(buffer);
+				intervalStart = lastContinuousBit = num;
+			}
+			else
+			{
+				lastContinuousBit = num;
+			}
+		}
+	}
+	if (intervalStart != -1)
+	{
+		if (intervalStart == lastContinuousBit)
+		{
+			snprintf(buffer, sizeof(buffer), "%d", intervalStart);
+		}
+		else
+		{
+			snprintf(buffer, sizeof(buffer), "%d-%d", intervalStart, lastContinuousBit);
+		}
+		if (len + strlen(buffer) >= cpusetSize)
+		{
+			return ;
+		}
+		strcpy(cpuset + len, buffer);
+		len += strlen(buffer);
+	}
+	else
+	{
+		cpuset[0] = '\0';
+	}
+}
+
+/*
+ * calculate the result of cpuset1 plus/minus cpuset2 and save in place
+ * if sub is true, the operation is minus
+ * if sub is false, the operation is plus
+ */
+void
+cpusetOperation(char *cpuset1, const char *cpuset2,
+							int len, bool sub)
+{
+	char cpuset[MaxCpuSetLength] = {0};
+	int defaultCore = -1;
+	Bitmapset *bms1 = CpusetToBitset(cpuset1, len);
+	Bitmapset *bms2 = CpusetToBitset(cpuset2, len);
+	if (sub)
+	{
+		bms1 = bms_del_members(bms1, bms2);
+	}
+	else
+	{
+		bms1 = bms_add_members(bms1, bms2);
+	}
+	if (!bms_is_empty(bms1))
+	{
+		BitsetToCpuset(bms1, cpuset1, len);
+	}
+	else
+	{
+		/* Get cpuset from cpuset/gpdb, and transform it into bitset */
+		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
+		Bitmapset *bmsDefault = CpusetToBitset(cpuset, MaxCpuSetLength);
+		/* get the minimum core number, in case of the zero core is not exist */
+		defaultCore = bms_first_from(bmsDefault, 0);
+		Assert(defaultCore >= 0);
+		snprintf(cpuset1, MaxCpuSetLength, "%d", defaultCore);
+	}
+}
+
+/*
+ * union cpuset2 to cpuset1
+ */
+void
+CpusetUnion(char *cpuset1, const char *cpuset2, int len)
+{
+	cpusetOperation(cpuset1, cpuset2, len, false);
+}
+
+/*
+ * subtract cpuset2 from cpuset1
+ */
+void
+CpusetDifference(char *cpuset1, const char *cpuset2, int len)
+{
+	cpusetOperation(cpuset1, cpuset2, len, true);
 }

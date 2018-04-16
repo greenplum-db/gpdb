@@ -91,6 +91,7 @@ test: resource_queue
 test: resource_queue_function
 test: resource_queue_stat
 test: resource_group
+test: resource_group_cpuset
 test: resource_group_gucs
 test: wrkloadadmin
 
