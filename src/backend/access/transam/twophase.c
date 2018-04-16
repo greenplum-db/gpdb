@@ -1113,7 +1113,7 @@ StartPrepare(GlobalTransaction gxact)
 		pfree(invalmsgs);
 	}
 
-	SIMPLE_FAULT_INJECTOR(StartPrepareTx);
+
 }
 
 /*
