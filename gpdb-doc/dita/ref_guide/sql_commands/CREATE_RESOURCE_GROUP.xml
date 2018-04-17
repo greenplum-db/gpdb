@@ -90,8 +90,8 @@ MEMORY_LIMIT=<varname>integer</varname>
       <codeblock>CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
   MEMORY_LIMIT=15, CPU_RATE_LIMIT=25);</codeblock>
       <p>Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:</p>
-      <codeblock>CREATE RESOURCE GROUP plc_run1 WITH ( MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
-  MEMORY_AUDITOR=cgroup);</codeblock>
+      <codeblock>CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
+  CONCURRENCY=0, MEMORY_AUDITOR=cgroup);</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>
