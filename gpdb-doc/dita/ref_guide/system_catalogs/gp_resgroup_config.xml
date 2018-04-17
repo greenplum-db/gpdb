@@ -43,6 +43,14 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>memauditor</codeph>
+            </entry>
+            <entry colname="col2">int4</entry>
+            <entry colname="col3">pg_resgroup.memauditor</entry>
+            <entry colname="col4">The memory auditor in use for the resource group.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>concurrency</codeph>
             </entry>
             <entry colname="col2">text</entry>
