@@ -2461,6 +2461,10 @@ GetSnapshotData(Snapshot snapshot)
 			globalxmin = DistributedLog_GetOldestXmin(globalxmin);
 	}
 
+	if (TransactionIdFollows(globalxmin, xmin))
+		elog(ERROR, "global xmin (%u) is higher than transaction xmin (%u)",
+			globalxmin, xmin);
+
 	/* Update global variables too */
 	RecentGlobalXmin = globalxmin - vacuum_defer_cleanup_age;
 	if (!TransactionIdIsNormal(RecentGlobalXmin))
