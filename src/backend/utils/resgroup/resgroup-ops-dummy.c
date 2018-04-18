@@ -36,6 +36,19 @@ ResGroupOps_Name(void)
 	return "unsupported";
 }
 
+/*
+ * Probe the configuration for the OS group implementation.
+ *
+ * Return true if everything is OK, or false is some requirements are not
+ * satisfied.  Will not fail in either case.
+ */
+bool
+ResGroupOps_Probe(void)
+{
+	unsupported_system();
+	return false;
+}
+
 /* Check whether the OS group implementation is available and useable */
 void
 ResGroupOps_Bless(void)
@@ -69,10 +82,11 @@ ResGroupOps_CreateGroup(Oid group)
 /*
  * Destroy the OS group for group.
  *
- * Fail if any process is running under it.
+ * One OS group can not be dropped if there are processes running under it,
+ * if migrate is true these processes will be moved out automatically.
  */
 void
-ResGroupOps_DestroyGroup(Oid group)
+ResGroupOps_DestroyGroup(Oid group, bool migrate)
 {
 	unsupported_system();
 }

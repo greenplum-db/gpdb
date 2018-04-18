@@ -1,0 +1,46 @@
+-- start_ignore
+drop resource group rg1;
+drop resource group rg2;
+\! gpconfig -c gp_resource_manager -v queue
+20180409:14:08:27:030072 gpconfig:nyu-vm-centos:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_manager -v queue'
+-- end_ignore
+\! echo $?
+0
+-- start_ignore
+\! gpstop -rai
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Gathering information and validating the environment...
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.6.1+dev.26.g8353723c5c build dev'
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-There are 1 connections to the database
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Master host=nyu-vm-centos
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20180409:14:08:27:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/src/gpdb5.git/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20180409:14:08:28:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20180409:14:08:28:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/src/gpdb5.git/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20180409:14:08:28:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Stopping master standby host nyu-vm-centos mode=fast
+20180409:14:08:29:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Successfully shutdown standby process on nyu-vm-centos
+20180409:14:08:29:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20180409:14:08:29:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20180409:14:08:29:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-0.00% of jobs completed
+20180409:14:08:31:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-100.00% of jobs completed
+20180409:14:08:31:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20180409:14:08:31:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-0.00% of jobs completed
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-100.00% of jobs completed
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-----------------------------------------------------
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-----------------------------------------------------
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-No leftover gpmmon process found
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20180409:14:08:32:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20180409:14:08:33:030207 gpstop:nyu-vm-centos:gpadmin-[INFO]:-Restarting System...
+-- end_ignore
+\! echo $?
+0

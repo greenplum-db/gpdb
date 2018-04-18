@@ -1,8 +1,11 @@
+test: resgroup_switch_queue
+
 test: pg_dumpall_current
 test: diff_dumps
-test: inserts
 test: pg_dumpall_current
 test: gpcheckcat
 
 test: resgroup_current_3_queue
-test: resgroup_cleanup_basic
+test: resgroup_switch_group
+test: resgroup_current_3_group
+test: resgroup_cleanup

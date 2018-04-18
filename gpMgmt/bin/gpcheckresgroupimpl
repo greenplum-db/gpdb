@@ -6,6 +6,8 @@
 import os
 import sys
 import psutil
+from gppylib.commands import gp
+from gppylib import gpversion
 
 class dummy(object):
 
@@ -54,6 +56,16 @@ class cgroup(object):
         self.validate_permission("cpuacct/gpdb/cpuacct.stat", "r")
 
         self.validate_permission("memory/memory.limit_in_bytes", "r")
+
+        # resgroup memory auditor is introduced in 6.0 devel and backported
+        # to 5.x branch since 5.6.1.  To provide backward compatibilities
+        # memory permissions are only checked since 6.0.
+        gpverstr = gp.GpVersion.local("", os.getenv("GPHOME"))
+        gpver = gpversion.GpVersion(gpverstr)
+        if gpver.version >= [6, 0, 0]:
+            self.validate_permission("memory/gpdb/", "rwx")
+            self.validate_permission("memory/gpdb/memory.limit_in_bytes", "rw")
+            self.validate_permission("memory/gpdb/memory.usage_in_bytes", "r")
 
     def die(self, msg):
         exit(self.impl + self.error_prefix + msg)

@@ -42,14 +42,42 @@
  * So far these operations are mainly for CPU rate limitation and accounting.
  */
 
-#define CGROUP_ERROR_PREFIX "cgroup is not properly configured: "
-#define CGROUP_ERROR(...) do { \
-	elog(ERROR, CGROUP_ERROR_PREFIX __VA_ARGS__); \
-} while (false)
+#define CGROUP_ERROR(...) elog(ERROR, __VA_ARGS__)
+#define CGROUP_CONFIG_ERROR(...) \
+	CGROUP_ERROR("cgroup is not properly configured: " __VA_ARGS__)
 
 #define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
 #define MAX_RETRY 10
+
+/*
+ * cgroup memory permission is only mandatory on 6.x and master;
+ * on 5.x we need to make it optional to provide backward compatibilities.
+ */
+#define CGROUP_MEMORY_IS_OPTIONAL (GP_VERSION_NUM < 60000)
+
+typedef struct PermItem PermItem;
+typedef struct PermList PermList;
+
+struct PermItem
+{
+	const char	*comp;
+	const char	*prop;
+	int			perm;
+};
+
+struct PermList
+{
+	const PermItem	*items;
+	bool			optional;
+	bool			*presult;
+};
+
+#define foreach_perm_list(i, lists) \
+	for ((i) = 0; (lists)[(i)].items; (i)++)
+
+#define foreach_perm_item(i, items) \
+	for ((i) = 0; (items)[(i)].comp; (i)++)
 
 static char * buildPath(Oid group, const char *base, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
@@ -61,16 +89,87 @@ static size_t readData(const char *path, char *data, size_t datasize);
 static void writeData(const char *path, char *data, size_t datasize);
 static int64 readInt64(Oid group, const char *base, const char *comp, const char *prop);
 static void writeInt64(Oid group, const char *base, const char *comp, const char *prop, int64 x);
+static bool permListCheck(const PermList *permlist, Oid group, bool report);
 static bool checkPermission(Oid group, bool report);
 static void getMemoryInfo(unsigned long *ram, unsigned long *swap);
 static void getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw);
 static int getOvercommitRatio(void);
-static void detectCgroupMountPoint(void);
-static void detectCgroupMemSwap(void);
+static bool detectCgroupMountPoint(void);
 
 static Oid currentGroupIdInCGroup = InvalidOid;
 static char cgdir[MAXPGPATH];
-static bool cgmemswap = false;
+
+bool gp_resource_group_enable_cgroup_memory = false;
+bool gp_resource_group_enable_cgroup_swap = false;
+
+/*
+ * These checks should keep in sync with gpMgmt/bin/gpcheckresgroupimpl
+ */
+static const PermItem perm_items_cpu[] =
+{
+	{ "cpu", "", R_OK | W_OK | X_OK },
+	{ "cpu", "cgroup.procs", R_OK | W_OK },
+	{ "cpu", "cpu.cfs_period_us", R_OK | W_OK },
+	{ "cpu", "cpu.cfs_quota_us", R_OK | W_OK },
+	{ "cpu", "cpu.shares", R_OK | W_OK },
+	{ NULL, NULL, 0 }
+};
+static const PermItem perm_items_cpu_acct[] =
+{
+	{ "cpuacct", "", R_OK | W_OK | X_OK },
+	{ "cpuacct", "cgroup.procs", R_OK | W_OK },
+	{ "cpuacct", "cpuacct.usage", R_OK },
+	{ "cpuacct", "cpuacct.stat", R_OK },
+	{ NULL, NULL, 0 }
+};
+static const PermItem perm_items_memory[] =
+{
+	{ "memory", "", R_OK | W_OK | X_OK },
+	{ "memory", "memory.limit_in_bytes", R_OK | W_OK },
+	{ "memory", "memory.usage_in_bytes", R_OK },
+	{ NULL, NULL, 0 }
+};
+static const PermItem perm_items_swap[] =
+{
+	{ "memory", "", R_OK | W_OK | X_OK },
+	{ "memory", "memory.memsw.limit_in_bytes", R_OK | W_OK },
+	{ "memory", "memory.memsw.usage_in_bytes", R_OK },
+	{ NULL, NULL, 0 }
+};
+
+/*
+ * Permission groups.
+ */
+static const PermList permlists[] =
+{
+	/*
+	 * swap permissions are optional.
+	 *
+	 * cgroup/memory/memory.memsw.* is only available if
+	 * - CONFIG_MEMCG_SWAP_ENABLED=on in kernel config, or
+	 * - swapaccount=1 in kernel cmdline.
+	 *
+	 * Without these interfaces the swap usage can not be limited or accounted
+	 * via cgroup.
+	 */
+	{ perm_items_swap, true, &gp_resource_group_enable_cgroup_swap },
+
+	/*
+	 * memory permissions can be mandatory or optional depends on the switch.
+	 *
+	 * resgroup memory auditor is introduced in 6.0 devel and backported
+	 * to 5.x branch since 5.6.1.  To provide backward compatibilities memory
+	 * permissions are optional on 5.x branch.
+	 */
+	{ perm_items_memory, CGROUP_MEMORY_IS_OPTIONAL,
+		&gp_resource_group_enable_cgroup_memory },
+
+	/* cpu/cpuacct permissions are mandatory */
+	{ perm_items_cpu, false, NULL },
+	{ perm_items_cpu_acct, false, NULL },
+
+	{ NULL, false, NULL }
+};
 
 /*
  * Build path string with parameters.
@@ -324,7 +423,7 @@ removeDir(Oid group, const char *comp, const char *prop, bool unassign)
 {
 	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
-	int retry = 0;
+	int retry = unassign ? 0 : MAX_RETRY - 1;
 	int fddir;
 
 	buildPath(group, NULL, comp, "", path, pathsize);
@@ -506,66 +605,71 @@ writeInt64(Oid group, const char *base, const char *comp, const char *prop, int6
 }
 
 /*
+ * Check a list of permissions on group.
+ *
+ * - if all the permissions are met then return true;
+ * - otherwise:
+ *   - raise an error if report is true and permlist is not optional;
+ *   - or return false;
+ */
+static bool
+permListCheck(const PermList *permlist, Oid group, bool report)
+{
+	char path[MAXPGPATH];
+	size_t pathsize = sizeof(path);
+	int i;
+
+	if (group == RESGROUP_ROOT_ID && permlist->presult)
+		*permlist->presult = false;
+
+	foreach_perm_item(i, permlist->items)
+	{
+		const char	*comp = permlist->items[i].comp;
+		const char	*prop = permlist->items[i].prop;
+		int			perm = permlist->items[i].perm;
+
+		buildPath(group, NULL, comp, prop, path, pathsize);
+
+		if (access(path, perm))
+		{
+			/* No such file or directory / Permission denied */
+
+			if (report && !permlist->optional)
+			{
+				CGROUP_CONFIG_ERROR("can't access %s '%s': %s",
+									prop[0] ? "file" : "directory",
+									path,
+									strerror(errno));
+			}
+			return false;
+		}
+	}
+
+	if (group == RESGROUP_ROOT_ID && permlist->presult)
+		*permlist->presult = true;
+
+	return true;
+}
+
+/*
  * Check permissions on group's cgroup dir & interface files.
  *
- * - if report is true then raise an error on and bad permission,
- *   otherwise only return false;
+ * - if report is true then raise an error if any mandatory permission
+ *   is not met;
+ * - otherwise only return false;
  */
 static bool
 checkPermission(Oid group, bool report)
 {
-	char path[MAXPGPATH];
-	size_t pathsize = sizeof(path);
-	const char *comp;
+	int i;
 
-#define __CHECK(prop, perm) do { \
-	buildPath(group, NULL, comp, prop, path, pathsize); \
-	if (access(path, perm)) \
-	{ \
-		if (report) \
-		{ \
-			CGROUP_ERROR("can't access %s '%s': %s", \
-						 prop[0] ? "file" : "directory", \
-						 path, \
-						 strerror(errno)); \
-		} \
-		return false; \
-	} \
-} while (0)
-
-    /*
-     * These checks should keep in sync with
-     * gpMgmt/bin/gpcheckresgroupimpl
-     */
-
-	comp = "cpu";
-
-	__CHECK("", R_OK | W_OK | X_OK);
-	__CHECK("cgroup.procs", R_OK | W_OK);
-	__CHECK("cpu.cfs_period_us", R_OK | W_OK);
-	__CHECK("cpu.cfs_quota_us", R_OK | W_OK);
-	__CHECK("cpu.shares", R_OK | W_OK);
-
-	comp = "cpuacct";
-
-	__CHECK("", R_OK | W_OK | X_OK);
-	__CHECK("cgroup.procs", R_OK | W_OK);
-	__CHECK("cpuacct.usage", R_OK);
-	__CHECK("cpuacct.stat", R_OK);
-
-	comp = "memory";
-
-	__CHECK("", R_OK | W_OK | X_OK);
-	__CHECK("memory.limit_in_bytes", R_OK | W_OK);
-	__CHECK("memory.usage_in_bytes", R_OK);
-
-	if (cgmemswap)
+	foreach_perm_list(i, permlists)
 	{
-		__CHECK("memory.memsw.limit_in_bytes", R_OK | W_OK);
-		__CHECK("memory.memsw.usage_in_bytes", R_OK);
-	}
+		const PermList *permlist = &permlists[i];
 
-#undef __CHECK
+		if (!permListCheck(permlist, group, report) && !permlist->optional)
+			return false;
+	}
 
 	return true;
 }
@@ -585,20 +689,9 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 static void
 getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
 {
-	char path[MAXPGPATH];
-	size_t pathsize = sizeof(path);
-
 	*cgram = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.limit_in_bytes");
 
-	/*
-	 * cgroup/memory/memory.memsw.limit_in_bytes is only available if
-	 * CONFIG_MEMCG_SWAP_ENABLED is on in kernel config or
-	 * swapaccount=1 in cmdline. Without this file we have to assume swap is
-	 * unlimited in container.
-	 */
-	buildPath(RESGROUP_ROOT_ID, "",
-			  "memory", "memory.memsw.limit_in_bytes", path, pathsize);
-	if (access(path, R_OK) == 0)
+	if (gp_resource_group_enable_cgroup_swap)
 	{
 		*cgmemsw = readInt64(RESGROUP_ROOT_ID, "",
 							 "memory", "memory.memsw.limit_in_bytes");
@@ -627,37 +720,19 @@ getOvercommitRatio(void)
 	return ratio;
 }
 
-/*
- * detect if cgroup supports swap memory limit
- */
-static void
-detectCgroupMemSwap(void)
-{
-	char path[MAXPGPATH];
-	size_t pathsize = sizeof(path);
-
-	buildPath(RESGROUP_ROOT_ID, "",
-			"memory", "memory.memsw.limit_in_bytes", path, pathsize);
-
-	if (access(path, F_OK))
-		cgmemswap = false;
-	else
-		cgmemswap = true;
-}
-
 /* detect cgroup mount point */
-static void
+static bool
 detectCgroupMountPoint(void)
 {
 	struct mntent *me;
 	FILE *fp;
 
 	if (cgdir[0])
-		return;
+		return true;
 
 	fp = setmntent(PROC_MOUNTS, "r");
 	if (fp == NULL)
-		CGROUP_ERROR("can not open '%s' for read", PROC_MOUNTS);
+		CGROUP_CONFIG_ERROR("can not open '%s' for read", PROC_MOUNTS);
 
 
 	while ((me = getmntent(fp)))
@@ -671,7 +746,7 @@ detectCgroupMountPoint(void)
 
 		p = strrchr(cgdir, '/');
 		if (p == NULL)
-			CGROUP_ERROR("cgroup mount point parse error: %s", cgdir);
+			CGROUP_CONFIG_ERROR("cgroup mount point parse error: %s", cgdir);
 		else
 			*p = 0;
 		break;
@@ -679,8 +754,7 @@ detectCgroupMountPoint(void)
 
 	endmntent(fp);
 
-	if (!cgdir[0])
-		CGROUP_ERROR("can not find cgroup mount point");
+	return !!cgdir[0];
 }
 
 /* Return the name for the OS group implementation */
@@ -688,6 +762,41 @@ const char *
 ResGroupOps_Name(void)
 {
 	return "cgroup";
+}
+
+/*
+ * Probe the configuration for the OS group implementation.
+ *
+ * Return true if everything is OK, or false is some requirements are not
+ * satisfied.  Will not fail in either case.
+ */
+bool
+ResGroupOps_Probe(void)
+{
+	bool result = true;
+
+	/*
+	 * We only have to do these checks and initialization once on each host,
+	 * so only let postmaster do the job.
+	 */
+	if (IsUnderPostmaster)
+		return result;
+
+	/*
+	 * Ignore the error even if cgroup mount point can not be successfully
+	 * probed, the error will be reported in Bless() later.
+	 */
+	if (!detectCgroupMountPoint())
+		result = false;
+
+	/*
+	 * Probe for optional features like the 'cgroup' memory auditor,
+	 * do not raise any errors.
+	 */
+	if (!checkPermission(RESGROUP_ROOT_ID, false))
+		return result;
+
+	return result;
 }
 
 /* Check whether the OS group implementation is available and useable */
@@ -701,8 +810,18 @@ ResGroupOps_Bless(void)
 	if (IsUnderPostmaster)
 		return;
 
-	detectCgroupMountPoint();
-	detectCgroupMemSwap();
+	/*
+	 * We should have already detected for cgroup mount point in Probe(),
+	 * it was not an error if the detection failed at that step.  But once
+	 * we call Bless() we know we want to make use of cgroup then we must
+	 * know the mount point, otherwise it's a critical error.
+	 */
+	if (!cgdir[0])
+		CGROUP_CONFIG_ERROR("can not find cgroup mount point");
+
+	/*
+	 * Check again, this time we will fail on unmet requirements.
+	 */
 	checkPermission(RESGROUP_ROOT_ID, true);
 
 	/*
@@ -766,7 +885,8 @@ ResGroupOps_CreateGroup(Oid group)
 
 	if (!createDir(group, "cpu")
 		|| !createDir(group, "cpuacct")
-		|| !createDir(group, "memory"))
+		|| (gp_resource_group_enable_cgroup_memory &&
+			!createDir(group, "memory")))
 	{
 		CGROUP_ERROR("can't create cgroup for resgroup '%d': %s",
 					 group, strerror(errno));
@@ -792,14 +912,16 @@ ResGroupOps_CreateGroup(Oid group)
 /*
  * Destroy the OS group for group.
  *
- * Fail if any process is running under it.
+ * One OS group can not be dropped if there are processes running under it,
+ * if migrate is true these processes will be moved out automatically.
  */
 void
-ResGroupOps_DestroyGroup(Oid group)
+ResGroupOps_DestroyGroup(Oid group, bool migrate)
 {
-	if (!removeDir(group, "cpu", "cpu.shares", true)
-		|| !removeDir(group, "cpuacct", NULL, true)
-		|| !removeDir(group, "memory", "memory.limit_in_bytes", true))
+	if (!removeDir(group, "cpu", "cpu.shares", migrate)
+		|| !removeDir(group, "cpuacct", NULL, migrate)
+		|| (gp_resource_group_enable_cgroup_memory &&
+			!removeDir(group, "memory", "memory.limit_in_bytes", migrate)))
 	{
 		CGROUP_ERROR("can't remove cgroup for resgroup '%d': %s",
 			 group, strerror(errno));
@@ -911,32 +1033,43 @@ ResGroupOps_SetMemoryLimitByValue(Oid group, int32 memory_limit)
 	const char *comp = "memory";
 	int64 memory_limit_in_bytes;
 
+	if (!gp_resource_group_enable_cgroup_memory)
+		return;
+
 	memory_limit_in_bytes = VmemTracker_ConvertVmemChunksToBytes(memory_limit);
 
-	if (cgmemswap == false)
+	/* Is swap interfaces enabled? */
+	if (!gp_resource_group_enable_cgroup_swap)
 	{
+		/* No, then we only need to setup the memory limit */
 		writeInt64(group, NULL, comp, "memory.limit_in_bytes",
 				memory_limit_in_bytes);
 	}
 	else
 	{
+		/* Yes, then we have to setup both the memory and mem+swap limits */
+
 		int64 memory_limit_in_bytes_old;
 
+		/*
+		 * Memory limit should always <= mem+swap limit, then the limits
+		 * must be set in a proper order depending on the relation between
+		 * new and old limits.
+		 */
 		memory_limit_in_bytes_old = readInt64(group, NULL,
 				comp, "memory.limit_in_bytes");
 
-		if (memory_limit_in_bytes == memory_limit_in_bytes_old)
-			return;
-
 		if (memory_limit_in_bytes > memory_limit_in_bytes_old)
 		{
+			/* When new value > old memory limit, write mem+swap limit first */
 			writeInt64(group, NULL, comp, "memory.memsw.limit_in_bytes",
 					memory_limit_in_bytes);
 			writeInt64(group, NULL, comp, "memory.limit_in_bytes",
 					memory_limit_in_bytes);
 		}
-		else
+		else if (memory_limit_in_bytes < memory_limit_in_bytes_old)
 		{
+			/* When new value < old memory limit,  write memory limit first */
 			writeInt64(group, NULL, comp, "memory.limit_in_bytes",
 					memory_limit_in_bytes);
 			writeInt64(group, NULL, comp, "memory.memsw.limit_in_bytes",
@@ -969,7 +1102,13 @@ ResGroupOps_GetMemoryUsage(Oid group)
 	int64 memory_usage_in_bytes;
 	char *prop;
 
-	prop = cgmemswap ? "memory.memsw.usage_in_bytes" : "memory.usage_in_bytes";
+	/* Report 0 if cgroup memory is not enabled */
+	if (!gp_resource_group_enable_cgroup_memory)
+		return 0;
+
+	prop = gp_resource_group_enable_cgroup_swap
+		? "memory.memsw.usage_in_bytes"
+		: "memory.usage_in_bytes";
 
 	memory_usage_in_bytes = readInt64(group, NULL, comp, prop);
 
@@ -986,6 +1125,10 @@ ResGroupOps_GetMemoryLimit(Oid group)
 {
 	const char *comp = "memory";
 	int64 memory_limit_in_bytes;
+
+	/* Report unlimited (max int32) if cgroup memory is not enabled */
+	if (!gp_resource_group_enable_cgroup_memory)
+		return (int32) ((1U << 31) - 1);
 
 	memory_limit_in_bytes = readInt64(group, NULL,
 			comp, "memory.limit_in_bytes");

@@ -648,8 +648,14 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 
 		if (isCommit)
 		{
+			bool		migrate;
+
 			removeGroup(groupId);
-			ResGroupOps_DestroyGroup(groupId);
+
+			/* Only migrate processes out of vmtracker groups */
+			migrate = group->memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER;
+
+			ResGroupOps_DestroyGroup(groupId, migrate);
 		}
 	}
 	PG_CATCH();
@@ -687,7 +693,7 @@ ResGroupCreateOnAbort(Oid groupId)
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
 		removeGroup(groupId);
 		/* remove the os dependent part for this resource group */
-		ResGroupOps_DestroyGroup(groupId);
+		ResGroupOps_DestroyGroup(groupId, true);
 	}
 	PG_CATCH();
 	{

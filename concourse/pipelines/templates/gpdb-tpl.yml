@@ -1602,6 +1602,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1636,6 +1640,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
