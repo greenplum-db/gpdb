@@ -220,6 +220,8 @@ FI_IDENT(CheckPointDtxInfo, "checkpoint_dtx_info")
 FI_IDENT(WalSenderLoop, "wal_sender_loop")
 /* inject fault at SyncRepWaitForLSN function for QueryCancelPending */
 FI_IDENT(SyncRepQueryCancel, "sync_rep_query_cancel")
+/* inject fault at start of function DistributedLog_AdvanceOldestXmin() */
+FI_IDENT(DistributedLogAdvanceOldestXmin, "distributedlog_advance_oldest_xmin")
 #endif
 
 /*

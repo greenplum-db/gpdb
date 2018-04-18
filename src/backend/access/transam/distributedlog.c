@@ -33,7 +33,10 @@
 #include "access/transam.h"
 #include "cdb/cdbtm.h"
 #include "storage/shmem.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
+#include "miscadmin.h"
+#include "libpq/libpq-be.h" /* struct Port */
 
 /* We need 8 bytes per xact */
 #define ENTRIES_PER_PAGE (BLCKSZ / sizeof(DistributedLogEntry))
@@ -192,6 +195,15 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 
 	if (!TransactionIdIsNormal(oldestLocalXmin))
 		elog(ERROR, "invalid oldest xmin: %u", oldestLocalXmin);
+
+#ifdef FAULT_INJECTOR
+	const char *dbname = NULL;
+	if (MyProcPort)
+		dbname = MyProcPort->database_name;
+
+	FaultInjector_InjectFaultIfSet(DistributedLogAdvanceOldestXmin, DDLNotSpecified,
+								   dbname?dbname: "", "");
+#endif
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
