@@ -1716,7 +1716,7 @@
          For each resource group that you assign to
           an external component, the <codeph>memory_usage</codeph> JSON-formatted string identifies the memory used
           and the memory limit on each segment.  The following example shows
-          <codeph>memory_usage</codeph> column output for an external component resource group for a single segment: <codeblock>"1":{"usage":11, "limit":15}</codeblock></p>
+          <codeph>memory_usage</codeph> column output for an external component resource group for a single segment: <codeblock>"1":{"used":11, "limit_granted":15}</codeblock></p>
       </body>
     </topic>
   </topic>
