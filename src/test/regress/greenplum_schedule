@@ -208,6 +208,9 @@ test: psql_gp_commands pg_resetxlog
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
 
+# fts_recovery_in_progresss uses fault injectors to simulate FTS fault states,
+# hence it should be run in isolation.
+test: fts_recovery_in_progress
 test: autovacuum-template0
 
 # end of tests

@@ -11992,3 +11992,21 @@ WakeupRecovery(void)
 {
 	SetLatch(&XLogCtl->recoveryWakeupLatch);
 }
+
+/*
+ * Report the last WAL replay location
+ */
+XLogRecPtr
+last_xlog_replay_location()
+{
+	/* use volatile pointer to prevent code rearrangement */
+	volatile XLogCtlData *xlogctl = XLogCtl;
+	Assert(xlogctl != NULL);
+	XLogRecPtr	recptr;
+
+	SpinLockAcquire(&xlogctl->info_lck);
+	recptr = xlogctl->recoveryLastRecPtr;
+	SpinLockRelease(&xlogctl->info_lck);
+
+	return recptr;
+}
