@@ -298,3 +298,5 @@ DROP RESOURCE GROUP rg1_memory_test;
 DROP
 DROP RESOURCE GROUP rg2_memory_test;
 DROP
+DROP VIEW memory_result;
+DROP
