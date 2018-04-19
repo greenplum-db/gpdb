@@ -23,7 +23,7 @@ MEMORY_LIMIT=<varname>integer</varname>
        <p>A resource
          group that you create to manage a user role identifies concurrent transaction, memory,
          and CPU limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.</p>
-      <p>A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups to manage both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for an external component to a role, nor can you assign a resource group that you create for a role to an external component.</p>
+      <p>A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups to manage both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for external components to a role, nor can you assign a resource group that you create for roles to an external component.</p>
       <p>You must have <codeph>SUPERUSER</codeph> privileges to create a resource group. The maximum number of resource groups allowed in your Greenplum Database cluster is 100.</p>
       <p>Greenplum Database pre-defines two default resource groups: <codeph>admin_group</codeph>
          and <codeph>default_group</codeph>. These group names, as well as the group name <codeph>none</codeph>, are reserved.</p>
@@ -72,7 +72,7 @@ MEMORY_LIMIT=<varname>integer</varname>
         <plentry>
           <pt>MEMORY_AUDITOR {vmtracker | cgroup}</pt>
           <pd>The memory auditor for the resource group. Greenplum Database employs virtual memory tracking for role resources and cgroup memory tracking for resources used by external components. The default <codeph>MEMORY_AUDITOR</codeph> is <codeph>vmtracker</codeph>. When you create a resource group with <codeph>vmtracker</codeph> memory auditing, Greenplum Database tracks that resource group's memory internally.</pd>
-          <pd>When you create a resource group specifying the <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>, Greenplum Database defers the accounting of memory used by that resource group to cgroups. <codeph>CONCURRENCY</codeph> must be zero (0) for a resource group that you create for an external component such as PL/Container. You cannot assign a resource group that you create for an external component to a Greenplum Database role.</pd>
+          <pd>When you create a resource group specifying the <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>, Greenplum Database defers the accounting of memory used by that resource group to cgroups. <codeph>CONCURRENCY</codeph> must be zero (0) for a resource group that you create for external components such as PL/Container. You cannot assign a resource group that you create for external components to a Greenplum Database role.</pd>
         </plentry>
       </parml>
     </section>

@@ -107,7 +107,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
             default resource group based on the role's capability. <codeph>SUPERUSER</codeph> roles
             are assigned the <codeph>admin_group</codeph> resource group, while the
               <codeph>default_group</codeph> resource group is assigned to non-admin roles.</pd>
-          <pd>You cannot assign a resource group created for an external component to a role.</pd>
+          <pd>You cannot assign a resource group that you create for an external component to a role.</pd>
         </plentry>
         <plentry>
           <pt><varname>queue_name</varname></pt>
