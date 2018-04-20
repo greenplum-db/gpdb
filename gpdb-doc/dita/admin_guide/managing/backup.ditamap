@@ -29,6 +29,7 @@
         <topicref href="backup-boostfs.xml#topic_zp4_mvv_bdb"/>
         <topicref href="backup-boostfs.xml#topic_t4z_tvv_bdb"/>
       </topicref>
+      <topicref href="backup-s3-plugin.xml"/>
     </topicref>
   </topicref>
 </map>
