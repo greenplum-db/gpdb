@@ -26,9 +26,9 @@ var _ = Describe("hub.UpgradeConvertPrimaries()", func() {
 		mockAgent     *testutils.MockAgentServer
 		segmentConfs  chan configutils.SegmentConfiguration
 		port          int
-		request 	  *pb.UpgradeConvertPrimariesRequest
-		oldConf			configutils.SegmentConfiguration
-		newConf			configutils.SegmentConfiguration
+		request       *pb.UpgradeConvertPrimariesRequest
+		oldConf       configutils.SegmentConfiguration
+		newConf       configutils.SegmentConfiguration
 	)
 
 	BeforeEach(func() {

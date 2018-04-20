@@ -30,6 +30,8 @@ func NewBootstrapper(hg HostnameGetter, r RemoteExecutor) *Bootstrapper {
 	}
 }
 
+// grpc generated function signature requires ctx and in params.
+// nolint: unparam
 func (s *Bootstrapper) CheckSeginstall(ctx context.Context, in *pb.CheckSeginstallRequest) (*pb.CheckSeginstallReply, error) {
 	gplog.Info("starting CheckSeginstall()")
 
@@ -43,6 +45,8 @@ func (s *Bootstrapper) CheckSeginstall(ctx context.Context, in *pb.CheckSeginsta
 	return &pb.CheckSeginstallReply{}, nil
 }
 
+// grpc generated function signature requires ctx and in params.
+// nolint: unparam
 func (s *Bootstrapper) PrepareStartAgents(ctx context.Context,
 	in *pb.PrepareStartAgentsRequest) (*pb.PrepareStartAgentsReply, error) {
 

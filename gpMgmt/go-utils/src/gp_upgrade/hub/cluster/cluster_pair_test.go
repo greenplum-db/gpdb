@@ -34,9 +34,7 @@ const (
 
 var _ = Describe("ClusterPair", func() {
 	var (
-		dir              string
-		mockedOutput     string
-		mockedExitStatus int
+		dir string
 
 		filesLaidDown []string
 		commandExecer *testutils.FakeCommandExecer
@@ -83,9 +81,6 @@ var _ = Describe("ClusterPair", func() {
 		})
 
 		It("Logs successfully when things work", func() {
-			mockedExitStatus = 0
-			mockedOutput = "Something that's not bad"
-
 			outChan <- []byte("some output")
 
 			subject := cluster.Pair{}
@@ -118,9 +113,6 @@ var _ = Describe("ClusterPair", func() {
 		})
 
 		It("puts Stop failures in the log and leaves files to mark the error", func() {
-			mockedExitStatus = 127
-			mockedOutput = "gpstop failed us" // what gpstop puts in its own logs
-
 			errChan <- errors.New("failed")
 
 			subject := cluster.Pair{}

@@ -207,7 +207,7 @@ var subDiskSpace = &cobra.Command{
 			os.Exit(1)
 		}
 		client := pb.NewCliToHubClient(conn)
-		return commanders.NewDiskUsageChecker(client).Execute(dbPort)
+		return commanders.NewDiskUsageChecker(client).Execute()
 	},
 }
 

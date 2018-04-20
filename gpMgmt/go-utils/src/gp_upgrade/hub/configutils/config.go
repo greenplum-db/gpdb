@@ -24,7 +24,7 @@ type Segment struct {
 	Dbid          int    `json:"dbid"`
 	Hostname      string `json:"hostname"`
 	Mode          string `json:"mode"`
-	Status        string `json:"status""`
+	Status        string `json:"status"`
 	Port          int    `json:"port"`
 	PreferredRole string `json:"preferred_role" db:"preferred_role"`
 	Role          string `json:"role"`

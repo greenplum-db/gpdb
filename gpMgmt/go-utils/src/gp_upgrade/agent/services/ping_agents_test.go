@@ -9,16 +9,11 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("CommandListener", func() {
-	var (
-		testLogFile *gbytes.Buffer
-	)
-
 	BeforeEach(func() {
-		_, _, testLogFile = testhelper.SetupTestLogger()
+		testhelper.SetupTestLogger()
 	})
 
 	AfterEach(func() {

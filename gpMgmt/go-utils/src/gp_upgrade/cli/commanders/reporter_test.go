@@ -4,7 +4,6 @@ import (
 	"errors"
 	"gp_upgrade/cli/commanders"
 	pb "gp_upgrade/idl"
-	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
@@ -20,7 +19,6 @@ var _ = Describe("Reporter", func() {
 		spyClient   *spyCliToHubClient
 		testLogFile *gbytes.Buffer
 		reporter    *commanders.Reporter
-		client      *mockpb.MockCliToHubClient
 		ctrl        *gomock.Controller
 	)
 
@@ -29,7 +27,6 @@ var _ = Describe("Reporter", func() {
 		_, _, testLogFile = testhelper.SetupTestLogger()
 		reporter = commanders.NewReporter(spyClient)
 		ctrl = gomock.NewController(GinkgoT())
-		client = mockpb.NewMockCliToHubClient(ctrl)
 	})
 
 	AfterEach(func() {

@@ -14,7 +14,6 @@ import (
 
 const (
 	// todo generalize to any host
-	address               = "localhost"
 	diskUsageWarningLimit = 80
 )
 

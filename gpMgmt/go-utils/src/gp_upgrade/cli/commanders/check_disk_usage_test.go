@@ -39,7 +39,7 @@ var _ = Describe("object count tests", func() {
 			).Return(&pb.CheckDiskUsageReply{}, errors.New("couldn't connect to hub"))
 
 			request := commanders.NewDiskUsageChecker(client)
-			err := request.Execute(9999)
+			err := request.Execute()
 
 			Expect(err).ToNot(BeNil())
 			Expect(string(testLogFile.Contents())).To(ContainSubstring("ERROR - gRPC call to hub failed"))
@@ -59,7 +59,7 @@ var _ = Describe("object count tests", func() {
 			).Return(&pb.CheckDiskUsageReply{SegmentFileSysUsage: expectedFilesystemsUsage}, nil)
 
 			request := commanders.NewDiskUsageChecker(client)
-			err := request.Execute(9999)
+			err := request.Execute()
 
 			Expect(err).To(BeNil())
 			Expect(string(testStdout.Contents())).To(ContainSubstring("diskspace check - hostC  - Couldn't connect"))

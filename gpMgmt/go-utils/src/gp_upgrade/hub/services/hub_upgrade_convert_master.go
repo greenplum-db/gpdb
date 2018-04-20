@@ -18,7 +18,7 @@ func (h *HubClient) UpgradeConvertMaster(ctx context.Context, in *pb.UpgradeConv
 	gplog.Info("Starting master upgrade")
 	//need to remember where we ran, i.e. pathToUpgradeWD, b/c pg_upgrade generates some files that need to be copied to QE nodes later
 	//this is also where the 1.done, 2.inprogress ... files will be written
-	err := h.convertMaster("pg_upgrade", in)
+	err := h.convertMaster(in)
 	if err != nil {
 		gplog.Error("%v", err)
 		return &pb.UpgradeConvertMasterReply{}, err
@@ -27,7 +27,8 @@ func (h *HubClient) UpgradeConvertMaster(ctx context.Context, in *pb.UpgradeConv
 	return &pb.UpgradeConvertMasterReply{}, nil
 }
 
-func (h *HubClient) convertMaster(upgradeFileName string, in *pb.UpgradeConvertMasterRequest) error {
+func (h *HubClient) convertMaster(in *pb.UpgradeConvertMasterRequest) error {
+	upgradeFileName := "pg_upgrade"
 	pathToUpgradeWD := filepath.Join(h.conf.StateDir, upgradeFileName)
 	err := utils.System.MkdirAll(pathToUpgradeWD, 0700)
 	if err != nil {

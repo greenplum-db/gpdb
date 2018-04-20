@@ -15,7 +15,7 @@ func NewDiskUsageChecker(client pb.CliToHubClient) DiskUsageChecker {
 	return DiskUsageChecker{client: client}
 }
 
-func (req DiskUsageChecker) Execute(dbPort int) error {
+func (req DiskUsageChecker) Execute() error {
 	reply, err := req.client.CheckDiskUsage(context.Background(),
 		&pb.CheckDiskUsageRequest{})
 	if err != nil {
