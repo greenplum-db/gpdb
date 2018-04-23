@@ -22,10 +22,17 @@ pushd ${SRC_DIR}
     dch --create --package $PACKAGE -v $VERSION "$MESSAGE"
 popd
 
-# the image should already have all the debian packages
-# yes | mk-build-deps -i ${SRC_DIR}/debian/control
-
 pushd ${SRC_DIR}
-    DEB_BUILD_OPTIONS='nocheck parallel=6' debuild -us -uc -b | tee debuild.log
+    set +e
+        DEB_BUILD_OPTIONS='nocheck parallel=6' debuild -us -uc -b > debuild.log
+        result=$?
+    set -e
 popd
+if [ ${result} -ne 0 ]; then
+    echo "***********************"
+    echo "***********************"
+    echo "Failed debuild; log is:"
+    cat debuild.log
+    exit ${result}
+fi
 cp greenplum-db*.deb deb_package_ubuntu16/greenplum-db.deb
