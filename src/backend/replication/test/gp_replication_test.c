@@ -185,8 +185,17 @@ test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_STARTUP);
+	/*
+	 * This would make sure Mirror is not reported as DOWN, as still in grace
+	 * period.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time = ((pg_time_t) time(NULL));
+	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time;
+
+	expect_ereport();
 	GetMirrorStatus(&response);
 
+	assert_true(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }
@@ -198,8 +207,21 @@ test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_BACKUP);
+	/*
+	 * This would make sure Mirror is reported as DOWN, as grace period
+	 * duration is taken into account.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time =
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
+
+	/*
+	 * Ensure the recovery finished before wal sender died.
+	 */
+	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - 1;
+
 	GetMirrorStatus(&response);
 
+	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }

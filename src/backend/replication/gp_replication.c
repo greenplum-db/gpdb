@@ -46,7 +46,16 @@ GetMirrorStatus(FtsResponse *response)
 		/* use volatile pointer to prevent code rearrangement */
 		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
-		if (walsnd->pid == 0)
+		if (walsnd->pid != 0)
+		{
+			if(walsnd->state == WALSNDSTATE_CATCHUP
+			   || walsnd->state == WALSNDSTATE_STREAMING)
+			{
+				response->IsMirrorUp = true;
+				response->IsInSync = (walsnd->state == WALSNDSTATE_STREAMING);
+			}
+		}
+		if (!response->IsMirrorUp)
 		{
 			Assert(walsnd->marked_pid_zero_at_time);
 			/*
@@ -76,16 +85,6 @@ GetMirrorStatus(FtsResponse *response)
 						 errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
 									  walsnd->marked_pid_zero_at_time, PMAcceptingConnectionsStartTime)));
 				response->RequestRetry = true;
-			}
-		}
-		else
-		{
-			if(walsnd->state == WALSNDSTATE_CATCHUP
-			   || walsnd->state == WALSNDSTATE_STREAMING)
-			{
-				response->IsMirrorUp = true;
-				response->IsInSync = (walsnd->state == WALSNDSTATE_STREAMING);
-				break;
 			}
 		}
 	}
