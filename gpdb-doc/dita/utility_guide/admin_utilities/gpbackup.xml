@@ -205,14 +205,14 @@
           <pt><b>--plugin-config</b>
             <varname>config-file_location</varname></pt>
           <pd>Specify the location of the <codeph>gpbackup</codeph> plugin configuration file, a
-            text file. The file contains configuration information for the plugin application that
-              <codeph>gpbackup</codeph> uses during the backup operation.</pd>
+            YAML-formatted text file. The file contains configuration information for the plugin
+            application that <codeph>gpbackup</codeph> uses during the backup operation.</pd>
           <pd>This option is supported only with <codeph>--single-data-file</codeph> or
               <codeph>--metadata-only</codeph>.</pd>
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
-          <pd>For information about using the S3 plugin application, see <xref
+          <pd>For information about using the S3 storage plugin application, see <xref
               href="../../admin_guide/managing/backup-s3-plugin.xml"/>.</pd>
         </plentry>
         <plentry>
