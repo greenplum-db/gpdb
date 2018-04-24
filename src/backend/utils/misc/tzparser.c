@@ -124,7 +124,7 @@ splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
 						filename, lineno)));
 		return false;
 	}
-	tzentry->abbrev = pstrdup(abbrev);
+	tzentry->abbrev = abbrev;
 
 	offset = strtok(NULL, WHITESPACE);
 	if (!offset)
@@ -135,45 +135,27 @@ splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
 				filename, lineno)));
 		return false;
 	}
-
-	/* We assume zone names don't begin with a digit or sign */
-	if (isdigit((unsigned char) *offset) || *offset == '+' || *offset == '-')
+	tzentry->offset = strtol(offset, &offset_endptr, 10);
+	if (offset_endptr == offset || *offset_endptr != '\0')
 	{
-		tzentry->zone = NULL;
-		tzentry->offset = strtol(offset, &offset_endptr, 10);
-		if (offset_endptr == offset || *offset_endptr != '\0')
-		{
-			ereport(tz_elevel,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid number for time zone offset in time zone file \"%s\", line %d",
-							filename, lineno)));
-			return false;
-		}
+		ereport(tz_elevel,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid number for time zone offset in time zone file \"%s\", line %d",
+						filename, lineno)));
+		return false;
+	}
 
-		is_dst = strtok(NULL, WHITESPACE);
-		if (is_dst && pg_strcasecmp(is_dst, "D") == 0)
-		{
-			tzentry->is_dst = true;
-			remain = strtok(NULL, WHITESPACE);
-		}
-		else
-		{
-			/* there was no 'D' dst specifier */
-			tzentry->is_dst = false;
-			remain = is_dst;
-		}
+	is_dst = strtok(NULL, WHITESPACE);
+	if (is_dst && pg_strcasecmp(is_dst, "D") == 0)
+	{
+		tzentry->is_dst = true;
+		remain = strtok(NULL, WHITESPACE);
 	}
 	else
 	{
-		/*
-		 * Assume entry is a zone name.  We do not try to validate it by
-		 * looking up the zone, because that would force loading of a lot of
-		 * zones that probably will never be used in the current session.
-		 */
-		tzentry->zone = pstrdup(offset);
-		tzentry->offset = 0;
+		/* there was no 'D' dst specifier */
 		tzentry->is_dst = false;
-		remain = strtok(NULL, WHITESPACE);
+		remain = is_dst;
 	}
 
 	if (!remain)				/* no more non-whitespace chars */
@@ -272,6 +254,9 @@ addToArray(tzEntry **base, int *arraysize, int n,
 	memmove(arrayptr + 1, arrayptr, (n - low) * sizeof(tzEntry));
 
 	memcpy(arrayptr, entry, sizeof(tzEntry));
+
+	/* Must dup the abbrev to ensure it survives */
+	arrayptr->abbrev = pstrdup(entry->abbrev);
 
 	return n + 1;
 }

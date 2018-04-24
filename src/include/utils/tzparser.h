@@ -22,7 +22,6 @@ typedef struct tzEntry
 {
 	/* the actual data: TZ abbrev (downcased), offset, DST flag */
 	char	   *abbrev;
-	char	   *zone;
 	int			offset;			/* in seconds from UTC */
 	bool		is_dst;
 	/* source information (for error messages) */

@@ -27,8 +27,9 @@ GMT         0    # Greenwich Mean Time
                  #     (Europe/London)
 UCT         0    # Universal Coordinated Time
                  #     (Etc/UCT)
-UT          0    # Universal Time (not in IANA database)
+UT          0    # Universal Time (not in zic)
 UTC         0    # Coordinated Universal Time
                  #     (Etc/UTC)
 Z           0    # Zulu
 ZULU        0    # Zulu
+
