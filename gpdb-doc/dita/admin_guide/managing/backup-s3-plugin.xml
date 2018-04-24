@@ -35,7 +35,7 @@
         sections to one another. The use of white space is significant. White space should not be
         used simply for formatting purposes, and tabs should not be used at all.</p>
       <p>This is the structure of a S3 storage plugin configuration file.</p>
-      <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gp_s3plugin</varname>>
+      <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
 <xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
   <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
@@ -46,7 +46,7 @@
         <plentry>
           <pt>executablepath</pt>
           <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
-            Database installation location is <codeph>$GPHOME/bin/gp_s3plugin</codeph>.</pd>
+            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>.</pd>
           <pd>
             <parml>
               <plentry id="s3-options">
@@ -88,7 +88,7 @@
       <p>This is an example S3 storage plugin configuration file that is used in the next
           <codeph>gpbackup</codeph> example command. The name of the file is
           <codeph>s3-test-config.yaml</codeph>.</p>
-      <codeblock>executablepath: $GPHOME/bin/gp_s3plugin
+      <codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
 options: 
   region: us-west-2
   aws_access_key_id: test-s3-user
