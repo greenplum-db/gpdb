@@ -5104,24 +5104,6 @@ choose_deduplicate(PlannerInfo *root, List *sortExprs,
 	naive_cost = dummy_path.total_cost;
 
 	/*
-	 * Make a flattened version of the rangetable. estimate_num_groups()
-	 * needs it. It is normally created later in the planning process,
-	 * in query_planner(), but since we want to call estimate_num_groups()
-	 * before query_planner(), we have to build it here.
-	 */
-	root->simple_rel_array_size = list_length(root->parse->rtable) + 1;
-	root->simple_rte_array = (RangeTblEntry **)
-		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
-	int rti = 1;
-	ListCell *lc;
-	foreach(lc, root->parse->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-
-		root->simple_rte_array[rti++] = rte;
-	}
-
-	/*
 	 * Next, calculate cost of deduplicate.
 	 * The first aggregate calculates number of duplicate for
 	 * each unique sort key, then we add cost of sort after
@@ -5141,8 +5123,6 @@ choose_deduplicate(PlannerInfo *root, List *sortExprs,
 			  num_distinct,
 			  width, -1.0);
 	dedup_cost = dummy_path.total_cost;
-
-	pfree(root->simple_rte_array);
 
 	if (numGroups)
 		*numGroups = num_distinct;
