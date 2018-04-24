@@ -111,7 +111,7 @@ options:
       <p>When running <codeph>gpbackup</codeph>, the <codeph>--plugin-config</codeph> option is
         supported only with <codeph>--single-data-file</codeph> or
         <codeph>--metadata-only</codeph>.</p>
-      <p>When you perform a backup with the S3 sorage plugin, the plugin stores the backup files in
+      <p>When you perform a backup with the S3 storage plugin, the plugin stores the backup files in
         this location in the S3 bucket. </p>
       <codeblock>&lt;<varname>backupdir</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
       <p>Where <varname>backupdir</varname> is the location you specified in the S3 configuration
