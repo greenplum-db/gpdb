@@ -54,10 +54,10 @@
     <title>Understanding Role and Component Resource Groups</title>
     <body>
     <p>Greenplum Database supports two types of resource groups: groups that manage resources for roles, and groups that manage resources for external components such as PL/Container.</p>
-    <p>The most common application for resource groups is to manage the number of active queries that may execute
+    <p>The most common application for resource groups is to manage the number of active queries that different roles may execute
       concurrently in your Greenplum Database cluster. You can also manage the
       amount of CPU and memory resources that Greenplum allocates to each query.</p>
-    <p>Resource groups for roles use Linux control groups (cgroups) for CPU resource management. Greenplum Database tracks virtual memory internally for these resource groups.</p>
+    <p>Resource groups for roles use Linux control groups (cgroups) for CPU resource management. Greenplum Database tracks virtual memory internally for these resource groups using a memory auditor referred to as <codeph>vmtracker</codeph>.</p>
     <p>When the user executes a query, Greenplum Database evaluates the query against a set of
       limits defined for the resource group. Greenplum Database executes the query immediately if
       the group's resource limits have not yet been reached and the query does not cause the group
@@ -719,7 +719,7 @@ gpstart
 </codeblock>
         </p>
         <p>
-          <codeph>pg_stat_activity</codeph> displays information about the user/role that initiated a query. A query that uses an external component such as PL/Container is composed of two parts: the Greenplum Database query operator processing and the UDF running in a PL/Container instance. Greenplum Database processes the query operators under the resource group assigned to the role that initiated the query. A UDF running in a PL/Container instance runs under the resource group assigned to the PL/Container runtime. The latter is not represented in the <codeph>pg_stat_activity</codeph> view; Greenplum Database does not have any insight into how external components such as PL/Container manage memory among running instances.
+          <codeph>pg_stat_activity</codeph> displays information about the user/role that initiated a query. A query that uses an external component such as PL/Container is composed of two parts: the Greenplum Database query operator that runs in Greenplum Database and the UDF that runs in a PL/Container instance. Greenplum Database processes the query operators under the resource group assigned to the role that initiated the query. A UDF running in a PL/Container instance runs under the resource group assigned to the PL/Container runtime. The latter is not represented in the <codeph>pg_stat_activity</codeph> view; Greenplum Database does not have any insight into how external components such as PL/Container manage memory in running instances.
         </p>
       </body>
     </topic>
