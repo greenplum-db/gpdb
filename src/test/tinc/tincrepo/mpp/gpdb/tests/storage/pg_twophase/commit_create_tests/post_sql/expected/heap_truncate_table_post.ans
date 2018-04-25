@@ -1,8 +1,0 @@
-SELECT COUNT(*) FROM cr_heap_truncate_table;
- count 
--------
-     0
-(1 row)
-
-DROP TABLE cr_heap_truncate_table;
-DROP TABLE

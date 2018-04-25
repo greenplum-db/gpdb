@@ -76,7 +76,6 @@ groups:
   - gate_replication_start
   - walrep_1
   - walrep_2
-  - pg_twophase
   - segwalrep_mirrorless_centos6
 {% endif %}
 {% if "Interconnect" in test_sections %}
@@ -203,7 +202,6 @@ groups:
   - gate_replication_start
   - walrep_1
   - walrep_2
-  - pg_twophase
   - segwalrep_mirrorless_centos6
   - compile_gpdb_centos6
 
@@ -1447,40 +1445,6 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-- name: pg_twophase
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_replication_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_replication_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
 
 - name: segwalrep_mirrorless_centos6
   plan:
@@ -2199,7 +2163,6 @@ jobs:
     - segwalrep_mirrorless_centos6
     - walrep_1
     - walrep_2
-    - pg_twophase
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
     - regression_tests_pxf
