@@ -31,18 +31,21 @@
 3:INSERT INTO crash_vacuum_in_appendonly_insert SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
 3:UPDATE crash_vacuum_in_appendonly_insert SET b = 2;
 
--- suspend at intended points
+-- suspend at intended points. Only one AO table can be in drop phase in a
+-- system at a time hence we must wait for this table's VACUUM to reach cleanup
+-- phase before triggering another VACUUM.
 3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 0, 0, 2);
 1&:VACUUM crash_before_cleanup_phase;
+3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
+
 3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 0, 0, 2);
 2&:VACUUM crash_before_segmentfile_drop;
-3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 0, 0, 2);
-
--- wait for suspend faults to trigger and then proceed to run next
--- command which would trigger panic fault and help test
--- crash_recovery
-3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
 3:SELECT gp_wait_until_triggered_fault('compaction_before_segmentfile_drop', 1, 2);
+
+-- we already waited for suspend faults to trigger and hence we can proceed to
+-- run next command which would trigger panic fault and help test
+-- crash_recovery
+3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 0, 0, 2);
 3:VACUUM crash_vacuum_in_appendonly_insert;
 1<:
 2<:
@@ -57,6 +60,7 @@
 
 -- perform post crash validation checks
 -- for crash_before_cleanup_phase
+1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_cleanup_phase');
 1:INSERT INTO crash_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=25;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
@@ -67,6 +71,7 @@
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
 -- for crash_before_segmentfile_drop
+1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_segmentfile_drop');
 1:INSERT INTO crash_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 1:UPDATE crash_before_segmentfile_drop SET b = b+10 WHERE a=25;
 1:SELECT * FROM crash_before_segmentfile_drop ORDER BY a,b;
@@ -120,6 +125,7 @@ SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 
 -- perform post crash validation checks
 -- for crash_master_before_cleanup_phase
+4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_cleanup_phase');
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=25;
 4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
@@ -130,6 +136,7 @@ SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=26;
 4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
 -- for crash_master_before_segmentfile_drop
+4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_segmentfile_drop');
 4:INSERT INTO crash_master_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 4:UPDATE crash_master_before_segmentfile_drop SET b = b+10 WHERE a=25;
 4:SELECT * FROM crash_master_before_segmentfile_drop ORDER BY a,b;
