@@ -78,13 +78,13 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
 	 */
-	data.walsnds[0].marked_pid_zero_at_time =
+	data.walsnds[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
 	 * Ensure the recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - 1;
+	PMAcceptingConnectionsStartTime = data.walsnds[0].replica_disconnected_at - 1;
 
 	expect_lwlock(LW_SHARED);
 	GetMirrorStatus(&response);
@@ -106,13 +106,13 @@ test_GetMirrorStatus_RequestRetry(void **state)
 	/*
 	 * Make the pid zero time within the grace period.
 	 */
-	data.walsnds[0].marked_pid_zero_at_time =
+	data.walsnds[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
 
 	/*
 	 * Ensure recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - gp_fts_mark_mirror_down_grace_period;
+	PMAcceptingConnectionsStartTime = data.walsnds[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
 
 	expect_lwlock(LW_SHARED);
 	expect_ereport();
@@ -137,7 +137,7 @@ test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 	 * wal sender pid zero time over the grace period
 	 * Mirror will be marked down, and no retry.
 	 */
-	data.walsnds[0].marked_pid_zero_at_time =
+	data.walsnds[0].replica_disconnected_at =
 		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
@@ -167,7 +167,7 @@ test_GetMirrorStatus_Overflow(void **state)
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
 	 */
-	data.walsnds[0].marked_pid_zero_at_time = INT64_MAX;
+	data.walsnds[0].replica_disconnected_at = INT64_MAX;
 	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL));
 
 	expect_lwlock(LW_SHARED);
@@ -185,8 +185,17 @@ test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_STARTUP);
+	/*
+	 * This would make sure Mirror is not reported as DOWN, as still in grace
+	 * period.
+	 */
+	data.walsnds[0].replica_disconnected_at = ((pg_time_t) time(NULL));
+	PMAcceptingConnectionsStartTime = data.walsnds[0].replica_disconnected_at;
+
+	expect_ereport();
 	GetMirrorStatus(&response);
 
+	assert_true(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }
@@ -198,8 +207,21 @@ test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_BACKUP);
+	/*
+	 * This would make sure Mirror is reported as DOWN, as grace period
+	 * duration is taken into account.
+	 */
+	data.walsnds[0].replica_disconnected_at =
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
+
+	/*
+	 * Ensure the recovery finished before wal sender died.
+	 */
+	PMAcceptingConnectionsStartTime = data.walsnds[0].replica_disconnected_at - 1;
+
 	GetMirrorStatus(&response);
 
+	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }

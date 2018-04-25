@@ -53,8 +53,8 @@
             than 1).</li>
           <li>You cannot use the <codeph>--exclude-table-file</codeph> with
               <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names
-            in a file specified with <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph>
-            ignores the partition names.</li>
+            in a file specified with <codeph>--exclude-table-file</codeph>,
+              <codeph>gpbackup</codeph> ignores the partition names.</li>
           <li>Incremental backups are not supported.</li>
         </ul></p>
     </body>
@@ -90,6 +90,7 @@
                     <li>Sequences</li>
                     <li dir="ltr">Comments</li>
                     <li dir="ltr">Tables</li>
+                    <li>Indexes</li>
                     <li dir="ltr">Owners</li>
                     <li dir="ltr">Writable External Tables (DDL only) </li>
                     <li dir="ltr">Readable External Tables (DDL only) </li>
@@ -183,7 +184,8 @@ gpbackup_20180105112754_metadata.sql  gpbackup_20180105112754_toc.yaml</codebloc
 gpbackup_0_20180105112754_17166.gz  gpbackup_0_20180105112754_26303.gz
 gpbackup_0_20180105112754_21816.gz</codeblock></p>
       <p>To consolidate all backup files into a single directory, include the
-          <codeph>--backup-dir</codeph> option. Note that you must specify an absolute path with this
+          <codeph>--backup-dir</codeph> option. Note that you must specify an absolute path with
+        this
         option:<codeblock>$ <b>gpbackup --dbname demo --backup-dir /home/gpadmin/backups</b>
 20171103:15:31:56 gpbackup:gpadmin:0ee2f5fb02c9:017586-[INFO]:-Starting backup of database demo
 ...
@@ -220,8 +222,8 @@ $ <b>gprestore --timestamp 20171103152558 --create-db</b>
 20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restoring post-data metadata from /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_postdata.sql
 20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Post-data metadata restore complete</codeblock></p>
         <p>If you specified a custom <codeph>--backup-dir</codeph> to consolidate the backup files,
-          include the same <codeph>--backup-dir</codeph> option when using <codeph>gprestore</codeph>
-          to locate the backup
+          include the same <codeph>--backup-dir</codeph> option when using
+            <codeph>gprestore</codeph> to locate the backup
           files:<codeblock>$ <b>dropdb demo</b>
 $ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</b>
 20171103:15:51:02 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Restore Key = 20171103153156
@@ -230,9 +232,9 @@ $ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --
         <p><codeph>gprestore</codeph> does not attempt to restore global metadata for the Greenplum
           System by default. If this is required, include the <codeph>--with-globals</codeph>
           argument.</p>
-        <p>By default, <codeph>gprestore</codeph> uses 1 connection to restore table data. If you
-          have a large backup set, you can improve performance of the restore by increasing the
-          number of parallel connections with the <codeph>--jobs</codeph> option. For
+        <p>By default, <codeph>gprestore</codeph> uses 1 connection to restore table data and
+          metadata. If you have a large backup set, you can improve performance of the restore by
+          increasing the number of parallel connections with the <codeph>--jobs</codeph> option. For
           example:<codeblock>$ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db --jobs 8</b></codeblock></p>
         <p>Test the number of parallel connections with your backup set to determine the ideal
           number for fast data recovery. </p>
@@ -308,8 +310,8 @@ $ <b>gpbackup --dbname demo --exclude-schema twitter</b></codeblock></p>
         <i>or</i> multiple <codeph>--exclude-schema</codeph> options. For
         example:<codeblock>$ <b>gpbackup --dbname demo --include-schema wikipedia --include-schema twitter</b></codeblock></p>
       <p>To filter the individual tables that are included in a backup set, or excluded from a
-        backup set, specify individual tables with the <codeph>--include-table</codeph> option or the
-          <codeph>--exclude-table</codeph> option. The table must be schema qualified,
+        backup set, specify individual tables with the <codeph>--include-table</codeph> option or
+        the <codeph>--exclude-table</codeph> option. The table must be schema qualified,
           <codeph>&lt;schema-name>.&lt;table-name></codeph>. The individual table filtering options
         can be specified multiple times. However, <codeph>--include-table</codeph> and
           <codeph>--exclude-table</codeph> cannot both be used in the same command. </p>
@@ -330,11 +332,11 @@ water.tonic</codeblock></p>
         example:<codeblock>$ <b>gpbackup --dbname demo --include-table-file /home/gpadmin/table-list.txt</b></codeblock></p>
       <p>You can combine <codeph>-include schema</codeph> with <codeph>--exclude-table</codeph> or
           <codeph>--exclude-table-file</codeph> for a backup. This example uses
-          <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph> to back up a schema
-        except for a single table. </p>
+          <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph> to back up a
+        schema except for a single table. </p>
       <codeblock>$ <b>gpbackup --dbname demo --include-schema mydata --exclude-table mydata.addresses</b></codeblock>
-      <p>You cannot combine <codeph>--include-schema</codeph> with <codeph>--include-table</codeph> or
-          <codeph>--include-table-file</codeph>, and you cannot combine
+      <p>You cannot combine <codeph>--include-schema</codeph> with <codeph>--include-table</codeph>
+        or <codeph>--include-table-file</codeph>, and you cannot combine
           <codeph>--exclude-schema</codeph> with any table filtering option such as
           <codeph>--exclude-table</codeph> or <codeph>--include-table</codeph>.</p>
       <section id="section_ddf_gyn_5bb"><title>Filtering by Leaf Partition</title><p>By default,
@@ -377,8 +379,8 @@ CREATE TABLE</codeblock></p><p>To
           name:<codeblock>public.sales_1_prt_oct17
 public.sales_1_prt_nov17
 public.sales_1_prt_dec17 </codeblock></p><p>Then
-          specify the file with the <codeph>--include-table-file</codeph> option to generate one data
-          file per leaf
+          specify the file with the <codeph>--include-table-file</codeph> option to generate one
+          data file per leaf
           partition:<codeblock>$ <b>gpbackup --dbname demo --include-table-file last-quarter.txt --leaf-partition-data</b></codeblock></p>When
         you specify <codeph>--leaf-partition-data</codeph>, <codeph>gpbackup</codeph> generates one
         data file per leaf partition when backing up a partitioned table. For example, this command
@@ -386,10 +388,10 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
           partition:<codeblock>$ <b>gpbackup --dbname demo --include-table public.sales --leaf-partition-data</b></codeblock><p>When
           leaf partitions are backed up, the leaf partition data is backed up along with the
           metadata for the entire partitioned table.</p><note>You cannot use the
-            <codeph>--exclude-table-file</codeph> option with <codeph>--leaf-partition-data</codeph>.
-          Although you can specify leaf partition names in a file specified with
-            <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph> ignores the partition
-          names.</note></section>
+            <codeph>--exclude-table-file</codeph> option with
+          <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names in a
+          file specified with <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph>
+          ignores the partition names.</note></section>
       <section>
         <title>Filtering with gprestore</title>
         <p>After creating a backup set with <codeph>gpbackup</codeph>, you can filter the schemas
@@ -407,8 +409,8 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
                 <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
               utility restores table indexes and rules. Triggers are also restored but are not
               supported in Greenplum Database.</li>
-            <li>The file that you specify with <codeph>--include-table-file</codeph> cannot include a
-              leaf partition name, as it can when you specify this option with
+            <li>The file that you specify with <codeph>--include-table-file</codeph> cannot include
+              a leaf partition name, as it can when you specify this option with
                 <codeph>gpbackup</codeph>. If you specified leaf partitions in the backup set,
               specify the partitioned table to restore the leaf partition data. <p>When restoring a
                 backup set that contains data from some leaf partitions of a partitioned table, the
@@ -675,8 +677,8 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
             <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. </p>
         <p>If you specify a custom backup directory, segment data files are copied to this same file
           path as a subdirectory of the backup directory. If you include the
-            <codeph>--leaf-partition-data</codeph> option, <codeph>gpbackup</codeph> creates one data
-          file for each leaf partition of a partitioned table, instead of just one table for
+            <codeph>--leaf-partition-data</codeph> option, <codeph>gpbackup</codeph> creates one
+          data file for each leaf partition of a partitioned table, instead of just one table for
           file.</p>
         <p>Each data file uses the file name format
             <filepath>gpbackup_&lt;content_id>_&lt;YYYYMMDDHHMMSS>_&lt;oid>.gz</filepath> where:<ul

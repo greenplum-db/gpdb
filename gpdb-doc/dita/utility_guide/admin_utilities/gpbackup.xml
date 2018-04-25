@@ -4,8 +4,6 @@
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
-      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gpbackup --dbname</b> <varname>database_name</varname>
@@ -22,6 +20,7 @@
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
    [<b>--no-compression</b>]
+   [<b>--plugin-config</b> <varname>config_file_location</varname>
    [<b>--quiet</b>]
    [<b>--single-data-file]</b>
    [<b>--verbose</b>]
@@ -53,20 +52,19 @@
         SEGMENT</codeph>command performs the backup task in parallel on each segment host. The
         backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is backed
         up.</p>When a back up operation completes, <codeph>gpbackup</codeph> returns a status code.
-      See <xref href="#topic1/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph>
-        can send status email notifications after a back up operation completes. You specify when
-        the utility sends the mail and the email recipients in a configuration file. See <xref
+      See <xref href="#topic1/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph> can send
+        status email notifications after a back up operation completes. You specify when the utility
+        sends the mail and the email recipients in a configuration file. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p></section>
     <section>
       <title>Options</title>
       <parml>
         <plentry>
-          <pt><b>-dbname</b>
+          <pt><b>--dbname</b>
             <varname>database_name</varname></pt>
           <pd>Required. Specifies the database to back up.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
@@ -80,7 +78,6 @@
             specify a custom backup directory, files are copied to these paths in subdirectories of
             the backup directory.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--compression-level</b>
             <varname>level</varname></pt>
@@ -88,18 +85,15 @@
             files. The default is 1. Note that <codeph>gpbackup</codeph> uses compression by
             default.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--data-only</b></pt>
           <pd>Optional. Backs up only the table data into CSV files, but does not backup metadata
             files needed to recreate the tables and other database objects.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--debug</b></pt>
           <pd>Optional. Displays verbose debug messages during operation.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--exclude-schema</b>
             <varname>schema_name</varname></pt>
@@ -125,7 +119,6 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--exclude-table-file</b>
             <varname>file_name</varname></pt>
@@ -143,7 +136,6 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--include-schema</b>
             <varname>schema_name</varname></pt>
@@ -156,7 +148,6 @@
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
             information.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--include-table</b>
             <varname>schema.table</varname></pt>
@@ -174,7 +165,6 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--include-table-file</b>
             <varname>file_name</varname></pt>
@@ -193,7 +183,6 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--leaf-partition-data</b></pt>
           <pd>Optional. For partitioned tables, creates one data file per leaf partition instead of
@@ -203,23 +192,33 @@
             combination with <codeph>--exclude-table-file</codeph> or
               <codeph>--exclude-table</codeph>.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--metadata-only</b></pt>
           <pd>Optional. Creates only the metadata files (DDL) needed to recreate the database
             objects, but does not back up the actual table data.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--no-compression</b></pt>
           <pd>Optional. Do not compress the table data CSV files.</pd>
         </plentry>
-
+        <plentry>
+          <pt><b>--plugin-config</b>
+            <varname>config-file_location</varname></pt>
+          <pd>Specify the location of the <codeph>gpbackup</codeph> plugin configuration file, a
+            YAML-formatted text file. The file contains configuration information for the plugin
+            application that <codeph>gpbackup</codeph> uses during the backup operation.</pd>
+          <pd>This option is supported only with <codeph>--single-data-file</codeph> or
+              <codeph>--metadata-only</codeph>.</pd>
+          <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
+            database, you must specify this option with configuration information for a
+            corresponding plugin application when you restore the database from the backup.</pd>
+          <pd>For information about using the S3 storage plugin application, see <xref
+              href="../../admin_guide/managing/backup-s3-plugin.xml"/>.</pd>
+        </plentry>
         <plentry>
           <pt><b>--quiet</b></pt>
           <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--single-data-file</b></pt>
           <pd>Optional. Create a single data file on each segment host for all tables backed up on
@@ -227,20 +226,17 @@
             for each table that is backed up on the segment.<note>If you use the
                 <codeph>--single-data-file</codeph> option to combine table backups into a single
               file per segment, you cannot set the <codeph>gprestore</codeph> option
-                <codeph>-jobs</codeph> to a value higher than 1 to perform a parallel restore
+                <codeph>--jobs</codeph> to a value higher than 1 to perform a parallel restore
               operation.</note></pd>
         </plentry>
-
         <plentry>
           <pt><b>--verbose</b></pt>
           <pd>Optional. Print verbose log messages.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--version</b></pt>
           <pd>Optional. Print the version number and exit.</pd>
         </plentry>
-
         <plentry>
           <pt><b>--with-stats</b></pt>
           <pd>Optional. Include query plan statistics in the backup set.</pd>
@@ -264,18 +260,18 @@
     <section>
       <title>Examples</title>
       <p>Backup all schemas and tables in the "demo" database, including global Greenplum Database
-        system objects statistics:<codeblock>$ gpbackup -dbname demo</codeblock></p>
+        system objects statistics:<codeblock>$ gpbackup --dbname demo</codeblock></p>
       <p>Backup all schemas and tables in the "demo" database except for the "twitter"
-        schema:<codeblock>$ gpbackup -dbname demo --exclude-schema twitter</codeblock></p>
+        schema:<codeblock>$ gpbackup --dbname demo --exclude-schema twitter</codeblock></p>
       <p>Backup only the "twitter" schema in the "demo"
-        database:<codeblock>$ gpbackup -dbname demo --include-schema twitter</codeblock></p>
+        database:<codeblock>$ gpbackup --dbname demo --include-schema twitter</codeblock></p>
       <p>Backup all schemas and tables in the "demo" database, including global Greenplum Database
         system objects and query statistics, and copy all backup files to the
           <filepath>/home/gpadmin/backup</filepath>
-        directory:<codeblock>$ gpbackup -dbname demo --with-stats --backup-dir /home/gpadmin/backup</codeblock></p>
+        directory:<codeblock>$ gpbackup --dbname demo --with-stats --backup-dir /home/gpadmin/backup</codeblock></p>
       <p>This example uses <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph>
         to back up a schema except for a single table. </p>
-      <codeblock>$ gpbackup -dbname demo --include-schema mydata --exclude-table mydata.addresses</codeblock>
+      <codeblock>$ gpbackup --dbname demo --include-schema mydata --exclude-table mydata.addresses</codeblock>
       <p>You cannot use the option <codeph>--exclude-schema</codeph> with a table filtering option
         such as <codeph>--include-table</codeph>.</p>
     </section>
@@ -283,7 +279,8 @@
       <title>See Also</title>
       <p>
         <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/></p>
+          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
     </section>
   </body>
 </topic>

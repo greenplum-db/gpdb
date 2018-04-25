@@ -3478,10 +3478,10 @@ static void
 groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 {
 	appendStringInfo(str, "{");
-	appendStringInfo(str, "\"usage\":%d, ",
+	appendStringInfo(str, "\"used\":%d, ",
 			VmemTracker_ConvertVmemChunksToMB(
 				ResGroupOps_GetMemoryUsage(group->groupId) / ResGroupGetSegmentNum()));
-	appendStringInfo(str, "\"limit\":%d",
+	appendStringInfo(str, "\"limit_granted\":%d",
 			VmemTracker_ConvertVmemChunksToMB(
 				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetSegmentNum()));
 	appendStringInfo(str, "}");

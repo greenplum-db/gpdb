@@ -179,7 +179,7 @@
                         having the <codeph>SUPERUSER</codeph> attribute.</pd>
                     <pd>You can assign the <codeph>default_group</codeph> resource group to any
                         role.</pd>
-                </plentry>
+                    <pd>You cannot assign a resource group that you create for an external component to a role.</pd></plentry>
                 <plentry>
                     <pt>RESOURCE QUEUE <varname>queue_name</varname></pt>
                     <pd>The name of the resource queue to which the new user-level role is to be

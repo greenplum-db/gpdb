@@ -33,7 +33,10 @@
 #include "access/transam.h"
 #include "cdb/cdbtm.h"
 #include "storage/shmem.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
+#include "miscadmin.h"
+#include "libpq/libpq-be.h" /* struct Port */
 
 /* We need 8 bytes per xact */
 #define ENTRIES_PER_PAGE (BLCKSZ / sizeof(DistributedLogEntry))
@@ -193,6 +196,15 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 	if (!TransactionIdIsNormal(oldestLocalXmin))
 		elog(ERROR, "invalid oldest xmin: %u", oldestLocalXmin);
 
+#ifdef FAULT_INJECTOR
+	const char *dbname = NULL;
+	if (MyProcPort)
+		dbname = MyProcPort->database_name;
+
+	FaultInjector_InjectFaultIfSet(DistributedLogAdvanceOldestXmin, DDLNotSpecified,
+								   dbname?dbname: "", "");
+#endif
+
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
 	oldestXmin = oldOldestXmin = DistributedLogShared->oldestXmin;
@@ -213,53 +225,51 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		oldestXmin = DistributedLogShared->oldestXmin;
 	}
 
-	/* sanity check, this shouldn't happen... */
-	if (TransactionIdFollows(oldestXmin, oldestLocalXmin))
+	/*
+	 * oldestXmin (DistributedLogShared->oldestXmin) can be higher than
+	 * oldestLocalXmin (globalXmin in GetSnapshotData()) in concurrent
+	 * work-load. This happens due to fact that GetSnapshotData() loops over
+	 * procArray and releases the ProcArrayLock before reaching here. So, if
+	 * oldestXmin has already bumped ahead of oldestLocalXmin its safe to just
+	 * return oldestXmin, as some other process already checked the
+	 * distributed log for us.
+	 */
+	if (TransactionIdPrecedes(oldestXmin, oldestLocalXmin))
 	{
-#ifdef USE_ASSERT_CHECKING
-		elog(PANIC,
-#else
-		elog(ERROR,
-#endif
-			 "local snapshot's xmin (%u) is older than recorded distributed oldestxmin (%u)",
-			 oldestLocalXmin, oldestXmin);
-	}
-
-	currPage = -1;
-	while (!TransactionIdEquals(oldestXmin, oldestLocalXmin))
-	{
-		int			page = TransactionIdToPage(oldestXmin);
-		int			entryno = TransactionIdToEntry(oldestXmin);
-		DistributedLogEntry *ptr;
-
-		if (page != currPage)
+		currPage = -1;
+		while (!TransactionIdEquals(oldestXmin, oldestLocalXmin))
 		{
-			slotno = SimpleLruReadPage(DistributedLogCtl, page, true, oldestXmin);
-			currPage = page;
-			entries = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
+			int			page = TransactionIdToPage(oldestXmin);
+			int			entryno = TransactionIdToEntry(oldestXmin);
+			DistributedLogEntry *ptr;
+
+			if (page != currPage)
+			{
+				slotno = SimpleLruReadPage(DistributedLogCtl, page, true, oldestXmin);
+				currPage = page;
+				entries = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
+			}
+
+			ptr = &entries[entryno];
+
+			/*
+			 * If this XID is already visible to all distributed snapshots, we can
+			 * advance past it. Otherwise stop here. (Local-only transactions will
+			 * have zeros in distribXid and distribTimeStamp; this test will also
+			 * skip over those.)
+			 */
+			if (ptr->distribTimeStamp != distribTransactionTimeStamp ||
+				TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
+			{
+				TransactionIdAdvance(oldestXmin);
+			}
+			else
+				break;
 		}
 
-		ptr = &entries[entryno];
-
-		/*
-		 * If this XID is already visible to all distributed snapshots, we can
-		 * advance past it. Otherwise stop here. (Local-only transactions will
-		 * have zeros in distribXid and distribTimeStamp; this test will also
-		 * skip over those.)
-		 */
-		if (ptr->distribTimeStamp != distribTransactionTimeStamp ||
-			TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
-		{
-			TransactionIdAdvance(oldestXmin);
-		}
-		else
-			break;
+		DistributedLog_Truncate(oldestXmin);
+		DistributedLogShared->oldestXmin = oldestXmin;
 	}
-
-	/* Truncate DistributedLog, if possible. */
-	DistributedLog_Truncate(oldestXmin);
-
-	DistributedLogShared->oldestXmin = oldestXmin;
 
 	LWLockRelease(DistributedLogControlLock);
 
