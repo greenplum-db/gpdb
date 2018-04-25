@@ -331,7 +331,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
       <topic id="topic833cons" xml:lang="en">
         <title>Other Memory Considerations</title>
         <body>
-        <p>Resource groups for roles track all Greenplum Database memory allocated via the <codeph>palloc()</codeph> function. Memory that you allocate using the Linux <codeph>malloc()</codeph> function is not managed by these resource groups. To ensure that resource groups for roles are accurately tracking memory usage, avoid <codeph>malloc()</codeph>ing large amounts of memory in custom Greenplum Database user-defined functions.</p>
+        <p>Resource groups for roles track all Greenplum Database memory allocated via the <codeph>palloc()</codeph> function. Memory that you allocate using the Linux <codeph>malloc()</codeph> function is not managed by these resource groups. To ensure that resource groups for roles are accurately tracking memory usage, avoid using <codeph>malloc()</codeph> to allocate large amounts of memory in custom Greenplum Database user-defined functions.</p>
         </body>
       </topic>
   </topic>
@@ -394,7 +394,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
      memory {
      }
  } </codeblock>
-            <p>This content configures CPU, CPU accounting, and memory  control groups
+            <p>This content configures CPU, CPU accounting, and memory control groups
               managed by the <codeph>gpadmin</codeph> user. Greenplum Database uses
               the memory control group only for those resource groups created with the
               <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>.</p>
