@@ -4,30 +4,19 @@
 <topic id="topic1" xml:lang="en">
   <title id="iz173472">Using Resource Groups</title>
   <body>
-    <p>Greenplum Database supports two types of resource groups: groups that manage resources for roles, and groups that manage resources for external components such as PL/Container.</p>
-    <p><b>Resource groups for roles</b>: You can use resource groups for roles to manage the number of active queries that may execute
-      concurrently in your Greenplum Database cluster. With resource groups for roles, you can also manage the
-      amount of CPU and memory resources Greenplum allocates to each query.</p>
-    <p>Resource groups for roles use Linux control groups (cgroups) for CPU resource management. Greenplum Database tracks virtual memory internally for resource groups for roles.</p>
-    <p>When the user executes a query, Greenplum Database evaluates the query against a set of
-      limits defined for the resource group. Greenplum Database executes the query immediately if
-      the group's resource limits have not yet been reached and the query does not cause the group
-      to exceed the concurrent transaction limit. If these conditions are not met, Greenplum
-      Database queues the query. For example, if the maximum number of concurrent transactions for
-      the resource group has already been reached, a subsequent query is queued and must wait until
-      other queries complete before it runs. Greenplum Database may also execute a pending query
-      when the resource group's concurrency and memory limits are altered to large enough
-      values.</p>
-    <p>Within a resource group for roles, transactions are evaluated on a first in, first out basis. Greenplum
-      Database periodically assesses the active workload of the system, reallocating resources and
-      starting/queuing jobs as necessary.</p>
-    <p><b>Resource groups for external components</b>: You can use resource groups for external components such as PL/Container to manage the CPU and memory resources used by an instance of the component.</p>
-      <p>Resource groups for external components use Linux cgroups to manage the total CPU and memory resources for the component. As Greenplum Database has no concept of a transaction at the component level, a concurrency limit is not applicable.</p> 
-      <p>An external component may optionally define and further refine a more granular level of memory management.</p>
+    <p>You use resource groups to set and enforce CPU, memory, and concurrent transaction limits in Greenplum Database. After you define a resource group, you can then assign the group to one or more Greenplum Database roles, or to an external component such as PL/Container, in order to control the resources used by those roles or components.</p>
+    <p>When you assign a resource group to a role (a role-based resource group), the resource limits that you define for the group apply to all of the roles to which you assign the group. For example, the CPU limit for a resource group identifies the maximum CPU usage for all running transactions submitted by Greenplum Database users in all roles to which you assign the group.</p>
+    <p>Similarly, when you assign a resource group to an external component, the group limits apply to all running instances of the component. For example, if you create a resource group for a PL/Container external component, the memory limit that you define for the group specifies the maximum memory usage for all running instances of each PL/Container runtime to which you assign the group.</p>
+
     <p>This topic includes the following subtopics:</p>
     <ul id="ul_wjf_1wy_sp">
       <li id="im168064">
         <xref href="#topic8339intro" type="topic" format="dita"/>
+      </li>
+      <li id="im168064x">
+        <xref href="#topic8339introattrlim" type="topic" format="dita"/><ul>
+      <li id="im16806az">
+        <xref href="#topic8339777" type="topic" format="dita"/>
       </li>
       <li id="im16806a">
         <xref href="#topic8339717179" type="topic" format="dita"/>
@@ -38,6 +27,7 @@
       <li id="im16806c">
         <xref href="#topic8339717" type="topic" format="dita"/>
       </li>
+      </ul></li>
       <li id="im16806d">
         <xref href="#topic71717999" type="topic" format="dita"/>
         <ul id="ul_wjf_1wy_spXX">
@@ -61,10 +51,34 @@
     </ul>
   </body>
   <topic id="topic8339intro" xml:lang="en">
-    <title>Introduction to Resource Group Attributes and Limits</title>
+    <title>Understanding Role and Component Resource Groups</title>
+    <body>
+    <p>Greenplum Database supports two types of resource groups: groups that manage resources for roles, and groups that manage resources for external components such as PL/Container.</p>
+    <p>The most common application for resource groups is to manage the number of active queries that may execute
+      concurrently in your Greenplum Database cluster. You can also manage the
+      amount of CPU and memory resources that Greenplum allocates to each query.</p>
+    <p>Resource groups for roles use Linux control groups (cgroups) for CPU resource management. Greenplum Database tracks virtual memory internally for these resource groups.</p>
+    <p>When the user executes a query, Greenplum Database evaluates the query against a set of
+      limits defined for the resource group. Greenplum Database executes the query immediately if
+      the group's resource limits have not yet been reached and the query does not cause the group
+      to exceed the concurrent transaction limit. If these conditions are not met, Greenplum
+      Database queues the query. For example, if the maximum number of concurrent transactions for
+      the resource group has already been reached, a subsequent query is queued and must wait until
+      other queries complete before it runs. Greenplum Database may also execute a pending query
+      when the resource group's concurrency and memory limits are altered to large enough
+      values.</p>
+    <p>Within a resource group for roles, transactions are evaluated on a first in, first out basis. Greenplum
+      Database periodically assesses the active workload of the system, reallocating resources and
+      starting/queuing jobs as necessary.</p>
+    <p>You can also use resource groups to manage the CPU and memory resources of external components such as PL/Container. Resource groups for external components use Linux cgroups to manage both the total CPU and total memory resources for the component.</p> 
+    </body>
+  </topic>
+
+  <topic id="topic8339introattrlim" xml:lang="en">
+    <title>Resource Group Attributes and Limits</title>
     <body>
     <p>When you create a resource group, you:</p><ul>
-      <li>Identify the type of resource group.</li>
+      <li>Specify the type of resource group by identifying how memory for the group is audited.</li>
       <li>Provide a set of limits that determine the amount of CPU and memory resources available to the group.</li>
     </ul>
 
@@ -82,13 +96,13 @@
         <tbody>
           <row>
             <entry colname="col1">MEMORY_AUDITOR</entry>
-            <entry colname="col2">The memory auditor in use for the resource group;
-              <codeph>vmtracker</codeph> (default; resource groups for roles) or <codeph>cgroup</codeph> (resource groups for external components).</entry>
+            <entry colname="col2">The memory auditor in use for the resource group.
+              <codeph>vmtracker</codeph> (the default) is required if you want to assign the resource group to roles. Specify <codeph>cgroup</codeph> to assign the resource group to an external component.</entry>
           </row>
           <row>
             <entry colname="col1">CONCURRENCY</entry>
             <entry colname="col2">The maximum number of concurrent transactions, including active
-              and idle transactions, that are permitted for a resource group for roles.</entry>
+              and idle transactions, that are permitted in the resource group.</entry>
           </row>
           <row>
             <entry colname="col1">CPU_RATE_LIMIT</entry>
@@ -120,8 +134,8 @@
   <topic id="topic8339777" xml:lang="en">
     <title>Memory Auditor</title>
     <body>
-      <p>The <codeph>MEMORY_AUDITOR</codeph> attribute identifies the type of resource
-        group. A resource group that specifies the <codeph>vmtracker</codeph>
+      <p>The <codeph>MEMORY_AUDITOR</codeph> attribute specifies the type of resource
+        group by identifying the memory auditor for the group. A resource group that specifies the <codeph>vmtracker</codeph>
         <codeph>MEMORY_AUDITOR</codeph> identifies a resource group for roles. A resource
         group specifying the <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>
         identifies a resource group for external components.</p>
@@ -175,7 +189,8 @@
     <title>Transaction Concurrency Limit</title>
     <body>
       <p>The <codeph>CONCURRENCY</codeph> limit controls the maximum number of concurrent
-        transactions permitted for a resource group for roles. The <codeph>CONCURRENCY</codeph> limit is not applicable to resource groups for external components and must be set to zero (0) for such groups.</p>
+        transactions permitted for a resource group for roles.
+      <note>The <codeph>CONCURRENCY</codeph> limit is not applicable to resource groups for external components and must be set to zero (0) for such groups.</note></p>
       <p>Each resource group for roles is logically divided into
         a fixed number of slots equal to the <codeph>CONCURRENCY</codeph> limit. Greenplum Database
         allocates these slots an equal, fixed percentage of memory resources.</p>
@@ -218,7 +233,7 @@
         active. If multiple resource groups are busy, they are allocated the CPU resources of any
         idle resource groups based on the ratio of their <codeph>CPU_RATE_LIMIT</codeph>s. For
         example, a resource group created with a <codeph>CPU_RATE_LIMIT</codeph> of 40 will be
-        allocated twice as much extra CPU resource as a resource group you create with a
+        allocated twice as much extra CPU resource as a resource group that you create with a
           <codeph>CPU_RATE_LIMIT</codeph> of 20.</p>
     </body>
   </topic>
@@ -251,7 +266,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         your Greenplum Database cluster must not exceed 100.</p>
     </body>
     <topic id="mem_roles" xml:lang="en">
-      <title>Additional Memory Limits for Resource Groups for Roles</title>
+      <title>Additional Memory Limits for Role-based Resource Groups</title>
       <body>
       <p>The memory reserved by a resource group for roles is further divided into fixed and shared components. The
           <codeph>MEMORY_SHARED_QUOTA</codeph> value that you specify when you create the resource group
@@ -381,7 +396,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
  } </codeblock>
             <p>This content configures CPU, CPU accounting, and memory  control groups
               managed by the <codeph>gpadmin</codeph> user. Greenplum Database uses
-              the memory control group only for those resource groups defined with the
+              the memory control group only for those resource groups created with the
               <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>.</p>
           </li>
           <li>If not already installed and running, install the Control Groups operating system
@@ -606,7 +621,7 @@ gpstart
       <p>You can assign a resource group to one or more roles. If you have defined a role hierarchy,
         assigning a resource group to a parent role does not propagate down to the members of that
         role group.</p>
-      <p>You cannot assign a resource group you create for an external component to a role.</p>
+      <note>You cannot assign a resource group that you create for an external component to a role.</note>
       <p>If you wish to remove a resource group assignment from a role and assign the role the
         default group, change the role's group name assignment to <codeph>NONE</codeph>. For
         example:</p>
@@ -704,7 +719,7 @@ gpstart
 </codeblock>
         </p>
         <p>
-          <codeph>pg_stat_activity</codeph> displays information about the user/role that initiated a query. A query that uses the PL/Container external component has two parts: the Greenplum Database query operator processing and the UDF running in a PL/Container instance. Greenplum Database processes the query operators under the resource group assigned to the role that initiated the query. A UDF running in a PL/Container instance runs under the resource group assigned to the PL/Container runtime. The latter is not represented in the <codeph>pg_stat_activity</codeph> view; Greenplum Database does not have any insight into how PL/Container manages its memory among running instances.
+          <codeph>pg_stat_activity</codeph> displays information about the user/role that initiated a query. A query that uses an external component such as PL/Container is composed of two parts: the Greenplum Database query operator processing and the UDF running in a PL/Container instance. Greenplum Database processes the query operators under the resource group assigned to the role that initiated the query. A UDF running in a PL/Container instance runs under the resource group assigned to the PL/Container runtime. The latter is not represented in the <codeph>pg_stat_activity</codeph> view; Greenplum Database does not have any insight into how external components such as PL/Container manage memory among running instances.
         </p>
       </body>
     </topic>
