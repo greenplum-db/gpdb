@@ -481,8 +481,8 @@ class DiskFree(Command):
 # -------------mkdir------------------
 class MakeDirectory(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-        cmdStr = "%s -p %s" % (findCmdInPath('mkdir'), directory)
+        self.directory = directory.replace('\'', '\'\\\'\'')
+        cmdStr = "%s -p \'%s\'" % (findCmdInPath('mkdir'), self.directory)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
@@ -532,9 +532,10 @@ class RemoveDirectory(Command):
                   "mkdir -p {unique_dir}  &&  " \
                   "{cmd} -a --delete {unique_dir}/ {target_dir}/  &&  " \
                   "rmdir {target_dir} {unique_dir} ; fi".format(
-                    unique_dir=unique_dir,
+                      unique_dir="\'%s\'" % unique_dir.replace(
+                          '\'', '\'\\\'\''),
                     cmd=findCmdInPath('rsync'),
-                    target_dir=directory
+                      target_dir="\'%s\'" % directory.replace('\'', '\'\\\'\'')
         )
         Command.__init__(self, name, cmd_str, ctxt, remoteHost)
 

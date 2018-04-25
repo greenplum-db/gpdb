@@ -133,6 +133,7 @@ def run_gpcommand(context, command, cmd_prefix=''):
     if cmd_prefix:
         cmd = Command(name='run %s' % command, cmdStr='%s;$GPHOME/bin/%s' % (cmd_prefix, command))
     try:
+        #print "Command: %s" % cmd.cmdStr
         cmd.run(validateAfter=True)
     except ExecutionError, e:
         context.exception = e
@@ -295,24 +296,63 @@ def check_partition_table_exists(context, dbname, schemaname, table_name, table_
         return False
     return check_table_exists(context, dbname, partitions[0][0].strip(), table_type)
 
+def unescape_sql_escape(name):
+    if len(name)== 0:
+        return ''
+    if (name[0] == '"' and name[-1] == '"'):
+        name =  name[1:-1];
+
+    name = name.replace('""', '"')
+    return name
 
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
     with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
-        if '.' in table_name:
-            schemaname, tablename = table_name.split('.')
+        index = 0
+        partitions = ['', '']
+        i = 0
+
+        while i< len(table_name):
+            if (table_name[i] == '"'):
+                partitions[index] = partitions[index] + table_name[i]
+                i += 1
+                while (table_name[i] != '"'):
+                    partitions[index] = partitions[index] + table_name[i]
+                    i += 1
+                partitions[index] = partitions[index] + table_name[i]
+                i += 1
+            elif (table_name[i] == '.'):
+                index += 1
+                i += 1
+            else:
+                partitions[index] = partitions[index] + table_name[i]
+                i += 1
+
+        if index >= 2:
+            raise Exception('Invalid fully qualified table name %s' % table_name)
+        #print "partitions[0]:%s" % partitions[0]
+        #if index >= 1:
+            #print "partitions[1]:%s" % partitions[1]
+
+        partitions[0] = unescape_sql_escape(partitions[0])
+        if index >= 1:
+            partitions[1] = unescape_sql_escape(partitions[1])
+
+        if (index==1):
             SQL_format = """
                 SELECT c.oid, c.relkind, c.relstorage, c.reloptions
                 FROM pg_class c, pg_namespace n
                 WHERE c.relname = '%s' AND n.nspname = '%s' AND c.relnamespace = n.oid;
                 """
-            SQL = SQL_format % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
-        else:
+            SQL = SQL_format % (escape_string(partitions[1], conn=conn), escape_string(partitions[0], conn=conn))
+        elif (index==0):
             SQL_format = """
                 SELECT oid, relkind, relstorage, reloptions \
                 FROM pg_class \
                 WHERE relname = E'%s';\
                 """
-            SQL = SQL_format % (escape_string(table_name, conn=conn))
+            SQL = SQL_format % (escape_string(partitions[0], conn=conn))
+
+        #print "SQL:%s" % SQL
 
         table_row = None
         try:
