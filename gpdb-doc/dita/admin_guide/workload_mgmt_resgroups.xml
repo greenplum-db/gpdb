@@ -207,6 +207,21 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         in resource groups. A transaction submitted in a resource group will fail and exit
         when memory usage exceeds its fixed memory allotment, no available resource group
         shared memory exists, and the transaction requests more memory.</note>
+      <section id="topic833glob" xml:lang="en">
+        <title>Global Shared Memory</title>
+         <p>The sum of the <codeph>MEMORY_LIMIT</codeph>s configured for all resource
+           groups (including the default <codeph>admin_group</codeph> and <codeph>default_group</codeph>
+           groups) identifies the percentage of reserved resource group memory. If this
+           sum is less than 100, Greenplum Database allocates any unreserved memory to a
+           resource group global shared memory pool.</p>
+         <p>Resource group global shared memory
+           is available only to role-based groups, and is most commonly requested at
+           the query level.</p>
+         <p>When requested and available, Greenplum Database allots global shared memory
+          to a transaction after first allocating slot and resource group shared
+          memory. Greenplum Database allots resource group global shared memory to
+          transactions on a first-come first-served basis.</p>
+      </section>
 
       <section id="topic833sp" xml:lang="en">
         <title>Query Operator Memory</title>
@@ -225,17 +240,27 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           among operators more optimally by re-allocating memory released by operators that have 
           completed their processing to operators in a later query stage.</p>
         <p><codeph>MEMORY_SPILL_RATIO</codeph> identifies the memory usage threshold for
-          memory-intensive operators in a transaction. When the transaction reaches this memory
-          threshold, it spills to disk. Greenplum Database uses the
+          memory-intensive operators in a transaction. When this threshold is reached, 
+          a transaction spills to disk. Greenplum Database uses the
             <codeph>MEMORY_SPILL_RATIO</codeph> to determine the initial memory to allocate to a
           transaction.</p>
         <p> The minimum <codeph>MEMORY_SPILL_RATIO</codeph> percentage you can specify for a
-          resource group is 0. The maximum is 100. The default <codeph>MEMORY_SPILL_RATIO</codeph>
+          resource group is 0. The maximum is <codeph>INT_MAX</codeph>. The default <codeph>MEMORY_SPILL_RATIO</codeph>
           is 20.</p>
         <p>You define the <codeph>MEMORY_SPILL_RATIO</codeph> when you create a resource group. You
           can selectively set this limit on a per-query basis at the session level with the
               <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
               type="section"/></codeph> server configuration parameter.</p>
+        <p>When resource group global shared memory is available, you can request that Greenplum Database allocate memory from the global shared pool to an individual query. <codeph>memory_spill_ratio</codeph>
+          values greater than 100 identify the amount of global shared memory requested
+          as a percentage relative to total group memory. For example, if resource group
+          total memory is 100GB and resource group reserved memory (sum of
+          <codeph>MEMORY_LIMIT</codeph>s) is 60GB, Greenplum Database has 40GB of global resource group 
+          memory available. If you create a resource group named <codeph>rg1</codeph>
+          specifying <codeph>MEMORY_LIMIT=1</codeph>, the total reserved memory for
+          resource group <codeph>rg1</codeph> is 1GB. To utilize an additional 5GB
+          of memory from the resource group global shared memory pool for a query, <codeph>SET</codeph>
+          <codeph>memory_spill_ratio=600</codeph> in your session prior to running the query.</p>
       </section>
       <section id="topic833cons" xml:lang="en">
         <title>Other Memory Considerations</title>
