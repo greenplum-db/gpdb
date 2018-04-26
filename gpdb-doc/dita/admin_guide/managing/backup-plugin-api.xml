@@ -9,9 +9,9 @@
       is an experimental feature and is not intended for use in a production
       environment. Experimental features are subject to change without notice
       in future releases.</note>
-    <p>The Backup Storage Plugin API provides a framework that enables you to develop a custom backup storage system that you integrate with the Greenplum Database <xref href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"><codeph>gprestore</codeph></xref> utilities.</p>
+    <p>The Backup Storage Plugin API provides a framework that you can use to develop a custom backup storage system that you integrate with the Greenplum Database <xref href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"><codeph>gprestore</codeph></xref> utilities.</p>
     <p>The Backup Storage Plugin API defines a set of interfaces that a plugin must support.  The API also specifies the format and content of a configuration file for a plugin.</p>
-    <p>When you use the Backup Storage Plugin API, you create a backup storage plugin that the Greenplum Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is available for use in certain backup and restore operations.</p>
+    <p>When you use the Backup Storage Plugin API, you create a plugin that the Greenplum Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is available for use in certain backup and restore operations.</p>
     <note>Greenplum Database supports using a custom storage plugin on a backup operation only when <codeph>gpbackup</codeph> is run with the <codeph>--single-data-file</codeph> or <codeph>--metadata-only</codeph> options. These options restrict the data that a plugin must move to/from each Greenplum Database segment to a single file per backup operation.</note>
 
     <p>This topic includes the following subtopics:</p>
@@ -49,8 +49,8 @@
   <varname>keyword2</varname>: <varname>value2</varname>
   ...
   <varname>keywordN</varname>: <varname>valueN</varname></codeblock></p>
-      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> use the <codeph><b>executablepath</b></codeph> plugin configuration file keyword value to determine the file system location of the plugin executable program.</p>
-      <p>The plugin configuration file may also include keywords and values specific to a plugin instance. A backup storage plugin uses <codeph><b>options</b></codeph> specified in the file to obtain information from the user that may be required to perform its tasks. This information may include location, connection, or authentication information, for example. The plugin should define the content of this information in <codeph><varname>keyword</varname>:<varname>value</varname></codeph> syntax. Plugin <codeph><b>options</b></codeph> are optional.</p>
+      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> use the <codeph><b>executablepath</b></codeph> value to determine the file system location of the plugin executable program.</p>
+      <p>The plugin configuration file may also include keywords and values specific to a plugin instance. A backup storage plugin can use <codeph><b>options</b></codeph> specified in the file to obtain information from the user that may be required to perform its tasks. This information may include location, connection, or authentication information, for example. The plugin should define and consume the content of this information in <codeph><varname>keyword</varname>:<varname>value</varname></codeph> syntax.</p>
 
       <p>A sample plugin configuration file for the Greenplum Database S3 backup storage plugin follows:<codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
 options:
@@ -71,7 +71,7 @@ options:
 
       <p>DIAGRAM HERE</p>
 
-      <p>The Backup Storage Plugin API defines the following calling syntax for a backup storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
+      <p>The Backup Storage Plugin API defines the following call syntax for a backup storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
 
       <p>where:</p><ul>
         <li><codeph><varname>plugin_executable</varname></codeph> - The absolute path of the backup storage plugin executable program. This path is determined by the <codeph>executablepath</codeph> property value configured in the plugin's configuration YAML file.</li>

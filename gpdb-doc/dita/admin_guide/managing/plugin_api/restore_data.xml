@@ -12,7 +12,7 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>gprestore</codeph> invokes the <codeph>restore_data</codeph> plugin command on each segment host when a restoring a streaming backup.</p>
-      <p>The <codeph>restore_data</codeph> command should read a potentially large data file named or mapped to <codeph>data_filenamekey</codeph> from the remote storage system and write the contents to <codeph>stdout</codeph>. If the <codeph>backup_data</codeph> command modified the data in any way (i.e. compressed), <codeph>restore_data</codeph> should preform the reverse operation.</p>
+      <p>The <codeph>restore_data</codeph> implementation should read a potentially large data file named or mapped to <codeph>data_filenamekey</codeph> from the remote storage system and write the contents to <codeph>stdout</codeph>. If the <codeph>backup_data</codeph> command modified the data in any way (i.e. compressed), <codeph>restore_data</codeph> should perform the reverse operation.</p>
     </section>
     <section id="section4"><title>Arguments</title><parml>
         <plentry>
