@@ -4321,3 +4321,57 @@ KnownAssignedXidsDisplay(int trace_level)
 
 	pfree(buf.data);
 }
+
+/* This function returns a list of all valid distributedTransaction Ids. */
+List *
+ListAllGxid(void)
+{
+	ProcArrayStruct *arrayP = procArray;
+	List		*gxids = NIL;
+	int			index;
+	DistributedTransactionId gxid;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (index = 0; index < arrayP->numProcs; index++)
+	{
+		volatile PGPROC	*proc = arrayP->procs[index];
+
+		gxid = proc->gxact.gxid;
+		if (gxid == InvalidDistributedTransactionId)
+			continue;
+		gxids = lappend_int(gxids, gxid);
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return gxids;
+}
+
+/*
+ * This function returns the corresponding process id given by a
+ * DistributedTransaction Id.
+ */
+int
+GetPidByGxid(DistributedTransactionId gxid)
+{
+	int i;
+	int pid = 0;
+	ProcArrayStruct *arrayP = procArray;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (i = 0; i < arrayP->numProcs; i++)
+	{
+		volatile PGPROC *proc = arrayP->procs[i];
+		if (proc->gxact.gxid == gxid)
+		{
+			pid = proc->pid;
+			break;
+		}
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return pid;
+}

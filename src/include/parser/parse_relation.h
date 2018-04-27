@@ -45,7 +45,7 @@ extern Node *colNameToVar(ParseState *pstate, char *colname, bool localonly,
 extern void markVarForSelectPriv(ParseState *pstate, Var *var,
 					 RangeTblEntry *rte);
 extern Relation parserOpenTable(ParseState *pstate, const RangeVar *relation,
-				int lockmode, bool nowait, bool *lockUpgraded);
+								int lockmode, bool nowait, bool *lockUpgraded);
 extern RangeTblEntry *addRangeTableEntry(ParseState *pstate,
 				   RangeVar *relation,
 				   Alias *alias,

@@ -71,6 +71,7 @@
 
 #include "cdb/cdbvars.h"
 #include "utils/visibility_summary.h"
+#include "utils/faultinjector.h"
 
 
 /* GUC variable */
@@ -993,30 +994,24 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 		*lockUpgraded = false;
 
     /*
-	 * CDB: We need to upgrade the requested lock from RowExclusiveLock
-	 * to Exclusive lock (locking the whole relation) when doing updates
-	 * on distributed relations.
+	 * Since we have introduced GDD(global deadlock detector), for heap table
+	 * we do not need to upgrade the requested lock. For ao table, because of
+	 * the design of ao table's visibilitymap, we have to upgrade the lock
+	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
 	 *
-	 * Historically the need for this was due to limitations caused by lack of
-	 * distributed deadlock detection (which we now have) and due to our use
-	 * of logical mirroring (which has been replaced with physical replication).
-	 * However the need for this remains due to our current implementation
-	 * of partitioning.
+	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
 	 *
-	 * Specifically in the case of INSERT SELECT we do not know which partitions
-	 * we may be updating.  So we need to serialize UPDATE and DELETE operations
-	 * to the same partitioned table.  
-	 *
-	 * Note: This code could be improved substantially.
+	 * Note: This code could be improved substantially after we redesign ao table
+	 * and select for update.
 	 */
 	if (lockmode == RowExclusiveLock)
 	{
 		rel = try_heap_open(relid, NoLock, noWait);
 		if (!rel)
 			return NULL;
-		
+
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			GpPolicyIsPartitioned(rel->rd_cdbpolicy))
+			(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
@@ -1038,11 +1033,14 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 */
 	if (lockmode == RowExclusiveLock &&
 		Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(rel->rd_cdbpolicy))
+		(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 	{
 		elog(ERROR, "relation \"%s\" concurrently updated", 
 			 RelationGetRelationName(rel));
 	}
+
+	/* inject fault after holding the lock */
+	SIMPLE_FAULT_INJECTOR(UpgradeRowLock);
 
 	return rel;
 }                                       /* CdbOpenRelation */
@@ -1231,6 +1229,22 @@ relation_close(Relation relation, LOCKMODE lockmode)
 
 	if (lockmode != NoLock)
 		UnlockRelationId(&relid, lockmode);
+	else
+	{
+		LOCKTAG		tag;
+
+		SET_LOCKTAG_RELATION(tag, relid.dbId, relid.relId);
+
+		/*
+		 * Closing with NoLock is a sufficient condition for a relation lock
+		 * to be transaction-level(means the lock can only be released after
+		 * the holding transaction is over).
+		 * This is because the difference betwwen the ref counts in the
+		 * relation and the lock tag can not be removed.
+		 * So this is a good time to set the persistent flag for the lock.
+		 */
+		LockSetPersistent(&tag);
+	}
 }
 
 

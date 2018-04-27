@@ -133,6 +133,7 @@
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/faultinjector.h"
+#include "utils/gdd.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 
@@ -184,6 +185,7 @@ typedef enum pmsub_type
 	PerfmonProc,
 	BackoffProc,
 	PerfmonSegmentInfoProc,
+	GlobalDeadLockDetectorProc,
 	MaxPMSubType
 } PMSubType;
 
@@ -375,6 +377,9 @@ static PMSubProc PMSubProcList[MaxPMSubType] =
 	{0, PerfmonSegmentInfoProc,
 	(PMSubStartCallback*)&perfmon_segmentinfo_start,
 	"stats sender process", PMSUBPROC_FLAG_QD_AND_QE, true},
+	{0, GlobalDeadLockDetectorProc,
+	(PMSubStartCallback*)&global_deadlock_detector_start,
+	"global deadlock detector process", PMSUBPROC_FLAG_QD, true},
 };
 
 static PMSubProc *FTSSubProc = &PMSubProcList[FtsProbeProc];
@@ -4705,6 +4710,7 @@ SubPostmasterMain(int argc, char *argv[])
 		strcmp(argv[1], "--forkavworker") == 0 ||
 		strcmp(argv[1], "--forkautovac") == 0   ||
 		strcmp(argv[1], "--forkseqserver") == 0 ||
+		strcmp(argv[1], "--forkglobaldeadlockdetector") == 0 ||
 		strcmp(argv[1], "--forkboot") == 0)
 		PGSharedMemoryReAttach();
 
@@ -4888,6 +4894,23 @@ SubPostmasterMain(int argc, char *argv[])
 		CreateSharedMemoryAndSemaphores(false, 0);
 
 		SeqServerMain(argc - 2, argv + 2);
+		proc_exit(0);
+	}
+	if (strcmp(argv[1], "--forkglobaldeadlockdetector") == 0)
+	{
+		/* Close the postmaster's sockets */
+		ClosePostmasterPorts(false);
+
+		/* Restore basic shared memory pointers */
+		InitShmemAccess(UsedShmemSegAddr);
+
+		/* Need a PGPROC to run CreateSharedMemoryAndSemaphores */
+		InitAuxiliaryProcess();
+
+		/* Attach process to shared data structures */
+		CreateSharedMemoryAndSemaphores(false, 0);
+
+		GlobalDeadLockDetector(argc - 2, argv + 2);
 		proc_exit(0);
 	}
 	if (strcmp(argv[1], "--forkftsprobe") == 0)

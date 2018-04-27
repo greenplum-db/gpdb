@@ -74,8 +74,8 @@ extern Relation try_heap_openrv(const RangeVar *relation, LOCKMODE lockmode);
 /* CDB */
 extern Relation CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
 								bool *lockUpgraded);
-extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
-								   bool *lockUpgraded);
+extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode,
+								   bool noWait, bool *lockUpgraded);
 extern Relation CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, 
 								  bool noWait, bool *lockUpgraded);
 

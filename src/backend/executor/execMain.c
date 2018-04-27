@@ -1647,7 +1647,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 *
 		 * So we're going to ignore the "NoLock" issue above.
 		 */
-		/* CDB: we must promote locks for UPDATE and DELETE operations. */
+
+		/* CDB: we must promote locks for UPDATE and DELETE operations for ao table. */
 		LOCKMODE    lockmode;
 		lockmode = (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer) ? RowExclusiveLock : NoLock;
 
@@ -1785,8 +1786,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 		switch (rc->markType)
 		{
-				/* CDB: On QD, lock whole table in X mode, if distributed. */
 			case ROW_MARK_TABLE_EXCLUSIVE:
+				/* CDB: On QD, lock whole table in X mode, if distributed ao able. */
 				relid = getrelid(rc->rti, rangeTable);
 				relation = heap_open(relid, ExclusiveLock);
 				break;

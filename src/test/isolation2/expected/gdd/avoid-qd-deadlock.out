@@ -1,0 +1,40 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
+DROP TABLE IF EXISTS tsudf;
+DROP
+
+CREATE TABLE tsudf (c int, d int);
+CREATE
+
+CREATE OR REPLACE FUNCTION func1(int) RETURNS int AS $$ BEGIN UPDATE tsudf SET d = d+1 WHERE c = $1; /* in func */ RETURN $1; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+CREATE
+
+INSERT INTO tsudf select i, i+1 from generate_series(1,10) i;
+INSERT 10
+
+SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, 10, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+3&: SELECT * FROM func1(1);  <waiting ...>
+4: SELECT * FROM func1(2);
+func1
+-----
+2    
+(1 row)
+
+3<:  <... completed>
+func1
+-----
+1    
+(1 row)
+3q: ... <quitting>
+4q: ... <quitting>

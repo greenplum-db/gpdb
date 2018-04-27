@@ -60,6 +60,7 @@
 #include "cdb/cdbsetop.h"		/* motion utilities */
 #include "cdb/cdbvars.h"
 
+#include "storage/lmgr.h"
 
 /* GUC parameter */
 double		cursor_tuple_fraction = DEFAULT_CURSOR_TUPLE_FRACTION;
@@ -2649,13 +2650,10 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		List	   *newmarks = NIL;
 
 		/*
-		 * In case of FOR UPDATE, upgrade the rowmarks so that we will grab an
-		 * ExclusiveLock on the table, instead of locking individual tuples.
-		 *
-		 * Because we don't have a distibuted deadlock detector. See comments
-		 * in CdbTryOpenRelation(). CdbTryOpenRelation() handles the upgrade,
-		 * where heap_open() would otherwise be called, but for FOR UPDATE
-		 * we have this mechanism.
+		 * select for update will lock the whole table, we do it at addRangeTableEntry.
+		 * The reason is that gpdb is an MPP database, the result tuples may not be on
+		 * the same segment. And for cursor statement, reader gang cannot get Xid to lock
+		 * the tuples. (More details: https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/p-6_dNjnRMQ)
 		 */
 		foreach(lc, root->rowMarks)
 		{

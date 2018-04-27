@@ -902,3 +902,27 @@ LockTagIsTemp(const LOCKTAG *tag)
 	}
 	return false;				/* default case */
 }
+
+/*
+ * Because of the current disign of AO table's visibility map,
+ * we have to keep upgrading locks for AO table.
+ */
+bool
+CondUpgradeRelLock(Oid relid)
+{
+	Relation rel;
+	bool upgrade = false;
+
+	rel = try_relation_open(relid, NoLock, true);
+
+	if (!rel)
+		elog(ERROR, "Relation open failed!");
+	else if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		upgrade = true;
+	else
+		upgrade = false;
+
+	relation_close(rel, NoLock);
+
+	return upgrade;
+}
