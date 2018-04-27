@@ -393,7 +393,7 @@ class PSQLError(Exception):
 
 class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
-    def check_result(self,ifile, optionalFlags = "", outputPath = ""):
+    def check_result(self,ifile, optionalFlags = "-U3", outputPath = ""):
         """
         PURPOSE: compare the actual and expected output files and report an
             error if they don't match.
@@ -404,10 +404,11 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
                 figure out the proper names of the .out and .ans files.
             optionalFlags: command-line options (if any) for diff.
                 For example, pass " -B " (with the blank spaces) to ignore
-                blank lines.
+                blank lines. By default, diffs are unified with 3 lines of
+                context (i.e. optionalFlags is "-U3").
         """
-        f1 = outFile(ifile, outputPath=outputPath)
-        f2 = gpdbAnsFile(ifile)
+        f1 = gpdbAnsFile(ifile)
+        f2 = outFile(ifile, outputPath=outputPath)
 
         result = isFileEqual(f1, f2, optionalFlags, outputPath=outputPath)
         self.failUnless(result)
