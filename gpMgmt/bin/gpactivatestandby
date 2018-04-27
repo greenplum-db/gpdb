@@ -292,16 +292,16 @@ def check_or_start_standby(options):
         with open(promote_file, 'w') as f:
             f.write('')
 
-        start_master()
+        start_master(options)
 
         return False
 
 #-------------------------------------------------------------------------
-def start_master():
+def start_master(options):
     """Starts the master."""
 
     logger.info('Starting standby master database in utility mode...')
-    gp.GpStart.local('Start GPDB', masterOnly=True)
+    gp.NewGpStart.local('Start GPDB', masterOnly=True, masterDirectory=options.master_data_dir)
 
 #-------------------------------------------------------------------------
 def stop_master():
@@ -311,12 +311,12 @@ def stop_master():
     gp.GpStop.local('Stop GPDB', masterOnly=True, fast=True)
  
 #-------------------------------------------------------------------------
-def promote_standby():
+def promote_standby(master_data_dir):
     """Promote standby"""
 
     logger.info('Promoting standby...')
     cmd = gp.Command('pg_ctl promote',
-                     'pg_ctl promote -D $MASTER_DATA_DIRECTORY')
+                     'pg_ctl promote -D %s' % master_data_dir)
     cmd.run(validateAfter=True)
 
     logger.debug('Waiting for connection...')
@@ -366,7 +366,7 @@ try:
 
     # promote standby, only if the standby is running in recovery
     if not requires_restart:
-        res = promote_standby()
+        res = promote_standby(options_.master_data_dir)
         if not res:
             raise GpActivateStandbyException('Either the set port is incorrect or '
                                              'the postmaster could not come up.')
@@ -379,7 +379,7 @@ try:
     # If we forced to start utility master, this is the time to restart
     # cluster so that the new master becomes dispatch mode.
     if requires_restart:
-        cmd = gp.GpStop.local('GPDB restart', restart=True)
+        cmd = gp.GpStop.local('GPDB restart', restart=True, datadir=options_.master_data_dir)
 
     # At this point, cancel isn't all that bad so re-enable 
     # keyboard interrupt.
