@@ -2014,3 +2014,17 @@ Feature: Validate command line arguments
         And the files in the backup sets are validated for the "local" storage unit
         And the files in the backup sets are validated for the "remote" storage unit
         And the backup sets on the "local" storage unit are deleted using gp_mfr
+
+    @ddpartIII
+    @ddonly
+    @skip_filename_compatibility
+    Scenario: 150 Full backup and restore with DataDomain to different dbids
+        Given the backup test is initialized with database "bkdb150"
+        And there is a "heap" table "public.heap_table" in "bkdb150" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb150" with data
+        And a backup file of tables "public.heap_table, public.ao_index_table" in "bkdb150" exists for validation
+        And all the data from "bkdb150" is saved for verification
+        When the user runs "gpcrondump -a -x bkdb150"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And the backup files on data domain are renamed with different dbids

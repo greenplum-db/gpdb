@@ -1499,8 +1499,18 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "bkdb149"
         And the backup sets on the "remote" storage unit are deleted using gp_mfr
 
+    @ddpartIII
+    @ddonly
+    @skip_filename_compatibility
+    Scenario: 150 Full backup and restore with DataDomain to different dbids
+        Given the old timestamps are read from json
+        When the user runs gpdbrestore -e with the stored timestamp
+        And gpdbrestore should return a return code of 0
+        Then verify that the data of "2" tables in "bkdb150" is validated after restore
+        And verify that the tuple count of all appendonly tables are consistent in "bkdb150"
+
     @ddonly
     @ddboostsetup
-    Scenario: 150 Cleanup DDBoost dump directories
+    Scenario: 151 Cleanup DDBoost dump directories
         Given the DDBoost dump directory is deleted for the "local" storage unit
         Given the DDBoost dump directory is deleted for the "remote" storage unit
