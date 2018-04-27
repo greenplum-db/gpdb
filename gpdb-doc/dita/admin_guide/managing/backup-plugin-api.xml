@@ -66,8 +66,8 @@ options:
     <title>Plugin API</title>
     <body>
       <p>The backup storage plugin that you implement when you use the Backup Storage Plugin API is an executable program that supports specific commands invoked by <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> at defined points in their respective life cycle operations:</p><ul>
-        <li>The Greenplum Database Backup Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during or after backup, and at cleanup/exit time.</li>
-        <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization, before or during restore, and at cleanup/exit time.</li></ul>
+        <li>The Greenplum Database Backup Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at cleanup/exit time.</li>
+        <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization, during restore, and at cleanup/exit time.</li></ul>
 
       <p>The Backup Storage Plugin API defines the following call syntax for a backup storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
 
@@ -173,7 +173,7 @@ options:
     <title>Verifying a Backup Storage Plugin</title>
     <body>
       <p>The Backup Storage Plugin API includes a test bench that you can run to ensure that a plugin is well integrated with <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>.</p>
-      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table and then proceeds to run a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup Storage Plugin API command implemented in the plugin.</p>
+      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table, explicitly tests each command, and run a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup Storage Plugin API command implemented in the plugin.</p>
       <p>The test bench program calling syntax is: <codeblock><b>plugin_test_bench.sh</b> <varname>plugin_executable plugin_config</varname></codeblock></p>
     <section id="topic8339191" xml:lang="en">
       <title>Procedure</title>
