@@ -256,6 +256,15 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
         os.unlink( dfile )
     return ok
 
+def read_diff(ifile, outputPath):
+    """
+    Opens the diff file that is assocated with the given input file and returns
+    its contents as a string.
+    """
+    dfile = diffFile(ifile, outputPath)
+    with open(dfile, 'r') as diff:
+        return diff.read()
+
 def copy_data(source='',target=''):
     cmd = 'cp '+ mkpath('data/' + source) + ' ' + mkpath(target)
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -332,7 +341,8 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         f2 = outFile(ifile, outputPath=outputPath)
 
         result = isFileEqual(f1, f2, optionalFlags, outputPath=outputPath)
-        self.failUnless(result)
+        diff = None if result else read_diff(ifile, outputPath)
+        self.assertTrue(result, "query resulted in diff:\n{}".format(diff))
 
         return True
 
