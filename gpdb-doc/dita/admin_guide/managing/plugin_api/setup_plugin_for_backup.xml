@@ -21,7 +21,7 @@
         </plentry>
         <plentry>
           <pt><varname>local_backup_dir</varname></pt>
-          <pd>The local directory on the Greenplum Database host (master and segments) to which <codeph>gpbackup</codeph> will write backup files. <codeph>setup_plugin_for_backup</codeph> must create this directory if it does not already exist.</pd>
+          <pd>The local directory on the Greenplum Database host (master and segments) to which <codeph>gpbackup</codeph> will write backup files. <codeph>gpbackup</codeph> creates this local directory.</pd>
         </plentry>
         </parml>
     </section>
