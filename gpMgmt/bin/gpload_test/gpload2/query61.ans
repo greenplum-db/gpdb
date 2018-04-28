@@ -1,0 +1,15 @@
+2018-04-28 15:48:09|INFO|gpload session started 2018-04-28 15:48:09
+2018-04-28 15:48:09|INFO|setting schema 'public' for table 'beforeaftersql'
+2018-04-28 15:48:09|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-04-28 15:48:11|INFO|running time: 2.33 seconds
+2018-04-28 15:48:11|INFO|rows Inserted          = 1
+2018-04-28 15:48:11|INFO|rows Updated           = 0
+2018-04-28 15:48:11|INFO|data formatting errors = 0
+2018-04-28 15:48:11|INFO|gpload succeeded
+ a  
+----
+  1
+ 30
+ 31
+(3 rows)
+

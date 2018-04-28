@@ -11,6 +11,7 @@ import platform
 import re
 import subprocess
 from pygresql import pg
+from shutil import copyfile
 
 def get_port_from_conf():
     file = os.environ.get('MASTER_DATA_DIRECTORY')+'/postgresql.conf'
@@ -95,7 +96,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,before=None,after=None):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -179,6 +180,12 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
     f.write("\n    - REUSE_TABLES: "+reuse_flag)
     if staging_table:
         f.write("\n    - STAGING_TABLE: "+staging_table)
+    if before or after:
+        f.write("\n   SQL:")
+        if before:
+            f.write("\n    - BEFORE: "+before)
+        if after:
+            f.write("\n    - AFTER: "+after)
     f.write("\n")
     f.close()
 
@@ -668,6 +675,38 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_14.txt','data_file.txt')
         write_config_file(mode='insert',reuse_flag='true',file='data_file.txt',log_errors=True, error_limit='100')
         self.doTest(29)
+    # bellow test cases start from 60 because they don't need run gpload twice
+    def test_60_gpload_before_after_sql_vacuum(self):
+        "60  gpload before after sql with vacuum"
+        runfile(mkpath('setup.sql'))
+        f = open(mkpath('query60.sql'),'w')
+        f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
+        f.write("\! psql -d reuse_gptest -c 'select * from beforeaftersql order by a'")
+        f.close()
+        copy_data('external_file_15.csv','data_file.csv')
+        write_config_file(formatOpts='csv',file='data_file.csv',table='beforeaftersql',format='csv',before='insert into beforeaftersql values(30); vacuum beforeaftersql', after='VACUUM beforeaftersql; insert into beforeaftersql values(31)')
+        self.doTest(60)
+    def test_61_gpload_before_sql_vacuum_with_space(self):
+        "61  gpload before sql vacuum with space"
+        runfile(mkpath('setup.sql'))
+        copyfile('query60.sql','query61.sql')
+        copy_data('external_file_15.csv','data_file.csv')
+        write_config_file(formatOpts='csv',file='data_file.csv',table='beforeaftersql',format='csv',before='insert into beforeaftersql values(30); ; vacuum beforeaftersql', after='insert into beforeaftersql values(31); ')
+        self.doTest(61)
+    def test_62_gpload_before_sql_vacuum_error_case(self):
+        "62  gpload before sql vacuum error case"
+        runfile(mkpath('setup.sql'))
+        copyfile('query60.sql','query62.sql')
+        copy_data('external_file_15.csv','data_file.csv')
+        write_config_file(formatOpts='csv',file='data_file.csv',table='beforeaftersql',format='csv',before='insert into beforeaftersql values(30);vacuum beforeaftersql; insert into beforeaftersql values(22,11)', after='insert into beforeaftersql values(31); insert into beforeaftersql values(22,11)')
+        self.doTest(62)
+    def test_63_gpload_before_sql_vacuum_split_error_case(self):
+        "63  gpload before sql vacuum split error case"
+        runfile(mkpath('setup.sql'))
+        copyfile('query60.sql','query63.sql')
+        copy_data('external_file_15.csv','data_file.csv')
+        write_config_file(formatOpts='csv',file='data_file.csv',table='beforeaftersql',format='csv',before='insert into beforeaftersql values(";error_split");vacuum beforeaftersql')
+        self.doTest(63)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

@@ -1,0 +1,15 @@
+2018-04-28 18:01:04|INFO|gpload session started 2018-04-28 18:01:04
+2018-04-28 18:01:04|INFO|setting schema 'public' for table 'beforeaftersql'
+2018-04-28 18:01:04|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-04-28 18:01:04|ERROR|could not execute SQL in sql:before "insert into beforeaftersql values(";error_split");vacuum beforeaftersql": ERROR:  unterminated quoted identifier at or near """
+LINE 1: insert into beforeaftersql values("
+                                          ^
+
+2018-04-28 18:01:04|INFO|rows Inserted          = 0
+2018-04-28 18:01:04|INFO|rows Updated           = 0
+2018-04-28 18:01:04|INFO|data formatting errors = 0
+2018-04-28 18:01:04|INFO|gpload failed
+ a 
+---
+(0 rows)
+
