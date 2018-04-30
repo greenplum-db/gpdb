@@ -1,4 +1,4 @@
-## ======================================================================
+
 {% set walrep_suites = ['walrep_1',
                            'walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
@@ -55,6 +55,7 @@ groups:
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
+  - icw_planner_centos7
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -175,6 +176,7 @@ groups:
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
+  - icw_planner_centos7
   - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
@@ -1132,6 +1134,25 @@ jobs:
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_centos7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
@@ -2147,6 +2168,7 @@ jobs:
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
+    - icw_planner_centos7
     - icw_gporca_sles11
     - icw_gporca_sles12
     - icw_planner_sles12
