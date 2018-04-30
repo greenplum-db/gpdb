@@ -63,3 +63,4 @@ func (c *mockClusterPair) StopEverything(str string) {}
 func (c *mockClusterPair) Init(baseDir, oldPath, newPath string, execer helpers.CommandExecer) error {
 	return c.InitErr
 }
+func (c *mockClusterPair) GetPortsAndDataDirForReconfiguration() (int, int, string) { return -1, -1, "" }

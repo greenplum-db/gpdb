@@ -9,7 +9,8 @@ import (
 )
 
 type MockHubClient struct {
-	UpgradeShareOidsRequest *pb.UpgradeShareOidsRequest
+	UpgradeShareOidsRequest        *pb.UpgradeShareOidsRequest
+	UpgradeReconfigurePortsRequest *pb.UpgradeReconfigurePortsRequest
 
 	UpgradeConvertPrimariesRequest  *pb.UpgradeConvertPrimariesRequest
 	UpgradeConvertPrimariesResponse *pb.UpgradeConvertPrimariesReply
@@ -82,4 +83,10 @@ func (m *MockHubClient) UpgradeConvertPrimaries(ctx context.Context, in *pb.Upgr
 	m.UpgradeConvertPrimariesRequest = in
 
 	return m.UpgradeConvertPrimariesResponse, m.Err
+}
+
+func (m *MockHubClient) UpgradeReconfigurePorts(ctx context.Context, in *pb.UpgradeReconfigurePortsRequest, opts ...grpc.CallOption) (*pb.UpgradeReconfigurePortsReply, error) {
+	m.UpgradeReconfigurePortsRequest = in
+
+	return nil, m.Err
 }

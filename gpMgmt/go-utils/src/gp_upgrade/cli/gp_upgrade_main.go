@@ -31,7 +31,7 @@ func main() {
 	prepare.AddCommand(subStartHub, subInitCluster, subShutdownClusters, subStartAgents)
 	status.AddCommand(subUpgrade, subConversion)
 	check.AddCommand(subVersion, subObjectCount, subDiskSpace, subConfig, subSeginstall)
-	upgrade.AddCommand(subConvertMaster, subConvertPrimaries, subShareOids, subValidateStartCluster)
+	upgrade.AddCommand(subConvertMaster, subConvertPrimaries, subShareOids, subValidateStartCluster, subReconfigurePorts)
 
 	err := root.Execute()
 	if err != nil {

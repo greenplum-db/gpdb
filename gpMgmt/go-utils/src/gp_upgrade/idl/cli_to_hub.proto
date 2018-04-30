@@ -18,7 +18,11 @@ service CliToHub {
     rpc UpgradeShareOids(UpgradeShareOidsRequest) returns (UpgradeShareOidsReply) {}
     rpc UpgradeValidateStartCluster(UpgradeValidateStartClusterRequest) returns (UpgradeValidateStartClusterReply) {}
     rpc UpgradeConvertPrimaries(UpgradeConvertPrimariesRequest) returns (UpgradeConvertPrimariesReply) {}
+    rpc UpgradeReconfigurePorts(UpgradeReconfigurePortsRequest) returns (UpgradeReconfigurePortsReply) {}
 }
+
+message UpgradeReconfigurePortsRequest {}
+message UpgradeReconfigurePortsReply {}
 
 message UpgradeConvertPrimariesRequest {
     string OldBinDir = 1;
@@ -67,6 +71,7 @@ enum UpgradeSteps {
     SHARE_OIDS = 8;
     VALIDATE_START_CLUSTER = 9;
     CONVERT_PRIMARIES = 10;
+    RECONFIGURE_PORTS = 11;
 }
 
 enum StepStatus {

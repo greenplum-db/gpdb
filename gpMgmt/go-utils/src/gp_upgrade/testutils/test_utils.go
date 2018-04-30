@@ -34,6 +34,36 @@ const (
     "role": "m",
     "status": "u"
   }]`
+
+	MASTER_ONLY_JSON = `[{
+		"address": "briarwood",
+		"content": -1,
+		"datadir": "/old/datadir",
+		"dbid": 1,
+		"hostname": "briarwood",
+		"mode": "s",
+		"port": 25437,
+		"preferred_role": "m",
+		"role": "m",
+		"san_mounts": null,
+		"status": "u"
+	}]
+`
+
+	NEW_MASTER_JSON = `[{
+		"address": "aspen",
+		"content": -1,
+		"datadir": "/new/datadir",
+		"dbid": 1,
+		"hostname": "briarwood",
+		"mode": "s",
+		"port": 35437,
+		"preferred_role": "m",
+		"role": "m",
+		"san_mounts": null,
+		"status": "u"
+	}]
+`
 )
 
 func Check(msg string, e error) {

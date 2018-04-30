@@ -99,4 +99,20 @@ var _ = Describe("reporter", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Describe("ReconfigurePorts", func() {
+		It("returns nil error when ports are reconfigured successfully", func() {
+			err := upgrader.ReconfigurePorts()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(hubClient.UpgradeReconfigurePortsRequest).To(Equal(&pb.UpgradeReconfigurePortsRequest{}))
+		})
+
+		It("returns error when ports cannot be reconfigured", func() {
+			hubClient.Err = errors.New("reconfigure ports failed")
+
+			err := upgrader.ReconfigurePorts()
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })

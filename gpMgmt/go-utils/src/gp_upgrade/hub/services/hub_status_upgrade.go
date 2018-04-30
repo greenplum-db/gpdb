@@ -60,6 +60,10 @@ func (h *HubClient) StatusUpgrade(ctx context.Context, in *pb.StatusUpgradeReque
 		Step: pb.UpgradeSteps_CONVERT_PRIMARIES,
 	}
 
+	reconfigurePortsPath := filepath.Join(h.conf.StateDir, "reconfigure-ports")
+	reconfigurePortsState := upgradestatus.NewStateCheck(reconfigurePortsPath, pb.UpgradeSteps_RECONFIGURE_PORTS)
+	reconfigurePortsStatus, _ := reconfigurePortsState.GetStatus()
+
 	statuses := strings.Join(conversionStatus.GetConversionStatuses(), " ")
 	if strings.Contains(statuses, "FAILED") {
 		upgradeConvertPrimariesStatus.Status = pb.StepStatus_FAILED
@@ -82,6 +86,7 @@ func (h *HubClient) StatusUpgrade(ctx context.Context, in *pb.StatusUpgradeReque
 			shareOidsStatus,
 			validateStartClusterStatus,
 			upgradeConvertPrimariesStatus,
+			reconfigurePortsStatus,
 		},
 	}, nil
 }

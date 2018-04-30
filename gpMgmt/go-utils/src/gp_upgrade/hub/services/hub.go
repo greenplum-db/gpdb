@@ -35,6 +35,7 @@ type reader interface {
 type pairOperator interface {
 	Init(string, string, string, helpers.CommandExecer) error
 	StopEverything(string)
+	GetPortsAndDataDirForReconfiguration() (int, int, string)
 }
 
 type HubClient struct {

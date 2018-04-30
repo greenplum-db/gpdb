@@ -5,11 +5,11 @@
 package mock_idl
 
 import (
-	"github.com/golang/mock/gomock"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"gp_upgrade/idl"
-	"reflect"
+	gomock "github.com/golang/mock/gomock"
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+	idl "gp_upgrade/idl"
+	reflect "reflect"
 )
 
 // MockCliToHubClient is a mock of CliToHubClient interface
@@ -305,6 +305,24 @@ func (mr *MockCliToHubClientMockRecorder) UpgradeConvertPrimaries(ctx, in interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeConvertPrimaries", reflect.TypeOf((*MockCliToHubClient)(nil).UpgradeConvertPrimaries), varargs...)
 }
 
+// UpgradeReconfigurePorts mocks base method
+func (m *MockCliToHubClient) UpgradeReconfigurePorts(ctx context.Context, in *idl.UpgradeReconfigurePortsRequest, opts ...grpc.CallOption) (*idl.UpgradeReconfigurePortsReply, error) {
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpgradeReconfigurePorts", varargs...)
+	ret0, _ := ret[0].(*idl.UpgradeReconfigurePortsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpgradeReconfigurePorts indicates an expected call of UpgradeReconfigurePorts
+func (mr *MockCliToHubClientMockRecorder) UpgradeReconfigurePorts(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeReconfigurePorts", reflect.TypeOf((*MockCliToHubClient)(nil).UpgradeReconfigurePorts), varargs...)
+}
+
 // MockCliToHubServer is a mock of CliToHubServer interface
 type MockCliToHubServer struct {
 	ctrl     *gomock.Controller
@@ -521,4 +539,17 @@ func (m *MockCliToHubServer) UpgradeConvertPrimaries(arg0 context.Context, arg1 
 // UpgradeConvertPrimaries indicates an expected call of UpgradeConvertPrimaries
 func (mr *MockCliToHubServerMockRecorder) UpgradeConvertPrimaries(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeConvertPrimaries", reflect.TypeOf((*MockCliToHubServer)(nil).UpgradeConvertPrimaries), arg0, arg1)
+}
+
+// UpgradeReconfigurePorts mocks base method
+func (m *MockCliToHubServer) UpgradeReconfigurePorts(arg0 context.Context, arg1 *idl.UpgradeReconfigurePortsRequest) (*idl.UpgradeReconfigurePortsReply, error) {
+	ret := m.ctrl.Call(m, "UpgradeReconfigurePorts", arg0, arg1)
+	ret0, _ := ret[0].(*idl.UpgradeReconfigurePortsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpgradeReconfigurePorts indicates an expected call of UpgradeReconfigurePorts
+func (mr *MockCliToHubServerMockRecorder) UpgradeReconfigurePorts(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeReconfigurePorts", reflect.TypeOf((*MockCliToHubServer)(nil).UpgradeReconfigurePorts), arg0, arg1)
 }

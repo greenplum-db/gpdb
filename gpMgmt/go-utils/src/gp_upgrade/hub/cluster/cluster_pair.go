@@ -83,3 +83,7 @@ func stopCluster(stopCmd helpers.Command, step string, stateManager *upgradestat
 
 	stateManager.MarkComplete(step)
 }
+
+func (cp *Pair) GetPortsAndDataDirForReconfiguration() (int, int, string) {
+	return cp.oldMasterPort, cp.newMasterPort, cp.newMasterDataDirectory
+}

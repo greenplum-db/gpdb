@@ -33,6 +33,7 @@ var UpgradeStepsMessage = map[pb.UpgradeSteps]string{
 	pb.UpgradeSteps_SHARE_OIDS:             "- Copy OID files from master to segments",
 	pb.UpgradeSteps_VALIDATE_START_CLUSTER: "- Validate the upgraded cluster can start up",
 	pb.UpgradeSteps_CONVERT_PRIMARIES:      "- Primary segment upgrade",
+	pb.UpgradeSteps_RECONFIGURE_PORTS:      "- Adjust upgrade cluster ports",
 }
 
 func NewReporter(client pb.CliToHubClient) *Reporter {

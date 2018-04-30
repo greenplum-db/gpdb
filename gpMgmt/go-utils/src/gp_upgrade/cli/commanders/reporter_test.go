@@ -110,6 +110,7 @@ var _ = Describe("Reporter", func() {
 			Entry("prepare init cluster", pb.UpgradeSteps_PREPARE_INIT_CLUSTER, pb.StepStatus_FAILED, "FAILED - Initialize upgrade target cluster"),
 			Entry("upgrade on master", pb.UpgradeSteps_MASTERUPGRADE, pb.StepStatus_PENDING, "PENDING - Run pg_upgrade on master"),
 			Entry("shutdown cluster", pb.UpgradeSteps_STOPPED_CLUSTER, pb.StepStatus_PENDING, "PENDING - Shutdown clusters"),
+			Entry("reconfigure ports", pb.UpgradeSteps_RECONFIGURE_PORTS, pb.StepStatus_PENDING, "PENDING - Adjust upgrade cluster ports"),
 		)
 	})
 })

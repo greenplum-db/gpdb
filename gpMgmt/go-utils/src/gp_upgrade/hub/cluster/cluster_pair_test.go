@@ -14,24 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	MASTER_ONLY_JSON = `
-[{
-    "address": "briarwood",
-    "content": -1,
-    "datadir": "/datadir",
-    "dbid": 1,
-    "hostname": "briarwood",
-    "mode": "s",
-    "port": 25437,
-    "preferred_role": "m",
-    "role": "m",
-    "san_mounts": null,
-    "status": "u"
-  }]
-`
-)
-
 var _ = Describe("ClusterPair", func() {
 	var (
 		dir string
@@ -61,8 +43,14 @@ var _ = Describe("ClusterPair", func() {
 		BeforeEach(func() {
 			testhelper.SetupTestLogger()
 			// fake out system utilities
+			numInvocations := 0
 			utils.System.ReadFile = func(filename string) ([]byte, error) {
-				return []byte(MASTER_ONLY_JSON), nil
+				if numInvocations == 0 {
+					numInvocations++
+					return []byte(testutils.MASTER_ONLY_JSON), nil
+				} else {
+					return []byte(testutils.NEW_MASTER_JSON), nil
+				}
 			}
 			utils.System.OpenFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
 				filesLaidDown = append(filesLaidDown, name)
@@ -94,8 +82,8 @@ var _ = Describe("ClusterPair", func() {
 			Expect(filesLaidDown).ToNot(ContainElement("path/to/gpstop/gpstop.old/running"))
 			Expect(filesLaidDown).ToNot(ContainElement("path/to/gpstop/gpstop.new/running"))
 
-			Expect(commandExecer.Calls()).To(ContainElement(fmt.Sprintf("bash -c source %s/../greenplum_path.sh; %s/gpstop -a -d %s", "old/path", "old/path", "/datadir")))
-			Expect(commandExecer.Calls()).To(ContainElement(fmt.Sprintf("bash -c source %s/../greenplum_path.sh; %s/gpstop -a -d %s", "new/path", "new/path", "/datadir")))
+			Expect(commandExecer.Calls()).To(ContainElement(fmt.Sprintf("bash -c source %s/../greenplum_path.sh; %s/gpstop -a -d %s", "old/path", "old/path", "/old/datadir")))
+			Expect(commandExecer.Calls()).To(ContainElement(fmt.Sprintf("bash -c source %s/../greenplum_path.sh; %s/gpstop -a -d %s", "new/path", "new/path", "/new/datadir")))
 		})
 
 		It("puts failures in the log if there are filesystem errors", func() {

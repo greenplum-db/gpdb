@@ -73,3 +73,14 @@ func (u *Upgrader) ValidateStartCluster(newDataDir string, newBinDir string) err
 	gplog.Info("Kicked off request for validation of cluster startup")
 	return nil
 }
+
+func (u *Upgrader) ReconfigurePorts() error {
+	_, err := u.client.UpgradeReconfigurePorts(context.Background(), &pb.UpgradeReconfigurePortsRequest{})
+	if err != nil {
+		gplog.Error(err.Error())
+		return err
+	}
+
+	gplog.Info("Request to reconfigure master port on upgraded cluster complete")
+	return nil
+}
