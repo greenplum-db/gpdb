@@ -173,7 +173,7 @@ options:
     <title>Verifying a Backup/Restore Storage Plugin</title>
     <body>
       <p>The Backup/Restore Storage Plugin API includes a test bench that you can run to ensure that a plugin is well integrated with <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>.</p>
-      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table, explicitly tests each command, and run a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup/Restore Storage Plugin API command implemented in the plugin.</p>
+      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table, explicitly tests each command, and runs a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup/Restore Storage Plugin API command implemented in the plugin.</p>
       <p>The test bench program calling syntax is: <codeblock><b>plugin_test_bench.sh</b> <varname>plugin_executable plugin_config</varname></codeblock></p>
     <section id="topic8339191" xml:lang="en">
       <title>Procedure</title>

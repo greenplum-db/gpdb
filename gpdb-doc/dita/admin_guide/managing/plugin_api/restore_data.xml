@@ -21,7 +21,7 @@
         </plentry>
         <plentry>
           <pt><varname>data_filenamekey</varname></pt>
-          <pd>The absolute path of, or mapping key to, a backup file on the remote storage system.</pd>
+          <pd>The mapping key to a backup file on the remote storage system. <varname>data_filenamekey</varname> is the same key provided to the <codeph>backup_data</codeph> command.</pd>
         </plentry>
         </parml>
     </section>

@@ -22,7 +22,7 @@
         </plentry>
         <plentry>
           <pt><varname>data_filenamekey</varname></pt>
-          <pd>The absolute path of a specially-named backup file for streamed data.</pd>
+          <pd>The mapping key for a specially-named backup file for streamed data.</pd>
         </plentry>
         </parml>
     </section>
