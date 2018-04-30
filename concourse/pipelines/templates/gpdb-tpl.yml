@@ -58,6 +58,7 @@ groups:
   - icw_planner_centos6
   - icw_gporca_centos6
   - icw_gporca_centos7
+  - icw_planner_centos7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
@@ -178,6 +179,7 @@ groups:
   - icw_planner_centos6
   - icw_gporca_centos6
   - icw_gporca_centos7
+  - icw_planner_centos7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
@@ -1421,6 +1423,25 @@ jobs:
     image: centos-gpdb-dev-7
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_centos7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -3357,6 +3378,7 @@ jobs:
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
+    - icw_planner_centos7
     - icw_gporca_sles11
     - icw_planner_ubuntu16
     - icw_gporca_conan_ubuntu16
