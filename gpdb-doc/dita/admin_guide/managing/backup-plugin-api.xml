@@ -12,7 +12,7 @@
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and integrate a custom backup storage system with the Greenplum Database <xref href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"><codeph>gprestore</codeph></xref> utilities.</p>
     <p>The Backup/Restore Storage Plugin API defines a set of interfaces that a plugin must support.  The API also specifies the format and content of a configuration file for a plugin.</p>
     <p>When you use the Backup/Restore Storage Plugin API, you create a plugin that the Greenplum Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is available for use in certain backup and restore operations.</p>
-    <note>Greenplum Database supports using a custom storage plugin on a backup operation only when <codeph>gpbackup</codeph> is run with the <codeph>--single-data-file</codeph> or <codeph>--metadata-only</codeph> options. These options restrict the data that a plugin must move to/from each Greenplum Database segment to a single file per backup operation.</note>
+    <note>Greenplum Database supports using a custom storage plugin on a backup operation only when <codeph>gpbackup</codeph> is run with the <codeph>--single-data-file</codeph> or <codeph>--metadata-only</codeph> options.</note>
 
     <p>This topic includes the following subtopics:</p>
     <ul id="ul_wjf_1wy_sp">
@@ -65,7 +65,7 @@ options:
   <topic id="topic_api" xml:lang="en">
     <title>Plugin API</title>
     <body>
-      <p>The plugin that you implement when you use the Backup/Restore Storage Plugin API is an executable program that supports specific commands invoked by <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> at defined points in their respective life cycle operations:</p><ul>
+      <p>The plugin that you implement when you use the Backup/Restore Storage Plugin API is an executable program that supports specific <varname>command</varname>s invoked by <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> at defined points in their respective life cycle operations:</p><ul>
         <li>The Greenplum Database Backup/Restore Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization, during restore, and at cleanup/exit time.</li></ul>
 
