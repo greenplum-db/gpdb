@@ -2,16 +2,16 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="backup-plugin-api" xml:lang="en">
-  <title id="kk1598353">Backup Storage Plugin API</title>
+  <title id="kk1598353">Backup/Restore Storage Plugin API</title>
   <body>
-  <p>This topic describes how to develop a custom backup storage plugin with the Greenplum Database Backup Storage Plugin API.</p>
-    <note type="warning">The Greenplum Database Backup Storage Plugin API
+  <p>This topic describes how to develop a custom storage plugin with the Greenplum Database Backup/Restore Storage Plugin API.</p>
+    <note type="warning">The Greenplum Database Backup/Restore Storage Plugin API
       is an experimental feature and is not intended for use in a production
       environment. Experimental features are subject to change without notice
       in future releases.</note>
-    <p>The Backup Storage Plugin API provides a framework that you can use to develop a custom backup storage system that you integrate with the Greenplum Database <xref href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"><codeph>gprestore</codeph></xref> utilities.</p>
-    <p>The Backup Storage Plugin API defines a set of interfaces that a plugin must support.  The API also specifies the format and content of a configuration file for a plugin.</p>
-    <p>When you use the Backup Storage Plugin API, you create a plugin that the Greenplum Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is available for use in certain backup and restore operations.</p>
+    <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and integrate a custom backup storage system with the Greenplum Database <xref href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"><codeph>gprestore</codeph></xref> utilities.</p>
+    <p>The Backup/Restore Storage Plugin API defines a set of interfaces that a plugin must support.  The API also specifies the format and content of a configuration file for a plugin.</p>
+    <p>When you use the Backup/Restore Storage Plugin API, you create a plugin that the Greenplum Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is available for use in certain backup and restore operations.</p>
     <note>Greenplum Database supports using a custom storage plugin on a backup operation only when <codeph>gpbackup</codeph> is run with the <codeph>--single-data-file</codeph> or <codeph>--metadata-only</codeph> options. These options restrict the data that a plugin must move to/from each Greenplum Database segment to a single file per backup operation.</note>
 
     <p>This topic includes the following subtopics:</p>
@@ -41,8 +41,8 @@
   <topic id="topic9339" xml:lang="en">
     <title>Plugin Configuration File</title>
     <body>
-      <p>Specifying the <codeph>--plugin-config</codeph> option to <codeph>gpbackup</codeph> instructs the utility to use the plugin specified in the configuration file for the backup operation.</p>
-      <p>The plugin configuration file provides information for both Greenplum Database and the plugin. The Backup Storage Plugin API defines the format of, and certain keywords used in, the plugin configuration file.</p>
+      <p>Specifying the <codeph>--plugin-config</codeph> option to the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> commands instructs the utilities to use the plugin specified in the configuration file for the operation.</p>
+      <p>The plugin configuration file provides information for both Greenplum Database and the plugin. The Backup/Restore Storage Plugin API defines the format of, and certain keywords used in, the plugin configuration file.</p>
       <p>A plugin configuration file is a YAML file in the following format: <codeblock><b>executablepath</b>: <varname>path_to_plugin_executable</varname>
 <b>options</b>:
   <varname>keyword1</varname>: <varname>value1</varname>
@@ -50,9 +50,9 @@
   ...
   <varname>keywordN</varname>: <varname>valueN</varname></codeblock></p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> use the <codeph><b>executablepath</b></codeph> value to determine the file system location of the plugin executable program.</p>
-      <p>The plugin configuration file may also include keywords and values specific to a plugin instance. A backup storage plugin can use the <codeph><b>options</b></codeph> block specified in the file to obtain information from the user that may be required to perform its tasks. This information may include location, connection, or authentication information, for example. The plugin should both specify and consume the content of this information in <codeph><varname>keyword</varname>:<varname>value</varname></codeph> syntax.</p>
+      <p>The plugin configuration file may also include keywords and values specific to a plugin instance. A backup/restore storage plugin can use the <codeph><b>options</b></codeph> block specified in the file to obtain information from the user that may be required to perform its tasks. This information may include location, connection, or authentication information, for example. The plugin should both specify and consume the content of this information in <codeph><varname>keyword</varname>:<varname>value</varname></codeph> syntax.</p>
 
-      <p>A sample plugin configuration file for the Greenplum Database S3 backup storage plugin follows:<codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
+      <p>A sample plugin configuration file for the Greenplum Database S3 backup/restore storage plugin follows:<codeblock>executablepath: $GPHOME/bin/gpbackup_s3_plugin
 options:
   region: us-west-2
   aws_access_key_id: notarealID
@@ -65,15 +65,15 @@ options:
   <topic id="topic_api" xml:lang="en">
     <title>Plugin API</title>
     <body>
-      <p>The backup storage plugin that you implement when you use the Backup Storage Plugin API is an executable program that supports specific commands invoked by <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> at defined points in their respective life cycle operations:</p><ul>
-        <li>The Greenplum Database Backup Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at cleanup/exit time.</li>
+      <p>The plugin that you implement when you use the Backup/Restore Storage Plugin API is an executable program that supports specific commands invoked by <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> at defined points in their respective life cycle operations:</p><ul>
+        <li>The Greenplum Database Backup/Restore Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization, during restore, and at cleanup/exit time.</li></ul>
 
-      <p>The Backup Storage Plugin API defines the following call syntax for a backup storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
+      <p>The Backup/Restore Storage Plugin API defines the following call syntax for a backup/restore storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
 
       <p>where:</p><ul>
-        <li><codeph><varname>plugin_executable</varname></codeph> - The absolute path of the backup storage plugin executable program. This path is determined by the <codeph>executablepath</codeph> property value configured in the plugin's configuration YAML file.</li>
-        <li><codeph><b><varname>command</varname></b></codeph> - The name of a Backup Storage Plugin API command that identifies a specific entry point to a <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> lifecycle operation.</li>
+        <li><codeph><varname>plugin_executable</varname></codeph> - The absolute path of the backup/restore storage plugin executable program. This path is determined by the <codeph>executablepath</codeph> property value configured in the plugin's configuration YAML file.</li>
+        <li><codeph><b><varname>command</varname></b></codeph> - The name of a Backup/Restore Storage Plugin API command that identifies a specific entry point to a <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> lifecycle operation.</li>
         <li><codeph><varname>config_file</varname></codeph> - The absolute path of the plugin's configuration YAML file.</li>
         <li><codeph><varname>arg</varname></codeph> - The command argument; the actual argument differs depending upon the <codeph><b><varname>command</varname></b></codeph> specified.</li>
       </ul>
@@ -82,9 +82,9 @@ options:
   <topic id="topic_commands" xml:lang="en">
     <title>Plugin Commands</title>
     <body>
-      <p>The Greenplum Database Backup Storage Plugin API defines the following commands:
+      <p>The Greenplum Database Backup/Restore Storage Plugin API defines the following commands:
   <table class="- topic/table " id="table_b1q_m2h_zz">
-    <title class="- topic/title ">Backup Storage Plugin API Commands</title>
+    <title class="- topic/title ">Backup/Restore Storage Plugin API Commands</title>
     <tgroup cols="2" class="- topic/tgroup ">
       <colspec colnum="1" colname="col1" colwidth="100pt" class="- topic/colspec "/>
       <colspec colnum="2" colname="col3" colwidth="300pt" class="- topic/colspec "/>
@@ -98,7 +98,7 @@ options:
         <row class="- topic/row ">
           <entry colname="col1" class="- topic/entry "><xref href="plugin_api/plugin_api_version.xml#topic1"
             type="topic" format="dita">plugin_api_version</xref></entry>
-          <entry colname="col3" class="- topic/entry ">Return the version of the Backup Storage Plugin API supported by the plugin. The only supported version is 0.1.0.</entry>
+          <entry colname="col3" class="- topic/entry ">Return the version of the Backup/Restore Storage Plugin API supported by the plugin. The only supported version is 0.1.0.</entry>
         </row>
         <row class="- topic/row ">
           <entry colname="col1" class="- topic/entry "><xref href="plugin_api/setup_plugin_for_backup.xml#topic1"
@@ -144,16 +144,16 @@ options:
     </tgroup>
   </table>
 </p>
-    <p>A backup storage plugin must support every command identified above, even if it is a no-op.</p>
+    <p>A backup/restore storage plugin must support every command identified above, even if it is a no-op.</p>
   </body>
   </topic>
   </topic>
 
   <topic id="topic9337" xml:lang="en">
-    <title>Implementing a Backup Storage Plugin</title>
+    <title>Implementing a Backup/Restore Storage Plugin</title>
     <body>
-      <p>You can implement a backup storage plugin executable in any programming or scripting language.</p>
-      <p>The tasks performed by a backup storage plugin will be very specific to the remote storage system. As you design the plugin implementation, you will want to:</p><ul>
+      <p>You can implement a backup/restore storage plugin executable in any programming or scripting language.</p>
+      <p>The tasks performed by a backup/restore storage plugin will be very specific to the remote storage system. As you design the plugin implementation, you will want to:</p><ul>
         <li>Examine the connection and data transfer interface to the remote storage system.</li>
         <li>Identify the storage path specifics of the remote system.</li>
         <li>Identify configuration information required from the user.</li>
@@ -162,7 +162,7 @@ options:
         <li>Define a mapping between a <codeph>gpbackup</codeph> file path and the remote storage system.</li>
         <li>Identify how <codeph>gpbackup</codeph> options affect the plugin, as well as which are required and/or not applicable. For example, if the plugin performs its own compression, <codeph>gpbackup</codeph> must be invoked with the <codeph>--no-compression</codeph> option to prevent the utility from compressing the data.</li>
       </ul>
-      <p>A backup storage plugin that you implement must:</p><ul>
+      <p>A backup/restore storage plugin that you implement must:</p><ul>
         <li>Support all plugin commands identified in <xref href="#topic_commands" type="topic" format="dita"/>. Each command must exit with the values identified on the command reference page.</li>
       </ul>
       <p>Refer to the <xref href="https://github.com/greenplum-db/gpbackup-s3-plugin" format="html" scope="external">gpbackup-s3-plugin</xref> github repository for an example plugin implementation.</p>
@@ -170,14 +170,14 @@ options:
   </topic>
 
   <topic id="topic9339a" xml:lang="en">
-    <title>Verifying a Backup Storage Plugin</title>
+    <title>Verifying a Backup/Restore Storage Plugin</title>
     <body>
-      <p>The Backup Storage Plugin API includes a test bench that you can run to ensure that a plugin is well integrated with <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>.</p>
-      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table, explicitly tests each command, and run a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup Storage Plugin API command implemented in the plugin.</p>
+      <p>The Backup/Restore Storage Plugin API includes a test bench that you can run to ensure that a plugin is well integrated with <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>.</p>
+      <p>The test bench is a <codeph>bash</codeph> script that you run in a Greenplum Database installation. The script generates a small (&lt;1MB) data set in a Greenplum Database table, explicitly tests each command, and run a backup and restore of the data (file and streaming). The test bench invokes <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>, which in turn individually call/test each Backup/Restore Storage Plugin API command implemented in the plugin.</p>
       <p>The test bench program calling syntax is: <codeblock><b>plugin_test_bench.sh</b> <varname>plugin_executable plugin_config</varname></codeblock></p>
     <section id="topic8339191" xml:lang="en">
       <title>Procedure</title>
-      <p>To run the Backup Storage Plugin API test bench against a plugin:</p><ol>
+      <p>To run the Backup/Restore Storage Plugin API test bench against a plugin:</p><ol>
         <li>Log in to the Greenplum Database master host and set up your environment. For example:<codeblock>$ ssh gpadmin@&lt;gpmaster&gt;
 gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
         <li>Obtain a copy of the test bench from the <codeph>gpbackup</codeph> github repository. For example:<codeblock>$ git clone git@github.com:greenplum-db/gpbackup.git</codeblock>The clone operation creates a directory named <codeph>gpbackup/</codeph> in the current working directory.</li>
@@ -217,10 +217,11 @@ gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
     </body>
   </topic>
   <topic id="topic9339b" xml:lang="en">
-    <title>Packaging and Deploying a Backup Storage Plugin</title>
+    <title>Packaging and Deploying a Backup/Restore Storage Plugin</title>
     <body>
-      <p>Your backup storage plugin is ready to be deployed to a Greenplum Database installation after the plugin passes your testing and the test bench verification. When you package the backup storage plugin, consider the following:</p><ul>
-        <li>The backup storage plugin must be installed in the same file system location on every host in the Greenplum Database cluster. Provide installation instructions for the plugin indentifying the same.</li>
+      <p>Your backup/restore storage plugin is ready to be deployed to a Greenplum Database installation after the plugin passes your testing and the test bench verification. When you package the backup/restore storage plugin, consider the following:</p><ul>
+        <li>The backup/restore storage plugin must be installed in the same file system location on every host in the Greenplum Database cluster. Provide installation instructions for the plugin indentifying the same.</li>
+        <li>The <codeph>gpadmin</codeph> user must have permission to traverse the file system path to the backup/restore plugin executable program.</li>
         <li>Include a template configuration file with the plugin.</li>
         <li>Document the valid plugin configuration keywords, making sure to include the syntax of expected values.</li>
         <li>Document required <codeph>gpbackup</codeph> options and how they affect plugin processing.</li>
