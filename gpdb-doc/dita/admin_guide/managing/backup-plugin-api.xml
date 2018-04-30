@@ -69,13 +69,13 @@ options:
         <li>The Greenplum Database Backup/Restore Storage Plugin API provides hooks into the <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization, during restore, and at cleanup/exit time.</li></ul>
 
-      <p>The Backup/Restore Storage Plugin API defines the following call syntax for a backup/restore storage plugin executable program:<codeblock><varname>plugin_executable</varname> <b><varname>command</varname></b> [<varname>config_file</varname> <varname>arg</varname>]</codeblock></p>
+      <p>The Backup/Restore Storage Plugin API defines the following call syntax for a backup/restore storage plugin executable program:<codeblock><varname>plugin_executable</varname> <varname>command</varname> <varname>config_file</varname> <varname>arg</varname></codeblock></p>
 
       <p>where:</p><ul>
         <li><codeph><varname>plugin_executable</varname></codeph> - The absolute path of the backup/restore storage plugin executable program. This path is determined by the <codeph>executablepath</codeph> property value configured in the plugin's configuration YAML file.</li>
-        <li><codeph><b><varname>command</varname></b></codeph> - The name of a Backup/Restore Storage Plugin API command that identifies a specific entry point to a <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> lifecycle operation.</li>
+        <li><codeph><varname>command</varname></codeph> - The name of a Backup/Restore Storage Plugin API command that identifies a specific entry point to a <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> lifecycle operation.</li>
         <li><codeph><varname>config_file</varname></codeph> - The absolute path of the plugin's configuration YAML file.</li>
-        <li><codeph><varname>arg</varname></codeph> - The command argument; the actual argument differs depending upon the <codeph><b><varname>command</varname></b></codeph> specified.</li>
+        <li><codeph><varname>arg</varname></codeph> - The command argument; the actual argument differs depending upon the <codeph><varname>command</varname></codeph> specified.</li>
       </ul>
 
     </body>
