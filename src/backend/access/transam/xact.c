@@ -796,9 +796,8 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
  * - case 3: if overflowed, check topmostxid from pg_subtrans with writer's top transaction id
  */
 static
-bool IsCurrentTransactionIdForReader(TransactionId xid) {
-	TransactionId topxid;
-
+bool IsCurrentTransactionIdForReader(TransactionId xid)
+{
 	Assert(!Gp_is_writer);
 
 	Assert(SharedLocalSnapshotSlot);
@@ -810,12 +809,12 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 	if (!writer_proc)
 	{
 		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-		elog(ERROR, "SharedLocalSnapshotSlot is not initialized with writer_proc.");
+		elog(ERROR, "reference to writer proc not found in shared snapshot");
 	}
 	else if (!writer_proc->pid)
 	{
 		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-		elog(ERROR, "SharedLocalSnapshotSlot->writer_proc is invalid.");
+		elog(ERROR, "writer proc reference shared with reader is invalid");
 	}
 
 	TransactionId writer_xid = writer_proc->xid;
@@ -830,8 +829,7 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 		if (TransactionIdEquals(xid, writer_xid))
 		{
 			ereportif(Debug_print_full_dtm, LOG,
-					  (errmsg("qExec Reader, xid = %d matches writer's top xid",
-							  xid)));
+					  (errmsg("reader encountered writer's top xid %u", xid)));
 			isCurrent = true;
 		}
 		else
@@ -857,15 +855,31 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 	if (!isCurrent && overflowed)
 	{
 		Assert(TransactionIdIsValid(writer_xid));
-
-		topxid = SubTransGetTopmostTransaction(xid);
-		Assert(TransactionIdIsValid(topxid));
-
-		if (TransactionIdEquals(topxid, writer_xid))
+		/*
+		 * QE readers don't have access to writer's transaction state.
+		 * Therefore, unlike writer, readers have to lookup pg_subtrans, which
+		 * is more expensive than searching for an xid in transaction state.  If
+		 * xid is older than the oldest running transaction we know of, it is
+		 * definitely not current and we can skip pg_subtrans.  Note that
+		 * pg_subtrans is not guaranteed to exist for transactions that are
+		 * known to be finished.
+		 */
+		if (TransactionIdFollowsOrEquals(xid, TransactionXmin) &&
+			TransactionIdEquals(SubTransGetTopmostTransaction(xid), writer_xid))
 		{
-			isCurrent = true;
+			/*
+			 * xid is a subtransaction of current transaction.  Did it abort?
+			 * If this was a writer, TransactionIdIsCurrentTransactionId()
+			 * returns false for aborted subtransactions.  We must therefore
+			 * consult clog.  In a writer, this information is available in
+			 * CurrentTransactionState.
+			 */
+			isCurrent = TransactionIdDidAbort(xid) ? false : true;
 		}
 	}
+
+	ereportif(isCurrent && Debug_print_full_dtm, LOG,
+			  (errmsg("reader encountered writer's subxact ID %u", xid)));
 
 	return isCurrent;
 }
