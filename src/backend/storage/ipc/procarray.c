@@ -507,6 +507,7 @@ ProcArrayClearTransaction(PGPROC *proc, bool commit)
 	 * ProcArray.
 	 */
 	proc->xid = InvalidTransactionId;
+	proc->lxid = InvalidLocalTransactionId;
 	proc->xmin = InvalidTransactionId;
 	proc->recoveryConflictPending = false;
 
@@ -514,23 +515,13 @@ ProcArrayClearTransaction(PGPROC *proc, bool commit)
 
 	/* redundant, but just in case */
 	proc->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
+	proc->inCommit = false;
 	proc->serializableIsoLevel = false;
 	proc->inDropTransaction = false;
 
 	/* Clear the subtransaction-XID cache too */
 	proc->subxids.nxids = 0;
 	proc->subxids.overflowed = false;
-
-	/* For commit, inCommit and lxid are cleared in CommitTransaction after
-	 * performing PT operations. It's done this way to correctly block
-	 * checkpoint till CommitTransaction completes the persistent table
-	 * updates.
-	 */
-	if (! commit)
-	{
-		proc->lxid = InvalidLocalTransactionId;
-		proc->inCommit = false;
-	}
 }
 
 /*

@@ -1388,22 +1388,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	/* compute latestXid among all children */
 	latestXid = TransactionIdLatest(xid, hdr->nsubxacts, children);
 
-	// NOTE: This use to be inside RecordTransactionCommitPrepared  and
-	// NOTE: RecordTransactionAbortPrepared.  Moved out here so the mirrored
-	// NOTE: can cover both the XLOG record and the mirrored pg_twophase file
-	// NOTE: work.
-	START_CRIT_SECTION();
- 
-	/*
-	 * We have to lock out checkpoint start here when updating persistent relation information
-	 * like Appendonly segment's committed EOF. Otherwise there might be a window between
-	 * the time some data is added to an appendonly segment file and its EOF updated in the
-	 * persistent relation tables. If there is a checkpoint before updating the persistent tables
-	 * and the system crash after the checkpoint, then during crash recovery we would not resync
-	 * to the right EOFs (MPP-18261).
-	 */
-	MyProc->inCommit = true;
-
 	/*
 	 * The order of operations here is critical: make the XLOG entry for
 	 * commit or abort, then mark the transaction committed or aborted in
@@ -1492,11 +1476,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	RemoveGXact(gxact);
 	MyLockedGxact = NULL;
-
-	/* Checkpoint can proceed now */
-	MyProc->inCommit = false;
-
-	END_CRIT_SECTION();
 
 	SIMPLE_FAULT_INJECTOR(FinishPreparedAfterRecordCommitPrepared);
 
@@ -1897,10 +1876,10 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	DistributedTransactionTimeStamp distribTimeStamp;
 	DistributedTransactionId distribXid;
 
-	/*
-	 * Ensure the caller already has set MyProc->isCommit.
-	 */
-	Assert(MyProc->inCommit);
+	START_CRIT_SECTION();
+
+	/* See notes in RecordTransactionCommit */
+	MyProc->inCommit = true;
 
 	/*
 	 * Crack open the gid to get the DTM start time and distributed
@@ -1976,6 +1955,11 @@ RecordTransactionCommitPrepared(TransactionId xid,
 
 	/* Mark the transaction committed in pg_clog */
 	TransactionIdCommitTree(xid, nchildren, children);
+
+	/* Checkpoint can proceed now */
+	MyProc->inCommit = false;
+
+	END_CRIT_SECTION();
 
 	/*
 	 * Wait for synchronous replication, if required.
