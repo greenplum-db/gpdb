@@ -2370,13 +2370,19 @@ def impl(context):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     gpexpand.initialize_segments()
 
-@when('the user runs gpexpand with the --end flag')
+@when('the user runs gpexpand to redistribute')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    context.command = gpexpand
+    gpexpand.redistribute()
+
+@when('the user runs gpexpand to redistribute with the --end flag')
 def impl(context):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     context.command = gpexpand
     gpexpand.redistribute(endtime=True)
 
-@when('the user runs gpexpand with the --duration flag')
+@when('the user runs gpexpand to redistribute with the --duration flag')
 def impl(context):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     context.command = gpexpand
@@ -2445,3 +2451,51 @@ def impl(context, hostnames):
                       ctxt=REMOTE,
                       remoteHost=host)
         cmd.run(validateAfter=True)
+
+@given('user has created expansionranktest tables')
+def impl(context):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        for i in range(7,10):
+            query = """drop table if exists expansionranktest%s""" % (i)
+            dbconn.execSQL(conn, query)
+            query = """create table expansionranktest%s(a int)""" % (i)
+            dbconn.execSQL(conn, query)
+        conn.commit()
+
+@given('user has fixed the expansion order for tables')
+def impl(context):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        for i in range(7,10):
+            query = """UPDATE gpexpand.status_detail SET rank=%s WHERE fq_name = 'public.expansionranktest%s'""" % (i,i)
+            dbconn.execSQL(conn, query)
+        conn.commit()
+
+@then('the tables were expanded in the specified order')
+def impl(context):
+# select rank from gpexpand.status_detail WHERE rank IN (7,8,9) ORDER BY expansion_started;
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """select rank from gpexpand.status_detail WHERE rank IN (7,8,9) ORDER BY expansion_started"""
+        cursor = dbconn.execSQL(conn, query)
+
+        rank = cursor.fetchone()[0]
+        if rank != 7:
+            raise Exception("Expected table with gpexpand.status rank 7 to have "
+                            "started expanding first instead got table with rank "
+                            "%d") % rank
+
+        rank = cursor.fetchone()[0]
+        if rank != 8:
+            raise Exception("Expected table with gpexpand.status rank 8 to have "
+                            "started expanding second instead got table with rank "
+                            "%d") % rank
+
+        rank = cursor.fetchone()[0]
+        if rank != 9:
+            raise Exception("Expected table with gpexpand.status rank 9 to have "
+                            "started expanding third instead got table with rank "
+                            "%d") % rank
+
+        return
