@@ -91,6 +91,13 @@
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
                                                   <codeph>gist</codeph>, and <codeph>gin</codeph>.
                                                 The default method is <codeph>btree</codeph>. </pd>
+                                        <pd>Currently, only the B-tree, GiST and GIN index methods
+                                                support multicolumn indexes. Up to 32 fields can be
+                                                specified by default. Only B-tree currently supports
+                                                unique indexes.</pd>
+                                        <pd>GPORCA supports only B-tree and bitmap indexes. GPORCA
+                                                ignores indexes created with unsupported indexing
+                                                methods.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
@@ -212,11 +219,6 @@
                 </section>
                 <section id="section5">
                         <title>Notes</title>
-                        <p>Currently, only the B-tree, GiST and GIN index methods support
-                                multicolumn indexes. Up to 32 fields can be specified by default.
-                                Only B-tree currently supports unique indexes.</p>
-                        <p>GPORCA supports only B-tree and bitmap indexes. GPORCA ignores indexes
-                                created with unsupported indexing methods.</p>
                         <p>An <i>operator class</i> can be specified for each column of an index.
                                 The operator class identifies the operators to be used by the index
                                 for that column. For example, a B-tree index on four-byte integers
