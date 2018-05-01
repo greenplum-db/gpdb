@@ -20,8 +20,12 @@ func (h *HubClient) PrepareShutdownClusters(ctx context.Context, in *pb.PrepareS
 		return &pb.PrepareShutdownClustersReply{}, err
 	}
 
-	pathToGpstopStateDir := path.Join(h.conf.StateDir, "gpstop")
-	go h.clusterPair.StopEverything(pathToGpstopStateDir)
+	if h.clusterPair.EitherPostmasterRunning() {
+		pathToGpstopStateDir := path.Join(h.conf.StateDir, "gpstop")
+		go h.clusterPair.StopEverything(pathToGpstopStateDir)
+	} else {
+		gplog.Info("PrepareShutdownClusters: neither postmaster was running, nothing to do")
+	}
 
 	/* TODO: gpstop may take a while.
 	 * How do we check if everything is stopped?

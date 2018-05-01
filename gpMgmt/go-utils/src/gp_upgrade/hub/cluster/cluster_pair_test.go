@@ -25,6 +25,7 @@ var _ = Describe("ClusterPair", func() {
 	)
 
 	BeforeEach(func() {
+		testhelper.SetupTestLogger()
 		commandExecer = &testutils.FakeCommandExecer{}
 		errChan = make(chan error, 2)
 		outChan = make(chan []byte, 2)
@@ -41,7 +42,6 @@ var _ = Describe("ClusterPair", func() {
 
 	Describe("StopEverything(), shutting down both clusters", func() {
 		BeforeEach(func() {
-			testhelper.SetupTestLogger()
 			// fake out system utilities
 			numInvocations := 0
 			utils.System.ReadFile = func(filename string) ([]byte, error) {
@@ -74,6 +74,7 @@ var _ = Describe("ClusterPair", func() {
 			subject := cluster.Pair{}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
 
 			subject.StopEverything("path/to/gpstop")
 
@@ -101,16 +102,48 @@ var _ = Describe("ClusterPair", func() {
 		})
 
 		It("puts Stop failures in the log and leaves files to mark the error", func() {
-			errChan <- errors.New("failed")
 
 			subject := cluster.Pair{}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
 
+			errChan <- errors.New("failed")
 			subject.StopEverything("path/to/gpstop")
 
 			Expect(filesLaidDown).To(ContainElement("path/to/gpstop/gpstop.old/failed"))
 			Expect(filesLaidDown).ToNot(ContainElement("path/to/gpstop/gpstop.old/in.progress"))
+		})
+	})
+
+	Describe("PostmastersRunning", func() {
+		var subject cluster.Pair
+		BeforeEach(func() {
+			utils.System.ReadFile = func(filename string) ([]byte, error) {
+				return []byte(testutils.MASTER_ONLY_JSON), nil
+			}
+			subject = cluster.Pair{}
+			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
+			Expect(err).ToNot(HaveOccurred())
+
+		})
+		It("returns true if both postmaster processes are running", func() {
+			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
+		})
+		It("returns true if only old postmaster is running", func() {
+			errChan <- nil
+			errChan <- errors.New("failed")
+			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
+		})
+		It("returns true if only new postmaster is running", func() {
+			errChan <- errors.New("failed")
+			errChan <- nil
+			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
+		})
+		It("returns false if both postmaster processes are down", func() {
+			errChan <- errors.New("failed")
+			errChan <- errors.New("failed")
+			Expect(subject.EitherPostmasterRunning()).To(BeFalse())
 		})
 	})
 })

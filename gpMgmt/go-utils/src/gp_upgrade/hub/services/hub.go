@@ -36,6 +36,7 @@ type pairOperator interface {
 	Init(string, string, string, helpers.CommandExecer) error
 	StopEverything(string)
 	GetPortsAndDataDirForReconfiguration() (int, int, string)
+	EitherPostmasterRunning() bool
 }
 
 type HubClient struct {

@@ -19,6 +19,8 @@ type Pair struct {
 	oldBinDir              string
 	newBinDir              string
 	commandExecer          helpers.CommandExecer
+	oldPostmasterRunning   bool
+	newPostmasterRunning   bool
 }
 
 func (cp *Pair) Init(baseDir, oldBinDir, newBinDir string, execer helpers.CommandExecer) error {
@@ -45,27 +47,56 @@ func (cp *Pair) Init(baseDir, oldBinDir, newBinDir string, execer helpers.Comman
 	return nil
 }
 
-func (cp *Pair) StopEverything(pathToGpstopStateDir string) {
-	checklistManager := upgradestatus.NewChecklistManager(pathToGpstopStateDir)
-	checklistManager.ResetStateDir("gpstop.old")
-	checklistManager.ResetStateDir("gpstop.new")
-
-	oldGpstopShellArgs := fmt.Sprintf("source %s/../greenplum_path.sh; %s/gpstop -a -d %s",
-		cp.oldBinDir, cp.oldBinDir, cp.oldMasterDataDirectory)
-	runOldStopCmd := cp.commandExecer("bash", "-c", oldGpstopShellArgs)
-	gplog.Info("old gpstop command: %+v", runOldStopCmd)
-
-	stopCluster(runOldStopCmd, "gpstop.old", checklistManager)
-
-	newGpstopShellArgs := fmt.Sprintf("source %s/../greenplum_path.sh; %s/gpstop -a -d %s",
-		cp.newBinDir, cp.newBinDir, cp.newMasterDataDirectory)
-	runNewStopCmd := cp.commandExecer("bash", "-c", newGpstopShellArgs)
-	gplog.Info("new gpstop command: %+v", runNewStopCmd)
-
-	stopCluster(runNewStopCmd, "gpstop.new", checklistManager)
+func convert(b bool) string {
+	if b {
+		return "is"
+	}
+	return "is not"
 }
 
-func stopCluster(stopCmd helpers.Command, step string, stateManager *upgradestatus.ChecklistManager) {
+func (cp *Pair) StopEverything(pathToGpstopStateDir string) {
+	logmsg := "Shutting down clusters. The old cluster %s running. The new cluster %s running."
+	gplog.Info(fmt.Sprintf(logmsg, convert(cp.oldPostmasterRunning), convert(cp.newPostmasterRunning)))
+	checklistManager := upgradestatus.NewChecklistManager(pathToGpstopStateDir)
+
+	if cp.oldPostmasterRunning {
+		cp.stopCluster(checklistManager, "gpstop.old", cp.oldBinDir, cp.oldMasterDataDirectory)
+	}
+
+	if cp.newPostmasterRunning {
+		cp.stopCluster(checklistManager, "gpstop.new", cp.newBinDir, cp.newMasterDataDirectory)
+	}
+}
+
+func (cp *Pair) EitherPostmasterRunning() bool {
+	cp.oldPostmasterRunning = cp.postmasterRunning(cp.oldMasterDataDirectory)
+	cp.newPostmasterRunning = cp.postmasterRunning(cp.newMasterDataDirectory)
+
+	return cp.oldPostmasterRunning || cp.newPostmasterRunning
+}
+
+func (cp *Pair) postmasterRunning(masterDataDir string) bool {
+	checkPid := "pgrep -F %s/postmaster.pid"
+
+	checkPidCmd := cp.commandExecer("bash", "-c", fmt.Sprintf(checkPid, masterDataDir))
+	err := checkPidCmd.Run()
+	if err != nil {
+		gplog.Error("Could not determine whether the cluster with MASTER_DATA_DIRECTORY: %s is running: %+v",
+			masterDataDir, err)
+		return false
+	}
+	return true
+}
+
+func (cp *Pair) stopCluster(stateManager *upgradestatus.ChecklistManager, step string, binDir string, masterDataDir string) {
+
+	stateManager.ResetStateDir(step)
+
+	gpstopShellArgs := fmt.Sprintf("source %s/../greenplum_path.sh; %s/gpstop -a -d %s",
+		binDir, binDir, masterDataDir)
+	stopCmd := cp.commandExecer("bash", "-c", gpstopShellArgs)
+	gplog.Info("gpstop command: %+v", stopCmd)
+
 	err := stateManager.MarkInProgress(step)
 	if err != nil {
 		gplog.Error(err.Error())

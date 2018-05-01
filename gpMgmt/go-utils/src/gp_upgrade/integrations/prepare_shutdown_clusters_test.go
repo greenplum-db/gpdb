@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"gp_upgrade/hub/cluster"
 	"gp_upgrade/hub/configutils"
 	"gp_upgrade/hub/services"
 	pb "gp_upgrade/idl"
@@ -16,6 +15,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"gp_upgrade/hub/cluster"
 )
 
 var _ = Describe("prepare shutdown-clusters", func() {
@@ -57,8 +57,8 @@ var _ = Describe("prepare shutdown-clusters", func() {
 		}
 		reader := configutils.NewReader()
 
-		outChan = make(chan []byte, 2)
-		errChan = make(chan error, 2)
+		outChan = make(chan []byte, 5)
+		errChan = make(chan error, 5)
 
 		commandExecer = &testutils.FakeCommandExecer{}
 		commandExecer.SetOutput(&testutils.FakeCommand{
@@ -76,7 +76,7 @@ var _ = Describe("prepare shutdown-clusters", func() {
 		os.RemoveAll(dir)
 	})
 
-	It("updates status PENDING to RUNNING then to COMPLETE if successful", func(done Done) {
+	It("updates status PENDING and then to COMPLETE if successful", func(done Done) {
 		defer close(done)
 		mockAgent.StatusConversionResponse = &pb.CheckConversionStatusReply{
 			Statuses: []string{},
@@ -87,25 +87,19 @@ var _ = Describe("prepare shutdown-clusters", func() {
 
 		Expect(runStatusUpgrade()).To(ContainSubstring("PENDING - Shutdown clusters"))
 
-		trigger := make(chan struct{}, 1)
 		commandExecer.SetOutput(&testutils.FakeCommand{
-			Out:     outChan,
-			Err:     errChan,
-			Trigger: trigger,
+			Out: outChan,
+			Err: errChan,
 		})
 		outChan <- []byte("pid1")
-		trigger <- struct{}{}
 
 		prepareShutdownClustersSession := runCommand("prepare", "shutdown-clusters", "--old-bindir", oldBinDir, "--new-bindir", newBinDir)
 		Eventually(prepareShutdownClustersSession).Should(Exit(0))
 
-		Expect(runStatusUpgrade()).To(ContainSubstring("RUNNING - Shutdown clusters"))
-		trigger <- struct{}{}
-
 		allCalls := strings.Join(commandExecer.Calls(), "")
 		Expect(allCalls).To(ContainSubstring(oldBinDir + "/gpstop -a"))
 		Expect(allCalls).To(ContainSubstring(newBinDir + "/gpstop -a"))
-		Expect(runStatusUpgrade()).To(ContainSubstring("COMPLETE - Shutdown clusters"))
+		Eventually(runStatusUpgrade).Should(ContainSubstring("COMPLETE - Shutdown clusters"))
 	})
 
 	It("updates status to FAILED if it fails to run", func() {
@@ -122,6 +116,8 @@ var _ = Describe("prepare shutdown-clusters", func() {
 		})
 		Expect(runStatusUpgrade()).To(ContainSubstring("PENDING - Shutdown clusters"))
 
+		errChan <- nil
+		errChan <- nil
 		errChan <- errors.New("start failed")
 
 		prepareShutdownClustersSession := runCommand("prepare", "shutdown-clusters", "--old-bindir", oldBinDir, "--new-bindir", newBinDir)
