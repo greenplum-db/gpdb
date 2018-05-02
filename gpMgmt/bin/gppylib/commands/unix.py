@@ -8,6 +8,7 @@ Set of Classes for executing unix commands.
 import os
 import platform
 import psutil
+import pwd
 import socket
 import signal
 import uuid
@@ -74,7 +75,7 @@ def getLocalHostname():
 
 
 def getUserName():
-    return os.environ.get('LOGNAME') or os.environ.get('USER')
+    return pwd.getpwuid(os.getuid()).pw_name
 
 
 def check_pid_on_remotehost(pid, host):
