@@ -48,7 +48,7 @@ class Gpdiff(Command):
         if match_sub:
             cmd_str += ' -gpd_init '
             cmd_str += ' -gpd_init '.join(match_sub)
-        cmd_str += ' %s %s' % (out_file, ans_file)
+        cmd_str += ' %s %s' % (ans_file, out_file)
         Command.__init__(self, 'run gpdiff', cmd_str)
 
     @staticmethod 
