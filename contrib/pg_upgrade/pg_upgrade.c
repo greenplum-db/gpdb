@@ -626,8 +626,16 @@ set_frozenxids(migratorContext *ctx)
 		PQclear(executeQueryOrDie(ctx, conn,
 								  "UPDATE	pg_catalog.pg_class "
 								  "SET	relfrozenxid = '%u' "
-		/* only heap and TOAST are vacuumed */
-								  "WHERE	relkind IN ('r', 't')",
+		/*
+		 * only heap and TOAST are vacuumed,
+		 * exclude relations with external storage as well as AO and CO tables
+		 *
+		 * The logic here should keep consistent with function
+		 * should_have_valid_relfrozenxid().
+		 */
+								  "WHERE	(relkind = 'r' AND relstorage "
+								  "NOT IN ('x', 'f', 'v', 'a', 'c')) "
+								  "OR (relkind IN ('t', 'o', 'b', 'm'))",
 								  ctx->old.controldata.chkpnt_nxtxid));
 		PQfinish(conn);
 

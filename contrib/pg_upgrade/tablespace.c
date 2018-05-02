@@ -44,11 +44,21 @@ get_tablespace_paths(migratorContext *ctx)
 	int			tblnum;
 	int			i_spclocation;
 
-	res = executeQueryOrDie(ctx, conn,
-							"SELECT	spclocation "
-							"FROM	pg_catalog.pg_tablespace "
-							"WHERE	spcname != 'pg_default' AND "
-							"		spcname != 'pg_global'");
+	char		query[QUERY_ALLOC];
+
+	snprintf(query, sizeof(query),
+			 "SELECT	%s "
+			 "FROM	pg_catalog.pg_tablespace "
+			 "WHERE	spcname != 'pg_default' AND "
+			 "		spcname != 'pg_global'",
+	/*
+	 * 9.2 removed the spclocation column in upstream postgres, in GPDB it was
+	 * removed in 6.0.0 during the 8.4 merge
+	 */
+			(GET_MAJOR_VERSION(ctx->old.major_version) <= 803) ?
+			"spclocation" : "pg_catalog.pg_tablespace_location(oid) AS spclocation");
+
+	res = executeQueryOrDie(ctx, conn, "%s", query);
 
 	if ((ctx->num_tablespaces = PQntuples(res)) != 0)
 		ctx->tablespaces = (char **) pg_malloc(ctx,

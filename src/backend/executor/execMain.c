@@ -105,6 +105,7 @@
 #include "cdb/cdbtargeteddispatch.h"
 
 extern bool cdbpathlocus_querysegmentcatalogs;
+
 /* Hooks for plugins to get control in ExecutorStart/Run/End() */
 ExecutorStart_hook_type ExecutorStart_hook = NULL;
 ExecutorRun_hook_type ExecutorRun_hook = NULL;
@@ -136,6 +137,8 @@ void ExecCheckRTEPerms(RangeTblEntry *rte);
 
 static PartitionNode *BuildPartitionNodeFromRoot(Oid relid);
 static void InitializeQueryPartsMetadata(PlannedStmt *plannedstmt, EState *estate);
+static void AdjustReplicatedTableCounts(EState *estate);
+static bool intoRelIsReplicatedTable(QueryDesc *queryDesc);
 
 /*
  * For a partitioned insert target only:  
@@ -269,8 +272,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 	START_MEMORY_ACCOUNT(plannedStmt->memoryAccountId);
 
-	Assert(queryDesc->plannedstmt->intoPolicy == NULL
-		   || queryDesc->plannedstmt->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
+	Assert(plannedStmt->intoPolicy == NULL ||
+		GpPolicyIsPartitioned(plannedStmt->intoPolicy) ||
+		GpPolicyIsReplicated(plannedStmt->intoPolicy));
 
 	/**
 	 * Perfmon related stuff.
@@ -1162,10 +1166,16 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 	RemoveMotionLayer(estate->motionlayer_context, true);
 
 	/*
+	 * Adjust SELECT INTO count
 	 * Close the SELECT INTO relation if any
 	 */
 	if (estate->es_select_into)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			intoRelIsReplicatedTable(queryDesc))
+			estate->es_processed = estate->es_processed / getgpsegmentCount();
 		CloseIntoRel(queryDesc);
+	}
 
 	/* do away with our snapshots */
 	UnregisterSnapshot(estate->es_snapshot);
@@ -1534,8 +1544,9 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	ListCell   *l;
 	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH && plannedstmt->planTree->dispatch == DISPATCH_PARALLEL;
 
-	Assert(plannedstmt->intoPolicy == NULL
-		   || plannedstmt->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
+	Assert(plannedstmt->intoPolicy == NULL ||
+		GpPolicyIsPartitioned(plannedstmt->intoPolicy) ||
+		GpPolicyIsReplicated(plannedstmt->intoPolicy));
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -2444,6 +2455,9 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 
 	/* Report how many tuples we may have inserted into AO tables */
 	SendAOTupCounts(estate);
+
+	/* Adjust INSERT/UPDATE/DELETE count for replicated table ON QD */
+	AdjustReplicatedTableCounts(estate);
 
 	/*
 	 * close the result relation(s) if any, but hold locks until xact commit.
@@ -3454,7 +3468,6 @@ EvalPlanQualEnd(EPQState *epqstate)
 	epqstate->planstate = NULL;
 	epqstate->origslot = NULL;
 }
-
 
 /*
  * Support for SELECT INTO (a/k/a CREATE TABLE AS)
@@ -4741,4 +4754,55 @@ InitializePartsMetadata(Oid rootOid)
 
 	metadata->accessMethods = createPartitionAccessMethods(num_partition_levels(metadata->partsAndRules));
 	return list_make1(metadata);
+}
+
+/*
+ * Adjust INSERT/UPDATE/DELETE count for replicated table ON QD
+ */
+static void
+AdjustReplicatedTableCounts(EState *estate)
+{
+	int i;
+	ResultRelInfo *resultRelInfo;
+	bool containReplicatedTable = false;
+
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
+	/* check if result_relations contain replicated table*/
+	for (i = 0; i < estate->es_num_result_relations; i++)
+	{
+		GpPolicy *policy = NULL;
+		resultRelInfo = estate->es_result_relations + i;
+
+		policy = resultRelInfo->ri_RelationDesc->rd_cdbpolicy;
+		if (!policy)
+			continue;
+
+		if (GpPolicyIsReplicated(policy))
+			containReplicatedTable = true;
+		else if (containReplicatedTable)
+		{
+			/*
+			 * If one is replicated table, assert that other
+			 * tables are also replicated table.
+ 			 */
+			Insist(0);
+		}
+	}
+
+	if (containReplicatedTable)
+		estate->es_processed = estate->es_processed / getgpsegmentCount();
+}
+
+static bool
+intoRelIsReplicatedTable(QueryDesc *queryDesc)
+{
+	DR_intorel *into = (DR_intorel *) queryDesc->dest;
+
+	if (into && into->pub.mydest == DestIntoRel &&
+		into->rel && GpPolicyIsReplicated(into->rel->rd_cdbpolicy))
+		return true;
+
+	return false;
 }

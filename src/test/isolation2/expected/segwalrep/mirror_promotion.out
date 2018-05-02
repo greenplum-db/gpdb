@@ -1,15 +1,30 @@
+-- Tests mirror promotion triggered by FTS in 2 different scenarios.
+--
+-- 1st: Shut-down of primary and hence unavailability of primary
+-- leading to mirror promotion. In this case the connection between
+-- primary and mirror is disconnected prior to promotion and
+-- walreceiver doesn't exist.
+--
+-- 2nd: Primary is alive but using fault injector simulated to not
+-- respond to fts. This helps to validate fts time-out logic for
+-- probes. Plus also mirror promotion triggered while connection
+-- between primary and mirror is still alive and hence walreceiver
+-- also exist during promotion.
+
 -- start_ignore
 create language plpythonu;
-CREATE
+ERROR:  language "plpythonu" already exists
 -- end_ignore
 
-create or replace function pg_ctl(datadir text, command text, port int, contentid int) returns text as $$ import subprocess 
-cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts else: return 'Invalid command input' 
+create extension if not exists gp_inject_fault;
+CREATE
+create or replace function pg_ctl(datadir text, command text) returns text as $$ import subprocess 
+cmd = 'pg_ctl -D %s ' % datadir if command in ('stop'): cmd = cmd + '-w -m immediate %s' % command else: return 'Invalid command input' 
 return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
 CREATE
 
 -- stop a primary in order to trigger a mirror promotion
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
 pg_ctl                                              
 ----------------------------------------------------
 waiting for server to shut down done
@@ -48,7 +63,11 @@ content|preferred_role|role|status|mode
 -- end_ignore
 (exited with code 0)
 
--- expect: to see the new rebuilt mirror up and in sync
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+-- expect: to see roles flipped and in sync
 select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
 content|preferred_role|role|status|mode
 -------+--------------+----+------+----
@@ -56,16 +75,44 @@ content|preferred_role|role|status|mode
 0      |p             |m   |u     |s   
 (2 rows)
 
--- now, let's stop the new primary, so that we can restore original role
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop', NULL, NULL);
-pg_ctl                                              
-----------------------------------------------------
-waiting for server to shut down done
-server stopped
+-- set GUCs to speed-up the test
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c gp_fts_probe_timeout -v 5 --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
 
+-- start_ignore
+select dbid from gp_segment_configuration where content = 0 and role = 'p';
+dbid
+----
+5   
+(1 row)
+-- end_ignore
+
+select gp_inject_fault('fts_handle_message', 'infinite_loop', '', '', '', -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
 (1 row)
 
 -- trigger failover
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+
+-- trigger one more probe right away which mostly results in sending
+-- promotion request again to mirror, while its going through
+-- promotion, which is nice condition to test as well.
 select gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
 -------------------------
@@ -80,18 +127,36 @@ content|preferred_role|role|status|mode
 0      |p             |p   |u     |n   
 (2 rows)
 
--- wait for content 0 (earlier mirror, now primary) to finish the promotion
+-- set GUCs to speed-up the test
+!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- -- wait for content 0 (earlier mirror, now primary) to finish the promotion
 0U: select 1;
 ?column?
 --------
 1       
 (1 row)
 
--- now, let's fully recover the mirror
+-- -- now, let's fully recover the mirror
 !\retcode gprecoverseg -aF;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
 
 -- now, the content 0 primary and mirror should be at their preferred role
 -- and up and in-sync

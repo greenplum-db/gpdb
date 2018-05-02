@@ -74,10 +74,10 @@
         </plentry>
         <plentry>
           <pt>-P <varname>last_http_port</varname></pt>
-          <pd>The last port number in a range of HTTP port numbers (<varname>http_port</varname>
-            to <varname>last_http_port</varname>, inclusive) on which <codeph>gpfdist</codeph>
-            will attempt to serve files. <codeph>gpfdist</codeph> serves the files on the
-            first port number in the range to which it successfully binds.</pd>
+          <pd>The last port number in a range of HTTP port numbers (<varname>http_port</varname> to
+              <varname>last_http_port</varname>, inclusive) on which <codeph>gpfdist</codeph> will
+            attempt to serve files. <codeph>gpfdist</codeph> serves the files on the first port
+            number in the range to which it successfully binds.</pd>
         </plentry>
         <plentry>
           <pt>-t <varname>timeout</varname></pt>
@@ -184,6 +184,33 @@
           <pd>Displays the version of this utility.</pd>
         </plentry>
       </parml>
+    </section>
+    <section>
+      <title>Notes</title>
+      <p>The server configuration parameter <codeph><xref
+            href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
+            >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
+        enabled when Greenplum Database communicates with the <codeph>gpfdist</codeph> utility to
+        either read data from or write data to an external data source. You can set the parameter
+        value to <codeph>false</codeph> to disable authentication when testing the communication
+        between the Greenplum Database external table and the <codeph>gpfdist</codeph> utility that
+        is serving the external data. If the value is <codeph>false</codeph>, these SSL exceptions
+        are ignored:<ul id="ul_vvb_5lj_mdb">
+          <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> is not
+            trusted by Greenplum Database.</li>
+          <li>The host name contained in the SSL certificate does not match the host name that is
+            running <codeph>gpfdist</codeph>.</li>
+        </ul><note type="warning">Disabling SSL certificate authentication exposes a security risk
+          by not validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
+      <p>If the <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you
+        can generate a core dump the next time a hang occurs to help debug the issue. Set the
+        environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no
+        activity to wait before <codeph>gpfdist</codeph> is forced to exit. When the environment
+        variable is set and <codeph>gpfidst</codeph> hangs, the utility aborts after the specified
+        number of seconds, creates a core dump, and sends abort information to the log file.</p>
+      <p>This example sets the environment variable on a Linux system so that
+          <codeph>gpfdist</codeph> exits after 300 seconds (5 minutes) of no
+        activity.<codeblock>export GPFDIST_WATCHDOG_TIMER=300</codeblock></p>
     </section>
     <section id="section6">
       <title>Examples</title>

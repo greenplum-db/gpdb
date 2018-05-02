@@ -83,6 +83,9 @@ test_HandleFtsWalRepProbePrimary(void **state)
 
 	will_be_called(SetSyncStandbysDefined);
 
+	expect_value(CheckPromoteSignal, do_unlink, true);
+	will_be_called(CheckPromoteSignal);
+
 	/* SyncRep should be enabled as soon as we found mirror is up. */
 	mockresponse.IsSyncRepEnabled = true;
 	expectSendFtsResponse(FTS_MSG_PROBE, &mockresponse);

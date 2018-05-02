@@ -23,9 +23,9 @@ import commands
 import signal
 from collections import defaultdict
 
+from behave import given, when, then
 from datetime import datetime
 from time import sleep
-from behave import given, when, then
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
@@ -34,6 +34,8 @@ from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
 from test.behave_utils.PgHba import PgHba, Entry
+from test.behave_utils.cluster_setup import TestCluster, reset_hosts
+from test.behave_utils.cluster_expand import Gpexpand
 from gppylib.commands.base import Command, REMOTE
 
 
@@ -359,6 +361,7 @@ def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
 
 
+@when('{command} should print "{out_msg}" to stdout')
 @then('{command} should print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
@@ -1761,6 +1764,20 @@ def impl(context, query, dbname):
     dbname, host, port, query)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
+@then('The user runs sql "{query}" in "{dbname}" on all the segments')
+@when('The user runs sql "{query}" in "{dbname}" on all the segments')
+@given('The user runs sql "{query}" in "{dbname}" on all the segments')
+def impl(context, query, dbname):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    for seg in segments:
+        host = seg.getSegmentHostName()
+        if seg.isSegmentPrimary() or seg.isSegmentMaster():
+            port = seg.getSegmentPort()
+            psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+            dbname, host, port, query)
+            Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
+
 
 @then('The user runs sql file "{file}" in "{dbname}" on all the segments')
 @when('The user runs sql file "{file}" in "{dbname}" on all the segments')
@@ -2268,3 +2285,163 @@ def step_impl(context):
 def step_impl(context, abbreviated_timezone):
     if context.startup_timezone != abbreviated_timezone:
         raise Exception("Expected timezone in startup.log to be %s, but it was %s" % (abbreviated_timezone, context.startup_timezone))
+
+
+@given("a working directory of the test as '{working_directory}'")
+def impl(context, working_directory):
+    context.working_directory = working_directory
+
+@given('a cluster is created with no mirrors on "{master_host}" and "{segment_host}"')
+def impl(context, master_host, segment_host):
+    del os.environ['MASTER_DATA_DIRECTORY']
+    os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
+                                                       'data/master/gpseg-1')
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+            curs = dbconn.execSQL(conn, "select count(*) from gp_segment_configuration where role='m';")
+            count = curs.fetchall()[0][0]
+            if count == 0:
+                print "Skipping creating a new cluster since the cluster is primary only already."
+                return
+    except:
+        pass
+
+    testcluster = TestCluster(hosts=[master_host,segment_host], base_dir=context.working_directory)
+    testcluster.reset_cluster()
+    testcluster.create_cluster(with_mirrors=False)
+    context.gpexpand_mirrors_enabled = False
+
+@given('a cluster is created with mirrors on "{master_host}" and "{segment_host}"')
+def impl(context, master_host, segment_host):
+    del os.environ['MASTER_DATA_DIRECTORY']
+    os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
+                                                       'data/master/gpseg-1')
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+            curs = dbconn.execSQL(conn, "select count(*) from gp_segment_configuration where role='m';")
+            count = curs.fetchall()[0][0]
+            if count > 0:
+                print "Skipping creating a new cluster since the cluster has mirrors already."
+                return
+    except:
+        pass
+
+    testcluster = TestCluster(hosts=[master_host,segment_host], base_dir=context.working_directory)
+    testcluster.reset_cluster()
+    testcluster.create_cluster(with_mirrors=True)
+    context.gpexpand_mirrors_enabled = True
+
+@given('the user runs gpexpand interview to add {num_of_segments} new segment and {num_of_hosts} new host "{hostnames}"')
+def impl(context, num_of_segments, num_of_hosts, hostnames):
+    num_of_segments = int(num_of_segments)
+    num_of_hosts = int(num_of_hosts)
+
+    hosts = []
+    if num_of_hosts > 0:
+        hosts = hostnames.split(',')
+        if num_of_hosts != len(hosts):
+            raise Exception("Incorrect amount of hosts. number of hosts:%s\nhostnames: %s" % (num_of_hosts, hosts))
+
+    temp_base_dir = context.temp_base_dir
+    primary_dir = os.path.join(temp_base_dir, 'data', 'primary')
+    mirror_dir = ''
+    if context.gpexpand_mirrors_enabled:
+        mirror_dir = os.path.join(temp_base_dir, 'data', 'mirror')
+
+    directory_pairs = []
+    # we need to create the tuples for the interview to work.
+    for i in range(0, num_of_segments):
+        directory_pairs.append((primary_dir,mirror_dir))
+
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    output, returncode = gpexpand.do_interview(hosts=hosts,
+                                               num_of_segments=num_of_segments,
+                                               directory_pairs=directory_pairs,
+                                               has_mirrors=context.gpexpand_mirrors_enabled)
+    if returncode != 0:
+        raise Exception("*****An error occured*****:\n %s" % output)
+
+@given('there are no gpexpand_inputfiles')
+def impl(context):
+    map(os.remove, glob.glob("gpexpand_inputfile*"))
+
+@when('the user runs gpexpand with the latest gpexpand_inputfile')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand.initialize_segments()
+
+@when('the user runs gpexpand with the --end flag')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    context.command = gpexpand
+    gpexpand.redistribute(endtime=True)
+
+@when('the user runs gpexpand with the --duration flag')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    context.command = gpexpand
+    gpexpand.redistribute(duration=True)
+
+@when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors')
+def impl(context):
+    inputfile_contents = """sdw1:sdw1:20502:/tmp/gpexpand_behave/data/primary/gpseg2:6:2:p
+sdw1:sdw1:21502:/tmp/gpexpand_behave/data/mirror/gpseg2:8:2:m
+sdw1:sdw1:20503:/tmp/gpexpand_behave/data/primary/gpseg3:7:3:p
+sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
+    with open(inputfile_name, 'w') as fd:
+        fd.write(inputfile_contents)
+
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand.initialize_segments()
+
+@given('the number of segments have been saved')
+def impl(context):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
+        context.start_data_segments = dbconn.execSQLForSingleton(conn, query)
+
+@then('verify that the cluster has {num_of_segments} new segments')
+def impl(context, num_of_segments):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
+        end_data_segments = dbconn.execSQLForSingleton(conn, query)
+
+    if int(num_of_segments) == int(end_data_segments - context.start_data_segments):
+        return
+
+    raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent: %s" % (context.start_data_segments, end_data_segments))
+
+@given('the cluster is setup for an expansion on hosts "{hostnames}"')
+def impl(context, hostnames):
+    hosts = hostnames.split(",")
+    temp_base_dir = context.temp_base_dir
+    for host in hosts:
+        cmd = Command(name='create data directories for expansion',
+                      cmdStr="mkdir -p %s/data/primary; mkdir -p %s/data/mirror" % (temp_base_dir, temp_base_dir),
+                      ctxt=REMOTE,
+                      remoteHost=host)
+        cmd.run(validateAfter=True)
+
+@given('a temporary directory to expand into')
+def impl(context):
+    context.temp_base_dir = tempfile.mkdtemp(dir='/tmp')
+
+@given('the new host "{hostnames}" is ready to go')
+def impl(context, hostnames):
+    hosts = hostnames.split(',')
+    reset_hosts(hosts, context.working_directory)
+    reset_hosts(hosts, context.temp_base_dir)
+
+@given('the database is killed on hosts "{hostnames}"')
+def impl(context, hostnames):
+    hosts = hostnames.split(",")
+    for host in hosts:
+        cmd = Command(name='pkill postgres',
+                      cmdStr="pkill postgres || true",
+                      ctxt=REMOTE,
+                      remoteHost=host)
+        cmd.run(validateAfter=True)

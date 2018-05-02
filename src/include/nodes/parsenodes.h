@@ -1064,6 +1064,13 @@ typedef enum SetOperation
 	SETOP_EXCEPT
 } SetOperation;
 
+typedef struct DistributedBy
+{
+	NodeTag		type;
+	GpPolicyType	ptype;
+	List		*keys; /* valid when ptype is POLICYTYPE_PARTITIONED */
+} DistributedBy;
+
 typedef struct SelectStmt
 {
 	NodeTag		type;
@@ -1112,7 +1119,7 @@ typedef struct SelectStmt
 	/* Eventually add fields for CORRESPONDING spec here */
 
 	/* This field used by: SELECT INTO, CTAS */
-	List       *distributedBy;  /* GPDB: columns to distribute the data on. */
+	Node *distributedBy;  /* GPDB: columns to distribute the data on. */
 
 } SelectStmt;
 
@@ -1575,9 +1582,7 @@ typedef struct CopyStmt
 	/* Convenient location for dispatch of misc meta data */
 	PartitionNode *partitions;
 	List		*ao_segnos;		/* AO segno map */
-	int			nattrs;
-	GpPolicyType	ptype;
-	AttrNumber	*distribution_attrs;
+	GpPolicy	*policy;
 } CopyStmt;
 
 /* ----------------------
@@ -1641,11 +1646,11 @@ typedef struct CreateStmt
 	List	   *options;		/* options from WITH clause */
 	OnCommitAction oncommit;	/* what do we do at COMMIT? */
 	char	   *tablespacename; /* table space to use, or NULL */
-	List       *distributedBy;   /* what columns we distribute the data by */
+	Node       *distributedBy;   /* what columns we distribute the data by */
 	Node       *partitionBy;     /* what columns we partition the data by */
 	char	    relKind;         /* CDB: force relkind to this */
 	char		relStorage;
-	struct GpPolicy  *policy;
+	GpPolicy   *policy;
 	Node       *postCreate;      /* CDB: parse and process after the CREATE */
 	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be
 								 * analyzed until after CREATE (until the target table
@@ -1694,7 +1699,7 @@ typedef struct CreateExternalStmt
 	List       *extOptions;		/* generic options to external table */
 	List	   *encoding;		/* List (size 1 max) of DefElem nodes for
 								   data encoding */
-	List       *distributedBy;   /* what columns we distribute the data by */
+	Node       *distributedBy;   /* what columns we distribute the data by */
 	struct GpPolicy  *policy;	/* used for writable tables */
 
 } CreateExternalStmt;
@@ -1927,6 +1932,7 @@ typedef struct CreateTableSpaceStmt
 	char	   *tablespacename;
 	char	   *owner;
 	char	   *location;
+	List	   *options;
 } CreateTableSpaceStmt;
 
 typedef struct DropTableSpaceStmt

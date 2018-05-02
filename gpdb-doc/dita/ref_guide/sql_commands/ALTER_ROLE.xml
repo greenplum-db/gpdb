@@ -65,7 +65,8 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           more information.</li>
         <li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role. The role
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
-          the resource group. You can assign a single resource group to one or more roles. See
+          the resource group. You can assign a single resource group to one or more roles. You
+          cannot assign a resource group that you create for an external component to a role. See
               <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
             /></codeph> for additional information.  </li>
         <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
@@ -105,7 +106,8 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
             <codeph>NONE</codeph> removes the role's current resource group assignment and assigns a
             default resource group based on the role's capability. <codeph>SUPERUSER</codeph> roles
             are assigned the <codeph>admin_group</codeph> resource group, while the
-              <codeph>default_group</codeph> resource group is assigned to non-admin roles. </pd>
+              <codeph>default_group</codeph> resource group is assigned to non-admin roles.</pd>
+          <pd>You cannot assign a resource group that you create for an external component to a role.</pd>
         </plentry>
         <plentry>
           <pt><varname>queue_name</varname></pt>

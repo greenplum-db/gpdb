@@ -25,7 +25,6 @@ class GPCatalogException(Exception):
 MASTER_ONLY_TABLES = [
     'gp_segment_configuration',
     'gp_configuration_history',
-    'gp_distribution_policy',
     'gp_segment_configuration',
     'pg_description',
     'pg_partition',

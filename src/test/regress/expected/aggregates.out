@@ -521,9 +521,14 @@ select max(unique2) from tenk1 order by max(unique2)+1;
  9999
 (1 row)
 
--- MPP: This works in Postgres
 select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
-ERROR:  set-valued function called in context that cannot accept a set
+ max  | g 
+------+---
+ 9999 | 3
+ 9999 | 2
+ 9999 | 1
+(3 rows)
+
 -- check for correct detection of nested-aggregate errors
 select max(min(unique1)) from tenk1;
 ERROR:  aggregate function calls cannot be nested

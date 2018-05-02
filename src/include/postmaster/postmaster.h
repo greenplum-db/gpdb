@@ -47,6 +47,7 @@ extern int	postmaster_alive_fds[2];
 
 #define POSTMASTER_IN_STARTUP_MSG "the database system is starting up"
 #define POSTMASTER_IN_RECOVERY_MSG "the database system is in recovery mode"
+#define POSTMASTER_IN_RECOVERY_DETAIL_MSG "last replayed record at"
 
 extern const char *progname;
 

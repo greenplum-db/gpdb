@@ -8,5 +8,5 @@ run:
   - -c
   - |
     set -ex
-    ccp_src/aws/setup_ssh_to_cluster.sh
+    ccp_src/scripts/setup_ssh_to_cluster.sh
     ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_tinc_test.sh \"$TINC_TARGET\""

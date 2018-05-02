@@ -12,9 +12,8 @@
         referencing IPv6 addresses in <codeph>gpfdist</codeph> URLs or when using numeric IP
         addresses instead of hostnames in any management utility, always enclose the IP address in
         brackets. For command prompt use, the best practice is to escape any brackets or put them
-        inside quotation marks. For example, use
-        either:<codeblock><ph>gpdbrestore -R </ph>\[2620:0:170:610::11\]
-<ph>gpdbrestore -R </ph>'[2620:0:170:610::11]'</codeblock></note></p>
+        inside quotation marks. For example, use either:<codeph>\[2620:0:170:610::11\]</codeph>
+        or <codeph>'[2620:0:170:610::11]'</codeph>.</note></p>
     <p>The following are the Greenplum Database management utilities.</p>
     <simpletable id="km162860">
       <strow>
@@ -44,16 +43,9 @@
             <xref href="gpconfig.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
-            <xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>
-          </p>
-          <p>
-            <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/>
-          </p>
-          <p>
             <xref href="gpdeletesystem.xml#topic1" type="topic" format="dita"/>
           </p>
           <p> gpdetective (deprecated)</p>
-          <p> gp_dump (deprecated)</p>
           <p>
             <xref href="gpexpand.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -72,13 +64,10 @@
           <p>
             <xref href="gplogfilter.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p>
-            <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
-          </p>
         </stentry>
         <stentry>
           <p>
-            <xref href="gpmfr.xml#topic1" type="topic" format="dita"/>
+            <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
           </p>
           <!-- hidden until testing is complete -msk
             <p>
@@ -99,7 +88,6 @@
           </p>
           <p>
             <xref href="gprestore.xml" type="topic" format="dita"/></p>
-          <p> gp_restore (deprecated)</p>
           <p>gpsizecalc (deprecated)</p>
           <p>
             <xref href="gpscp.xml#topic1" type="topic" format="dita"/>

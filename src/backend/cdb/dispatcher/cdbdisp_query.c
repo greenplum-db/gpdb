@@ -912,8 +912,6 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	Oid			sessionUserId = GetSessionUserId();
 	Oid			outerUserId = GetOuterUserId();
 	Oid			currentUserId = GetUserId();
-	bool		sessionUserIsSuper = superuser_arg(GetSessionUserId());
-	bool		outerUserIsSuper = superuser_arg(GetSessionUserId());
 	StringInfoData resgroupInfo;
 
 	int			tmp,
@@ -923,8 +921,6 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	int			total_query_len;
 	char	   *shared_query,
 			   *pos;
-	char		one = 1;
-	char		zero = 0;
 
 	initStringInfo(&resgroupInfo);
 	if (IsResGroupActivated())
@@ -933,8 +929,8 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	total_query_len = 1 /* 'M' */ +
 		sizeof(len) /* message length */ +
 		sizeof(gp_command_count) +
-		sizeof(sessionUserId) + 1 /* sessionUserIsSuper */ +
-		sizeof(outerUserId) + 1 /* outerUserIsSuper */ +
+		sizeof(sessionUserId) /* sessionUserIsSuper */ +
+		sizeof(outerUserId) /* outerUserIsSuper */ +
 		sizeof(currentUserId) +
 		sizeof(rootIdx) +
 		sizeof(n32) * 2 /* currentStatementStartTimestamp */ +
@@ -982,20 +978,9 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	memcpy(pos, &tmp, sizeof(sessionUserId));
 	pos += sizeof(sessionUserId);
 
-	if (sessionUserIsSuper)
-		*pos++ = one;
-	else
-		*pos++ = zero;
-
-
 	tmp = htonl(outerUserId);
 	memcpy(pos, &tmp, sizeof(outerUserId));
 	pos += sizeof(outerUserId);
-
-	if (outerUserIsSuper)
-		*pos++ = one;
-	else
-		*pos++ = zero;
 
 	tmp = htonl(currentUserId);
 	memcpy(pos, &tmp, sizeof(currentUserId));

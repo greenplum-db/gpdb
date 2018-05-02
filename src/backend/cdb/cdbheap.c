@@ -152,7 +152,7 @@ CdbHeap_DeleteMinAndInsert(CdbHeap *hp, void *newElement)
 }								/* CdbHeap_DeleteMinAndInsert */
 
 
-void
+static void
 SiftDown(CdbHeap *hp, int iHole, void *newElement)
 {
 	CdbHeapCmpFn comparator = hp->comparator;

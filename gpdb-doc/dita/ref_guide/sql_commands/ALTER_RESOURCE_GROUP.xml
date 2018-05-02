@@ -19,11 +19,13 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
       <title>Description</title>
       <p><codeph>ALTER RESOURCE GROUP</codeph> changes the limits of a resource group. 
         Only a superuser can alter a resource group.</p>
-        <p>You can set or reset the concurrency limit of a resource group to control the maximum
+        <p>You can set or reset the concurrency limit of a resource group that you create for roles to control the maximum
         number of active concurrent statements in that group. You can also reset the memory or CPU
         rate limit of a resource group to control the amount of memory or CPU resources that all
         queries submitted through the group can consume on each segment host.</p>
-        <p>The new resource limit is immediately applied if current resource usage is less than or equal to the new value and there are no running transactions in the resource group. If current resource usage exceeds the new limit value, or there are running transactions in other resource groups holding some of the resource, Greenplum Database will defer the new limit assignment until resource usage is within the range of the new value.</p>
+        <p>When you alter the CPU limit of a resource group, the new limit is immediately applied.</p>
+        <p>When you alter a memory limit of a resource group that you create for roles, the new resource limit is immediately applied if current resource usage is less than or equal to the new value and there are no running transactions in the resource group. If the current resource usage exceeds the new memory limit value, or if there are running transactions in other resource groups that hold some of the resource, then Greenplum Database defers assigning the new limit until resource usage falls within the range of the new value.</p>
+        <p>When you increase the memory limit of a resource group that you create for external components, the new resource limit is phased in as system memory resources become available. If you decrease the memory limit of a resource group that you create for external components, the behavior is component-specific. For example, if you decrease the memory limit of a resource group that you create for a PL/Container runtime, queries in a running container may fail with an out of memory error.</p>
         <p>You can alter one limit type in a single <codeph>ALTER RESOURCE GROUP</codeph> call.</p>
     </section>
     <section id="section4">
@@ -35,13 +37,13 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
         </plentry>
         <plentry>
           <pt>CONCURRENCY <varname>integer</varname></pt>
-          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group.
+          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for resource groups that you assign to roles.
             Any transactions submitted after the <codeph>CONCURRENCY</codeph> value limit is
             reached are queued. When a running transaction completes, the earliest queued
             transaction is executed.</pd>
           <pd> The <codeph>CONCURRENCY</codeph> value
             must be an integer in the range [0 .. <codeph>max_connections</codeph>]. The default 
-            <codeph>CONCURRENCY</codeph> value is 20.</pd>
+            <codeph>CONCURRENCY</codeph> value for a resource group that you create for roles is 20.</pd>
             <pd><note>You cannot set the <codeph>CONCURRENCY</codeph> value for the <codeph>admin_group</codeph> to zero (0).</note></pd>
         </plentry>
         <plentry>

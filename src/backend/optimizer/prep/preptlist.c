@@ -169,8 +169,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 		if (rte->rtekind == RTE_RELATION)
 		{
 			relation = heap_open(rte->relid, NoLock);
-			if (relation->rd_cdbpolicy &&
-				relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+			if (GpPolicyIsPartitioned(relation->rd_cdbpolicy))
 				isdistributed = true;
 			heap_close(relation, NoLock);
 			if (isdistributed)

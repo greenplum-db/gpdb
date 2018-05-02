@@ -673,7 +673,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			if (funcctx->tuple_desc->natts > 13)
 			{
 				Datum now = TimestampTzGetDatum(GetCurrentTimestamp());
-				char *groupName = GetResGroupNameForId(beentry->st_rsgid, AccessShareLock);
+				char *groupName = GetResGroupNameForId(beentry->st_rsgid);
 
 				values[13] = ObjectIdGetDatum(beentry->st_rsgid);
 

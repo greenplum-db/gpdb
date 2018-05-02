@@ -46,9 +46,24 @@ GetMirrorStatus(FtsResponse *response)
 		/* use volatile pointer to prevent code rearrangement */
 		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
-		if (walsnd->pid == 0)
+		if (walsnd->pid != 0)
 		{
-			Assert(walsnd->marked_pid_zero_at_time);
+			/*
+			 * WalSndSetState() resets replica_disconnected_at for
+			 * below states. If modifying below states then be sure
+			 * to update corresponding logic in WalSndSetState() as
+			 * well.
+			 */
+			if(walsnd->state == WALSNDSTATE_CATCHUP
+			   || walsnd->state == WALSNDSTATE_STREAMING)
+			{
+				response->IsMirrorUp = true;
+				response->IsInSync = (walsnd->state == WALSNDSTATE_STREAMING);
+			}
+		}
+		if (!response->IsMirrorUp)
+		{
+			Assert(walsnd->replica_disconnected_at);
 			/*
 			 * PMAcceptingConnectionStartTime is process-local variable, set in
 			 * postmaster process and inherited by the FTS handler child
@@ -57,7 +72,7 @@ GetMirrorStatus(FtsResponse *response)
 			 * processes can be spawned.
 			 */
 			Assert(PMAcceptingConnectionsStartTime);
-			pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsnd->marked_pid_zero_at_time, PMAcceptingConnectionsStartTime);
+			pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsnd->replica_disconnected_at, PMAcceptingConnectionsStartTime);
 			/*
 			 * Report mirror as down, only if it didn't connect for below
 			 * grace period to primary. This helps to avoid marking mirror
@@ -74,18 +89,8 @@ GetMirrorStatus(FtsResponse *response)
 				ereport(LOG,
 						(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
 						 errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
-									  walsnd->marked_pid_zero_at_time, PMAcceptingConnectionsStartTime)));
+									  walsnd->replica_disconnected_at, PMAcceptingConnectionsStartTime)));
 				response->RequestRetry = true;
-			}
-		}
-		else
-		{
-			if(walsnd->state == WALSNDSTATE_CATCHUP
-			   || walsnd->state == WALSNDSTATE_STREAMING)
-			{
-				response->IsMirrorUp = true;
-				response->IsInSync = (walsnd->state == WALSNDSTATE_STREAMING);
-				break;
 			}
 		}
 	}

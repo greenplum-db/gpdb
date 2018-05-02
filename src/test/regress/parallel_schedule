@@ -134,7 +134,7 @@ test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts f
 # ----------
 test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes with xml
 
-# GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
+# large objects are not supported by GPDB
 # test: largeobject
 
 # INSERT RETURNING is not supported by GPDB

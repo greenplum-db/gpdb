@@ -250,7 +250,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	bool		nulls[Natts_pg_tablespace];
 	HeapTuple	tuple;
 	Oid			tablespaceoid;
-	char	   *location;
+	char	   *location = NULL;
 	Oid			ownerId;
 
 	/* Must be super user */
@@ -267,8 +267,53 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	else
 		ownerId = GetUserId();
 
+	/* If we have segment-level overrides */
+	if (list_length(stmt->options) > 0)
+	{
+		ListCell   *option;
+
+		foreach(option, stmt->options)
+		{
+			DefElem	   *defel = (DefElem *) lfirst(option);
+
+			/* Segment content ID specific locations */
+			if (strlen(defel->defname) > strlen("content") &&
+				strncmp(defel->defname, "content", strlen("content")) == 0)
+			{
+				int contentId = pg_atoi(defel->defname + strlen("content"), sizeof(int16), 0);
+
+				/*
+				 * The master validates the content ids are in [0, segCount)
+				 * before dispatching. We can use primary segment count
+				 * because the number of primary segments can never shrink and
+				 * therefore should not have holes in the content id sequence.
+				 */
+				if (Gp_role == GP_ROLE_DISPATCH)
+				{
+					if (contentId < 0 || contentId >= getgpsegmentCount())
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("segment content ID %d does not exist", contentId),
+								 errhint("Segment content IDs can be found in gp_segment_configuration table.")));
+				}
+				else if (contentId == Gp_segment)
+				{
+					location = pstrdup(strVal(defel->arg));
+					break;
+				}
+			}
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("invalid segment specification"),
+						 errhint("Segment-level locations can be specified using \"contentX <path>\" where X is the content ID.")));
+		}
+	}
+
+	if (!location)
+		location = pstrdup(stmt->location);
+
 	/* Unix-ify the offered path, and strip any trailing slashes */
-	location = pstrdup(stmt->location);
 	canonicalize_path(location);
 
 	/* disallow quotes, else CREATE DATABASE would be at risk */
@@ -334,8 +379,6 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->tablespacename));
 	values[Anum_pg_tablespace_spcowner - 1] =
 		ObjectIdGetDatum(ownerId);
-	values[Anum_pg_tablespace_spclocation - 1] =
-		CStringGetTextDatum(location);
 	nulls[Anum_pg_tablespace_spcacl - 1] = true;
 	nulls[Anum_pg_tablespace_spcoptions - 1] = true;
 

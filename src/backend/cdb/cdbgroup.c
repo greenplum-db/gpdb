@@ -705,8 +705,8 @@ cdb_grouping_planner(PlannerInfo *root,
 			allowed_agg &= ~AGG_3PHASE;
 
 		/*
-		 * GPDB_84_MERGE_FIXME: Don't do three-phase aggregation if any of the
-		 * aggregates use FILTERs. We used to do it, with the old, hacky,
+		 * We currently don't do three-phase aggregation if any of the
+		 * aggregates use FILTERs. We used to do it in GPDB-5, with the old, hacky,
 		 * FILTER implementation, but it doesn't work with the new one without
 		 * some extra work.
 		 */
@@ -1817,7 +1817,7 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 
 
 /* Helper for qsort in planDqaJoinOrder. */
-int
+static int
 compareDqas(const void *larg, const void *rarg)
 {
 	double		lft = ((DqaInfo *) larg)->num_rows;
@@ -1838,7 +1838,7 @@ compareDqas(const void *larg, const void *rarg)
  * to locate those entries.  Here, however, we use that vector to locate
  * the DQA arguments and reorder the vector to agree with join order.
  */
-void
+static void
 planDqaJoinOrder(PlannerInfo *root, MppGroupContext *ctx,
 				 double input_rows)
 {
@@ -2631,7 +2631,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
  * There are no similar results for sort and distinct attributes since
  * they don't necessarily appear in the subplan target list.
  */
-List *
+static List *
 make_subplan_tlist(List *tlist, Node *havingQual,
 				   List *grp_clauses,
 				   int *pnum_gkeys, AttrNumber **pcols_gkeys, Oid **pcols_gops,
@@ -2840,7 +2840,7 @@ augment_subplan_tlist(List *tlist, List *exprs, int *pnum, AttrNumber **pcols,
  * This function is for the case when a subplan target list (not a whole plan)
  * is supplied to cdb_grouping_planner.
  */
-List *
+static List *
 describe_subplan_tlist(List *sub_tlist,
 					   List *tlist, Node *havingQual,
 					   List *grp_clauses, int *pnum_gkeys, AttrNumber **pcols_gkeys, Oid **pcols_gops,
@@ -3218,7 +3218,7 @@ generate_three_tlists(List *tlist,
  *	final_tlist - the target list of the final Agg node.
  *	final_qual - the qual of the final Agg node.
  */
-void
+static void
 generate_multi_stage_tlists(MppGroupContext *ctx,
 							List **p_prelim_tlist,
 							List **p_inter_tlist,
@@ -3253,7 +3253,7 @@ generate_multi_stage_tlists(MppGroupContext *ctx,
  * several "coplans" each with its own target list requirements.  This
  * function lays the groundwork for all such target lists.
  */
-void
+static void
 prepare_dqa_pruning_tlists(MppGroupContext *ctx)
 {
 	/*
@@ -3280,7 +3280,7 @@ prepare_dqa_pruning_tlists(MppGroupContext *ctx)
  * Performs the last phase of generate_multi_phase_tlist in the context of
  * DQA pruning.
  */
-void
+static void
 generate_dqa_pruning_tlists(MppGroupContext *ctx,
 							int dqa_index,
 							List **p_prelim_tlist,
@@ -3320,7 +3320,7 @@ generate_dqa_pruning_tlists(MppGroupContext *ctx,
  * in a multi-phase aggregation plan, possibly with DISTINCT-qualified
  * aggregate functions (DQAs).
  */
-void
+static void
 deconstruct_agg_info(MppGroupContext *ctx)
 {
 	int			i;
@@ -3471,7 +3471,7 @@ deconstruct_agg_info(MppGroupContext *ctx)
  * functions.  This list is transient -- it drives the production of the
  * final target list and having qual through finalize_split_expression.
  */
-void
+static void
 reconstruct_agg_info(MppGroupContext *ctx,
 					 List **p_prelim_tlist,
 					 List **p_inter_tlist,
@@ -3546,7 +3546,7 @@ reconstruct_agg_info(MppGroupContext *ctx,
  *       and is sensitive to dqa_index.  Ordinarily this function would
  *       be used only for multiple-DQA planning.
  */
-void
+static void
 reconstruct_coplan_info(MppGroupContext *ctx,
 						int dqa_index,
 						List **p_prelim_tlist,
@@ -3617,7 +3617,7 @@ reconstruct_coplan_info(MppGroupContext *ctx,
  * first (partial) aggregation and referring to this target list from
  * the modified expression for use in the second (final) aggregation.
  */
-Expr *
+static Expr *
 deconstruct_expr(Expr *expr, MppGroupContext *ctx)
 {
 	return (Expr *) deconstruct_expr_mutator((Node *) expr, ctx);
@@ -3628,7 +3628,7 @@ deconstruct_expr(Expr *expr, MppGroupContext *ctx)
  *
  * Work for deconstruct_expr.
  */
-Node *
+static Node *
 deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 {
 	TargetEntry *tle;
@@ -3709,7 +3709,7 @@ deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
  * be used to convert the ending transition value to the result type.
  * aggregation
  */
-Node *
+static Node *
 split_aggref(Aggref *aggref, MppGroupContext *ctx)
 {
 	ListCell   *cell;
@@ -3925,7 +3925,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
  * Make a targetlist similar to the given length n tlist but consisting of
  * simple Var nodes with the given varno and varattno in offset + [1..N].
  */
-List *
+static List *
 make_vars_tlist(List *tlist, Index varno, AttrNumber offset)
 {
 	List	   *new_tlist = NIL;
@@ -3968,7 +3968,7 @@ make_vars_tlist(List *tlist, Index varno, AttrNumber offset)
  * modify tlist2, but the result shares structure below the TargetEntry
  * nodes.
  */
-List *
+static List *
 seq_tlist_concat(List *tlist1, List *tlist2)
 {
 	ListCell   *lc;
@@ -3991,7 +3991,7 @@ seq_tlist_concat(List *tlist1, List *tlist2)
  * Note: Only called on the top of the "join" tree, so all D_i are
  *       included in attribute offset calculations.
  */
-Node *
+static Node *
 finalize_split_expr(Node *expr, MppGroupContext *ctx)
 {
 	return finalize_split_expr_mutator(expr, ctx);
@@ -4005,7 +4005,7 @@ finalize_split_expr(Node *expr, MppGroupContext *ctx)
  * 2nd DQA argument will be replaced by the targetlist expression that
  * corresponds to that DQA.
  */
-Node *
+static Node *
 finalize_split_expr_mutator(Node *node, MppGroupContext *ctx)
 {
 	if (node == NULL)
@@ -4061,7 +4061,7 @@ finalize_split_expr_mutator(Node *node, MppGroupContext *ctx)
  * Return the transition type Oid of the given aggregate fuction or throw
  * an error, if none.
  */
-Oid
+static Oid
 lookup_agg_transtype(Aggref *aggref)
 {
 	Oid			aggid = aggref->aggfnoid;
@@ -4322,7 +4322,7 @@ add_second_stage_agg(PlannerInfo *root,
  * This is the caller's responsibility since the nature of the changes
  * depends on the context in which the subquery is used.
  */
-Plan *
+static Plan *
 add_subqueryscan(PlannerInfo *root, List **p_pathkeys,
 				 Index varno, Query *subquery, Plan *subplan)
 {
@@ -4479,7 +4479,7 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
  * Returns the total cost and, more importantly, populates the given
  * dummy Plan node with cost information
  */
-Cost
+static Cost
 cost_common_agg(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *info, Plan *dummy)
 {
 	QualCost	tlist_cost;
@@ -4521,7 +4521,7 @@ cost_common_agg(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *info, Plan
  * Corresponds to make_one_stage_agg_plan and must be maintained in sync
  * with it.
  */
-Cost
+static Cost
 cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *info)
 {
 	Plan		input_dummy;
@@ -4629,7 +4629,7 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
  * Corresponds to make_two_stage_agg_plan and must be maintained in sync
  * with it.
  */
-Cost
+static Cost
 cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *info)
 {
 	Plan		input_dummy;
@@ -4807,7 +4807,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
  * This function assumes the environment established by planDqaJoinOrder()
  * and set_coplan_strategies().
  */
-Cost
+static Cost
 cost_3phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *info)
 {
 	Plan		dummy;
@@ -4957,7 +4957,7 @@ cost_3phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
  * If result should be ordered, compare a Sort of 1 with 2.
  * Else compare 1 with 2.
  */
-void
+static void
 set_cost_of_join_strategies(MppGroupContext *ctx, Cost *hashjoin_cost, Cost *mergejoin_cost)
 {
 	Cost		hj_cost;
@@ -5108,7 +5108,7 @@ initAggPlanInfo(AggPlanInfo *info, Path *input_path, Plan *input_plan)
  * DQACOPLAN_PH:	<-1- PlainAgg <-d- HashedAgg <-x- R
  *
  */
-void
+static void
 set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, Path *input)
 {
 	double		input_rows = input->parent->rows;
@@ -5118,9 +5118,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	long		numGroups = (group_rows < 0) ? 0 :
 	(group_rows > LONG_MAX) ? LONG_MAX :
 	(long) group_rows;
-	// GPDB_84_MERGE_FIXME: choose_hashed_grouping no longer tracks these separately.
-	//bool		can_hash_group_key = ctx->agg_counts->canHashAgg;
-	//bool		can_hash_dqa_arg = dqaArg->can_hash;
+
 	bool can_hash_group_key = true;
 	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;
@@ -5241,7 +5239,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 
 /* incremental_sort_cost -- helper for set_coplan_strategies
  */
-Cost
+static Cost
 incremental_sort_cost(double rows, int width, int numKeyCols)
 {
 	Plan		dummy;
@@ -5257,7 +5255,7 @@ incremental_sort_cost(double rows, int width, int numKeyCols)
 
 /* incremental_agg_cost -- helper for set_coplan_strategies
  */
-Cost
+static Cost
 incremental_agg_cost(double rows, int width, AggStrategy strategy,
 					 int numGroupCols, double numGroups,
 					 int numAggs, int transSpace)
@@ -5280,7 +5278,7 @@ incremental_agg_cost(double rows, int width, AggStrategy strategy,
 
 /*  incremental_motion_cost -- helper for set_coplan_strategies
  */
-Cost
+static Cost
 incremental_motion_cost(double sendrows, double recvrows)
 {
 	Cost		cost_per_row = (gp_motion_cost_per_row > 0.0)

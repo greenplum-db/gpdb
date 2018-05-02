@@ -295,6 +295,7 @@ status_detail_table_sql = """CREATE TABLE %s.%s
                           distribution_policy smallint[],
                           distribution_policy_names text,
                           distribution_policy_coloids text,
+                          distribution_policy_type text,
                           storage_options text,
                           rank int,
                           status text,
@@ -1825,7 +1826,8 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
     c.oid as tableoid,
     p.attrnums as distribution_policy,
     now() as last_updated,
-    %s
+    %s,
+    p.policytype as distribution_policy_type
 FROM
             pg_class c
     JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -1863,13 +1865,14 @@ WHERE
                 if dist_policy is None:
                     dist_policy = 'NULL'
 
+                dist_policy_type = row[6];
                 full_name = '%s.%s' % (dbname, fqname)
                 rank = 1 if self.unique_index_tables.has_key(full_name) else 2
 
-                fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
+                fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
                     dbname, fqname, schema_oid, table_oid,
                     dist_policy, policy_name, policy_oids,
-                    rank, undone_status, rel_bytes))
+                    dist_policy_type, rank, undone_status, rel_bytes))
         except Exception, e:
             raise ExpansionError(e)
         finally:
@@ -1945,13 +1948,14 @@ ORDER BY tablename, c2.oid desc;
                 if dist_policy is None:
                     dist_policy = 'NULL'
 
+                dist_policy_type = row[6];
                 full_name = '%s.%s' % (dbname, fqname)
                 rank = 1 if self.unique_index_tables.has_key(full_name) else 2
 
-                fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
+                fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
                     dbname, fqname, schema_oid, table_oid,
                     dist_policy, policy_name, policy_oids,
-                    rank, undone_status, rel_bytes))
+                    dist_policy_type, rank, undone_status, rel_bytes))
         except Exception:
             raise
         finally:
@@ -1973,6 +1977,7 @@ ORDER BY tablename, c2.oid desc;
     def _update_distribution_policy(self, dbname):
         """ NULL out the distribution policy for both
             regular and partitioned table before expansion
+            Notice: Don't do this for replicated table. 
         """
 
         table_conn = self.connect_database(dbname)
@@ -1986,6 +1991,7 @@ FROM pg_class c
     LEFT JOIN pg_partition_rule pr ON (c.oid=pr.parchildrelid)
 WHERE
     localoid = c.oid
+    AND policytype = 'p'
     AND pp.parrelid IS NULL
     AND pr.parchildrelid IS NULL
     AND n.nspname != 'gpexpand';
@@ -2009,6 +2015,7 @@ UPDATE gp_distribution_policy
     ) p1
     WHERE
     localoid = p1.partitiontableoid
+    AND policytype = 'p'
     AND p1.partitionlevel = (SELECT max(parlevel) FROM pg_partition WHERE parrelid = p1.tableoid);
 
 """
@@ -2265,6 +2272,7 @@ class ExpandTable():
         if row is not None:
             (self.dbname, self.fq_name, self.schema_oid, self.table_oid,
              self.distrib_policy, self.distrib_policy_names, self.distrib_policy_coloids,
+             self.distrib_policy_type,
              self.storage_options, self.rank, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
@@ -2272,10 +2280,11 @@ class ExpandTable():
     def add_table(self, conn):
         insertSQL = """INSERT INTO %s.%s
                             VALUES ('%s','%s',%s,%s,
-                                    '%s','%s','%s','%s',%d,'%s','%s','%s',%d)
+                                    '%s','%s', '%s', '%s','%s',%d,'%s','%s','%s',%d)
                     """ % (gpexpand_schema, status_detail_table,
                            self.dbname, self.fq_name, self.schema_oid, self.table_oid,
                            self.distrib_policy, self.distrib_policy_names, self.distrib_policy_coloids,
+                           self.distrib_policy_type,
                            self.storage_options, self.rank, self.status,
                            self.expansion_started, self.expansion_finished,
                            self.source_bytes)
@@ -2328,7 +2337,10 @@ class ExpandTable():
         logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), foo.decode('utf-8')))
         # logger.info("Storage options for table %s is %s" % (self.fq_name, self.storage_options))
 
-        if foo == "" or foo == "None" or foo is None:
+        if self.distrib_policy_type.strip() == 'r':
+            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
+                schema_name, table_name, new_storage_options)
+        elif foo == "" or foo == "None" or foo is None:
             sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
                 schema_name, table_name, new_storage_options)
         else:

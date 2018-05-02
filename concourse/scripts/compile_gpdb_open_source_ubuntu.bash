@@ -28,7 +28,8 @@ function build_gpdb() {
       --with-python \
       --with-libraries=${CWD}/depends/build/lib \
       --with-includes=${CWD}/depends/build/include \
-      --prefix=${GREENPLUM_INSTALL_DIR}
+      --prefix=${GREENPLUM_INSTALL_DIR} \
+      ${CONFIGURE_FLAGS}
     make -j4 -s
     LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
     popd

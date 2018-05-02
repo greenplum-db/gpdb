@@ -67,7 +67,7 @@ static void InitParseState(CopyState pstate, Relation relation,
 			   Datum *values, bool *nulls, bool writable,
 			   List *fmtOpts, char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, Oid fmterrtbl, int encoding);
+			   bool islimitinrows, bool logerrors, int encoding);
 
 static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 int nArgs,
@@ -119,7 +119,7 @@ elog(DEBUG2, "external_getnext returning tuple")
 FileScanDesc
 external_beginscan(Relation relation, uint32 scancounter,
 			   List *uriList, List *fmtOpts, char fmtType, bool isMasterOnly,
-			  int rejLimit, bool rejLimitInRows, Oid fmterrtbl, int encoding)
+			  int rejLimit, bool rejLimitInRows, bool logErrors, int encoding)
 {
 	FileScanDesc scan;
 	TupleDesc	tupDesc = NULL;
@@ -266,7 +266,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 
 	/* Initialize all the parsing and state variables */
 	InitParseState(scan->fs_pstate, relation, NULL, NULL, false, fmtOpts, fmtType,
-				scan->fs_uri, rejLimit, rejLimitInRows, fmterrtbl, encoding);
+				scan->fs_uri, rejLimit, rejLimitInRows, logErrors, encoding);
 
 	if (fmttype_is_custom(fmtType))
 	{
@@ -566,7 +566,7 @@ external_insert_init(Relation rel)
 				   extInsertDesc->ext_uri,
 				   extentry->rejectlimit,
 				   (extentry->rejectlimittype == 'r'),
-				   extentry->fmterrtbl,
+				   extentry->logerrors,
 				   extentry->encoding);
 
 	if (fmttype_is_custom(extentry->fmtcode))
@@ -1282,7 +1282,7 @@ InitParseState(CopyState pstate, Relation relation,
 			   Datum *values, bool *nulls, bool iswritable,
 			   List *fmtOpts, char fmtType,
 			   char *uri, int rejectlimit,
-			   bool islimitinrows, Oid fmterrtbl, int encoding)
+			   bool islimitinrows, bool logerrors, int encoding)
 {
 	TupleDesc	tupDesc = NULL;
 	char	   *format_str = NULL;
@@ -1325,15 +1325,15 @@ InitParseState(CopyState pstate, Relation relation,
 	else
 	{
 		/* select the SREH mode */
-		if (fmterrtbl == InvalidOid)
-		{
-			/* no error log */
-			pstate->errMode = SREH_IGNORE;
-		}
-		else if (fmterrtbl == RelationGetRelid(relation))
+		if (logerrors)
 		{
 			/* errors into file */
 			pstate->errMode = SREH_LOG;
+		}
+		else
+		{
+			/* no error log */
+			pstate->errMode = SREH_IGNORE;
 		}
 
 		/* Single row error handling */

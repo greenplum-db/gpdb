@@ -1924,13 +1924,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			/* data needs to get inserted locally */
 			if (cstate->on_segment)
 			{
-				MemoryContext oldcxt;
-				oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
-				cstate->rel->rd_cdbpolicy = palloc(sizeof(GpPolicy) + sizeof(AttrNumber) * stmt->nattrs);
-				cstate->rel->rd_cdbpolicy->nattrs = stmt->nattrs;
-				cstate->rel->rd_cdbpolicy->ptype = stmt->ptype;
-				memcpy(cstate->rel->rd_cdbpolicy->attrs, stmt->distribution_attrs, sizeof(AttrNumber) * stmt->nattrs);
-				MemoryContextSwitchTo(oldcxt);
+				cstate->rel->rd_cdbpolicy = GpPolicyCopy(CacheMemoryContext, stmt->policy);
 			}
 			CopyFrom(cstate);
 		}
@@ -2321,6 +2315,7 @@ CopyToDispatch(CopyState cstate)
 
 	cdbCopy->partitions = RelationBuildPartitionDesc(cstate->rel, false);
 	cdbCopy->skip_ext_partition = cstate->skip_ext_partition;
+	cdbCopy->hasReplicatedTable = GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy);
 
 	/* XXX: lock all partitions */
 
@@ -2514,8 +2509,9 @@ CopyTo(CopyState cstate)
 			}
 		}
 		else
+		{
 			target_rels = lappend(target_rels, cstate->rel);
-
+		}
 		tupDesc = RelationGetDescr(cstate->rel);
 	}
 	else
@@ -2620,6 +2616,15 @@ CopyTo(CopyState cstate)
 
 	if (cstate->rel)
 	{
+		/* For replicated table, choose only one segment to scan data */
+		if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment &&
+				GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy) &&
+				gp_session_id % GpIdentity.numsegments != GpIdentity.segindex)
+		{
+			MemoryContextDelete(cstate->rowcontext);
+			return;
+		}
+
 		foreach(lc, target_rels)
 		{
 			Relation rel = lfirst(lc);
@@ -4062,17 +4067,6 @@ CopyFromDispatch(CopyState cstate)
 				}
 
 				/*
-				 * At this point in the code, values[x] is final for this
-				 * data row -- either the input data, a null or a default
-				 * value is in there, and constraints applied.
-				 *
-				 * Perform a cdbhash on this data row. Perform a hash operation
-				 * on each attribute that is included in CDB policy (partitioning
-				 * key columns). Send COPY data line to the target segment
-				 * database executors. Data row will not be inserted locally.
-				 */
-				target_seg  = GetTargetSeg(part_distData, values, nulls);
-				/*
 				 * Send data row to all databases for this segment.
 				 * Also send the original row number with the data.
 				 */
@@ -4104,9 +4098,30 @@ CopyFromDispatch(CopyState cstate)
 										   cstate->line_buf.len);
 				}
 				
-				/* send modified data */
-				if (!cstate->on_segment) {
-					cdbCopySendData(cdbCopy,
+				/*
+				 * At this point in the code, values[x] is final for this
+				 * data row -- either the input data, a null or a default
+				 * value is in there, and constraints applied.
+				 *
+				 * Perform a cdbhash on this data row. Perform a hash operation
+				 * on each attribute that is included in CDB policy (partitioning
+				 * key columns). Send COPY data line to the target segment
+				 * database executors. Data row will not be inserted locally.
+				 */
+				if (part_distData &&
+					GpPolicyIsReplicated(part_distData->policy))
+				{
+					cdbCopySendDataToAll(cdbCopy,
+							line_buf_with_lineno.data,
+							line_buf_with_lineno.len);
+					RESET_LINEBUF_WITH_LINENO;
+				}
+				else
+				{
+					target_seg  = GetTargetSeg(part_distData, values, nulls);
+
+					if (!cstate->on_segment)
+						cdbCopySendData(cdbCopy,
 									target_seg,
 									line_buf_with_lineno.data,
 									line_buf_with_lineno.len);
@@ -7812,7 +7827,6 @@ InitDistributionData(CopyState cstate, Form_pg_attribute *attr,
 		 * have all column types handy.
 		 */
 		List *cols = NIL;
-		ListCell *lc;
 		HASHCTL hash_ctl;
 
 		partition_get_policies_attrs(estate->es_result_partitions,
@@ -7828,10 +7842,7 @@ InitDistributionData(CopyState cstate, Form_pg_attribute *attr,
 		                      &hash_ctl,
 		                      HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
 		p_nattrs = list_length(cols);
-		policy = palloc(sizeof(GpPolicy) + sizeof(AttrNumber) * p_nattrs);
-		i = 0;
-		foreach (lc, cols)
-			policy->attrs[i++] = lfirst_int(lc);
+		policy = createHashPartitionedPolicy(NULL, cols);
 	}
 
 	/*

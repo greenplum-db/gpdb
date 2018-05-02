@@ -525,7 +525,7 @@ CreateRole(CreateRoleStmt *stmt)
 	{
 		Oid rsgid;
 
-		rsgid = GetResGroupIdForName(resgroup, ShareLock);
+		rsgid = GetResGroupIdForName(resgroup);
 		if (rsgid == InvalidOid)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1169,7 +1169,7 @@ AlterRole(AlterRoleStmt *stmt)
 								resgroup)));
 		}
 
-		rsgid = GetResGroupIdForName(resgroup, ShareLock);
+		rsgid = GetResGroupIdForName(resgroup);
 		if (rsgid == InvalidOid)
 			ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),

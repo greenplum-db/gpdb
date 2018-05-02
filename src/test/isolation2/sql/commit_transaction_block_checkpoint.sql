@@ -12,7 +12,7 @@ select gp_inject_fault('twophase_transaction_commit_prepared', 'suspend', 3);
 2&: commit;
 
 -- wait for the fault to trigger since following checkpoint could be faster
-select gp_inject_fault('twophase_transaction_commit_prepared', 'wait_until_triggered', '', '', '', 1, 0, 3);
+select gp_wait_until_triggered_fault('twophase_transaction_commit_prepared', 1, 3);
 
 -- do checkpoint on segment content 1 in utility mode, and it should block
 1U&: checkpoint;
@@ -35,7 +35,7 @@ select gp_inject_fault('onephase_transaction_commit', 'suspend', 1);
 2&: commit;
 
 -- wait for the fault to trigger since following checkpoint could be faster
-select gp_inject_fault('onephase_transaction_commit', 'wait_until_triggered', '', '', '', 1, 0, 1);
+select gp_wait_until_triggered_fault('onephase_transaction_commit', 1, 1);
 
 -- do checkpoint on master in utility mode, and it should block
 -1U&: checkpoint;

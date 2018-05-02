@@ -12,8 +12,10 @@ cat > ~/gpdb-env.sh << EOF
 EOF
 source ~/gpdb-env.sh
 
-createdb gptest
-gpconfig --skipvalidation -c fsync -v off
-gpstop -u
+if gpstate > /dev/null 2>&1 ; then
+  createdb gptest
+  gpconfig --skipvalidation -c fsync -v off
+  gpstop -u
+fi
 cd /home/gpadmin/gpdb_src/gpMgmt
 make -f Makefile.behave behave flags="$BEHAVE_FLAGS"

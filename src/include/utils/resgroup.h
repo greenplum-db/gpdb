@@ -79,6 +79,12 @@ extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
 
 /*
+ * Non-GUC global variables.
+ */
+extern bool gp_resource_group_enable_cgroup_memory;
+extern bool gp_resource_group_enable_cgroup_swap;
+
+/*
  * Resource Group assignment hook.
  *
  * This hook can be set by an extension to control how queries are assigned to

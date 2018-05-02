@@ -73,7 +73,7 @@ create table _tmp_table2 as select i as c1, 0 as c2 from generate_series(0, 10) 
 -- interval.
 select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
 select gp_request_fts_probe_scan();
-select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- make one QE sleep before reading command
 select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 50, 2::smallint);

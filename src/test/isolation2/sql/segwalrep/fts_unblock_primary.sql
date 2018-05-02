@@ -21,19 +21,17 @@ $$ language plpgsql;
 create language plpythonu;
 -- end_ignore
 
-create or replace function pg_ctl(datadir text, command text, port int, contentid int)
+create or replace function pg_ctl(datadir text, command text, port int, contentid int, dbid int)
 returns text as $$
     import subprocess
-
     cmd = 'pg_ctl -D %s ' % datadir
     if command in ('stop', 'restart'):
         cmd = cmd + '-w -m immediate %s' % command
     elif command == 'start':
-        opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
+        opts = '-p %d -\-gp_dbid=%d -\-silent-mode=true -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, dbid, contentid)
         cmd = cmd + '-o "%s" start' % opts
     else:
         return 'Invalid command input'
-
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
 
@@ -59,7 +57,7 @@ select gp_request_fts_probe_scan();
 select gp_inject_fault('fts_probe', 'status', 1);
 
 -- stop a mirror
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'stop', NULL, NULL);
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'stop', NULL, NULL, NULL);
 
 -- this should block since mirror is not up and sync replication is on
 2: begin;
@@ -93,8 +91,23 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 -- synchronous_standby_names should now be empty on the primary
 2U: show synchronous_standby_names;
 
+--hold walsender in startup
+select gp_inject_fault('initialize_wal_sender', 'suspend', dbid)
+from gp_segment_configuration where role='p' and content=2;
+
 -- bring the mirror back up and see primary s/u and mirror s/u
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'start', (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), 2);
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'start', (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), 2, (select dbid from gp_segment_configuration c where c.role='m' and c.content=2));
+select gp_wait_until_triggered_fault('initialize_wal_sender', 1, dbid)
+from gp_segment_configuration where role='p' and content=2;
+-- make sure the walsender on primary is in startup
+select state from gp_stat_replication where gp_segment_id=2;
+select gp_request_fts_probe_scan();
+-- mirror should continue to be reported as down since walsender is in startup
+select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
+
+-- let the walsender proceed
+select gp_inject_fault('initialize_wal_sender', 'reset', dbid)
+from gp_segment_configuration where role='p' and content=2;
 select wait_for_streaming(2::smallint);
 select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
 

@@ -1,0 +1,3174 @@
+CREATE SCHEMA rpt_tpch;
+SET SEARCH_PATH to rpt_tpch;
+
+CREATE TABLE heap_customer (
+    c_custkey integer NOT NULL,
+    c_name character varying(25) NOT NULL,
+    c_address character varying(40) NOT NULL,
+    c_nationkey integer NOT NULL,
+    c_phone character(15) NOT NULL,
+    c_acctbal numeric(15,2) NOT NULL,
+    c_mktsegment character(10) NOT NULL,
+    c_comment character varying(117) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED REPLICATED;
+
+CREATE TABLE heap_lineitem (
+    l_orderkey bigint NOT NULL,
+    l_partkey integer NOT NULL,
+    l_suppkey integer NOT NULL,
+    l_linenumber integer NOT NULL,
+    l_quantity numeric(15,2) NOT NULL,
+    l_extendedprice numeric(15,2) NOT NULL,
+    l_discount numeric(15,2) NOT NULL,
+    l_tax numeric(15,2) NOT NULL,
+    l_returnflag character(1) NOT NULL,
+    l_linestatus character(1) NOT NULL,
+    l_shipdate date NOT NULL,
+    l_commitdate date NOT NULL,
+    l_receiptdate date NOT NULL,
+    l_shipinstruct character(25) NOT NULL,
+    l_shipmode character(10) NOT NULL,
+    l_comment character varying(44) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED BY (l_orderkey);
+
+CREATE TABLE heap_nation (
+    n_nationkey integer,
+    n_name character(25),
+    n_regionkey integer,
+    n_comment character varying(152)
+)
+WITH (appendonly=false) DISTRIBUTED REPLICATED;
+
+CREATE TABLE heap_orders (
+    o_orderkey bigint NOT NULL,
+    o_custkey integer NOT NULL,
+    o_orderstatus character(1) NOT NULL,
+    o_totalprice numeric(15,2) NOT NULL,
+    o_orderdate date NOT NULL,
+    o_orderpriority character(15) NOT NULL,
+    o_clerk character(15) NOT NULL,
+    o_shippriority integer NOT NULL,
+    o_comment character varying(79) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED BY (o_orderkey);
+
+CREATE TABLE heap_part (
+    p_partkey integer NOT NULL,
+    p_name character varying(55) NOT NULL,
+    p_mfgr character(25) NOT NULL,
+    p_brand character(10) NOT NULL,
+    p_type character varying(25) NOT NULL,
+    p_size integer NOT NULL,
+    p_container character(10) NOT NULL,
+    p_retailprice numeric(15,2) NOT NULL,
+    p_comment character varying(23) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED BY (p_partkey);
+
+CREATE TABLE heap_partsupp (
+    ps_partkey integer NOT NULL,
+    ps_suppkey integer NOT NULL,
+    ps_availqty integer NOT NULL,
+    ps_supplycost numeric(15,2) NOT NULL,
+    ps_comment character varying(199) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED BY (ps_partkey);
+
+CREATE TABLE heap_region (
+    r_regionkey integer NOT NULL,
+    r_name character(25) NOT NULL,
+    r_comment character varying(152)
+)
+WITH (appendonly=false) DISTRIBUTED REPLICATED;
+
+CREATE TABLE heap_supplier (
+    s_suppkey integer NOT NULL,
+    s_name character(25) NOT NULL,
+    s_address character varying(40) NOT NULL,
+    s_nationkey integer NOT NULL,
+    s_phone character(15) NOT NULL,
+    s_acctbal numeric(15,2) NOT NULL,
+    s_comment character varying(101) NOT NULL
+)
+WITH (appendonly=false) DISTRIBUTED REPLICATED;
+
+\copy heap_customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from '@abs_srcdir@/data/customer.csv' with delimiter '|';
+\copy heap_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem_small.csv' with delimiter '|';
+\copy heap_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem.csv' with delimiter '|'; 
+\copy heap_nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from '@abs_srcdir@/data/nation.csv' with delimiter '|';
+\copy heap_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order_small.csv' with delimiter '|';
+\copy heap_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order.csv' with delimiter '|'; 
+\copy heap_part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from '@abs_srcdir@/data/part.csv' with delimiter '|'; 
+\copy heap_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
+\copy heap_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
+\copy heap_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+
+
+CREATE TABLE ao_customer (
+    c_custkey integer NOT NULL,
+    c_name character varying(25) NOT NULL,
+    c_address character varying(40) NOT NULL,
+    c_nationkey integer NOT NULL,
+    c_phone character(15) NOT NULL,
+    c_acctbal numeric(15,2) NOT NULL,
+    c_mktsegment character(10) NOT NULL,
+    c_comment character varying(117) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED REPLICATED;
+
+CREATE TABLE ao_lineitem (
+    l_orderkey bigint NOT NULL,
+    l_partkey integer NOT NULL,
+    l_suppkey integer NOT NULL,
+    l_linenumber integer NOT NULL,
+    l_quantity numeric(15,2) NOT NULL,
+    l_extendedprice numeric(15,2) NOT NULL,
+    l_discount numeric(15,2) NOT NULL,
+    l_tax numeric(15,2) NOT NULL,
+    l_returnflag character(1) NOT NULL,
+    l_linestatus character(1) NOT NULL,
+    l_shipdate date NOT NULL,
+    l_commitdate date NOT NULL,
+    l_receiptdate date NOT NULL,
+    l_shipinstruct character(25) NOT NULL,
+    l_shipmode character(10) NOT NULL,
+    l_comment character varying(44) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED BY (l_orderkey);
+
+CREATE TABLE ao_nation (
+    n_nationkey integer,
+    n_name character(25),
+    n_regionkey integer,
+    n_comment character varying(152)
+)
+WITH (appendonly=false) DISTRIBUTED REPLICATED;
+
+CREATE TABLE ao_orders (
+    o_orderkey bigint NOT NULL,
+    o_custkey integer NOT NULL,
+    o_orderstatus character(1) NOT NULL,
+    o_totalprice numeric(15,2) NOT NULL,
+    o_orderdate date NOT NULL,
+    o_orderpriority character(15) NOT NULL,
+    o_clerk character(15) NOT NULL,
+    o_shippriority integer NOT NULL,
+    o_comment character varying(79) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED BY (o_orderkey);
+
+CREATE TABLE ao_part (
+    p_partkey integer NOT NULL,
+    p_name character varying(55) NOT NULL,
+    p_mfgr character(25) NOT NULL,
+    p_brand character(10) NOT NULL,
+    p_type character varying(25) NOT NULL,
+    p_size integer NOT NULL,
+    p_container character(10) NOT NULL,
+    p_retailprice numeric(15,2) NOT NULL,
+    p_comment character varying(23) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED BY (p_partkey);
+
+CREATE TABLE ao_partsupp (
+    ps_partkey integer NOT NULL,
+    ps_suppkey integer NOT NULL,
+    ps_availqty integer NOT NULL,
+    ps_supplycost numeric(15,2) NOT NULL,
+    ps_comment character varying(199) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED REPLICATED;
+
+CREATE TABLE ao_region (
+    r_regionkey integer NOT NULL,
+    r_name character(25) NOT NULL,
+    r_comment character varying(152)
+)
+WITH (appendonly=true) DISTRIBUTED REPLICATED;
+
+CREATE TABLE ao_supplier (
+    s_suppkey integer NOT NULL,
+    s_name character(25) NOT NULL,
+    s_address character varying(40) NOT NULL,
+    s_nationkey integer NOT NULL,
+    s_phone character(15) NOT NULL,
+    s_acctbal numeric(15,2) NOT NULL,
+    s_comment character varying(101) NOT NULL
+)
+WITH (appendonly=true) DISTRIBUTED REPLICATED;
+
+\copy ao_customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from '@abs_srcdir@/data/customer.csv' with delimiter '|';
+\copy ao_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem_small.csv' with delimiter '|';
+\copy ao_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem.csv' with delimiter '|';
+\copy ao_nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from '@abs_srcdir@/data/nation.csv' with delimiter '|';
+\copy ao_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order_small.csv' with delimiter '|';
+\copy ao_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order.csv' with delimiter '|';
+\copy ao_part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from '@abs_srcdir@/data/part.csv' with delimiter '|';
+\copy ao_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
+\copy ao_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
+\copy ao_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+
+
+CREATE TABLE co_customer (
+    c_custkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_name character varying(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_address character varying(40) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_nationkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_phone character(15) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_acctbal numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_mktsegment character(10) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    c_comment character varying(117) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (c_custkey);
+
+CREATE TABLE co_lineitem (
+    l_orderkey bigint NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_partkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_suppkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_linenumber integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_quantity numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_extendedprice numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_discount numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_tax numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_returnflag character(1) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_linestatus character(1) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_shipdate date NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_commitdate date NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_receiptdate date NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_shipinstruct character(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_shipmode character(10) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    l_comment character varying(44) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (l_orderkey);
+
+CREATE TABLE co_nation (
+    n_nationkey integer ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    n_name character(25) ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    n_regionkey integer ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    n_comment character varying(152) ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (n_nationkey);
+
+CREATE TABLE co_orders (
+    o_orderkey bigint NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_custkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_orderstatus character(1) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_totalprice numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_orderdate date NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_orderpriority character(15) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_clerk character(15) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_shippriority integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    o_comment character varying(79) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (o_orderkey);
+
+CREATE TABLE co_part (
+    p_partkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_name character varying(55) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_mfgr character(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_brand character(10) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_type character varying(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_size integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_container character(10) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_retailprice numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    p_comment character varying(23) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED REPLICATED;
+
+CREATE TABLE co_partsupp (
+    ps_partkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    ps_suppkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    ps_availqty integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    ps_supplycost numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    ps_comment character varying(199) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED REPLICATED;
+
+CREATE TABLE co_region (
+    r_regionkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    r_name character(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    r_comment character varying(152) ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (r_regionkey);
+
+CREATE TABLE co_supplier (
+    s_suppkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_name character(25) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_address character varying(40) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_nationkey integer NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_phone character(15) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_acctbal numeric(15,2) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+    s_comment character varying(101) NOT NULL ENCODING (compresstype=none,blocksize=32768,compresslevel=0)
+)
+WITH (appendonly=true, orientation=column) DISTRIBUTED BY (s_suppkey);
+
+\copy co_customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from '@abs_srcdir@/data/customer.csv' with delimiter '|';
+\copy co_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem_small.csv' with delimiter '|';
+\copy co_lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from '@abs_srcdir@/data/lineitem.csv' with delimiter '|'; 
+\copy co_nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from '@abs_srcdir@/data/nation.csv' with delimiter '|';
+\copy co_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order_small.csv' with delimiter '|';
+\copy co_orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from '@abs_srcdir@/data/order.csv' with delimiter '|'; 
+\copy co_part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT) from '@abs_srcdir@/data/part.csv' with delimiter '|'; 
+\copy co_partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from '@abs_srcdir@/data/partsupp.csv' with delimiter '|';
+\copy co_region ( R_REGIONKEY,R_NAME,R_COMMENT) from '@abs_srcdir@/data/region.csv' with delimiter '|';
+\copy co_supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from '@abs_srcdir@/data/supplier.csv' with delimiter '|';
+
+select  'mpph1',
+	l_returnflag,
+	l_linestatus,
+	sum(l_quantity) as sum_qty,
+	sum(l_extendedprice) as sum_base_price,
+	sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+	sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+	avg(l_quantity) as avg_qty,
+	avg(l_extendedprice) as avg_price,
+	avg(l_discount) as avg_disc,
+	count(*) as count_order
+from
+	heap_lineitem
+where
+	l_shipdate <= date '1998-12-01' - interval '108 day'
+group by
+	l_returnflag,
+	l_linestatus
+order by
+	l_returnflag,
+	l_linestatus;
+
+select  'mpph2',
+	s.s_acctbal,
+	s.s_name,
+	n.n_name,
+	p.p_partkey,
+	p.p_mfgr,
+	s.s_address,
+	s.s_phone,
+	s.s_comment 
+from 
+	heap_supplier s, 
+	heap_partsupp ps, 
+	heap_nation n, 
+	heap_region r, 
+	heap_part p, 
+	(select p_partkey, min(ps_supplycost) as min_ps_cost 
+		from 
+			heap_part, 
+			heap_partsupp , 	
+			heap_supplier,
+			heap_nation, 
+			heap_region 
+		where 
+			p_partkey=ps_partkey 
+			and s_suppkey = ps_suppkey 
+			and s_nationkey = n_nationkey 
+			and n_regionkey = r_regionkey 
+			and r_name = 'EUROPE' 
+		group by p_partkey ) g 
+where 
+	p.p_partkey = ps.ps_partkey 
+	and g.p_partkey = p.p_partkey 
+	and g. min_ps_cost = ps.ps_supplycost 
+	and s.s_suppkey = ps.ps_suppkey 
+	and p.p_size = 45 
+	and p.p_type like '%NICKEL' 
+	and s.s_nationkey = n.n_nationkey 
+	and n.n_regionkey = r.r_regionkey 
+	and r.r_name = 'EUROPE' 
+order by 
+	s.s_acctbal desc,
+	n.n_name,
+	s.s_name,
+	p.p_partkey
+LIMIT 100;
+
+select
+	s_acctbal,
+	s_name,
+	n_name,
+	p_partkey,
+	p_mfgr,
+	s_address,
+	s_phone,
+	s_comment
+from
+	heap_part,
+	heap_supplier,
+	heap_partsupp,
+	heap_nation,
+	heap_region
+where
+	p_partkey = ps_partkey
+	and s_suppkey = ps_suppkey
+	and p_size = 45
+	and p_type like '%NICKEL'
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'EUROPE'
+	and ps_supplycost = (
+		select
+			min(ps_supplycost)
+		from
+			heap_partsupp,
+			heap_supplier,
+			heap_nation,
+			heap_region
+		where
+			p_partkey = ps_partkey
+			and s_suppkey = ps_suppkey
+			and s_nationkey = n_nationkey
+			and n_regionkey = r_regionkey
+			and r_name = 'EUROPE'
+	)
+order by
+	s_acctbal desc,
+	n_name,
+	s_name,
+	p_partkey
+LIMIT 100;
+
+select  'mpph3',
+	l_orderkey,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	o_orderdate,
+	o_shippriority
+from
+	heap_customer,
+	heap_orders,
+	heap_lineitem
+where
+	c_mktsegment = 'MACHINERY'
+	and c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate < date '1995-03-15'
+	and l_shipdate > date '1995-03-15'
+group by
+	l_orderkey,
+	o_orderdate,
+	o_shippriority
+order by
+	revenue desc,
+	o_orderdate
+LIMIT 10;
+
+select  'mpph4',
+        o_orderpriority,
+        count(*) as order_count
+from
+        heap_orders
+where
+        o_orderdate >= date '1994-05-01'
+        and o_orderdate < date '1994-05-01' + interval '3 month'
+        and exists (
+                select
+                        *
+                from
+                        heap_lineitem
+                where
+                        l_orderkey = o_orderkey
+                        and l_commitdate < l_receiptdate
+        )
+group by
+        o_orderpriority
+order by
+        o_orderpriority;
+
+select  'mpph5',
+	n_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue
+from
+	heap_customer,
+	heap_orders,
+	heap_lineitem,
+	heap_supplier,
+	heap_nation,
+	heap_region
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and l_suppkey = s_suppkey
+	and c_nationkey = s_nationkey
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'AMERICA'
+	and o_orderdate >= date '1997-01-01'
+	and o_orderdate < date '1997-01-01' + interval '1 year'
+group by
+	n_name
+order by
+	revenue desc;
+
+select  'mpph6',
+	sum(l_extendedprice * l_discount) as revenue
+from
+	heap_lineitem
+where
+	l_shipdate >= date '1996-01-01'
+	and l_shipdate < date '1996-01-01' + interval '1 year'
+	and l_discount between 0.04 - 0.01 and 0.04 + 0.01
+	and l_quantity < 24;
+
+select  'mpph7',
+	supp_nation,
+	cust_nation,
+	l_year,
+	sum(volume) as revenue
+from
+	(
+		select
+			n1.n_name as supp_nation,
+			n2.n_name as cust_nation,
+			extract(year from l_shipdate) as l_year,
+			l_extendedprice * (1 - l_discount) as volume
+		from
+			heap_supplier,
+			heap_lineitem,
+			heap_orders,
+			heap_customer,
+			heap_nation n1,
+			heap_nation n2
+		where
+			s_suppkey = l_suppkey
+			and o_orderkey = l_orderkey
+			and c_custkey = o_custkey
+			and s_nationkey = n1.n_nationkey
+			and c_nationkey = n2.n_nationkey
+			and (
+				(n1.n_name = 'MOZAMBIQUE' and n2.n_name = 'GERMANY')
+				or (n1.n_name = 'GERMANY' and n2.n_name = 'MOZAMBIQUE')
+			)
+			and l_shipdate between date '1995-01-01' and date '1996-12-31'
+	) as shipping
+group by
+	supp_nation,
+	cust_nation,
+	l_year
+order by
+	supp_nation,
+	cust_nation,
+	l_year;
+
+select  'mpph8',
+	o_year,
+	sum(case
+		when nation = 'PERU' then volume
+		else 0
+	end) / sum(volume) as mkt_share
+from
+	(
+		select
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) as volume,
+			n2.n_name as nation
+		from
+			heap_part,
+			heap_supplier,
+			heap_lineitem,
+			heap_orders,
+			heap_customer,
+			heap_nation n1,
+			heap_nation n2,
+			heap_region
+		where
+			p_partkey = l_partkey
+			and s_suppkey = l_suppkey
+			and l_orderkey = o_orderkey
+			and o_custkey = c_custkey
+			and c_nationkey = n1.n_nationkey
+			and n1.n_regionkey = r_regionkey
+			and r_name = 'AMERICA'
+			and s_nationkey = n2.n_nationkey
+			and o_orderdate between date '1995-01-01' and date '1996-12-31'
+			and p_type = 'MEDIUM POLISHED TIN'
+	) as all_nations
+group by
+	o_year
+order by
+	o_year;
+
+select  'mpph9',
+	nation,
+	o_year,
+	sum(amount) as sum_profit
+from
+	(
+		select
+			n_name as nation,
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
+		from
+			heap_part,
+			heap_supplier,
+			heap_lineitem,
+			heap_partsupp,
+			heap_orders,
+			heap_nation
+		where
+			s_suppkey = l_suppkey
+			and ps_suppkey = l_suppkey
+			and ps_partkey = l_partkey
+			and p_partkey = l_partkey
+			and o_orderkey = l_orderkey
+			and s_nationkey = n_nationkey
+			and p_name like '%tan%'
+	) as profit
+group by
+	nation,
+	o_year
+order by
+	nation,
+	o_year desc;
+
+select  'mpph10',
+	c_custkey,
+	c_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	c_acctbal,
+	n_name,
+	c_address,
+	c_phone,
+	c_comment
+from
+	heap_customer,
+	heap_orders,
+	heap_lineitem,
+	heap_nation
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate >= date '1994-10-01'
+	and o_orderdate < date '1994-10-01' + interval '3 month'
+	and l_returnflag = 'R'
+	and c_nationkey = n_nationkey
+group by
+	c_custkey,
+	c_name,
+	c_acctbal,
+	c_phone,
+	n_name,
+	c_address,
+	c_comment
+order by
+	revenue desc
+LIMIT 20;
+
+select  'mpph11',
+	ps_partkey,
+	sum(ps_supplycost * ps_availqty) as value
+from
+	heap_partsupp,
+	heap_supplier,
+	heap_nation
+where
+	ps_suppkey = s_suppkey
+	and s_nationkey = n_nationkey
+	and n_name = 'ROMANIA'
+group by
+	ps_partkey having
+		sum(ps_supplycost * ps_availqty) > (
+			select
+				sum(ps_supplycost * ps_availqty) * 0.0001000000
+			from
+				heap_partsupp,
+				heap_supplier,
+				heap_nation
+			where
+				ps_suppkey = s_suppkey
+				and s_nationkey = n_nationkey
+				and n_name = 'ROMANIA'
+		)
+order by
+	value desc;
+
+select  'mpph12',
+	l_shipmode,
+	sum(case
+		when o_orderpriority = '1-URGENT'
+			or o_orderpriority = '2-HIGH'
+			then 1
+		else 0
+	end) as high_line_count,
+	sum(case
+		when o_orderpriority <> '1-URGENT'
+			and o_orderpriority <> '2-HIGH'
+			then 1
+		else 0
+	end) as low_line_count
+from
+	heap_orders,
+	heap_lineitem
+where
+	o_orderkey = l_orderkey
+	and l_shipmode in ('RAIL', 'MAIL')
+	and l_commitdate < l_receiptdate
+	and l_shipdate < l_commitdate
+	and l_receiptdate >= date '1993-01-01'
+	and l_receiptdate < date '1993-01-01' + interval '1 year'
+group by
+	l_shipmode
+order by
+	l_shipmode;
+
+select  'mpph13',
+	c_count,
+	count(*) as custdist
+from
+	(
+		select
+			c_custkey,
+			count(o_orderkey)
+		from
+			heap_customer left outer join heap_orders on
+				c_custkey = o_custkey
+				and o_comment not like '%express%deposits%'
+		group by
+			c_custkey
+	) as c_orders (c_custkey, c_count)
+group by
+	c_count
+order by
+	custdist desc,
+	c_count desc;
+
+select  'mpph14',
+	100.00 * sum(case
+		when p_type like 'PROMO%'
+			then l_extendedprice * (1 - l_discount)
+		else 0
+	end) / sum(l_extendedprice * (1 - l_discount)) as promo_revenue
+from
+	heap_lineitem,
+	heap_part
+where
+	l_partkey = p_partkey
+	and l_shipdate >= date '1993-01-01'
+	and l_shipdate < date '1993-01-01' + interval '1 month';
+create view revenue0 (supplier_no, total_revenue) as
+	select
+		l_suppkey,
+		sum(l_extendedprice * (1 - l_discount))
+	from
+		heap_lineitem
+	where
+		l_shipdate >= date '1993-01-01'
+		and l_shipdate < date '1993-01-01' + interval '3 month'
+	group by
+		l_suppkey;
+
+select  'mpph15',
+	s_suppkey,
+	s_name,
+	s_address,
+	s_phone,
+	total_revenue
+from
+	heap_supplier,
+	revenue0
+where
+	s_suppkey = supplier_no
+	and total_revenue = (
+		select
+			max(total_revenue)
+		from
+			revenue0
+	)
+order by
+	s_suppkey;
+
+drop view revenue0;
+
+select 'mpph16',
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	heap_part, 
+	heap_partsupp left join heap_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	heap_partsupp,
+	heap_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			heap_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select 'mpph17',
+      sum(l_extendedprice) / 7.0 as avg_yearly
+from
+      heap_lineitem,
+      (
+          select
+              p_partkey as x_partkey,
+              0.2 * avg(l_quantity) as x_avg_20
+          from
+              heap_part,
+              heap_lineitem
+          where
+              p_partkey = l_partkey
+              and p_brand = 'Brand#32'
+              and p_container = 'JUMBO PACK'
+          group by
+              p_partkey
+      ) x
+where
+      x_partkey = l_partkey
+and l_quantity < x_avg_20;
+
+select
+	sum(l_extendedprice) / 7.0 as avg_yearly
+from
+	heap_lineitem,
+	heap_part
+where
+	p_partkey = l_partkey
+	and p_brand = 'Brand#32'
+	and p_container = 'JUMBO PACK'
+	and l_quantity < (
+		select
+			0.2 * avg(l_quantity)
+		from
+			heap_lineitem
+		where
+			l_partkey = p_partkey
+	);
+
+select  'mpph18',
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice,
+	sum(l_quantity)
+from
+	heap_customer,
+	heap_orders,
+	heap_lineitem
+where
+	o_orderkey in (
+		select
+			l_orderkey
+		from
+			heap_lineitem
+		group by
+			l_orderkey having
+				sum(l_quantity) > 300
+	)
+	and c_custkey = o_custkey
+	and o_orderkey = l_orderkey
+group by
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice
+order by
+	o_totalprice desc,
+	o_orderdate
+LIMIT 100;
+
+select  'mpph19',
+	sum(l_extendedprice* (1 - l_discount)) as revenue
+from
+	heap_lineitem,
+	heap_part
+where
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#23'
+		and p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')
+		and l_quantity >= 1 and l_quantity <= 1 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#53'
+		and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
+		and l_quantity >= 10 and l_quantity <= 10 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#21'
+		and p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
+		and l_quantity >= 20 and l_quantity <= 20 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	);
+
+select  'mpph20',
+	s_name,
+	s_address 
+from 
+	heap_supplier, 
+	heap_nation 
+where 
+	s_suppkey in( 
+		select 
+			ps_suppkey 
+		from 
+			heap_partsupp, 
+			( 
+				select 
+					sum(l_quantity) as qty_sum, l_partkey, l_suppkey 
+				from 
+					heap_lineitem 
+				where 
+					l_shipdate >= date '1996-01-01' 
+					and l_shipdate < date '1996-01-01' + interval '1 year' 
+				group by l_partkey, l_suppkey ) g 
+		where 
+			g.l_partkey = ps_partkey 
+			and g.l_suppkey = ps_suppkey 
+			and ps_availqty > 0.5 * g.qty_sum 
+			and ps_partkey in ( select p_partkey from heap_part where p_name like 'medium%' ) 
+		) 
+	and s_nationkey = n_nationkey 
+	and n_name = 'UNITED STATES'
+order by 
+	s_name;
+
+select
+	s_name,
+	s_address
+from
+	heap_supplier,
+	heap_nation
+where
+	s_suppkey in (
+		select
+			ps_suppkey
+		from
+			heap_partsupp
+		where
+			ps_partkey in (
+				select
+					p_partkey
+				from
+					heap_part
+				where
+					p_name like 'medium%'
+			)
+			and ps_availqty > (
+				select
+					0.5 * sum(l_quantity)
+				from
+					heap_lineitem
+				where
+					l_partkey = ps_partkey
+					and l_suppkey = ps_suppkey
+					and l_shipdate >= date '1996-01-01'
+					and l_shipdate < date '1996-01-01' + interval '1 year'
+			)
+	)
+	and s_nationkey = n_nationkey
+	and n_name = 'UNITED STATES'
+order by
+	s_name;
+
+select  'mpph21',
+	s_name, 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
+from 
+	heap_supplier, 
+	heap_orders, 
+	heap_nation, 
+	heap_lineitem l1 
+		left join heap_lineitem l2 
+			on (l2.l_orderkey = l1.l_orderkey and l2.l_suppkey <> l1.l_suppkey) 
+		left join (
+			select 
+				l3.l_orderkey,
+				l3.l_suppkey 
+			from 
+				heap_lineitem l3 
+			where 
+				l3.l_receiptdate > l3.l_commitdate) l4 
+			on (l4.l_orderkey = l1.l_orderkey and l4.l_suppkey <> l1.l_suppkey) 
+where 
+	s_suppkey = l1.l_suppkey 
+	and o_orderkey = l1.l_orderkey 
+	and o_orderstatus = 'F' 
+	and l1.l_receiptdate > l1.l_commitdate 
+	and l2.l_orderkey is not null 
+	and l4.l_orderkey is null 
+	and s_nationkey = n_nationkey 
+	and n_name = 'MOZAMBIQUE' 
+group by 
+	s_name 
+order by 
+	numwait desc, 
+	s_name
+LIMIT 100;
+
+select  'mpph22',
+	cntrycode, 
+	count(*) as numcust, 
+	sum(c_acctbal) as totacctbal 
+from 
+	( 
+		select 
+			substring(c_phone from 1 for 2) as cntrycode, 
+			c_acctbal 
+		from 
+			heap_customer left join heap_orders 
+				on c_custkey = o_custkey 
+		where 
+			substring(c_phone from 1 for 2) in 
+				('11', '28', '21', '26', '19', '13', '22') 
+			and c_acctbal > ( 
+				select 
+					avg(c_acctbal) 
+				from 
+					heap_customer 
+				where 
+					c_acctbal > 0.00 
+					and substring(c_phone from 1 for 2) in 
+						('11', '28', '21', '26', '19', '13', '22') 
+			) 
+			and o_custkey is null 
+	) as custsale 
+group by 
+	cntrycode 
+order by 
+	cntrycode;
+
+select
+	cntrycode,
+	count(*) as numcust,
+	sum(c_acctbal) as totacctbal
+from
+	(
+		select
+			substring(c_phone from 1 for 2) as cntrycode,
+			c_acctbal
+		from
+			heap_customer
+		where
+			substring(c_phone from 1 for 2) in
+				('11', '28', '21', '26', '19', '13', '22')
+			and c_acctbal > (
+				select
+					avg(c_acctbal)
+				from
+					heap_customer
+				where
+					c_acctbal > 0.00
+					and substring(c_phone from 1 for 2) in
+						('11', '28', '21', '26', '19', '13', '22')
+			)
+			and not exists (
+				select
+					*
+				from
+					heap_orders
+				where
+					o_custkey = c_custkey
+			)
+	) as custsale
+group by
+	cntrycode
+order by
+	cntrycode;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	heap_partsupp,
+	heap_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			heap_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	heap_part, 
+	heap_partsupp left join heap_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+select  'mpph1',
+	l_returnflag,
+	l_linestatus,
+	sum(l_quantity) as sum_qty,
+	sum(l_extendedprice) as sum_base_price,
+	sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+	sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+	avg(l_quantity) as avg_qty,
+	avg(l_extendedprice) as avg_price,
+	avg(l_discount) as avg_disc,
+	count(*) as count_order
+from
+	ao_lineitem
+where
+	l_shipdate <= date '1998-12-01' - interval '108 day'
+group by
+	l_returnflag,
+	l_linestatus
+order by
+	l_returnflag,
+	l_linestatus;
+
+select  'mpph2',
+	s.s_acctbal,
+	s.s_name,
+	n.n_name,
+	p.p_partkey,
+	p.p_mfgr,
+	s.s_address,
+	s.s_phone,
+	s.s_comment 
+from 
+	ao_supplier s, 
+	ao_partsupp ps, 
+	ao_nation n, 
+	ao_region r, 
+	ao_part p, 
+	(select p_partkey, min(ps_supplycost) as min_ps_cost 
+		from 
+			ao_part, 
+			ao_partsupp , 	
+			ao_supplier,
+			ao_nation, 
+			ao_region 
+		where 
+			p_partkey=ps_partkey 
+			and s_suppkey = ps_suppkey 
+			and s_nationkey = n_nationkey 
+			and n_regionkey = r_regionkey 
+			and r_name = 'EUROPE' 
+		group by p_partkey ) g 
+where 
+	p.p_partkey = ps.ps_partkey 
+	and g.p_partkey = p.p_partkey 
+	and g. min_ps_cost = ps.ps_supplycost 
+	and s.s_suppkey = ps.ps_suppkey 
+	and p.p_size = 45 
+	and p.p_type like '%NICKEL' 
+	and s.s_nationkey = n.n_nationkey 
+	and n.n_regionkey = r.r_regionkey 
+	and r.r_name = 'EUROPE' 
+order by 
+	s.s_acctbal desc,
+	n.n_name,
+	s.s_name,
+	p.p_partkey
+LIMIT 100;
+
+select
+	s_acctbal,
+	s_name,
+	n_name,
+	p_partkey,
+	p_mfgr,
+	s_address,
+	s_phone,
+	s_comment
+from
+	ao_part,
+	ao_supplier,
+	ao_partsupp,
+	ao_nation,
+	ao_region
+where
+	p_partkey = ps_partkey
+	and s_suppkey = ps_suppkey
+	and p_size = 45
+	and p_type like '%NICKEL'
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'EUROPE'
+	and ps_supplycost = (
+		select
+			min(ps_supplycost)
+		from
+			ao_partsupp,
+			ao_supplier,
+			ao_nation,
+			ao_region
+		where
+			p_partkey = ps_partkey
+			and s_suppkey = ps_suppkey
+			and s_nationkey = n_nationkey
+			and n_regionkey = r_regionkey
+			and r_name = 'EUROPE'
+	)
+order by
+	s_acctbal desc,
+	n_name,
+	s_name,
+	p_partkey
+LIMIT 100;
+
+select  'mpph3',
+	l_orderkey,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	o_orderdate,
+	o_shippriority
+from
+	ao_customer,
+	ao_orders,
+	ao_lineitem
+where
+	c_mktsegment = 'MACHINERY'
+	and c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate < date '1995-03-15'
+	and l_shipdate > date '1995-03-15'
+group by
+	l_orderkey,
+	o_orderdate,
+	o_shippriority
+order by
+	revenue desc,
+	o_orderdate
+LIMIT 10;
+
+select  'mpph4',
+        o_orderpriority,
+        count(*) as order_count
+from
+        ao_orders
+where
+        o_orderdate >= date '1994-05-01'
+        and o_orderdate < date '1994-05-01' + interval '3 month'
+        and exists (
+                select
+                        *
+                from
+                        ao_lineitem
+                where
+                        l_orderkey = o_orderkey
+                        and l_commitdate < l_receiptdate
+        )
+group by
+        o_orderpriority
+order by
+        o_orderpriority;
+
+select  'mpph5',
+	n_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue
+from
+	ao_customer,
+	ao_orders,
+	ao_lineitem,
+	ao_supplier,
+	ao_nation,
+	ao_region
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and l_suppkey = s_suppkey
+	and c_nationkey = s_nationkey
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'AMERICA'
+	and o_orderdate >= date '1997-01-01'
+	and o_orderdate < date '1997-01-01' + interval '1 year'
+group by
+	n_name
+order by
+	revenue desc;
+
+select  'mpph6',
+	sum(l_extendedprice * l_discount) as revenue
+from
+	ao_lineitem
+where
+	l_shipdate >= date '1996-01-01'
+	and l_shipdate < date '1996-01-01' + interval '1 year'
+	and l_discount between 0.04 - 0.01 and 0.04 + 0.01
+	and l_quantity < 24;
+
+select  'mpph7',
+	supp_nation,
+	cust_nation,
+	l_year,
+	sum(volume) as revenue
+from
+	(
+		select
+			n1.n_name as supp_nation,
+			n2.n_name as cust_nation,
+			extract(year from l_shipdate) as l_year,
+			l_extendedprice * (1 - l_discount) as volume
+		from
+			ao_supplier,
+			ao_lineitem,
+			ao_orders,
+			ao_customer,
+			ao_nation n1,
+			ao_nation n2
+		where
+			s_suppkey = l_suppkey
+			and o_orderkey = l_orderkey
+			and c_custkey = o_custkey
+			and s_nationkey = n1.n_nationkey
+			and c_nationkey = n2.n_nationkey
+			and (
+				(n1.n_name = 'MOZAMBIQUE' and n2.n_name = 'GERMANY')
+				or (n1.n_name = 'GERMANY' and n2.n_name = 'MOZAMBIQUE')
+			)
+			and l_shipdate between date '1995-01-01' and date '1996-12-31'
+	) as shipping
+group by
+	supp_nation,
+	cust_nation,
+	l_year
+order by
+	supp_nation,
+	cust_nation,
+	l_year;
+
+select  'mpph8',
+	o_year,
+	sum(case
+		when nation = 'PERU' then volume
+		else 0
+	end) / sum(volume) as mkt_share
+from
+	(
+		select
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) as volume,
+			n2.n_name as nation
+		from
+			ao_part,
+			ao_supplier,
+			ao_lineitem,
+			ao_orders,
+			ao_customer,
+			ao_nation n1,
+			ao_nation n2,
+			ao_region
+		where
+			p_partkey = l_partkey
+			and s_suppkey = l_suppkey
+			and l_orderkey = o_orderkey
+			and o_custkey = c_custkey
+			and c_nationkey = n1.n_nationkey
+			and n1.n_regionkey = r_regionkey
+			and r_name = 'AMERICA'
+			and s_nationkey = n2.n_nationkey
+			and o_orderdate between date '1995-01-01' and date '1996-12-31'
+			and p_type = 'MEDIUM POLISHED TIN'
+	) as all_nations
+group by
+	o_year
+order by
+	o_year;
+
+select  'mpph9',
+	nation,
+	o_year,
+	sum(amount) as sum_profit
+from
+	(
+		select
+			n_name as nation,
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
+		from
+			ao_part,
+			ao_supplier,
+			ao_lineitem,
+			ao_partsupp,
+			ao_orders,
+			ao_nation
+		where
+			s_suppkey = l_suppkey
+			and ps_suppkey = l_suppkey
+			and ps_partkey = l_partkey
+			and p_partkey = l_partkey
+			and o_orderkey = l_orderkey
+			and s_nationkey = n_nationkey
+			and p_name like '%tan%'
+	) as profit
+group by
+	nation,
+	o_year
+order by
+	nation,
+	o_year desc;
+
+select  'mpph10',
+	c_custkey,
+	c_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	c_acctbal,
+	n_name,
+	c_address,
+	c_phone,
+	c_comment
+from
+	ao_customer,
+	ao_orders,
+	ao_lineitem,
+	ao_nation
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate >= date '1994-10-01'
+	and o_orderdate < date '1994-10-01' + interval '3 month'
+	and l_returnflag = 'R'
+	and c_nationkey = n_nationkey
+group by
+	c_custkey,
+	c_name,
+	c_acctbal,
+	c_phone,
+	n_name,
+	c_address,
+	c_comment
+order by
+	revenue desc
+LIMIT 20;
+
+select  'mpph11',
+	ps_partkey,
+	sum(ps_supplycost * ps_availqty) as value
+from
+	ao_partsupp,
+	ao_supplier,
+	ao_nation
+where
+	ps_suppkey = s_suppkey
+	and s_nationkey = n_nationkey
+	and n_name = 'ROMANIA'
+group by
+	ps_partkey having
+		sum(ps_supplycost * ps_availqty) > (
+			select
+				sum(ps_supplycost * ps_availqty) * 0.0001000000
+			from
+				ao_partsupp,
+				ao_supplier,
+				ao_nation
+			where
+				ps_suppkey = s_suppkey
+				and s_nationkey = n_nationkey
+				and n_name = 'ROMANIA'
+		)
+order by
+	value desc;
+
+select  'mpph12',
+	l_shipmode,
+	sum(case
+		when o_orderpriority = '1-URGENT'
+			or o_orderpriority = '2-HIGH'
+			then 1
+		else 0
+	end) as high_line_count,
+	sum(case
+		when o_orderpriority <> '1-URGENT'
+			and o_orderpriority <> '2-HIGH'
+			then 1
+		else 0
+	end) as low_line_count
+from
+	ao_orders,
+	ao_lineitem
+where
+	o_orderkey = l_orderkey
+	and l_shipmode in ('RAIL', 'MAIL')
+	and l_commitdate < l_receiptdate
+	and l_shipdate < l_commitdate
+	and l_receiptdate >= date '1993-01-01'
+	and l_receiptdate < date '1993-01-01' + interval '1 year'
+group by
+	l_shipmode
+order by
+	l_shipmode;
+
+select  'mpph13',
+	c_count,
+	count(*) as custdist
+from
+	(
+		select
+			c_custkey,
+			count(o_orderkey)
+		from
+			ao_customer left outer join ao_orders on
+				c_custkey = o_custkey
+				and o_comment not like '%express%deposits%'
+		group by
+			c_custkey
+	) as c_orders (c_custkey, c_count)
+group by
+	c_count
+order by
+	custdist desc,
+	c_count desc;
+
+select  'mpph14',
+	100.00 * sum(case
+		when p_type like 'PROMO%'
+			then l_extendedprice * (1 - l_discount)
+		else 0
+	end) / sum(l_extendedprice * (1 - l_discount)) as promo_revenue
+from
+	ao_lineitem,
+	ao_part
+where
+	l_partkey = p_partkey
+	and l_shipdate >= date '1993-01-01'
+	and l_shipdate < date '1993-01-01' + interval '1 month';
+create view revenue0 (supplier_no, total_revenue) as
+	select
+		l_suppkey,
+		sum(l_extendedprice * (1 - l_discount))
+	from
+		ao_lineitem
+	where
+		l_shipdate >= date '1993-01-01'
+		and l_shipdate < date '1993-01-01' + interval '3 month'
+	group by
+		l_suppkey;
+
+select  'mpph15',
+	s_suppkey,
+	s_name,
+	s_address,
+	s_phone,
+	total_revenue
+from
+	ao_supplier,
+	revenue0
+where
+	s_suppkey = supplier_no
+	and total_revenue = (
+		select
+			max(total_revenue)
+		from
+			revenue0
+	)
+order by
+	s_suppkey;
+
+drop view revenue0;
+
+select 'mpph16',
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	ao_part, 
+	ao_partsupp left join ao_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	ao_partsupp,
+	ao_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			ao_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select 'mpph17',
+      sum(l_extendedprice) / 7.0 as avg_yearly
+from
+      ao_lineitem,
+      (
+          select
+              p_partkey as x_partkey,
+              0.2 * avg(l_quantity) as x_avg_20
+          from
+              ao_part,
+              ao_lineitem
+          where
+              p_partkey = l_partkey
+              and p_brand = 'Brand#32'
+              and p_container = 'JUMBO PACK'
+          group by
+              p_partkey
+      ) x
+where
+      x_partkey = l_partkey
+and l_quantity < x_avg_20;
+
+select
+	sum(l_extendedprice) / 7.0 as avg_yearly
+from
+	ao_lineitem,
+	ao_part
+where
+	p_partkey = l_partkey
+	and p_brand = 'Brand#32'
+	and p_container = 'JUMBO PACK'
+	and l_quantity < (
+		select
+			0.2 * avg(l_quantity)
+		from
+			ao_lineitem
+		where
+			l_partkey = p_partkey
+	);
+
+select  'mpph18',
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice,
+	sum(l_quantity)
+from
+	ao_customer,
+	ao_orders,
+	ao_lineitem
+where
+	o_orderkey in (
+		select
+			l_orderkey
+		from
+			ao_lineitem
+		group by
+			l_orderkey having
+				sum(l_quantity) > 300
+	)
+	and c_custkey = o_custkey
+	and o_orderkey = l_orderkey
+group by
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice
+order by
+	o_totalprice desc,
+	o_orderdate
+LIMIT 100;
+
+select  'mpph19',
+	sum(l_extendedprice* (1 - l_discount)) as revenue
+from
+	ao_lineitem,
+	ao_part
+where
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#23'
+		and p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')
+		and l_quantity >= 1 and l_quantity <= 1 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#53'
+		and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
+		and l_quantity >= 10 and l_quantity <= 10 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#21'
+		and p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
+		and l_quantity >= 20 and l_quantity <= 20 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	);
+
+select  'mpph20',
+	s_name,
+	s_address 
+from 
+	ao_supplier, 
+	ao_nation 
+where 
+	s_suppkey in( 
+		select 
+			ps_suppkey 
+		from 
+			ao_partsupp, 
+			( 
+				select 
+					sum(l_quantity) as qty_sum, l_partkey, l_suppkey 
+				from 
+					ao_lineitem 
+				where 
+					l_shipdate >= date '1996-01-01' 
+					and l_shipdate < date '1996-01-01' + interval '1 year' 
+				group by l_partkey, l_suppkey ) g 
+		where 
+			g.l_partkey = ps_partkey 
+			and g.l_suppkey = ps_suppkey 
+			and ps_availqty > 0.5 * g.qty_sum 
+			and ps_partkey in ( select p_partkey from ao_part where p_name like 'medium%' ) 
+		) 
+	and s_nationkey = n_nationkey 
+	and n_name = 'UNITED STATES'
+order by 
+	s_name;
+
+select
+	s_name,
+	s_address
+from
+	ao_supplier,
+	ao_nation
+where
+	s_suppkey in (
+		select
+			ps_suppkey
+		from
+			ao_partsupp
+		where
+			ps_partkey in (
+				select
+					p_partkey
+				from
+					ao_part
+				where
+					p_name like 'medium%'
+			)
+			and ps_availqty > (
+				select
+					0.5 * sum(l_quantity)
+				from
+					ao_lineitem
+				where
+					l_partkey = ps_partkey
+					and l_suppkey = ps_suppkey
+					and l_shipdate >= date '1996-01-01'
+					and l_shipdate < date '1996-01-01' + interval '1 year'
+			)
+	)
+	and s_nationkey = n_nationkey
+	and n_name = 'UNITED STATES'
+order by
+	s_name;
+
+select  'mpph21',
+	s_name, 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
+from 
+	ao_supplier, 
+	ao_orders, 
+	ao_nation, 
+	ao_lineitem l1 
+		left join ao_lineitem l2 
+			on (l2.l_orderkey = l1.l_orderkey and l2.l_suppkey <> l1.l_suppkey) 
+		left join (
+			select 
+				l3.l_orderkey,
+				l3.l_suppkey 
+			from 
+				ao_lineitem l3 
+			where 
+				l3.l_receiptdate > l3.l_commitdate) l4 
+			on (l4.l_orderkey = l1.l_orderkey and l4.l_suppkey <> l1.l_suppkey) 
+where 
+	s_suppkey = l1.l_suppkey 
+	and o_orderkey = l1.l_orderkey 
+	and o_orderstatus = 'F' 
+	and l1.l_receiptdate > l1.l_commitdate 
+	and l2.l_orderkey is not null 
+	and l4.l_orderkey is null 
+	and s_nationkey = n_nationkey 
+	and n_name = 'MOZAMBIQUE' 
+group by 
+	s_name 
+order by 
+	numwait desc, 
+	s_name
+LIMIT 100;
+
+select  'mpph22',
+	cntrycode, 
+	count(*) as numcust, 
+	sum(c_acctbal) as totacctbal 
+from 
+	( 
+		select 
+			substring(c_phone from 1 for 2) as cntrycode, 
+			c_acctbal 
+		from 
+			ao_customer left join ao_orders 
+				on c_custkey = o_custkey 
+		where 
+			substring(c_phone from 1 for 2) in 
+				('11', '28', '21', '26', '19', '13', '22') 
+			and c_acctbal > ( 
+				select 
+					avg(c_acctbal) 
+				from 
+					ao_customer 
+				where 
+					c_acctbal > 0.00 
+					and substring(c_phone from 1 for 2) in 
+						('11', '28', '21', '26', '19', '13', '22') 
+			) 
+			and o_custkey is null 
+	) as custsale 
+group by 
+	cntrycode 
+order by 
+	cntrycode;
+
+select
+	cntrycode,
+	count(*) as numcust,
+	sum(c_acctbal) as totacctbal
+from
+	(
+		select
+			substring(c_phone from 1 for 2) as cntrycode,
+			c_acctbal
+		from
+			ao_customer
+		where
+			substring(c_phone from 1 for 2) in
+				('11', '28', '21', '26', '19', '13', '22')
+			and c_acctbal > (
+				select
+					avg(c_acctbal)
+				from
+					ao_customer
+				where
+					c_acctbal > 0.00
+					and substring(c_phone from 1 for 2) in
+						('11', '28', '21', '26', '19', '13', '22')
+			)
+			and not exists (
+				select
+					*
+				from
+					ao_orders
+				where
+					o_custkey = c_custkey
+			)
+	) as custsale
+group by
+	cntrycode
+order by
+	cntrycode;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	ao_partsupp,
+	ao_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			ao_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	ao_part, 
+	ao_partsupp left join ao_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+select  'mpph1',
+	l_returnflag,
+	l_linestatus,
+	sum(l_quantity) as sum_qty,
+	sum(l_extendedprice) as sum_base_price,
+	sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+	sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+	avg(l_quantity) as avg_qty,
+	avg(l_extendedprice) as avg_price,
+	avg(l_discount) as avg_disc,
+	count(*) as count_order
+from
+	co_lineitem
+where
+	l_shipdate <= date '1998-12-01' - interval '108 day'
+group by
+	l_returnflag,
+	l_linestatus
+order by
+	l_returnflag,
+	l_linestatus;
+
+select  'mpph2',
+	s.s_acctbal,
+	s.s_name,
+	n.n_name,
+	p.p_partkey,
+	p.p_mfgr,
+	s.s_address,
+	s.s_phone,
+	s.s_comment 
+from 
+	co_supplier s, 
+	co_partsupp ps, 
+	co_nation n, 
+	co_region r, 
+	co_part p, 
+	(select p_partkey, min(ps_supplycost) as min_ps_cost 
+		from 
+			co_part, 
+			co_partsupp, 	
+			co_supplier,
+			co_nation, 
+			co_region 
+		where 
+			p_partkey=ps_partkey 
+			and s_suppkey = ps_suppkey 
+			and s_nationkey = n_nationkey 
+			and n_regionkey = r_regionkey 
+			and r_name = 'EUROPE' 
+		group by p_partkey ) g 
+where 
+	p.p_partkey = ps.ps_partkey 
+	and g.p_partkey = p.p_partkey 
+	and g. min_ps_cost = ps.ps_supplycost 
+	and s.s_suppkey = ps.ps_suppkey 
+	and p.p_size = 45 
+	and p.p_type like '%NICKEL' 
+	and s.s_nationkey = n.n_nationkey 
+	and n.n_regionkey = r.r_regionkey 
+	and r.r_name = 'EUROPE' 
+order by 
+	s.s_acctbal desc,
+	n.n_name,
+	s.s_name,
+	p.p_partkey
+LIMIT 100;
+
+select
+	s_acctbal,
+	s_name,
+	n_name,
+	p_partkey,
+	p_mfgr,
+	s_address,
+	s_phone,
+	s_comment
+from
+	co_part,
+	co_supplier,
+	co_partsupp,
+	co_nation,
+	co_region
+where
+	p_partkey = ps_partkey
+	and s_suppkey = ps_suppkey
+	and p_size = 45
+	and p_type like '%NICKEL'
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'EUROPE'
+	and ps_supplycost = (
+		select
+			min(ps_supplycost)
+		from
+			co_partsupp,
+			co_supplier,
+			co_nation,
+			co_region
+		where
+			p_partkey = ps_partkey
+			and s_suppkey = ps_suppkey
+			and s_nationkey = n_nationkey
+			and n_regionkey = r_regionkey
+			and r_name = 'EUROPE'
+	)
+order by
+	s_acctbal desc,
+	n_name,
+	s_name,
+	p_partkey
+LIMIT 100;
+
+select  'mpph3',
+	l_orderkey,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	o_orderdate,
+	o_shippriority
+from
+	co_customer,
+	co_orders,
+	co_lineitem
+where
+	c_mktsegment = 'MACHINERY'
+	and c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate < date '1995-03-15'
+	and l_shipdate > date '1995-03-15'
+group by
+	l_orderkey,
+	o_orderdate,
+	o_shippriority
+order by
+	revenue desc,
+	o_orderdate
+LIMIT 10;
+
+select  'mpph4',
+        o_orderpriority,
+        count(*) as order_count
+from
+        co_orders
+where
+        o_orderdate >= date '1994-05-01'
+        and o_orderdate < date '1994-05-01' + interval '3 month'
+        and exists (
+                select
+                        *
+                from
+                        co_lineitem
+                where
+                        l_orderkey = o_orderkey
+                        and l_commitdate < l_receiptdate
+        )
+group by
+        o_orderpriority
+order by
+        o_orderpriority;
+
+select  'mpph5',
+	n_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue
+from
+	co_customer,
+	co_orders,
+	co_lineitem,
+	co_supplier,
+	co_nation,
+	co_region
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and l_suppkey = s_suppkey
+	and c_nationkey = s_nationkey
+	and s_nationkey = n_nationkey
+	and n_regionkey = r_regionkey
+	and r_name = 'AMERICA'
+	and o_orderdate >= date '1997-01-01'
+	and o_orderdate < date '1997-01-01' + interval '1 year'
+group by
+	n_name
+order by
+	revenue desc;
+
+select  'mpph6',
+	sum(l_extendedprice * l_discount) as revenue
+from
+	co_lineitem
+where
+	l_shipdate >= date '1996-01-01'
+	and l_shipdate < date '1996-01-01' + interval '1 year'
+	and l_discount between 0.04 - 0.01 and 0.04 + 0.01
+	and l_quantity < 24;
+
+select  'mpph7',
+	supp_nation,
+	cust_nation,
+	l_year,
+	sum(volume) as revenue
+from
+	(
+		select
+			n1.n_name as supp_nation,
+			n2.n_name as cust_nation,
+			extract(year from l_shipdate) as l_year,
+			l_extendedprice * (1 - l_discount) as volume
+		from
+			co_supplier,
+			co_lineitem,
+			co_orders,
+			co_customer,
+			co_nation n1,
+			co_nation n2
+		where
+			s_suppkey = l_suppkey
+			and o_orderkey = l_orderkey
+			and c_custkey = o_custkey
+			and s_nationkey = n1.n_nationkey
+			and c_nationkey = n2.n_nationkey
+			and (
+				(n1.n_name = 'MOZAMBIQUE' and n2.n_name = 'GERMANY')
+				or (n1.n_name = 'GERMANY' and n2.n_name = 'MOZAMBIQUE')
+			)
+			and l_shipdate between date '1995-01-01' and date '1996-12-31'
+	) as shipping
+group by
+	supp_nation,
+	cust_nation,
+	l_year
+order by
+	supp_nation,
+	cust_nation,
+	l_year;
+
+select  'mpph8',
+	o_year,
+	sum(case
+		when nation = 'PERU' then volume
+		else 0
+	end) / sum(volume) as mkt_share
+from
+	(
+		select
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) as volume,
+			n2.n_name as nation
+		from
+			co_part,
+			co_supplier,
+			co_lineitem,
+			co_orders,
+			co_customer,
+			co_nation n1,
+			co_nation n2,
+			co_region
+		where
+			p_partkey = l_partkey
+			and s_suppkey = l_suppkey
+			and l_orderkey = o_orderkey
+			and o_custkey = c_custkey
+			and c_nationkey = n1.n_nationkey
+			and n1.n_regionkey = r_regionkey
+			and r_name = 'AMERICA'
+			and s_nationkey = n2.n_nationkey
+			and o_orderdate between date '1995-01-01' and date '1996-12-31'
+			and p_type = 'MEDIUM POLISHED TIN'
+	) as all_nations
+group by
+	o_year
+order by
+	o_year;
+
+select  'mpph9',
+	nation,
+	o_year,
+	sum(amount) as sum_profit
+from
+	(
+		select
+			n_name as nation,
+			extract(year from o_orderdate) as o_year,
+			l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
+		from
+			co_part,
+			co_supplier,
+			co_lineitem,
+			co_partsupp,
+			co_orders,
+			co_nation
+		where
+			s_suppkey = l_suppkey
+			and ps_suppkey = l_suppkey
+			and ps_partkey = l_partkey
+			and p_partkey = l_partkey
+			and o_orderkey = l_orderkey
+			and s_nationkey = n_nationkey
+			and p_name like '%tan%'
+	) as profit
+group by
+	nation,
+	o_year
+order by
+	nation,
+	o_year desc;
+
+select  'mpph10',
+	c_custkey,
+	c_name,
+	sum(l_extendedprice * (1 - l_discount)) as revenue,
+	c_acctbal,
+	n_name,
+	c_address,
+	c_phone,
+	c_comment
+from
+	co_customer,
+	co_orders,
+	co_lineitem,
+	co_nation
+where
+	c_custkey = o_custkey
+	and l_orderkey = o_orderkey
+	and o_orderdate >= date '1994-10-01'
+	and o_orderdate < date '1994-10-01' + interval '3 month'
+	and l_returnflag = 'R'
+	and c_nationkey = n_nationkey
+group by
+	c_custkey,
+	c_name,
+	c_acctbal,
+	c_phone,
+	n_name,
+	c_address,
+	c_comment
+order by
+	revenue desc
+LIMIT 20;
+
+select  'mpph11',
+	ps_partkey,
+	sum(ps_supplycost * ps_availqty) as value
+from
+	co_partsupp,
+	co_supplier,
+	co_nation
+where
+	ps_suppkey = s_suppkey
+	and s_nationkey = n_nationkey
+	and n_name = 'ROMANIA'
+group by
+	ps_partkey having
+		sum(ps_supplycost * ps_availqty) > (
+			select
+				sum(ps_supplycost * ps_availqty) * 0.0001000000
+			from
+				co_partsupp,
+				co_supplier,
+				co_nation
+			where
+				ps_suppkey = s_suppkey
+				and s_nationkey = n_nationkey
+				and n_name = 'ROMANIA'
+		)
+order by
+	value desc;
+
+select  'mpph12',
+	l_shipmode,
+	sum(case
+		when o_orderpriority = '1-URGENT'
+			or o_orderpriority = '2-HIGH'
+			then 1
+		else 0
+	end) as high_line_count,
+	sum(case
+		when o_orderpriority <> '1-URGENT'
+			and o_orderpriority <> '2-HIGH'
+			then 1
+		else 0
+	end) as low_line_count
+from
+	co_orders,
+	co_lineitem
+where
+	o_orderkey = l_orderkey
+	and l_shipmode in ('RAIL', 'MAIL')
+	and l_commitdate < l_receiptdate
+	and l_shipdate < l_commitdate
+	and l_receiptdate >= date '1993-01-01'
+	and l_receiptdate < date '1993-01-01' + interval '1 year'
+group by
+	l_shipmode
+order by
+	l_shipmode;
+
+select  'mpph13',
+	c_count,
+	count(*) as custdist
+from
+	(
+		select
+			c_custkey,
+			count(o_orderkey)
+		from
+			co_customer left outer join co_orders on
+				c_custkey = o_custkey
+				and o_comment not like '%express%deposits%'
+		group by
+			c_custkey
+	) as c_orders (c_custkey, c_count)
+group by
+	c_count
+order by
+	custdist desc,
+	c_count desc;
+
+select  'mpph14',
+	100.00 * sum(case
+		when p_type like 'PROMO%'
+			then l_extendedprice * (1 - l_discount)
+		else 0
+	end) / sum(l_extendedprice * (1 - l_discount)) as promo_revenue
+from
+	co_lineitem,
+	co_part
+where
+	l_partkey = p_partkey
+	and l_shipdate >= date '1993-01-01'
+	and l_shipdate < date '1993-01-01' + interval '1 month';
+create view revenue0 (supplier_no, total_revenue) as
+	select
+		l_suppkey,
+		sum(l_extendedprice * (1 - l_discount))
+	from
+		co_lineitem
+	where
+		l_shipdate >= date '1993-01-01'
+		and l_shipdate < date '1993-01-01' + interval '3 month'
+	group by
+		l_suppkey;
+
+select  'mpph15',
+	s_suppkey,
+	s_name,
+	s_address,
+	s_phone,
+	total_revenue
+from
+	co_supplier,
+	revenue0
+where
+	s_suppkey = supplier_no
+	and total_revenue = (
+		select
+			max(total_revenue)
+		from
+			revenue0
+	)
+order by
+	s_suppkey;
+
+drop view revenue0;
+
+select 'mpph16',
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	co_part, 
+	co_partsupp left join co_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	co_partsupp,
+	co_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			co_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select 'mpph17',
+      sum(l_extendedprice) / 7.0 as avg_yearly
+from
+      co_lineitem,
+      (
+          select
+              p_partkey as x_partkey,
+              0.2 * avg(l_quantity) as x_avg_20
+          from
+              co_part,
+              co_lineitem
+          where
+              p_partkey = l_partkey
+              and p_brand = 'Brand#32'
+              and p_container = 'JUMBO PACK'
+          group by
+              p_partkey
+      ) x
+where
+      x_partkey = l_partkey
+and l_quantity < x_avg_20;
+
+select
+	sum(l_extendedprice) / 7.0 as avg_yearly
+from
+	co_lineitem,
+	co_part
+where
+	p_partkey = l_partkey
+	and p_brand = 'Brand#32'
+	and p_container = 'JUMBO PACK'
+	and l_quantity < (
+		select
+			0.2 * avg(l_quantity)
+		from
+			co_lineitem
+		where
+			l_partkey = p_partkey
+	);
+
+select  'mpph18',
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice,
+	sum(l_quantity)
+from
+	co_customer,
+	co_orders,
+	co_lineitem
+where
+	o_orderkey in (
+		select
+			l_orderkey
+		from
+			co_lineitem
+		group by
+			l_orderkey having
+				sum(l_quantity) > 300
+	)
+	and c_custkey = o_custkey
+	and o_orderkey = l_orderkey
+group by
+	c_name,
+	c_custkey,
+	o_orderkey,
+	o_orderdate,
+	o_totalprice
+order by
+	o_totalprice desc,
+	o_orderdate
+LIMIT 100;
+
+select  'mpph19',
+	sum(l_extendedprice* (1 - l_discount)) as revenue
+from
+	co_lineitem,
+	co_part
+where
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#23'
+		and p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')
+		and l_quantity >= 1 and l_quantity <= 1 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#53'
+		and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
+		and l_quantity >= 10 and l_quantity <= 10 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	)
+	or
+	(
+		p_partkey = l_partkey
+		and p_brand = 'Brand#21'
+		and p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
+		and l_quantity >= 20 and l_quantity <= 20 + 10
+		and p_size between 1 and 15
+		and l_shipmode in ('AIR', 'AIR REG')
+		and l_shipinstruct = 'DELIVER IN PERSON'
+	);
+
+select  'mpph20',
+	s_name,
+	s_address 
+from 
+	co_supplier, 
+	co_nation 
+where 
+	s_suppkey in( 
+		select 
+			ps_suppkey 
+		from 
+			co_partsupp, 
+			( 
+				select 
+					sum(l_quantity) as qty_sum, l_partkey, l_suppkey 
+				from 
+					co_lineitem 
+				where 
+					l_shipdate >= date '1996-01-01' 
+					and l_shipdate < date '1996-01-01' + interval '1 year' 
+				group by l_partkey, l_suppkey ) g 
+		where 
+			g.l_partkey = ps_partkey 
+			and g.l_suppkey = ps_suppkey 
+			and ps_availqty > 0.5 * g.qty_sum 
+			and ps_partkey in ( select p_partkey from co_part where p_name like 'medium%' ) 
+		) 
+	and s_nationkey = n_nationkey 
+	and n_name = 'UNITED STATES'
+order by 
+	s_name;
+
+select
+	s_name,
+	s_address
+from
+	co_supplier,
+	co_nation
+where
+	s_suppkey in (
+		select
+			ps_suppkey
+		from
+			co_partsupp
+		where
+			ps_partkey in (
+				select
+					p_partkey
+				from
+					co_part
+				where
+					p_name like 'medium%'
+			)
+			and ps_availqty > (
+				select
+					0.5 * sum(l_quantity)
+				from
+					co_lineitem
+				where
+					l_partkey = ps_partkey
+					and l_suppkey = ps_suppkey
+					and l_shipdate >= date '1996-01-01'
+					and l_shipdate < date '1996-01-01' + interval '1 year'
+			)
+	)
+	and s_nationkey = n_nationkey
+	and n_name = 'UNITED STATES'
+order by
+	s_name;
+
+select  'mpph21',
+	s_name, 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
+from 
+	co_supplier, 
+	co_orders, 
+	co_nation, 
+	co_lineitem l1 
+		left join co_lineitem l2 
+			on (l2.l_orderkey = l1.l_orderkey and l2.l_suppkey <> l1.l_suppkey) 
+		left join (
+			select 
+				l3.l_orderkey,
+				l3.l_suppkey 
+			from 
+				co_lineitem l3 
+			where 
+				l3.l_receiptdate > l3.l_commitdate) l4 
+			on (l4.l_orderkey = l1.l_orderkey and l4.l_suppkey <> l1.l_suppkey) 
+where 
+	s_suppkey = l1.l_suppkey 
+	and o_orderkey = l1.l_orderkey 
+	and o_orderstatus = 'F' 
+	and l1.l_receiptdate > l1.l_commitdate 
+	and l2.l_orderkey is not null 
+	and l4.l_orderkey is null 
+	and s_nationkey = n_nationkey 
+	and n_name = 'MOZAMBIQUE' 
+group by 
+	s_name 
+order by 
+	numwait desc, 
+	s_name
+LIMIT 100;
+
+select  'mpph22',
+	cntrycode, 
+	count(*) as numcust, 
+	sum(c_acctbal) as totacctbal 
+from 
+	( 
+		select 
+			substring(c_phone from 1 for 2) as cntrycode, 
+			c_acctbal 
+		from 
+			co_customer left join co_orders 
+				on c_custkey = o_custkey 
+		where 
+			substring(c_phone from 1 for 2) in 
+				('11', '28', '21', '26', '19', '13', '22') 
+			and c_acctbal > ( 
+				select 
+					avg(c_acctbal) 
+				from 
+					co_customer 
+				where 
+					c_acctbal > 0.00 
+					and substring(c_phone from 1 for 2) in 
+						('11', '28', '21', '26', '19', '13', '22') 
+			) 
+			and o_custkey is null 
+	) as custsale 
+group by 
+	cntrycode 
+order by 
+	cntrycode;
+
+select
+	cntrycode,
+	count(*) as numcust,
+	sum(c_acctbal) as totacctbal
+from
+	(
+		select
+			substring(c_phone from 1 for 2) as cntrycode,
+			c_acctbal
+		from
+			co_customer
+		where
+			substring(c_phone from 1 for 2) in
+				('11', '28', '21', '26', '19', '13', '22')
+			and c_acctbal > (
+				select
+					avg(c_acctbal)
+				from
+					co_customer
+				where
+					c_acctbal > 0.00
+					and substring(c_phone from 1 for 2) in
+						('11', '28', '21', '26', '19', '13', '22')
+			)
+			and not exists (
+				select
+					*
+				from
+					co_orders
+				where
+					o_custkey = c_custkey
+			)
+	) as custsale
+group by
+	cntrycode
+order by
+	cntrycode;
+
+select
+	p_brand,
+	p_type,
+	p_size,
+	count(distinct ps_suppkey) as supplier_cnt
+from
+	co_partsupp,
+	co_part
+where
+	p_partkey = ps_partkey
+	and p_brand <> 'Brand#35'
+	and p_type not like 'MEDIUM ANODIZED%'
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and ps_suppkey not in (
+		select
+			s_suppkey
+		from
+			co_supplier
+		where
+			s_comment like '%Customer%Complaints%'
+	)
+group by
+	p_brand,
+	p_type,
+	p_size
+order by
+	supplier_cnt desc,
+	p_brand,
+	p_type,
+	p_size;
+
+select
+	p_brand, 
+	p_type, 
+	p_size, 
+	count(distinct ps_suppkey) as supplier_cnt 
+from 
+	co_part, 
+	co_partsupp left join co_supplier on (ps_suppkey=s_suppkey and s_comment like '%Customer%Complaints%' ) 
+where 
+	p_partkey = ps_partkey 
+	and p_brand <> 'Brand#35' 
+	and p_type not like 'MEDIUM ANODIZED%' 
+	and p_size in (39, 31, 24, 22, 46, 20, 42, 15)
+	and s_suppkey is null 
+group by 
+	p_brand, 
+	p_type, 
+	p_size 
+order by 
+	supplier_cnt desc, 
+	p_brand, 
+	p_type, 
+	p_size;
+
+-- hashagg
+
+set enable_groupagg=off;
+set enable_hashagg=on;
+select c_nationkey, count(*) from heap_customer group by c_nationkey;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select c_nationkey, sum(c_acctbal) from heap_customer group by c_nationkey;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select c_mktsegment, bool_and(c_nationkey>10) from heap_customer group by c_mktsegment;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select l_returnflag, l_linestatus, variance(l_discount) from heap_lineitem group by l_returnflag, l_linestatus;
+set statement_mem= 10240;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select l_orderkey, l_suppkey, var_pop(l_discount) as var_pop from heap_lineitem group by l_orderkey, l_suppkey order by l_orderkey, l_suppkey, var_pop limit 2000;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select l_suppkey, avg(l_discount) from heap_lineitem group by l_suppkey;
+set statement_mem= 7000;
+set enable_groupagg=off;
+set enable_hashagg=on;
+select l_orderkey, covar_pop(l_partkey, l_suppkey) as covar_pop from heap_lineitem group by l_orderkey order by l_orderkey, covar_pop limit 2000;
+set enable_hashagg=on;
+create table agg_zoo(x bigint, y int) distributed by (x);
+insert into agg_zoo select random() * 12345678, 1 from generate_series(1,100000);
+analyze agg_zoo;
+set statement_mem="1600";
+select sum(y) from agg_zoo;
+select sum(y) from (select sum(y) as y from agg_zoo group by x) a;
+
+reset all;
+SET SEARCH_PATH to rpt_tpch;
+-- opperf
+
+create table opperfscale(nseg int, nscale int, nscaleperseg int); 
+
+insert into opperfscale
+ 	select case when lc < 7000000 then 1 else seg end as nseg, 
+	       case when lc < 7000000 then 1 else lc / 6000000 end as nscale,
+	       case when lc < 7000000 or lc / 6000000 < seg 
+	       		then 2 
+			else lc / 6000000 / seg + 1 end as nscaleperseg
+	from
+	(
+ 		select max(content)+1 as seg from gp_segment_configuration where preferred_role = 'p'
+	) S,
+	(
+	 select count(*) as lc from heap_lineitem 
+	) L;
+
+select * from opperfscale;
+
+-- Sort test 2:
+select count(*) from (select count(*) from
+(
+select l_linenumber, l_shipdate, l_linestatus  from heap_lineitem
+where l_orderkey % (
+	select max(nscaleperseg) from opperfscale
+	) = 0 
+order by l_linenumber, l_shipdate, l_linestatus
+limit 1000000
+) tmpt) tmp;
+
+-- Sort test 3: 
+
+set gp_enable_sort_limit = off;
+select count(*) from (select l_linenumber, l_shipdate, l_tax from heap_lineitem order by l_linenumber, l_shipdate, l_tax
+limit 100) q;
+set gp_enable_sort_limit = on;
+
+-- Hashagg 1: yahoo
+
+select count(*) from (select count(*) from (
+select avg(l_quantity) as c1, max(l_discount) as c2 
+from heap_lineitem
+group by 
+l_orderkey, l_linenumber, l_linestatus, l_comment
+) tmpt) tmp;
+
+-- Hashagg 2: easy
+select count(*) from (select count(*) from
+(
+select avg(l_quantity), max(l_discount) 
+from heap_lineitem
+group by 
+l_linenumber, l_linestatus, l_returnflag
+) tmpt) tmp;
+-- Sort agg 1: yahoo
+
+set enable_hashagg = off;
+select count(*) from (select count(*) from (
+select avg(l_quantity), max(l_discount) 
+from heap_lineitem
+where l_orderkey % (select max(nscaleperseg) from opperfscale) = 0 
+group by 
+l_orderkey, l_linenumber, l_linestatus, l_comment
+) tmpt) tmp;
+set enable_hashagg = on;
+-- Sort agg 2: easy
+set enable_hashagg = off;
+select count(*) from (select count(*) from (
+select avg(l_quantity), max(l_discount) 
+from heap_lineitem
+where l_orderkey % (select max(nscaleperseg) from opperfscale) = 0
+group by 
+l_linenumber, l_linestatus, l_returnflag
+) tmpt) tmp;
+set enable_hashagg = on;
+-- scan test with selection
+-- Select one column from heap_lineitem
+
+select max(l_partkey) from heap_lineitem where l_quantity > 20 and l_discount < 0.9 ;
+-- Hash join
+
+select count(*) from heap_lineitem l1, heap_lineitem l2
+where 
+l1.l_orderkey % (select max(nscaleperseg) from opperfscale) = 0 and
+l2.l_orderkey % (select max(nscaleperseg) from opperfscale) = 0 and
+l1.l_partkey = l2.l_partkey and l1.l_returnflag = l2.l_returnflag
+;
+
+-- Hash join, lots of fields
+select count(*) from heap_lineitem l1, heap_lineitem l2
+where 
+l1.l_orderkey % (
+		select max(nscaleperseg) from opperfscale 
+		) = 0 and
+l2.l_orderkey % (
+		select max(nscaleperseg) from opperfscale 
+		) = 0 and
+-- l1.l_orderkey = l2.l_orderkey and 
+l1.l_partkey = l2.l_partkey
+and l1.l_suppkey = l2.l_suppkey
+and l1.l_linenumber = l2.l_linenumber
+and l1.l_extendedprice = l2.l_extendedprice
+and l1.l_returnflag = l2.l_returnflag
+and l1.l_shipdate = l2.l_shipdate
+and l1.l_commitdate = l2.l_commitdate
+and l1.l_shipmode = l2.l_shipmode
+and l1.l_comment = l2.l_comment
+;
+
+-- scan test
+-- Merge join
+
+set enable_hashjoin = off;
+set enable_mergejoin=on;
+select count(*) from heap_lineitem l1, heap_lineitem l2
+where 
+l1.l_orderkey % (select max(nscaleperseg * 4) from opperfscale) = 0 and
+l2.l_orderkey % (select max(nscaleperseg * 4) from opperfscale) = 0 and
+l1.l_partkey = l2.l_partkey and l1.l_returnflag = l2.l_returnflag
+;
+set enable_hashjoin = on;
+set enable_mergejoin=off;
+-- Merge join, lots of fields
+set enable_mergejoin=on;
+set enable_hashjoin = off;
+
+select count(*) from heap_lineitem l1, heap_lineitem l2
+where 
+l1.l_orderkey % (select max(nscaleperseg * 4) from opperfscale) = 0 and
+l2.l_orderkey % (select max(nscaleperseg * 4) from opperfscale) = 0 and
+l1.l_partkey = l2.l_partkey
+and l1.l_suppkey = l2.l_suppkey
+and l1.l_linenumber = l2.l_linenumber
+and l1.l_extendedprice = l2.l_extendedprice
+and l1.l_returnflag = l2.l_returnflag
+and l1.l_shipdate = l2.l_shipdate
+and l1.l_commitdate = l2.l_commitdate
+and l1.l_shipmode = l2.l_shipmode
+and l1.l_comment = l2.l_comment
+;
+set enable_mergejoin=off;
+set enable_hashjoin = on;
+-- Nested loop join
+select count(*) from heap_part p1, heap_part p2
+where 
+p1.p_partkey % (select max(nscale * 10) from opperfscale) = 0 and 
+p2.p_partkey % (select max(nscale * 10) from opperfscale) = 0 and 
+p1.p_size < p2.p_size 
+and p1.p_retailprice > p2.p_retailprice
+and p1.p_brand > p2.p_brand
+;
+
+-- Left outer join, with hash join
+select count(*) from heap_lineitem l left outer join heap_partsupp p
+on l.l_partkey = p.ps_partkey and l.l_suppkey = p.ps_suppkey
+and l.l_quantity > (p.ps_availqty / 10)
+where l.l_orderkey % (select max(nscaleperseg) from opperfscale) = 0
+;
+
+-- Full outer join, merge join
+set enable_hashjoin = off;
+
+select count(*) from (select count(*) from heap_lineitem l left outer join heap_partsupp p
+on l.l_partkey = p.ps_partkey and l.l_suppkey = p.ps_suppkey
+and l.l_quantity > (p.ps_availqty / 10)
+where l.l_orderkey % (select max(nscaleperseg) from opperfscale) = 0) tmp
+;
+
+set enable_hashjoin = on;
+-- nested loop outer join
+select count(*) from heap_part p left outer join heap_supplier s 
+on p.p_partkey > s.s_suppkey and p.p_size < s.s_nationkey
+where
+p.p_partkey % (select max(nscale * 4) from opperfscale) = 1
+and s.s_suppkey % (select max(nscale * 4) from opperfscale) = 1
+;
+
+-- Full outer join, merge join
+-- set enable_hashjoin = off;
+select count(*) from (select count(*) from heap_lineitem l full outer join heap_partsupp p
+on l.l_partkey = p.ps_partkey and l.l_suppkey = p.ps_suppkey) tmp
+-- and l.l_quantity > (p.ps_availqty / 10)
+;
+
+-- distinct
+select count(*) from (select count(*) from
+(
+select distinct l_partkey, l_suppkey, l_shipmode from heap_lineitem 
+where l_orderkey % (select max(nscaleperseg) from opperfscale) = 0 
+) tmpt) tmp;
+
+-- distinct using group by
+select count(*) from 
+(select count(1) from heap_lineitem
+ where l_orderkey % (select max(nscaleperseg) from opperfscale) = 0
+ group by l_partkey, l_suppkey, l_shipmode
+) tmpt;
+
+-- count distinct
+select count(distinct l_partkey), count(distinct l_suppkey), count(distinct l_shipmode) 
+	from heap_lineitem 
+where l_orderkey % (select max(nscale * 4) from opperfscale) = 0;
+-- Union
+
+select count(*) from (select count(*) from
+(
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg) * 20 from opperfscale) = 1
+  union
+
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg) * 20 from opperfscale) = 2
+  union
+
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg) * 20 from opperfscale) = 3
+  union
+
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem  where
+  l_orderkey % (select max(nscaleperseg) * 20 from opperfscale) = 4
+  union
+
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg) * 20 from opperfscale) = 5
+) tmpt) tmp;
+-- Union all
+
+select count(*) from
+(
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg * 10) from opperfscale) = 1
+  union all
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg * 10) from opperfscale) = 2
+  union all
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg * 10) from opperfscale) = 3
+  union all
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg * 10) from opperfscale) = 4
+  union all
+  select l_suppkey, l_partkey, l_shipmode from heap_lineitem where
+  l_orderkey % (select max(nscaleperseg * 10) from opperfscale) = 5
+) tmpt;
+
+DROP SCHEMA rpt_tpch cascade;

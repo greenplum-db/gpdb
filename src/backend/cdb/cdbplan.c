@@ -927,7 +927,8 @@ plan_tree_mutator(Node *node,
  * definition.
  *
  */
-void		mutate_plan_fields(Plan *newplan, Plan *oldplan, Node *(*mutator) (), void *context)
+static void
+mutate_plan_fields(Plan *newplan, Plan *oldplan, Node *(*mutator) (), void *context)
 {
 	/*
 	 * Scalar fields startup_cost total_cost plan_rows plan_width nParamExec
@@ -953,7 +954,8 @@ void		mutate_plan_fields(Plan *newplan, Plan *oldplan, Node *(*mutator) (), void
  * definition.
  *
  */
-void		mutate_join_fields(Join *newjoin, Join *oldjoin, Node *(*mutator) (), void *context)
+static void 
+mutate_join_fields(Join *newjoin, Join *oldjoin, Node *(*mutator) (), void *context)
 {
 	/* A Join node is a Plan node. */
 	mutate_plan_fields((Plan *) newjoin, (Plan *) oldjoin, mutator, context);

@@ -234,7 +234,7 @@ cdbparallelize(PlannerInfo *root,
 
 				/* Tell caller if target rel is distributed. */
 				if (policy &&
-					policy->ptype == POLICYTYPE_PARTITIONED)
+					(GpPolicyIsPartitioned(policy) || GpPolicyIsReplicated(policy)))
 					context->resultSegments = true;
 
 				if (policy)
@@ -1021,8 +1021,9 @@ focusPlan(Plan *plan, bool stable, bool rescannable)
 {
 	Assert(plan->flow && plan->flow->flotype != FLOW_UNDEFINED);
 
-	/* Already focused?  Do nothing. */
-	if (plan->flow->flotype == FLOW_SINGLETON)
+	/* Already focused and flow is not CdbLocusType_SegmentGeneral, Do nothing. */
+	if (plan->flow->flotype == FLOW_SINGLETON &&
+		plan->flow->locustype != CdbLocusType_SegmentGeneral)
 		return true;
 
 	/* TODO How specify deep-six? */

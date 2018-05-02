@@ -17,7 +17,9 @@ DROP ROLE IF EXISTS regressuser4;
 DROP ROLE IF EXISTS regressuser5;
 DROP ROLE IF EXISTS regressuser6;
 
+-- start_ignore
 SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
+-- end_ignore
 
 RESET client_min_messages;
 
@@ -518,6 +520,7 @@ SELECT has_sequence_privilege('x_seq', 'USAGE');
 \c -
 SET SESSION AUTHORIZATION regressuser1;
 
+-- start_ignore
 SELECT lo_create(1001);
 SELECT lo_create(1002);
 SELECT lo_create(1003);
@@ -533,10 +536,12 @@ GRANT SELECT ON LARGE OBJECT 1005 TO regressuser2 WITH GRANT OPTION;
 GRANT SELECT, INSERT ON LARGE OBJECT 1001 TO PUBLIC;	-- to be failed
 GRANT SELECT, UPDATE ON LARGE OBJECT 1001 TO nosuchuser;	-- to be failed
 GRANT SELECT, UPDATE ON LARGE OBJECT  999 TO PUBLIC;	-- to be failed
+-- end_ignore
 
 \c -
 SET SESSION AUTHORIZATION regressuser2;
 
+-- start_ignore
 SELECT lo_create(2001);
 SELECT lo_create(2002);
 
@@ -557,40 +562,49 @@ GRANT ALL ON LARGE OBJECT 2001 TO regressuser3;
 
 SELECT lo_unlink(1001);		-- to be denied
 SELECT lo_unlink(2002);
+-- end_ignore
 
 \c -
+-- start_ignore
 -- confirm ACL setting
 SELECT oid, pg_get_userbyid(lomowner) ownername, lomacl FROM pg_largeobject_metadata;
+-- end_ignore
 
 SET SESSION AUTHORIZATION regressuser3;
 
+-- start_ignore
 SELECT loread(lo_open(1001, x'40000'::int), 32);
 SELECT loread(lo_open(1003, x'40000'::int), 32);	-- to be denied
 SELECT loread(lo_open(1005, x'40000'::int), 32);
 
 SELECT lo_truncate(lo_open(1005, x'20000'::int), 10);	-- to be denied
 SELECT lo_truncate(lo_open(2001, x'20000'::int), 10);
+-- end_ignore
 
 -- compatibility mode in largeobject permission
 \c -
 SET lo_compat_privileges = false;	-- default setting
 SET SESSION AUTHORIZATION regressuser4;
 
+-- start_ignore
 SELECT loread(lo_open(1002, x'40000'::int), 32);	-- to be denied
 SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');	-- to be denied
 SELECT lo_truncate(lo_open(1002, x'20000'::int), 10);	-- to be denied
 SELECT lo_unlink(1002);					-- to be denied
 SELECT lo_export(1001, '/dev/null');			-- to be denied
+-- end_ignore
 
 \c -
 SET lo_compat_privileges = true;	-- compatibility mode
 SET SESSION AUTHORIZATION regressuser4;
 
+-- start_ignore
 SELECT loread(lo_open(1002, x'40000'::int), 32);
 SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');
 SELECT lo_truncate(lo_open(1002, x'20000'::int), 10);
 SELECT lo_unlink(1002);
 SELECT lo_export(1001, '/dev/null');			-- to be denied
+-- end_ignore
 
 -- don't allow unpriv users to access pg_largeobject contents
 \c -
@@ -748,7 +762,9 @@ DROP TABLE atestc;
 DROP TABLE atestp1;
 DROP TABLE atestp2;
 
+-- start_ignore
 SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
+-- end_ignore
 
 DROP GROUP regressgroup1;
 DROP GROUP regressgroup2;

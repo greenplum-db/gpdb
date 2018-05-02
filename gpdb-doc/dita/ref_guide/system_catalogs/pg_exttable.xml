@@ -82,12 +82,10 @@
               rows.</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>fmterrtbl</codeph></entry>
-            <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_class.oid</entry>
-            <entry colname="col4">The object id of the error table where format errors will be
-                  logged.<p><b>NOTE:</b> This column is no longer used and will be removed in a
-                future release.</p></entry>
+            <entry colname="col1"><codeph>logerrors</codeph></entry>
+            <entry colname="col2">bool</entry>
+	    <entry colname="col3"/>
+	    <entry colname="col4"><codeph>1</codeph> to log errors, <codeph>0</codeph> to not.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>encoding</codeph></entry>

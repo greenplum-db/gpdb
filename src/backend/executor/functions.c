@@ -176,8 +176,9 @@ bool querytree_safe_for_qe_walker(Node *expr, void *context)
 						Assert(namespaceId != InvalidOid);
 						
 						if (!(IsSystemNamespace(namespaceId) ||
-							  IsToastNamespace(namespaceId) ||
-							  IsAoSegmentNamespace(namespaceId)))
+									IsToastNamespace(namespaceId) ||
+									IsAoSegmentNamespace(namespaceId) ||
+									IsReplicatedTable(rte->relid)))
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -201,7 +202,7 @@ bool querytree_safe_for_qe_walker(Node *expr, void *context)
 /**
  * This function determines if the query tree is safe to be planned and
  * executed on a QE. The checks it performs are:
- * 1. The query cannot access any non-catalog relation.
+ * 1. The query cannot access any non-catalog relation except it's a replicated table.
  * 2. The query must be select only.
  * In case of a problem, the method spits out an error.
  */

@@ -133,7 +133,6 @@ Feature: gpcheckcat tests
         Examples:
           | attrname   | tablename     |
           | reloid     | pg_exttable   |
-          | fmterrtbl  | pg_exttable   |
           | conrelid   | pg_constraint |
 
     @miss_attr_table
@@ -356,7 +355,8 @@ Feature: gpcheckcat tests
     @constraint_g
     Scenario: gpcheckcat should generate repair scripts when only -g option is provided
         Given database "constraint_g_db" is dropped and recreated
-        And the user runs "psql constraint_g_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_invalid_constraint.sql"
+        And the user runs "psql constraint_g_db -c "create table foo(i int primary key);""
+        And the user runs sql "set allow_system_table_mods='dml'; update gp_distribution_policy  set attrnums=NULL where localoid='foo'::regclass::oid;" in "constraint_g_db" on all the segments
         Then psql should return a return code of 0
         When the user runs "gpcheckcat -g repair_dir constraint_g_db"
         Then gpcheckcat should return a return code of 1

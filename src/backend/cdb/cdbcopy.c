@@ -57,6 +57,7 @@ makeCdbCopy(bool is_copy_in)
 	c->outseglist = NIL;
 	c->partitions = NULL;
 	c->ao_segnos = NIL;
+	c->hasReplicatedTable = false;
 	initStringInfo(&(c->err_msg));
 	initStringInfo(&(c->err_context));
 	initStringInfo(&(c->copy_out_buf));
@@ -176,15 +177,11 @@ cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
 
 	if (policy)
 	{
-		((CopyStmt *) q->utilityStmt)->nattrs = policy->nattrs;
-		((CopyStmt *) q->utilityStmt)->ptype = policy->ptype;
-		((CopyStmt *) q->utilityStmt)->distribution_attrs = policy->attrs;
+		((CopyStmt *) q->utilityStmt)->policy = GpPolicyCopy(CurrentMemoryContext, policy);
 	}
 	else
 	{
-		((CopyStmt *) q->utilityStmt)->nattrs = 0;
-		((CopyStmt *) q->utilityStmt)->ptype = 0;
-		((CopyStmt *) q->utilityStmt)->distribution_attrs = NULL;
+		((CopyStmt *) q->utilityStmt)->policy = createRandomPartitionedPolicy(NULL);
 	}
 
 	MemoryContextSwitchTo(oldcontext);

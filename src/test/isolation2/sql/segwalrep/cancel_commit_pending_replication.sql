@@ -27,7 +27,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'suspend', 2);
 -- `wal_sender_loop`. We also verify the `sync_rep_query_cancel` is
 -- triggered by query cancel request.
 1&: create table cancel_commit_pending_replication(a int, b int);
-select gp_inject_fault('finish_prepared_start_of_function', 'wait_until_triggered', 2);
+select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, 2);
 -- now pause the wal sender on primary for content 0
 select gp_inject_fault('wal_sender_loop', 'suspend', 2);
 -- let the transaction move forward with the commit
@@ -38,7 +38,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
 select gp_inject_fault('sync_rep_query_cancel', 'skip', 2);
 0U: select pg_cancel_backend(procpid) from pg_stat_activity where waiting_reason='replication' and sess_id in (select sess_id from store_session_id);
 -- EXPECT: hit this fault for QueryCancelPending
-select gp_inject_fault('sync_rep_query_cancel', 'wait_until_triggered', 2);
+select gp_wait_until_triggered_fault('sync_rep_query_cancel', 1, 2);
 -- EXPECT: the query is still in waiting mode, to verify the cancel is ignored.
 0U: select waiting_reason from pg_stat_activity where sess_id in (select sess_id from store_session_id);
 -- resume the primary on content 0

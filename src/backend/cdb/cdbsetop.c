@@ -84,6 +84,10 @@ choose_setop_type(List *planlist)
 				ok_general = ok_replicated = FALSE;
 				break;
 
+			case CdbLocusType_SegmentGeneral:
+				ok_general = ok_replicated = FALSE;
+				break;
+
 			case CdbLocusType_General:
 				break;
 
@@ -139,6 +143,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 						break;
 					case CdbLocusType_SingleQE:
 					case CdbLocusType_General:
+					case CdbLocusType_SegmentGeneral:
 						Assert(subplanflow->flotype == FLOW_SINGLETON && subplanflow->segindex > -1);
 
 						/*
@@ -207,6 +212,11 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_General:
 						break;
 
+					case CdbLocusType_SegmentGeneral:
+						/* Gather to QE.  No need to keep ordering. */
+						adjusted_plan = (Plan *) make_motion_gather_to_QE(root, subplan, NULL);
+						break;
+
 					case CdbLocusType_Entry:
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
@@ -253,7 +263,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
  *
  * A NULL result indicates either a NULL argument or a problem.
  */
-Flow *
+static Flow *
 copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 {
 	Flow	   *new_flow = NULL;
@@ -390,7 +400,7 @@ make_motion_hash(PlannerInfo *root __attribute__((unused)), Plan *subplan, List 
  *
  * Returns the newly allocate expression list for a Motion node.
  */
-List *
+static List *
 makeHashExprsFromNonjunkTargets(List *targetlist)
 {
 	ListCell   *cell;
@@ -534,4 +544,13 @@ mark_plan_singleQE(Plan *plan)
 	plan->flow = makeFlow(FLOW_SINGLETON);
 	plan->flow->segindex = 0;
 	plan->flow->locustype = CdbLocusType_SingleQE;
+}
+
+void
+mark_plan_segment_general(Plan *plan)
+{
+	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
+	plan->flow = makeFlow(FLOW_SINGLETON);
+	plan->flow->segindex = 0;
+	plan->flow->locustype = CdbLocusType_SegmentGeneral;
 }

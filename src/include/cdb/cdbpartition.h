@@ -209,7 +209,7 @@ extern List *
 basic_AT_oids(Relation rel, AlterTableCmd *cmd);
 
 extern AlterTableCmd *basic_AT_cmd(AlterTableCmd *cmd);
-extern bool can_implement_dist_on_part(Relation rel, List *dist_cnames);
+extern bool can_implement_dist_on_part(Relation rel, DistributedBy *dist);
 extern bool is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool fthrow);
 
 extern void

@@ -20,6 +20,9 @@
 
 #include "access/attnum.h"
 #include "catalog/genbki.h"
+#include "nodes/pg_list.h"
+#include "utils/palloc.h"
+
 /*
  * Defines for gp_policy
  */
@@ -31,14 +34,22 @@ CATALOG(gp_distribution_policy,5002) BKI_WITHOUT_OIDS
 {
 	Oid			localoid;
 	int2		attrnums[1];
+	char		policytype; /* distribution policy type */
 } FormData_gp_policy;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(localoid REFERENCES pg_class(oid));
 
-#define Natts_gp_policy			2
+#define Natts_gp_policy		3
 #define Anum_gp_policy_localoid	1
 #define Anum_gp_policy_attrnums	2
+#define Anum_gp_policy_type	3
+
+/*
+ * Symbolic values for Anum_gp_policy_type column
+ */
+#define SYM_POLICYTYPE_PARTITIONED 'p'
+#define SYM_POLICYTYPE_REPLICATED 'r'
 
 /*
  * GpPolicyType represents a type of policy under which a relation's
@@ -47,7 +58,8 @@ FOREIGN_KEY(localoid REFERENCES pg_class(oid));
 typedef enum GpPolicyType
 {
 	POLICYTYPE_PARTITIONED,		/* Tuples partitioned onto segment database. */
-	POLICYTYPE_ENTRY			/* Tuples stored on entry database. */
+	POLICYTYPE_ENTRY,			/* Tuples stored on entry database. */
+	POLICYTYPE_REPLICATED		/* Tuples stored a copy on all segment database. */
 } GpPolicyType;
 
 /*
@@ -60,14 +72,13 @@ typedef enum GpPolicyType
  */
 typedef struct GpPolicy
 {
+	NodeTag         type;
 	GpPolicyType ptype;
 
 	/* These fields apply to POLICYTYPE_PARTITIONED. */
 	int			nattrs;
-	AttrNumber	attrs[1];		/* the first of nattrs attribute numbers.  */
+	AttrNumber	*attrs;		/* pointer to the first of nattrs attribute numbers.  */
 } GpPolicy;
-
-#define SizeOfGpPolicy(nattrs)	(offsetof(GpPolicy, attrs) + sizeof(AttrNumber) * (nattrs))
 
 /*
  * GpPolicyCopy -- Return a copy of a GpPolicy object.
@@ -106,8 +117,17 @@ void GpPolicyReplace(Oid tbloid, const GpPolicy *policy);
 
 void GpPolicyRemove(Oid tbloid);
 
-bool GpPolicyIsRandomly(GpPolicy *policy);
+bool GpPolicyIsRandomPartitioned(const GpPolicy *policy);
+bool GpPolicyIsHashPartitioned(const GpPolicy *policy);
+bool GpPolicyIsPartitioned(const GpPolicy *policy);
+bool GpPolicyIsReplicated(const GpPolicy *policy);
+bool GpPolicyIsEntry(const GpPolicy *policy);
 
-extern GpPolicy *createRandomDistribution(void);
+extern GpPolicy *makeGpPolicy(MemoryContext mcxt, GpPolicyType ptype, int nattrs);
+extern GpPolicy *createReplicatedGpPolicy(MemoryContext mcxt);
+extern GpPolicy *createRandomPartitionedPolicy(MemoryContext mcxt);
+extern GpPolicy *createHashPartitionedPolicy(MemoryContext mcxt, List *keys);
+
+extern bool IsReplicatedTable(Oid relid);
 
 #endif /*_GP_POLICY_H_*/

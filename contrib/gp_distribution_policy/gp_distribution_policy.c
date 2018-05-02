@@ -99,11 +99,7 @@ set_distribution_policy (Datum array_distribution)
 				errmsg("there is no distribution set in target table")));
 	}
 
-	policy = (GpPolicy *)palloc(sizeof(*policy) - sizeof(policy->attrs) + 
-								nattrs * sizeof(policy->attrs[0]));
-	
-	policy->ptype = POLICYTYPE_PARTITIONED;
-	policy->nattrs = nattrs;
+	policy = makeGpPolicy(NULL, POLICYTYPE_PARTITIONED, nattrs);
 	
 	for (int i = 0; i < nattrs; i++)
 	{

@@ -80,8 +80,6 @@ typedef struct CdbDispatchCmdAsync
 
 } CdbDispatchCmdAsync;
 
-static int	timeoutCounter = 0;
-
 static void *cdbdisp_makeDispatchParams_async(int maxSlices, char *queryText, int len);
 
 static void cdbdisp_checkDispatchResult_async(struct CdbDispatcherState *ds,
@@ -405,6 +403,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 	int			timeout = 0;
 	bool		sentSignal = false;
 	struct pollfd *fds;
+	uint8 ftsVersion = 0;
 
 	db_count = pParms->dispatchCount;
 	fds = (struct pollfd *) palloc(db_count * sizeof(struct pollfd));
@@ -515,6 +514,13 @@ checkDispatchResult(CdbDispatcherState *ds,
 			elog(LOG, "handlePollError poll() failed; errno=%d", sock_errno);
 
 			handlePollError(pParms);
+
+			/*
+			 * Since an error was detected for the segment, request
+			 * FTS to perform a probe before checking the segment
+			 * state.
+			 */
+			FtsNotifyProber();
 			checkSegmentAlive(pParms);
 
 			if (pParms->waitMode != DISPATCH_WAIT_NONE)
@@ -535,10 +541,17 @@ checkDispatchResult(CdbDispatcherState *ds,
 				sentSignal = true;
 			}
 
-			if (timeoutCounter++ > (wait ? 30 : 300))
+			/*
+			 * This code relies on FTS being triggered at regular
+			 * intervals. Iff FTS detects change in configuration
+			 * then check segment state. FTS probe is not triggered
+			 * explicitly in this case because this happens every
+			 * DISPATCH_WAIT_TIMEOUT_MSEC.
+			 */
+			if (ftsVersion == 0 || ftsVersion != getFtsVersion())
 			{
+				ftsVersion = getFtsVersion();
 				checkSegmentAlive(pParms);
-				timeoutCounter = 0;
 			}
 
 			if (!wait)
@@ -771,7 +784,6 @@ static void
 checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 {
 	int			i;
-	bool		forceScan = true;
 
 	/*
 	 * check the connection still valid
@@ -795,12 +807,6 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 
 		ELOG_DISPATCHER_DEBUG("FTS testing connection %d of %d (%s)",
 							  i + 1, pParms->dispatchCount, segdbDesc->whoami);
-
-		if (forceScan)
-		{
-			FtsNotifyProber();
-			forceScan = false;
-		}
 
 		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
 		{

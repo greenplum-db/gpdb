@@ -3255,7 +3255,7 @@ setQryDistributionPolicy(SelectStmt *stmt, Query *qry)
 {
 	ListCell   *keys = NULL;
 
-	GpPolicy  *policy = NULL;
+	DistributedBy	*dist = NULL;
 	int			colindex = 0;
 
 	if (Gp_role != GP_ROLE_DISPATCH)
@@ -3263,31 +3263,25 @@ setQryDistributionPolicy(SelectStmt *stmt, Query *qry)
 
 	Assert(stmt->distributedBy);
 
-	if (stmt->distributedBy)
+	dist = (DistributedBy *)stmt->distributedBy;
+	if (dist)
 	{
 		/*
 		 * We have a DISTRIBUTED BY column list specified by the user
 		 * Process it now and set the distribution policy.
 		 */
-		if (list_length(stmt->distributedBy) > MaxPolicyAttributeNumber)
+		if (list_length(dist->keys) > MaxPolicyAttributeNumber)
 			ereport(ERROR,
 					(errcode(ERRCODE_TOO_MANY_COLUMNS),
 					 errmsg("number of distributed by columns exceeds limit (%d)",
 							MaxPolicyAttributeNumber)));
 
-		policy = (GpPolicy *) palloc0(sizeof(GpPolicy) - sizeof(policy->attrs)
-								+ list_length(stmt->distributedBy) * sizeof(policy->attrs[0]));
-		policy->ptype = POLICYTYPE_PARTITIONED;
-		policy->nattrs = 0;
-
-		if (stmt->distributedBy->length == 1 && (list_head(stmt->distributedBy) == NULL || linitial(stmt->distributedBy) == NULL))
-		{
-			/* distributed randomly */
-			qry->intoPolicy = policy;
-		}
+		if (dist->ptype == POLICYTYPE_REPLICATED)
+			qry->intoPolicy = createReplicatedGpPolicy(NULL);
 		else
 		{
-			foreach(keys, stmt->distributedBy)
+			List	*policykeys = NIL;
+			foreach(keys, dist->keys)
 			{
 				char	   *key = strVal(lfirst(keys));
 				bool		found = false;
@@ -3312,10 +3306,10 @@ setQryDistributionPolicy(SelectStmt *stmt, Query *qry)
 									"clause does not exist",
 									key)));
 	
-				policy->attrs[policy->nattrs++] = colindex;
-	
+				policykeys = lappend_int(policykeys, colindex);
 			}
-			qry->intoPolicy = policy;
+
+			qry->intoPolicy = createHashPartitionedPolicy(NULL, policykeys);
 		}
 	}
 }

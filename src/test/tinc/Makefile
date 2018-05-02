@@ -58,12 +58,6 @@ walrep_2:
 	-q "class!=DDLTestCase" \
 	-q "class!=DMLTestCase"
 
-test_pg_twophase:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_pg_twophase.py \
-	-p test_switch.py
-
 runaway_query:
 	$(TESTER) \
 		resource_management.runaway_query.runaway_query_scenario.test_runaway_query_scenario.RQTScenarioTestCase \

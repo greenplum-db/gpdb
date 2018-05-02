@@ -740,7 +740,7 @@ sorted_insert_list(List *list, HeapTuple tuple)
  * is all associated with the hash table and is allocated in the given
  * memory context, so it will be easy to free in bulk.
  */
-void
+static void
 record_constraints(Relation pgcon,
 				   MemoryContext context,
 				   HTAB *hash_tbl,
@@ -6606,7 +6606,7 @@ atpxPartAddList(Relation rel,
 	ct->ownerid = ownerid;
 
 	if (!ct->distributedBy)
-		ct->distributedBy = make_dist_clause(rel);
+		ct->distributedBy = (Node *)make_dist_clause(rel);
 
 	/* this function does transformExpr on the boundary specs */
 	(void) atpxPart_validate_spec(pBy, &cxt, rel, ct, pelem, pNode, partName,
@@ -8035,10 +8035,11 @@ basic_AT_cmd(AlterTableCmd *cmd)
  * dist_cnames      List of column names proposed for distribution some part
  */
 bool
-can_implement_dist_on_part(Relation rel, List *dist_cnames)
+can_implement_dist_on_part(Relation rel, DistributedBy *dist)
 {
-	ListCell   *lc;
-	int			i;
+	ListCell	*lc;
+	int		i;
+	List		*dist_cnames;	
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 	{
@@ -8048,8 +8049,13 @@ can_implement_dist_on_part(Relation rel, List *dist_cnames)
 	}
 
 	/* Random is okay.  It is represented by a list of one empty list. */
-	if (list_length(dist_cnames) == 1 && linitial(dist_cnames) == NIL)
+	if (dist->ptype == POLICYTYPE_PARTITIONED && dist->keys == NIL)
 		return true;
+
+	if (dist->ptype == POLICYTYPE_REPLICATED)
+		return false;
+
+	dist_cnames = dist->keys;	
 
 	/* Require an exact match to the policy of the parent. */
 	if (list_length(dist_cnames) != rel->rd_cdbpolicy->nattrs)

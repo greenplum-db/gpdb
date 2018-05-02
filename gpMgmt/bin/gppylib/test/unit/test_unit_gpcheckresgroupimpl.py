@@ -14,6 +14,11 @@ gpcheckresgroupimpl_path = os.path.abspath('gpcheckresgroupimpl')
 gpcheckresgroupimpl = imp.load_source('gpcheckresgroupimpl', gpcheckresgroupimpl_path)
 import gpcheckresgroupimpl
 
+from gppylib.commands import gp
+from gppylib import gpversion
+gpverstr = gp.GpVersion.local("", os.getenv("GPHOME"))
+gpver = gpversion.GpVersion(gpverstr)
+
 @unittest.skipUnless(sys.platform.startswith("linux"), "requires linux")
 class GpCheckResGroupImplCGroup(unittest.TestCase):
     cgroup_mntpnt = None
@@ -43,6 +48,10 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
 
         self.touch(os.path.join(self.cgroup_mntpnt, "memory", "memory.limit_in_bytes"), 0400)
         self.touch(os.path.join(self.cgroup_mntpnt, "memory", "memory.memsw.limit_in_bytes"), 0400)
+
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.limit_in_bytes"), 0600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0400)
 
     def tearDown(self):
         shutil.rmtree(self.cgroup_mntpnt)
@@ -158,6 +167,61 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
     def test_when_memory_limit_in_bytes_missing(self):
         os.unlink(os.path.join(self.cgroup_mntpnt, "memory", "memory.limit_in_bytes"))
         with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.limit_in_bytes' does not exist"):
+            self.cgroup.validate_all()
+
+    def test_when_memory_limit_in_bytes_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "memory.limit_in_bytes"), 0100)
+        with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.limit_in_bytes' permission denied: require permission 'r'"):
+            self.cgroup.validate_all()
+
+    def test_when_memory_gpdb_dir_missing(self):
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "directory '.*/memory/gpdb/' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_memory_gpdb_dir_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0500)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "directory '.*/memory/gpdb/' permission denied: require permission 'rwx'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+        # restore permission for the dir to be removed in tearDown()
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0700)
+
+    def test_when_memory_gpdb_limit_in_bytes_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.limit_in_bytes"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/memory/gpdb/memory.limit_in_bytes' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_memory_gpdb_limit_in_bytes_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.limit_in_bytes"), 0100)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/memory/gpdb/memory.limit_in_bytes' permission denied: require permission 'rw'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_memory_gpdb_usage_in_bytes_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/memory/gpdb/memory.usage_in_bytes' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_memory_gpdb_usage_in_bytes_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0100)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/memory/gpdb/memory.usage_in_bytes' permission denied: require permission 'r'"):
+                self.cgroup.validate_all()
+        else:
             self.cgroup.validate_all()
 
 

@@ -57,10 +57,10 @@ extern bool DistributedLog_ScanForPrevCommitted(
 									TransactionId *indexXid,
 									DistributedTransactionTimeStamp *distribTimeStamp,
 									DistributedTransactionId *distribXid);
-
 extern TransactionId DistributedLog_AdvanceOldestXmin(TransactionId oldestInProgressLocalXid,
 								 DistributedTransactionTimeStamp distribTimeStamp,
 								 DistributedTransactionId oldestDistribXid);
+extern void DistributedLog_AdvanceOldestXminOnQD(TransactionId oldestLocalXmin);
 extern TransactionId DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin);
 
 extern Size DistributedLog_ShmemSize(void);

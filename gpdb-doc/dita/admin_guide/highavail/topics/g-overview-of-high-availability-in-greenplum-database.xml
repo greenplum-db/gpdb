@@ -151,8 +151,8 @@
          <p>Making regular backups of the databases is recommended except in cases where the
             database can be easily regenerated from the source data. Backups should be taken to
             protect from operational, software, and hardware errors. </p>
-         <p>Use the <codeph>gpcrondump</codeph> utility to backup Greenplum databases.
-               <codeph>gpcrondomp</codeph> performs the backup in parallel across segments, so
+         <p>Use the <codeph>gpbackup</codeph> utility to backup Greenplum databases.
+               <codeph>gpbackup</codeph> performs the backup in parallel across segments, so
             backup performance scales up as hardware is added to the cluster. </p>
          <p>When designing a backup strategy, a primary concern is where to store the backup data.
             The data each segment manages can be backed up on the segment's local storage, but
@@ -169,11 +169,6 @@
                   appliance.</pd>
             </plentry>
             <plentry>
-               <pt>NetBackup</pt>
-               <pd>Through native API integration, backups can be streamed to a Veritas NetBackup
-                  cluster.</pd>
-            </plentry>
-            <plentry>
                <pt>NFS</pt>
                <pd>If an NFS mount is created on each Greenplum Database host in the cluster,
                   backups can be written directly to the NFS mount. A scale out NFS solution is
@@ -182,26 +177,6 @@
                   cluster.</pd>
             </plentry>
          </parml>
-      </section>
-      <section>
-         <title>Incremental Backups</title>
-         <p>Greenplum Database allows <i>incremental backup</i> at the partition level for
-            append-optimized and column-oriented tables. When you perform an incremental backup,
-            only the partitions for append-optimized and column-oriented tables that have changed
-            since the previous backup are backed up. (Heap tables are <i>always</i> backed up.)
-            Restoring an incremental backup requires restoring the previous full backup and
-            subsequent incremental backups. </p>
-         <p>Incremental backup is beneficial only when the database contains large, partitioned
-            tables where all but one or a few partitions remain unchanged between backups. An
-            incremental backup saves just the changed partitions and the heap tables. By not backing
-            up the unchanged partitions, the backup size and time can be significantly reduced.</p>
-         <p>If a large fact table is not partitioned, and a single row is added or changed, the
-            entire table is backed up, and there is no savings in backup size or time. Therefore,
-            incremental backup is only recommended for databases with large, partitioned tables and
-            relatively small dimension tables. </p>
-         <p>If you maintain dual clusters and use incremental backup, you can populate the second
-            cluster with the incremental backups. Use the <codeph>--noplan</codeph> option to
-            achieve this, allowing backups from the primary site to be applied faster.</p>
       </section>
    </body>
 </topic>

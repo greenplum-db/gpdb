@@ -1359,6 +1359,12 @@ vac_update_relstats_from_list(List *updated_stats)
 
 		rel = relation_open(stats->relid, AccessShareLock);
 
+		if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
+		{
+			stats->rel_pages = stats->rel_pages / getgpsegmentCount();
+			stats->rel_tuples = stats->rel_tuples / getgpsegmentCount();
+		}
+
 		/*
 		 * Pass 'false' for isvacuum, so that the stats are
 		 * actually updated.
@@ -1967,8 +1973,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	/*
 	 * Switch to the table owner's userid, so that any index functions are run
 	 * as that user.  Also lock down security-restricted operations and
-	 * arrange to make GUC variable changes local to this command. (This is
-	 * unnecessary, but harmless, for lazy VACUUM.)
+	 * arrange to make GUC variable changes local to this command.
 	 */
 	GetUserIdAndSecContext(&save_userid, &save_sec_context);
 	SetUserIdAndSecContext(onerel->rd_rel->relowner,
@@ -2037,6 +2042,19 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 			VacuumStatsContext stats_context;
 
 			stats_context.updated_stats = NIL;
+			/*
+			 * Revert back to original userid before dispatching vacuum to QEs.
+			 * Dispatcher includes CurrentUserId in the serialized dispatch
+			 * command (see buildGpQueryString()).  QEs assume this userid
+			 * before starting to execute the dispatched command.  If the
+			 * original userid has superuser privileges and owner of the table
+			 * being vacuumed does not, and if the command is dispatched with
+			 * owner's userid, it may lead to spurious permission denied error
+			 * on QE even when a super user is running the vacuum.
+			 */
+			SetUserIdAndSecContext(
+								   save_userid,
+								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 			dispatchVacuum(vacstmt, &stats_context);
 		}
 	}
@@ -2049,8 +2067,10 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 			VacuumStatsContext stats_context;
 
 			stats_context.updated_stats = NIL;
+			SetUserIdAndSecContext(
+								   save_userid,
+								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 			dispatchVacuum(vacstmt, &stats_context);
-
 			vac_update_relstats_from_list(stats_context.updated_stats);
 		}
 	}

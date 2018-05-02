@@ -133,28 +133,6 @@ SELECT * from exttab_ctas_2 order by i;
 -- Error table should have additional rows that were rejected by the above query
 SELECT count(*) from gp_read_error_log('exttab_basic_7');
 
-
--- Test that pg_exttable.fmterrtbl references to itself for external table with error logs
-DROP EXTERNAL TABLE IF EXISTS exttab_error_log;
-
-CREATE EXTERNAL TABLE exttab_error_log( i int, j text ) 
-LOCATION ('gpfdist://@host@:@port@/exttab_union_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
-LOG ERRORS SEGMENT REJECT LIMIT 2;
-
-SELECT reloid = fmterrtbl FROM pg_exttable
-WHERE reloid = (SELECT oid from pg_class where relname ilike 'exttab_error_log');
-
-DROP EXTERNAL TABLE IF EXISTS exttab_error_tbl;
-
-CREATE EXTERNAL TABLE exttab_error_tbl( i int, j text ) 
-LOCATION ('gpfdist://@host@:@port@/exttab_union_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
-LOG ERRORS INTO sample_errtbl SEGMENT REJECT LIMIT 2;
-
--- Should be False
-SELECT reloid = fmterrtbl FROM pg_exttable
-WHERE reloid = (SELECT oid from pg_class where relname ilike 'exttab_error_tbl');
-
-
 -- Test that drop external table gets rid off error logs
 DROP EXTERNAL TABLE IF EXISTS exttab_error_log;
 

@@ -1187,7 +1187,7 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
  * A targetlist is "nullable" if all entries in the targetlist
  * cannot be proven to be non-nullable.
  */
-bool
+static bool
 is_targetlist_nullable(Query *subq)
 {
 	Assert(subq);

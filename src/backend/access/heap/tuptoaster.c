@@ -82,6 +82,26 @@ static struct varlena *toast_fetch_datum_slice(struct varlena * attr,
 						int32 sliceoffset, int32 length);
 
 
+/*
+ * GPDB: Check to be sure that a toast table's index is valid before making use
+ * of it in a query.
+ *
+ * GPDB_94_MERGE_FIXME: This function exists only because we don't yet have
+ * upstream commit 2ef085d0e. Once that's merged, we can get rid of this.
+ */
+static void
+check_toast_indisvalid(Relation toastrel, Relation toastidx)
+{
+	Assert(RelationIsValid(toastidx));
+	Assert(RelationIsValid(toastrel));
+	Assert(PointerIsValid(toastidx->rd_index));
+
+	if (!IndexIsValid(toastidx->rd_index))
+		elog(ERROR, "no valid index found for toast relation with Oid %d",
+			 RelationGetRelid(toastrel));
+}
+
+
 /* ----------
  * heap_tuple_fetch_attr -
  *
@@ -1467,6 +1487,8 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 	toasttupDesc = toastrel->rd_att;
 	toastidx = index_open(toastrel->rd_rel->reltoastidxid, RowExclusiveLock);
 
+	check_toast_indisvalid(toastrel, toastidx);
+
 	/*
 	 * Get the data pointer and length, and compute va_rawsize and va_extsize.
 	 *
@@ -1651,6 +1673,8 @@ toast_delete_datum(Relation rel __attribute__((unused)), Datum value)
 	toastrel = heap_open(toast_pointer.va_toastrelid, RowExclusiveLock);
 	toastidx = index_open(toastrel->rd_rel->reltoastidxid, RowExclusiveLock);
 
+	check_toast_indisvalid(toastrel, toastidx);
+
 	/*
 	 * Setup a scan key to find chunks with matching va_valueid
 	 */
@@ -1729,6 +1753,8 @@ toast_fetch_datum(struct varlena * attr)
 	toastrel = heap_open(toast_pointer.va_toastrelid, AccessShareLock);
 	toasttupDesc = toastrel->rd_att;
 	toastidx = index_open(toastrel->rd_rel->reltoastidxid, AccessShareLock);
+
+	check_toast_indisvalid(toastrel, toastidx);
 
 	/*
 	 * Setup a scan key to fetch from the index by va_valueid
@@ -1923,6 +1949,8 @@ toast_fetch_datum_slice(struct varlena * attr, int32 sliceoffset, int32 length)
 	toastrel = heap_open(toast_pointer.va_toastrelid, AccessShareLock);
 	toasttupDesc = toastrel->rd_att;
 	toastidx = index_open(toastrel->rd_rel->reltoastidxid, AccessShareLock);
+
+	check_toast_indisvalid(toastrel, toastidx);
 
 	/*
 	 * Setup a scan key to fetch from the index. This is either two keys or

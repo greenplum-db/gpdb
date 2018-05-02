@@ -2183,7 +2183,7 @@ _readCreateStmt(void)
 	READ_NODE_FIELD(partitionBy);
 	READ_CHAR_FIELD(relKind);
 	READ_CHAR_FIELD(relStorage);
-	/* policy omitted */
+	READ_NODE_FIELD(policy);
 	/* postCreate omitted */
 	READ_NODE_FIELD(deferredStmts);
 	READ_BOOL_FIELD(is_part_child);
@@ -2192,8 +2192,6 @@ _readCreateStmt(void)
 	READ_OID_FIELD(ownerid);
 	READ_BOOL_FIELD(buildAoBlkdir);
 	READ_NODE_FIELD(attr_encodings);
-
-	local_node->policy = NULL;
 
 	READ_DONE();
 }

@@ -272,13 +272,13 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				{
 					targetPolicy = query->intoPolicy;
 
-					Assert(query->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
+					Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
 					Assert(query->intoPolicy->nattrs >= 0);
 					Assert(query->intoPolicy->nattrs <= MaxPolicyAttributeNumber);
 				}
 				else if (gp_create_table_random_default_distribution)
 				{
-					targetPolicy = createRandomDistribution();
+					targetPolicy = createRandomPartitionedPolicy(NULL);
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 							 errmsg("Using default RANDOM distribution since no distribution was specified."),
@@ -287,16 +287,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				else
 				{
 					/* Find out what the flow is partitioned on */
+					List	*policykeys = NIL;
 					hashExpr = plan->flow->hashExpr;
-
-					/* User did not specify a DISTRIBUTED BY clause */
-					if (hashExpr)
-						targetPolicy = palloc0(sizeof(GpPolicy) - sizeof(targetPolicy->attrs) + list_length(hashExpr) * sizeof(targetPolicy->attrs[0]));
-					else
-						targetPolicy = palloc0(sizeof(GpPolicy));
-
-					targetPolicy->ptype = POLICYTYPE_PARTITIONED;
-					targetPolicy->nattrs = 0;
 
 					if (hashExpr)
 						foreach(exp1, hashExpr)
@@ -343,10 +335,10 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 								 */
 								else
 									new_var = makeVar(OUTER,
-													  n,
-													  exprType((Node *) target->expr),
-													  exprTypmod((Node *) target->expr),
-													  0);
+											n,
+											exprType((Node *) target->expr),
+											exprTypmod((Node *) target->expr),
+											0);
 
 								if (equal(var1, new_var))
 								{
@@ -355,8 +347,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 									 * result table, to avoid unnecessary
 									 * redistibution of data
 									 */
-									Assert(targetPolicy->nattrs < MaxPolicyAttributeNumber);
-									targetPolicy->attrs[targetPolicy->nattrs++] = n;
+									Assert(list_length(policykeys) < MaxPolicyAttributeNumber);
+									policykeys = lappend_int(policykeys, n);
 									found_expr = true;
 									break;
 
@@ -370,7 +362,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					}
 
 					/* do we know how to partition? */
-					if (targetPolicy->nattrs == 0)
+					if (policykeys == NIL)
 					{
 						/*
 						 * hash on the first hashable column we can find.
@@ -388,12 +380,14 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 								if (isGreenplumDbHashable(typeOid))
 								{
-									targetPolicy->attrs[targetPolicy->nattrs++] = i + 1;
+									policykeys = lappend_int(policykeys, i + 1);
 									break;
 								}
 							}
 						}
 					}
+
+					targetPolicy = createHashPartitionedPolicy(NULL, policykeys);
 
 					if (query->intoPolicy == NULL)
 					{
@@ -427,28 +421,60 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 				query->intoPolicy = targetPolicy;
 
-				/*
-				 * Make sure the top level flow is partitioned on the
-				 * partitioning key of the target relation.	Since this is a
-				 * SELECT INTO (basically same as an INSERT) command, the
-				 * target list will correspond to the attributes of the target
-				 * relation in order.
-				 */
-				hashExpr = getExprListFromTargetList(plan->targetlist,
-													 targetPolicy->nattrs,
-													 targetPolicy->attrs,
-													 true);
-				if (!repartitionPlan(plan, false, false, hashExpr))
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
+
+				if (GpPolicyIsReplicated(query->intoPolicy))
+				{
+					/*
+					 * CdbLocusType_SegmentGeneral is only used by replicated table right now,
+					 * so if both input and target are replicated table, no need to add a motion
+					 */
+					if (plan->flow->flotype == FLOW_SINGLETON &&
+							plan->flow->locustype == CdbLocusType_SegmentGeneral)
+					{
+						/* do nothing */
+					}
+
+					/* plan's data are available on all segment, no motion needed */
+					if (plan->flow->flotype == FLOW_SINGLETON &&
+							plan->flow->locustype == CdbLocusType_General)
+					{
+						/* do nothing */
+					}
+
+					if (!broadcastPlan(plan, false, false))
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+									errmsg("Cannot parallelize that SELECT INTO yet")));
+
+				}
+				else
+				{
+					/*
+					 * Make sure the top level flow is partitioned on the
+					 * partitioning key of the target relation.	Since this is a
+					 * SELECT INTO (basically same as an INSERT) command, the
+					 * target list will correspond to the attributes of the target
+					 * relation in order.
+					 */
+					hashExpr = getExprListFromTargetList(plan->targetlist,
+							targetPolicy->nattrs,
+							targetPolicy->attrs,
+							true);
+					if (!repartitionPlan(plan, false, false, hashExpr))
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 									errmsg("Cannot parallelize that SELECT INTO yet")
-									));
+							       ));
+				}
 
-				Assert(query->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
-
+				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
 			}
 
-			if (plan->flow->flotype == FLOW_PARTITIONED && !query->intoClause)
+			if ((plan->flow->flotype == FLOW_PARTITIONED && !query->intoClause) ||
+				(!query->intoClause &&
+					 	plan->flow->flotype == FLOW_SINGLETON &&
+				 		plan->flow->locustype == CdbLocusType_SegmentGeneral))
 				bringResultToDispatcher = true;
+
 			needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch && !query->intoClause;
 			break;
 
@@ -543,7 +569,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 /*
  * Function apply_motion_mutator() is the workhorse for apply_motion().
  */
-Node *
+static Node *
 apply_motion_mutator(Node *node, ApplyMotionState *context)
 {
 	Node	   *newnode;
@@ -643,9 +669,6 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		Assert(flow && motion->plan.lefttree->flow);
 		Assert(flow->req_move == MOVEMENT_NONE && !flow->flow_before_req_move);
 
-		/* Assign unique node number to the new node. */
-		assignMotionID(newnode, context, node);
-
 		/* If top slice marked as singleton, make it a dispatcher singleton. */
 		if (motion->motionType == MOTIONTYPE_FIXED
 			&& motion->numOutputSegs == 1
@@ -657,6 +680,26 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 			flow->segindex = -1;
 			motion->outputSegIdx[0] = -1;
 		}
+
+		/*
+		 * For non-top slice, if this motion is QE singleton and subplan's locus
+		 * is CdbLocusType_SegmentGeneral, omit this motion.
+		 */
+		if (context->sliceDepth > 0 &&
+			flow->flotype == FLOW_SINGLETON &&
+			flow->segindex == 0 &&
+			motion->plan.lefttree->flow->locustype == CdbLocusType_SegmentGeneral)
+		{
+			/* omit this motion */
+			newnode = (Node *)motion->plan.lefttree;
+
+			/* Don't need assign a motion node Id */
+			goto done;
+		}
+
+		/* Assign unique node number to the new node. */
+		assignMotionID(newnode, context, node);
+
 		goto done;
 	}
 
@@ -788,7 +831,7 @@ done:
 /*
  * Helper code for ApplyMotionState -- Assign motion id to new Motion node.
  */
-void
+static void
 assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode)
 {
 	Assert(IsA(newnode, Motion) &&context != NULL);
@@ -991,7 +1034,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
  * with values between 0 and numSegs-1
  * --------------------------------------------------------------------
  */
-int *
+static int *
 makeDefaultSegIdxArray(int numSegs)
 {
 	int		   *segIdx = palloc(numSegs * sizeof(int));
@@ -1130,7 +1173,7 @@ request_explicit_motion(Plan *plan, Index resultRelationsIdx, List *rtable)
  * Find the index of the segid column of the requested relation (relid) in the
  * target list
  */
-AttrNumber
+static AttrNumber
 find_segid_column(List *tlist, Index relid)
 {
 	if (NIL == tlist)
@@ -1217,7 +1260,7 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
 
 	/* Rel not distributed?  Then segment id doesn't matter. */
 	if (!rel->cdbpolicy ||
-		rel->cdbpolicy->ptype != POLICYTYPE_PARTITIONED)
+		rel->cdbpolicy->ptype == POLICYTYPE_ENTRY)
 		return;
 
 	/* Ignore references occurring in the Query's final output targetlist. */

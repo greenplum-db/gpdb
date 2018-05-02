@@ -254,9 +254,12 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <list>	ext_on_clause_list format_opt format_opt_list format_def_list
 				ext_options ext_options_opt ext_options_list
 				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
+				OptTableSpaceOptions
+				tblspace_options tblspace_options_list
 %type <defelt>	ext_on_clause_item format_opt_item format_def_item
 				ext_options_item
 				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
+				tblspace_options_item
 
 %type <ival>	opt_lock lock_type cast_context
 %type <ival>	vacuum_option_list vacuum_option_elem
@@ -476,7 +479,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <list>	constraints_set_list
 %type <boolean> constraints_set_mode
 %type <str>		OptTableSpace OptConsTableSpace OptTableSpaceOwner
-%type <list>    DistributedBy OptDistributedBy 
+%type <node>    DistributedBy OptDistributedBy 
 %type <ival>	TabPartitionByType OptTabPartitionRangeInclusive
 %type <node>	OptTabPartitionBy TabSubPartitionBy 
 				tab_part_val tab_part_val_no_paran
@@ -668,7 +671,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	QUEUE
 
-	RANDOMLY READABLE READS REF REJECT_P RESOURCE
+	RANDOMLY READABLE READS REF REJECT_P REPLICATED RESOURCE
 	ROLLUP ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SETS SPLIT SQL SUBPARTITION
@@ -4123,8 +4126,27 @@ OptConsTableSpace:   USING INDEX TABLESPACE name	{ $$ = $4; }
 			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
-DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'		{ $$ = $4; }
-			| DISTRIBUTED RANDOMLY			{ $$ = list_make1(NULL); }
+DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'
+			{
+				DistributedBy *distributedBy = makeNode(DistributedBy);
+				distributedBy->ptype = POLICYTYPE_PARTITIONED;
+				distributedBy->keys = $4;
+				$$ = (Node *)distributedBy;
+			}
+			| DISTRIBUTED RANDOMLY
+			{
+				DistributedBy *distributedBy = makeNode(DistributedBy);
+				distributedBy->ptype = POLICYTYPE_PARTITIONED;
+				distributedBy->keys = NIL;
+				$$ = (Node *)distributedBy;
+			}
+			| DISTRIBUTED REPLICATED
+			{
+				DistributedBy *distributedBy = makeNode(DistributedBy);
+				distributedBy->ptype = POLICYTYPE_REPLICATED;
+				distributedBy->keys = NIL;
+				$$ = (Node *)distributedBy;
+			}
 		;
 
 OptDistributedBy:   DistributedBy			{ $$ = $1; }
@@ -5275,15 +5297,45 @@ opt_procedural:
  *
  *****************************************************************************/
 
-CreateTableSpaceStmt: CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst
+CreateTableSpaceStmt: CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst OptTableSpaceOptions
 				{
 					CreateTableSpaceStmt *n = makeNode(CreateTableSpaceStmt);
 					n->tablespacename = $3;
 					n->owner = $4;
 					n->location = $6;
+					n->options = $7;
 					$$ = (Node *) n;
 				}
 		;
+
+OptTableSpaceOptions:
+			OPTIONS tblspace_options			{ $$ = $2; }
+			| /* EMPTY */						{ $$ = NIL; }
+			;
+
+tblspace_options:
+			'(' tblspace_options_list ')'		{ $$ = $2; }
+			| '(' ')'							{ $$ = NIL; }
+			;
+
+
+tblspace_options_list:
+			tblspace_options_item
+			{
+				$$ = list_make1($1);
+			}
+			| tblspace_options_list ',' tblspace_options_item
+			{
+				$$ = lappend($1, $3);
+			}
+			;
+
+tblspace_options_item:
+			ColLabel Sconst
+			{
+				$$ = makeDefElem($1, (Node *) makeString($2));
+			}
+			;
 
 OptTableSpaceOwner: OWNER name			{ $$ = $2; }
 			| /*EMPTY */				{ $$ = NULL; }
@@ -14171,6 +14223,7 @@ unreserved_keyword:
 			| REPEATABLE
 			| REPLACE
 			| REPLICA
+			| REPLICATED
 			| RESET
 			| RESOURCE
 			| RESTART
@@ -15402,13 +15455,3 @@ makeIsNotDistinctFromNode(Node *expr, int position)
 	 													"=", NULL, expr, position), position);
 	return n;
 }
-
-/*
- * Must undefine this stuff before including scan.c, since it has different
- * definitions for these macros.
- */
-#undef yyerror
-#undef yylval
-#undef yylloc
-
-#include "scan.c"

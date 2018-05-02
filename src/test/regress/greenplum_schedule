@@ -93,7 +93,7 @@ test: resource_queue_stat
 test: resource_group
 test: wrkloadadmin
 
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats
 test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests
@@ -121,6 +121,8 @@ test: nested_case_null sort bb_mpph
 test: bb_memory_quota memconsumption
 
 test: tuple_serialization
+# Tests for replicated table
+test: rpt rpt_joins rpt_tpch
 
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
@@ -205,5 +207,10 @@ test: psql_gp_commands pg_resetxlog
 
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
+
+# fts_recovery_in_progresss uses fault injectors to simulate FTS fault states,
+# hence it should be run in isolation.
+test: fts_recovery_in_progress
+test: autovacuum-template0
 
 # end of tests

@@ -52,6 +52,8 @@ typedef enum CdbLocusType
     CdbLocusType_General,       /* compatible with any locus (data is
                                  * self-contained in the query plan or
                                  * generally available in any qExec or qDisp) */
+    CdbLocusType_SegmentGeneral,/* generally available in any qExec, but not
+				 * available in qDisp */
     CdbLocusType_Replicated,    /* replicated over all qExecs of an N-gang */
     CdbLocusType_Hashed,        /* hash partitioned over all qExecs of N-gang */
     CdbLocusType_HashedOJ,      /* result of hash partitioned outer join */
@@ -182,6 +184,8 @@ typedef struct CdbPathLocus
             ((locus).locustype == CdbLocusType_HashedOJ)
 #define CdbPathLocus_IsStrewn(locus)        \
             ((locus).locustype == CdbLocusType_Strewn)
+#define CdbPathLocus_IsSegmentGeneral(locus)        \
+            ((locus).locustype == CdbLocusType_SegmentGeneral)
 
 #define CdbPathLocus_MakeSimple(plocus, _locustype) \
     do {                                                \
@@ -199,6 +203,8 @@ typedef struct CdbPathLocus
             CdbPathLocus_MakeSimple((plocus), CdbLocusType_SingleQE)
 #define CdbPathLocus_MakeGeneral(plocus)                \
             CdbPathLocus_MakeSimple((plocus), CdbLocusType_General)
+#define CdbPathLocus_MakeSegmentGeneral(plocus)                \
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_SegmentGeneral)
 #define CdbPathLocus_MakeReplicated(plocus)             \
             CdbPathLocus_MakeSimple((plocus), CdbLocusType_Replicated)
 #define CdbPathLocus_MakeHashed(plocus, partkey_)       \

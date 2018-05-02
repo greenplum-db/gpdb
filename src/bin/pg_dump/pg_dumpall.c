@@ -1364,7 +1364,7 @@ dumpTablespaces(PGconn *conn)
 	if (server_version >= 90000)
 		res = executeQuery(conn, "SELECT spcname, "
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
-						   "spclocation, spcacl, "
+						   "pg_catalog.pg_tablespace_location(oid), spcacl, "
 						   "array_to_string(spcoptions, ', '),"
 						"pg_catalog.shobj_description(oid, 'pg_tablespace') "
 						   "FROM pg_catalog.pg_tablespace "
@@ -1792,7 +1792,7 @@ dumpDbRoleConfig(PGconn *conn)
 
 	printfPQExpBuffer(buf, "SELECT rolname, datname, unnest(setconfig) "
 					  "FROM pg_db_role_setting, pg_authid, pg_database "
-		  "WHERE setrole = pg_authid.oid AND setdatabase = pg_database.oid");
+		  "WHERE setrole = pg_authid.oid AND setdatabase = pg_database.oid ORDER BY 1,2");
 	res = executeQuery(conn, buf->data);
 
 	if (PQntuples(res) > 0)

@@ -557,6 +557,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	root->append_rel_list = NIL;
 	root->rowMarks = NIL;
 	root->hasInheritedTarget = false;
+	root->upd_del_replicated_table = 0;
 
 	Assert(config);
 	root->config = config;
@@ -1105,6 +1106,8 @@ inheritance_planner(PlannerInfo *root)
 					case CdbLocusType_HashedOJ:
 					case CdbLocusType_Strewn:
 						/* MPP-2023: Among subplans, these loci are okay. */
+						break;
+					case CdbLocusType_SegmentGeneral:
 						break;
 					case CdbLocusType_Null:
 					case CdbLocusType_SingleQE:
@@ -1670,6 +1673,25 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			best_path = sorted_path;
 
 		/*
+		 * Check to see if it's possible to optimize MIN/MAX aggregates.
+		 * If so, we will forget all the work we did so far to choose a
+		 * "regular" path ... but we had to do it anyway to be able to
+		 * tell which way is cheaper.
+		 */
+		result_plan = optimize_minmax_aggregates(root,
+												 tlist,
+												 best_path);
+		if (result_plan != NULL)
+		{
+			/*
+			 * optimize_minmax_aggregates generated the full plan, with the
+			 * right tlist, and it has no sort order.
+			 */
+			current_pathkeys = NIL;
+			mark_plan_entry(result_plan);
+		}
+
+		/*
 		 * CDB:  For now, we either - construct a general parallel plan, - let
 		 * the sequential planner handle the situation, or - construct a
 		 * sequential plan using the mix-max index optimization.
@@ -1677,7 +1699,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * Eventually we should add a parallel version of the min-max
 		 * optimization.  For now, it's either-or.
 		 */
-		if (Gp_role == GP_ROLE_DISPATCH)
+		if (Gp_role == GP_ROLE_DISPATCH && result_plan == NULL)
 		{
 			bool		querynode_changed = false;
 			bool		pass_subtlist = agg_counts.hasOrderedAggs;
@@ -1754,30 +1776,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 													  true);
 			}
 		}
-		else	/* Not GP_ROLE_DISPATCH */
-		{
-			/*
-			 * Check to see if it's possible to optimize MIN/MAX aggregates.
-			 * If so, we will forget all the work we did so far to choose a
-			 * "regular" path ... but we had to do it anyway to be able to
-			 * tell which way is cheaper.
-			 */
-			result_plan = optimize_minmax_aggregates(root,
-													 tlist,
-													 best_path);
-			if (result_plan != NULL)
-			{
-				/*
-				 * optimize_minmax_aggregates generated the full plan, with
-				 * the right tlist, and it has no sort order.
-				 */
-				current_pathkeys = NIL;
-				mark_plan_entry(result_plan);
-			}
 
-		}
-
-		if (result_plan == NULL)
+		if (result_plan == NULL)	/* Not GP_ROLE_DISPATCH */
 		{
 			/*
 			 * Normal case --- create a plan according to query_planner's
@@ -2410,13 +2410,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 									   result_plan->total_cost,
 									   current_pathkeys,
 									   dNumDistinctRows);
-
-			/* GPDB_84_MERGE_FIXME: The hash Agg we build for DISTINCT currently
-			 * loses the GROUP_ID() information, so don't use it if there's a
-			 * GROUP_ID().
-			 */
-			if (use_hashed_distinct && contain_group_id((Node *) result_plan->targetlist))
-				use_hashed_distinct = false;
 		}
 
 		/*
@@ -2672,8 +2665,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			{
 				RelOptInfo *brel = root->simple_rel_array[rc->rti];
 
-				if (brel->cdbpolicy &&
-					brel->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+				if (GpPolicyIsPartitioned(brel->cdbpolicy))
 				{
 					if (rc->markType == ROW_MARK_EXCLUSIVE)
 						rc->markType = ROW_MARK_TABLE_EXCLUSIVE;
@@ -2708,11 +2700,16 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	 */
 	if (parse->limitCount || parse->limitOffset)
 	{
-		if (Gp_role == GP_ROLE_DISPATCH && result_plan->flow->flotype == FLOW_PARTITIONED)
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			(result_plan->flow->flotype == FLOW_PARTITIONED ||
+			 result_plan->flow->locustype == CdbLocusType_SegmentGeneral))
 		{
-			/* pushdown the first phase of multi-phase limit (which takes offset into account) */
-			result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
-			
+			if (result_plan->flow->flotype == FLOW_PARTITIONED)
+			{
+				/* pushdown the first phase of multi-phase limit (which takes offset into account) */
+				result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
+			}
+
 			/*
 			 * Focus on QE [merge to preserve order], prior to final LIMIT.
 			 *

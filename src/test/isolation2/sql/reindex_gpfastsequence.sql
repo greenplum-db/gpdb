@@ -10,7 +10,7 @@ select gp_inject_fault('reindex_relation', 'suspend', 2);
 
 -- The reindex_relation fault should be hit
 1&: reindex table gp_fastsequence;
-2: select gp_inject_fault('reindex_relation', 'wait_until_triggered', 2);
+2: select gp_wait_until_triggered_fault('reindex_relation', 1, 2);
 -- The insert should for reindex in session 1
 2&: insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
 

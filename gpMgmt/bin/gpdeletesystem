@@ -188,11 +188,28 @@ def check_for_dump_files(options):
            or gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*backups*'")
 
 def getTablespaceDirs():
-    sqlcmd = "select spclocation FROM pg_tablespace where spcname != 'pg_default' and spcname != 'pg_global'"
-    with dbconn.connect(dbconn.DbURL()) as conn:
-        tablespaces = dbconn.execSQL(conn, sqlcmd).fetchall()
+    ''' Create list of user-created tablespace locations for each host '''
+    tblspclocs = {}
+    gettblspcoids_sql = "select oid from pg_tablespace where spcname not in ('pg_default', 'pg_global')"
+    gettblspclocs_sql = "select c.hostname, t.tblspc_loc from gp_tablespace_location(%s) t, gp_segment_configuration c where t.gp_segment_id = c.content group by c.hostname, t.tblspc_loc"
 
-    return [row[0] for row in tablespaces]
+    # Get the tablespace oids
+    with dbconn.connect(dbconn.DbURL()) as conn:
+        tblspcoids = dbconn.execSQL(conn, gettblspcoids_sql).fetchall()
+
+    # Use the tablespace oids to get the tablespace locations
+    for row in tblspcoids:
+        tblspcoid = row[0]
+        with dbconn.connect(dbconn.DbURL()) as conn:
+            query_results = dbconn.execSQL(conn, gettblspclocs_sql % tblspcoid).fetchall()
+
+            for query_result in query_results:
+                if query_result[0] in tblspclocs:
+                    tblspclocs[query_result[0]].append(query_result[1])
+                else:
+                    tblspclocs[query_result[0]] = [query_result[1]]
+
+    return tblspclocs
 
 # -------------------------------------------------------------------------
 # delete_system() - deletes a GPDB system
@@ -245,10 +262,8 @@ def delete_cluster(options):
 
         try:
             logger.info('Deleting tablespace directories...')
-            # getSegmentsByHostName(segments)
-            segmentHosts = gparray.GpArray.getSegmentsByHostName(segments).keys()
-            for segmentHost in segmentHosts:
-                for tablespaceDir in tablespaceDirs:
+            for segmentHost in tablespaceDirs:
+                for tablespaceDir in tablespaceDirs[segmentHost]:
                     logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
                                                                           tablespaceDir))
                     cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,

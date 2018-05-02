@@ -25,8 +25,8 @@
     <note type="warning" class="- topic/note ">Do not change database objects in the gp_toolkit schema. Do not create database objects in the schema.
       Changes to objects in the schema might affect the accuracy of administrative information
       returned by schema objects. <ph>Any changes made in the gp_toolkit schema are lost when the database is backed up and then
-        restored with the <codeph class="+ topic/ph pr-d/codeph ">gpcrondump</codeph> and <codeph
-          class="+ topic/ph pr-d/codeph ">gpdbrestore</codeph> utilities. </ph></note>
+        restored with the <codeph class="+ topic/ph pr-d/codeph ">gpbackup</codeph> and <codeph
+          class="+ topic/ph pr-d/codeph ">gprestore</codeph> utilities. </ph></note>
     <p otherprops="op-print">These are the categories for views in the <codeph>gp_toolkit</codeph>
       schema.</p>
   </body>

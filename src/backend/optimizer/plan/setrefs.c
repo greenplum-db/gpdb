@@ -1727,9 +1727,16 @@ set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		TargetEntry *tle = (TargetEntry *) lfirst(l);
 		Node	   *newexpr;
 
-		if (IsA(tle->expr, Grouping) ||
-				IsA(tle->expr, GroupId))
+		if (IsA(plan, Repeat) &&
+			(IsA(tle->expr, Grouping) || IsA(tle->expr, GroupId)))
+		{
+			/*
+			 * CDB: group_id() & grouping() rely on Repeat to generate non-zero
+			 * values for repeated grouping columns. So, always compute them, rather
+			 * than using OUTER refs from subplan.
+			 */
 			newexpr = copyObject(tle->expr);
+		}
 		else
 		{
 			/* If it's a non-Var sort/group item, first try to match by sortref */

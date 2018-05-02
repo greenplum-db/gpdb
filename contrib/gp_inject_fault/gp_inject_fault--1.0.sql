@@ -25,3 +25,14 @@ CREATE FUNCTION gp_inject_fault(
 RETURNS boolean
 AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 0, $3) $$
 LANGUAGE SQL;
+
+-- Simpler version to avoid confusion for wait_until_triggered fault.
+-- occurrence in call below defines wait until number of times the
+-- fault hits.
+CREATE FUNCTION gp_wait_until_triggered_fault(
+  faultname text,
+  numtimestriggered int4,
+  db_id int4)
+RETURNS boolean
+AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', $2, 0, $3) $$
+LANGUAGE SQL;

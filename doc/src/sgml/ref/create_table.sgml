@@ -35,7 +35,7 @@ CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP}] TABLE table_name (
    [ WITH ( storage_parameter=value [, ... ] )
    [ ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP} ]
    [ TABLESPACE tablespace ]
-   [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+   [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
    [ PARTITION BY partition_type (column)
        [ SUBPARTITION BY partition_type (column) ] 
           [ SUBPARTITION TEMPLATE ( template_spec ) ]

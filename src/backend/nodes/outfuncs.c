@@ -314,7 +314,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_INT_FIELD(nMotionNodes);
 	WRITE_INT_FIELD(nInitPlans);
 
-	/* Don't serialize policy */
+	WRITE_NODE_FIELD(intoPolicy);
 
 	WRITE_UINT64_FIELD(query_mem);
 }
@@ -578,7 +578,7 @@ _outExternalScan(StringInfo str, ExternalScan *node)
 	WRITE_BOOL_FIELD(isMasterOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
-	WRITE_OID_FIELD(fmterrtbl);
+	WRITE_BOOL_FIELD(logErrors);
 	WRITE_INT_FIELD(encoding);
 	WRITE_INT_FIELD(scancounter);
 }
@@ -2417,6 +2417,16 @@ _outCreateExternalStmt(StringInfo str, CreateExternalStmt *node)
 }
 
 static void
+_outDistributedBy(StringInfo str, DistributedBy *node)
+{
+	WRITE_NODE_TYPE("DISTRIBUTEDBY");
+
+	WRITE_ENUM_FIELD(ptype, GpPolicyType);
+	WRITE_NODE_FIELD(keys);
+}
+
+
+static void
 _outIndexStmt(StringInfo str, IndexStmt *node)
 {
 	WRITE_NODE_TYPE("INDEXSTMT");
@@ -3140,14 +3150,7 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
-	WRITE_INT_FIELD(nattrs);
-	WRITE_ENUM_FIELD(ptype, GpPolicyType);
-	appendStringInfoLiteral(str, " :distribution_attrs");
-	for (int i = 0; i < node->nattrs; i++)
-	{
-		appendStringInfo(str, " %d", node->distribution_attrs[i]);
-	}
-
+	WRITE_NODE_FIELD(policy);
 }
 #endif/* COMPILING_BINARY_FUNCS */
 
@@ -4225,6 +4228,7 @@ _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_STRING_FIELD(owner);
 	WRITE_STRING_FIELD(location);
+	WRITE_NODE_FIELD(options);
 }
 
 static void
@@ -4873,6 +4877,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_PartitionBy:
 				_outPartitionBy(str, obj);
+				break;
+			case T_DistributedBy:
+				_outDistributedBy(str, obj);
 				break;
 			case T_IndexStmt:
 				_outIndexStmt(str, obj);

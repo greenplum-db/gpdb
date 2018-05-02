@@ -83,8 +83,11 @@ extern Datum assign_new_record(PG_FUNCTION_ARGS);
 extern Datum udf_setenv(PG_FUNCTION_ARGS);
 extern Datum udf_unsetenv(PG_FUNCTION_ARGS);
 
-/* Aut Constraints */
+/* Auth Constraints */
 extern Datum check_auth_time_constraints(PG_FUNCTION_ARGS);
+
+/* XID wraparound */
+extern Datum test_consume_xids(PG_FUNCTION_ARGS);
 
 /* Triggers */
 
@@ -1911,4 +1914,37 @@ trigger_udf_return_new_oid(PG_FUNCTION_ARGS)
 	HeapTupleSetOid(ret_tuple, new_oid);
 
 	return PointerGetDatum(ret_tuple);
+}
+
+
+/*
+ * test_consume_xids(int4), for rapidly consuming XIDs, to test wraparound.
+ *
+ * Used by the 'autovacuum-template0' test.
+ */
+PG_FUNCTION_INFO_V1(test_consume_xids);
+Datum
+test_consume_xids(PG_FUNCTION_ARGS)
+{
+	int32		nxids = PG_GETARG_INT32(0);
+	TransactionId topxid;
+	TransactionId xid;
+	TransactionId targetxid;
+
+	/* make sure we have a top-XID first */
+	topxid = GetCurrentTransactionId();
+
+	xid = ReadNewTransactionId();
+
+	targetxid = xid + nxids;
+	while (targetxid < FirstNormalTransactionId)
+		targetxid++;
+
+	while (TransactionIdPrecedes(xid, targetxid))
+	{
+		elog(DEBUG1, "xid: %u", xid);
+		xid = GetNewTransactionId(true);
+	}
+
+	PG_RETURN_VOID();
 }

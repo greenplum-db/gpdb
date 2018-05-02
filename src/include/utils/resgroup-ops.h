@@ -20,11 +20,12 @@
  */
 
 extern const char * ResGroupOps_Name(void);
+extern bool ResGroupOps_Probe(void);
 extern void ResGroupOps_Bless(void);
 extern void ResGroupOps_Init(void);
 extern void ResGroupOps_AdjustGUCs(void);
 extern void ResGroupOps_CreateGroup(Oid group);
-extern void ResGroupOps_DestroyGroup(Oid group);
+extern void ResGroupOps_DestroyGroup(Oid group, bool migrate);
 extern void ResGroupOps_AssignGroup(Oid group, int pid);
 extern int ResGroupOps_LockGroup(Oid group, const char *comp, bool block);
 extern void ResGroupOps_UnLockGroup(Oid group, int fd);

@@ -542,6 +542,80 @@ aocs_endscan(AOCSScanDesc scan)
 	pfree(scan);
 }
 
+/*
+ * Upgrades a Datum value from a previous version of the AOCS page format. The
+ * DatumStreamRead that is passed must correspond to the column being upgraded.
+ */
+static void upgrade_datum_impl(DatumStreamRead *ds, int attno, Datum values[],
+							   bool isnull[], int formatversion)
+{
+	bool 	convert_numeric = false;
+
+	if (PG82NumericConversionNeeded(formatversion))
+	{
+		/*
+		 * On the first call for this DatumStream, figure out if this column is
+		 * a numeric, or a domain over numerics.
+		 *
+		 * TODO: consolidate this code with upgrade_tuple() in appendonlyam.c.
+		 */
+		if (!OidIsValid(ds->baseTypeOid))
+		{
+			ds->baseTypeOid = getBaseType(ds->typeInfo.typid);
+		}
+
+		/* If this Datum is a numeric, we need to convert it. */
+		convert_numeric = (ds->baseTypeOid == NUMERICOID) && !isnull[attno];
+	}
+
+	if (convert_numeric)
+	{
+		/*
+		 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields were the
+		 * other way 'round. Swap them.
+		 */
+		Datum 		datum;
+		char	   *numericdata;
+		char	   *upgradedata;
+		size_t		datalen;
+		uint16		tmp;
+
+		/*
+		 * We need to make a copy of this data so that any other tuples pointing
+		 * to it won't be affected. Store it in the upgrade space for this
+		 * DatumStream.
+		 */
+		datum = values[attno];
+		datalen = VARSIZE_ANY(DatumGetPointer(datum));
+
+		upgradedata = datumstreamread_get_upgrade_space(ds, datalen);
+		memcpy(upgradedata, DatumGetPointer(datum), datalen);
+
+		/* Swap the fields. */
+		numericdata = VARDATA_ANY(upgradedata);
+
+		memcpy(&tmp, &numericdata[0], 2);
+		memcpy(&numericdata[0], &numericdata[2], 2);
+		memcpy(&numericdata[2], &tmp, 2);
+
+		/* Re-point the Datum to the upgraded numeric. */
+		values[attno] = PointerGetDatum(upgradedata);
+	}
+}
+
+static void upgrade_datum_scan(AOCSScanDesc scan, int attno, Datum values[],
+							   bool isnull[], int formatversion)
+{
+	upgrade_datum_impl(scan->ds[attno], attno, values, isnull, formatversion);
+}
+
+static void upgrade_datum_fetch(AOCSFetchDesc fetch, int attno, Datum values[],
+								bool isnull[], int formatversion)
+{
+	upgrade_datum_impl(fetch->datumStreamFetchDesc[attno]->datumStream, attno,
+					   values, isnull, formatversion);
+}
+
 void
 aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 {
@@ -561,6 +635,8 @@ aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 
 	while (1)
 	{
+		AOCSFileSegInfo *curseginfo;
+
 ReadNext:
 		/* If necessary, open next seg */
 		if (scan->cur_seg < 0 || err < 0)
@@ -577,6 +653,7 @@ ReadNext:
 		}
 
 		Assert(scan->cur_seg >= 0);
+		curseginfo = scan->seginfo[scan->cur_seg];
 
 		/* Read from cur_seg */
 		for (i = 0; i < scan->num_proj_atts; i++)
@@ -607,6 +684,15 @@ ReadNext:
 			 */
 			datumstreamread_get(scan->ds[attno], &d[attno], &null[attno]);
 
+			/*
+			 * Perform any required upgrades on the Datum we just fetched.
+			 */
+			if (curseginfo->formatversion < AORelationVersion_GetLatest())
+			{
+				upgrade_datum_scan(scan, attno, d, null,
+								   curseginfo->formatversion);
+			}
+
 			if (rowNum == INT64CONST(-1) &&
 				scan->ds[attno]->blockFirstRowNum != INT64CONST(-1))
 			{
@@ -617,8 +703,7 @@ ReadNext:
 		}
 
 		AOTupleIdInit_Init(&aoTupleId);
-		AOTupleIdInit_segmentFileNum(&aoTupleId,
-									 scan->seginfo[scan->cur_seg]->segno);
+		AOTupleIdInit_segmentFileNum(&aoTupleId, curseginfo->segno);
 
 		scan->cur_seg_row++;
 		if (rowNum == INT64CONST(-1))
@@ -1004,8 +1089,18 @@ fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 	{
 		Datum	   *values = slot_get_values(slot);
 		bool	   *nulls = slot_get_isnull(slot);
+		int			formatversion = datumStream->ao_read.formatVersion;
 
 		datumstreamread_get(datumStream, &(values[colno]), &(nulls[colno]));
+
+		/*
+		 * Perform any required upgrades on the Datum we just fetched.
+		 */
+		if (formatversion < AORelationVersion_GetLatest())
+		{
+			upgrade_datum_fetch(aocsFetchDesc, colno, values, nulls,
+								formatversion);
+		}
 	}
 	else
 	{

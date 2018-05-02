@@ -58,6 +58,7 @@ typedef struct CdbCopy
 	PartitionNode *partitions;
 	List		  *ao_segnos;
 	HTAB		  *aotupcounts; /* hash of ao relation id to processed tuple count */
+	bool		hasReplicatedTable;
 } CdbCopy;
 
 

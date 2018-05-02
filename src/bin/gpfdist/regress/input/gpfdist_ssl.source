@@ -56,7 +56,7 @@ FORMAT 'text';
 -- Execute query to clean out the output file
 SELECT * FROM clean_out_file;
 
--- gpfdist_ssl case 2
+-- gpfdist_ssl case 1
 DROP TABLE IF EXISTS tbl_on_heap;
 CREATE TABLE tbl_on_heap (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -73,7 +73,7 @@ FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl SELECT * FROM tbl_on_heap;
 SELECT * FROM tbl_on_heap ORDER BY s1;
 
--- gpfdist_ssl case 1
+-- gpfdist_ssl case 2
 DROP TABLE IF EXISTS tbl_on_heap2;
 CREATE TABLE tbl_on_heap2 (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -86,7 +86,8 @@ FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap2 SELECT * FROM tbl2;
 SELECT * FROM tbl_on_heap2 ORDER BY s1;
 
--- gpfdist_ssl case 5 on same ETL server
+-- gpfdist_ssl case 3
+-- on same ETL server
 DROP TABLE IF EXISTS tbl_on_heap;
 CREATE TABLE tbl_on_heap (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -99,7 +100,7 @@ FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap SELECT * FROM tbl;
 SELECT * FROM tbl_on_heap ORDER BY s1;
 
--- gpfdist_ssl case 6
+-- gpfdist_ssl case 4
 DROP TABLE IF EXISTS tbl_on_heap;
 CREATE TABLE tbl_on_heap (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -112,7 +113,7 @@ FORMAT 'TEXT' (DELIMITER '|' );
 INSERT INTO tbl_on_heap SELECT * FROM tbl;
 SELECT * FROM tbl_on_heap ORDER BY s1;
 
--- gpfdist_ssl case 10
+-- gpfdist_ssl case 5
 DROP TABLE IF EXISTS tbl_on_heap;
 CREATE TABLE tbl_on_heap (
             s1 text, s2 text, s3 text, dt timestamp,
@@ -129,20 +130,14 @@ select * from gpfdist_ssl_stop;
 select * from gpfdist_ssl_not_matching_start;
 -- end_ignore
 
--- gpfdist_ssl case 3
-DROP TABLE IF EXISTS tbl_on_heap;
-CREATE TABLE tbl_on_heap (
-            s1 text, s2 text, s3 text, dt timestamp,
-            n1 smallint, n2 integer, n3 bigint, n4 decimal,
-            n5 numeric, n6 real, n7 double precision);
+-- gpfdist_ssl case 6
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
 LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
-INSERT INTO tbl_on_heap SELECT * FROM tbl;
-SELECT * FROM tbl_on_heap ORDER BY s1;
-
-DROP TABLE tbl_on_heap;
+SELECT * FROM tbl;
+SET verify_gpfdists_cert=off; 
+SELECT * FROM tbl;
 
 -- start_ignore
 select * from gpfdist_ssl_stop;

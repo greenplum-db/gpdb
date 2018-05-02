@@ -238,7 +238,6 @@ typedef struct PROC_HDR
 extern int	DeadlockTimeout;
 extern int	StatementTimeout;
 extern bool log_lock_waits;
-extern int IdleSessionGangTimeout;
 
 extern volatile bool cancel_from_timeout;
 

@@ -837,41 +837,6 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	bool		isLogSwitch = (rmid == RM_XLOG_ID && info == XLOG_SWITCH);
 	uint8       extended_info = 0;
 
-    /* Safety check in case our assumption is ever broken. */
-	/* NOTE: This is slightly modified from the one in xact.c -- the test for */
- 	/* NOTE: seqXlogWrite is omitted... */
-	/* NOTE: some local-only changes are OK */
- 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
- 	{
- 		/*
- 	     * we better only do really minor things on the reader that result
- 	     * in writing to the xlog here at commit.  for now sequences
- 	     * should be the only one
- 	     */
-		if (DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY)
-		{
-			/* MPP-1687: readers may under some circumstances extend the CLOG
-			 * rmid == RM_CLOG_ID and info having CLOG_ZEROPAGE set */
-			elog(LOG, "Reader qExec committing LOCAL_ONLY changes. (%d %d)", rmid, info);
-		}
-		else
-		{
-			/*
-			 * We are allowing the QE Reader to write to support error tables.
-			 */
-			elog(DEBUG1, "Reader qExec writing changes. (%d %d)", rmid, info);
-#ifdef nothing
-			ereport(ERROR,
-					(errmsg("Reader qExec had local changes to commit! (rmid = %u)",
-							rmid),
-					 errdetail("A Reader qExec tried to commit local changes.  "
-							   "Only the single Writer qExec can do so. "),
-					 errhint("This is most likely the result of a feature being turned "
-							 "on that violates the single WRITER principle")));
-#endif
-		}
- 	}
-
 	/* cross-check on whether we should be here or not */
 	if (!XLogInsertAllowed())
 		elog(ERROR, "cannot make new WAL entries during recovery");
@@ -7609,6 +7574,8 @@ StartupXLOG(void)
 		Assert(ControlFile->state == DB_IN_STANDBY_MODE);
 		StandbyMode = false;
 
+		elog(LOG, "updating pg_control to state DB_IN_STANDBY_PROMOTED");
+
 		/* Transition to promoted mode */
 		ControlFile->state = DB_IN_STANDBY_PROMOTED;
 		ControlFile->time = (pg_time_t) time(NULL);
@@ -7741,7 +7708,10 @@ StartupXLOG(void)
 	 * This could happen if the promoted standby goes through a restart.
 	 */
 	if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
+	{
+		elog(LOG, "pg_control state is DB_IN_STANDBY_PROMOTED hence renaming recovery file");
 		renameRecoveryFile();
+	}
 
 	/*
 	 * Prepare to write WAL starting at EndOfLog position, and init xlog
@@ -12021,4 +11991,22 @@ void
 WakeupRecovery(void)
 {
 	SetLatch(&XLogCtl->recoveryWakeupLatch);
+}
+
+/*
+ * Report the last WAL replay location
+ */
+XLogRecPtr
+last_xlog_replay_location()
+{
+	/* use volatile pointer to prevent code rearrangement */
+	volatile XLogCtlData *xlogctl = XLogCtl;
+	Assert(xlogctl != NULL);
+	XLogRecPtr	recptr;
+
+	SpinLockAcquire(&xlogctl->info_lck);
+	recptr = xlogctl->recoveryLastRecPtr;
+	SpinLockRelease(&xlogctl->info_lck);
+
+	return recptr;
 }

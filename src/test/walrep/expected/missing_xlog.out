@@ -133,10 +133,10 @@ select gp_request_fts_probe_scan();
  t
 (1 row)
 
-select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
 

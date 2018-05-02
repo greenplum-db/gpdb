@@ -1086,11 +1086,11 @@ from gp_segment_configuration where role = 'p' and content = 0;
 
 insert into aocs_small_and_dense_content select i,i from
 generate_series(1,800000)i;
-select gp_inject_fault('appendonly_skip_compression',
-'wait_until_triggered', dbid) from gp_segment_configuration where
+select gp_wait_until_triggered_fault('appendonly_skip_compression', 1, dbid)
+from gp_segment_configuration where
 role = 'p' and content = 0;
- gp_inject_fault 
------------------
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
 

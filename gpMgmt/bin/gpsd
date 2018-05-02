@@ -90,6 +90,7 @@ def dumpStats(cur):
         'INSERT INTO pg_statistic VALUES (\n' \
         '{2});\n\n'
     types = ['smallint',  # staattnum
+             'boolean',
              'real',
              'integer',
              'real',

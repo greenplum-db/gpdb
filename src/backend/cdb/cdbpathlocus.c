@@ -315,16 +315,15 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 		return result;
 	}
 
-	if (policy &&
-		policy->ptype == POLICYTYPE_PARTITIONED)
+	if (GpPolicyIsPartitioned(policy))
 	{
 		/* Are the rows distributed by hashing on specified columns? */
 		if (policy->nattrs > 0)
 		{
 			List	   *partkey = cdb_build_distribution_pathkeys(root,
-																  rel,
-																  policy->nattrs,
-																  policy->attrs);
+					rel,
+					policy->nattrs,
+					policy->attrs);
 
 			CdbPathLocus_MakeHashed(&result, partkey);
 		}
@@ -333,7 +332,10 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 		else
 			CdbPathLocus_MakeStrewn(&result);
 	}
-
+	else if (GpPolicyIsReplicated(policy))
+	{
+		CdbPathLocus_MakeSegmentGeneral(&result);
+	}
 	/* Kludge used internally for querying catalogs on segment dbs */
 	else if (cdbpathlocus_querysegmentcatalogs)
 		CdbPathLocus_MakeStrewn(&result);
@@ -402,7 +404,16 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 			if (flow->segindex == -1)
 				CdbPathLocus_MakeEntry(&locus);
 			else
-				CdbPathLocus_MakeSingleQE(&locus);
+			{
+				/*
+				 * keep segmentGeneral character, otherwise planner may put
+				 * this subplan to qDisp unexpectedly 
+				 */
+				if (flow->locustype == CdbLocusType_SegmentGeneral)
+					CdbPathLocus_MakeSegmentGeneral(&locus);
+				else
+					CdbPathLocus_MakeSingleQE(&locus);
+			}
 			break;
 		case FLOW_REPLICATED:
 			CdbPathLocus_MakeReplicated(&locus);

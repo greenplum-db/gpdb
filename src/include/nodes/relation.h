@@ -282,6 +282,8 @@ typedef struct PlannerInfo
 
 	/* optional private data for join_search_hook, e.g., GEQO */
 	void	   *join_search_private;
+
+	int		   upd_del_replicated_table;
 } PlannerInfo;
 
 /*----------

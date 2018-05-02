@@ -263,6 +263,12 @@ extern bool gp_external_enable_exec;
 extern int gp_external_max_segs;
 
 /*
+ * This option determines whether curl verifies the authenticity of the
+ * gpfdist's certificate.
+ */
+extern bool verify_gpfdists_cert;
+
+/*
  * gp_command_count
  *
  * This GUC is 0 at the beginning of a client session and
@@ -586,6 +592,12 @@ extern double   gp_motion_cost_per_row;
  * estimates.  If 0, estimates are based on the actual number of segment dbs.
  */
 extern int      gp_segments_for_planner;
+
+/*
+ * Enable/disable the special optimization of MIN/MAX aggregates as
+ * Index Scan with limit.
+ */
+extern bool gp_enable_minmax_optimization;
 
 /*
  * "gp_enable_multiphase_agg"

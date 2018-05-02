@@ -1217,11 +1217,6 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 		 * them by applying the pattern operator, so there's no reason to
 		 * approximate.  (If the MCVs cover a significant part of the total
 		 * population, this gives us a big leg up in accuracy.)
-		 *
-		 * GPDB_84_MERGE_FIXME: this entire function is a massive conflict
-		 * because of the confusing backports and merges throughout its history.
-		 * At Venky's suggestion we have replaced this section with the 8.4
-		 * logic and removed CDB-specific pieces. Revisit.
 		 */
 		Selectivity selec;
 		int			hist_size;

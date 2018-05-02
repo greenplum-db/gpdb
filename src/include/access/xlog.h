@@ -390,4 +390,7 @@ extern void do_pg_abort_backup(void);
 extern bool
 IsBkpBlockApplied(XLogRecord *record, uint8 block_id);
 
+extern XLogRecPtr
+last_xlog_replay_location(void);
+
 #endif   /* XLOG_H */

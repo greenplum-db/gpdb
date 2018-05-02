@@ -3,3 +3,5 @@ test: diff_dumps
 test: inserts
 test: pg_dumpall_other
 test: gpcheckcat
+
+test: resgroup_other_2_queue

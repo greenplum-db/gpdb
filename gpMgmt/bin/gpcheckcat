@@ -461,7 +461,7 @@ def checkDistribPolicy():
       join pg_class rel on (pk.conrelid = rel.oid)
       join pg_namespace n on (rel.relnamespace = n.oid)
       join gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in('p', 'u') and d.attrnums is null
+    where pk.contype in('p', 'u') and d.policytype = 'p' and d.attrnums is null
     '''
 
     db = connect2(GV.cfg[1])
@@ -502,7 +502,7 @@ def checkDistribPolicy():
       join  pg_class rel on (pk.conrelid = rel.oid)
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in ('p', 'u') and
+    where pk.contype in ('p', 'u') and d.policytype = 'p' and
           (d.attrnums is null or not
            d.attrnums operator(pg_catalog.<@) pk.conkey)
     '''
@@ -3304,6 +3304,7 @@ TableMainColumn['pg_pltemplate'] = ['tmplname', 'pg_pltemplate']
 TableMainColumn['pg_proc_callback'] = ['profnoid', 'pg_proc']
 TableMainColumn['pg_type_encoding'] = ['typid', 'pg_type']
 TableMainColumn['pg_window'] = ['winfnoid', 'pg_proc']
+TableMainColumn['gp_distribution_policy'] = ['localoid', 'pg_class']
 
 # Table with OID (special case), these OIDs are known to be inconsistent
 TableMainColumn['pg_attrdef'] = ['adrelid', 'pg_class']
@@ -3958,7 +3959,7 @@ class GPObject:
                 for issue in issues:
                     # Get schemaname.tablename corresponding to oid
                     for key in issue.pkeys:
-                        if 'relid' in key or key in ['ev_class', 'reloid', 'fmterrtbl']:
+                        if 'relid' in key or key in ['ev_class', 'reloid']:
                             table_list = db.query(oid_query % issue.pkeys[key]).getresult()
                             if table_list:
                                 if issue.type == 'missing':

@@ -2070,16 +2070,19 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 /*
  * Transform a small array constant to an ArrayExpr.
  *
- * This used by ORCA, to transform the array argument of a ScalarArrayExpr
- * into an ArrayExpr. If a ScalarArrayExpr has an ArrayExpr argument, ORCA
- * can perform some optimizations - partition pruning at least - based on
- * the elements in the ArrayExpr. It doesn't currently know how to extract
- * elements from an Array const, however, so to enable those optimizations
- * in ORCA, we convert small Array Consts into corresponding ArrayExprs.
+ * This is used by ORCA, to transform the array argument of a ScalarArrayExpr
+ * into an ArrayExpr. If a ScalarArrayExpr has an ArrayExpr argument, ORCA can
+ * perform some optimizations - partition pruning at least - by first expanding
+ * the ArrayExpr into its disjunctive normal form and then deriving constraints
+ * based on the elements in the ArrayExpr. It doesn't currently know how to
+ * extract elements from an Array const, however, so to enable those
+ * optimizations in ORCA, we convert small Array Consts into corresponding
+ * ArrayExprs.
  *
  * If the argument is not an array constant or the number of elements in the
  * array is greater than optimizer_array_expansion_threshold, returns the
- * original Const unmodified.
+ * original Const unmodified since it is expensive to derive constraints for
+ * large arrays.
  */
 Expr *
 transform_array_Const_to_ArrayExpr(Const *c)

@@ -647,6 +647,8 @@ namespace gpdb {
 	// returns true if a query cancel is requested in GPDB
 	bool FAbortRequested(void);
 
+	GpPolicy *PMakeGpPolicy(MemoryContext mcxt, GpPolicyType ptype, int nattrs);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\

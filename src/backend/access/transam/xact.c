@@ -537,8 +537,9 @@ AssignTransactionId(TransactionState s)
 	 * the Xid as "running".  See GetNewTransactionId.
 	 */
 	s->transactionId = GetNewTransactionId(isSubXact);
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("AssignTransactionId(): assigned xid %u", s->transactionId)));
+	ereportif(Debug_print_full_dtm, LOG,
+			  (errmsg("AssignTransactionId(): assigned xid %u",
+					  s->transactionId)));
 
 	if (isSubXact)
 	{
@@ -828,8 +829,9 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 		 */
 		if (TransactionIdEquals(xid, writer_xid))
 		{
-			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-					(errmsg("qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid)));
+			ereportif(Debug_print_full_dtm, LOG,
+					  (errmsg("qExec Reader, xid = %d matches writer's top xid",
+							  xid)));
 			isCurrent = true;
 		}
 		else
@@ -897,9 +899,9 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	{
 		isCurrentTransactionId = IsCurrentTransactionIdForReader(xid);
 
-		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-				(errmsg("qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = %s -- Subtransaction",
-						xid, (isCurrentTransactionId ? "true" : "false"))));
+		ereportif(Debug_print_full_dtm, LOG,
+				  (errmsg("qExec Reader xid = %u, is current = %s",
+						  xid, (isCurrentTransactionId ? "true" : "false"))));
 
 		return isCurrentTransactionId;
 	}
@@ -1151,7 +1153,6 @@ RecordTransactionCommit(void)
 	SharedInvalidationMessage *invalMessages = NULL;
 	bool		RelcacheInitFileInval;
 	bool		isDtxPrepared = 0;
-	bool		omitCommitRecordForDirtyQEReader;
 	TMGXACT_LOG gxact_log;
 	XLogRecPtr	recptr = {0,0};
 
@@ -1172,31 +1173,7 @@ RecordTransactionCommit(void)
 												 &RelcacheInitFileInval);
 
 	isDtxPrepared = isPreparedDtxTransaction();
-	omitCommitRecordForDirtyQEReader = false;
-	if (markXidCommitted)
-	{
-		/* Safety check in case our assumption is ever broken. */
-		if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer && !seqXlogWrite)
-		{
-			/* with the introduction of the new DTM system, we have
-			 * more coherent state information, local-only changes
-			 * should be OK. */
-			if (DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY)
-			{
-				/* MPP-1687: readers may under some circumstances extend the CLOG */
-				elog(LOG, "Reader qExec committing LOCAL-ONLY changes.");
-			}
-			else
-			{
-				/*
-				 * We are allowing the QE Reader to write to support error tables.
-				 */
-				elog(DEBUG1, "omitting logging commit record for Reader qExec that has written changes.");
-				omitCommitRecordForDirtyQEReader = true;
-			}
-		}
-	}
-	
+
 	/*
 	 * If we haven't been assigned an XID yet, we neither can, nor do we want
 	 * to write a COMMIT record.
@@ -1215,54 +1192,6 @@ RecordTransactionCommit(void)
 		/* Can't have child XIDs either; AssignTransactionId enforces this */
 		Assert(nchildren == 0);
 
-		/* add global transaction information */
-		if (isDtxPrepared)
-		{
-			XLogRecData rdata[2];
-			xl_xact_commit xlrec;
-
-			SetCurrentTransactionStopTimestamp();
-			xlrec.xact_time = xactStopTimestamp;
-			xlrec.nrels = 0;
-			xlrec.nsubxacts = 0;
-			xlrec.nmsgs = 0;
-			rdata[0].data = (char *) (&xlrec);
-			rdata[0].len = MinSizeOfXactCommit;
-			rdata[0].buffer = InvalidBuffer;
-
-			getDtxLogInfo(&gxact_log);
-
-			rdata[0].next = &(rdata[1]);
-			rdata[1].data = (char *) &gxact_log;
-			rdata[1].len = sizeof(gxact_log);
-			rdata[1].buffer = InvalidBuffer;
-
-			rdata[1].next = NULL;
-
-			/*
-			 * Checkpoint process should hold off obtaining the REDO
-			 * pointer while a backend is writing distributed commit
-			 * xlog record and changing state of the distributed
-			 * trasaction.  Otherwise, it is possible that a commit
-			 * record is written by a transaction and the checkpointer
-			 * determines REDO pointer to be after this commit record.
-			 * But the transaction is yet to chance its state to
-			 * INSERTED_DISRIBUTED_COMMITTED and the checkpoint process
-			 * fails to record this transaction in the checkpoint.
-			 * Crash recovery will never see the commit record for this
-			 * transaction and the second phase of 2PC will never
-			 * happen.  The inCommit flag avoids the situation by
-			 * blocking checkpointer untill a backend has finished
-			 * updating the state.
-			 */
-			save_inCommit = MyProc->inCommit;
-			MyProc->inCommit = true;
-			insertingDistributedCommitted();
-			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT, rdata);
-			insertedDistributedCommitted();
-			MyProc->inCommit = save_inCommit;
-		}
-
 		/*
 		 * If we didn't create XLOG entries, we're done here; otherwise we
 		 * should flush those entries the same as a commit record.	(An
@@ -1273,7 +1202,13 @@ RecordTransactionCommit(void)
 		if (!isDtxPrepared && XactLastRecEnd.xrecoff == 0)
 			goto cleanup;
 	}
-	else
+
+	/*
+	 * A QD may write distributed commit record even when it didn't have a
+	 * valid local XID if the distributed transaction changed data only on
+	 * segments (e.g. DML statement).
+	 */
+	if (markXidCommitted || isDtxPrepared)
 	{
 		/*
 		 * Begin commit critical section and insert the commit XLOG record.
@@ -1283,7 +1218,8 @@ RecordTransactionCommit(void)
 		xl_xact_commit xlrec;
 
 		/* Tell bufmgr and smgr to prepare for commit */
-		BufmgrCommit();
+		if (markXidCommitted)
+			BufmgrCommit();
 
 		/*
 		 * Set flags required for recovery processing of commits.
@@ -1313,6 +1249,19 @@ RecordTransactionCommit(void)
 		 * holding the ProcArrayLock, since we're the only one modifying it.
 		 * This makes checkpoint's determination of which xacts are inCommit a
 		 * bit fuzzy, but it doesn't matter.
+		 *
+		 * In GPDB, if this is a distributed transaction, checkpoint process
+		 * should hold off obtaining the REDO pointer while a backend is
+		 * writing distributed commit xlog record and changing state of the
+		 * distributed transaction.  Otherwise, it is possible that a commit
+		 * record is written by a transaction and the checkpointer determines
+		 * REDO pointer to be after this commit record.  But the transaction is
+		 * yet to change its state to INSERTED_DISRIBUTED_COMMITTED and the
+		 * checkpoint process fails to record this transaction in the
+		 * checkpoint.  Crash recovery will never see the commit record for
+		 * this transaction and the second phase of 2PC will never happen.  The
+		 * inCommit flag avoids this situation by blocking checkpointer until a
+		 * backend has finished updating the state.
 		 */
 		START_CRIT_SECTION();
 		save_inCommit = MyProc->inCommit;
@@ -1353,23 +1302,21 @@ RecordTransactionCommit(void)
 			rdata[3].buffer = InvalidBuffer;
 			lastrdata = 3;
 		}
-		/* add global transaction information */
-		if (isDtxPrepared)
-		{
-			getDtxLogInfo(&gxact_log);
-
-			rdata[lastrdata].next = &(rdata[4]);
-			rdata[4].data = (char *) &gxact_log;
-			rdata[4].len = sizeof(gxact_log);
-			rdata[4].buffer = InvalidBuffer;
-			lastrdata = 4;
-		}
 		rdata[lastrdata].next = NULL;
 
 		SIMPLE_FAULT_INJECTOR(OnePhaseTransactionCommit);
 
 		if (isDtxPrepared)
 		{
+			/* add global transaction information */
+			getDtxLogInfo(&gxact_log);
+
+			rdata[lastrdata].next = &(rdata[4]);
+			rdata[4].data = (char *) &gxact_log;
+			rdata[4].len = sizeof(gxact_log);
+			rdata[4].buffer = InvalidBuffer;
+			rdata[4].next = NULL;
+
 			insertingDistributedCommitted();
 
 			/*
@@ -1453,9 +1400,6 @@ RecordTransactionCommit(void)
 		if (max_wal_senders > 0)
 			WalSndWakeup();
 
-		if (isDtxPrepared)
-			forcedDistributedCommitted(&recptr);
-
 		/*
 		 * Now we may update the CLOG, if we wrote a COMMIT record above
 		 */
@@ -1517,7 +1461,7 @@ RecordTransactionCommit(void)
 	 * If we entered a commit critical section, leave it now, and let
 	 * checkpoints proceed.
 	 */
-	if (markXidCommitted)
+	if (markXidCommitted || isDtxPrepared)
 	{
 		MyProc->inCommit = save_inCommit;
 		END_CRIT_SECTION();
@@ -1529,7 +1473,7 @@ RecordTransactionCommit(void)
 	 * Note that at this stage we have marked clog, but still show as running
 	 * in the procarray and continue to hold locks.
 	 */
-	if (markXidCommitted)
+	if (markXidCommitted || isDtxPrepared)
 	{
 		Assert(recptr.xrecoff != 0);
 		SyncRepWaitForLSN(recptr);
@@ -2061,11 +2005,11 @@ SetSharedTransactionId_writer(void)
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT);
 
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("%s setting shared xid %u -> %u",
-					DtxContextToString(DistributedTransactionContext),
-					SharedLocalSnapshotSlot->xid,
-					TopTransactionStateData.transactionId)));
+	ereportif(Debug_print_full_dtm, LOG,
+			  (errmsg("%s setting shared xid %u -> %u",
+					  DtxContextToString(DistributedTransactionContext),
+					  SharedLocalSnapshotSlot->xid,
+					  TopTransactionStateData.transactionId)));
 	SharedLocalSnapshotSlot->xid = TopTransactionStateData.transactionId;
 }
 
@@ -2084,10 +2028,12 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 	 */
 	TopTransactionStateData.transactionId = xid;
 	currentCommandId = cid;
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("qExec READER setting local xid=%u, cid=%u (distributedXid %u/%u)",
-					TopTransactionStateData.transactionId, currentCommandId,
-					QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync)));
+	ereportif(Debug_print_full_dtm, LOG,
+			  (errmsg("qExec READER setting local xid=%u, cid=%u "
+					  "(distributedXid %u/%u)",
+					  TopTransactionStateData.transactionId, currentCommandId,
+					  QEDtxContextInfo.distributedXid,
+					  QEDtxContextInfo.segmateSync)));
 }
 
 /*
@@ -2170,6 +2116,13 @@ StartTransaction(void)
 	AtStart_ResourceOwner();
 
 	/*
+	 * Transactions may be started while recovery is in progress, if
+	 * hot standby is enabled.  This mode is not supported in
+	 * Greenplum yet.
+	 */
+	AssertImply(DistributedTransactionContext != DTX_CONTEXT_LOCAL_ONLY,
+				!s->startedInRecovery);
+	/*
 	 * MPP Modification
 	 *
 	 * If we're an executor and don't have a valid QDSentXID, then we're starting
@@ -2204,13 +2157,13 @@ StartTransaction(void)
 			if (SharedLocalSnapshotSlot != NULL)
 			{
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-				TimestampTz oldStartTimestamp = SharedLocalSnapshotSlot->startTimestamp;
+				ereportif(Debug_print_full_dtm, LOG,
+						  (errmsg("setting shared snapshot startTimestamp = "
+								  INT64_FORMAT "[old=" INT64_FORMAT "])",
+								  stmtStartTimestamp,
+								  SharedLocalSnapshotSlot->startTimestamp)));
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-
-				ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-						(errmsg("setting SharedLocalSnapshotSlot->startTimestamp = " INT64_FORMAT "[old=" INT64_FORMAT "])",
-								stmtStartTimestamp, oldStartTimestamp)));
 			}
 		}
 		break;
@@ -2223,18 +2176,25 @@ StartTransaction(void)
 			if (gp_enable_slow_writer_testmode)
 				pg_usleep(500000);
 
-			if (QEDtxContextInfo.distributedXid == InvalidDistributedTransactionId)
+			if (QEDtxContextInfo.distributedXid ==
+				InvalidDistributedTransactionId)
 			{
 				elog(ERROR,
-					 "not tied to distributed transaction id, but still coordinated as a distributed transaction.");
+					 "distributed transaction id is invalid in context %s",
+					 DtxContextToString(DistributedTransactionContext));
 			}
 
-			if (SharedLocalSnapshotSlot != NULL)
-			{
-				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-				SharedLocalSnapshotSlot->ready = false;
-				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
-			}
+			/*
+			 * Snapshot must not be created before setting transaction
+			 * isolation level.
+			 */
+			Assert(!FirstSnapshotSet);
+
+			/* Assume transaction characteristics as sent by QD */
+			XactIsoLevel = mppTxOptions_IsoLevel(
+				QEDtxContextInfo.distributedTxnOptions);
+			XactReadOnly = isMppTxOptions_ReadOnly(
+				QEDtxContextInfo.distributedTxnOptions);
 
 			/*
 			 * MPP: we're a QE Writer.
@@ -2247,13 +2207,16 @@ StartTransaction(void)
 			 * will auto-commit, and then we will follow it with the real user
 			 * command.
 			 */
-			if (DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
-				DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
+			if (DistributedTransactionContext ==
+				DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
+				DistributedTransactionContext ==
+				DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
 			{
 				currentDistribXid = QEDtxContextInfo.distributedXid;
 
 				Assert(QEDtxContextInfo.distributedTimeStamp != 0);
-				Assert(QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId);
+				Assert(QEDtxContextInfo.distributedXid !=
+					   InvalidDistributedTransactionId);
 
 				/*
 				 * Update distributed XID info, this is only used for
@@ -2269,21 +2232,26 @@ StartTransaction(void)
 			{
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
 
+				SharedLocalSnapshotSlot->ready = false;
 				SharedLocalSnapshotSlot->xid = s->transactionId;
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 				SharedLocalSnapshotSlot->QDxid = QEDtxContextInfo.distributedXid;
 				SharedLocalSnapshotSlot->pid = MyProc->pid;
 				SharedLocalSnapshotSlot->writer_proc = MyProc;
 
-				ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-						(errmsg("qExec writer setting distributedXid: %d sharedQDxid %d (shared xid %u -> %u) ready %s (shared timeStamp = " INT64_FORMAT " -> " INT64_FORMAT ")",
-								QEDtxContextInfo.distributedXid,
-								SharedLocalSnapshotSlot->QDxid,
-								SharedLocalSnapshotSlot->xid,
-								s->transactionId,
-								SharedLocalSnapshotSlot->ready ? "true" : "false",
-								SharedLocalSnapshotSlot->startTimestamp,
-								xactStartTimestamp)));
+				ereportif(Debug_print_full_dtm, LOG,
+						  (errmsg(
+							  "qExec writer setting distributedXid: %d "
+							  "sharedQDxid %d (shared xid %u -> %u) ready %s"
+							  " (shared timeStamp = " INT64_FORMAT " -> "
+							  INT64_FORMAT ")",
+							  QEDtxContextInfo.distributedXid,
+							  SharedLocalSnapshotSlot->QDxid,
+							  SharedLocalSnapshotSlot->xid,
+							  s->transactionId,
+							  SharedLocalSnapshotSlot->ready ? "true" : "false",
+							  SharedLocalSnapshotSlot->startTimestamp,
+							  xactStartTimestamp)));
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 			}
 		}
@@ -2298,13 +2266,26 @@ StartTransaction(void)
 			Assert (SharedLocalSnapshotSlot != NULL);
 			currentDistribXid = QEDtxContextInfo.distributedXid;
 
-			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-					(errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
-							QEDtxContextInfo.distributedXid,
-							QEDtxContextInfo.curcid,
-							getDistributedTransactionId(),
-							DtxContextToString(DistributedTransactionContext),
-							SharedSnapshotDump())));
+			/*
+			 * Snapshot must not be created before setting transaction
+			 * isolation level.
+			 */
+			Assert(!FirstSnapshotSet);
+
+			/* Assume transaction characteristics as sent by QD */
+			XactIsoLevel = mppTxOptions_IsoLevel(
+				QEDtxContextInfo.distributedTxnOptions);
+			XactReadOnly = isMppTxOptions_ReadOnly(
+				QEDtxContextInfo.distributedTxnOptions);
+
+			ereportif(Debug_print_full_dtm, LOG,
+					  (errmsg("qExec reader: distributedXid %d currcid %d "
+							  "gxid = %u DtxContext '%s' sharedsnapshots: %s",
+							  QEDtxContextInfo.distributedXid,
+							  QEDtxContextInfo.curcid,
+							  getDistributedTransactionId(),
+							  DtxContextToString(DistributedTransactionContext),
+							  SharedSnapshotDump())));
 		}
 		break;
 	
@@ -2319,13 +2300,15 @@ StartTransaction(void)
 			break;
 	}
 
-	ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-			(errmsg("[Distributed Snapshot #%u] *StartTransaction* (gxid = %u, xid = %u, '%s')",
-					(!FirstSnapshotSet ? 0 :
-					 GetTransactionSnapshot()->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
-					getDistributedTransactionId(),
-					s->transactionId,
-					DtxContextToString(DistributedTransactionContext))));
+	ereportif(Debug_print_snapshot_dtm, LOG,
+			  (errmsg("[Distributed Snapshot #%u] *StartTransaction* "
+					  "(gxid = %u, xid = %u, '%s')",
+					  (!FirstSnapshotSet ? 0 :
+					   GetTransactionSnapshot()->
+					   distribSnapshotWithLocalMapping.ds.distribSnapshotId),
+					  getDistributedTransactionId(),
+					  s->transactionId,
+					  DtxContextToString(DistributedTransactionContext))));
 
 	/*
 	 * Assign a new LocalTransactionId, and combine it with the backendId to
@@ -2407,10 +2390,12 @@ StartTransaction(void)
 
 	ShowTransactionState("StartTransaction");
 
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("StartTransaction in DTX Context = '%s', %s",
-					DtxContextToString(DistributedTransactionContext),
-					LocalDistribXact_DisplayString(MyProc))));
+	ereportif(Debug_print_full_dtm, LOG,
+			  (errmsg("StartTransaction in DTX Context = '%s', "
+					  "isolation level %s, read-only = %d, %s",
+					  DtxContextToString(DistributedTransactionContext),
+					  IsoLevelAsUpperString(XactIsoLevel), XactReadOnly,
+					  LocalDistribXact_DisplayString(MyProc))));
 }
 
 /*
@@ -2424,7 +2409,6 @@ CommitTransaction(void)
 	TransactionState s = CurrentTransactionState;
 	TransactionId latestXid;
 
-	TransactionId localXid;
 	bool needNotifyCommittedDtxTransaction = false;
 
 	ShowTransactionState("CommitTransaction");
@@ -2533,20 +2517,6 @@ CommitTransaction(void)
 	 * commit processing
 	 */
 	s->state = TRANS_COMMIT;
-
-	/*
-	 * If we're a QE reader, we share the same top-level as the QE writer, but we
-	 * should't write a commit record because the QE writer will do that. We also
-	 * haven't advertised that XID in the proc array, so we don't need to clean
-	 * that up here either.
-	 */
-	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
-		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
-	{
-		localXid = InvalidTransactionId;
-	}
-	else
-		localXid = GetTopTransactionIdIfAny();
 
 	/*
 	 * Here is where we really truly commit.
@@ -2815,6 +2785,7 @@ PrepareTransaction(void)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot PREPARE a transaction that has operated on temporary tables")));
 #endif
+	SIMPLE_FAULT_INJECTOR(StartPrepareTx);
 
 	/* Prevent cancel/die interrupt while cleaning up */
 	HOLD_INTERRUPTS();
@@ -3008,8 +2979,6 @@ AbortTransaction(void)
 	TransactionState s = CurrentTransactionState;
 	TransactionId latestXid;
 
-	TransactionId localXid = GetTopTransactionIdIfAny();
-
 	SIMPLE_FAULT_INJECTOR(AbortTransactionFail);
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -3084,15 +3053,6 @@ AbortTransaction(void)
 	AtAbort_Notify();
 	AtEOXact_RelationMap(false);
 	AtAbort_Twophase();
-
-	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
-	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
-		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
-	{
-		localXid = InvalidTransactionId;
-	}
-	else
-		localXid = GetTopTransactionIdIfAny();
 
 	/*
 	 * Advertise the fact that we aborted in pg_clog (assuming that we got as
@@ -3316,10 +3276,12 @@ StartTransactionCommand(void)
 
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
-				ereport((Debug_print_full_dtm ? LOG : DEBUG3),
-						(errmsg("qExec WRITER updating shared xid: %u -> %u (StartTransactionCommand) timestamp: " INT64_FORMAT " -> " INT64_FORMAT ")",
-								oldXid, s->transactionId,
-								oldStartTimestamp, xactStartTimestamp)));
+				ereportif(Debug_print_full_dtm, LOG,
+						  (errmsg("qExec WRITER updating shared xid: %u -> %u "
+								  "(StartTransactionCommand) timestamp: "
+								  INT64_FORMAT " -> " INT64_FORMAT ")",
+								  oldXid, s->transactionId,
+								  oldStartTimestamp, xactStartTimestamp)));
 			}
 			break;
 
@@ -5004,8 +4966,8 @@ ExecutorMarkTransactionDoesWrites(void)
 	// UNDONE: Verify we are in transaction...
 	if (!TopTransactionStateData.executorSaysXactDoesWrites)
 	{
-		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-				(errmsg("ExecutorMarkTransactionDoesWrites called")));
+		ereportif(Debug_print_full_dtm, LOG,
+				  (errmsg("ExecutorMarkTransactionDoesWrites called")));
 		TopTransactionStateData.executorSaysXactDoesWrites = true;
 	}
 }

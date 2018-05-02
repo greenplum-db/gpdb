@@ -1,4 +1,4 @@
-%{
+%top{
 /*-------------------------------------------------------------------------
  *
  * scan.l
@@ -6,7 +6,7 @@
  *
  * NOTE NOTE NOTE:
  *
- * The rules in this file must be kept in sync with psql's lexer!!!
+ * The rules in this file must be kept in sync with psql's psqlscan.l!
  *
  * The rules are designed so that the scanner never has to backtrack,
  * in the sense that there is always a rule that can match the input
@@ -33,11 +33,13 @@
 #include <ctype.h>
 #include <unistd.h>
 
+#include "parser/gramparse.h"
 #include "parser/parser.h"				/* only needed for GUC variables */
-#include "parser/scanner.h"
 #include "parser/scansup.h"
 #include "mb/pg_wchar.h"
+}
 
+%{
 #define unify_version(a,b,c) ((a<<16)+(b<<8)+c)
 #if unify_version(YY_FLEX_MAJOR_VERSION,YY_FLEX_MINOR_VERSION,YY_FLEX_SUBMINOR_VERSION) < unify_version(2,5,35)
 int base_yyget_lineno  (void);

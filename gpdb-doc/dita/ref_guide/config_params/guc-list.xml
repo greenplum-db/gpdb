@@ -367,6 +367,7 @@
             <li>
               <xref href="#gp_max_plan_size"/>
             </li>
+            <li><xref href="#gp_max_slices"/></li>
             <li>
               <xref href="#gp_motion_cost_per_row"/>
             </li>
@@ -583,6 +584,7 @@
             <li>
               <xref href="#log_truncate_on_rotation"/>
             </li>
+            <li><xref href="#maintenance_work_mem" format="dita"/></li>
             <li>
               <xref href="#max_appendonly_tables"/>
             </li>
@@ -643,6 +645,9 @@
             <li>
               <xref href="#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
+            </li>
+            <li><xref href="#optimizer_enable_associativity" type="section"
+                >optimizer_enable_associativity</xref>
             </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
@@ -851,6 +856,7 @@
             <li>
               <xref href="#validate_previous_free_tid"/>
             </li>
+            <li><xref href="#verify_gpfdists_cert"/></li>
             <li><xref href="#vmem_process_interrupt" type="section"
               >vmem_process_interrupt</xref></li>
             <li>
@@ -2837,8 +2843,7 @@
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
                 </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
-                    <codeph>ZSTD</codeph> |
-                    <codeph>QUICKLZ</codeph><sup>2</sup> |
+                    <codeph>ZSTD</codeph> | <codeph>QUICKLZ</codeph><sup>2</sup> |
                     <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
                 </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
                     19</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
@@ -3441,14 +3446,14 @@
   <topic id="gp_enable_query_metrics">
     <title>gp_enable_query_metrics</title>
     <body>
-      <p>Enables collection of query metrics. When query metrics collection is enabled, 
-        Greenplum Database collects metrics during query execution. The default is off.</p> 
-      <p>After changing this configuration parameter, Greenplum Database must be restarted for the 
+      <p>Enables collection of query metrics. When query metrics collection is enabled, Greenplum
+        Database collects metrics during query execution. The default is off.</p>
+      <p>After changing this configuration parameter, Greenplum Database must be restarted for the
         change to take effect.</p>
-      <p>The Greenplum Database metrics collection extension, when enabled, sends the
-      collected metrics over UDP to a Pivotal Greenplum Command Center agent<sup>1</sup>. </p>
-      <note><sup>1</sup> The metrics collection extension is included in Pivotal's commercial 
-      version of Greenplum Database. Pivotal Greenplum Command Center is supported only with 
+      <p>The Greenplum Database metrics collection extension, when enabled, sends the collected
+        metrics over UDP to a Pivotal Greenplum Command Center agent<sup>1</sup>. </p>
+      <note><sup>1</sup> The metrics collection extension is included in Pivotal's commercial
+        version of Greenplum Database. Pivotal Greenplum Command Center is supported only with
         Pivotal Greenplum Database.</note>
       <table id="gp_enable_query_metrics">
         <tgroup cols="3">
@@ -4191,19 +4196,16 @@
   <topic id="gp_instrument_shmem_size">
     <title>gp_instrument_shmem_size</title>
     <body>
-      <p>The amount of shared memory, in kilobytes, allocated for query metrics.
-      The default is 5120 and the maximum is 131072. At startup, if
-      <codeph><xref href="#gp_enable_query_metrics"
-      format="dita">gp_enable_query_metrics</xref></codeph> is set to on,
-      Greenplum Database allocates space in shared memory to save query metrics.
-      This memory is organized as a header and a list of slots. The number of
-      slots needed depends on the number of concurrent queries and the number of
-      execution plan nodes per query. The default value, 5120, is based on a
-      Greenplum Database system that executes a maximum of about 250 concurrent
-      queries with 120 nodes per query. If the
-      <codeph>gp_enable_query_metrics</codeph> configuration parameter is off,
-      or if the slots are exhausted, the metrics are maintained in local memory
-      instead of in shared memory. </p>
+      <p>The amount of shared memory, in kilobytes, allocated for query metrics. The default is 5120
+        and the maximum is 131072. At startup, if <codeph><xref href="#gp_enable_query_metrics"
+            format="dita">gp_enable_query_metrics</xref></codeph> is set to on, Greenplum Database
+        allocates space in shared memory to save query metrics. This memory is organized as a header
+        and a list of slots. The number of slots needed depends on the number of concurrent queries
+        and the number of execution plan nodes per query. The default value, 5120, is based on a
+        Greenplum Database system that executes a maximum of about 250 concurrent queries with 120
+        nodes per query. If the <codeph>gp_enable_query_metrics</codeph> configuration parameter is
+        off, or if the slots are exhausted, the metrics are maintained in local memory instead of in
+        shared memory. </p>
       <table id="gp_instrument_shmem_size">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4220,7 +4222,8 @@
             <row>
               <entry colname="col1">integer <codeph>0 - 131072</codeph></entry>
               <entry colname="col2">5120</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry></row>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
           </tbody>
         </tgroup>
       </table>
@@ -4602,6 +4605,42 @@
       </table>
     </body>
   </topic>
+  <topic id="gp_max_slices">
+    <title>gp_max_slices</title>
+    <body>
+      <p dir="ltr">Specifies the maximum number of slices (portions of a query plan that are
+        executed on segment instances) that can be generated by a query. If the query generates more
+        than the specified number of slices, Greenplum Database returns an error and does not
+        execute the query. The default value is <codeph>0</codeph>, no maximum value. </p>
+      <p>Executing a query that generates a large number of slices might affect Greenplum Database
+        performance. For example, a query that contains <codeph>UNION</codeph> or <codeph>UNION
+          ALL</codeph> operators over several complex views can generate a large number of slices.
+        You can run <codeph>EXPLAIN ANALYZE</codeph> on the query to view slice statistics for the
+        query.</p>
+      <table id="table_uwf_lzw_ldb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - INT_MAX</entry>
+              <entry colname="col2">0</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  
   <topic id="gp_motion_cost_per_row">
     <title>gp_motion_cost_per_row</title>
     <body>
@@ -6817,6 +6856,36 @@
       </table>
     </body>
   </topic>
+  <topic id="maintenance_work_mem">
+    <title>maintenance_work_mem</title>
+    <body>
+      <p>Specifies the maximum amount of memory to be used in maintenance operations, such as
+          <codeph>VACUUM</codeph> and <codeph>CREATE INDEX</codeph>. It defaults to 16 megabytes
+        (16MB). Larger settings might improve performance for vacuuming and for restoring database
+        dumps.</p>
+      <table id="table_wfs_tfp_qcb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Integer</entry>
+              <entry colname="col2">16</entry>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="max_appendonly_tables">
     <title>max_appendonly_tables</title>
     <body>
@@ -7307,8 +7376,10 @@
         used, then the legacy query optimizer is used. </p>
       <p>The <cmdname>optimizer</cmdname> parameter can be set for a database system, an individual
         database, or a session or query.</p>
-      <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
-          <cite>Greenplum Database Administrator Guide</cite>.</p>
+      <p>For information about the legacy query optimizer and GPORCA, see <xref
+          href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator
+        Guide</cite></ph>.</p>
       <table id="optimizer_guc_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7342,8 +7413,10 @@
             href="#optimizer" format="dita"/></codeph> to on, set the value of this parameter to on
         and run the command <cmdname>ANALYZE</cmdname> or <cmdname>ANALYZE ROOTPARTITION</cmdname>
         on partitioned tables to ensure the proper statistics have been collected. </p>
-      <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
-          <cite>Greenplum Database Administrator Guide</cite>.</p>
+      <p>For information about the legacy query optimizer and GPORCA, see <xref
+          href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator
+        Guide</cite></ph>.</p>
       <table id="table_gj5_k5l_vp">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7473,6 +7546,44 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_enable_associativity">
+    <title>optimizer_enable_associativity</title>
+    <body>
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter controls whether the join
+        associativity transform is enabled during query optimization. The transform analyzes join
+        orders. For the default value <codeph>off</codeph>, only the GPORCA dynamic programming
+        algorithm for analyzing join orders is enabled. The join associativity transform largely
+        duplicates the functionality of the newer dynamic programming algorithm. </p>
+      <p dir="ltr">If the value is <codeph>on</codeph>, GPORCA can use the associativity transform
+        during query optimization.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_zqr_knr_hdb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_enable_master_only_queries">
     <title>optimizer_enable_master_only_queries</title>
     <body>
@@ -7484,8 +7595,9 @@
         query.</p>
       <note>Enabling this parameter decreases performance of short running catalog queries. To avoid
         this issue, set this parameter only for a session or a query. </note>
-      <p>For information about GPORCA, see the <cite>Greenplum Database Administrator
-        Guide</cite>.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
       <table id="table_ykk_rg5_gv">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7784,8 +7896,9 @@
         </ul></p>
       <p>Setting this parameter to <codeph>ALWAYS</codeph> generates a minidump for all queries. Set
         this parameter to <codeph>ONERROR</codeph> to minimize total optimization time. </p>
-      <p>For information about GPORCA, see "Querying Data" in the <cite>Greenplum Database
-          Administrator Guide</cite>.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
       <table id="optimizer_minidump">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9629,6 +9742,54 @@
         failed. Greenplum Database attempts to execute the queries. </p>
       <note otherprops="pivotal">If a warning is returned, please contact Pivotal Support.</note>
       <table id="table_fkc_4pb_1w">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="verify_gpfdists_cert">
+    <title>verify_gpfdists_cert</title>
+    <body>
+      <p dir="ltr">When a Greenplum Database external table is defined with the
+          <codeph>gpfdists</codeph> protocol to use SSL security, this parameter controls whether
+        SSL certificate authentication is enabled. The default is <codeph>true</codeph>, SSL
+        authentication is enabled when Greenplum Database communicates with the
+          <codeph>gpfdist</codeph> utility to either read data from or write data to an external
+        data source.</p>
+      <p>The value <codeph>false</codeph> disables SSL certificate authentication. These SSL
+        exceptions are ignored:<ul id="ul_ygd_1lj_mdb">
+          <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> is not
+            trusted by Greenplum Database.</li>
+          <li>The host name contained in the SSL certificate does not match the host name that is
+            running <codeph>gpfdist</codeph>.</li>
+        </ul></p>
+      <p>You can set the value to <codeph>false</codeph> to disable authentication when testing the
+        communication between the Greenplum Database external table and the <codeph>gpfdist</codeph>
+        utility that is serving the external data.<note type="warning">Disabling SSL certificate
+          authentication exposes a security risk by not validating the <codeph>gpfdists</codeph> SSL
+          certificate. </note></p>
+      <p>For information about the <codeph>gpfdists</codeph> protocol, see <xref
+          href="../../admin_guide/external/g-gpfdists-protocol.xml">gpfdists:// Protocol</xref>. For
+        information about running the <codeph>gpfdist</codeph> utility, see <xref
+          href="../../utility_guide/admin_utilities/gpfdist.xml"/>. </p>
+      <table id="table_ncx_n1h_ldb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>

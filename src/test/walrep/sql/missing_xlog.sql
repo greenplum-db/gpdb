@@ -123,7 +123,7 @@ create extension if not exists gp_inject_fault;
 -- interval.
 select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
 select gp_request_fts_probe_scan();
-select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);

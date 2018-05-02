@@ -24,42 +24,10 @@
 										   // 14 bits, or 16,383 (16k-1).
 										   // Maximum row count for small content.
 										   
-#define AOSmallContentHeader_MaxLength   0x1FFFFF 
-										   // 21 bits, or 2,097,151 (2 Mb-1).
-										   // Maximum blocksize.  Does not include
-										   // Append-Only Storage Header overhead...
-
-/*
- * Large Content.
- */
-#define AOLargeContentHeader_MaxLargeRowCount 0x1FFFFFF 
-										   // 25 bits, or 33,554,431, or (2^25-1)
-										   // Maximum row count for large content.
-
-#define AOLargeContentHeader_MaxLargeContentLength   0x3FFFFFFF 
-										  // 30 bits, or 1,073,741,823 (1Gb-1).
-
 /*
  * Non-Bulk Dense Content.
  */
-#define AONonBulkDenseContentHeader_MaxLength   0x1FFFFF 
-											   // 21 bits, or 2,097,151 (2 Mb-1).
-											   // Maximum blocksize.  Does not include
-											   // Append-Only Storage Header overhead...
-	
 #define AONonBulkDenseContentHeader_MaxLargeRowCount 0x3FFFFFFF 
-										   // 30 bits, or 1,073,741,823, or (2^30-1)
-										   // Maximum row count for dense content.
-
-/*
- * Bulk Dense Content.
- */
-#define AOBulkDenseContentHeader_MaxLength   0x1FFFFF 
-											   // 21 bits, or 2,097,151 (2 Mb-1).
-											   // Maximum blocksize.  Does not include
-											   // Append-Only Storage Header overhead...
-	
-#define AOBulkDenseContentHeader_MaxLargeRowCount 0x3FFFFFFF 
 										   // 30 bits, or 1,073,741,823, or (2^30-1)
 										   // Maximum row count for dense content.
 
@@ -164,8 +132,5 @@ typedef enum AOHeaderCheckError
 	AOHeaderCheckInvalidOverallBlockLen,
 	AOHeaderCheckLargeContentLenIsZero,
 } AOHeaderCheckError;
-
-extern int32 AppendOnlyStorage_GetUsableBlockSize(
-	int32 configBlockSize);
 
 #endif   /* CDBAPPENDONLYSTORAGE_H */

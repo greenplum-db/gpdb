@@ -51,6 +51,11 @@ cdbpathtoplan_create_flow(PlannerInfo *root,
 		flow = makeFlow(FLOW_SINGLETON);
 		flow->segindex = 0;
 	}
+	else if (CdbPathLocus_IsSegmentGeneral(locus))
+	{
+		flow = makeFlow(FLOW_SINGLETON);
+		flow->segindex = 0;
+	}
 	else if (CdbPathLocus_IsReplicated(locus))
 	{
 		flow = makeFlow(FLOW_REPLICATED);

@@ -39,6 +39,7 @@
 #include "replication/walsender.h"
 #include "storage/bfz.h"
 #include "storage/proc.h"
+#include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
@@ -73,6 +74,7 @@ static const char *assign_gp_workfile_compress_algorithm(const char *newval, boo
 static const char *assign_optimizer_minidump(const char *newval,
 						  bool doit, GucSource source);
 static bool assign_optimizer(bool newval, bool doit, GucSource source);
+static bool assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source);
 static bool assign_dispatch_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_gp_hashagg_default_nbatches(int newval, bool doit, GucSource source);
 
@@ -325,6 +327,7 @@ bool		dml_ignore_target_partition_check = false;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
+bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
@@ -450,6 +453,12 @@ bool		optimizer_enable_associativity;
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
+
+/* GUCs for replicated table */
+bool		optimizer_replicated_table_insert;
+
+/* GUCs for slice table*/
+int			gp_max_slices;
 
 /* System Information */
 static int	gp_server_version_num;
@@ -755,6 +764,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_create_index_concurrently,
 		false, NULL, NULL
+	},
+
+	{
+		{"gp_enable_minmax_optimization", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables the planner's use of index scans with limit to implement MIN/MAX."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_minmax_optimization,
+		true, NULL, NULL
 	},
 
 	{
@@ -2826,6 +2845,26 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"optimizer_replicated_table_insert", PGC_USERSET, STATS_ANALYZE,
+			gettext_noop("Omit broadcast motion when inserting into replicated table"),
+			gettext_noop("Only when source is SegmentGeneral or General locus"),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_replicated_table_insert,
+		true, NULL, NULL
+	},
+
+	{
+		{"verify_gpfdists_cert", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Verifies the authenticity of the gpfdist's certificate"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&verify_gpfdists_cert,
+		true, assign_verify_gpfdists_cert, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -2946,7 +2985,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&memory_spill_ratio,
-		20, 0, 100, NULL, NULL
+		20, 0, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -3476,7 +3515,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"gp_fts_probe_retries", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_fts_probe_retries,
 		5, 0, 100, NULL, NULL
@@ -3902,12 +3940,12 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Item limit for expansion of arrays in WHERE clause to disjunctive form."),
+			gettext_noop("Item limit for expansion of arrays in WHERE clause for constraint derivation."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_expansion_threshold,
-		25, 0, INT_MAX, NULL, NULL
+		100, 0, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -4018,6 +4056,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_server_version_num,
 		GP_VERSION_NUM, GP_VERSION_NUM, GP_VERSION_NUM, NULL, NULL
+	},
+
+	{
+		{"gp_max_slices", PGC_USERSET, PRESET_OPTIONS,
+			gettext_noop("Maximum slices for a single query"),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
+		},
+		&gp_max_slices,
+		0, 0, INT_MAX, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -4805,6 +4853,15 @@ assign_optimizer(bool newval, bool doit, GucSource source)
 		}
 	}
 
+	return true;
+}
+
+static bool
+assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source)
+{
+	if (!newval && Gp_role == GP_ROLE_DISPATCH)
+		elog(WARNING, "verify_gpfdists_cert=off. Greenplum Database will stop validating "
+				"the gpfidsts SSL certificate for connections between segments and gpfdists");
 	return true;
 }
 

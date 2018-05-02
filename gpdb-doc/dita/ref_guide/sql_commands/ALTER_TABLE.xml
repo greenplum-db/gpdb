@@ -25,8 +25,9 @@ ALTER TABLE <varname>name</varname>
    | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
    <varname>partition_action</varname></codeblock>
                         <p>where <varname>action</varname> is one of:</p>
-                        <codeblock>  ADD [COLUMN] <varname>column_name type</varname>
+                        <codeblock>  ADD [COLUMN] <varname>column_name type</varname> [ DEFAULT <varname>default_expr</varname> ]
       [<varname>column_constraint</varname> [ ... ]]
+      [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
   DROP [COLUMN] <varname>column</varname> [RESTRICT | CASCADE]
   ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname> [USING <varname>expression</varname>]
   ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
@@ -111,10 +112,11 @@ ALTER TABLE <varname>name</varname>
                                 There are several subforms: </p>
                         <ul>
                                 <li id="ay136723"><b>ADD COLUMN</b> — Adds a new column to the
-                                        table, using the same syntax as <codeph>CREATE
-                                                TABLE</codeph>. When adding a column to an
-                                        append-optimized table a <codeph>DEFAULT</codeph> clause is
-                                        required. </li>
+                                        table, using the same syntax as <codeph><xref
+                                                  href="CREATE_TABLE.xml">CREATE
+                                                TABLE</xref></codeph>. The <codeph>ENCODING</codeph>
+                                        clause is valid only for append-optimized, column-oriented
+                                        tables.</li>
                                 <li><b>DROP COLUMN</b> — Drops a column from a table. Note that if
                                         you drop table columns that are being used as the Greenplum
                                         Database distribution key, the distribution policy for the
@@ -706,12 +708,10 @@ ALTER TABLE <varname>name</varname>
                         <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
                                 rows in the table are initialized with the column's default value,
                                 or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
-                                specified. (Note that adding a column to an append-optimized table
-                                without specifying a default value is not allowed.) Adding a column
-                                with a non-null default or changing the type of an existing column
-                                will require the entire table to be rewritten. This may take a
-                                significant amount of time for a large table; and it will
-                                temporarily require double the disk space.</p>
+                                specified. Adding a column with a non-null default or changing the
+                                type of an existing column will require the entire table to be
+                                rewritten. This may take a significant amount of time for a large
+                                table; and it will temporarily require double the disk space.</p>
                         <p>You can specify multiple changes in a single <codeph>ALTER TABLE</codeph>
                                 command, which will be done in a single pass over the table. </p>
                         <p>The <codeph>DROP COLUMN</codeph> form does not physically remove the

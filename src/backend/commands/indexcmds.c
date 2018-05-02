@@ -577,30 +577,24 @@ DefineIndex(RangeVar *heapRelation,
 					  accessMethodName, accessMethodId,
 					  amcanorder, isconstraint);
 
-	if (shouldDispatch)
-	{
-		if ((primary || unique) && rel->rd_cdbpolicy)
-			checkPolicyForUniqueIndex(rel,
-									  indexInfo->ii_KeyAttrNumbers,
-									  indexInfo->ii_NumIndexAttrs,
-									  primary,
-									  list_length(indexInfo->ii_Expressions),
-									  relationHasPrimaryKey(rel),
-									  relationHasUniqueIndex(rel));
-		
-		/* We don't have to worry about constraints on parts.  Already checked. */
-		if ( isconstraint && rel_is_partitioned(relationId) )
-			checkUniqueConstraintVsPartitioning(rel,
-												indexInfo->ii_KeyAttrNumbers,
-												indexInfo->ii_NumIndexAttrs,
-												primary);
+	if ((primary || unique) && rel->rd_cdbpolicy)
+		checkPolicyForUniqueIndex(rel,
+								  indexInfo->ii_KeyAttrNumbers,
+								  indexInfo->ii_NumIndexAttrs,
+								  primary,
+								  list_length(indexInfo->ii_Expressions),
+								  relationHasPrimaryKey(rel),
+								  relationHasUniqueIndex(rel));
 
-	}
-	else if (Gp_role == GP_ROLE_EXECUTE)
-	{
-		if (stmt)
-			quiet = true;
-	}
+	/* We don't have to worry about constraints on parts.  Already checked. */
+	if ( isconstraint && rel_is_partitioned(relationId) )
+		checkUniqueConstraintVsPartitioning(rel,
+											indexInfo->ii_KeyAttrNumbers,
+											indexInfo->ii_NumIndexAttrs,
+											primary);
+
+	if (Gp_role == GP_ROLE_EXECUTE && stmt)
+		quiet = true;
 
 	/*
 	 * Report index creation if appropriate (delay this till after most of the

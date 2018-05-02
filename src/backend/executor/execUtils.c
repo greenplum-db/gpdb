@@ -1708,6 +1708,14 @@ InitSliceTable(EState *estate, int nMotions, int nSubplans)
 				n;
 	MemoryContext oldcontext;
 
+	n = 1 + nMotions + nSubplans;
+
+	if (gp_max_slices > 0 && n > gp_max_slices)
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("at most %d slices are allowed in a query, current number: %d", gp_max_slices, n),
+				 errhint("rewrite your query or adjust GUC gp_max_slices")));
+
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 
 	table = makeNode(SliceTable);
@@ -1719,7 +1727,6 @@ InitSliceTable(EState *estate, int nMotions, int nSubplans)
 	/* Each slice table has a unique-id. */
 	table->ic_instance_id = ++gp_interconnect_id;
 
-	n = 1 + nMotions + nSubplans;
 	for (i = 0; i < n; i++)
 	{
 		slice = makeNode(Slice);
@@ -1834,7 +1841,7 @@ static void InitSliceReq(SliceReq * req);
 static void AccumSliceReq(SliceReq * inv, SliceReq * req);
 static void InventorySliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req);
 static void AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceReq * req);
-
+static void FinalizeSliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req);
 
 /*
  * Function AssignGangs runs on the QD and finishes construction of the
@@ -1884,12 +1891,14 @@ AssignGangs(QueryDesc *queryDesc)
 
 	/* Capture main slice tree requirement. */
 	InventorySliceTree(sliceMap, 0, &inv);
+	FinalizeSliceTree(sliceMap, 0, &inv);
 
 	/* Capture initPlan slice tree requirements. */
 	for (i = sliceTable->nMotions + 1; i < nslices; i++)
 	{
 		InitSliceReq(&req);
 		InventorySliceTree(sliceMap, i, &req);
+		FinalizeSliceTree(sliceMap, i, &req);
 		AccumSliceReq(&inv, &req);
 	}
 
@@ -2030,6 +2039,58 @@ InventorySliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req)
 	{
 		childIndex = lfirst_int(cell);
 		InventorySliceTree(sliceMap, childIndex, req);
+	}
+}
+
+/*
+ * Helper function to adjust slice tree for replicated table.
+ *
+ * Main slice or init plans that working on replicated table may
+ * generate all gangs with 1-size, but in GPDB, main slice and
+ * init plans all need a N-size gang to act as primary writer,
+ * so this function will try to promote a 1-size gang to N-size
+ * gang and set it as direct dispatch.
+ */
+static void
+FinalizeSliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req)
+{
+	ListCell *cell;
+	int childIndex;
+	Slice *slice = sliceMap[sliceIndex];
+
+	if (req->numNgangs > 0)
+		return;
+
+	switch (slice->gangType)
+	{
+		case GANGTYPE_UNALLOCATED:
+		case GANGTYPE_ENTRYDB_READER:
+		case GANGTYPE_PRIMARY_WRITER:
+		case GANGTYPE_PRIMARY_READER:
+			break;
+
+		case GANGTYPE_SINGLETON_READER:
+			Assert(req->num1gangs_primary_reader > 0);
+			req->num1gangs_primary_reader--;
+			req->numNgangs++;
+			slice->gangType = GANGTYPE_PRIMARY_READER;
+			slice->gangSize = getgpsegmentCount();
+			slice->numGangMembersToBeActive = 1;
+			Assert(!slice->directDispatch.isDirectDispatch);
+			slice->directDispatch.isDirectDispatch = true;
+			/*
+			 * Important: Do not make a random contentIds here,
+			 * always use first QE as worker, otherwise interconnect
+			 * will mess it up.
+			 */
+			slice->directDispatch.contentIds = list_make1_int(gp_singleton_segindex);
+			break;
+	}
+
+	foreach(cell, slice->children)
+	{
+		childIndex = lfirst_int(cell);
+		FinalizeSliceTree(sliceMap, childIndex, req);
 	}
 }
 

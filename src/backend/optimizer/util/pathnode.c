@@ -631,6 +631,19 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 	if (orig_jointype == JOIN_DEDUP_SEMI)
 	{
 		Assert(new_path->jointype == JOIN_INNER);
+
+		/*
+		 * Skip rowid unique path if distinct rels are replicated tables
+		 * The reason is ctid + gp_segment_id can not identify a logical
+		 * row of replicated table.
+		 *
+		 * TODO: add a motion on top of segmentGeneral node to support
+		 * rowid unique.
+		 */
+		if (CdbPathLocus_IsPartitioned(path->locus) &&
+		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->outerjoinpath->locus))
+			return;
+
 		path = (Path *) create_unique_rowid_path(root,
 												 parent_rel,
 												 (Path *) new_path,
@@ -639,6 +652,11 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 	else if (orig_jointype == JOIN_DEDUP_SEMI_REVERSE)
 	{
 		Assert(new_path->jointype == JOIN_INNER);
+
+		if (CdbPathLocus_IsPartitioned(path->locus) &&
+		    CdbPathLocus_IsSegmentGeneral(((JoinPath *)path)->innerjoinpath->locus))
+			return;
+
 		path = (Path *) create_unique_rowid_path(root,
 												 parent_rel,
 												 (Path *) new_path,
@@ -1101,7 +1119,9 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 		{
 			Path	   *subpath = (Path *) lfirst(l);
 
+			/* If one of subplan is segment general, gather others to single QE */
 			if (CdbPathLocus_IsBottleneck(subpath->locus) ||
+				CdbPathLocus_IsSegmentGeneral(subpath->locus) ||
 				CdbPathLocus_IsReplicated(subpath->locus))
 			{
 				fIsNotPartitioned = true;
@@ -2313,6 +2333,8 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, CdbLocusType ctelo
 		CdbPathLocus_MakeSingleQE(&result);
 	else if (ctelocus == CdbLocusType_General)
 		CdbPathLocus_MakeGeneral(&result);
+	else if (ctelocus == CdbLocusType_SegmentGeneral)
+		CdbPathLocus_MakeSegmentGeneral(&result);
 	else
 		CdbPathLocus_MakeStrewn(&result);
 

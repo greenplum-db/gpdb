@@ -265,8 +265,9 @@ test_ftsConnect_one_failure_one_success(void **state)
 	PGconn *failure_pgconn = palloc(sizeof(PGconn));
 	failure_pgconn->status = CONNECTION_BAD;
 	will_return(PQconnectStart, failure_pgconn);
+
 	expect_value(PQerrorMessage, conn, failure_pgconn);
-	will_be_called(PQerrorMessage);
+	will_return(PQerrorMessage, "");
 
 	ftsConnect(&context);
 
@@ -461,7 +462,7 @@ test_ftsReceive_when_fts_handler_FATAL(void **state)
 	will_return(PQconsumeInput, 0);
 
 	expect_value(PQerrorMessage, conn, ftsInfo->conn);
-	will_be_called(PQerrorMessage);
+	will_return(PQerrorMessage, "");
 
 	/*
 	 * TEST

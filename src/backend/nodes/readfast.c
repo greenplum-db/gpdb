@@ -1104,7 +1104,7 @@ _readCreateStmt(void)
 	READ_NODE_FIELD(distributedBy);
 	READ_CHAR_FIELD(relKind);
 	READ_CHAR_FIELD(relStorage);
-	/* policy omitted */
+	READ_NODE_FIELD(policy);
 	/* postCreate - for analysis, QD only */
 	/* deferredStmts - for analysis, QD only */
 	READ_BOOL_FIELD(is_part_child);
@@ -1113,8 +1113,6 @@ _readCreateStmt(void)
 	READ_OID_FIELD(ownerid);
 	READ_BOOL_FIELD(buildAoBlkdir);
 	READ_NODE_FIELD(attr_encodings);
-
-	local_node->policy = NULL;
 
 	/*
 	 * Some extra checks to make sure we didn't get lost
@@ -1388,9 +1386,7 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
 	READ_NODE_FIELD(ao_segnos);
-	READ_INT_FIELD(nattrs);
-	READ_ENUM_FIELD(ptype, GpPolicyType);
-	READ_INT_ARRAY(distribution_attrs, local_node->nattrs, AttrNumber);
+	READ_NODE_FIELD(policy);
 	READ_DONE();
 
 }
@@ -1453,7 +1449,8 @@ _readPlannedStmt(void)
 	READ_INT_FIELD(nParamExec);
 	READ_INT_FIELD(nMotionNodes);
 	READ_INT_FIELD(nInitPlans);
-	/* intoPolicy not serialized in outfast.c */
+
+	READ_NODE_FIELD(intoPolicy);
 
 	READ_UINT64_FIELD(query_mem);
 	READ_DONE();
@@ -1687,7 +1684,7 @@ _readExternalScan(void)
 	READ_BOOL_FIELD(isMasterOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
-	READ_OID_FIELD(fmterrtbl);
+	READ_BOOL_FIELD(logErrors);
 	READ_INT_FIELD(encoding);
 	READ_INT_FIELD(scancounter);
 
@@ -2473,6 +2470,7 @@ _readCreateTableSpaceStmt(void)
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(owner);
 	READ_STRING_FIELD(location);
+	READ_NODE_FIELD(options);
 
 	READ_DONE();
 }
@@ -2719,6 +2717,17 @@ _readCreateFdwStmt(void)
 	READ_DONE();
 }
 
+static DistributedBy*
+_readDistributedBy(void)
+{
+	READ_LOCALS(DistributedBy);
+
+	READ_ENUM_FIELD(ptype, GpPolicyType);
+	READ_NODE_FIELD(keys);
+
+	READ_DONE();
+}
+
 static AlterFdwStmt *
 _readAlterFdwStmt(void)
 {
@@ -2912,6 +2921,23 @@ _readValue(NodeTag nt)
 	return result;
 
 }
+
+/*
+ * _readGpPolicy
+ */
+static GpPolicy *
+_readGpPolicy(void)
+{
+	READ_LOCALS(GpPolicy);
+
+	READ_ENUM_FIELD(ptype, GpPolicyType);
+
+	READ_INT_FIELD(nattrs);
+	READ_INT_ARRAY(attrs, local_node->nattrs, AttrNumber);
+
+	READ_DONE();
+}
+
 
 static void *
 readNodeBinary(void)
@@ -3763,6 +3789,12 @@ readNodeBinary(void)
 				break;
 			case T_LockRows:
 				return_value = _readLockRows();
+				break;
+			case T_GpPolicy:
+				return_value = _readGpPolicy();
+				break;
+			case T_DistributedBy:
+				return_value = _readDistributedBy();
 				break;
 
 

@@ -104,4 +104,7 @@ void mark_plan_entry(Plan* plan);
 extern
 void mark_plan_singleQE(Plan* plan);
 
+extern
+void mark_plan_segment_general(Plan* plan);
+
 #endif   /* CDBSETOP_H */

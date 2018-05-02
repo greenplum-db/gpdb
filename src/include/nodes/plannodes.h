@@ -127,9 +127,10 @@ typedef struct PlannedStmt
 
 	int			nInitPlans;		/* number of initPlans in plan */
 
-	/* GPDB: Used only on QD. Don't serialize.  Cloned from top Query node
-	 *       at the end of planning.  Holds the result distribution policy
-	 *       for SELECT ... INTO and set operations.
+	/* 
+	 * Cloned from top Query node at the end of planning.
+	 * Holds the result distribution policy
+	 * for SELECT ... INTO and set operations.
 	 */
 	struct GpPolicy  *intoPolicy;
 
@@ -724,7 +725,7 @@ typedef struct ExternalScan
 	bool		isMasterOnly;   /* true for EXECUTE on master seg only */
 	int			rejLimit;       /* reject limit (-1 for no sreh)      */
 	bool		rejLimitInRows; /* true if ROWS false if PERCENT      */
-	Oid			fmterrtbl;      /* format error table, InvalidOid if none */
+	bool		logErrors;      /* true to log errors into file       */
 	int			encoding;		/* encoding of external table data    */
 	uint32      scancounter;	/* counter incr per scan node created */
 

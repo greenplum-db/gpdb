@@ -119,7 +119,7 @@ extern Oid get_settable_tablespace_oid(char *tablespacename);
 extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 			List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
 
-extern List *make_dist_clause(Relation rel);
+extern DistributedBy *make_dist_clause(Relation rel);
 
 extern Oid transformFkeyCheckAttrs(Relation pkrel,
 								   int numattrs, int16 *attnums,

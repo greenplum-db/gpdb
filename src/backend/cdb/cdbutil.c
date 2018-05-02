@@ -475,7 +475,7 @@ freeCdbComponentDatabases(CdbComponentDatabases *pDBs)
  * freeCdbComponentDatabaseInfo:
  * Releases any storage allocated for members variables of a CdbComponentDatabaseInfo struct.
  */
-void
+static void
 freeCdbComponentDatabaseInfo(CdbComponentDatabaseInfo *cdi)
 {
 	int			i;

@@ -276,7 +276,7 @@
         <codeblock>plcontainer image-add -f /home/gpadmin/plcontainer-python-images-1.0.0.tar.gz</codeblock></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
-      <p>Use the <codeph>plcontainer image-show</codeph> command to display the installed Docker
+      <p>Use the <codeph>plcontainer image-list</codeph> command to display the installed Docker
         images on the local host.</p>
       <p>This command adds information to the PL/Container configuration file so that PL/Container
         can access the Docker image to create a Docker

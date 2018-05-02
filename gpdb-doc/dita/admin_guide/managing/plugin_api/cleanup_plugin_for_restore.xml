@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="pa137116">cleanup_plugin_for_restore</title>
+  <body>
+    <p>Plugin command to clean up a storage plugin after restore.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><varname>plugin_executable</varname> <b>cleanup_plugin_for_restore</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>gprestore</codeph> invokes the <codeph>cleanup_plugin_for_restore</codeph> plugin command on the master and all segment hosts when a <codeph>gprestore</codeph> operation completes, both in success and failure cases.</p>
+      <p>The <codeph>cleanup_plugin_for_restore</codeph> implementation should perform the actions necessary to clean up the remote storage system after a restore. Clean up activities may include removing remote directories or temporary files created during the restore, disconnecting from the backup service, etc.</p>
+    </section>
+    <section id="section4"><title>Arguments</title><parml>
+        <plentry>
+          <pt><varname>plugin_config_file</varname></pt>
+          <pd>The absolute path to the plugin configuration YAML file.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>local_backup_dir</varname></pt>
+          <pd>The local directory on the Greenplum Database host (master and segments) from which <codeph>gprestore</codeph> reads backup files.</pd>
+        </plentry>
+        </parml>
+    </section>
+    <section id="section5"><title>Exit Code</title>
+      <p>The <codeph>cleanup_plugin_for_restore</codeph> command must exit with a value of 0 on success, non-zero if an error occurs. In the case of a non-zero exit code, <codeph>gprestore</codeph> displays the contents of <codeph>stderr</codeph> to the user.</p>
+    </section>
+  </body>
+</topic>

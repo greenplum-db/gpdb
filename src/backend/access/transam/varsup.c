@@ -190,7 +190,7 @@ GetNewTransactionId(bool isSubXact)
 	/*
 	 * To aid testing, you can set the debug_burn_xids GUC, to consume XIDs
 	 * faster. If set, we bump the XID counter to the next value divisible by
-	 * 1024, minus one. The idea is to skip over "boring" XID ranges, but
+	 * 4096, minus one. The idea is to skip over "boring" XID ranges, but
 	 * still step through XID wraparound, CLOG page boundaries etc. one XID
 	 * at a time.
 	 */
@@ -199,12 +199,18 @@ GetNewTransactionId(bool isSubXact)
 		TransactionId xx;
 		uint32		r;
 
+		/*
+		 * Based on the minimum of ENTRIES_PER_PAGE (DistributedLog),
+		 * SUBTRANS_XACTS_PER_PAGE, CLOG_XACTS_PER_PAGE.
+		 */
+		const uint32      page_extend_limit = 4 * 1024;
+
 		xx = ShmemVariableCache->nextXid;
 
-		r = xx % 1024;
-		if (r > 1 && r < 1023)
+		r = xx % page_extend_limit;
+		if (r > 1 && r < (page_extend_limit - 1))
 		{
-			xx += 1024 - r - 1;
+			xx += page_extend_limit - r - 1;
 			ShmemVariableCache->nextXid = xx;
 		}
 	}

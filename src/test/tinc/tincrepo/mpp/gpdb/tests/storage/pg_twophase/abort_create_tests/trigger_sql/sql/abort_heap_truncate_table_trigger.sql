@@ -1,1 +1,0 @@
-TRUNCATE TABLE cr_heap_truncate_table;

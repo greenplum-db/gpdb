@@ -1,6 +1,10 @@
 ## Dispatcher API
-This document illustrates the interfaces of a GPDB component called dispatcher, which is responsible for 1) building connections from master node to segments,
-2) managing query/plan dispatching, 3) and collecting query execution results. The implementation of dispatcher is mainly located under this directory
+This document illustrates the interfaces of a GPDB component called dispatcher, which is responsible for
+1) building connections from master node to segments,
+2) managing query/plan dispatching, and
+3) collecting query execution results.
+
+The implementation of dispatcher is mainly located under this directory.
 
 ### Terms Used:
 * Gang: Gang refers to a group of processes on segments. There are 4 types of Gang:

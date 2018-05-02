@@ -28,5 +28,4 @@
 #define GpSegmentIdAttributeNumber			    (-8)    /*CDB*/
 #define FirstLowInvalidHeapAttributeNumber		(-9)
 
-
 #endif   /* SYSATTR_H */

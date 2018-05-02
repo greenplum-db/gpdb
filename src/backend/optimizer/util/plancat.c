@@ -419,7 +419,7 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 
     /* Rel not distributed?  RelationGetNumberOfBlocks can get actual #pages. */
     if (!relOptInfo->cdbpolicy ||
-        relOptInfo->cdbpolicy->ptype != POLICYTYPE_PARTITIONED)
+        relOptInfo->cdbpolicy->ptype == POLICYTYPE_ENTRY)
     {
         estimate_rel_size(rel, attr_widths, pages, tuples);
         return;

@@ -834,30 +834,47 @@ Relation
 parserOpenTable(ParseState *pstate, const RangeVar *relation,
 				int lockmode, bool nowait, bool *lockUpgraded)
 {
-	Relation rel = NULL;
-	
-	PG_TRY();
+	Relation	rel;
+	ParseCallbackState pcbstate;
+	Oid			relid;
+
+	setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
+
+	/* Look up the appropriate relation using namespace search */
+	relid = RangeVarGetRelid(relation, true);
+	if (relid == InvalidOid)
 	{
-		rel = CdbOpenRelationRv(relation, lockmode, nowait, NULL);
-	}
-	PG_CATCH();
-	{
-		if (relation->schemaname == NULL &&
-			isFutureCTE(pstate, relation->relname))
-		{
+		if (relation->schemaname)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_TABLE),
-					 errmsg("relation \"%s\" does not exist",
-							relation->relname),
-					 errdetail("There is a WITH item named \"%s\", but it cannot be referenced from this part of the query.",
-							   relation->relname),
-					 errhint("Re-order the WITH items to remove forward references.")));
+					 errmsg("relation \"%s.%s\" does not exist",
+							relation->schemaname, relation->relname)));
+		else
+		{
+			/*
+			 * An unqualified name might have been meant as a reference to
+			 * some not-yet-in-scope CTE.  The bare "does not exist" message
+			 * has proven remarkably unhelpful for figuring out such problems,
+			 * so we take pains to offer a specific hint.
+			 */
+			if (isFutureCTE(pstate, relation->relname))
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_TABLE),
+						 errmsg("relation \"%s\" does not exist",
+								relation->relname),
+						 errdetail("There is a WITH item named \"%s\", but it cannot be referenced from this part of the query.",
+								   relation->relname),
+						 errhint("Re-order the WITH items to remove forward references.")));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_TABLE),
+						 errmsg("relation \"%s\" does not exist",
+								relation->relname)));
 		}
-
-		PG_RE_THROW();
 	}
-	PG_END_TRY();
+	rel = CdbTryOpenRelation(relid, lockmode, nowait, lockUpgraded);
 
+	cancel_parser_errposition_callback(&pcbstate);
 	return rel;
 }
 

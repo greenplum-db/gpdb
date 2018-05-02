@@ -277,3 +277,25 @@ UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='bfv_statist
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
 
 RESET allow_system_table_mods;
+
+-- cardinality estimation for join on varchar, text, char and bpchar columns must account for FreqRemaining and NDVRemaining
+-- resulting in better cardinality numbers for the joins in orca
+-- start_ignore
+DROP TABLE IF EXISTS test_join_card1;
+DROP TABLE IF EXISTS test_join_card2;
+-- end_ignore
+CREATE TABLE test_join_card1 (a varchar, b varchar);
+CREATE TABLE test_join_card2 (a varchar, b varchar);
+CREATE TABLE test_join_card3 (a varchar, b varchar);
+INSERT INTO test_join_card1 SELECT i::text, i::text FROM generate_series(1, 20000)i;
+INSERT INTO test_join_card2 SELECT i::text, NULL FROM generate_series(1, 179)i;
+INSERT INTO test_join_card2 SELECT 1::text, 'a' FROM generate_series(1, 5820)i;
+INSERT INTO test_join_card3 SELECT i::text, i::text FROM generate_series(1,10000)i;
+ANALYZE test_join_card1;
+ANALYZE test_join_card2;
+ANALYZE test_join_card3;
+EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3 WHERE t1.b = t2.b and t3.b = t2.b;
+-- start_ignore
+DROP TABLE IF EXISTS test_join_card1;
+DROP TABLE IF EXISTS test_join_card2;
+-- end_ignore

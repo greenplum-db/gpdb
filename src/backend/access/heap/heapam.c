@@ -1015,8 +1015,8 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 		if (!rel)
 			return NULL;
 		
-		if (rel->rd_cdbpolicy &&
-			rel->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+		if (Gp_role == GP_ROLE_DISPATCH &&
+			GpPolicyIsPartitioned(rel->rd_cdbpolicy))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
@@ -1037,8 +1037,8 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 * okay.
 	 */
 	if (lockmode == RowExclusiveLock &&
-		rel->rd_cdbpolicy &&
-		rel->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+		Gp_role == GP_ROLE_DISPATCH &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy))
 	{
 		elog(ERROR, "relation \"%s\" concurrently updated", 
 			 RelationGetRelationName(rel));

@@ -72,30 +72,6 @@ and ordinal_position =1;
  public       | r          | a           |                1
 (1 row)
 
-select table_schema, table_name,column_name,ordinal_position
-from information_schema.columns
-where ordinal_position = 20;
-    table_schema    |      table_name      |    column_name     | ordinal_position 
---------------------+----------------------+--------------------+------------------
- information_schema | element_types        | interval_precision |               20
- gp_toolkit         | __gp_log_segment_ext | logdetail          |               20
- gp_toolkit         | __gp_log_master_ext  | logdetail          |               20
- gp_toolkit         | gp_log_system        | logdetail          |               20
- gp_toolkit         | gp_log_database      | logdetail          |               20
- pg_catalog         | pg_statistic         | stavalues2         |               20
- pg_catalog         | pg_partitions        | parenttablespace   |               20
- information_schema | attributes           | datetime_precision |               20
- pg_catalog         | pg_type              | typanalyze         |               20
- pg_catalog         | pg_proc              | proargnames        |               20
- pg_catalog         | pg_class             | relhasoids         |               20
- pg_catalog         | pg_constraint        | conexclop          |               20
- pg_catalog         | pg_am                | ammarkpos          |               20
- information_schema | columns              | collation_catalog  |               20
- information_schema | domains              | udt_catalog        |               20
- information_schema | parameters           | numeric_scale      |               20
- information_schema | routines             | collation_catalog  |               20
-(17 rows)
-
 -- MPP-25724
 create table mpp_25724(mpp_25724_col int) distributed by (mpp_25724_col);
 select a.column_name

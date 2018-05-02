@@ -772,7 +772,7 @@ FROM
     JOIN pg_catalog.gp_distribution_policy p ON (c.oid = p.localoid)
 WHERE """
     table_sql_filter_out_child_partitions = """c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule ) AND """
-    table_sql_part2 = """ n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit');"""
+    table_sql_part2 = """ n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit') AND n.nspname NOT LIKE 'pg_temp_%';"""
     all_tables_sql = table_sql_part1 + \
                      ('' if partition_transfer else table_sql_filter_out_child_partitions) + \
                      table_sql_part2

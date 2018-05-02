@@ -43,10 +43,6 @@ from information_schema.columns
 where table_name ='r'
 and ordinal_position =1;
 
-select table_schema, table_name,column_name,ordinal_position
-from information_schema.columns
-where ordinal_position = 20;
-
 -- MPP-25724
 create table mpp_25724(mpp_25724_col int) distributed by (mpp_25724_col);
 

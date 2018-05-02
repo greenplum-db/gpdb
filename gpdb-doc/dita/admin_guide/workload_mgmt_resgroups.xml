@@ -38,6 +38,9 @@
           </li>
         </ul>
       </li>
+      <li id="im16806c">
+        <xref href="#topic777999" type="topic" format="dita"/>
+      </li>
     </ul>
   </body>
   <topic id="topic8339intro" xml:lang="en">
@@ -658,5 +661,41 @@ gpstart
       </body>
     </topic>
 
+  </topic>
+  <topic id="topic777999" xml:lang="en">
+    <title>Resource Group Frequently Asked Questions</title>
+    <body>
+      <section id="topic791" xml:lang="en">
+        <title>CPU</title>
+        <ul>
+          <li><b>Why is CPU usage lower than the <codeph>CPU_RATE_LIMIT</codeph> configured for the resource group?</b>
+            <p>You may run into this situation when a low number of queries and slices are running in the resource group, and these processes are not utilizing all of the cores on the system.</p></li>
+          <li><b>Why is CPU usage for the resource group higher than the configured <codeph>CPU_RATE_LIMIT</codeph>?</b>
+            <p>This situation can occur in the following circumstances:<ul>
+              <li>A resource group may utilize more CPU than its <codeph>CPU_RATE_LIMIT</codeph> when other resource groups are idle. In this situation, Greenplum Database allocates the CPU resource of an idle resource group to a busier one. This resource group feature is called CPU burst.</li>
+              <li>The operating system CPU scheduler may cause CPU usage to spike, then drop down. If you believe this might be occurring, calculate the average CPU usage within a given period of time (for example, 5 seconds) and use that average to determine if CPU usage is higher than the configured limit.</li>
+            </ul></p></li>
+        </ul>
+        <p></p>
+      </section>
+      <section id="topic795" xml:lang="en">
+        <title>Memory</title>
+        <ul>
+          <li><b>Why did my query return an "out of memory" error?</b>
+            <p>A transaction submitted in a resource group fails and exits when memory usage exceeds its fixed memory allotment, no available resource group shared memory exists, and the transaction requests more memory.</p></li>
+          <li><b>Why did my query return a "memory limit reached" error?</b>
+            <p>Greenplum Database automatically adjusts transaction and group memory to the new settings when you use <codeph>ALTER RESOURCE GROUP</codeph> to change a resource group's memory and/or concurrency limits. An "out of memory" error may occur if you recently altered resource group attributes and there is no longer a sufficient amount of memory available for a currently running query.</p></li>
+        </ul>
+      </section>
+      <section id="topic797" xml:lang="en">
+        <title>Concurrency</title>
+        <ul>
+          <li><b>Why is the number of running transactions lower than the <codeph>CONCURRENCY</codeph> limit configured for the resource group?</b>
+            <p>Greenplum Database considers memory availability before running a transaction, and will queue the transaction if there is not enough memory available to serve it. If you use <codeph>ALTER RESOURCE GROUP</codeph> to increase the <codeph>CONCURRENCY</codeph> limit for a resource group but do not also adjust memory limits, currently running transactions may be consuming all allotted memory resources for the group. When in this state, Greenplum Database queues subsequent transactions in the resource group.</p></li>
+          <li><b>Why is the number of running transactions in the resource group higher than the configured <codeph>CONCURRENCY</codeph> limit?</b>
+            <p>The resource group may be running <codeph>SET</codeph> and <codeph>SHOW</codeph> commands, which bypass resource group transaction checks.</p></li>
+        </ul>
+      </section>
+    </body>
   </topic>
 </topic>

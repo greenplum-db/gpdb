@@ -851,11 +851,20 @@ processSequenceRequest(int sockfd )
 	}
 	PG_CATCH();
 	{
+		AbortOutOfAnyTransaction();
 		if (!elog_demote(LOG))
 		{
     		elog(LOG, "unable to demote error");
 			PG_RE_THROW();
 		}
+
+		/*
+		 * Report the error to the server log. It would be nice to deliver
+		 * it to the client somehow, but we have no mechanism for that.
+		 */
+		EmitErrorReport();
+
+		FlushErrorState();
 		return false;
 	}
 	PG_END_TRY();
