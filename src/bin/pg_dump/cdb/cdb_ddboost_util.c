@@ -1153,10 +1153,6 @@ getFileWithRegex(struct ddboost_options *dd_options, char* pathWithRegex)
 	}
 
 	int err = 0;
-	ddp_path_t path1 = {0};
-	ddp_dir_desc_t dird = DDP_INVALID_DESCRIPTOR;
-	ddp_dirent_t ret_dirent;
-
 	if (!ddboostDir)
 	{
 		mpp_err_msg(logError, progname, "Directory on DDboost is not specified\n");
@@ -1164,6 +1160,9 @@ getFileWithRegex(struct ddboost_options *dd_options, char* pathWithRegex)
 		goto cleanup;
 	}
 
+	ddp_path_t path1 = {0};
+	ddp_dir_desc_t dird = DDP_INVALID_DESCRIPTOR;
+	ddp_dirent_t ret_dirent;
 	path1.su_name = dd_options->ddboost_storage_unit;
 	path1.path_name = ddboostDir;
 
@@ -1185,13 +1184,12 @@ getFileWithRegex(struct ddboost_options *dd_options, char* pathWithRegex)
 			if (err == DD_ERR_EMPTY)
 			{
 				err = DD_OK;
-				break;
 			}
 			else
 			{
 				mpp_err_msg(logError, progname, "Reading directory %s on ddboost failed. Err %d\n", ddboostDir, err);
-				break;
 			}
+			break;
 		}
 
 		else
@@ -1220,7 +1218,7 @@ cleanup:
     }
     if (ddboostDir)
         free(ddboostDir);
-	if (err != 0) {
+	if (err != DD_OK) {
 		exit(1);
 	}
 	return NULL;

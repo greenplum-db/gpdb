@@ -1432,7 +1432,7 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
 	/* First form the prefix */
 	char	szFileNamePrefix[1 + MAXPGPATH];
 	int	 instid; /* dispatch node */
-	int	 segid[100];
+	char	segid[100];
 	int	 len = 0;
 	char	*pszBackupFileName;
 	char 	*dir_name = "db_dumps"; /* default directory */

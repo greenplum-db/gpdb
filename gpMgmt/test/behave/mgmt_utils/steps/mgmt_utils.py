@@ -4889,9 +4889,6 @@ def rename_files_for_dbids_on_data_domain(context):
     primary_segs = [seg for seg in gparray.getSegDbList() if seg.isSegmentPrimary()]
     num_segs = len(primary_segs)
 
-    try: context.backup_timestamp
-    except: context.backup_timestamp = None
-
     if context.backup_timestamp is not None:
         timestamp = context.backup_timestamp
     else:
