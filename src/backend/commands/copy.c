@@ -4329,9 +4329,7 @@ CopyFrom(CopyState cstate)
 	int			attnum;
 	int			i;
 	Oid			in_func_oid;
-	Datum		*partValues = NULL;
-	bool		*partNulls = NULL;
-	bool		isnull;
+    bool		isnull;
 	ResultRelInfo *resultRelInfo;
 	EState	   *estate = CreateExecutorState(); /* for ExecConstraints() */
 	TupleTableSlot *baseSlot;
@@ -4502,11 +4500,7 @@ CopyFrom(CopyState cstate)
 
 	attr_offsets = (int *) palloc(num_phys_attrs * sizeof(int));
 
-	partValues = (Datum *) palloc(attr_count * sizeof(Datum));
-	partNulls = (bool *) palloc(attr_count * sizeof(bool));
-
 	bistate = GetBulkInsertState();
-
 	/* Set up callback to identify error line number */
 	errcontext.callback = copy_in_error_callback;
 	errcontext.arg = (void *) cstate;
@@ -4940,16 +4934,17 @@ PROCESS_SEGMENT_DATA:
 				{
 					AttrMap *map = resultRelInfo->ri_partInsertMap;
 					Assert(map != NULL);
+                    slot = resultRelInfo->ri_partSlot;
 
-					slot = resultRelInfo->ri_partSlot;
-					ExecClearTuple(slot);
-					partValues = slot_get_values(resultRelInfo->ri_partSlot);
-					partNulls = slot_get_isnull(resultRelInfo->ri_partSlot);
-					MemSet(partValues, 0, attr_count * sizeof(Datum));
-					MemSet(partNulls, true, attr_count * sizeof(bool));
+                    ExecClearTuple(slot);
+                    int attr_count_part = slot->tts_tupleDescriptor->natts;
+                    Datum *partValues = slot_get_values(slot);
+                    bool *partNulls = slot_get_isnull(slot);
+                    MemSet(partValues, 0, attr_count_part * sizeof(Datum));
+                    MemSet(partNulls, true, attr_count_part * sizeof(bool));
 
 					reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
-										   partValues, partNulls, (int) attr_count);
+										   partValues, partNulls, attr_count_part);
 					ExecStoreVirtualTuple(slot);
 				}
 				else
