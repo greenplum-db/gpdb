@@ -65,8 +65,13 @@ var _ = Describe("prepare shutdown-clusters", func() {
 			Out: outChan,
 			Err: errChan,
 		})
-
-		hub = services.NewHub(&cluster.Pair{}, &reader, grpc.DialContext, commandExecer.Exec, conf)
+		clusterPair := &cluster.Pair{
+			OldMasterPort: 5432,
+			NewMasterPort:6432,
+			OldMasterDataDirectory: "/old/data/dir",
+			NewMasterDataDirectory: "/new/data/dir",
+		}
+		hub = services.NewHub(clusterPair, &reader, grpc.DialContext, commandExecer.Exec, conf)
 		go hub.Start()
 	})
 

@@ -10,9 +10,10 @@ import (
 )
 
 type Reader struct {
-	config       SegmentConfiguration
-	fileLocation string
-	mu           sync.RWMutex
+	config        SegmentConfiguration
+	fileLocation  string
+	mu            sync.RWMutex
+	isInitialized bool
 }
 
 func NewReader() Reader {
@@ -20,13 +21,21 @@ func NewReader() Reader {
 }
 
 func (reader *Reader) OfOldClusterConfig(base string) {
+	if reader.isInitialized {
+		return
+	}
 	reader.fileLocation = GetConfigFilePath(base)
 	reader.config = nil
+	reader.isInitialized = true
 }
 
 func (reader *Reader) OfNewClusterConfig(base string) {
+	if reader.isInitialized {
+		return
+	}
 	reader.fileLocation = GetNewClusterConfigFilePath(base)
 	reader.config = nil
+	reader.isInitialized = true
 }
 
 func (reader *Reader) Read() error {

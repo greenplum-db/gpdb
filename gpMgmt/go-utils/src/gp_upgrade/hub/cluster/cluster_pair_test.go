@@ -22,6 +22,7 @@ var _ = Describe("ClusterPair", func() {
 		commandExecer *testutils.FakeCommandExecer
 		errChan       chan error
 		outChan       chan []byte
+		subject       cluster.Pair
 	)
 
 	BeforeEach(func() {
@@ -66,12 +67,17 @@ var _ = Describe("ClusterPair", func() {
 				filesLaidDown = filteredFiles
 				return nil
 			}
+			subject = cluster.Pair{
+				OldMasterPort:          25437,
+				NewMasterPort:          35437,
+				OldMasterDataDirectory: "/old/datadir",
+				NewMasterDataDirectory: "/new/datadir",
+			}
 		})
 
 		It("Logs successfully when things work", func() {
 			outChan <- []byte("some output")
 
-			subject := cluster.Pair{}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
@@ -92,7 +98,6 @@ var _ = Describe("ClusterPair", func() {
 				return nil, errors.New("filesystem blowup")
 			}
 
-			subject := cluster.Pair{}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -103,7 +108,6 @@ var _ = Describe("ClusterPair", func() {
 
 		It("puts Stop failures in the log and leaves files to mark the error", func() {
 
-			subject := cluster.Pair{}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(subject.EitherPostmasterRunning()).To(BeTrue())
@@ -117,12 +121,16 @@ var _ = Describe("ClusterPair", func() {
 	})
 
 	Describe("PostmastersRunning", func() {
-		var subject cluster.Pair
 		BeforeEach(func() {
 			utils.System.ReadFile = func(filename string) ([]byte, error) {
 				return []byte(testutils.MASTER_ONLY_JSON), nil
 			}
-			subject = cluster.Pair{}
+			subject = cluster.Pair{
+				OldMasterPort:          25437,
+				NewMasterPort:          35437,
+				OldMasterDataDirectory: "/old/datadir",
+				NewMasterDataDirectory: "/new/datadir",
+			}
 			err := subject.Init(dir, "old/path", "new/path", commandExecer.Exec)
 			Expect(err).ToNot(HaveOccurred())
 

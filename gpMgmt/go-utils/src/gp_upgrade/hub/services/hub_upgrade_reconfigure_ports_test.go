@@ -54,10 +54,12 @@ var _ = Describe("UpgradeReconfigurePorts", func() {
 			Err: errChan,
 			Out: outChan,
 		})
-		clusterPair := &cluster.Pair{}
-		err = clusterPair.Init(dir, "old/path", "new/path", commandExecer.Exec)
-		Expect(err).ToNot(HaveOccurred())
-
+		clusterPair := &cluster.Pair{
+			OldMasterPort:          25437,
+			NewMasterPort:          35437,
+			OldMasterDataDirectory: "/old/datadir",
+			NewMasterDataDirectory: "/new/datadir",
+		}
 		hub = services.NewHub(clusterPair, reader, grpc.DialContext, commandExecer.Exec, &services.HubConfig{
 			StateDir: dir,
 		})
