@@ -104,7 +104,7 @@ static int
 			constrNodeMatch(const void *keyPtr1, const void *keyPtr2, Size keysize);
 
 static void parruleord_open_gap(Oid partid, int2 level, Oid parent,
-					int2 ruleord, int stopkey, bool closegap);
+					int2 ruleord, int2 stopkey, bool closegap);
 static bool has_external_partition(List *rules);
 
 /*
@@ -1938,13 +1938,23 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
  */
 static void
 parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
-					int stopkey, bool closegap)
+					int2 stopkey, bool closegap)
 {
 	Relation	rel;
 	Relation	irel;
 	HeapTuple	tuple;
 	ScanKeyData scankey[3];
 	IndexScanDesc sd;
+
+	/*
+	 * Ensure that ruleord argument did not wrap around due to int2
+	 * typecast. We check if ruleord is less than 1 to also ensure that 0
+	 * (default partition) is not given as an argument.
+	 */
+	if (ruleord < 1)
+		ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			errmsg("too many partitions, parruleord overflow")));
 
 	/*---
 	 * This is equivalent to:
@@ -1974,7 +1984,6 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 	sd = index_beginscan(rel, irel, SnapshotNow, 3, scankey);
 	while (HeapTupleIsValid(tuple = index_getnext(sd, BackwardScanDirection)))
 	{
-		int			old_ruleord;
 		Form_pg_partition_rule rule_desc;
 
 		Insist(HeapTupleIsValid(tuple));
@@ -1984,16 +1993,15 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 		rule_desc =
 			(Form_pg_partition_rule) GETSTRUCT(tuple);
 
-		old_ruleord = rule_desc->parruleord;
+		if (rule_desc->parruleord < stopkey)
+			break;
+
 		closegap ? rule_desc->parruleord-- : rule_desc->parruleord++;
 
 		simple_heap_update(rel, &tuple->t_self, tuple);
 		CatalogUpdateIndexes(rel, tuple);
 
 		heap_freetuple(tuple);
-
-		if (old_ruleord <= stopkey)
-			break;
 	}
 	index_endscan(sd);
 	heap_close(irel, RowExclusiveLock);
@@ -6674,9 +6682,11 @@ atpxPartAddList(Relation rel,
 		}
 	}
 
-	if (maxpartno < 0)
+	if (maxpartno < 0 || maxpartno > PG_INT16_MAX)
 	{
-		elog(ERROR, "too many partitions, parruleord overflow");
+		ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			errmsg("too many partitions, parruleord overflow")));
 	}
 
 	if (newPos == FIRST && pNode && list_length(pNode->rules) > 0)
