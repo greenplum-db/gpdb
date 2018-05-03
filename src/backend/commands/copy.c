@@ -5004,7 +5004,7 @@ PROCESS_SEGMENT_DATA:
 						skip_tuple = true;
 					else if (newtuple != tuple) /* modified by Trigger(s) */
 					{
-						ExecStoreHeapTuple(newtuple, slot, InvalidBuffer, true);
+						ExecStoreHeapTuple(newtuple, slot, InvalidBuffer, false);
 					}
 				}
 

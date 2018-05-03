@@ -1072,3 +1072,5 @@ SELECT count(*) FROM test_tsvector WHERE a @@ to_tsquery('345&qwerty');
      1
 (1 row)
 
+COPY test_tsvector TO '/tmp/test_tsvector.txt';
+COPY test_tsvector FROM '/tmp/test_tsvector.txt';
