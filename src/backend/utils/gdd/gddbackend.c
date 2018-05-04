@@ -571,7 +571,6 @@ buildWaitGraph(GddCtx *ctx)
 	}
 	PG_END_TRY();
 
-	Assert(connected);
 	SPI_finish();
 	/* Make sure we are in gddContext */
 	MemoryContextSwitchTo(gddContext);
