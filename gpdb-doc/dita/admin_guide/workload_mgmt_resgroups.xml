@@ -335,21 +335,15 @@ ls -l &lt;cgroup_mount_point&gt;/cpuacct/gpdb</codeblock>
               management.</p>
           </li>
           <li>To automatically recreate Greenplum Database required cgroup hierarchies and
-             parameters when your system is restarted, configure your
-             system to enable the Linux cgroup service daemon <codeph>cgconfig.service</codeph> 
-            (Redhat/CentOS 7.x and SuSE 11+) or <codeph>cgconfig</codeph> (Redhat/CentOS 6.x)
-            at node start-up. For example, configure one of the following cgroup service start
-            commands in your preferred service auto-start tool:
-            <ul>
-              <li> Redhat/CentOS 7.x systems:
-                <codeblock>sudo systemctl start cgconfig.service</codeblock>
+            parameters when your system is restarted, configure your system to enable the Linux
+            cgroup service daemon <codeph>cgconfig.service</codeph> (Redhat/CentOS 7.x and SuSE 11+)
+            or <codeph>cgconfig</codeph> (Redhat/CentOS 6.x) at node start-up. For example,
+            configure one of the following cgroup service commands in your preferred service
+            auto-start tool: <ul>
+              <li> Redhat/CentOS 7.x and SuSE11+ systems:
+                <codeblock>sudo systemctl enable cgconfig.service</codeblock>
               </li>
-              <li> Redhat/CentOS 6.x systems:
-                <codeblock>sudo service cgconfig start </codeblock>
-              </li>
-              <li> SuSE 11+ systems:
-                <codeblock>sudo systemctl start cgconfig.service</codeblock>
-              </li>
+              <li> Redhat/CentOS 6.x systems: <codeblock>sudo chkconfig cgconfig on</codeblock></li>
             </ul>
             <p>You may choose a different method to recreate the Greenplum Database resource group
               cgroup hierarchies.</p>
