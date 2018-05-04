@@ -13,16 +13,18 @@ $ docker run -d -p 5432:5432 -h dwgpdb -v /tmp/gpdata:/data local/gpdb
 The host name `dwgpdb` is strongly required to initializing the database properly with the same data from `/data` directory after restarting or rebuilding the container.
 
 ## The first connect to GPDB from the host
+Review the docker logs to check that GPDB is installed and started up successfully:
+```
+$ docker ps -a
+$ docker logs --follow <GPDB_CONTAINDER_ID>
+```
+
+Connect:
 ```
 # apt-get install postgresql-client-9.5
 $ psql -h 127.0.0.1 -p 5432 -U gpadmin
 Password: gppassword
 gpadmin=# select version();
-```
-Check the docker logs if the connection is failed:
-```
-$ docker ps -a
-$ docker logs --follow <GPDB_CONTAINDER_ID>
 ```
 
 ## Using gp-utils in container
