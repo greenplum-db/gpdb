@@ -40,6 +40,8 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	uint32		i;
 	DistributedTransactionId distribXid = InvalidDistributedTransactionId;
 
+	Assert(!IS_QUERY_DISPATCHER());
+
 	/*
 	 * Return early if local xid is not normal as it cannot have distributed
 	 * xid associated with it.

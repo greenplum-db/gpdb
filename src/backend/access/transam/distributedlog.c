@@ -32,6 +32,7 @@
 #include "access/slru.h"
 #include "access/transam.h"
 #include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h"
 #include "storage/shmem.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
@@ -191,7 +192,7 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 	DistributedLogEntry *entries = NULL;
 	TransactionId oldOldestXmin;
 
-	Assert(DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE);
+	Assert(!IS_QUERY_DISPATCHER());
 
 	if (!TransactionIdIsNormal(oldestLocalXmin))
 		elog(ERROR, "invalid oldest xmin: %u", oldestLocalXmin);
@@ -277,41 +278,14 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 }
 
 /*
- * Maintain "oldest xmin" among distributed snapshots on QD.
- *
- * On QD, all distributed transactions are represented in ProcArray (unlike
- * QEs).  Therefore, oldest xmin among distributed snapshots on QD is the same
- * as RecentGlobalXmin.  Furthermore, HeapTupleSatisfiesMVCC ignores
- * distributed snapshot on QD, relying solely on local snapshots.  Maintaining
- * oldest xmin in shared memory is still helpful on QD because it allows
- * reusing the logic to agressively truncate distributed log that's applied on
- * QEs.  On the flip side, a point of contention that can be avoided on QD is
- * introduced.  If this turns out to be a bottleneck, atomic operations may
- * come to rescue.
- */
-void
-DistributedLog_AdvanceOldestXminOnQD(TransactionId oldestLocalXmin)
-{
-	Assert(DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE);
-
-	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
-	TransactionId oldOldestXmin = DistributedLogShared->oldestXmin;
-	if (TransactionIdPrecedes(oldOldestXmin, oldestLocalXmin))
-	{
-		/* Truncate DistributedLog, if possible. */
-		DistributedLog_Truncate(oldestLocalXmin);
-		DistributedLogShared->oldestXmin = oldestLocalXmin;
-	}
-	LWLockRelease(DistributedLogControlLock);
-}
-
-/*
  * Return the "oldest xmin" among distributed snapshots.
  */
 TransactionId
 DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin)
 {
 	TransactionId result;
+
+	Assert(!IS_QUERY_DISPATCHER());
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 	result = DistributedLogShared->oldestXmin;
@@ -344,21 +318,24 @@ DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xid
 {
 	int			i;
 
-	/*
-	 * GPDB_84_MERGE_FIXME: This is a naive implementation, not very efficient.
-	 * Should update the list of transaction one distributed clog page at a time.
-	 * Similar to how we do for the clog now, since commit 06da3c570.
-	 */
-	DistributedLog_SetCommitted(xid,
-								distribTimeStamp,
-								distribXid,
-								isRedo);
-	for (i = 0; i < nxids; i++)
+	if (!IS_QUERY_DISPATCHER())
 	{
-		DistributedLog_SetCommitted(xids[i],
+		/*
+		 * GPDB_84_MERGE_FIXME: This is a naive implementation, not very efficient.
+		 * Should update the list of transaction one distributed clog page at a time.
+		 * Similar to how we do for the clog now, since commit 06da3c570.
+		 */
+		DistributedLog_SetCommitted(xid,
 									distribTimeStamp,
 									distribXid,
 									isRedo);
+		for (i = 0; i < nxids; i++)
+		{
+			DistributedLog_SetCommitted(xids[i],
+										distribTimeStamp,
+										distribXid,
+										isRedo);
+		}
 	}
 }
 
@@ -374,6 +351,7 @@ DistributedLog_SetCommitted(
 	bool								isRedo)
 {
 	Assert(TransactionIdIsValid(localXid));
+	Assert(!IS_QUERY_DISPATCHER());
 
 	int			page = TransactionIdToPage(localXid);
 	int			entryno = TransactionIdToEntry(localXid);
@@ -445,6 +423,8 @@ DistributedLog_CommittedCheck(
 	int			page = TransactionIdToPage(localXid);
 	int			entryno = TransactionIdToEntry(localXid);
 	int			slotno;
+
+	Assert(!IS_QUERY_DISPATCHER());
 
 	DistributedLogEntry *ptr;
 	TransactionId oldestXmin;
@@ -596,9 +576,15 @@ DistributedLog_ShmemSize(void)
 {
 	Size		size;
 
-	size = SimpleLruShmemSize(NUM_DISTRIBUTEDLOG_BUFFERS, 0);
-
-	size += DistributedLog_SharedShmemSize();
+	if (IS_QUERY_DISPATCHER())
+	{
+		size = 0;
+	}
+	else
+	{
+		size = SimpleLruShmemSize(NUM_DISTRIBUTEDLOG_BUFFERS, 0);
+		size += DistributedLog_SharedShmemSize();
+	}
 
 	return size;
 }
@@ -607,6 +593,9 @@ void
 DistributedLog_ShmemInit(void)
 {
 	bool		found;
+
+	if (IS_QUERY_DISPATCHER())
+		return;
 
 	/* Set up SLRU for the distributed log. */
 	DistributedLogCtl->PagePrecedes = DistributedLog_PagePrecedes;
@@ -639,6 +628,9 @@ DistributedLog_BootStrap(void)
 {
 	int			slotno;
 
+	if (IS_QUERY_DISPATCHER())
+		return;
+
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
 	/* Create and zero the first page of the commit log */
@@ -665,6 +657,8 @@ DistributedLog_ZeroPage(int page, bool writeXlog)
 {
 	int			slotno;
 
+	Assert(!IS_QUERY_DISPATCHER());
+
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "DistributedLog_ZeroPage zero page %d",
 		 page);
@@ -686,6 +680,9 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 {
 	int			startPage;
 	int			endPage;
+
+	if (IS_QUERY_DISPATCHER())
+		return;
 
 	/*
 	 * UNDONE: We really need oldest frozen xid.  If we can't get it, then
@@ -745,6 +742,9 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 void
 DistributedLog_Shutdown(void)
 {
+	if (IS_QUERY_DISPATCHER())
+		return;
+
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "DistributedLog_Shutdown");
 
@@ -758,6 +758,9 @@ DistributedLog_Shutdown(void)
 void
 DistributedLog_CheckPoint(void)
 {
+	if (IS_QUERY_DISPATCHER())
+		return;
+
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "DistributedLog_CheckPoint");
 
@@ -778,6 +781,9 @@ void
 DistributedLog_Extend(TransactionId newestXact)
 {
 	int			page;
+
+	if (IS_QUERY_DISPATCHER())
+		return;
 
 	/*
 	 * No work except at first XID of a page.  But beware: just after
@@ -837,6 +843,7 @@ DistributedLog_Truncate(TransactionId oldestXmin)
 	TransactionId oldOldestXmin = DistributedLogShared->oldestXmin;
 
 	Assert(LWLockHeldByMe(DistributedLogControlLock));
+	Assert(!IS_QUERY_DISPATCHER());
 
 	if (oldOldestXmin == InvalidTransactionId)
 	{
@@ -951,6 +958,7 @@ void
 DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+	Assert(!IS_QUERY_DISPATCHER());
 
 	if (info == DISTRIBUTEDLOG_ZEROPAGE)
 	{
