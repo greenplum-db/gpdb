@@ -64,7 +64,10 @@ fi
 echo '========================> GPDB start'
 /etc/init.d/ssh start
 sleep 2
+chown gpadmin:gpadmin /gpdb_start.sh
+chmod +x /gpdb_start.sh
 su - gpadmin bash -c '/gpdb_start.sh'
+echo '========================> GPDB ready'
 
 
 
