@@ -73,7 +73,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
           <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
           <pd>The memory usage threshold for memory-intensive operators in a transaction
             issued in the resource group. The minimum memory spill ratio percentage for a
-            resource group is 0. The maximum is <codeph>INT_MAX</codeph>. The default
+            resource group is 0. The maximum is 100. The default
             <codeph>MEMORY_SPILL_RATIO</codeph> value is 20.</pd>
         </plentry>
       </parml>

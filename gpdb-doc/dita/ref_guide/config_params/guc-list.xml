@@ -7357,7 +7357,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">0 - <codeph>INT_MAX</codeph></entry>
+              <entry colname="col1">0 - 100</entry>
               <entry colname="col2">20</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
