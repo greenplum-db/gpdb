@@ -7,7 +7,8 @@ This dockerfile is using PPA for Ubuntu 16 — https://launchpad.net/~greenplum/
 ## Build and run
 ```
 $ docker build -t local/gpdb .
-$ docker run -d -p 5432:5432 -h dwgpdb -v /srv/data/:/data local/gpdb
+$ mkdir -p /tmp/gpdata/
+$ docker run -d -p 5432:5432 -h dwgpdb -v /tmp/gpdata:/data local/gpdb
 ```
 The host name `dwgpdb` is strongly required to initializing the database properly with the same data from `/data` directory after restarting or rebuilding the container.
 
