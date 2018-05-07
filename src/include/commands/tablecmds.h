@@ -75,8 +75,6 @@ extern void AlterRelationNamespaceInternal(Relation classRel, Oid relOid,
 
 extern void CheckTableNotInUse(Relation rel, const char *stmt);
 
-extern void TruncateRelfiles(Relation rel, SubTransactionId mysubid);
-
 extern void ExecuteTruncate(TruncateStmt *stmt);
 
 extern void renameatt(Oid myrelid,

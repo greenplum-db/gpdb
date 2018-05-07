@@ -3105,49 +3105,45 @@ heap_truncate(List *relids)
 	{
 		Relation	rel = lfirst(cell);
 
-		/*
-		 * Truncating AO and auxiliary tables' relfiles, like in case
-		 * of heap tables, leaves the AO table in an inconsistent
-		 * state at the end of commit:
-		 *
-		 *    - The aoseg table indicates no segfiles on disk.
-		 *    - AO segment files are truncated, with EOF = 0.
-		 *    - The EOF recorded in persistent tables for the AO
-		 *      segment files, however, is greater than 0 if the
-		 *      transaction inserted tuples in the AO table.
-		 *
-		 * One may think of resetting the EOF in persistent tables to
-		 * 0.  Beware, EOF of AO segfiles can only increase.  Filerep
-		 * incremental recovery relies on this assumption.
-		 *
-		 * Therefore, ON COMMIT DELETE ROWS action for AO tables is
-		 * implemented by creating new segment file and scheduling
-		 * existing one for drop at the end of commit.  TRUNCATE TABLE
-		 * command works the same way.  At some point, all temporary
-		 * tables should be exempt from persistent tables/lifecycle
-		 * management.
-		 */
-
-		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
-		{
-			/*
-			 * GPDB_90_MERGE_FIXME: see commit cab9a0656, which changed how
-			 * truncation was done for heap tables. Do we need a matching change
-			 * here, and does the removal of filerep change any of the
-			 * assumptions in the above comment?
-			 */
-			TruncateRelfiles(rel, InvalidSubTransactionId);
-			reindex_relation(RelationGetRelid(rel), true, true);
-		}
-		else
-		{
-			/* Truncate the relation */
-			heap_truncate_one_rel(rel);
-		}
+		/* Truncate the relation */
+		heap_truncate_one_rel(rel);
 
 		/* Close the relation, but keep exclusive lock on it until commit */
 		heap_close(rel, NoLock);
 	}
+}
+
+static void
+heap_truncate_one_relid(Oid relid)
+{
+	if (OidIsValid(relid))
+	{
+		Relation rel = relation_open(relid, AccessExclusiveLock);
+		heap_truncate_one_rel(rel);
+		heap_close(rel, NoLock);
+	}
+}
+
+static void
+ao_aux_tables_truncate(Relation rel)
+{
+	Oid ao_base_relid = RelationGetRelid(rel);
+
+	Oid			aoseg_relid = InvalidOid;
+	Oid			aoblkdir_relid = InvalidOid;
+	Oid			aovisimap_relid = InvalidOid;
+
+	if (!RelationIsAoRows(rel) && !RelationIsAoCols(rel))
+		return;
+
+	GetAppendOnlyEntryAuxOids(ao_base_relid, SnapshotNow,
+							  &aoseg_relid,
+							  &aoblkdir_relid, NULL,
+							  &aovisimap_relid, NULL);
+
+	heap_truncate_one_relid(aoseg_relid);
+	heap_truncate_one_relid(aoblkdir_relid);
+	heap_truncate_one_relid(aovisimap_relid);
 }
 
 /*
@@ -3181,6 +3177,8 @@ heap_truncate_one_rel(Relation rel)
 		/* keep the lock... */
 		heap_close(toastrel, NoLock);
 	}
+
+	ao_aux_tables_truncate(rel);
 }
 
 /*

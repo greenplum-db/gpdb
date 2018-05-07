@@ -1324,91 +1324,36 @@ CheckExclusiveAccess(Relation rel)
 }
 #endif
 
-/*
- * Allocate new relfiles for the specified relation and schedule old
- * relfile for deletion.  Caller must hold AccessExclusiveLock on the
- * relation.
- */
-void
-TruncateRelfiles(Relation rel, SubTransactionId mySubid)
+static void
+relid_set_new_relfilenode(Oid relid, TransactionId recentXmin)
 {
-	Oid			heap_relid;
-	Oid			aoseg_relid = InvalidOid;
-	Oid			aoblkdir_relid = InvalidOid;
-	Oid			aovisimap_relid = InvalidOid;
-
-	Assert(CheckExclusiveAccess(rel));
-
-	heap_relid = RelationGetRelid(rel);
-
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
-		GetAppendOnlyEntryAuxOids(heap_relid, SnapshotNow,
-								  &aoseg_relid,
-								  &aoblkdir_relid, NULL,
-								  &aovisimap_relid, NULL);
-
-	/*
-	 * Normally, we need a transaction-safe truncation here.  However, if
-	 * the table was either created in the current (sub)transaction or has
-	 * a new relfilenode in the current (sub)transaction, then we can just
-	 * truncate it in-place, because a rollback would cause the whole
-	 * table or the current physical file to be thrown away anyway.
-	 */
-	if (rel->rd_createSubid == mySubid ||
-		rel->rd_newRelfilenodeSubid == mySubid)
+	if (OidIsValid(relid))
 	{
-		/* Immediate, non-rollbackable truncation is OK */
-		heap_truncate_one_rel(rel);
-	}
-	else
-	{
-		Oid			toast_relid;
-
-		/*
-		 * Need the full transaction-safe pushups.
-		 *
-		 * Create a new empty storage file for the relation, and assign it
-		 * as the relfilenode value. The old storage file is scheduled for
-		 * deletion at commit.
-		 */
-		RelationSetNewRelfilenode(rel, RecentXmin);
-
-		toast_relid = rel->rd_rel->reltoastrelid;
-
-		/*
-		 * The same for the toast table, if any.
-		 */
-		if (OidIsValid(toast_relid))
-		{
-			rel = relation_open(toast_relid, AccessExclusiveLock);
-			RelationSetNewRelfilenode(rel, RecentXmin);
-			heap_close(rel, NoLock);
-		}
-	}
-
-	/*
-	 * The same for the aoseg table, if any.
-	 */
-	if (OidIsValid(aoseg_relid))
-	{
-		rel = relation_open(aoseg_relid, AccessExclusiveLock);
-		RelationSetNewRelfilenode(rel, RecentXmin);
+		Relation rel = relation_open(relid, AccessExclusiveLock);
+		RelationSetNewRelfilenode(rel, recentXmin);
 		heap_close(rel, NoLock);
 	}
+}
 
-	if (OidIsValid(aoblkdir_relid))
-	{
-		rel = relation_open(aoblkdir_relid, AccessExclusiveLock);
-		RelationSetNewRelfilenode(rel, RecentXmin);
-		heap_close(rel, NoLock);
-	}
+static void
+ao_aux_tables_safe_truncate(Relation rel)
+{
+	if (!RelationIsAoRows(rel) && !RelationIsAoCols(rel))
+		return;
 
-	if (OidIsValid(aovisimap_relid))
-	{
-		rel = relation_open(aovisimap_relid, AccessExclusiveLock);
-		RelationSetNewRelfilenode(rel, RecentXmin);
-		heap_close(rel, NoLock);
-	}
+	Oid relid = RelationGetRelid(rel);
+
+	Oid aoseg_relid = InvalidOid;
+	Oid aoblkdir_relid = InvalidOid;
+	Oid aovisimap_relid = InvalidOid;
+
+	GetAppendOnlyEntryAuxOids(relid, SnapshotNow, &aoseg_relid,
+								  &aoblkdir_relid, NULL, &aovisimap_relid,
+								  NULL);
+
+	relid_set_new_relfilenode(aoseg_relid, RecentXmin);
+	relid_set_new_relfilenode(aoblkdir_relid, RecentXmin);
+	relid_set_new_relfilenode(aovisimap_relid, RecentXmin);
 }
 
 /*
@@ -1652,12 +1597,58 @@ ExecuteTruncate(TruncateStmt *stmt)
 	{
 		Relation	rel = (Relation) lfirst(cell);
 
-		TruncateRelfiles(rel, mySubid);
+		Assert(CheckExclusiveAccess(rel));
 
 		/*
-		 * Reconstruct the indexes to match, and we're done.
+		 * Normally, we need a transaction-safe truncation here.  However, if
+		 * the table was either created in the current (sub)transaction or has
+		 * a new relfilenode in the current (sub)transaction, then we can just
+		 * truncate it in-place, because a rollback would cause the whole
+		 * table or the current physical file to be thrown away anyway.
 		 */
-		reindex_relation(RelationGetRelid(rel), true, false);
+		if (rel->rd_createSubid == mySubid ||
+			rel->rd_newRelfilenodeSubid == mySubid)
+		{
+			/* Immediate, non-rollbackable truncation is OK */
+			heap_truncate_one_rel(rel);
+		}
+		else
+		{
+			Oid			heap_relid;
+			Oid			toast_relid;
+
+			/*
+			 * Need the full transaction-safe pushups.
+			 *
+			 * Create a new empty storage file for the relation, and assign it
+			 * as the relfilenode value. The old storage file is scheduled for
+			 * deletion at commit.
+			 */
+			RelationSetNewRelfilenode(rel, RecentXmin);
+
+			heap_relid = RelationGetRelid(rel);
+			toast_relid = rel->rd_rel->reltoastrelid;
+
+			/*
+			 * The same for the toast table, if any.
+			 */
+			if (OidIsValid(toast_relid))
+			{
+				Relation toast_rel = relation_open(toast_relid, AccessExclusiveLock);
+				RelationSetNewRelfilenode(toast_rel, RecentXmin);
+				heap_close(toast_rel, NoLock);
+			}
+
+			/*
+			 * The same for the ao auxiliary tables, if any.
+			 */
+			ao_aux_tables_safe_truncate(rel);
+
+			/*
+			 * Reconstruct the indexes to match, and we're done.
+			 */
+			reindex_relation(heap_relid, true, false);
+		}
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
