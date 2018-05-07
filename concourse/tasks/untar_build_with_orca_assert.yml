@@ -1,0 +1,19 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/qp-gpdbdev
+inputs:
+  - name: bin_orca
+  - name: bin_xerces
+  - name: gpdb_tarball
+  - name: gpdb_main_src
+outputs:
+  - name: bin_gpdb
+  - name: package_tarball
+run:
+  path: gpdb_main_src/concourse/scripts/untar_and_build_gpdb.py
+params:
+  ACTION: build
+  MODE: orca
+  CONFIGURE_OPTION: --disable-gpcloud --enable-cassert

@@ -59,7 +59,7 @@
 #define RESGROUP_MAX_MEMORY_SHARED_QUOTA	(100)
 
 #define RESGROUP_MIN_MEMORY_SPILL_RATIO		(0)
-#define RESGROUP_MAX_MEMORY_SPILL_RATIO		(INT_MAX)
+#define RESGROUP_MAX_MEMORY_SPILL_RATIO		(100)
 
 /*
  * The names must be in the same order as ResGroupMemAuditorType.

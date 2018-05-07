@@ -25,7 +25,7 @@ groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_rati
 rg_spill_test|20                 |20                          |20                |20                         
 (1 row)
 
--- positive, memory_spill_ratio range is [0, 2147483647]
+-- positive, memory_spill_ratio range is [0, 100]
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
 ALTER
 SELECT * FROM rg_spill_status;
@@ -58,9 +58,9 @@ groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_rati
 rg_spill_test|20                 |20                          |81                |81                         
 (1 row)
 
--- negative: memory_spill_ratio is negative
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
-ERROR:  memory_spill_ratio range is [0, 2147483647]
+-- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
+ERROR:  memory_spill_ratio range is [0, 100]
 SELECT * FROM rg_spill_status;
 groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------------+-------------------+----------------------------+------------------+---------------------------

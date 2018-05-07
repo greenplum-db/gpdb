@@ -63,8 +63,8 @@ SELECT 1;
 (1 row)
 
 -- negative set to session level
-SET MEMORY_SPILL_RATIO TO -1;
-ERROR:  -1 is outside the valid range for parameter "memory_spill_ratio" (0 .. 2147483647)
+SET MEMORY_SPILL_RATIO TO 101;
+ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
 SHOW MEMORY_SPILL_RATIO;
 memory_spill_ratio
 ------------------

@@ -20,3 +20,7 @@ REGRESS_OPTS = --dbname="walrep_regression"
 
 NO_PGXS = 1
 include $(top_srcdir)/src/makefiles/pgxs.mk
+
+# Ease the top-level Makefile's job a little bit, and install supporting
+# libraries as part of installcheck.
+installcheck: install
