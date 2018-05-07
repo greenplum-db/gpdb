@@ -700,11 +700,11 @@ gpstart
           <li><b>Why did my query return a "memory limit reached" error?</b>
             <p>Greenplum Database automatically adjusts transaction and group memory to the new settings when you use <codeph>ALTER RESOURCE GROUP</codeph> to change a resource group's memory and/or concurrency limits. An "out of memory" error may occur if you recently altered resource group attributes and there is no longer a sufficient amount of memory available for a currently running query.</p></li>
             <li><b>Why does the actual memory usage of my resource group exceed the amount configured for the group?</b>
-              <p>The actual memory usage of a resource group may exceed the configured amount when one or more queries running in the group is allocated memory from the global shared memory pool.</p><p>Memory usage may also exceed the configured amount when a transaction spills to disk. Greenplum Database statements continue to request memory when they start to spill to disk because:<ul> 
+              <p>The actual memory usage of a resource group may exceed the configured amount when one or more queries running in the group is allocated memory from the global shared memory pool.  (If no global shared memory is available, queries fail and do not impact the memory resources of other resource groups.)</p><p>When global shared memory is available, memory usage may also exceed the configured amount when a transaction spills to disk. Greenplum Database statements continue to request memory when they start to spill to disk because:<ul> 
                 <li>Spilling to disk requires extra memory to work.</li>
                 <li>Other operators may continue to request memory.</li>
                 </ul>
-                Memory usage grows in spill situations; the resource group may eventually use up to 200-300% of its configured group memory limit.</p></li>
+                Memory usage grows in spill situations; when global shared memory is available, the resource group may eventually use up to 200-300% of its configured group memory limit.</p></li>
         </ul>
       </section>
       <section id="topic797" xml:lang="en">

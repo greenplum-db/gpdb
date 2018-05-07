@@ -7335,7 +7335,7 @@
       <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only
         when resource group-based resource management is active.</note>
       <p>Sets the memory usage threshold percentage for memory-intensive operators in a transaction. When 
-        resource group memory reaches this threshold, a transaction spills to disk.</p>
+        a transaction reaches this threshold, it spills to disk.</p>
       <p>The default <codeph>memory_spill_ratio</codeph> percentage is the value defined for the resource group
         assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at
         the session level to selectively set this limit on a per-query basis. For example, if you
