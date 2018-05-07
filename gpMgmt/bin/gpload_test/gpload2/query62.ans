@@ -1,0 +1,14 @@
+2018-04-28 16:11:17|INFO|gpload session started 2018-04-28 16:11:17
+2018-04-28 16:11:17|INFO|setting schema 'public' for table 'beforeaftersql'
+2018-04-28 16:11:17|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-04-28 16:11:17|ERROR|could not execute SQL in sql:before "insert into beforeaftersql values(30);vacuum beforeaftersql; insert into beforeaftersql values(22,11)": ERROR:  INSERT has more expressions than target columns
+
+2018-04-28 16:11:17|INFO|rows Inserted          = 0
+2018-04-28 16:11:17|INFO|rows Updated           = 0
+2018-04-28 16:11:17|INFO|data formatting errors = 0
+2018-04-28 16:11:17|INFO|gpload failed
+ a  
+----
+ 30
+(1 row)
+

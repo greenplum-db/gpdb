@@ -9,6 +9,7 @@ CREATE SCHEMA test;
 DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;
 DROP TABLE IF EXISTS texttable;
 DROP TABLE IF EXISTS csvtable;
+DROP TABLE IF EXISTS beforeaftersql;
 CREATE TABLE texttable (
             s1 text, s2 text, s3 text, dt timestamp,
             n1 smallint, n2 integer, n3 bigint, n4 decimal,
@@ -19,3 +20,4 @@ CREATE TABLE csvtable (
 CREATE TABLE test.csvtable (
 	    year int, make text, model text, decription text, price decimal)
             DISTRIBUTED BY (year);
+CREATE TABLE beforeaftersql(a int);

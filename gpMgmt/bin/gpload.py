@@ -52,6 +52,7 @@ import hashlib
 import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
 import uuid
 import socket
+import re
 
 thePlatform = platform.system()
 if thePlatform in ['Windows', 'Microsoft']:
@@ -2700,7 +2701,13 @@ class gpload:
             self.log(self.LOG, "Pre-SQL from user: %s" % before)
             if not self.options.D:
                 try:
-                    self.db.query(before.encode('utf-8'))
+                    if re.search("vacuum ", before, re.IGNORECASE):
+                        before_sql_list = before.split(';')
+                        for before_sql in before_sql_list:
+                            if before_sql.strip() != '':
+                                self.db.query(before_sql.encode('utf-8'))
+                    else:
+                        self.db.query(before.encode('utf-8'))
                 except Exception, e:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
@@ -2723,7 +2730,13 @@ class gpload:
             self.log(self.LOG, "Post-SQL from user: %s" % after)
             if not self.options.D:
                 try:
-                    self.db.query(after.encode('utf-8'))
+                    if re.search("vacuum ", after, re.IGNORECASE):
+                        after_sql_list = after.split(';')
+                        for after_sql in after_sql_list:
+                            if after_sql.strip() != '':
+                                self.db.query(after_sql.encode('utf-8'))
+                    else:
+                        self.db.query(after.encode('utf-8'))
                 except Exception, e:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
