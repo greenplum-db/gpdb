@@ -419,10 +419,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
      cpuacct {
      }
  } </codeblock>
-            <p>This content configures CPU, CPU accounting, and memory control groups
-              managed by the <codeph>gpadmin</codeph> user. Greenplum Database uses
-              the memory control group only for those resource groups created with the
-              <codeph>cgroup</codeph> <codeph>MEMORY_AUDITOR</codeph>.</p>
+            <p>This content configures CPU and CPU accounting control groups
+              managed by the <codeph>gpadmin</codeph> user.</p>
           </li>
           <li>If you plan to use resource groups to manage PL/Container instances, you must add a memory block to the <codeph>gpdb.conf</codeph> file. Be sure to add the block before the closing curly-brace (<codeph>}</codeph>):<codeblock>     cpuacct {
      }
