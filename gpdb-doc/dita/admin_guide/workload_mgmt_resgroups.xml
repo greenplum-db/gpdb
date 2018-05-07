@@ -353,6 +353,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         </section>
         </body>
       </topic>
+      </topic>
       
       <topic id="topic833cons" xml:lang="en">
         <title>Other Memory Considerations</title>
