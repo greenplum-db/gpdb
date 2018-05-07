@@ -1,0 +1,30 @@
+DROP TABLE IF EXISTS t05;
+DROP
+CREATE TABLE t05 (id int primary key);
+CREATE
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+
+10: INSERT INTO t05 VALUES(segid(0,1));
+INSERT 1
+
+20: INSERT INTO t05 VALUES(segid(1,1));
+INSERT 1
+-- seg 0: con20 ==> con10, xid lock
+20&: INSERT INTO t05 VALUES(segid(0,1));  <waiting ...>
+
+-- seg 1: con10 ==> con20, xid lock
+10>: INSERT INTO t05 VALUES(segid(1,1));  <waiting ...>
+
+-- con20 will be cancelled by gdd
+20<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+20q: ... <quitting>
+
+-- no more deadlock
+10<:  <... completed>
+INSERT 1
+10q: ... <quitting>

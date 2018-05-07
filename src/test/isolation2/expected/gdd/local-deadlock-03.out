@@ -1,0 +1,45 @@
+DROP TABLE IF EXISTS t03;
+DROP
+CREATE TABLE t03 (id int, val int);
+CREATE
+INSERT INTO t03 (id, val) SELECT i, i FROM generate_series(1, 20) i;
+INSERT 20
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+30: BEGIN;
+BEGIN
+
+10: UPDATE t03 SET val=val WHERE id IN (segid(0,2), segid(1,2));
+UPDATE 2
+
+20: UPDATE t03 SET val=val WHERE id=segid(0,1);
+UPDATE 1
+
+30: UPDATE t03 SET val=val WHERE id=segid(1,1);
+UPDATE 1
+
+-- seg 0: con10 ==> con20, xid lock
+-- seg 1: con10 ==> con30, xid lock
+10&: UPDATE t03 SET val=val WHERE id IN (segid(0,1), segid(1,1));  <waiting ...>
+
+-- seg 1: con30 ==> con10, xid lock
+30>: UPDATE t03 SET val=val WHERE id=segid(1,2);  <waiting ...>
+
+-- con20 will be cancelled by local deadlock detector or gdd
+30<:  <... completed>
+UPDATE 1
+30q: ... <quitting>
+
+-- no more deadlock
+10<:  <... completed>
+ERROR:  deadlock detected  (seg1 127.0.1.1:25433 pid=29851)
+DETAIL:  Process 29851 waits for ShareLock on transaction 1009; blocked by process 29968.
+Process 29968 waits for ShareLock on transaction 1008; blocked by process 29851.
+HINT:  See server log for query details.
+10q: ... <quitting>
+20<:  <... completed>
+FAILED:  Execution failed
+20q: ... <quitting>

@@ -20,8 +20,11 @@ CREATE
 --
 -- This thread on gpdb-dev has more details:
 -- https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/OS1-ODIK0P4/ZIzayBbMBwAJ
+-- Since global deadlock detector has been added into gpdb, UPDATE on heap
+-- table does not acquire an Exclusive Relation Lock on QD. Therefore, we change
+-- the table to ao table here.
 
-CREATE TABLE deadlock_entry_db_singleton_table (c int, d int);
+CREATE TABLE deadlock_entry_db_singleton_table (c int, d int) WITH (appendonly=true);
 CREATE
 INSERT INTO deadlock_entry_db_singleton_table select i, i+1 from generate_series(1,10) i;
 INSERT 10

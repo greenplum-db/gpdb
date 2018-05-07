@@ -686,6 +686,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
+		lock->persistent = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("LockAcquire: new", lock, lockmode);
@@ -1705,6 +1706,45 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 
 	RemoveLocalLock(locallock);
 	return TRUE;
+}
+
+void
+LockSetPersistent(const LOCKTAG *locktag)
+{
+	LOCKMETHODID lockmethodid = locktag->locktag_lockmethodid;
+	LockMethod	lockMethodTable;
+	LOCALLOCKTAG localtag;
+	LOCALLOCK  *locallock;
+	LOCKMODE    lm;
+
+	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
+		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
+	lockMethodTable = LockMethods[lockmethodid];
+
+	for (lm = 1; lm <= lockMethodTable->numLockModes; lm++)
+	{
+#ifdef LOCK_DEBUG
+		if (LOCK_DEBUG_ENABLED(locktag))
+			elog(LOG, "LockRelease: lock [%u,%u] %s",
+				 locktag->locktag_field1, locktag->locktag_field2,
+				 lockMethodTable->lockModeNames[lm]);
+#endif
+		/*
+		 * Find the LOCALLOCK entry for this lock and lockmode
+		 */
+		MemSet(&localtag, 0, sizeof(localtag));		/* must clear padding */
+		localtag.lock = *locktag;
+		localtag.mode = lm;
+
+		locallock = (LOCALLOCK *) hash_search(LockMethodLocalHash,
+											  (void *) &localtag,
+											  HASH_FIND, NULL);
+
+		if (!locallock || locallock->nLocks <= 0)
+			continue;
+
+		locallock->lock->persistent = true;
+	}
 }
 
 /*
@@ -2870,6 +2910,7 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
+		lock->persistent = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("lock_twophase_recover: new", lock, lockmode);

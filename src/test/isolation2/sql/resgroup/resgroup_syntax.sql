@@ -95,7 +95,7 @@ CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memo
 -- negative: concurrency should be zero for cgroup audited resource group
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
 
--- memory_spill_ratio range is [0, 2147483647]
+-- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=10, memory_spill_ratio=0);
 DROP RESOURCE GROUP rg_test_group;
@@ -136,7 +136,7 @@ DROP RESOURCE GROUP rg2_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
 DROP RESOURCE GROUP rg_test_group;
 
--- memory_spill_ratio range is [0, 2147483647]
+-- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=0, memory_spill_ratio=1);
 DROP RESOURCE GROUP rg_test_group;

@@ -13,6 +13,7 @@
  */
 #ifndef FTSPROBE_H
 #define FTSPROBE_H
+#include "access/xlogdefs.h"
 
 typedef struct
 {
@@ -81,6 +82,8 @@ typedef struct
 	int16 probe_errno;            /* saved errno from the latest system call */
 	struct pg_conn *conn;         /* libpq connection object */
 	int retry_count;
+	XLogRecPtr xlogrecptr;
+	bool recovery_making_progress;
 } fts_segment_info;
 
 typedef struct

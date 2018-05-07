@@ -19,6 +19,10 @@ CREATE RESOURCE GROUP rg_spill_test WITH
 (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=-1);
 DROP RESOURCE GROUP rg_spill_test;
 
+CREATE RESOURCE GROUP rg_spill_test WITH
+(concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=101);
+DROP RESOURCE GROUP rg_spill_test;
+
 -- alter
 CREATE RESOURCE GROUP rg_spill_test WITH
 (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=20);
@@ -27,7 +31,7 @@ ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 60;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 100;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 10000;
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
 
 DROP RESOURCE GROUP rg_spill_test;
 
@@ -51,7 +55,7 @@ SET MEMORY_SPILL_RATIO TO -1;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
-SET MEMORY_SPILL_RATIO TO 10000;
+SET MEMORY_SPILL_RATIO TO 101;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 

@@ -81,7 +81,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <limits.h>
-
+#include "access/xlog.h"
 /* headers required for process affinity bindings */
 #ifdef HAVE_NUMA_H
 #define NUMA_VERSION1_COMPATIBILITY 1
@@ -133,6 +133,7 @@
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/faultinjector.h"
+#include "utils/gdd.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 
@@ -184,6 +185,7 @@ typedef enum pmsub_type
 	PerfmonProc,
 	BackoffProc,
 	PerfmonSegmentInfoProc,
+	GlobalDeadLockDetectorProc,
 	MaxPMSubType
 } PMSubType;
 
@@ -375,6 +377,9 @@ static PMSubProc PMSubProcList[MaxPMSubType] =
 	{0, PerfmonSegmentInfoProc,
 	(PMSubStartCallback*)&perfmon_segmentinfo_start,
 	"stats sender process", PMSUBPROC_FLAG_QD_AND_QE, true},
+	{0, GlobalDeadLockDetectorProc,
+	(PMSubStartCallback*)&global_deadlock_detector_start,
+	"global deadlock detector process", PMSUBPROC_FLAG_QD, true},
 };
 
 static PMSubProc *FTSSubProc = &PMSubProcList[FtsProbeProc];
@@ -1900,6 +1905,7 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 	ProtocolVersion proto;
 	MemoryContext oldcontext;
     char       *gpqeid = NULL;
+	XLogRecPtr  recptr;
 
 	if (pq_getbytes((char *) &len, 4) == EOF)
 	{
@@ -2076,6 +2082,43 @@ retry1:
 								 errmsg("cannot handle FTS connection on master")));
 					am_ftshandler = true;
 					am_mirror = IsRoleMirror();
+
+#ifdef FAULT_INJECTOR
+					if (FaultInjector_InjectFaultIfSet(
+							FTSConnStartupPacket,
+							DDLNotSpecified,
+							"" /* databaseName */,
+							"" /* tableName */) == FaultInjectorTypeSkip)
+					{
+						/*
+						 * If this fault is set to skip, report recovery is
+						 * hung. Without this fault recovery is reported as
+						 * progressing.
+						 */
+						if (FaultInjector_InjectFaultIfSet(
+							FTSRecoveryInProgress,
+							DDLNotSpecified,
+							"" /* databaseName */,
+							"" /* tableName */) == FaultInjectorTypeSkip)
+						{
+							recptr = last_xlog_replay_location();
+						}
+						else
+						{
+							time_t counter = time(NULL);
+
+							recptr.xlogid = counter;
+							recptr.xrecoff = counter;
+						}
+
+						ereport(FATAL,
+								(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+								 errSendAlert(true),
+								 errmsg(POSTMASTER_IN_RECOVERY_MSG),
+								 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
+										   XLogLocationToString(&recptr))));
+					}
+#endif
 				}
 				else
 					ereport(FATAL,
@@ -2205,10 +2248,14 @@ retry1:
 					 errmsg("the database system is shutting down")));
 			break;
 		case CAC_RECOVERY:
+			recptr = last_xlog_replay_location();
+
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 					 errSendAlert(true),
-					 errmsg(POSTMASTER_IN_RECOVERY_MSG)));
+					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
+						   XLogLocationToString(&recptr))));
 			break;
 		case CAC_TOOMANY:
 			ereport(FATAL,
@@ -2226,10 +2273,14 @@ retry1:
 				Assert(am_mirror);
 				break;
 			}
+
+			recptr = last_xlog_replay_location();
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
 					 errSendAlert(true),
-					 errmsg(POSTMASTER_IN_RECOVERY_MSG)));
+					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
+						   XLogLocationToString(&recptr))));
 			break;
 		case CAC_OK:
 			break;
@@ -4659,6 +4710,7 @@ SubPostmasterMain(int argc, char *argv[])
 		strcmp(argv[1], "--forkavworker") == 0 ||
 		strcmp(argv[1], "--forkautovac") == 0   ||
 		strcmp(argv[1], "--forkseqserver") == 0 ||
+		strcmp(argv[1], "--forkglobaldeadlockdetector") == 0 ||
 		strcmp(argv[1], "--forkboot") == 0)
 		PGSharedMemoryReAttach();
 
@@ -4842,6 +4894,23 @@ SubPostmasterMain(int argc, char *argv[])
 		CreateSharedMemoryAndSemaphores(false, 0);
 
 		SeqServerMain(argc - 2, argv + 2);
+		proc_exit(0);
+	}
+	if (strcmp(argv[1], "--forkglobaldeadlockdetector") == 0)
+	{
+		/* Close the postmaster's sockets */
+		ClosePostmasterPorts(false);
+
+		/* Restore basic shared memory pointers */
+		InitShmemAccess(UsedShmemSegAddr);
+
+		/* Need a PGPROC to run CreateSharedMemoryAndSemaphores */
+		InitAuxiliaryProcess();
+
+		/* Attach process to shared data structures */
+		CreateSharedMemoryAndSemaphores(false, 0);
+
+		GlobalDeadLockDetector(argc - 2, argv + 2);
 		proc_exit(0);
 	}
 	if (strcmp(argv[1], "--forkftsprobe") == 0)

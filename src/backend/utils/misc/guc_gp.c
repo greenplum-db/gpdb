@@ -47,6 +47,7 @@
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/vmem_tracker.h"
+#include "utils/gdd.h"
 
 /*
  * These constants are copied from guc.c. They should not bitrot when we
@@ -327,6 +328,7 @@ bool		dml_ignore_target_partition_check = false;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
+bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
@@ -763,6 +765,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_create_index_concurrently,
 		false, NULL, NULL
+	},
+
+	{
+		{"gp_enable_minmax_optimization", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables the planner's use of index scans with limit to implement MIN/MAX."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_minmax_optimization,
+		true, NULL, NULL
 	},
 
 	{
@@ -2974,7 +2986,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&memory_spill_ratio,
-		20, 0, INT_MAX, NULL, NULL
+		20, 0, 100, NULL, NULL
 	},
 
 	{
@@ -3504,7 +3516,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"gp_fts_probe_retries", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
-			GUC_UNIT_S
 		},
 		&gp_fts_probe_retries,
 		5, 0, 100, NULL, NULL
@@ -3861,6 +3872,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_global_deadlock_detector_period", PGC_SIGHUP, LOCK_MANAGEMENT,
+			gettext_noop("Sets the executing period of global deadlock detector backend."),
+			NULL,
+			GUC_UNIT_S
+		},
+		&gp_global_deadlock_detector_period,
+		120, 5, INT_MAX, NULL, NULL
+	},
+
+	{
 		{"gp_email_connect_timeout", PGC_SUSET, LOGGING,
 			gettext_noop("Sets the amount of time (in secs) after which SMTP sockets would timeout"),
 			NULL,
@@ -3930,12 +3951,12 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Item limit for expansion of arrays in WHERE clause to disjunctive form."),
+			gettext_noop("Item limit for expansion of arrays in WHERE clause for constraint derivation."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_expansion_threshold,
-		25, 0, INT_MAX, NULL, NULL
+		100, 0, INT_MAX, NULL, NULL
 	},
 
 	{

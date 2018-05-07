@@ -255,7 +255,8 @@ def check_db_exists(dbname, host=None, port=0, user=None):
 def create_database_if_not_exists(context, dbname, host=None, port=0, user=None):
     if not check_db_exists(dbname, host, port, user):
         create_database(context, dbname, host, port, user)
-
+    context.dbname = dbname
+    context.conn = dbconn.connect(dbconn.DbURL(dbname=context.dbname))
 
 def create_database(context, dbname=None, host=None, port=0, user=None):
     LOOPS = 10

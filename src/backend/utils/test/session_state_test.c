@@ -5,9 +5,6 @@
 
 #include "postgres.h"
 
-static Size add_size(Size s1, Size s2);
-static Size mul_size(Size s1, Size s2);
-
 #include "../session_state.c"
 
 /*
@@ -58,50 +55,6 @@ void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
-}
-
-static Size
-GetSessionStateArrayHeaderSize()
-{
-	return sizeof(int) /* numSession */ +
-				sizeof(int) /* maxSession*/ + sizeof(SessionState *) /* freeList */ +
-				sizeof(SessionState *) /* usedList */+ sizeof(SessionState *) /* sessions */;
-}
-
-/*
- * Add two Size values, checking for overflow
- */
-static Size
-add_size(Size s1, Size s2)
-{
-	Size		result;
-
-	result = s1 + s2;
-	/* We are assuming Size is an unsigned type here... */
-	if (result < s1 || result < s2)
-		ereport(ERROR,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("requested shared memory size overflows size_t")));
-	return result;
-}
-
-/*
- * Multiply two Size values, checking for overflow
- */
-static Size
-mul_size(Size s1, Size s2)
-{
-	Size		result;
-
-	if (s1 == 0 || s2 == 0)
-		return 0;
-	result = s1 * s2;
-	/* We are assuming Size is an unsigned type here... */
-	if (result / s2 != s1)
-		ereport(ERROR,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("requested shared memory size overflows size_t")));
-	return result;
 }
 
 /* Creates a SessionStateArray of the specified number of entry */
@@ -209,43 +162,6 @@ ReleaseSessionState(int sessionId)
 }
 
 /*
- * Checks if the SessionStateArray struct layout is as expected
- */
-void
-test__SessionState_ShmemSize__StructLayout(void **state)
-{
-	const int headerEndOffset = offsetof(SessionStateArray, data);
-	/*
-	 * Make sure the data field is the last field.
-	 */
-	assert_true(headerEndOffset == sizeof(SessionStateArray) - sizeof(void*));
-
-	Size actualSize = sizeof(SessionStateArray);
-	Size calculatedSize = GetSessionStateArrayHeaderSize() +
-			sizeof(void *) /* the start pointer of the entries */;
-	assert_true(actualSize == calculatedSize);
-}
-
-/*
- * Checks if the SessionState_ShmemSize calculates correct size
- */
-void
-test__SessionState_ShmemSize__CalculatesCorrectSize(void **state)
-{
-	const Size headerSize = GetSessionStateArrayHeaderSize();
-
-	MaxBackends = 0;
-	assert_true(headerSize == SessionState_ShmemSize());
-
-	MaxBackends = 10;
-	assert_true(headerSize + 10 * sizeof(SessionState) == SessionState_ShmemSize());
-
-	/* Current maximum value for Maxbackends is INT_MAX / BLCKSZ */
-	MaxBackends = MAX_MAX_BACKENDS;
-	assert_true(headerSize + (MAX_MAX_BACKENDS) * sizeof(SessionState) == SessionState_ShmemSize());
-}
-
-/*
  * Checks if SessionState_ShmemInit does nothing under postmaster.
  * Note, it is *only* expected to re-attach with an existing array.
  */
@@ -259,7 +175,6 @@ test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
 	/* Initilize with some non-zero values */
 	fakeSessionStateArray.maxSession = 0;
 	fakeSessionStateArray.numSession = 0;
-	fakeSessionStateArray.sessions = NULL;
 	fakeSessionStateArray.freeList = NULL;
 	fakeSessionStateArray.usedList = NULL;
 
@@ -277,7 +192,6 @@ test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
 	/* All the struct properties should be unchanged */
 	assert_true(AllSessionStateEntries->maxSession == 0);
 	assert_true(AllSessionStateEntries->numSession == 0);
-	assert_true(AllSessionStateEntries->sessions == NULL);
 	assert_true(AllSessionStateEntries->freeList == NULL &&
 			AllSessionStateEntries->usedList == NULL);
 
@@ -303,7 +217,6 @@ test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
 		/* All the struct properties should be unchanged */
 		assert_true(AllSessionStateEntries->maxSession == MaxBackends);
 		assert_true(AllSessionStateEntries->numSession == 0);
-		assert_true(AllSessionStateEntries->sessions == &AllSessionStateEntries->data);
 		assert_true(AllSessionStateEntries->freeList == AllSessionStateEntries->sessions &&
 				AllSessionStateEntries->usedList == NULL);
 
@@ -603,8 +516,6 @@ main(int argc, char* argv[])
 	gp_sessionstate_loglevel = LOG;
 
 	const UnitTest tests[] = {
-		unit_test(test__SessionState_ShmemSize__StructLayout),
-		unit_test(test__SessionState_ShmemSize__CalculatesCorrectSize),
 		unit_test(test__SessionState_ShmemInit__NoOpUnderPostmaster),
 		unit_test(test__SessionState_ShmemInit__InitializesWhenPostmaster),
 		unit_test(test__SessionState_ShmemInit__LinkedListSanity),

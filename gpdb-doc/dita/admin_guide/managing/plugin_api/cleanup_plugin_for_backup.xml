@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="pa137116">cleanup_plugin_for_backup</title>
+  <body>
+    <p>Plugin command to clean up a storage plugin after backup.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock><varname>plugin_executable</varname> <b>cleanup_plugin_for_backup</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>gpbackup</codeph> invokes the <codeph>cleanup_plugin_for_backup</codeph> plugin command on the master and all segment hosts when a <codeph>gpbackup</codeph> operation completes, both in success and failure cases.</p>
+      <p>The <codeph>cleanup_plugin_for_backup</codeph> command should perform the actions necessary to clean up the remote storage system after a backup. Clean up activities may include removing remote directories or temporary files created during the backup, disconnecting from the backup service, etc.</p>
+    </section>
+    <section id="section4"><title>Arguments</title><parml>
+        <plentry>
+          <pt><varname>plugin_config_file</varname></pt>
+          <pd>The absolute path to the plugin configuration YAML file.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>local_backup_dir</varname></pt>
+          <pd>The local directory on the Greenplum Database host (master and segments) to which <codeph>gpbackup</codeph> wrote backup files.</pd>
+        </plentry>
+        </parml>
+    </section>
+    <section id="section5"><title>Exit Code</title>
+      <p>The <codeph>cleanup_plugin_for_backup</codeph> command must exit with a value of 0 on success, non-zero if an error occurs. In the case of a non-zero exit code, <codeph>gpbackup</codeph> displays the contents of <codeph>stderr</codeph> to the user.</p>
+    </section>
+  </body>
+</topic>

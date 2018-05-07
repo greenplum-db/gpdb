@@ -1142,8 +1142,6 @@ RecordTransactionCommit(void)
 	TransactionId xid;
 	bool		markXidCommitted;
 	TransactionId latestXid = InvalidTransactionId;
-	/* Initializing just to make compiler happy */
-	bool save_inCommit = MyProc->inCommit;
 	int			nrels;
 	RelFileNode *rels;
 	bool		haveNonTemp;
@@ -1264,7 +1262,6 @@ RecordTransactionCommit(void)
 		 * backend has finished updating the state.
 		 */
 		START_CRIT_SECTION();
-		save_inCommit = MyProc->inCommit;
 		MyProc->inCommit = true;
 
 		SetCurrentTransactionStopTimestamp();
@@ -1463,7 +1460,7 @@ RecordTransactionCommit(void)
 	 */
 	if (markXidCommitted || isDtxPrepared)
 	{
-		MyProc->inCommit = save_inCommit;
+		MyProc->inCommit = false;
 		END_CRIT_SECTION();
 	}
 
@@ -2606,12 +2603,6 @@ CommitTransaction(void)
 	 * already, but this ordering is definitely critical during abort.)
 	 */
 	smgrDoPendingDeletes(true);
-
-	/* Let checkpoint go through now, defered from cleaning these in
-	 * ProcArrayClearTransaction.
-	 */
-	MyProc->inCommit = false;
-	MyProc->lxid = InvalidLocalTransactionId;
 
 	AtEOXact_MultiXact();
 

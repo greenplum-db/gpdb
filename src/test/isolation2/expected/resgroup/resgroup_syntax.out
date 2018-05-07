@@ -176,7 +176,7 @@ ERROR:  memory_auditor should be "vmtracker" or "cgroup"
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10, memory_auditor="cgroup");
 ERROR:  resource group concurrency must be 0 when group memory_auditor is cgroup
 
--- memory_spill_ratio range is [0, 2147483647]
+-- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=10, memory_spill_ratio=0);
 CREATE
@@ -187,7 +187,7 @@ CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=10, memory_spill_ratio=-1);
-ERROR:  memory_spill_ratio range is [0, 2147483647]
+ERROR:  memory_spill_ratio range is [0, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=-1, memory_spill_ratio=10);
 ERROR:  memory_shared_quota range is [0, 100]
 
@@ -251,7 +251,7 @@ CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
--- memory_spill_ratio range is [0, 2147483647]
+-- memory_spill_ratio range is [0, 100]
 -- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=0, memory_spill_ratio=1);
 CREATE

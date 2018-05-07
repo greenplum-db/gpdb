@@ -1,4 +1,4 @@
-## ======================================================================
+
 {% set walrep_suites = ['walrep_1',
                            'walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
@@ -55,6 +55,7 @@ groups:
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
+  - icw_planner_centos7
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -101,6 +102,7 @@ groups:
                     CLI_gpexpand_suites %}
   - [[ test_name ]]
 {% endfor %}
+  - gpexpand
   - gpcheck
   - gppkg
   - check_centos
@@ -175,6 +177,7 @@ groups:
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
+  - icw_planner_centos7
   - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
@@ -246,6 +249,7 @@ groups:
                     CLI_gpexpand_suites %}
   - [[ test_name ]]
 {% endfor %}
+  - gpexpand
   - gpcheck
   - gppkg
   - check_centos
@@ -1134,6 +1138,25 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: icw_planner_centos7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+
 {% endif %}
 {% if "sles" in os_types %}
 - name: icw_gporca_sles11
@@ -1537,9 +1560,13 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - compile_gpdb_sles11
       - compile_gpdb_centos6
+{% if "sles" in os_types %}
+      - compile_gpdb_sles11
+{% endif %}
+{% if "centos7" in os_types %}
       - compile_gpdb_centos7
+{% endif %}
       trigger: true
     - get: bin_gpdb_centos6
       passed:
@@ -1814,6 +1841,44 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TEST_OS: centos
+
+
+- name: gpexpand
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_cli_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_cli_start]
+      trigger: [[ test_trigger ]]
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: pre_run_test_setup
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
+    image: centos-gpdb-dev-6
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    params:
+      BEHAVE_FLAGS: --tags=gpexpand
+    image: centos-gpdb-dev-6
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
 
 {% for test_name in CLI_gpexpand_suites %}
 - name: [[ test_name ]]
@@ -2147,6 +2212,7 @@ jobs:
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
+    - icw_planner_centos7
     - icw_gporca_sles11
     - icw_gporca_sles12
     - icw_planner_sles12
@@ -2171,6 +2237,7 @@ jobs:
                     CLI_gpexpand_suites %}
     - [[ test_name ]]
 {% endfor %}
+    - gpexpand
     - gpcheck
     - gppkg
     - check_centos

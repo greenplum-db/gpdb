@@ -27,7 +27,7 @@
  */
 
 #define unsupported_system() \
-	elog(WARNING, "cpu rate limitation for resource group is unsupported on this system")
+	elog(WARNING, "resource group is not supported on this system")
 
 /* Return the name for the OS group implementation */
 const char *
@@ -45,7 +45,6 @@ ResGroupOps_Name(void)
 bool
 ResGroupOps_Probe(void)
 {
-	unsupported_system();
 	return false;
 }
 

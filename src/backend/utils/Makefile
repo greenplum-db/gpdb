@@ -9,7 +9,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 OBJS        = fmgrtab.o session_state.o
-SUBDIRS     = adt cache datumstream error fmgr hash init mb misc mmgr resowner \
+SUBDIRS     = adt cache datumstream error fmgr gdd hash init mb misc mmgr resowner \
 			   resgroup resscheduler sort time gpmon gp workfile_manager resource_manager
 
 # location of Catalog.pm

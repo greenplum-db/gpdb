@@ -224,6 +224,17 @@ FI_IDENT(SyncRepQueryCancel, "sync_rep_query_cancel")
 FI_IDENT(DistributedLogAdvanceOldestXmin, "distributedlog_advance_oldest_xmin")
 /* inject fault at initialization of wal sender */
 FI_IDENT(InitializeWalSender, "initialize_wal_sender")
+/* inject fault when fts connection is received on primary/mirror */
+FI_IDENT(FTSConnStartupPacket, "fts_conn_startup_packet")
+/*
+ * inject fault to report recovery is hung to FTS. This fault only works with
+ * FTSConnStartupPacket fault set to skip.
+ */
+FI_IDENT(FTSRecoveryInProgress, "fts_recovery_in_progress")
+/* inject fault after CdbTryOpenRelation function */
+FI_IDENT(UpgradeRowLock, "upgrade_row_lock")
+/* inject fault in Gdd loop */
+FI_IDENT(GddProbe, "gdd_probe")
 #endif
 
 /*

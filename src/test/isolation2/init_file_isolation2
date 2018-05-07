@@ -10,4 +10,20 @@ s/^\d+.*gpconfig.*-\[INFO\]:-//
 # ignore OID and file/line number diffs for invalid toast indexes
 m/^ERROR:  no valid index found for toast relation/
 s/with Oid \d+ \(.*\)/with Oid OID/
+
+# messages from local deadlock detector
+# ERROR:  deadlock detected  (seg1 127.0.1.1:25433 pid=29851)
+# DETAIL:  Process 29851 waits for ShareLock on transaction 1009; blocked by process 29968.
+# Process 29968 waits for ShareLock on transaction 1008; blocked by process 29851.
+
+m/^ERROR:  deadlock detected  (seg\d+ [0-9.]+:\d+ pid=\d+)/
+s/seg\d+ [0-9.]+:\d+ pid=\d+/SEG IP:PORT pid=PID/
+
+m/^DETAIL:  Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
+s/^DETAIL:  Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./DETAIL:  Process PID waits for ShareLock on transaction XID; blocked by process PID./
+
+m/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
+s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./Process PID waits for ShareLock on transaction XID; blocked by process PID./
+
+
 -- end_matchsubs

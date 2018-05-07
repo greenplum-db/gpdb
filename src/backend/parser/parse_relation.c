@@ -22,6 +22,7 @@
 #include "access/sysattr.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_proc_callback.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
@@ -905,13 +906,31 @@ addRangeTableEntry(ParseState *pstate,
 	/*
 	 * CDB: lock promotion around the locking clause is a little different
 	 * from postgres to allow for required lock promotion for distributed
-	 * tables.
+	 * AO tables.
+	 * select for update should lock the whole table, we do it here.
 	 */
 	locking = getLockedRefname(pstate, refname);
 	if (locking)
 	{
 		lockmode = locking->forUpdate ? RowExclusiveLock : RowShareLock;
-		nowait	 = locking->noWait;
+		if (locking->forUpdate)
+		{
+			Oid relid;
+			
+			relid = RangeVarGetRelid(relation, true);
+			if (relid == InvalidOid)
+				elog(ERROR, "Got Invalid RelationId of %s", relation->relname);
+			
+			rel = try_heap_open(relid, NoLock, true);
+			if (!rel)
+				elog(ERROR, "open relation(%u) fail", relid);
+			if (locking->forUpdate)
+				lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
+			else
+				lockmode = RowShareLock;
+			heap_close(rel, NoLock);
+		}
+		nowait = locking->noWait;
 	}
 
 	/*

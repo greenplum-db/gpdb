@@ -1,0 +1,38 @@
+DROP TABLE IF EXISTS t04a;
+DROP
+CREATE TABLE t04a (id int, val int);
+CREATE
+INSERT INTO t04a (id, val) SELECT i, i FROM generate_series(1, 20) i;
+INSERT 20
+
+DROP TABLE IF EXISTS t04b;
+DROP
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+
+10: UPDATE t04a SET val=val WHERE id=segid(0,1);
+UPDATE 1
+10: CREATE TABLE t04b (id int);
+CREATE
+
+20: UPDATE t04a SET val=val WHERE id=segid(1,1);
+UPDATE 1
+
+-- seg 1: con10 ==> con20, xid lock
+10&: UPDATE t04a SET val=val WHERE id=segid(1,1);  <waiting ...>
+
+-- seg -1: con20 ==> con10, xid lock
+20>: CREATE TABLE t04b (id int);  <waiting ...>
+
+-- con20 will be cancelled by gdd
+20<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+20q: ... <quitting>
+
+-- no more deadlock
+10<:  <... completed>
+UPDATE 1
+10q: ... <quitting>

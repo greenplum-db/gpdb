@@ -91,4 +91,7 @@ extern bool FindAndSignalProcess(int sessionId, int commandId);
 
 extern void getDtxCheckPointInfo(char **result, int *result_size);
 
+extern List *ListAllGxid(void);
+extern int GetPidByGxid(DistributedTransactionId gxid);
+
 #endif   /* PROCARRAY_H */

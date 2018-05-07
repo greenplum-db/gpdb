@@ -506,6 +506,14 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 		config->gp_enable_multiphase_agg = false;
 
 		/*
+		 * The MIN/MAX optimization works by inserting a subplan with LIMIT 1.
+		 * That effectively turns a correlated subquery into a multi-level
+		 * correlated subquery, which we don't currently support. (See check
+		 * above.)
+		 */
+		config->gp_enable_minmax_optimization = false;
+
+		/*
 		 * Only create subplans with sequential scans
 		 */
 		config->enable_indexscan = false;

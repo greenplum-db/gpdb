@@ -28,7 +28,9 @@
 #include "cdb/cdbvars.h"
 #include "postmaster/fts.h"
 #include "postmaster/ftsprobe.h"
+#include "postmaster/postmaster.h"
 #include "utils/snapmgr.h"
+
 
 static struct pollfd *PollFds;
 
@@ -195,6 +197,66 @@ ftsConnectStart(fts_segment_info *ftsInfo)
 	return true;
 }
 
+static void
+checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
+{
+	if (strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)))
+	{
+		XLogRecPtr tmpptr;
+		char *ptr = strstr(PQerrorMessage(ftsInfo->conn),
+				_(POSTMASTER_IN_RECOVERY_DETAIL_MSG));
+
+		if ((ptr == NULL) ||
+		    sscanf(ptr, POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X\n",
+		    &tmpptr.xlogid, &tmpptr.xrecoff) != 2)
+		{
+#ifdef USE_ASSERT_CHECKING
+			elog(ERROR,
+#else
+			elog(LOG,
+#endif
+				"invalid in-recovery message %s "
+				"(content=%d, dbid=%d) state=%d",
+				PQerrorMessage(ftsInfo->conn),
+				ftsInfo->primary_cdbinfo->segindex,
+				ftsInfo->primary_cdbinfo->dbid,
+				ftsInfo->state);
+			return;
+		}
+
+		/*
+		 * If the xlog record returned from the primary is less than or
+		 * equal to the xlog record we had saved from the last probe
+		 * then we assume that recovery is not making progress. In the
+		 * case of rolling panics on the primary the returned xlog
+		 * location can be less than the recorded xlog location. In
+		 * these cases of rolling panic or recovery hung we want to
+		 * mark the primary as down.
+		 */
+		if (XLByteLE(tmpptr, ftsInfo->xlogrecptr))
+		{
+			elog(LOG, "FTS: detected segment is in recovery mode and not making progress (content=%d) "
+				 "primary dbid=%d, mirror dbid=%d",
+				 ftsInfo->primary_cdbinfo->segindex,
+				 ftsInfo->primary_cdbinfo->dbid,
+				 ftsInfo->mirror_cdbinfo->dbid);
+		}
+		else
+		{
+			ftsInfo->recovery_making_progress = true;
+			ftsInfo->xlogrecptr.xlogid = tmpptr.xlogid;
+			ftsInfo->xlogrecptr.xrecoff = tmpptr.xrecoff;
+			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				 "FTS: detected segment is in recovery mode replayed (%s) (content=%d) "
+				 "primary dbid=%d, mirror dbid=%d",
+				 XLogLocationToString(&tmpptr),
+				 ftsInfo->primary_cdbinfo->segindex,
+				 ftsInfo->mirror_cdbinfo->dbid,
+				 ftsInfo->mirror_cdbinfo->dbid);
+		}
+	}
+}
+
 /*
  * Start a libpq connection for each "per segment" object in context.  If the
  * connection is already started for an object, advance libpq state machine for
@@ -227,6 +289,11 @@ ftsConnect(fts_context *context)
 			case FTS_PROBE_SEGMENT:
 			case FTS_SYNCREP_OFF_SEGMENT:
 			case FTS_PROMOTE_SEGMENT:
+				/*
+				 * We always default to false.  If connect fails due to recovery in progress
+				 * this variable will be set based on LSN value in error message.
+				 */
+				ftsInfo->recovery_making_progress = false;
 				if (ftsInfo->conn == NULL)
 				{
 					AssertImply(ftsInfo->retry_count > 0,
@@ -275,6 +342,7 @@ ftsConnect(fts_context *context)
 
 						case PGRES_POLLING_FAILED:
 							ftsInfo->state = nextFailedState(ftsInfo->state);
+							checkIfFailedDueToRecoveryInProgress(ftsInfo);
 							elog(LOG, "FTS: cannot establish libpq connection "
 								 "(content=%d, dbid=%d): %s, retry_count=%d",
 								 ftsInfo->primary_cdbinfo->segindex,
@@ -695,6 +763,41 @@ ftsReceive(fts_context *context)
 	}
 }
 
+static void
+retryForFtsFailed(fts_segment_info *ftsInfo, pg_time_t now)
+{
+	if (ftsInfo->retry_count == gp_fts_probe_retries)
+	{
+		elog(LOG, "FTS max (%d) retries exhausted "
+			"(content=%d, dbid=%d) state=%d",
+			ftsInfo->retry_count,
+			ftsInfo->primary_cdbinfo->segindex,
+			ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
+		return;
+	}
+
+	ftsInfo->retry_count++;
+	if (ftsInfo->state == FTS_PROBE_SUCCESS ||
+		ftsInfo->state == FTS_PROBE_FAILED)
+		ftsInfo->state = FTS_PROBE_RETRY_WAIT;
+	else if (ftsInfo->state == FTS_SYNCREP_OFF_FAILED)
+		ftsInfo->state = FTS_SYNCREP_OFF_RETRY_WAIT;
+	else
+		ftsInfo->state = FTS_PROMOTE_RETRY_WAIT;
+	ftsInfo->retryStartTime = now;
+	elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		"FTS initialized retry start time to now "
+		"(content=%d, dbid=%d) state=%d",
+		ftsInfo->primary_cdbinfo->segindex,
+		ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
+
+	PQfinish(ftsInfo->conn);
+	ftsInfo->conn = NULL;
+	ftsInfo->poll_events = ftsInfo->poll_revents = 0;
+	/* Reset result before next attempt. */
+	memset(&ftsInfo->result, 0, sizeof(fts_result));
+}
+
 /*
  * If retry attempts are available, transition the sgement to the start state
  * corresponding to their failure state.  If retries have exhausted, leave the
@@ -724,36 +827,7 @@ processRetry(fts_context *context)
 			case FTS_PROBE_FAILED:
 			case FTS_SYNCREP_OFF_FAILED:
 			case FTS_PROMOTE_FAILED:
-				if (ftsInfo->retry_count == gp_fts_probe_retries)
-				{
-					elog(LOG, "FTS max (%d) retries exhausted "
-						 "(content=%d, dbid=%d) state=%d",
-						 ftsInfo->retry_count,
-						 ftsInfo->primary_cdbinfo->segindex,
-						 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
-				}
-				else
-				{
-					ftsInfo->retry_count++;
-					if (ftsInfo->state == FTS_PROBE_SUCCESS ||
-						ftsInfo->state == FTS_PROBE_FAILED)
-						ftsInfo->state = FTS_PROBE_RETRY_WAIT;
-					else if (ftsInfo->state == FTS_SYNCREP_OFF_FAILED)
-						ftsInfo->state = FTS_SYNCREP_OFF_RETRY_WAIT;
-					else
-						ftsInfo->state = FTS_PROMOTE_RETRY_WAIT;
-					ftsInfo->retryStartTime = now;
-					elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
-						   "FTS initialized retry start time to now "
-						   "(content=%d, dbid=%d) state=%d",
-						   ftsInfo->primary_cdbinfo->segindex,
-						   ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
-					PQfinish(ftsInfo->conn);
-					ftsInfo->conn = NULL;
-					ftsInfo->poll_events = ftsInfo->poll_revents = 0;
-					/* Reset result before next attempt. */
-					memset(&ftsInfo->result, 0, sizeof(fts_result));
-				}
+				retryForFtsFailed(ftsInfo, now);
 				break;
 			case FTS_PROBE_RETRY_WAIT:
 			case FTS_SYNCREP_OFF_RETRY_WAIT:
@@ -988,8 +1062,23 @@ processResponse(fts_context *context)
 				}
 				break;
 			case FTS_PROBE_FAILED:
-				/* Primary is down, see if mirror can be promoted. */
+				/* Primary is down */
+
+				/* If primary is in recovery, do not mark it down and promote mirror */
+				if (ftsInfo->recovery_making_progress)
+				{
+					Assert(strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)));
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						 "FTS: detected segment is in recovery mode and making "
+						 "progress (content=%d) primary dbid=%d, mirror dbid=%d",
+						 primary->segindex, primary->dbid, mirror->dbid);
+
+					ftsInfo->state = FTS_RESPONSE_PROCESSED;
+					break;
+				}
+
 				Assert(!IsPrimaryAlive);
+				/* See if mirror can be promoted. */
 				if (SEGMENT_IS_IN_SYNC(mirror))
 				{
 					/*
@@ -1050,7 +1139,6 @@ processResponse(fts_context *context)
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_SUCCESS:
-				Assert(ftsInfo->result.isRoleMirror);
 				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 					   "FTS mirror (content=%d, dbid=%d) promotion "
 					   "triggerred successfully",
@@ -1142,6 +1230,9 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		ftsInfo->result.isRoleMirror = false;
 		ftsInfo->result.dbid = primary->dbid;
 		ftsInfo->state = FTS_PROBE_SEGMENT;
+		ftsInfo->recovery_making_progress = false;
+		ftsInfo->xlogrecptr.xlogid = 0;
+		ftsInfo->xlogrecptr.xrecoff = 0;
 
 		ftsInfo->primary_cdbinfo = primary;
 		ftsInfo->mirror_cdbinfo = mirror;

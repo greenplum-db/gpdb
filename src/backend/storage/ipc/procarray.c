@@ -507,6 +507,7 @@ ProcArrayClearTransaction(PGPROC *proc, bool commit)
 	 * ProcArray.
 	 */
 	proc->xid = InvalidTransactionId;
+	proc->lxid = InvalidLocalTransactionId;
 	proc->xmin = InvalidTransactionId;
 	proc->recoveryConflictPending = false;
 
@@ -514,23 +515,13 @@ ProcArrayClearTransaction(PGPROC *proc, bool commit)
 
 	/* redundant, but just in case */
 	proc->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
+	proc->inCommit = false;
 	proc->serializableIsoLevel = false;
 	proc->inDropTransaction = false;
 
 	/* Clear the subtransaction-XID cache too */
 	proc->subxids.nxids = 0;
 	proc->subxids.overflowed = false;
-
-	/* For commit, inCommit and lxid are cleared in CommitTransaction after
-	 * performing PT operations. It's done this way to correctly block
-	 * checkpoint till CommitTransaction completes the persistent table
-	 * updates.
-	 */
-	if (! commit)
-	{
-		proc->lxid = InvalidLocalTransactionId;
-		proc->inCommit = false;
-	}
 }
 
 /*
@@ -4320,4 +4311,58 @@ KnownAssignedXidsDisplay(int trace_level)
 		 buf.data);
 
 	pfree(buf.data);
+}
+
+/* This function returns a list of all valid distributedTransaction Ids. */
+List *
+ListAllGxid(void)
+{
+	ProcArrayStruct *arrayP = procArray;
+	List		*gxids = NIL;
+	int			index;
+	DistributedTransactionId gxid;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (index = 0; index < arrayP->numProcs; index++)
+	{
+		volatile PGPROC	*proc = arrayP->procs[index];
+
+		gxid = proc->gxact.gxid;
+		if (gxid == InvalidDistributedTransactionId)
+			continue;
+		gxids = lappend_int(gxids, gxid);
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return gxids;
+}
+
+/*
+ * This function returns the corresponding process id given by a
+ * DistributedTransaction Id.
+ */
+int
+GetPidByGxid(DistributedTransactionId gxid)
+{
+	int i;
+	int pid = 0;
+	ProcArrayStruct *arrayP = procArray;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (i = 0; i < arrayP->numProcs; i++)
+	{
+		volatile PGPROC *proc = arrayP->procs[i];
+		if (proc->gxact.gxid == gxid)
+		{
+			pid = proc->pid;
+			break;
+		}
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return pid;
 }

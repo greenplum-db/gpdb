@@ -546,6 +546,7 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->mpp_trying_fallback_plan = false;
 	c1->constraint_exclusion = constraint_exclusion;
 
+	c1->gp_enable_minmax_optimization = gp_enable_minmax_optimization;
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;
 	c1->gp_enable_preunique = gp_enable_preunique;
 	c1->gp_eager_preunique = gp_eager_preunique;
