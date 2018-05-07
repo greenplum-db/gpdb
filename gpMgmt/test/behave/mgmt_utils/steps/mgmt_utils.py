@@ -4218,6 +4218,14 @@ def impl(context, func_name, dbname):
     if row_count != 'test_function':
         raise Exception('Function %s does not exist in %s"' % (func_name, dbname))
 
+@then('verify that sequence "{seq_name}" last value is "{last_value}" in database "{dbname}"')
+@when('verify that sequence "{seq_name}" last value is "{last_value}" in database "{dbname}"')
+@given('verify that sequence "{seq_name}" last value is "{last_value}" in database "{dbname}"')
+def impl(context, seq_name, last_value, dbname):
+    SQL = """SELECT last_value FROM "%s";""" % seq_name
+    lv = getRows(dbname, SQL)[0][0]
+    if lv != int(last_value):
+        raise Exception('Sequence %s last value is not %s in %s"' % (seq_name, last_value, dbname))
 
 @when('the user runs the query "{query}" in database "{dbname}" and sends the output to "{filename}"')
 def impl(context, query, dbname, filename):
@@ -4878,6 +4886,38 @@ def store_timestamp_in_old_format(context, directory=None, prefix=""):
 
         run_command(context, change_report_file_content)
 
+@given('the backup files on data domain are renamed with different dbids')
+@when('the backup files on data domain are renamed with different dbids')
+@then('the backup files on data domain are renamed with different dbids')
+def impl(context):
+    rename_files_for_dbids_on_data_domain(context)
+
+def rename_files_for_dbids_on_data_domain(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    primary_segs = [seg for seg in gparray.getSegDbList() if seg.isSegmentPrimary()]
+    num_segs = len(primary_segs)
+
+    if context.backup_timestamp is not None:
+        timestamp = context.backup_timestamp
+    else:
+        timestamp = context.full_backup_timestamp
+
+    ddboost_dir = os.path.join(context._root["ddboost_backupdir"], timestamp[0:8])
+    name_dict = {}
+    for ps in primary_segs:
+        segdbId = ps.getSegmentDbId()
+        segcid = ps.getSegmentContentId()
+        old_filename = "%s/gp_dump_%d_%d_%s.gz" % (ddboost_dir, segcid, segdbId, timestamp)
+        new_filename = "%s/gp_dump_%d_%d_%s.gz" % (ddboost_dir, segcid, segdbId+num_segs, timestamp)
+        name_dict[old_filename] = new_filename
+
+    for new_name, old_name in name_dict.iteritems():
+        rename_files_cmd = "gpddboost --rename --from-file=%s --to-file=%s" % (new_name, old_name)
+
+        run_command(context, rename_files_cmd)
+
+        if context.exception:
+            raise context.exception
 
 # todo this seems like it can only be a given or a when, not a "then"
 @then('the timestamp will be stored in json format')

@@ -176,6 +176,7 @@ static int	renameFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_co
 static int	setCredential(struct ddboost_options *dd_options);
 static int	copyWithinDDboost(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_conn, int direction);
 static int	get_stream_counts(ddp_conn_desc_t connd, ddp_stream_counts_t * stream_counts);
+static char *getFileWithRegex(struct ddboost_options *dd_options, char *fileWithRegex);
 
 /* Helper routines for handling multiple -T options using a linked list */
 struct schemaTableList *
@@ -1108,21 +1109,119 @@ cleanup:
 int
 readFileFromDDBoost(struct ddboost_options *dd_options)
 {
-	char	   *ddBoostFile = Safe_strdup(dd_options->from_file);
+	char	   *ddboostFile = Safe_strdup(dd_options->from_file);
 	int			err = 0;
 
-	if (!ddBoostFile)
+	if (!ddboostFile)
 	{
 		mpp_err_msg(logError, progname, "Destination file on DDboost not specified\n");
 		return -1;
 	}
+	if (strstr(ddboostFile, "-?[0-9]+")) {
 
-	err = readFromDDFileToOutput(ddBoostFile, dd_options->ddboost_storage_unit);
-	if (ddBoostFile)
-		free(ddBoostFile);
+		char* searchFile = getFileWithRegex(dd_options, ddboostFile);
+		if (searchFile == NULL) {
+			mpp_err_msg(logError, progname, "File pattern %s not found on DDboost\n", ddboostFile);
+			return -1;
+		}
+		ddboostFile = searchFile;
+		mpp_err_msg("DEBUG", progname, "Found file %s\n", ddboostFile);
+	}
+
+	err = readFromDDFileToOutput(ddboostFile, dd_options->ddboost_storage_unit);
+	if (ddboostFile)
+		free(ddboostFile);
 
 	return err;
 
+}
+
+
+char*
+getFileWithRegex(struct ddboost_options *dd_options, char* pathWithRegex)
+{
+	char *lastSlash = NULL;
+	char *ddboostDir = NULL;
+	lastSlash = strrchr(pathWithRegex, '/');
+	ddboostDir = strndup(pathWithRegex, lastSlash - pathWithRegex);
+
+	regex_t regexCompiled;
+	if (regcomp(&regexCompiled, lastSlash + 1, REG_EXTENDED))
+	{
+		printf("Could not compile regular expression.\n");
+		exit(1);
+	}
+
+	int err = 0;
+	if (!ddboostDir)
+	{
+		mpp_err_msg(logError, progname, "Directory on DDboost is not specified\n");
+		err = -1;
+		goto cleanup;
+	}
+
+	ddp_path_t path1 = {0};
+	ddp_dir_desc_t dird = DDP_INVALID_DESCRIPTOR;
+	ddp_dirent_t ret_dirent;
+	path1.su_name = dd_options->ddboost_storage_unit;
+	path1.path_name = ddboostDir;
+
+	err = ddp_open_dir(ddp_conn, &path1, &dird);
+	if (err)
+	{
+		mpp_err_msg(logError, progname, "Opening directory %s on ddboost failed. Err %d\n", ddboostDir, err);
+		err = -1;
+		goto cleanup;
+	}
+	int status = 0;
+	char* filename;
+	while (1)
+	{
+		memset(&ret_dirent, 0, sizeof(ddp_dirent_t));
+		err = ddp_readdir(dird, &ret_dirent);
+		if (err != DD_OK)
+		{
+			if (err == DD_ERR_EMPTY)
+			{
+				err = DD_OK;
+			}
+			else
+			{
+				mpp_err_msg(logError, progname, "Reading directory %s on ddboost failed. Err %d\n", ddboostDir, err);
+			}
+			break;
+		}
+
+		else
+		{
+			status = regexec(&regexCompiled, ret_dirent.d_name, (size_t) 0, NULL, 0);
+			if (status == 0) {
+				filename = malloc(strlen(ddboostDir) + 1 + strlen(ret_dirent.d_name) + 1);
+				strcpy(filename, ddboostDir);
+				strcat(filename, "/");
+				strcat(filename, ret_dirent.d_name);
+				if (dird != DDP_INVALID_DESCRIPTOR)
+				{
+					ddp_close_dir(dird);
+				}
+				if (ddboostDir)
+					free(ddboostDir);
+				return filename;
+			}
+		}
+	}
+
+cleanup:
+    if (dird != DDP_INVALID_DESCRIPTOR)
+    {
+	    ddp_close_dir(dird);
+    }
+    if (ddboostDir)
+        free(ddboostDir);
+	if (err != DD_OK) {
+		exit(1);
+	}
+	return NULL;
 }
 
 int

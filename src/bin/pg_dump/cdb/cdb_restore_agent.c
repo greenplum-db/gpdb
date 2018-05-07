@@ -1432,21 +1432,23 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
 	/* First form the prefix */
 	char	szFileNamePrefix[1 + MAXPGPATH];
 	int	 instid; /* dispatch node */
-	int	 segid;
+	char	segid[100];
 	int	 len = 0;
 	char	*pszBackupFileName;
 	char 	*dir_name = "db_dumps"; /* default directory */
 
 	instid = g_sourceContentID;
-	segid = g_sourceDBID;
-	if (g_is_old_format)
+	sprintf(segid, "%s", "-?[0-9]+");
+	if (g_is_old_format) {
 		instid = (instid == -1) ? 1 : 0;
+		sprintf(segid, "%d", g_sourceDBID);
+	}
 
 	memset(szFileNamePrefix, 0, (1 + MAXPGPATH));
 	if (dd_boost_dir)
-		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dd_boost_dir, DUMP_PREFIX, instid, segid);
+		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%s_", dd_boost_dir, DUMP_PREFIX, instid, segid);
 	else
-		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dir_name, DUMP_PREFIX, instid, segid);
+		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%s_", dir_name, DUMP_PREFIX, instid, segid);
 
 	/* Now add up the length of the pieces */
 	len += strlen(szFileNamePrefix);

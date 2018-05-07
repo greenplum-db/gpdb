@@ -1703,13 +1703,17 @@
           <codeph>1</codeph> are running on the same host; their CPU usage
           is the same.</p> 
         <p id="json_field_info2">The <codeph>memory_usage</codeph> field is also a JSON-formatted,
-          key:value string. This string identifies, for each resource group, the
-          used, available, granted, and proposed fixed and shared memory quota 
-          allocations on each segment. The key is segment id. The values are 
-          memory values displayed in MB units. Example
-          <codeph>memory_usage</codeph> column output for a
-          single segment:<codeblock>
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "quota_granted":60, "quota_proposed":60, "shared_used":0, "shared_available":16, "shared_granted":16, "shared_proposed":16}</codeblock></p>
+          key:value string. The string contents differ depending upon the type of resource
+          group. For each resource group that you assign to a role (default memory auditor <codeph>vmtracker</codeph>), this string
+          identifies the used, available, granted, and proposed fixed and shared memory
+          quota allocations on each segment. The key is segment id. The values are 
+          memory values displayed in MB units. The following example shows
+          <codeph>memory_usage</codeph> column output for a single segment for a resource group that you assign to a role:<codeblock>
+"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "quota_granted":60, "quota_proposed":60, "shared_used":0, "shared_available":16, "shared_granted":16, "shared_proposed":16}</codeblock>
+         For each resource group that you assign to
+          an external component, the <codeph>memory_usage</codeph> JSON-formatted string identifies the memory used
+          and the memory limit on each segment.  The following example shows
+          <codeph>memory_usage</codeph> column output for an external component resource group for a single segment: <codeblock>"1":{"used":11, "limit_granted":15}</codeblock></p>
       </body>
     </topic>
   </topic>

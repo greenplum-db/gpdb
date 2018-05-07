@@ -275,6 +275,16 @@ from  mpp_22413
 where d2 ='55'
 group by d1, d2;
 
+-- planner must not crash while creating multistage agg plan for median function on partitioned table columns.
+-- orca falls back for median function, so this test only applies to planner.
+DROP TABLE IF EXISTS t_multistage;
+CREATE TABLE t_multistage (a int, b int)
+PARTITION BY RANGE(b) (START(1) END (18) EVERY(1));
+INSERT INTO t_multistage SELECT i, (i%14)+1 FROM generate_series(1,100)i;
+EXPLAIN SELECT median(b) from t_multistage;
+SELECT median(b) from t_multistage;
+DROP TABLE IF EXISTS t_multistage;
+
 drop view percv2;
 drop view percv;
 drop table perct;

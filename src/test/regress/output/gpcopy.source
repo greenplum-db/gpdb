@@ -1082,6 +1082,7 @@ ERROR:  value of distribution key doesn't belong to segment with ID 0, it belong
 CONTEXT:  COPY copy_on_segment_check_distkey, line 2: "0"
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 CREATE TABLE COPY_ON_SEGMENT_CHECK_TOW_DSITKEY(a int,b int)DISTRIBUTED BY(a,b);
 INSERT INTO COPY_ON_SEGMENT_CHECK_TOW_DSITKEY SELECT generate_series(0,10),generate_series(0,10);
@@ -1122,6 +1123,7 @@ set gp_vmem_idle_resource_timeout=1;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
 -- COPY FROM ON SEGMENT partitoned table distributed randomly
@@ -1266,6 +1268,7 @@ COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_ID\n<SEGID>"' on 
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_I\n<SEGID>"' on segment;
 ERROR:  invalid input syntax for integer: ""  (seg0 172.17.0.2:40000 pid=27935)
 CONTEXT:  COPY copy_from_program_error, line 1, column 
+ALTER TABLE COPY_FROM_PROGRAM_ERROR SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 -- Test that xlog records are generated for COPY in the same transaction as
 -- created table. The actual validation for this test will be performed once the

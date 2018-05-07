@@ -91,6 +91,9 @@
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
                                                 and <codeph>gist</codeph>. The default method is
                                                   <codeph>btree</codeph>. </pd>
+                                        <pd>GPORCA supports only B-tree and bitmap indexes. GPORCA
+                                                ignores indexes created with unsupported indexing
+                                                methods.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>

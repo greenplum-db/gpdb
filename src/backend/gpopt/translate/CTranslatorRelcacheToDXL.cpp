@@ -2473,10 +2473,11 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	CDouble dNDVBuckets(0.0);
 	CDouble dFreqBuckets(0.0);
+	CDouble dDistinctRemain(0.0);
+	CDouble dFreqRemain(0.0);
 
 	// We only want to create statistics buckets if the column is NOT a text, varchar, char or bpchar type
 	// For the above column types we will use NDVRemain and NullFreq to do cardinality estimation.
-
 	if (CTranslatorUtils::FCreateStatsBucket(oidAttType))
 	{
 		// transform all the bits and pieces from pg_statistic
@@ -2507,18 +2508,23 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 		CUtils::AddRefAppend(pdrgpdxlbucket, pdrgpdxlbucketTransformed);
 		pdrgpdxlbucketTransformed->Release();
+
+		// there will be remaining tuples if the merged histogram and the NULLS do not cover
+		// the total number of distinct values
+		if ((1 - CStatistics::DEpsilon > dFreqBuckets + dNullFrequency) &&
+			(0 < dDistinct - dNDVBuckets - iNullNDV))
+		{
+			dDistinctRemain = std::max(CDouble(0.0), (dDistinct - dNDVBuckets - iNullNDV));
+			dFreqRemain = std::max(CDouble(0.0), (1 - dFreqBuckets - dNullFrequency));
+		}
 	}
-
-	// there will be remaining tuples if the merged histogram and the NULLS do not cover
-	// the total number of distinct values
-	CDouble dDistinctRemain(0.0);
-	CDouble dFreqRemain(0.0);
-
- 	if ((1 - CStatistics::DEpsilon > dFreqBuckets + dNullFrequency) &&
-	 	(0 < dDistinct - dNDVBuckets - iNullNDV))
+	else
 	{
- 		dDistinctRemain = std::max(CDouble(0.0), (dDistinct - dNDVBuckets - iNullNDV));
- 		dFreqRemain = std::max(CDouble(0.0), (1 - dFreqBuckets - dNullFrequency));
+		// in case of text, varchar, char or bpchar, there are no stats buckets, so the
+		// remaining frequency is everything excluding NULLs, and distinct remaining is the
+		// stadistinct as available in pg_statistic
+		dDistinctRemain = dDistinct;
+ 		dFreqRemain = 1 - dNullFrequency;
 	}
 
 	// free up allocated datum and float4 arrays
