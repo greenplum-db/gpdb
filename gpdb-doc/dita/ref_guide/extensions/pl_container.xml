@@ -73,38 +73,37 @@
     <body>
       <p>Greenplum Database runs PL/Container user-defined functions in Docker
         containers. The Docker containers and the Greenplum Database server share
-        CPU and memory resources on the same host. In the default case, Greenplum
-        Database is unaware of the resources consumed by running PL/Container instances.</p>
+        CPU and memory resources on the same hosts. In the default case, Greenplum
+        Database is unaware of the resources consumed by running PL/Container instances. In PL/Container version 1.2 and later, you can use Greenplum Database resource
+         groups to control overall CPU and memory resource usage for running PL/Container
+         instances, as described in the following section.</p>
       <p>PL/Container manages resource usage at two levels - the container level and
         the runtime level. You can control container-level CPU and memory resources
         with the <codeph>memory_mb</codeph> and
         <codeph>cpu_share</codeph> settings that you configure for the PL/Container
         runtime. <codeph>memory_mb</codeph> governs the memory resources available
-        to each container instance of the runtime. The <codeph>cpu_share</codeph>
-        setting identifies the relative weighting of CPU usage compared to other
+        to each container instance. The <codeph>cpu_share</codeph>
+        setting identifies the relative weighting of a container's CPU usage compared to other
         containers. Refer to <xref href="#topic_ojn_r2s_dw" format="dita"/> 
         for PL/Container configuration information.</p>
       <p>You cannot by default restrict the number of executing PL/Container
         container instances, nor can you restrict the total amount of memory or CPU
         resources that they consume.</p>
-      <p>In PL/Container version 1.2 and later, you can use Greenplum Database resource
-         groups to control overall CPU and memory resource usage for running PL/Container
-         instances, as described in the following section.</p>
 
     </body>
   <topic id="topic_resgroup">
     <title>Using Resource Groups to Manage PL/Container Resources</title>
     <body>
       <p>In PL/Container version 1.2.0 and later, you can use Greenplum Database
-        resource groups to manage and limit the CPU and memory resources of 
-        PL/Container runtimes. For more information about enabling, configuring,
+        resource groups to manage and limit the total CPU and memory resources of 
+        containers in PL/Container runtimes. For more information about enabling, configuring,
         and using Greenplum Database resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml" format="dita" scope="peer">Using Resource Groups</xref>
         in the <cite>Greenplum Database Administrator Guide</cite>.</p>
 
       <note>If you do not explicitly configure resource groups for a PL/Container
         runtime, its container instances are limited only by system resources. The containers may consume resources at the expense of the Greenplum Database server.</note>
 
-      <p>Resource groups for external components such as PL/Container use Linux control groups (cgroups) to manage component-level use of memory and CPU resources. When you manage PL/Container resources with resource groups, you configure both a memory limit and a CPU limit that Greenplum Database applies to all container instances that share the same PL/Container runtime defintion.</p>
+      <p>Resource groups for external components such as PL/Container use Linux control groups (cgroups) to manage component-level use of memory and CPU resources. When you manage PL/Container resources with resource groups, you configure both a memory limit and a CPU limit that Greenplum Database applies to all container instances that share the same PL/Container runtime configuration.</p>
 
       <p>When you create a resource group to manage the resources of a PL/Container
         runtime, you must specify <codeph>MEMORY_AUDITOR=cgroup</codeph> and
@@ -117,7 +116,7 @@
       <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
         <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to
         the <xref href="../../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml" format="dita" scope="peer">CREATE RESOURCE GROUP</xref>
-        reference page for detailed information on this SQL command.</p>
+        reference page for detailed information about this SQL command.</p>
 
       <p>You can create one or more resource groups to manage your running PL/Container
         instances. After you create a resource group for PL/Container, you assign
@@ -134,7 +133,7 @@
  plpy_run1_rg |   16391
 (1 row)</codeblock></p>
 
-      <p>You assign a resource group to a PL/Container runtime definition by specifying the
+      <p>You assign a resource group to a PL/Container runtime configuration by specifying the
         <codeph>-s resource_group_id=<varname>rg_groupid</varname></codeph> option to
         the <codeph>plcontainer runtime-add</codeph> (new runtime) or
         <codeph>plcontainer runtime-replace</codeph> (existing runtime) commands.
@@ -148,7 +147,7 @@
         <xref href="#topic_rw3_52s_dw" format="dita"/>.</p>
 
       <p>After you assign a resource group to a PL/Container runtime, all
-        container instances that share the same runtime definition are
+        container instances that share the same runtime configuration are
         subject to the memory limit and the CPU limit that
         you configured for the group. If you decrease the memory limit of a
         PL/Container resource group, queries executing in running containers
@@ -165,7 +164,7 @@
       <note>If you downgrade to Greenplum Database version 5.7 or earlier after you
         configure resource groups for PL/Container, you must also downgrade PL/Container
         to version 1.1 and remove all <codeph>resource_group_id</codeph> settings from
-        your PL/Container runtime definitions.</note>
+        your PL/Container runtime configurations.</note>
     </body>
     <topic id="topic_resgroupcfg_proc">
       <title>Procedure</title>
@@ -182,18 +181,15 @@
             <codeph>gpdb.conf</codeph> cgroups configuration file includes a
             <codeph>memory { }</codeph> block as described in the previous link.</note></li>
           <li>Analyze the resource usage of your Greenplum Database deployment.
-            Determine the amount of CPU and memory resources that you want to
-            allocate to PL/Container Docker containers.<p><b>Result</b>: You identify the percentages
-            of resource group memory and CPU resources for PL/Container.</p></li>
-          <li>Examine the PL/Container runtime definitions that you have configured
-            or plan to configure in your Greenplum Database deployment. Determine
-            how you want to distribute the total PL/Container CPU and memory
+            Determine the percentage of resource group CPU and memory resources that
+            you want to allocate to PL/Container Docker containers.</li>
+          <li>Determine how you want to distribute the total PL/Container CPU and memory
             resources that you identified in the step above among the PL/Container
-            runtimes.<p><b>Result</b>: You identify:<ul>
+            runtimes. Identify:<ul>
             <li>The number of PL/Container resource group(s) that you require.</li>
             <li>The percentage of memory and CPU resources to allocate to each resource group.</li>
              <li>The resource-group-to-PL/Container-runtime assignment(s).</li>
-           </ul></p></li>
+           </ul></li>
           <li>Create the PL/Container resource groups that you identified in the
             step above. For example, suppose that you choose to allocate 25% of
             both memory and CPU Greenplum Database resources to PL/Container. If
@@ -212,8 +208,8 @@ CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
  plr_run1_rg  |   16393
 (1 row)</codeblock></li>
           <li>Assign each resource group that you created to the desired
-            PL/Container runtime(s). If you have not yet created the runtime
-            definition, use the <codeph>plcontainer runtime-add</codeph> command.
+            PL/Container runtime configuration. If you have not yet created the runtime
+            configuration, use the <codeph>plcontainer runtime-add</codeph> command.
             If the runtime already exists, use the
             <codeph>plcontainer runtime-replace</codeph> or
             <codeph>plcontainer runtime-edit</codeph> command to add the 
@@ -866,15 +862,15 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         format="dita">settings</xref></codeph> element in the PL/Container
                     configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
                       <li><codeph>cpu_share</codeph> - Set the CPU limit for each container
-                        of the runtime. The default value is 1024. The value is a
+                        in the runtime configuration. The default value is 1024. The value is a
                         relative weighting of CPU usage compared to other containers.</li>
                       <li><codeph>memory_mb</codeph> - Set the memory limit for each container
-                        of the runtime. The default value is 1024.
+                        in the runtime configuration. The default value is 1024.
                         The value is an integer that specifies the amount of memory in MB. </li>
-                      <li><codeph>resource_group_id</codeph> - Assign the specified resource group to the runtime.
+                      <li><codeph>resource_group_id</codeph> - Assign the specified resource group to the runtime configuration.
                         The resource group limits the total CPU and memory resource
-                        usage for all running containers that share this runtime
-                        definition. You must specify the <codeph>groupid</codeph>
+                        usage for all containers that share this runtime
+                        configuration. You must specify the <codeph>groupid</codeph>
                          of the resource group.
                          For information about managing PL/Container resources,
                          see <xref href="#topic_resmgmt" format="dita"
@@ -1211,10 +1207,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                           group to assign to the PL/Container runtime.
                           The resource group limits the total CPU and memory resource
                           usage for all running containers that share this runtime
-                          definition. You must specify the <codeph>groupid</codeph>
+                          configuration. You must specify the <codeph>groupid</codeph>
                           of the resource group. If you do not assign a 
-                          resource group to a PL/Container runtime, its container instances
-                          are limited only by system resources.
+                          resource group to a PL/Container runtime configuration, its
+                          container instances are limited only by system resources.
                           For information about managing PL/Container resources,
                           see <xref href="#topic_resmgmt" format="dita"
                           >About PL/Container Resource Management</xref>.</pd>
