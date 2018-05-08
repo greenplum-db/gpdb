@@ -36,6 +36,7 @@
 #include "utils/tqual.h"
 
 #include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h"
 #include "utils/guc.h"
 
 
@@ -283,6 +284,9 @@ CopySnapshot(Snapshot snapshot)
 			   snapshot->distribSnapshotWithLocalMapping.ds.count *
 			   sizeof(DistributedTransactionId));
 
+		Assert(snapshot->distribSnapshotWithLocalMapping.ds.count ==
+			   newsnap->distribSnapshotWithLocalMapping.ds.count);
+
 		/* Store -1 as the maxCount, to indicate that the array was not malloc'd */
 		newsnap->distribSnapshotWithLocalMapping.ds.maxCount = -1;
 
@@ -294,15 +298,23 @@ CopySnapshot(Snapshot snapshot)
 			sizeof(DistributedTransactionId);
 
 		/* Copy the local xid cache */
-		newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
-			(TransactionId*) ((char *) newsnap + dsoff);
-		memcpy(newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-			   snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-			   snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
-			   sizeof(TransactionId));
-
-		newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount =
-			snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
+		if (IS_QUERY_DISPATCHER())
+		{
+			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids = NULL;
+			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount = 0;
+			newsnap->distribSnapshotWithLocalMapping.currentLocalXidsCount = 0;
+		}
+		else
+		{
+			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
+				(TransactionId*) ((char *) newsnap + dsoff);
+			memcpy(newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+				   snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+				   snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
+				   sizeof(TransactionId));
+			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount =
+				snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
+		}
 	}
 	else
 	{
