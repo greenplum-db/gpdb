@@ -114,8 +114,8 @@ groups:
   - DPM_backup-restore_netbackup_part2
   - DPM_backup-restore_netbackup_part3
   - DPM_backup_43_restore_5
-  - DPM_gptransfer-43x-to-5x
-  - DPM_gptransfer-5x-to-5x
+  - gptransfer-43x-to-5x
+  - gptransfer-5x-to-5x
   - gate_dpm_end
 {% endif %}
 {% if "UD" in test_sections %}
@@ -251,8 +251,8 @@ groups:
   - DPM_backup-restore_netbackup_part2
   - DPM_backup-restore_netbackup_part3
   - DPM_backup_43_restore_5
-  - DPM_gptransfer-43x-to-5x
-  - DPM_gptransfer-5x-to-5x
+  - gptransfer-43x-to-5x
+  - gptransfer-5x-to-5x
   - gate_dpm_end
 
 {% endif %}
@@ -2862,7 +2862,7 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: DPM_gptransfer-43x-to-5x
+- name: gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
     trigger: [[ test_trigger ]]
@@ -2967,7 +2967,7 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: DPM_gptransfer-5x-to-5x
+- name: gptransfer-5x-to-5x
   plan:
   - *ccp_jitter_delay
   - aggregate:
@@ -3082,8 +3082,8 @@ jobs:
       - DPM_backup-restore_netbackup_part2
       - DPM_backup-restore_netbackup_part3
       - DPM_backup_43_restore_5
-      - DPM_gptransfer-43x-to-5x
-      - DPM_gptransfer-5x-to-5x
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -3429,8 +3429,8 @@ jobs:
                     MM_gpexpand_suites %}
     - MM_[[ test_name ]]
 {% endfor %}
-    - DPM_gptransfer-43x-to-5x
-    - DPM_gptransfer-5x-to-5x
+    - gptransfer-43x-to-5x
+    - gptransfer-5x-to-5x
     - mpp_interconnect
     - QP_optimizer-functional
 {% for test_name in aa_Test_suites %}
