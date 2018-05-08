@@ -1368,18 +1368,7 @@ Feature: gptransfer tests
        And the user runs "dropdb -U $GPTRANSFER_DEST_USER -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST gptransfer_testdb6"
        And the user runs "createdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_testdb6"
        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c " CREATE TABLE test_sequence (id SERIAL, name TEXT, age INT); INSERT INTO test_sequence values (DEFAULT,generate_series(1,100),1);" -d gptransfer_testdb6"
-       And the user runs "gptransfer -d gptransfer_testdb6 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -v --batch-size=10"
-       Then gptransfer should return a return code of 0
-       And verify that table "test_sequence" in "gptransfer_testdb6" has "100" rows
-       And verify that sequence "test_sequence_id_seq" last value is "101" in database "gptransfer_testdb6"
-
-   Scenario: gptransfer table that includes implicit sequence with --full option
-       Given the gptransfer test is initialized
-       And the user runs "dropdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_testdb6"
-       And the user runs "dropdb -U $GPTRANSFER_DEST_USER -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST gptransfer_testdb6"
-       And the user runs "createdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_testdb6"
-       And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c " CREATE TABLE test_sequence (id SERIAL, name TEXT, age INT); INSERT INTO test_sequence values (DEFAULT,generate_series(1,100),1);" -d gptransfer_testdb6"
-       And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -v --batch-size=2"
+       And the user runs "gptransfer -d gptransfer_testdb6 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -v --batch-size=10"
        Then gptransfer should return a return code of 0
        And verify that table "test_sequence" in "gptransfer_testdb6" has "100" rows
        And verify that sequence "test_sequence_id_seq" last value is "101" in database "gptransfer_testdb6"
@@ -1390,7 +1379,7 @@ Feature: gptransfer tests
        And the user runs "dropdb -U $GPTRANSFER_DEST_USER -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST gptransfer_testdb6"
        And the user runs "createdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_testdb6"
        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c " CREATE TABLE test_sequence (id SERIAL, name TEXT, age INT); INSERT INTO test_sequence values (DEFAULT,generate_series(1,100),1);" -d gptransfer_testdb6"
-       And the user runs "gptransfer -t gptransfer_testdb6.public.test_sequence --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -v --batch-size=10"
+       And the user runs "gptransfer -t gptransfer_testdb6.public.test_sequence --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -v --batch-size=10"
        Then gptransfer should return a return code of 0
        And verify that table "test_sequence" in "gptransfer_testdb6" has "100" rows
        And verify that sequence "test_sequence_id_seq" last value is "101" in database "gptransfer_testdb6"
