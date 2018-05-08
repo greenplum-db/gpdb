@@ -345,7 +345,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
 
         <section id="topic833low" xml:lang="en">
           <title>memory_spill_ratio and Low Memory Queries </title>
-            <p>A <codeph>memory_spill_ratio</codeph> setting of zero (0) has been shown
+            <p>A low <codeph>memory_spill_ratio</codeph> setting (for example,
+              in the 0-10 range) has been shown
               to increase the performance of queries with low memory requirements. Use
               the <codeph>memory_spill_ratio</codeph> server configuration parameter
               to override the setting on a per-query basis. For example:

@@ -241,11 +241,12 @@
         utilization controls, see <xref href="#topic12" type="topic" format="dita"/>.</p>
     <section id="topic113x" xml:lang="en">
       <title>statement_mem and Low Memory Queries</title>
-        <p>A <codeph>statement_mem</codeph> setting in the 1MB range has been shown
+        <p>A low <codeph>statement_mem</codeph> setting (for example, in the 
+          1-3MB range) has been shown
           to increase the performance of queries with low memory requirements. Use
           the <codeph>statement_mem</codeph> server configuration parameter to
           override the setting on a per-query basis. For example:
-          <codeblock>SET statement_mem='1MB';</codeblock></p>
+          <codeblock>SET statement_mem='2MB';</codeblock></p>
     </section>
     </body>
   </topic>
