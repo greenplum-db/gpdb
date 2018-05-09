@@ -1,25 +1,13 @@
 import sys
 import signal
 from gppylib.gparray import GpArray
-from gppylib.db import dbconn
 from gppylib.commands.gp import GpSegStopCmd, GpRecoverseg
 from gppylib.commands import base
 from gppylib import gplog
 
+from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 
-class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
-    """A distributed query that will cause the system to detect
-    the reconfiguration of the system"""
-
-    query = "SELECT * FROM gp_dist_random('gp_id')"
-
-    def __init__(self, conn):
-        base.SQLCommand.__init__(self, "Reconfig detection sql query")
-        self.cancel_conn = conn
-
-    def run(self):
-        dbconn.execSQL(self.cancel_conn, self.query)
-
+from gppylib.operations.segment_reconfigurer import ReconfigDetectionSQLQueryCommand
 
 class GpSegmentRebalanceOperation:
     def __init__(self, gpEnv, gpArray):
@@ -70,22 +58,8 @@ class GpSegmentRebalanceOperation:
                 self.logger.info("gprecoverseg will continue with a partial rebalance.")
 
             pool.empty_completed_items()
-            # issue a distributed query to make sure we pick up the fault
-            # that we just caused by shutting down segments
-            conn = None
-            try:
-                self.logger.info("Triggering segment reconfiguration")
-                dburl = dbconn.DbURL()
-                conn = dbconn.connect(dburl)
-                cmd = ReconfigDetectionSQLQueryCommand(conn)
-                pool.addCommand(cmd)
-                pool.wait_and_printdots(1, False)
-            except Exception:
-                # This exception is expected
-                pass
-            finally:
-                if conn:
-                    conn.close()
+            segment_reconfigurer = SegmentReconfigurer(self.logger, pool)
+            segment_reconfigurer.reconfigure()
 
             # Final step is to issue a recoverseg operation to resync segments
             self.logger.info("Starting segment synchronization")
