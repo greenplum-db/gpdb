@@ -1489,6 +1489,19 @@ exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
 	if (Debug_dtm_action == DEBUG_DTM_ACTION_PANIC_BEGIN_COMMAND &&
 		CheckDebugDtmActionProtocol(dtxProtocolCommand, contextInfo))
 	{
+			/*
+			 * Avoid core file generation for this PANIC. It helps to avoid
+			 * filling up disks during tests and also saves time.
+			 */
+#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
+			struct rlimit lim;
+			getrlimit(RLIMIT_CORE, &lim);
+			lim.rlim_cur = 0;
+			if (setrlimit(RLIMIT_CORE, &lim) != 0)
+				elog(NOTICE,
+					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
+					 errno);
+#endif
 		elog(PANIC,"PANIC for debug_dtm_action = %d, debug_dtm_action_protocol = %s",
 			 Debug_dtm_action, DtxProtocolCommandToString(dtxProtocolCommand));
 	}

@@ -27,7 +27,9 @@
 #include "postgres.h"
 
 #include <signal.h>
-
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 #include "access/xact.h"
 #include "cdb/cdbutil.h"
 #include "postmaster/autovacuum.h"
@@ -407,7 +409,20 @@ FaultInjector_InjectFaultNameIfSet(
 				entryLocal->faultInjectorState = FaultInjectorStateCompleted;
 				FaultInjector_UpdateHashEntry(entryLocal);
 			}
-			
+
+			/*
+			 * Avoid core file generation for this PANIC. It helps to avoid
+			 * filling up disks during tests and also saves time.
+			 */
+#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
+			struct rlimit lim;
+			getrlimit(RLIMIT_CORE, &lim);
+			lim.rlim_cur = 0;
+			if (setrlimit(RLIMIT_CORE, &lim) != 0)
+				elog(NOTICE,
+					 "setrlimit failed for RLIMIT_CORE soft limit to zero. errno: %d (%m).",
+					 errno);
+#endif
 			ereport(PANIC, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
