@@ -1,3 +1,5 @@
+import time
+
 from gppylib.commands import base
 from gppylib.db import dbconn
 
@@ -26,12 +28,17 @@ class SegmentReconfigurer:
         # that we just caused by shutting down segments
         self.logger.info("Triggering segment reconfiguration")
         dburl = dbconn.DbURL()
+        start_time = time.time()
         while True:
+            conn = None
             try:
                 conn = dbconn.connect(dburl)
             except Exception as e:
-                # This exception is expected
-                continue
+                now = time.time()
+                if now < start_time + 30:
+                    continue
+                else:
+                    raise
             else:
                 cmd = ReconfigDetectionSQLQueryCommand(conn)
                 self.pool.addCommand(cmd)

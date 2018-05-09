@@ -1,3 +1,6 @@
+import datetime
+import time
+
 from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 
 from gppylib.test.unit.gp_unittest import GpTestCase
@@ -31,3 +34,37 @@ class SegmentReconfiguerTestCase(GpTestCase):
 
         connect.assert_has_calls([call(db_url), call(db_url), call(db_url), ])
         conn.close.assert_any_call()
+
+    @patch('time.time')
+    @patch('gppylib.db.dbconn.connect')
+    @patch('gppylib.db.dbconn.DbURL')
+    def test_it_gives_up_after_30_seconds(self, db_url_mock, connect, now_mock):
+        nonlocal = {'counter': 0}
+
+        def fail_twice(*args):
+            if nonlocal['counter'] < 2:
+                nonlocal['counter'] += 1
+                new_datetime = start_datetime + datetime.timedelta(seconds=15) * nonlocal['counter']
+                now_mock.configure_mock(return_value=time.mktime(new_datetime.timetuple()))
+                raise pgdb.DatabaseError
+            else:
+                return mock.DEFAULT
+
+        start_datetime = datetime.datetime(2018, 5, 9, 16, 0, 0)
+        start_time = time.mktime(start_datetime.timetuple())
+
+        now_mock.configure_mock(return_value=start_time)
+
+        db_url = 'dbUrl'
+        db_url_mock.return_value = db_url
+        conn = Mock(name='conn')
+        connect.configure_mock(return_value=conn, side_effect=fail_twice)
+        logger = Mock()
+        worker_pool = Mock()
+
+        reconfigurer = SegmentReconfigurer(logger, worker_pool)
+        with self.assertRaises(pgdb.DatabaseError):
+            reconfigurer.reconfigure()
+
+        connect.assert_has_calls([call(db_url), call(db_url), ])
+        conn.close.assert_has_calls([])
