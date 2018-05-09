@@ -410,12 +410,10 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                 to a file named <codeph>plcontainer110-backup.xml</codeph> in the local
               directory:<codeblock>$ plcontainer runtime-backup -f plcontainer110-backup.xml</codeblock></li>
             <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the
-                <codeph>-r</codeph> option to uninstall the PL/Container language extension. For
-              example, the following command uninstalls the PL/Container language extension on a Linux
-              system:<codeblock>$ gppkg -r plcontainer-1.1.0</codeblock></li>
-            <li>Run the package installation command to install PL/Container 1.2.
-              The following command installs the language extension on a Linux
-              system:<codeblock>$ gppkg -i plcontainer-1.2.0-rhel7-x86_64.gppkg</codeblock></li>
+                <codeph>-u</codeph> option to update the PL/Container language extension. For
+              example, the following command updates the PL/Container language extension
+              to version 1.2 on a Linux
+              system:<codeblock>$ gppkg -u plcontainer-1.2.0-rhel7-x86_64.gppkg</codeblock></li>
             <li>Source the Greenplum Database environment file
               <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>$ source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Restore the PL/Container configuration. For example, this command restores
