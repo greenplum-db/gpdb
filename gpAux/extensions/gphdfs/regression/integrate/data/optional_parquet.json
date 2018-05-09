@@ -1,0 +1,16 @@
+{"name":"Michael"}
+{"name":"Andy", "age":30, "address":{"city":"SF", "zip":94086}}
+{"name":"Justin", "age":45, "address":{}}
+{"name":"Bark", "age":40, "address":{"city":"NY", "house":{"number":456}}}
+{"name":"Carl", "age":50, "address":{"city":"NY", "house":{"number":456, "color":"blue"}}}
+{"name":"Dawn", "age":1, "address":{"city":"NY", "house":{"number":456, "color":"blue"}, "pets": ["cat", "dog"]}}
+{"name":"Ellie", "age":2, "address":{"city":"NY", "house":{"number":456, "color":"blue"}, "pets": []}}
+{"name":"Foyzer", "age":3, "address":{"city":"NY", "house":{"number":456, "color":"blue", "floors": [1,2,3]}, "pets": ["cat", "dog"]}}
+{"name":"Grey", "age":14, "address":{"city":"NY", "house":{"number":456, "color":"blue", "floors": []}, "pets": ["cat", "dog"]}}
+{"name":"Hawk", "age":5, "address":{"city":"NY", "house":{"number":456, "color":"blue"}}}
+{"name":"Inder", "age":6, "address":{"city":"NY", "house":{"color":"blue"}}}
+{"name":"Jack", "age":17, "address":{"city":"NY"}}
+{"name":"Higgin", "age":8, "address":{"house":{"number":456}}}
+{"name":"Kelly", "age":9, "address":{}}
+{"age":0, "address":{}}
+{"age":99, "address":{"city":"NY", "house":{"number":456, "color":"blue", "pets": ["dog"]}}}

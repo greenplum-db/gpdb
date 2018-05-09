@@ -33,7 +33,9 @@ _main() {
 
 	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
 	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/extwrite/
-	$UPLOADCMD $DATADIR/*  hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
+	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/parquet/
+	$UPLOADCMD $DATADIR/*.txt  hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
+	$UPLOADCMD $DATADIR/*.parquet  hdfs://${HADOOP_HOST}:${HADOOP_PORT}/parquet/
 	$UPLOADCMD $DYNDATADIR/* hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
 }
 

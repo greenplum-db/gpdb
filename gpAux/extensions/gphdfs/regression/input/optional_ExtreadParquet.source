@@ -1,0 +1,12 @@
+-- start_ignore
+drop external table optional_readhdfs_parquet;
+-- end_ignore
+
+create readable external table optional_readhdfs_parquet 
+(
+  address text,
+  age int8,
+  name varchar
+) location ('gphdfs://%HDFSaddr%/parquet/optional_parquet.parquet') format 'PARQUET';
+
+select * from optional_readhdfs_parquet order by age;
