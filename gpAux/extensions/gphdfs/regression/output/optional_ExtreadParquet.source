@@ -30,10 +30,9 @@ select * from optional_readhdfs_parquet order by age;
 (16 rows)
 
 --start_ignore
-\!/tmp/hadoop-2.6.5/bin/hadoop fs -rm -r /mapreduce/*
-18/05/08 22:31:45 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+\!/tmp/hadoop-2.7.3/bin/hadoop fs -rm -r /mapreduce/*
 rm: `/mapreduce/*': No such file or directory
-\!/tmp/hadoop-2.6.5/bin/hadoop fs -rm -r /mapred/*
-18/05/08 22:31:47 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+\!/tmp/hadoop-2.7.3/bin/hadoop fs -rm -r /mapred/*
 rm: `/mapred/*': No such file or directory
 --end_ignore
+
