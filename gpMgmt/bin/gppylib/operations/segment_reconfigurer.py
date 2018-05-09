@@ -24,17 +24,17 @@ class SegmentReconfigurer:
     def reconfigure(self):
         # issue a distributed query to make sure we pick up the fault
         # that we just caused by shutting down segments
-        conn = None
-        try:
-            self.logger.info("Triggering segment reconfiguration")
-            dburl = dbconn.DbURL()
-            conn = dbconn.connect(dburl)
-            cmd = ReconfigDetectionSQLQueryCommand(conn)
-            self.pool.addCommand(cmd)
-            self.pool.wait_and_printdots(1, False)
-        except Exception:
-            # This exception is expected
-            pass
-        finally:
-            if conn:
+        self.logger.info("Triggering segment reconfiguration")
+        dburl = dbconn.DbURL()
+        while True:
+            try:
+                conn = dbconn.connect(dburl)
+            except Exception as e:
+                # This exception is expected
+                continue
+            else:
+                cmd = ReconfigDetectionSQLQueryCommand(conn)
+                self.pool.addCommand(cmd)
+                self.pool.wait_and_printdots(1, False)
                 conn.close()
+                break
