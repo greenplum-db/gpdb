@@ -360,5 +360,23 @@ class GpStop(GpTestCase):
                                                                          "option with '-y' for skipping standby."):
             self.subject.GpStop.createProgram(options, args)
 
+    @patch('gpstop.SegmentStop')
+    def test_stop_standby_option(self, mock):
+        self.standby = Segment.initFromString(
+            "10|-1|m|m|s|u|smdw|smdw|5432|/data/standby_master")
+        self.gparray = GpArray([self.master, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3, self.standby])
+        self.mock_gparray.return_value = self.gparray
+
+        sys.argv = ["gpstop", "-a", "-y"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+        assert not mock.called
+        log_message = self.get_info_messages()
+        self.assertTrue("Stopping master standby host smdw mode=fast" not in log_message)
+        self.assertTrue("No standby master host configured" not in log_message)
+
 if __name__ == '__main__':
     run_tests()
