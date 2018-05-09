@@ -247,7 +247,7 @@ information included, an example output:
 
 ```sql
 select * from pg_dist_wait_status();
- segid | waiter_dxid | holder_dxid | persistent
+ segid | waiter_dxid | holder_dxid | holdTillEndXact
 -------+-------------+-------------+------------
     -1 |          29 |          28 | t
      0 |          28 |          26 | t

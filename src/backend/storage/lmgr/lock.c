@@ -686,7 +686,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
-		lock->persistent = false;
+		lock->holdTillEndXact = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("LockAcquire: new", lock, lockmode);
@@ -1709,7 +1709,7 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 }
 
 void
-LockSetPersistent(const LOCKTAG *locktag)
+LockSetHoldTillEndXact(const LOCKTAG *locktag)
 {
 	LOCKMETHODID lockmethodid = locktag->locktag_lockmethodid;
 	LockMethod	lockMethodTable;
@@ -1743,7 +1743,7 @@ LockSetPersistent(const LOCKTAG *locktag)
 		if (!locallock || locallock->nLocks <= 0)
 			continue;
 
-		locallock->lock->persistent = true;
+		locallock->lock->holdTillEndXact = true;
 	}
 }
 
@@ -2910,7 +2910,7 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
-		lock->persistent = false;
+		lock->holdTillEndXact = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("lock_twophase_recover: new", lock, lockmode);

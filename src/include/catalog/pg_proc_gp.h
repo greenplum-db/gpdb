@@ -249,8 +249,8 @@ DESCR("statistics: information about resource groups in key-value style");
 DATA(insert OID = 6066 ( pg_resgroup_get_status  PGNSP PGUID 12 1 1000 0 f f f f t v 1 0 2249 "26" "{26,26,23,23,23,23,1186,114,114}" "{i,o,o,o,o,o,o,o,o}" "{groupid,groupid,num_running,num_queueing,num_queued,num_executed,total_queue_duration,cpu_usage,memory_usage}" _null_ pg_resgroup_get_status _null_ _null_ _null_ n a ));
 DESCR("statistics: information about resource groups");
 
-/* pg_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT persistent bool) => SETOF pg_catalog.record */
-DATA(insert OID = 6036 ( pg_dist_wait_status  PGNSP PGUID 12 1 1000 0 f f f f t v 0 0 2249 "" "{23,28,28,16}" "{o,o,o,o}" "{segid,waiter_dxid,holder_dxid,persistent}" _null_ pg_dist_wait_status _null_ _null_ _null_ n a ));
+/* pg_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT holdTillEndXact bool) => SETOF pg_catalog.record */
+DATA(insert OID = 6036 ( pg_dist_wait_status  PGNSP PGUID 12 1 1000 0 f f f f t v 0 0 2249 "" "{23,28,28,16}" "{o,o,o,o}" "{segid,waiter_dxid,holder_dxid,holdTillEndXact}" _null_ pg_dist_wait_status _null_ _null_ _null_ n a ));
 DESCR("waiting relation information");
 
 /* pg_resqueue_status() => SETOF record */

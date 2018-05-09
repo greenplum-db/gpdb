@@ -1241,9 +1241,9 @@ relation_close(Relation relation, LOCKMODE lockmode)
 		 * the holding transaction is over).
 		 * This is because the difference betwwen the ref counts in the
 		 * relation and the lock tag can not be removed.
-		 * So this is a good time to set the persistent flag for the lock.
+		 * So this is a good time to set the holdTillEndXact flag for the lock.
 		 */
-		LockSetPersistent(&tag);
+		LockSetHoldTillEndXact(&tag);
 	}
 }
 
