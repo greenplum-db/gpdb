@@ -2485,7 +2485,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup-restore_ddboost_part2
   plan:
@@ -2562,7 +2563,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup-restore_ddboost_part3
   plan:
@@ -2639,7 +2641,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup-restore_netbackup_part1
   plan:
@@ -2696,7 +2699,8 @@ jobs:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup-restore_netbackup_part2
   plan:
@@ -2753,7 +2757,8 @@ jobs:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup-restore_netbackup_part3
   plan:
@@ -2810,7 +2815,8 @@ jobs:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
     on_failure:
       <<: *dpm_debug_sleep
-  - *dpm_ccp_destroy
+  ensure:
+    <<: *dpm_ccp_destroy
 
 - name: DPM_backup_43_restore_5
   plan:
