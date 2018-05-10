@@ -1293,7 +1293,6 @@ CREATE_QD_DB () {
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $EXPORT_LIB_PATH;export PGPORT=$GP_PORT; $PG_CTL -D $GP_DIR stop; fi"
 		BACKOUT_COMMAND "$ECHO \"Stopping Master instance\""
 		LOG_MSG "[INFO]:-Completed starting the Master in admin mode"
-		$SLEEP 2
 		GP_HOSTNAME=`HOST_LOOKUP $GP_HOSTADDRESS`
 		if [ x"$GP_HOSTNAME" = x"__lookup_of_hostname_failed__" ]; then
 			ERROR_EXIT "[FATAL]:-Hostname lookup for host $GP_HOSTADDRESS failed." 2
@@ -1492,7 +1491,7 @@ STOP_QD_PRODUCTION () {
     if [ -f $GPSTOP ]; then
 	GPSTOP_OPTS=$(OUTPUT_LEVEL_OPTS)
 	export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1
-	$GPSTOP -a -l $LOG_DIR -i -m -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
+	$GPSTOP -a -l $LOG_DIR -m -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
 	RETVAL=$?
 	case $RETVAL in
 	    0 ) LOG_MSG "[INFO]:-Successfully shutdown the new Greenplum instance" ;;
@@ -1621,7 +1620,6 @@ FORCE_FTS_PROBE () {
         fi
 
         $PSQL -p $GP_PORT -d "$DEFAULTDB" -c "select gp_request_fts_probe_scan()" >> /dev/null 2>&1
-        sleep 1;
     done
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
@@ -2059,7 +2057,6 @@ if [ -f $DCA_VERSION_FILE ]; then
 	SET_DCA_CONFIG_SETTINGS	
 fi
 
-env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "CHECKPOINT;" >> $LOG_FILE 2>&1
 STOP_QD_PRODUCTION
 START_QD_PRODUCTION
 
