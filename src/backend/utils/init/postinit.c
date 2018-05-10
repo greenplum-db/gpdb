@@ -1035,7 +1035,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	{
 		addSharedSnapshot("Query Dispatcher", gp_session_id);
 	}
-    else if (Gp_segment == -1 && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+    else if (IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
     {
 		/* 
 		 * Entry db singleton QE is a user of the shared snapshot -- not a creator.

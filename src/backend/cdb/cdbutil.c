@@ -939,7 +939,7 @@ master_standby_dbid(void)
 	 * Can only run on a master node, this restriction is due to the reliance
 	 * on the gp_segment_configuration table.
 	 */
-	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+	if (!IS_QUERY_DISPATCHER())
 		elog(ERROR, "master_standby_dbid() executed on execution segment");
 
 	/*
@@ -989,7 +989,7 @@ dbid_get_dbinfo(int16 dbid)
 	 * on the gp_segment_configuration table.  This may be able to be relaxed
 	 * by switching to a different method of checking.
 	 */
-	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+	if (!IS_QUERY_DISPATCHER())
 		elog(ERROR, "dbid_get_dbinfo() executed on execution segment");
 
 	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
@@ -1116,7 +1116,7 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 	 * on the gp_segment_configuration table.  This may be able to be relaxed
 	 * by switching to a different method of checking.
 	 */
-	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+	if (!IS_QUERY_DISPATCHER())
 		elog(ERROR, "contentid_get_dbid() executed on execution segment");
 
 	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);

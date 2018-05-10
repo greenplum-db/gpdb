@@ -207,7 +207,7 @@ mirroring_sanity_check(int flags, const char *func)
 		if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
 			elog(ERROR, "%s requires valid GpIdentity dbid", func);
 
-		if (GpIdentity.segindex != MASTER_CONTENT_ID)
+		if (!IS_QUERY_DISPATCHER())
 			elog(ERROR, "%s must be run on the master", func);
 	}
 
@@ -234,7 +234,7 @@ mirroring_sanity_check(int flags, const char *func)
 		if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
 			elog(ERROR, "%s requires valid GpIdentity dbid", func);
 
-		if (GpIdentity.segindex == MASTER_CONTENT_ID)
+		if (IS_QUERY_DISPATCHER())
 			elog(ERROR, "%s cannot be run on the master", func);
 	}
 

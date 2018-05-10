@@ -2798,7 +2798,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	switch (Gp_role)
 	{
 		case GP_ROLE_EXECUTE:
-			if (Gp_segment == -1 && !Gp_is_writer)
+			if (IS_QUERY_DISPATCHER() && !Gp_is_writer)
 			{
 				isEntryDbSingleton = true;
 			}

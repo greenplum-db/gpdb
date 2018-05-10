@@ -335,7 +335,7 @@ auth_failed(Port *port, int status)
 static bool
 internal_client_authentication(Port *port)
 {
-	if (GpIdentity.segindex == MASTER_CONTENT_ID)
+	if (IS_QUERY_DISPATCHER())
 	{
 		/* 
 		 * The entry-DB (or QE at the master) case.

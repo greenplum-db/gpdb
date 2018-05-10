@@ -244,7 +244,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * gathering stats from all slices.
 	 */
 	bool isAlienPlanNode = !((localMotionId == parentMotionId) || (parentMotionId == UNSET_SLICE_ID) ||
-			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
+							 (nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || IS_QUERY_DISPATCHER());
 
 	/* We cannot have alien nodes if we are eliminating aliens */
 	AssertImply(estate->eliminateAliens, !isAlienPlanNode);

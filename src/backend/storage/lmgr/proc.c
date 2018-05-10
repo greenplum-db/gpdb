@@ -838,7 +838,7 @@ ProcKill(int code, Datum arg)
 			SharedSnapshotRemove(SharedLocalSnapshotSlot,
 								 "Query Dispatcher");
 		}
-	    else if (Gp_segment == -1 && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+	    else if (IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 	    {
 			/* 
 			 * Entry db singleton QE is a user of the shared snapshot -- not a creator.
@@ -2136,7 +2136,7 @@ void ProcNewMppSessionId(int *newSessionId)
     if (NULL != MySessionState)
     {
     	/* This should not happen outside of dispatcher on the master */
-    	Assert(GpIdentity.segindex == MASTER_CONTENT_ID && Gp_role == GP_ROLE_DISPATCH);
+    	Assert(IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_DISPATCH);
 
     	ereport(gp_sessionstate_loglevel, (errmsg("ProcNewMppSessionId: changing session id (old: %d, new: %d), pinCount: %d, activeProcessCount: %d",
     			MySessionState->sessionId, *newSessionId, MySessionState->pinCount, MySessionState->activeProcessCount), errprintstack(true)));

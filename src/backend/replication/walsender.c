@@ -795,7 +795,7 @@ WalSndKill(int code, Datum arg)
 
 	Assert(walsnd != NULL);
 
-	if (GpIdentity.segindex == MASTER_CONTENT_ID)
+	if (IS_QUERY_DISPATCHER())
 	{
 		/*
 		 * Acquire the SyncRepLock here to avoid any race conditions

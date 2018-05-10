@@ -224,7 +224,7 @@ rel_is_default_partition(Oid relid)
 	 * entry database, we accept calls from QEs running a segment, but return
 	 * false.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
@@ -270,7 +270,7 @@ rel_is_partitioned(Oid relid)
 	 * entry database, we accept calls from QEs running a segment, but return
 	 * false.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
@@ -545,7 +545,7 @@ rel_is_child_partition(Oid relid)
 	 * entry database, are some unguarded calles that may come from segments,
 	 * so we return false, even though we don't actually know.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
@@ -1487,7 +1487,7 @@ get_part_oid(Oid rootrelid, int16 parlevel, bool istemplate)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrel = heap_open(PartitionRelationId, AccessShareLock);
 	ScanKeyInit(&scankey[0], Anum_pg_partition_parrelid,
@@ -2208,7 +2208,7 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	 * but always return NULL; so our result is only meaningful on the entry
 	 * database.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return pnode;
 
 	/*
@@ -2346,7 +2346,7 @@ get_partition_key_bitmapset(Oid relid)
 	 * Reject calls from QEs running on a segment database, since pg_partition
 	 * and  pg_partition_rule are populated only on the entry database.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	/*
 	 * select paratts from pg_partition where parrelid = :relid and not
@@ -3215,7 +3215,7 @@ rel_partition_get_master(Oid relid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
@@ -3269,7 +3269,7 @@ rel_get_part_path1(Oid relid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
@@ -7113,7 +7113,7 @@ exchange_part_rule(Oid oldrelid, Oid newrelid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so a call to this function is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	catalogRelation = heap_open(PartitionRuleRelationId, RowExclusiveLock);
 

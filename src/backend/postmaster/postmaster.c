@@ -2076,7 +2076,7 @@ retry1:
 			{
 				if (strcmp(valptr, GPCONN_TYPE_FTS) == 0)
 				{
-					if (GpIdentity.segindex == MASTER_CONTENT_ID)
+					if (IS_QUERY_DISPATCHER())
 						ereport(FATAL,
 								(errcode(ERRCODE_PROTOCOL_VIOLATION),
 								 errmsg("cannot handle FTS connection on master")));

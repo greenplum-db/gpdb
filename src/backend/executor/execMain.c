@@ -548,7 +548,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 *
 	 * TODO: eliminate aliens even on master, if not EXPLAIN ANALYZE
 	 */
-	estate->eliminateAliens = execute_pruned_plan && queryDesc->plannedstmt->nMotionNodes > 0 && Gp_segment != -1;
+	estate->eliminateAliens = execute_pruned_plan && queryDesc->plannedstmt->nMotionNodes > 0 && !IS_QUERY_DISPATCHER();
 
 	/*
 	 * Assign a Motion Node to every Plan Node. This makes it

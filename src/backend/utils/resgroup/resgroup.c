@@ -516,7 +516,7 @@ InitResGroups(void)
 
 	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
 	{
-		Assert(GpIdentity.segindex == MASTER_CONTENT_ID);
+		Assert(IS_QUERY_DISPATCHER());
 		cdbComponentDBs = getCdbComponentDatabases();
 		qdinfo = &cdbComponentDBs->entry_db_info[0];
 		pResGroupControl->segmentsOnMaster = qdinfo->hostSegs;

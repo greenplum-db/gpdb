@@ -239,7 +239,7 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 
 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 	{
-		if (Gp_segment == -1)
+		if (IS_QUERY_DISPATCHER())
 			elog(ERROR, "EntryReader qExec tried to allocate a Combo Command Id");
 		else
 			elog(ERROR, "Reader qExec tried to allocate a Combo Command Id");

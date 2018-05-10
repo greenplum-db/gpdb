@@ -204,7 +204,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	 */
 	if (optimizer &&
 		GP_ROLE_DISPATCH == Gp_role &&
-		MASTER_CONTENT_ID == GpIdentity.segindex)
+		IS_QUERY_DISPATCHER())
 	{
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);

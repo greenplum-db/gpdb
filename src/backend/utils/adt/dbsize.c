@@ -458,7 +458,7 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	 * It does not work on entry db since we do not support dispatching
 	 * from entry-db currently.
 	 */
-	if (Gp_role == GP_ROLE_EXECUTE && Gp_segment == -1)
+	if (Gp_role == GP_ROLE_EXECUTE && IS_QUERY_DISPATCHER())
 		elog(ERROR, "This query is not currently supported by GPDB.");
 
 	rel = try_relation_open(relOid, AccessShareLock, false);

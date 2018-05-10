@@ -16616,7 +16616,7 @@ CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
 	 * it again on QE.
 	 */
 	if (relstorage == RELSTORAGE_EXTERNAL &&
-		(Gp_segment != -1 || rel_is_child_partition(relOid)))
+		(!IS_QUERY_DISPATCHER() || rel_is_child_partition(relOid)))
 		return;
 
 	if ((removeType == OBJECT_EXTTABLE && relstorage != RELSTORAGE_EXTERNAL) ||
