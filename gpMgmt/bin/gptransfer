@@ -1899,12 +1899,22 @@ FROM (
         """
         sequences = set()
 
-        get_depend_obj_sql = ''' select nspname, relname from pg_depend, pg_class,pg_namespace
-            where pg_class.oid = pg_depend.objid
-            and refclassid='pg_class'::regclass
-            and refobjid='%s.%s'::regclass
-            and relkind='S'
-            and relnamespace=pg_namespace.oid;''' % (
+        # escape '%' to '%%' in below sql string
+        # funcid:1574 is the oid of nextval function, which can get from pg_proc table
+        get_depend_obj_sql = """
+            select
+                nspname, relname
+            from pg_class,pg_namespace
+            where  pg_class.relnamespace = pg_namespace.oid
+                and relkind='S'
+                and pg_class.oid in (
+                    select
+                        substring(adsrc from '%%nextval#(''#"%%#"''::regclass#)' for '#')::regclass::oid
+                    from pg_attrdef
+                    where adrelid='%s.%s'::regclass
+                        and adsrc like '%%nextval(%%'
+                        and adbin like '%%FUNCEXPR :funcid 1574%%'
+                );""" % (
             pg.escape_string(self._table_pair.source.schema),
             pg.escape_string(self._table_pair.source.table))
 
