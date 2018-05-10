@@ -32,6 +32,7 @@
 #include "mock/pxfbridge_mock.c"
 #include "mock/pxfuriparser_mock.c"
 #include "mock/pxffragment_mock.c"
+#include "mock/pxffilters_mock.c"
 
 const char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
 const char *uri_param = "pxf://localhost:5888/tmp/dummy1";

@@ -1,5 +1,5 @@
 void
-get_fragments(GPHDUri *uri, Relation relation)
+get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 {
 	check_expected(uri);
 	check_expected(relation);

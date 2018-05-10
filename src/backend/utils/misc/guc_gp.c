@@ -2863,7 +2863,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_GPDB_ADDOPT
 		},
 		&enable_filter_pushdown,
-		true, NULL, NULL
+		false, NULL, NULL
 	},
 
 	/* End-of-list marker */
