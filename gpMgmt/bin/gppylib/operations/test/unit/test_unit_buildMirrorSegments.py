@@ -2,7 +2,7 @@
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
-from gppylib.gparray import Segment
+from gppylib.gparray import Segment, GpArray
 from gppylib.test.unit.gp_unittest import *
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult
@@ -127,6 +127,38 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.assertFalse(result)
         self.logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
                                          'Segment: sdw1:/data/primary0:content=0:dbid=2:mode=s:status=u: REASON: reason')
+
+    @patch('gppylib.operations.buildMirrorSegments.dbconn.connect')
+    @patch('gppylib.operations.buildMirrorSegments.dbconn.execSQL')
+    def test_registerMirrorsInCatalog_succeeds(self, mock1, mock2):
+        gpArray = self._createGpArrayWith2Primary2Mirrors()
+        self.buildMirrorSegs._GpMirrorListToBuild__registerMirrorsInCatalog(gpArray)
+        self.logger.info.assert_any_call("Updating gp_segment_configuration with mirror info")
+        self.logger.info.assert_any_call("Successfully updated gp_segment_configuration with mirror info")
+
+    @patch('gppylib.operations.buildMirrorSegments.dbconn.connect')
+    @patch('gppylib.operations.buildMirrorSegments.dbconn.execSQL', side_effect=Exception("boom"))
+    def test_registerMirrorsInCatalog_fails(self, mock1, mock2):
+        gpArray = self._createGpArrayWith2Primary2Mirrors()
+        with self.assertRaisesRegexp(Exception, "boom"):
+            self.buildMirrorSegs._GpMirrorListToBuild__registerMirrorsInCatalog(gpArray)
+
+        self.logger.info.assert_any_call("Updating gp_segment_configuration with mirror info")
+        self.logger.error.assert_any_call("Failed while updating mirror info in gp_segment_configuration: boom")
+
+    def _createGpArrayWith2Primary2Mirrors(self):
+        self.master = Segment.initFromString(
+                "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
+        self.primary0 = Segment.initFromString(
+            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
+        self.primary1 = Segment.initFromString(
+            "3|1|p|p|s|u|sdw2|sdw2|40001|/data/primary1")
+        mirror0 = Segment.initFromString(
+            "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
+        mirror1 = Segment.initFromString(
+            "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
+
+        return GpArray([self.master, self.primary0, self.primary1, mirror0, mirror1])
 
 if __name__ == '__main__':
     run_tests()

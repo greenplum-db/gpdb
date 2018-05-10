@@ -29,7 +29,6 @@ def _write_datadir_config():
     contents = """
 {0}
 {0}
-{0}
 """.format(mirror_data_dir)
     with open(datadir_config, 'w') as fp:
         fp.write(contents)
