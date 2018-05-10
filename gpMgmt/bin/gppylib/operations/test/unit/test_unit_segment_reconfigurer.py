@@ -6,65 +6,54 @@ from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 from gppylib.test.unit.gp_unittest import GpTestCase
 from pygresql import pgdb
 import mock
-from mock import Mock, patch, call
+from mock import Mock, patch, call, MagicMock
 
 
 class SegmentReconfiguerTestCase(GpTestCase):
+    def setUp(self):
+        self.conn = Mock(name='conn')
+        self.logger = Mock()
+        self.worker_pool = Mock()
+        self.db_url = 'dbUrl'
+
+        self.db_url_mock = MagicMock(return_value=self.db_url)
+        cm = patch('gppylib.db.dbconn.DbURL', new=(MagicMock(return_value=self.db_url)))
+        cm.__enter__()
+        self.cm = cm
+
+    def tearDown(self):
+        self.cm.__exit__()
+
     @patch('gppylib.db.dbconn.connect')
-    @patch('gppylib.db.dbconn.DbURL')
-    def test_it_retries_the_connection(self, db_url_mock, connect):
-        nonlocal = {'counter': 0}
+    def test_it_retries_the_connection(self, connect):
+        connect.configure_mock(side_effect=[pgdb.DatabaseError, pgdb.DatabaseError, self.conn])
 
-        def fail_twice(*args):
-            if nonlocal['counter'] < 2:
-                nonlocal['counter'] += 1
-                raise pgdb.DatabaseError
-            else:
-                return mock.DEFAULT
-
-        db_url = 'dbUrl'
-        db_url_mock.return_value = db_url
-        conn = Mock(name='conn')
-        connect.configure_mock(return_value=conn, side_effect=fail_twice)
-        logger = Mock()
-        worker_pool = Mock()
-
-        reconfigurer = SegmentReconfigurer(logger, worker_pool)
+        reconfigurer = SegmentReconfigurer(self.logger, self.worker_pool)
         reconfigurer.reconfigure()
 
-        connect.assert_has_calls([call(db_url), call(db_url), call(db_url), ])
-        conn.close.assert_any_call()
+        connect.assert_has_calls([call(self.db_url), call(self.db_url), call(self.db_url), ])
+        self.conn.close.assert_any_call()
 
     @patch('time.time')
     @patch('gppylib.db.dbconn.connect')
-    @patch('gppylib.db.dbconn.DbURL')
-    def test_it_gives_up_after_30_seconds(self, db_url_mock, connect, now_mock):
-        nonlocal = {'counter': 0}
-
-        def fail_twice(*args):
-            if nonlocal['counter'] < 2:
-                nonlocal['counter'] += 1
-                new_datetime = start_datetime + datetime.timedelta(seconds=15) * nonlocal['counter']
-                now_mock.configure_mock(return_value=time.mktime(new_datetime.timetuple()))
-                raise pgdb.DatabaseError
-            else:
-                return mock.DEFAULT
-
+    def test_it_gives_up_after_30_seconds(self, connect, now_mock):
         start_datetime = datetime.datetime(2018, 5, 9, 16, 0, 0)
         start_time = time.mktime(start_datetime.timetuple())
-
         now_mock.configure_mock(return_value=start_time)
 
-        db_url = 'dbUrl'
-        db_url_mock.return_value = db_url
-        conn = Mock(name='conn')
-        connect.configure_mock(return_value=conn, side_effect=fail_twice)
-        logger = Mock()
-        worker_pool = Mock()
+        def fail_for_half_a_minute():
+            for i in xrange(1, 3):
+                # leap forward 15 seconds
+                new_time = start_time + 15 * i
+                now_mock.configure_mock(return_value=new_time)
+                yield pgdb.DatabaseError
 
-        reconfigurer = SegmentReconfigurer(logger, worker_pool)
+
+        connect.configure_mock(side_effect=fail_for_half_a_minute())
+
+        reconfigurer = SegmentReconfigurer(self.logger, self.worker_pool)
         with self.assertRaises(pgdb.DatabaseError):
             reconfigurer.reconfigure()
 
-        connect.assert_has_calls([call(db_url), call(db_url), ])
-        conn.close.assert_has_calls([])
+        connect.assert_has_calls([call(self.db_url), call(self.db_url), ])
+        self.conn.close.assert_has_calls([])

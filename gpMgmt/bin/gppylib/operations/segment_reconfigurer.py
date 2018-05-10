@@ -30,7 +30,6 @@ class SegmentReconfigurer:
         dburl = dbconn.DbURL()
         start_time = time.time()
         while True:
-            conn = None
             try:
                 conn = dbconn.connect(dburl)
             except Exception as e:
