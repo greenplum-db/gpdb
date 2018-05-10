@@ -22,7 +22,7 @@ GEM
       middleman-livereload
       middleman-sprockets
       middleman-syntax (= 2.1.0)
-      nokogiri (= 1.8.1)
+      nokogiri (= 1.8.2)
       puma
       rack-rewrite
       redcarpet (~> 3.2.3)
