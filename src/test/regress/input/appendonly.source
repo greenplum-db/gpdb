@@ -545,6 +545,24 @@ insert into ao_compress_results values (pg_relation_size('ao_compress_table'), p
 
 select count(*) from (select distinct * from ao_compress_results) temp; -- should give 2 after reclaiming space
 
+-- Same transaction truncate multiple times. This performs unsafe truncate means
+-- direct file truncate and not flipping the relfilenode.
+
+create table ao_truncate_multiple_times(a int) with (appendonly=true);
+insert into ao_truncate_multiple_times select * from generate_series(0, 9);
+begin;
+select * from ao_truncate_multiple_times;
+truncate table ao_truncate_multiple_times;
+select * from ao_truncate_multiple_times;
+insert into ao_truncate_multiple_times select * from generate_series(10, 19);
+select * from ao_truncate_multiple_times;
+truncate table ao_truncate_multiple_times;
+select * from ao_truncate_multiple_times;
+insert into ao_truncate_multiple_times select * from generate_series(20, 29);
+select * from ao_truncate_multiple_times;
+abort;
+select * from ao_truncate_multiple_times;
+
 -------------------- 
 -- supported sql 
 --------------------
