@@ -2,8 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="defining-queries">
     <title id="in140509">Defining Queries</title>
-    <shortdesc>Greenplum Database is based on the PostgreSQL implementation of the SQL
-        standard. </shortdesc>
+    <shortdesc>Greenplum Database is based on the PostgreSQL implementation of the SQL standard. </shortdesc>
     <body>
         <p>This topic describes how to construct SQL queries in Greenplum Database.</p>
         <ul>
@@ -20,14 +19,15 @@
         <body>
             <p>SQL is a standard language for accessing databases. The language consists of elements
                 that enable data storage, retrieval, analysis, viewing, manipulation, and so on. You
-                use SQL commands to construct queries and commands that the Greenplum Database engine understands. SQL queries consist of a sequence of
-                commands. Commands consist of a sequence of valid tokens in correct syntax order,
-                terminated by a semicolon (<codeph>;</codeph>). </p>
-            <p>For more information about SQL commands, see the <cite>Greenplum
-                    Database Reference Guide</cite>.</p>
-            <p>Greenplum Database uses PostgreSQL's structure and syntax, with some
-                exceptions. For more information about SQL rules and concepts in PostgreSQL, see
-                "SQL Syntax" in the PostgreSQL documentation.</p>
+                use SQL commands to construct queries and commands that the Greenplum Database
+                engine understands. SQL queries consist of a sequence of commands. Commands consist
+                of a sequence of valid tokens in correct syntax order, terminated by a semicolon
+                    (<codeph>;</codeph>). </p>
+            <p>For more information about SQL commands, see the <cite>Greenplum Database Reference
+                    Guide</cite>.</p>
+            <p>Greenplum Database uses PostgreSQL's structure and syntax, with some exceptions. For
+                more information about SQL rules and concepts in PostgreSQL, see "SQL Syntax" in the
+                PostgreSQL documentation.</p>
         </body>
     </topic>
     <topic id="topic4" xml:lang="en">
@@ -46,8 +46,8 @@
                 <li id="in143969">A correlated subquery</li>
                 <li id="in199893">A field selection expression</li>
                 <li id="in199900">A function call</li>
-                <li id="in205284">A new column value in an <codeph>INSERT</codeph><ph
-                       > or <codeph>UPDATE</codeph></ph></li>
+                <li id="in205284">A new column value in an <codeph>INSERT</codeph><ph> or
+                            <codeph>UPDATE</codeph></ph></li>
                 <li id="in205286">An operator invocation column reference</li>
                 <li id="in144037">A positional parameter reference, in the body of a function
                     definition or prepared statement</li>
@@ -186,9 +186,8 @@
                 <p>
                     <codeblock>sqrt(2)</codeblock>
                 </p>
-                <p>See the <cite>Greenplum Database Reference Guide</cite> for
-                    lists of the built-in functions by category. You can add custom functions,
-                    too.</p>
+                <p>See the <cite>Greenplum Database Reference Guide</cite> for lists of the built-in
+                    functions by category. You can add custom functions, too.</p>
             </body>
         </topic>
         <topic id="topic11" xml:lang="en">
@@ -223,10 +222,10 @@
                 <p>For predefined aggregate functions, see <xref
                         href="../topics/functions-operators.xml#topic29"/>. You can also add custom
                     aggregate functions.</p>
-                <p>Greenplum Database provides the <codeph>MEDIAN</codeph> aggregate
-                    function, which returns the fiftieth percentile of the
-                        <codeph>PERCENTILE_CONT</codeph> result and special aggregate expressions
-                    for inverse distribution functions as follows:</p>
+                <p>Greenplum Database provides the <codeph>MEDIAN</codeph> aggregate function, which
+                    returns the fiftieth percentile of the <codeph>PERCENTILE_CONT</codeph> result
+                    and special aggregate expressions for inverse distribution functions as
+                    follows:</p>
                 <p>
                     <codeblock>PERCENTILE_CONT(_percentage_) WITHIN GROUP (ORDER BY _expression_)
 </codeblock>
@@ -241,8 +240,8 @@
                 <body>
                     <p>The following are current limitations of the aggregate expressions:</p>
                     <ul>
-                        <li id="in199103">Greenplum Database does not support the
-                            following keywords: ALL, DISTINCT, FILTER and OVER. See <xref
+                        <li id="in199103">Greenplum Database does not support the following
+                            keywords: ALL, DISTINCT, FILTER and OVER. See <xref
                                 href="../topics/functions-operators.xml#topic31/in2073121"/> for
                             more details. </li>
                         <li id="in199105">An aggregate expression can appear only in the result list
@@ -259,12 +258,12 @@
                             expression acts as a constant over any one evaluation of that subquery.
                             See <xref format="dita" href="#topic15" type="topic"/> and <xref
                                 href="../topics/functions-operators.xml#topic29/in204913"/>.</li>
-                        <li id="in200915">Greenplum Database does not support DISTINCT
-                            with multiple input expressions.</li>
+                        <li id="in200915">Greenplum Database does not support DISTINCT with multiple
+                            input expressions.</li>
                         <li id="in2009151">Greenplum Database does not support specifying an
                             aggregate function as an argument to another aggregate function.</li>
-                        <li id="in2009152">Greenplum Database does not support specifying a
-                            window function as an argument to an aggregate function.</li>
+                        <li id="in2009152">Greenplum Database does not support specifying a window
+                            function as an argument to an aggregate function.</li>
                     </ul>
                 </body>
             </topic>
@@ -356,26 +355,102 @@
         <topic id="topic14" xml:lang="en">
             <title>Type Casts</title>
             <body>
-                <p>A type cast specifies a conversion from one data type to another. Greenplum Database accepts two equivalent syntaxes for type casts:</p>
-                <p>
-                    <codeblock>CAST ( expression AS type )
-expression::type
-</codeblock>
-                </p>
-                <p>The <codeph>CAST</codeph> syntax conforms to SQL; the syntax with
-                        <codeph>::</codeph> is historical PostgreSQL usage.</p>
-                <p>A cast applied to a value expression of a known type is a run-time type
-                    conversion. The cast succeeds only if a suitable type conversion function is
-                    defined. This differs from the use of casts with constants. A cast applied to a
-                    string literal represents the initial assignment of a type to a literal constant
-                    value, so it succeeds for any type if the contents of the string literal are
-                    acceptable input syntax for the data type.</p>
+                <p>A type cast specifies a conversion from one data type to another. A cast applied
+                    to a value expression of a known type is a run-time type conversion. The cast
+                    succeeds only if a suitable type conversion function is defined. This differs
+                    from the use of casts with constants. A cast applied to a string literal
+                    represents the initial assignment of a type to a literal constant value, so it
+                    succeeds for any type if the contents of the string literal are acceptable input
+                    syntax for the data type.</p>
+                <p>Greenplum Database supports three types of casts applied to a value expression:
+                        <ul id="ul_f4w_svt_rdb">
+                        <li><i>Explicit cast</i> - Greenplum Database applies a cast when you
+                            explicitly specify a cast between two data types. Greenplum Database
+                            accepts two equivalent syntaxes for explicit type casts:<p>
+                                <codeblock>CAST ( expression AS type )
+expression::type</codeblock>
+                            </p><p>The <codeph>CAST</codeph> syntax conforms to SQL; the syntax with
+                                    <codeph>::</codeph> is historical PostgreSQL usage.</p></li>
+                        <li><i>Assignment cast</i> - Greenplum Database implicitly invokes a cast in
+                            assignment contexts, when assigning a value to a column of the target
+                            data type. For example, a <codeph>CREATE CAST</codeph> command with the
+                                <codeph>AS ASSIGNMENT</codeph> clause creates a cast that is applied
+                            implicitly in the assignment context. This example assignment cast
+                            assumes that <codeph>tbl1.f1</codeph> is a column of type
+                                <codeph>text</codeph>. The <codeph>INSERT</codeph> command is
+                            allowed because the value is implicitly cast from the
+                                <codeph>integer</codeph> to <codeph>text</codeph> type.
+                            <codeblock>INSERT INTO tbl1 (f1) VALUES (42);</codeblock></li>
+                        <li><i>Implicit cast</i> - Greenplum Database implicitly invokes a cast in a
+                            assignment or expression context. For example, a <codeph>CREATE
+                                CAST</codeph> command with the <codeph>AS IMPICIT</codeph> clause
+                            creates an implicit cast, a cast that is applied implicitly in both the
+                            assignment and expression context. This example implicit cast assumes
+                            that <codeph>tbl1.c1</codeph> is a column of type <codeph>int</codeph>.
+                            For the calculation in the predicate, the value of <codeph>c1</codeph>
+                            is implicitly cast from <codeph>int</codeph> to a
+                                <codeph>decimal</codeph>
+                            type.<codeblock>SELECT * FROM tbl1 WHERE tbl1.c2 = (4.3 + tbl1.c1) ;</codeblock></li>
+                    </ul></p>
                 <p>You can usually omit an explicit type cast if there is no ambiguity about the
                     type a value expression must produce; for example, when it is assigned to a
-                    table column, the system automatically applies a type cast. The system applies
-                    automatic casting only to casts marked "OK to apply implicitly" in system
-                    catalogs. Other casts must be invoked with explicit casting syntax to prevent
-                    unexpected conversions from being applied without the user's knowledge.</p>
+                    table column, the system automatically applies a type cast. Greenplum Database
+                    implicitly applies casts only to casts where the is defined with the cast
+                    context of assignment or implicit in the system catalogs. Other casts must be
+                    invoked with explicit casting syntax to prevent unexpected conversions from
+                    being applied without the user's knowledge. You can display cast information
+                    with the <codeph>psql</codeph> metacommand <codeph>\dC</codeph>. Cast
+                    information is stored in the catalog table <codeph>pg_cast</codeph>, type
+                    information is stored in the catalog table <codeph>pg_type</codeph>. </p>
+                <p>Greenplum Database 5.x limits implicit casts between <codeph>text</codeph> and
+                    other non-text data types to minimize unexpected results when performing casts
+                    to <codeph>text</codeph>. The following examples are types of queries that
+                    contain expressions that require an explicit cast.</p>
+                <p>The examples assume these table
+                    definitions.<codeblock>CREATE TABLE tbl1 (a int) DISTRIBUTED RANDOMLY ;
+CREATE TABLE tbl2 (b text) DISTRIBUTED RANDOMLY ;</codeblock></p>
+                <ul id="ul_rgx_3xt_rdb">
+                    <li>Queries that reference text type and non-text type columns in an expression.
+                        In this example query, the comparison expression causes a cast
+                            error:<codeblock>SELECT * FROM tbl1, tbl2 WHERE tbl1.a = tbl2.b ;
+ERROR:  operator does not exist: integer = text
+LINE 1: SELECT * FROM tbl1, tbl2 WHERE tbl1.a = tbl2.b ;
+                                              ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.</codeblock><p>The
+                            updated example casts the <codeph>text</codeph> type to an
+                                <codeph>integer</codeph>
+                            type.<codeblock>SELECT * FROM tbl1, tbl2 WHERE tbl1.a::int = tbl2.b;</codeblock></p></li>
+                    <li>Queries that perform comparisons between a text type column and a non-quoted
+                        literal such as an <codeph>integer</codeph>, <codeph>number</codeph>,
+                            <codeph>float</codeph>, or <codeph>oid</codeph>. This example query that
+                        compares text and non-quoted integer returns an
+                            error.<codeblock>SELECT * FROM tbl2 WHERE b = 123;</codeblock><p>Adding
+                            an explicit cast to text fixes the
+                            issue.<codeblock>SELECT * FROM tbl2 WHERE b = 123::text;</codeblock></p></li>
+                    <li>Queries that perform comparisons between a <codeph>date</codeph> type column
+                        or literal of type <codeph>date</codeph> and an integer-like column. This
+                        example query compares an <codeph>integer</codeph> column with a literal of
+                        type <codeph>date</codeph> returns an
+                            error.<codeblock>SELECT a FROM tbl1 WHERE a = '20130101'::date;</codeblock><p>There
+                            is no built-in cast from integer type to <codeph>date</codeph> type.
+                            However, you can explicitly cast an <codeph>integer</codeph> to
+                                <codeph>text</codeph> and then to <codeph>date</codeph>. The updated
+                            examples use the <codeph>cast</codeph> and <codeph>::</codeph>
+                            syntax.<codeblock>SELECT * FROM tbl1 WHERE cast(cast(a AS text) AS date)  = '20130101'::date;
+SELECT * FROM tbl1 WHERE (a::text)::date  = '20130101'::date;</codeblock></p></li>
+                    <li>Queries that mix the <codeph>text</codeph> type and a non-text data type in
+                        function and aggregate arguments. In this example, the query that executes
+                        the example function <codeph>concat</codeph> returns a cast
+                            error.<codeblock>CREATE FUNCTION concat(text, text) 
+RETURNS text AS $$ 
+  SELECT $1 || $2 
+$$ STRICT LANGUAGE SQL;
+
+SELECT concat('a', 2);</codeblock><p>Adding
+                            an explicit cast from <codeph>integer</codeph> to <codeph>text</codeph>
+                            fixes the
+                        issue.<codeblock>SELECT concat('a', 2::text);</codeblock></p></li>
+                </ul>
             </body>
         </topic>
         <topic id="topic15" xml:lang="en">
@@ -394,10 +469,11 @@ expression::type
                 <p>A correlated subquery (CSQ) is a <codeph>SELECT</codeph> query with a
                         <codeph>WHERE</codeph> clause or target list that contains references to the
                     parent outer clause. CSQs efficiently express results in terms of results of
-                    another query. Greenplum Database supports correlated subqueries
-                    that provide compatibility with many existing applications. A CSQ is a scalar or
-                    table subquery, depending on whether it returns one or multiple rows. Greenplum Database does not support correlated subqueries with
-                    skip-level correlations.</p>
+                    another query. Greenplum Database supports correlated subqueries that provide
+                    compatibility with many existing applications. A CSQ is a scalar or table
+                    subquery, depending on whether it returns one or multiple rows. Greenplum
+                    Database does not support correlated subqueries with skip-level
+                    correlations.</p>
             </body>
         </topic>
         <topic id="topic17" xml:lang="en">
@@ -416,16 +492,15 @@ expression::type
                     <codeblock>SELECT * FROM t1 WHERE 
 EXISTS (SELECT 1 FROM t2 WHERE t2.x = t1.x);
 </codeblock>
-                    <p>Greenplum Database uses one of the following methods to run
-                        CSQs:</p>
+                    <p>Greenplum Database uses one of the following methods to run CSQs:</p>
                     <ul>
                         <li id="in197793">Unnest the CSQ into join operations &#8211; This method is
-                            most efficient, and it is how Greenplum Database runs most
-                            CSQs, including queries from the TPC-H benchmark.</li>
+                            most efficient, and it is how Greenplum Database runs most CSQs,
+                            including queries from the TPC-H benchmark.</li>
                         <li id="in197800">Run the CSQ on every row of the outer query &#8211; This
-                            method is relatively inefficient, and it is how Greenplum Database runs queries that contain CSQs in the
-                                <codeph>SELECT</codeph> list or are connected by <codeph>OR</codeph>
-                            conditions.</li>
+                            method is relatively inefficient, and it is how Greenplum Database runs
+                            queries that contain CSQs in the <codeph>SELECT</codeph> list or are
+                            connected by <codeph>OR</codeph> conditions.</li>
                     </ul>
                     <p>The following examples illustrate how to rewrite some of these types of
                         queries to improve performance.</p>
@@ -488,14 +563,14 @@ WHERE x &lt; (SELECT count(*) FROM t3 WHERE t1.y = t3.y)
         <topic id="topic22" xml:lang="en">
             <title>Advanced Table Functions</title>
             <body>
-                <p>Greenplum Database supports table functions with
-                        <codeph>TABLE</codeph> value expressions. You can sort input rows for
-                    advanced table functions with an <codeph>ORDER BY</codeph> clause. You can
-                    redistribute them with a <codeph>SCATTER BY</codeph> clause to specify one or
-                    more columns or an expression for which rows with the specified characteristics
-                    are available to the same process. This usage is similar to using a
-                        <codeph>DISTRIBUTED BY</codeph> clause when creating a table, but the
-                    redistribution occurs when the query runs.</p>
+                <p>Greenplum Database supports table functions with <codeph>TABLE</codeph> value
+                    expressions. You can sort input rows for advanced table functions with an
+                        <codeph>ORDER BY</codeph> clause. You can redistribute them with a
+                        <codeph>SCATTER BY</codeph> clause to specify one or more columns or an
+                    expression for which rows with the specified characteristics are available to
+                    the same process. This usage is similar to using a <codeph>DISTRIBUTED
+                        BY</codeph> clause when creating a table, but the redistribution occurs when
+                    the query runs.</p>
                 <note type="note">Based on the distribution of data, Greenplum Database
                     automatically parallelizes table functions with <codeph>TABLE</codeph> value
                     parameters over the nodes of the cluster.</note>
