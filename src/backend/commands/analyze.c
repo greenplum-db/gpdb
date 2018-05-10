@@ -539,6 +539,17 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 	colLargeRowIndexes = (RowIndexes **) palloc(sizeof(RowIndexes *) * attr_cnt);
 
 	/*
+	 * switch back to the original user to collect sample rows, the security threat does
+	 * not exist here as we donot execute any functions which could potentially lead to the
+	 * CVE-2009-4136
+	 * The patch to prevent the security threat was introduced from upstream commit:
+	 *   https://github.com/postgres/postgres/commit/62aba76568e58698ad5eaa6153bc45186aacbde2
+	 * setting to the original user is required due to GPDB specific way of collecting samples
+	 * using query, but not required postgres since we do block sampling.
+	 */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
+
+	/*
 	 * Acquire the sample rows
 	 */
 	// GPDB_90_MERGE_FIXME: Need to implement 'acuire_inherited_sample_rows_by_query'
@@ -553,6 +564,9 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 											   (vacstmt->options & VACOPT_ROOTONLY) != 0,
 											   colLargeRowIndexes);
 
+	/* change the privilige back to the table owner */
+	SetUserIdAndSecContext(onerel->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 	/*
 	 * Compute the statistics.	Temporary results during the calculations for
 	 * each column are stored in a child context.  The calc routines are

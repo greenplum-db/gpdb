@@ -15,6 +15,11 @@
 #ifndef IDLE_RESOURCE_CLEANER_H
 #define IDLE_RESOURCE_CLEANER_H
 
+/*
+ * If get_idle_session_timeout_hook() returns IDLE_RESOURCES_NEVER_TIME_OUT, the
+ * session will never time out. The same goes for IdleSessionGangTimeout.
+ */
+#define IDLE_RESOURCES_NEVER_TIME_OUT 0
 
 void		StartIdleResourceCleanupTimers(void);
 

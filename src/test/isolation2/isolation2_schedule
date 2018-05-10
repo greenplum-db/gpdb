@@ -6,6 +6,8 @@ test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
+test: invalidated_toast_index
+test: distributed_snapshot
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
@@ -105,6 +107,7 @@ test: segwalrep/commit_blocking
 test: segwalrep/fts_unblock_primary
 test: segwalrep/mirror_promotion
 test: segwalrep/cancel_commit_pending_replication
+test: segwalrep/twophase_tolerance_with_mirror_promotion
 
 # Tests for crash recovery
 test: crash_recovery

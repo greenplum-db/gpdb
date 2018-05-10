@@ -4,19 +4,6 @@
   <title>Backing Up and Restoring Databases</title>
   <topicref href="backup-main.xml">
     <topicref href="backup-overview.xml"/>
-    <topicref href="backup-heading.xml">
-      <topicref href="backup-options.xml"/>
-      <topicref href="backup-gpcrondump.xml"/>
-      <topicref href="backup-sets.xml"/>
-      <topicref href="backup-incremental.xml"/>
-      <topicref href="backup-locks.xml"/>
-      <topicref href="backup-named-pipes.xml"/>
-      <topicref href="backup-ddboost.xml" otherprops="pivotal"/>
-      <topicref href="backup-veritas.xml"/>
-      <topicref href="restore-parallel.xml"/>
-      <topicref href="gpdbrestore.xml"/>
-      <topicref href="restore-diff-system.xml"/>
-    </topicref>
     <topicref href="backup-gpbackup.xml">
       <topicref href="backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
       <topicref href="backup-gpbackup.xml#topic_x3s_lqj_tbb"/>

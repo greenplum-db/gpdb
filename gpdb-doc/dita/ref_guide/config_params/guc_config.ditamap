@@ -145,6 +145,7 @@
             <topicref href="guc-list.xml#gp_max_local_distributed_cache"/>
             <topicref href="guc-list.xml#gp_max_packet_size"/>
             <topicref href="guc-list.xml#gp_max_plan_size"/>
+            <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
             <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
@@ -213,6 +214,7 @@
             <topicref href="guc-list.xml#log_temp_files"/>
             <topicref href="guc-list.xml#log_timezone"/>
             <topicref href="guc-list.xml#log_truncate_on_rotation"/>
+            <topicref href="guc-list.xml#maintenance_work_mem"/>
             <topicref href="guc-list.xml#max_appendonly_tables"/>
             <topicref href="guc-list.xml#max_connections"/>
             <topicref href="guc-list.xml#max_files_per_process"/>
@@ -300,6 +302,7 @@
             <topicref href="guc-list.xml#vacuum_cost_page_miss"/>
             <topicref href="guc-list.xml#vacuum_freeze_min_age"/>
             <topicref href="guc-list.xml#validate_previous_free_tid"/>
+            <topicref href="guc-list.xml#verify_gpfdists_cert"/>
             <topicref href="guc-list.xml#vmem_process_interrupt"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>

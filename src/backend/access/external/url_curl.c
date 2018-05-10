@@ -24,6 +24,7 @@
 
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/guc.h"
 #include "utils/resowner.h"
@@ -115,7 +116,9 @@ typedef struct
  *	extssl_protocol  CURL_SSLVERSION_TLSv1 				
  *  extssl_cipher 	 TLS_RSA_WITH_AES_128_CBC_SHA
  *  extssl_verifycert 	1
- *  extssl_verifyhost 	2 										
+ *  extssl_verifyhost 	2
+ *  extssl_no_verifycert 	0
+ *  extssl_no_verifyhost 	0
  *  extssl_cert 		"gpfdists/client.crt"
  *  extssl_key 			"gpfdists/client.key"
  *  extssl_pass 		"?" 										
@@ -124,10 +127,12 @@ typedef struct
  *  extssl_libcurldebug 1 	
  */
 
-static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
+const static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
 const char* extssl_cipher = "AES128-SHA";
-static int extssl_verifycert = 1;
-static int extssl_verifyhost = 2;
+const static int extssl_verifycert = 1;
+const static int extssl_verifyhost = 2;
+const static int extssl_no_verifycert = 0;
+const static int extssl_no_verifyhost = 0;
 const char* extssl_cert = "gpfdists/client.crt";
 const char* extssl_key = "gpfdists/client.key";
 const char* extssl_ca = "gpfdists/root.crt";
@@ -1262,10 +1267,12 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		}
 
 		/* set cert verification */
-		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYPEER, (long)extssl_verifycert);
+		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYPEER,
+				(long)(verify_gpfdists_cert ? extssl_verifycert : extssl_no_verifycert));
 
 		/* set host verification */
-		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYHOST, (long)extssl_verifyhost);
+		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYHOST,
+				(long)(verify_gpfdists_cert ? extssl_verifyhost : extssl_no_verifyhost));
 
 		/* set ciphersuite */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_CIPHER_LIST, extssl_cipher);

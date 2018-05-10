@@ -31,7 +31,7 @@
  * GPPC_C_BUILD avoids definitions conflicting with actual backend definitions.
  */
 #define GPPC_C_BUILD
-#include "gppc.h"
+#include "gppc/gppc.h"
 
 #define ENSURE_NODE(val, nodetag) do{ \
 	if (val != NULL && !IsA(val, nodetag)) \

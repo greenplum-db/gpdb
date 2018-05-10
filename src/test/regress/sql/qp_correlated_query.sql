@@ -253,6 +253,8 @@ explain select * from B where not exists (select * from C,A where C.i in (select
 select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
 explain select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
 select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+explain select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
+select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
 
 
 -- ----------------------------------------------------------------------

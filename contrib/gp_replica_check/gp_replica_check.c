@@ -13,6 +13,7 @@
 #include "storage/fd.h"
 #include "utils/builtins.h"
 #include "utils/hsearch.h"
+#include "utils/relmapper.h"
 #include "utils/tqual.h"
 
 /*
@@ -488,9 +489,16 @@ get_relfilenode_map()
 			continue;
 
 		RelfilenodeEntry *rentry;
-		int rnode = classtuple->relfilenode;
+		Oid rnode;
+		/* Its relmapped relation, need to fetch the mapping from relmap file */
+		if (classtuple->relfilenode == InvalidOid)
+			rnode = RelationMapOidToFilenode(HeapTupleGetOid(tup),
+											 classtuple->relisshared);
+		else
+			rnode = classtuple->relfilenode;
+
 		rentry = hash_search(relfilenodemap, (void *)&rnode, HASH_ENTER, NULL);
-		rentry->relfilenode = classtuple->relfilenode;
+		rentry->relfilenode = rnode;
 		rentry->relam = classtuple->relam;
 		rentry->relkind = classtuple->relkind;
 		rentry->relstorage = classtuple->relstorage;
@@ -507,7 +515,7 @@ get_relfilenode_entry(char *relfilenode, HTAB *relfilenode_map)
 {
 	bool found;
 
-	int rnode = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(relfilenode)));
+	Oid rnode = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(relfilenode)));
 	RelfilenodeEntry *rentry = hash_search(relfilenode_map, (void *)&rnode, HASH_FIND, &found);
 
 	if (found)

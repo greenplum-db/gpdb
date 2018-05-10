@@ -128,6 +128,14 @@ typedef struct DatumStreamRead
 	uint8	   *large_object_buffer;
 	int32		large_object_buffer_size;
 
+	/*
+	 * Temporary space for storing a Datum that has to be upgraded from a prior
+	 * AO format version but can't be upgraded in place. Allocated only as
+	 * needed, and holds only one value at a time.
+	 */
+	void	   *datum_upgrade_buffer;
+	size_t		datum_upgrade_buffer_size;
+
 	/* EOF of current file */
 	int64		eof;
 	int64		eofUncompress;
@@ -140,6 +148,12 @@ typedef struct DatumStreamRead
 	DatumStreamVersion datumStreamVersion;
 
 	DatumStreamTypeInfo typeInfo;
+
+	/*
+	 * Cached base type, to assist with numeric upgrades. Initialized lazily
+	 * when needed.
+	 */
+	Oid			baseTypeOid;
 
 	bool		rle_can_have_compression;
 	bool		delta_can_have_compression;
@@ -300,6 +314,8 @@ extern void datumstreamread_rewind_block(DatumStreamRead * datumStream);
 extern bool datumstreamread_find_block(DatumStreamRead * datumStream,
 						   DatumStreamFetchDesc datumStreamFetchDesc,
 						   int64 rowNum);
+extern void *datumstreamread_get_upgrade_space(DatumStreamRead *datumStream,
+											   size_t len);
 
 /*
  * MPP-17061: make sure datumstream_read_block_info was called first for the CO block

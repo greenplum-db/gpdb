@@ -1,0 +1,265 @@
+-- convert_to_v4 takes a modern numeric and converts it into a GPDB4 numeric.
+CREATE OR REPLACE FUNCTION convert_to_v4(value numeric) RETURNS numeric AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'convertNumericToGPDB4' LANGUAGE C RETURNS NULL ON NULL INPUT;
+CREATE
+
+-- set_ao_formatversion forces an AO[CO] format to a specific version (the last
+-- argument is set to true for a column-oriented table, and false otherwise).
+CREATE OR REPLACE FUNCTION set_ao_formatversion(aosegrel oid, version smallint, isaocs bool) RETURNS bool AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'setAOFormatVersion' LANGUAGE C RETURNS NULL ON NULL INPUT;
+CREATE
+
+DROP TABLE IF EXISTS ao_upgrade_test;
+DROP
+DROP TABLE IF EXISTS aocs_upgrade_test;
+DROP
+
+CREATE TABLE ao_upgrade_test (rowid int, n numeric) WITH (appendonly=true);
+CREATE
+CREATE TABLE aocs_upgrade_test (rowid int, n numeric) WITH (appendonly=true, orientation=column);
+CREATE
+CREATE TABLE aocs_rle_upgrade_test (rowid int, n numeric) WITH (appendonly=true, orientation=column, compresstype=RLE_TYPE);
+CREATE
+
+INSERT INTO ao_upgrade_test (SELECT a, convert_to_v4((a + 5) !) FROM generate_series(1, 10) a);
+INSERT 10
+INSERT INTO aocs_upgrade_test (SELECT a, convert_to_v4((a + 5) !) FROM generate_series(1, 10) a);
+INSERT 10
+
+-- For the RLE test case, insert a bunch of identical numerics so they will be
+-- run-length compressed.
+INSERT INTO aocs_rle_upgrade_test (SELECT a, convert_to_v4(9 !) FROM generate_series(1, 10) a);
+INSERT 10
+
+-- Check to make sure convert_to_v4() does what we expect; without setting the
+-- AO format version back to GPDB4, the numerics we inserted should be mangled.
+SELECT * FROM ao_upgrade_test;
+rowid|n     
+-----+------
+3    |4.0   
+4    |36.3  
+5    |362.9 
+6    |3991.7
+7    |4.79  
+8    |62.27 
+9    |871.78
+10   |1.308 
+1    |720   
+2    |5040  
+(10 rows)
+SELECT * FROM aocs_upgrade_test;
+rowid|n     
+-----+------
+3    |4.0   
+4    |36.3  
+5    |362.9 
+6    |3991.7
+7    |4.79  
+8    |62.27 
+9    |871.78
+10   |1.308 
+1    |720   
+2    |5040  
+(10 rows)
+SELECT * FROM aocs_rle_upgrade_test;
+rowid|n   
+-----+----
+8    |36.3
+9    |36.3
+10   |36.3
+3    |36.3
+4    |36.3
+5    |36.3
+6    |36.3
+7    |36.3
+1    |36.3
+2    |36.3
+(10 rows)
+
+-- Downgrade to GPDB4 (AO version 2).
+--start_ignore
+*U: SELECT set_ao_formatversion( (SELECT segrelid FROM pg_appendonly WHERE relid = 'ao_upgrade_test'::regclass), 2::smallint, false);
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+*U: SELECT set_ao_formatversion( (SELECT segrelid FROM pg_appendonly WHERE relid = 'aocs_upgrade_test'::regclass), 2::smallint, true);
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+*U: SELECT set_ao_formatversion( (SELECT segrelid FROM pg_appendonly WHERE relid = 'aocs_rle_upgrade_test'::regclass), 2::smallint, true);
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+
+set_ao_formatversion
+--------------------
+t                   
+(1 row)
+--end_ignore
+
+-- Scan test. The numerics should be fixed again.
+SELECT * FROM ao_upgrade_test;
+rowid|n            
+-----+-------------
+8    |6227020800   
+9    |87178291200  
+10   |1307674368000
+1    |720          
+2    |5040         
+3    |40320        
+4    |362880       
+5    |3628800      
+6    |39916800     
+7    |479001600    
+(10 rows)
+SELECT * FROM aocs_upgrade_test;
+rowid|n            
+-----+-------------
+1    |720          
+2    |5040         
+3    |40320        
+4    |362880       
+5    |3628800      
+6    |39916800     
+7    |479001600    
+8    |6227020800   
+9    |87178291200  
+10   |1307674368000
+(10 rows)
+SELECT * FROM aocs_rle_upgrade_test;
+rowid|n     
+-----+------
+1    |362880
+2    |362880
+3    |362880
+4    |362880
+5    |362880
+6    |362880
+7    |362880
+8    |362880
+9    |362880
+10   |362880
+(10 rows)
+
+-- Fetch test. To force fetches, we'll add bitmap indexes and disable sequential
+-- scan.
+CREATE INDEX ao_bitmap_index ON ao_upgrade_test USING bitmap(n);
+CREATE
+CREATE INDEX aocs_bitmap_index ON aocs_upgrade_test USING bitmap(n);
+CREATE
+CREATE INDEX aocs_rle_bitmap_index ON aocs_rle_upgrade_test USING bitmap(n);
+CREATE
+
+SET enable_seqscan TO off;
+SET
+
+-- Ensure we're using a bitmap scan for our tests. Upgrade note to developers:
+-- the only thing that this test needs to verify is that a fetch-based scan is
+-- in use. Other diffs are fine.
+EXPLAIN SELECT n FROM ao_upgrade_test WHERE n = (9 !);
+QUERY PLAN                                                                                           
+-----------------------------------------------------------------------------------------------------
+Gather Motion 3:1  (slice1; segments: 3)  (cost=1000.36..1100.37 rows=1 width=9)                     
+  ->  Bitmap Append-Only Row-Oriented Scan on ao_upgrade_test  (cost=1000.36..1100.37 rows=1 width=9)
+        Recheck Cond: n = 362880::numeric                                                            
+        ->  Bitmap Index Scan on ao_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                
+              Index Cond: n = 362880::numeric                                                        
+Settings:  enable_seqscan=off                                                                        
+Optimizer status: legacy query optimizer                                                             
+(7 rows)
+EXPLAIN SELECT n FROM aocs_upgrade_test WHERE n = (9 !);
+QUERY PLAN                                                                                                
+----------------------------------------------------------------------------------------------------------
+Gather Motion 3:1  (slice1; segments: 3)  (cost=1000.36..1100.37 rows=1 width=9)                          
+  ->  Bitmap Append-Only Column-Oriented Scan on aocs_upgrade_test  (cost=1000.36..1100.37 rows=1 width=9)
+        Recheck Cond: n = 362880::numeric                                                                 
+        ->  Bitmap Index Scan on aocs_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                   
+              Index Cond: n = 362880::numeric                                                             
+Settings:  enable_seqscan=off                                                                             
+Optimizer status: legacy query optimizer                                                                  
+(7 rows)
+EXPLAIN SELECT n FROM aocs_rle_upgrade_test WHERE n = (9 !);
+QUERY PLAN                                                                                                    
+--------------------------------------------------------------------------------------------------------------
+Gather Motion 3:1  (slice1; segments: 3)  (cost=1000.36..1100.37 rows=1 width=9)                              
+  ->  Bitmap Append-Only Column-Oriented Scan on aocs_rle_upgrade_test  (cost=1000.36..1100.37 rows=1 width=9)
+        Recheck Cond: n = 362880::numeric                                                                     
+        ->  Bitmap Index Scan on aocs_rle_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                   
+              Index Cond: n = 362880::numeric                                                                 
+Settings:  enable_seqscan=off                                                                                 
+Optimizer status: legacy query optimizer                                                                      
+(7 rows)
+
+SELECT n FROM ao_upgrade_test WHERE n = (9 !);
+n     
+------
+362880
+(1 row)
+SELECT n FROM aocs_upgrade_test WHERE n = (9 !);
+n     
+------
+362880
+(1 row)
+SELECT n FROM aocs_rle_upgrade_test WHERE n = (9 !);
+n     
+------
+362880
+362880
+362880
+362880
+362880
+362880
+362880
+362880
+362880
+362880
+(10 rows)
+
+RESET enable_seqscan;
+RESET
+
+DROP FUNCTION convert_to_v4(numeric);
+DROP
+DROP FUNCTION set_ao_formatversion(oid, smallint, bool);
+DROP

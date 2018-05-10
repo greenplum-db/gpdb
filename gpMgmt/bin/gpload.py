@@ -1076,7 +1076,7 @@ def jenkins(data, initval = 0):
     a, b, c = jenkinsmix(a, b, c)
     return c
 
-# MPP-20927 Citibank: gpload external table name problem
+# MPP-20927: gpload external table name problem
 # Not sure if it is used by other components, just leave it here.
 def shortname(name):
     """
@@ -1150,7 +1150,7 @@ class gpload:
 
         # Create Temp and External table names. However external table name could
         # get overwritten with another name later on (see create_external_table_name).
-        # MPP-20927 Citibank: gpload external table name problem. We use uuid to avoid
+        # MPP-20927: gpload external table name problem. We use uuid to avoid
         # external table name confliction.
         self.unique_suffix = str(uuid.uuid1()).replace('-', '_')
         self.staging_table_name = 'temp_staging_gpload_' + self.unique_suffix

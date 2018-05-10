@@ -461,7 +461,7 @@ def checkDistribPolicy():
       join pg_class rel on (pk.conrelid = rel.oid)
       join pg_namespace n on (rel.relnamespace = n.oid)
       join gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in('p', 'u') and d.attrnums is null
+    where pk.contype in('p', 'u') and d.policytype = 'p' and d.attrnums is null
     '''
 
     db = connect2(GV.cfg[1])
@@ -502,7 +502,7 @@ def checkDistribPolicy():
       join  pg_class rel on (pk.conrelid = rel.oid)
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in ('p', 'u') and
+    where pk.contype in ('p', 'u') and d.policytype = 'p' and
           (d.attrnums is null or not
            d.attrnums operator(pg_catalog.<@) pk.conkey)
     '''

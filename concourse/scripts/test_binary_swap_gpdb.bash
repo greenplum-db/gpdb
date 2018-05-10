@@ -2,15 +2,37 @@
 
 set -eox pipefail
 
+if [ "$USER" = gpadmin ]; then
+    tmpdir=/tmp
+else
+    tmpdir=/opt
+fi
+
 function gen_env() {
-    cat > /opt/run_test.sh <<-EOF
+    cat > $tmpdir/run_test.sh <<-EOF
         source /usr/local/greenplum-db-devel/greenplum_path.sh
+        [ -e \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh ] && \
         source \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
         cd "\${1}/gpdb_src/src/test/binary_swap"
-        ./test_binary_swap.sh -b /tmp/local/greenplum-db-devel
+        ./test_binary_swap.sh -b /tmp/local/greenplum-db-devel \
+            -v "${BINARY_SWAP_VARIANT}" || (
+            errcode=\$?
+            find . -name regression.diffs \
+            | while read diff; do
+                cat <<EOF1
+
+======================================================================
+DIFF FILE: \$diff
+----------------------------------------------------------------------
+
+EOF1
+                cat \$diff
+              done
+            exit \$errcode
+        )
 EOF
 
-    chmod a+x /opt/run_test.sh
+    chmod a+x $tmpdir/run_test.sh
 }
 
 function install_gpdb_binary_swap() {
@@ -21,7 +43,11 @@ function install_gpdb_binary_swap() {
 }
 
 function run_test() {
-    su - gpadmin -c "bash /opt/run_test.sh $(pwd)"
+    if [ "$USER" = gpadmin ]; then
+        bash $tmpdir/run_test.sh $(pwd)
+    else
+        su - gpadmin -c "bash $tmpdir/run_test.sh $(pwd)"
+    fi
 }
 
 function _main() {

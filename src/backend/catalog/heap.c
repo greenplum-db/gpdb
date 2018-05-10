@@ -3368,6 +3368,12 @@ insert_ordered_unique_oid(List *list, Oid datum)
 	return list;
 }
 
+/*
+ * Note: when modifying this function, make sure to modify the query
+ * updating 'relfrozenxid' in function set_frozenxids() too.
+ * This is to keep consistent behavior for relfrozenxid before
+ * and after upgrade.
+ */
 bool
 should_have_valid_relfrozenxid(char relkind, char relstorage)
 {

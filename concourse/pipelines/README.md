@@ -107,7 +107,7 @@ template) to the source repository.
 
 As an example of generating a pipeline with a targeted test subset,
 the following can be used to generate a pipeline with supporting
-builds (default: centos6 platform) and `DPM` only jobs.
+builds (default: centos6 platform) and `CLI` only jobs.
 
 The generated pipeline and helper `fly` command are intended encourage
 engineers to set the pipeline with a team-name-string (-t) and engineer
@@ -117,14 +117,14 @@ NOTE: The majority of jobs are only available for the `centos6`
       platform.
 
 ```
-$ ./gen_pipeline.py -t dpm -u curry -a DPM
+$ ./gen_pipeline.py -t dpm -u curry -a CLI
 
 ======================================================================
   Generate Pipeline type: .. : dpm
   Pipeline file ............ : gpdb-dpm-curry.yml
   Template file ............ : gpdb-tpl.yml
   OS Types ................. : ['centos6']
-  Test sections ............ : ['DPM']
+  Test sections ............ : ['CLI']
   test_trigger ............. : True
 ======================================================================
 
@@ -136,6 +136,7 @@ fly -t gpdb-dev \
     -c gpdb-dpm-curry.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \
+    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
     -v bucket-name=gpdb5-concourse-builds-dev \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
@@ -164,6 +165,7 @@ fly -t gpdb-dev \
     -c gpdb-cs-durant.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \
+    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
     -v bucket-name=gpdb5-concourse-builds-dev \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>

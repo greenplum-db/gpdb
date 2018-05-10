@@ -15455,13 +15455,3 @@ makeIsNotDistinctFromNode(Node *expr, int position)
 	 													"=", NULL, expr, position), position);
 	return n;
 }
-
-/*
- * Must undefine this stuff before including scan.c, since it has different
- * definitions for these macros.
- */
-#undef yyerror
-#undef yylval
-#undef yylloc
-
-#include "scan.c"

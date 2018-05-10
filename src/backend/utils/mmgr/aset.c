@@ -1403,6 +1403,10 @@ AllocSetFreeImpl(MemoryContext context, void *pointer, bool isHeader)
 			prevblock->next = block->next;
 
 		freesz = UserPtr_GetUserPtrSize(block);
+#ifdef CLOBBER_FREED_MEMORY
+		/* Wipe freed memory for debugging purposes */
+		memset(block, 0x7F, block->freeptr - ((char *) block));
+#endif
 		MemoryContextNoteFree(&set->header, freesz);
 		gp_free(block);
 	}

@@ -211,6 +211,7 @@
                 <xref href="guc-list.xml#gp_workfile_limit_per_segment" type="section"
                   >gp_workfile_limit_per_segment</xref>
               </p>
+              <p><xref href="guc-list.xml#maintenance_work_mem" format="dita"/></p>
               <p>
                 <xref href="guc-list.xml#max_stack_depth" type="section">max_stack_depth</xref>
               </p>
@@ -679,6 +680,19 @@
         </simpletable>
       </body>
     </topic>
+    <topic id="topic_zd5_p32_mdb">
+      <title>Query Plan Execution</title>
+      <body>
+        <p>Control the query plan execution.</p>
+        <simpletable frame="none" id="simpletable_kbx_t32_mdb">
+          <strow>
+            <stentry>
+              <p><xref href="guc-list.xml#gp_max_slices">gp_max_slices</xref></p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
   </topic>
   <topic id="topic29" xml:lang="en">
     <title id="kh155046">Error Reporting and Logging Parameters</title>
@@ -930,10 +944,10 @@
     <topic id="query-metrics">
       <title>Query Metrics Collection Parameters</title>
       <body>
-        <p>These parameters enable and configure query metrics collection. When enabled, 
-          Greenplum Database saves metrics to shared memory during query execution. These
-          metrics are used by Pivotal Greenplum Command Center, which is included with 
-          Pivotal's commercial version of Greenplum Database.</p> 
+        <p>These parameters enable and configure query metrics collection. When enabled, Greenplum
+          Database saves metrics to shared memory during query execution. These metrics are used by
+          Pivotal Greenplum Command Center, which is included with Pivotal's commercial version of
+          Greenplum Database.</p>
         <simpletable id="query-metrics" frame="none">
           <strow>
             <stentry>
@@ -1286,8 +1300,6 @@
               <xref href="guc-list.xml#gp_external_max_segs" type="section"
                 >gp_external_max_segs</xref>
             </p>
-          </stentry>
-          <stentry>
             <p>
               <xref href="guc-list.xml#topic_lvm_ttc_3p" type="section"
                 >gp_initial_bad_row_limit</xref>
@@ -1296,6 +1308,8 @@
               <xref href="guc-list.xml#gp_reject_percent_threshold" type="section"
                 >gp_reject_percent_threshold</xref>
             </p>
+          </stentry>
+          <stentry>
             <p>
               <xref href="guc-list.xml#readable_external_table_timeout" type="section"
                 >readable_external_table_timeout</xref>
@@ -1303,6 +1317,7 @@
             <p>
               <xref href="guc-list.xml#writable_external_table_bufsize" type="section"
                 >writable_external_table_bufsize</xref></p>
+            <p><xref href="guc-list.xml#verify_gpfdists_cert">verify_gpfdists_cert</xref></p>
           </stentry>
         </strow>
       </simpletable>

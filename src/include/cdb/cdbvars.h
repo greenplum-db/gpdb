@@ -263,6 +263,12 @@ extern bool gp_external_enable_exec;
 extern int gp_external_max_segs;
 
 /*
+ * This option determines whether curl verifies the authenticity of the
+ * gpfdist's certificate.
+ */
+extern bool verify_gpfdists_cert;
+
+/*
  * gp_command_count
  *
  * This GUC is 0 at the beginning of a client session and

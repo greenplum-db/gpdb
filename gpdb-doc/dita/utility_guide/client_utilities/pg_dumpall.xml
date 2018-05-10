@@ -17,7 +17,7 @@
                 also supported in Greenplum Database. It creates a single
                 (non-parallel) dump file. <ph>For routine backups of Greenplum
                     Database it is better to use the Greenplum Database backup utility,
-                            <codeph><xref href="../admin_utilities/gpcrondump.xml#topic1"
+                            <codeph><xref href="../admin_utilities/gpbackup.xml#topic1"
                     /></codeph>, for the best performance.</ph></p>
             <p><codeph>pg_dumpall</codeph> creates a single script file that contains SQL commands
                 that can be used as input to <codeph><xref href="psql.xml#topic1" type="topic"

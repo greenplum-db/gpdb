@@ -1,0 +1,205 @@
+-- The goal of these tests is to validate that existing transactions on the
+-- primary are not hung when the mirror gets promoted. In order to validate
+-- this, mirror promotion is triggered at the following two-phase commit
+-- points:
+--   1) if the transaction hasn't prepared, then it should be aborted
+--   2) if the transaction is already prepared, then it should complete commit
+--      on the mirror
+--   3) if the transaction has committed on the primary, but not acknowledged
+--      to the master then it should complete the commit on the mirror
+
+-- Test setup: This test needs a minimum of 3 primary/mirror pairs. In order to
+-- minimize test time, each scenario is created on a different segment. Each
+-- scenario fails over to the mirror and recovery for all 3 mirrors is done at the
+-- end of the test.
+
+-- start_matchsubs
+--
+-- # create a match/subs expression
+--
+-- m/ERROR:  FTS detected connection lost during dispatch to seg0.*/
+-- s/seg\d+.*/seg_DUMMY/gm
+--
+-- end_matchsubs
+
+CREATE extension IF NOT EXISTS gp_inject_fault;
+CREATE
+1:set dtx_phase2_retry_count=5;
+SET
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+1:SELECT role, preferred_role, content FROM gp_segment_configuration;
+role|preferred_role|content
+----+--------------+-------
+p   |p             |-1     
+m   |m             |-1     
+p   |p             |0      
+m   |m             |0      
+p   |p             |1      
+m   |m             |1      
+p   |p             |2      
+m   |m             |2      
+(8 rows)
+
+-- Scenario 1: Not prepared
+1:SELECT gp_inject_fault('start_prepare', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1&:CREATE TABLE tolerance_test_table(an_int int);  <waiting ...>
+2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+2:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+1<:  <... completed>
+ERROR:  FTS detected connection lost during dispatch to seg0 127.0.0.1:25432 pid=74795:
+
+1:SELECT gp_inject_fault('start_prepare', 'reset', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT gp_inject_fault('fts_handle_message', 'reset', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 0;
+role|preferred_role
+----+--------------
+m   |p             
+p   |m             
+(2 rows)
+-- expect to fail with table not-exists
+1:INSERT INTO tolerance_test_table VALUES(42);
+ERROR:  relation "tolerance_test_table" does not exist
+LINE 1: INSERT INTO tolerance_test_table VALUES(42);
+                    ^
+
+
+-- Scenario 2: Prepared but not committed
+1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1&:CREATE TABLE tolerance_test_table(an_int int);  <waiting ...>
+2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+2:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+2:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'resume', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1<:  <... completed>
+CREATE
+
+1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT gp_inject_fault('fts_handle_message', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 1;
+role|preferred_role
+----+--------------
+m   |p             
+p   |m             
+(2 rows)
+1:INSERT INTO tolerance_test_table VALUES(42);
+INSERT 1
+
+-- Scenario 3: Commit-Prepare received on primary but not acknowledged to master
+1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1&:DROP TABLE tolerance_test_table;  <waiting ...>
+2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+2:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+1<:  <... completed>
+DROP
+
+1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT gp_inject_fault('fts_handle_message', 'reset', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
+role|preferred_role
+----+--------------
+m   |p             
+p   |m             
+(2 rows)
+
+1:!\retcode gprecoverseg -aF;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+1:!\retcode gprecoverseg -ar;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+1:SELECT role, preferred_role, content FROM gp_segment_configuration;
+role|preferred_role|content
+----+--------------+-------
+p   |p             |-1     
+m   |m             |-1     
+p   |p             |0      
+m   |m             |0      
+p   |p             |1      
+m   |m             |1      
+p   |p             |2      
+m   |m             |2      
+(8 rows)

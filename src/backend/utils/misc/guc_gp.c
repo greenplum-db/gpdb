@@ -74,6 +74,7 @@ static const char *assign_gp_workfile_compress_algorithm(const char *newval, boo
 static const char *assign_optimizer_minidump(const char *newval,
 						  bool doit, GucSource source);
 static bool assign_optimizer(bool newval, bool doit, GucSource source);
+static bool assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source);
 static bool assign_dispatch_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_gp_hashagg_default_nbatches(int newval, bool doit, GucSource source);
 
@@ -454,6 +455,9 @@ bool		optimizer_analyze_midlevel_partition;
 
 /* GUCs for replicated table */
 bool		optimizer_replicated_table_insert;
+
+/* GUCs for slice table*/
+int			gp_max_slices;
 
 /* System Information */
 static int	gp_server_version_num;
@@ -2843,6 +2847,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"verify_gpfdists_cert", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Verifies the authenticity of the gpfdist's certificate"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&verify_gpfdists_cert,
+		true, assign_verify_gpfdists_cert, NULL
+	},
+
+	{
 		{"enable_filter_pushdown", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Enable passing of query constraints to external table providers"),
 			NULL,
@@ -2972,7 +2986,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&memory_spill_ratio,
-		20, 0, 100, NULL, NULL
+		20, 0, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -4046,6 +4060,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		GP_VERSION_NUM, GP_VERSION_NUM, GP_VERSION_NUM, NULL, NULL
 	},
 
+	{
+		{"gp_max_slices", PGC_USERSET, PRESET_OPTIONS,
+			gettext_noop("Maximum slices for a single query"),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
+		},
+		&gp_max_slices,
+		0, 0, INT_MAX, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL
@@ -4831,6 +4855,15 @@ assign_optimizer(bool newval, bool doit, GucSource source)
 		}
 	}
 
+	return true;
+}
+
+static bool
+assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source)
+{
+	if (!newval && Gp_role == GP_ROLE_DISPATCH)
+		elog(WARNING, "verify_gpfdists_cert=off. Greenplum Database will stop validating "
+				"the gpfidsts SSL certificate for connections between segments and gpfdists");
 	return true;
 }
 

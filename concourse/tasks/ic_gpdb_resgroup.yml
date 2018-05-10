@@ -6,12 +6,15 @@ inputs:
   - name: gpdb_src
   - name: ccp_src
   - name: cluster_env_files
+  - name: binary_swap_gpdb
+    optional: true
 outputs:
 
 params:
   MAKE_TEST_COMMAND: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
   TEST_OS: ""
+  TEST_BINARY_SWAP: false
   CONFIGURE_FLAGS: ""
 
 run:

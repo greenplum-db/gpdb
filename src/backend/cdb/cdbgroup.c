@@ -705,8 +705,8 @@ cdb_grouping_planner(PlannerInfo *root,
 			allowed_agg &= ~AGG_3PHASE;
 
 		/*
-		 * GPDB_84_MERGE_FIXME: Don't do three-phase aggregation if any of the
-		 * aggregates use FILTERs. We used to do it, with the old, hacky,
+		 * We currently don't do three-phase aggregation if any of the
+		 * aggregates use FILTERs. We used to do it in GPDB-5, with the old, hacky,
 		 * FILTER implementation, but it doesn't work with the new one without
 		 * some extra work.
 		 */
@@ -5118,9 +5118,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	long		numGroups = (group_rows < 0) ? 0 :
 	(group_rows > LONG_MAX) ? LONG_MAX :
 	(long) group_rows;
-	// GPDB_84_MERGE_FIXME: choose_hashed_grouping no longer tracks these separately.
-	//bool		can_hash_group_key = ctx->agg_counts->canHashAgg;
-	//bool		can_hash_dqa_arg = dqaArg->can_hash;
+
 	bool can_hash_group_key = true;
 	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;

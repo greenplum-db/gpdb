@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_phj_g5j_tbb">
+<topic id="topic1">
   <title>gprestore</title>
   <body>
     <p>Restore a Greenplum Database backup that was created using the <codeph>gpbackup</codeph>
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
       located in the Greenplum Database master host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
-      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gprestore --timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
@@ -63,7 +61,7 @@
         increase this number with the <codeph>--jobs</codeph> option for large restore
         operations.</p>
       <p>When a restore operation completes, <codeph>gprestore</codeph> returns a status code. See
-          <xref href="#topic_phj_g5j_tbb/return_codes" format="dita"/>.</p>
+          <xref href="#topic1/return_codes" format="dita"/>.</p>
       <p><codeph>gprestore</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
         configuration file. See <xref

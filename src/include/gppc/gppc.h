@@ -33,7 +33,7 @@
  *
  *
  * IDENTIFICATION
- *	    src/include/gppc.h
+ *	    src/include/gppc/gppc.h
  *
  *//* ----------------------------------------------------------------------- */
 #ifndef GPPC_H

@@ -1,2 +1,5 @@
 test: pg_dumpall_current
 test: gpcheckcat
+
+test: resgroup_cleanup_basic
+test: resgroup_current_1_queue

@@ -225,6 +225,7 @@ def dump_stats(cur, oid_str, f_out):
         'INSERT INTO pg_statistic VALUES (\n' \
         '{5});\n\n'
     types = ['smallint',  # staattnum
+             'boolean',
              'real',
              'integer',
              'real',

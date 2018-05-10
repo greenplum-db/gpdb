@@ -86,11 +86,10 @@ typedef struct WalSnd
 	bool		synchronous;
 
 	/*
-	 * Records time when PID was set to 0, either during initialization or due
-	 * to disconnection. This helps to detect time passed since mirror didn't
-	 * connect.
+	 * Records time, either during initialization or due to disconnection.
+	 * This helps to detect time passed since mirror didn't connect.
 	 */
-	pg_time_t   marked_pid_zero_at_time;
+	pg_time_t   replica_disconnected_at;
 } WalSnd;
 
 extern WalSnd *MyWalSnd;
