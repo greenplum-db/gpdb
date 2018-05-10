@@ -9,7 +9,7 @@ from gppylib.db import dbconn
 def before_feature(context, feature):
 
     # we should be able to run gpexpand without having a cluster initialized
-    if 'gpexpand' in feature.tags:
+    if 'gpexpand' in feature.tags or 'gpaddmirrors' in feature.tags:
         return
 
     drop_database_if_exists(context, 'testdb')
@@ -59,7 +59,7 @@ def after_feature(context, feature):
         context.conn.close()
 
 def before_scenario(context, scenario):
-    if 'gpexpand' in context.feature.tags:
+    if 'gpexpand' in context.feature.tags or 'gpaddmirrors' in context.feature.tags:
         return
 
     if 'analyzedb' not in context.feature.tags:
@@ -67,7 +67,7 @@ def before_scenario(context, scenario):
         drop_database_if_exists(context, 'testdb')
 
 def after_scenario(context, scenario):
-    if 'gpexpand' in context.feature.tags:
+    if 'gpexpand' in context.feature.tags or 'gpaddmirrors' in context.feature.tags:
         return
 
     if 'analyzedb' not in context.feature.tags:
