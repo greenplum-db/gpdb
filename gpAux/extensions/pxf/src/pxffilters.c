@@ -1,13 +1,13 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements.	See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *	 http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -21,7 +21,6 @@
  * pxffilters.c
  *
  * Functions for handling push down of supported scan level filters to PXF.
- *
  */
 #include "pxffilters.h"
 
@@ -56,7 +55,7 @@ static List* get_attrs_from_expr(Expr *expr, bool* expressionIsSupported);
 dbop_pxfop_map pxf_supported_opr_op_expr[] =
 {
 	/* int2 */
-	{Int2EqualOperator  /* int2eq */, PXFOP_EQ},
+	{Int2EqualOperator	/* int2eq */, PXFOP_EQ},
 	{95  /* int2lt */, PXFOP_LT},
 	{520 /* int2gt */, PXFOP_GT},
 	{522 /* int2le */, PXFOP_LE},
@@ -64,7 +63,7 @@ dbop_pxfop_map pxf_supported_opr_op_expr[] =
 	{519 /* int2ne */, PXFOP_NE},
 
 	/* int4 */
-	{Int4EqualOperator  /* int4eq */, PXFOP_EQ},
+	{Int4EqualOperator	/* int4eq */, PXFOP_EQ},
 	{97  /* int4lt */, PXFOP_LT},
 	{521 /* int4gt */, PXFOP_GT},
 	{523 /* int4le */, PXFOP_LE},
@@ -80,12 +79,12 @@ dbop_pxfop_map pxf_supported_opr_op_expr[] =
 	{411 /* int8lt */, PXFOP_NE},
 
 	/* text */
-	{TextEqualOperator  /* texteq  */, PXFOP_EQ},
+	{TextEqualOperator	/* texteq  */, PXFOP_EQ},
 	{664 /* text_lt */, PXFOP_LT},
 	{666 /* text_gt */, PXFOP_GT},
 	{665 /* text_le */, PXFOP_LE},
 	{667 /* text_ge */, PXFOP_GE},
-	{531 /* textlt  */, PXFOP_NE},
+	{531 /* textlt	*/, PXFOP_NE},
 	{1209 /* textlike  */, PXFOP_LIKE},
 
 	/* int2 to int4 */
@@ -137,7 +136,7 @@ dbop_pxfop_map pxf_supported_opr_op_expr[] =
 	{1869 /* int82ne */, PXFOP_NE},
 
 	/* date */
-	{DateEqualOperator  /* date_eq */, PXFOP_EQ},
+	{DateEqualOperator	/* date_eq */, PXFOP_EQ},
 	{1095  /* date_lt */, PXFOP_LT},
 	{1097 /* date_gt */, PXFOP_GT},
 	{1096 /* date_le */, PXFOP_LE},
@@ -175,30 +174,22 @@ dbop_pxfop_map pxf_supported_opr_op_expr[] =
 	{1059 /* bpcharle */, PXFOP_LE},
 	{1061 /* bpcharge */, PXFOP_GE},
 	{1057 /* bpcharne */, PXFOP_NE},
-
-	/* boolean */
-	{BooleanEqualOperator  /* booleq */, PXFOP_EQ},
-	{58  /* boollt */, PXFOP_LT},
-	{59 /* boolgt */, PXFOP_GT},
-	{1694 /* boolle */, PXFOP_LE},
-	{1695 /* boolge */, PXFOP_GE},
-	{85 /* boolne */, PXFOP_NE}
 };
 
 
 dbop_pxfop_array_map pxf_supported_opr_scalar_array_op_expr[] =
 {
 	/* int2 */
-	{Int2EqualOperator  /* int2eq */, PXFOP_IN, true},
+	{Int2EqualOperator	/* int2eq */, PXFOP_IN, true},
 
 	/* int4 */
-	{Int4EqualOperator  /* int4eq */, PXFOP_IN, true},
+	{Int4EqualOperator	/* int4eq */, PXFOP_IN, true},
 
 	/* int8 */
 	{Int8EqualOperator /* int8eq */, PXFOP_IN, true},
 
 	/* text */
-	{TextEqualOperator  /* texteq  */, PXFOP_IN, true},
+	{TextEqualOperator	/* texteq  */, PXFOP_IN, true},
 
 	/* int2 to int4 */
 	{Int24EqualOperator /* int24eq */, PXFOP_IN, true},
@@ -219,7 +210,7 @@ dbop_pxfop_array_map pxf_supported_opr_scalar_array_op_expr[] =
 	{Int82EqualOperator /* int82eq */, PXFOP_IN, true},
 
 	/* date */
-	{DateEqualOperator  /* date_eq */, PXFOP_IN, true},
+	{DateEqualOperator	/* date_eq */, PXFOP_IN, true},
 
 	/* timestamp */
 	{TimestampEqualOperator  /* timestamp_eq */, PXFOP_IN, true},
@@ -232,13 +223,6 @@ dbop_pxfop_array_map pxf_supported_opr_scalar_array_op_expr[] =
 
 	/* bpchar */
 	{BPCharEqualOperator  /* bpchareq */, PXFOP_IN, true},
-
-	/* boolean */
-	{BooleanEqualOperator  /* booleq */, PXFOP_IN, true},
-
-	/* bytea */
-	// TODO: uncomment once HAWQ-1085 is done
-	//,{ByteaEqualOperator  /* byteaeq */, PXFOP_IN, true},
 };
 
 Oid pxf_supported_types[] =
@@ -266,7 +250,7 @@ Oid pxf_supported_types[] =
 static void
 pxf_free_expression_items_list(List *expressionItems, bool freeBoolExprNodes)
 {
-	ExpressionItem 	*expressionItem = NULL;
+	ExpressionItem	*expressionItem = NULL;
 	int previousLength;
 
 	while (list_length(expressionItems) > 0)
@@ -423,23 +407,23 @@ pxf_free_filter(PxfFilterDesc* filter)
  *
  * Where:
  *
- * a0     - first column of table
- * c23    - scalar constant with type oid 23(INT4)
- * s1     - size of constant in bytes
- * d1     - serialized constant value
- * o2     - greater than operation
- * a1     - second column of table
- * c23    - scalar constant with type oid 23(INT4)
- * s1     - size of constant in bytes
- * d5     - serialized constant value
- * o1     - less than operation
- * a2     - third column of table
- * c25    - scalar constant with type oid 25(TEXT)
- * s5     - size of constant in bytes
+ * a0	  - first column of table
+ * c23	  - scalar constant with type oid 23(INT4)
+ * s1	  - size of constant in bytes
+ * d1	  - serialized constant value
+ * o2	  - greater than operation
+ * a1	  - second column of table
+ * c23	  - scalar constant with type oid 23(INT4)
+ * s1	  - size of constant in bytes
+ * d5	  - serialized constant value
+ * o1	  - less than operation
+ * a2	  - third column of table
+ * c25	  - scalar constant with type oid 25(TEXT)
+ * s5	  - size of constant in bytes
  * dthird - serialized constant value
- * o5     - equals operation
- * l0     - AND operator
- * l0     - AND operator
+ * o5	  - equals operation
+ * l0	  - AND operator
+ * l0	  - AND operator
  *
  */
 static char *
@@ -607,7 +591,7 @@ pxf_serialize_filter_list(List *expressionItems)
 				NullTest *expr = (NullTest *) node;
 				Var *var = (Var *) expr->arg;
 
-				//TODO: add check for supported operation
+				/* TODO: add check for supported operation */
 				if (!supported_filter_type(var->vartype))
 				{
 					elog(DEBUG1, "Query will not be optimized to use filter push-down.");
@@ -658,7 +642,7 @@ pxf_serialize_filter_list(List *expressionItems)
 static bool
 opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 {
-	Node	*leftop 	= NULL;
+	Node	*leftop		= NULL;
 	Node	*rightop	= NULL;
 	Oid		 rightop_type = InvalidOid;
 	Oid		 leftop_type = InvalidOid;
@@ -667,7 +651,7 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 		return false;
 
 	leftop = get_leftop((Expr*)expr);
-	rightop	= get_rightop((Expr*)expr);
+	rightop = get_rightop((Expr*)expr);
 	leftop_type = exprType(leftop);
 	rightop_type = exprType(rightop);
 
@@ -739,7 +723,7 @@ static bool
 scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter)
 {
 
-	Node	*leftop 	= NULL;
+	Node	*leftop		= NULL;
 	Node	*rightop	= NULL;
 
 	leftop = (Node *) linitial(expr->args);
@@ -901,27 +885,27 @@ get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
 	if (IsA(expr, OpExpr))
 	{
 		leftop = get_leftop(expr);
-		rightop	= get_rightop(expr);
+		rightop = get_rightop(expr);
 	} else if (IsA(expr, ScalarArrayOpExpr))
 	{
 		ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) expr;
 		leftop = (Node *) linitial(saop->args);
 		rightop = (Node *) lsecond(saop->args);
 	} else {
-		// If expression type is not known, report that it's not supported
+		/*	If expression type is not known, report that it's not supported */
 		*expressionIsSupported = false;
 		return NIL;
 	}
 
-	// We support following combinations of operands:
-	// Var, Const
-	// Relabel, Const
-	// FuncExpr, Const
-	// Const, Var
-	// Const, Relabel
-	// Const, FuncExpr
-	// For most of datatypes column is represented by Var node
-	// For varchar column is represented by RelabelType node
+	/*	We support following combinations of operands: */
+	/*	Var, Const */
+	/*	Relabel, Const */
+	/*	FuncExpr, Const */
+	/*	Const, Var */
+	/*	Const, Relabel */
+	/*	Const, FuncExpr */
+	/*	For most of datatypes column is represented by Var node */
+	/*	For varchar column is represented by RelabelType node */
 	if (IsA(leftop, Var) && IsA(rightop, Const))
 	{
 		attrs = append_attr_from_var((Var *) leftop, attrs);
@@ -943,8 +927,8 @@ get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
 		attrs = append_attr_from_func_args(expr, attrs, expressionIsSupported);
 	}
 	else {
-		// If operand type or combination is not known, report that it's not supported
-		// to avoid partially extracted attributes from expression
+		/*	If operand type or combination is not known, report that it's not supported */
+		/*	to avoid partially extracted attributes from expression */
 		*expressionIsSupported = false;
 		return NIL;
 	}
@@ -962,8 +946,8 @@ get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
 static bool
 supported_filter_type(Oid type)
 {
-	int		 nargs 		= sizeof(pxf_supported_types) / sizeof(Oid);
-	int 	 i;
+	int		 nargs		= sizeof(pxf_supported_types) / sizeof(Oid);
+	int		 i;
 
 	/* is type supported? */
 	for (i = 0; i < nargs; i++)
@@ -1227,17 +1211,17 @@ char *serializePxfFilterQuals(List *quals)
 		return result;
 	}
 
-    int logicalOpsNum = 0;
-    List *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
+	int logicalOpsNum = 0;
+	List *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
 
-    // Trivial expression means list of OpExpr implicitly ANDed
-    bool isTrivialExpression = logicalOpsNum == 0 && expressionItems && expressionItems->length > 1;
-    if (isTrivialExpression) {
-        enrich_trivial_expression(expressionItems);
-    }
+	/*	Trivial expression means list of OpExpr implicitly ANDed */
+	bool isTrivialExpression = logicalOpsNum == 0 && expressionItems && expressionItems->length > 1;
+	if (isTrivialExpression) {
+		enrich_trivial_expression(expressionItems);
+	}
 
-    result  = pxf_serialize_filter_list(expressionItems);
-    pxf_free_expression_items_list(expressionItems, isTrivialExpression);
+	result	= pxf_serialize_filter_list(expressionItems);
+	pxf_free_expression_items_list(expressionItems, isTrivialExpression);
 
 	elog(DEBUG1, "serializePxfFilterQuals: resulting filter string is '%s'", (result == NULL) ? "null" : result);
 

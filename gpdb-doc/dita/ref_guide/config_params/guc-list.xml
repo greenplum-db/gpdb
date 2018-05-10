@@ -279,6 +279,9 @@
               <xref href="#gp_external_max_segs"/>
             </li>
             <li>
+              <xref href="#enable_filter_pushdown"/>
+            </li>
+            <li>
               <xref href="#gp_filerep_tcp_keepalives_count"/>
             </li>
             <li>
@@ -860,7 +863,8 @@
               <xref href="#wal_receiver_status_interval"/>
             </li>
             <li><xref href="#writable_external_table_bufsize" type="section"
-                >writable_external_table_bufsize</xref></li>
+                >writable_external_table_bufsize</xref>
+            </li>
             <li>
               <xref href="#xid_stop_limit"/>
             </li>
@@ -3662,6 +3666,35 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">64</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="enable_filter_pushdown">
+    <title>enable_filter_pushdown</title>
+    <body>
+      <p>Enable filter pushdown when reading data from external tables. If
+      pushdown fails, a query will be executed without it, and GPDB will apply
+      the same constraints to the result.</p>
+      <table id="enable_filter_pushdown_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

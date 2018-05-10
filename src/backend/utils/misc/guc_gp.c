@@ -476,7 +476,7 @@ char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
 
-bool		enable_filter_pushdown = true;
+bool		enable_filter_pushdown = false;
 
 /* Executor */
 bool		gp_enable_mk_sort = true;
