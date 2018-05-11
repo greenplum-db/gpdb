@@ -65,7 +65,7 @@
 #include "executor/tuptable.h"
 
 #include "catalog/pg_type.h"
-#include "cdb/cdbvars.h"                /* Gp_segment */
+#include "cdb/cdbvars.h"                /* GpIdentity.segindex */
 
 /* Does att's datatype allow packing into the 1-byte-header varlena format? */
 #define ATT_IS_PACKABLE(att) \
@@ -593,7 +593,7 @@ heap_getsysattr(HeapTuple tup, int attnum, bool *isnull)
 			elog(ERROR, "Invalid reference to \"tableoid\" system attribute");
 			break;
 		case GpSegmentIdAttributeNumber:                       /*CDB*/
-			result = Int32GetDatum(Gp_segment);
+			result = Int32GetDatum(GpIdentity.segindex);
 			break;
 		default:
 			elog(ERROR, "invalid attnum: %d", attnum);

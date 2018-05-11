@@ -340,7 +340,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->dbid == GpIdentity.dbid && cdbInfo->segindex == Gp_segment)
+		if (cdbInfo->dbid == GpIdentity.dbid && cdbInfo->segindex == GpIdentity.segindex)
 		{
 			break;
 		}
@@ -350,7 +350,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
 				 errmsg("Cannot locate entry database represented by this db in gp_segment_configuration: dbid %d content %d",
-						GpIdentity.dbid, Gp_segment)));
+						GpIdentity.dbid, GpIdentity.segindex)));
 	}
 
 	/*

@@ -1447,13 +1447,13 @@ CheckDebugDtmActionProtocol(DtxProtocolCommand dtxProtocolCommand,
 	{
 		return (Debug_dtm_action_target == DEBUG_DTM_ACTION_TARGET_PROTOCOL &&
 			Debug_dtm_action_protocol == dtxProtocolCommand &&
-			Debug_dtm_action_segment == Gp_segment);
+			Debug_dtm_action_segment == GpIdentity.segindex);
 	}
 	else
 	{
 		return (Debug_dtm_action_target == DEBUG_DTM_ACTION_TARGET_PROTOCOL &&
 			Debug_dtm_action_protocol == dtxProtocolCommand &&
-			Debug_dtm_action_segment == Gp_segment &&
+			Debug_dtm_action_segment == GpIdentity.segindex &&
 			Debug_dtm_action_nestinglevel == contextInfo->nestingLevel);
 	}
 }
@@ -1532,7 +1532,7 @@ CheckDebugDtmActionSqlCommandTag(const char *sqlCommandTag)
 
 	result = (Debug_dtm_action_target == DEBUG_DTM_ACTION_TARGET_SQL &&
 			  strcmp(Debug_dtm_action_sql_command_tag, sqlCommandTag) == 0 &&
-			  Debug_dtm_action_segment == Gp_segment);
+			  Debug_dtm_action_segment == GpIdentity.segindex);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"CheckDebugDtmActionSqlCommandTag Debug_dtm_action_target = %d, Debug_dtm_action_sql_command_tag = '%s' check '%s', Debug_dtm_action_segment = %d, Debug_dtm_action_primary = %s, result = %s.",
 		Debug_dtm_action_target,

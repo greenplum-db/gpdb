@@ -463,18 +463,7 @@ extern bool gp_interconnect_log_stats;
 
 extern bool gp_interconnect_cache_future_packets;
 
-/*
- * Parameter gp_segment
- *
- * The segment (content) controlled by this QE
- * content indicator: -1 for entry database, 0, ..., n-1 for segment database
- *
- * This variable is in the PGC_BACKEND context; it is set internally by the
- * Query Dispatcher, and is propagated to Query Executors in the connection
- * parameters.	It is not modifiable by any user, ever.
- */
 #define UNDEF_SEGMENT -2
-extern int	Gp_segment;		/* GUC var */
 
 extern int	getgpsegmentCount(void);
 

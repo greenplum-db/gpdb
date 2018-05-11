@@ -2488,7 +2488,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 
 	sprintf(extvar->GP_CID, "%x", QEDtxContextInfo.curcid);
 	sprintf(extvar->GP_SN, "%x", scancounter);
-	sprintf(extvar->GP_SEGMENT_ID, "%d", Gp_segment);
+	sprintf(extvar->GP_SEGMENT_ID, "%d", GpIdentity.segindex);
 	sprintf(extvar->GP_SEG_PORT, "%d", PostPortNumber);
 	sprintf(extvar->GP_SESSION_ID, "%d", gp_session_id);
 	sprintf(extvar->GP_SEGMENT_COUNT, "%d", GpIdentity.numsegments);

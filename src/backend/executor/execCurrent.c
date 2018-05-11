@@ -97,7 +97,7 @@ execCurrentOf(CurrentOfExpr *cexpr,
 	/*
 	 * Found the cursor. Does the table and segment match?
 	 */
-	if (current_gp_segment_id == Gp_segment &&
+	if (current_gp_segment_id == GpIdentity.segindex &&
 		(current_table_oid == InvalidOid || current_table_oid == table_oid))
 	{
 		return true;

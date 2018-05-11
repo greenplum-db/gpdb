@@ -143,8 +143,8 @@ INSERT INTO srf_testtab VALUES ('foo -1');
 
 create function srf_on_master () returns setof text as $$
 begin
-  return next 'foo ' || current_setting('gp_segment');
-  return next 'bar ' || current_setting('gp_segment');
+  return next 'foo ' || current_setting('gp_contentid');
+  return next 'bar ' || current_setting('gp_contentid');
 end;
 $$ language plpgsql EXECUTE ON MASTER;
 
@@ -169,9 +169,9 @@ begin
 
   -- To make the output reproducible, regardless of the number of segments in
   -- the cluster, only return rows on segments 0 and 1
-  if current_setting('gp_segment')::integer < 2 then
-    return next 'foo ' || current_setting('gp_segment');
-    return next 'bar ' || current_setting('gp_segment');
+  if current_setting('gp_contentid')::integer < 2 then
+    return next 'foo ' || current_setting('gp_contentid');
+    return next 'bar ' || current_setting('gp_contentid');
   end if;
 end;
 $$ language plpgsql EXECUTE ON ALL SEGMENTS;

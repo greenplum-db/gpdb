@@ -60,7 +60,7 @@ gp_instrument_shmem_summary(PG_FUNCTION_ARGS)
 
 	MemSet(nulls, 0, sizeof(nulls));
 
-	values[0] = Int32GetDatum(Gp_segment);
+	values[0] = Int32GetDatum(GpIdentity.segindex);
 	if (InstrumentGlobal)
 	{
 		values[1] = Int64GetDatum(InstrumentGlobal->free);

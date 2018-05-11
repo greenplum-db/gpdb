@@ -401,7 +401,7 @@ sisc_lockname(char *p, int size, int share_id, const char* name)
 
 	snprintf(filename, sizeof(filename),
 			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
-			 Gp_segment, gp_session_id, gp_command_count, share_id, name);
+			 GpIdentity.segindex, gp_session_id, gp_command_count, share_id, name);
 
 	path = GetTempFilePath(filename, true);
 	if (strlen(path) >= size)

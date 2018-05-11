@@ -25,7 +25,7 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbpullup.h"              /* cdbpullup_targetlist() */
 #include "cdb/cdbutil.h"
-#include "cdb/cdbvars.h"		/* Gp_segment */
+#include "cdb/cdbvars.h"		/* GpIdentity.segindex */
 #include "cdb/memquota.h"
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "miscadmin.h"
@@ -444,7 +444,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	/* Set up a temporary StatHdr for both collecting and depositing stats. */
 	ctx.msgptrs[0] = &ctx.send.hdr;
-	ctx.send.hdr.segindex = Gp_segment;
+	ctx.send.hdr.segindex = GpIdentity.segindex;
 	ctx.send.hdr.nInst = 1;
 
 	/* Set up receive context area referencing our temp StatHdr. */
@@ -538,7 +538,7 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	/* Start building the message header in our context area. */
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.hdr.type = T_CdbExplain_StatHdr;
-	ctx.hdr.segindex = Gp_segment;
+	ctx.hdr.segindex = GpIdentity.segindex;
 	ctx.hdr.nInst = 0;
 
 	/* Allocate a separate buffer where nodes can append extra message text. */

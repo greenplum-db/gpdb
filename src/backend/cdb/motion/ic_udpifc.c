@@ -2600,7 +2600,7 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
-			 Gp_segment, sendSlice->sliceIndex);
+			 GpIdentity.segindex, sendSlice->sliceIndex);
 
 	pEntry = createChunkTransportState(transportStates,
 									   sendSlice,
@@ -2847,12 +2847,12 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 
 	conn->conn_info.recvSliceIndex = pEntry->recvSlice->sliceIndex;
 	conn->conn_info.sendSliceIndex = pEntry->sendSlice->sliceIndex;
-	conn->conn_info.srcContentId = Gp_segment;
+	conn->conn_info.srcContentId = GpIdentity.segindex;
 	conn->conn_info.dstContentId = conn->cdbProc->contentid;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "setupOutgoingUDPConnection: node %d route %d srccontent %d dstcontent %d: %s",
-			 pEntry->motNodeId, conn->route, Gp_segment, conn->cdbProc->contentid, conn->remoteHostAndPort);
+			 pEntry->motNodeId, conn->route, GpIdentity.segindex, conn->cdbProc->contentid, conn->remoteHostAndPort);
 
 	conn->conn_info.srcListenerPort = (Gp_listener_port >> 16) & 0x0ffff;
 	conn->conn_info.srcPid = MyProcPid;
@@ -3088,7 +3088,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 				conn->conn_info.sendSliceIndex = aSlice->sliceIndex;
 
 				conn->conn_info.srcContentId = conn->cdbProc->contentid;
-				conn->conn_info.dstContentId = Gp_segment;
+				conn->conn_info.dstContentId = GpIdentity.segindex;
 
 				conn->conn_info.srcListenerPort = conn->cdbProc->listenerPort;
 				conn->conn_info.srcPid = conn->cdbProc->pid;
@@ -3312,7 +3312,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		if (elevel)
 			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
 									"%s; setup was %s",
-									Gp_segment, mySlice->sliceIndex,
+									GpIdentity.segindex, mySlice->sliceIndex,
 									forceEOS ? "force" : "normal",
 									transportStates->activated ? "completed" : "exited")));
 
@@ -3344,7 +3344,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		/* cleanup a Sending motion node. */
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG1, "Interconnect seg%d slice%d closing connections to slice%d (%d peers)",
-				 Gp_segment, mySlice->sliceIndex, mySlice->parentIndex,
+				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex,
 				 list_length(parentSlice->primaryProcesses));
 
 		/*
@@ -4226,7 +4226,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 		 * acks. QD (never be a sender) does not. QD may have several
 		 * concurrent running interconnect instances.
 		 */
-		if (pkt->srcContentId == Gp_segment &&
+		if (pkt->srcContentId == GpIdentity.segindex &&
 			pkt->srcPid == MyProcPid &&
 			pkt->srcListenerPort == ((Gp_listener_port >> 16) & 0x0ffff) &&
 			pkt->sessionId == gp_session_id &&
@@ -4363,7 +4363,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 		else if (DEBUG1 >= log_min_messages)
 			write_log("handleAck: not the ack we're looking for (flags 0x%x)...mot(%d) content(%d:%d) srcpid(%d:%d) dstpid(%d) srcport(%d:%d) dstport(%d) sess(%d:%d) cmd(%d:%d)",
 					  pkt->flags, pkt->motNodeId,
-					  pkt->srcContentId, Gp_segment,
+					  pkt->srcContentId, GpIdentity.segindex,
 					  pkt->srcPid, MyProcPid,
 					  pkt->dstPid,
 					  pkt->srcListenerPort, ((Gp_listener_port >> 16) & 0x0ffff),
@@ -5410,7 +5410,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
-			 Gp_segment, motNodeID, pEntry->recvSlice->sliceIndex);
+			 GpIdentity.segindex, motNodeID, pEntry->recvSlice->sliceIndex);
 
 	/*
 	 * we want to add our tcItem onto each of the outgoing buffers -- this is

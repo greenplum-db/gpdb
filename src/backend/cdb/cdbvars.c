@@ -90,8 +90,6 @@ int			gp_connections_per_thread;	/* How many libpq connections are
 int			gp_cached_gang_threshold;	/* How many gangs to keep around from
 										 * stmt to stmt. */
 
-int			Gp_segment = UNDEF_SEGMENT; /* What content this QE is handling. */
-
 bool		Gp_write_shared_snapshot;	/* tell the writer QE to write the
 										 * shared snapshot */
 
@@ -484,9 +482,6 @@ assign_gp_session_role(const char *newval, bool doit, GucSource source __attribu
 		Gp_session_role = newrole;
 		Gp_role = Gp_session_role;
 
-		if (Gp_role == GP_ROLE_DISPATCH)
-			Gp_segment = -1;
-
 		if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
 			MyProc->mppIsWriter = false;
 	}
@@ -862,7 +857,7 @@ Datum gp_execution_dbid(PG_FUNCTION_ARGS);
 Datum
 mpp_execution_segment(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_INT32(Gp_segment);
+	PG_RETURN_INT32(GpIdentity.segindex);
 }
 
 /*

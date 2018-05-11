@@ -20,7 +20,7 @@ test__set_ps_display(void **state)
 
 	gp_session_id = 1024;
 	Gp_role = GP_ROLE_DISPATCH;
-	Gp_segment = 24;
+	GpIdentity.segindex = 24;
 	gp_command_count = 1024;
 	currentSliceId = 40;
 
@@ -49,7 +49,7 @@ test__set_ps_display__real_act_prefix_size_overflow(void **state)
 
 	gp_session_id = 26351;
 	Gp_role = GP_ROLE_DISPATCH;
-	Gp_segment = -1;
+	GpIdentity.segindex = -1;
 	gp_command_count = 964;
 	currentSliceId = -1;
 
@@ -81,7 +81,7 @@ test__set_ps_display__real_act_prefix_size(void **state)
 
 	gp_session_id = 26351;
 	Gp_role = GP_ROLE_DISPATCH;
-	Gp_segment = -1;
+	GpIdentity.segindex = -1;
 	gp_command_count = 964;
 	currentSliceId = -1;
 

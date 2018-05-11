@@ -923,7 +923,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 			elog(LOG, "Interconnect seg%d slice%d sent " UINT64_FORMAT " tuples, "
 				 UINT64_FORMAT " total bytes, " UINT64_FORMAT " tuple bytes, "
 				 UINT64_FORMAT " chunks; waited " UINT64_FORMAT " usec.",
-				 Gp_segment,
+				 GpIdentity.segindex,
 				 currentSliceId,
 				 pMNEntry->stat_total_sends,
 				 pMNEntry->stat_total_bytes_sent,
@@ -938,7 +938,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 			elog(LOG, "Interconnect seg%d slice%d received from slice%d: " UINT64_FORMAT " tuples, "
 				 UINT64_FORMAT " total bytes, " UINT64_FORMAT " tuple bytes, "
 				 UINT64_FORMAT " chunks; waited " UINT64_FORMAT " usec.",
-				 Gp_segment,
+				 GpIdentity.segindex,
 				 currentSliceId,
 				 motNodeID,
 				 pMNEntry->stat_total_recvs,

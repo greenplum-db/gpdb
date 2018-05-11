@@ -83,7 +83,7 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 
-#include "cdb/cdbvars.h"  /*Gp_segment */
+#include "cdb/cdbvars.h"  /* GpIdentity.segindex */
 #include "cdb/cdbtm.h"
 #include "utils/ps_status.h"    /* get_ps_display_username() */
 #include "cdb/cdbselect.h"
@@ -2601,8 +2601,8 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 				 * choose to not write anything for the very early log messages
 				 * before GUC variables are set.
 				 */
-				if( Gp_segment != UNDEF_SEGMENT )
-					appendStringInfo(buf, "%d", Gp_segment );
+				if( GpIdentity.segindex != UNDEF_SEGMENT )
+					appendStringInfo(buf, "%d", GpIdentity.segindex);
 				break;
 			case 'I':
 				/* prints a succinct description of an MPP process. */
@@ -2624,7 +2624,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 				if (gp_command_count > 0)
 					appendStringInfo(buf, "cmd%d ", gp_command_count);
 				if (Gp_role == GP_ROLE_EXECUTE)
-					appendStringInfo(buf, "seg%d ", Gp_segment);
+					appendStringInfo(buf, "seg%d ", GpIdentity.segindex);
 				if (currentSliceId > 0)
 					appendStringInfo(buf, "slice%d ", currentSliceId);
 				if (j < buf->len &&
@@ -3361,7 +3361,7 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 	/* GPDB specific options */
 	syslogger_write_int32(true, "con", gp_session_id, amsyslogger, true);
 	syslogger_write_int32(true, "cmd", gp_command_count, amsyslogger, true);
-	syslogger_write_int32(false, "seg", Gp_segment, amsyslogger, true);
+	syslogger_write_int32(false, "seg", GpIdentity.segindex, amsyslogger, true);
 	syslogger_write_int32(true, "slice", currentSliceId, amsyslogger, true);
 	{
 		DistributedTransactionId dist_trans_id;
@@ -3498,7 +3498,7 @@ write_message_to_server_log(int elevel,
 	fix_fields.gp_is_primary = 't';
 	fix_fields.gp_session_id = gp_session_id;
 	fix_fields.gp_command_count = gp_command_count;
-	fix_fields.gp_segment_id = Gp_segment;
+	fix_fields.gp_segment_id = GpIdentity.segindex;
 	fix_fields.slice_id = currentSliceId;
 	fix_fields.error_cursor_pos = cursorpos;
 	fix_fields.internal_query_pos = internalpos;
@@ -4745,7 +4745,7 @@ StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, SIGNAL_ARG
 
 	errorData->gp_session_id = gp_session_id;
 	errorData->gp_command_count = gp_command_count;
-	errorData->gp_segment_id = Gp_segment;
+	errorData->gp_segment_id = GpIdentity.segindex;
 	errorData->slice_id = currentSliceId;
 	errorData->signal_num = (int32)postgres_signal_arg;
 	errorData->frame_depth = 0;

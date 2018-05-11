@@ -296,7 +296,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 								 errmsg("segment content ID %d does not exist", contentId),
 								 errhint("Segment content IDs can be found in gp_segment_configuration table.")));
 				}
-				else if (contentId == Gp_segment)
+				else if (contentId == GpIdentity.segindex)
 				{
 					location = pstrdup(strVal(defel->arg));
 					break;

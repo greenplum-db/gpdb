@@ -350,7 +350,7 @@ pickInstrFromShmem(const Plan *plan, int instrument_options)
 		memset(slot, 0x00, sizeof(InstrumentationSlot));
 		/* initialize the picked slot */
 		instr = &(slot->data);
-		slot->segid = (int16) Gp_segment;
+		slot->segid = (int16) GpIdentity.segindex;
 		slot->pid = MyProcPid;
 		gpmon_gettmid(&(slot->tmid));
 		slot->ssid = gp_session_id;

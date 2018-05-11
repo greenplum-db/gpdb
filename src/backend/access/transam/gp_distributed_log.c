@@ -16,7 +16,7 @@
 #include "access/clog.h"
 #include "access/distributedlog.h"
 #include "access/transam.h"
-#include "cdb/cdbvars.h"                /* Gp_segment */
+#include "cdb/cdbvars.h"                /* GpIdentity.segindex */
 
 Datum		gp_distributed_log(PG_FUNCTION_ARGS);
 
@@ -115,7 +115,7 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 			MemSet(values, 0, sizeof(values));
 			MemSet(nulls, false, sizeof(nulls));
 
-			values[0] = Int16GetDatum((int16)Gp_segment);
+			values[0] = Int16GetDatum((int16)GpIdentity.segindex);
 			values[1] = Int16GetDatum((int16)GpIdentity.dbid);
 			values[2] = TransactionIdGetDatum(distribXid);
 

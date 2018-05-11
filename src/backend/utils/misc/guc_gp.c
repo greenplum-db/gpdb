@@ -3432,16 +3432,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_segment", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Segment id of the segment db which is local to this worker process."),
-			gettext_noop("-1 for a session's entry process (qDisp) or a worker on the entry db."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&Gp_segment,
-		-999, INT_MIN, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"gp_qd_port", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Shows the Master Postmaster port."),
 			gettext_noop("0 for a session's entry process (qDisp)"),

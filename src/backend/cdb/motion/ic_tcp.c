@@ -575,7 +575,7 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG4, "Interconnect seg%d slice%d setting up sending motion node (aggressive retry is %s)",
-			 Gp_segment, sendSlice->sliceIndex,
+			 GpIdentity.segindex, sendSlice->sliceIndex,
 			 (transportStates->aggressiveRetry ? "active" : "inactive"));
 
 	pEntry = createChunkTransportState(transportStates,
@@ -949,7 +949,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 								 pEntry->recvSlice->sliceIndex,
 								 conn->remoteHostAndPort,
 								 conn->cdbProc->pid,
-								 Gp_segment,
+								 GpIdentity.segindex,
 								 pEntry->sendSlice->sliceIndex,
 								 conn->localHostAndPort,
 								 conn->sockfd)));
@@ -958,7 +958,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 		regMsg->recvSliceIndex = pEntry->recvSlice->sliceIndex;
 		regMsg->sendSliceIndex = pEntry->sendSlice->sliceIndex;
 
-		regMsg->srcContentId = Gp_segment;
+		regMsg->srcContentId = GpIdentity.segindex;
 		regMsg->srcListenerPort = Gp_listener_port & 0x0ffff;
 		regMsg->srcPid = MyProcPid;
 		regMsg->srcSessionId = gp_session_id;
@@ -1199,7 +1199,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	{
 		ereport(LOG, (errmsg("Interconnect seg%d slice%d sockfd=%d accepted "
 							 "registration message from seg%d slice%d %s pid=%d",
-							 Gp_segment,
+							 GpIdentity.segindex,
 							 msg.recvSliceIndex,
 							 conn->sockfd,
 							 msg.srcContentId,
@@ -1992,7 +1992,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates,
 		if (elevel)
 			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
 									"%s; setup was %s",
-									Gp_segment, mySlice->sliceIndex,
+									GpIdentity.segindex, mySlice->sliceIndex,
 									forceEOS ? "force" : "normal",
 									transportStates->activated ? "completed" : "exited")));
 
@@ -2065,7 +2065,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates,
 		/* cleanup a Sending motion node. */
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG3, "Interconnect seg%d slice%d closing connections to slice%d",
-				 Gp_segment, mySlice->sliceIndex, mySlice->parentIndex);
+				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex);
 
 		getChunkTransportState(transportStates, mySlice->sliceIndex, &pEntry);
 
@@ -2762,7 +2762,7 @@ SendEosTCP(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG3, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
-			 Gp_segment, motNodeID, pEntry->recvSlice->sliceIndex);
+			 GpIdentity.segindex, motNodeID, pEntry->recvSlice->sliceIndex);
 
 	/*
 	 * we want to add our tcItem onto each of the outgoing buffers -- this is

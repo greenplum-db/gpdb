@@ -285,7 +285,7 @@ extern void putTransportDirectBuffer(ChunkTransportState *transportStates,
 		int			*p_inactive = inactiveCountPtr; \
 		int			i, index, inactive = 0; \
 		/* add our tcItem to each of the outgoing buffers. */ \
-		index = Max(0, Gp_segment); /* entry-db has -1 */ \
+		index = Max(0, GpIdentity.segindex); /* entry-db has -1 */ \
 		for (i = 0; i < pEntry->numConns; i++, index++) \
 		{ \
 			if (index >= pEntry->numConns) \

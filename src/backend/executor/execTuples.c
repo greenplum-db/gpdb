@@ -101,7 +101,7 @@
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
-#include "cdb/cdbvars.h"                    /* Gp_segment */
+#include "cdb/cdbvars.h"                    /* GpIdentity.segindex */
 
 static TupleDesc ExecTypeFromTLInternal(List *targetList,
 					   bool hasoid, bool skipjunk);
@@ -1447,7 +1447,7 @@ slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
 								result = ObjectIdGetDatum(InvalidOid);
 							break;
                         case GpSegmentIdAttributeNumber:
-							result = Int32GetDatum(Gp_segment);
+							result = Int32GetDatum(GpIdentity.segindex);
 							break;
                         case TableOidAttributeNumber:
 							result = ObjectIdGetDatum(slot->tts_tableOid);

@@ -143,7 +143,7 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 			continue;
 		}
 
-		values[0] = Int32GetDatum(Gp_segment);
+		values[0] = Int32GetDatum(GpIdentity.segindex);
 		strlcpy(work_set_path, work_set->path, MAXPGPATH);
 
 		values[2] = UInt32GetDatum(crtEntry->hashvalue);
@@ -252,7 +252,7 @@ gp_workfile_mgr_used_diskspace(PG_FUNCTION_ARGS)
 	bool		nulls[NUM_USED_DISKSPACE_ELEM];
 	MemSet(nulls, 0, sizeof(nulls));
 
-	values[0] = Int32GetDatum(Gp_segment);
+	values[0] = Int32GetDatum(GpIdentity.segindex);
 	values[1] = Int64GetDatum(WorkfileSegspace_GetSize());
 
 	HeapTuple tuple = heap_form_tuple(tupdesc, values, nulls);

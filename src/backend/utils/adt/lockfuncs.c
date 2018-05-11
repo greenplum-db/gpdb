@@ -449,7 +449,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 
 		values[15] = BoolGetDatum(proc->mppIsWriter);
 
-		values[16] = Int32GetDatum(Gp_segment);
+		values[16] = Int32GetDatum(GpIdentity.segindex);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);

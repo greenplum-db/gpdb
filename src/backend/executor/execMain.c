@@ -626,7 +626,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 				elog(DEBUG1, "seg%d executing slice%d under root slice%d",
-					 Gp_segment,
+					 GpIdentity.segindex,
 					 LocallyExecutingSliceIndex(estate),
 					 RootSliceIndex(estate));
 		}

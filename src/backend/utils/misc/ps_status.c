@@ -32,7 +32,7 @@
 #include "miscadmin.h"
 #include "utils/ps_status.h"
 
-#include "cdb/cdbvars.h"        /* Gp_role, Gp_segment, currentSliceId */
+#include "cdb/cdbvars.h"        /* Gp_role, GpIdentity.segindex, currentSliceId */
 
 extern char **environ;
 extern int PostPortNumber;
@@ -358,8 +358,8 @@ set_ps_display(const char *activity, bool force)
 
 	/* Which segment is accessed by this qExec? */
 	if (Gp_role == GP_ROLE_EXECUTE &&
-		Gp_segment >= -1 && ep - cp > 0)
-		cp += snprintf(cp, ep - cp, "seg%d ", Gp_segment);
+		GpIdentity.segindex >= -1 && ep - cp > 0)
+		cp += snprintf(cp, ep - cp, "seg%d ", GpIdentity.segindex);
 
 	/* Add count of commands received from client session. */
 	if (gp_command_count > 0 && ep - cp > 0)

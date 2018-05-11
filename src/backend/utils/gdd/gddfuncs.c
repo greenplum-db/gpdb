@@ -257,7 +257,7 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 				h_dxid = h_proc->localDistribXactData.distribXid;
 			}
 
-			values[0] = Int32GetDatum(Gp_segment);
+			values[0] = Int32GetDatum(GpIdentity.segindex);
 			values[1] = TransactionIdGetDatum(w_dxid);
 			values[2] = TransactionIdGetDatum(h_dxid);
 			values[3] = BoolGetDatum(lockIsPersistent(w_lock));
