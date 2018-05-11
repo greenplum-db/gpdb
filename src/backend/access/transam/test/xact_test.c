@@ -6,6 +6,16 @@
 /* Fetch definition of PG_exception_stack */
 #include "postgres.h"
 
+#undef TransactionIdDidAbortForReader
+#define TransactionIdDidAbortForReader(xid) \
+	mock_TransactionIdDidAbortForReader(xid)
+/* Mock it so that XIDs > 100 are treated as aborted. */
+static bool
+mock_TransactionIdDidAbortForReader(TransactionId xid)
+{
+	return xid > 100;
+}
+
 #include "../xact.c"
 
 void

@@ -874,7 +874,7 @@ bool IsCurrentTransactionIdForReader(TransactionId xid)
 			 * consult clog.  In a writer, this information is available in
 			 * CurrentTransactionState.
 			 */
-			isCurrent = TransactionIdDidAbort(xid) ? false : true;
+			isCurrent = TransactionIdDidAbortForReader(xid) ? false : true;
 		}
 	}
 

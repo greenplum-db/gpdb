@@ -78,3 +78,32 @@ fetch all in c1;
 select count(*) = 80 as passed from subxact2 t2, subxact1 t1
  where t2.a = t1.b and t1.a = 3;
 commit;
+
+-- Test that effects of committed children of an aborted parent are
+-- not visible.
+begin;
+savepoint sp1;
+insert into subxact1 values (4, 1);
+savepoint sp2; -- child of sp1
+update subxact1 set b = 0 where b = 1;
+rollback to sp2;
+savepoint sp3; -- child of sp1
+insert into subxact1 values (4, 3);
+savepoint sp4; -- child of sp3
+insert into subxact1 values (4, 4);
+-- Create three nested subtransaction sunder sp4 and commit them.
+select recurse(3, 4, false);
+release sp4;
+-- Create two nested subtransactions under sp3 and abort them.
+select recurse(2, 4, true);
+release sp3;
+-- Effects of committed subtransactions under sp1 should be visible
+-- (6 rows).
+select * from subxact2 t2, subxact1 t1
+ where t2.a = t1.b and t1.a = 4;
+rollback to sp1;
+-- sp1 aborted. Effects of the subtree rooted at sp1 should no longer
+-- be visible.
+select * from subxact2 t2, subxact1 t1
+ where t2.a = t1.b and t1.a = 4;
+commit;

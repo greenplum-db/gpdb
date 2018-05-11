@@ -22,6 +22,7 @@
 #include "access/clog.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
+#include "cdb/cdbvars.h"
 #include "utils/snapmgr.h"
 
 
@@ -221,6 +222,26 @@ TransactionIdDidAbort(TransactionId transactionId)
 	 * It's not aborted.
 	 */
 	return false;
+}
+
+/*
+ * A QE reader uses this interface to determine commit status of a
+ * subtransaction ID that is known to be our own subtransaction.  This is used
+ * only in the case that subtransaction ID cache maintained in writer's PGPROC
+ * has overflown.  It's possible to use TransactionIdDidAbort() instead but it
+ * is not necessary to walk up the transaction tree and determine if a parent
+ * has aborted.  If status of the our own subtransaction is SUB_COMMITTED, it
+ * cannot have an aborted parent because upon subtransaction abort, status of
+ * the entire tree is marked as aborted in clog.
+ */
+bool
+TransactionIdDidAbortForReader(TransactionId transactionId)
+{
+	Assert(!Gp_is_writer);
+	XidStatus status = TransactionLogFetch(transactionId);
+	/* we must be dealing with a subtransaction */
+	Assert(status != TRANSACTION_STATUS_COMMITTED);
+	return status == TRANSACTION_STATUS_ABORTED;
 }
 
 /*
