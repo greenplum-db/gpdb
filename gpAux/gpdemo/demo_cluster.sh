@@ -50,7 +50,8 @@ checkDemoConfig(){
         echo " This port is needed by the Master Database instance. "
         echo ">>> Edit Makefile to correct the port number (MASTER_PORT). <<<" 
         echo -n " Check to see if the port is free by using : "
-        echo " 'netstat -an | grep ${MASTER_DEMO_PORT}"
+        echo " 'netstat -an | grep ${MASTER_DEMO_PORT}'"
+        echo " If the port is not used please make sure files ${PORT_FILE}* are deleted"
         echo ""
         return 1
     fi
@@ -64,7 +65,8 @@ checkDemoConfig(){
         echo " This port is needed by the Standby Database instance. "
         echo ">>> Edit Makefile to correct the port number (STANDBY_PORT). <<<"
         echo -n " Check to see if the port is free by using : "
-        echo " 'netstat -an | grep ${STANDBY_DEMO_PORT}"
+        echo " 'netstat -an | grep ${STANDBY_DEMO_PORT}'."
+        echo " If the port is not used please make sure files ${PORT_FILE}* are deleted"
         echo ""
         return 1
     fi
@@ -80,7 +82,8 @@ checkDemoConfig(){
             echo " This port is needed for segment database instance."
             echo ">>> Edit Makefile to correct the base ports (PORT_BASE). <<<"
             echo -n " Check to see if the port is free by using : "
-            echo " 'netstat -an | grep ${PORT_NUM}"
+            echo " 'netstat -an | grep ${PORT_NUM}'"
+            echo " If the port is not used please make sure files ${PORT_FILE}* are deleted"
             echo ""
             return 1
         fi
