@@ -1756,6 +1756,8 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	globalXminDistributedSnapshots = xmax;
 	count = 0;
 
+	Assert(ds->inProgressXidArray != NULL);
+
 	/*
 	 * Gather up current in-progress global transactions for the distributed
 	 * snapshot.

@@ -2483,7 +2483,7 @@ gatherRMInDoubtTransactions(void)
 			{
 				elog(DEBUG3, "Found in-doubt transaction with GID: %s on remote RM", gid);
 
-				strcpy(lastDtx->gid, gid);
+				strncpy(lastDtx->gid, gid, TMGIDSIZE);
 			}
 
 		}
