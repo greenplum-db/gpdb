@@ -17,7 +17,8 @@
                                 'filerep_end_to_end_full_primary',
                                 'filerep_end_to_end_incr_primary'] %}
 {% set MM_1_suites = ['gprecoverseg',
-                      'gpcheckcat'] %}
+                      'gpcheckcat',
+                      'gpaddmirrors'] %}
 {% set MM_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem',
