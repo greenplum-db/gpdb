@@ -9,6 +9,9 @@ from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 
 from gppylib.operations.segment_reconfigurer import ReconfigDetectionSQLQueryCommand
 
+MIRROR_PROMOTION_TIMEOUT=30
+
+
 class GpSegmentRebalanceOperation:
     def __init__(self, gpEnv, gpArray):
         self.gpEnv = gpEnv
@@ -58,7 +61,8 @@ class GpSegmentRebalanceOperation:
                 self.logger.info("gprecoverseg will continue with a partial rebalance.")
 
             pool.empty_completed_items()
-            segment_reconfigurer = SegmentReconfigurer(self.logger, pool)
+            segment_reconfigurer = SegmentReconfigurer(logger=self.logger,
+                    worker_pool=pool, timeout=MIRROR_PROMOTION_TIMEOUT)
             segment_reconfigurer.reconfigure()
 
             # Final step is to issue a recoverseg operation to resync segments

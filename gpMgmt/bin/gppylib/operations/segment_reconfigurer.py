@@ -22,9 +22,10 @@ class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
 
 
 class SegmentReconfigurer:
-    def __init__(self, logger, pool):
+    def __init__(self, logger, worker_pool, timeout):
         self.logger = logger
-        self.pool = pool
+        self.pool = worker_pool
+        self.timeout = timeout
 
     def _trigger_fts_probe(self, dburl):
         conn = pygresql.pg.connect(dburl.pgdb,
@@ -51,7 +52,7 @@ class SegmentReconfigurer:
                 conn = dbconn.connect(dburl)
             except Exception as e:
                 now = time.time()
-                if now < start_time + 30:
+                if now < start_time + self.timeout:
                     continue
                 else:
                     raise

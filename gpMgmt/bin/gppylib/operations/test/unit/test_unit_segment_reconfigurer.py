@@ -21,6 +21,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
     port = 15432
     user = 'postgres'
     passwd = 'passwd'
+    timeout = 30
 
     def setUp(self):
         self.conn = Mock(name='conn')
@@ -46,7 +47,8 @@ class SegmentReconfiguerTestCase(GpTestCase):
         self.cm.__exit__(None, None, None)
 
     def test_it_triggers_fts_probe(self):
-        reconfigurer = SegmentReconfigurer(self.logger, self.worker_pool)
+        reconfigurer = SegmentReconfigurer(logger=self.logger,
+                worker_pool=self.worker_pool, timeout=self.timeout)
         reconfigurer.reconfigure()
         pygresql.pg.connect.assert_has_calls([
             call(self.db, self.host, self.port, None, self.user, self.passwd),
@@ -58,7 +60,8 @@ class SegmentReconfiguerTestCase(GpTestCase):
     def test_it_retries_the_connection(self):
         self.connect.configure_mock(side_effect=[pgdb.DatabaseError, pgdb.DatabaseError, self.conn])
 
-        reconfigurer = SegmentReconfigurer(self.logger, self.worker_pool)
+        reconfigurer = SegmentReconfigurer(logger=self.logger,
+                worker_pool=self.worker_pool, timeout=self.timeout)
         reconfigurer.reconfigure()
 
         self.connect.assert_has_calls([call(self.db_url), call(self.db_url), call(self.db_url), ])
@@ -71,16 +74,18 @@ class SegmentReconfiguerTestCase(GpTestCase):
         now_mock.configure_mock(return_value=start_time)
 
         def fail_for_half_a_minute():
-            for i in xrange(1, 3):
+            new_time = start_time
+            for i in xrange(2):
                 # leap forward 15 seconds
-                new_time = start_time + 15 * i
+                new_time += self.timeout / 2
                 now_mock.configure_mock(return_value=new_time)
                 yield pgdb.DatabaseError
 
 
         self.connect.configure_mock(side_effect=fail_for_half_a_minute())
 
-        reconfigurer = SegmentReconfigurer(self.logger, self.worker_pool)
+        reconfigurer = SegmentReconfigurer(logger=self.logger,
+                worker_pool=self.worker_pool, timeout=self.timeout)
         with self.assertRaises(pgdb.DatabaseError):
             reconfigurer.reconfigure()
 
