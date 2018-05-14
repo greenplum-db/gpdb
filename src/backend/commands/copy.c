@@ -3254,7 +3254,7 @@ CopyFromDispatch(CopyState cstate)
 	bool	   *nulls;
 	int		   *attr_offsets;
 	int			total_rejected_from_qes = 0;
-	int			total_completed_from_qes = 0;
+	int64		total_completed_from_qes = 0;
 	bool		isnull;
 	bool	   *isvarlena;
 	ResultRelInfo *resultRelInfo;

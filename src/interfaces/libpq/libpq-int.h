@@ -243,7 +243,7 @@ struct pg_result
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int			numRejected;
 	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
-	int			numCompleted;
+	int64		numCompleted;
 	/* GPDB: number of processed tuples for each AO partition */
 	int			naotupcounts;
 	PQaoRelTupCount *aotupcounts;

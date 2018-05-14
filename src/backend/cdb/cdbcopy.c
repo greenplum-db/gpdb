@@ -449,7 +449,7 @@ processCopyEndResults(CdbCopy *c,
 					  bool *first_error,
 					  int *failed_count,
 					  int *total_rows_rejected,
-					  int *total_rows_completed)
+					  int64 *total_rows_completed)
 {
 	SegmentDatabaseDescriptor *q;
 	int			seg;
@@ -702,7 +702,7 @@ cdbCopyEnd(CdbCopy *c)
  * and fetch the total number of rows completed by all QEs
  */
 int
-cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
+cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed)
 {
 	SegmentDatabaseDescriptor *q;
 	SegmentDatabaseDescriptor **failedSegDBs;
