@@ -5,7 +5,7 @@ from gppylib.db import dbconn
 import pygresql.pg
 
 
-fts_probe_query = 'SELECT gp_request_fts_probe_scan()'
+FTS_PROBE_QUERY = 'SELECT gp_request_fts_probe_scan()'
 
 class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
     """A distributed query that will cause the system to detect
@@ -34,7 +34,7 @@ class SegmentReconfigurer:
                 dburl.pguser,
                 dburl.pgpass,
                 )
-        conn.query(fts_probe_query)
+        conn.query(FTS_PROBE_QUERY)
         conn.close()
 
     def reconfigure(self):

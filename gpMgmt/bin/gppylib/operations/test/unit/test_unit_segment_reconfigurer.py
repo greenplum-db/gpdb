@@ -1,7 +1,7 @@
 import datetime
 import time
 
-from gppylib.operations.segment_reconfigurer import SegmentReconfigurer, fts_probe_query
+from gppylib.operations.segment_reconfigurer import SegmentReconfigurer, FTS_PROBE_QUERY
 
 from gppylib.test.unit.gp_unittest import GpTestCase
 from pygresql import pgdb
@@ -50,7 +50,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
         reconfigurer.reconfigure()
         pygresql.pg.connect.assert_has_calls([
             call(self.db, self.host, self.port, None, self.user, self.passwd),
-            call().query(fts_probe_query),
+            call().query(FTS_PROBE_QUERY),
             call().close(),
             ]
             )
