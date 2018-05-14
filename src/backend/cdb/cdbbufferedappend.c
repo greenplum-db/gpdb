@@ -54,7 +54,8 @@ BufferedAppendInit(BufferedAppend *bufferedAppend,
 				   int32 memoryLen,
 				   int32 maxBufferLen,
 				   int32 maxLargeWriteLen,
-				   char *relationName)
+				   char *relationName,
+				   bool isTempRel)
 {
 	Assert(bufferedAppend != NULL);
 	Assert(memory != NULL);
@@ -96,6 +97,7 @@ BufferedAppendInit(BufferedAppend *bufferedAppend,
 	bufferedAppend->file = -1;
 	bufferedAppend->filePathName = NULL;
 	bufferedAppend->fileLen = 0;
+	bufferedAppend->isTempRel = isTempRel;
 }
 
 /*
@@ -206,8 +208,10 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend)
 	 * controls the visibility of data in AO / CO files, writing xlog
 	 * record after writing to file works fine.
 	 */
-	xlog_ao_insert(bufferedAppend->relFileNode, bufferedAppend->segmentFileNum,
-				   bufferedAppend->largeWritePosition, largeWriteMemory, bytestotal);
+	if (!bufferedAppend->isTempRel)
+		xlog_ao_insert(bufferedAppend->relFileNode, bufferedAppend->segmentFileNum,
+					   bufferedAppend->largeWritePosition,
+					   largeWriteMemory, bytestotal);
 
 	bufferedAppend->largeWritePosition += bufferedAppend->largeWriteLen;
 	bufferedAppend->largeWriteLen = 0;

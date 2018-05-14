@@ -27,6 +27,7 @@ typedef struct BufferedAppend
 	 * Init level.
 	 */
 	char				*relationName;
+	bool isTempRel;
 
 	/*
 	 * Large-write memory level members.
@@ -94,12 +95,13 @@ extern int32 BufferedAppendMemoryLen(
  * determine the amount of memory to supply.
  */
 extern void BufferedAppendInit(
-    BufferedAppend       *bufferedAppend,
-    uint8                *memory,
-    int32                memoryLen,
-    int32                maxBufferLen,
-    int32                maxLargeWriteLen,
-    char				 *relationName);
+	BufferedAppend *bufferedAppend,
+	uint8          *memory,
+	int32          memoryLen,
+	int32          maxBufferLen,
+	int32          maxLargeWriteLen,
+	char           *relationName,
+	bool           isTempRel);
 
 /*
  * Takes an open file handle for the next file.

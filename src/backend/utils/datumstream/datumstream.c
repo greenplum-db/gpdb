@@ -493,7 +493,8 @@ create_datumstreamwrite(
 						int32 maxsz,
 						Form_pg_attribute attr,
 						char *relname,
-						char *title)
+						char *title,
+						bool isTempRel)
 {
 	DatumStreamWrite *acc = palloc0(sizeof(DatumStreamWrite));
 
@@ -561,6 +562,7 @@ create_datumstreamwrite(
 								acc->maxAoBlockSize,
 								relname,
 								title,
+								isTempRel,
 								&acc->ao_attr);
 
 	acc->ao_write.compression_functions = compressionFunctions;

@@ -65,6 +65,7 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 							int32 maxBufferLen,
 							char *relationName,
 							char *title,
+							bool isTempRel,
 							AppendOnlyStorageAttributes *storageAttributes)
 {
 	int			relationNameLen;
@@ -147,7 +148,8 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 					   memoryLen,
 					    /* maxBufferLen */ storageWrite->maxBufferWithCompressionOverrrunLen,
 					   storageWrite->largeWriteLen,
-					   relationName);
+					   relationName,
+					   isTempRel);
 
 	elogif(Debug_appendonly_print_insert || Debug_appendonly_print_append_block, LOG,
 		   "Append-Only Storage Write initialize for table '%s' (compression = %s, compression level %d, maximum buffer length %d, large write length %d)",
@@ -275,7 +277,8 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 	 * gp_replica_check tool, to compare primary and mirror, will complain if
 	 * a file exists in master but not in mirror, even if it's empty.
 	 */
-	xlog_ao_insert(*relFileNode, segmentFileNum, 0, NULL, 0);
+	if (!storageWrite->bufferedAppend.isTempRel)
+		xlog_ao_insert(*relFileNode, segmentFileNum, 0, NULL, 0);
 }
 
 /*
