@@ -101,6 +101,7 @@ valid_tokens = {
     "format": {'parse_children': True, 'parent': "input"},
     "delimiter": {'parse_children': True, 'parent': "input"},
     "escape": {'parse_children': True, 'parent': "input"},
+    "fill_missing_fields": {'parse_children': True, 'parent': "input"},
     "null_as": {'parse_children': True, 'parent': "input"},
     "quote": {'parse_children': True, 'parent': "input"},
     "encoding": {'parse_children': True, 'parent': "input"},
@@ -2220,6 +2221,9 @@ class gpload:
 
         if self.getconfig('gpload:input:header',bool,False):
             self.formatOpts += "header "
+            
+        if self.getconfig('gpload:input:fill_missing_fields',bool,False):
+            self.formatOpts += "FILL MISSING FIELDS "
 
         force_not_null_columns = self.getconfig('gpload:input:force_not_null',list,[])
         if force_not_null_columns:
