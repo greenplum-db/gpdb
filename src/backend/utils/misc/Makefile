@@ -19,7 +19,7 @@ override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS)
 
 OBJS = guc.o help_config.o pg_rusage.o ps_status.o superuser.o tzparser.o uriparser.o \
        rbtree.o \
-       faultinjector.o netcheck.o testutils.o \
+       faultinjector.o testutils.o \
 	   bitstream.o bitmap_compression.o guc_gp.o zlib_wrapper.o backend_cancel.o
 
 # This location might depend on the installation directories. Therefore
