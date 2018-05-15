@@ -1,15 +1,28 @@
 import sys
 import signal
 from gppylib.gparray import GpArray
+from gppylib.db import dbconn
 from gppylib.commands.gp import GpSegStopCmd, GpRecoverseg
 from gppylib.commands import base
 from gppylib import gplog
 
 from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 
-from gppylib.operations.segment_reconfigurer import ReconfigDetectionSQLQueryCommand
-
 MIRROR_PROMOTION_TIMEOUT=30
+
+
+class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
+    """A distributed query that will cause the system to detect
+    the reconfiguration of the system"""
+
+    query = "SELECT * FROM gp_dist_random('gp_id')"
+
+    def __init__(self, conn):
+        base.SQLCommand.__init__(self, "Reconfig detection sql query")
+        self.cancel_conn = conn
+
+    def run(self):
+        dbconn.execSQL(self.cancel_conn, self.query)
 
 
 class GpSegmentRebalanceOperation:

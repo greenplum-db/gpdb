@@ -7,20 +7,6 @@ import pygresql.pg
 
 FTS_PROBE_QUERY = 'SELECT gp_request_fts_probe_scan()'
 
-class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
-    """A distributed query that will cause the system to detect
-    the reconfiguration of the system"""
-
-    query = "SELECT * FROM gp_dist_random('gp_id')"
-
-    def __init__(self, conn):
-        base.SQLCommand.__init__(self, "Reconfig detection sql query")
-        self.cancel_conn = conn
-
-    def run(self):
-        dbconn.execSQL(self.cancel_conn, self.query)
-
-
 class SegmentReconfigurer:
     def __init__(self, logger, worker_pool, timeout):
         self.logger = logger
@@ -57,8 +43,5 @@ class SegmentReconfigurer:
                 else:
                     raise
             else:
-                cmd = ReconfigDetectionSQLQueryCommand(conn)
-                self.pool.addCommand(cmd)
-                self.pool.wait_and_printdots(1, False)
                 conn.close()
                 break
