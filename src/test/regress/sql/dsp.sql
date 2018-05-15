@@ -355,6 +355,10 @@ set gp_default_storage_options='appendonly=true';
 create external table ext_t1 (a int, b int)
     location ('file:///tmp/test.txt') format 'text';
 \d+ ext_t1
+create external table ext_error_logging_off (a int, b int)
+    location ('file:///tmp/test.txt') format 'text'
+    segment reject limit 100;
+\d+ ext_error_logging_off
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     log errors segment reject limit 100;
