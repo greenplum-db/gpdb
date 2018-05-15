@@ -18,11 +18,12 @@
                                 'filerep_end_to_end_incr_primary'] %}
 {% set MM_1_suites = ['gprecoverseg',
                       'gpcheckcat',
-                      'gpaddmirrors'] %}
+                      'gpaddmirrors',
+                      'gpinitstandby',
+                      'gpactivatestandby'] %}
 {% set MM_2_suites = ['analyzedb',
                       'gpperfmon',
-                      'gpinitsystem',
-                      'gpinitstandby'] %}
+                      'gpinitsystem'] %}
 {% set MM_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 {% set aa_Test_suites = ['Planner_centos6',
