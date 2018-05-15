@@ -125,6 +125,7 @@ extern int xid_warn_limit;
  */
 extern bool TransactionIdDidCommit(TransactionId transactionId);
 extern bool TransactionIdDidAbort(TransactionId transactionId);
+extern bool TransactionIdDidAbortForReader(TransactionId transactionId);
 extern bool TransactionIdIsKnownCompleted(TransactionId transactionId);
 extern void TransactionIdAbort(TransactionId transactionId);
 extern void TransactionIdCommitTree(TransactionId xid, int nxids, TransactionId *xids);
