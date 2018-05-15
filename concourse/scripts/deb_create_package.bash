@@ -13,6 +13,17 @@ cp -R debian_release/debian ${SRC_DIR}/
 ORCA_TAG=$(grep -Po 'v\d+.\d+.\d+' ${SRC_DIR}/depends/conanfile_orca.txt)
 git clone --branch ${ORCA_TAG} https://github.com/greenplum-db/gporca.git ${SRC_DIR}/gporca
 
+report_error() {
+    local result=$1
+
+    echo "***********************"
+    echo "***********************"
+    echo "Failed debuild; log is:"
+    cat debuild.log
+
+    exit ${result}
+}
+
 pushd ${SRC_DIR}
     VERSION=`./getversion | tr " " "."`-oss
     SHA=`git rev-parse --short HEAD`
@@ -20,19 +31,7 @@ pushd ${SRC_DIR}
     PACKAGE=`cat debian/control | egrep "^Package: " | cut -d " " -f 2`
 
     dch --create --package $PACKAGE -v $VERSION "$MESSAGE"
+    DEB_BUILD_OPTIONS='nocheck parallel=6' debuild -us -uc -b > debuild.log || report_error $?
 popd
 
-pushd ${SRC_DIR}
-    set +e
-        DEB_BUILD_OPTIONS='nocheck parallel=6' debuild -us -uc -b > debuild.log
-        result=$?
-    set -e
-popd
-if [ ${result} -ne 0 ]; then
-    echo "***********************"
-    echo "***********************"
-    echo "Failed debuild; log is:"
-    cat debuild.log
-    exit ${result}
-fi
 cp greenplum-db*.deb deb_package_ubuntu16/greenplum-db.deb
