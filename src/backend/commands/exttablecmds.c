@@ -68,7 +68,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	DefElem    *dencoding = NULL;
 	ListCell   *option;
 	Oid			reloid = 0;
-	Oid			fmtErrTblOid = InvalidOid;
 	Datum		formatOptStr;
 	Datum		optionsStr;
 	Datum		locationUris = 0;
@@ -420,12 +419,11 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	else
 		reloid = RangeVarGetRelid(createExtStmt->relation, true);
 
-	/*
-	 * In the case of error log file, set fmtErrorTblOid to the external table
-	 * itself.
-	 */
+	bool logerrors;
 	if (issreh)
-		fmtErrTblOid = reloid;
+		logerrors = singlerowerrorDesc->into_file;
+	else
+		logerrors = false;
 
 	/*
 	 * create a pg_exttable entry for this external table.
@@ -438,7 +436,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						rejectlimittype,
 						commandString,
 						rejectlimit,
-						fmtErrTblOid,
+						logerrors,
 						encoding,
 						formatOptStr,
 						optionsStr,
