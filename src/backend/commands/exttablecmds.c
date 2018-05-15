@@ -79,6 +79,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	int			rejectlimit = -1;
 	int			encoding = -1;
 	bool		issreh = false; /* is single row error handling requested? */
+	bool 		logerrors = false;
 	bool		iswritable = createExtStmt->iswritable;
 	bool		isweb = createExtStmt->isweb;
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
@@ -313,6 +314,8 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 		issreh = true;
 
+		logerrors = singlerowerrorDesc->into_file;
+
 		/* get reject limit, and reject limit type */
 		rejectlimit = singlerowerrorDesc->rejectlimit;
 		rejectlimittype = (singlerowerrorDesc->is_limit_in_rows ? 'r' : 'p');
@@ -418,12 +421,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 		Assert(reloid != InvalidOid);
 	else
 		reloid = RangeVarGetRelid(createExtStmt->relation, true);
-
-	bool logerrors;
-	if (issreh)
-		logerrors = singlerowerrorDesc->into_file;
-	else
-		logerrors = false;
 
 	/*
 	 * create a pg_exttable entry for this external table.
