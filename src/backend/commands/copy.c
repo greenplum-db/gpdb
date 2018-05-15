@@ -143,7 +143,8 @@ InitPartitionData(PartitionData *partitionData, EState *estate, Form_pg_attribut
 static void
 FreePartitionData(PartitionData *partitionData);
 static GpDistributionData *
-GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
+GetDistributionPolicyForPartition(GpDistributionData* distData,
+                                  CopyState cstate, EState *estate,
                                   PartitionData *partitionData, HTAB *hashmap,
                                   Oid *p_attr_types,
                                   GetAttrContext *getAttrContext,
@@ -4028,7 +4029,7 @@ CopyFromDispatch(CopyState cstate)
 						getAttrContext->cdbCopy = cdbCopy;
 						getAttrContext->original_lineno_for_qe =
 							original_lineno_for_qe;
-						part_distData = GetDistributionPolicyForPartition(
+						GetDistributionPolicyForPartition(part_distData,
 							        cstate, estate, partitionData,
 							        distData->hashmap, distData->p_attr_types,
 							        getAttrContext, oldcontext);
@@ -8004,7 +8005,8 @@ FreePartitionData(PartitionData *partitionData)
 
 /* Get distribution policy for specific part */
 static GpDistributionData *
-GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
+GetDistributionPolicyForPartition(GpDistributionData* distData,
+                                  CopyState cstate, EState *estate,
                                   PartitionData *partitionData, HTAB *hashmap,
                                   Oid *p_attr_types,
                                   GetAttrContext *getAttrContext,
@@ -8043,9 +8045,10 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 		values_for_partition = getAttrContext->values;
 	}
 
+	MemSet(distData, 0, sizeof(*distData));
+
 	/* values_get_partition() calls palloc() */
 	MemoryContext save_cxt = MemoryContextSwitchTo(ctxt);
-	GpDistributionData *distData = palloc(sizeof(GpDistributionData));
 	distData->p_attr_types = p_attr_types;
 	resultRelInfo = values_get_partition(values_for_partition,
 	                                     getAttrContext->nulls,
