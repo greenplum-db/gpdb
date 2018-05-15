@@ -1,13 +1,13 @@
 
-{% set walrep_suites = ['walrep_1',
-                           'walrep_2'] %}
+{% set walrep_suites = ['walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
                       'gpcheckcat',
-                      'gpaddmirrors'] %}
+                      'gpaddmirrors',
+                      'gpinitstandby',
+                      'gpactivatestandby'] %}
 {% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
-                      'gpinitsystem',
-                      'gpinitstandby'] %}
+                      'gpinitsystem'] %}
 {% set CLI_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 ## ======================================================================
