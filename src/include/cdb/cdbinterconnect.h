@@ -15,6 +15,7 @@
 #ifndef CDBINTERCONNECT_H
 #define CDBINTERCONNECT_H
 
+#include "libpq/libpq-be.h"
 #include "nodes/primnodes.h"
 #include "cdb/tupchunklist.h"
 #include "access/htup.h"

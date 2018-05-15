@@ -13,6 +13,9 @@
  */
 #include "postgres.h"
 
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "libpq/pqformat.h"
 #include "libpq/libpq.h"
 #include "postmaster/fts.h"
@@ -21,7 +24,6 @@
 #include "utils/guc.h"
 #include "replication/gp_replication.h"
 #include "storage/fd.h"
-#include <unistd.h>
 
 #define FTS_PROBE_FILE_NAME "fts_probe_file.bak"
 #define FTS_PROBE_MAGIC_STRING "FtS PrObEr MaGiC StRiNg, pRoBiNg cHeCk......."
