@@ -35,15 +35,6 @@ TESTER= \
 DISCOVER=discover
 
 # cs-walrepl-multinode
-walrep_1:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \
-	-s gpactivatestandby \
-	-s gpinitstandby \
-	-s gpstart \
-	-s gpstate \
-	-s gpstop \
-	-s run
-
 walrep_2:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \
 	-s basebackup \
