@@ -386,6 +386,7 @@ select attrelid::regclass,attnum,attoptions
  co7      |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (24 rows)
 
+drop database if exists dsp3;
 create database dsp3;
 \c dsp3
 set gp_default_storage_options=
@@ -892,8 +893,6 @@ Execute on: all segments
 Segment reject limit: 100 rows
 Error Log in File
 
-drop external table ext_t1;
-drop external table ext_t2;
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped
 SET gp_vmem_idle_resource_timeout=30;
@@ -1064,9 +1063,6 @@ select relname, relkind, relstorage, reloptions from pg_class where relname like
 RESET gp_default_storage_options;
 -- cleanup
 \c postgres
-drop database dsp1;
-drop database dsp2;
-drop database dsp3;
 -- start_matchsubs
 -- m/.*\[ERROR\]*/
 -- s/.*\[ERROR\]/[ERROR]/gm
