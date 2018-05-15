@@ -347,10 +347,3 @@ SELECT parchildrelid::regclass, parname, parruleord
    ON p.oid = r.paroid
    WHERE p.parrelid = 'test_partitioned_table_never_decrements_parruleord_to_zero'::regclass
    ORDER BY parruleord;
-
--- PG_UPGRADE_FIXME:
--- This DROP TABLE needs to be removed after fixing issue where partition
--- typnames differ between CREATE TABLE vs. ADD PARTITION. Because of the
--- typname slightly differs, pg_upgrade fails due to the pre-assigned oid
--- going to the wrong typname.
-DROP TABLE test_partitioned_table_never_decrements_parruleord_to_zero;
