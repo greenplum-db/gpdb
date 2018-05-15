@@ -427,7 +427,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	 */
 	InsertExtTableEntry(reloid,
 						iswritable,
-						isweb,
 						issreh,
 						formattype,
 						rejectlimittype,
