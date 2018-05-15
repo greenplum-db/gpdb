@@ -1,6 +1,0 @@
-drop table functest;
-DROP TABLE
-drop function func2();
-DROP FUNCTION
-drop function func1();
-DROP FUNCTION
