@@ -23,8 +23,10 @@
                 engine understands. SQL queries consist of a sequence of commands. Commands consist
                 of a sequence of valid tokens in correct syntax order, terminated by a semicolon
                     (<codeph>;</codeph>). </p>
-            <p>For more information about SQL commands, see the <cite>Greenplum Database Reference
-                    Guide</cite>.</p>
+            <p>For more information about SQL commands, see <xref
+                    href="../../../ref_guide/sql_commands/sql_ref.xml">SQL Command
+                    Reference</xref><ph otherprops="op-print"> in the <cite>Greenplum Database
+                        Reference Guide</cite></ph>.</p>
             <p>Greenplum Database uses PostgreSQL's structure and syntax, with some exceptions. For
                 more information about SQL rules and concepts in PostgreSQL, see "SQL Syntax" in the
                 PostgreSQL documentation.</p>
@@ -186,8 +188,10 @@
                 <p>
                     <codeblock>sqrt(2)</codeblock>
                 </p>
-                <p>See the <cite>Greenplum Database Reference Guide</cite> for lists of the built-in
-                    functions by category. You can add custom functions, too.</p>
+                <p>See <xref href="../../../ref_guide/function-summary.xml#topic1">Summary of
+                        Built-in Functions</xref><ph otherprops="op-print"> in the <cite>Greenplum
+                            Database Reference Guide</cite></ph> for lists of the built-in functions
+                    by category. You can add custom functions, too.</p>
             </body>
         </topic>
         <topic id="topic11" xml:lang="en">
@@ -373,17 +377,19 @@ expression::type</codeblock>
                                     <codeph>::</codeph> is historical PostgreSQL usage.</p></li>
                         <li><i>Assignment cast</i> - Greenplum Database implicitly invokes a cast in
                             assignment contexts, when assigning a value to a column of the target
-                            data type. For example, a <codeph>CREATE CAST</codeph> command with the
-                                <codeph>AS ASSIGNMENT</codeph> clause creates a cast that is applied
-                            implicitly in the assignment context. This example assignment cast
-                            assumes that <codeph>tbl1.f1</codeph> is a column of type
-                                <codeph>text</codeph>. The <codeph>INSERT</codeph> command is
-                            allowed because the value is implicitly cast from the
-                                <codeph>integer</codeph> to <codeph>text</codeph> type.
+                            data type. For example, a <codeph><xref
+                                    href="../../../ref_guide/sql_commands/CREATE_CAST.xml">CREATE
+                                    CAST</xref></codeph> command with the <codeph>AS
+                                ASSIGNMENT</codeph> clause creates a cast that is applied implicitly
+                            in the assignment context. This example assignment cast assumes that
+                                <codeph>tbl1.f1</codeph> is a column of type <codeph>text</codeph>.
+                            The <codeph>INSERT</codeph> command is allowed because the value is
+                            implicitly cast from the <codeph>integer</codeph> to
+                                <codeph>text</codeph> type.
                             <codeblock>INSERT INTO tbl1 (f1) VALUES (42);</codeblock></li>
                         <li><i>Implicit cast</i> - Greenplum Database implicitly invokes a cast in
                             assignment or expression contexts. For example, a <codeph>CREATE
-                                CAST</codeph> command with the <codeph>AS IMPICIT</codeph> clause
+                                CAST</codeph> command with the <codeph>AS IMPLICIT</codeph> clause
                             creates an implicit cast, a cast that is applied implicitly in both the
                             assignment and expression context. This example implicit cast assumes
                             that <codeph>tbl1.c1</codeph> is a column of type <codeph>int</codeph>.
