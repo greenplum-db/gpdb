@@ -660,10 +660,15 @@ def is_any_segment_resynchronized():
     return False
 
 
-def check_row_count(tablename, dbname, nrows):
+def check_row_count(context, tablename, dbname, nrows):
     NUM_ROWS_QUERY = 'select count(*) from %s' % tablename
     # We want to bubble up the exception so that if table does not exist, the test fails
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    if hasattr(context, 'standby_was_activated') and context.standby_was_activated is True:
+        dburl = dbconn.DbURL(dbname=dbname, port=context.standby_port, hostname=context.standby_hostname)
+    else:
+        dburl = dbconn.DbURL(dbname=dbname)
+
+    with dbconn.connect(dburl) as conn:
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
