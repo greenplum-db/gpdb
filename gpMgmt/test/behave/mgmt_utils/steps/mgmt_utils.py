@@ -10,6 +10,7 @@ except:
     print "The pexpect module could not be imported."
 
 import os
+import re
 import platform
 import shutil
 import socket
@@ -27,7 +28,8 @@ from behave import given, when, then
 from datetime import datetime
 from time import sleep
 
-from gppylib.commands.gp import SegmentStart, GpStandbyStart
+
+from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands.unix import findCmdInPath
 from gppylib.operations.backup_utils import Context
 from gppylib.operations.dump import get_partition_state
@@ -1222,11 +1224,9 @@ def impl(context, tablename, dbname):
 def impl(context, table_name, part_level, dbname):
     validate_part_table_data_on_segments(context, table_name, part_level, dbname)
 
-
 @then('data for table "{table_name}" is distributed across all segments on "{dbname}"')
 def impl(context, table_name, dbname):
     validate_table_data_on_segments(context, table_name, dbname)
-
 
 @then('verify that the data of the {filename} under "{directory}" in "{dbname}" is validated after restore')
 def impl(context, filename, dbname, directory):
@@ -1255,12 +1255,12 @@ def impl(context, dbname):
 def impl(context, table_list, dbname):
     tables = [t.strip() for t in table_list.split(',')]
     for t in tables:
-        check_empty_table(t, dbname)
+        check_empty_table(context, t, dbname)
 
 
 @then('verify that table "{tname}" in "{dbname}" has "{nrows}" rows')
 def impl(context, tname, dbname, nrows):
-    check_row_count(tname, dbname, int(nrows))
+    check_row_count(context, tname, dbname, int(nrows))
 
 
 @then(
@@ -1288,13 +1288,13 @@ def impl(context, table_list, dbname, num_parts, partitionlevel=1):
 
 
 # raise exception if tname does not have X empty partitions
-def check_x_empty_parts(dbname, tname, x):
+def check_x_empty_parts(context, dbname, tname, x):
     num_empty = 0
     parts = get_partition_tablenames(tname, dbname)
     for part in parts:
         p = part[0]
         try:
-            check_empty_table(p, dbname)
+            check_empty_table(context, p, dbname)
             num_empty += 1
         except Exception as e:
             print e
@@ -1345,7 +1345,7 @@ def impl(context, table_list, dbname, num_parts):
     expected_num_parts = int(num_parts.strip())
     tables = [t.strip() for t in table_list.split(',')]
     for t in tables:
-        check_x_empty_parts(dbname, t, expected_num_parts)
+        check_x_empty_parts(context, dbname, t, expected_num_parts)
 
 
 @given('a backup file of tables "{table_list}" in "{dbname}" exists for validation')
@@ -1781,7 +1781,7 @@ def impl(context, dbname, table_file_name):
 def impl(context, dbname):
     for table in context.table_names:
         table_name = "%s.%s" % (table[0], table[1])
-        check_empty_table(table_name, dbname)
+        check_empty_table(context, table_name, dbname)
 
 
 @then('verify that the data of "{expected_count}" tables in "{dbname}" is validated after restore')
@@ -2655,6 +2655,53 @@ def impl(context):
     context.standby_data_dir = temp_data_dir
     context.standby_was_initialized = True
 
+@when('the user runs gpactivatestandby with options "{options}"')
+@then('the user runs gpactivatestandby with options "{options}"')
+def impl(context, options):
+    context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
+    context.standby_was_activated = True
+
+@then('the user runs command "{command}" from standby master')
+def impl(context, command):
+    cmd = "PGPORT=%s %s" % (context.standby_port, command)
+    run_command_remote(context,
+                       cmd,
+                       context.standby_hostname,
+                       os.getenv("GPHOME") + '/greenplum_path.sh',
+                       'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir,
+                       validateAfter=False)
+
+@when('the master goes down')
+@then('the master goes down')
+def impl(context):
+	master = MasterStop("Stopping Master", master_data_dir, mode='immediate')
+	master.run()
+
+@when('the standby master goes down')
+def impl(context):
+	master = MasterStop("Stopping Master Standby", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
+                        remoteHost=context.standby_hostname)
+	master.run(validateAfter=True)
+
+@then('clean up and revert back to original master')
+def impl(context):
+    # TODO: think about preserving the master data directory for debugging
+    shutil.rmtree(master_data_dir, ignore_errors=True)
+
+    if context.master_hostname != context.standby_hostname:
+        # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
+        cmd = "gpinitstandby -a -s %s" % context.master_hostname
+    else:
+        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (context.master_hostname, context.master_port, master_data_dir)
+
+    context.execute_steps(u'''Then the user runs command "%s" from standby master''' % cmd)
+
+    master = MasterStop("Stopping current master", context.standby_data_dir, mode='immediate', ctxt=REMOTE,
+                        remoteHost=context.standby_hostname)
+    master.run()
+
+    cmd = "gpactivatestandby -a -d %s" % master_data_dir
+    run_gpcommand(context, cmd)
 
 # from https://stackoverflow.com/questions/2838244/get-open-tcp-port-in-python/2838309#2838309
 def get_open_port():
@@ -2686,7 +2733,11 @@ def impl(context):
 @when('the user runs pg_controldata against the standby data directory')
 def impl(context):
     cmd = "pg_controldata " + context.standby_data_dir
-    run_gpcommand(context, cmd)
+    run_command_remote(context,
+                       cmd,
+                       context.standby_hostname,
+                       os.getenv("GPHOME") + '/greenplum_path.sh',
+                       'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir)
 
 
 @when('the user initializes standby master on "{hostname}"')
@@ -4076,6 +4127,14 @@ def impl(context, can_ssh):
                   ctxt=REMOTE, remoteHost=context.standby_host)
     cmd.run(validateAfter=True)
 
+@then('verify the standby master is now acting as master')
+def impl(context):
+	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
+	with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port)) as conn:
+		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
+
+	if len(segconfig) != 1:
+		raise Exception("gp_segment_configuration did not have standby master acting as new master")
 
 @given('all the compression data from "{dbname}" is saved for verification')
 def impl(context, dbname):
@@ -5548,3 +5607,50 @@ def impl(context):
                             "%d") % rank
 
         return
+
+@then('verify that gpstart on original master fails due to lower Timeline ID')
+def step_impl(context):
+    ''' This assumes that gpstart still checks for Timeline ID if a standby master is present '''
+    context.execute_steps(u'''
+                            When the user runs "gpstart -a"
+                            Then gpstart should return a return code of 2
+                            And gpstart should print "Standby activated, this node no more can act as master." to stdout
+                            ''')
+
+@then('verify gpstate with options "{options}" output is correct')
+def step_impl(context, options):
+    if '-f' in options:
+        if context.standby_hostname not in context.stdout_message or \
+                context.standby_data_dir not in context.stdout_message or \
+                str(context.standby_port) not in context.stdout_message:
+            raise Exception("gpstate -f output is missing expected standby master information")
+    elif '-s' in options:
+        if context.standby_hostname not in context.stdout_message or \
+                context.standby_data_dir not in context.stdout_message or \
+                str(context.standby_port) not in context.stdout_message:
+            raise Exception("gpstate -s output is missing expected master information")
+    elif '-Q' in options:
+        for stdout_line in context.stdout_message.split('\n'):
+            if 'up segments, from configuration table' in stdout_line:
+                segments_up = int(re.match(".*of up segments, from configuration table\s+=\s+([0-9]+)", stdout_line).group(1))
+                if segments_up <= 1:
+                    raise Exception("gpstate -Q output does not match expectations of more than one segment up")
+
+            if 'down segments, from configuration table' in stdout_line:
+                segments_down = int(re.match(".*of down segments, from configuration table\s+=\s+([0-9]+)", stdout_line).group(1))
+                if segments_down != 0:
+                    raise Exception("gpstate -Q output does not match expectations of all segments up")
+                break ## down segments comes after up segments, so we can break here
+    elif '-m' in options:
+        dbname = 'postgres'
+        with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, port=context.standby_port, dbname=dbname)) as conn:
+            query = """select datadir, port from pg_catalog.gp_segment_configuration where role='m' and content <> -1;"""
+            cursor = dbconn.execSQL(conn, query)
+
+        for i in range(cursor.rowcount):
+            datadir, port = cursor.fetchone()
+            if datadir not in context.stdout_message or \
+                str(port) not in context.stdout_message:
+                    raise Exception("gpstate -m output missing expected mirror info, datadir %s port %d" %(datadir, port))
+    else:
+        raise Exception("no verification for gpstate option given")
