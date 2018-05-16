@@ -478,6 +478,14 @@ def impl(context, table_type, tablename, dbname):
     if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
         raise Exception("Table '%s' of type '%s' does not exist when expected" % (tablename, table_type))
 
+@then('verify that there is a "{table_type}" table "{tablename}" in "{dbname}" with "{numrows}" rows')
+def impl(context, table_type, tablename, dbname, numrows):
+    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
+        raise Exception("Table '%s' of type '%s' does not exist when expected" % (tablename, table_type))
+        with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+            rowcount = dbconn.execSQLForSingleton(conn, "SELECT count(*) FROM %s" % tablename)
+            if rowcount != numrows:
+                raise Exception("Expected to find %d rows in table %s, found %d" % (numrows, tablename, rowcount))
 
 @then(
     'data for partition table "{table_name}" with partition level "{part_level}" is distributed across all segments on "{dbname}"')
@@ -1007,6 +1015,30 @@ def impl(context):
 
     context.killed_seg_host = seg_host
     context.killed_seg_port = seg_port
+
+
+@given('user kills all primary processes')
+@when('user kills all primary processes')
+@then('user kills all primary processes')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    for seg in gparray.getDbList():
+        if seg.isSegmentPrimary():
+            seg_data_dir = seg.getSegmentDataDirectory()
+            seg_host = seg.getSegmentHostName()
+            seg_port = seg.getSegmentPort()
+
+            pid = get_pid_for_segment(seg_data_dir, seg_host)
+            if pid is None:
+                raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
+
+            kill_process(int(pid), seg_host, signal.SIGKILL)
+
+            has_process_eventually_stopped(pid, seg_host)
+
+            pid = get_pid_for_segment(seg_data_dir, seg_host)
+            if pid is not None:
+                raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
 
 
 @given('user can start transactions')
@@ -1807,6 +1839,10 @@ def impl(context):
         And the path "gpcheckcat.repair.*" is removed from current working directory
     ''')
 
+@given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with "{numrows}" rows')
+def impl(context, tabletype, tablename, dbname, numrows):
+    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True, rowcount=int(numrows))
+
 
 @given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 @then('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
@@ -2398,8 +2434,9 @@ def step_impl(context, abbreviated_timezone):
 def impl(context, working_directory):
     context.working_directory = working_directory
 
-@given('a cluster is created with no mirrors on "{master_host}" and "{segment_host}"')
-def impl(context, master_host, segment_host):
+@given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
+def impl(context, master_host, segment_host_list):
+    segment_host_list = segment_host_list.split(",")
     del os.environ['MASTER_DATA_DIRECTORY']
     os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
                                                        'data/master/gpseg-1')
@@ -2413,7 +2450,7 @@ def impl(context, master_host, segment_host):
     except:
         pass
 
-    testcluster = TestCluster(hosts=[master_host,segment_host], base_dir=context.working_directory)
+    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory)
     testcluster.reset_cluster()
     testcluster.create_cluster(with_mirrors=False)
     context.gpexpand_mirrors_enabled = False
@@ -2606,6 +2643,11 @@ def impl(context):
                             "%d") % rank
 
         return
+
+@given('an FTS probe is triggered')
+def impl(context):
+    with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+        dbconn.execSQLForSingleton(conn, "SELECT gp_request_fts_probe_scan()")
 
 @then('verify that gpstart on original master fails due to lower Timeline ID')
 def step_impl(context):
