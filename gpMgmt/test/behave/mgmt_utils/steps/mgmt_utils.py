@@ -96,6 +96,9 @@ def impl(context, checksum_toggle):
     if not is_ok:
         stop_database(context)
 
+        master_port = os.getenv('PGPORT', 15432)
+        port_base = str(int(master_port) + 10000)
+
         cmd = """
         cd ../gpAux/gpdemo; \
             export MASTER_DEMO_PORT={master_port} && \
@@ -104,8 +107,8 @@ def impl(context, checksum_toggle):
             export WITH_MIRRORS={with_mirrors} && \
             ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
             env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ./demo_cluster.sh
-        """.format(master_port=os.getenv('MASTER_PORT', 15432),
-                   port_base=os.getenv('PORT_BASE', 25432),
+        """.format(master_port=master_port,
+                   port_base=port_base,
                    num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
                    with_mirrors='true',
                    checksum_toggle=checksum_toggle)
@@ -115,6 +118,8 @@ def impl(context, checksum_toggle):
         if context.ret_code != 0:
             raise Exception('%s' % context.error_message)
 
+        if ('PGDATABASE' in os.environ):
+            run_command(context, "createdb %s" % os.getenv('PGDATABASE'))
 
 @given('the database is not running')
 @when('the database is not running')
@@ -665,6 +670,28 @@ def impl(context, filename, directory):
     if not os.path.exists(filepath):
         raise Exception("file '%s' not created" % filepath)
 
+@given('the file "{filepath}" exists under master data directory')
+def impl(context, filepath):
+    fullfilepath = os.path.join(master_data_dir, filepath)
+    if not os.path.isdir(os.path.dirname(fullfilepath)):
+        os.makedirs(os.path.dirname(fullfilepath))
+    open(fullfilepath, 'a').close()
+
+@then('the file "{filepath}" does not exist under standby master data directory')
+def impl(context, filepath):
+    fullfilepath = os.path.join(context.standby_data_dir, filepath)
+    cmd = "ls -al %s" % fullfilepath
+    try:
+        run_command_remote(context,
+                           cmd,
+                           context.standby_hostname,
+                           os.getenv("GPHOME") + '/greenplum_path.sh',
+                           'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir,
+                           validateAfter=True)
+    except:
+        pass
+    else:
+        raise Exception("file '%s' should not exist in standby master data directory" % fullfilepath)
 
 @given('the directory "{dirname}" does not exist in current working directory')
 def impl(context, dirname):
@@ -774,7 +801,6 @@ def impl(context):
     if os.path.exists(authorized_keys_backup_file):
         shutil.move(authorized_keys_backup_file, authorized_keys_backup_file[:-3])
 
-
 def delete_data_dir(host):
     cmd = Command(name='remove data directories',
                   cmdStr='rm -rf %s' % master_data_dir,
@@ -782,15 +808,62 @@ def delete_data_dir(host):
                   remoteHost=host)
     cmd.run(validateAfter=True)
 
+def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', remote=False):
+    if '-n' in options:
+        cmd = "gpinitstandby -a"
+    elif remote:
+        #if standby_data_dir exists on $hostname, remove it
+        remove_dir(hostname, standby_data_dir)
+        # create the data dir on $hostname
+        create_dir(hostname, os.path.dirname(standby_data_dir))
+        # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
+        cmd = "gpinitstandby -a -s %s" % hostname
+    else:
+        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (hostname, port, standby_data_dir)
 
-@when('the user initializes a standby on the same host as master')
+    run_gpcommand(context, cmd + ' ' + options)
+
+@when('the user initializes a standby on the same host as master with same port')
 def impl(context):
-    hostname = get_master_hostname('template1')[0][0]
-    port_guaranteed_open = get_open_port()
+    hostname = get_master_hostname('postgres')[0][0]
     temp_data_dir = tempfile.mkdtemp() + "/standby_datadir"
-    cmd = "gpinitstandby -a -s %s -P %d -F %s" % (hostname, port_guaranteed_open, temp_data_dir)
-    run_gpcommand(context, cmd)
-    context.standby_data_dir = temp_data_dir
+    run_gpinitstandby(context, hostname, os.environ.get("PGPORT"), temp_data_dir)
+
+@when('the user runs gpinitstandby with options "{options}"')
+@then('the user runs gpinitstandby with options "{options}"')
+@given('the user runs gpinitstandby with options "{options}"')
+def impl(context, options):
+    dbname = 'postgres'
+    with dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT"), dbname=dbname)) as conn:
+        query = """select distinct content, hostname from gp_segment_configuration order by content limit 2;"""
+        cursor = dbconn.execSQL(conn, query)
+
+    try:
+        _, master_hostname = cursor.fetchone()
+        _, segment_hostname = cursor.fetchone()
+    except:
+        raise Exception("Did not get two rows from query: %s" % query)
+
+    # if we have two hosts, assume we're testing on a multinode cluster
+    if master_hostname != segment_hostname:
+        context.standby_hostname = segment_hostname
+        context.standby_port = os.environ.get("PGPORT")
+        remote = True
+    else:
+        context.standby_hostname = master_hostname
+        context.standby_port = get_open_port()
+        remote = False
+
+    # -n option assumes gpinitstandby already ran and put standby in catalog
+    if "-n" not in options:
+        if remote:
+            context.standby_data_dir = master_data_dir
+        else:
+            context.standby_data_dir = tempfile.mkdtemp() + "/standby_datadir"
+
+    run_gpinitstandby(context, context.standby_hostname, context.standby_port, context.standby_data_dir, options, remote)
+    context.master_hostname = master_hostname
+    context.master_port = os.environ.get("PGPORT")
     context.standby_was_initialized = True
 
 
@@ -825,54 +898,6 @@ def impl(context):
 def impl(context):
     cmd = "pg_controldata " + context.standby_data_dir
     run_gpcommand(context, cmd)
-
-
-@when('the user initializes standby master on "{hostname}"')
-def impl(context, hostname):
-    create_standby(context, hostname)
-
-
-def create_standby(context, hostname):
-    port = os.environ.get('PGPORT')
-    if hostname.strip() == 'mdw':
-        if not hasattr(context, 'master') or not hasattr(context, 'standby_host'):
-            raise Exception('Expected master to be saved but was not found')
-        delete_data_dir(context.master)
-        cmd = Command(name='gpinitstandby',
-                      cmdStr='PGPORT=%s MASTER_DATA_DIRECTORY=%s gpinitstandby -a -s %s' % (
-                      port, master_data_dir, context.master),
-                      ctxt=REMOTE,
-                      remoteHost=context.standby_host)
-        cmd.run(validateAfter=True)
-        return
-    elif hostname.strip() == 'smdw':
-        context.master = get_master_hostname('template1')[0][0]
-        context.ret_code = 0
-        context.stdout_message = ''
-        context.error_message = ''
-        segment_hostlist = get_segment_hostlist()
-        segment_hosts = [seg for seg in segment_hostlist if seg != context.master]
-        context.standby_host = segment_hosts[0]
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        segdbs = gparray.getDbList()
-        for seg in segdbs:
-            if seg.getSegmentHostName() == context.standby_host:
-                context.standby_host_data_dir = seg.getSegmentDataDirectory()
-
-        context.standby_was_initialized = False
-        standby = get_standby_host()
-
-        if standby:
-            context.standby_was_initialized = True
-            context.standby_host = standby
-            return
-
-        delete_data_dir(context.standby_host)
-        cmd = "gpinitstandby -a -s %s" % context.standby_host
-        run_gpcommand(context, cmd)
-    else:
-        raise Exception('Invalid host type specified "%s"' % hostname)
-
 
 @when('the user runs the query "{query}" on "{dbname}"')
 def impl(context, query, dbname):
@@ -1448,6 +1473,21 @@ def impl(context):
         context.standby_host = standby
         run_gpcommand(context, 'gpinitstandby -ra')
 
+@then('verify the standby master entries in catalog')
+def impl(context):
+	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"
+	check_stat_replication_query = "SELECT * FROM pg_stat_replication"
+	with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
+		statrep = dbconn.execSQL(conn, check_stat_replication_query).fetchall()
+
+	context.standby_dbid = segconfig[0][0]
+
+	if len(segconfig) != 1:
+		raise Exception("gp_segment_configuration did not have standby master")
+
+	if len(statrep) != 1:
+		raise Exception("pg_stat_replication did not have standby master")
 
 @given('all the compression data from "{dbname}" is saved for verification')
 def impl(context, dbname):
@@ -2294,7 +2334,6 @@ def step_impl(context, abbreviated_timezone):
     if context.startup_timezone != abbreviated_timezone:
         raise Exception("Expected timezone in startup.log to be %s, but it was %s" % (abbreviated_timezone, context.startup_timezone))
 
-
 @given("a working directory of the test as '{working_directory}'")
 def impl(context, working_directory):
     context.working_directory = working_directory
@@ -2507,3 +2546,13 @@ def impl(context):
                             "%d") % rank
 
         return
+
+@then('verify gpstate with options "{options}" output is correct')
+def step_impl(context, options):
+    if '-f' in options:
+        if context.standby_hostname not in context.stdout_message or \
+                context.standby_data_dir not in context.stdout_message or \
+                str(context.standby_port) not in context.stdout_message:
+            raise Exception("gpstate -f output is missing expected standby master information")
+    else:
+        raise Exception("no verification for gpstate option given")

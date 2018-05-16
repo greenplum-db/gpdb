@@ -67,7 +67,9 @@ def before_scenario(context, scenario):
         drop_database_if_exists(context, 'testdb')
 
 def after_scenario(context, scenario):
-    if 'gpexpand' in context.feature.tags or 'gpaddmirrors' in context.feature.tags:
+    if 'gpexpand' in context.feature.tags \
+        or 'gpaddmirrors' in context.feature.tags \
+        or 'gpinitstandby' in context.feature.tags:
         return
 
     if 'analyzedb' not in context.feature.tags:

@@ -117,10 +117,10 @@ def run_cmd(command):
     return (result.rc, result.stdout, result.stderr)
 
 
-def run_command_remote(context, command, host, source_file, export_mdd):
+def run_command_remote(context, command, host, source_file, export_mdd, validateAfter=True):
     cmd = Command(name='run command %s' % command,
                   cmdStr='gpssh -h %s -e \'source %s; %s; %s\'' % (host, source_file, export_mdd, command))
-    cmd.run(validateAfter=True)
+    cmd.run(validateAfter=validateAfter)
     result = cmd.get_results()
     context.ret_code = result.rc
     context.stdout_message = result.stdout
