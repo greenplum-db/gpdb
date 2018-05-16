@@ -79,7 +79,44 @@ def impl(context):
     res = cmd.get_results()
     if not res.stdout.strip():
         raise Exception('Mirror segment "%s" not active on "%s"' % (context.remote_mirror_datadir, context.remote_mirror_seghost))
-    
+
+@given('the saved "{seg}" segment is marked down in config')
+@when('the saved "{seg}" segment is marked down in config')
+@then('the saved "{seg}" segment is marked down in config')
+def impl(context, seg):
+    if seg == "mirror":
+        dbid = context.remote_mirror_segdbId
+        seghost = context.remote_mirror_seghost
+        datadir = context.remote_mirror_datadir
+    else:
+        dbid = context.remote_pair_primary_segdbId
+        seghost = context.remote_pair_primary_host
+        datadir = context.remote_pair_primary_datadir
+
+    qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (seghost, dbid)
+    row_count = getRows('postgres', qry)[0][0]
+    if row_count != 1:
+        raise Exception('Expected %s segment %s on host %s to be down, but it is running.' % (seg, datadir, seghost))\
+
+@when('user kills a "{seg}" process with the saved information')
+def impl(context, seg):
+    if seg == "mirror":
+        datadir = context.remote_mirror_datadir
+        seghost = context.remote_mirror_seghost
+    elif seg == "primary":
+        datadir = context.remote_pair_primary_datadir
+        seghost = context.remote_pair_primary_host
+    else:
+        raise Exception("Got invalid segment type: %s" % seg)
+
+    datadir_grep = '[' + datadir[0] + ']' + datadir[1:]
+    cmdStr = "ps ux | grep %s | awk '{print $2}' | xargs kill" % datadir_grep
+    cmd = Command(name='get %s pid: %s' % (seg, cmdStr),
+                  cmdStr=cmdStr,
+                  ctxt=REMOTE,
+                  remoteHost=seghost)
+    cmd.run()
+
 @given('the saved mirror segment is marked down in config')
 @when('the saved mirror segment is marked down in config')
 @then('the saved mirror segment is marked down in config')

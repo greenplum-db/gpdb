@@ -191,22 +191,24 @@ Feature: gprecoverseg tests
     @gprecoverseg_checksums
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
         Given the database is running
-        And the database "gptest1" does not exist
         And results of the sql "show data_checksums" db "template1" are stored in the context
-        # cause a full recovery AFTER an injected failure on a remote primary
+        # cause a full recovery AFTER a failure on a remote primary
         And all the segments are running
         And the segments are synchronized
         And the information of a "mirror" segment on a remote host is saved
         And the information of the corresponding primary segment on a remote host is saved
-        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "primary" segment option
-        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "primary" segment option
-        Given database "gptest1" exists
-        Then the saved mirror segment is marked down in config
-        And the saved mirror segment process is still running on that host
+        When user kills a "primary" process with the saved information
         And user can start transactions
+        Then the saved "primary" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
+        And the segments are synchronized
+        When the user runs "gprecoverseg -ra"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
+        And all the segments are running
+        And the segments are synchronized
         # validate the the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
