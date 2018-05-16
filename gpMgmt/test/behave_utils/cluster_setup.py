@@ -101,7 +101,7 @@ class TestCluster:
         # Whether to do gpinitsystem or not
         self.mirror_enabled = False
         self.number_of_segments = 2
-        self.number_of_hosts = 1
+        self.number_of_hosts = len(self.hosts)-1
         self.standby_enabled = False
 
         self.number_of_expansion_hosts = 0
