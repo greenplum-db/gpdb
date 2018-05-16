@@ -1,6 +1,50 @@
 create schema bfv_aggregate;
 set search_path=bfv_aggregate;
 
+
+--
+-- DISTINCT queries
+--
+
+-- SETUP
+create table smalldupl (a int, b int, c int) distributed by (a);
+insert into smalldupl values (1, 5, 30), (2, 3, 40), (3, 5, 60), (4, 8, 90), (5, 8, 40);
+
+create table largedupl (a int, b int, c int) distributed by (a);
+insert into largedupl select i, i%500, i from generate_series(1, 5000) i;
+
+create table largeuniq (a int, b int, c int) distributed by (a);
+insert into largeuniq select i, i, i from generate_series(1, 5000) i;
+
+analyze smalldupl;
+analyze largedupl;
+analyze largeuniq;
+
+-- TEST
+select distinct b from smalldupl order by b;
+select distinct b, c from smalldupl order by b, c;
+select distinct b, max(b) over() from smalldupl order by b;
+select distinct b, sum(b) over() from smalldupl order by b;
+select distinct b, sum(b) from smalldupl group by b order by b;
+select distinct b, sum(b) from smalldupl group by b having sum(b) > 3;
+select distinct t1.b, t2.b, t1.c, t2.c from smalldupl t1, smalldupl t2 where t1.c=t2.c order by t1.b, t1.b;
+
+-- EXPLAIN tests
+-- should see one-stage unique using hashagg
+-- since there are no duplicates and no sort is needed
+explain select distinct b from largeuniq;
+-- should see one-stage unique using sort
+-- since there are no duplicates and sort is needed anyway
+explain select distinct b from largeuniq order by b;
+
+-- should see two-stage unique using hashagg
+-- since there are many duplicates that will reduce motion cost with pre-unique
+explain select distinct b from largedupl order by b;
+-- should see two-stage unique using sort
+set enable_hashagg=off;
+explain select distinct b from largedupl order by b;
+reset enable_hashagg;
+
 --
 -- Window function with outer references in PARTITION BY/ORDER BY clause
 --

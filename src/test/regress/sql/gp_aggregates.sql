@@ -35,15 +35,6 @@ SELECT * FROM mpp2687v;
 select case when ten < 5 then ten else ten * 2 end, count(distinct two), count(distinct four) from tenk1 group by 1;
 select ten, ten, count(distinct two), count(distinct four) from tenk1 group by 1,2;
 
---MPP-20151: distinct is transformed to a group-by
-select distinct two from tenk1 order by two;
-select distinct two, four from tenk1 order by two, four;
-select distinct two, max(two) over() from tenk1 order by two;
-select distinct two, sum(four) over() from tenk1 order by two;
-select distinct two, sum(four) from tenk1 group by two order by two;
-select distinct two, sum(four) from tenk1 group by two having sum(four) > 5000;
-select distinct t1.two, t2.two, t1.four, t2.four from tenk1 t1, tenk1 t2 where t1.hundred=t2.hundred order by t1.two, t1.four;
-
 -- A variant with more result rows. We had a bug at one point where the
 -- Motion Gather node on top of this was missing the Merge Key, and hence
 -- the output came out unsorted. But it was not visible if all the rows

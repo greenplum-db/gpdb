@@ -37,8 +37,6 @@ extern List *transformWindowDefinitions(ParseState *pstate,
 						   List *windowdefs,
 						   List **targetlist);
 
-extern List *transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
-						   List **sortClause, List **groupClause);
 extern List *transformDistinctClause(ParseState *pstate,
 						List **targetlist, List *sortClause, bool is_agg);
 extern List *transformDistinctOnClause(ParseState *pstate, List *distinctlist,

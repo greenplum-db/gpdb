@@ -1298,6 +1298,182 @@ getAnySubplan(Plan *node)
 }
 
 /*--------------------
+ * apply_preunique_distinct
+ *	  CDB: For queries with DISTINCT in project list, attempt preunique
+ *	  optimization, if enabled and worthwhile. This means adding an additional
+ *	  HashAgg or [Sort] + Unique as the first stage of 2-stage DISTINCT
+ *	  implementation done underneath a Motion.
+ *
+ * use_hashed_distinct specifies using HashAgg instead of [Sort]+Unique.
+ * limit_tuples, count_est, offset_est are used to construct a pre-unique Limit
+ * as an additional optimization when LIMIT is present in the query.
+ *
+ * Returns the original or modified plan when first-stage operators that
+ * implement pre-unique.
+ *--------------------
+ */
+static Plan *apply_preunique_distinct(PlannerInfo *root,
+									  Plan *result_plan,
+									  double limit_tuples,
+									  int64 count_est,
+									  int64 offset_est,
+									  bool use_hashed_distinct,
+									  double numDistinct,
+									  List **current_pathkeys)
+{
+	Query	   *parse = root->parse;
+	double		base_cost,
+	alt_cost = 0.0;
+	bool		preliminary_limit_allowed;
+
+	double		motion_cost_per_row = (gp_motion_cost_per_row > 0.0) ?
+										gp_motion_cost_per_row : 2.0 * cpu_tuple_cost;
+
+	base_cost = result_plan->startup_cost + motion_cost_per_row * result_plan->plan_rows;
+
+	/* cost the pre_unique alternative */
+	if (use_hashed_distinct)
+	{
+		Path	hashagg_path; /* dummy for result of cost_agg */
+		HashAggTableSizes hash_info;
+
+		/*
+		 * Note that HashAgg uses a HHashTable for performing the aggregations. So
+		 * estimate the hash table size using GPDB specific methods.
+		 */
+		double hashentrysize = agg_hash_entrywidth(0 /* numaggs */,
+												   /* The following estimate is very rough but good enough for planning. */
+												   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + result_plan->plan_width,
+												   0 /* transitionSpace */);
+
+		if (!calcHashAggTableSizes(global_work_mem(root),
+								   numDistinct,
+								   hashentrysize,
+								   false,
+								   &hash_info))
+		{
+			/* 
+			 * should never happen - since we should have already done this check to
+			 * determine use_hashed_distinct
+			 */
+			return result_plan;
+		}
+
+		cost_agg(&hashagg_path, root, AGG_HASHED, 0,
+				 list_length(parse->distinctClause), /* numDistinctCols */
+				 numDistinct,
+				 result_plan->startup_cost,
+				 result_plan->total_cost,
+				 result_plan->plan_rows,
+				 hash_info.workmem_per_entry,
+				 hash_info.nbatches,
+				 hash_info.hashentry_width,
+				 false /* streaming */);
+		alt_cost += hashagg_path.startup_cost;
+	}
+	else
+	{
+		Path	sort_path;	/* dummy for result of cost_sort */
+		cost_sort(&sort_path, root, NIL, result_plan->total_cost,
+				  numDistinct, result_plan->plan_rows, -1.0);
+		alt_cost += sort_path.startup_cost;
+	}
+	alt_cost = motion_cost_per_row * numDistinct;
+	alt_cost += cpu_operator_cost * numDistinct
+				* list_length(parse->distinctClause);
+
+	/* construct pre_unique alternative if it is cheaper */
+	if (alt_cost < base_cost || root->config->gp_eager_preunique)
+	{
+		if (use_hashed_distinct)
+		{
+			/*
+			 * Reduce the number of rows to move by adding a HashAgg
+			 * prior to the redistribute Motion.
+			 */
+			result_plan = (Plan *) make_agg(root,
+											result_plan->targetlist,
+											NIL,
+											AGG_HASHED,
+											false, /* streaming */
+											list_length(parse->distinctClause),
+											extract_grouping_cols(parse->distinctClause,
+																  result_plan->targetlist),
+											extract_grouping_ops(parse->distinctClause),
+											numDistinct,
+											0, /* num_nullcols */
+											0, /* input_grouping */
+											0, /* grouping */
+											0, /* rollupGSTimes */
+											0, /* numAggs */
+											0, /* transSpace */
+											result_plan);
+
+			/* Hashed aggregation produces randomly-ordered results */
+			*current_pathkeys = NIL;
+
+			/*
+			 * Since HashAgg output is unordered, it is incorrect to apply a
+			 * Limit during pre-unique prior to redistribution when there is an
+			 * ORDER BY.
+			 */
+			preliminary_limit_allowed = !root->sort_pathkeys;
+		}
+		else
+		{
+			/*
+			 * Reduce the number of rows to move by adding a [Sort
+			 * and] Unique prior to the redistribute Motion.
+			 */
+			if (root->sort_pathkeys)
+			{
+				if (!pathkeys_contained_in(root->sort_pathkeys, *current_pathkeys))
+				{
+					result_plan = (Plan *) make_sort_from_pathkeys(root,
+																   result_plan,
+																   root->sort_pathkeys,
+																   limit_tuples,
+																   true);
+					((Sort *) result_plan)->noduplicates = gp_enable_sort_distinct;
+					*current_pathkeys = root->sort_pathkeys;
+					mark_sort_locus(result_plan);
+				}
+			}
+
+			result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
+
+			/*
+			 * Our sort node (under the unique node), unfortunately can't
+			 * guarantee uniqueness (because it happens locally and not
+			 * globally) -- so we aren't allowed to push the limit into the
+			 * sort; but we can avoid moving the entire sorted result-set by
+			 * plunking a limit on the top of the unique-node.
+			 */
+			preliminary_limit_allowed = true;
+		}
+
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+
+		result_plan->plan_rows = numDistinct;
+
+		if (parse->limitCount && preliminary_limit_allowed)
+		{
+			/*
+			 * Our extra limit operation is basically a
+			 * third-phase on multi-phase limit (see 2-phase limit
+			 * below)
+			 */
+			result_plan = pushdown_preliminary_limit(result_plan,
+													 parse->limitCount,
+													 count_est,
+													 parse->limitOffset,
+													 offset_est);
+		}
+	}
+	return result_plan;
+}
+
+/*--------------------
  * grouping_planner
  *	  Perform planning steps related to grouping, aggregation, etc.
  *	  This primarily means adding top-level processing to the basic
@@ -2436,68 +2612,16 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		if (Gp_role == GP_ROLE_DISPATCH && CdbPathLocus_IsPartitioned(current_locus))
 		{
 			bool		needMotion = !cdbpathlocus_collocates(root, current_locus,
-															  root->distinct_pathkeys, false /* exact_match */ );
+															  root->distinct_pathkeys,
+															  false /* exact_match */ );
 
 			/* Apply the preunique optimization, if enabled and worthwhile. */
-			/* GPDB_84_MERGE_FIXME: pre-unique for hash distinct not implemented. */
-			if (root->config->gp_enable_preunique && needMotion && !use_hashed_distinct)
+			if (root->config->gp_enable_preunique && needMotion)
 			{
-				double		base_cost,
-							alt_cost;
-				Path		sort_path;	/* dummy for result of cost_sort */
-
-				base_cost = motion_cost_per_row * result_plan->plan_rows;
-				alt_cost = motion_cost_per_row * numDistinct;
-				cost_sort(&sort_path, root, NIL, alt_cost,
-						  numDistinct, result_plan->plan_rows, -1.0);
-				alt_cost += sort_path.startup_cost;
-				alt_cost += cpu_operator_cost * numDistinct
-					* list_length(parse->distinctClause);
-
-				if (alt_cost < base_cost || root->config->gp_eager_preunique)
-				{
-					/*
-					 * Reduce the number of rows to move by adding a [Sort
-					 * and] Unique prior to the redistribute Motion.
-					 */
-					if (root->sort_pathkeys)
-					{
-						if (!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
-						{
-							result_plan = (Plan *) make_sort_from_pathkeys(root,
-																		   result_plan,
-																		   root->sort_pathkeys,
-																		   limit_tuples,
-																		   true);
-							((Sort *) result_plan)->noduplicates = gp_enable_sort_distinct;
-							current_pathkeys = root->sort_pathkeys;
-							mark_sort_locus(result_plan);
-						}
-					}
-
-					result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
-
-					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
-
-					result_plan->plan_rows = numDistinct;
-
-					/*
-					 * Our sort node (under the unique node), unfortunately
-					 * can't guarantee uniqueness -- so we aren't allowed to
-					 * push the limit into the sort; but we can avoid moving
-					 * the entire sorted result-set by plunking a limit on the
-					 * top of the unique-node.
-					 */
-					if (parse->limitCount)
-					{
-						/*
-						 * Our extra limit operation is basically a
-						 * third-phase on multi-phase limit (see 2-phase limit
-						 * below)
-						 */
-						result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
-					}
-				}
+				result_plan = apply_preunique_distinct(root, result_plan,
+													   limit_tuples, count_est, offset_est,
+													   use_hashed_distinct, numDistinct,
+													   &current_pathkeys);
 			}
 
 			if (needMotion)

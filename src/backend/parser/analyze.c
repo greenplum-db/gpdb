@@ -1519,25 +1519,10 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	else if (linitial(stmt->distinctClause) == NULL)
 	{
 		/* We had SELECT DISTINCT */
-		if (!pstate->p_hasAggs && !pstate->p_hasWindowFuncs && qry->groupClause == NIL)
-		{
-			/*
-			 * MPP-15040
-			 * turn distinct clause into grouping clause to make both sort-based
-			 * and hash-based grouping implementations viable plan options
-			 */
-			qry->distinctClause = transformDistinctToGroupBy(pstate,
-															 &qry->targetList,
-															 &qry->sortClause,
-															 &qry->groupClause);
-		}
-		else
-		{
-			qry->distinctClause = transformDistinctClause(pstate,
-														  &qry->targetList,
-														  qry->sortClause,
-														  false);
-		}
+		qry->distinctClause = transformDistinctClause(pstate,
+													  &qry->targetList,
+													  qry->sortClause,
+													  false);
 		qry->hasDistinctOn = false;
 	}
 	else

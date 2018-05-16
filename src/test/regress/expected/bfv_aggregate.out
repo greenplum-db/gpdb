@@ -1,6 +1,155 @@
 create schema bfv_aggregate;
 set search_path=bfv_aggregate;
 --
+-- DISTINCT queries
+--
+-- SETUP
+create table smalldupl (a int, b int, c int) distributed by (a);
+insert into smalldupl values (1, 5, 30), (2, 3, 40), (3, 5, 60), (4, 8, 90), (5, 8, 40);
+create table largedupl (a int, b int, c int) distributed by (a);
+insert into largedupl select i, i%500, i from generate_series(1, 5000) i;
+create table largeuniq (a int, b int, c int) distributed by (a);
+insert into largeuniq select i, i, i from generate_series(1, 5000) i;
+analyze smalldupl;
+analyze largedupl;
+analyze largeuniq;
+-- TEST
+select distinct b from smalldupl order by b;
+ b 
+---
+ 3
+ 5
+ 8
+(3 rows)
+
+select distinct b, c from smalldupl order by b, c;
+ b | c  
+---+----
+ 3 | 40
+ 5 | 30
+ 5 | 60
+ 8 | 40
+ 8 | 90
+(5 rows)
+
+select distinct b, max(b) over() from smalldupl order by b;
+ b | max 
+---+-----
+ 3 |   8
+ 5 |   8
+ 8 |   8
+(3 rows)
+
+select distinct b, sum(b) over() from smalldupl order by b;
+ b | sum 
+---+-----
+ 3 |  29
+ 5 |  29
+ 8 |  29
+(3 rows)
+
+select distinct b, sum(b) from smalldupl group by b order by b;
+ b | sum 
+---+-----
+ 3 |   3
+ 5 |  10
+ 8 |  16
+(3 rows)
+
+select distinct b, sum(b) from smalldupl group by b having sum(b) > 3;
+ b | sum 
+---+-----
+ 8 |  16
+ 5 |  10
+(2 rows)
+
+select distinct t1.b, t2.b, t1.c, t2.c from smalldupl t1, smalldupl t2 where t1.c=t2.c order by t1.b, t1.b;
+ b | b | c  | c  
+---+---+----+----
+ 3 | 3 | 40 | 40
+ 5 | 5 | 30 | 30
+ 5 | 5 | 60 | 60
+ 8 | 8 | 40 | 40
+(4 rows)
+
+-- EXPLAIN tests
+-- should see one-stage unique using hashagg
+-- since there are no duplicates and no sort is needed
+explain select distinct b from largeuniq;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=171.50..221.50 rows=5000 width=4)
+   ->  HashAggregate  (cost=171.50..221.50 rows=1667 width=4)
+         Group Key: b
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..159.00 rows=1667 width=4)
+               Hash Key: b
+               ->  Seq Scan on largeuniq  (cost=0.00..59.00 rows=1667 width=4)
+ Optimizer: legacy query optimizer
+(7 rows)
+
+-- should see one-stage unique using sort
+-- since there are no duplicates and sort is needed anyway
+explain select distinct b from largeuniq order by b;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Unique  (cost=466.19..503.69 rows=5000 width=4)
+   Group Key: b
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=466.19..491.19 rows=5000 width=4)
+         Merge Key: b
+         ->  Unique  (cost=466.19..491.19 rows=1667 width=4)
+               Group Key: b
+               ->  Sort  (cost=466.19..478.69 rows=1667 width=4)
+                     Sort Key (Distinct): b
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..159.00 rows=1667 width=4)
+                           Hash Key: b
+                           ->  Seq Scan on largeuniq  (cost=0.00..59.00 rows=1667 width=4)
+ Optimizer: legacy query optimizer
+(12 rows)
+
+-- should see two-stage unique using hashagg
+-- since there are many duplicates that will reduce motion cost with pre-unique
+explain select distinct b from largedupl order by b;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=115.16..116.41 rows=500 width=4)
+   Merge Key: b
+   ->  Sort  (cost=115.16..116.41 rows=167 width=4)
+         Sort Key: b
+         ->  HashAggregate  (cost=87.75..92.75 rows=167 width=4)
+               Group Key: b
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=71.50..86.50 rows=167 width=4)
+                     Hash Key: b
+                     ->  HashAggregate  (cost=71.50..76.50 rows=167 width=4)
+                           Group Key: b
+                           ->  Seq Scan on largedupl  (cost=0.00..59.00 rows=1667 width=4)
+ Optimizer: legacy query optimizer
+(12 rows)
+
+-- should see two-stage unique using sort
+set enable_hashagg=off;
+explain select distinct b from largedupl order by b;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Unique  (cost=423.61..427.36 rows=500 width=4)
+   Group Key: b
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=423.61..426.11 rows=500 width=4)
+         Merge Key: b
+         ->  Unique  (cost=423.61..426.11 rows=167 width=4)
+               Group Key: b
+               ->  Sort  (cost=423.61..424.86 rows=167 width=4)
+                     Sort Key (Distinct): b
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=366.19..401.19 rows=167 width=4)
+                           Hash Key: b
+                           ->  Unique  (cost=366.19..391.19 rows=167 width=4)
+                                 Group Key: b
+                                 ->  Sort  (cost=366.19..378.69 rows=1667 width=4)
+                                       Sort Key (Distinct): b
+                                       ->  Seq Scan on largedupl  (cost=0.00..59.00 rows=1667 width=4)
+ Optimizer: legacy query optimizer
+(16 rows)
+
+reset enable_hashagg;
+--
 -- Window function with outer references in PARTITION BY/ORDER BY clause
 --
 -- SETUP
