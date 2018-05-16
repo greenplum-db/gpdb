@@ -41,7 +41,7 @@ class SegmentReconfigurer:
                 if now < start_time + self.timeout:
                     continue
                 else:
-                    raise
+                    raise RuntimeError("Mirror promotion did not complete in {0} seconds.".format(self.timeout))
             else:
                 conn.close()
                 break

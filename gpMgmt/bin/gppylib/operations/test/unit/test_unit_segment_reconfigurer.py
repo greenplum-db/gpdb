@@ -86,8 +86,9 @@ class SegmentReconfiguerTestCase(GpTestCase):
 
         reconfigurer = SegmentReconfigurer(logger=self.logger,
                 worker_pool=self.worker_pool, timeout=self.timeout)
-        with self.assertRaises(pgdb.DatabaseError):
+        with self.assertRaises(RuntimeError) as context:
             reconfigurer.reconfigure()
+            self.assertEqual("Mirror promotion did not complete in {0} seconds.".format(self.timeout), context.exception.message)
 
         self.connect.assert_has_calls([call(self.db_url), call(self.db_url), ])
         self.conn.close.assert_has_calls([])
