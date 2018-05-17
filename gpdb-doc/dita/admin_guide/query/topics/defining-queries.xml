@@ -409,56 +409,6 @@ expression::type</codeblock>
                         <codeph>\dC</codeph>. Cast information is stored in the catalog table
                         <codeph>pg_cast</codeph>, and type information is stored in the catalog
                     table <codeph>pg_type</codeph>. </p>
-                <p>Greenplum Database 5.x limits implicit casts between <codeph>text</codeph> and
-                    other non-text data types to minimize unexpected results when performing casts
-                    to <codeph>text</codeph>. The following examples are types of queries that
-                    contain expressions that require an explicit cast.</p>
-                <p>The examples assume these table
-                    definitions.<codeblock>CREATE TABLE tbl1 (a int) DISTRIBUTED RANDOMLY ;
-CREATE TABLE tbl2 (b text) DISTRIBUTED RANDOMLY ;</codeblock></p>
-                <ul id="ul_rgx_3xt_rdb">
-                    <li>Queries that reference text type and non-text type columns in an
-                            expression.<p>In this example query, the comparison expression causes a
-                            cast
-                            error:<codeblock>SELECT * FROM tbl1, tbl2 WHERE tbl1.a = tbl2.b ;
-ERROR:  operator does not exist: integer = text
-LINE 1: SELECT * FROM tbl1, tbl2 WHERE tbl1.a = tbl2.b ;
-                                              ^
-HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.</codeblock></p><p>The
-                            updated example casts the <codeph>text</codeph> type to an
-                                <codeph>integer</codeph>
-                            type.<codeblock>SELECT * FROM tbl1, tbl2 WHERE tbl1.a = tbl2.b::int;</codeblock></p></li>
-                    <li>Queries that perform comparisons between a text type column and a non-quoted
-                        literal such as an <codeph>integer</codeph>, <codeph>number</codeph>,
-                            <codeph>float</codeph>, or <codeph>oid</codeph>.<p>This example query
-                            that compares text and non-quoted integer returns an
-                            error.<codeblock>SELECT * FROM tbl2 WHERE b = 123;</codeblock></p><p>Adding
-                            an explicit cast to text fixes the
-                            issue.<codeblock>SELECT * FROM tbl2 WHERE b = 123::text;</codeblock></p></li>
-                    <li>Queries that perform comparisons between a <codeph>date</codeph> type column
-                        or literal of type <codeph>date</codeph> and an integer-like column.<p> This
-                            example query compares an <codeph>integer</codeph> column with a literal
-                            of type <codeph>date</codeph> returns an
-                            error.<codeblock>SELECT a FROM tbl1 WHERE a = '20130101'::date;</codeblock></p><p>There
-                            is no built-in cast from integer type to <codeph>date</codeph> type.
-                            However, you can explicitly cast an <codeph>integer</codeph> to
-                                <codeph>text</codeph> and then to <codeph>date</codeph>. The updated
-                            examples use the <codeph>cast</codeph> and <codeph>::</codeph>
-                            syntax.<codeblock>SELECT * FROM tbl1 WHERE cast(cast(a AS text) AS date)  = '20130101'::date;
-SELECT * FROM tbl1 WHERE (a::text)::date  = '20130101'::date;</codeblock></p></li>
-                    <li>Queries that mix the <codeph>text</codeph> type and a non-text data type in
-                        function and aggregate arguments.<p>In this example, the query that executes
-                            the example function <codeph>concat</codeph> returns a cast
-                            error.<codeblock>CREATE FUNCTION concat(text, text) 
-RETURNS text AS $$ 
-  SELECT $1 || $2 
-$$ STRICT LANGUAGE SQL;
-
-SELECT concat('a', 2);</codeblock></p><p>Adding
-                            an explicit cast from <codeph>integer</codeph> to <codeph>text</codeph>
-                            fixes the
-                        issue.<codeblock>SELECT concat('a', 2::text);</codeblock></p></li>
-                </ul>
             </body>
         </topic>
         <topic id="topic15" xml:lang="en">
