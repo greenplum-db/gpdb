@@ -1308,6 +1308,11 @@ if test "$enable_gpfdist" = yes ; then
   AC_SUBST(have_yaml)
 fi
 
+if test "$enable_mapreduce" = yes; then
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_ERROR([libyaml is required for Greenplum Mapreduce])])
+  AC_SUBST(have_yaml)
+fi
+
 if test "$enable_gpperfmon" = yes; then
   CHECK_APR()
   GPAC_PATH_APU_1_CONFIG
