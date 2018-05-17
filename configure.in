@@ -1397,6 +1397,11 @@ if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_LIBS
 fi
 
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  AC_CHECK_LIB(execinfo, backtrace, [], [AC_MSG_ERROR([library 'execinfo' is required for backtrace support])])
+fi
+
 ##
 ## Header files
 ##
@@ -1574,6 +1579,11 @@ fi
 if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_VERSION
+fi
+
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  AC_CHECK_HEADERS([execinfo.h], [], [AC_MSG_ERROR([header file <execinfo.h> is required for backtrace support])])
 fi
 
 ##
