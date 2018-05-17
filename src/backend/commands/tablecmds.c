@@ -1392,7 +1392,7 @@ relid_set_new_relfilenode(Oid relid, TransactionId recentXmin)
 static void
 ao_aux_tables_safe_truncate(Relation rel)
 {
-	if (!RelationIsAoRows(rel) && !RelationIsAoCols(rel))
+	if (!RelationIsAppendOptimized(rel))
 		return;
 
 	Oid relid = RelationGetRelid(rel);
@@ -7242,7 +7242,8 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		 * workaround; see GitHub issue
 		 *     https://github.com/greenplum-db/gpdb/issues/3756
 		 */
-		if (!defval && (RelationIsAoRows(rel) || RelationIsAoCols(rel)))
+
+		if (!defval && RelationIsAppendOptimized(rel))
 		{
 			defval = (Expr *) makeNullConst(typeOid, -1, collOid);
 		}
@@ -10940,7 +10941,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 				ATExecChangeOwner(tuple_class->reltoastrelid, newOwnerId,
 								  true, lockmode);
 
-			if(RelationIsAoRows(target_rel) || RelationIsAoCols(target_rel))
+			if (RelationIsAppendOptimized(target_rel))
 			{
 				Oid segrelid, blkdirrelid;
 				Oid visimap_relid;
@@ -11066,7 +11067,7 @@ ATExecClusterOn(Relation rel, const char *indexName, LOCKMODE lockmode)
 {
 	Oid			indexOid;
 
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -11310,7 +11311,7 @@ ATExecSetRelOptions(Relation rel, List *defList, bool isReset, LOCKMODE lockmode
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			if(RelationIsAoRows(rel) || RelationIsAoCols(rel))
+			if (RelationIsAppendOptimized(rel))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("altering reloptions for append only tables"
@@ -11483,7 +11484,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	reltoastidxid = rel->rd_rel->reltoastidxid;
 
 	/* Get the ao sub objects */
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 		GetAppendOnlyEntryAuxOids(tableOid, SnapshotNow,
 								  &relaosegrelid,
 								  &relaoblkdirrelid, &relaoblkdiridxid,
@@ -11533,7 +11534,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	 */
 	RelationCreateStorage(newrnode, rel->rd_rel->relpersistence);
 
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		copy_append_only_data(rel->rd_node, newrnode, rel->rd_backend, rel->rd_rel->relpersistence);
 	}
@@ -12789,8 +12790,7 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 
 	pre_built = prebuild_temp_table(rel, tmprel, dist_clause,
 									storage_opts,
-									(RelationIsAoRows(rel) ||
-									 RelationIsAoCols(rel)),
+									RelationIsAppendOptimized(rel),
 									useExistingColumnAttributes);
 	if (pre_built)
 	{
@@ -15708,8 +15708,7 @@ make_orientation_options(Relation rel)
 {
 	List *l = NIL;
 
-	if (RelationIsAoRows(rel) ||
-		RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		l = lappend(l, makeDefElem("appendonly", (Node *)makeString("true")));
 

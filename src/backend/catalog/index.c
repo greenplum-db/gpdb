@@ -2034,8 +2034,7 @@ IndexBuildScan(Relation parentRelation,
 		OldestXmin = InvalidTransactionId;		/* not used */
 	}
 	else if (indexInfo->ii_Concurrent ||
-			 RelationIsAoRows(parentRelation) ||
-			 RelationIsAoCols(parentRelation))
+			 RelationIsAppendOptimized(parentRelation))
 	{
 		snapshot = RegisterSnapshot(GetTransactionSnapshot());
 		registered_snapshot = true;
@@ -3530,7 +3529,7 @@ reindex_relation(Oid relid, int flags)
 	 */
 	rel = heap_open(relid, ShareLock);
 
-	relIsAO = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
+	relIsAO = RelationIsAppendOptimized(rel);
 
 	toast_relid = rel->rd_rel->reltoastrelid;
 

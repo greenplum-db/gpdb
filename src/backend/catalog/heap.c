@@ -2220,7 +2220,7 @@ heap_drop_with_catalog(Oid relid)
 
 	relkind = rel->rd_rel->relkind;
 
-	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
+	is_appendonly_rel = RelationIsAppendOptimized(rel);
 	is_external_rel = RelationIsExternal(rel);
 
 	/*
@@ -3244,7 +3244,7 @@ ao_aux_tables_truncate(Relation rel)
 	Oid			aoblkdir_relid = InvalidOid;
 	Oid			aovisimap_relid = InvalidOid;
 
-	if (!RelationIsAoRows(rel) && !RelationIsAoCols(rel))
+	if (!RelationIsAppendOptimized(rel))
 		return;
 
 	GetAppendOnlyEntryAuxOids(ao_base_relid, SnapshotNow,

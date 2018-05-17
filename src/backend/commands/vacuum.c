@@ -423,7 +423,7 @@ vacuum_assign_compaction_segno(Relation onerel,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 	Assert(RelationIsValid(onerel));
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationIsAppendOptimized(onerel));
 
 	/*
 	 * Assign a compaction segment num and insert segment num
@@ -1969,7 +1969,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 
 	if (!is_heap)
 	{
-		Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+		Assert(RelationIsAppendOptimized(onerel));
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), SnapshotNow,
 								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
@@ -2105,7 +2105,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	 * after the drop.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && vacstmt->appendonly_compaction_segno &&
-		(RelationIsAoRows(onerel) || RelationIsAoCols(onerel)))
+		RelationIsAppendOptimized(onerel))
 	{
 		if (vacstmt->appendonly_phase == AOVAC_COMPACT)
 		{
@@ -2226,7 +2226,7 @@ static bool vacuum_appendonly_index_should_vacuum(Relation aoRelation,
 	int64 hidden_tupcount;
 	FileSegTotals *totals;
 
-	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
+	Assert(RelationIsAppendOptimized(aoRelation));
 
 	if(Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -2284,7 +2284,7 @@ vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt)
 	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
 	int totalSegfiles;
 
-	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
+	Assert(RelationIsAppendOptimized(aoRelation));
 	Assert(vacstmt);
 
 	memset(&vacuumIndexState, 0, sizeof(vacuumIndexState));

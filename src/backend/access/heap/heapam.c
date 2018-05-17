@@ -1029,7 +1029,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 			return NULL;
 
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
+			RelationIsAppendOptimized(rel))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
@@ -1050,8 +1050,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 * okay.
 	 */
 	if (lockmode == RowExclusiveLock &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
+		Gp_role == GP_ROLE_DISPATCH && RelationIsAppendOptimized(rel))
 	{
 		elog(ERROR, "relation \"%s\" concurrently updated", 
 			 RelationGetRelationName(rel));
@@ -2832,7 +2831,7 @@ heap_update_internal(Relation relation, ItemPointer otid, HeapTuple newtup,
 	bool		all_visible_cleared_new = false;
 
 	Assert(ItemPointerIsValid(otid));
-	Assert(!(RelationIsAoRows(relation) || RelationIsAoCols(relation)));
+	Assert(!RelationIsAppendOptimized(relation));
 
 	/*
 	 * Fetch the list of attributes to be checked for HOT update.  This is

@@ -461,7 +461,7 @@ DefineIndex(RangeVar *heapRelation,
 		errmsg("access method \"%s\" does not support exclusion constraints",
 			   accessMethodName)));
 
-    if  (unique && (RelationIsAoRows(rel) || RelationIsAoCols(rel)))
+    if  (unique && RelationIsAppendOptimized(rel))
         ereport(ERROR,
                 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                  errmsg("append-only tables do not support unique indexes")));

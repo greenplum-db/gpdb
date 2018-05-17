@@ -409,7 +409,7 @@ CreateTrigger(CreateTrigStmt *stmt, const char *queryString,
 	}
 
 	/* Check GPDB limitations */
-	if ((RelationIsAoRows(rel) || RelationIsAoCols(rel)) &&
+	if (RelationIsAppendOptimized(rel) &&
 		TRIGGER_FOR_ROW(tgtype) &&
 		!stmt->isconstraint)
 	{
@@ -2635,7 +2635,7 @@ GetTupleForTrigger(EState *estate,
 	Buffer		buffer;
 
 	/* these should be rejected when you try to create such triggers, but let's check */
-	if (RelationIsAoRows(relation) || RelationIsAoCols(relation))
+	if (RelationIsAppendOptimized(relation))
 		elog(ERROR, "UPDATE and DELETE triggers are not supported on append-only tables");
 	if (RelationIsExternal(relation))
 		elog(ERROR, "UPDATE and DELETE triggers are not supported on external tables");

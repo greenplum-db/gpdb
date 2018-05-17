@@ -511,7 +511,7 @@ rel_has_appendonly_partition(Oid relid)
 
 		heap_close(rel, NoLock);
 
-		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		if (RelationIsAppendOptimized(rel))
 		{
 			return true;
 		}

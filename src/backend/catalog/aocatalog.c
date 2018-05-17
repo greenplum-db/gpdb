@@ -56,7 +56,7 @@ CreateAOAuxiliaryTable(
 	Oid			namespaceid;
 
 	Assert(RelationIsValid(rel));
-	Assert(RelationIsAoRows(rel) || RelationIsAoCols(rel));
+	Assert(RelationIsAppendOptimized(rel));
 	Assert(auxiliaryNamePrefix);
 	Assert(tupledesc);
 	if (relkind != RELKIND_AOSEGMENTS)

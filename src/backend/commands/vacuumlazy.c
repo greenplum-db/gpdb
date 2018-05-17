@@ -228,7 +228,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	 * Execute the various vacuum operations. Appendonly tables are treated
 	 * differently.
 	 */
-	if (RelationIsAoRows(onerel) || RelationIsAoCols(onerel))
+	if (RelationIsAppendOptimized(onerel))
 	{
 		lazy_vacuum_aorel(onerel, vacstmt);
 		return;
@@ -1375,7 +1375,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 	int64       hidden_tupcount;
 	AppendOnlyVisimap visimap;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationIsAppendOptimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
@@ -1447,7 +1447,7 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 {
 	char	   *relname;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationIsAppendOptimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
 	ereport(elevel,

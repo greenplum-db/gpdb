@@ -570,7 +570,7 @@ calculate_table_size(Oid relOid)
 	if (OidIsValid(rel->rd_rel->reltoastrelid))
 		size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
 
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		Assert(OidIsValid(rel->rd_appendonly->segrelid));
 		size += calculate_total_relation_size(rel->rd_appendonly->segrelid);

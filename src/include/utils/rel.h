@@ -332,6 +332,13 @@ typedef struct StdRdOptions
 	((bool)(((relation)->rd_rel->relstorage == RELSTORAGE_AOCOLS)))
 
 /*
+ * RelationIsAppendOptimized
+ * 		True iff relation has append only storage (can be row or column orientation)
+ */
+#define RelationIsAppendOptimized(relation) \
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
+
+/*
  * RelationIsForeign
  * 		True iff relation has foreign storage
  */

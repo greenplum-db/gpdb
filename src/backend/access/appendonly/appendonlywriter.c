@@ -1255,7 +1255,7 @@ assignPerRelSegno(List *all_relids)
 		Oid			cur_relid = lfirst_oid(cell);
 		Relation	rel = heap_open(cur_relid, NoLock);
 
-		if (RelationIsAoCols(rel) || RelationIsAoRows(rel))
+		if (RelationIsAppendOptimized(rel))
 		{
 			SegfileMapNode *n;
 
@@ -1405,7 +1405,7 @@ GetFileSegStateInfoFromSegments(Relation parentrel)
 	Oid			save_userid;
 	bool		save_secdefcxt;
 
-	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
+	Assert(RelationIsAppendOptimized(parentrel));
 
 	/*
 	 * get the name of the aoseg relation
@@ -1525,7 +1525,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 	ListCell   *l;
 	int64	   *total_tupcount;
 
-	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
+	Assert(RelationIsAppendOptimized(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* Give -1 for segno, so that we'll have all segfile tupcount. */

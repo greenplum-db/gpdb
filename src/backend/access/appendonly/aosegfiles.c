@@ -1486,7 +1486,7 @@ gp_update_ao_master_stats_internal(Oid relid, Snapshot appendOnlyMetaDataSnapsho
 	/* open the parent (main) relation */
 	parentrel = heap_open(relid, RowExclusiveLock);
 
-	if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+	if (!RelationIsAppendOptimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",
@@ -1603,7 +1603,7 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+		if (!RelationIsAppendOptimized(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",
@@ -1790,7 +1790,7 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+		if (!RelationIsAppendOptimized(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",
@@ -2078,7 +2078,7 @@ ao_compression_ratio_internal(Oid relid)
 	/* open the parent (main) relation */
 	parentrel = heap_open(relid, AccessShareLock);
 
-	if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+	if (!RelationIsAppendOptimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",

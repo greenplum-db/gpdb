@@ -329,7 +329,7 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 	 * We don't support cluster on an AO table. We print out a warning/error to
 	 * the user, and simply return.
 	 */
-	if (RelationIsAoRows(OldHeap) || RelationIsAoCols(OldHeap))
+	if (RelationIsAppendOptimized(OldHeap))
 	{
 		ereport((printError ? ERROR : WARNING),
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

@@ -921,7 +921,7 @@ CondUpgradeRelLock(Oid relid)
 
 	if (!rel)
 		elog(ERROR, "Relation open failed!");
-	else if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	else if (RelationIsAppendOptimized(rel))
 		upgrade = true;
 	else
 		upgrade = false;

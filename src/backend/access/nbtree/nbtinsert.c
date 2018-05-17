@@ -221,8 +221,7 @@ _bt_ao_check_unique(Relation rel, Relation aoRel, ItemPointer tid)
 	SnapshotData SnapshotDirty;
 	TransactionId xwait = InvalidTransactionId;
 	
-	Assert(RelationIsAoRows(aoRel) ||
-		   RelationIsAoCols(aoRel));
+	Assert(RelationIsAppendOptimized(aoRel));
 
 	InitDirtySnapshot(SnapshotDirty);
 	
@@ -377,7 +376,7 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 				 * If the parent relation is an AO/CO table, we have to find out
 				 * if this tuple is actually in the table.
 				 */
-				if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
+				if (RelationIsAppendOptimized(heapRel))
 				{
 					TransactionId xwait =
 						_bt_ao_check_unique(rel, heapRel, &curitup->t_tid);
