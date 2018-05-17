@@ -31,20 +31,20 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 
-static List* pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum);
-static void pxf_free_filter(PxfFilterDesc* filter);
-static char* pxf_serialize_filter_list(List *filters);
-static bool opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter);
-static bool scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter);
-static bool var_to_pxffilter(Var *var, PxfFilterDesc *filter);
+static List *pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum);
+static void pxf_free_filter(PxfFilterDesc * filter);
+static char *pxf_serialize_filter_list(List *filters);
+static bool opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc * filter);
+static bool scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc * filter);
+static bool var_to_pxffilter(Var *var, PxfFilterDesc * filter);
 static bool supported_filter_type(Oid type);
-static bool supported_operator_type_op_expr(Oid type, PxfFilterDesc *filter);
-static bool supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc *filter, bool useOr);
+static bool supported_operator_type_op_expr(Oid type, PxfFilterDesc * filter);
+static bool supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc * filter, bool useOr);
 static void scalar_const_to_str(Const *constval, StringInfo buf);
 static void list_const_to_str(Const *constval, StringInfo buf);
-static List* append_attr_from_var(Var* var, List* attrs);
+static List *append_attr_from_var(Var *var, List *attrs);
 static void enrich_trivial_expression(List *expressionItems);
-static List* get_attrs_from_expr(Expr *expr, bool* expressionIsSupported);
+static List *get_attrs_from_expr(Expr *expr, bool *expressionIsSupported);
 
 /*
  * All supported HAWQ operators, and their respective HDFS operator code.
@@ -55,177 +55,177 @@ static List* get_attrs_from_expr(Expr *expr, bool* expressionIsSupported);
 dbop_pxfop_map pxf_supported_opr_op_expr[] =
 {
 	/* int2 */
-	{Int2EqualOperator	/* int2eq */, PXFOP_EQ},
-	{95  /* int2lt */, PXFOP_LT},
-	{520 /* int2gt */, PXFOP_GT},
-	{522 /* int2le */, PXFOP_LE},
-	{524 /* int2ge */, PXFOP_GE},
-	{519 /* int2ne */, PXFOP_NE},
+	{Int2EqualOperator /* int2eq */ , PXFOP_EQ},
+	{95 /* int2lt */ , PXFOP_LT},
+	{520 /* int2gt */ , PXFOP_GT},
+	{522 /* int2le */ , PXFOP_LE},
+	{524 /* int2ge */ , PXFOP_GE},
+	{519 /* int2ne */ , PXFOP_NE},
 
 	/* int4 */
-	{Int4EqualOperator	/* int4eq */, PXFOP_EQ},
-	{97  /* int4lt */, PXFOP_LT},
-	{521 /* int4gt */, PXFOP_GT},
-	{523 /* int4le */, PXFOP_LE},
-	{525 /* int4ge */, PXFOP_GE},
-	{518 /* int4lt */, PXFOP_NE},
+	{Int4EqualOperator /* int4eq */ , PXFOP_EQ},
+	{97 /* int4lt */ , PXFOP_LT},
+	{521 /* int4gt */ , PXFOP_GT},
+	{523 /* int4le */ , PXFOP_LE},
+	{525 /* int4ge */ , PXFOP_GE},
+	{518 /* int4lt */ , PXFOP_NE},
 
 	/* int8 */
-	{Int8EqualOperator /* int8eq */, PXFOP_EQ},
-	{412 /* int8lt */, PXFOP_LT},
-	{413 /* int8gt */, PXFOP_GT},
-	{414 /* int8le */, PXFOP_LE},
-	{415 /* int8ge */, PXFOP_GE},
-	{411 /* int8lt */, PXFOP_NE},
+	{Int8EqualOperator /* int8eq */ , PXFOP_EQ},
+	{412 /* int8lt */ , PXFOP_LT},
+	{413 /* int8gt */ , PXFOP_GT},
+	{414 /* int8le */ , PXFOP_LE},
+	{415 /* int8ge */ , PXFOP_GE},
+	{411 /* int8lt */ , PXFOP_NE},
 
 	/* text */
-	{TextEqualOperator	/* texteq  */, PXFOP_EQ},
-	{664 /* text_lt */, PXFOP_LT},
-	{666 /* text_gt */, PXFOP_GT},
-	{665 /* text_le */, PXFOP_LE},
-	{667 /* text_ge */, PXFOP_GE},
-	{531 /* textlt	*/, PXFOP_NE},
-	{1209 /* textlike  */, PXFOP_LIKE},
+	{TextEqualOperator /* texteq  */ , PXFOP_EQ},
+	{664 /* text_lt */ , PXFOP_LT},
+	{666 /* text_gt */ , PXFOP_GT},
+	{665 /* text_le */ , PXFOP_LE},
+	{667 /* text_ge */ , PXFOP_GE},
+	{531 /* textlt	*/ , PXFOP_NE},
+	{1209 /* textlike  */ , PXFOP_LIKE},
 
 	/* int2 to int4 */
-	{Int24EqualOperator /* int24eq */, PXFOP_EQ},
-	{534  /* int24lt */, PXFOP_LT},
-	{536 /* int24gt */, PXFOP_GT},
-	{540 /* int24le */, PXFOP_LE},
-	{542 /* int24ge */, PXFOP_GE},
-	{538 /* int24ne */, PXFOP_NE},
+	{Int24EqualOperator /* int24eq */ , PXFOP_EQ},
+	{534 /* int24lt */ , PXFOP_LT},
+	{536 /* int24gt */ , PXFOP_GT},
+	{540 /* int24le */ , PXFOP_LE},
+	{542 /* int24ge */ , PXFOP_GE},
+	{538 /* int24ne */ , PXFOP_NE},
 
 	/* int4 to int2 */
-	{Int42EqualOperator /* int42eq */, PXFOP_EQ},
-	{535  /* int42lt */, PXFOP_LT},
-	{537 /* int42gt */, PXFOP_GT},
-	{541 /* int42le */, PXFOP_LE},
-	{543 /* int42ge */, PXFOP_GE},
-	{539 /* int42ne */, PXFOP_NE},
+	{Int42EqualOperator /* int42eq */ , PXFOP_EQ},
+	{535 /* int42lt */ , PXFOP_LT},
+	{537 /* int42gt */ , PXFOP_GT},
+	{541 /* int42le */ , PXFOP_LE},
+	{543 /* int42ge */ , PXFOP_GE},
+	{539 /* int42ne */ , PXFOP_NE},
 
 	/* int8 to int4 */
-	{Int84EqualOperator /* int84eq */, PXFOP_EQ},
-	{418  /* int84lt */, PXFOP_LT},
-	{419 /* int84gt */, PXFOP_GT},
-	{420 /* int84le */, PXFOP_LE},
-	{430 /* int84ge */, PXFOP_GE},
-	{417 /* int84ne */, PXFOP_NE},
+	{Int84EqualOperator /* int84eq */ , PXFOP_EQ},
+	{418 /* int84lt */ , PXFOP_LT},
+	{419 /* int84gt */ , PXFOP_GT},
+	{420 /* int84le */ , PXFOP_LE},
+	{430 /* int84ge */ , PXFOP_GE},
+	{417 /* int84ne */ , PXFOP_NE},
 
 	/* int4 to int8 */
-	{Int48EqualOperator /* int48eq */, PXFOP_EQ},
-	{37  /* int48lt */, PXFOP_LT},
-	{76 /* int48gt */, PXFOP_GT},
-	{80 /* int48le */, PXFOP_LE},
-	{82 /* int48ge */, PXFOP_GE},
-	{36 /* int48ne */, PXFOP_NE},
+	{Int48EqualOperator /* int48eq */ , PXFOP_EQ},
+	{37 /* int48lt */ , PXFOP_LT},
+	{76 /* int48gt */ , PXFOP_GT},
+	{80 /* int48le */ , PXFOP_LE},
+	{82 /* int48ge */ , PXFOP_GE},
+	{36 /* int48ne */ , PXFOP_NE},
 
 	/* int2 to int8 */
-	{Int28EqualOperator /* int28eq */, PXFOP_EQ},
-	{1864  /* int28lt */, PXFOP_LT},
-	{1865 /* int28gt */, PXFOP_GT},
-	{1866 /* int28le */, PXFOP_LE},
-	{1867 /* int28ge */, PXFOP_GE},
-	{1863 /* int28ne */, PXFOP_NE},
+	{Int28EqualOperator /* int28eq */ , PXFOP_EQ},
+	{1864 /* int28lt */ , PXFOP_LT},
+	{1865 /* int28gt */ , PXFOP_GT},
+	{1866 /* int28le */ , PXFOP_LE},
+	{1867 /* int28ge */ , PXFOP_GE},
+	{1863 /* int28ne */ , PXFOP_NE},
 
 	/* int8 to int2 */
-	{Int82EqualOperator /* int82eq */, PXFOP_EQ},
-	{1870  /* int82lt */, PXFOP_LT},
-	{1871 /* int82gt */, PXFOP_GT},
-	{1872 /* int82le */, PXFOP_LE},
-	{1873 /* int82ge */, PXFOP_GE},
-	{1869 /* int82ne */, PXFOP_NE},
+	{Int82EqualOperator /* int82eq */ , PXFOP_EQ},
+	{1870 /* int82lt */ , PXFOP_LT},
+	{1871 /* int82gt */ , PXFOP_GT},
+	{1872 /* int82le */ , PXFOP_LE},
+	{1873 /* int82ge */ , PXFOP_GE},
+	{1869 /* int82ne */ , PXFOP_NE},
 
 	/* date */
-	{DateEqualOperator	/* date_eq */, PXFOP_EQ},
-	{1095  /* date_lt */, PXFOP_LT},
-	{1097 /* date_gt */, PXFOP_GT},
-	{1096 /* date_le */, PXFOP_LE},
-	{1098 /* date_ge */, PXFOP_GE},
-	{1094 /* date_ne */, PXFOP_NE},
+	{DateEqualOperator /* date_eq */ , PXFOP_EQ},
+	{1095 /* date_lt */ , PXFOP_LT},
+	{1097 /* date_gt */ , PXFOP_GT},
+	{1096 /* date_le */ , PXFOP_LE},
+	{1098 /* date_ge */ , PXFOP_GE},
+	{1094 /* date_ne */ , PXFOP_NE},
 
 	/* timestamp */
-	{TimestampEqualOperator  /* timestamp_eq */, PXFOP_EQ},
-	{2062  /* timestamp_lt */, PXFOP_LT},
-	{2064 /* timestamp_gt */, PXFOP_GT},
-	{2063 /* timestamp_le */, PXFOP_LE},
-	{2065 /* timestamp_ge */, PXFOP_GE},
-	{2061 /* timestamp_ne */, PXFOP_NE},
+	{TimestampEqualOperator /* timestamp_eq */ , PXFOP_EQ},
+	{2062 /* timestamp_lt */ , PXFOP_LT},
+	{2064 /* timestamp_gt */ , PXFOP_GT},
+	{2063 /* timestamp_le */ , PXFOP_LE},
+	{2065 /* timestamp_ge */ , PXFOP_GE},
+	{2061 /* timestamp_ne */ , PXFOP_NE},
 
 	/* float8 */
-	{Float8EqualOperator  /* float8eq */, PXFOP_EQ},
-	{672 /* float8lt */, PXFOP_LT},
-	{674 /* float8gt */, PXFOP_GT},
-	{673 /* float8le */, PXFOP_LE},
-	{675 /* float8ge */, PXFOP_GE},
-	{671 /* float8ne */, PXFOP_NE},
+	{Float8EqualOperator /* float8eq */ , PXFOP_EQ},
+	{672 /* float8lt */ , PXFOP_LT},
+	{674 /* float8gt */ , PXFOP_GT},
+	{673 /* float8le */ , PXFOP_LE},
+	{675 /* float8ge */ , PXFOP_GE},
+	{671 /* float8ne */ , PXFOP_NE},
 
 	/* float48 */
-	{1120 /* float48eq */, PXFOP_EQ},
-	{1122 /* float48lt */, PXFOP_LT},
-	{1123 /* float48gt */, PXFOP_GT},
-	{1124 /* float48le */, PXFOP_LE},
-	{1125 /* float48ge */, PXFOP_GE},
-	{1121 /* float48ne */, PXFOP_NE},
+	{1120 /* float48eq */ , PXFOP_EQ},
+	{1122 /* float48lt */ , PXFOP_LT},
+	{1123 /* float48gt */ , PXFOP_GT},
+	{1124 /* float48le */ , PXFOP_LE},
+	{1125 /* float48ge */ , PXFOP_GE},
+	{1121 /* float48ne */ , PXFOP_NE},
 
 	/* bpchar */
-	{BPCharEqualOperator  /* bpchareq */, PXFOP_EQ},
-	{1058  /* bpcharlt */, PXFOP_LT},
-	{1060 /* bpchargt */, PXFOP_GT},
-	{1059 /* bpcharle */, PXFOP_LE},
-	{1061 /* bpcharge */, PXFOP_GE},
-	{1057 /* bpcharne */, PXFOP_NE},
+	{BPCharEqualOperator /* bpchareq */ , PXFOP_EQ},
+	{1058 /* bpcharlt */ , PXFOP_LT},
+	{1060 /* bpchargt */ , PXFOP_GT},
+	{1059 /* bpcharle */ , PXFOP_LE},
+	{1061 /* bpcharge */ , PXFOP_GE},
+	{1057 /* bpcharne */ , PXFOP_NE},
 };
 
 
 dbop_pxfop_array_map pxf_supported_opr_scalar_array_op_expr[] =
 {
 	/* int2 */
-	{Int2EqualOperator	/* int2eq */, PXFOP_IN, true},
+	{Int2EqualOperator /* int2eq */ , PXFOP_IN, true},
 
 	/* int4 */
-	{Int4EqualOperator	/* int4eq */, PXFOP_IN, true},
+	{Int4EqualOperator /* int4eq */ , PXFOP_IN, true},
 
 	/* int8 */
-	{Int8EqualOperator /* int8eq */, PXFOP_IN, true},
+	{Int8EqualOperator /* int8eq */ , PXFOP_IN, true},
 
 	/* text */
-	{TextEqualOperator	/* texteq  */, PXFOP_IN, true},
+	{TextEqualOperator /* texteq  */ , PXFOP_IN, true},
 
 	/* int2 to int4 */
-	{Int24EqualOperator /* int24eq */, PXFOP_IN, true},
+	{Int24EqualOperator /* int24eq */ , PXFOP_IN, true},
 
 	/* int4 to int2 */
-	{Int42EqualOperator /* int42eq */, PXFOP_IN, true},
+	{Int42EqualOperator /* int42eq */ , PXFOP_IN, true},
 
 	/* int8 to int4 */
-	{Int84EqualOperator /* int84eq */, PXFOP_IN, true},
+	{Int84EqualOperator /* int84eq */ , PXFOP_IN, true},
 
 	/* int4 to int8 */
-	{Int48EqualOperator /* int48eq */, PXFOP_IN, true},
+	{Int48EqualOperator /* int48eq */ , PXFOP_IN, true},
 
 	/* int2 to int8 */
-	{Int28EqualOperator /* int28eq */, PXFOP_IN, true},
+	{Int28EqualOperator /* int28eq */ , PXFOP_IN, true},
 
 	/* int8 to int2 */
-	{Int82EqualOperator /* int82eq */, PXFOP_IN, true},
+	{Int82EqualOperator /* int82eq */ , PXFOP_IN, true},
 
 	/* date */
-	{DateEqualOperator	/* date_eq */, PXFOP_IN, true},
+	{DateEqualOperator /* date_eq */ , PXFOP_IN, true},
 
 	/* timestamp */
-	{TimestampEqualOperator  /* timestamp_eq */, PXFOP_IN, true},
+	{TimestampEqualOperator /* timestamp_eq */ , PXFOP_IN, true},
 
 	/* float8 */
-	{Float8EqualOperator  /* float8eq */, PXFOP_IN, true},
+	{Float8EqualOperator /* float8eq */ , PXFOP_IN, true},
 
 	/* float48 */
-	{1120 /* float48eq */, PXFOP_IN, true},
+	{1120 /* float48eq */ , PXFOP_IN, true},
 
 	/* bpchar */
-	{BPCharEqualOperator  /* bpchareq */, PXFOP_IN, true},
+	{BPCharEqualOperator /* bpchareq */ , PXFOP_IN, true},
 };
 
-Oid pxf_supported_types[] =
+Oid			pxf_supported_types[] =
 {
 	INT2OID,
 	INT4OID,
@@ -240,7 +240,7 @@ Oid pxf_supported_types[] =
 	BOOLOID,
 	DATEOID,
 	TIMESTAMPOID,
-	/* complex datatypes*/
+	/* complex datatypes */
 	INT2ARRAYOID,
 	INT4ARRAYOID,
 	INT8ARRAYOID,
@@ -250,8 +250,8 @@ Oid pxf_supported_types[] =
 static void
 pxf_free_expression_items_list(List *expressionItems, bool freeBoolExprNodes)
 {
-	ExpressionItem	*expressionItem = NULL;
-	int previousLength;
+	ExpressionItem *expressionItem = NULL;
+	int			previousLength;
 
 	while (list_length(expressionItems) > 0)
 	{
@@ -262,7 +262,10 @@ pxf_free_expression_items_list(List *expressionItems, bool freeBoolExprNodes)
 		}
 		pfree(expressionItem);
 
-		/* to avoid freeing already freed items - delete all occurrences of current expression*/
+		/*
+		 * to avoid freeing already freed items - delete all occurrences of
+		 * current expression
+		 */
 		previousLength = expressionItems->length + 1;
 		while (expressionItems != NULL && previousLength > expressionItems->length)
 		{
@@ -287,17 +290,18 @@ static List *
 pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 {
 	ExpressionItem *expressionItem = NULL;
-	List			*result = NIL;
-	ListCell		*lc = NULL;
-	ListCell		*ilc = NULL;
+	List	   *result = NIL;
+	ListCell   *lc = NULL;
+	ListCell   *ilc = NULL;
 
 	if (list_length(quals) == 0)
 		return NIL;
 
-	foreach (lc, quals)
+	foreach(lc, quals)
 	{
-		Node *node = (Node *) lfirst(lc);
-		NodeTag tag = nodeTag(node);
+		Node	   *node = (Node *)lfirst(lc);
+		NodeTag		tag = nodeTag(node);
+
 		expressionItem = (ExpressionItem *) palloc0(sizeof(ExpressionItem));
 		expressionItem->node = node;
 		expressionItem->parent = parent;
@@ -305,54 +309,59 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 
 		switch (tag)
 		{
-			case T_Var: // IN(single_value)
+			case T_Var:
+				/* IN(single_value) */
 			case T_OpExpr:
 			case T_ScalarArrayOpExpr:
 			case T_NullTest:
-			{
-				result = lappend(result, expressionItem);
-				break;
-			}
-			case T_BoolExpr:
-			{
-				(*logicalOpsNum)++;
-				BoolExpr	*expr = (BoolExpr *) node;
-				List *inner_result = pxf_make_expression_items_list(expr->args, node, logicalOpsNum);
-				result = list_concat(result, inner_result);
-
-				int childNodesNum = 0;
-
-				/* Find number of child nodes on first level*/
-				foreach (ilc, inner_result)
 				{
-					ExpressionItem *ei = (ExpressionItem *) lfirst(ilc);
-					if (!ei->processed && ei->parent == node)
-					{
-						ei->processed = true;
-						childNodesNum++;
-					}
+					result = lappend(result, expressionItem);
+					break;
 				}
+			case T_BoolExpr:
+				{
+					(*logicalOpsNum)++;
+					BoolExpr   *expr = (BoolExpr *)node;
+					List	   *inner_result = pxf_make_expression_items_list(expr->args, node, logicalOpsNum);
 
-				if (expr->boolop == NOT_EXPR) {
-					for (int i = 0; i < childNodesNum; i++)
+					result = list_concat(result, inner_result);
+
+					int			childNodesNum = 0;
+
+					/* Find number of child nodes on first level */
+					foreach(ilc, inner_result)
 					{
-						result = lappend(result, expressionItem);
+						ExpressionItem *ei = (ExpressionItem *) lfirst(ilc);
+
+						if (!ei->processed && ei->parent == node)
+						{
+							ei->processed = true;
+							childNodesNum++;
+						}
 					}
-				}
-				else if (expr->boolop == AND_EXPR || expr->boolop == OR_EXPR) {
-					for (int i = 0; i < childNodesNum - 1; i++)
+
+					if (expr->boolop == NOT_EXPR)
 					{
-						result = lappend(result, expressionItem);
+						for (int i = 0; i < childNodesNum; i++)
+						{
+							result = lappend(result, expressionItem);
+						}
 					}
+					else if (expr->boolop == AND_EXPR || expr->boolop == OR_EXPR)
+					{
+						for (int i = 0; i < childNodesNum - 1; i++)
+						{
+							result = lappend(result, expressionItem);
+						}
+					}
+					else
+					{
+						elog(ERROR,
+							 "internal error in pxffilters.c:pxf_make_expression_items_list. "
+							 "Found unknown boolean expression type");
+					}
+					break;
 				}
-				else {
-					ereport(ERROR,
-						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("internal error in pxffilters.c:pxf_make_expression_items_list. "
-								 "Found unknown boolean expression type")));
-				}
-				break;
-			}
 			default:
 				elog(DEBUG1, "pxf_make_expression_items_list: unsupported node tag %d", tag);
 				break;
@@ -363,7 +372,7 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 }
 
 static void
-pxf_free_filter(PxfFilterDesc* filter)
+pxf_free_filter(PxfFilterDesc * filter)
 {
 	if (!filter)
 		return;
@@ -429,197 +438,230 @@ pxf_free_filter(PxfFilterDesc* filter)
 static char *
 pxf_serialize_filter_list(List *expressionItems)
 {
-	StringInfo	 resbuf;
-	ListCell	*lc = NULL;
+	StringInfo	resbuf;
+	ListCell   *lc = NULL;
 
-	if (list_length(expressionItems) == 0) {
+	if (list_length(expressionItems) == 0)
+	{
 		return NULL;
 	}
 
 	resbuf = makeStringInfo();
 
 	/*
-	 * Iterate through the expression items in the list and serialize them one after the other.
+	 * Iterate through the expression items in the list and serialize them one
+	 * after the other.
 	 */
-	foreach (lc, expressionItems)
+	foreach(lc, expressionItems)
 	{
 		ExpressionItem *expressionItem = (ExpressionItem *) lfirst(lc);
-		Node *node = expressionItem->node;
-		NodeTag tag = nodeTag(node);
+		Node	   *node = expressionItem->node;
+		NodeTag		tag = nodeTag(node);
 
 		switch (tag)
 		{
 			case T_Var:
-			{
-				elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_Var)", tag);
-				PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
-				Var *var = (Var *) node;
-				if (var_to_pxffilter(var, filter))
 				{
-					PxfOperand l = filter->l;
-					PxfOperand r = filter->r;
-					PxfOperatorCode o = filter->op;
-					if (pxfoperand_is_attr(l) && pxfoperand_is_scalar_const(r))
+					elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_Var)", tag);
+					PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
+					Var		   *var = (Var *)node;
+
+					if (var_to_pxffilter(var, filter))
 					{
-						appendStringInfo(resbuf, "%c%d%c%d%c%lu%c%s",
-												 PXF_ATTR_CODE, l.attnum - 1, /* Java attrs are 0-based */
-												 PXF_SCALAR_CONST_CODE, r.consttype,
-												 PXF_SIZE_BYTES, strlen(r.conststr->data),
-												 PXF_CONST_DATA, (r.conststr)->data);
+						PxfOperand	l = filter->l;
+						PxfOperand	r = filter->r;
+						PxfOperatorCode o = filter->op;
+
+						if (pxfoperand_is_attr(l) && pxfoperand_is_scalar_const(r))
+						{
+							appendStringInfo(resbuf, "%c%d%c%d%c%lu%c%s",
+											 PXF_ATTR_CODE, l.attnum - 1,		/* Java attrs are
+																				 * 0-based */
+										  PXF_SCALAR_CONST_CODE, r.consttype,
+									PXF_SIZE_BYTES, strlen(r.conststr->data),
+										 PXF_CONST_DATA, (r.conststr)->data);
+						}
+						else
+						{
+							/*
+							 * var_to_pxffilter() should have never let this
+							 * happen
+							 */
+							elog(ERROR,
+							  "internal error in pxffilters.c:pxf_serialize_"
+							   "filter_list. Found a non const+attr filter");
+						}
+						appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
+						pxf_free_filter(filter);
+
 					}
 					else
 					{
-						/* var_to_pxffilter() should have never let this happen */
-						ereport(ERROR,
-								(errcode(ERRCODE_INTERNAL_ERROR),
-								 errmsg("internal error in pxffilters.c:pxf_serialize_"
-										 "filter_list. Found a non const+attr filter")));
+						/*
+						 * if at least one expression item is not supported,
+						 * whole filter doesn't make sense
+						 */
+						elog(DEBUG1, "Query will not be optimized to use filter push-down.");
+						pfree(filter);
+						pfree(resbuf->data);
+						return NULL;
 					}
-					appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
-					pxf_free_filter(filter);
-
+					break;
 				}
-				else
-				{
-					/* if at least one expression item is not supported, whole filter doesn't make sense*/
-					elog(DEBUG1, "Query will not be optimized to use filter push-down.");
-					pfree(filter);
-					pfree(resbuf->data);
-					return NULL;
-				}
-				break;
-			}
 			case T_OpExpr:
-			{
-				elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_OpExpr)", tag);
-				PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
-				OpExpr *expr = (OpExpr *) node;
-				if (opexpr_to_pxffilter(expr, filter))
 				{
-					PxfOperand l = filter->l;
-					PxfOperand r = filter->r;
-					PxfOperatorCode o = filter->op;
-					if (pxfoperand_is_attr(l) && pxfoperand_is_scalar_const(r))
+					elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_OpExpr)", tag);
+					PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
+					OpExpr	   *expr = (OpExpr *)node;
+
+					if (opexpr_to_pxffilter(expr, filter))
 					{
-						appendStringInfo(resbuf, "%c%d%c%d%c%lu%c%s",
-												 PXF_ATTR_CODE, l.attnum - 1, /* Java attrs are 0-based */
-												 PXF_SCALAR_CONST_CODE, r.consttype,
-												 PXF_SIZE_BYTES, strlen(r.conststr->data),
-												 PXF_CONST_DATA, (r.conststr)->data);
-					}
-					else if (pxfoperand_is_scalar_const(l) && pxfoperand_is_attr(r))
-					{
-						appendStringInfo(resbuf, "%c%d%c%lu%c%s%c%d",
-												 PXF_SCALAR_CONST_CODE, l.consttype,
-												 PXF_SIZE_BYTES, strlen(l.conststr->data),
-												 PXF_CONST_DATA, (l.conststr)->data,
-												 PXF_ATTR_CODE, r.attnum - 1); /* Java attrs are 0-based */
+						PxfOperand	l = filter->l;
+						PxfOperand	r = filter->r;
+						PxfOperatorCode o = filter->op;
+
+						if (pxfoperand_is_attr(l) && pxfoperand_is_scalar_const(r))
+						{
+							appendStringInfo(resbuf, "%c%d%c%d%c%lu%c%s",
+											 PXF_ATTR_CODE, l.attnum - 1,		/* Java attrs are
+																				 * 0-based */
+										  PXF_SCALAR_CONST_CODE, r.consttype,
+									PXF_SIZE_BYTES, strlen(r.conststr->data),
+										 PXF_CONST_DATA, (r.conststr)->data);
+						}
+						else if (pxfoperand_is_scalar_const(l) && pxfoperand_is_attr(r))
+						{
+							appendStringInfo(resbuf, "%c%d%c%lu%c%s%c%d",
+										  PXF_SCALAR_CONST_CODE, l.consttype,
+									PXF_SIZE_BYTES, strlen(l.conststr->data),
+										  PXF_CONST_DATA, (l.conststr)->data,
+											 PXF_ATTR_CODE, r.attnum - 1);		/* Java attrs are
+																				 * 0-based */
+						}
+						else
+						{
+							/*
+							 * opexpr_to_pxffilter() should have never let
+							 * this happen
+							 */
+							elog(ERROR, "internal error in pxffilters.c:pxf_serialize_"
+							   "filter_list. Found a non const+attr filter");
+						}
+						appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
+						pxf_free_filter(filter);
 					}
 					else
 					{
-						/* opexpr_to_pxffilter() should have never let this happen */
-						ereport(ERROR,
-								(errcode(ERRCODE_INTERNAL_ERROR),
-								 errmsg("internal error in pxffilters.c:pxf_serialize_"
-										 "filter_list. Found a non const+attr filter")));
+						/*
+						 * if at least one expression item is not supported,
+						 * whole filter doesn't make sense
+						 */
+						elog(DEBUG1, "Query will not be optimized to use filter push-down.");
+						pfree(filter);
+						pfree(resbuf->data);
+						return NULL;
 					}
-					appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
-					pxf_free_filter(filter);
-				} else {
-					/* if at least one expression item is not supported, whole filter doesn't make sense*/
-					elog(DEBUG1, "Query will not be optimized to use filter push-down.");
-					pfree(filter);
-					pfree(resbuf->data);
-					return NULL;
+					break;
 				}
-				break;
-			}
 			case T_ScalarArrayOpExpr:
-			{
-				elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_ScalarArrayOpExpr)", tag);
-				ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *) node;
-				PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
-				if (scalar_array_op_expr_to_pxffilter(expr, filter))
 				{
-					PxfOperand l = filter->l;
-					PxfOperand r = filter->r;
-					PxfOperatorCode o = filter->op;
-					if (pxfoperand_is_attr(l) && pxfoperand_is_list_const(r))
+					elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_ScalarArrayOpExpr)", tag);
+					ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *)node;
+					PxfFilterDesc *filter = (PxfFilterDesc *) palloc0(sizeof(PxfFilterDesc));
+
+					if (scalar_array_op_expr_to_pxffilter(expr, filter))
 					{
-						appendStringInfo(resbuf, "%c%d%c%d%s",
-												 PXF_ATTR_CODE, l.attnum - 1, /* Java attrs are 0-based */
-												 PXF_LIST_CONST_CODE, r.consttype,
-												 r.conststr->data);
-					}
-					else if (pxfoperand_is_list_const(l) && pxfoperand_is_attr(r))
-					{
-						appendStringInfo(resbuf, "%c%d%s%c%d",
-												 PXF_SCALAR_CONST_CODE, l.consttype,
-												 l.conststr->data,
-												 PXF_ATTR_CODE, r.attnum - 1); /* Java attrs are 0-based */
+						PxfOperand	l = filter->l;
+						PxfOperand	r = filter->r;
+						PxfOperatorCode o = filter->op;
+
+						if (pxfoperand_is_attr(l) && pxfoperand_is_list_const(r))
+						{
+							appendStringInfo(resbuf, "%c%d%c%d%s",
+											 PXF_ATTR_CODE, l.attnum - 1,		/* Java attrs are
+																				 * 0-based */
+											 PXF_LIST_CONST_CODE, r.consttype,
+											 r.conststr->data);
+						}
+						else if (pxfoperand_is_list_const(l) && pxfoperand_is_attr(r))
+						{
+							appendStringInfo(resbuf, "%c%d%s%c%d",
+										  PXF_SCALAR_CONST_CODE, l.consttype,
+											 l.conststr->data,
+											 PXF_ATTR_CODE, r.attnum - 1);		/* Java attrs are
+																				 * 0-based */
+						}
+						else
+						{
+							/*
+							 * scalararrayopexpr_to_pxffilter() should have
+							 * never let this happen
+							 */
+							elog(ERROR, "internal error in pxffilters.c:pxf_serialize_"
+							   "filter_list. Found a non const+attr filter");
+						}
+						appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
+						pxf_free_filter(filter);
 					}
 					else
 					{
-						/* scalararrayopexpr_to_pxffilter() should have never let this happen */
-						ereport(ERROR,
-								(errcode(ERRCODE_INTERNAL_ERROR),
-								 errmsg("internal error in pxffilters.c:pxf_serialize_"
-										 "filter_list. Found a non const+attr filter")));
+						/*
+						 * if at least one expression item is not supported,
+						 * whole filter doesn't make sense
+						 */
+						elog(DEBUG1, "Query will not be optimized to use filter push-down.");
+						pfree(filter);
+						pfree(resbuf->data);
+						return NULL;
 					}
-					appendStringInfo(resbuf, "%c%d", PXF_OPERATOR_CODE, o);
-					pxf_free_filter(filter);
-				} else {
-					/* if at least one expression item is not supported, whole filter doesn't make sense*/
-					elog(DEBUG1, "Query will not be optimized to use filter push-down.");
-					pfree(filter);
-					pfree(resbuf->data);
-					return NULL;
+					break;
 				}
-				break;
-			}
 			case T_BoolExpr:
-			{
-				BoolExpr *expr = (BoolExpr *) node;
-				BoolExprType boolType = expr->boolop;
-				elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_BoolExpr), bool node type %d", tag, boolType);
-				appendStringInfo(resbuf, "%c%d", PXF_LOGICAL_OPERATOR_CODE, boolType);
-				break;
-			}
+				{
+					BoolExpr   *expr = (BoolExpr *)node;
+					BoolExprType boolType = expr->boolop;
+
+					elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_BoolExpr), bool node type %d", tag, boolType);
+					appendStringInfo(resbuf, "%c%d", PXF_LOGICAL_OPERATOR_CODE, boolType);
+					break;
+				}
 			case T_NullTest:
-			{
-				elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_NullTest)", tag);
-				NullTest *expr = (NullTest *) node;
-				Var *var = (Var *) expr->arg;
+				{
+					elog(DEBUG1, "pxf_serialize_filter_list: node tag %d (T_NullTest)", tag);
+					NullTest   *expr = (NullTest *)node;
+					Var		   *var = (Var *)expr->arg;
 
-				/* TODO: add check for supported operation */
-				if (!supported_filter_type(var->vartype))
-				{
-					elog(DEBUG1, "Query will not be optimized to use filter push-down.");
-					return NULL;
-				}
+					/* TODO: add check for supported operation */
+					if (!supported_filter_type(var->vartype))
+					{
+						elog(DEBUG1, "Query will not be optimized to use filter push-down.");
+						return NULL;
+					}
 
-				/* filter expression for T_NullTest will not have any constant value */
-				if (expr->nulltesttype == IS_NULL)
-				{
-					appendStringInfo(resbuf, "%c%d%c%d", PXF_ATTR_CODE, var->varattno - 1, PXF_OPERATOR_CODE, PXFOP_IS_NULL);
+					/*
+					 * filter expression for T_NullTest will not have any
+					 * constant value
+					 */
+					if (expr->nulltesttype == IS_NULL)
+					{
+						appendStringInfo(resbuf, "%c%d%c%d", PXF_ATTR_CODE, var->varattno - 1, PXF_OPERATOR_CODE, PXFOP_IS_NULL);
+					}
+					else if (expr->nulltesttype == IS_NOT_NULL)
+					{
+						appendStringInfo(resbuf, "%c%d%c%d", PXF_ATTR_CODE, var->varattno - 1, PXF_OPERATOR_CODE, PXFOP_IS_NOTNULL);
+					}
+					else
+					{
+						elog(ERROR,
+							 "internal error in pxffilters.c:pxf_serialize_"
+							 "filter_list. Found a NullTest filter with incorrect NullTestType");
+					}
+					break;
 				}
-				else if (expr->nulltesttype == IS_NOT_NULL)
-				{
-					appendStringInfo(resbuf, "%c%d%c%d", PXF_ATTR_CODE, var->varattno - 1, PXF_OPERATOR_CODE, PXFOP_IS_NOTNULL);
-				}
-				else
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INTERNAL_ERROR),
-							 errmsg("internal error in pxffilters.c:pxf_serialize_"
-									 "filter_list. Found a NullTest filter with incorrect NullTestType")));
-				}
-				break;
-			}
 			default:
-			{
-				elog(DEBUG5, "Skipping tag: %d", tag);
-			}
+				{
+					elog(DEBUG5, "Skipping tag: %d", tag);
+				}
 		}
 	}
 
@@ -640,18 +682,18 @@ pxf_serialize_filter_list(List *expressionItems)
  * if it is - create it and return a success code.
  */
 static bool
-opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
+opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc * filter)
 {
-	Node	*leftop		= NULL;
-	Node	*rightop	= NULL;
-	Oid		 rightop_type = InvalidOid;
-	Oid		 leftop_type = InvalidOid;
+	Node	   *leftop = NULL;
+	Node	   *rightop = NULL;
+	Oid			rightop_type = InvalidOid;
+	Oid			leftop_type = InvalidOid;
 
 	if ((!expr) || (!filter))
 		return false;
 
-	leftop = get_leftop((Expr*)expr);
-	rightop = get_rightop((Expr*)expr);
+	leftop = get_leftop((Expr *)expr);
+	rightop = get_rightop((Expr *)expr);
 	leftop_type = exprType(leftop);
 	rightop_type = exprType(rightop);
 
@@ -664,10 +706,10 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 	}
 
 	elog(DEBUG1, "opexpr_to_gphdfilter: leftop (expr type: %d, arg type: %d), "
-			"rightop_type (expr type: %d, arg type %d), op: %d",
-			leftop_type, nodeTag(leftop),
-			rightop_type, nodeTag(rightop),
-			expr->opno);
+		 "rightop_type (expr type: %d, arg type %d), op: %d",
+		 leftop_type, nodeTag(leftop),
+		 rightop_type, nodeTag(rightop),
+		 expr->opno);
 
 	/*
 	 * check if supported type -
@@ -682,13 +724,13 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 		return false;
 
 	/* arguments must be VAR and CONST */
-	if (IsA(leftop,  Var) && IsA(rightop, Const))
+	if (IsA(leftop, Var)&&IsA(rightop, Const))
 	{
 		filter->l.opcode = PXF_ATTR_CODE;
-		filter->l.attnum = ((Var *) leftop)->varattno;
+		filter->l.attnum = ((Var *)leftop)->varattno;
 		filter->l.consttype = InvalidOid;
 		if (filter->l.attnum <= InvalidAttrNumber)
-			return false; /* system attr not supported */
+			return false;		/* system attr not supported */
 
 		filter->r.opcode = PXF_SCALAR_CONST_CODE;
 		filter->r.attnum = InvalidAttrNumber;
@@ -696,7 +738,7 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 		scalar_const_to_str((Const *)rightop, filter->r.conststr);
 		filter->r.consttype = ((Const *)rightop)->consttype;
 	}
-	else if (IsA(leftop, Const) && IsA(rightop, Var))
+	else if (IsA(leftop, Const)&&IsA(rightop, Var))
 	{
 		filter->l.opcode = PXF_SCALAR_CONST_CODE;
 		filter->l.attnum = InvalidAttrNumber;
@@ -705,10 +747,10 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 		filter->l.consttype = ((Const *)leftop)->consttype;
 
 		filter->r.opcode = PXF_ATTR_CODE;
-		filter->r.attnum = ((Var *) rightop)->varattno;
+		filter->r.attnum = ((Var *)rightop)->varattno;
 		filter->r.consttype = InvalidOid;
 		if (filter->r.attnum <= InvalidAttrNumber)
-			return false; /* system attr not supported */
+			return false;		/* system attr not supported */
 	}
 	else
 	{
@@ -720,16 +762,16 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc *filter)
 }
 
 static bool
-scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter)
+scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc * filter)
 {
 
-	Node	*leftop		= NULL;
-	Node	*rightop	= NULL;
+	Node	   *leftop = NULL;
+	Node	   *rightop = NULL;
 
-	leftop = (Node *) linitial(expr->args);
-	rightop = (Node *) lsecond(expr->args);
-	Oid		 leftop_type = exprType(leftop);
-	Oid		 rightop_type = exprType(rightop);
+	leftop = (Node *)linitial(expr->args);
+	rightop = (Node *)lsecond(expr->args);
+	Oid			leftop_type = exprType(leftop);
+	Oid			rightop_type = exprType(rightop);
 
 	/*
 	 * check if supported type -
@@ -740,16 +782,16 @@ scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter
 	/*
 	 * check if supported operator -
 	 */
-	if(!supported_operator_type_scalar_array_op_expr(expr->opno, filter, expr->useOr))
+	if (!supported_operator_type_scalar_array_op_expr(expr->opno, filter, expr->useOr))
 		return false;
 
-	if (IsA(leftop, Var) && IsA(rightop, Const))
+	if (IsA(leftop, Var)&&IsA(rightop, Const))
 	{
 		filter->l.opcode = PXF_ATTR_CODE;
-		filter->l.attnum = ((Var *) leftop)->varattno;
+		filter->l.attnum = ((Var *)leftop)->varattno;
 		filter->l.consttype = InvalidOid;
 		if (filter->l.attnum <= InvalidAttrNumber)
-			return false; /* system attr not supported */
+			return false;		/* system attr not supported */
 
 		filter->r.opcode = PXF_LIST_CONST_CODE;
 		filter->r.attnum = InvalidAttrNumber;
@@ -757,7 +799,7 @@ scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter
 		list_const_to_str((Const *)rightop, filter->r.conststr);
 		filter->r.consttype = ((Const *)rightop)->consttype;
 	}
-	else if (IsA(leftop, Const) && IsA(rightop, Var))
+	else if (IsA(leftop, Const)&&IsA(rightop, Var))
 	{
 		filter->l.opcode = PXF_LIST_CONST_CODE;
 		filter->l.attnum = InvalidAttrNumber;
@@ -766,10 +808,10 @@ scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter
 		filter->l.consttype = ((Const *)leftop)->consttype;
 
 		filter->r.opcode = PXF_ATTR_CODE;
-		filter->r.attnum = ((Var *) rightop)->varattno;
+		filter->r.attnum = ((Var *)rightop)->varattno;
 		filter->r.consttype = InvalidOid;
 		if (filter->r.attnum <= InvalidAttrNumber)
-			return false; /* system attr not supported */
+			return false;		/* system attr not supported */
 	}
 	else
 	{
@@ -783,9 +825,9 @@ scalar_array_op_expr_to_pxffilter(ScalarArrayOpExpr *expr, PxfFilterDesc *filter
 }
 
 static bool
-var_to_pxffilter(Var *var, PxfFilterDesc *filter)
+var_to_pxffilter(Var *var, PxfFilterDesc * filter)
 {
-	Oid var_type = InvalidOid;
+	Oid			var_type = InvalidOid;
 
 	if ((!var) || (!filter))
 		return false;
@@ -799,13 +841,13 @@ var_to_pxffilter(Var *var, PxfFilterDesc *filter)
 		return false;
 
 	/* arguments must be VAR and CONST */
-	if (IsA(var,  Var))
+	if (IsA(var, Var))
 	{
 		filter->l.opcode = PXF_ATTR_CODE;
 		filter->l.attnum = var->varattno;
 		filter->l.consttype = InvalidOid;
 		if (filter->l.attnum <= InvalidAttrNumber)
-			return false; /* system attr not supported */
+			return false;		/* system attr not supported */
 
 		filter->r.opcode = PXF_SCALAR_CONST_CODE;
 		filter->r.attnum = InvalidAttrNumber;
@@ -822,10 +864,11 @@ var_to_pxffilter(Var *var, PxfFilterDesc *filter)
 	return true;
 }
 
-static List*
-append_attr_from_var(Var* var, List* attrs)
+static List *
+append_attr_from_var(Var *var, List *attrs)
 {
-	AttrNumber varattno = var->varattno;
+	AttrNumber	varattno = var->varattno;
+
 	/* system attr not supported */
 	if (varattno > InvalidAttrNumber)
 		return lappend_int(attrs, varattno - 1);
@@ -839,22 +882,33 @@ append_attr_from_var(Var* var, List* attrs)
  * extracts all columns from FuncExpr into attrs
  * assigns false to expressionIsSupported if at least one of items is not supported
  */
-static List*
-append_attr_from_func_args(FuncExpr *expr, List* attrs, bool* expressionIsSupported) {
-	if (!expressionIsSupported) {
+static List *
+append_attr_from_func_args(FuncExpr *expr, List *attrs, bool *expressionIsSupported)
+{
+	if (!expressionIsSupported)
+	{
 		return NIL;
 	}
-	ListCell *lc = NULL;
-	foreach (lc, expr->args)
+	ListCell   *lc = NULL;
+
+	foreach(lc, expr->args)
 	{
-		Node *node = (Node *) lfirst(lc);
-		if (IsA(node, FuncExpr)) {
-			attrs = append_attr_from_func_args((FuncExpr *) node, attrs, expressionIsSupported);
-		} else if (IsA(node, Var)) {
-			attrs = append_attr_from_var((Var *) node, attrs);
-		} else if (IsA(node, OpExpr)) {
-			attrs = get_attrs_from_expr((OpExpr *) node, expressionIsSupported);
-		} else {
+		Node	   *node = (Node *)lfirst(lc);
+
+		if (IsA(node, FuncExpr))
+		{
+			attrs = append_attr_from_func_args((FuncExpr *)node, attrs, expressionIsSupported);
+		}
+		else if (IsA(node, Var))
+		{
+			attrs = append_attr_from_var((Var *)node, attrs);
+		}
+		else if (IsA(node, OpExpr))
+		{
+			attrs = get_attrs_from_expr((OpExpr *)node, expressionIsSupported);
+		}
+		else
+		{
 			*expressionIsSupported = false;
 			return NIL;
 		}
@@ -870,12 +924,12 @@ append_attr_from_func_args(FuncExpr *expr, List* attrs, bool* expressionIsSuppor
  * extracts and returns list of all columns from Expr
  * assigns false to expressionIsSupported if at least one of items is not supported
  */
-static List*
-get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
+static List *
+get_attrs_from_expr(Expr *expr, bool *expressionIsSupported)
 {
-	Node *leftop = NULL;
-	Node *rightop = NULL;
-	List *attrs = NIL;
+	Node	   *leftop = NULL;
+	Node	   *rightop = NULL;
+	List	   *attrs = NIL;
 
 	*expressionIsSupported = true;
 
@@ -886,49 +940,65 @@ get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
 	{
 		leftop = get_leftop(expr);
 		rightop = get_rightop(expr);
-	} else if (IsA(expr, ScalarArrayOpExpr))
+	}
+	else if (IsA(expr, ScalarArrayOpExpr))
 	{
-		ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) expr;
-		leftop = (Node *) linitial(saop->args);
-		rightop = (Node *) lsecond(saop->args);
-	} else {
-		/*	If expression type is not known, report that it's not supported */
+		ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *)expr;
+
+		leftop = (Node *)linitial(saop->args);
+		rightop = (Node *)lsecond(saop->args);
+	}
+	else
+	{
+		/* If expression type is not known, report that it's not supported */
 		*expressionIsSupported = false;
 		return NIL;
 	}
 
-	/*	We support following combinations of operands: */
-	/*	Var, Const */
-	/*	Relabel, Const */
-	/*	FuncExpr, Const */
-	/*	Const, Var */
-	/*	Const, Relabel */
-	/*	Const, FuncExpr */
-	/*	For most of datatypes column is represented by Var node */
-	/*	For varchar column is represented by RelabelType node */
-	if (IsA(leftop, Var) && IsA(rightop, Const))
+	/* We support following combinations of operands: */
+	/* Var, Const */
+	/* Relabel, Const */
+	/* FuncExpr, Const */
+	/* Const, Var */
+	/* Const, Relabel */
+	/* Const, FuncExpr */
+	/* For most of datatypes column is represented by Var node */
+	/* For varchar column is represented by RelabelType node */
+	if (IsA(leftop, Var)&&IsA(rightop, Const))
 	{
-		attrs = append_attr_from_var((Var *) leftop, attrs);
-	} else if (IsA(leftop, RelabelType) && IsA(rightop, Const))
+		attrs = append_attr_from_var((Var *)leftop, attrs);
+	}
+	else if (IsA(leftop, RelabelType)&&IsA(rightop, Const))
 	{
-		attrs = append_attr_from_var((Var *) ((RelabelType *) leftop)->arg, attrs);
-	} else if (IsA(leftop, FuncExpr) && IsA(rightop, Const)) {
-		FuncExpr *expr = (FuncExpr *) leftop;
+		attrs = append_attr_from_var((Var *)((RelabelType *)leftop)->arg, attrs);
+	}
+	else if (IsA(leftop, FuncExpr)&&IsA(rightop, Const))
+	{
+		FuncExpr   *expr = (FuncExpr *)leftop;
+
 		attrs = append_attr_from_func_args(expr, attrs, expressionIsSupported);
 	}
-	else if (IsA(rightop, Var) && IsA(leftop, Const))
+	else if (IsA(rightop, Var)&&IsA(leftop, Const))
 	{
-		attrs = append_attr_from_var((Var *) rightop, attrs);
-	} else if (IsA(rightop, RelabelType) && IsA(leftop, Const))
+		attrs = append_attr_from_var((Var *)rightop, attrs);
+	}
+	else if (IsA(rightop, RelabelType)&&IsA(leftop, Const))
 	{
-		attrs = append_attr_from_var((Var *) ((RelabelType *) rightop)->arg, attrs);
-	} else if (IsA(rightop, FuncExpr) && IsA(leftop, Const)) {
-		FuncExpr *expr = (FuncExpr *) rightop;
+		attrs = append_attr_from_var((Var *)((RelabelType *)rightop)->arg, attrs);
+	}
+	else if (IsA(rightop, FuncExpr)&&IsA(leftop, Const))
+	{
+		FuncExpr   *expr = (FuncExpr *)rightop;
+
 		attrs = append_attr_from_func_args(expr, attrs, expressionIsSupported);
 	}
-	else {
-		/*	If operand type or combination is not known, report that it's not supported */
-		/*	to avoid partially extracted attributes from expression */
+	else
+	{
+		/*
+		 * If operand type or combination is not known, report that it's not
+		 * supported
+		 */
+		/* to avoid partially extracted attributes from expression */
 		*expressionIsSupported = false;
 		return NIL;
 	}
@@ -946,8 +1016,8 @@ get_attrs_from_expr(Expr *expr, bool* expressionIsSupported)
 static bool
 supported_filter_type(Oid type)
 {
-	int		 nargs		= sizeof(pxf_supported_types) / sizeof(Oid);
-	int		 i;
+	int			nargs = sizeof(pxf_supported_types) / sizeof(Oid);
+	int			i;
 
 	/* is type supported? */
 	for (i = 0; i < nargs; i++)
@@ -963,49 +1033,51 @@ supported_filter_type(Oid type)
 
 
 static bool
-supported_operator_type_op_expr(Oid type, PxfFilterDesc *filter)
+supported_operator_type_op_expr(Oid type, PxfFilterDesc * filter)
 {
 
-	int nargs = sizeof(pxf_supported_opr_op_expr) / sizeof(dbop_pxfop_map);
-	int i;
+	int			nargs = sizeof(pxf_supported_opr_op_expr) / sizeof(dbop_pxfop_map);
+	int			i;
+
 	/* is operator supported? if so, set the corresponding PXFOP */
 	for (i = 0; i < nargs; i++)
 	{
 		/* NOTE: switch to hash table lookup if   */
 		/* array grows. for now it's cheap enough */
-		if(type == pxf_supported_opr_op_expr[i].dbop)
+		if (type == pxf_supported_opr_op_expr[i].dbop)
 		{
 			filter->op = pxf_supported_opr_op_expr[i].pxfop;
-			return true; /* filter qualifies! */
+			return true;		/* filter qualifies! */
 		}
 	}
 
-		elog(DEBUG1, "opexpr_to_pxffilter: operator is not supported, operator code: %d", type);
+	elog(DEBUG1, "opexpr_to_pxffilter: operator is not supported, operator code: %d", type);
 
-		return false;
+	return false;
 }
 
 static bool
-supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc *filter, bool useOr)
+supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc * filter, bool useOr)
 {
 
-	int nargs = sizeof(pxf_supported_opr_scalar_array_op_expr) / sizeof(dbop_pxfop_array_map);
-	int i;
+	int			nargs = sizeof(pxf_supported_opr_scalar_array_op_expr) / sizeof(dbop_pxfop_array_map);
+	int			i;
+
 	/* is operator supported? if so, set the corresponding PXFOP */
 	for (i = 0; i < nargs; i++)
 	{
 		/* NOTE: switch to hash table lookup if   */
 		/* array grows. for now it's cheap enough */
-		if(useOr == pxf_supported_opr_scalar_array_op_expr[i].useOr && type == pxf_supported_opr_scalar_array_op_expr[i].dbop)
+		if (useOr == pxf_supported_opr_scalar_array_op_expr[i].useOr && type == pxf_supported_opr_scalar_array_op_expr[i].dbop)
 		{
 			filter->op = pxf_supported_opr_scalar_array_op_expr[i].pxfop;
-			return true; /* filter qualifies! */
+			return true;		/* filter qualifies! */
 		}
 	}
 
-		elog(DEBUG1, "supported_operator_type_scalar_array_op_expr: operator is not supported, operator code: %d", type);
+	elog(DEBUG1, "supported_operator_type_scalar_array_op_expr: operator is not supported, operator code: %d", type);
 
-		return false;
+	return false;
 }
 
 
@@ -1052,19 +1124,12 @@ scalar_const_to_str(Const *constval, StringInfo buf)
 		case TIMESTAMPOID:
 			appendStringInfo(buf, "%s", extval);
 			break;
-		case BOOLOID:
-			if (strcmp(extval, "t") == 0)
-				appendStringInfo(buf, TrueConstValue);
-			else
-				appendStringInfo(buf, FalseConstValue);
-			break;
 		default:
 			/* should never happen. we filter on types earlier */
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("internal error in pxffilters.c:scalar_const_to_str. "
-							"Using unsupported data type (%d) (value %s)",
-							constval->consttype, extval)));
+			elog(ERROR,
+				 "internal error in pxffilters.c:scalar_const_to_str. "
+				 "Using unsupported data type (%d) (value %s)",
+				 constval->consttype, extval);
 
 	}
 
@@ -1086,9 +1151,9 @@ static void
 list_const_to_str(Const *constval, StringInfo buf)
 {
 	StringInfo	interm_buf;
-	Datum *dats;
+	Datum	   *dats;
 	ArrayType  *arr;
-	int len;
+	int			len;
 
 	if (constval->constisnull)
 	{
@@ -1096,7 +1161,8 @@ list_const_to_str(Const *constval, StringInfo buf)
 		return;
 	}
 
-	if (constval->constbyval) {
+	if (constval->constbyval)
+	{
 		elog(DEBUG1, "Constant passed by value is not expected in this context.");
 		return;
 	}
@@ -1108,85 +1174,87 @@ list_const_to_str(Const *constval, StringInfo buf)
 	switch (constval->consttype)
 	{
 		case INT2ARRAYOID:
-		{
-			int16 value;
-			deconstruct_array(arr, INT2OID, sizeof (value), true, 's', &dats, NULL, &len);
-
-			for (int i = 0; i < len; i++)
 			{
-				value = DatumGetInt16(dats[i]);
+				int16		value;
 
-				appendStringInfo(interm_buf, "%hd", value);
+				deconstruct_array(arr, INT2OID, sizeof(value), true, 's', &dats, NULL, &len);
 
-				appendStringInfo(buf, "%c%d%c%s",
-						PXF_SIZE_BYTES, interm_buf->len,
-						PXF_CONST_DATA, interm_buf->data);
-				resetStringInfo(interm_buf);
+				for (int i = 0; i < len; i++)
+				{
+					value = DatumGetInt16(dats[i]);
+
+					appendStringInfo(interm_buf, "%hd", value);
+
+					appendStringInfo(buf, "%c%d%c%s",
+									 PXF_SIZE_BYTES, interm_buf->len,
+									 PXF_CONST_DATA, interm_buf->data);
+					resetStringInfo(interm_buf);
+				}
+				break;
 			}
-			break;
-		}
 		case INT4ARRAYOID:
-		{
-			int32 value;
-			deconstruct_array(arr, INT4OID, sizeof (value), true, 'i', &dats, NULL, &len);
-
-			for (int i = 0; i < len; i++)
 			{
-				value = DatumGetInt32(dats[i]);
+				int32		value;
 
-				appendStringInfo(interm_buf, "%d", value);
+				deconstruct_array(arr, INT4OID, sizeof(value), true, 'i', &dats, NULL, &len);
 
-				appendStringInfo(buf, "%c%d%c%s",
-						PXF_SIZE_BYTES, interm_buf->len,
-						PXF_CONST_DATA, interm_buf->data);
-				resetStringInfo(interm_buf);
+				for (int i = 0; i < len; i++)
+				{
+					value = DatumGetInt32(dats[i]);
+
+					appendStringInfo(interm_buf, "%d", value);
+
+					appendStringInfo(buf, "%c%d%c%s",
+									 PXF_SIZE_BYTES, interm_buf->len,
+									 PXF_CONST_DATA, interm_buf->data);
+					resetStringInfo(interm_buf);
+				}
+				break;
 			}
-			break;
-		}
 		case INT8ARRAYOID:
-		{
-			int64 value;
-			deconstruct_array(arr, INT8OID, sizeof (value), true, 'd', &dats, NULL, &len);
-
-			for (int i = 0; i < len; i++)
 			{
-				value = DatumGetInt64(dats[i]);
+				int64		value;
 
-				appendStringInfo(interm_buf, "%ld", value);
+				deconstruct_array(arr, INT8OID, sizeof(value), true, 'd', &dats, NULL, &len);
 
-				appendStringInfo(buf, "%c%d%c%s",
-						PXF_SIZE_BYTES, interm_buf->len,
-						PXF_CONST_DATA, interm_buf->data);
-				resetStringInfo(interm_buf);
+				for (int i = 0; i < len; i++)
+				{
+					value = DatumGetInt64(dats[i]);
+
+					appendStringInfo(interm_buf, "%ld", value);
+
+					appendStringInfo(buf, "%c%d%c%s",
+									 PXF_SIZE_BYTES, interm_buf->len,
+									 PXF_CONST_DATA, interm_buf->data);
+					resetStringInfo(interm_buf);
+				}
+				break;
 			}
-			break;
-		}
 		case TEXTARRAYOID:
-		{
-			char *value;
-
-			deconstruct_array(arr, TEXTOID, -1, false, 'i', &dats, NULL, &len);
-
-			for (int i = 0; i < len; i++)
 			{
-				value = DatumGetCString(DirectFunctionCall1(textout, dats[i]));
+				char	   *value;
 
-				appendStringInfo(interm_buf, "%s", value);
+				deconstruct_array(arr, TEXTOID, -1, false, 'i', &dats, NULL, &len);
 
-				appendStringInfo(buf, "%c%d%c%s",
-						PXF_SIZE_BYTES, interm_buf->len,
-						PXF_CONST_DATA, interm_buf->data);
-				resetStringInfo(interm_buf);
+				for (int i = 0; i < len; i++)
+				{
+					value = DatumGetCString(DirectFunctionCall1(textout, dats[i]));
+
+					appendStringInfo(interm_buf, "%s", value);
+
+					appendStringInfo(buf, "%c%d%c%s",
+									 PXF_SIZE_BYTES, interm_buf->len,
+									 PXF_CONST_DATA, interm_buf->data);
+					resetStringInfo(interm_buf);
+				}
+				break;
 			}
-			break;
-		}
 		default:
 			/* should never happen. we filter on types earlier */
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("internal error in pxffilters.c:list_const_to_str. "
-							"Using unsupported data type (%d)",
-							constval->consttype)));
+			elog(ERROR,
+				 "internal error in pxffilters.c:list_const_to_str. "
+				 "Using unsupported data type (%d)",
+				 constval->consttype);
 
 	}
 
@@ -1203,24 +1271,28 @@ list_const_to_str(Const *constval, StringInfo buf)
  * string that represents the push down filters (See called functions
  * headers for more information).
  */
-char *serializePxfFilterQuals(List *quals)
+char *
+serializePxfFilterQuals(List *quals)
 {
-	char	*result = NULL;
+	char	   *result = NULL;
 
-	if (quals == NULL) {
+	if (quals == NULL)
+	{
 		return result;
 	}
 
-	int logicalOpsNum = 0;
-	List *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
+	int			logicalOpsNum = 0;
+	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
 
-	/*	Trivial expression means list of OpExpr implicitly ANDed */
-	bool isTrivialExpression = logicalOpsNum == 0 && expressionItems && expressionItems->length > 1;
-	if (isTrivialExpression) {
+	/* Trivial expression means list of OpExpr implicitly ANDed */
+	bool		isTrivialExpression = logicalOpsNum == 0 && expressionItems && expressionItems->length > 1;
+
+	if (isTrivialExpression)
+	{
 		enrich_trivial_expression(expressionItems);
 	}
 
-	result	= pxf_serialize_filter_list(expressionItems);
+	result = pxf_serialize_filter_list(expressionItems);
 	pxf_free_expression_items_list(expressionItems, isTrivialExpression);
 
 	elog(DEBUG1, "serializePxfFilterQuals: resulting filter string is '%s'", (result == NULL) ? "null" : result);
@@ -1232,20 +1304,24 @@ char *serializePxfFilterQuals(List *quals)
  * Takes list of expression items which supposed to be just a list of OpExpr
  * and adds needed number of AND items
  */
-void enrich_trivial_expression(List *expressionItems) {
-	int logicalOpsNumNeeded = expressionItems->length - 1;
+void
+enrich_trivial_expression(List *expressionItems)
+{
+	int			logicalOpsNumNeeded = expressionItems->length - 1;
+
 	if (logicalOpsNumNeeded > 0)
 	{
 		ExpressionItem *andExpressionItem = (ExpressionItem *) palloc0(sizeof(ExpressionItem));
-		BoolExpr *andExpr = makeNode(BoolExpr);
+		BoolExpr   *andExpr = makeNode(BoolExpr);
 
 		andExpr->boolop = AND_EXPR;
 
-		andExpressionItem->node = (Node *) andExpr;
+		andExpressionItem->node = (Node *)andExpr;
 		andExpressionItem->parent = NULL;
 		andExpressionItem->processed = false;
 
-		for (int i = 0; i < logicalOpsNumNeeded; i++) {
+		for (int i = 0; i < logicalOpsNumNeeded; i++)
+		{
 			expressionItems = lappend(expressionItems, andExpressionItem);
 		}
 	}
@@ -1259,74 +1335,81 @@ void enrich_trivial_expression(List *expressionItems) {
  * List might contain duplicates.
  * Caller should release memory once result is not needed.
  */
-List* extractPxfAttributes(List* quals, bool* qualsAreSupported)
+List *
+extractPxfAttributes(List *quals, bool *qualsAreSupported)
 {
 
-	if (!(*qualsAreSupported)) {
+	if (!(*qualsAreSupported))
+	{
 		return NIL;
 	}
-	ListCell		*lc = NULL;
-	List *attributes = NIL;
-	bool expressionIsSupported;
+	ListCell   *lc = NULL;
+	List	   *attributes = NIL;
+	bool		expressionIsSupported;
+
 	*qualsAreSupported = true;
 
 	if (list_length(quals) == 0)
 		return NIL;
 
-	foreach (lc, quals)
+	foreach(lc, quals)
 	{
-		Node *node = (Node *) lfirst(lc);
-		NodeTag tag = nodeTag(node);
+		Node	   *node = (Node *)lfirst(lc);
+		NodeTag		tag = nodeTag(node);
 
 		switch (tag)
 		{
 			case T_OpExpr:
 			case T_ScalarArrayOpExpr:
-			{
-				Expr* expr = (Expr *) node;
-				List			*attrs = get_attrs_from_expr(expr, &expressionIsSupported);
-				if (!expressionIsSupported) {
-					*qualsAreSupported = false;
-					return NIL;
+				{
+					Expr	   *expr = (Expr *)node;
+					List	   *attrs = get_attrs_from_expr(expr, &expressionIsSupported);
+
+					if (!expressionIsSupported)
+					{
+						*qualsAreSupported = false;
+						return NIL;
+					}
+					attributes = list_concat(attributes, attrs);
+					break;
 				}
-				attributes = list_concat(attributes, attrs);
-				break;
-			}
 			case T_BoolExpr:
-			{
-				BoolExpr* expr = (BoolExpr *) node;
-				bool innerBoolQualsAreSupported = true;
-				List *inner_result = extractPxfAttributes(expr->args, &innerBoolQualsAreSupported);
-				if (!innerBoolQualsAreSupported) {
-					*qualsAreSupported = false;
+				{
+					BoolExpr   *expr = (BoolExpr *)node;
+					bool		innerBoolQualsAreSupported = true;
+					List	   *inner_result = extractPxfAttributes(expr->args, &innerBoolQualsAreSupported);
+
+					if (!innerBoolQualsAreSupported)
+					{
+						*qualsAreSupported = false;
+						return NIL;
+					}
+					attributes = list_concat(attributes, inner_result);
+					break;
+				}
+			case T_NullTest:
+				{
+					NullTest   *expr = (NullTest *)node;
+
+					attributes = append_attr_from_var((Var *)expr->arg, attributes);
+					break;
+				}
+			case T_BooleanTest:
+				{
+					BooleanTest *expr = (BooleanTest *)node;
+
+					attributes = append_attr_from_var((Var *)expr->arg, attributes);
+					break;
+				}
+			default:
+				{
+					/*
+					 * tag is not supported, it's risk of having: 1)
+					 * false-positive tuples 2) unable to join tables 3) etc
+					 */
+					elog(INFO, "extractPxfAttributes: unsupported node tag %d, unable to extract attribute from qualifier", tag);
 					return NIL;
 				}
-				attributes = list_concat(attributes, inner_result);
-				break;
-			}
-			case T_NullTest:
-			{
-				NullTest* expr = (NullTest *) node;
-				attributes = append_attr_from_var((Var *) expr->arg, attributes);
-				break;
-			}
-			case T_BooleanTest:
-			{
-				BooleanTest* expr = (BooleanTest *) node;
-				attributes = append_attr_from_var((Var *) expr->arg, attributes);
-				break;
-			}
-			default:
-			{
-				/*
-				 * tag is not supported, it's risk of having:
-				 * 1) false-positive tuples
-				 * 2) unable to join tables
-				 * 3) etc
-				 */
-				elog(INFO, "extractPxfAttributes: unsupported node tag %d, unable to extract attribute from qualifier", tag);
-				return NIL;
-			}
 		}
 	}
 

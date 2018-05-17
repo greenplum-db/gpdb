@@ -49,7 +49,7 @@ typedef enum PxfOperatorCode
 	PXFOP_IS_NOTNULL,
 	PXFOP_IN
 
-} PxfOperatorCode;
+}	PxfOperatorCode;
 
 /*
  * each supported operand from both sides of the operator is represented
@@ -75,68 +75,74 @@ typedef enum PxfOperatorCode
  */
 typedef struct PxfOperand
 {
-	char		opcode;		/* PXF_ATTR_CODE, PXF_SCALAR_CONST_CODE, PXF_LIST_CONST_CODE*/
-	AttrNumber	attnum;		/* used when opcode is PXF_ATTR_CODE */
-	StringInfo	conststr;	/* used when opcode is PXF_SCALAR_CONST_CODE or PXF_LIST_CONST_CODE*/
-	Oid			consttype;	/* used when opcode is PXF_SCALAR_CONST_CODE or PXF_LIST_CONST_CODE*/
+	char		opcode;			/* PXF_ATTR_CODE, PXF_SCALAR_CONST_CODE,
+								 * PXF_LIST_CONST_CODE */
+	AttrNumber	attnum;			/* used when opcode is PXF_ATTR_CODE */
+	StringInfo	conststr;		/* used when opcode is PXF_SCALAR_CONST_CODE
+								 * or PXF_LIST_CONST_CODE */
+	Oid			consttype;		/* used when opcode is PXF_SCALAR_CONST_CODE
+								 * or PXF_LIST_CONST_CODE */
 
-} PxfOperand;
+}	PxfOperand;
 
 /*
  * A PXF filter has a left and right operands, and an operator.
  */
 typedef struct PxfFilterDesc
 {
-	PxfOperand		l;		/* left operand */
-	PxfOperand		r;		/* right operand or InvalidAttrNumber if none */
-	PxfOperatorCode op;		/* operator code */
+	PxfOperand	l;				/* left operand */
+	PxfOperand	r;				/* right operand or InvalidAttrNumber if none */
+	PxfOperatorCode op;			/* operator code */
 
-} PxfFilterDesc;
+}	PxfFilterDesc;
 
 /*
  * HAWQ operator OID to PXF operator code mapping used for OpExpr
  */
 typedef struct dbop_pxfop_map
 {
-	Oid				dbop;
+	Oid			dbop;
 	PxfOperatorCode pxfop;
 
-} dbop_pxfop_map;
+}	dbop_pxfop_map;
 
 /*
  * HAWQ operator OID to PXF operator code mapping used for ScalarArrayOpExpr
  */
 typedef struct dbop_pxfop_array_map
 {
-	Oid				dbop;
+	Oid			dbop;
 	PxfOperatorCode pxfop;
-	bool			useOr;
+	bool		useOr;
 
-} dbop_pxfop_array_map;
+}	dbop_pxfop_array_map;
 
 typedef struct ExpressionItem
 {
-	Node	*node;
-	Node	*parent;
-	bool	processed;
-} ExpressionItem;
+	Node	   *node;
+	Node	   *parent;
+	bool		processed;
+}	ExpressionItem;
 
-static inline bool pxfoperand_is_attr(PxfOperand x)
+static inline bool
+pxfoperand_is_attr(PxfOperand x)
 {
 	return (x.opcode == PXF_ATTR_CODE);
 }
 
-static inline bool pxfoperand_is_scalar_const(PxfOperand x)
+static inline bool
+pxfoperand_is_scalar_const(PxfOperand x)
 {
 	return (x.opcode == PXF_SCALAR_CONST_CODE);
 }
 
-static inline bool pxfoperand_is_list_const(PxfOperand x)
+static inline bool
+pxfoperand_is_list_const(PxfOperand x)
 {
 	return (x.opcode == PXF_LIST_CONST_CODE);
 }
 
-char *serializePxfFilterQuals(List *quals);
-List* extractPxfAttributes(List* quals, bool* qualsAreSupported);
+char	   *serializePxfFilterQuals(List *quals);
+List	   *extractPxfAttributes(List *quals, bool *qualsAreSupported);
 
-#endif // _PXF_FILTERS_H_
+#endif   /* // _PXF_FILTERS_H_ */
