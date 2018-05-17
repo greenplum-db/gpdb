@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #	Filename:-		gpsegstate.sh
 #	Version:-		$Revision$
 #	Updated:-		$Date$	

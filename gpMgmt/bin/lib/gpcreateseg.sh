@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #	Filename:-		gpcreateseg.sh
 #	Version:-		$Revision$
 #	Updated:-		$Date$	

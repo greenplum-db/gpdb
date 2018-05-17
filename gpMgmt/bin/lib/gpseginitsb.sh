@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #	Filename:-		gpseginitsb.sh
 #	Version:-		$Revision$
 #	Updated:-		$Date$	

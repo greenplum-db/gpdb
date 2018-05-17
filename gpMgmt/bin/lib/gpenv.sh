@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This is a bash script (since /bin/bash is guaranteed) that sets up the environment
 # needed to execute a python script.  It uses the path to itself as the basis from

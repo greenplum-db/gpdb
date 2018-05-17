@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #***********************************************************
 # Look for Greenplum executables to find path

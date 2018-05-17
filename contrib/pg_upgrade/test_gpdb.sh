@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # contrib/pg_upgrade/test_gpdb.sh
 #

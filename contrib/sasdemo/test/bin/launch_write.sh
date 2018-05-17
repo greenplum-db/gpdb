@@ -1,6 +1,4 @@
-#!/bin/bash
-
-
+#!/usr/bin/env bash
 
 SEGMENTS=`psql -XtA -c "select content+1 from gp_segment_configuration where content >= 0"`
 BASEPORT=1999
