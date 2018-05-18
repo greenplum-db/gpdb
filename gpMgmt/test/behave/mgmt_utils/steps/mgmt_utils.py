@@ -2571,6 +2571,7 @@ def impl(context):
         conn.commit()
 
 @given('user has fixed the expansion order for tables')
+@when('user has fixed the expansion order for tables')
 def impl(context):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
