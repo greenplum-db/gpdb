@@ -16,6 +16,7 @@ Usage: gpssh-exkeys [--version] [-?v]
              -f hostfile   : a file listing all new hosts to connect to
              -e hostfile   : a file listing all existing hosts for expansion
              -x hostfile   : a file listing all new hosts for expansion
+             -p port       : ssh port to be used if not using default (port 22)
 
     Each line in a hostfile is expected to contain a single host name.  Blank
     lines and comment lines (beginning with #) are ignored.  The name of the
@@ -68,6 +69,7 @@ class Global:
     opt['-f'] = False
     opt['-x'] = False  # new hosts for expansion
     opt['-e'] = False  # existing hosts file for expansion
+    opt['-p'] = 22
     passwd = []
     # ssh commands don't respect $HOME; they always use the home
     # directory supplied in /etc/passwd so sshd can find the same
@@ -176,9 +178,9 @@ class Host:
 
         return False
 
-    def tryParamikoConnect(self, client, pwd=None, silence=False):
+    def tryParamikoConnect(self, client,  pwd=None, silence=False):
         try:
-            client.connect(self.m_host, password=pwd)
+            client.connect(self.m_host, port=int(GV.opt['-p']), password=pwd)
             return True
         except paramiko.AuthenticationException:
             if not silence: print >> sys.stderr, '[ERROR %s] bad password' % (self.m_host)
@@ -333,7 +335,7 @@ class Host:
 def parseCommandLine():
     global opt
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?vh:f:x:e:', ['version'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?vh:f:x:e:p:', ['version'])
     except Exception, e:
         usage('[ERROR] ' + str(e))
 
@@ -344,6 +346,8 @@ def parseCommandLine():
             GV.opt[switch] = True
         elif (switch[1] in ['f', 'x', 'e']):
             GV.opt[switch] = val
+        elif (switch == '-p'):
+            GV.opt[switch] = int(val)
         elif (switch == '-h'):
             GV.opt[switch].append(val)
         elif (switch == '--version'):
@@ -428,7 +432,7 @@ def testAccess(hostname):
     reported by ssh-keyscan.
     '''
     errfile = os.path.join(tempDir, 'sshcheck.err')
-    cmd = 'ssh -o "BatchMode=yes" -o "StrictHostKeyChecking=no" %s true 2>%s' % (hostname, errfile)
+    cmd = 'ssh -p %s -o "BatchMode=yes" -o "StrictHostKeyChecking=no" %s true 2>%s' % (GV.opt['-p'], hostname, errfile)
     if GV.opt['-v']: print '[INFO %s]: %s' % (hostname, cmd)
     rc = os.system(cmd)
     if rc != 0:
@@ -679,7 +683,7 @@ try:
     # takes care of part of it; testAccess takes care of the rest.
     errfile = os.path.join(tempDir, "keyscan.err")
     for host in localhosts:
-        cmd = 'ssh-keyscan -t rsa %s >> %s 2>%s' % (host.host(), GV.known_hosts_fname, errfile)
+        cmd = 'ssh-keyscan -p %s -t rsa %s >> %s 2>%s' % (GV.opt['-p'], host.host(), GV.known_hosts_fname, errfile)
         if GV.opt['-v']: print '[INFO]', cmd
         rc = os.system(cmd)
         if rc != 0:
@@ -710,7 +714,7 @@ try:
     badHosts = []
     errfile = os.path.join(tempDir, "keyscan.err")
     for h in GV.allHosts:
-        cmd = 'ssh-keyscan -t rsa %s >> %s 2>%s' % (h.host(), GV.known_hosts_fname, errfile)
+        cmd = 'ssh-keyscan -p %s -t rsa %s >> %s 2>%s' % (GV.opt['-p'], h.host(), GV.known_hosts_fname, errfile)
         if GV.opt['-v']: print '[INFO]', cmd
         rc = os.system(cmd)
         if rc != 0:
@@ -876,8 +880,9 @@ try:
 
         for h in GV.newHosts:
             cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' +
-                   '%s %s %s %s %s:.ssh/ 2>&1'
-                   % (GV.authorized_keys_fname,
+                   '-P %s %s %s %s %s %s:.ssh/ 2>&1'
+                   % (GV.opt['-p'],
+                      GV.authorized_keys_fname,
                       GV.known_hosts_fname,
                       GV.id_rsa_fname,
                       GV.id_rsa_pub_fname,
