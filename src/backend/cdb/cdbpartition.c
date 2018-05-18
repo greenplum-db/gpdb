@@ -169,7 +169,6 @@ static Oid selectPartition1(PartitionNode *partnode, Datum *values, bool *isnull
 				 PartitionNode **ppn_out);
 static int atpxPart_validate_spec(
 					   PartitionBy *pBy,
-					   CreateStmtContext *pcxt,
 					   Relation rel,
 					   CreateStmt *ct,
 					   PartitionElem *pelem,
@@ -5103,9 +5102,7 @@ apply_template_storage_encodings(CreateStmt *ct, Oid relid, Oid paroid,
  */
 
 static int
-atpxPart_validate_spec(
-					   PartitionBy *pBy,
-					   CreateStmtContext *pcxt,
+atpxPart_validate_spec(PartitionBy *pBy,
 					   Relation rel,
 					   CreateStmt *ct,
 					   PartitionElem *pelem,
@@ -5116,8 +5113,8 @@ atpxPart_validate_spec(
 					   char *partDesc)
 {
 	PartitionSpec *spec = makeNode(PartitionSpec);
-	ParseState *pstate = NULL;
-	List	   *schema = NIL;
+	ParseState *pstate;
+	List	   *schema;
 	List	   *inheritOids;
 	List	   *old_constraints;
 	int			parentOidCount;
@@ -5126,7 +5123,7 @@ atpxPart_validate_spec(
 
 	/* get the table column defs */
 	schema =
-		MergeAttributes(schema,
+		MergeAttributes(NIL,
 						list_make1(
 								   makeRangeVar(
 												get_namespace_name(
@@ -5134,8 +5131,6 @@ atpxPart_validate_spec(
 												pstrdup(RelationGetRelationName(rel)), -1)),
 						false, true /* isPartitioned */ ,
 						&inheritOids, &old_constraints, &parentOidCount, NULL);
-
-	pcxt->columns = schema;
 
 	spec->partElem = list_make1(pelem);
 
@@ -5432,8 +5427,14 @@ atpxPart_validate_spec(
 		}						/* end while */
 	}
 
+	CreateStmtContext cxt;
+
+	MemSet(&cxt, 0, sizeof(cxt));
+
+	cxt.columns = schema;
 	pstate = make_parsestate(NULL);
-	result = validate_partition_spec(pstate, pcxt, ct, pBy, "", -1);
+
+	result = validate_partition_spec(pstate, &cxt, ct, pBy, "", -1);
 	free_parsestate(pstate);
 
 	return result;
@@ -5464,7 +5465,6 @@ atpxPartAddList(Relation rel,
 	NewPosition newPos = MIDDLE;
 	bool		bOpenGap = false;
 	PartitionBy *pBy;
-	CreateStmtContext cxt;
 	Node	   *pSubSpec = NULL;	/* return the subpartition spec */
 	Relation	par_rel = rel;
 	PartitionNode pNodebuf;
@@ -5475,8 +5475,6 @@ atpxPartAddList(Relation rel,
 	if (par_prule && par_prule->topRule)
 		par_rel =
 			heap_open(par_prule->topRule->parchildrelid, AccessShareLock);
-
-	MemSet(&cxt, 0, sizeof(cxt));
 
 	Assert((PARTTYP_LIST == part_type) || (PARTTYP_RANGE == part_type));
 
@@ -6617,7 +6615,7 @@ atpxPartAddList(Relation rel,
 		ct->distributedBy = (Node *)make_dist_clause(rel);
 
 	/* this function does transformExpr on the boundary specs */
-	(void) atpxPart_validate_spec(pBy, &cxt, rel, ct, pelem, pNode, partName,
+	(void) atpxPart_validate_spec(pBy, rel, ct, pelem, pNode, partName,
 								  isDefault, part_type, "");
 
 	if (pelem && pelem->boundSpec)
@@ -7237,9 +7235,6 @@ atpxModifyListOverlap(Relation rel,
 		PartitionValuesSpec *pVSpec;
 		AlterPartitionId pid2;
 		PartitionNode *pNode = prule->pNode;
-		CreateStmtContext cxt;
-
-		MemSet(&cxt, 0, sizeof(cxt));
 
 		Assert(IsA(pelem->boundSpec, PartitionValuesSpec));
 
@@ -7247,7 +7242,6 @@ atpxModifyListOverlap(Relation rel,
 
 		/* this function does transformExpr on the boundary specs */
 		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  &cxt,
 									  rel,
 									  NULL, /* CreateStmt */
 									  pelem,
@@ -7753,13 +7747,8 @@ atpxModifyRangeOverlap(Relation rel,
 						prule2->partIdStr : "")));
 
 	{
-		CreateStmtContext cxt;
-
-		MemSet(&cxt, 0, sizeof(cxt));
-
 		/* this function does transformExpr on the boundary specs */
 		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  &cxt,
 									  rel,
 									  NULL, /* CreateStmt */
 									  pelem,
