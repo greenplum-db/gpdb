@@ -25,7 +25,8 @@ static void copy_distributedlog(migratorContext *ctx);
 static void set_frozenxids(migratorContext *ctx);
 static void setup(migratorContext *ctx, char *argv0, bool live_check);
 static void cleanup(migratorContext *ctx);
-static void	get_restricted_token(const char *progname);
+static void get_restricted_token(const char *progname);
+static void truncate_pg_partition(migratorContext *ctx);
 
 #ifdef WIN32
 static char * pg_strdupn(const char *str);
@@ -433,6 +434,10 @@ create_new_objects(migratorContext *ctx)
 			  );
 	check_ok(ctx);
 
+	/* For QE node, we do not need partition related systable entries. */
+	if (!ctx->dispatcher_mode)
+		truncate_pg_partition(ctx);
+
 	/* Restore contents of AO auxiliary tables */
 	restore_aosegment_tables(ctx);
 
@@ -463,6 +468,31 @@ create_new_objects(migratorContext *ctx)
 		dump_new_oids(ctx);
 
 	stop_postmaster(ctx, false, false);
+}
+
+/*
+ * GPDB does not store partition related catalog information on QE
+ * so we safely delete them.
+ */
+static void
+truncate_pg_partition(migratorContext *ctx)
+{
+	PGconn	*conn_template1;
+
+	conn_template1 = connectToServer(ctx, "template1", CLUSTER_NEW);
+
+	PQclear(executeQueryOrDie(ctx, conn_template1,
+							  "set allow_system_table_mods='dml'"));
+	PQclear(executeQueryOrDie(ctx, conn_template1,
+							  "delete from pg_catalog.pg_partition"));
+	PQclear(executeQueryOrDie(ctx, conn_template1,
+							  "delete from pg_catalog.pg_partition_rule"));
+	PQclear(executeQueryOrDie(ctx, conn_template1,
+							  "delete from pg_catalog.pg_partition_encoding"));
+	PQclear(executeQueryOrDie(ctx, conn_template1,
+							  "reset allow_system_table_mods"));
+
+	PQfinish(conn_template1);
 }
 
 /*
@@ -692,8 +722,6 @@ cleanup(migratorContext *ctx)
 	if (ctx->debug)
 		return;
 
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, ALL_DUMP_FILE);
-	unlink(filename);
 	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, GLOBALS_DUMP_FILE);
 	unlink(filename);
 	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, DB_DUMP_FILE);
