@@ -5,7 +5,7 @@ CREATE TABLE users (
 	lname text not null,
 	username text,
 	userid serial
-	-- , PRIMARY KEY(lname, fname) 
+	-- , PRIMARY KEY(lname, fname)
 	) DISTRIBUTED BY (userid);
 
 CREATE INDEX users_username_idx ON users(username);

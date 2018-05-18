@@ -559,6 +559,13 @@ CTranslatorRelcacheToDXL::Pmdrel
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, pmdid->Wsz());
 	}
 
+	// GPDB_91_MERGE_FIXME - Orca does not support foreign data
+	if (RelationIsForeign(rel))
+	{
+		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Foreign Data"));
+	}
+
+
 	CMDName *pmdname = NULL;
 	IMDRelation::Erelstoragetype erelstorage = IMDRelation::ErelstorageSentinel;
 	DrgPmdcol *pdrgpmdcol = NULL;
@@ -638,7 +645,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		// collect all check constraints
 		pdrgpmdidCheckConstraints = PdrgpmdidCheckConstraints(pmp, oid);
 
-		fTemporary = rel->rd_istemp;
+		fTemporary = (rel->rd_rel->relpersistence == RELPERSISTENCE_TEMP);
 		fHasOids = rel->rd_rel->relhasoids;
 	
 		GPOS_DELETE_ARRAY(pulAttnoMapping);
@@ -1600,7 +1607,7 @@ CTranslatorRelcacheToDXL::Pmdtype
 	CMDIdGPDB *pmdidOpGT = GPOS_NEW(pmp) CMDIdGPDB(ptce->gt_opr);
 	CMDIdGPDB *pmdidOpGEq = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->lt_opr));
 	CMDIdGPDB *pmdidOpComp = GPOS_NEW(pmp) CMDIdGPDB(ptce->cmp_proc);
-	BOOL fHashable = gpdb::FOpHashJoinable(ptce->eq_opr);
+	BOOL fHashable = gpdb::FOpHashJoinable(ptce->eq_opr, oidType);
 	BOOL fComposite = gpdb::FCompositeType(oidType);
 
 	// get standard aggregates

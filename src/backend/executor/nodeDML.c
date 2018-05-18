@@ -17,6 +17,7 @@
 #include "miscadmin.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbvars.h"
 #include "commands/tablecmds.h"
 #include "executor/execDML.h"
 #include "executor/instrument.h"
@@ -85,6 +86,16 @@ ExecDML(DMLState *node)
 	/* remove 'junk' columns from tuple */
 	node->cleanedUpSlot = ExecFilterJunk(node->junkfilter, projectedSlot);
 
+	/* GPDB_91_MERGE_FIXME:
+	 * This kind of node is used by ORCA only. If in the future ORCA still uses
+	 * DML node, canSetTag should be saved in DML plan node and init-ed by
+	 * copying canSetTag value from the parse tree.
+	 *
+	 * For !isUpdate case, ExecInsert() and ExecDelete() should use canSetTag
+	 * value from parse tree, however for isUpdate case, it seems that
+	 * ExecInsert() is run after ExecDelete() so canSetTag should be set
+	 * properly in ExecInsert().
+	 */
 	if (DML_INSERT == action)
 	{
 		/* Respect any given tuple Oid when updating a tuple. */
@@ -105,9 +116,12 @@ ExecDML(DMLState *node)
 		 * actions depending on the type of plan (constraint enforcement and
 		 * triggers.)
 		 */
-		ExecInsert(node->cleanedUpSlot, NULL /* destReceiver */,
-				node->ps.state, PLANGEN_OPTIMIZER /* Plan origin */, 
-				isUpdate);
+		ExecInsert(node->cleanedUpSlot,
+				   NULL,
+				   node->ps.state,
+				   true, /* GPDB_91_MERGE_FIXME: canSetTag, where to get this? */
+				   PLANGEN_OPTIMIZER /* Plan origin */,
+				   isUpdate);
 	}
 	else /* DML_DELETE */
 	{
@@ -120,8 +134,14 @@ ExecDML(DMLState *node)
 		tupleid = &tuple_ctid;
 
 		/* Correct tuple count by ignoring deletes when splitting tuples. */
-		ExecDelete(tupleid, node->cleanedUpSlot, NULL /* DestReceiver */, node->ps.state,
-				PLANGEN_OPTIMIZER /* Plan origin */, isUpdate);
+		ExecDelete(tupleid,
+				   NULL, /* GPDB_91_MERGE_FIXME: oldTuple? */
+				   node->cleanedUpSlot,
+				   NULL /* DestReceiver */,
+				   node->ps.state,
+				   !isUpdate, /* GPDB_91_MERGE_FIXME: where to get canSetTag? */
+				   PLANGEN_OPTIMIZER /* Plan origin */,
+				   isUpdate);
 	}
 
 	return slot;
@@ -140,13 +160,15 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	DMLState *dmlstate = makeNode(DMLState);
 	dmlstate->ps.plan = (Plan *)node;
 	dmlstate->ps.state = estate;
-
 	/*
 	 * Initialize es_result_relation_info, just like ModifyTable.
 	 * GPDB_90_MERGE_FIXME: do we need to consolidate the ModifyTable and DML
 	 * logic?
 	 */
 	estate->es_result_relation_info = estate->es_result_relations;
+
+	CmdType operation = estate->es_plannedstmt->commandType;
+	ResultRelInfo *resultRelInfo = estate->es_result_relation_info;
 
 	ExecInitResultTupleSlot(estate, &dmlstate->ps);
 
@@ -202,6 +224,21 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 
 	        /* Request a callback at end of query. */
 	        dmlstate->ps.cdbexplainfun = ExecDMLExplainEnd;
+	}
+
+	/*
+	 * If there are indices on the result relation, open them and save
+	 * descriptors in the result relation info, so that we can add new index
+	 * entries for the tuples we add/update.  We need not do this for a
+	 * DELETE, however, since deletion doesn't affect indexes.
+	 */
+	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer) /* only needed by the root slice who will do the actual updating */
+	{
+		if (resultRelInfo->ri_RelationDesc->rd_rel->relhasindex  &&
+			operation != CMD_DELETE)
+		{
+			ExecOpenIndices(resultRelInfo);
+		}
 	}
 
 	return dmlstate;

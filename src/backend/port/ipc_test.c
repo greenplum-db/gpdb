@@ -16,12 +16,12 @@
  *	   the parallel regression tests for a more complete test.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/ipc_test.c,v 1.27 2010/01/02 16:57:50 momjian Exp $
+ *	  src/backend/port/ipc_test.c
  *
  *-------------------------------------------------------------------------
  */
@@ -104,7 +104,7 @@ on_exit_reset(void)
 }
 
 void
-RecordSharedMemoryInLockFile(unsigned long id1, unsigned long id2)
+AddToDataDirLockFile(int target_line, const char *str)
 {
 }
 
@@ -135,7 +135,7 @@ errcode_for_file_access(void)
 
 bool
 errstart(int elevel, const char *filename, int lineno,
-		 const char *funcname)
+		 const char *funcname, const char *domain)
 {
 	return (elevel >= ERROR);
 }

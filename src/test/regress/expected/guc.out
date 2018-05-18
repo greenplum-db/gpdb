@@ -627,7 +627,8 @@ NOTICE:  schema "no_such_schema" does not exist
 -- with error occurring here
 select report_guc('work_mem'), current_setting('work_mem');
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
-ERROR:  schema "no_such_schema" does not exist
+ERROR:  invalid value for parameter "search_path": "no_such_schema"
+DETAIL:  schema "no_such_schema" does not exist
 alter function report_guc(text) reset search_path set work_mem = '2MB';
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select report_guc('work_mem'), current_setting('work_mem');
@@ -658,7 +659,7 @@ select myfunc(0), current_setting('work_mem');
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CONTEXT:  SQL statement "set local work_mem = '2MB'"
-PL/pgSQL function "myfunc" line 2 at SQL statement
+PL/pgSQL function "myfunc" line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
  2MB    | 3MB
@@ -668,7 +669,7 @@ alter function myfunc(int) reset all;
 select myfunc(0), current_setting('work_mem');
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CONTEXT:  SQL statement "set local work_mem = '2MB'"
-PL/pgSQL function "myfunc" line 2 at SQL statement
+PL/pgSQL function "myfunc" line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
  2MB    | 3MB
@@ -690,7 +691,7 @@ select myfunc(0), current_setting('work_mem');
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CONTEXT:  SQL statement "set work_mem = '2MB'"
-PL/pgSQL function "myfunc" line 2 at SQL statement
+PL/pgSQL function "myfunc" line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
  2MB    | 3MB
@@ -724,10 +725,10 @@ select myfunc(0);
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CONTEXT:  SQL statement "set work_mem = '2MB'"
-PL/pgSQL function "myfunc" line 2 at SQL statement
+PL/pgSQL function "myfunc" line 3 at SQL statement
 ERROR:  division by zero
 CONTEXT:  SQL statement "SELECT 1/$1"
-PL/pgSQL function "myfunc" line 3 at PERFORM
+PL/pgSQL function "myfunc" line 4 at PERFORM
 select current_setting('work_mem');
  current_setting 
 -----------------
@@ -738,7 +739,7 @@ select myfunc(1), current_setting('work_mem');
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CONTEXT:  SQL statement "set work_mem = '2MB'"
-PL/pgSQL function "myfunc" line 2 at SQL statement
+PL/pgSQL function "myfunc" line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
  2MB    | 3MB

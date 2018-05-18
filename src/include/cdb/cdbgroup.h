@@ -26,9 +26,8 @@
 #include "optimizer/clauses.h" /* AggClauseCounts */
 #include "optimizer/planmain.h"   /* GroupContext */
 
-extern Plan *
-cdb_grouping_planner(PlannerInfo* root,
-					 AggClauseCounts *agg_counts,
+extern Plan *cdb_grouping_planner(PlannerInfo* root,
+					 AggClauseCosts *agg_costs,
 					 GroupContext *group_context);
 
 extern bool cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match);
@@ -40,6 +39,7 @@ extern void generate_three_tlists(List *tlist,
 								  int numGroupCols,
 								  AttrNumber *groupColIdx,
 								  Oid *groupOperators,
+								  PlannerInfo *root,
 								  List **p_tlist1,
 								  List **p_tlist2,
 								  List **p_tlist3,
@@ -58,8 +58,7 @@ extern Plan *add_second_stage_agg(PlannerInfo *root,
 								  uint64 grouping,
 								  int rollup_gs_times,
 								  double numGroups,
-								  int numAggs,
-								  int transSpace,
+								  AggClauseCosts *agg_costs,
 								  const char *alias,
 								  List **p_current_pathkeys,
 								  Plan *result_plan,
@@ -71,7 +70,7 @@ extern List *reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_
 								  List *orig_tlist, List *new_tlist);
 extern List *augment_subplan_tlist(List *tlist, List *exprs, int *pnum, AttrNumber **pcols, bool return_resno);
 
-extern Plan *within_agg_planner(PlannerInfo *root, AggClauseCounts *agg_counts,
+extern Plan *within_agg_planner(PlannerInfo *root, AggClauseCosts *agg_costs,
 								GroupContext *group_context);
 
 extern void UpdateScatterClause(Query *query, List *newtlist);

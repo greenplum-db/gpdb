@@ -3,12 +3,12 @@
  * parse_func.c
  *		handle function calls in parser
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_func.c,v 1.224 2010/05/30 18:10:40 tgl Exp $
+ *	  src/backend/parser/parse_func.c
  *
  *-------------------------------------------------------------------------
  */
@@ -512,8 +512,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_FUNCTION),
 					 errmsg("function %s does not exist",
-							func_signature_string(funcname, nargs,
-												  argnames,
+							func_signature_string(funcname, nargs, argnames,
 												  actual_arg_types)),
 					 errhint("No aggregate function matches the given name and argument types. "
 					  "Perhaps you misplaced ORDER BY; ORDER BY must appear "
@@ -605,6 +604,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 					 errmsg("could not find array type for data type %s",
 							format_type_be(newa->element_typeid)),
 				  parser_errposition(pstate, exprLocation((Node *) vargs))));
+		/* array_collid will be set by parse_collate.c */
 		newa->multidims = false;
 		newa->location = exprLocation((Node *) vargs);
 
@@ -642,6 +642,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		funcexpr->funcretset = retset;
 		funcexpr->funcvariadic = func_variadic;
 		funcexpr->funcformat = COERCE_EXPLICIT_CALL;
+		/* funccollid and inputcollid will be set by parse_collate.c */
 		funcexpr->args = fargs;
 		funcexpr->location = location;
 
@@ -654,6 +655,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 		aggref->aggfnoid = funcid;
 		aggref->aggtype = rettype;
+		/* aggcollid and inputcollid will be set by parse_collate.c */
 		/* aggdirectargs and args will be set by transformAggregateCall */
 		/* aggorder and aggdistinct will be set by transformAggregateCall */
 		aggref->aggfilter = agg_filter;
@@ -714,6 +716,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 		wfunc->winfnoid = funcid;
 		wfunc->wintype = rettype;
+		/* wincollid and inputcollid will be set by parse_collate.c */
 		wfunc->args = fargs;
 		/* winref will be set by transformWindowFuncCall */
 		wfunc->winstar = agg_star;
@@ -1357,8 +1360,13 @@ func_get_detail(List *funcname,
 		 * can't write "foo[] (something)" as a function call.  In theory
 		 * someone might want to invoke it as "_foo (something)" but we have
 		 * never supported that historically, so we can insist that people
-		 * write it as a normal cast instead.  Lack of historical support is
-		 * also the reason for not considering composite-type casts here.
+		 * write it as a normal cast instead.
+		 *
+		 * We also reject the specific case of COERCEVIAIO for a composite
+		 * source type and a string-category target type.  This is a case that
+		 * find_coercion_pathway() allows by default, but experience has shown
+		 * that it's too commonly invoked by mistake.  So, again, insist that
+		 * people use cast syntax if they want to do that.
 		 *
 		 * NB: it's important that this code does not exceed what coerce_type
 		 * can do, because the caller will try to apply coerce_type if we
@@ -1389,8 +1397,23 @@ func_get_detail(List *funcname,
 					cpathtype = find_coercion_pathway(targetType, sourceType,
 													  COERCION_EXPLICIT,
 													  &cfuncid);
-					iscoercion = (cpathtype == COERCION_PATH_RELABELTYPE ||
-								  cpathtype == COERCION_PATH_COERCEVIAIO);
+					switch (cpathtype)
+					{
+						case COERCION_PATH_RELABELTYPE:
+							iscoercion = true;
+							break;
+						case COERCION_PATH_COERCEVIAIO:
+							if ((sourceType == RECORDOID ||
+								 ISCOMPLEX(sourceType)) &&
+							  TypeCategory(targetType) == TYPCATEGORY_STRING)
+								iscoercion = false;
+							else
+								iscoercion = true;
+							break;
+						default:
+							iscoercion = false;
+							break;
+					}
 				}
 
 				if (iscoercion)
@@ -1828,6 +1851,8 @@ ParseComplexProjection(ParseState *pstate, char *funcname, Node *first_arg,
 			fselect->fieldnum = i + 1;
 			fselect->resulttype = att->atttypid;
 			fselect->resulttypmod = att->atttypmod;
+			/* save attribute's collation for parse_collate.c */
+			fselect->resultcollid = att->attcollation;
 			return (Node *) fselect;
 		}
 	}

@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  * src/bin/psql/startup.c
  */
@@ -171,7 +171,7 @@ main(int argc, char *argv[])
 	/* loop until we have a password if requested by backend */
 	do
 	{
-#define PARAMS_ARRAY_SIZE	7
+#define PARAMS_ARRAY_SIZE	8
 		const char **keywords = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*keywords));
 		const char **values = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*values));
 
@@ -189,8 +189,10 @@ main(int argc, char *argv[])
 			"postgres" : options.dbname;
 		keywords[5] = "fallback_application_name";
 		values[5] = pset.progname;
-		keywords[6] = NULL;
-		values[6] = NULL;
+		keywords[6] = "client_encoding";
+		values[6] = (pset.notty || getenv("PGCLIENTENCODING")) ? NULL : "auto";
+		keywords[7] = NULL;
+		values[7] = NULL;
 
 		new_pass = false;
 		pset.db = PQconnectdbParams(keywords, values, true);
@@ -224,8 +226,12 @@ main(int argc, char *argv[])
 
 	if (options.action == ACT_LIST_DB)
 	{
-		int			success = listAllDbs(false);
+		int			success;
 
+		if (!options.no_psqlrc)
+			process_psqlrc(argv[0]);
+
+		success = listAllDbs(false);
 		PQfinish(pset.db);
 		exit(success ? EXIT_SUCCESS : EXIT_FAILURE);
 	}

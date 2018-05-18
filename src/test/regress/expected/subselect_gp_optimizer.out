@@ -86,34 +86,34 @@ NOTICE:  CREATE TABLE will create partition "csq_t2_1_prt_4" for table "csq_t2"
 insert into csq_t1 select * from csq_t1_base;
 insert into csq_t2 select * from csq_t2_base;
 explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1;
-                                                                       QUERY PLAN                                                                       
---------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                                                                                          QUERY PLAN                                                                                                                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..1293.00 rows=1 width=8)
-   Filter: (subplan)
+   Filter: (SubPlan 1)
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: csq_t1.x
-         ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Partition Selector for csq_t1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-                           Partitions selected:  4 (out of 4)
+                     ->  Partition Selector for csq_t1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 4 (out of 4)
                      ->  Dynamic Table Scan on csq_t1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
-   SubPlan 1
+   SubPlan 1  (slice0)
      ->  Result  (cost=0.00..431.00 rows=1 width=1)
            ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                 Filter: "ColRef_0022" = true
+                 Filter: (CASE WHEN (sum((CASE WHEN csq_t1.x <= csq_t2.x THEN 1 ELSE 0 END))) IS NULL THEN true WHEN (sum((CASE WHEN csq_t2.x IS NULL THEN 1 ELSE 0 END))) > 0::bigint THEN NULL::boolean WHEN csq_t1.x IS NULL THEN NULL::boolean WHEN (sum((CASE WHEN csq_t1.x <= csq_t2.x THEN 1 ELSE 0 END))) = 0::bigint THEN true ELSE false END) = true
                  ->  Result  (cost=0.00..431.00 rows=1 width=1)
                        ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                              ->  Result  (cost=0.00..431.00 rows=1 width=8)
                                    ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                         Filter: csq_t2.y = $1
+                                         Filter: csq_t2.y = csq_t1.y
                                          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
-                                               ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
+                                               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                                      ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                                                           ->  Partition Selector for csq_t2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=50 width=4)
-                                                                 Partitions selected:  4 (out of 4)
+                                                           ->  Partition Selector for csq_t2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                                                 Filter: NOT csq_t2.y IS NULL
+                                                                 Partitions selected: 4 (out of 4)
                                                            ->  Dynamic Table Scan on csq_t2 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=8)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer: PQO version 2.55.21
 (26 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
@@ -198,33 +198,32 @@ select * from mrs_t1 where exists (select x from mrs_t1 where x = 1) order by 1;
 (20 rows)
 
 explain select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5;
-                                                                                                         QUERY PLAN                                                                                                          
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..1293.04 rows=20 width=4)
-   ->  Result  (cost=0.00..1293.04 rows=10 width=4)
-         Filter: CASE WHEN NOT public.mrs_t1.x IS NULL THEN CASE WHEN "ColRef_0019" = "ColRef_0018" THEN NULL::boolean WHEN NOT "ColRef_0019" IS NULL THEN true ELSE false END ELSE NULL::boolean END OR public.mrs_t1.x < 5
-         ->  GroupAggregate  (cost=0.00..1293.03 rows=10 width=20)
-               Group By: public.mrs_t1.x, public.mrs_t1.ctid, public.mrs_t1.gp_segment_id
-               ->  Sort  (cost=0.00..1293.03 rows=10 width=30)
-                     Sort Key: public.mrs_t1.ctid, public.mrs_t1.gp_segment_id
-                     ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..1293.03 rows=10 width=30)
-                           Hash Key: public.mrs_t1.gp_segment_id
-                           ->  Result  (cost=0.00..1293.03 rows=10 width=30)
-                                 ->  GroupAggregate  (cost=0.00..1293.03 rows=10 width=30)
-                                       Group By: public.mrs_t1.x, public.mrs_t1.ctid, public.mrs_t1.gp_segment_id
-                                       ->  Nested Loop Left Join  (cost=0.00..1293.03 rows=210 width=18)
-                                             Join Filter: public.mrs_t1.x = "inner"."?column?" OR "inner"."?column?" IS NULL
-                                             ->  Sort  (cost=0.00..431.00 rows=10 width=14)
-                                                   Sort Key: public.mrs_t1.ctid, public.mrs_t1.gp_segment_id
-                                                   ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=10 width=14)
-                                             ->  Result  (cost=0.00..431.00 rows=30 width=8)
-                                                   ->  Materialize  (cost=0.00..431.00 rows=30 width=4)
-                                                         ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=30 width=4)
-                                                               ->  Result  (cost=0.00..431.00 rows=10 width=4)
-                                                                     ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=10 width=4)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(24 rows)
+                                                                                                                                                                                                QUERY PLAN                                                                                                                                                                                                
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.03 rows=20 width=4)
+   ->  Result  (cost=0.00..1293.03 rows=7 width=4)
+         Filter: CASE WHEN NOT subselect_gp.mrs_t1.x IS NULL THEN CASE WHEN (pg_catalog.sum((sum((CASE WHEN (subselect_gp.mrs_t1.x - 95) IS NULL THEN 1 ELSE 0 END))))) = (count((count()))) THEN NULL::boolean WHEN NOT (pg_catalog.sum((sum((CASE WHEN (subselect_gp.mrs_t1.x - 95) IS NULL THEN 1 ELSE 0 END))))) IS NULL THEN true ELSE false END ELSE NULL::boolean END OR subselect_gp.mrs_t1.x < 5
+         ->  GroupAggregate  (cost=0.00..1293.03 rows=7 width=20)
+               Group Key: subselect_gp.mrs_t1.x, subselect_gp.mrs_t1.ctid, subselect_gp.mrs_t1.gp_segment_id
+               ->  Sort  (cost=0.00..1293.03 rows=7 width=30)
+                     Sort Key: subselect_gp.mrs_t1.ctid, subselect_gp.mrs_t1.gp_segment_id
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1293.03 rows=7 width=30)
+                           Hash Key: subselect_gp.mrs_t1.ctid, subselect_gp.mrs_t1.gp_segment_id
+                           ->  Result  (cost=0.00..1293.03 rows=7 width=30)
+                                 ->  GroupAggregate  (cost=0.00..1293.03 rows=7 width=30)
+                                       Group Key: subselect_gp.mrs_t1.x, subselect_gp.mrs_t1.ctid, subselect_gp.mrs_t1.gp_segment_id
+                                       ->  Nested Loop Left Join  (cost=0.00..1293.03 rows=140 width=18)
+                                             Join Filter: subselect_gp.mrs_t1.x = (subselect_gp.mrs_t1.x - 95) OR (subselect_gp.mrs_t1.x - 95) IS NULL
+                                             ->  Sort  (cost=0.00..431.00 rows=7 width=14)
+                                                   Sort Key: subselect_gp.mrs_t1.ctid, subselect_gp.mrs_t1.gp_segment_id
+                                                   ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=7 width=14)
+                                             ->  Result  (cost=0.00..431.00 rows=20 width=8)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=20 width=4)
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=20 width=4)
+                                                               ->  Result  (cost=0.00..431.00 rows=7 width=4)
+                                                                     ->  Table Scan on mrs_t1  (cost=0.00..431.00 rows=7 width=4)
+ Optimizer: PQO version 2.55.21
+(23 rows)
 
 select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5 order by 1;
  x 
@@ -384,7 +383,7 @@ explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; 
  Result  (cost=0.00..1293.00 rows=1 width=4)
    Filter: CASE WHEN NOT csq_m1.x IS NULL THEN CASE WHEN (sum((CASE WHEN csq_d1.x IS NULL THEN 1 ELSE 0 END))) = (count()) THEN NULL::boolean WHEN NOT (sum((CASE WHEN csq_d1.x IS NULL THEN 1 ELSE 0 END))) IS NULL THEN false ELSE true END ELSE NULL::boolean END OR csq_m1.x < (-100)
    ->  GroupAggregate  (cost=0.00..1293.00 rows=1 width=20)
-         Group By: csq_m1.x, csq_m1.ctid, csq_m1.gp_segment_id
+         Group Key: csq_m1.x, csq_m1.ctid, csq_m1.gp_segment_id
          ->  Sort  (cost=0.00..1293.00 rows=1 width=18)
                Sort Key: csq_m1.x, csq_m1.ctid, csq_m1.gp_segment_id
                ->  Nested Loop Left Join  (cost=0.00..1293.00 rows=1 width=18)
@@ -414,14 +413,14 @@ explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; 
    ->  Result  (cost=0.00..1293.00 rows=1 width=4)
          Filter: CASE WHEN NOT csq_d1.x IS NULL THEN CASE WHEN "ColRef_0018" = "ColRef_0017" THEN NULL::boolean WHEN NOT "ColRef_0018" IS NULL THEN false ELSE true END ELSE NULL::boolean END OR csq_d1.x < (-100)
          ->  GroupAggregate  (cost=0.00..1293.00 rows=1 width=20)
-               Group By: csq_d1.x, csq_d1.ctid, csq_d1.gp_segment_id
+               Group Key: csq_d1.x, csq_d1.ctid, csq_d1.gp_segment_id
                ->  Sort  (cost=0.00..1293.00 rows=1 width=30)
                      Sort Key: csq_d1.ctid, csq_d1.gp_segment_id
                      ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..1293.00 rows=1 width=30)
                            Hash Key: csq_d1.gp_segment_id
                            ->  Result  (cost=0.00..1293.00 rows=1 width=30)
                                  ->  GroupAggregate  (cost=0.00..1293.00 rows=1 width=30)
-                                       Group By: csq_d1.x, csq_d1.ctid, csq_d1.gp_segment_id
+                                       Group Key: csq_d1.x, csq_d1.ctid, csq_d1.gp_segment_id
                                        ->  Nested Loop Left Join  (cost=0.00..1293.00 rows=3 width=18)
                                              Join Filter: csq_d1.x = csq_m1.x OR csq_m1.x IS NULL
                                              ->  Sort  (cost=0.00..431.00 rows=1 width=14)
@@ -475,15 +474,14 @@ INSERT INTO csq_r VALUES (1);
 explain SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Table Scan on csq_r  (cost=0.00..862.00 rows=1 width=4)
-         Filter: a = ((subplan))
-         SubPlan 1
+         Filter: a = ((SubPlan 1))
+         SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(8 rows)
+ Optimizer: PQO version 2.55.21
+(7 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -495,15 +493,14 @@ SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
 explain SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Table Scan on csq_r  (cost=0.00..862.00 rows=1 width=4)
-         Filter: a <> ((subplan))
-         SubPlan 1
+         Filter: a <> ((SubPlan 1))
+         SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(8 rows)
+ Optimizer: PQO version 2.55.21
+(7 rows)
 
 SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -514,16 +511,15 @@ SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
 explain SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Table Scan on csq_r  (cost=0.00..862.00 rows=1 width=4)
-         Filter: (subplan)
-         SubPlan 1
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(9 rows)
+ Optimizer: PQO version 2.55.21
+(8 rows)
 
 SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -535,16 +531,15 @@ SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
 explain SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Table Scan on csq_r  (cost=0.00..862.00 rows=1 width=4)
-         Filter: (subplan)
-         SubPlan 1
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(9 rows)
+ Optimizer: PQO version 2.55.21
+(8 rows)
 
 SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -555,16 +550,15 @@ SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
 explain SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1);
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Table Scan on csq_r  (cost=0.00..862.00 rows=1 width=4)
-         Filter: a > ((subplan))
-         SubPlan 1
+         Filter: a > ((SubPlan 1))
+         SubPlan 1  (slice1; segments: 3)
            ->  Limit  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=4)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(9 rows)
+ Optimizer: PQO version 2.55.21
+(8 rows)
 
 SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1);
  a 
@@ -651,22 +645,21 @@ insert into csq_pullup values ('def',3, 1, 'abc');
 explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t);
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=19)
-   ->  Result  (cost=0.00..862.00 rows=1 width=19)
-         Filter: 1 = COALESCE("ColRef_0023", 0::bigint)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=17)
+   ->  Result  (cost=0.00..862.00 rows=1 width=17)
+         Filter: 1 = COALESCE((count()), 0::bigint)
          ->  Result  (cost=0.00..862.00 rows=1 width=36)
-               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=27)
-                     Hash Cond: public.csq_pullup.t = public.csq_pullup.t
-                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=19)
+               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=25)
+                     Hash Cond: subselect_gp.csq_pullup.t = subselect_gp.csq_pullup.t
+                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                            ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                 Group By: public.csq_pullup.t
+                                 Group Key: subselect_gp.csq_pullup.t
                                  ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                       Sort Key: public.csq_pullup.t
+                                       Sort Key: subselect_gp.csq_pullup.t
                                        ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(15 rows)
+ Optimizer: PQO version 2.55.21
+(14 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t);
   t  | n | i |  v  
@@ -682,29 +675,28 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.v);
                                                            QUERY PLAN                                                           
 --------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..862.00 rows=1 width=19)
-   ->  Result  (cost=0.00..862.00 rows=1 width=19)
-         Filter: 1 = COALESCE("ColRef_0023", 0::bigint)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=17)
+   ->  Result  (cost=0.00..862.00 rows=1 width=17)
+         Filter: 1 = COALESCE((count((count()))), 0::bigint)
          ->  Result  (cost=0.00..862.00 rows=1 width=36)
-               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=27)
-                     Hash Cond: public.csq_pullup.t = public.csq_pullup.v::text
-                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=19)
+               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=25)
+                     Hash Cond: subselect_gp.csq_pullup.t = subselect_gp.csq_pullup.v::text
+                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                            ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                 Group By: public.csq_pullup.v
+                                 Group Key: subselect_gp.csq_pullup.v
                                  ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                                       Sort Key: public.csq_pullup.v
-                                       ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=12)
-                                             Hash Key: public.csq_pullup.v
+                                       Sort Key: subselect_gp.csq_pullup.v
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                                             Hash Key: subselect_gp.csq_pullup.v
                                              ->  Result  (cost=0.00..431.00 rows=1 width=12)
                                                    ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                                         Group By: public.csq_pullup.v
+                                                         Group Key: subselect_gp.csq_pullup.v
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                                               Sort Key: public.csq_pullup.v
+                                                               Sort Key: subselect_gp.csq_pullup.v
                                                                ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(22 rows)
+ Optimizer: PQO version 2.55.21
+(21 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.v);
   t  | n | i |  v  
@@ -720,31 +712,30 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n=t1.n);
                                                            QUERY PLAN                                                           
 --------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..862.00 rows=1 width=19)
-   ->  Result  (cost=0.00..862.00 rows=1 width=19)
-         Filter: 1 = COALESCE("ColRef_0023", 0::bigint)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=17)
+   ->  Result  (cost=0.00..862.00 rows=1 width=17)
+         Filter: 1 = COALESCE((count((count()))), 0::bigint)
          ->  Result  (cost=0.00..862.00 rows=1 width=36)
-               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=27)
-                     Hash Cond: public.csq_pullup.n = public.csq_pullup.n
-                     ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=19)
-                           Hash Key: public.csq_pullup.n
-                           ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=19)
-                     ->  Hash  (cost=431.00..431.00 rows=1 width=15)
-                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=15)
-                                 Group By: public.csq_pullup.n
-                                 ->  Sort  (cost=0.00..431.00 rows=1 width=15)
-                                       Sort Key: public.csq_pullup.n
-                                       ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=15)
-                                             Hash Key: public.csq_pullup.n
-                                             ->  Result  (cost=0.00..431.00 rows=1 width=15)
-                                                   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=15)
-                                                         Group By: public.csq_pullup.n
-                                                         ->  Sort  (cost=0.00..431.00 rows=1 width=7)
-                                                               Sort Key: public.csq_pullup.n
-                                                               ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=7)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(24 rows)
+               ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=25)
+                     Hash Cond: subselect_gp.csq_pullup.n = subselect_gp.csq_pullup.n
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=17)
+                           Hash Key: subselect_gp.csq_pullup.n
+                           ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=13)
+                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=13)
+                                 Group Key: subselect_gp.csq_pullup.n
+                                 ->  Sort  (cost=0.00..431.00 rows=1 width=13)
+                                       Sort Key: subselect_gp.csq_pullup.n
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=13)
+                                             Hash Key: subselect_gp.csq_pullup.n
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=13)
+                                                   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=13)
+                                                         Group Key: subselect_gp.csq_pullup.n
+                                                         ->  Sort  (cost=0.00..431.00 rows=1 width=5)
+                                                               Sort Key: subselect_gp.csq_pullup.n
+                                                               ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=5)
+ Optimizer: PQO version 2.55.21
+(23 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n=t1.n);
   t  | n | i |  v  
@@ -758,22 +749,21 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 -- function(numeric), function(numeric)
 --
 explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.n + 1);
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..5172.20 rows=1 width=19)
-   ->  Result  (cost=0.00..5172.20 rows=1 width=19)
-         Filter: 1 = ((subplan))
-         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=500 width=36)
-         SubPlan 1
-           ->  Aggregate  (cost=0.00..431.00 rows=2 width=8)
-                 ->  Result  (cost=0.00..431.00 rows=2 width=1)
-                       Filter: ($0 + 1::numeric) = (public.csq_pullup.n + 1::numeric)
-                       ->  Materialize  (cost=0.00..431.00 rows=2 width=7)
-                             ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=7)
-                                   ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=7)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(13 rows)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..5172.20 rows=1 width=17)
+   ->  Result  (cost=0.00..5172.20 rows=1 width=17)
+         Filter: 1 = ((SubPlan 1))
+         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=334 width=36)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                       Filter: (subselect_gp.csq_pullup.n + 1::numeric) = (subselect_gp.csq_pullup.n + 1::numeric)
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=5)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+                                   ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=5)
+ Optimizer: PQO version 2.55.21
+(12 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.n + 1);
   t  | n | i |  v  
@@ -787,22 +777,21 @@ select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t
 -- function(numeric), function(int)
 --
 explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.i + 1);
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..5172.20 rows=1 width=19)
-   ->  Result  (cost=0.00..5172.20 rows=1 width=19)
-         Filter: 1 = ((subplan))
-         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=500 width=36)
-         SubPlan 1
-           ->  Aggregate  (cost=0.00..431.00 rows=2 width=8)
-                 ->  Result  (cost=0.00..431.00 rows=2 width=1)
-                       Filter: ($0 + 1::numeric) = (public.csq_pullup.i + 1)::numeric
-                       ->  Materialize  (cost=0.00..431.00 rows=2 width=4)
-                             ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=4)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..5172.20 rows=1 width=17)
+   ->  Result  (cost=0.00..5172.20 rows=1 width=17)
+         Filter: 1 = ((SubPlan 1))
+         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=334 width=36)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                       Filter: (subselect_gp.csq_pullup.n + 1::numeric) = (subselect_gp.csq_pullup.i + 1)::numeric
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(13 rows)
+ Optimizer: PQO version 2.55.21
+(12 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.i + 1);
   t  | n | i |  v  
@@ -908,7 +897,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2 union 
    ->  Hash Join  (cost=0.00..1293.00 rows=1 width=4)
          Hash Cond: "outer".y = subselect_t1.x
          ->  GroupAggregate  (cost=0.00..862.00 rows=2 width=4)
-               Group By: y
+               Group Key: y
                ->  Sort  (cost=0.00..862.00 rows=3 width=4)
                      Sort Key: y
                      ->  Append  (cost=0.00..862.00 rows=3 width=4)
@@ -960,7 +949,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
                ->  Hash Join  (cost=0.00..1293.00 rows=1 width=1)
                      Hash Cond: "outer".y = subselect_t1.x
                      ->  GroupAggregate  (cost=0.00..862.00 rows=2 width=4)
-                           Group By: y
+                           Group Key: y
                            ->  Sort  (cost=0.00..862.00 rows=3 width=4)
                                  Sort Key: y
                                  ->  Append  (cost=0.00..862.00 rows=3 width=4)
@@ -1205,7 +1194,7 @@ from
 ----------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..862.00 rows=1 width=16)
    ->  WindowAgg  (cost=0.00..862.00 rows=1 width=16)
-         Order By: t2_mpp_24563.seq
+         Order By: row_number() OVER (?)
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
                Merge Key: t2_mpp_24563.seq
                ->  Result  (cost=0.00..862.00 rows=1 width=12)
@@ -1219,13 +1208,12 @@ from
                                                    Filter: value = 7
                                              ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                                                    ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                                         Group By: t1_mpp_24563.id
+                                                         Group Key: t1_mpp_24563.id
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                                                Sort Key: t1_mpp_24563.id
                                                                ->  Table Scan on t1_mpp_24563  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.675
-(22 rows)
+ Optimizer: PQO version 2.55.21
+(21 rows)
 
 drop table t1_mpp_24563;
 drop table t2_mpp_24563;
@@ -1258,36 +1246,35 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                                                  QUERY PLAN                                                                                  
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  WindowAgg  (cost=0.00..862.00 rows=1 width=16)
-   ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..862.00 rows=2 width=12)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=2 width=12)
          ->  Result  (cost=0.00..862.00 rows=1 width=12)
                ->  Result  (cost=0.00..862.00 rows=1 width=16)
                      ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=16)
-                           Hash Cond: public.t_mpp_20470.col_name::text = public.t_mpp_20470.col_name::text
-                           ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
-                                 Hash Key: public.t_mpp_20470.col_name
+                           Hash Cond: subselect_gp.t_mpp_20470.col_name::text = subselect_gp.t_mpp_20470.col_name::text
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                 Hash Key: subselect_gp.t_mpp_20470.col_name
                                  ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                                       ->  Partition Selector for t_mpp_20470 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-                                             Partitions selected:  2 (out of 2)
+                                       ->  Partition Selector for t_mpp_20470 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 2 (out of 2)
                                        ->  Dynamic Table Scan on t_mpp_20470 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                            ->  Hash  (cost=431.00..431.00 rows=1 width=16)
                                  ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                                       Group By: public.t_mpp_20470.col_name
+                                       Group Key: subselect_gp.t_mpp_20470.col_name
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                                             Sort Key: public.t_mpp_20470.col_name
-                                             ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=16)
-                                                   Hash Key: public.t_mpp_20470.col_name
+                                             Sort Key: subselect_gp.t_mpp_20470.col_name
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                                   Hash Key: subselect_gp.t_mpp_20470.col_name
                                                    ->  Result  (cost=0.00..431.00 rows=1 width=16)
                                                          ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                                                               Group By: public.t_mpp_20470.col_name
+                                                               Group Key: subselect_gp.t_mpp_20470.col_name
                                                                ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                                                                     Sort Key: public.t_mpp_20470.col_name
+                                                                     Sort Key: subselect_gp.t_mpp_20470.col_name
                                                                      ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-                                                                           ->  Partition Selector for t_mpp_20470 (dynamic scan id: 2)  (cost=10.00..100.00 rows=50 width=4)
-                                                                                 Partitions selected:  2 (out of 2)
+                                                                           ->  Partition Selector for t_mpp_20470 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                                                                 Partitions selected: 2 (out of 2)
                                                                            ->  Dynamic Table Scan on t_mpp_20470 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=12)
- Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(30 rows)
+ Optimizer: PQO version 2.55.21
+(29 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;
@@ -1472,7 +1459,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                      ->  Table Scan on subselect_tbl  (cost=0.00..431.00 rows=3 width=4)
                      ->  Hash  (cost=862.00..862.00 rows=2 width=4)
                            ->  GroupAggregate  (cost=0.00..862.00 rows=2 width=4)
-                                 Group By: subselect_gp.subselect_tbl.f2
+                                 Group Key: subselect_gp.subselect_tbl.f2
                                  ->  Sort  (cost=0.00..862.00 rows=3 width=4)
                                        Sort Key: subselect_gp.subselect_tbl.f2
                                        ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=4)
@@ -1519,7 +1506,7 @@ WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                      Hash Cond: c.unique2 = b.unique2
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=238.33..536.98 rows=3319 width=8)
                            ->  HashAggregate  (cost=238.33..337.88 rows=3319 width=8)
-                                 Group By: c.unique1, c.unique2
+                                 Group Key: c.unique1, c.unique2
                                  ->  Seq Scan on tenk1 c  (cost=0.00..188.55 rows=3319 width=8)
                      ->  Hash  (cost=188.55..188.55 rows=3319 width=244)
                            ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=244)
@@ -1622,120 +1609,116 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
 EXPLAIN select count(*) from
   (select 1 from tenk1 a
    where unique1 IN (select hundred from tenk1 b)) ss;
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..631.98 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..631.98 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..631.98 rows=1 width=8)
-               ->  Nested Loop  (cost=0.00..631.98 rows=34 width=1)
-                     Join Filter: true
-                     ->  GroupAggregate  (cost=0.00..431.94 rows=34 width=4)
-                           Group By: public.tenk1.hundred
-                           ->  Sort  (cost=0.00..431.94 rows=34 width=4)
-                                 Sort Key: public.tenk1.hundred
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.94 rows=34 width=4)
-                                       Hash Key: public.tenk1.hundred
-                                       ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
-                                             Group By: public.tenk1.hundred
-                                             ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
-                     ->  Index Scan using tenk1_unique1 on tenk1  (cost=0.00..200.04 rows=1 width=1)
-                           Index Cond: public.tenk1.unique1 = public.tenk1.hundred
- Settings:  optimizer=on
- Optimizer status: PQO version 2.34.1
-(18 rows)
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..864.06 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..864.06 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..864.06 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..864.06 rows=34 width=1)
+                     Hash Cond: public.tenk1.unique1 = public.tenk1.hundred
+                     ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+                     ->  Hash  (cost=431.94..431.94 rows=34 width=4)
+                           ->  GroupAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                 Group Key: public.tenk1.hundred
+                                 ->  Sort  (cost=0.00..431.94 rows=34 width=4)
+                                       Sort Key: public.tenk1.hundred
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.94 rows=34 width=4)
+                                             Hash Key: public.tenk1.hundred
+                                             ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                   Group Key: public.tenk1.hundred
+                                                   ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+ Optimizer: PQO version 2.55.21
+(17 rows)
 
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select hundred from tenk1 b)) ss;
-                                                                   QUERY PLAN                                                                    
--------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..632.01 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..632.01 rows=10 width=4)
-         ->  GroupAggregate  (cost=0.00..632.01 rows=4 width=4)
-               Group By: public.tenk1.ten
-               ->  Sort  (cost=0.00..632.01 rows=4 width=4)
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..864.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..864.10 rows=10 width=4)
+         ->  GroupAggregate  (cost=0.00..864.10 rows=4 width=4)
+               Group Key: public.tenk1.ten
+               ->  Sort  (cost=0.00..864.10 rows=4 width=4)
                      Sort Key: public.tenk1.ten
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..632.01 rows=4 width=4)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..864.10 rows=4 width=4)
                            Hash Key: public.tenk1.ten
-                           ->  GroupAggregate  (cost=0.00..632.01 rows=4 width=4)
-                                 Group By: public.tenk1.ten
-                                 ->  Sort  (cost=0.00..632.01 rows=34 width=4)
+                           ->  GroupAggregate  (cost=0.00..864.10 rows=4 width=4)
+                                 Group Key: public.tenk1.ten
+                                 ->  Sort  (cost=0.00..864.10 rows=34 width=4)
                                        Sort Key: public.tenk1.ten
-                                       ->  Nested Loop  (cost=0.00..632.00 rows=34 width=4)
-                                             Join Filter: true
-                                             ->  GroupAggregate  (cost=0.00..431.96 rows=34 width=4)
-                                                   Group By: public.tenk1.hundred
-                                                   ->  Sort  (cost=0.00..431.96 rows=34 width=4)
-                                                         Sort Key: public.tenk1.hundred
-                                                         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.96 rows=34 width=4)
-                                                               Hash Key: public.tenk1.hundred
-                                                               ->  HashAggregate  (cost=0.00..431.96 rows=34 width=4)
-                                                                     Group By: public.tenk1.hundred
-                                                                     ->  Table Scan on tenk1  (cost=0.00..431.52 rows=3404 width=4)
-                                             ->  Index Scan using tenk1_unique1 on tenk1  (cost=0.00..200.04 rows=1 width=4)
-                                                   Index Cond: public.tenk1.unique1 = public.tenk1.hundred
- Settings:  optimizer=on
- Optimizer status: PQO version 2.51.1
-(27 rows)
+                                       ->  Hash Join  (cost=0.00..864.10 rows=34 width=4)
+                                             Hash Cond: public.tenk1.unique1 = public.tenk1.hundred
+                                             ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=8)
+                                             ->  Hash  (cost=431.94..431.94 rows=34 width=4)
+                                                   ->  GroupAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                         Group Key: public.tenk1.hundred
+                                                         ->  Sort  (cost=0.00..431.94 rows=34 width=4)
+                                                               Sort Key: public.tenk1.hundred
+                                                               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.94 rows=34 width=4)
+                                                                     Hash Key: public.tenk1.hundred
+                                                                     ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                                           Group Key: public.tenk1.hundred
+                                                                           ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+ Optimizer: PQO version 2.55.21
+(26 rows)
 
 EXPLAIN select count(*) from
   (select 1 from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..632.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..632.00 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..632.00 rows=1 width=8)
-               ->  Nested Loop  (cost=0.00..632.00 rows=34 width=1)
-                     Join Filter: true
-                     ->  GroupAggregate  (cost=0.00..431.96 rows=34 width=4)
-                           Group By: public.tenk1.hundred
-                           ->  Sort  (cost=0.00..431.96 rows=34 width=4)
-                                 Sort Key: public.tenk1.hundred
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.96 rows=34 width=4)
-                                       Hash Key: public.tenk1.hundred
-                                       ->  HashAggregate  (cost=0.00..431.96 rows=34 width=4)
-                                             Group By: public.tenk1.hundred
-                                             ->  Table Scan on tenk1  (cost=0.00..431.52 rows=3404 width=4)
-                     ->  Index Scan using tenk1_unique1 on tenk1  (cost=0.00..200.04 rows=1 width=1)
-                           Index Cond: public.tenk1.unique1 = public.tenk1.hundred
- Settings:  optimizer=on
- Optimizer status: PQO version 2.51.1
-(18 rows)
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..864.06 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..864.06 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..864.06 rows=1 width=8)
+               ->  Hash Semi Join  (cost=0.00..864.06 rows=34 width=1)
+                     Hash Cond: public.tenk1.unique1 = public.tenk1.hundred
+                     ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+                     ->  Hash  (cost=431.94..431.94 rows=34 width=4)
+                           ->  GroupAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                 Group Key: public.tenk1.hundred
+                                 ->  Sort  (cost=0.00..431.94 rows=34 width=4)
+                                       Sort Key: public.tenk1.hundred
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.94 rows=34 width=4)
+                                             Hash Key: public.tenk1.hundred
+                                             ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                   Group Key: public.tenk1.hundred
+                                                   ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+ Optimizer: PQO version 2.55.21
+(17 rows)
 
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
-                                                                   QUERY PLAN                                                                    
--------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..632.01 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..632.01 rows=10 width=4)
-         ->  GroupAggregate  (cost=0.00..632.01 rows=4 width=4)
-               Group By: public.tenk1.ten
-               ->  Sort  (cost=0.00..632.01 rows=4 width=4)
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..864.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..864.10 rows=10 width=4)
+         ->  GroupAggregate  (cost=0.00..864.10 rows=4 width=4)
+               Group Key: public.tenk1.ten
+               ->  Sort  (cost=0.00..864.10 rows=4 width=4)
                      Sort Key: public.tenk1.ten
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..632.01 rows=4 width=4)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..864.10 rows=4 width=4)
                            Hash Key: public.tenk1.ten
-                           ->  GroupAggregate  (cost=0.00..632.01 rows=4 width=4)
-                                 Group By: public.tenk1.ten
-                                 ->  Sort  (cost=0.00..632.01 rows=34 width=4)
+                           ->  GroupAggregate  (cost=0.00..864.10 rows=4 width=4)
+                                 Group Key: public.tenk1.ten
+                                 ->  Sort  (cost=0.00..864.10 rows=34 width=4)
                                        Sort Key: public.tenk1.ten
-                                       ->  Nested Loop  (cost=0.00..632.00 rows=34 width=4)
-                                             Join Filter: true
-                                             ->  GroupAggregate  (cost=0.00..431.96 rows=34 width=4)
-                                                   Group By: public.tenk1.hundred
-                                                   ->  Sort  (cost=0.00..431.96 rows=34 width=4)
-                                                         Sort Key: public.tenk1.hundred
-                                                         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.96 rows=34 width=4)
-                                                               Hash Key: public.tenk1.hundred
-                                                               ->  HashAggregate  (cost=0.00..431.96 rows=34 width=4)
-                                                                     Group By: public.tenk1.hundred
-                                                                     ->  Table Scan on tenk1  (cost=0.00..431.52 rows=3404 width=4)
-                                             ->  Index Scan using tenk1_unique1 on tenk1  (cost=0.00..200.04 rows=1 width=4)
-                                                   Index Cond: public.tenk1.unique1 = public.tenk1.hundred
- Settings:  optimizer=on
- Optimizer status: PQO version 2.51.1
-(27 rows)
+                                       ->  Hash Semi Join  (cost=0.00..864.10 rows=34 width=4)
+                                             Hash Cond: public.tenk1.unique1 = public.tenk1.hundred
+                                             ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=8)
+                                             ->  Hash  (cost=431.94..431.94 rows=34 width=4)
+                                                   ->  GroupAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                         Group Key: public.tenk1.hundred
+                                                         ->  Sort  (cost=0.00..431.94 rows=34 width=4)
+                                                               Sort Key: public.tenk1.hundred
+                                                               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.94 rows=34 width=4)
+                                                                     Hash Key: public.tenk1.hundred
+                                                                     ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
+                                                                           Group Key: public.tenk1.hundred
+                                                                           ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+ Optimizer: PQO version 2.55.21
+(26 rows)
 
 --
 -- In case of simple exists query, planner can generate alternative
@@ -1756,7 +1739,7 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
                                  ->  Table Scan on tenk2  (cost=0.00..431.51 rows=3353 width=4)
                                  ->  Hash  (cost=431.96..431.96 rows=3319 width=12)
                                        ->  HashAggregate  (cost=0.00..431.96 rows=3319 width=12)
-                                             Group By: tenk1.unique1
+                                             Group Key: tenk1.unique1
                                              ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
  Settings:  optimizer=on
  Optimizer status: PQO version 2.36.0

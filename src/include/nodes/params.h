@@ -4,10 +4,10 @@
  *	  Support for finding the values associated with Param nodes.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/params.h,v 1.42 2010/02/26 02:01:25 momjian Exp $
+ * src/include/nodes/params.h
  *
  *-------------------------------------------------------------------------
  */
@@ -72,7 +72,7 @@ typedef struct ParamListInfoData
 	void	   *parserSetupArg;
 	int			numParams;		/* number of ParamExternDatas following */
 	ParamExternData params[1];	/* VARIABLE LENGTH ARRAY */
-} ParamListInfoData;
+}	ParamListInfoData;
 
 
 /*

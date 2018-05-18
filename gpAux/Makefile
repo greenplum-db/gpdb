@@ -192,8 +192,13 @@ ifneq (false, ${PG_LANG})
 ifeq ($(BLD_ARCH), sles11_x86_64)
 CONFIGFLAGS+= --with-python
 else
+ifeq ($(BLD_ARCH),win32)
+# GPDB_91_MERGE_FIXME: Our MinGW environment doesn't currently include Python.
+CONFIGFLAGS+= --with-perl
+else
 CONFIGFLAGS+= --with-perl --with-python
-endif   # ifdef sles11
+endif   # win32
+endif   # sles11_x86_64
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif

@@ -27,9 +27,9 @@ partition p1 start('0') end('10') WITH (appendonly=true,checksum=true,compressle
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'n_nationkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p1" for table "toolkit_aopart"
-NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p2" for table "toolkit_aopart"
 NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p1_2_prt_1" for table "toolkit_aopart_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p1_2_prt_2" for table "toolkit_aopart_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p2" for table "toolkit_aopart"
 NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p2_2_prt_1" for table "toolkit_aopart_1_prt_p2"
 NOTICE:  CREATE TABLE will create partition "toolkit_aopart_1_prt_p2_2_prt_2" for table "toolkit_aopart_1_prt_p2"
 select count(iaotype),iaotype
@@ -210,7 +210,6 @@ select sifnamespace, sifrelname from gp_toolkit.gp_skew_idle_fractions where sif
  public       | toolkit_skew
 (1 row)
 
------------------------------------
 -- Test gp_bloat_expected_pages and gp_bloat_diag views
 -- (re-using the toolkit_skew table)
 analyze toolkit_skew;
@@ -232,7 +231,6 @@ select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass
 -- Create bloat by deleting all rows
 delete from toolkit_skew;
 analyze toolkit_skew;
-NOTICE:  ANALYZE detected all empty sample pages for table toolkit_skew, please run VACUUM FULL for accurate estimation.
 select btdrelpages > 40 as btdrelpages_over_40,
        btdrelpages < 80 as btdrelpages_below_80,
        btdexppages > 0 as btdexppages_over_0,
@@ -277,6 +275,8 @@ select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass
 -- integer overflow error, before the view was fixed to use numerics for all the
 -- calculations.)
 create table wide_width_test as select * from pg_attribute;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'attrelid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 set allow_system_table_mods=dml ;
 update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
 select * from gp_toolkit.gp_bloat_diag WHERE bdinspname <> 'pg_catalog';
@@ -336,9 +336,9 @@ partition p1 start('0') end('10') WITH (appendonly=true,checksum=true,compressle
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'n_nationkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p1" for table "gptoolkit_user_table_ao"
-NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p2" for table "gptoolkit_user_table_ao"
 NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p1_2_prt_1" for table "gptoolkit_user_table_ao_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p1_2_prt_2" for table "gptoolkit_user_table_ao_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p2" for table "gptoolkit_user_table_ao"
 NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p2_2_prt_1" for table "gptoolkit_user_table_ao_1_prt_p2"
 NOTICE:  CREATE TABLE will create partition "gptoolkit_user_table_ao_1_prt_p2_2_prt_2" for table "gptoolkit_user_table_ao_1_prt_p2"
 create table gptoolkit_user_table_co (id VARCHAR, lname CHAR(20), fname CHAR(10), tincan FLOAT
@@ -393,7 +393,6 @@ select rarolename,ramemberid,ramembername from gp_toolkit.gp_roles_assigned wher
  toolkit_user1 |            | 
 (2 rows)
 
------------------------------------
 -- Test size views.
 --
 -- We can't include the exact sizes in the output, as they differ slightly depending
@@ -541,7 +540,6 @@ select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
  t
 (1 row)
 
------------------------------------
 -- Test Resource Queue views
 -- GP Resource Queue Activity
 select * from gp_toolkit.gp_resq_activity;

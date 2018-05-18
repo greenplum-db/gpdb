@@ -3,23 +3,24 @@
  * parse_cte.c
  *	  handle CTEs (common table expressions) in parser
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_cte.c,v 2.9 2010/01/02 16:57:49 momjian Exp $
+ *	  src/backend/parser/parse_cte.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
 #include "parser/parse_cte.h"
-//#include "parser/parse_expr.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
 
 
 /* Enumeration of contexts in which a self-reference is disallowed */
@@ -116,7 +117,7 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	 * list.  Check this right away so we needn't worry later.
 	 *
 	 * Also, tentatively mark each CTE as non-recursive, and initialize its
-	 * reference count to zero.
+	 * reference count to zero, and set pstate->p_hasModifyingCTE if needed.
 	 */
 	foreach(lc, withClause->ctes)
 	{
@@ -137,6 +138,16 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 
 		cte->cterecursive = false;
 		cte->cterefcount = 0;
+
+		if (!IsA(cte->ctequery, SelectStmt))
+		{
+			/* must be a data-modifying statement */
+			Assert(IsA(cte->ctequery, InsertStmt) ||
+				   IsA(cte->ctequery, UpdateStmt) ||
+				   IsA(cte->ctequery, DeleteStmt));
+
+			pstate->p_hasModifyingCTE = true;
+		}
 	}
 
 	if (withClause->recursive)
@@ -230,20 +241,20 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 	Query	   *query;
 
 	/* Analysis not done already */
-	Assert(IsA(cte->ctequery, SelectStmt));
+	Assert(!IsA(cte->ctequery, Query));
 
 	query = parse_sub_analyze(cte->ctequery, pstate, cte, NULL);
 	cte->ctequery = (Node *) query;
 
 	/*
-	 * Check that we got something reasonable.	Many of these conditions are
-	 * impossible given restrictions of the grammar, but check 'em anyway.
-	 * (These are the same checks as in transformRangeSubselect.)
+	 * Check that we got something reasonable.	These first two cases should
+	 * be prevented by the grammar.
 	 */
-	if (!IsA(query, Query) ||
-		query->commandType != CMD_SELECT ||
-		query->utilityStmt != NULL)
-		elog(ERROR, "unexpected non-SELECT command in subquery in WITH");
+	if (!IsA(query, Query))
+		elog(ERROR, "unexpected non-Query statement in WITH");
+	if (query->utilityStmt != NULL)
+		elog(ERROR, "unexpected utility statement in WITH");
+
 	if (query->intoClause)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
@@ -251,31 +262,48 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 				 parser_errposition(pstate,
 								 exprLocation((Node *) query->intoClause))));
 
-	/* CTE queries are always marked as not canSetTag */
+	/*
+	 * We disallow data-modifying WITH except at the top level of a query,
+	 * because it's not clear when such a modification should be executed.
+	 */
+	if (query->commandType != CMD_SELECT &&
+		pstate->parentParseState != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("WITH clause containing a data-modifying statement must be at the top level"),
+				 parser_errposition(pstate, cte->location)));
+
+	/*
+	 * CTE queries are always marked not canSetTag.  (Currently this only
+	 * matters for data-modifying statements, for which the flag will be
+	 * propagated to the ModifyTable plan node.)
+	 */
 	query->canSetTag = false;
 
 	if (!cte->cterecursive)
 	{
 		/* Compute the output column names/types if not done yet */
-		analyzeCTETargetList(pstate, cte, query->targetList);
+		analyzeCTETargetList(pstate, cte, GetCTETargetList(cte));
 	}
 	else
 	{
 		/*
-		 * Verify that the previously determined output column types match
-		 * what the query really produced.	We have to check this because the
-		 * recursive term could have overridden the non-recursive term, and we
-		 * don't have any easy way to fix that.
+		 * Verify that the previously determined output column types and
+		 * collations match what the query really produced.  We have to check
+		 * this because the recursive term could have overridden the
+		 * non-recursive term, and we don't have any easy way to fix that.
 		 */
 		ListCell   *lctlist,
 				   *lctyp,
-				   *lctypmod;
+				   *lctypmod,
+				   *lccoll;
 		int			varattno;
 
 		lctyp = list_head(cte->ctecoltypes);
 		lctypmod = list_head(cte->ctecoltypmods);
+		lccoll = list_head(cte->ctecolcollations);
 		varattno = 0;
-		foreach(lctlist, query->targetList)
+		foreach(lctlist, GetCTETargetList(cte))
 		{
 			TargetEntry *te = (TargetEntry *) lfirst(lctlist);
 			Node	   *texpr;
@@ -284,7 +312,7 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 				continue;
 			varattno++;
 			Assert(varattno == te->resno);
-			if (lctyp == NULL || lctypmod == NULL)		/* shouldn't happen */
+			if (lctyp == NULL || lctypmod == NULL || lccoll == NULL)	/* shouldn't happen */
 				elog(ERROR, "wrong number of output columns in WITH");
 			texpr = (Node *) te->expr;
 			if (exprType(texpr) != lfirst_oid(lctyp) ||
@@ -299,10 +327,20 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 														 exprTypmod(texpr))),
 						 errhint("Cast the output of the non-recursive term to the correct type."),
 						 parser_errposition(pstate, exprLocation(texpr))));
+			if (exprCollation(texpr) != lfirst_oid(lccoll))
+				ereport(ERROR,
+						(errcode(ERRCODE_COLLATION_MISMATCH),
+						 errmsg("recursive query \"%s\" column %d has collation \"%s\" in non-recursive term but collation \"%s\" overall",
+								cte->ctename, varattno,
+								get_collation_name(lfirst_oid(lccoll)),
+								get_collation_name(exprCollation(texpr))),
+						 errhint("Use the COLLATE clause to set the collation of the non-recursive term."),
+						 parser_errposition(pstate, exprLocation(texpr))));
 			lctyp = lnext(lctyp);
 			lctypmod = lnext(lctypmod);
+			lccoll = lnext(lccoll);
 		}
-		if (lctyp != NULL || lctypmod != NULL)	/* shouldn't happen */
+		if (lctyp != NULL || lctypmod != NULL || lccoll != NULL)		/* shouldn't happen */
 			elog(ERROR, "wrong number of output columns in WITH");
 	}
 }
@@ -365,14 +403,14 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 	Assert(cte->ctecolnames == NIL);
 
 	/*
-	 * We need to determine column names and types.  The alias column names
-	 * override anything coming from the query itself.	(Note: the SQL spec
-	 * says that the alias list must be empty or exactly as long as the output
-	 * column set; but we allow it to be shorter for consistency with Alias
-	 * handling.)
+	 * We need to determine column names, types, and collations.  The alias
+	 * column names override anything coming from the query itself.  (Note:
+	 * the SQL spec says that the alias list must be empty or exactly as long
+	 * as the output column set; but we allow it to be shorter for consistency
+	 * with Alias handling.)
 	 */
 	cte->ctecolnames = copyObject(cte->aliascolnames);
-	cte->ctecoltypes = cte->ctecoltypmods = NIL;
+	cte->ctecoltypes = cte->ctecoltypmods = cte->ctecolcollations = NIL;
 	numaliases = list_length(cte->aliascolnames);
 	varattno = 0;
 	foreach(tlistitem, tlist)
@@ -380,6 +418,7 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 		TargetEntry *te = (TargetEntry *) lfirst(tlistitem);
 		Oid			coltype;
 		int32		coltypmod;
+		Oid			colcoll;
 
 		if (te->resjunk)
 			continue;
@@ -394,6 +433,7 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 		}
 		coltype = exprType((Node *) te->expr);
 		coltypmod = exprTypmod((Node *) te->expr);
+		colcoll = exprCollation((Node *) te->expr);
 
 		/*
 		 * If the CTE is recursive, force the exposed column type of any
@@ -402,14 +442,20 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 		 * might see "unknown" as a result of an untyped literal in the
 		 * non-recursive term's select list, and if we don't convert to text
 		 * then we'll have a mismatch against the UNION result.
+		 *
+		 * The column might contain 'foo' COLLATE "bar", so don't override
+		 * collation if it's already set.
 		 */
 		if (cte->cterecursive && coltype == UNKNOWNOID)
 		{
 			coltype = TEXTOID;
 			coltypmod = -1;		/* should be -1 already, but be sure */
+			if (!OidIsValid(colcoll))
+				colcoll = DEFAULT_COLLATION_OID;
 		}
 		cte->ctecoltypes = lappend_oid(cte->ctecoltypes, coltype);
 		cte->ctecoltypmods = lappend_int(cte->ctecoltypmods, coltypmod);
+		cte->ctecolcollations = lappend_oid(cte->ctecolcollations, colcoll);
 	}
 	if (varattno < numaliases)
 		ereport(ERROR,
@@ -638,11 +684,19 @@ checkWellFormedRecursion(CteState *cstate)
 		CommonTableExpr *cte = cstate->items[i].cte;
 		SelectStmt *stmt = (SelectStmt *) cte->ctequery;
 
-		Assert(IsA(stmt, SelectStmt));	/* not analyzed yet */
+		Assert(!IsA(stmt, Query));		/* not analyzed yet */
 
 		/* Ignore items that weren't found to be recursive */
 		if (!cte->cterecursive)
 			continue;
+
+		/* Must be a SELECT statement */
+		if (!IsA(stmt, SelectStmt))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_RECURSION),
+					 errmsg("recursive query \"%s\" must not contain data-modifying statements",
+							cte->ctename),
+					 parser_errposition(cstate->pstate, cte->location)));
 
 		/* Must have top-level UNION */
 		if (stmt->op != SETOP_UNION)

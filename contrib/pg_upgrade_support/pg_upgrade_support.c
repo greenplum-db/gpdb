@@ -1,11 +1,12 @@
 /*
- *	pg_upgrade_sysoids.c
+ *	pg_upgrade_support.c
  *
  *	server-side functions to set backend global variables
- *	to control oid and relfilenode assignment
+ *	to control oid and relfilenode assignment, and do other special
+ *	hacks needed for pg_upgrade.
  *
- *	Copyright (c) 2010, PostgreSQL Global Development Group
- *	$PostgreSQL: pgsql/contrib/pg_upgrade_support/pg_upgrade_support.c,v 1.5 2010/07/06 19:18:55 momjian Exp $
+ *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	contrib/pg_upgrade_support/pg_upgrade_support.c
  */
 
 #include "postgres.h"
@@ -17,6 +18,7 @@
 #include "catalog/pg_type.h"
 #include "commands/extension.h"
 #include "miscadmin.h"
+#include "utils/array.h"
 #include "utils/builtins.h"
 
 #include "catalog/oid_dispatch.h"
@@ -53,26 +55,9 @@
 PG_MODULE_MAGIC;
 #endif
 
-Datum		add_pg_enum_label(PG_FUNCTION_ARGS);
-
 Datum		create_empty_extension(PG_FUNCTION_ARGS);
 
-PG_FUNCTION_INFO_V1(add_pg_enum_label);
-
 PG_FUNCTION_INFO_V1(create_empty_extension);
-
-Datum
-add_pg_enum_label(PG_FUNCTION_ARGS)
-{
-	Oid			enumoid = PG_GETARG_OID(0);
-	Oid			typoid = PG_GETARG_OID(1);
-	Name		label = PG_GETARG_NAME(2);
-
-	EnumValuesCreate(typoid, list_make1(makeString(NameStr(*label))),
-					 enumoid);
-
-	PG_RETURN_VOID();
-}
 
 Datum
 create_empty_extension(PG_FUNCTION_ARGS)

@@ -21,6 +21,7 @@ select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id
 -- test with nested loop join
 set optimizer_enable_hashjoin = off;
 set enable_hashjoin=off;
+set enable_nestloop=on;
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
 

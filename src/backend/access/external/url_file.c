@@ -105,12 +105,12 @@ url_file_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 
 	if (n > 0 && fo.line_number)
 	{
-		pstate->cur_lineno = fo.line_number - 1;
+		pstate->cur_lineno = fo.line_number;
 
 		if (pstate->cdbsreh)
 			snprintf(pstate->cdbsreh->filename,
 					 sizeof pstate->cdbsreh->filename,
-					 "%s [%s]", pstate->filename, fo.fname);
+					 "%s [%s]", ffile->common.url, fo.fname);
 	}
 	return want;
 }

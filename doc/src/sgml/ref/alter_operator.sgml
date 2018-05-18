@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_operator.sgml,v 1.6 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_operator.sgml
 PostgreSQL documentation
 -->
 
@@ -13,8 +13,8 @@ PostgreSQL documentation
  <refnamediv>
   <refname>ALTER OPERATOR</refname>
   <refpurpose>change the definition of an operator</refpurpose>
- </refnamediv>  
-  
+ </refnamediv>
+
  <indexterm zone="sql-alteroperator">
   <primary>ALTER OPERATOR</primary>
  </indexterm>
@@ -22,9 +22,10 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 ALTER OPERATOR <replaceable>name</replaceable> ( { <replaceable>left_type</replaceable> | NONE } , { <replaceable>right_type</replaceable> | NONE } ) OWNER TO <replaceable>new_owner</replaceable>
+ALTER OPERATOR <replaceable>name</replaceable> ( { <replaceable>left_type</replaceable> | NONE } , { <replaceable>right_type</replaceable> | NONE } ) SET SCHEMA <replaceable>new_schema</replaceable>
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1>
   <title>Description</title>
 
@@ -43,7 +44,7 @@ ALTER OPERATOR <replaceable>name</replaceable> ( { <replaceable>left_type</repla
    However, a superuser can alter ownership of any operator anyway.)
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -85,6 +86,15 @@ ALTER OPERATOR <replaceable>name</replaceable> ( { <replaceable>left_type</repla
      </para>
     </listitem>
    </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">new_schema</replaceable></term>
+    <listitem>
+     <para>
+      The new schema for the operator.
+     </para>
+    </listitem>
+   </varlistentry>
   </variablelist>
  </refsect1>
 
@@ -98,7 +108,7 @@ ALTER OPERATOR @@ (text, text) OWNER TO joe;
 </programlisting>
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

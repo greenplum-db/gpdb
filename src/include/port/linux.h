@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/include/port/linux.h,v 1.44 2007/11/15 21:14:44 momjian Exp $ */
+/* src/include/port/linux.h */
 
 /*
  * As of July 2007, all known versions of the Linux kernel will sometimes
@@ -19,6 +19,4 @@
  * perform better and (b) causes outright failures on ext4 data=journal
  * filesystems, because those don't support O_DIRECT.
  */
-#define PLATFORM_DEFAULT_SYNC_METHOD_STR "fdatasync"
 #define PLATFORM_DEFAULT_SYNC_METHOD	SYNC_METHOD_FDATASYNC
-#define PLATFORM_DEFAULT_SYNC_FLAGBIT	0

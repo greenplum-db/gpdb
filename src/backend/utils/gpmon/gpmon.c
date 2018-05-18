@@ -14,6 +14,7 @@
 #include "libpq/pqsignal.h"
 #include "gpmon/gpmon.h"
 
+#include "utils/guc.h"
 #include "utils/memutils.h"
 
 #include "cdb/cdbtm.h"
@@ -21,7 +22,6 @@
 #include "miscadmin.h"
 
 /* Extern stuff */
-extern const char * show_session_authorization(void);
 extern char *get_database_name(Oid dbid);
 
 static void gpmon_record_kv(int32 tmid, int32 ssid, int32 ccnt,
@@ -221,8 +221,8 @@ void gpmon_qlog_packet_init(gpmon_packet_t *gpmonPacket)
 	gpmon_gettmid(&gpmonPacket->u.qlog.key.tmid);
 	gpmonPacket->u.qlog.key.ssid = gp_session_id;
 
-	username = show_session_authorization(); /* does not have to be freed */
-	/* User Id.  We use session authorization (so to make sense with session id) */
+	username = GetConfigOption("session_authorization", false); /* does not have to be freed */
+	/* User Id.  We use session authorization_string (so to make sense with session id) */
 	snprintf(gpmonPacket->u.qlog.user, sizeof(gpmonPacket->u.qlog.user), "%s",
 			username ? username : "");
 

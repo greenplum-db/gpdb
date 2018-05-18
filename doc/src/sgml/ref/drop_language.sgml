@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_language.sgml,v 1.28 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/drop_language.sgml
 PostgreSQL documentation
 -->
 
@@ -33,8 +33,17 @@ DROP [ PROCEDURAL ] LANGUAGE [ IF EXISTS ] <replaceable class="PARAMETER">name</
    previously registered procedural language.  You must be a superuser
    or the owner of the language to use <command>DROP LANGUAGE</>.
   </para>
+
+  <note>
+   <para>
+    As of <productname>PostgreSQL</productname> 9.1, most procedural
+    languages have been made into <quote>extensions</>, and should
+    therefore be removed with <xref linkend="sql-dropextension">
+    not <command>DROP LANGUAGE</command>.
+   </para>
+  </note>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -44,7 +53,7 @@ DROP [ PROCEDURAL ] LANGUAGE [ IF EXISTS ] <replaceable class="PARAMETER">name</
     <term><literal>IF EXISTS</literal></term>
     <listitem>
      <para>
-      Do not throw an error if the language does not exist. A notice is issued 
+      Do not throw an error if the language does not exist. A notice is issued
       in this case.
      </para>
     </listitem>
@@ -81,7 +90,7 @@ DROP [ PROCEDURAL ] LANGUAGE [ IF EXISTS ] <replaceable class="PARAMETER">name</
    </varlistentry>
   </variablelist>
  </refsect1>
-  
+
  <refsect1>
   <title>Examples</title>
 
@@ -94,7 +103,7 @@ DROP LANGUAGE plsample;
 </programlisting>
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

@@ -27,7 +27,6 @@ typedef struct BufferedAppend
 	 * Init level.
 	 */
 	char				*relationName;
-	bool isTempRel;
 
 	/*
 	 * Large-write memory level members.
@@ -71,7 +70,7 @@ typedef struct BufferedAppend
 	 * File level members.
 	 */
 	File 				 file;
-	RelFileNode			relFileNode;
+	RelFileNodeBackend	relFileNode;
 	int32				segmentFileNum;
     char				 *filePathName;
     int64                fileLen;
@@ -100,8 +99,7 @@ extern void BufferedAppendInit(
 	int32          memoryLen,
 	int32          maxBufferLen,
 	int32          maxLargeWriteLen,
-	char           *relationName,
-	bool           isTempRel);
+	char           *relationName);
 
 /*
  * Takes an open file handle for the next file.
@@ -109,7 +107,7 @@ extern void BufferedAppendInit(
 extern void BufferedAppendSetFile(
     BufferedAppend       *bufferedAppend,
     File 				 file,
-	RelFileNode			 relfilenode,
+	RelFileNodeBackend	 relfilenode,
 	int32				 segmentFileNum,
     char				 *filePathName,
     int64				 eof,

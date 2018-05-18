@@ -7,10 +7,10 @@
  * accessed via the extended FE/BE query protocol.
  *
  *
- * Copyright (c) 2002-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.102 2010/01/02 16:57:37 momjian Exp $
+ *	  src/backend/commands/prepare.c
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,7 @@
 #include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_type.h"
 #include "rewrite/rewriteHandler.h"
@@ -92,7 +93,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 		foreach(l, stmt->argtypes)
 		{
 			TypeName   *tn = lfirst(l);
-			Oid			toid = typenameTypeId(pstate, tn, NULL);
+			Oid			toid = typenameTypeId(pstate, tn);
 
 			argtypes[i++] = toid;
 		}
@@ -380,6 +381,9 @@ EvaluateParams(PreparedStatement *pstmt, List *params,
 							format_type_be(expected_type_id)),
 			   errhint("You will need to rewrite or cast the expression.")));
 
+		/* Take care of collations in the finished expression. */
+		assign_expr_collations(pstate, expr);
+
 		lfirst(l) = expr;
 		i++;
 	}
@@ -390,7 +394,7 @@ EvaluateParams(PreparedStatement *pstmt, List *params,
 	/* sizeof(ParamListInfoData) includes the first array element */
 	paramLI = (ParamListInfo)
 		palloc(sizeof(ParamListInfoData) +
-			   (num_params - 1) *sizeof(ParamExternData));
+			   (num_params - 1) * sizeof(ParamExternData));
 	/* we have static list of params, so no hooks needed */
 	paramLI->paramFetch = NULL;
 	paramLI->paramFetchArg = NULL;

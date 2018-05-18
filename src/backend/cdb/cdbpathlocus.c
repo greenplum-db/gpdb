@@ -444,6 +444,7 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 								  tle->resno,
 								  exprType((Node *) tle->expr),
 								  exprTypmod((Node *) tle->expr),
+								  exprCollation((Node *) tle->expr),
 								  0);
 					pathkey = cdb_make_pathkey_for_expr(root, (Node *) var, eq, true);
 					partkey = lappend(partkey, pathkey);

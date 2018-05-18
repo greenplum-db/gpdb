@@ -440,12 +440,12 @@ COMMIT;
 --    executing in the segments, as soon as the DECLARE CURSOR is issued,
 --    so there's a race condition.
 
-BEGIN; 
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; 
-CREATE TABLE cursor (a int, b int); 
-INSERT INTO cursor VALUES (1, 1); 
-DECLARE c1 NO SCROLL CURSOR FOR SELECT * FROM cursor FOR UPDATE; 
-UPDATE cursor SET b = 2; 
-FETCH ALL FROM c1; 
-COMMIT; 
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+CREATE TABLE cursor (a int, b int);
+INSERT INTO cursor VALUES (1, 1);
+DECLARE c1 NO SCROLL CURSOR FOR SELECT * FROM cursor FOR UPDATE;
+UPDATE cursor SET b = 2;
+FETCH ALL FROM c1;
+COMMIT;
 DROP TABLE cursor;

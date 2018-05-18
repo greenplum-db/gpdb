@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_opclass.sgml,v 1.11 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_opclass.sgml
 PostgreSQL documentation
 -->
 
@@ -13,8 +13,8 @@ PostgreSQL documentation
  <refnamediv>
   <refname>ALTER OPERATOR CLASS</refname>
   <refpurpose>change the definition of an operator class</refpurpose>
- </refnamediv>  
-  
+ </refnamediv>
+
  <indexterm zone="sql-alteropclass">
   <primary>ALTER OPERATOR CLASS</primary>
  </indexterm>
@@ -23,9 +23,10 @@ PostgreSQL documentation
 <synopsis>
 ALTER OPERATOR CLASS <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> RENAME TO <replaceable>new_name</replaceable>
 ALTER OPERATOR CLASS <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> OWNER TO <replaceable>new_owner</replaceable>
+ALTER OPERATOR CLASS <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> SET SCHEMA <replaceable>new_schema</replaceable>
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1>
   <title>Description</title>
 
@@ -44,7 +45,7 @@ ALTER OPERATOR CLASS <replaceable>name</replaceable> USING <replaceable class="p
    class anyway.)
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -82,6 +83,15 @@ ALTER OPERATOR CLASS <replaceable>name</replaceable> USING <replaceable class="p
     <listitem>
      <para>
       The new owner of the operator class.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">new_schema</replaceable></term>
+    <listitem>
+     <para>
+      The new schema for the operator class.
      </para>
     </listitem>
    </varlistentry>

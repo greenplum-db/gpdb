@@ -78,7 +78,7 @@ for key in skeys:
 	val = TD[key]
 	plpy.notice("TD[" + key + "] => " + str(val))
 
-return None  
+return None
 
 $$;
 
@@ -99,7 +99,27 @@ update trigger_test set v = 'update' where i = 1;
 delete from trigger_test;
 truncate table trigger_test;
 
+DROP TRIGGER show_trigger_data_trig_stmt on trigger_test;
+DROP TRIGGER show_trigger_data_trig_before on trigger_test;
+DROP TRIGGER show_trigger_data_trig_after on trigger_test;
+
+insert into trigger_test values(1,'insert');
+CREATE VIEW trigger_test_view AS SELECT * FROM trigger_test;
+
+--start_ignore
+-- INSTEAD OF triggers are not yet supported in Greenplum
+CREATE TRIGGER show_trigger_data_trig
+INSTEAD OF INSERT OR UPDATE OR DELETE ON trigger_test_view
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(24,'skidoo view');
+
+insert into trigger_test_view values(2,'insert');
+update trigger_test_view set v = 'update' where i = 1;
+delete from trigger_test_view;
+
 DROP FUNCTION trigger_data() CASCADE;
+--end_ignore
+DROP VIEW trigger_test_view;
+delete from trigger_test;
 
 
 --
@@ -286,3 +306,47 @@ UPDATE trigger_test SET v = 'null' WHERE i = 0;
 DROP TRIGGER test_null_trigger ON trigger_test;
 
 SELECT * FROM trigger_test;
+
+
+--
+-- Test that triggers honor typmod when assigning to tuple fields,
+-- as per an early 9.0 bug report
+--
+
+SET DateStyle = 'ISO';
+
+CREATE FUNCTION set_modif_time() RETURNS trigger AS $$
+    TD['new']['modif_time'] = '2010-10-13 21:57:28.930486'
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+
+-- Add 'DISTRIBUTED RANDOMLY' to avoid "ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns"
+CREATE TABLE pb (a TEXT, modif_time TIMESTAMP(0) WITHOUT TIME ZONE) DISTRIBUTED RANDOMLY;
+
+CREATE TRIGGER set_modif_time BEFORE UPDATE ON pb
+  FOR EACH ROW EXECUTE PROCEDURE set_modif_time();
+
+INSERT INTO pb VALUES ('a', '2010-10-09 21:57:33.930486');
+SELECT * FROM pb;
+UPDATE pb SET a = 'b';
+SELECT * FROM pb;
+
+
+-- triggers for tables with composite types
+
+CREATE TABLE comp1 (i integer, j boolean);
+CREATE TYPE comp2 AS (k integer, l boolean);
+
+CREATE TABLE composite_trigger_test (f1 comp1, f2 comp2);
+
+CREATE FUNCTION composite_trigger_f() RETURNS trigger AS $$
+    TD['new']['f1'] = (3, False)
+    TD['new']['f2'] = {'k': 7, 'l': 'yes', 'ignored': 10}
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+
+CREATE TRIGGER composite_trigger BEFORE INSERT ON composite_trigger_test
+  FOR EACH ROW EXECUTE PROCEDURE composite_trigger_f();
+
+INSERT INTO composite_trigger_test VALUES (NULL, NULL);
+SELECT * FROM composite_trigger_test;

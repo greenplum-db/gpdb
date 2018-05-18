@@ -3,12 +3,12 @@
  * functions.c
  *	  Execution of SQL-language functions
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.144 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/executor/functions.c
  *
  *-------------------------------------------------------------------------
  */
@@ -59,6 +59,10 @@ typedef struct
  * We have an execution_state record for each query in a function.	Each
  * record contains a plantree for its query.  If the query is currently in
  * F_EXEC_RUN state then there's a QueryDesc too.
+ *
+ * The "next" fields chain together all the execution_state records generated
+ * from a single original parsetree.  (There will only be more than one in
+ * case of rule expansion of the original parsetree.)
  */
 typedef enum
 {
@@ -89,7 +93,8 @@ typedef struct
 	char	   *fname;			/* function name (for error msgs) */
 	char	   *src;			/* function body text (for error msgs) */
 
-	Oid		   *argtypes;		/* resolved types of arguments */
+	SQLFunctionParseInfoPtr pinfo;		/* data for parser callback hooks */
+
 	Oid			rettype;		/* actual return type */
 	int16		typlen;			/* length of the return type */
 	bool		typbyval;		/* true if return type is pass by value */
@@ -105,18 +110,36 @@ typedef struct
 
 	JunkFilter *junkFilter;		/* will be NULL if function returns VOID */
 
-	/* head of linked list of execution_state records */
-	execution_state *func_state;
+	/*
+	 * func_state is a List of execution_state records, each of which is the
+	 * first for its original parsetree, with any additional records chained
+	 * to it via the "next" fields.  This sublist structure is needed to keep
+	 * track of where the original query boundaries are.
+	 */
+	List	   *func_state;
 } SQLFunctionCache;
 
 typedef SQLFunctionCache *SQLFunctionCachePtr;
 
+/*
+ * Data structure needed by the parser callback hooks to resolve parameter
+ * references during parsing of a SQL function's body.  This is separate from
+ * SQLFunctionCache since we sometimes do parsing separately from execution.
+ */
+typedef struct SQLFunctionParseInfo
+{
+	Oid		   *argtypes;		/* resolved types of input arguments */
+	int			nargs;			/* number of input arguments */
+	Oid			collation;		/* function's input collation, if known */
+}	SQLFunctionParseInfo;
+
 
 /* non-export function prototypes */
-static execution_state *init_execution_state(List *queryTree_list,
+static Node *sql_fn_param_ref(ParseState *pstate, ParamRef *pref);
+static List *init_execution_state(List *queryTree_list,
 					 SQLFunctionCachePtr fcache,
 					 bool lazyEvalOK);
-static void init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK);
+static void init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK);
 static void postquel_start(execution_state *es, SQLFunctionCachePtr fcache);
 static bool postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache);
 static void postquel_end(execution_state *es);
@@ -134,7 +157,8 @@ static void sqlfunction_receive(TupleTableSlot *slot, DestReceiver *self);
 static void sqlfunction_shutdown(DestReceiver *self);
 static void sqlfunction_destroy(DestReceiver *self);
 
-bool querytree_safe_for_qe_walker(Node *expr, void *context)
+bool
+querytree_safe_for_qe_walker(Node *expr, void *context)
 {
 	Assert(context == NULL);
 	
@@ -206,68 +230,191 @@ bool querytree_safe_for_qe_walker(Node *expr, void *context)
  * 2. The query must be select only.
  * In case of a problem, the method spits out an error.
  */
-void querytree_safe_for_qe(Query *query)
+void
+querytree_safe_for_qe(Node *node)
 {
-	Assert(query);
-	querytree_safe_for_qe_walker((Node *)query, NULL);
+	Assert(node);
+	querytree_safe_for_qe_walker(node, NULL);
 }
 
-/* Set up the list of per-query execution_state records for a SQL function */
-static execution_state *
+/*
+ * Prepare the SQLFunctionParseInfo struct for parsing a SQL function body
+ *
+ * This includes resolving actual types of polymorphic arguments.
+ *
+ * call_expr can be passed as NULL, but then we will fail if there are any
+ * polymorphic arguments.
+ */
+SQLFunctionParseInfoPtr
+prepare_sql_fn_parse_info(HeapTuple procedureTuple,
+						  Node *call_expr,
+						  Oid inputCollation)
+{
+	SQLFunctionParseInfoPtr pinfo;
+	Form_pg_proc procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
+	int			nargs;
+
+	pinfo = (SQLFunctionParseInfoPtr) palloc0(sizeof(SQLFunctionParseInfo));
+
+	/* Save the function's input collation */
+	pinfo->collation = inputCollation;
+
+	/*
+	 * Copy input argument types from the pg_proc entry, then resolve any
+	 * polymorphic types.
+	 */
+	pinfo->nargs = nargs = procedureStruct->pronargs;
+	if (nargs > 0)
+	{
+		Oid		   *argOidVect;
+		int			argnum;
+
+		argOidVect = (Oid *) palloc(nargs * sizeof(Oid));
+		memcpy(argOidVect,
+			   procedureStruct->proargtypes.values,
+			   nargs * sizeof(Oid));
+
+		for (argnum = 0; argnum < nargs; argnum++)
+		{
+			Oid			argtype = argOidVect[argnum];
+
+			if (IsPolymorphicType(argtype))
+			{
+				argtype = get_call_expr_argtype(call_expr, argnum);
+				if (argtype == InvalidOid)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATATYPE_MISMATCH),
+							 errmsg("could not determine actual type of argument declared %s",
+									format_type_be(argOidVect[argnum]))));
+				argOidVect[argnum] = argtype;
+			}
+		}
+
+		pinfo->argtypes = argOidVect;
+	}
+
+	return pinfo;
+}
+
+/*
+ * Parser setup hook for parsing a SQL function body.
+ */
+void
+sql_fn_parser_setup(struct ParseState *pstate, SQLFunctionParseInfoPtr pinfo)
+{
+	/* Later we might use these hooks to support parameter names */
+	pstate->p_pre_columnref_hook = NULL;
+	pstate->p_post_columnref_hook = NULL;
+	pstate->p_paramref_hook = sql_fn_param_ref;
+	/* no need to use p_coerce_param_hook */
+	pstate->p_ref_hook_state = (void *) pinfo;
+}
+
+/*
+ * sql_fn_param_ref		parser callback for ParamRefs ($n symbols)
+ */
+static Node *
+sql_fn_param_ref(ParseState *pstate, ParamRef *pref)
+{
+	SQLFunctionParseInfoPtr pinfo = (SQLFunctionParseInfoPtr) pstate->p_ref_hook_state;
+	int			paramno = pref->number;
+	Param	   *param;
+
+	/* Check parameter number is valid */
+	if (paramno <= 0 || paramno > pinfo->nargs)
+		return NULL;			/* unknown parameter number */
+
+	param = makeNode(Param);
+	param->paramkind = PARAM_EXTERN;
+	param->paramid = paramno;
+	param->paramtype = pinfo->argtypes[paramno - 1];
+	param->paramtypmod = -1;
+	param->paramcollid = get_typcollation(param->paramtype);
+	param->location = pref->location;
+
+	/*
+	 * If we have a function input collation, allow it to override the
+	 * type-derived collation for parameter symbols.  (XXX perhaps this should
+	 * not happen if the type collation is not default?)
+	 */
+	if (OidIsValid(pinfo->collation) && OidIsValid(param->paramcollid))
+		param->paramcollid = pinfo->collation;
+
+	return (Node *) param;
+}
+
+/*
+ * Set up the per-query execution_state records for a SQL function.
+ *
+ * The input is a List of Lists of parsed and rewritten, but not planned,
+ * querytrees.	The sublist structure denotes the original query boundaries.
+ */
+static List *
 init_execution_state(List *queryTree_list,
 					 SQLFunctionCachePtr fcache,
 					 bool lazyEvalOK)
 {
-	execution_state *firstes = NULL;
-	execution_state *preves = NULL;
+	List	   *eslist = NIL;
 	execution_state *lasttages = NULL;
-	ListCell   *qtl_item;
+	ListCell   *lc1;
 
-	foreach(qtl_item, queryTree_list)
+	foreach(lc1, queryTree_list)
 	{
-		Query	   *queryTree = (Query *) lfirst(qtl_item);
-		Node	   *stmt;
-		execution_state *newes;
+		List	   *qtlist = (List *) lfirst(lc1);
+		execution_state *firstes = NULL;
+		execution_state *preves = NULL;
+		ListCell   *lc2;
 
-		Assert(IsA(queryTree, Query));
+		foreach(lc2, qtlist)
+		{
+			Query	   *queryTree = (Query *) lfirst(lc2);
+			Node	   *stmt;
+			execution_state *newes;
 
-		if (queryTree->commandType == CMD_UTILITY)
-			stmt = queryTree->utilityStmt;
-		else
-			stmt = (Node *) pg_plan_query(queryTree, 0, NULL);
+			Assert(IsA(queryTree, Query));
 
-		/* Precheck all commands for validity in a function */
-		if (IsA(stmt, TransactionStmt))
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			/* translator: %s is a SQL statement name */
-					 errmsg("%s is not allowed in a SQL function",
-							CreateCommandTag(stmt))));
+			/* Plan the query if needed */
+			if (queryTree->commandType == CMD_UTILITY)
+				stmt = queryTree->utilityStmt;
+			else
+				stmt = (Node *) pg_plan_query(queryTree, 0, NULL);
 
-		if (fcache->readonly_func && !CommandIsReadOnly(stmt))
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			/* translator: %s is a SQL statement name */
-					 errmsg("%s is not allowed in a non-volatile function",
-							CreateCommandTag(stmt))));
+			/* Precheck all commands for validity in a function */
+			if (IsA(stmt, TransactionStmt))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				/* translator: %s is a SQL statement name */
+						 errmsg("%s is not allowed in a SQL function",
+								CreateCommandTag(stmt))));
 
-		newes = (execution_state *) palloc(sizeof(execution_state));
-		if (preves)
-			preves->next = newes;
-		else
-			firstes = newes;
+			if (fcache->readonly_func && !CommandIsReadOnly(stmt))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				/* translator: %s is a SQL statement name */
+					   errmsg("%s is not allowed in a non-volatile function",
+							  CreateCommandTag(stmt))));
 
-		newes->next = NULL;
-		newes->status = F_EXEC_START;
-		newes->setsResult = false;		/* might change below */
-		newes->lazyEval = false;	/* might change below */
-		newes->stmt = stmt;
-		newes->qd = NULL;
+			/* OK, build the execution_state for this query */
+			newes = (execution_state *) palloc(sizeof(execution_state));
+			if (preves)
+				preves->next = newes;
+			else
+				firstes = newes;
 
-		if (queryTree->canSetTag)
-			lasttages = newes;
+			newes->next = NULL;
+			newes->status = F_EXEC_START;
+			newes->setsResult = false;	/* might change below */
+			newes->lazyEval = false;	/* might change below */
+			newes->stmt = stmt;
+			newes->qd = NULL;
 
-		preves = newes;
+			if (queryTree->canSetTag)
+				lasttages = newes;
+
+			preves = newes;
+		}
+
+		eslist = lappend(eslist, firstes);
 	}
 
 	/*
@@ -295,26 +442,30 @@ init_execution_state(List *queryTree_list,
 
 			if (ps->commandType == CMD_SELECT &&
 				ps->utilityStmt == NULL &&
-				ps->intoClause == NULL)
+				ps->intoClause == NULL &&
+				!ps->hasModifyingCTE)
 				fcache->lazyEval = lasttages->lazyEval = true;
 		}
 	}
 
-	return firstes;
+	return eslist;
 }
 
-/* Initialize the SQLFunctionCache for a SQL function */
+/*
+ * Initialize the SQLFunctionCache for a SQL function
+ */
 static void
-init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
+init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
 {
 	Oid			foid = finfo->fn_oid;
 	Oid			rettype;
 	HeapTuple	procedureTuple;
 	Form_pg_proc procedureStruct;
 	SQLFunctionCachePtr fcache;
-	Oid		   *argOidVect;
-	int			nargs;
+	List	   *raw_parsetree_list;
 	List	   *queryTree_list;
+	List	   *flat_query_list;
+	ListCell   *lc;
 	Datum		tmp;
 	bool		isNull;
 
@@ -363,37 +514,13 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 		(procedureStruct->provolatile != PROVOLATILE_VOLATILE);
 
 	/*
-	 * We need the actual argument types to pass to the parser.
+	 * We need the actual argument types to pass to the parser.  Also make
+	 * sure that parameter symbols are considered to have the function's
+	 * resolved input collation.
 	 */
-	nargs = procedureStruct->pronargs;
-	if (nargs > 0)
-	{
-		int			argnum;
-
-		argOidVect = (Oid *) palloc(nargs * sizeof(Oid));
-		memcpy(argOidVect,
-			   procedureStruct->proargtypes.values,
-			   nargs * sizeof(Oid));
-		/* Resolve any polymorphic argument types */
-		for (argnum = 0; argnum < nargs; argnum++)
-		{
-			Oid			argtype = argOidVect[argnum];
-
-			if (IsPolymorphicType(argtype))
-			{
-				argtype = get_fn_expr_argtype(finfo, argnum);
-				if (argtype == InvalidOid)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATATYPE_MISMATCH),
-							 errmsg("could not determine actual type of argument declared %s",
-									format_type_be(argOidVect[argnum]))));
-				argOidVect[argnum] = argtype;
-			}
-		}
-	}
-	else
-		argOidVect = NULL;
-	fcache->argtypes = argOidVect;
+	fcache->pinfo = prepare_sql_fn_parse_info(procedureTuple,
+											  finfo->fn_expr,
+											  collation);
 
 	/*
 	 * And of course we need the function body text.
@@ -407,9 +534,32 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 	fcache->src = TextDatumGetCString(tmp);
 
 	/*
-	 * Parse and rewrite the queries in the function text.
+	 * Parse and rewrite the queries in the function text.	Use sublists to
+	 * keep track of the original query boundaries.  But we also build a
+	 * "flat" list of the rewritten queries to pass to check_sql_fn_retval.
+	 * This is because the last canSetTag query determines the result type
+	 * independently of query boundaries --- and it might not be in the last
+	 * sublist, for example if the last query rewrites to DO INSTEAD NOTHING.
+	 * (It might not be unreasonable to throw an error in such a case, but
+	 * this is the historical behavior and it doesn't seem worth changing.)
 	 */
-	queryTree_list = pg_parse_and_rewrite(fcache->src, argOidVect, nargs);
+	raw_parsetree_list = pg_parse_query(fcache->src);
+
+	queryTree_list = NIL;
+	flat_query_list = NIL;
+	foreach(lc, raw_parsetree_list)
+	{
+		Node	   *parsetree = (Node *) lfirst(lc);
+		List	   *queryTree_sublist;
+
+		queryTree_sublist = pg_analyze_and_rewrite_params(parsetree,
+														  fcache->src,
+									   (ParserSetupHook) sql_fn_parser_setup,
+														  fcache->pinfo);
+		queryTree_list = lappend(queryTree_list, queryTree_sublist);
+		flat_query_list = list_concat(flat_query_list,
+									  list_copy(queryTree_sublist));
+	}
 
 	/*
 	 * If we have only SELECT statements with no FROM clauses, we should
@@ -427,33 +577,8 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		bool		canRunLocal = true;
-		ListCell   *list_item;
-
-		foreach(list_item, queryTree_list)
-		{
-			Node	   *parsetree = (Node *) lfirst(list_item);
-			if (IsA(parsetree,Query))
-			{
-				/* This will error out if there is a problem with the query tree */
-				querytree_safe_for_qe((Query*)parsetree);
-			}
-			else
-			{
-				canRunLocal = false;
-				break;
-			}		
-		}
-
-		if (!canRunLocal)
-		{
-			if (procedureStruct->provolatile == PROVOLATILE_VOLATILE)
-				elog(ERROR,"Volatile SQL function %s cannot be executed from the segment databases",NameStr(procedureStruct->proname));	
-			else if (procedureStruct->provolatile == PROVOLATILE_STABLE)
-				elog(ERROR,"Stable SQL function %s cannot be executed from the segment databases",NameStr(procedureStruct->proname));
-			else 
-				elog(ERROR,"SQL function %s cannot be executed from the segment databases",NameStr(procedureStruct->proname));		
-		}
+		/* This will error out if there is a problem with the query tree */
+		querytree_safe_for_qe((Node *) queryTree_list);
 	}
 
 	/*
@@ -477,7 +602,7 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 	 */
 	fcache->returnsTuple = check_sql_fn_retval(foid,
 											   rettype,
-											   queryTree_list,
+											   flat_query_list,
 											   NULL,
 											   &fcache->junkFilter);
 
@@ -509,24 +634,12 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 static void
 postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 {
-	Snapshot	snapshot;
 	DestReceiver *dest;
 
 	Assert(es->qd == NULL);
 
-	/*
-	 * In a read-only function, use the surrounding query's snapshot;
-	 * otherwise take a new snapshot for each query.  The snapshot should
-	 * include a fresh command ID so that all work to date in this transaction
-	 * is visible.
-	 */
-	if (fcache->readonly_func)
-		snapshot = GetActiveSnapshot();
-	else
-	{
-		CommandCounterIncrement();
-		snapshot = GetTransactionSnapshot();
-	}
+	/* Caller should have ensured a suitable snapshot is active */
+	Assert(ActiveSnapshotSet());
 
 	/*
 	 * If this query produces the function result, send its output to the
@@ -551,7 +664,8 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 	{
 		es->qd = CreateQueryDesc((PlannedStmt *) es->stmt,
 								 fcache->src,
-								 snapshot, InvalidSnapshot,
+								 GetActiveSnapshot(),
+								 InvalidSnapshot,
 								 dest,
 								 fcache->paramLI,
 								 GP_INSTRUMENT_OPTS);
@@ -583,32 +697,33 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 	else
 		es->qd = CreateUtilityQueryDesc(es->stmt,
 										fcache->src,
-										snapshot,
+										GetActiveSnapshot(),
 										dest,
 										fcache->paramLI);
-
-	/* We assume we don't need to set up ActiveSnapshot for ExecutorStart */
 
 	/* Utility commands don't need Executor. */
 	if (es->qd->utilitystmt == NULL)
 	{
-		/*
-		 * Only set up to collect queued triggers if it's not a SELECT. This
-		 * isn't just an optimization, but is necessary in case a SELECT
-		 * returns multiple rows to caller --- we mustn't exit from the
-		 * function execution with a stacked AfterTrigger level still active.
-		 */
-		if (es->qd->operation != CMD_SELECT)
-			AfterTriggerBeginQuery();
-		
-		
+		int			eflags;
+
 		if (!IsResManagerMemoryPolicyNone()
 			&& SPI_IsMemoryReserved())
 		{
 			es->qd->plannedstmt->query_mem = SPI_GetMemoryReservation();
 		}
 
-		ExecutorStart(es->qd, 0);
+		/*
+		 * In lazyEval mode, do not let the executor set up an AfterTrigger
+		 * context.  This is necessary not just an optimization, because we
+		 * mustn't exit from the function execution with a stacked
+		 * AfterTrigger level still active.  We are careful not to select
+		 * lazyEval mode for any statement that could possibly queue triggers.
+		 */
+		if (es->lazyEval)
+			eflags = EXEC_FLAG_SKIP_TRIGGERS;
+		else
+			eflags = 0;			/* default run-to-completion flags */
+		ExecutorStart(es->qd, eflags);
 	}
 
 	es->status = F_EXEC_RUN;
@@ -620,9 +735,6 @@ static bool
 postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 {
 	bool		result;
-
-	/* Make our snapshot the active one for any called functions */
-	PushActiveSnapshot(es->qd->snapshot);
 
 	if (es->qd->utilitystmt)
 	{
@@ -651,8 +763,6 @@ postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 		result = (count == 0L || es->qd->estate->es_processed == 0);
 	}
 
-	PopActiveSnapshot();
-
 	return result;
 }
 
@@ -666,27 +776,18 @@ postquel_end(execution_state *es)
 	/* Utility commands don't need Executor. */
 	if (es->qd->utilitystmt == NULL)
 	{
-		/* Make our snapshot the active one for any called functions */
-		PushActiveSnapshot(es->qd->snapshot);
+		Oid			relationOid = InvalidOid; 	/* relation that is modified */
+		AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
 
-		{
-			Oid			relationOid = InvalidOid; 	/* relation that is modified */
-			AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
+		if (Gp_role == GP_ROLE_DISPATCH)
+			autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
 
-			if (es->qd->operation != CMD_SELECT)
-				AfterTriggerEndQuery(es->qd->estate);
+		ExecutorFinish(es->qd);
+		ExecutorEnd(es->qd);
 
-			if (Gp_role == GP_ROLE_DISPATCH)
-				autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
-
-			ExecutorEnd(es->qd);
-
-			/* MPP-14001: Running auto_stats */
-			if (Gp_role == GP_ROLE_DISPATCH)
-				auto_stats(cmdType, relationOid, es->qd->es_processed, true /* inFunction */);
-		}
-
-		PopActiveSnapshot();
+		/* MPP-14001: Running auto_stats */
+		if (Gp_role == GP_ROLE_DISPATCH)
+			auto_stats(cmdType, relationOid, es->qd->es_processed, true /* inFunction */);
 	}
 
 	(*es->qd->dest->rDestroy) (es->qd->dest);
@@ -711,7 +812,7 @@ postquel_sub_params(SQLFunctionCachePtr fcache,
 		{
 			/* sizeof(ParamListInfoData) includes the first array element */
 			paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-									   (nargs - 1) *sizeof(ParamExternData));
+									  (nargs - 1) * sizeof(ParamExternData));
 			/* we have static list of params, so no hooks needed */
 			paramLI->paramFetch = NULL;
 			paramLI->paramFetchArg = NULL;
@@ -733,7 +834,7 @@ postquel_sub_params(SQLFunctionCachePtr fcache,
 			prm->value = fcinfo->arg[i];
 			prm->isnull = fcinfo->argnull[i];
 			prm->pflags = 0;
-			prm->ptype = fcache->argtypes[i];
+			prm->ptype = fcache->pinfo->argtypes[i];
 		}
 	}
 	else
@@ -797,9 +898,13 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	ErrorContextCallback sqlerrcontext;
 	bool		randomAccess;
 	bool		lazyEvalOK;
+	bool		is_first;
+	bool		pushed_snapshot;
 	execution_state *es;
 	TupleTableSlot *slot;
 	Datum		result;
+	List	   *eslist;
+	ListCell   *eslc;
 
 	/*
 	 * Switch to context in which the fcache lives.  This ensures that
@@ -848,16 +953,36 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	fcache = (SQLFunctionCachePtr) fcinfo->flinfo->fn_extra;
 	if (fcache == NULL)
 	{
-		init_sql_fcache(fcinfo->flinfo, lazyEvalOK);
+		init_sql_fcache(fcinfo->flinfo, PG_GET_COLLATION(), lazyEvalOK);
 		fcache = (SQLFunctionCachePtr) fcinfo->flinfo->fn_extra;
 	}
-	es = fcache->func_state;
+	eslist = fcache->func_state;
+
+	/*
+	 * Find first unfinished query in function, and note whether it's the
+	 * first query.
+	 */
+	es = NULL;
+	is_first = true;
+	foreach(eslc, eslist)
+	{
+		es = (execution_state *) lfirst(eslc);
+
+		while (es && es->status == F_EXEC_DONE)
+		{
+			is_first = false;
+			es = es->next;
+		}
+
+		if (es)
+			break;
+	}
 
 	/*
 	 * Convert params to appropriate format if starting a fresh execution. (If
 	 * continuing execution, we can re-use prior params.)
 	 */
-	if (es && es->status == F_EXEC_START)
+	if (is_first && es && es->status == F_EXEC_START)
 		postquel_sub_params(fcache, fcinfo);
 
 	/*
@@ -867,73 +992,132 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	if (!fcache->tstore)
 		fcache->tstore = tuplestore_begin_heap(randomAccess, false, work_mem);
 
-	/*
-	 * Find first unfinished query in function.
-	 */
-	while (es && es->status == F_EXEC_DONE)
-		es = es->next;
-
 	bool orig_gp_enable_gpperfmon = gp_enable_gpperfmon;
 
-	PG_TRY();
+PG_TRY();
+{
+	/*
+	 * Temporarily disable gpperfmon since we don't send information for internal queries in
+	 * most cases, except when the debugging level is set to DEBUG4 or DEBUG5.
+	 */
+	if (log_min_messages > DEBUG4)
 	{
-		/*
-		 * Temporarily disable gpperfmon since we don't send information for internal queries in
-		 * most cases, except when the debugging level is set to DEBUG4 or DEBUG5.
-		 */
-		if (log_min_messages > DEBUG4)
+		gp_enable_gpperfmon = false;
+	}
+
+	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
+
+	/*
+	 * Execute each command in the function one after another until we either
+	 * run out of commands or get a result row from a lazily-evaluated SELECT.
+	 *
+	 * Notes about snapshot management:
+	 *
+	 * In a read-only function, we just use the surrounding query's snapshot.
+	 *
+	 * In a non-read-only function, we rely on the fact that we'll never
+	 * suspend execution between queries of the function: the only reason to
+	 * suspend execution before completion is if we are returning a row from a
+	 * lazily-evaluated SELECT.  So, when first entering this loop, we'll
+	 * either start a new query (and push a fresh snapshot) or re-establish
+	 * the active snapshot from the existing query descriptor.  If we need to
+	 * start a new query in a subsequent execution of the loop, either we need
+	 * a fresh snapshot (and pushed_snapshot is false) or the existing
+	 * snapshot is on the active stack and we can just bump its command ID.
+	 */
+	pushed_snapshot = false;
+	while (es)
+	{
+		bool		completed;
+
+		if (es->status == F_EXEC_START)
 		{
-			gp_enable_gpperfmon = false;
+			/*
+			 * If not read-only, be sure to advance the command counter for
+			 * each command, so that all work to date in this transaction is
+			 * visible.  Take a new snapshot if we don't have one yet,
+			 * otherwise just bump the command ID in the existing snapshot.
+			 */
+			if (!fcache->readonly_func)
+			{
+				CommandCounterIncrement();
+				if (!pushed_snapshot)
+				{
+					PushActiveSnapshot(GetTransactionSnapshot());
+					pushed_snapshot = true;
+				}
+				else
+					UpdateActiveSnapshotCommandId();
+			}
+
+			postquel_start(es, fcache);
+		}
+		else if (!fcache->readonly_func && !pushed_snapshot)
+		{
+			/* Re-establish active snapshot when re-entering function */
+			PushActiveSnapshot(es->qd->snapshot);
+			pushed_snapshot = true;
 		}
 
-		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
+		completed = postquel_getnext(es, fcache);
 
 		/*
-		 * Execute each command in the function one after another until we either
-		 * run out of commands or get a result row from a lazily-evaluated SELECT.
+		 * If we ran the command to completion, we can shut it down now. Any
+		 * row(s) we need to return are safely stashed in the tuplestore, and
+		 * we want to be sure that, for example, AFTER triggers get fired
+		 * before we return anything.  Also, if the function doesn't return
+		 * set, we can shut it down anyway because it must be a SELECT and we
+		 * don't care about fetching any more result rows.
 		 */
-		while (es)
+		if (completed || !fcache->returnsSet)
+			postquel_end(es);
+
+		/*
+		 * Break from loop if we didn't shut down (implying we got a
+		 * lazily-evaluated row).  Otherwise we'll press on till the whole
+		 * function is done, relying on the tuplestore to keep hold of the
+		 * data to eventually be returned.  This is necessary since an
+		 * INSERT/UPDATE/DELETE RETURNING that sets the result might be
+		 * followed by additional rule-inserted commands, and we want to
+		 * finish doing all those commands before we return anything.
+		 */
+		if (es->status != F_EXEC_DONE)
+			break;
+
+		/*
+		 * Advance to next execution_state, which might be in the next list.
+		 */
+		es = es->next;
+		while (!es)
 		{
-			bool		completed;
+			eslc = lnext(eslc);
+			if (!eslc)
+				break;			/* end of function */
 
-			if (es->status == F_EXEC_START)
-				postquel_start(es, fcache);
-
-			completed = postquel_getnext(es, fcache);
-
-			/*
-			 * If we ran the command to completion, we can shut it down now. Any
-			 * row(s) we need to return are safely stashed in the tuplestore, and
-			 * we want to be sure that, for example, AFTER triggers get fired
-			 * before we return anything.  Also, if the function doesn't return
-			 * set, we can shut it down anyway because it must be a SELECT and we
-			 * don't care about fetching any more result rows.
-			 */
-			if (completed || !fcache->returnsSet)
-				postquel_end(es);
+			es = (execution_state *) lfirst(eslc);
 
 			/*
-			 * Break from loop if we didn't shut down (implying we got a
-			 * lazily-evaluated row).  Otherwise we'll press on till the whole
-			 * function is done, relying on the tuplestore to keep hold of the
-			 * data to eventually be returned.  This is necessary since an
-			 * INSERT/UPDATE/DELETE RETURNING that sets the result might be
-			 * followed by additional rule-inserted commands, and we want to
-			 * finish doing all those commands before we return anything.
+			 * Flush the current snapshot so that we will take a new one for
+			 * the new query list.  This ensures that new snaps are taken at
+			 * original-query boundaries, matching the behavior of interactive
+			 * execution.
 			 */
-			if (es->status != F_EXEC_DONE)
-				break;
-			es = es->next;
+			if (pushed_snapshot)
+			{
+				PopActiveSnapshot();
+				pushed_snapshot = false;
+			}
 		}
+	}
 
-		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
-	}
-	PG_CATCH();
-	{
-		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
+}
+PG_CATCH();
+{
+	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
+	PG_RE_THROW();
+}
+PG_END_TRY();
 
 	/*
 	 * The tuplestore now contains whatever row(s) we are supposed to return.
@@ -1059,17 +1243,24 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		tuplestore_clear(fcache->tstore);
 	}
 
+	/* Pop snapshot if we have pushed one */
+	if (pushed_snapshot)
+		PopActiveSnapshot();
+
 	/*
 	 * If we've gone through every command in the function, we are done. Reset
 	 * the execution states to start over again on next call.
 	 */
 	if (es == NULL)
 	{
-		es = fcache->func_state;
-		while (es)
+		foreach(eslc, fcache->func_state)
 		{
-			es->status = F_EXEC_START;
-			es = es->next;
+			es = (execution_state *) lfirst(eslc);
+			while (es)
+			{
+				es->status = F_EXEC_START;
+				es = es->next;
+			}
 		}
 	}
 
@@ -1120,18 +1311,25 @@ sql_exec_error_callback(void *arg)
 	{
 		execution_state *es;
 		int			query_num;
+		ListCell   *lc;
 
-		es = fcache->func_state;
+		es = NULL;
 		query_num = 1;
-		while (es)
+		foreach(lc, fcache->func_state)
 		{
-			if (es->qd)
+			es = (execution_state *) lfirst(lc);
+			while (es)
 			{
-				errcontext("SQL function \"%s\" statement %d",
-						   fcache->fname, query_num);
-				break;
+				if (es->qd)
+				{
+					errcontext("SQL function \"%s\" statement %d",
+							   fcache->fname, query_num);
+					break;
+				}
+				es = es->next;
 			}
-			es = es->next;
+			if (es)
+				break;
 			query_num++;
 		}
 		if (es == NULL)
@@ -1163,16 +1361,31 @@ static void
 ShutdownSQLFunction(Datum arg)
 {
 	SQLFunctionCachePtr fcache = (SQLFunctionCachePtr) DatumGetPointer(arg);
-	execution_state *es = fcache->func_state;
+	execution_state *es;
+	ListCell   *lc;
 
-	while (es != NULL)
+	foreach(lc, fcache->func_state)
 	{
-		/* Shut down anything still running */
-		if (es->status == F_EXEC_RUN)
-			postquel_end(es);
-		/* Reset states to START in case we're called again */
-		es->status = F_EXEC_START;
-		es = es->next;
+		es = (execution_state *) lfirst(lc);
+		while (es)
+		{
+			/* Shut down anything still running */
+			if (es->status == F_EXEC_RUN)
+			{
+				/* Re-establish active snapshot for any called functions */
+				if (!fcache->readonly_func)
+					PushActiveSnapshot(es->qd->snapshot);
+
+				postquel_end(es);
+
+				if (!fcache->readonly_func)
+					PopActiveSnapshot();
+			}
+
+			/* Reset states to START in case we're called again */
+			es->status = F_EXEC_START;
+			es = es->next;
+		}
 	}
 
 	/* Release tuplestore if we have one */
@@ -1352,6 +1565,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 			tle->expr = (Expr *) makeRelabelType(tle->expr,
 												 rettype,
 												 -1,
+												 get_typcollation(rettype),
 												 COERCE_DONTCARE);
 			/* Relabel is dangerous if TLE is a sort/group or setop column */
 			if (tle->ressortgroupref != 0 || parse->setOperations)
@@ -1380,7 +1594,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 		 * the function that's calling it.
 		 *
 		 * XXX Note that if rettype is RECORD, the IsBinaryCoercible check
-		 * will succeed for any composite restype.  For the moment we rely on
+		 * will succeed for any composite restype.	For the moment we rely on
 		 * runtime type checking to catch any discrepancy, but it'd be nice to
 		 * do better at parse time.
 		 */
@@ -1397,6 +1611,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 					tle->expr = (Expr *) makeRelabelType(tle->expr,
 														 rettype,
 														 -1,
+												   get_typcollation(rettype),
 														 COERCE_DONTCARE);
 					/* Relabel is dangerous if sort/group or setop column */
 					if (tle->ressortgroupref != 0 || parse->setOperations)
@@ -1465,6 +1680,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 					/* The type of the null we insert isn't important */
 					null_expr = (Expr *) makeConst(INT4OID,
 												   -1,
+												   InvalidOid,
 												   sizeof(int32),
 												   (Datum) 0,
 												   true,		/* isnull */
@@ -1499,6 +1715,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 					tle->expr = (Expr *) makeRelabelType(tle->expr,
 														 atttype,
 														 -1,
+												   get_typcollation(atttype),
 														 COERCE_DONTCARE);
 					/* Relabel is dangerous if sort/group or setop column */
 					if (tle->ressortgroupref != 0 || parse->setOperations)
@@ -1525,6 +1742,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 				/* The type of the null we insert isn't important */
 				null_expr = (Expr *) makeConst(INT4OID,
 											   -1,
+											   InvalidOid,
 											   sizeof(int32),
 											   (Datum) 0,
 											   true,	/* isnull */

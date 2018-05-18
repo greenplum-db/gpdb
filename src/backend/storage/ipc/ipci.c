@@ -3,12 +3,12 @@
  * ipci.c
  *	  POSTGRES inter-process communication initialization code.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipci.c,v 1.104 2010/02/16 22:34:50 tgl Exp $
+ *	  src/backend/storage/ipc/ipci.c
  *
  *-------------------------------------------------------------------------
  */
@@ -39,6 +39,7 @@
 #include "storage/ipc.h"
 #include "storage/pg_shmem.h"
 #include "storage/pmsignal.h"
+#include "storage/predicate.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "storage/sinvaladt.h"
@@ -127,6 +128,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 												 sizeof(ShmemIndexEnt)));
 		size = add_size(size, BufferShmemSize());
 		size = add_size(size, LockShmemSize());
+		size = add_size(size, PredicateLockShmemSize());
 		size = add_size(size, workfile_mgr_shmem_size());
 		if (Gp_role == GP_ROLE_DISPATCH)
 			size = add_size(size, AppendOnlyWriterShmemSize());
@@ -256,6 +258,11 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 * Set up lock manager
 	 */
 	InitLocks();
+
+	/*
+	 * Set up predicate lock manager
+	 */
+	InitPredicateLocks();
 
 	/*
 	 * Set up append only writer

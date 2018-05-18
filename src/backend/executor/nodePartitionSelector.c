@@ -311,7 +311,7 @@ void LogSelectedPartitionsForScan(int32 selectorId, HTAB *pidIndex, const int32 
  * ----------------------------------------------------------------
  */
 void
-ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
+ExecReScanPartitionSelector(PartitionSelectorState *node)
 {
 	/* reset PartitionSelectorState */
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
@@ -323,16 +323,6 @@ ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
 
 	/* free result tuple slot */
 	ExecClearTuple(node->ps.ps_ResultTupleSlot);
-
-	/*
-	 * If we are being passed an outer tuple, link it into the "regular"
-	 * per-tuple econtext for possible qual eval.
-	 */
-	if (exprCtxt != NULL)
-	{
-		ExprContext *stdecontext = node->ps.ps_ExprContext;
-		stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-	}
 
 	/* If the PartitionSelector is in the inner side of a nest loop join,
 	 * it should be constant partition elimination and thus has no child node.*/

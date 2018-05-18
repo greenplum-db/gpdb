@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/createuser.sgml,v 1.56 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/createuser.sgml
 PostgreSQL documentation
 -->
 
@@ -27,12 +27,12 @@ PostgreSQL documentation
    <arg><replaceable>username</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
-  
+
 
  <refsect1>
   <title>Description</title>
   <para>
-   <application>createuser</application> creates a 
+   <application>createuser</application> creates a
    new <productname>PostgreSQL</productname> user (or more precisely, a role).
    Only superusers and users with <literal>CREATEROLE</> privilege can create
    new users, so <application>createuser</application> must be
@@ -74,11 +74,11 @@ PostgreSQL documentation
         <productname>PostgreSQL</productname> installation.
        </para>
       </listitem>
-     </varlistentry>  
+     </varlistentry>
 
      <varlistentry>
       <term><option>-c <replaceable class="parameter">number</replaceable></></term>
-      <term><option>--connection-limit <replaceable class="parameter">number</replaceable></></term>
+      <term><option>--connection-limit=<replaceable class="parameter">number</replaceable></></term>
       <listitem>
        <para>
         Set a maximum number of connections for the new user.
@@ -103,7 +103,6 @@ PostgreSQL documentation
       <listitem>
        <para>
         The new user will not be allowed to create databases.
-        This is the default.
        </para>
       </listitem>
      </varlistentry>
@@ -217,7 +216,6 @@ PostgreSQL documentation
       <listitem>
        <para>
         The new user will not be allowed to create new roles.
-        This is the default.
        </para>
       </listitem>
      </varlistentry>
@@ -238,7 +236,6 @@ PostgreSQL documentation
       <listitem>
        <para>
         The new user will not be a superuser.
-        This is the default.
        </para>
       </listitem>
      </varlistentry>
@@ -275,16 +272,16 @@ PostgreSQL documentation
   <para>
    <application>createuser</application> also accepts the following
    command-line arguments for connection parameters:
-    
+
    <variablelist>
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></></term>
-      <term><option>--host <replaceable class="parameter">host</replaceable></></term>
+      <term><option>--host=<replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
-        Specifies the host name of the machine on which the 
+        Specifies the host name of the machine on which the
         server
-        is running.  If the value begins with a slash, it is used 
+        is running.  If the value begins with a slash, it is used
         as the directory for the Unix domain socket.
        </para>
       </listitem>
@@ -292,10 +289,10 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-p <replaceable class="parameter">port</replaceable></></term>
-      <term><option>--port <replaceable class="parameter">port</replaceable></></term>
+      <term><option>--port=<replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-        Specifies the TCP port or local Unix domain socket file 
+        Specifies the TCP port or local Unix domain socket file
         extension on which the server
         is listening for connections.
        </para>
@@ -304,7 +301,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></></term>
-      <term><option>--username <replaceable class="parameter">username</replaceable></></term>
+      <term><option>--username=<replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
         User name to connect as (not the user name to create).

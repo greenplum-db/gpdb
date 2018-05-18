@@ -6,7 +6,7 @@ For All Releases (major, minor, beta, RC)
 	  (by packager) (beta)
 
 * Release notes
-	o scan cvs logs, use pgcvslog and flags in comments
+	o run git log and, if useful, src/tools/git_changelog
 	o update doc/src/sgml/release.sgml
 	o run spellchecker on result
 	o add SGML markup
@@ -30,12 +30,8 @@ For Major Releases
 ==================
 (in addition to the above)
 
-* Bump minor library versions, major if appropriate (see below)
-	o src/interfaces/*/Makefile
-	o src/interfaces/*/*/Makefile
-
 * Release notes
-	o search with commit message text to find CVS commit file changes
+	o use git log or src/tools/git_changelog to find the relevant commits
 	o check completion of items that have been marked as completed at
 	  http://wiki.postgresql.org/wiki/Todo
 	o remove completed TODO items
@@ -66,26 +62,30 @@ For Major Releases
 Starting a New Development Cycle
 ================================
 
-* Create a branch in CVS for maintenance of the previous release
+* Create a branch in git for maintenance of the previous release
 
 * Increment the major version number in src/tools/version_stamp.pl
 
 * Run "src/tools/version_stamp.pl devel", then run autoconf
 
+* Bump minor library versions, major if appropriate (see below)
+	o src/interfaces/*/Makefile
+	o src/interfaces/*/*/Makefile
+
 
 Creating Back-Branch Release Notes
 ==================================
 
-* Do 'cvs log' on each back-branch and run pgcvslog
+* Run src/tools/git_changelog to generate a list of relevant commits
 
-* In CVS HEAD, edit and create SGML markup for the most recent branch
-  in that branch's release-N.N.sgml file
+* On the git master branch, edit and create SGML markup for the most recent
+  branch in that branch's release-N.N.sgml file
 
 * Copy this into older branches' release-N.N.sgml files, then remove
-  items that do not apply based on cvs logs for that branch (and add
+  items that do not apply based on commit logs for that branch (and add
   any that are needed)
 
-* Copy the appropriate release-N.N.sgml files into each back CVS branch
+* Copy the appropriate release-N.N.sgml files into each back branch
 
 
 ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ function:
 	}
 
 If we wanted to add a third argument:
-	
+
 	void print_stuff(int arg1, int arg2, int arg3)
 	{
 	    printf("stuff: %d %d %d\n", arg1, arg2, arg3);

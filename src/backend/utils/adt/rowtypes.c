@@ -3,12 +3,12 @@
  * rowtypes.c
  *	  I/O and comparison functions for generic composite types.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/rowtypes.c,v 1.28 2010/02/26 02:01:09 momjian Exp $
+ *	  src/backend/utils/adt/rowtypes.c
  *
  *-------------------------------------------------------------------------
  */
@@ -909,6 +909,7 @@ record_cmp(FunctionCallInfo fcinfo)
 	while (i1 < ncolumns1 || i2 < ncolumns2)
 	{
 		TypeCacheEntry *typentry;
+		Oid			collation;
 		FunctionCallInfoData locfcinfo;
 		int32		cmpresult;
 
@@ -939,6 +940,14 @@ record_cmp(FunctionCallInfo fcinfo)
 							format_type_be(tupdesc1->attrs[i1]->atttypid),
 							format_type_be(tupdesc2->attrs[i2]->atttypid),
 							j + 1)));
+
+		/*
+		 * If they're not same collation, we don't complain here, but the
+		 * comparison function might.
+		 */
+		collation = tupdesc1->attrs[i1]->attcollation;
+		if (collation != tupdesc2->attrs[i2]->attcollation)
+			collation = InvalidOid;
 
 		/*
 		 * Lookup the comparison function if not done already
@@ -977,7 +986,7 @@ record_cmp(FunctionCallInfo fcinfo)
 
 			/* Compare the pair of elements */
 			InitFunctionCallInfoData(locfcinfo, &typentry->cmp_proc_finfo, 2,
-									 NULL, NULL);
+									 collation, NULL, NULL);
 			locfcinfo.arg[0] = values1[i1];
 			locfcinfo.arg[1] = values2[i2];
 			locfcinfo.argnull[0] = false;
@@ -1133,6 +1142,7 @@ record_eq(PG_FUNCTION_ARGS)
 	while (i1 < ncolumns1 || i2 < ncolumns2)
 	{
 		TypeCacheEntry *typentry;
+		Oid			collation;
 		FunctionCallInfoData locfcinfo;
 		bool		oprresult;
 
@@ -1165,6 +1175,14 @@ record_eq(PG_FUNCTION_ARGS)
 							j + 1)));
 
 		/*
+		 * If they're not same collation, we don't complain here, but the
+		 * equality function might.
+		 */
+		collation = tupdesc1->attrs[i1]->attcollation;
+		if (collation != tupdesc2->attrs[i2]->attcollation)
+			collation = InvalidOid;
+
+		/*
 		 * Lookup the equality function if not done already
 		 */
 		typentry = my_extra->columns[j].typentry;
@@ -1194,7 +1212,7 @@ record_eq(PG_FUNCTION_ARGS)
 
 			/* Compare the pair of elements */
 			InitFunctionCallInfoData(locfcinfo, &typentry->eq_opr_finfo, 2,
-									 NULL, NULL);
+									 collation, NULL, NULL);
 			locfcinfo.arg[0] = values1[i1];
 			locfcinfo.arg[1] = values2[i2];
 			locfcinfo.argnull[0] = false;

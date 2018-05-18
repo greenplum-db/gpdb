@@ -1,7 +1,7 @@
 #
 # Makefile for utils/adt
 #
-# $PostgreSQL: pgsql/src/backend/utils/adt/Makefile,v 1.70 2008/11/03 20:17:20 adunstan Exp $
+# src/backend/utils/adt/Makefile
 #
 
 subdir = src/backend/utils/adt

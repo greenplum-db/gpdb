@@ -231,7 +231,12 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 			Var		   *var;
 			PossibleValueSet pvs;
 
-			var = makeVar(rangeTableIndex, policy->attrs[i], parts[i].attr->atttypid, parts[i].attr->atttypmod, 0);
+			var = makeVar(rangeTableIndex,
+						  policy->attrs[i],
+						  parts[i].attr->atttypid,
+						  parts[i].attr->atttypmod,
+						  parts[i].attr->attcollation,
+						  0);
 
 			/**
 			 * Note that right now we only examine the given qual.  This is okay because if there are other
@@ -484,6 +489,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 				/* no change to dispatchInfo --> just iterate children */
 				break;
 			case T_Append:
+			case T_MergeAppend:
 				/* no change to dispatchInfo --> just iterate children */
 				break;
 			case T_LockRows:

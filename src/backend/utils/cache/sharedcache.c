@@ -19,6 +19,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "port/atomics.h"
+#include "storage/shmem.h"
 #include "utils/memutils.h"
 #include "utils/sharedcache.h"
 

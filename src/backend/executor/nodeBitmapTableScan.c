@@ -108,14 +108,14 @@ ExecBitmapTableScan(BitmapTableScanState *node)
  * Prepares the BitmapTableScanState for a re-scan.
  */
 void
-ExecBitmapTableReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
+ExecReScanBitmapTable(BitmapTableScanState *node)
 {
-	BitmapTableScanReScan(node, exprCtxt);
+	BitmapTableScanReScan(node);
 	/*
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	ExecReScan(outerPlanState(node), exprCtxt);
+	ExecReScan(outerPlanState(node));
 }
 
 /* Cleans up once scanning is finished */

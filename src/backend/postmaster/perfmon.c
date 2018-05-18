@@ -17,6 +17,7 @@
 #include "postmaster/fork_process.h"
 #include "postmaster/perfmon.h"
 #include "storage/ipc.h"
+#include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "cdb/cdbvars.h"
 

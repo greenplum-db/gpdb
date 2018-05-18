@@ -3,14 +3,12 @@
  * numutils.c
  *	  utility functions for I/O of built-in numeric types.
  *
- *		integer:				pg_atoi, pg_itoa, pg_ltoa
- *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/numutils.c,v 1.78 2010/01/02 16:57:54 momjian Exp $
+ *	  src/backend/utils/adt/numutils.c
  *
  *-------------------------------------------------------------------------
  */
@@ -106,80 +104,123 @@ pg_atoi(char *s, int size, int c)
 }
 
 /*
- *		pg_itoa			- converts a short int to its string represention
+ * pg_itoa: converts a signed 16-bit integer to its string representation
  *
- *		Note:
- *				previously based on ~ingres/source/gutil/atoi.c
- *				now uses vendor's sprintf conversion
+ * Caller must ensure that 'a' points to enough memory to hold the result
+ * (at least 7 bytes, counting a leading sign and trailing NUL).
+ *
+ * It doesn't seem worth implementing this separately.
  */
 void
 pg_itoa(int16 i, char *a)
 {
-	/* 
-	 * The standard postgres way is to sprintf, but that uses a lot of cpu.
-	 * Do a fast conversion to string instead.
-	 */
-	char tmp[33];
-	char *tp = tmp;
-	char *sp;
-	int ii = 0;
-	unsigned long v;
-	long value = i;
-	bool sign = (value < 0);;
-	if (sign)
-		v = -value;
-	else
-		v = (unsigned long)value;
-	while (v || tp == tmp)
-	{
-		ii = v % 10;
-		v = v / 10;
-		*tp++ = ii+'0';
-	}
-	sp = a;
-	if (sign)
-		*sp++ = '-';
-	while (tp > tmp)
-		*sp++ = *--tp;
-	*sp = 0;
-	
+	pg_ltoa((int32) i, a);
 }
 
 /*
- *		pg_ltoa			- converts a long int to its string represention
+ * pg_ltoa: converts a signed 32-bit integer to its string representation
  *
- *		Note:
- *				previously based on ~ingres/source/gutil/atoi.c
- *				now uses vendor's sprintf conversion
+ * Caller must ensure that 'a' points to enough memory to hold the result
+ * (at least 12 bytes, counting a leading sign and trailing NUL).
  */
 void
-pg_ltoa(int32 l, char *a)
+pg_ltoa(int32 value, char *a)
 {
+	char	   *start = a;
+	bool		neg = false;
+
 	/*
-	 * The standard postgres way is to sprintf, but that uses a lot of cpu.
-	 * Do a fast conversion to string instead.
+	 * Avoid problems with the most negative integer not being representable
+	 * as a positive integer.
 	 */
-	char tmp[33];
-	char *tp = tmp;
-	char *sp;
-	int ii = 0;
-	unsigned long v;
-	long value = l;
-	bool sign = (value < 0);;
-	if (sign)
-		v = -value;
-	else
-		v = (unsigned long)value;
-	while (v || tp == tmp)
+	if (value == (-2147483647 - 1))
 	{
-		ii = v % 10;
-		v = v / 10;
-		*tp++ = ii+'0';
+		memcpy(a, "-2147483648", 12);
+		return;
 	}
-	sp = a;
-	if (sign)
-		*sp++ = '-';
-	while (tp > tmp)
-		*sp++ = *--tp;
-	*sp = 0;
+	else if (value < 0)
+	{
+		value = -value;
+		neg = true;
+	}
+
+	/* Compute the result string backwards. */
+	do
+	{
+		int32		remainder;
+		int32		oldval = value;
+
+		value /= 10;
+		remainder = oldval - value * 10;
+		*a++ = '0' + remainder;
+	} while (value != 0);
+
+	if (neg)
+		*a++ = '-';
+
+	/* Add trailing NUL byte, and back up 'a' to the last character. */
+	*a-- = '\0';
+
+	/* Reverse string. */
+	while (start < a)
+	{
+		char		swap = *start;
+
+		*start++ = *a;
+		*a-- = swap;
+	}
+}
+
+/*
+ * pg_lltoa: convert a signed 64-bit integer to its string representation
+ *
+ * Caller must ensure that 'a' points to enough memory to hold the result
+ * (at least MAXINT8LEN+1 bytes, counting a leading sign and trailing NUL).
+ */
+void
+pg_lltoa(int64 value, char *a)
+{
+	char	   *start = a;
+	bool		neg = false;
+
+	/*
+	 * Avoid problems with the most negative integer not being representable
+	 * as a positive integer.
+	 */
+	if (value == (-INT64CONST(0x7FFFFFFFFFFFFFFF) - 1))
+	{
+		memcpy(a, "-9223372036854775808", 21);
+		return;
+	}
+	else if (value < 0)
+	{
+		value = -value;
+		neg = true;
+	}
+
+	/* Compute the result string backwards. */
+	do
+	{
+		int64		remainder;
+		int64		oldval = value;
+
+		value /= 10;
+		remainder = oldval - value * 10;
+		*a++ = '0' + remainder;
+	} while (value != 0);
+
+	if (neg)
+		*a++ = '-';
+
+	/* Add trailing NUL byte, and back up 'a' to the last character. */
+	*a-- = '\0';
+
+	/* Reverse string. */
+	while (start < a)
+	{
+		char		swap = *start;
+
+		*start++ = *a;
+		*a-- = swap;
+	}
 }

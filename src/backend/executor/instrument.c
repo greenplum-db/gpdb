@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2001-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/instrument.c,v 1.25 2010/02/26 02:00:41 momjian Exp $
+ *	  src/backend/executor/instrument.c
  *
  *-------------------------------------------------------------------------
  */

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/droplang.sgml,v 1.34 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/droplang.sgml
 PostgreSQL documentation
 -->
 
@@ -25,34 +25,39 @@ PostgreSQL documentation
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg choice="plain"><replaceable>langname</replaceable></arg>
    <arg><replaceable>dbname</replaceable></arg>
-   <sbr>
+  </cmdsynopsis>
+
+  <cmdsynopsis>
    <command>droplang</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <group choice="plain"><arg>--list</arg><arg>-l</arg></group>
    <arg choice="plain"><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
- 
+
  <refsect1 id="R1-APP-DROPLANG-1">
   <title>
    Description
   </title>
 
   <para>
-   <application>droplang</application> is a utility for removing an 
-   existing programming language from a
+   <application>droplang</application> is a utility for removing an
+   existing procedural language from a
    <productname>PostgreSQL</productname> database.
-   <application>droplang</application> can drop any procedural language,
-   even those not supplied by the <productname>PostgreSQL</> distribution.
   </para>
+
   <para>
-   Although backend programming languages can be removed directly using
-   several <acronym>SQL</acronym> commands, it is recommended to use
-   <application>droplang</application> because it performs a number
-   of checks and is much easier to use. See
-   <xref linkend="sql-droplanguage">
-   for more.
+   <application>droplang</application> is just a wrapper around the
+   <xref linkend="sql-dropextension"> SQL command.
   </para>
+
+  <caution>
+   <para>
+    <application>droplang</application> is deprecated and may be removed
+    in a future <productname>PostgreSQL</productname> release.  Direct use
+    of the <command>DROP EXTENSION</> command is recommended instead.
+   </para>
+  </caution>
  </refsect1>
 
 
@@ -61,20 +66,20 @@ PostgreSQL documentation
 
    <para>
     <application>droplang</application> accepts the following command line arguments:
-    
+
     <variablelist>
      <varlistentry>
       <term><replaceable class="parameter">langname</replaceable></term>
       <listitem>
        <para>
-        Specifies the name of the backend programming language to be removed.
+        Specifies the name of the procedural language to be removed.
        </para>
       </listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option><optional>-d</> <replaceable class="parameter">dbname</replaceable></></term>
-      <term><option><optional>--dbname</> <replaceable class="parameter">dbname</replaceable></></term>
+      <term><option><optional>--dbname=</><replaceable class="parameter">dbname</replaceable></></term>
       <listitem>
        <para>
         Specifies from which database the language should be removed.
@@ -129,18 +134,18 @@ PostgreSQL documentation
    </para>
 
    <para>
-    <application>droplang</application> also accepts 
+    <application>droplang</application> also accepts
     the following command line arguments for connection parameters:
-    
+
     <variablelist>
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></></term>
-      <term><option>--host <replaceable class="parameter">host</replaceable></></term>
+      <term><option>--host=<replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
-        Specifies the host name of the machine on which the 
+        Specifies the host name of the machine on which the
         server
-        is running.  If host begins with a slash, it is used 
+        is running.  If host begins with a slash, it is used
         as the directory for the Unix domain socket.
        </para>
       </listitem>
@@ -148,10 +153,10 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-p <replaceable class="parameter">port</replaceable></></term>
-      <term><option>--port <replaceable class="parameter">port</replaceable></></term>
+      <term><option>--port=<replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-        Specifies the Internet TCP/IP port or local Unix domain socket file 
+        Specifies the Internet TCP/IP port or local Unix domain socket file
         extension on which the server
         is listening for connections.
        </para>
@@ -160,7 +165,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></></term>
-      <term><option>--username <replaceable class="parameter">username</replaceable></></term>
+      <term><option>--username=<replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
         User name to connect as.
@@ -189,7 +194,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Force <application>droplang</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>
@@ -257,7 +262,7 @@ PostgreSQL documentation
    Use <xref linkend="app-createlang"> to add a language.
   </para>
  </refsect1>
- 
+
 
  <refsect1>
   <title>Examples</title>
@@ -275,6 +280,7 @@ PostgreSQL documentation
 
   <simplelist type="inline">
    <member><xref linkend="app-createlang"></member>
+   <member><xref linkend="sql-dropextension"></member>
    <member><xref linkend="sql-droplanguage"></member>
   </simplelist>
  </refsect1>

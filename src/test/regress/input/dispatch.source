@@ -45,6 +45,9 @@ ALTER DATABASE "dispatch test db" SET search_path="my schema",public;
 
 CREATE SCHEMA "my schema";
 
+-- Reconnect so that the search_path includes "my schema".
+\c
+
 -- Create a table with the same name in both schemas, "my schema" and public.
 CREATE TABLE "my table" (t text);
 INSERT INTO "my table" VALUES ('myschema.mytable');

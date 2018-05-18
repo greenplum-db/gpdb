@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.103 2010/01/02 16:57:41 momjian Exp $
+ *	  src/backend/executor/nodeHashjoin.c
  *
  *-------------------------------------------------------------------------
  */
@@ -22,14 +22,27 @@
 #include "executor/instrument.h"	/* Instrumentation */
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
+#include "miscadmin.h"
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"			/* work_mem */
 
-/* Returns true for JOIN_LEFT, JOIN_ANTI and JOIN_LASJ_NOTIN jointypes */
-#define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
+/*
+ * States of the ExecHashJoin state machine
+ */
+#define HJ_BUILD_HASHTABLE		1
+#define HJ_NEED_NEW_OUTER		2
+#define HJ_SCAN_BUCKET			3
+#define HJ_FILL_OUTER_TUPLE		4
+#define HJ_FILL_INNER_TUPLES	5
+#define HJ_NEED_NEW_BATCH		6
+
+/* Returns true if doing null-fill on outer relation */
+#define HJ_FILL_OUTER(hjstate)	((hjstate)->hj_NullInnerTupleSlot != NULL)
+/* Returns true if doing null-fill on inner relation */
+#define HJ_FILL_INNER(hjstate)	((hjstate)->hj_NullOuterTupleSlot != NULL)
 
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
@@ -38,7 +51,7 @@ static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
 						  ExecWorkFile *file,
 						  uint32 *hashvalue,
 						  TupleTableSlot *tupleSlot);
-static int	ExecHashJoinNewBatch(HashJoinState *hjstate);
+static bool ExecHashJoinNewBatch(HashJoinState *hjstate);
 static bool isNotDistinctJoin(List *qualList);
 
 static void ReleaseHashTable(HashJoinState *node);
@@ -63,10 +76,8 @@ ExecHashJoin(HashJoinState *node)
 	HashState  *hashNode;
 	List	   *joinqual;
 	List	   *otherqual;
-	TupleTableSlot *inntuple;
 	ExprContext *econtext;
 	HashJoinTable hashtable;
-	HashJoinTuple curtuple;
 	TupleTableSlot *outerTupleSlot;
 	uint32		hashvalue;
 	int			batchno;
@@ -79,10 +90,6 @@ ExecHashJoin(HashJoinState *node)
 	otherqual = node->js.ps.qual;
 	hashNode = (HashState *) innerPlanState(node);
 	outerNode = outerPlanState(node);
-
-	/*
-	 * get information from HashJoin state
-	 */
 	hashtable = node->hj_HashTable;
 	econtext = node->js.ps.ps_ExprContext;
 
@@ -94,302 +101,384 @@ ExecHashJoin(HashJoinState *node)
 	ResetExprContext(econtext);
 
 	/*
-	 * if this is the first call, build the hash table for inner relation
-	 */
-	if (hashtable == NULL)
-	{
-		/*
-		 * MPP-4165: My fix for MPP-3300 was correct in that we avoided
-		 * the *deadlock* but had very unexpected (and painful)
-		 * performance characteristics: we basically de-pipeline and
-		 * de-parallelize execution of any query which has motion below
-		 * us.
-		 *
-		 * So now prefetch_inner is set (see createplan.c) if we have *any* motion
-		 * below us. If we don't have any motion, it doesn't matter.
-		 *
-		 * See motion_sanity_walker() for details on how a deadlock may occur.
-		 */
-		if (!node->prefetch_inner)
-		{
-			/*
-			 * If the outer relation is completely empty, we can quit without
-			 * building the hash table.  However, for an inner join it is only a
-			 * win to check this when the outer relation's startup cost is less
-			 * than the projected cost of building the hash table.	Otherwise it's
-			 * best to build the hash table first and see if the inner relation is
-			 * empty.  (When it's an outer join, we should always make this check,
-			 * since we aren't going to be able to skip the join on the strength
-			 * of an empty inner relation anyway.)
-			 *
-			 * If we are rescanning the join, we make use of information gained on
-			 * the previous scan: don't bother to try the prefetch if the previous
-			 * scan found the outer relation nonempty.	This is not 100% reliable
-			 * since with new parameters the outer relation might yield different
-			 * results, but it's a good heuristic.
-			 *
-			 * The only way to make the check is to try to fetch a tuple from the
-			 * outer plan node.  If we succeed, we have to stash it away for later
-			 * consumption by ExecHashJoinOuterGetTuple.
-			 */
-			if ((HASHJOIN_IS_OUTER(node)) ||
-					(outerNode->plan->startup_cost < hashNode->ps.plan->total_cost &&
-						!node->hj_OuterNotEmpty))
-			{
-				TupleTableSlot *slot;
-
-				slot = ExecProcNode(outerNode);
-
-				node->hj_FirstOuterTupleSlot = slot;
-				if (TupIsNull(node->hj_FirstOuterTupleSlot))
-				{
-					node->hj_OuterNotEmpty = false;
-
-					/* CDB: Tell inner subtree that its data will not be needed. */
-					ExecSquelchNode((PlanState *)hashNode);
-
-					return NULL;
-				}
-				else
-					node->hj_OuterNotEmpty = true;
-			}
-			else
-				node->hj_FirstOuterTupleSlot = NULL;
-		}
-		else
-		{
-			/* see MPP-989 comment above, for now we assume that we have
-			 * at least one row on the outer. */
-			node->hj_FirstOuterTupleSlot = NULL;
-		}
-
-		/*
-		 * create the hash table
-		 */
-		hashtable = ExecHashTableCreate(hashNode,
-										node,
-										node->hj_HashOperators,
-										PlanStateOperatorMemKB((PlanState *) hashNode));
-		node->hj_HashTable = hashtable;
-
-		/*
-		 * CDB: Offer extra info for EXPLAIN ANALYZE.
-		 */
-		if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
-			ExecHashTableExplainInit(hashNode, node, hashtable);
-
-
-		/*
-		 * execute the Hash node, to build the hash table
-		 */
-		hashNode->hashtable = hashtable;
-
-		/*
-		 * Only if doing a LASJ_NOTIN join, we want to quit as soon as we find
-		 * a NULL key on the inner side
-		 */
-		hashNode->hs_quit_if_hashkeys_null = (node->js.jointype == JOIN_LASJ_NOTIN);
-
-		/*
-		 * Store pointer to the HashJoinState in the hashtable, as we will
-		 * need the HashJoin plan when creating the spill file set
-		 */
-		hashtable->hjstate = node;
-
-		/* Execute the Hash node and build the hashtable */
-		(void) MultiExecProcNode((PlanState *) hashNode);
-
-#ifdef HJDEBUG
-		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
-#endif
-
-		/**
-		 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
-		 */
-		if (node->js.jointype == JOIN_LASJ_NOTIN && hashNode->hs_hashkeys_null)
-		{
-			/*
-			 * CDB: We'll read no more from outer subtree. To keep sibling QEs
-			 * from being starved, tell source QEs not to clog up the pipeline
-			 * with our never-to-be-consumed data.
-			 */
-			ExecSquelchNode(outerNode);
-			/* end of join */
-
-			ExecEagerFreeHashJoin(node);
-
-			return NULL;
-		}
-
-		/*
-		 * We just scanned the entire inner side and built the hashtable
-		 * (and its overflow batches). Check here and remember if the inner
-		 * side is empty.
-		 */
-		node->hj_InnerEmpty = (hashtable->totalTuples == 0);
-
-		/*
-		 * If the inner relation is completely empty, and we're not doing an
-		 * outer join, we can quit without scanning the outer relation.
-		 */
-		if (node->hj_InnerEmpty && !HASHJOIN_IS_OUTER(node))
-		{
-			/*
-			 * CDB: We'll read no more from outer subtree. To keep sibling QEs
-			 * from being starved, tell source QEs not to clog up the pipeline
-			 * with our never-to-be-consumed data.
-			 */
-			ExecSquelchNode(outerNode);
-			/* end of join */
-
-			ExecEagerFreeHashJoin(node);
-
-			return NULL;
-		}
-
-		/*
-		 * Reset OuterNotEmpty for scan.  (It's OK if we fetched a tuple
-		 * above, because ExecHashJoinOuterGetTuple will immediately set it
-		 * again.)
-		 */
-		node->hj_OuterNotEmpty = false;
-	}
-
-	/* For a rescannable hash table we might need to reload batch 0 during rescan */
-	if (hashtable->curbatch == -1 && !hashtable->first_pass)
-	{
-		hashtable->curbatch = 0;
-		if (!ExecHashJoinReloadHashTable(node))
-		{
-			return NULL;
-		}
-	}
-
-	/*
-	 * run the hash join process
+	 * run the hash join state machine
 	 */
 	for (;;)
 	{
 		/* We must never use an eagerly released hash table */
-		Assert(!hashtable->eagerlyReleased);
+		Assert(hashtable == NULL || !hashtable->eagerlyReleased);
 
-		/*
-		 * If we don't have an outer tuple, get the next one
-		 */
-		if (node->hj_NeedNewOuter)
+		switch (node->hj_JoinState)
 		{
-			outerTupleSlot = ExecHashJoinOuterGetTuple(outerNode,
-													   node,
-													   &hashvalue);
-			if (TupIsNull(outerTupleSlot))
-			{
-				/* end of join */
-				if (!node->reuse_hashtable)
+			case HJ_BUILD_HASHTABLE:
+
+				/*
+				 * First time through: build hash table for inner relation.
+				 */
+				Assert(hashtable == NULL);
+
+			  /*
+			   * MPP-4165: My fix for MPP-3300 was correct in that we avoided
+			   * the *deadlock* but had very unexpected (and painful)
+			   * performance characteristics: we basically de-pipeline and
+			   * de-parallelize execution of any query which has motion below
+			   * us.
+			   *
+			   * So now prefetch_inner is set (see createplan.c) if we have *any* motion
+			   * below us. If we don't have any motion, it doesn't matter.
+			   *
+			   * See motion_sanity_walker() for details on how a deadlock may occur.
+			   */
+			  if (!node->prefetch_inner)
+			  {
+				/*
+				 * If the outer relation is completely empty, and it's not
+				 * right/full join, we can quit without building the hash
+				 * table.  However, for an inner join it is only a win to
+				 * check this when the outer relation's startup cost is less
+				 * than the projected cost of building the hash table.
+				 * Otherwise it's best to build the hash table first and see
+				 * if the inner relation is empty.	(When it's a left join, we
+				 * should always make this check, since we aren't going to be
+				 * able to skip the join on the strength of an empty inner
+				 * relation anyway.)
+				 *
+				 * If we are rescanning the join, we make use of information
+				 * gained on the previous scan: don't bother to try the
+				 * prefetch if the previous scan found the outer relation
+				 * nonempty. This is not 100% reliable since with new
+				 * parameters the outer relation might yield different
+				 * results, but it's a good heuristic.
+				 *
+				 * The only way to make the check is to try to fetch a tuple
+				 * from the outer plan node.  If we succeed, we have to stash
+				 * it away for later consumption by ExecHashJoinOuterGetTuple.
+				 */
+				if (HJ_FILL_INNER(node))
+				{
+					/* no chance to not build the hash table */
+					node->hj_FirstOuterTupleSlot = NULL;
+				}
+				else if (HJ_FILL_OUTER(node) ||
+						 (outerNode->plan->startup_cost < hashNode->ps.plan->total_cost &&
+						  !node->hj_OuterNotEmpty))
+				{
+					node->hj_FirstOuterTupleSlot = ExecProcNode(outerNode);
+					if (TupIsNull(node->hj_FirstOuterTupleSlot))
+					{
+						node->hj_OuterNotEmpty = false;
+						return NULL;
+					}
+					else
+						node->hj_OuterNotEmpty = true;
+				}
+				else
+					node->hj_FirstOuterTupleSlot = NULL;
+			  }
+			  else
+			  {
+				  /* see MPP-989 comment above, for now we assume that we have
+				   * at least one row on the outer. */
+				  node->hj_FirstOuterTupleSlot = NULL;
+			  }
+
+				/*
+				 * create the hash table
+				 */
+				hashtable = ExecHashTableCreate(hashNode,
+												node,
+												node->hj_HashOperators,
+				/* GPDB_91_MERGE_FIXME: do we need to get rid of hs_keepnull? */
+												HJ_FILL_INNER(node) || hashNode->hs_keepnull,
+												PlanStateOperatorMemKB((PlanState *) hashNode));
+				node->hj_HashTable = hashtable;
+
+				/*
+				 * CDB: Offer extra info for EXPLAIN ANALYZE.
+				 */
+				if ((estate->es_instrument & INSTRUMENT_CDB))
+					ExecHashTableExplainInit(hashNode, node, hashtable);
+
+				/*
+				 * Only if doing a LASJ_NOTIN join, we want to quit as soon as we find
+				 * a NULL key on the inner side
+				 */
+				hashNode->hs_quit_if_hashkeys_null = (node->js.jointype == JOIN_LASJ_NOTIN);
+
+				/*
+				 * execute the Hash node, to build the hash table
+				 */
+				hashNode->hashtable = hashtable;
+				(void) MultiExecProcNode((PlanState *) hashNode);
+
+#ifdef HJDEBUG
+				elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
+#endif
+
+				/**
+				 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
+				 */
+				if (node->js.jointype == JOIN_LASJ_NOTIN && hashNode->hs_hashkeys_null)
+				{
+					/*
+					 * CDB: We'll read no more from outer subtree. To keep sibling QEs
+					 * from being starved, tell source QEs not to clog up the pipeline
+					 * with our never-to-be-consumed data.
+					 */
+					ExecSquelchNode(outerNode);
+					/* end of join */
+
 					ExecEagerFreeHashJoin(node);
 
-				return NULL;
-			}
-
-			econtext->ecxt_outertuple = outerTupleSlot;
-			node->hj_NeedNewOuter = false;
-			node->hj_MatchedOuter = false;
-
-			/*
-			 * Now we have an outer tuple; find the corresponding bucket for
-			 * this tuple in the main hash table or skew hash table.
-			 */
-			node->hj_CurHashValue = hashvalue;
-			ExecHashGetBucketAndBatch(hashtable, hashvalue,
-									  &node->hj_CurBucketNo, &batchno);
-			node->hj_CurSkewBucketNo = ExecHashGetSkewBucket(hashtable,
-															 hashvalue);
-			node->hj_CurTuple = NULL;
-
-			/*
-			 * Now we've got an outer tuple and the corresponding hash bucket,
-			 * but it might not belong to the current batch, or it might match
-			 * a skew bucket.
-			 */
-			if (batchno != hashtable->curbatch &&
-				node->hj_CurSkewBucketNo == INVALID_SKEW_BUCKET_NO)
-			{
-				/*
-				 * Need to postpone this outer tuple to a later batch. Save it
-				 * in the corresponding outer-batch file.
-				 */
-				Assert(batchno != 0);
-				Assert(batchno > hashtable->curbatch);
-				ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
-									  hashvalue,
-									  hashtable,
-									  &hashtable->outerBatchFile[batchno],
-									  hashtable->bfCxt);
-				node->hj_NeedNewOuter = true;
-				continue;		/* loop around for a new outer tuple */
-			}
-		}
-
-		/*
-		 * OK, scan the selected hash bucket for matches
-		 */
-		for (;;)
-		{
-			/*
-			 * OPT-3325: Handle NULLs in the outer side of LASJ_NOTIN
-			 *  - if tuple is NULL and inner is not empty, drop outer tuple
-			 *  - if tuple is NULL and inner is empty, keep going as we'll
-			 *    find no match for this tuple in the inner side
-			 */
-			if (node->js.jointype == JOIN_LASJ_NOTIN &&
-					!node->hj_InnerEmpty &&
-					isJoinExprNull(node->hj_OuterHashKeys,econtext))
-			{
-				node->hj_MatchedOuter = true;
-				break;		/* loop around for a new outer tuple */
-			}
-
-			curtuple = ExecScanHashBucket(hashNode, node, econtext);
-			if (curtuple == NULL)
-				break;			/* out of matches */
-
-			/*
-			 * we've got a match, but still need to test non-hashed quals
-			 */
-			inntuple = ExecStoreMinimalTuple(HJTUPLE_MINTUPLE(curtuple),
-											 node->hj_HashTupleSlot,
-											 false);	/* don't pfree */
-			econtext->ecxt_innertuple = inntuple;
-
-			/* reset temp memory each time to avoid leaks from qual expr */
-			ResetExprContext(econtext);
-
-			/*
-			 * if we pass the qual, then save state for next call and have
-			 * ExecProject form the projection, store it in the tuple table,
-			 * and return the slot.
-			 *
-			 * Only the joinquals determine MatchedOuter status, but all quals
-			 * must pass to actually return the tuple.
-			 */
-			if (joinqual == NIL || ExecQual(joinqual, econtext, false))
-			{
-				node->hj_MatchedOuter = true;
-
-				/* In an antijoin, we never return a matched tuple */
-				if (node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
-				{
-					node->hj_NeedNewOuter = true;
-					break;		/* out of loop over hash bucket */
+					return NULL;
 				}
 
 				/*
-				 * In a semijoin, we'll consider returning the first match,
-				 * but after that we're done with this outer tuple.
+				 * If the inner relation is completely empty, and we're not
+				 * doing a left outer join, we can quit without scanning the
+				 * outer relation.
 				 */
-				if (node->js.jointype == JOIN_SEMI)
-					node->hj_NeedNewOuter = true;
+				if (hashtable->totalTuples == 0 && !HJ_FILL_OUTER(node))
+				{
+					/*
+					 * CDB: We'll read no more from outer subtree. To keep sibling QEs
+					 * from being starved, tell source QEs not to clog up the pipeline
+					 * with our never-to-be-consumed data.
+					 */
+					ExecSquelchNode(outerNode);
+					/* end of join */
 
-				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
+					ExecEagerFreeHashJoin(node);
+
+					return NULL;
+				}
+
+				/*
+				 * We just scanned the entire inner side and built the hashtable
+				 * (and its overflow batches). Check here and remember if the inner
+				 * side is empty.
+				 */
+				node->hj_InnerEmpty = (hashtable->totalTuples == 0);
+
+				/*
+				 * need to remember whether nbatch has increased since we
+				 * began scanning the outer relation
+				 */
+				hashtable->nbatch_outstart = hashtable->nbatch;
+
+				/*
+				 * Reset OuterNotEmpty for scan.  (It's OK if we fetched a
+				 * tuple above, because ExecHashJoinOuterGetTuple will
+				 * immediately set it again.)
+				 */
+				node->hj_OuterNotEmpty = false;
+
+				node->hj_JoinState = HJ_NEED_NEW_OUTER;
+
+				/* FALL THRU */
+
+			case HJ_NEED_NEW_OUTER:
+
+				/* For a rescannable hash table we might need to reload batch 0 during rescan */
+				if (hashtable->curbatch == -1 && !hashtable->first_pass)
+				{
+					hashtable->curbatch = 0;
+					if (!ExecHashJoinReloadHashTable(node))
+					{
+						return NULL;
+					}
+				}
+
+				/*
+				 * We don't have an outer tuple, try to get the next one
+				 */
+				outerTupleSlot = ExecHashJoinOuterGetTuple(outerNode,
+														   node,
+														   &hashvalue);
+				if (TupIsNull(outerTupleSlot))
+				{
+					/* end of batch, or maybe whole join */
+					if (HJ_FILL_INNER(node))
+					{
+						/* set up to scan for unmatched inner tuples */
+						ExecPrepHashTableForUnmatched(node);
+						node->hj_JoinState = HJ_FILL_INNER_TUPLES;
+					}
+					else
+						node->hj_JoinState = HJ_NEED_NEW_BATCH;
+					continue;
+				}
+
+				econtext->ecxt_outertuple = outerTupleSlot;
+				node->hj_MatchedOuter = false;
+
+				/*
+				 * Find the corresponding bucket for this tuple in the main
+				 * hash table or skew hash table.
+				 */
+				node->hj_CurHashValue = hashvalue;
+				ExecHashGetBucketAndBatch(hashtable, hashvalue,
+										  &node->hj_CurBucketNo, &batchno);
+				node->hj_CurSkewBucketNo = ExecHashGetSkewBucket(hashtable,
+																 hashvalue);
+				node->hj_CurTuple = NULL;
+
+				/*
+				 * The tuple might not belong to the current batch (where
+				 * "current batch" includes the skew buckets if any).
+				 */
+				if (batchno != hashtable->curbatch &&
+					node->hj_CurSkewBucketNo == INVALID_SKEW_BUCKET_NO)
+				{
+					/*
+					 * Need to postpone this outer tuple to a later batch.
+					 * Save it in the corresponding outer-batch file.
+					 */
+					Assert(batchno > hashtable->curbatch);
+					ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
+										  hashvalue,
+										  hashtable,
+										  &hashtable->outerBatchFile[batchno],
+										  hashtable->bfCxt);
+					/* Loop around, staying in HJ_NEED_NEW_OUTER state */
+					continue;
+				}
+
+				/* OK, let's scan the bucket for matches */
+				node->hj_JoinState = HJ_SCAN_BUCKET;
+
+				/* FALL THRU */
+
+			case HJ_SCAN_BUCKET:
+
+				/*
+				 * We check for interrupts here because this corresponds to
+				 * where we'd fetch a row from a child plan node in other join
+				 * types.
+				 */
+				CHECK_FOR_INTERRUPTS();
+
+				/*
+				 * OPT-3325: Handle NULLs in the outer side of LASJ_NOTIN
+				 *  - if tuple is NULL and inner is not empty, drop outer tuple
+				 *  - if tuple is NULL and inner is empty, keep going as we'll
+				 *    find no match for this tuple in the inner side
+				 */
+				if (node->js.jointype == JOIN_LASJ_NOTIN &&
+					!node->hj_InnerEmpty &&
+					isJoinExprNull(node->hj_OuterHashKeys,econtext))
+				{
+					node->hj_MatchedOuter = true;
+					node->hj_JoinState = HJ_NEED_NEW_OUTER;
+					continue;
+				}
+
+				/*
+				 * Scan the selected hash bucket for matches to current outer
+				 */
+				if (!ExecScanHashBucket(hashNode, node, econtext))
+				{
+					/* out of matches; check for possible outer-join fill */
+					node->hj_JoinState = HJ_FILL_OUTER_TUPLE;
+					continue;
+				}
+
+				/*
+				 * We've got a match, but still need to test non-hashed quals.
+				 * ExecScanHashBucket already set up all the state needed to
+				 * call ExecQual.
+				 *
+				 * If we pass the qual, then save state for next call and have
+				 * ExecProject form the projection, store it in the tuple
+				 * table, and return the slot.
+				 *
+				 * Only the joinquals determine tuple match status, but all
+				 * quals must pass to actually return the tuple.
+				 */
+				if (joinqual == NIL || ExecQual(joinqual, econtext, false))
+				{
+					node->hj_MatchedOuter = true;
+					MemTupleSetMatch(HJTUPLE_MINTUPLE(node->hj_CurTuple));
+
+					/* In an antijoin, we never return a matched tuple */
+					if (node->js.jointype == JOIN_ANTI ||
+						node->js.jointype == JOIN_LASJ_NOTIN)
+					{
+						node->hj_JoinState = HJ_NEED_NEW_OUTER;
+						continue;
+					}
+
+					/*
+					 * In a semijoin, we'll consider returning the first
+					 * match, but after that we're done with this outer tuple.
+					 */
+					if (node->js.jointype == JOIN_SEMI)
+						node->hj_JoinState = HJ_NEED_NEW_OUTER;
+
+					if (otherqual == NIL ||
+						ExecQual(otherqual, econtext, false))
+					{
+						TupleTableSlot *result;
+
+						result = ExecProject(node->js.ps.ps_ProjInfo, NULL);
+
+						return result;
+					}
+				}
+				break;
+
+			case HJ_FILL_OUTER_TUPLE:
+
+				/*
+				 * The current outer tuple has run out of matches, so check
+				 * whether to emit a dummy outer-join tuple.  Whether we emit
+				 * one or not, the next state is NEED_NEW_OUTER.
+				 */
+				node->hj_JoinState = HJ_NEED_NEW_OUTER;
+
+				if (!node->hj_MatchedOuter &&
+					HJ_FILL_OUTER(node))
+				{
+					/*
+					 * Generate a fake join tuple with nulls for the inner
+					 * tuple, and return it if it passes the non-join quals.
+					 */
+					econtext->ecxt_innertuple = node->hj_NullInnerTupleSlot;
+
+					if (otherqual == NIL ||
+						ExecQual(otherqual, econtext, false))
+					{
+						TupleTableSlot *result;
+
+						result = ExecProject(node->js.ps.ps_ProjInfo, NULL);
+
+						return result;
+					}
+				}
+				break;
+
+			case HJ_FILL_INNER_TUPLES:
+
+				/*
+				 * We have finished a batch, but we are doing right/full join,
+				 * so any unmatched inner tuples in the hashtable have to be
+				 * emitted before we continue to the next batch.
+				 */
+				if (!ExecScanHashTableForUnmatched(node, econtext))
+				{
+					/* no more unmatched tuples */
+					node->hj_JoinState = HJ_NEED_NEW_BATCH;
+					continue;
+				}
+
+				/*
+				 * Generate a fake join tuple with nulls for the outer tuple,
+				 * and return it if it passes the non-join quals.
+				 */
+				econtext->ecxt_outertuple = node->hj_NullOuterTupleSlot;
+
+				if (otherqual == NIL ||
+					ExecQual(otherqual, econtext, false))
 				{
 					TupleTableSlot *result;
 
@@ -397,45 +486,26 @@ ExecHashJoin(HashJoinState *node)
 
 					return result;
 				}
+				break;
+
+			case HJ_NEED_NEW_BATCH:
 
 				/*
-				 * If semijoin and we didn't return the tuple, we're still
-				 * done with this outer tuple.
+				 * Try to advance to next batch.  Done if there are no more.
 				 */
-				if (node->js.jointype == JOIN_SEMI)
-					break;		/* out of loop over hash bucket */
-			}
-		}
+				if (!ExecHashJoinNewBatch(node))
+				{
+					if (!node->reuse_hashtable)
+						ExecEagerFreeHashJoin(node);
 
-		/*
-		 * Now the current outer tuple has run out of matches, so check
-		 * whether to emit a dummy outer-join tuple. If not, loop around to
-		 * get a new outer tuple.
-		 */
-		node->hj_NeedNewOuter = true;
+					return NULL;	/* end of join */
+				}
+				node->hj_JoinState = HJ_NEED_NEW_OUTER;
+				break;
 
-		if (!node->hj_MatchedOuter &&
-			HASHJOIN_IS_OUTER(node))
-		{
-			/*
-			 * We are doing an outer join and there were no join matches for
-			 * this outer tuple.  Generate a fake join tuple with nulls for
-			 * the inner tuple, and return it if it passes the non-join quals.
-			 */
-			econtext->ecxt_innertuple = node->hj_NullInnerTupleSlot;
-
-			if (otherqual == NIL || ExecQual(otherqual, econtext, false))
-			{
-				/*
-				 * qualification was satisfied so we project and return the
-				 * slot containing the result tuple using ExecProject().
-				 */
-				TupleTableSlot *result;
-
-				result = ExecProject(node->js.ps.ps_ProjInfo, NULL);
-
-				return result;
-			}
+			default:
+				elog(ERROR, "unrecognized hashjoin state: %d",
+					 (int) node->hj_JoinState);
 		}
 	}
 }
@@ -547,7 +617,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &hjstate->js.ps);
 	hjstate->hj_OuterTupleSlot = ExecInitExtraTupleSlot(estate);
 
-	/* note: HASHJOIN_IS_OUTER macro depends on this initialization */
+	/* set up null tuples for outer joins, if needed */
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
@@ -560,6 +630,19 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 				ExecInitNullTupleSlot(estate,
 								 ExecGetResultType(innerPlanState(hjstate)));
 			break;
+		case JOIN_RIGHT:
+			hjstate->hj_NullOuterTupleSlot =
+				ExecInitNullTupleSlot(estate,
+								 ExecGetResultType(outerPlanState(hjstate)));
+			break;
+		case JOIN_FULL:
+			hjstate->hj_NullOuterTupleSlot =
+				ExecInitNullTupleSlot(estate,
+								 ExecGetResultType(outerPlanState(hjstate)));
+			hjstate->hj_NullInnerTupleSlot =
+				ExecInitNullTupleSlot(estate,
+								 ExecGetResultType(innerPlanState(hjstate)));
+			break;
 		default:
 			elog(ERROR, "unrecognized join type: %d",
 				 (int) node->join.jointype);
@@ -567,7 +650,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 
 	/*
 	 * now for some voodoo.  our temporary tuple slot is actually the result
-	 * tuple slot of the Hash node (which is our inner plan).  we do this
+	 * tuple slot of the Hash node (which is our inner plan).  we can do this
 	 * because Hash nodes don't return tuples via ExecProcNode() -- instead
 	 * the hash join node uses ExecScanHashBucket() to get at the contents of
 	 * the hash table.	-cim 6/9/91
@@ -626,7 +709,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	/* child Hash node needs to evaluate inner hash keys, too */
 	((HashState *) innerPlanState(hjstate))->hashkeys = rclauses;
 
-	hjstate->hj_NeedNewOuter = true;
+	hjstate->hj_JoinState = HJ_BUILD_HASHTABLE;
 	hjstate->hj_MatchedOuter = false;
 	hjstate->hj_OuterNotEmpty = false;
 
@@ -682,12 +765,13 @@ ExecEndHashJoin(HashJoinState *node)
  * ExecHashJoinOuterGetTuple
  *
  *		get the next outer tuple for hashjoin: either by
- *		executing a plan node in the first pass, or from
+ *		executing the outer plan node in the first pass, or from
  *		the temp files for the hashjoin batches.
  *
- * Returns a null slot if no more outer tuples.  On success, the tuple's
- * hash value is stored at *hashvalue --- this is either originally computed,
- * or re-read from the temp file.
+ * Returns a null slot if no more outer tuples (within the current batch).
+ *
+ * On success, the tuple's hash value is stored at *hashvalue --- this is
+ * either originally computed, or re-read from the temp file.
  */
 static TupleTableSlot *
 ExecHashJoinOuterGetTuple(PlanState *outerNode,
@@ -703,23 +787,18 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 	/* Read tuples from outer relation only if it's the first batch */
 	if (curbatch == 0)
 	{
-		for (;;)
+		/*
+		 * Check to see if first outer tuple was already fetched by
+		 * ExecHashJoin() and not used yet.
+		 */
+		slot = hjstate->hj_FirstOuterTupleSlot;
+		if (!TupIsNull(slot))
+			hjstate->hj_FirstOuterTupleSlot = NULL;
+		else
+			slot = ExecProcNode(outerNode);
+
+		while (!TupIsNull(slot))
 		{
-			/*
-			 * Check to see if first outer tuple was already fetched by
-			 * ExecHashJoin() and not used yet.
-			 */
-			slot = hjstate->hj_FirstOuterTupleSlot;
-			if (!TupIsNull(slot))
-				hjstate->hj_FirstOuterTupleSlot = NULL;
-			else
-			{
-				slot = ExecProcNode(outerNode);
-			}
-
-			if (TupIsNull(slot))
-				break;
-
 			/*
 			 * We have to compute the tuple's hash value.
 			 */
@@ -727,7 +806,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			econtext->ecxt_outertuple = slot;
 
 			bool hashkeys_null = false;
-			bool keep_nulls = HASHJOIN_IS_OUTER(hjstate) ||
+			bool keep_nulls = HJ_FILL_OUTER(hjstate) ||
 					hjstate->hj_nonequijoin;
 			if (ExecHashGetHashValue(hashState, hashtable, econtext,
 									 hjstate->hj_OuterHashKeys,
@@ -746,30 +825,24 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			 * That tuple couldn't match because of a NULL, so discard it and
 			 * continue with the next one.
 			 */
+			slot = ExecProcNode(outerNode);
 		}
-
-		/*
-		 * We have just reached the end of the first pass. Try to switch to a
-		 * saved batch.
-		 */
-
-		/* SFR: This can cause re-spill! */
-		curbatch = ExecHashJoinNewBatch(hjstate);
-
 
 #ifdef HJDEBUG
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
 #endif
-
-	} /* if (curbatch == 0) */
-
-	/*
-	 * Try to read from a temp file. Loop allows us to advance to new batches
-	 * as needed.  NOTE: nbatch could increase inside ExecHashJoinNewBatch, so
-	 * don't try to optimize this loop.
-	 */
-	while (curbatch < hashtable->nbatch)
+	}
+	else if (curbatch < hashtable->nbatch)
 	{
+		ExecWorkFile    *file = hashtable->outerBatchFile[curbatch];
+
+		/*
+		 * In outer-join cases, we could get here even though the batch file
+		 * is empty.
+		 */
+		if (file == NULL)
+			return NULL;
+
 		/*
 		 * For batches > 0, we can be reading many many outer tuples from disk
 		 * and probing them against the hashtable. If we don't find any
@@ -782,12 +855,11 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			return NULL;
 
 		slot = ExecHashJoinGetSavedTuple(hjstate,
-										 hashtable->outerBatchFile[curbatch],
+										 file,
 										 hashvalue,
 										 hjstate->hj_OuterTupleSlot);
 		if (!TupIsNull(slot))
 			return slot;
-		curbatch = ExecHashJoinNewBatch(hjstate);
 
 #ifdef HJDEBUG
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
@@ -796,7 +868,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	}
 
-	/* Out of batches... */
+	/* End of this batch */
 	return NULL;
 }
 
@@ -804,10 +876,9 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
  * ExecHashJoinNewBatch
  *		switch to a new hashjoin batch
  *
- * Returns the number of the new batch (1..nbatch-1), or nbatch if no more.
- * We will never return a batch number that has an empty outer batch file.
+ * Returns true if successful, false if there are no more batches.
  */
-static int
+static bool
 ExecHashJoinNewBatch(HashJoinState *hjstate)
 {
 	HashJoinTable hashtable = hjstate->hj_HashTable;
@@ -818,12 +889,11 @@ ExecHashJoinNewBatch(HashJoinState *hjstate)
 
 	HashState  *hashState = (HashState *) innerPlanState(hjstate);
 
-start_over:
 	nbatch = hashtable->nbatch;
 	curbatch = hashtable->curbatch;
 
 	if (curbatch >= nbatch)
-		return nbatch;
+		return false;
 
 	if (curbatch >= 0 && hashtable->stats)
 		ExecHashTableExplainBatchEnd(hashState, hashtable);
@@ -868,6 +938,7 @@ start_over:
 		hashtable->skewEnabled = false;
 		hashtable->skewBucket = NULL;
 		hashtable->skewBucketNums = NULL;
+		hashtable->nSkewBuckets = 0;
 		hashtable->spaceUsedSkew = 0;
 	}
 
@@ -876,8 +947,9 @@ start_over:
 	 * sides.  We can sometimes skip over batches that are empty on only one
 	 * side, but there are exceptions:
 	 *
-	 * 1. In an outer join, we have to process outer batches even if the inner
-	 * batch is empty.
+	 * 1. In a left/full outer join, we have to process outer batches even if
+	 * the inner batch is empty.  Similarly, in a right/full outer join, we
+	 * have to process inner batches even if the outer batch is empty.
 	 *
 	 * 2. If we have increased nbatch since the initial estimate, we have to
 	 * scan inner batches since they might contain tuples that need to be
@@ -923,7 +995,10 @@ start_over:
 			break;
 
 		if (hashtable->outerBatchFile[curbatch] &&
-			HASHJOIN_IS_OUTER(hjstate))
+			HJ_FILL_OUTER(hjstate))
+			break;				/* must process due to rule 1 */
+		if (hashtable->innerBatchFile[curbatch] &&
+			HJ_FILL_INNER(hjstate))
 			break;				/* must process due to rule 1 */
 		if (hashtable->innerBatchFile[curbatch] &&
 			nbatch != hashtable->nbatch_original)
@@ -948,31 +1023,26 @@ start_over:
 										 * whether join was run to completion */
 
 	if (curbatch >= nbatch)
-		return curbatch;		/* no more batches */
+		return false;			/* no more batches */
 
 	if (!ExecHashJoinReloadHashTable(hjstate))
 	{
 		/* We no longer continue as we couldn't load the batch */
-		return nbatch;
+		return false;
 	}
-	/*
-	 * If there's no outer batch file, advance to next batch.
-	 */
-	if (hashtable->outerBatchFile[curbatch] == NULL)
-		goto start_over;
 
 	/*
-	 * Rewind outer batch file, so that we can start reading it.
+	 * Rewind outer batch file (if present), so that we can start reading it.
 	 */
-	bool		result = ExecWorkFile_Rewind(hashtable->outerBatchFile[curbatch]);
-	if (!result)
+	if (hashtable->outerBatchFile[curbatch] != NULL)
 	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not access temporary file")));
+		if (!ExecWorkFile_Rewind(hashtable->outerBatchFile[curbatch]))
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not access temporary file")));
 	}
 
-	return curbatch;
+	return true;
 }
 
 /*
@@ -1093,7 +1163,7 @@ ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
 
 
 void
-ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
+ExecReScanHashJoin(HashJoinState *node)
 {
 	/*
 	 * In a multi-batch join, we currently have to do rescans the hard way,
@@ -1106,22 +1176,31 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	{
 		node->hj_HashTable->first_pass = false;
 
-		if (((PlanState *) node)->righttree->chgParam == NULL
-			&& !node->hj_HashTable->eagerlyReleased)
+		if (node->js.ps.righttree->chgParam == NULL &&
+			!node->hj_HashTable->eagerlyReleased)
 		{
 			/*
-			 * okay to reuse the hash table; needn't rescan inner, either.
+			 * Okay to reuse the hash table; needn't rescan inner, either.
 			 *
-			 * What we do need to do is reset our state about the emptiness of
-			 * the outer relation, so that the new scan of the outer will
-			 * update it correctly if it turns out to be empty this time.
-			 * (There's no harm in clearing it now because ExecHashJoin won't
-			 * need the info.  In the other cases, where the hash table
-			 * doesn't exist or we are destroying it, we leave this state
-			 * alone because ExecHashJoin will need it the first time
-			 * through.)
+			 * However, if it's a right/full join, we'd better reset the
+			 * inner-tuple match flags contained in the table.
+			 */
+			if (HJ_FILL_INNER(node))
+				ExecHashTableResetMatchFlags(node->hj_HashTable);
+
+			/*
+			 * Also, we need to reset our state about the emptiness of the
+			 * outer relation, so that the new scan of the outer will update
+			 * it correctly if it turns out to be empty this time. (There's no
+			 * harm in clearing it now because ExecHashJoin won't need the
+			 * info.  In the other cases, where the hash table doesn't exist
+			 * or we are destroying it, we leave this state alone because
+			 * ExecHashJoin will need it the first time through.)
 			 */
 			node->hj_OuterNotEmpty = false;
+
+			/* ExecHashJoin can skip the BUILD_HASHTABLE step */
+			node->hj_JoinState = HJ_NEED_NEW_OUTER;
 
 			if (node->hj_HashTable->nbatch > 1)
 			{
@@ -1145,13 +1224,14 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 			}
 			pfree(node->hj_HashTable);
 			node->hj_HashTable = NULL;
+			node->hj_JoinState = HJ_BUILD_HASHTABLE;
 
 			/*
 			 * if chgParam of subnode is not null then plan will be re-scanned
 			 * by first ExecProcNode.
 			 */
-			if (((PlanState *) node)->righttree->chgParam == NULL)
-				ExecReScan(((PlanState *) node)->righttree, exprCtxt);
+			if (node->js.ps.righttree->chgParam == NULL)
+				ExecReScan(node->js.ps.righttree);
 		}
 	}
 
@@ -1161,7 +1241,6 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	node->hj_CurSkewBucketNo = INVALID_SKEW_BUCKET_NO;
 	node->hj_CurTuple = NULL;
 
-	node->hj_NeedNewOuter = true;
 	node->hj_MatchedOuter = false;
 	node->hj_FirstOuterTupleSlot = NULL;
 
@@ -1169,8 +1248,8 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	if (node->js.ps.lefttree->chgParam == NULL)
+		ExecReScan(node->js.ps.lefttree);
 }
 
 /**
@@ -1202,7 +1281,7 @@ ReleaseHashTable(HashJoinState *node)
 	node->hj_CurBucketNo = 0;
 	node->hj_CurTuple = NULL;
 
-	node->hj_NeedNewOuter = true;
+	node->hj_JoinState = HJ_NEED_NEW_OUTER;
 	node->hj_MatchedOuter = false;
 	node->hj_FirstOuterTupleSlot = NULL;
 

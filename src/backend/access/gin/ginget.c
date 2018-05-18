@@ -4,17 +4,17 @@
  *	  fetch tuples from a GIN scan.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.30 2010/02/26 02:00:33 momjian Exp $
+ *			src/backend/access/gin/ginget.c
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/gin.h"
+#include "access/gin_private.h"
 #include "access/relscan.h"
 #include "catalog/index.h"
 #include "miscadmin.h"
@@ -35,25 +35,58 @@ typedef struct pendingPosition
 
 
 /*
- * Tries to refind previously taken ItemPointer on page.
+ * Convenience function for invoking a key's consistentFn
  */
 static bool
-findItemInPage(Page page, ItemPointer item, OffsetNumber *off)
+callConsistentFn(GinState *ginstate, GinScanKey key)
+{
+	/*
+	 * If we're dealing with a dummy EVERYTHING key, we don't want to call the
+	 * consistentFn; just claim it matches.
+	 */
+	if (key->searchMode == GIN_SEARCH_MODE_EVERYTHING)
+	{
+		key->recheckCurItem = false;
+		return true;
+	}
+
+	/*
+	 * Initialize recheckCurItem in case the consistentFn doesn't know it
+	 * should set it.  The safe assumption in that case is to force recheck.
+	 */
+	key->recheckCurItem = true;
+
+	return DatumGetBool(FunctionCall8Coll(&ginstate->consistentFn[key->attnum - 1],
+								 ginstate->supportCollation[key->attnum - 1],
+										  PointerGetDatum(key->entryRes),
+										  UInt16GetDatum(key->strategy),
+										  key->query,
+										  UInt32GetDatum(key->nuserentries),
+										  PointerGetDatum(key->extra_data),
+									   PointerGetDatum(&key->recheckCurItem),
+										  PointerGetDatum(key->queryValues),
+									 PointerGetDatum(key->queryCategories)));
+}
+
+/*
+ * Tries to refind previously taken ItemPointer on a posting page.
+ */
+static bool
+findItemInPostingPage(Page page, ItemPointer item, OffsetNumber *off)
 {
 	OffsetNumber maxoff = GinPageGetOpaque(page)->maxoff;
 	int			res;
 
 	if (GinPageGetOpaque(page)->flags & GIN_DELETED)
-		/* page was deleted by concurrent  vacuum */
+		/* page was deleted by concurrent vacuum */
 		return false;
 
 	/*
 	 * scan page to find equal or first greater value
 	 */
-
 	for (*off = FirstOffsetNumber; *off <= maxoff; (*off)++)
 	{
-		res = compareItemPointers(item, (ItemPointer) GinDataPageGetItem(page, *off));
+		res = ginCompareItemPointers(item, (ItemPointer) GinDataPageGetItem(page, *off));
 
 		if (res <= 0)
 			return true;
@@ -81,7 +114,9 @@ moveRightIfItNeeded(GinBtreeData *btree, GinBtreeStack *stack)
 			return false;		/* no more pages */
 
 		LockBuffer(stack->buffer, GIN_UNLOCK);
-		stack->buffer = ReleaseAndReadBuffer(stack->buffer, btree->index, stack->blkno);
+		stack->buffer = ReleaseAndReadBuffer(stack->buffer,
+											 btree->index,
+											 stack->blkno);
 		LockBuffer(stack->buffer, GIN_SHARE);
 		stack->off = FirstOffsetNumber;
 	}
@@ -90,71 +125,94 @@ moveRightIfItNeeded(GinBtreeData *btree, GinBtreeStack *stack)
 }
 
 /*
- * Does fullscan of posting tree and saves ItemPointers
- * in scanEntry->partialMatch TIDBitmap
+ * Scan all pages of a posting tree and save all its heap ItemPointers
+ * in scanEntry->matchBitmap
  */
 static void
-scanForItems(Relation index, GinScanEntry scanEntry, BlockNumber rootPostingTree)
+scanPostingTree(Relation index, GinScanEntry scanEntry,
+				BlockNumber rootPostingTree)
 {
 	GinPostingTreeScan *gdi;
 	Buffer		buffer;
 	Page		page;
 	BlockNumber blkno;
 
-	gdi = prepareScanPostingTree(index, rootPostingTree, TRUE);
+	/* Descend to the leftmost leaf page */
+	gdi = ginPrepareScanPostingTree(index, rootPostingTree, TRUE);
 
-	buffer = scanBeginPostingTree(gdi);
+	buffer = ginScanBeginPostingTree(gdi);
 	IncrBufferRefCount(buffer); /* prevent unpin in freeGinBtreeStack */
 
 	freeGinBtreeStack(gdi->stack);
 	pfree(gdi);
 
 	/*
-	 * Goes through all leaves
+	 * Loop iterates through all leaf pages of posting tree
 	 */
 	for (;;)
 	{
 		page = BufferGetPage(buffer);
 
-		if ((GinPageGetOpaque(page)->flags & GIN_DELETED) == 0 && GinPageGetOpaque(page)->maxoff >= FirstOffsetNumber)
+		if ((GinPageGetOpaque(page)->flags & GIN_DELETED) == 0 &&
+			GinPageGetOpaque(page)->maxoff >= FirstOffsetNumber)
 		{
-			tbm_add_tuples(scanEntry->partialMatch,
+			tbm_add_tuples(scanEntry->matchBitmap,
 				   (ItemPointer) GinDataPageGetItem(page, FirstOffsetNumber),
 						   GinPageGetOpaque(page)->maxoff, false);
 			scanEntry->predictNumberResult += GinPageGetOpaque(page)->maxoff;
 		}
 
-		blkno = GinPageGetOpaque(page)->rightlink;
 		if (GinPageRightMost(page))
-		{
-			UnlockReleaseBuffer(buffer);
-			return;				/* no more pages */
-		}
+			break;				/* no more pages */
 
+		blkno = GinPageGetOpaque(page)->rightlink;
 		LockBuffer(buffer, GIN_UNLOCK);
 		buffer = ReleaseAndReadBuffer(buffer, index, blkno);
 		LockBuffer(buffer, GIN_SHARE);
 	}
+
+	UnlockReleaseBuffer(buffer);
 }
 
 /*
- * Collects all ItemPointer into the TIDBitmap struct
- * for entries partially matched to search entry.
+ * Collects TIDs into scanEntry->matchBitmap for all heap tuples that
+ * match the search entry.	This supports three different match modes:
  *
- * Returns true if done, false if it's needed to restart scan from scratch
+ * 1. Partial-match support: scan from current point until the
+ *	  comparePartialFn says we're done.
+ * 2. SEARCH_MODE_ALL: scan from current point (which should be first
+ *	  key for the current attnum) until we hit null items or end of attnum
+ * 3. SEARCH_MODE_EVERYTHING: scan from current point (which should be first
+ *	  key for the current attnum) until we hit end of attnum
+ *
+ * Returns true if done, false if it's necessary to restart scan from scratch
  */
 static bool
-computePartialMatchList(GinBtreeData *btree, GinBtreeStack *stack, GinScanEntry scanEntry)
+collectMatchBitmap(GinBtreeData *btree, GinBtreeStack *stack,
+				   GinScanEntry scanEntry)
 {
-	Page		page;
-	IndexTuple	itup;
-	Datum		idatum;
-	int32		cmp;
+	OffsetNumber attnum;
+	Form_pg_attribute attr;
 
-	scanEntry->partialMatch = tbm_create(work_mem * 1024L);
+	/* Initialize empty bitmap result */
+	scanEntry->matchBitmap = tbm_create(work_mem * 1024L);
+
+	/* Null query cannot partial-match anything */
+	if (scanEntry->isPartialMatch &&
+		scanEntry->queryCategory != GIN_CAT_NORM_KEY)
+		return true;
+
+	/* Locate tupdesc entry for key column (for attbyval/attlen data) */
+	attnum = scanEntry->attnum;
+	attr = btree->ginstate->origTupdesc->attrs[attnum - 1];
 
 	for (;;)
 	{
+		Page		page;
+		IndexTuple	itup;
+		Datum		idatum;
+		GinNullCategory icategory;
+
 		/*
 		 * stack->off points to the interested entry, buffer is already locked
 		 */
@@ -167,56 +225,85 @@ computePartialMatchList(GinBtreeData *btree, GinBtreeStack *stack, GinScanEntry 
 		/*
 		 * If tuple stores another attribute then stop scan
 		 */
-		if (gintuple_get_attrnum(btree->ginstate, itup) != scanEntry->attnum)
+		if (gintuple_get_attrnum(btree->ginstate, itup) != attnum)
 			return true;
 
-		idatum = gin_index_getattr(btree->ginstate, itup);
+		/* Safe to fetch attribute value */
+		idatum = gintuple_get_key(btree->ginstate, itup, &icategory);
 
-
-		/*----------
-		 * Check of partial match.
-		 * case cmp == 0 => match
-		 * case cmp > 0 => not match and finish scan
-		 * case cmp < 0 => not match and continue scan
-		 *----------
+		/*
+		 * Check for appropriate scan stop conditions
 		 */
-		cmp = DatumGetInt32(FunctionCall4(&btree->ginstate->comparePartialFn[scanEntry->attnum - 1],
-										  scanEntry->entry,
-										  idatum,
-										  UInt16GetDatum(scanEntry->strategy),
+		if (scanEntry->isPartialMatch)
+		{
+			int32		cmp;
+
+			/*
+			 * In partial match, stop scan at any null (including
+			 * placeholders); partial matches never match nulls
+			 */
+			if (icategory != GIN_CAT_NORM_KEY)
+				return true;
+
+			/*----------
+			 * Check of partial match.
+			 * case cmp == 0 => match
+			 * case cmp > 0 => not match and finish scan
+			 * case cmp < 0 => not match and continue scan
+			 *----------
+			 */
+			cmp = DatumGetInt32(FunctionCall4Coll(&btree->ginstate->comparePartialFn[attnum - 1],
+							   btree->ginstate->supportCollation[attnum - 1],
+												  scanEntry->queryKey,
+												  idatum,
+										 UInt16GetDatum(scanEntry->strategy),
 									PointerGetDatum(scanEntry->extra_data)));
 
-		if (cmp > 0)
-			return true;
-		else if (cmp < 0)
+			if (cmp > 0)
+				return true;
+			else if (cmp < 0)
+			{
+				stack->off++;
+				continue;
+			}
+		}
+		else if (scanEntry->searchMode == GIN_SEARCH_MODE_ALL)
 		{
-			stack->off++;
-			continue;
+			/*
+			 * In ALL mode, we are not interested in null items, so we can
+			 * stop if we get to a null-item placeholder (which will be the
+			 * last entry for a given attnum).	We do want to include NULL_KEY
+			 * and EMPTY_ITEM entries, though.
+			 */
+			if (icategory == GIN_CAT_NULL_ITEM)
+				return true;
 		}
 
+		/*
+		 * OK, we want to return the TIDs listed in this entry.
+		 */
 		if (GinIsPostingTree(itup))
 		{
 			BlockNumber rootPostingTree = GinGetPostingTree(itup);
-			Datum		newDatum,
-						savedDatum = datumCopy(
-											   idatum,
-											   btree->ginstate->origTupdesc->attrs[scanEntry->attnum - 1]->attbyval,
-			btree->ginstate->origTupdesc->attrs[scanEntry->attnum - 1]->attlen
-			);
 
 			/*
 			 * We should unlock current page (but not unpin) during tree scan
 			 * to prevent deadlock with vacuum processes.
 			 *
-			 * We save current entry value (savedDatum) to be able to refind
-			 * our tuple after re-locking
+			 * We save current entry value (idatum) to be able to re-find our
+			 * tuple after re-locking
 			 */
+			if (icategory == GIN_CAT_NORM_KEY)
+				idatum = datumCopy(idatum, attr->attbyval, attr->attlen);
+
 			LockBuffer(stack->buffer, GIN_UNLOCK);
-			scanForItems(btree->index, scanEntry, rootPostingTree);
+
+			/* Collect all the TIDs in this entry's posting tree */
+			scanPostingTree(btree->index, scanEntry, rootPostingTree);
 
 			/*
 			 * We lock again the entry page and while it was unlocked insert
-			 * might occured, so we need to refind our position
+			 * might have occurred, so we need to re-find our position.
 			 */
 			LockBuffer(stack->buffer, GIN_SHARE);
 			page = BufferGetPage(stack->buffer);
@@ -224,44 +311,49 @@ computePartialMatchList(GinBtreeData *btree, GinBtreeStack *stack, GinScanEntry 
 			{
 				/*
 				 * Root page becomes non-leaf while we unlock it. We will
-				 * start again, this situation doesn't cause often - root can
-				 * became a non-leaf only one per life of index.
+				 * start again, this situation doesn't occur often - root can
+				 * became a non-leaf only once per life of index.
 				 */
-
 				return false;
 			}
 
+			/* Search forward to re-find idatum */
 			for (;;)
 			{
+				Datum		newDatum;
+				GinNullCategory newCategory;
+
 				if (moveRightIfItNeeded(btree, stack) == false)
 					elog(ERROR, "lost saved point in index");	/* must not happen !!! */
 
 				page = BufferGetPage(stack->buffer);
 				itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, stack->off));
-				newDatum = gin_index_getattr(btree->ginstate, itup);
 
-				if (gintuple_get_attrnum(btree->ginstate, itup) != scanEntry->attnum)
+				if (gintuple_get_attrnum(btree->ginstate, itup) != attnum)
 					elog(ERROR, "lost saved point in index");	/* must not happen !!! */
+				newDatum = gintuple_get_key(btree->ginstate, itup,
+											&newCategory);
 
-				if (compareEntries(btree->ginstate, scanEntry->attnum, newDatum, savedDatum) == 0)
-				{
-					/* Found!  */
-					if (btree->ginstate->origTupdesc->attrs[scanEntry->attnum - 1]->attbyval == false)
-						pfree(DatumGetPointer(savedDatum));
-					break;
-				}
+				if (ginCompareEntries(btree->ginstate, attnum,
+									  newDatum, newCategory,
+									  idatum, icategory) == 0)
+					break;		/* Found! */
 
 				stack->off++;
 			}
+
+			if (icategory == GIN_CAT_NORM_KEY && !attr->attbyval)
+				pfree(DatumGetPointer(idatum));
 		}
 		else
 		{
-			tbm_add_tuples(scanEntry->partialMatch, GinGetPosting(itup), GinGetNPosting(itup), false);
+			tbm_add_tuples(scanEntry->matchBitmap,
+						   GinGetPosting(itup), GinGetNPosting(itup), false);
 			scanEntry->predictNumberResult += GinGetNPosting(itup);
 		}
 
 		/*
-		 * Ok, we save ItemPointers, go to the next entry
+		 * Done with this entry, go to the next
 		 */
 		stack->off++;
 	}
@@ -273,73 +365,73 @@ computePartialMatchList(GinBtreeData *btree, GinBtreeStack *stack, GinScanEntry 
  * Start* functions setup beginning state of searches: finds correct buffer and pins it.
  */
 static void
-startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
+startScanEntry(GinState *ginstate, GinScanEntry entry)
 {
 	GinBtreeData btreeEntry;
 	GinBtreeStack *stackEntry;
 	Page		page;
-	bool		needUnlock = TRUE;
+	bool		needUnlock;
 
+restartScanEntry:
 	entry->buffer = InvalidBuffer;
+	ItemPointerSetMin(&entry->curItem);
 	entry->offset = InvalidOffsetNumber;
 	entry->list = NULL;
 	entry->nlist = 0;
-	entry->partialMatch = NULL;
-	entry->partialMatchResult = NULL;
+	entry->matchBitmap = NULL;
+	entry->matchResult = NULL;
 	entry->reduceResult = FALSE;
 	entry->predictNumberResult = 0;
-
-	if (entry->master != NULL)
-	{
-		entry->isFinished = entry->master->isFinished;
-		return;
-	}
 
 	/*
 	 * we should find entry, and begin scan of posting tree or just store
 	 * posting list in memory
 	 */
-
-	prepareEntryScan(&btreeEntry, index, entry->attnum, entry->entry, ginstate);
+	ginPrepareEntryScan(&btreeEntry, entry->attnum,
+						entry->queryKey, entry->queryCategory,
+						ginstate);
 	btreeEntry.searchMode = TRUE;
 
 	stackEntry = ginFindLeafPage(&btreeEntry, NULL);
 	page = BufferGetPage(stackEntry->buffer);
+	needUnlock = TRUE;
 
 	entry->isFinished = TRUE;
 
-	if (entry->isPartialMatch)
+	if (entry->isPartialMatch ||
+		entry->queryCategory == GIN_CAT_EMPTY_QUERY)
 	{
 		/*
-		 * btreeEntry.findItem points to the first equal or greater value than
-		 * needed. So we will scan further and collect all ItemPointers
+		 * btreeEntry.findItem locates the first item >= given search key.
+		 * (For GIN_CAT_EMPTY_QUERY, it will find the leftmost index item
+		 * because of the way the GIN_CAT_EMPTY_QUERY category code is
+		 * assigned.)  We scan forward from there and collect all TIDs needed
+		 * for the entry type.
 		 */
 		btreeEntry.findItem(&btreeEntry, stackEntry);
-		if (computePartialMatchList(&btreeEntry, stackEntry, entry) == false)
+		if (collectMatchBitmap(&btreeEntry, stackEntry, entry) == false)
 		{
 			/*
 			 * GIN tree was seriously restructured, so we will cleanup all
 			 * found data and rescan. See comments near 'return false' in
-			 * computePartialMatchList()
+			 * collectMatchBitmap()
 			 */
-			if (entry->partialMatch)
+			if (entry->matchBitmap)
 			{
-				if (entry->partialMatchIterator)
-					tbm_end_iterate(entry->partialMatchIterator);
-				entry->partialMatchIterator = NULL;
-				tbm_free(entry->partialMatch);
-				entry->partialMatch = NULL;
+				if (entry->matchIterator)
+					tbm_end_iterate(entry->matchIterator);
+				entry->matchIterator = NULL;
+				tbm_free(entry->matchBitmap);
+				entry->matchBitmap = NULL;
 			}
 			LockBuffer(stackEntry->buffer, GIN_UNLOCK);
 			freeGinBtreeStack(stackEntry);
-
-			startScanEntry(index, ginstate, entry);
-			return;
+			goto restartScanEntry;
 		}
 
-		if (entry->partialMatch && !tbm_is_empty(entry->partialMatch))
+		if (entry->matchBitmap && !tbm_is_empty(entry->matchBitmap))
 		{
-			entry->partialMatchIterator = tbm_begin_iterate(entry->partialMatch);
+			entry->matchIterator = tbm_begin_iterate(entry->matchBitmap);
 			entry->isFinished = FALSE;
 		}
 	}
@@ -354,17 +446,17 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 			Page		page;
 
 			/*
-			 * We should unlock entry page before make deal with posting tree
-			 * to prevent deadlocks with vacuum processes. Because entry is
-			 * never deleted from page and posting tree is never reduced to
-			 * the posting list, we can unlock page after getting BlockNumber
-			 * of root of posting tree.
+			 * We should unlock entry page before touching posting tree to
+			 * prevent deadlocks with vacuum processes. Because entry is never
+			 * deleted from page and posting tree is never reduced to the
+			 * posting list, we can unlock page after getting BlockNumber of
+			 * root of posting tree.
 			 */
 			LockBuffer(stackEntry->buffer, GIN_UNLOCK);
 			needUnlock = FALSE;
-			gdi = prepareScanPostingTree(index, rootPostingTree, TRUE);
+			gdi = ginPrepareScanPostingTree(ginstate->index, rootPostingTree, TRUE);
 
-			entry->buffer = scanBeginPostingTree(gdi);
+			entry->buffer = ginScanBeginPostingTree(gdi);
 
 			/*
 			 * We keep buffer pinned because we need to prevent deletion of
@@ -405,19 +497,23 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 }
 
 static void
-startScanKey(Relation index, GinState *ginstate, GinScanKey key)
+startScanKey(GinState *ginstate, GinScanKey key)
 {
+	ItemPointerSetMin(&key->curItem);
+	key->curItemMatches = false;
+	key->recheckCurItem = false;
+	key->isFinished = false;
+}
+
+static void
+startScan(IndexScanDesc scan)
+{
+	GinScanOpaque so = (GinScanOpaque) scan->opaque;
+	GinState   *ginstate = &so->ginstate;
 	uint32		i;
 
-	if (!key->firstCall)
-		return;
-
-	for (i = 0; i < key->nentries; i++)
-		startScanEntry(index, ginstate, key->scanEntry + i);
-
-	memset(key->entryRes, TRUE, sizeof(bool) * key->nentries);
-	key->isFinished = FALSE;
-	key->firstCall = FALSE;
+	for (i = 0; i < so->totalentries; i++)
+		startScanEntry(ginstate, so->entries[i]);
 
 	if (GinFuzzySearchLimit > 0)
 	{
@@ -428,27 +524,20 @@ startScanKey(Relation index, GinState *ginstate, GinScanKey key)
 		 * minimal predictNumberResult.
 		 */
 
-		for (i = 0; i < key->nentries; i++)
-			if (key->scanEntry[i].predictNumberResult <= key->nentries * GinFuzzySearchLimit)
+		for (i = 0; i < so->totalentries; i++)
+			if (so->entries[i]->predictNumberResult <= so->totalentries * GinFuzzySearchLimit)
 				return;
 
-		for (i = 0; i < key->nentries; i++)
-			if (key->scanEntry[i].predictNumberResult > key->nentries * GinFuzzySearchLimit)
+		for (i = 0; i < so->totalentries; i++)
+			if (so->entries[i]->predictNumberResult > so->totalentries * GinFuzzySearchLimit)
 			{
-				key->scanEntry[i].predictNumberResult /= key->nentries;
-				key->scanEntry[i].reduceResult = TRUE;
+				so->entries[i]->predictNumberResult /= so->totalentries;
+				so->entries[i]->reduceResult = TRUE;
 			}
 	}
-}
-
-static void
-startScan(IndexScanDesc scan)
-{
-	uint32		i;
-	GinScanOpaque so = (GinScanOpaque) scan->opaque;
 
 	for (i = 0; i < so->nkeys; i++)
-		startScanKey(scan->indexRelation, &so->ginstate, so->keys + i);
+		startScanKey(ginstate, so->keys + i);
 }
 
 /*
@@ -457,18 +546,16 @@ startScan(IndexScanDesc scan)
  * to prevent interference with vacuum
  */
 static void
-entryGetNextItem(Relation index, GinScanEntry entry)
+entryGetNextItem(GinState *ginstate, GinScanEntry entry)
 {
 	Page		page;
 	BlockNumber blkno;
 
 	for (;;)
 	{
-		entry->offset++;
-
-		if (entry->offset <= entry->nlist)
+		if (entry->offset < entry->nlist)
 		{
-			entry->curItem = entry->list[entry->offset - 1];
+			entry->curItem = entry->list[entry->offset++];
 			return;
 		}
 
@@ -488,18 +575,21 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 			if (blkno == InvalidBlockNumber)
 			{
 				ReleaseBuffer(entry->buffer);
-				ItemPointerSet(&entry->curItem, InvalidBlockNumber, InvalidOffsetNumber);
+				ItemPointerSetInvalid(&entry->curItem);
 				entry->buffer = InvalidBuffer;
 				entry->isFinished = TRUE;
 				return;
 			}
 
-			entry->buffer = ReleaseAndReadBuffer(entry->buffer, index, blkno);
+			entry->buffer = ReleaseAndReadBuffer(entry->buffer,
+												 ginstate->index,
+												 blkno);
 			LockBuffer(entry->buffer, GIN_SHARE);
 			page = BufferGetPage(entry->buffer);
 
 			entry->offset = InvalidOffsetNumber;
-			if (!ItemPointerIsValid(&entry->curItem) || findItemInPage(page, &entry->curItem, &entry->offset))
+			if (!ItemPointerIsValid(&entry->curItem) ||
+				findItemInPostingPage(page, &entry->curItem, &entry->offset))
 			{
 				/*
 				 * Found position equal to or greater than stored
@@ -511,13 +601,13 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 				LockBuffer(entry->buffer, GIN_UNLOCK);
 
 				if (!ItemPointerIsValid(&entry->curItem) ||
-					compareItemPointers(&entry->curItem, entry->list + entry->offset - 1) == 0)
+					ginCompareItemPointers(&entry->curItem,
+									   entry->list + entry->offset - 1) == 0)
 				{
 					/*
 					 * First pages are deleted or empty, or we found exact
 					 * position, so break inner loop and continue outer one.
 					 */
-
 					break;
 				}
 
@@ -536,52 +626,57 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 #define dropItem(e) ( gin_rand() > ((double)GinFuzzySearchLimit)/((double)((e)->predictNumberResult)) )
 
 /*
- * Sets entry->curItem to new found heap item pointer for one
- * entry of one scan key
+ * Sets entry->curItem to next heap item pointer for one entry of one scan key,
+ * or sets entry->isFinished to TRUE if there are no more.
+ *
+ * Item pointers must be returned in ascending order.
+ *
+ * Note: this can return a "lossy page" item pointer, indicating that the
+ * entry potentially matches all items on that heap page.  However, it is
+ * not allowed to return both a lossy page pointer and exact (regular)
+ * item pointers for the same page.  (Doing so would break the key-combination
+ * logic in keyGetItem and scanGetItem; see comment in scanGetItem.)  In the
+ * current implementation this is guaranteed by the behavior of tidbitmaps.
  */
-static bool
-entryGetItem(Relation index, GinScanEntry entry)
+static void
+entryGetItem(GinState *ginstate, GinScanEntry entry)
 {
-	if (entry->master)
-	{
-		entry->isFinished = entry->master->isFinished;
-		entry->curItem = entry->master->curItem;
-	}
-	else if (entry->partialMatch)
+	Assert(!entry->isFinished);
+
+	if (entry->matchBitmap)
 	{
 		do
 		{
-			if (entry->partialMatchResult == NULL ||
-				entry->offset >= entry->partialMatchResult->ntuples)
+			if (entry->matchResult == NULL ||
+				entry->offset >= entry->matchResult->ntuples)
 			{
-				entry->partialMatchResult = tbm_iterate(entry->partialMatchIterator);
+				entry->matchResult = tbm_iterate(entry->matchIterator);
 
-				if (entry->partialMatchResult == NULL)
+				if (entry->matchResult == NULL)
 				{
-					ItemPointerSet(&entry->curItem, InvalidBlockNumber, InvalidOffsetNumber);
-					tbm_end_iterate(entry->partialMatchIterator);
-					entry->partialMatchIterator = NULL;
+					ItemPointerSetInvalid(&entry->curItem);
+					tbm_end_iterate(entry->matchIterator);
+					entry->matchIterator = NULL;
 					entry->isFinished = TRUE;
 					break;
 				}
 
 				/*
-				 * reset counter to the beginning of
-				 * entry->partialMatchResult. Note: entry->offset is still
-				 * greater than partialMatchResult->ntuples if
-				 * partialMatchResult is lossy. So, on next call we will get
-				 * next result from TIDBitmap.
+				 * Reset counter to the beginning of entry->matchResult. Note:
+				 * entry->offset is still greater than matchResult->ntuples if
+				 * matchResult is lossy.  So, on next call we will get next
+				 * result from TIDBitmap.
 				 */
 				entry->offset = 0;
 			}
 
-			if (entry->partialMatchResult->ntuples < 0)
+			if (entry->matchResult->ntuples < 0)
 			{
 				/*
 				 * lossy result, so we need to check the whole page
 				 */
 				ItemPointerSetLossyPage(&entry->curItem,
-										entry->partialMatchResult->blockno);
+										entry->matchResult->blockno);
 
 				/*
 				 * We might as well fall out of the loop; we could not
@@ -592,8 +687,8 @@ entryGetItem(Relation index, GinScanEntry entry)
 			}
 
 			ItemPointerSet(&entry->curItem,
-						   entry->partialMatchResult->blockno,
-						   entry->partialMatchResult->offsets[entry->offset]);
+						   entry->matchResult->blockno,
+						   entry->matchResult->offsets[entry->offset]);
 			entry->offset++;
 		} while (entry->reduceResult == TRUE && dropItem(entry));
 	}
@@ -604,7 +699,7 @@ entryGetItem(Relation index, GinScanEntry entry)
 			entry->curItem = entry->list[entry->offset - 1];
 		else
 		{
-			ItemPointerSet(&entry->curItem, InvalidBlockNumber, InvalidOffsetNumber);
+			ItemPointerSetInvalid(&entry->curItem);
 			entry->isFinished = TRUE;
 		}
 	}
@@ -612,137 +707,350 @@ entryGetItem(Relation index, GinScanEntry entry)
 	{
 		do
 		{
-			entryGetNextItem(index, entry);
-		} while (entry->isFinished == FALSE && entry->reduceResult == TRUE && dropItem(entry));
+			entryGetNextItem(ginstate, entry);
+		} while (entry->isFinished == FALSE &&
+				 entry->reduceResult == TRUE &&
+				 dropItem(entry));
 	}
-
-	return entry->isFinished;
 }
 
 /*
- * Sets key->curItem to new found heap item pointer for one scan key
- * Returns isFinished, ie TRUE means we did NOT get a new item pointer!
- * Also, *keyrecheck is set true if recheck is needed for this scan key.
- * Note: lossy page could be returned after items from the same page.
+ * Identify the "current" item among the input entry streams for this scan key,
+ * and test whether it passes the scan key qual condition.
+ *
+ * The current item is the smallest curItem among the inputs.  key->curItem
+ * is set to that value.  key->curItemMatches is set to indicate whether that
+ * TID passes the consistentFn test.  If so, key->recheckCurItem is set true
+ * iff recheck is needed for this item pointer (including the case where the
+ * item pointer is a lossy page pointer).
+ *
+ * If all entry streams are exhausted, sets key->isFinished to TRUE.
+ *
+ * Item pointers must be returned in ascending order.
+ *
+ * Note: this can return a "lossy page" item pointer, indicating that the
+ * key potentially matches all items on that heap page.  However, it is
+ * not allowed to return both a lossy page pointer and exact (regular)
+ * item pointers for the same page.  (Doing so would break the key-combination
+ * logic in scanGetItem.)
  */
-static bool
-keyGetItem(Relation index, GinState *ginstate, MemoryContext tempCtx,
-		   GinScanKey key, bool *keyrecheck)
+static void
+keyGetItem(GinState *ginstate, MemoryContext tempCtx, GinScanKey key)
 {
+	ItemPointerData minItem;
+	ItemPointerData curPageLossy;
 	uint32		i;
+	uint32		lossyEntry;
+	bool		haveLossyEntry;
 	GinScanEntry entry;
 	bool		res;
 	MemoryContext oldCtx;
 
-	if (key->isFinished)
-		return TRUE;
+	Assert(!key->isFinished);
 
-	do
+	/*
+	 * Find the minimum of the active entry curItems.
+	 *
+	 * Note: a lossy-page entry is encoded by a ItemPointer with max value for
+	 * offset (0xffff), so that it will sort after any exact entries for the
+	 * same page.  So we'll prefer to return exact pointers not lossy
+	 * pointers, which is good.
+	 */
+	ItemPointerSetMax(&minItem);
+
+	for (i = 0; i < key->nentries; i++)
+	{
+		entry = key->scanEntry[i];
+		if (entry->isFinished == FALSE &&
+			ginCompareItemPointers(&entry->curItem, &minItem) < 0)
+			minItem = entry->curItem;
+	}
+
+	if (ItemPointerIsMax(&minItem))
+	{
+		/* all entries are finished */
+		key->isFinished = TRUE;
+		return;
+	}
+
+	/*
+	 * We might have already tested this item; if so, no need to repeat work.
+	 * (Note: the ">" case can happen, if minItem is exact but we previously
+	 * had to set curItem to a lossy-page pointer.)
+	 */
+	if (ginCompareItemPointers(&key->curItem, &minItem) >= 0)
+		return;
+
+	/*
+	 * OK, advance key->curItem and perform consistentFn test.
+	 */
+	key->curItem = minItem;
+
+	/*
+	 * Lossy-page entries pose a problem, since we don't know the correct
+	 * entryRes state to pass to the consistentFn, and we also don't know what
+	 * its combining logic will be (could be AND, OR, or even NOT). If the
+	 * logic is OR then the consistentFn might succeed for all items in the
+	 * lossy page even when none of the other entries match.
+	 *
+	 * If we have a single lossy-page entry then we check to see if the
+	 * consistentFn will succeed with only that entry TRUE.  If so, we return
+	 * a lossy-page pointer to indicate that the whole heap page must be
+	 * checked.  (On subsequent calls, we'll do nothing until minItem is past
+	 * the page altogether, thus ensuring that we never return both regular
+	 * and lossy pointers for the same page.)
+	 *
+	 * This idea could be generalized to more than one lossy-page entry, but
+	 * ideally lossy-page entries should be infrequent so it would seldom be
+	 * the case that we have more than one at once.  So it doesn't seem worth
+	 * the extra complexity to optimize that case. If we do find more than
+	 * one, we just punt and return a lossy-page pointer always.
+	 *
+	 * Note that only lossy-page entries pointing to the current item's page
+	 * should trigger this processing; we might have future lossy pages in the
+	 * entry array, but they aren't relevant yet.
+	 */
+	ItemPointerSetLossyPage(&curPageLossy,
+							GinItemPointerGetBlockNumber(&key->curItem));
+
+	lossyEntry = 0;
+	haveLossyEntry = false;
+	for (i = 0; i < key->nentries; i++)
+	{
+		entry = key->scanEntry[i];
+		if (entry->isFinished == FALSE &&
+			ginCompareItemPointers(&entry->curItem, &curPageLossy) == 0)
+		{
+			if (haveLossyEntry)
+			{
+				/* Multiple lossy entries, punt */
+				key->curItem = curPageLossy;
+				key->curItemMatches = true;
+				key->recheckCurItem = true;
+				return;
+			}
+			lossyEntry = i;
+			haveLossyEntry = true;
+		}
+	}
+
+	/* prepare for calling consistentFn in temp context */
+	oldCtx = MemoryContextSwitchTo(tempCtx);
+
+	if (haveLossyEntry)
+	{
+		/* Single lossy-page entry, so see if whole page matches */
+		memset(key->entryRes, FALSE, key->nentries);
+		key->entryRes[lossyEntry] = TRUE;
+
+		if (callConsistentFn(ginstate, key))
+		{
+			/* Yes, so clean up ... */
+			MemoryContextSwitchTo(oldCtx);
+			MemoryContextReset(tempCtx);
+
+			/* and return lossy pointer for whole page */
+			key->curItem = curPageLossy;
+			key->curItemMatches = true;
+			key->recheckCurItem = true;
+			return;
+		}
+	}
+
+	/*
+	 * At this point we know that we don't need to return a lossy whole-page
+	 * pointer, but we might have matches for individual exact item pointers,
+	 * possibly in combination with a lossy pointer.  Our strategy if there's
+	 * a lossy pointer is to try the consistentFn both ways and return a hit
+	 * if it accepts either one (forcing the hit to be marked lossy so it will
+	 * be rechecked).  An exception is that we don't need to try it both ways
+	 * if the lossy pointer is in a "hidden" entry, because the consistentFn's
+	 * result can't depend on that.
+	 *
+	 * Prepare entryRes array to be passed to consistentFn.
+	 */
+	for (i = 0; i < key->nentries; i++)
+	{
+		entry = key->scanEntry[i];
+		if (entry->isFinished == FALSE &&
+			ginCompareItemPointers(&entry->curItem, &key->curItem) == 0)
+			key->entryRes[i] = TRUE;
+		else
+			key->entryRes[i] = FALSE;
+	}
+	if (haveLossyEntry)
+		key->entryRes[lossyEntry] = TRUE;
+
+	res = callConsistentFn(ginstate, key);
+
+	if (!res && haveLossyEntry && lossyEntry < key->nuserentries)
+	{
+		/* try the other way for the lossy item */
+		key->entryRes[lossyEntry] = FALSE;
+
+		res = callConsistentFn(ginstate, key);
+	}
+
+	key->curItemMatches = res;
+	/* If we matched a lossy entry, force recheckCurItem = true */
+	if (haveLossyEntry)
+		key->recheckCurItem = true;
+
+	/* clean up after consistentFn calls */
+	MemoryContextSwitchTo(oldCtx);
+	MemoryContextReset(tempCtx);
+}
+
+/*
+ * Get next heap item pointer (after advancePast) from scan.
+ * Returns true if anything found.
+ * On success, *item and *recheck are set.
+ *
+ * Note: this is very nearly the same logic as in keyGetItem(), except
+ * that we know the keys are to be combined with AND logic, whereas in
+ * keyGetItem() the combination logic is known only to the consistentFn.
+ */
+static bool
+scanGetItem(IndexScanDesc scan, ItemPointer advancePast,
+			ItemPointerData *item, bool *recheck)
+{
+	GinScanOpaque so = (GinScanOpaque) scan->opaque;
+	GinState   *ginstate = &so->ginstate;
+	ItemPointerData myAdvancePast = *advancePast;
+	uint32		i;
+	bool		allFinished;
+	bool		match;
+
+	for (;;)
 	{
 		/*
-		 * move forward from previously value and set new curItem, which is
-		 * minimal from entries->curItems. Lossy page is encoded by
-		 * ItemPointer with max value for offset (0xffff), so if there is an
-		 * non-lossy entries on lossy page they will returned too and after
-		 * that the whole page. That's not a problem for resulting tidbitmap.
+		 * Advance any entries that are <= myAdvancePast.  In particular,
+		 * since entry->curItem was initialized with ItemPointerSetMin, this
+		 * ensures we fetch the first item for each entry on the first call.
 		 */
-		ItemPointerSetMax(&key->curItem);
-		for (i = 0; i < key->nentries; i++)
-		{
-			entry = key->scanEntry + i;
+		allFinished = TRUE;
 
-			if (key->entryRes[i])
-			{
-				/*
-				 * Move forward only entries which was the least on previous
-				 * call, key->entryRes[i] points that current entry was a
-				 * result of loop/call.
-				 */
-				if (entry->isFinished == FALSE && entryGetItem(index, entry) == FALSE)
-				{
-					if (compareItemPointers(&entry->curItem, &key->curItem) < 0)
-						key->curItem = entry->curItem;
-				}
-				else
-					key->entryRes[i] = FALSE;
-			}
-			else if (entry->isFinished == FALSE)
-			{
-				if (compareItemPointers(&entry->curItem, &key->curItem) < 0)
-					key->curItem = entry->curItem;
-			}
+		for (i = 0; i < so->totalentries; i++)
+		{
+			GinScanEntry entry = so->entries[i];
+
+			while (entry->isFinished == FALSE &&
+				   ginCompareItemPointers(&entry->curItem,
+										  &myAdvancePast) <= 0)
+				entryGetItem(ginstate, entry);
+
+			if (entry->isFinished == FALSE)
+				allFinished = FALSE;
 		}
 
-		if (ItemPointerIsMax(&key->curItem))
+		if (allFinished)
 		{
-			/* all entries are finished */
-			key->isFinished = TRUE;
-			return TRUE;
+			/* all entries exhausted, so we're done */
+			return false;
 		}
 
 		/*
-		 * Now key->curItem contains closest ItemPointer to previous result.
-		 *
-		 * if key->nentries == 1 then the consistentFn should always succeed,
-		 * but we must call it anyway to find out the recheck status.
+		 * Perform the consistentFn test for each scan key.  If any key
+		 * reports isFinished, meaning its subset of the entries is exhausted,
+		 * we can stop.  Otherwise, set *item to the minimum of the key
+		 * curItems.
 		 */
+		ItemPointerSetMax(item);
+
+		for (i = 0; i < so->nkeys; i++)
+		{
+			GinScanKey	key = so->keys + i;
+
+			keyGetItem(&so->ginstate, so->tempCtx, key);
+
+			if (key->isFinished)
+				return false;	/* finished one of keys */
+
+			if (ginCompareItemPointers(&key->curItem, item) < 0)
+				*item = key->curItem;
+		}
+
+		Assert(!ItemPointerIsMax(item));
 
 		/*----------
-		 * entryRes array is used for:
-		 * - as an argument for consistentFn
-		 * - entry->curItem with corresponding key->entryRes[i] == false are
-		 *	 greater than key->curItem, so next loop/call they should be
-		 *	 renewed by entryGetItem(). So, we need to set up an array before
-		 *	 checking of lossy page.
+		 * Now *item contains first ItemPointer after previous result.
+		 *
+		 * The item is a valid hit only if all the keys succeeded for either
+		 * that exact TID, or a lossy reference to the same page.
+		 *
+		 * This logic works only if a keyGetItem stream can never contain both
+		 * exact and lossy pointers for the same page.	Else we could have a
+		 * case like
+		 *
+		 *		stream 1		stream 2
+		 *		...				...
+		 *		42/6			42/7
+		 *		50/1			42/0xffff
+		 *		...				...
+		 *
+		 * We would conclude that 42/6 is not a match and advance stream 1,
+		 * thus never detecting the match to the lossy pointer in stream 2.
+		 * (keyGetItem has a similar problem versus entryGetItem.)
 		 *----------
 		 */
-		for (i = 0; i < key->nentries; i++)
+		match = true;
+		for (i = 0; i < so->nkeys; i++)
 		{
-			entry = key->scanEntry + i;
+			GinScanKey	key = so->keys + i;
 
-			if (entry->isFinished == FALSE &&
-				compareItemPointers(&entry->curItem, &key->curItem) == 0)
-				key->entryRes[i] = TRUE;
-			else
-				key->entryRes[i] = FALSE;
+			if (key->curItemMatches)
+			{
+				if (ginCompareItemPointers(item, &key->curItem) == 0)
+					continue;
+				if (ItemPointerIsLossyPage(&key->curItem) &&
+					GinItemPointerGetBlockNumber(&key->curItem) ==
+					GinItemPointerGetBlockNumber(item))
+					continue;
+			}
+			match = false;
+			break;
 		}
 
-		/*
-		 * Initialize *keyrecheck in case the consistentFn doesn't know it
-		 * should set it.  The safe assumption in that case is to force
-		 * recheck.
-		 */
-		*keyrecheck = true;
+		if (match)
+			break;
 
 		/*
-		 * If one of the entry's scans returns lossy result, return it without
-		 * further checking - we can't call consistentFn for lack of data.
+		 * No hit.	Update myAdvancePast to this TID, so that on the next pass
+		 * we'll move to the next possible entry.
 		 */
-		if (ItemPointerIsLossyPage(&key->curItem))
-			return FALSE;
+		myAdvancePast = *item;
+	}
 
-		oldCtx = MemoryContextSwitchTo(tempCtx);
-		res = DatumGetBool(FunctionCall6(&ginstate->consistentFn[key->attnum - 1],
-										 PointerGetDatum(key->entryRes),
-										 UInt16GetDatum(key->strategy),
-										 key->query,
-										 UInt32GetDatum(key->nentries),
-										 PointerGetDatum(key->extra_data),
-										 PointerGetDatum(keyrecheck)));
-		MemoryContextSwitchTo(oldCtx);
-		MemoryContextReset(tempCtx);
-	} while (!res);
+	/*
+	 * We must return recheck = true if any of the keys are marked recheck.
+	 */
+	*recheck = false;
+	for (i = 0; i < so->nkeys; i++)
+	{
+		GinScanKey	key = so->keys + i;
 
-	return FALSE;
+		if (key->recheckCurItem)
+		{
+			*recheck = true;
+			break;
+		}
+	}
+
+	return TRUE;
 }
 
 
 /*
+ * Functions for scanning the pending list
+ */
+
+
+/*
  * Get ItemPointer of next heap row to be checked from pending list.
- * Returns false if there are no more. On pages with several rows
+ * Returns false if there are no more. On pages with several heap rows
  * it returns each row separately, on page with part of heap row returns
- * per page data.  pos->firstOffset and pos->lastOffset points
- * fraction of tuples for current heap row.
+ * per page data.  pos->firstOffset and pos->lastOffset are set to identify
+ * the range of pending-list tuples belonging to this heap row.
  *
  * The pendingBuffer is presumed pinned and share-locked on entry, and is
  * pinned and share-locked on success exit.  On failure exit it's released.
@@ -814,10 +1122,9 @@ scanGetCandidate(IndexScanDesc scan, pendingPosition *pos)
 
 			/*
 			 * Now pos->firstOffset points to the first tuple of current heap
-			 * row, pos->lastOffset points to the first tuple of second heap
-			 * row (or to the end of page)
+			 * row, pos->lastOffset points to the first tuple of next heap row
+			 * (or to the end of page)
 			 */
-
 			break;
 		}
 	}
@@ -826,34 +1133,46 @@ scanGetCandidate(IndexScanDesc scan, pendingPosition *pos)
 }
 
 /*
- * Scan page from current tuple (off) up till the first of:
+ * Scan pending-list page from current tuple (off) up till the first of:
  * - match is found (then returns true)
  * - no later match is possible
  * - tuple's attribute number is not equal to entry's attrnum
  * - reach end of page
+ *
+ * datum[]/category[]/datumExtracted[] arrays are used to cache the results
+ * of gintuple_get_key() on the current page.
  */
 static bool
 matchPartialInPendingList(GinState *ginstate, Page page,
 						  OffsetNumber off, OffsetNumber maxoff,
-						  Datum value, OffsetNumber attrnum,
-						  Datum *datum, bool *datumExtracted,
-						  StrategyNumber strategy,
-						  Pointer extra_data)
+						  GinScanEntry entry,
+						  Datum *datum, GinNullCategory *category,
+						  bool *datumExtracted)
 {
 	IndexTuple	itup;
 	int32		cmp;
 
+	/* Partial match to a null is not possible */
+	if (entry->queryCategory != GIN_CAT_NORM_KEY)
+		return false;
+
 	while (off < maxoff)
 	{
 		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, off));
-		if (attrnum != gintuple_get_attrnum(ginstate, itup))
+
+		if (gintuple_get_attrnum(ginstate, itup) != entry->attnum)
 			return false;
 
 		if (datumExtracted[off - 1] == false)
 		{
-			datum[off - 1] = gin_index_getattr(ginstate, itup);
+			datum[off - 1] = gintuple_get_key(ginstate, itup,
+											  &category[off - 1]);
 			datumExtracted[off - 1] = true;
 		}
+
+		/* Once we hit nulls, no further match is possible */
+		if (category[off - 1] != GIN_CAT_NORM_KEY)
+			return false;
 
 		/*----------
 		 * Check partial match.
@@ -862,11 +1181,12 @@ matchPartialInPendingList(GinState *ginstate, Page page,
 		 * case cmp < 0 => not match and continue scan
 		 *----------
 		 */
-		cmp = DatumGetInt32(FunctionCall4(&ginstate->comparePartialFn[attrnum - 1],
-										  value,
-										  datum[off - 1],
-										  UInt16GetDatum(strategy),
-										  PointerGetDatum(extra_data)));
+		cmp = DatumGetInt32(FunctionCall4Coll(&ginstate->comparePartialFn[entry->attnum - 1],
+							   ginstate->supportCollation[entry->attnum - 1],
+											  entry->queryKey,
+											  datum[off - 1],
+											  UInt16GetDatum(entry->strategy),
+										PointerGetDatum(entry->extra_data)));
 		if (cmp == 0)
 			return true;
 		else if (cmp > 0)
@@ -878,27 +1198,20 @@ matchPartialInPendingList(GinState *ginstate, Page page,
 	return false;
 }
 
-static bool
-hasAllMatchingKeys(GinScanOpaque so, pendingPosition *pos)
-{
-	int			i;
-
-	for (i = 0; i < so->nkeys; i++)
-		if (pos->hasMatchKey[i] == false)
-			return false;
-
-	return true;
-}
-
 /*
- * Sets entryRes array for each key by looking at
- * every entry per indexed value (heap's row) in pending list.
- * returns true if at least one of datum was matched by key's entry
+ * Set up the entryRes array for each key by looking at
+ * every entry for current heap row in pending list.
+ *
+ * Returns true if each scan key has at least one entryRes match.
+ * This corresponds to the situations where the normal index search will
+ * try to apply the key's consistentFn.  (A tuple not meeting that requirement
+ * cannot be returned by the normal search since no entry stream will
+ * source its TID.)
  *
  * The pendingBuffer is presumed pinned and share-locked on entry.
  */
 static bool
-collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
+collectMatchesForHeapRow(IndexScanDesc scan, pendingPosition *pos)
 {
 	GinScanOpaque so = (GinScanOpaque) scan->opaque;
 	OffsetNumber attrnum;
@@ -908,7 +1221,7 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 				j;
 
 	/*
-	 * Resets entryRes
+	 * Reset all entryRes and hasMatchKey flags
 	 */
 	for (i = 0; i < so->nkeys; i++)
 	{
@@ -918,13 +1231,19 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 	}
 	memset(pos->hasMatchKey, FALSE, so->nkeys);
 
+	/*
+	 * Outer loop iterates over multiple pending-list pages when a single heap
+	 * row has entries spanning those pages.
+	 */
 	for (;;)
 	{
 		Datum		datum[BLCKSZ / sizeof(IndexTupleData)];
+		GinNullCategory category[BLCKSZ / sizeof(IndexTupleData)];
 		bool		datumExtracted[BLCKSZ / sizeof(IndexTupleData)];
 
 		Assert(pos->lastOffset > pos->firstOffset);
-		memset(datumExtracted + pos->firstOffset - 1, 0, sizeof(bool) * (pos->lastOffset - pos->firstOffset));
+		memset(datumExtracted + pos->firstOffset - 1, 0,
+			   sizeof(bool) * (pos->lastOffset - pos->firstOffset));
 
 		page = BufferGetPage(pos->pendingBuffer);
 
@@ -934,128 +1253,174 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 
 			for (j = 0; j < key->nentries; j++)
 			{
+				GinScanEntry entry = key->scanEntry[j];
 				OffsetNumber StopLow = pos->firstOffset,
 							StopHigh = pos->lastOffset,
 							StopMiddle;
-				GinScanEntry entry = key->scanEntry + j;
 
-				/* already true - do not extra work */
+				/* If already matched on earlier page, do no extra work */
 				if (key->entryRes[j])
 					continue;
 
 				/*
-				 * Interested tuples are from pos->firstOffset to
+				 * Interesting tuples are from pos->firstOffset to
 				 * pos->lastOffset and they are ordered by (attnum, Datum) as
-				 * it's done in entry tree So we could use binary search to
-				 * prevent linear scanning
+				 * it's done in entry tree.  So we can use binary search to
+				 * avoid linear scanning.
 				 */
 				while (StopLow < StopHigh)
 				{
+					int			res;
+
 					StopMiddle = StopLow + ((StopHigh - StopLow) >> 1);
 
 					itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, StopMiddle));
+
 					attrnum = gintuple_get_attrnum(&so->ginstate, itup);
 
 					if (key->attnum < attrnum)
+					{
 						StopHigh = StopMiddle;
-					else if (key->attnum > attrnum)
+						continue;
+					}
+					if (key->attnum > attrnum)
+					{
 						StopLow = StopMiddle + 1;
+						continue;
+					}
+
+					if (datumExtracted[StopMiddle - 1] == false)
+					{
+						datum[StopMiddle - 1] =
+							gintuple_get_key(&so->ginstate, itup,
+											 &category[StopMiddle - 1]);
+						datumExtracted[StopMiddle - 1] = true;
+					}
+
+					if (entry->queryCategory == GIN_CAT_EMPTY_QUERY)
+					{
+						/* special behavior depending on searchMode */
+						if (entry->searchMode == GIN_SEARCH_MODE_ALL)
+						{
+							/* match anything except NULL_ITEM */
+							if (category[StopMiddle - 1] == GIN_CAT_NULL_ITEM)
+								res = -1;
+							else
+								res = 0;
+						}
+						else
+						{
+							/* match everything */
+							res = 0;
+						}
+					}
 					else
 					{
-						int			res;
-
-						if (datumExtracted[StopMiddle - 1] == false)
-						{
-							datum[StopMiddle - 1] = gin_index_getattr(&so->ginstate, itup);
-							datumExtracted[StopMiddle - 1] = true;
-						}
-						res = compareEntries(&so->ginstate,
-											 entry->attnum,
-											 entry->entry,
-											 datum[StopMiddle - 1]);
-
-						if (res == 0)
-						{
-							/*
-							 * The exact match causes, so we just scan from
-							 * current position to find a partial match. See
-							 * comment above about tuple's ordering.
-							 */
-							if (entry->isPartialMatch)
-								key->entryRes[j] =
-									matchPartialInPendingList(&so->ginstate,
-															page, StopMiddle,
-															  pos->lastOffset,
-															  entry->entry,
-															  entry->attnum,
-															  datum,
-															  datumExtracted,
-															  entry->strategy,
-														  entry->extra_data);
-							else
-								key->entryRes[j] = true;
-							break;
-						}
-						else if (res < 0)
-							StopHigh = StopMiddle;
-						else
-							StopLow = StopMiddle + 1;
+						res = ginCompareEntries(&so->ginstate,
+												entry->attnum,
+												entry->queryKey,
+												entry->queryCategory,
+												datum[StopMiddle - 1],
+												category[StopMiddle - 1]);
 					}
+
+					if (res == 0)
+					{
+						/*
+						 * Found exact match (there can be only one, except in
+						 * EMPTY_QUERY mode).
+						 *
+						 * If doing partial match, scan forward from here to
+						 * end of page to check for matches.
+						 *
+						 * See comment above about tuple's ordering.
+						 */
+						if (entry->isPartialMatch)
+							key->entryRes[j] =
+								matchPartialInPendingList(&so->ginstate,
+														  page,
+														  StopMiddle,
+														  pos->lastOffset,
+														  entry,
+														  datum,
+														  category,
+														  datumExtracted);
+						else
+							key->entryRes[j] = true;
+
+						/* done with binary search */
+						break;
+					}
+					else if (res < 0)
+						StopHigh = StopMiddle;
+					else
+						StopLow = StopMiddle + 1;
 				}
 
 				if (StopLow >= StopHigh && entry->isPartialMatch)
 				{
 					/*
-					 * The exact match wasn't found, so we need to start scan
-					 * from first tuple greater then current entry See comment
-					 * above about tuple's ordering.
+					 * No exact match on this page.  If doing partial match,
+					 * scan from the first tuple greater than target value to
+					 * end of page.  Note that since we don't remember whether
+					 * the comparePartialFn told us to stop early on a
+					 * previous page, we will uselessly apply comparePartialFn
+					 * to the first tuple on each subsequent page.
 					 */
 					key->entryRes[j] =
 						matchPartialInPendingList(&so->ginstate,
-												  page, StopHigh,
+												  page,
+												  StopHigh,
 												  pos->lastOffset,
-												  entry->entry,
-												  entry->attnum,
+												  entry,
 												  datum,
-												  datumExtracted,
-												  entry->strategy,
-												  entry->extra_data);
+												  category,
+												  datumExtracted);
 				}
 
 				pos->hasMatchKey[i] |= key->entryRes[j];
 			}
 		}
 
+		/* Advance firstOffset over the scanned tuples */
 		pos->firstOffset = pos->lastOffset;
 
 		if (GinPageHasFullRow(page))
 		{
 			/*
-			 * We scan all values from one tuple, go to next one
+			 * We have examined all pending entries for the current heap row.
+			 * Break out of loop over pages.
 			 */
-
-			return hasAllMatchingKeys(so, pos);
+			break;
 		}
 		else
 		{
+			/*
+			 * Advance to next page of pending entries for the current heap
+			 * row.  Complain if there isn't one.
+			 */
 			ItemPointerData item = pos->item;
 
-			/*
-			 * need to get next portion of tuples of row containing on several
-			 * pages
-			 */
-
-			if (scanGetCandidate(scan, pos) == false || !ItemPointerEquals(&pos->item, &item))
-				elog(ERROR, "Could not process tuple"); /* XXX should not be
-														 * here ! */
+			if (scanGetCandidate(scan, pos) == false ||
+				!ItemPointerEquals(&pos->item, &item))
+				elog(ERROR, "could not find additional pending pages for same heap tuple");
 		}
 	}
 
-	return hasAllMatchingKeys(so, pos);
+	/*
+	 * Now return "true" if all scan keys have at least one matching datum
+	 */
+	for (i = 0; i < so->nkeys; i++)
+	{
+		if (pos->hasMatchKey[i] == false)
+			return false;
+	}
+
+	return true;
 }
 
 /*
- * Collect all matched rows from pending list in bitmap
+ * Collect all matched rows from pending list into bitmap
  */
 static void
 scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
@@ -1063,7 +1428,6 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 	GinScanOpaque so = (GinScanOpaque) scan->opaque;
 	MemoryContext oldCtx;
 	bool		recheck,
-				keyrecheck,
 				match;
 	int			i;
 	pendingPosition pos;
@@ -1099,16 +1463,18 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 	while (scanGetCandidate(scan, &pos))
 	{
 		/*
-		 * Check entries in tuple and setup entryRes array If tuples of heap's
-		 * row are placed on several pages collectDatumForItem will read all
-		 * of that pages.
+		 * Check entries in tuple and set up entryRes array.
+		 *
+		 * If pending tuples belonging to the current heap row are spread
+		 * across several pages, collectMatchesForHeapRow will read all of
+		 * those pages.
 		 */
-		if (!collectDatumForItem(scan, &pos))
+		if (!collectMatchesForHeapRow(scan, &pos))
 			continue;
 
 		/*
-		 * Matching of entries of one row is finished, so check row by
-		 * consistent function.
+		 * Matching of entries of one row is finished, so check row using
+		 * consistent functions.
 		 */
 		oldCtx = MemoryContextSwitchTo(so->tempCtx);
 		recheck = false;
@@ -1118,21 +1484,12 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 		{
 			GinScanKey	key = so->keys + i;
 
-			keyrecheck = true;
-
-			if (!DatumGetBool(FunctionCall6(&so->ginstate.consistentFn[key->attnum - 1],
-											PointerGetDatum(key->entryRes),
-											UInt16GetDatum(key->strategy),
-											key->query,
-											UInt32GetDatum(key->nentries),
-											PointerGetDatum(key->extra_data),
-											PointerGetDatum(&keyrecheck))))
+			if (!callConsistentFn(&so->ginstate, key))
 			{
 				match = false;
 				break;
 			}
-
-			recheck |= keyrecheck;
+			recheck |= key->recheckCurItem;
 		}
 
 		MemoryContextSwitchTo(oldCtx);
@@ -1148,84 +1505,9 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 	pfree(pos.hasMatchKey);
 }
 
-/*
- * Get heap item pointer from scan
- * returns true if found
- */
-static bool
-scanGetItem(IndexScanDesc scan, ItemPointerData *item, bool *recheck)
-{
-	GinScanOpaque so = (GinScanOpaque) scan->opaque;
-	uint32		i;
-	bool		keyrecheck;
-
-	/*
-	 * We return recheck = true if any of the keyGetItem calls return
-	 * keyrecheck = true.  Note that because the second loop might advance
-	 * some keys, this could theoretically be too conservative.  In practice
-	 * though, we expect that a consistentFn's recheck result will depend only
-	 * on the operator and the query, so for any one key it should stay the
-	 * same regardless of advancing to new items.  So it's not worth working
-	 * harder.
-	 */
-	*recheck = false;
-
-	ItemPointerSetMin(item);
-	for (i = 0; i < so->nkeys; i++)
-	{
-		GinScanKey	key = so->keys + i;
-
-		if (keyGetItem(scan->indexRelation, &so->ginstate, so->tempCtx,
-					   key, &keyrecheck))
-			return FALSE;		/* finished one of keys */
-		if (compareItemPointers(item, &key->curItem) < 0)
-			*item = key->curItem;
-		*recheck |= keyrecheck;
-	}
-
-	for (i = 1; i <= so->nkeys; i++)
-	{
-		GinScanKey	key = so->keys + i - 1;
-
-		for (;;)
-		{
-			int			cmp = compareItemPointers(item, &key->curItem);
-
-			if (cmp != 0 && (ItemPointerIsLossyPage(item) || ItemPointerIsLossyPage(&key->curItem)))
-			{
-				/*
-				 * if one of ItemPointers points to the whole page then
-				 * compare only page's number
-				 */
-				if (ItemPointerGetBlockNumber(item) == ItemPointerGetBlockNumber(&key->curItem))
-					cmp = 0;
-				else
-					cmp = (ItemPointerGetBlockNumber(item) > ItemPointerGetBlockNumber(&key->curItem)) ? 1 : -1;
-			}
-
-			if (cmp == 0)
-				break;
-			else if (cmp > 0)
-			{
-				if (keyGetItem(scan->indexRelation, &so->ginstate, so->tempCtx,
-							   key, &keyrecheck))
-					return FALSE;		/* finished one of keys */
-				*recheck |= keyrecheck;
-			}
-			else
-			{					/* returns to begin */
-				*item = key->curItem;
-				i = 0;
-				break;
-			}
-		}
-	}
-
-	return TRUE;
-}
 
 #define GinIsNewKey(s)		( ((GinScanOpaque) scan->opaque)->keys == NULL )
-#define GinIsVoidRes(s)		( ((GinScanOpaque) scan->opaque)->isVoidRes == true )
+#define GinIsVoidRes(s)		( ((GinScanOpaque) scan->opaque)->isVoidRes )
 
 Datum
 gingetbitmap(PG_FUNCTION_ARGS)
@@ -1245,11 +1527,14 @@ gingetbitmap(PG_FUNCTION_ARGS)
 	else
 		tbm = (TIDBitmap *)n;
 
+	/*
+	 * Set up the scan keys, and check for unsatisfiable query.
+	 */
 	if (GinIsNewKey(scan))
-		newScanKey(scan);
+		ginNewScanKey(scan);
 
 	if (GinIsVoidRes(scan))
-		PG_RETURN_INT64(0);
+		PG_RETURN_POINTER(tbm);
 
 	ntids = 0;
 
@@ -1276,7 +1561,7 @@ gingetbitmap(PG_FUNCTION_ARGS)
 	{
 		CHECK_FOR_INTERRUPTS();
 
-		if (!scanGetItem(scan, &iptr, &recheck))
+		if (!scanGetItem(scan, &iptr, &iptr, &recheck))
 			break;
 
 		if (ItemPointerIsLossyPage(&iptr))

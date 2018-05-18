@@ -9,14 +9,14 @@
  * contains variables.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.88 2010/07/08 00:14:03 tgl Exp $
+ *	  src/backend/optimizer/util/var.c
  *
  *-------------------------------------------------------------------------
  */
@@ -726,7 +726,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
  * entries might now be arbitrary expressions, not just Vars.  This affects
  * this function in one important way: we might find ourselves inserting
  * SubLink expressions into subqueries, and we must make sure that their
- * Query.hasSubLinks fields get set to TRUE if so.  If there are any
+ * Query.hasSubLinks fields get set to TRUE if so.	If there are any
  * SubLinks in the join alias lists, the outer Query should already have
  * hasSubLinks = TRUE, so this is only relevant to un-flattened subqueries.
  *
@@ -870,6 +870,7 @@ flatten_join_alias_vars_mutator(Node *node,
 	/* Shouldn't need to handle these planner auxiliary nodes here */
 	Assert(!IsA(node, SpecialJoinInfo));
 	Assert(!IsA(node, PlaceHolderInfo));
+	Assert(!IsA(node, MinMaxAggInfo));
 
 	return expression_tree_mutator(node, flatten_join_alias_vars_mutator,
 								   (void *) context);

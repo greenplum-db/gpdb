@@ -3,10 +3,10 @@
  * rewriteheap.h
  *	  Declarations for heap rewrite support functions
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/rewriteheap.h,v 1.7 2010/01/02 16:58:00 momjian Exp $
+ * src/include/access/rewriteheap.h
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,6 @@ extern RewriteState begin_heap_rewrite(Relation NewHeap,
 extern void end_heap_rewrite(RewriteState state);
 extern void rewrite_heap_tuple(RewriteState state, HeapTuple oldTuple,
 				   HeapTuple newTuple);
-extern void rewrite_heap_dead_tuple(RewriteState state, HeapTuple oldTuple);
+extern bool rewrite_heap_dead_tuple(RewriteState state, HeapTuple oldTuple);
 
 #endif   /* REWRITE_HEAP_H */

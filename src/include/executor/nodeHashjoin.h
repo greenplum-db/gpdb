@@ -4,10 +4,10 @@
  *	  prototypes for nodeHashjoin.c
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeHashjoin.h,v 1.40 2010/01/02 16:58:03 momjian Exp $
+ * src/include/executor/nodeHashjoin.h
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,7 @@
 extern HashJoinState *ExecInitHashJoin(HashJoin *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecHashJoin(HashJoinState *node);
 extern void ExecEndHashJoin(HashJoinState *node);
-extern void ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt);
+extern void ExecReScanHashJoin(HashJoinState *node);
 
 extern void ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 								  HashJoinTable hashtable, ExecWorkFile **fileptr,

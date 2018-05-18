@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/fetch.sgml,v 1.47 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/fetch.sgml
 PostgreSQL documentation
 -->
 
@@ -25,6 +25,7 @@ PostgreSQL documentation
  </indexterm>
 
  <refsynopsisdiv>
+<!-- Note the "direction" bit is also in ref/move.sgml -->
 <synopsis>
 FETCH [ <replaceable class="PARAMETER">direction</replaceable> [ FROM | IN ] ] <replaceable class="PARAMETER">cursor_name</replaceable>
 
@@ -378,7 +379,7 @@ FETCH PRIOR FROM liahona;
 CLOSE liahona;
 COMMIT WORK;
 </programlisting>
-  </para>        
+  </para>
  </refsect1>
 
  <refsect1>

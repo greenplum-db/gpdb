@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeLimit.c,v 1.41 2010/01/02 16:57:42 momjian Exp $
+ *	  src/backend/executor/nodeLimit.c
  *
  *-------------------------------------------------------------------------
  */
@@ -26,8 +26,10 @@
 #include "cdb/cdbvars.h"
 #include "executor/executor.h"
 #include "executor/nodeLimit.h"
+#include "nodes/nodeFuncs.h"
 
 static void recompute_limits(LimitState *node);
+static void pass_down_bound(LimitState *node, PlanState *child_node);
 
 
 /* ----------------------------------------------------------------
@@ -307,23 +309,32 @@ recompute_limits(LimitState *node)
 	/* Set state-machine state */
 	node->lstate = LIMIT_RESCAN;
 
-	/*
-	 * If we have a COUNT, and our input is a Sort node, notify it that it can
-	 * use bounded sort.
-	 *
-	 * This is a bit of a kluge, but we don't have any more-abstract way of
-	 * communicating between the two nodes; and it doesn't seem worth trying
-	 * to invent one without some more examples of special communication
-	 * needs.
-	 *
-	 * Note: it is the responsibility of nodeSort.c to react properly to
-	 * changes of these parameters.  If we ever do redesign this, it'd be a
-	 * good idea to integrate this signaling with the parameter-change
-	 * mechanism.
-	 */
-	if (IsA(outerPlanState(node), SortState))
+	/* Notify child node about limit, if useful */
+	pass_down_bound(node, outerPlanState(node));
+}
+
+/*
+ * If we have a COUNT, and our input is a Sort node, notify it that it can
+ * use bounded sort.  Also, if our input is a MergeAppend, we can apply the
+ * same bound to any Sorts that are direct children of the MergeAppend,
+ * since the MergeAppend surely need read no more than that many tuples from
+ * any one input.  We also have to be prepared to look through a Result,
+ * since the planner might stick one atop MergeAppend for projection purposes.
+ *
+ * This is a bit of a kluge, but we don't have any more-abstract way of
+ * communicating between the two nodes; and it doesn't seem worth trying
+ * to invent one without some more examples of special communication needs.
+ *
+ * Note: it is the responsibility of nodeSort.c to react properly to
+ * changes of these parameters.  If we ever do redesign this, it'd be a
+ * good idea to integrate this signaling with the parameter-change mechanism.
+ */
+static void
+pass_down_bound(LimitState *node, PlanState *child_node)
+{
+	if (IsA(child_node, SortState))
 	{
-		SortState  *sortState = (SortState *) outerPlanState(node);
+		SortState  *sortState = (SortState *) child_node;
 		int64		tuples_needed = node->count + node->offset;
 
 		/* negative test checks for overflow */
@@ -337,6 +348,31 @@ recompute_limits(LimitState *node)
 			sortState->bounded = true;
 			sortState->bound = tuples_needed;
 		}
+	}
+	else if (IsA(child_node, MergeAppendState))
+	{
+		MergeAppendState *maState = (MergeAppendState *) child_node;
+		int			i;
+
+		for (i = 0; i < maState->ms_nplans; i++)
+			pass_down_bound(node, maState->mergeplans[i]);
+	}
+	else if (IsA(child_node, ResultState))
+	{
+		/*
+		 * An extra consideration here is that if the Result is projecting a
+		 * targetlist that contains any SRFs, we can't assume that every input
+		 * tuple generates an output tuple, so a Sort underneath might need to
+		 * return more than N tuples to satisfy LIMIT N. So we cannot use
+		 * bounded sort.
+		 *
+		 * If Result supported qual checking, we'd have to punt on seeing a
+		 * qual, too.  Note that having a resconstantqual is not a
+		 * showstopper: if that fails we're not getting any rows at all.
+		 */
+		if (outerPlanState(child_node) &&
+			!expression_returns_set((Node *) child_node->plan->targetlist))
+			pass_down_bound(node, outerPlanState(child_node));
 	}
 }
 
@@ -420,7 +456,7 @@ ExecEndLimit(LimitState *node)
 
 
 void
-ExecReScanLimit(LimitState *node, ExprContext *exprCtxt)
+ExecReScanLimit(LimitState *node)
 {
 	/*
 	 * Recompute limit/offset in case parameters changed, and reset the state
@@ -433,6 +469,6 @@ ExecReScanLimit(LimitState *node, ExprContext *exprCtxt)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	if (node->ps.lefttree->chgParam == NULL)
+		ExecReScan(node->ps.lefttree);
 }

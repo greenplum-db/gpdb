@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_schema.sgml,v 1.12 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_schema.sgml
 PostgreSQL documentation
 -->
 
@@ -81,7 +81,7 @@ ALTER SCHEMA <replaceable>name</replaceable> OWNER TO <replaceable>new_owner</re
 
  <refsect1>
   <title>Compatibility</title>
-    
+
   <para>
    There is no <command>ALTER SCHEMA</command> statement in the SQL
    standard.

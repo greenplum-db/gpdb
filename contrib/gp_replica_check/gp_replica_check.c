@@ -30,9 +30,12 @@
 /*
  * Not all the FSM and VM changes are WAL-logged and its OK if they are out of
  * date. So it is OK to skip them for consistency check.
+ *
+ * Temporary tables (starting with "t_") shouldn't be replicated anyway.
  */
 
 #define should_skip(filename)	(pg_strncasecmp(filename, "pg", 2) == 0 \
+								|| pg_strncasecmp(filename, "t_", 2) == 0 \
 								|| pg_strncasecmp(filename, ".", 1) == 0 \
 								|| pg_strncasecmp(filename + strlen(filename) - 4, "_fsm", 4) == 0 \
 								|| pg_strncasecmp(filename + strlen(filename) - 3, "_vm", 3) == 0)

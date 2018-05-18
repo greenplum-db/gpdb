@@ -1,9 +1,4 @@
-libpgcrypto.a
-libpgcrypto.so
-libpgcrypto.so.0
-libpgcrypto.so.0.0
-log
-tmp_check
-/pgcrypto.sql
 # Generated subdirectories
+/log/
 /results/
+/tmp_check/

@@ -715,8 +715,8 @@ gpqeid_next_param(char **cpp, char **npp)
  * inherited from the postmaster; etc; so don't try to do too much in here.
  */
 void
-			cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
-										const char *gpqeid_value)
+cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
+							const char *gpqeid_value)
 {
 	char	   *gpqeid = pstrdup(gpqeid_value);
 	char	   *cp;

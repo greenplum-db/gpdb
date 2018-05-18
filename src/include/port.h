@@ -3,10 +3,10 @@
  * port.h
  *	  Header for src/port/ compatibility functions.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/port.h,v 1.134 2010/05/15 14:44:13 tgl Exp $
+ * src/include/port.h
  *
  *-------------------------------------------------------------------------
  */
@@ -36,12 +36,13 @@ extern bool pg_set_block(pgsocket sock);
 
 extern char *first_dir_separator(const char *filename);
 extern char *last_dir_separator(const char *filename);
-extern char *first_path_separator(const char *pathlist);
+extern char *first_path_var_separator(const char *pathlist);
 extern void join_path_components(char *ret_path,
 					 const char *head, const char *tail);
 extern void canonicalize_path(char *path);
 extern void make_native_path(char *path);
 extern bool path_contains_parent_reference(const char *path);
+extern bool path_is_relative_and_below_cwd(const char *path);
 extern bool path_is_prefix_of_path(const char *path1, const char *path2);
 extern const char *get_progname(const char *argv0);
 extern void get_share_path(const char *my_exec_path, char *ret_path);
@@ -153,6 +154,8 @@ extern int	pg_strcasecmp(const char *s1, const char *s2);
 extern int	pg_strncasecmp(const char *s1, const char *s2, size_t n);
 extern unsigned char pg_toupper(unsigned char ch);
 extern unsigned char pg_tolower(unsigned char ch);
+extern unsigned char pg_ascii_toupper(unsigned char ch);
+extern unsigned char pg_ascii_tolower(unsigned char ch);
 
 #ifdef USE_REPL_SNPRINTF
 
@@ -179,25 +182,34 @@ extern unsigned char pg_tolower(unsigned char ch);
 #ifdef printf
 #undef printf
 #endif
+/*
+ * Versions of libintl >= 0.18? try to replace setlocale() with a macro
+ * to their own versions.  Remove the macro, if it exists, because it
+ * ends up calling the wrong version when the backend and libintl use
+ * different versions of msvcrt.
+ */
+#if defined(setlocale) && defined(WIN32)
+#undef setlocale
+#endif
 
 extern int	pg_vsnprintf(char *str, size_t count, const char *fmt, va_list args);
 extern int
 pg_snprintf(char *str, size_t count, const char *fmt,...)
 /* This extension allows gcc to check the format string */
-__attribute__((format(printf, 3, 4)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 extern int
 pg_sprintf(char *str, const char *fmt,...)
 /* This extension allows gcc to check the format string */
-__attribute__((format(printf, 2, 3)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 extern int	pg_vfprintf(FILE *stream, const char *fmt, va_list args);
 extern int
 pg_fprintf(FILE *stream, const char *fmt,...)
 /* This extension allows gcc to check the format string */
-__attribute__((format(printf, 2, 3)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 extern int
 pg_printf(const char *fmt,...)
 /* This extension allows gcc to check the format string */
-__attribute__((format(printf, 1, 2)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 /*
  *	The GCC-specific code below prevents the __attribute__(... 'printf')
@@ -297,11 +309,12 @@ extern int	pgunlink(const char *path);
  */
 #if defined(WIN32) && !defined(__CYGWIN__)
 extern int	pgsymlink(const char *oldpath, const char *newpath);
+extern int	pgreadlink(const char *path, char *buf, size_t size);
+extern bool pgwin32_is_junction(char *path);
 
 #define symlink(oldpath, newpath)	pgsymlink(oldpath, newpath)
+#define readlink(path, buf, size)	pgreadlink(path, buf, size)
 #endif
-
-extern void copydir(char *fromdir, char *todir, bool recurse);
 
 extern bool rmtree(const char *path, bool rmtopdir);
 
@@ -337,8 +350,12 @@ extern FILE *pgwin32_fopen(const char *, const char *);
 #define		fopen(a,b) pgwin32_fopen(a,b)
 #endif
 
+#ifndef popen
 #define popen(a,b) _popen(a,b)
+#endif
+#ifndef pclose
 #define pclose(a) _pclose(a)
+#endif
 
 /* New versions of MingW have gettimeofday, old mingw and msvc don't */
 #ifndef HAVE_GETTIMEOFDAY
@@ -387,8 +404,8 @@ extern void srand48(long seed);
 extern int	getopt(int nargc, char *const * nargv, const char *ostr);
 #endif
 
-#if !defined(HAVE_GETPEEREID) || defined(_AIX)
-extern int getpeereid(int sock, uid_t *uid, gid_t *gid);
+#if !defined(HAVE_GETPEEREID) && !defined(WIN32)
+extern int	getpeereid(int sock, uid_t *uid, gid_t *gid);
 #endif
 
 #ifndef HAVE_ISINF
@@ -459,7 +476,17 @@ extern void qsort_arg(void *base, size_t nel, size_t elsize,
 		  qsort_arg_comparator cmp, void *arg);
 
 /* port/chklocale.c */
-extern int	pg_get_encoding_from_locale(const char *ctype);
+extern int	pg_get_encoding_from_locale(const char *ctype, bool write_message);
+
+/* port/inet_net_ntop.c */
+extern char *inet_net_ntop(int af, const void *src, int bits,
+			  char *dst, size_t size);
+
+/* port/pgcheckdir.c */
+extern int	pg_check_dir(const char *dir);
+
+/* port/pgmkdirp.c */
+extern int	pg_mkdir_p(char *path, int omode);
 
 /* port/inet_net_ntop.c */
 extern char *inet_net_ntop(int af, const void *src, int bits,

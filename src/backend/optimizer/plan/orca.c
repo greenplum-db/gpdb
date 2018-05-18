@@ -30,6 +30,7 @@
 #include "optimizer/planner.h"
 #include "optimizer/transform.h"
 #include "portability/instr_time.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 
 /* GPORCA entry point */

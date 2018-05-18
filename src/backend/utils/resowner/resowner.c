@@ -9,12 +9,12 @@
  * See utils/resowner/README for more info.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/resowner/resowner.c,v 1.34 2010/01/02 16:57:58 momjian Exp $
+ *	  src/backend/utils/resowner/resowner.c
  *
  *-------------------------------------------------------------------------
  */
@@ -23,6 +23,7 @@
 #include "access/hash.h"
 #include "cdb/cdbvars.h"
 #include "storage/bufmgr.h"
+#include "storage/predicate.h"
 #include "storage/proc.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -99,7 +100,7 @@ typedef struct ResourceOwnerData
 	int			nfiles;			/* number of owned temporary files */
 	File	   *files;			/* dynamically allocated array */
 	int			maxfiles;		/* currently allocated array size */
-} ResourceOwnerData;
+}	ResourceOwnerData;
 
 
 /*****************************************************************************
@@ -294,6 +295,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 			if (owner == TopTransactionResourceOwner)
 			{
 				ProcReleaseLocks(isCommit);
+				ReleasePredicateLocks(isCommit);
 				
 				if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
  					ResLockWaitCancel();

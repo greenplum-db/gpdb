@@ -280,6 +280,8 @@ void
 cdbdisp_dumpDispatchResults(struct CdbDispatchResults *gangResults,
 							ErrorData **qeError);
 
+extern ErrorData *cdbdisp_get_PQerror(struct pg_result *pgresult);
+
 /*
  * Return sum of the cmdTuples values from CdbDispatchResult
  * entries that have a successful PGresult.  If sliceIndex >= 0,

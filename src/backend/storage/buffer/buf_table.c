@@ -10,12 +10,12 @@
  * before the lock is released (see notes in README).
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/buf_table.c,v 1.52 2010/04/28 16:54:15 tgl Exp $
+ *	  src/backend/storage/buffer/buf_table.c
  *
  *-------------------------------------------------------------------------
  */

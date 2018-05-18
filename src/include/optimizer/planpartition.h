@@ -19,7 +19,11 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 
-extern bool inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path, Plan **inner_plan_p);
+extern bool inject_partition_selectors_for_join(PlannerInfo *root,
+									JoinPath *join_path,
+									List **partSelectors_p);
+
+extern Plan *create_partition_selector_plan(PlannerInfo *root, PartitionSelectorPath *pspath);
 
 extern RestrictInfo *make_mergeclause(Node *outer, Node *inner);
 

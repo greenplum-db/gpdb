@@ -31,11 +31,11 @@
  * be infrequent enough that more-detailed tracking is not worth the effort.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/plancache.c,v 1.35 2010/02/26 02:01:11 momjian Exp $
+ *	  src/backend/utils/cache/plancache.c
  *
  *-------------------------------------------------------------------------
  */
@@ -542,8 +542,8 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 		TupleDesc	resultDesc;
 
 		/*
-		 * Restore the search_path that was in use when the plan was made.
-		 * See comments for PushOverrideSearchPath about limitations of this.
+		 * Restore the search_path that was in use when the plan was made. See
+		 * comments for PushOverrideSearchPath about limitations of this.
 		 *
 		 * (XXX is there anything else we really need to restore?)
 		 */
@@ -1051,6 +1051,7 @@ PlanCacheComputeResultDesc(List *stmt_list)
 	switch (ChoosePortalStrategy(stmt_list))
 	{
 		case PORTAL_ONE_SELECT:
+		case PORTAL_ONE_MOD_WITH:
 			node = (Node *) linitial(stmt_list);
 			if (IsA(node, Query))
 			{

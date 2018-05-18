@@ -172,16 +172,15 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 
 /* Rescan AssertOp */
 void
-ExecReScanAssertOp(AssertOpState *node, ExprContext *exprCtxt)
+ExecReScanAssertOp(AssertOpState *node)
 {
 	/*
 	 * If chgParam of subnode is not null then plan will be re-scanned by
-	 * first ExecProcNode.  However, if caller is passing us an exprCtxt
-	 * then forcibly rescan the subnode now, so that we can pass the
-	 * exprCtxt down to the subnode (needed for gated indexscan).
+	 * first ExecProcNode.
 	 */
-	if (node->ps.lefttree->chgParam == NULL || exprCtxt != NULL)
-		ExecReScan(node->ps.lefttree, exprCtxt);
+	if (node->ps.lefttree &&
+		node->ps.lefttree->chgParam == NULL)
+		ExecReScan(node->ps.lefttree);
 }
 
 /* Release Resources Requested by AssertOp node. */

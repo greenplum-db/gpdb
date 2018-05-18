@@ -1,28 +1,15 @@
-current_good_schedule
-libregress.so
-libregress.so.0
-libregress.so.0.0
-regress.so
-regression.diffs
-regression.out
-config.ini
-pgbouncer.log
-pgbouncer.pid
-
 # Local binaries
 /pg_regress
-/twophase_pqexecparams
-GPTest.pm
 
 # Generated subdirectories
 /tmp_check/
 /results/
 /log/
 
+# Configure-generated files
+/GPTest.pm
+
 data/wet_csv?.tbl
 data/wet_text?.tbl
 data/wet_syntax?.tbl
 data/wet_execute.tbl
-
-stdin
-stdout

@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/pg_archivecleanup/pg_archivecleanup.c,v 1.3 2010/07/06 19:18:55 momjian Exp $
+ * contrib/pg_archivecleanup/pg_archivecleanup.c
  *
  * pg_archivecleanup.c
  *
@@ -18,15 +18,15 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#ifdef WIN32
-int			getopt(int argc, char *const argv[], const char *optstring);
-#else
+#ifndef WIN32
 #include <sys/time.h>
 #include <unistd.h>
 
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#else							/* WIN32 */
+extern int	getopt(int argc, char *const argv[], const char *optstring);
 #endif   /* ! WIN32 */
 
 extern char *optarg;
@@ -117,12 +117,8 @@ CleanupPriorWALFiles(void)
 			strspn(xlde->d_name, "0123456789ABCDEF") == XLOG_DATA_FNAME_LEN &&
 				strcmp(xlde->d_name + 8, exclusiveCleanupFileName + 8) < 0)
 			{
-#ifdef WIN32
-				snprintf(WALFilePath, MAXPGPATH, "%s\\%s", archiveLocation, xlde->d_name);
-#else
-				snprintf(WALFilePath, MAXPGPATH, "%s/%s", archiveLocation, xlde->d_name);
-#endif
-
+				snprintf(WALFilePath, MAXPGPATH, "%s/%s",
+						 archiveLocation, xlde->d_name);
 				if (debug)
 					fprintf(stderr, "%s: removing file \"%s\"\n",
 							progname, WALFilePath);
@@ -207,19 +203,19 @@ usage(void)
 	printf("%s removes older WAL files from PostgreSQL archives.\n\n", progname);
 	printf("Usage:\n");
 	printf("  %s [OPTION]... ARCHIVELOCATION OLDESTKEPTWALFILE\n", progname);
-	printf("\n"
-		   "for use as an archive_cleanup_command in the recovery.conf when standby_mode = on:\n"
-		   "  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\n"
-		   "e.g.\n"
-		   "  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n");
-	printf("\n"
-		   "or for use as a standalone archive cleaner:\n"
-		   "e.g.\n"
-		   "  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n");
 	printf("\nOptions:\n");
 	printf("  -d                 generates debug output (verbose mode)\n");
 	printf("  --help             show this help, then exit\n");
 	printf("  --version          output version information, then exit\n");
+	printf("\n"
+		   "For use as archive_cleanup_command in recovery.conf when standby_mode = on:\n"
+		   "  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\n"
+		   "e.g.\n"
+		   "  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n");
+	printf("\n"
+		   "Or for use as a standalone archive cleaner:\n"
+		   "e.g.\n"
+		   "  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n");
 	printf("\nReport bugs to <pgsql-bugs@postgresql.org>.\n");
 }
 
@@ -308,8 +304,12 @@ main(int argc, char **argv)
 	SetWALFileNameForCleanup();
 
 	if (debug)
+	{
+		snprintf(WALFilePath, MAXPGPATH, "%s/%s",
+				 archiveLocation, exclusiveCleanupFileName);
 		fprintf(stderr, "%s: keep WAL file \"%s\" and later\n",
-				progname, exclusiveCleanupFileName);
+				progname, WALFilePath);
+	}
 
 	/*
 	 * Remove WAL files older than cut-off

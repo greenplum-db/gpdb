@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dump.sgml,v 1.117 2010/02/23 17:28:09 tgl Exp $
+doc/src/sgml/ref/pg_dump.sgml
 PostgreSQL documentation
 -->
 
@@ -76,11 +76,7 @@ PostgreSQL documentation
    database are to be restored. The most flexible output file format is
    the <quote>custom</quote> format (<option>-Fc</option>). It allows
    for selection and reordering of all archived items, and is compressed
-   by default. The <application>tar</application> format
-   (<option>-Ft</option>) is not compressed and has restrictions on
-   reordering data when loading, but it is otherwise quite flexible;
-   moreover, it can be manipulated with standard Unix tools such as
-   <command>tar</command>.
+   by default.
   </para>
 
   <para>
@@ -146,7 +142,8 @@ PostgreSQL documentation
       <listitem>
        <para>
         Output commands to clean (drop)
-        database objects prior to (the commands for) creating them.
+        database objects prior to outputting the commands for creating them.
+        (Restore might generate some harmless errors.)
        </para>
 
        <para>
@@ -194,8 +191,12 @@ PostgreSQL documentation
       <term><option>--file=<replaceable class="parameter">file</replaceable></option></term>
       <listitem>
        <para>
-        Send output to the specified file.  If this is omitted, the
-        standard output is used.
+        Send output to the specified file. This parameter can be omitted for
+        file based output formats, in which case the standard output is used.
+        It must be given for the directory output format however, where it
+        specifies the target directory instead of a file. In this case the
+        directory is created by <command>pg_dump</command> and must not exist
+        before.
        </para>
       </listitem>
      </varlistentry>
@@ -226,9 +227,28 @@ PostgreSQL documentation
           <para>
            Output a custom-format archive suitable for input into
            <application>pg_restore</application>.
-           This is the most flexible output format in that it allows manual
-           selection and reordering of archived items during restore.
-           This format is also compressed by default.
+           Together with the directory output format, this is the most flexible
+           output format in that it allows manual selection and reordering of
+           archived items during restore. This format is also compressed by
+           default.
+          </para>
+         </listitem>
+        </varlistentry>
+
+        <varlistentry>
+         <term><literal>d</></term>
+         <term><literal>directory</></term>
+         <listitem>
+          <para>
+           Output a directory-format archive suitable for input into
+           <application>pg_restore</application>. This will create a directory
+           with one file for each table and blob being dumped, plus a
+           so-called Table of Contents file describing the dumped objects in a
+           machine-readable format that <application>pg_restore</application>
+           can read. A directory format archive can be manipulated with
+           standard Unix tools; for example, files in an uncompressed archive
+           can be compressed with the <application>gzip</application> tool.
+           This format is compressed by default.
           </para>
          </listitem>
         </varlistentry>
@@ -239,13 +259,12 @@ PostgreSQL documentation
          <listitem>
           <para>
            Output a <command>tar</command>-format archive suitable for input
-           into <application>pg_restore</application>.
-           This output format allows manual selection and reordering of
-           archived items during restore, but there is a restriction: the
-           relative order of table data items cannot be changed during
-           restore.  Also, <command>tar</command> format does not support
-           compression and has a limit of 8 GB on the size of individual
-           tables.
+           into <application>pg_restore</application>. The tar-format is
+           compatible with the directory-format; extracting a tar-format
+           archive produces a valid directory-format archive.
+           However, the tar-format does not support compression and has a
+           limit of 8 GB on the size of individual tables. Also, the relative
+           order of table data items cannot be changed during restore.
           </para>
          </listitem>
         </varlistentry>
@@ -283,7 +302,8 @@ PostgreSQL documentation
         linkend="APP-PSQL-patterns" endterm="APP-PSQL-patterns-title">),
         so multiple schemas can also be selected by writing wildcard characters
         in the pattern.  When using wildcards, be careful to quote the pattern
-        if needed to prevent the shell from expanding the wildcards.
+        if needed to prevent the shell from expanding the wildcards;  see
+        <xref linkend="pg-dump-examples" endterm="pg-dump-examples-title">.
        </para>
 
        <note>
@@ -408,18 +428,29 @@ PostgreSQL documentation
       <term><option>--table=<replaceable class="parameter">table</replaceable></option></term>
       <listitem>
        <para>
-       Dump only tables (or views or sequences) matching the table pattern.
-       Specify the table in the format schema.table.
- 
-       Multiple tables can be selected by writing multiple -t switches. 
-       Also, the table parameter is interpreted as a pattern according 
-       to the same rules used by the <literal>\d</> commands in psql, so multiple tables 
-       can also be selected by writing wildcard characters in the pattern. 
-       When using wildcards, be careful to quote the pattern if needed 
-       to prevent the shell from expanding the wildcards. The -n and -N 
-       switches have no effect when -t is used, because tables
-       selected by -t will be dumped regardless of those switches, 
-       and non-table objects will not be dumped. 
+        Dump only tables (or views or sequences or foreign tables) matching the
+        <replaceable class="parameter">table</replaceable> pattern.
+        Specify the table in the format schema.table.
+       </para>
+
+       <para>
+        Multiple tables
+        can be selected by writing multiple <option>-t</> switches.  Also, the
+        <replaceable class="parameter">table</replaceable> parameter is
+        interpreted as a pattern according to the same rules used by
+        <application>psql</>'s <literal>\d</> commands (see <xref
+        linkend="APP-PSQL-patterns" endterm="APP-PSQL-patterns-title">),
+        so multiple tables can also be selected by writing wildcard characters
+        in the pattern.  When using wildcards, be careful to quote the pattern
+        if needed to prevent the shell from expanding the wildcards;  see
+        <xref linkend="pg-dump-examples" endterm="pg-dump-examples-title">.
+       </para>
+
+       <para>
+        The <option>-n</> and <option>-N</> switches have no effect when
+        <option>-t</> is used, because tables selected by <option>-t</> will
+        be dumped regardless of those switches, and non-table objects will not
+        be dumped.
        </para>
 
        <note>
@@ -529,25 +560,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>--inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands (rather
-        than <command>COPY</command>).  This will make restoration very slow;
-        it is mainly useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.
-        However, since this option generates a separate command for each row,
-        an error in reloading a row causes only that row to be lost rather
-        than the entire table contents.
-        Note that
-        the restore might fail altogether if you have rearranged column order.
-        The <option>--column-inserts</option> option is safe against column
-        order changes, though even slower.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>--column-inserts</option></term>
       <term><option>--attribute-inserts</option></term>
       <listitem>
@@ -604,6 +616,25 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>--inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands (rather
+        than <command>COPY</command>).  This will make restoration very slow;
+        it is mainly useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.
+        However, since this option generates a separate command for each row,
+        an error in reloading a row causes only that row to be lost rather
+        than the entire table contents.
+        Note that
+        the restore might fail altogether if you have rearranged column order.
+        The <option>--column-inserts</option> option is safe against column
+        order changes, though even slower.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--lock-wait-timeout=<replaceable class="parameter">timeout</replaceable></option></term>
       <listitem>
        <para>
@@ -615,6 +646,15 @@ PostgreSQL documentation
         version you are dumping from, but an integer number of milliseconds
         is accepted by all versions since 7.3.  This option is ignored when
         dumping from a pre-7.3 server.)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-security-labels</option></term>
+      <listitem>
+       <para>
+        Do not dump security labels.
        </para>
       </listitem>
      </varlistentry>
@@ -632,6 +672,63 @@ PostgreSQL documentation
         This option is only meaningful for the plain-text format.  For
         the archive formats, you can specify the option when you
         call <command>pg_restore</command>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-unlogged-table-data</option></term>
+      <listitem>
+       <para>
+        Do not dump the contents of unlogged tables.  This option has no
+        effect on whether or not the table definitions (schema) are dumped;
+        it only suppresses dumping the table data.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--quote-all-identifiers</></term>
+      <listitem>
+       <para>
+        Force quoting of all identifiers.  This may be useful when dumping a
+        database for migration to a future version that may have introduced
+        additional keywords.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--serializable-deferrable</option></term>
+      <listitem>
+       <para>
+        Use a <literal>serializable</literal> transaction for the dump, to
+        ensure that the snapshot used is consistent with later database
+        states; but do this by waiting for a point in the transaction stream
+        at which no anomalies can be present, so that there isn't a risk of
+        the dump failing or causing other transactions to roll back with a
+        <literal>serialization_failure</literal>.  See <xref linkend="mvcc">
+        for more information about transaction isolation and concurrency
+        control.
+       </para>
+
+       <para>
+        This option is not beneficial for a dump which is intended only for
+        disaster recovery.  It could be useful for a dump used to load a
+        copy of the database for reporting or other read-only load sharing
+        while the original database continues to be updated.  Without it the
+        dump may reflect a state which is not consistent with any serial
+        execution of the transactions eventually committed.  For example, if
+        batch processing techniques are used, a batch may show as closed in
+        the dump without all of the items which are in the batch appearing.
+       </para>
+
+       <para>
+        This option will make no difference if there are no read-write
+        transactions active when pg_dump is started.  If read-write
+        transactions are active, the start of the dump may be delayed for an
+        indeterminate length of time.  Once running, performance with or
+        without the switch is the same.
        </para>
       </listitem>
      </varlistentry>
@@ -806,7 +903,7 @@ PostgreSQL documentation
   <para>
    The database activity of <application>pg_dump</application> is
    normally collected by the statistics collector.  If this is
-   undesirable, you can set parameter <literal>track_counts</literal>
+   undesirable, you can set parameter <varname>track_counts</>
    to false via <envar>PGOPTIONS</envar> or the <literal>ALTER
    USER</literal> command.
   </para>
@@ -886,7 +983,7 @@ CREATE DATABASE foo WITH TEMPLATE template0;
  </refsect1>
 
  <refsect1 id="pg-dump-examples">
-  <title>Examples</title>
+  <title id="pg-dump-examples-title">Examples</title>
 
   <para>
    To dump a database called <literal>mydb</> into a SQL-script file:
@@ -909,6 +1006,14 @@ CREATE DATABASE foo WITH TEMPLATE template0;
 
 <screen>
 <prompt>$</prompt> <userinput>pg_dump -Fc mydb &gt; db.dump</userinput>
+</screen>
+  </para>
+
+  <para>
+   To dump a database into a directory-format archive:
+
+<screen>
+<prompt>$</prompt> <userinput>pg_dump -Fd mydb -f dumpdir</userinput>
 </screen>
   </para>
 

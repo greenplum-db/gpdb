@@ -4,10 +4,10 @@
  *	  Routines to support inter-object dependencies.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.45 2010/04/05 01:09:53 tgl Exp $
+ * src/include/catalog/dependency.h
  *
  *-------------------------------------------------------------------------
  */
@@ -121,6 +121,7 @@ typedef enum ObjectClass
 	OCLASS_PROC,				/* pg_proc */
 	OCLASS_TYPE,				/* pg_type */
 	OCLASS_CAST,				/* pg_cast */
+	OCLASS_COLLATION,			/* pg_collation */
 	OCLASS_CONSTRAINT,			/* pg_constraint */
 	OCLASS_CONVERSION,			/* pg_conversion */
 	OCLASS_DEFAULT,				/* pg_attrdef */
@@ -202,15 +203,20 @@ extern void recordMultipleDependencies(const ObjectAddress *depender,
 						   int nreferenced,
 						   DependencyType behavior);
 
+extern void recordDependencyOnCurrentExtension(const ObjectAddress *object,
+								   bool isReplace);
+
 extern long deleteDependencyRecordsFor(Oid classId, Oid objectId,
-									   bool skipExtensionDeps);
+						   bool skipExtensionDeps);
 
 extern long deleteDependencyRecordsForClass(Oid classId, Oid objectId,
-                                Oid refclassId, char deptype);
+								Oid refclassId, char deptype);
 
 extern long changeDependencyFor(Oid classId, Oid objectId,
 					Oid refClassId, Oid oldRefObjectId,
 					Oid newRefObjectId);
+
+extern Oid	getExtensionOfObject(Oid classId, Oid objectId);
 
 extern bool sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId);
 
@@ -227,11 +233,6 @@ extern Oid	get_index_constraint(Oid indexId);
 extern void recordSharedDependencyOn(ObjectAddress *depender,
 						 ObjectAddress *referenced,
 						 SharedDependencyType deptype);
-
-extern Oid	getExtensionOfObject(Oid classId, Oid objectId);
-
-extern void recordDependencyOnCurrentExtension(const ObjectAddress *object,
-								   bool isReplace);
 
 extern void deleteSharedDependencyRecordsFor(Oid classId, Oid objectId,
 								 int32 objectSubId);

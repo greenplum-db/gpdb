@@ -63,8 +63,8 @@ ALTER TABLE tmp ADD COLUMN z int2[];
 
 INSERT INTO tmp (a, b, c, d, e, f, g, h, i, j, k, l, m, n, p, q, r, s, t, u,
 	v, w, x, y, z)
-   VALUES (4, 'name', 'text', 4.1, 4.1, 2, '(4.1,4.1,3.1,3.1)', 
-        'Mon May  1 00:30:30 1995', 'c', '{Mon May  1 00:30:30 1995, Monday Aug 24 14:43:07 1992, epoch}', 
+   VALUES (4, 'name', 'text', 4.1, 4.1, 2, '(4.1,4.1,3.1,3.1)',
+        'Mon May  1 00:30:30 1995', 'c', '{Mon May  1 00:30:30 1995, Monday Aug 24 14:43:07 1992, epoch}',
 	314159, '(1,1)', '512',
 	'1 2 3 4 5 6 7 8', 'magnetic disk', '(1.1,1.1)', '(4.1,4.1,3.1,3.1)',
 	'(0,2,4.1,4.1,3.1,3.1)', '(4.1,4.1,3.1,3.1)', '["epoch" "infinity"]',
@@ -74,7 +74,7 @@ SELECT * FROM tmp;
 
 DROP TABLE tmp;
 
--- the wolf bug - schema mods caused inconsistent row descriptors 
+-- the wolf bug - schema mods caused inconsistent row descriptors
 CREATE TABLE tmp (
 	initial 	int4
 );
@@ -132,8 +132,8 @@ ALTER TABLE tmp ADD COLUMN z int2[];
 
 INSERT INTO tmp (a, b, c, d, e, f, g, h, i, j, k, l, m, n, p, q, r, s, t, u,
 	v, w, x, y, z)
-   VALUES (4, 'name', 'text', 4.1, 4.1, 2, '(4.1,4.1,3.1,3.1)', 
-        'Mon May  1 00:30:30 1995', 'c', '{Mon May  1 00:30:30 1995, Monday Aug 24 14:43:07 1992, epoch}', 
+   VALUES (4, 'name', 'text', 4.1, 4.1, 2, '(4.1,4.1,3.1,3.1)',
+        'Mon May  1 00:30:30 1995', 'c', '{Mon May  1 00:30:30 1995, Monday Aug 24 14:43:07 1992, epoch}',
 	314159, '(1,1)', '512',
 	'1 2 3 4 5 6 7 8', 'magnetic disk', '(1.1,1.1)', '(4.1,4.1,3.1,3.1)',
 	'(0,2,4.1,4.1,3.1,3.1)', '(4.1,4.1,3.1,3.1)', '["epoch" "infinity"]',
@@ -176,7 +176,7 @@ ALTER TABLE tmp_view RENAME TO tmp_view_new;
 ANALYZE tenk1;
 set enable_seqscan to off;
 set enable_bitmapscan to off;
--- 5 values, sorted 
+-- 5 values, sorted
 SELECT unique1 FROM tenk1 WHERE unique1 < 5 ORDER BY 1;
 reset enable_seqscan;
 reset enable_bitmapscan;
@@ -219,6 +219,25 @@ ALTER TABLE tmp3 add constraint tmpconstr foreign key (a) references tmp2 match 
 -- Delete one row, add the constraint again -- should fail
 DELETE FROM tmp3 where a=5;
 ALTER TABLE tmp3 add constraint tmpconstr foreign key (a) references tmp2 match full;
+ALTER TABLE tmp3 drop constraint tmpconstr;
+
+INSERT INTO tmp3 values (5,50);
+
+-- Try NOT VALID and then VALIDATE CONSTRAINT, but fails. Delete failure then re-validate
+ALTER TABLE tmp3 add constraint tmpconstr foreign key (a) references tmp2 match full NOT VALID;
+-- FK constraints are not supported in GPDB
+--start_ignore
+ALTER TABLE tmp3 validate constraint tmpconstr;
+--end_ignore
+
+-- Delete failing row
+DELETE FROM tmp3 where a=5;
+
+-- Try (and succeed) and repeat to show it works on already valid constraint
+--start_ignore
+ALTER TABLE tmp3 validate constraint tmpconstr;
+ALTER TABLE tmp3 validate constraint tmpconstr;
+--end_ignore
 
 -- Try (and fail) to create constraint from tmp5(a) to tmp4(a) - unique constraint on
 -- tmp4 is a,b
@@ -418,9 +437,14 @@ insert into atacc1 (test) values (2);
 -- should fail
 insert into atacc1 (test) values (2);
 -- should succeed
-insert into atacc1 (test) values (4);
+-- In GPDB, we must insert enough values so as to cause duplicates to
+-- be detected on at least one out of several (usually 3) gpdb
+-- segments.
+insert into atacc1 select i from generate_series(3,10)i;
 -- try adding a unique oid constraint
 alter table atacc1 add constraint atacc_oid1 unique(oid);
+-- try to create duplicates via alter table using - should fail
+alter table atacc1 alter column test type integer using 0;
 drop table atacc1;
 
 -- let's do one where the unique constraint fails when added
@@ -930,6 +954,18 @@ order by relname, attnum;
 
 drop table p1, p2 cascade;
 
+-- test attinhcount tracking with merged columns
+
+create table depth0();
+create table depth1(c text) inherits (depth0);
+create table depth2() inherits (depth1);
+alter table depth0 add c text;
+
+select attrelid::regclass, attname, attinhcount, attislocal
+from pg_attribute
+where attnum > 0 and attrelid::regclass in ('depth0', 'depth1', 'depth2')
+order by attrelid::regclass::text, attnum;
+
 --
 -- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
@@ -1057,7 +1093,7 @@ insert into anothertab (atcol1, atcol2) values (default, null);
 select * from anothertab;
 
 alter table anothertab alter column atcol2 type text
-      using case when atcol2 is true then 'IT WAS TRUE' 
+      using case when atcol2 is true then 'IT WAS TRUE'
                  when atcol2 is false then 'IT WAS FALSE'
                  else 'IT WAS NULL!' end;
 
@@ -1094,14 +1130,108 @@ select * from another;
 
 drop table another;
 
+-- table's row type
+create table tab1 (a int, b text);
+create table tab2 (x int, y tab1);
+alter table tab1 alter column b type varchar; -- fails
+
 -- disallow recursive containment of row types
 create temp table recur1 (f1 int);
 alter table recur1 add column f2 recur1; -- fails
 alter table recur1 add column f2 recur1[]; -- fails
+create domain array_of_recur1 as recur1[];
+alter table recur1 add column f2 array_of_recur1; -- fails
 create temp table recur2 (f1 int, f2 recur1);
 alter table recur1 add column f2 recur2; -- fails
 alter table recur1 add column f2 int;
 alter table recur1 alter column f2 type recur2; -- fails
+
+-- SET STORAGE may need to add a TOAST table
+create table test_storage (a text);
+alter table test_storage alter a set storage plain;
+alter table test_storage add b int default 0; -- rewrite table to remove its TOAST table
+alter table test_storage alter a set storage extended; -- re-add TOAST table
+
+select reltoastrelid <> 0 as has_toast_table
+from pg_class
+where oid = 'test_storage'::regclass;
+
+--
+-- lock levels
+--
+drop type lockmodes;
+create type lockmodes as enum (
+ 'AccessShareLock'
+,'RowShareLock'
+,'RowExclusiveLock'
+,'ShareUpdateExclusiveLock'
+,'ShareLock'
+,'ShareRowExclusiveLock'
+,'ExclusiveLock'
+,'AccessExclusiveLock'
+);
+
+drop view my_locks;
+create or replace view my_locks as
+select case when c.relname like 'pg_toast%' then 'pg_toast' else c.relname end, max(mode::lockmodes) as max_lockmode
+from pg_locks l join pg_class c on l.relation = c.oid
+where virtualtransaction = (
+        select virtualtransaction
+        from pg_locks
+        where transactionid = txid_current()::integer)
+and locktype = 'relation'
+and relnamespace != (select oid from pg_namespace where nspname = 'pg_catalog')
+and c.relname != 'my_locks'
+group by c.relname;
+
+create table alterlock (f1 int primary key, f2 text);
+
+-- share update exclusive
+begin; alter table alterlock alter column f2 set statistics 150;
+select * from my_locks order by 1;
+rollback;
+
+begin; alter table alterlock cluster on alterlock_pkey;
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock set without cluster;
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock set (fillfactor = 100);
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock reset (fillfactor);
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock set (toast.autovacuum_enabled = off);
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock set (autovacuum_enabled = off);
+select * from my_locks order by 1;
+commit;
+
+begin; alter table alterlock alter column f2 set (n_distinct = 1);
+select * from my_locks order by 1;
+rollback;
+
+begin; alter table alterlock alter column f2 set storage extended;
+select * from my_locks order by 1;
+rollback;
+
+-- share row exclusive
+begin; alter table alterlock alter column f2 set default 'x';
+select * from my_locks order by 1;
+rollback;
+
+-- cleanup
+drop table alterlock;
+drop view my_locks;
+drop type lockmodes;
 
 --
 -- alter function
@@ -1137,6 +1267,21 @@ create domain alter1.posint integer check (value > 0);
 
 create type alter1.ctype as (f1 int, f2 text);
 
+create function alter1.same(alter1.ctype, alter1.ctype) returns boolean language sql 
+as 'select $1.f1 is not distinct from $2.f1 and $1.f2 is not distinct from $2.f2';
+
+create operator alter1.=(procedure = alter1.same, leftarg  = alter1.ctype, rightarg = alter1.ctype);
+
+create operator class alter1.ctype_hash_ops default for type alter1.ctype using hash as
+  operator 1 alter1.=(alter1.ctype, alter1.ctype);
+
+create conversion alter1.ascii_to_utf8 for 'sql_ascii' to 'utf8' from ascii_to_utf8;
+
+create text search parser alter1.prs(start = prsd_start, gettoken = prsd_nexttoken, end = prsd_end, lextypes = prsd_lextype);
+create text search configuration alter1.cfg(parser = alter1.prs);
+create text search template alter1.tmpl(init = dsimple_init, lexize = dsimple_lexize);
+create text search dictionary alter1.dict(template = alter1.tmpl);
+
 insert into alter1.t1(f2) values(11);
 insert into alter1.t1(f2) values(12);
 
@@ -1144,7 +1289,16 @@ alter table alter1.t1 set schema alter2;
 alter table alter1.v1 set schema alter2;
 alter function alter1.plus1(int) set schema alter2;
 alter domain alter1.posint set schema alter2;
+alter operator class alter1.ctype_hash_ops using hash set schema alter2;
+alter operator family alter1.ctype_hash_ops using hash set schema alter2;
+alter operator alter1.=(alter1.ctype, alter1.ctype) set schema alter2;
+alter function alter1.same(alter1.ctype, alter1.ctype) set schema alter2;
 alter type alter1.ctype set schema alter2;
+alter conversion alter1.ascii_to_utf8 set schema alter2;
+alter text search parser alter1.prs set schema alter2;
+alter text search configuration alter1.cfg set schema alter2;
+alter text search template alter1.tmpl set schema alter2;
+alter text search dictionary alter1.dict set schema alter2;
 
 -- this should succeed because nothing is left in alter1
 drop schema alter1;
@@ -1160,3 +1314,112 @@ select alter2.plus1(41);
 
 -- clean up
 drop schema alter2 cascade;
+
+--
+-- composite types
+--
+
+CREATE TYPE test_type AS (a int);
+\d test_type
+
+ALTER TYPE nosuchtype ADD ATTRIBUTE b text; -- fails
+
+ALTER TYPE test_type ADD ATTRIBUTE b text;
+\d test_type
+
+ALTER TYPE test_type ADD ATTRIBUTE b text; -- fails
+
+ALTER TYPE test_type ALTER ATTRIBUTE b SET DATA TYPE varchar;
+\d test_type
+
+ALTER TYPE test_type ALTER ATTRIBUTE b SET DATA TYPE integer;
+\d test_type
+
+ALTER TYPE test_type DROP ATTRIBUTE b;
+\d test_type
+
+ALTER TYPE test_type DROP ATTRIBUTE c; -- fails
+
+ALTER TYPE test_type DROP ATTRIBUTE IF EXISTS c;
+
+ALTER TYPE test_type DROP ATTRIBUTE a, ADD ATTRIBUTE d boolean;
+\d test_type
+
+ALTER TYPE test_type RENAME ATTRIBUTE a TO aa;
+ALTER TYPE test_type RENAME ATTRIBUTE d TO dd;
+\d test_type
+
+DROP TYPE test_type;
+
+CREATE TYPE test_type1 AS (a int, b text);
+CREATE TABLE test_tbl1 (x int, y test_type1);
+ALTER TYPE test_type1 ALTER ATTRIBUTE b TYPE varchar; -- fails
+
+CREATE TYPE test_type2 AS (a int, b text);
+CREATE TABLE test_tbl2 OF test_type2;
+CREATE TABLE test_tbl2_subclass () INHERITS (test_tbl2);
+\d test_type2
+\d test_tbl2
+
+ALTER TYPE test_type2 ADD ATTRIBUTE c text; -- fails
+ALTER TYPE test_type2 ADD ATTRIBUTE c text CASCADE;
+\d test_type2
+\d test_tbl2
+
+ALTER TYPE test_type2 ALTER ATTRIBUTE b TYPE varchar; -- fails
+ALTER TYPE test_type2 ALTER ATTRIBUTE b TYPE varchar CASCADE;
+\d test_type2
+\d test_tbl2
+
+ALTER TYPE test_type2 DROP ATTRIBUTE b; -- fails
+ALTER TYPE test_type2 DROP ATTRIBUTE b CASCADE;
+\d test_type2
+\d test_tbl2
+
+ALTER TYPE test_type2 RENAME ATTRIBUTE a TO aa; -- fails
+ALTER TYPE test_type2 RENAME ATTRIBUTE a TO aa CASCADE;
+\d test_type2
+\d test_tbl2
+\d test_tbl2_subclass
+
+DROP TABLE test_tbl2_subclass;
+
+-- This test isn't that interesting on its own, but the purpose is to leave
+-- behind a table to test pg_upgrade with. The table has a composite type
+-- column in it, and the composite type has a dropped attribute.
+CREATE TYPE test_type3 AS (a int);
+CREATE TABLE test_tbl3 (c) AS SELECT '(1)'::test_type3;
+ALTER TYPE test_type3 DROP ATTRIBUTE a, ADD ATTRIBUTE b int;
+
+CREATE TYPE test_type_empty AS ();
+DROP TYPE test_type_empty;
+
+--
+-- typed tables: OF / NOT OF
+--
+
+CREATE TYPE tt_t0 AS (z inet, x int, y numeric(8,2));
+ALTER TYPE tt_t0 DROP ATTRIBUTE z;
+CREATE TABLE tt0 (x int NOT NULL, y numeric(8,2));	-- OK
+CREATE TABLE tt1 (x int, y bigint);					-- wrong base type
+CREATE TABLE tt2 (x int, y numeric(9,2));			-- wrong typmod
+CREATE TABLE tt3 (y numeric(8,2), x int);			-- wrong column order
+CREATE TABLE tt4 (x int);							-- too few columns
+CREATE TABLE tt5 (x int, y numeric(8,2), z int);	-- too few columns
+CREATE TABLE tt6 () INHERITS (tt0);					-- can't have a parent
+CREATE TABLE tt7 (x int, q text, y numeric(8,2)) WITH OIDS;
+ALTER TABLE tt7 DROP q;								-- OK
+
+ALTER TABLE tt0 OF tt_t0;
+ALTER TABLE tt1 OF tt_t0;
+ALTER TABLE tt2 OF tt_t0;
+ALTER TABLE tt3 OF tt_t0;
+ALTER TABLE tt4 OF tt_t0;
+ALTER TABLE tt5 OF tt_t0;
+ALTER TABLE tt6 OF tt_t0;
+ALTER TABLE tt7 OF tt_t0;
+
+CREATE TYPE tt_t1 AS (x int, y numeric(8,2));
+ALTER TABLE tt7 OF tt_t1;			-- reassign an already-typed table
+ALTER TABLE tt7 NOT OF;
+\d tt7

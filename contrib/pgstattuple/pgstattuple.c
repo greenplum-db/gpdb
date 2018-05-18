@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/pgstattuple/pgstattuple.c,v 1.39 2010/04/02 16:16:51 tgl Exp $
+ * contrib/pgstattuple/pgstattuple.c
  *
  * Copyright (c) 2001,2002	Tatsuo Ishii
  *
@@ -241,6 +241,9 @@ pgstat_relation(Relation rel, FunctionCallInfo fcinfo)
 			break;
 		case RELKIND_COMPOSITE_TYPE:
 			err = "composite type";
+			break;
+		case RELKIND_FOREIGN_TABLE:
+			err = "foreign table";
 			break;
 		default:
 			err = "unknown";

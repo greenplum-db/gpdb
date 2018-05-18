@@ -6,7 +6,7 @@
 --
 -- Copyright (c) 1994, Regents of the University of California
 --
--- $PostgreSQL: pgsql/src/tutorial/advanced.source,v 1.6 2003/11/29 22:41:33 pgsql Exp $
+-- src/tutorial/advanced.source
 --
 ---------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@
 --	descendants.
 -----------------------------
 
--- For example, the capitals table inherits from cities table. (It inherits 
+-- For example, the capitals table inherits from cities table. (It inherits
 -- all data fields from cities.)
 
 CREATE TABLE cities (

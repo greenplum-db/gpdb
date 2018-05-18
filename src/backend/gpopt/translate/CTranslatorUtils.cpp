@@ -16,6 +16,8 @@
 
 #include "postgres.h"
 
+#include "utils/guc.h"
+
 #include "nodes/plannodes.h"
 #include "nodes/parsenodes.h"
 #include "access/sysattr.h"

@@ -25,7 +25,7 @@ $$ language plpgsql MODIFIES SQL DATA;
 select cache_test();
 NOTICE:  table "cache_tab" does not exist, skipping
 CONTEXT:  SQL statement "drop table if exists cache_tab"
-PL/pgSQL function "cache_test" line 2 at SQL statement
+PL/pgSQL function "cache_test" line 3 at SQL statement
  cache_test 
 ------------
  
@@ -469,7 +469,7 @@ $$ language plpgsql MODIFIES SQL DATA;
 select cache_test();
 NOTICE:  table "cache_temp" does not exist, skipping
 CONTEXT:  SQL statement "drop table if exists cache_temp"
-PL/pgSQL function "cache_test" line 2 at SQL statement
+PL/pgSQL function "cache_test" line 3 at SQL statement
  cache_test 
 ------------
  

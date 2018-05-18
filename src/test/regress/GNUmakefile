@@ -3,10 +3,10 @@
 # GNUmakefile--
 #    Makefile for src/test/regress (the regression tests)
 #
-# Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.83 2010/07/05 18:54:38 tgl Exp $
+# src/test/regress/GNUmakefile
 #
 #-------------------------------------------------------------------------
 
@@ -32,12 +32,6 @@ ifdef MAX_CONNECTIONS
 MAXCONNOPT += --max-connections=$(MAX_CONNECTIONS)
 endif
 
-# locale
-NOLOCALE =
-ifdef NO_LOCALE
-NOLOCALE += --no-locale
-endif
-
 # stuff to pass into build of pg_regress
 EXTRADEFS = '-DHOST_TUPLE="$(host_tuple)"' \
 	'-DMAKEPROG="$(MAKE)"' \
@@ -56,9 +50,9 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 # Build regression test driver
 
-all: submake-libpgport pg_regress$(X)
+all: pg_regress$(X)
 
-pg_regress$(X): pg_regress.o pg_regress_main.o
+pg_regress$(X): pg_regress.o pg_regress_main.o | submake-libpgport
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
 
 # dependencies ensure that path changes propagate
@@ -133,14 +127,17 @@ installdirs-tests: installdirs
 	$(MKDIR_P)  $(patsubst $(srcdir)/%/,'$(DESTDIR)$(pkglibdir)/regress/%',$(sort $(dir $(regress_data_files))))
 
 
-# Get some extra C modules from contrib/spi...
+# Get some extra C modules from contrib/spi and contrib/dummy_seclabel...
 
-all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest query_info_hook_test
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) dummy_seclabel$(DLSUFFIX) tablespace-setup includecheck hooktest query_info_hook_test
 
 refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
 	cp $< $@
 
 autoinc$(DLSUFFIX): $(top_builddir)/contrib/spi/autoinc$(DLSUFFIX)
+	cp $< $@
+
+dummy_seclabel$(DLSUFFIX): $(top_builddir)/contrib/dummy_seclabel/dummy_seclabel$(DLSUFFIX)
 	cp $< $@
 
 $(top_builddir)/contrib/spi/refint$(DLSUFFIX): $(top_srcdir)/contrib/spi/refint.c
@@ -149,10 +146,10 @@ $(top_builddir)/contrib/spi/refint$(DLSUFFIX): $(top_srcdir)/contrib/spi/refint.
 $(top_builddir)/contrib/spi/autoinc$(DLSUFFIX): $(top_srcdir)/contrib/spi/autoinc.c
 	$(MAKE) -C $(top_builddir)/contrib/spi autoinc$(DLSUFFIX)
 
+$(top_builddir)/contrib/dummy_seclabel/dummy_seclabel$(DLSUFFIX): $(top_builddir)/contrib/dummy_seclabel/dummy_seclabel.c
+	$(MAKE) -C $(top_builddir)/contrib/dummy_seclabel dummy_seclabel$(DLSUFFIX)
 
 # Tablespace setup
-
-all: tablespace-setup
 
 .PHONY: tablespace-setup
 tablespace-setup:
@@ -176,29 +173,27 @@ query_info_hook_test:
 ## Run tests
 ##
 
-pg_regress_call = ./pg_regress --inputdir=$(srcdir) --dlpath=. $(if $(MULTIBYTE),--multibyte=$(MULTIBYTE)) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
+REGRESS_OPTS = --dlpath=. --init-file=$(srcdir)/init_file
 
-check: all
-	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --schedule=$(srcdir)/parallel_schedule 
+check: all tablespace-setup
+	$(pg_regress_check) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) $(TEMP_CONF) $(EXTRA_TESTS)
 
-installcheck: all
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule 
+installcheck: all tablespace-setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/serial_schedule $(EXTRA_TESTS)
+
+installcheck-parallel: all tablespace-setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) $(EXTRA_TESTS)
 
 installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
-	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao; \
-	else \
-	bash kerberos/setup_test.sh; \
-	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao --host=`hostname`; \
-	fi
+	$(pg_regress_installcheck) $(REGRESS_OPTS)  --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao $(EXTRA_TESTS)
 
 testbouncer: all
 	bash -c "bouncer/setup.sh"
-	$(pg_regress_call)  --port=65432 --psqldir=$(PSQLDIR) --schedule=./minimal_schedule --host=`hostname`;
+	$(pg_regress_check)  --port=65432 --schedule=./minimal_schedule --host=`hostname` $(EXTRA_TESTS)
 	bash -c "bouncer/stop.sh"
 
 standbycheck: all
-	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/standby_schedule --use-existing
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/standby_schedule  $(EXTRA_TESTS)
 
 # old interfaces follow...
 
@@ -206,11 +201,11 @@ runcheck: check
 runtest: installcheck
 runtest-parallel: installcheck-parallel
 
-bigtest: all
-	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule numeric_big 
+bigtest: all tablespace-setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/serial_schedule numeric_big
 
-bigcheck: all
-	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) numeric_big
+bigcheck: all tablespace-setup
+	$(pg_regress_check) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) numeric_big
 
 bkuprestore: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bkuprestore_schedule
@@ -228,13 +223,13 @@ clean distclean maintainer-clean: clean-lib
 # things created by dynamic configs
 	find sql -type l | xargs rm -f
 	find expected -type l | xargs rm -f
-	rm -f $(OBJS) refint$(DLSUFFIX) autoinc$(DLSUFFIX) pg_regress_main.o pg_regress.o pg_regress$(X)
+	rm -f $(OBJS) refint$(DLSUFFIX) autoinc$(DLSUFFIX) dummy_seclabel$(DLSUFFIX)
+	rm -f pg_regress_main.o pg_regress.o pg_regress$(X)
 # things created by various check targets
 	rm -f $(output_files) $(input_files)
 	rm -rf testtablespace
 	rm -rf testtablespace_otherloc
-	rm -rf results tmp_check log
-	rm -f regression.diffs regression.out regress.out run_check.out
+	rm -rf $(pg_regress_clean_files)
 	rm -f data/pg_class32.data
 	rm -f gmon.out
 	rm -f $(srcdir)/sql/cppudf.sql

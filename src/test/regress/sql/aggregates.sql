@@ -103,7 +103,7 @@ CREATE TEMPORARY TABLE bitwise_test(
 );
 
 -- empty case
-SELECT 
+SELECT
   BIT_AND(i2) AS "?",
   BIT_OR(i4)  AS "?"
 FROM bitwise_test;
@@ -163,7 +163,7 @@ SELECT
   boolor_statefunc(FALSE, TRUE) AS "t",
   NOT boolor_statefunc(FALSE, FALSE) AS "t";
 
-CREATE TEMPORARY TABLE bool_test(  
+CREATE TEMPORARY TABLE bool_test(
   b1 BOOL,
   b2 BOOL,
   b3 BOOL,
@@ -209,31 +209,87 @@ SELECT
 FROM bool_test;
 
 --
--- Test several cases that should be optimized into indexscans instead of
--- the generic aggregate implementation.  We can't actually verify that they
--- are done as indexscans, but we can check that the results are correct.
+-- Test cases that should be optimized into indexscans instead of
+-- the generic aggregate implementation.
 --
+analyze tenk1;		-- ensure we get consistent plans here
 
 -- Basic cases
+explain (costs off)
+  select min(unique1) from tenk1;
+select min(unique1) from tenk1;
+explain (costs off)
+  select max(unique1) from tenk1;
 select max(unique1) from tenk1;
+explain (costs off)
+  select max(unique1) from tenk1 where unique1 < 42;
 select max(unique1) from tenk1 where unique1 < 42;
+explain (costs off)
+  select max(unique1) from tenk1 where unique1 > 42;
 select max(unique1) from tenk1 where unique1 > 42;
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+explain (costs off)
+  select max(unique1) from tenk1 where unique1 > 42000;
 select max(unique1) from tenk1 where unique1 > 42000;
+reset enable_seqscan;
 
 -- multi-column index (uses tenk1_thous_tenthous)
+explain (costs off)
+  select max(tenthous) from tenk1 where thousand = 33;
 select max(tenthous) from tenk1 where thousand = 33;
+explain (costs off)
+  select min(tenthous) from tenk1 where thousand = 33;
 select min(tenthous) from tenk1 where thousand = 33;
 
 -- check parameter propagation into an indexscan subquery
+-- In GPDB, this cannot use the MIN/MAX optimization, because the subplan
+-- parameter cannot be pushed through a Motion node.
+explain (costs off)
+  select f1, (select min(unique1) from tenk1 where unique1 > f1) AS gt
+    from int4_tbl;
 select f1, (select min(unique1) from tenk1 where unique1 > f1) AS gt
-from int4_tbl;
+  from int4_tbl;
 
 -- check some cases that were handled incorrectly in 8.3.0
+explain (costs off)
+  select distinct max(unique2) from tenk1;
 select distinct max(unique2) from tenk1;
+explain (costs off)
+  select max(unique2) from tenk1 order by 1;
 select max(unique2) from tenk1 order by 1;
+explain (costs off)
+  select max(unique2) from tenk1 order by max(unique2);
 select max(unique2) from tenk1 order by max(unique2);
+explain (costs off)
+  select max(unique2) from tenk1 order by max(unique2)+1;
 select max(unique2) from tenk1 order by max(unique2)+1;
+explain (costs off)
+  select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
 select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
+
+-- try it on an inheritance tree
+create table minmaxtest(f1 int);
+create table minmaxtest1() inherits (minmaxtest);
+create table minmaxtest2() inherits (minmaxtest);
+create table minmaxtest3() inherits (minmaxtest);
+create index minmaxtesti on minmaxtest(f1);
+create index minmaxtest1i on minmaxtest1(f1);
+create index minmaxtest2i on minmaxtest2(f1 desc);
+create index minmaxtest3i on minmaxtest3(f1) where f1 is not null;
+
+insert into minmaxtest values(11), (12);
+insert into minmaxtest1 values(13), (14);
+insert into minmaxtest2 values(15), (16);
+insert into minmaxtest3 values(17), (18);
+
+set enable_seqscan=off;
+explain (costs off)
+  select min(f1), max(f1) from minmaxtest;
+select min(f1), max(f1) from minmaxtest;
+reset enable_seqscan;
+
+drop table minmaxtest cascade;
 
 -- check for correct detection of nested-aggregate errors
 select max(min(unique1)) from tenk1;
@@ -375,11 +431,16 @@ select aggfns(distinct a,a,c order by a,b)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 
 -- string_agg tests
-select string_agg(a) from (values('aaaa'),('bbbb'),('cccc')) g(a);
 select string_agg(a,',') from (values('aaaa'),('bbbb'),('cccc')) g(a);
 select string_agg(a,',') from (values('aaaa'),(null),('bbbb'),('cccc')) g(a);
-select string_agg(a,',') from (values(null),(null),('bbbb'),('cccc')) g(a);
+select string_agg(a,'AB') from (values(null),(null),('bbbb'),('cccc')) g(a);
 select string_agg(a,',') from (values(null),(null)) g(a);
+
+-- check some implicit casting cases, as per bug #5564
+select string_agg(distinct f1, ',' order by f1) from varchar_tbl;  -- ok
+select string_agg(distinct f1::text, ',' order by f1) from varchar_tbl;  -- not ok
+select string_agg(distinct f1, ',' order by f1::text) from varchar_tbl;  -- not ok
+select string_agg(distinct f1::text, ',' order by f1::text) from varchar_tbl;  -- ok
 
 -- FILTER tests
 
@@ -392,8 +453,8 @@ select ten, sum(distinct four) filter (where four > 10) from onek a
 group by ten
 having exists (select 1 from onek b where sum(distinct a.four) = b.four);
 
---select max(foo COLLATE "C") filter (where (bar collate "POSIX") > '0')
---from (values ('a', 'b')) AS v(foo,bar);
+select max(foo COLLATE "C") filter (where (bar collate "POSIX") > '0')
+from (values ('a', 'b')) AS v(foo,bar);
 
 -- outer reference in FILTER (PostgreSQL extension)
 select (select count(*)
@@ -468,9 +529,12 @@ select ten, mode() within group (order by string4) from tenk1 group by ten order
 select percentile_disc(array[0.25,0.5,0.75]) within group (order by x)
 from unnest('{fred,jim,fred,jack,jill,fred,jill,jim,jim,sheila,jim,sheila}'::text[]) u(x);
 
+-- start_ignore
+-- GPDB_92_MERGE_FIXME: We don't have pg_collation_for yet. Will get it in 9.2.
 -- check collation propagates up in suitable cases:
---select pg_collation_for(percentile_disc(1) within group (order by x collate "POSIX"))
---  from (values ('fred'),('jim')) v(x);
+select pg_collation_for(percentile_disc(1) within group (order by x collate "POSIX"))
+  from (values ('fred'),('jim')) v(x);
+-- end_ignore
 
 -- ordered-set aggs created with CREATE AGGREGATE
 select test_rank(3) within group (order by x)
@@ -492,8 +556,8 @@ select rank(sum(x)) within group (order by x) from generate_series(1,5) x;
 select rank(3) within group (order by x) from (values ('fred'),('jim')) v(x);
 select rank(3) within group (order by stringu1,stringu2) from tenk1;
 select rank('fred') within group (order by x) from generate_series(1,5) x;
---select rank('adam'::text collate "C") within group (order by x collate "POSIX")
---  from (values ('fred'),('jim')) v(x);
+select rank('adam'::text collate "C") within group (order by x collate "POSIX")
+  from (values ('fred'),('jim')) v(x);
 -- hypothetical-set type unification successes:
 select rank('adam'::varchar) within group (order by x) from (values ('fred'),('jim')) v(x);
 select rank('3') within group (order by x) from generate_series(1,5) x;

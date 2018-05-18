@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/relnode.c,v 1.98 2010/02/26 02:00:47 momjian Exp $
+ *	  src/backend/optimizer/util/relnode.c
  *
  *-------------------------------------------------------------------------
  */
@@ -754,7 +754,9 @@ cdb_define_pseudo_column(PlannerInfo   *root,
 
     /* Make a Var node which upper nodes can copy to reference the column. */
     var = makeVar(rel->relid, rci->pseudoattno,
-                  exprType((Node *)defexpr), exprTypmod((Node *)defexpr),
+                  exprType((Node *) defexpr),
+				  exprTypmod((Node *) defexpr),
+				  exprCollation((Node *) defexpr),
                   0);
 
     /* Note the estimated number of bytes for a value of this type. */

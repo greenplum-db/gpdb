@@ -19,12 +19,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepunion.c,v 1.183 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/optimizer/prep/prepunion.c
  *
  *-------------------------------------------------------------------------
  */
@@ -75,7 +75,8 @@ static Node *adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ct
 
 static Plan *recurse_set_operations(Node *setOp, PlannerInfo *root,
 					   double tuple_fraction,
-					   List *colTypes, bool junkOK,
+					   List *colTypes, List *colCollations,
+					   bool junkOK,
 					   int flag, List *refnames_tlist,
 					   List **sortClauses, double *pNumGroups);
 static Plan *generate_recursion_plan(SetOperationStmt *setOp,
@@ -102,12 +103,14 @@ static bool choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 					double dNumGroups, double dNumOutputRows,
 					double tuple_fraction,
 					const char *construct);
-static List *generate_setop_tlist(List *colTypes, int flag,
+static List *generate_setop_tlist(List *colTypes, List *colCollations,
+					 int flag,
 					 Index varno,
 					 bool hack_constants,
 					 List *input_tlist,
 					 List *refnames_tlist);
-static List *generate_append_tlist(List *colTypes, bool flag,
+static List *generate_append_tlist(List *colTypes, List *colCollations,
+					  bool flag,
 					  List *input_plans,
 					  List *refnames_tlist);
 static List *generate_setop_grouplist(SetOperationStmt *op, List *targetlist);
@@ -188,7 +191,8 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
 	 * on upper-level nodes to deal with that).
 	 */
 	return recurse_set_operations((Node *) topop, root, tuple_fraction,
-								  topop->colTypes, true, -1,
+								  topop->colTypes, topop->colCollations,
+								  true, -1,
 								  leftmostQuery->targetList,
 								  sortClauses, NULL);
 }
@@ -198,7 +202,8 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
  *	  Recursively handle one step in a tree of set operations
  *
  * tuple_fraction: fraction of tuples we expect to retrieve from node
- * colTypes: list of type OIDs of expected output columns
+ * colTypes: OID list of set-op's result column datatypes
+ * colCollations: OID list of set-op's result column collations
  * junkOK: if true, child resjunk columns may be left in the result
  * flag: if >= 0, add a resjunk output column indicating value of flag
  * refnames_tlist: targetlist to take column names from
@@ -215,7 +220,8 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
 static Plan *
 recurse_set_operations(Node *setOp, PlannerInfo *root,
 					   double tuple_fraction,
-					   List *colTypes, bool junkOK,
+					   List *colTypes, List *colCollations,
+					   bool junkOK,
 					   int flag, List *refnames_tlist,
 					   List **sortClauses, double *pNumGroups)
 {
@@ -262,8 +268,9 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 		 * Add a SubqueryScan with the caller-requested targetlist
 		 */
 		plan = (Plan *)
-			make_subqueryscan(root, generate_setop_tlist(colTypes, flag,
-												   1,
+			make_subqueryscan(root, generate_setop_tlist(colTypes, colCollations,
+												   flag,
+												   rtr->rtindex,
 												   true,
 												   subplan->targetlist,
 												   refnames_tlist),
@@ -312,11 +319,13 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
          * better EXPLAIN output in CDB/MPP; varno 0 is used in PostgreSQL).
 		 */
 		if (flag >= 0 ||
-			!tlist_same_datatypes(plan->targetlist, colTypes, junkOK))
+			!tlist_same_datatypes(plan->targetlist, colTypes, junkOK) ||
+			!tlist_same_collations(plan->targetlist, colCollations, junkOK))
 		{
 			plan = (Plan *)
 				make_result(root,
-							generate_setop_tlist(colTypes, flag,
+							generate_setop_tlist(colTypes, colCollations,
+												 flag,
 												 OUTER,
 												 false,
 												 plan->targetlist,
@@ -362,19 +371,21 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 	 * separately without any intention of combining them into one Append.
 	 */
 	lplan = recurse_set_operations(setOp->larg, root, tuple_fraction,
-								   setOp->colTypes, false, -1,
+								   setOp->colTypes, setOp->colCollations,
+								   false, -1,
 								   refnames_tlist, sortClauses, NULL);
 	/* The right plan will want to look at the left one ... */
 	root->non_recursive_plan = lplan;
 	rplan = recurse_set_operations(setOp->rarg, root, tuple_fraction,
-								   setOp->colTypes, false, -1,
+								   setOp->colTypes, setOp->colCollations,
+								   false, -1,
 								   refnames_tlist, sortClauses, NULL);
 	root->non_recursive_plan = NULL;
 
 	/*
 	 * Generate tlist for RecursiveUnion plan node --- same as in Append cases
 	 */
-	tlist = generate_append_tlist(setOp->colTypes, false,
+	tlist = generate_append_tlist(setOp->colTypes, setOp->colCollations, false,
 								  list_make2(lplan, rplan),
 								  refnames_tlist);
 
@@ -482,7 +493,7 @@ generate_union_plan(SetOperationStmt *op, PlannerInfo *root,
 	 * concerned, but we must make it look real anyway for the benefit of the
 	 * next plan level up.
 	 */
-	tlist = generate_append_tlist(op->colTypes, false,
+	tlist = generate_append_tlist(op->colTypes, op->colCollations, false,
 								  planlist, refnames_tlist);
 
 	/*
@@ -547,12 +558,14 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	/* Recurse on children, ensuring their outputs are marked */
 	lplan = recurse_set_operations(op->larg, root,
 								   0.0 /* all tuples needed */ ,
-								   op->colTypes, false, 0,
+								   op->colTypes, op->colCollations,
+								   false, 0,
 								   refnames_tlist,
 								   &child_sortclauses, &dLeftGroups);
 	rplan = recurse_set_operations(op->rarg, root,
 								   0.0 /* all tuples needed */ ,
-								   op->colTypes, false, 1,
+								   op->colTypes, op->colCollations,
+								   false, 1,
 								   refnames_tlist,
 								   &child_sortclauses, &dRightGroups);
 
@@ -623,7 +636,7 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	 * column is shown as a variable not a constant, else setrefs.c will get
 	 * confused.
 	 */
-	tlist = generate_append_tlist(op->colTypes, true,
+	tlist = generate_append_tlist(op->colTypes, op->colCollations, true,
 								  planlist, refnames_tlist);
 
 	/*
@@ -714,6 +727,13 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
  *
  * NOTE: we can also pull a UNION ALL up into a UNION, since the distinct
  * output rows will be lost anyway.
+ *
+ * NOTE: currently, we ignore collations while determining if a child has
+ * the same properties.  This is semantically sound only so long as all
+ * collations have the same notion of equality.  It is valid from an
+ * implementation standpoint because we don't care about the ordering of
+ * a UNION child's result: UNION ALL results are always unordered, and
+ * generate_union_plan will force a fresh sort if the top level is a UNION.
  */
 static List *
 recurse_union_children(Node *setOp, PlannerInfo *root,
@@ -754,8 +774,10 @@ recurse_union_children(Node *setOp, PlannerInfo *root,
 	 */
 	return list_make1(recurse_set_operations(setOp, root,
 											 tuple_fraction,
-											 top_union->colTypes, false,
-											 -1, refnames_tlist,
+											 top_union->colTypes,
+											 top_union->colCollations,
+											 false, -1,
+											 refnames_tlist,
 											 &child_sortclauses, NULL));
 }
 
@@ -804,6 +826,7 @@ make_union_unique(SetOperationStmt *op, Plan *plan,
 								 plan->targetlist,
 								 NIL,
 								 AGG_HASHED,
+								 NULL,
 								 false, /* streaming */
 								 list_length(groupList),
 								 extract_grouping_cols(groupList,
@@ -814,8 +837,6 @@ make_union_unique(SetOperationStmt *op, Plan *plan,
 								 0, /* input_grouping */
 								 0, /* grouping */
 								 0, /* rollupGSTimes */
-								 0, /* numAggs */
-								 0, /* transSpace */
 								 plan);
 		/* Hashed aggregation produces randomly-ordered results */
 		*sortClauses = NIL;
@@ -900,7 +921,7 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 	 * These path variables are dummies that just hold cost fields; we don't
 	 * make actual Paths for these steps.
 	 */
-	cost_agg(&hashed_p, root, AGG_HASHED, 0,
+	cost_agg(&hashed_p, root, AGG_HASHED, NULL,
 			 numGroupCols, dNumGroups,
 			 input_plan->startup_cost, input_plan->total_cost,
 			 input_plan->plan_rows,
@@ -917,7 +938,8 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 	sorted_p.total_cost = input_plan->total_cost;
 	/* XXX cost_sort doesn't actually look at pathkeys, so just pass NIL */
 	cost_sort(&sorted_p, root, NIL, sorted_p.total_cost,
-			  input_plan->plan_rows, input_plan->plan_width, -1.0);
+			  input_plan->plan_rows, input_plan->plan_width,
+			  0.0, work_mem, -1.0);
 	cost_group(&sorted_p, root, numGroupCols, dNumGroups,
 			   sorted_p.startup_cost, sorted_p.total_cost,
 			   input_plan->plan_rows);
@@ -941,7 +963,8 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 /*
  * Generate targetlist for a set-operation plan node
  *
- * colTypes: column datatypes for non-junk columns
+ * colTypes: OID list of set-op's result column datatypes
+ * colCollations: OID list of set-op's result column collations
  * flag: -1 if no flag column needed, 0 or 1 to create a const flag column
  * varno: varno to use in generated Vars
  * hack_constants: true to copy up constants (see comments in code)
@@ -949,7 +972,8 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
  * refnames_tlist: targetlist to take column names from
  */
 static List *
-generate_setop_tlist(List *colTypes, int flag,
+generate_setop_tlist(List *colTypes, List *colCollations,
+					 int flag,
 					 Index varno,
 					 bool hack_constants,
 					 List *input_tlist,
@@ -957,19 +981,23 @@ generate_setop_tlist(List *colTypes, int flag,
 {
 	List	   *tlist = NIL;
 	int			resno = 1;
-	ListCell   *i,
-			   *j,
-			   *k;
+	ListCell   *ctlc,
+			   *cclc,
+			   *itlc,
+			   *rtlc;
 	TargetEntry *tle;
 	Node	   *expr;
 
-	j = list_head(input_tlist);
-	k = list_head(refnames_tlist);
-	foreach(i, colTypes)
+	/* there's no forfour() so we must chase one list manually */
+	rtlc = list_head(refnames_tlist);
+	forthree(ctlc, colTypes, cclc, colCollations, itlc, input_tlist)
 	{
-		Oid			colType = lfirst_oid(i);
-		TargetEntry *inputtle = (TargetEntry *) lfirst(j);
-		TargetEntry *reftle = (TargetEntry *) lfirst(k);
+		Oid			colType = lfirst_oid(ctlc);
+		Oid			colColl = lfirst_oid(cclc);
+		TargetEntry *inputtle = (TargetEntry *) lfirst(itlc);
+		TargetEntry *reftle = (TargetEntry *) lfirst(rtlc);
+
+		rtlc = lnext(rtlc);
 
 		Assert(inputtle->resno == resno);
 		Assert(reftle->resno == resno);
@@ -996,22 +1024,50 @@ generate_setop_tlist(List *colTypes, int flag,
 									inputtle->resno,
 									exprType((Node *) inputtle->expr),
 									exprTypmod((Node *) inputtle->expr),
+									exprCollation((Node *) inputtle->expr),
 									0);
+
 		if (exprType(expr) != colType)
 		{
+			/*
+			 * Note: it's not really cool to be applying coerce_to_common_type
+			 * here; one notable point is that assign_expr_collations never
+			 * gets run on any generated nodes.  For the moment that's not a
+			 * problem because we force the correct exposed collation below.
+			 * It would likely be best to make the parser generate the correct
+			 * output tlist for every set-op to begin with, though.
+			 */
 			expr = coerce_to_common_type(NULL,	/* no UNKNOWNs here */
 										 expr,
 										 colType,
 										 "UNION/INTERSECT/EXCEPT");
 		}
+
+		/*
+		 * Ensure the tlist entry's exposed collation matches the set-op. This
+		 * is necessary because plan_set_operations() reports the result
+		 * ordering as a list of SortGroupClauses, which don't carry collation
+		 * themselves but just refer to tlist entries.	If we don't show the
+		 * right collation then planner.c might do the wrong thing in
+		 * higher-level queries.
+		 *
+		 * Note we use RelabelType, not CollateExpr, since this expression
+		 * will reach the executor without any further processing.
+		 */
+		if (exprCollation(expr) != colColl)
+		{
+			expr = (Node *) makeRelabelType((Expr *) expr,
+											exprType(expr),
+											exprTypmod(expr),
+											colColl,
+											COERCE_DONTCARE);
+		}
+
 		tle = makeTargetEntry((Expr *) expr,
 							  (AttrNumber) resno++,
 							  pstrdup(reftle->resname),
 							  false);
 		tlist = lappend(tlist, tle);
-
-		j = lnext(j);
-		k = lnext(k);
 	}
 
 	if (flag >= 0)
@@ -1020,6 +1076,7 @@ generate_setop_tlist(List *colTypes, int flag,
 		/* flag value is the given constant */
 		expr = (Node *) makeConst(INT4OID,
 								  -1,
+								  InvalidOid,
 								  sizeof(int4),
 								  Int32GetDatum(flag),
 								  false,
@@ -1037,24 +1094,27 @@ generate_setop_tlist(List *colTypes, int flag,
 /*
  * Generate targetlist for a set-operation Append node
  *
- * colTypes: column datatypes for non-junk columns
+ * colTypes: OID list of set-op's result column datatypes
+ * colCollations: OID list of set-op's result column collations
  * flag: true to create a flag column copied up from subplans
  * input_plans: list of sub-plans of the Append
  * refnames_tlist: targetlist to take column names from
  *
  * The entries in the Append's targetlist should always be simple Vars;
- * we just have to make sure they have the right datatypes and typmods.
+ * we just have to make sure they have the right datatypes/typmods/collations.
  * The Vars are always generated with varno OUTER (CDB/MPP change for
  * EXPLAIN; varno 0 was used in PostgreSQL).
  */
 static List *
-generate_append_tlist(List *colTypes, bool flag,
+generate_append_tlist(List *colTypes, List *colCollations,
+					  bool flag,
 					  List *input_plans,
 					  List *refnames_tlist)
 {
 	List	   *tlist = NIL;
 	int			resno = 1;
 	ListCell   *curColType;
+	ListCell   *curColCollation;
 	ListCell   *ref_tl_item;
 	int			colindex;
 	TargetEntry *tle;
@@ -1109,10 +1169,12 @@ generate_append_tlist(List *colTypes, bool flag,
 	 * Now we can build the tlist for the Append.
 	 */
 	colindex = 0;
-	forboth(curColType, colTypes, ref_tl_item, refnames_tlist)
+	forthree(curColType, colTypes, curColCollation, colCollations,
+			 ref_tl_item, refnames_tlist)
 	{
 		Oid			colType = lfirst_oid(curColType);
 		int32		colTypmod = colTypmods[colindex++];
+		Oid			colColl = lfirst_oid(curColCollation);
 		TargetEntry *reftle = (TargetEntry *) lfirst(ref_tl_item);
 
 		Assert(reftle->resno == resno);
@@ -1121,6 +1183,7 @@ generate_append_tlist(List *colTypes, bool flag,
 								resno,
 								colType,
 								colTypmod,
+								colColl,
 								0);
 		tle = makeTargetEntry((Expr *) expr,
 							  (AttrNumber) resno++,
@@ -1137,6 +1200,7 @@ generate_append_tlist(List *colTypes, bool flag,
 								resno,
 								INT4OID,
 								-1,
+								InvalidOid,
 								0);
 		tle = makeTargetEntry((Expr *) expr,
 							  (AttrNumber) resno++,
@@ -1417,13 +1481,10 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 
 			newrc->rti = childRTindex;
 			newrc->prti = rti;
+			newrc->rowmarkId = oldrc->rowmarkId;
 			newrc->markType = oldrc->markType;
 			newrc->noWait = oldrc->noWait;
 			newrc->isParent = false;
-			/* junk attrs for children are not identified yet */
-			newrc->ctidAttNo = InvalidAttrNumber;
-			newrc->toidAttNo = InvalidAttrNumber;
-			newrc->wholeAttNo = InvalidAttrNumber;
 
 			root->rowMarks = lappend(root->rowMarks, newrc);
 		}
@@ -1473,7 +1534,7 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
  *	  Build the list of translations from parent Vars to child Vars for
  *	  an inheritance child.
  *
- * For paranoia's sake, we match type as well as attribute name.
+ * For paranoia's sake, we match type/collation as well as attribute name.
  */
 static void
 make_inh_translation_list(Relation oldrelation, Relation newrelation,
@@ -1493,6 +1554,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 		char	   *attname;
 		Oid			atttypid;
 		int32		atttypmod;
+		Oid			attcollation;
 		int			new_attno;
 
 		att = old_tupdesc->attrs[old_attno];
@@ -1505,6 +1567,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 		attname = NameStr(att->attname);
 		atttypid = att->atttypid;
 		atttypmod = att->atttypmod;
+		attcollation = att->attcollation;
 
 		/*
 		 * When we are generating the "translation list" for the parent table
@@ -1516,6 +1579,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 										 (AttrNumber) (old_attno + 1),
 										 atttypid,
 										 atttypmod,
+										 attcollation,
 										 0));
 			continue;
 		}
@@ -1549,15 +1613,19 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 					 attname, RelationGetRelationName(newrelation));
 		}
 
-		/* Found it, check type */
+		/* Found it, check type and collation match */
 		if (atttypid != att->atttypid || atttypmod != att->atttypmod)
 			elog(ERROR, "attribute \"%s\" of relation \"%s\" does not match parent's type",
+				 attname, RelationGetRelationName(newrelation));
+		if (attcollation != att->attcollation)
+			elog(ERROR, "attribute \"%s\" of relation \"%s\" does not match parent's collation",
 				 attname, RelationGetRelationName(newrelation));
 
 		vars = lappend(vars, makeVar(newvarno,
 									 (AttrNumber) (new_attno + 1),
 									 atttypid,
 									 atttypmod,
+									 attcollation,
 									 0));
 	}
 
@@ -1797,6 +1865,7 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 	Assert(!IsA(node, SpecialJoinInfo));
 	Assert(!IsA(node, AppendRelInfo));
 	Assert(!IsA(node, PlaceHolderInfo));
+	Assert(!IsA(node, MinMaxAggInfo));
 
 	/*
 	 * We have to process RestrictInfo nodes specially.  (Note: although
@@ -1838,13 +1907,13 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		/*
 		 * Reset cached derivative fields, since these might need to have
-		 * different values when considering the child relation.
+		 * different values when considering the child relation.  Note we
+		 * don't reset left_ec/right_ec: each child variable is implicitly
+		 * equivalent to its parent, so still a member of the same EC if any.
 		 */
 		newinfo->eval_cost.startup = -1;
 		newinfo->norm_selec = -1;
 		newinfo->outer_selec = -1;
-		newinfo->left_ec = NULL;
-		newinfo->right_ec = NULL;
 		newinfo->left_em = NULL;
 		newinfo->right_em = NULL;
 		newinfo->scansel_cache = NIL;

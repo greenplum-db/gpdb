@@ -445,26 +445,21 @@ role_to_string(GpRoleValue role)
 
 
 /*
- * Assign hook routine for "gp_session_role" option.  Because this variable
+ * Check and Assign routines for "gp_session_role" option.  Because this variable
  * has context PGC_BACKEND, we expect this assigment to happen only during
  * setup of a BACKEND, e.g., based on the role value specified on the connect
  * request.
  *
  * See src/backend/util/misc/guc.c for option definition.
  */
-const char *
-assign_gp_session_role(const char *newval, bool doit, GucSource source __attribute__((unused)))
+bool
+check_gp_session_role(char **newval, void **extra, GucSource source)
 {
-#if FALSE
-	elog(DEBUG1, "assign_gp_session_role: gp_session_role=%s, newval=%s, doit=%s",
-		 show_gp_session_role(), newval, (doit ? "true" : "false"));
-#endif
-
-	GpRoleValue newrole = string_to_role(newval);
+	GpRoleValue newrole = string_to_role(*newval);
 
 	if (newrole == GP_ROLE_UNDEFINED)
 	{
-		return NULL;
+		return false;
 	}
 
 	/* Force utility mode in a stand-alone backend. */
@@ -473,25 +468,34 @@ assign_gp_session_role(const char *newval, bool doit, GucSource source __attribu
 		if (source != PGC_S_DEFAULT)
 			elog(WARNING, "gp_session_role forced to 'utility' in single-user mode");
 
-		newval = strdup("utility");
-		newrole = GP_ROLE_UTILITY;
+		*newval = strdup("utility");
 	}
+	return true;
+}
 
-	if (doit)
-	{
-		Gp_session_role = newrole;
-		Gp_role = Gp_session_role;
+void
+assign_gp_session_role(const char *newval, void *extra)
+{
+#if FALSE
+	elog(DEBUG1, "assign_gp_session_role: gp_session_role=%s, newval=%s",
+		 show_gp_session_role(), newval);
+#endif
 
-		if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
-			MyProc->mppIsWriter = false;
-	}
-	return newval;
+	GpRoleValue newrole = string_to_role(newval);
+
+	Assert(newrole != GP_ROLE_UNDEFINED);
+
+	Gp_session_role = newrole;
+	Gp_role = Gp_session_role;
+
+	if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
+		MyProc->mppIsWriter = false;
 }
 
 
 
 /*
- * Assign hook routine for "gp_role" option.  This variable has context
+ * Check and Assign routines for "gp_role" option.  This variable has context
  * PGC_SUSET so that is can only be set by a superuser via the SET command.
  * (It can also be set using an option on postmaster start, but this isn't
  * interesting beccause the derived global CdbRole is always set (along with
@@ -499,75 +503,79 @@ assign_gp_session_role(const char *newval, bool doit, GucSource source __attribu
  *
  * See src/backend/util/misc/guc.c for option definition.
  */
-const char *
-assign_gp_role(const char *newval, bool doit, GucSource source)
+bool
+check_gp_role(char **newval, void **extra, GucSource source)
+{
+	GpRoleValue newrole = string_to_role(*newval);
+
+	if (newrole == GP_ROLE_UNDEFINED)
+	{
+		return false;
+	}
+	return true;
+}
+
+void
+assign_gp_role(const char *newval, void *extra)
 {
 #if FALSE
 	elog(DEBUG1, "assign_gp_role: gp_role=%s, newval=%s, doit=%s",
 		 show_gp_role(), newval, (doit ? "true" : "false"));
 #endif
 
-
 	GpRoleValue newrole = string_to_role(newval);
 	GpRoleValue oldrole = Gp_role;
 
-	if (newrole == GP_ROLE_UNDEFINED)
+	Assert(newrole != GP_ROLE_UNDEFINED);
+
+	/*
+	 * When changing between roles, we must call cdb_cleanup and then
+	 * cdb_setup to get setup and connections appropriate to the new role.
+	 */
+	bool		do_disconnect = false;
+	bool		do_connect = false;
+
+	if (Gp_role != newrole && IsUnderPostmaster)
 	{
-		return NULL;
+		if (Gp_role != GP_ROLE_UTILITY)
+			do_disconnect = true;
+
+		if (newrole != GP_ROLE_UTILITY)
+			do_connect = true;
 	}
 
-	if (doit)
+	if (do_disconnect)
+		cdb_cleanup(0, 0);
+
+	Gp_role = newrole;
+
+	// GPDB_91_MERGE_FIXME: we don't have access to 'source' anymore
+	//if (source != PGC_S_DEFAULT)
 	{
-		/*
-		 * When changing between roles, we must call cdb_cleanup and then
-		 * cdb_setup to get setup and connections appropriate to the new role.
-		 */
-		bool		do_disconnect = false;
-		bool		do_connect = false;
-
-		if (Gp_role != newrole && IsUnderPostmaster)
+		if (do_connect)
 		{
-			if (Gp_role != GP_ROLE_UTILITY)
-				do_disconnect = true;
-
-			if (newrole != GP_ROLE_UTILITY)
-				do_connect = true;
-		}
-
-		if (do_disconnect)
-			cdb_cleanup(0, 0);
-
-		Gp_role = newrole;
-
-		if (source != PGC_S_DEFAULT)
-		{
-			if (do_connect)
+			/*
+			 * In case there are problems with the Greenplum Database
+			 * tables or data, we catch any error coming out of
+			 * cdblink_setup so we can set the gp_role back to what it
+			 * was.  Otherwise we may be left with inappropriate
+			 * connections for the new role.
+			 */
+			PG_TRY();
 			{
-				/*
-				 * In case there are problems with the Greenplum Database
-				 * tables or data, we catch any error coming out of
-				 * cdblink_setup so we can set the gp_role back to what it
-				 * was.  Otherwise we may be left with inappropriate
-				 * connections for the new role.
-				 */
-				PG_TRY();
-				{
-					cdb_setup();
-				}
-				PG_CATCH();
-				{
-					cdb_cleanup(0, 0);
-					Gp_role = oldrole;
-					if (Gp_role != GP_ROLE_UTILITY)
-						cdb_setup();
-					PG_RE_THROW();
-				}
-				PG_END_TRY();
+				cdb_setup();
 			}
+			PG_CATCH();
+			{
+				cdb_cleanup(0, 0);
+				Gp_role = oldrole;
+				if (Gp_role != GP_ROLE_UTILITY)
+					cdb_setup();
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
 		}
 	}
-
-	return newval;
 }
 
 
@@ -578,25 +586,17 @@ assign_gp_role(const char *newval, bool doit, GucSource source)
  *
  * See src/backend/util/misc/guc.c for option definition.
  */
-bool
-assign_gp_connections_per_thread(int newval, bool doit, GucSource source __attribute__((unused)))
+void
+assign_gp_connections_per_thread(int newval, void *extra)
 {
 #if FALSE
-	elog(DEBUG1, "assign_gp_connections_per_thread: gp_connections_per_thread=%s, newval=%d, doit=%s",
-		 show_gp_connections_per_thread(), newval, (doit ? "true" : "false"));
+	elog(DEBUG1, "assign_gp_connections_per_thread: gp_connections_per_thread=%s, newval=%d",
+		 show_gp_connections_per_thread(), newval);
 #endif
 
-	if (doit)
-	{
-		if (newval < 0)
-			return false;
-
-		cdbdisp_setAsync(newval == 0);
-		cdbgang_setAsync(newval == 0);
-		gp_connections_per_thread = newval;
-	}
-
-	return true;
+	cdbdisp_setAsync(newval == 0);
+	cdbgang_setAsync(newval == 0);
+	gp_connections_per_thread = newval;
 }
 
 /*
@@ -703,55 +703,52 @@ int gp_log_interconnect;
  *
  */
 bool
-gpvars_assign_gp_enable_gpperfmon(bool newval, bool doit, GucSource source)
+gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source)
 {
-	if (doit)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
 	{
-
-		if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be superuser to set gp_enable_gpperfmon")));
-		}
-		else
-		{
-			gp_enable_gpperfmon = newval;
-		}
+		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
+		GUC_check_errmsg("must be superuser to set gp_enable_gpperfmon");
+		return false;
 	}
 
 	return true;
 }
 
 bool
-gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source)
+gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source)
 {
-	if (doit)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
 	{
-		if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be superuser to set gp_gpperfmon_send_interval")));
-		}
-		else
-		{
-			gp_gpperfmon_send_interval = newval;
-		}
+		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
+		GUC_check_errmsg("must be superuser to set gp_gpperfmon_send_interval");
+		return false;
 	}
 
 	return true;
 }
 
 /*
+ * gpvars_check_gp_resource_manager_policy
  * gpvars_assign_gp_resource_manager_policy
  * gpvars_show_gp_resource_manager_policy
  */
-const char *
-gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
+bool
+gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source)
 {
-	ResourceManagerPolicy newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+	if (*newval == NULL ||
+		*newval[0] == 0 ||
+		!pg_strcasecmp("queue", *newval) ||
+		!pg_strcasecmp("group", *newval))
+		return true;
 
+	GUC_check_errmsg("invalid value for resource manager policy: \"%s\"", *newval);
+	return false;
+}
+
+void
+gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra)
+{
 	/*
 	 * Probe resgroup configurations even not in resgroup mode,
 	 * variables like gp_resource_group_enable_cgroup_memory need to
@@ -760,32 +757,18 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSourc
 	ResGroupOps_Probe();
 
 	if (newval == NULL || newval[0] == 0)
-		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
 	else if (!pg_strcasecmp("queue", newval))
-		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
 	else if (!pg_strcasecmp("group", newval))
 	{
 		ResGroupOps_Bless();
-		newtype = RESOURCE_MANAGER_POLICY_GROUP;
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP;
+		gp_enable_resqueue_priority = false;
 	}
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid value for resource manager policy")));
-
-	if (doit)
-	{
-		Gp_resource_manager_policy = newtype;
-
-		/*
-		 * disable backoff mechanism of resource queue if we are going to
-		 * enable resource group
-		 */
-		if (newtype == RESOURCE_MANAGER_POLICY_GROUP)
-			gp_enable_resqueue_priority = false;
-	}
-
-	return newval;
+	/*
+	 * No else should happen, since newval has been checked in check_hook.
+	 */
 }
 
 const char *
@@ -807,19 +790,12 @@ gpvars_show_gp_resource_manager_policy(void)
  * gpvars_assign_statement_mem
  */
 bool
-gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)))
+gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 {
-	if (doit)
+	if (*newval >= max_statement_mem)
 	{
-		if (newval >= max_statement_mem)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
-							max_statement_mem)));
-		}
-
-		statement_mem = newval;
+		GUC_check_errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
+						 max_statement_mem);
 	}
 
 	return true;

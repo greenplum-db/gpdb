@@ -251,7 +251,7 @@ BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap)
 	 * Prepare child node to produce new bitmaps for the new partition (and cleanup
 	 * any leftover state from old partition).
 	 */
-	ExecReScan(outerPlanState(node), NULL);
+	ExecReScan(outerPlanState(node));
 }
 
 /*
@@ -335,12 +335,12 @@ BitmapTableScanEnd(BitmapTableScanState *scanState)
  * Prepares for a rescan.
  */
 void
-BitmapTableScanReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
+BitmapTableScanReScan(BitmapTableScanState *node)
 {
 	ScanState *scanState = &node->ss;
-	DynamicScan_ReScan(scanState, exprCtxt);
+	DynamicScan_ReScan(scanState);
 
 	freeBitmapState(node);
 
-	ExecReScan(outerPlanState(node), exprCtxt);
+	ExecReScan(outerPlanState(node));
 }

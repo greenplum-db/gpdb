@@ -189,17 +189,17 @@ SELECT count(*) FROM tenk_ao4;
 -- The first row is good (so it grows the file), the second is bad.
 --
 COPY tenk_ao1 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_ao1, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_ao1, line 2, column unique1: "bad data row"
 COPY tenk_ao2 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_ao2, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_ao2, line 2, column unique1: "bad data row"
 COPY tenk_ao3 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_ao3, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_ao3, line 2, column unique1: "bad data row"
 COPY tenk_ao4 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_ao4, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_ao4, line 2, column unique1: "bad data row"
 SELECT count(*) FROM tenk_ao1;
  count 
 -------

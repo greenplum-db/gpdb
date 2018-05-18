@@ -2,10 +2,10 @@
  *
  * Dynamic loader declarations for Cygwin
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/port/dynloader/cygwin.h,v 1.10 2010/01/02 16:57:50 momjian Exp $
+ * src/backend/port/dynloader/cygwin.h
  *
  *-------------------------------------------------------------------------
   */

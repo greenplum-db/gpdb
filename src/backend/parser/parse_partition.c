@@ -27,6 +27,7 @@
 #include "optimizer/walkers.h"
 #include "parser/analyze.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_node.h"
 #include "parser/parse_oper.h"
@@ -53,7 +54,6 @@ typedef struct
 /* state structures for validating parsed partition specifications */
 typedef struct
 {
-	ParseState *pstate;
 	CreateStmtContext *cxt;
 	CreateStmt *stmt;
 	PartitionBy *pBy;
@@ -75,22 +75,20 @@ typedef struct
 	int			location;
 }	range_partition_ctx;
 
-static void make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, char *relname,
+static void make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 				PartitionBy *curPby, Node *newSub,
 				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc);
 static char *deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent);
 static Node *
-make_prule_catalog(ParseState *pstate,
-				   CreateStmtContext *cxt, CreateStmt *stmt,
+make_prule_catalog(CreateStmtContext *cxt, CreateStmt *stmt,
 				   Node *partitionBy, PartitionElem *pElem,
 				   char *at_depth, char *child_name_str,
 				   char *whereExpr,
 				   Node *pWhere
 );
-static int partition_range_compare(ParseState *pstate,
-						CreateStmtContext *cxt, CreateStmt *stmt,
+static int partition_range_compare(CreateStmtContext *cxt, CreateStmt *stmt,
 						PartitionBy *pBy,
 						char *at_depth,
 						int partNumber,
@@ -108,9 +106,7 @@ static Datum eval_basic_opexpr(ParseState *pstate, List *oprname,
 				  bool *typbyval, int16 *typlen,
 				  Oid *restypid,
 				  int location);
-static Node *
-make_prule_rulestmt(ParseState *pstate,
-					CreateStmtContext *cxt, CreateStmt *stmt,
+static Node *make_prule_rulestmt(CreateStmtContext *cxt, CreateStmt *stmt,
 					Node *partitionBy, PartitionElem *pElem,
 					char *at_depth, char *child_name_str,
 					char *whereExpr,
@@ -121,8 +117,7 @@ static void validate_list_partition(partValidationState *vstate);
 static List *transformPartitionStorageEncodingClauses(List *enc);
 static void merge_part_column_encodings(CreateStmt *cs, List *stenc);
 static void merge_partition_encoding(ParseState *pstate, PartitionElem *elem, List *penc);
-static List *make_partition_rules(ParseState *pstate,
-					 CreateStmtContext *cxt, CreateStmt *stmt,
+static List *make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 					 Node *partitionBy, PartitionElem *pElem,
 					 char *at_depth, char *child_name_str,
 					 int partNumId, int maxPartNum,
@@ -178,7 +173,7 @@ static bool range_partition_walker(Node *node, void *context);
  *----------
  */
 void
-transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
+transformPartitionBy(CreateStmtContext *cxt,
 					 CreateStmt *stmt, Node *partitionBy, GpPolicy *policy)
 {
 	Oid			snamespaceid;
@@ -255,7 +250,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 				 errmsg("too many columns for RANGE partition%s -- "
 						"only one column is allowed.",
 						at_depth),
-				 parser_errposition(pstate, pBy->location)));
+				 parser_errposition(cxt->pstate, pBy->location)));
 	}
 
 	/* validate keys */
@@ -286,7 +281,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 							 errmsg("column \"%s\" specified more than once "
 									"in partitioning key",
 									colname),
-							 parser_errposition(pstate, pBy->location)));
+							 parser_errposition(cxt->pstate, pBy->location)));
 
 
 				key_attnums = lappend_int(key_attnums, i);
@@ -301,7 +296,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 					{
 						int32		typmod;
 
-						typeid = typenameTypeId(pstate, column->typeName, &typmod);
+						typenameTypeIdAndMod(cxt->pstate, column->typeName, &typeid, &typmod);
 
 						column->typeName->typeOid = typeid;
 						column->typeName->typemod = typmod;
@@ -317,7 +312,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
 					 errmsg("column \"%s\" does not exist in relation \"%s\"",
 							colname, cxt->relation->relname),
-					 parser_errposition(pstate, pBy->location)));
+					 parser_errposition(cxt->pstate, pBy->location)));
 		}
 
 		if (lookup_opclass)
@@ -397,7 +392,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 	if (pBy->partSpec)
 	{
-		partNumber = validate_partition_spec(pstate, cxt, stmt, pBy, at_depth,
+		partNumber = validate_partition_spec(cxt, stmt, pBy, at_depth,
 											 partNumber);
 		stenc = ((PartitionSpec *) pBy->partSpec)->enc_clauses;
 	}
@@ -411,7 +406,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("no partitions specified at depth %d",
 						partDepth),
-				 parser_errposition(pstate, pBy->location)));
+				 parser_errposition(cxt->pstate, pBy->location)));
 	}
 
 	/*
@@ -441,7 +436,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 						 errmsg("missing SUBPARTITION BY clause for "
 								"subpartition specification%s",
 								at_depth),
-						 parser_errposition(pstate, pBy->location)));
+						 parser_errposition(cxt->pstate, pBy->location)));
 			}
 			if (psubBy && psubBy->partSpec)
 			{
@@ -449,7 +444,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 						 errmsg("subpartition specification conflict%s",
 								at_depth),
-						 parser_errposition(pstate, psubBy->location)));
+						 parser_errposition(cxt->pstate, psubBy->location)));
 			}
 			psubBy->partSpec = (Node *) subSpec;
 		}
@@ -570,7 +565,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 							 errmsg("missing SUBPARTITION BY clause "
 									"for subpartition specification%s",
 									at_depth),
-							 parser_errposition(pstate, pElem->location)));
+							 parser_errposition(cxt->pstate, pElem->location)));
 				}
 
 				if (psubBy && psubBy->partSpec)
@@ -581,7 +576,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("subpartition configuration conflicts "
 									"with subpartition template"),
-							 parser_errposition(pstate, psubBy->location)));
+							 parser_errposition(cxt->pstate, psubBy->location)));
 				}
 
 				if (!((PartitionSpec *) pElem->subSpec)->istemplate && !gp_allow_non_uniform_partitioning_ddl)
@@ -682,8 +677,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 			int			everycount = every ?
 			((PartitionRangeItem *) every)->everycount : 0;
 			List	   *allRules =
-			make_partition_rules(pstate,
-								 cxt, stmt,
+			make_partition_rules(cxt, stmt,
 								 partitionBy, pElem, at_depth,
 								 relname, partno + 1, partNumber,
 								 everyno, everycount,
@@ -787,7 +781,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 		if (newSub)
 			newSub->parentRel = copyObject(pBy->parentRel);
 
-		make_child_node(pstate, stmt, cxt, relname, curPby, (Node *) newSub,
+		make_child_node(cxt, stmt, relname, curPby, (Node *) newSub,
 						pRuleCatalog, pPostCreate, pConstraint, pStoreAttr,
 						prtstr, bQuiet, colencs);
 
@@ -912,7 +906,7 @@ merge_part_column_encodings(CreateStmt *cs, List *stenc)
 }
 
 static void
-make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, char *relname,
+make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 				PartitionBy *curPby, Node *newSub,
 				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
@@ -931,6 +925,7 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 
 	child_tab_name->catalogname = cxt->relation->catalogname;
 	child_tab_name->schemaname = cxt->relation->schemaname;
+	child_tab_name->relpersistence = cxt->relation->relpersistence;
 	child_tab_name->relname = relname;
 	child_tab_name->location = -1;
 
@@ -1034,7 +1029,7 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 		}
 	}
 
-	childstmts = transformCreateStmt(child_tab_stmt, pstate->p_sourcetext, true);
+	childstmts = transformCreateStmt(child_tab_stmt, cxt->pstate->p_sourcetext, true);
 
 	/*
 	 * Attach the child partition to the parent, by creating an ALTER TABLE
@@ -1081,8 +1076,7 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 }
 
 static List *
-make_partition_rules(ParseState *pstate,
-					 CreateStmtContext *cxt, CreateStmt *stmt,
+make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 					 Node *partitionBy, PartitionElem *pElem,
 					 char *at_depth, char *child_name_str,
 					 int partNumId, int maxPartNum,
@@ -1142,7 +1136,7 @@ make_partition_rules(ParseState *pstate,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("mismatched columns for VALUES%s",
 									at_depth),
-							 parser_errposition(pstate, spec->location)));
+							 parser_errposition(cxt->pstate, spec->location)));
 				}
 
 				pColConst = (Value *) pCol;
@@ -1201,7 +1195,7 @@ make_partition_rules(ParseState *pstate,
 													(Node *) pValConst,
 													-1 /* position */ );
 
-				exprStr = deparse_partition_rule((Node *) pEq, pstate, (Node *) spec);
+				exprStr = deparse_partition_rule((Node *) pEq, cxt->pstate, (Node *) spec);
 
 				/*
 				 * for multiple cols - AND the matches eg: (col = value) AND
@@ -1282,8 +1276,7 @@ make_partition_rules(ParseState *pstate,
 
 		if (doRuleStmt)
 		{
-			pRule = make_prule_catalog(pstate,
-									   cxt, stmt,
+			pRule = make_prule_catalog(cxt, stmt,
 									   partitionBy, pElem,
 									   at_depth, child_name_str,
 									   ORBuf.data,
@@ -1291,8 +1284,7 @@ make_partition_rules(ParseState *pstate,
 
 			allRules = lappend(allRules, pRule);
 
-			pRule = make_prule_rulestmt(pstate,
-										cxt, stmt,
+			pRule = make_prule_rulestmt(cxt, stmt,
 										partitionBy, pElem,
 										at_depth, child_name_str,
 										ORBuf.data,
@@ -1449,7 +1441,7 @@ make_partition_rules(ParseState *pstate,
 							  errmsg("too few columns in %s specification%s",
 									 st_end,
 									 at_depth),
-							  parser_errposition(pstate, pBSpec->location)));
+							  parser_errposition(cxt->pstate, pBSpec->location)));
 					}
 
 					pColConst = (Value *) pCol;
@@ -1489,7 +1481,7 @@ make_partition_rules(ParseState *pstate,
 													(Node *) pValConst,
 													-1 /* position */ );
 
-					exprStr = deparse_partition_rule((Node *) pEq, pstate, (Node *) pBSpec);
+					exprStr = deparse_partition_rule((Node *) pEq, cxt->pstate, (Node *) pBSpec);
 
 					/*
 					 * for multiple cols - AND the matches eg: (col = value)
@@ -1551,7 +1543,7 @@ make_partition_rules(ParseState *pstate,
 							 errmsg("too many columns in %s specification%s",
 									st_end,
 									at_depth),
-							 parser_errposition(pstate, pBSpec->location)));
+							 parser_errposition(cxt->pstate, pBSpec->location)));
 				}
 
 				if (pIndOR)
@@ -1595,16 +1587,14 @@ make_partition_rules(ParseState *pstate,
 
 		if (doRuleStmt)
 		{
-			pRule = make_prule_catalog(pstate,
-									   cxt, stmt,
+			pRule = make_prule_catalog(cxt, stmt,
 									   partitionBy, pElem,
 									   at_depth, child_name_str,
 									   ORBuf.data,
 									   pIndOR);
 			allRules = lappend(allRules, pRule);
 
-			pRule = make_prule_rulestmt(pstate,
-										cxt, stmt,
+			pRule = make_prule_rulestmt(cxt, stmt,
 										partitionBy, pElem,
 										at_depth, child_name_str,
 										ORBuf.data,
@@ -1738,8 +1728,7 @@ deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent)
 }
 
 static Node *
-make_prule_catalog(ParseState *pstate,
-				   CreateStmtContext *cxt, CreateStmt *stmt,
+make_prule_catalog(CreateStmtContext *cxt, CreateStmt *stmt,
 				   Node *partitionBy, PartitionElem *pElem,
 				   char *at_depth, char *child_name_str,
 				   char *whereExpr,
@@ -1849,8 +1838,7 @@ make_prule_catalog(ParseState *pstate,
 }	/* end make_prule_catalog */
 
 static Node *
-make_prule_rulestmt(ParseState *pstate,
-					CreateStmtContext *cxt, CreateStmt *stmt,
+make_prule_rulestmt(CreateStmtContext *cxt, CreateStmt *stmt,
 					Node *partitionBy, PartitionElem *pElem,
 					char *at_depth, char *child_name_str,
 					char *exprBuf,
@@ -1938,7 +1926,7 @@ make_prule_rulestmt(ParseState *pstate,
 
 /* XXX: major cleanup required. Get rid of gotos at least */
 static int
-partition_range_compare(ParseState *pstate, CreateStmtContext *cxt,
+partition_range_compare(CreateStmtContext *cxt,
 						CreateStmt *stmt, PartitionBy *pBy,
 						char *at_depth, int partNumber,
 						char *compare_op,		/* =, <, > only */
@@ -1986,7 +1974,7 @@ L_redoLoop:
 		 * (because it compares things like "location") so do a real compare
 		 * using eval .
 		 */
-		res = eval_basic_opexpr(pstate, cop, n1, n2, NULL, NULL, NULL, -1);
+		res = eval_basic_opexpr(cxt->pstate, cop, n1, n2, NULL, NULL, NULL, -1);
 
 		if (DatumGetBool(res) && strcmp("=", compare_op) == 0)
 		{
@@ -2092,11 +2080,15 @@ part_el_cmp(void *a, void *b, void *arg)
 				/* use < */
 				RegProcedure sortFunction = sortfuncs[0][i++];
 
-				if (DatumGetBool(OidFunctionCall2(sortFunction, c1->constvalue,
-												  c2->constvalue)))
+				if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+													  c1->constcollid,
+													  c1->constvalue,
+													  c2->constvalue)))
 					return -1;	/* a < b */
-				if (DatumGetBool(OidFunctionCall2(sortFunction, c2->constvalue,
-												  c1->constvalue)))
+				if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+													  c1->constcollid,
+													  c2->constvalue,
+													  c1->constvalue)))
 					return 1;
 			}
 			/* equal */
@@ -2131,15 +2123,19 @@ part_el_cmp(void *a, void *b, void *arg)
 			sortFunction = sortfuncs[0][i];
 
 			/* try < first */
-			if (DatumGetBool(OidFunctionCall2(sortFunction, c1->constvalue,
-											  c2->constvalue)))
+			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+												  c1->constcollid,
+												  c1->constvalue,
+												  c2->constvalue)))
 				return -1;
 
 			/* see if they're equal */
 			sortFunction = sortfuncs[1][i];
 
-			if (DatumGetBool(OidFunctionCall2(sortFunction, c1->constvalue,
-											  c2->constvalue)))
+			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+												  c1->constcollid,
+												  c1->constvalue,
+												  c2->constvalue)))
 			{
 				/* equal, but that might actually mean < */
 				if (pe1 == PART_EDGE_EXCLUSIVE)
@@ -2179,13 +2175,17 @@ part_el_cmp(void *a, void *b, void *arg)
 			/* use < */
 			RegProcedure sortFunction = sortfuncs[0][i];
 
-			if (DatumGetBool(OidFunctionCall2(sortFunction, c1->constvalue,
-											  c2->constvalue)))
+			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+												  c1->constcollid,
+												  c1->constvalue,
+												  c2->constvalue)))
 				return -1;		/* a < b */
 
 			sortFunction = sortfuncs[1][i];
-			if (DatumGetBool(OidFunctionCall2(sortFunction, c1->constvalue,
-											  c2->constvalue)))
+			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
+												  c1->constcollid,
+												  c1->constvalue,
+												  c2->constvalue)))
 			{
 				if (pe1 == PART_EDGE_INCLUSIVE &&
 					pe2 == PART_EDGE_EXCLUSIVE)
@@ -2255,7 +2255,7 @@ sort_range_elems(List *opclasses, List *elems)
 }
 
 int
-validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
+validate_partition_spec(CreateStmtContext *cxt,
 						CreateStmt *stmt, PartitionBy *pBy,
 						char *at_depth, int partNumber)
 {
@@ -2271,7 +2271,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 
 	vstate = palloc0(sizeof(partValidationState));
 
-	vstate->pstate = pstate;
 	vstate->cxt = cxt;
 	vstate->stmt = stmt;
 	vstate->pBy = pBy;
@@ -2344,7 +2343,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE"),
-					 parser_errposition(pstate, pElem->location)));
+					 parser_errposition(cxt->pstate, pElem->location)));
 
 
 		/*
@@ -2378,7 +2377,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 							 errmsg("multiple default partitions are not "
 									"allowed"),
-							 parser_errposition(pstate, pElem->location)));
+							 parser_errposition(cxt->pstate, pElem->location)));
 
 				}
 
@@ -2392,7 +2391,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 									"for DEFAULT partition%s%s",
 									namBuf,
 									at_depth),
-							 parser_errposition(pstate, pElem->location)));
+							 parser_errposition(cxt->pstate, pElem->location)));
 
 				}
 
@@ -2421,7 +2420,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 									 errmsg("duplicate partition name for partition%s%s",
 											namBuf,
 											at_depth),
-									 parser_errposition(pstate, pElem->location)));
+									 parser_errposition(cxt->pstate, pElem->location)));
 					}
 					allPartNames = lappend(allPartNames, pElem->partName);
 				}
@@ -2463,7 +2462,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 						 errmsg("unknown partition type %d %s",
 								pBy->partType, at_depth),
-						 parser_errposition(pstate, pBy->location)));
+						 parser_errposition(cxt->pstate, pBy->location)));
 				break;
 
 		}
@@ -2478,7 +2477,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 		if (!IsA(elem, PartitionElem))
 			continue;
 
-		merge_partition_encoding(pstate, elem, pSpec->enc_clauses);
+		merge_partition_encoding(cxt->pstate, elem, pSpec->enc_clauses);
 	}
 
 	/* validate_range_partition might have changed some boundaries */
@@ -2491,7 +2490,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 				 errmsg("PARTITIONS \"%d\" must match \"%d\" elements "
 						"in specification%s",
 						partNumber, partno, vstate->at_depth),
-				 parser_errposition(pstate, pBy->location)));
+				 parser_errposition(cxt->pstate, pBy->location)));
 
 	if (vstate->allRangeVals)
 		list_free(vstate->allRangeVals);
@@ -2514,6 +2513,7 @@ flatten_partition_val(Node *node, Oid target_type)
 		Const	   *c;
 		Type		typ = typeidType(target_type);
 		int32		typmod = ((Form_pg_type) GETSTRUCT(typ))->typtypmod;
+		int32		typcollation = ((Form_pg_type) GETSTRUCT(typ))->typcollation;
 		int16		typlen = ((Form_pg_type) GETSTRUCT(typ))->typlen;
 		bool		typbyval = ((Form_pg_type) GETSTRUCT(typ))->typbyval;
 		bool		isnull;
@@ -2535,7 +2535,7 @@ flatten_partition_val(Node *node, Oid target_type)
 		}
 
 		res = partition_arg_get_val(node, &isnull);
-		c = makeConst(target_type, typmod, typlen, res, isnull, typbyval);
+		c = makeConst(target_type, typmod, typcollation, typlen, res, isnull, typbyval);
 
 		return c;
 	}
@@ -2551,7 +2551,10 @@ partition_arg_get_val(Node *node, bool *isnull)
 {
 	Const	   *c;
 
-	c = (Const *) evaluate_expr((Expr *) node, exprType(node), exprTypmod(node));
+	c = (Const *) evaluate_expr((Expr *) node,
+								exprType(node),
+								exprTypmod(node),
+								exprCollation(node));
 	if (!IsA(c, Const))
 		elog(ERROR, "partition parameter is not constant");
 
@@ -2564,7 +2567,7 @@ static void
 preprocess_range_spec(partValidationState *vstate)
 {
 	PartitionSpec *spec = (PartitionSpec *) vstate->pBy->partSpec;
-	ParseState *pstate = vstate->pstate;
+	ParseState *pstate = vstate->cxt->pstate;
 	ListCell   *lc;
 	List	   *plusop = list_make2(makeString("pg_catalog"), makeString("+"));
 	List	   *ltop = list_make2(makeString("pg_catalog"), makeString("<"));
@@ -2588,9 +2591,9 @@ preprocess_range_spec(partValidationState *vstate)
 				found = true;
 				if (!OidIsValid(column->typeName->typeOid))
 				{
-					column->typeName->typeOid =
-						typenameTypeId(vstate->pstate, column->typeName,
-									   &column->typeName->typemod);
+					typenameTypeIdAndMod(pstate, column->typeName,
+										 &column->typeName->typeOid,
+										 &column->typeName->typemod);
 				}
 				typname = column->typeName;
 				break;
@@ -2706,7 +2709,9 @@ preprocess_range_spec(partValidationState *vstate)
 						TypeName   *typ = lfirst(lccol);
 						Node	   *newnode;
 						int32		typmod;
-						Oid			typid = typenameTypeId(vstate->pstate, typ,  &typmod);
+						Oid			typid;
+
+						typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
 						newnode = coerce_partition_value(lfirst(lcstart),
 														 typid, typmod,
@@ -2719,6 +2724,9 @@ preprocess_range_spec(partValidationState *vstate)
 														 typid,
 														 typmod,
 														 PARTTYP_RANGE);
+
+						assign_expr_collations(pstate, newnode);
+
 						lfirst(lcend) = newnode;
 						lcend = lnext(lcend);
 					}
@@ -2767,6 +2775,8 @@ preprocess_range_spec(partValidationState *vstate)
 							rtypeId = newrtypeId;
 						}
 
+						assign_expr_collations(pstate, e);
+
 						everytypes = lappend_oid(everytypes, rtypeId);
 					}
 				}
@@ -2789,10 +2799,15 @@ preprocess_range_spec(partValidationState *vstate)
 					Const	   *clauseend;
 					Const	   *clauseevery;
 					int32		typmod;
-					Oid			typid = typenameTypeId(vstate->pstate, type, &typmod);
-					int16		len = get_typlen(typid);
-					bool		typbyval = get_typbyval(typid);
+					Oid			typid;
+					int16		len;
+					bool		typbyval;
+					Oid			typcollation;
 
+					typenameTypeIdAndMod(pstate, type, &typid, &typmod);
+					get_typlenbyval(typid, &len, &typbyval);
+					typcollation = get_typcollation(typid);
+					
 					Assert(lcevery);
 					Assert(lcend);
 
@@ -2805,7 +2820,9 @@ preprocess_range_spec(partValidationState *vstate)
 											&typbyval, &len, &typid,
 											-1);
 
-					myend = makeConst(typid, typmod, len,
+					myend = makeConst(typid, typmod,
+									  typcollation,
+									  len,
 									  datumCopy(res, typbyval, len),
 									  false, typbyval);
 
@@ -2847,6 +2864,7 @@ preprocess_range_spec(partValidationState *vstate)
 					Oid			typid = lfirst_oid(lctypes);
 					bool		byval = get_typbyval(typid);
 					int16		typlen = get_typlen(typid);
+					Oid			typcollation = get_typcollation(typid);
 					Const	   *c;
 
 					/* increment every */
@@ -2856,7 +2874,11 @@ preprocess_range_spec(partValidationState *vstate)
 											NULL, NULL,
 											&typid, -1);
 
-					c = makeConst(typid, -1, typlen, res, false, byval);
+					c = makeConst(typid,
+								  -1,
+								  typcollation,
+								  typlen,
+								  res, false, byval);
 					pfree(lfirst(lceveryinc));
 					lfirst(lceveryinc) = c;
 				}
@@ -2950,7 +2972,7 @@ preprocess_range_spec(partValidationState *vstate)
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 								 errmsg("partition name \"%s\" too long",
 										el->partName),
-						  parser_errposition(vstate->pstate, el->location)));
+						  parser_errposition(pstate, el->location)));
 
 					el2->partName = pstrdup(newname);
 				}
@@ -2973,12 +2995,16 @@ preprocess_range_spec(partValidationState *vstate)
 					Node	   *mystart = lfirst(lcstart);
 					TypeName   *typ = lfirst(lccol);
 					Node	   *newnode;
+					Oid			typid;
 					int32		typmod;
-					Oid			typid = typenameTypeId(vstate->pstate, typ, &typmod);
+
+					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
 					newnode = coerce_partition_value(mystart,
 													 typid, typmod,
 													 PARTTYP_RANGE);
+
+					assign_expr_collations(pstate, newnode);
 
 					lfirst(lcstart) = newnode;
 				}
@@ -2996,12 +3022,16 @@ preprocess_range_spec(partValidationState *vstate)
 					Node	   *myend = lfirst(lcend);
 					TypeName   *typ = lfirst(lccol);
 					Node	   *newnode;
+					Oid			typid;
 					int32		typmod;
-					Oid			typid = typenameTypeId(vstate->pstate, typ, &typmod);
+
+					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
 					newnode = coerce_partition_value(myend,
 													 typid, typmod,
 													 PARTTYP_RANGE);
+
+					assign_expr_collations(pstate, newnode);
 
 					lfirst(lcend) = newnode;
 				}
@@ -3253,7 +3283,9 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				Type		typ;
 				char	   *outputstr;
 				int32		coltypmod;
-				Oid			coltypid = typenameTypeId(vstate->pstate, type, &coltypmod);
+				Oid			coltypid;
+
+				typenameTypeIdAndMod(pstate, type, &coltypid, &coltypmod);
 
 				oprmul = lappend(NIL, makeString("*"));
 				oprplus = lappend(NIL, makeString("+"));
@@ -3292,7 +3324,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 										NULL, NULL, &restypid,
 										exprLocation(n3));
 				typ = typeidType(restypid);
-				c = makeConst(restypid, -1, typeLen(typ), res, false,
+				c = makeConst(restypid, -1, InvalidOid, typeLen(typ), res, false,
 							  typeByVal(typ));
 				ReleaseSysCache(typ);
 
@@ -3309,7 +3341,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 										&restypid,
 										exprLocation(n1));
 				typ = typeidType(restypid);
-				newend = makeConst(restypid, -1, typeLen(typ), res, false,
+				newend = makeConst(restypid, -1, InvalidOid, typeLen(typ), res, false,
 								   typeByVal(typ));
 				ReleaseSysCache(typ);
 
@@ -3359,7 +3391,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 											   exprLocation(n1));
 
 					typ = typeidType(test_typid);
-					tmpconst = makeConst(test_typid, -1, typeLen(typ), uncast,
+					tmpconst = makeConst(test_typid, -1, InvalidOid, typeLen(typ), uncast,
 										 false, typeByVal(typ));
 					ReleaseSysCache(typ);
 
@@ -3525,6 +3557,7 @@ l_next_iteration:
 static void
 validate_range_partition(partValidationState *vstate)
 {
+	ParseState *pstate = vstate->cxt->pstate;
 	bool		bAppendRange = false;
 	PartitionBoundSpec *prevBSpec = NULL;
 	PartitionBoundSpec *spec = (PartitionBoundSpec *) vstate->spec;
@@ -3544,7 +3577,7 @@ validate_range_partition(partValidationState *vstate)
 							"specification in partition clause",
 							specTName),
 			/* MPP-4249: use value spec location if have one */
-					 parser_errposition(vstate->pstate,
+					 parser_errposition(pstate,
 								 ((PartitionValuesSpec *) spec)->location)));
 		}
 	}
@@ -3553,7 +3586,7 @@ validate_range_partition(partValidationState *vstate)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("missing boundary specification"),
-			   parser_errposition(vstate->pstate, vstate->pElem->location)));
+			   parser_errposition(pstate, vstate->pElem->location)));
 
 	}
 
@@ -3595,8 +3628,7 @@ validate_range_partition(partValidationState *vstate)
 							"unnamed RANGE boundary "
 							"specifications%s",
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 
@@ -3609,9 +3641,9 @@ validate_range_partition(partValidationState *vstate)
 		vstate->prevHadName = false;
 
 	if (spec->partStart)
-		PartitionRangeItemIsValid(vstate->pstate, (PartitionRangeItem *) spec->partStart);
+		PartitionRangeItemIsValid(pstate, (PartitionRangeItem *) spec->partStart);
 	if (spec->partEnd)
-		PartitionRangeItemIsValid(vstate->pstate, (PartitionRangeItem *) spec->partEnd);
+		PartitionRangeItemIsValid(pstate, (PartitionRangeItem *) spec->partEnd);
 
 	/*
 	 * Fixup boundaries for previous partition ending if necessary
@@ -3652,8 +3684,7 @@ validate_range_partition(partValidationState *vstate)
 				(PartitionRangeItem *) prevBSpec->partStart;
 
 
-				compareRc = partition_range_compare(vstate->pstate,
-													vstate->cxt, vstate->stmt,
+				compareRc = partition_range_compare(vstate->cxt, vstate->stmt,
 													vstate->pBy,
 													vstate->at_depth,
 													vstate->partNumber,
@@ -3668,7 +3699,7 @@ validate_range_partition(partValidationState *vstate)
 									"than START of previous%s",
 									vstate->namBuf,
 									vstate->at_depth),
-							 parser_errposition(vstate->pstate,
+							 parser_errposition(pstate,
 												spec->location)));
 
 				}
@@ -3698,8 +3729,7 @@ validate_range_partition(partValidationState *vstate)
 					 errmsg("start of partition%s overlaps previous%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 
@@ -3715,8 +3745,7 @@ validate_range_partition(partValidationState *vstate)
 							"previous%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 		else	/* build ri for current */
@@ -3760,10 +3789,9 @@ L_setprevElem:
 		PartitionRangeItem *pRI2 =
 		(PartitionRangeItem *) spec->partEnd;
 
-		PartitionRangeItemIsValid(vstate->pstate, (PartitionRangeItem *) spec->partEnd);
+		PartitionRangeItemIsValid(pstate, (PartitionRangeItem *) spec->partEnd);
 		compareRc =
-			partition_range_compare(vstate->pstate,
-									vstate->cxt, vstate->stmt,
+			partition_range_compare(vstate->cxt, vstate->stmt,
 									vstate->pBy,
 									vstate->at_depth,
 									vstate->partNumber,
@@ -3778,13 +3806,11 @@ L_setprevElem:
 					 errmsg("START greater than END for partition%s%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 		compareRc =
-			partition_range_compare(vstate->pstate,
-									vstate->cxt, vstate->stmt,
+			partition_range_compare(vstate->cxt, vstate->stmt,
 									vstate->pBy,
 									vstate->at_depth,
 									vstate->partNumber,
@@ -3799,8 +3825,7 @@ L_setprevElem:
 					 errmsg("START equal to END for partition%s%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 
@@ -3822,8 +3847,7 @@ L_setprevElem:
 		PartitionRangeItem *pRI2 =
 		(PartitionRangeItem *) prevBSpec->partEnd;
 
-		rc = partition_range_compare(vstate->pstate,
-									 vstate->cxt, vstate->stmt,
+		rc = partition_range_compare(vstate->cxt, vstate->stmt,
 									 vstate->pBy,
 									 vstate->at_depth,
 									 vstate->partNumber,
@@ -3841,8 +3865,7 @@ L_setprevElem:
 							"overlaps previous range%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 
@@ -3851,8 +3874,7 @@ L_setprevElem:
 		 * possible
 		 */
 		if (1 != rc)
-			rc = partition_range_compare(vstate->pstate,
-										 vstate->cxt, vstate->stmt,
+			rc = partition_range_compare(vstate->cxt, vstate->stmt,
 										 vstate->pBy,
 										 vstate->at_depth,
 										 vstate->partNumber,
@@ -3871,8 +3893,7 @@ L_setprevElem:
 							"overlaps previous range%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 		}
 
 	}							/* end compare to last */
@@ -3916,8 +3937,7 @@ L_setprevElem:
 			if (lcBSpec->partStart)
 			{
 				compareRc =
-					partition_range_compare(vstate->pstate,
-											vstate->cxt, vstate->stmt,
+					partition_range_compare(vstate->cxt, vstate->stmt,
 											vstate->pBy,
 											vstate->at_depth,
 											vstate->partNumber,
@@ -3939,8 +3959,7 @@ L_setprevElem:
 				}
 
 				compareRc =
-					partition_range_compare(vstate->pstate,
-											vstate->cxt, vstate->stmt,
+					partition_range_compare(vstate->cxt, vstate->stmt,
 											vstate->pBy,
 											vstate->at_depth,
 											vstate->partNumber,
@@ -3983,8 +4002,7 @@ L_setprevElem:
 				}
 
 				compareRc =
-					partition_range_compare(vstate->pstate,
-											vstate->cxt, vstate->stmt,
+					partition_range_compare(vstate->cxt, vstate->stmt,
 											vstate->pBy,
 											vstate->at_depth,
 											vstate->partNumber,
@@ -4006,8 +4024,7 @@ L_setprevElem:
 					break;
 				}
 
-				compareRc = partition_range_compare(vstate->pstate,
-													vstate->cxt, vstate->stmt,
+				compareRc = partition_range_compare(vstate->cxt, vstate->stmt,
 													vstate->pBy,
 													vstate->at_depth,
 													vstate->partNumber,
@@ -4041,8 +4058,7 @@ L_setprevElem:
 					(PartitionRangeItem *) lcBSpec->partEnd;
 
 				compareRc =
-					partition_range_compare(vstate->pstate,
-											vstate->cxt, vstate->stmt,
+					partition_range_compare(vstate->cxt, vstate->stmt,
 											vstate->pBy,
 											vstate->at_depth,
 											vstate->partNumber,
@@ -4065,8 +4081,7 @@ L_setprevElem:
 				}
 
 				compareRc =
-					partition_range_compare(vstate->pstate,
-											vstate->cxt, vstate->stmt,
+					partition_range_compare(vstate->cxt, vstate->stmt,
 											vstate->pBy,
 											vstate->at_depth,
 											vstate->partNumber,
@@ -4096,8 +4111,7 @@ L_setprevElem:
 					 errmsg("invalid range comparison for partition%s%s",
 							vstate->namBuf,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 
 		}
 
@@ -4110,8 +4124,7 @@ L_setprevElem:
 							vstate->namBuf,
 							otherPartPos,
 							vstate->at_depth),
-					 parser_errposition(vstate->pstate,
-										spec->location)));
+					 parser_errposition(pstate, spec->location)));
 		}
 
 		if (lc_allPrev)
@@ -4161,12 +4174,16 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 		elog(ERROR, "cache lookup failed for operator %u", opexpr->opno);
 	opexpr->opfuncid = oprcode;
 
+	assign_expr_collations(pstate, (Node *) opexpr);
+
 	lhs = partition_arg_get_val((Node *) linitial(opexpr->args), &isnull);
 	if (!isnull)
 	{
 		rhs = partition_arg_get_val((Node *) lsecond(opexpr->args), &isnull);
 		if (!isnull)
-			res = OidFunctionCall2(opexpr->opfuncid, lhs, rhs);
+			res = OidFunctionCall2Coll(opexpr->opfuncid,
+									   opexpr->inputcollid,
+									   lhs, rhs);
 	}
 
 	/* If the caller supplied a target result type, coerce if necesssary */
@@ -4181,7 +4198,10 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 				int32		typmod;
 				Const	   *c;
 
-				c = makeConst(opexpr->opresulttype, -1, typeLen(typ), res,
+				c = makeConst(opexpr->opresulttype,
+							  -1,
+							  opexpr->opcollid,
+							  typeLen(typ), res,
 							  isnull, typeByVal(typ));
 				ReleaseSysCache(typ);
 
@@ -4194,6 +4214,8 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 										 COERCION_EXPLICIT,
 										 COERCE_IMPLICIT_CAST,
 										 -1);
+
+				assign_expr_collations(pstate, (Node *) e);
 
 				res = partition_arg_get_val((Node *) e, &isnull);
 			}
@@ -4236,6 +4258,7 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 static void
 validate_list_partition(partValidationState *vstate)
 {
+	ParseState *pstate = vstate->cxt->pstate;
 	PartitionValuesSpec *spec;
 	Node	   *n = vstate->spec;
 	ListCell   *lc;
@@ -4258,8 +4281,8 @@ validate_list_partition(partValidationState *vstate)
 				found = true;
 				if (!OidIsValid(column->typeName->typeOid))
 				{
-					column->typeName->typeOid
-						= typenameTypeId(vstate->pstate, column->typeName,
+					typenameTypeIdAndMod(pstate, column->typeName,
+										 &column->typeName->typeOid,
 										 &column->typeName->typemod);
 				}
 				typname = column->typeName;
@@ -4278,7 +4301,7 @@ validate_list_partition(partValidationState *vstate)
 						"partition%s of type LIST%s",
 						vstate->namBuf,
 						vstate->at_depth),
-			   parser_errposition(vstate->pstate, vstate->pElem->location)));
+			   parser_errposition(pstate, vstate->pElem->location)));
 
 	}
 
@@ -4287,7 +4310,7 @@ validate_list_partition(partValidationState *vstate)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("invalid boundary specification for LIST partition"),
-			   parser_errposition(vstate->pstate, vstate->pElem->location)));
+			   parser_errposition(pstate, vstate->pElem->location)));
 
 
 	}
@@ -4320,7 +4343,7 @@ validate_list_partition(partValidationState *vstate)
 							 list_length(vstate->pBy->keys) ? "s" : "",
 							 nvals,
 							 nvals ? "s" : ""),
-						 parser_errposition(vstate->pstate, spec->location)));
+						 parser_errposition(pstate, spec->location)));
 			}
 
 			/*
@@ -4329,13 +4352,14 @@ validate_list_partition(partValidationState *vstate)
 			llc2 = list_head(coltypes);
 			foreach(lc_val, vals)
 			{
-				Node	   *node = transformExpr(vstate->pstate,
+				Node	   *node = transformExpr(pstate,
 												 (Node *) lfirst(lc_val),
 												 EXPR_KIND_PARTITION_EXPRESSION);
 				TypeName   *type = lfirst(llc2);
 				int32		typmod;
-				Oid			typid = typenameTypeId(vstate->pstate, type, &typmod);
+				Oid			typid;
 
+				typenameTypeIdAndMod(pstate, type, &typid, &typmod);
 				node = coerce_partition_value(node, typid, typmod,
 											  PARTTYP_LIST);
 
@@ -4376,7 +4400,7 @@ validate_list_partition(partValidationState *vstate)
 										"in partition%s%s",
 										vstate->namBuf,
 										vstate->at_depth),
-						parser_errposition(vstate->pstate, spec->location)));
+						parser_errposition(pstate, spec->location)));
 					}
 				}
 			}
@@ -4617,6 +4641,7 @@ Node *
 coerce_partition_value(Node *node, Oid typid, int32 typmod,
 					   PartitionByType partype)
 {
+	Oid			typcollation;
 	Node	   *out;
 
 	/* Create a coercion expression to the target type */
@@ -4654,10 +4679,19 @@ coerce_partition_value(Node *node, Oid typid, int32 typmod,
 	}
 
 	/*
+	 * GPDB_91_MERGE_FIXME: For now, partition specifications always use
+	 * default collation. We're not very consistent about that though, I think.
+	 */
+	typcollation = get_typcollation(typid);
+
+	/*
 	 * And then evaluate it. evaluate_expr calls possible cast function, and
 	 * returns a Const. (the check for that below is just for paranoia)
 	 */
-	out = (Node *) evaluate_expr((Expr *) out, typid, typmod);
+	out = (Node *) evaluate_expr((Expr *) out,
+								 typid,
+								 typmod,
+								 typcollation);
 	if (!IsA(out, Const))
 		elog(ERROR, "partition parameter is not constant");
 

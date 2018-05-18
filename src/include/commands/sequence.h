@@ -5,10 +5,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/sequence.h,v 1.44 2010/01/07 04:53:35 tgl Exp $
+ * src/include/commands/sequence.h
  *
  *-------------------------------------------------------------------------
  */
@@ -73,9 +73,11 @@ extern Datum setval_oid(PG_FUNCTION_ARGS);
 extern Datum setval3_oid(PG_FUNCTION_ARGS);
 extern Datum lastval(PG_FUNCTION_ARGS);
 
+extern Datum pg_sequence_parameters(PG_FUNCTION_ARGS);
+
 extern void DefineSequence(CreateSeqStmt *stmt);
 extern void AlterSequence(AlterSeqStmt *stmt);
-extern void AlterSequenceInternal(Oid relid, List *options);
+extern void ResetSequence(Oid seq_relid);
 
 extern void seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
 extern void seq_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);

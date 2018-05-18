@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.267 2010/03/30 21:58:10 tgl Exp $
+ *	  src/backend/optimizer/plan/planner.c
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +30,7 @@
 #include "optimizer/orca.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
@@ -266,9 +267,11 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->rewindPlanIDs = NULL;
 	glob->finalrtable = NIL;
 	glob->finalrowmarks = NIL;
+	glob->resultRelations = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
 	glob->lastPHId = 0;
+	glob->lastRowMarkId = 0;
 	glob->transientPlan = false;
 	glob->oneoffPlan = false;
 	/* ApplyShareInputContext initialization. */
@@ -352,6 +355,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	/* final cleanup of the plan */
 	Assert(glob->finalrtable == NIL);
 	Assert(glob->finalrowmarks == NIL);
+	Assert(glob->resultRelations == NIL);
 	Assert(parse == root->parse);
 	top_plan = set_plan_references(glob, top_plan,
 								   root->parse->rtable,
@@ -433,12 +437,13 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
 	result->commandType = parse->commandType;
 	result->hasReturning = (parse->returningList != NIL);
+	result->hasModifyingCTE = parse->hasModifyingCTE;
 	result->canSetTag = parse->canSetTag;
 	result->transientPlan = glob->transientPlan;
 	result->oneoffPlan = glob->oneoffPlan;
 	result->planTree = top_plan;
 	result->rtable = glob->finalrtable;
-	result->resultRelations = root->resultRelations;
+	result->resultRelations = glob->resultRelations;
 	result->utilityStmt = parse->utilityStmt;
 	result->intoClause = parse->intoClause;
 	result->subplans = glob->subplans;
@@ -612,11 +617,20 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	inline_set_returning_functions(root);
 
 	/*
-	 * Check to see if any subqueries in the rangetable can be merged into
-	 * this query.
+	 * Check to see if any subqueries in the jointree can be merged into this
+	 * query.
 	 */
 	parse->jointree = (FromExpr *)
 		pull_up_subqueries(root, (Node *) parse->jointree, NULL, NULL);
+
+	/*
+	 * If this is a simple UNION ALL query, flatten it into an appendrel. We
+	 * do this now because it requires applying pull_up_subqueries to the leaf
+	 * queries of the UNION ALL, which weren't touched above because they
+	 * weren't referenced by the jointree (they will be after we do this).
+	 */
+	if (parse->setOperations)
+		flatten_simple_union_all(root);
 
 	/*
 	 * Detect whether any rangetable entries are RTE_JOIN kind; if not, we can
@@ -840,7 +854,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 				rowMarks = root->rowMarks;
 
 			plan = (Plan *) make_modifytable(root, parse->commandType,
-										   copyObject(root->resultRelations),
+											 parse->canSetTag,
+									   list_make1_int(parse->resultRelation),
 											 list_make1(plan),
 											 returningLists,
 											 rowMarks,
@@ -1143,7 +1158,7 @@ inheritance_planner(PlannerInfo *root)
 		/* Make sure any initplans from this rel get into the outer list */
 		root->init_plans = list_concat(root->init_plans, subroot.init_plans);
 
-		/* Build target-relations list for the executor */
+		/* Build list of target-relation RT indexes */
 		resultRelations = lappend_int(resultRelations, appinfo->child_relid);
 
 		/* Build list of per-relation RETURNING targetlists */
@@ -1159,21 +1174,6 @@ inheritance_planner(PlannerInfo *root)
 		}
 	}
 
-	/**
-	 * If due to constraint exclusions all the result relations have been removed,
-	 * we need something upstream.
-	 */
-	if (resultRelations)
-	{
-		root->resultRelations = resultRelations;
-	}
-	else
-	{
-		root->resultRelations = list_make1_int(parse->resultRelation);
-	}
-
-	root->resultRelations = resultRelations;
-
 	/* Mark result as unordered (probably unnecessary) */
 	root->query_pathkeys = NIL;
 
@@ -1183,7 +1183,6 @@ inheritance_planner(PlannerInfo *root)
 	 */
 	if (subplans == NIL)
 	{
-		root->resultRelations = list_make1_int(parentRTindex);
 		/* although dummy, it must have a valid tlist for executor */
 		tlist = preprocess_targetlist(root, parse->targetList);
 		plan = (Plan *) make_result(root,
@@ -1210,7 +1209,8 @@ inheritance_planner(PlannerInfo *root)
 
 	/* And last, tack on a ModifyTable node to do the UPDATE/DELETE work */
 	return (Plan *) make_modifytable(root, parse->commandType,
-									 copyObject(root->resultRelations),
+									 parse->canSetTag,
+									 resultRelations,
 									 subplans,
 									 returningLists,
 									 rowMarks,
@@ -1422,6 +1422,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	{
 		/* No set operations, do regular planning */
 		List	   *sub_tlist;
+		double		sub_limit_tuples;
 		AttrNumber *groupColIdx = NULL;
 		Oid		   *groupOperators = NULL;
 		bool		need_tlist_eval = true;
@@ -1429,7 +1430,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		Path	   *cheapest_path;
 		Path	   *sorted_path;
 		long		numGroups = 0;
-		AggClauseCounts agg_counts;
+		AggClauseCosts agg_costs;
 		int			numGroupCols;
 		double		path_rows;
 		int			path_width;
@@ -1439,7 +1440,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		bool		grpext = false;
 		CanonicalGroupingSets *canonical_grpsets;
 
-		MemSet(&agg_counts, 0, sizeof(AggClauseCounts));
+		MemSet(&agg_costs, 0, sizeof(AggClauseCosts));
 
 		/* A recursive query should always have setOperations */
 		Assert(!root->hasRecursion);
@@ -1485,6 +1486,33 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		grpext = is_grouping_extension(canonical_grpsets);
 
 		/*
+		 * Do aggregate preprocessing, if the query has any aggs.
+		 *
+		 * Note: think not that we can turn off hasAggs if we find no aggs. It
+		 * is possible for constant-expression simplification to remove all
+		 * explicit references to aggs, but we still have to follow the
+		 * aggregate semantics (eg, producing only one output row).
+		 */
+		if (parse->hasAggs)
+		{
+			/*
+			 * Collect statistics about aggregates for estimating costs. Note:
+			 * we do not attempt to detect duplicate aggregates here; a
+			 * somewhat-overestimated cost is okay for our present purposes.
+			 */
+			count_agg_clauses(root, (Node *) tlist, &agg_costs);
+			count_agg_clauses(root, parse->havingQual, &agg_costs);
+
+			/*
+			 * Preprocess MIN/MAX aggregates, if any.  Note: be careful about
+			 * adding logic between here and the optimize_minmax_aggregates
+			 * call.  Anything that is needed in MIN/MAX-optimizable cases
+			 * will have to be duplicated in planagg.c.
+			 */
+			preprocess_minmax_aggregates(root, tlist);
+		}
+
+		/*
 		 * Calculate pathkeys that represent grouping/ordering requirements.
 		 * Stash them in PlannerInfo so that query_planner can canonicalize
 		 * them after EquivalenceClasses have been formed.	The sortClause is
@@ -1517,25 +1545,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  false);
 
 		/*
-		 * Will need actual number of aggregates for estimating costs.
-		 *
-		 * Note: we do not attempt to detect duplicate aggregates here; a
-		 * somewhat-overestimated count is okay for our present purposes.
-		 *
-		 * Note: think not that we can turn off hasAggs if we find no aggs. It
-		 * is possible for constant-expression simplification to remove all
-		 * explicit references to aggs, but we still have to follow the
-		 * aggregate semantics (eg, producing only one output row).
-		 */
-		MemSet(&agg_counts, 0, sizeof(AggClauseCounts));
-
-		if (parse->hasAggs)
-		{
-			count_agg_clauses((Node *) tlist, &agg_counts);
-			count_agg_clauses(parse->havingQual, &agg_counts);
-		}
-
-		/*
 		 * Generate appropriate target list for subplan; may be different from
 		 * tlist if grouping or aggregation is needed.
 		 */
@@ -1554,23 +1563,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		}
 		else
 			root->window_pathkeys = NIL;
-
-		/*
-		 * Will need actual number of aggregates for estimating costs.
-		 *
-		 * Note: we do not attempt to detect duplicate aggregates here; a
-		 * somewhat-overestimated count is okay for our present purposes.
-		 *
-		 * Note: think not that we can turn off hasAggs if we find no aggs. It
-		 * is possible for constant-expression simplification to remove all
-		 * explicit references to aggs, but we still have to follow the
-		 * aggregate semantics (eg, producing only one output row).
-		 */
-		if (parse->hasAggs)
-		{
-			count_agg_clauses((Node *) tlist, &agg_counts);
-			count_agg_clauses(parse->havingQual, &agg_counts);
-		}
 
 		/*
 		 * Figure out whether we want a sorted result from query_planner.
@@ -1603,12 +1595,27 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			root->query_pathkeys = NIL;
 
 		/*
+		 * Figure out whether there's a hard limit on the number of rows that
+		 * query_planner's result subplan needs to return.  Even if we know a
+		 * hard limit overall, it doesn't apply if the query has any
+		 * grouping/aggregation operations.
+		 */
+		if (parse->groupClause ||
+			parse->distinctClause ||
+			parse->hasAggs ||
+			parse->hasWindowFuncs ||
+			root->hasHavingQual)
+			sub_limit_tuples = -1.0;
+		else
+			sub_limit_tuples = limit_tuples;
+
+		/*
 		 * Generate the best unsorted and presorted paths for this Query (but
 		 * note there may not be any presorted path).  query_planner will also
 		 * estimate the number of groups in the query, and canonicalize all
 		 * the pathkeys.
 		 */
-		query_planner(root, sub_tlist, tuple_fraction, limit_tuples,
+		query_planner(root, sub_tlist, tuple_fraction, sub_limit_tuples,
 					  &cheapest_path, &sorted_path, &dNumGroups);
 
 		/*
@@ -1638,7 +1645,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 									   path_rows, path_width,
 									   cheapest_path, sorted_path,
 									   numGroupCols,
-									   dNumGroups, &agg_counts);
+									   dNumGroups, &agg_costs);
 			/* Also convert # groups to long int --- but 'ware overflow! */
 			numGroups = (long) Min(dNumGroups, (double) LONG_MAX);
 		}
@@ -1681,6 +1688,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 */
 		result_plan = optimize_minmax_aggregates(root,
 												 tlist,
+												 &agg_costs,
 												 best_path);
 		if (result_plan != NULL)
 		{
@@ -1703,7 +1711,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		if (Gp_role == GP_ROLE_DISPATCH && result_plan == NULL)
 		{
 			bool		querynode_changed = false;
-			bool		pass_subtlist = agg_counts.hasOrderedAggs;
+			bool		pass_subtlist = agg_costs.numOrderedAggs > 0;
 			GroupContext group_context;
 
 			group_context.best_path = best_path;
@@ -1725,7 +1733,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			group_context.querynode_changed = &querynode_changed;
 
 			result_plan = cdb_grouping_planner(root,
-											   &agg_counts,
+											   &agg_costs,
 											   &group_context);
 
 			/* Add the Repeat node if needed. */
@@ -1884,7 +1892,9 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				result_plan = (Plan *) make_agg(root,
 												tlist,
 												(List *) parse->havingQual,
-												AGG_HASHED, false,
+												AGG_HASHED,
+												&agg_costs,
+												false, /* streaming */
 												numGroupCols,
 												groupColIdx,
 												groupOperators,
@@ -1893,8 +1903,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 												0, /* input_grouping */
 												0, /* grouping */
 												0, /* rollup_gs_times */
-												agg_counts.numAggs,
-												agg_counts.transitionSpace,
 												result_plan);
 
 				if (canonical_grpsets != NULL &&
@@ -1951,7 +1959,9 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				result_plan = (Plan *) make_agg(root,
 												tlist,
 												(List *) parse->havingQual,
-												aggstrategy, false,
+												aggstrategy,
+												&agg_costs,
+												false, /* streaming */
 												numGroupCols,
 												groupColIdx,
 												groupOperators,
@@ -1960,8 +1970,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 												0, /* input_grouping */
 												0, /* grouping */
 												0, /* rollup_gs_times */
-												agg_counts.numAggs,
-												agg_counts.transitionSpace,
 												result_plan);
 
 				if (canonical_grpsets != NULL &&
@@ -2009,7 +2017,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 													  &numGroupCols,
 													  &groupColIdx,
 													  &groupOperators,
-													  &agg_counts,
+													  &agg_costs,
 													  canonical_grpsets,
 													  &dNumGroups,
 													  &querynode_changed,
@@ -2449,7 +2457,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				base_cost = motion_cost_per_row * result_plan->plan_rows;
 				alt_cost = motion_cost_per_row * numDistinct;
 				cost_sort(&sort_path, root, NIL, alt_cost,
-						  numDistinct, result_plan->plan_rows, -1.0);
+						  numDistinct, result_plan->plan_rows,
+						  0, work_mem, -1.0);
 				alt_cost += sort_path.startup_cost;
 				alt_cost += cpu_operator_cost * numDistinct
 					* list_length(parse->distinctClause);
@@ -2523,6 +2532,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 											result_plan->targetlist,
 											NIL,
 											AGG_HASHED,
+											NULL,
 											false, /* streaming */
 										  list_length(parse->distinctClause),
 								 extract_grouping_cols(parse->distinctClause,
@@ -2533,8 +2543,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 											0, /* input_grouping */
 											0, /* grouping */
 											0, /* rollupGSTimes */
-											0,
-											0, /* transSpace */
 											result_plan);
 			/* Hashed aggregation produces randomly-ordered results */
 			current_pathkeys = NIL;
@@ -2776,12 +2784,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	}
 
 	Insist(result_plan->flow);
-
-	/* Compute result-relations list if needed */
-	if (parse->resultRelation)
-		root->resultRelations = list_make1_int(parse->resultRelation);
-	else
-		root->resultRelations = NIL;
 
 	/*
 	 * Return the actual output ordering in query_pathkeys for possible use by
@@ -3060,16 +3062,13 @@ preprocess_rowmarks(PlannerInfo *root)
 
 		newrc = makeNode(PlanRowMark);
 		newrc->rti = newrc->prti = rc->rti;
+		newrc->rowmarkId = ++(root->glob->lastRowMarkId);
 		if (rc->forUpdate)
 			newrc->markType = ROW_MARK_EXCLUSIVE;
 		else
 			newrc->markType = ROW_MARK_SHARE;
 		newrc->noWait = rc->noWait;
 		newrc->isParent = false;
-		/* attnos will be assigned in preprocess_targetlist */
-		newrc->ctidAttNo = InvalidAttrNumber;
-		newrc->toidAttNo = InvalidAttrNumber;
-		newrc->wholeAttNo = InvalidAttrNumber;
 
 		prowmarks = lappend(prowmarks, newrc);
 	}
@@ -3089,17 +3088,15 @@ preprocess_rowmarks(PlannerInfo *root)
 
 		newrc = makeNode(PlanRowMark);
 		newrc->rti = newrc->prti = i;
+		newrc->rowmarkId = ++(root->glob->lastRowMarkId);
 		/* real tables support REFERENCE, anything else needs COPY */
-		if (rte->rtekind == RTE_RELATION)
+		if (rte->rtekind == RTE_RELATION &&
+			rte->relkind != RELKIND_FOREIGN_TABLE)
 			newrc->markType = ROW_MARK_REFERENCE;
 		else
 			newrc->markType = ROW_MARK_COPY;
 		newrc->noWait = false;	/* doesn't matter */
 		newrc->isParent = false;
-		/* attnos will be assigned in preprocess_targetlist */
-		newrc->ctidAttNo = InvalidAttrNumber;
-		newrc->toidAttNo = InvalidAttrNumber;
-		newrc->wholeAttNo = InvalidAttrNumber;
 
 		prowmarks = lappend(prowmarks, newrc);
 	}
@@ -3414,7 +3411,7 @@ choose_hashed_grouping(PlannerInfo *root,
 					   double path_rows, int path_width,
 					   Path *cheapest_path, Path *sorted_path,
 					   int numGroupOps,
-					   double dNumGroups, AggClauseCounts *agg_counts)
+					   double dNumGroups, AggClauseCosts *agg_costs)
 {
 	Query	   *parse = root->parse;
 	int			numGroupCols;
@@ -3433,7 +3430,7 @@ choose_hashed_grouping(PlannerInfo *root,
 	 * the hash table, and/or running many sorts in parallel, either of which
 	 * seems like a certain loser.)
 	 */
-	can_hash = (agg_counts->numOrderedAggs == 0 &&
+	can_hash = (agg_costs->numOrderedAggs == 0 &&
 				grouping_is_hashable(parse->groupClause));
 	can_sort = grouping_is_sortable(parse->groupClause);
 
@@ -3460,14 +3457,14 @@ choose_hashed_grouping(PlannerInfo *root,
 	 * hash reloading (see execHHashagg.c). So hash agg is not allowed if one
 	 * of the aggregates doesn't have its preliminary function.
 	 */
-	if (agg_counts->missing_prelimfunc)
+	if (agg_costs->missing_prelimfunc)
 		return false;
 
 	/*
 	 * CDB: The parallel grouping planner cannot use hashed aggregation for
 	 * ordered aggregates.
 	 */
-	if (agg_counts->numOrderedAggs != 0)
+	if (agg_costs->numOrderedAggs != 0)
 		return false;
 
 	/*
@@ -3475,14 +3472,10 @@ choose_hashed_grouping(PlannerInfo *root,
 	 * work_mem.
 	 */
 
-	/* 
-	 * Note that HashAgg uses a HHashTable for performing the aggregations. So
-	 * estimate the hash table size using GPDB specific methods.
-	 */
-	hashentrysize = agg_hash_entrywidth(agg_counts->numAggs,
-								/* The following estimate is very rough but good enough for planning. */
-								sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
-								agg_counts->transitionSpace);
+	/* Estimate per-hash-entry space at tuple width... */
+	hashentrysize = agg_hash_entrywidth(agg_costs->numAggs,
+							   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
+							   agg_costs->transitionSpace);
 
 	if (!calcHashAggTableSizes(global_work_mem(root),
 							   dNumGroups,
@@ -3523,7 +3516,7 @@ choose_hashed_grouping(PlannerInfo *root,
 	 * make actual Paths for these steps.
 	 */
 	numGroupCols = num_distcols_in_grouplist(root->parse->groupClause);
-	cost_agg(&hashed_p, root, AGG_HASHED, agg_counts->numAggs,
+	cost_agg(&hashed_p, root, AGG_HASHED, agg_costs,
 			 numGroupCols, dNumGroups,
 			 cheapest_path->startup_cost, cheapest_path->total_cost,
 			 path_rows, hash_info.workmem_per_entry,
@@ -3531,7 +3524,8 @@ choose_hashed_grouping(PlannerInfo *root,
 	/* Result of hashed agg is always unsorted */
 	if (target_pathkeys)
 		cost_sort(&hashed_p, root, target_pathkeys, hashed_p.total_cost,
-				  dNumGroups, path_width, limit_tuples);
+				  dNumGroups, path_width,
+				  0.0, work_mem, limit_tuples);
 
 	if (sorted_path)
 	{
@@ -3548,12 +3542,13 @@ choose_hashed_grouping(PlannerInfo *root,
 	if (!pathkeys_contained_in(root->group_pathkeys, current_pathkeys))
 	{
 		cost_sort(&sorted_p, root, root->group_pathkeys, sorted_p.total_cost,
-				  path_rows, path_width, -1.0);
+				  path_rows, path_width,
+				  0.0, work_mem, -1.0);
 		current_pathkeys = root->group_pathkeys;
 	}
 
 	if (parse->hasAggs)
-		cost_agg(&sorted_p, root, AGG_SORTED, agg_counts->numAggs,
+		cost_agg(&sorted_p, root, AGG_SORTED, agg_costs,
 				 numGroupCols, dNumGroups,
 				 sorted_p.startup_cost, sorted_p.total_cost,
 				 path_rows, 0.0, 0.0, 0.0, false);
@@ -3565,7 +3560,8 @@ choose_hashed_grouping(PlannerInfo *root,
 	if (target_pathkeys &&
 		!pathkeys_contained_in(target_pathkeys, current_pathkeys))
 		cost_sort(&sorted_p, root, target_pathkeys, sorted_p.total_cost,
-				  dNumGroups, path_width, limit_tuples);
+				  dNumGroups, path_width,
+				  0.0, work_mem, limit_tuples);
 
 	/*
 	 * Now make the decision using the top-level tuple fraction.  First we
@@ -3690,7 +3686,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * These path variables are dummies that just hold cost fields; we don't
 	 * make actual Paths for these steps.
 	 */
-	cost_agg(&hashed_p, root, AGG_HASHED, 0,
+	cost_agg(&hashed_p, root, AGG_HASHED, NULL,
 			 numDistinctCols, dNumDistinctRows,
 			 cheapest_startup_cost, cheapest_total_cost,
 			 path_rows,
@@ -3705,7 +3701,8 @@ choose_hashed_distinct(PlannerInfo *root,
 	 */
 	if (parse->sortClause)
 		cost_sort(&hashed_p, root, root->sort_pathkeys, hashed_p.total_cost,
-				  dNumDistinctRows, path_width, limit_tuples);
+				  dNumDistinctRows, path_width,
+				  0.0, work_mem, limit_tuples);
 
 	/*
 	 * Now for the GROUP case.	See comments in grouping_planner about the
@@ -3728,7 +3725,8 @@ choose_hashed_distinct(PlannerInfo *root,
 		else
 			current_pathkeys = root->sort_pathkeys;
 		cost_sort(&sorted_p, root, current_pathkeys, sorted_p.total_cost,
-				  path_rows, path_width, -1.0);
+				  path_rows, path_width,
+				  0.0, work_mem, -1.0);
 	}
 	cost_group(&sorted_p, root, numDistinctCols, dNumDistinctRows,
 			   sorted_p.startup_cost, sorted_p.total_cost,
@@ -3736,7 +3734,8 @@ choose_hashed_distinct(PlannerInfo *root,
 	if (parse->sortClause &&
 		!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
 		cost_sort(&sorted_p, root, root->sort_pathkeys, sorted_p.total_cost,
-				  dNumDistinctRows, path_width, limit_tuples);
+				  dNumDistinctRows, path_width,
+				  0.0, work_mem, limit_tuples);
 
 	/*
 	 * Now make the decision using the top-level tuple fraction.  First we
@@ -4368,6 +4367,119 @@ expression_planner(Expr *expr)
 	fix_opfuncids(result);
 
 	return (Expr *) result;
+}
+
+/*
+ * plan_cluster_use_sort
+ *		Use the planner to decide how CLUSTER should implement sorting
+ *
+ * tableOid is the OID of a table to be clustered on its index indexOid
+ * (which is already known to be a btree index).  Decide whether it's
+ * cheaper to do an indexscan or a seqscan-plus-sort to execute the CLUSTER.
+ * Return TRUE to use sorting, FALSE to use an indexscan.
+ *
+ * Note: caller had better already hold some type of lock on the table.
+ */
+bool
+plan_cluster_use_sort(Oid tableOid, Oid indexOid)
+{
+	PlannerInfo *root;
+	Query	   *query;
+	PlannerGlobal *glob;
+	RangeTblEntry *rte;
+	RelOptInfo *rel;
+	IndexOptInfo *indexInfo;
+	QualCost	indexExprCost;
+	Cost		comparisonCost;
+	Path	   *seqScanPath;
+	Path		seqScanAndSortPath;
+	IndexPath  *indexScanPath;
+	ListCell   *lc;
+
+	/* Set up mostly-dummy planner state */
+	query = makeNode(Query);
+	query->commandType = CMD_SELECT;
+
+	glob = makeNode(PlannerGlobal);
+
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	root->config = DefaultPlannerConfig();
+
+	/* Build a minimal RTE for the rel */
+	rte = makeNode(RangeTblEntry);
+	rte->rtekind = RTE_RELATION;
+	rte->relid = tableOid;
+	rte->relkind = RELKIND_RELATION;
+	rte->inh = false;
+	rte->inFromCl = true;
+	query->rtable = list_make1(rte);
+
+	/* ... and insert it into PlannerInfo */
+	root->simple_rel_array_size = 2;
+	root->simple_rel_array = (RelOptInfo **)
+		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
+	root->simple_rte_array = (RangeTblEntry **)
+		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
+	root->simple_rte_array[1] = rte;
+
+	/* Build RelOptInfo */
+	rel = build_simple_rel(root, 1, RELOPT_BASEREL);
+
+	/* Locate IndexOptInfo for the target index */
+	indexInfo = NULL;
+	foreach(lc, rel->indexlist)
+	{
+		indexInfo = (IndexOptInfo *) lfirst(lc);
+		if (indexInfo->indexoid == indexOid)
+			break;
+	}
+
+	/*
+	 * It's possible that get_relation_info did not generate an IndexOptInfo
+	 * for the desired index; this could happen if it's not yet reached its
+	 * indcheckxmin usability horizon, or if it's a system index and we're
+	 * ignoring system indexes.  In such cases we should tell CLUSTER to not
+	 * trust the index contents but use seqscan-and-sort.
+	 */
+	if (lc == NULL)				/* not in the list? */
+		return true;			/* use sort */
+
+	/*
+	 * Rather than doing all the pushups that would be needed to use
+	 * set_baserel_size_estimates, just do a quick hack for rows and width.
+	 */
+	rel->rows = rel->tuples;
+	rel->width = get_relation_data_width(tableOid, NULL);
+
+	root->total_table_pages = rel->pages;
+
+	/*
+	 * Determine eval cost of the index expressions, if any.  We need to
+	 * charge twice that amount for each tuple comparison that happens during
+	 * the sort, since tuplesort.c will have to re-evaluate the index
+	 * expressions each time.  (XXX that's pretty inefficient...)
+	 */
+	cost_qual_eval(&indexExprCost, indexInfo->indexprs, root);
+	comparisonCost = 2.0 * (indexExprCost.startup + indexExprCost.per_tuple);
+
+	/* Estimate the cost of seq scan + sort */
+	seqScanPath = create_seqscan_path(root, rel);
+	cost_sort(&seqScanAndSortPath, root, NIL,
+			  seqScanPath->total_cost, rel->tuples, rel->width,
+			  comparisonCost, maintenance_work_mem, -1.0);
+
+	/* Estimate the cost of index scan */
+	indexScanPath = create_index_path(root, indexInfo,
+									  NIL, NIL, NIL,
+									  ForwardScanDirection, NULL);
+
+	return (seqScanAndSortPath.total_cost < indexScanPath->path.total_cost);
 }
 
 /*

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_controldata.sgml,v 1.13 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/pg_controldata.sgml
 PostgreSQL documentation
 -->
 
@@ -22,6 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
   <cmdsynopsis>
    <command>pg_controldata</command>
+   <arg><replaceable class="parameter">option</replaceable></arg>
    <arg><replaceable class="parameter">datadir</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
@@ -31,7 +32,7 @@ PostgreSQL documentation
   <para>
    <command>pg_controldata</command> prints information initialized during
    <command>initdb</>, such as the catalog version.
-   It also shows information about write-ahead logging and checkpoint 
+   It also shows information about write-ahead logging and checkpoint
    processing.  This information is cluster-wide, and not specific to any one
    database.
   </para>
@@ -39,7 +40,7 @@ PostgreSQL documentation
   <para>
    This utility can only be run by the user who initialized the cluster because
    it requires read access to the data directory.
-   You can specify the data directory on the command line, or use 
+   You can specify the data directory on the command line, or use
    the environment variable <envar>PGDATA</>.  This utility supports the options
    <literal>-V</> and <literal>--version</>, which print the
    <application>pg_controldata</application> version and exit.  It also

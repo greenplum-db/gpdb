@@ -4,12 +4,12 @@
  *	  reliable BSD-style signal(2) routine stolen from RWW who stole it
  *	  from Stevens...
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/interfaces/libpq/pqsignal.c,v 1.30 2010/01/02 16:58:12 momjian Exp $
+ *	  src/interfaces/libpq/pqsignal.c
  *
  * NOTES
  *		This shouldn't be in libpq, but the monitor and some other
@@ -17,9 +17,12 @@
  *
  *-------------------------------------------------------------------------
  */
-#include "pqsignal.h"
+#include "postgres_fe.h"
 
 #include <signal.h>
+
+#include "pqsignal.h"
+
 
 pqsigfunc
 pqsignal(int signo, pqsigfunc func)

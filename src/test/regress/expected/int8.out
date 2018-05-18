@@ -456,7 +456,7 @@ SELECT max(q1), max(q2) FROM INT8_TBL;
 
 -- TO_CHAR()
 --
-SELECT '' AS to_char_1, to_char(q1, '9G999G999G999G999G999'), to_char(q2, '9,999,999,999,999,999') 
+SELECT '' AS to_char_1, to_char(q1, '9G999G999G999G999G999'), to_char(q2, '9,999,999,999,999,999')
 	FROM INT8_TBL;
  to_char_1 |        to_char         |        to_char         
 -----------+------------------------+------------------------
@@ -467,7 +467,7 @@ SELECT '' AS to_char_1, to_char(q1, '9G999G999G999G999G999'), to_char(q2, '9,999
            |  4,567,890,123,456,789 | -4,567,890,123,456,789
 (5 rows)
 
-SELECT '' AS to_char_2, to_char(q1, '9G999G999G999G999G999D999G999'), to_char(q2, '9,999,999,999,999,999.999,999') 
+SELECT '' AS to_char_2, to_char(q1, '9G999G999G999G999G999D999G999'), to_char(q2, '9,999,999,999,999,999.999,999')
 	FROM INT8_TBL;
  to_char_2 |            to_char             |            to_char             
 -----------+--------------------------------+--------------------------------
@@ -478,7 +478,7 @@ SELECT '' AS to_char_2, to_char(q1, '9G999G999G999G999G999D999G999'), to_char(q2
            |  4,567,890,123,456,789.000,000 | -4,567,890,123,456,789.000,000
 (5 rows)
 
-SELECT '' AS to_char_3, to_char( (q1 * -1), '9999999999999999PR'), to_char( (q2 * -1), '9999999999999999.999PR') 
+SELECT '' AS to_char_3, to_char( (q1 * -1), '9999999999999999PR'), to_char( (q2 * -1), '9999999999999999.999PR')
 	FROM INT8_TBL;
  to_char_3 |      to_char       |        to_char         
 -----------+--------------------+------------------------
@@ -489,7 +489,7 @@ SELECT '' AS to_char_3, to_char( (q1 * -1), '9999999999999999PR'), to_char( (q2 
            | <4567890123456789> |  4567890123456789.000 
 (5 rows)
 
-SELECT '' AS to_char_4, to_char( (q1 * -1), '9999999999999999S'), to_char( (q2 * -1), 'S9999999999999999') 
+SELECT '' AS to_char_4, to_char( (q1 * -1), '9999999999999999S'), to_char( (q2 * -1), 'S9999999999999999')
 	FROM INT8_TBL;
  to_char_4 |      to_char      |      to_char      
 -----------+-------------------+-------------------
@@ -801,6 +801,19 @@ SELECT * FROM generate_series('+4567890123456789'::int8, '+4567890123456799'::in
  4567890123456797
  4567890123456799
 (6 rows)
+
+-- corner case
+SELECT (-1::int8<<63)::text;
+         text         
+----------------------
+ -9223372036854775808
+(1 row)
+
+SELECT ((-1::int8<<63)+1)::text;
+         text         
+----------------------
+ -9223372036854775807
+(1 row)
 
 -- check sane handling of INT64_MIN overflow cases
 SELECT (-9223372036854775808)::int8 * (-1)::int8;

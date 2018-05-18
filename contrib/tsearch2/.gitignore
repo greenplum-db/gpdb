@@ -1,4 +1,4 @@
-uninstall_tsearch2.sql
-/tsearch2.sql
 # Generated subdirectories
+/log/
 /results/
+/tmp_check/

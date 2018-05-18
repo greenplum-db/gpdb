@@ -3,18 +3,19 @@
  * scankey.c
  *	  scan key support code
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/scankey.c,v 1.34 2010/01/02 16:57:33 momjian Exp $
+ *	  src/backend/access/common/scankey.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/skey.h"
+#include "catalog/pg_collation.h"
 
 
 /*
@@ -33,6 +34,7 @@ ScanKeyEntryInitialize(ScanKey entry,
 					   AttrNumber attributeNumber,
 					   StrategyNumber strategy,
 					   Oid subtype,
+					   Oid collation,
 					   RegProcedure procedure,
 					   Datum argument)
 {
@@ -40,9 +42,12 @@ ScanKeyEntryInitialize(ScanKey entry,
 	entry->sk_attno = attributeNumber;
 	entry->sk_strategy = strategy;
 	entry->sk_subtype = subtype;
+	entry->sk_collation = collation;
 	entry->sk_argument = argument;
 	if (RegProcedureIsValid(procedure))
+	{
 		fmgr_info(procedure, &entry->sk_func);
+	}
 	else
 	{
 		Assert(flags & (SK_SEARCHNULL | SK_SEARCHNOTNULL));
@@ -53,11 +58,15 @@ ScanKeyEntryInitialize(ScanKey entry,
 /*
  * ScanKeyInit
  *		Shorthand version of ScanKeyEntryInitialize: flags and subtype
- *		are assumed to be zero (the usual value).
+ *		are assumed to be zero (the usual value), and collation is defaulted.
  *
  * This is the recommended version for hardwired lookups in system catalogs.
  * It cannot handle NULL arguments, unary operators, or nondefault operators,
  * but we need none of those features for most hardwired lookups.
+ *
+ * We set collation to DEFAULT_COLLATION_OID always.  This is appropriate
+ * for textual columns in system catalogs, and it will be ignored for
+ * non-textual columns, so it's not worth trying to be more finicky.
  *
  * Note: CurrentMemoryContext at call should be as long-lived as the ScanKey
  * itself, because that's what will be used for any subsidiary info attached
@@ -74,6 +83,7 @@ ScanKeyInit(ScanKey entry,
 	entry->sk_attno = attributeNumber;
 	entry->sk_strategy = strategy;
 	entry->sk_subtype = InvalidOid;
+	entry->sk_collation = DEFAULT_COLLATION_OID;
 	entry->sk_argument = argument;
 	fmgr_info(procedure, &entry->sk_func);
 }
@@ -93,6 +103,7 @@ ScanKeyEntryInitializeWithInfo(ScanKey entry,
 							   AttrNumber attributeNumber,
 							   StrategyNumber strategy,
 							   Oid subtype,
+							   Oid collation,
 							   FmgrInfo *finfo,
 							   Datum argument)
 {
@@ -100,6 +111,7 @@ ScanKeyEntryInitializeWithInfo(ScanKey entry,
 	entry->sk_attno = attributeNumber;
 	entry->sk_strategy = strategy;
 	entry->sk_subtype = subtype;
+	entry->sk_collation = collation;
 	entry->sk_argument = argument;
 	fmgr_info_copy(&entry->sk_func, finfo, CurrentMemoryContext);
 }

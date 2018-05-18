@@ -20,6 +20,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbtm.h"
 #include "access/xact.h"
+#include "utils/guc.h"
 #include "utils/tqual.h"
 
 /*

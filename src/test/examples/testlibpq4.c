@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/test/examples/testlibpq4.c,v 1.14 2009/06/11 14:49:15 momjian Exp $
+ * src/test/examples/testlibpq4.c
  *
  *
  * testlibpq4.c
@@ -72,11 +72,11 @@ main(int argc, char **argv)
 	 * defaults by looking up environment variables or, failing that, using
 	 * hardwired constants
 	 */
-	pghost = NULL;				/* host name of the backend server */
-	pgport = NULL;				/* port of the backend server */
+	pghost = NULL;				/* host name of the backend */
+	pgport = NULL;				/* port of the backend */
 	pgoptions = NULL;			/* special options to start up the backend
 								 * server */
-	pgtty = NULL;				/* debugging tty for the backend server */
+	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */
 	conn1 = PQsetdb(pghost, pgport, pgoptions, pgtty, dbName1);

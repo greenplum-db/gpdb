@@ -39,7 +39,6 @@ insert into people values (770,'John','Woo');
 insert into people values (771,'Jim','Ng');
 insert into people values (778,'Jerry','Lau');
 insert into people values (790,'Jen','Smith');
-create view print_name as select concat(' ',id, fname, lname) from people; -- fail, type mismatch
 create view print_name as select concat(' ', fname, lname) from people where id < 790;
 
 select * from print_name;

@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.113 2010/02/26 02:01:21 momjian Exp $
+ * src/include/access/htup.h
  *
  *-------------------------------------------------------------------------
  */
@@ -210,6 +210,14 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 #define HEAP2_XACT_MASK			0xC000	/* visibility-related bits */
 
 /*
+ * HEAP_TUPLE_HAS_MATCH is a temporary flag used during hash joins.  It is
+ * only used in tuples that are in the hash table, and those don't need
+ * any visibility information, so we can overlay it on a visibility flag
+ * instead of using up a dedicated bit.
+ */
+#define HEAP_TUPLE_HAS_MATCH	HEAP_ONLY_TUPLE /* tuple has a join match */
+
+/*
  * HeapTupleHeader accessor macros
  *
  * Note: beware of multiple evaluations of "tup" argument.	But the Set
@@ -367,6 +375,21 @@ do { \
 #define HeapTupleHeaderClearHeapOnly(tup) \
 ( \
   (tup)->t_infomask2 &= ~HEAP_ONLY_TUPLE \
+)
+
+#define HeapTupleHeaderHasMatch(tup) \
+( \
+  (tup)->t_infomask2 & HEAP_TUPLE_HAS_MATCH \
+)
+
+#define HeapTupleHeaderSetMatch(tup) \
+( \
+  (tup)->t_infomask2 |= HEAP_TUPLE_HAS_MATCH \
+)
+
+#define HeapTupleHeaderClearMatch(tup) \
+( \
+  (tup)->t_infomask2 &= ~HEAP_TUPLE_HAS_MATCH \
 )
 
 #define HeapTupleHeaderGetNatts(tup) \

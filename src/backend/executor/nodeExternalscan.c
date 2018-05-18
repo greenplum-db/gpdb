@@ -264,7 +264,7 @@ ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 	currentScanDesc = external_beginscan(currentRelation,
 									 node->scancounter,
 									 node->uriList,
-									 node->fmtOpts,
+									 node->fmtOptString,
 									 node->fmtType,
 									 node->isMasterOnly,
 									 node->rejLimit,
@@ -364,13 +364,13 @@ ExecStopExternalScan(ExternalScanState *node)
 */
 
 /* ----------------------------------------------------------------
-*		ExecExternalReScan
+*		ExecReScanExternal
 *
 *		Rescans the relation.
 * ----------------------------------------------------------------
 */
 void
-ExecExternalReScan(ExternalScanState *node, ExprContext *exprCtxt)
+ExecReScanExternal(ExternalScanState *node)
 {
 	FileScanDesc fileScan = node->ess_ScanDesc;
 

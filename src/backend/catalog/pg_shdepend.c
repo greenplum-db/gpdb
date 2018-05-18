@@ -3,12 +3,12 @@
  * pg_shdepend.c
  *	  routines to support manipulation of the pg_shdepend relation
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_shdepend.c,v 1.43 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/catalog/pg_shdepend.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_default_acl.h"
@@ -35,6 +36,7 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
+#include "commands/collationcmds.h"
 #include "commands/conversioncmds.h"
 #include "commands/defrem.h"
 #include "commands/proclang.h"
@@ -1067,7 +1069,7 @@ storeObjectDescription(StringInfo descs, objectType type,
 			if (deptype == SHARED_DEPENDENCY_OWNER)
 				appendStringInfo(descs, _("owner of %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_ACL)
-				appendStringInfo(descs, _("access to %s"), objdesc);
+				appendStringInfo(descs, _("privileges for %s"), objdesc);
 			else
 				elog(ERROR, "unrecognized dependency type: %d",
 					 (int) deptype);
@@ -1329,6 +1331,10 @@ shdepReassignOwned(List *roleids, Oid newrole)
 			/* Issue the appropriate ALTER OWNER call */
 			switch (sdepForm->classid)
 			{
+				case CollationRelationId:
+					AlterCollationOwner_oid(sdepForm->objid, newrole);
+					break;
+
 				case ConversionRelationId:
 					AlterConversionOwner_oid(sdepForm->objid, newrole);
 					break;
@@ -1352,7 +1358,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
 					 * owned sequences, etc when we happen to visit them
 					 * before their parent table.
 					 */
-					ATExecChangeOwner(sdepForm->objid, newrole, true);
+					ATExecChangeOwner(sdepForm->objid, newrole, true, AccessExclusiveLock);
 					break;
 
 				case ProcedureRelationId:

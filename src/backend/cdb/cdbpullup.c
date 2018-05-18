@@ -596,6 +596,7 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
 					  varattno,
 					  exprType((Node *) oldexpr),
 					  exprTypmod((Node *) oldexpr),
+					  exprCollation((Node *) oldexpr),
 					  0);
 		var->varnoold = varno;	/* assuming it wasn't ever a plain Var */
 		var->varoattno = varattno;

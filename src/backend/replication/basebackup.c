@@ -30,7 +30,6 @@
 #include "lib/stringinfo.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
-#include "miscadmin.h"
 #include "nodes/pg_list.h"
 #include "replication/basebackup.h"
 #include "replication/walsender.h"
@@ -41,6 +40,7 @@
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
+#include "utils/memutils.h"
 #include "utils/fmgroids.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
@@ -257,7 +257,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(base_backup_cleanup, (Datum) 0);
 
-	endptr = do_pg_stop_backup(labelfile);
+	endptr = do_pg_stop_backup(labelfile, !opt->nowait);
 
 	if (opt->includewal)
 	{
@@ -286,18 +286,10 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 		while (true)
 		{
 			/* Send another xlog segment */
-			char		tempfn[MAXPGPATH], fn[MAXPGPATH];
+			char		fn[MAXPGPATH];
 			int			i;
 
-			/*
-			 * XLogFilePath may produce full path as well as relative path.
-			 * Here we are sendin this as part of the last tar file,
-			 * so make sure it is relative path.
-			 */
-			XLogFileName(tempfn, ThisTimeLineID, logid, logseg);
-			if (snprintf(fn, MAXPGPATH, "pg_xlog/%s", tempfn) > MAXPGPATH)
-				elog(ERROR, "could not make xlog filename for %s", tempfn);
-
+			XLogFilePath(fn, ThisTimeLineID, logid, logseg);
 			_tarWriteHeader(fn, NULL, &statbuf);
 
 			/* Send the actual WAL file contents, block-by-block */
@@ -325,10 +317,6 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			elogif(debug_basebackup, LOG,
 				   "basebackup perform -- Sent xlog file %s", fn);
 
-			/*
-			 * Files are always fixed size, and always end on a 512 byte
-			 * boundary, so padding is never necessary.
-			 */
 			/* Advance to the next WAL file */
 			NextLogSeg(logid, logseg);
 
@@ -446,9 +434,18 @@ void
 SendBaseBackup(BaseBackupCmd *cmd)
 {
 	DIR		   *dir;
+	MemoryContext backup_context;
+	MemoryContext old_context;
 	basebackup_options opt;
 
 	parse_basebackup_options(cmd->options, &opt);
+
+	backup_context = AllocSetContextCreate(CurrentMemoryContext,
+										   "Streaming base backup context",
+										   ALLOCSET_DEFAULT_MINSIZE,
+										   ALLOCSET_DEFAULT_INITSIZE,
+										   ALLOCSET_DEFAULT_MAXSIZE);
+	old_context = MemoryContextSwitchTo(backup_context);
 
 	WalSndSetState(WALSNDSTATE_BACKUP);
 
@@ -465,11 +462,14 @@ SendBaseBackup(BaseBackupCmd *cmd)
 	dir = AllocateDir("pg_tblspc");
 	if (!dir)
 		ereport(ERROR,
-				(errmsg("could not open directory \"%s\": %m", "pg_tblspc")));
+				(errmsg("unable to open directory pg_tblspc: %m")));
 
 	perform_base_backup(&opt, dir);
 
 	FreeDir(dir);
+
+	MemoryContextSwitchTo(old_context);
+	MemoryContextDelete(backup_context);
 }
 
 static void
@@ -780,7 +780,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		 * WAL archive anyway. But include it as an empty directory anyway, so
 		 * we get permissions right.
 		 */
-		if (strcmp(de->d_name, "pg_xlog") == 0)
+		if (strcmp(pathbuf, "./pg_xlog") == 0)
 		{
 			if (!sizeonly)
 			{

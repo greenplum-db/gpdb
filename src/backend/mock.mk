@@ -36,7 +36,17 @@ EXCL_OBJS=\
 # this exclusion list) as needed.
 EXCL_OBJS+=\
 	src/backend/access/gist/%.o \
-	src/backend/access/gin/%.o \
+	src/backend/access/gin/gininsert.o \
+	src/backend/access/gin/ginxlog.o \
+	src/backend/access/gin/ginentrypage.o \
+	src/backend/access/gin/gindatapage.o \
+	src/backend/access/gin/ginbtree.o \
+	src/backend/access/gin/ginscan.o \
+	src/backend/access/gin/ginget.o \
+	src/backend/access/gin/ginvacuum.o \
+	src/backend/access/gin/ginarrayproc.o \
+	src/backend/access/gin/ginbulk.o \
+	src/backend/access/gin/ginfast.o \
 	src/backend/access/hash/hash.o \
 	src/backend/access/hash/hashsearch.o \
 	\
@@ -62,7 +72,6 @@ EXCL_OBJS+=\
 	src/backend/utils/adt/pgstatfuncs.o \
 	src/backend/utils/adt/pivot.o \
 	src/backend/utils/adt/pseudotypes.o \
-	src/backend/utils/adt/quote.o \
 	src/backend/utils/adt/rowtypes.o \
 	src/backend/utils/adt/tsginidx.o \
 	src/backend/utils/adt/tsgistidx.o \

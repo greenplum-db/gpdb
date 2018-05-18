@@ -1,9 +1,10 @@
-# $PostgreSQL: pgsql/contrib/pg_stat_statements/Makefile,v 1.1 2009/01/04 22:19:59 tgl Exp $
+# contrib/pg_stat_statements/Makefile
 
 MODULE_big = pg_stat_statements
-DATA_built = pg_stat_statements.sql
-DATA = uninstall_pg_stat_statements.sql
 OBJS = pg_stat_statements.o
+
+EXTENSION = pg_stat_statements
+DATA = pg_stat_statements--1.0.sql pg_stat_statements--unpackaged--1.0.sql
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

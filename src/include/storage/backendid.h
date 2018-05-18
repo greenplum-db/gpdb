@@ -4,10 +4,10 @@
  *	  POSTGRES backend id communication definitions
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/backendid.h,v 1.23 2010/01/02 16:58:08 momjian Exp $
+ * src/include/storage/backendid.h
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +22,12 @@ typedef int BackendId;			/* unique currently active backend identifier */
 
 #define InvalidBackendId		(-1)
 
-extern BackendId MyBackendId;	/* backend id of this backend */
+/*
+ * TempRelBackendId is used in GPDB in place of a real backend ID in some
+ * places where we deal with a temporary tables.
+ */
+#define TempRelBackendId		(-2)
+
+extern PGDLLIMPORT BackendId MyBackendId;		/* backend id of this backend */
 
 #endif   /* BACKENDID_H */

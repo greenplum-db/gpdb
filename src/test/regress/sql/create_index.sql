@@ -76,12 +76,14 @@ CREATE INDEX gpolygonind ON polygon_tbl USING gist (f1);
 
 CREATE INDEX gcircleind ON circle_tbl USING gist (f1);
 
+INSERT INTO POINT_TBL(f1) VALUES (NULL);
+
 CREATE INDEX gpointind ON point_tbl USING gist (f1);
 
 CREATE TEMP TABLE gpolygon_tbl AS
     SELECT polygon(home_base) AS f1 FROM slow_emp4000;
-INSERT INTO gpolygon_tbl VALUES ( '(1000,0,0,1000)' ); 
-INSERT INTO gpolygon_tbl VALUES ( '(0,1000,1000,1000)' ); 
+INSERT INTO gpolygon_tbl VALUES ( '(1000,0,0,1000)' );
+INSERT INTO gpolygon_tbl VALUES ( '(0,1000,1000,1000)' );
 
 CREATE TEMP TABLE gcircle_tbl AS
     SELECT circle(home_base) AS f1 FROM slow_emp4000;
@@ -89,6 +91,8 @@ CREATE TEMP TABLE gcircle_tbl AS
 CREATE INDEX ggpolygonind ON gpolygon_tbl USING gist (f1);
 
 CREATE INDEX ggcircleind ON gcircle_tbl USING gist (f1);
+
+-- get non-indexed results for comparison purposes
 
 SET enable_seqscan = ON;
 SET enable_indexscan = OFF;
@@ -130,6 +134,14 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
 
+SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+
+SELECT * FROM point_tbl WHERE f1 IS NULL;
+
+SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+
+SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+
 SET enable_seqscan = OFF;
 SET optimizer_enable_tablescan = OFF;
 SET enable_indexscan = ON;
@@ -206,6 +218,30 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
 EXPLAIN (COSTS OFF)
 SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
 SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM point_tbl WHERE f1 IS NULL;
+SELECT * FROM point_tbl WHERE f1 IS NULL;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+
+SET enable_seqscan = OFF;
+SET enable_indexscan = OFF;
+SET enable_bitmapscan = ON;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
 
 RESET enable_seqscan;
 RESET optimizer_enable_tablescan;
@@ -215,13 +251,18 @@ RESET enable_bitmapscan;
 --
 -- GIN over int[] and text[]
 --
+-- Note: GIN currently supports only bitmap scans, not plain indexscans
+--
 
 SET enable_seqscan = OFF;
 SET optimizer_enable_tablescan = OFF;
-SET enable_indexscan = ON;
-SET enable_bitmapscan = OFF;
+SET enable_indexscan = OFF;
+SET enable_bitmapscan = ON;
 
 CREATE INDEX intarrayidx ON array_index_op_test USING gin (i);
+
+explain (costs off)
+SELECT * FROM array_index_op_test WHERE i @> '{32}' ORDER BY seqno;
 
 SELECT * FROM array_index_op_test WHERE i @> '{32}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i && '{32}' ORDER BY seqno;
@@ -231,8 +272,19 @@ SELECT * FROM array_index_op_test WHERE i @> '{32,17}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i && '{32,17}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i <@ '{38,34,32,89}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i = '{47,77}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE i = '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE i @> '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE i && '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE i <@ '{}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i = '{NULL}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i @> '{NULL}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i && '{NULL}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i <@ '{NULL}' ORDER BY seqno;
 
 CREATE INDEX textarrayidx ON array_index_op_test USING gin (t);
+
+explain (costs off)
+SELECT * FROM array_index_op_test WHERE t @> '{AAAAAAAA72908}' ORDER BY seqno;
 
 SELECT * FROM array_index_op_test WHERE t @> '{AAAAAAAA72908}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE t && '{AAAAAAAA72908}' ORDER BY seqno;
@@ -242,19 +294,10 @@ SELECT * FROM array_index_op_test WHERE t @> '{AAAAAAAA72908,AAAAAAAAAA646}' ORD
 SELECT * FROM array_index_op_test WHERE t && '{AAAAAAAA72908,AAAAAAAAAA646}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE t <@ '{AAAAAAAA72908,AAAAAAAAAAAAAAAAAAA17075,AA88409,AAAAAAAAAAAAAAAAAA36842,AAAAAAA48038,AAAAAAAAAAAAAA10611}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE t = '{AAAAAAAAAA646,A87088}' ORDER BY seqno;
-
--- Repeat some of the above tests but exercising bitmapscans instead
-SET enable_indexscan = OFF;
-SET enable_bitmapscan = ON;
-
-SELECT * FROM array_index_op_test WHERE i @> '{32}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i && '{32}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i @> '{17}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i && '{17}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i @> '{32,17}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i && '{32,17}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i <@ '{38,34,32,89}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i = '{47,77}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE t = '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE t @> '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE t && '{}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE t <@ '{}' ORDER BY seqno;
 
 -- And try it with a multicolumn GIN index
 
@@ -262,27 +305,15 @@ DROP INDEX intarrayidx, textarrayidx;
 
 CREATE INDEX botharrayidx ON array_index_op_test USING gin (i, t);
 
-SET enable_seqscan = OFF;
-RESET optimizer_enable_tablescan;
-SET enable_indexscan = ON;
-SET enable_bitmapscan = OFF;
-
 SELECT * FROM array_index_op_test WHERE i @> '{32}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i && '{32}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE t @> '{AAAAAAA80240}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE t && '{AAAAAAA80240}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i @> '{32}' AND t && '{AAAAAAA80240}' ORDER BY seqno;
 SELECT * FROM array_index_op_test WHERE i && '{32}' AND t @> '{AAAAAAA80240}' ORDER BY seqno;
-
-SET enable_indexscan = OFF;
-SET enable_bitmapscan = ON;
-
-SELECT * FROM array_index_op_test WHERE i @> '{32}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i && '{32}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE t @> '{AAAAAAA80240}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE t && '{AAAAAAA80240}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i @> '{32}' AND t && '{AAAAAAA80240}' ORDER BY seqno;
-SELECT * FROM array_index_op_test WHERE i && '{32}' AND t @> '{AAAAAAA80240}' ORDER BY seqno;
+SELECT * FROM array_index_op_test WHERE t = '{}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i = '{NULL}' ORDER BY seqno;
+SELECT * FROM array_op_test WHERE i <@ '{NULL}' ORDER BY seqno;
 
 RESET enable_seqscan;
 RESET optimizer_enable_tablescan;
@@ -388,6 +419,32 @@ COMMIT;
 DROP TABLE concur_heap;
 
 --
+-- Test ADD CONSTRAINT USING INDEX
+--
+
+CREATE TABLE cwi_test( a int , b varchar(10), c char);
+
+-- add some data so that all tests have something to work with.
+
+INSERT INTO cwi_test VALUES(1, 2), (3, 4), (5, 6);
+
+CREATE UNIQUE INDEX cwi_uniq_idx ON cwi_test(a , b);
+ALTER TABLE cwi_test ADD primary key USING INDEX cwi_uniq_idx;
+
+\d cwi_test
+
+CREATE UNIQUE INDEX cwi_uniq2_idx ON cwi_test(b , a);
+ALTER TABLE cwi_test DROP CONSTRAINT cwi_uniq_idx,
+	ADD CONSTRAINT cwi_replaced_pkey PRIMARY KEY
+		USING INDEX cwi_uniq2_idx;
+
+\d cwi_test
+
+DROP INDEX cwi_replaced_pkey;	-- Should fail; a constraint depends on it
+
+DROP TABLE cwi_test;
+
+--
 -- Tests for IS NULL/IS NOT NULL with b-tree indexes
 --
 
@@ -436,5 +493,5 @@ RESET enable_seqscan;
 RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
- 
+
 DROP TABLE onek_with_null;

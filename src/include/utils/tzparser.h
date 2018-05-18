@@ -3,15 +3,17 @@
  * tzparser.h
  *	  Timezone offset file parsing definitions.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/tzparser.h,v 1.6 2010/01/02 16:58:10 momjian Exp $
+ * src/include/utils/tzparser.h
  *
  *-------------------------------------------------------------------------
  */
 #ifndef TZPARSER_H
 #define TZPARSER_H
+
+#include "utils/datetime.h"
 
 /*
  * The result of parsing a timezone configuration file is an array of
@@ -31,6 +33,6 @@ typedef struct tzEntry
 } tzEntry;
 
 
-extern bool load_tzoffsets(const char *filename, bool doit, int elevel);
+extern TimeZoneAbbrevTable *load_tzoffsets(const char *filename);
 
 #endif   /* TZPARSER_H */

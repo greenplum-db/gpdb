@@ -1,3 +1,4 @@
-/pg_trgm.sql
 # Generated subdirectories
+/log/
 /results/
+/tmp_check/

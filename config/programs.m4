@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/config/programs.m4,v 1.28 2010/02/22 21:16:50 momjian Exp $
+# config/programs.m4
 
 
 # PGAC_PATH_BISON
@@ -35,7 +35,7 @@ fi
 
 if test -z "$BISON"; then
   AC_MSG_WARN([
-*** Without Bison you will not be able to build PostgreSQL from CVS nor
+*** Without Bison you will not be able to build PostgreSQL from Git nor
 *** change any of the parser definition files.  You can obtain Bison from
 *** a GNU mirror site.  (If you are using the official distribution of
 *** PostgreSQL then you do not need to worry about this, because the Bison
@@ -97,7 +97,7 @@ fi
 
 if test x"$pgac_cv_path_flex" = x"no"; then
   AC_MSG_WARN([
-*** Without Flex you will not be able to build PostgreSQL from CVS nor
+*** Without Flex you will not be able to build PostgreSQL from Git nor
 *** change any of the scanner definition files.  You can obtain Flex from
 *** a GNU mirror site.  (If you are using the official distribution of
 *** PostgreSQL then you do not need to worry about this because the Flex
@@ -125,7 +125,7 @@ AC_SUBST(FLEXFLAGS)
 AC_DEFUN([PGAC_CHECK_READLINE],
 [AC_REQUIRE([AC_CANONICAL_HOST])
 
-AC_CACHE_VAL([pgac_cv_check_readline],
+AC_CACHE_CHECK([for library containing readline], [pgac_cv_check_readline],
 [pgac_cv_check_readline=no
 pgac_save_LIBS=$LIBS
 if test x"$with_libedit_preferred" != x"yes"
@@ -133,7 +133,6 @@ then	READLINE_ORDER="-lreadline -ledit"
 else	READLINE_ORDER="-ledit -lreadline"
 fi
 for pgac_rllib in $READLINE_ORDER ; do
-  AC_MSG_CHECKING([for ${pgac_rllib}])
   for pgac_lib in "" " -ltermcap" " -lncurses" " -lcurses" ; do
     LIBS="${pgac_rllib}${pgac_lib} $pgac_save_LIBS"
     AC_TRY_LINK_FUNC([readline], [[
@@ -152,14 +151,11 @@ for pgac_rllib in $READLINE_ORDER ; do
     ]])
   done
   if test "$pgac_cv_check_readline" != no ; then
-    AC_MSG_RESULT([yes ($pgac_cv_check_readline)])
     break
-  else
-    AC_MSG_RESULT(no)
   fi
 done
 LIBS=$pgac_save_LIBS
-])[]dnl AC_CACHE_VAL
+])[]dnl AC_CACHE_CHECK
 
 if test "$pgac_cv_check_readline" != no ; then
   LIBS="$pgac_cv_check_readline $LIBS"
@@ -175,8 +171,8 @@ fi
 # Readline versions < 2.1 don't have rl_completion_append_character
 
 AC_DEFUN([PGAC_VAR_RL_COMPLETION_APPEND_CHARACTER],
-[AC_MSG_CHECKING([for rl_completion_append_character])
-AC_TRY_LINK([#include <stdio.h>
+[AC_CACHE_CHECK([for rl_completion_append_character], pgac_cv_var_rl_completion_append_character,
+[AC_TRY_LINK([#include <stdio.h>
 #ifdef HAVE_READLINE_READLINE_H
 # include <readline/readline.h>
 #elif defined(HAVE_READLINE_H)
@@ -184,10 +180,12 @@ AC_TRY_LINK([#include <stdio.h>
 #endif
 ],
 [rl_completion_append_character = 'x';],
-[AC_MSG_RESULT(yes)
+[pgac_cv_var_rl_completion_append_character=yes],
+[pgac_cv_var_rl_completion_append_character=no])])
+if test x"$pgac_cv_var_rl_completion_append_character" = x"yes"; then
 AC_DEFINE(HAVE_RL_COMPLETION_APPEND_CHARACTER, 1,
-          [Define to 1 if you have the global variable 'rl_completion_append_character'.])],
-[AC_MSG_RESULT(no)])])# PGAC_VAR_RL_COMPLETION_APPEND_CHARACTER
+          [Define to 1 if you have the global variable 'rl_completion_append_character'.])
+fi])# PGAC_VAR_RL_COMPLETION_APPEND_CHARACTER
 
 
 

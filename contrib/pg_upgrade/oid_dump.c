@@ -61,9 +61,9 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_magic_oid.h"
 
-static char *simple_escape_literal(migratorContext *ctx, PGconn *conn, const char *s);
+static char *simple_escape_literal(PGconn *conn, const char *s);
 
-static void dump_rows(migratorContext *ctx, PQExpBuffer buf, FILE *file, PGconn *conn, const char *sql, const char *funcname);
+static void dump_rows(PQExpBuffer buf, FILE *file, PGconn *conn, const char *sql, const char *funcname);
 
 /*
  * Read all pg_type and pg_class OIDs from old cluster, into the DbInfo structs.
@@ -75,25 +75,25 @@ static void dump_rows(migratorContext *ctx, PQExpBuffer buf, FILE *file, PGconn 
  * different strategy.
  */
 void
-get_old_oids(migratorContext *ctx)
+get_old_oids(void)
 {
 	int			dbnum;
 
-	prep_status(ctx, "Exporting object OIDs from the old cluster");
+	prep_status("Exporting object OIDs from the old cluster");
 
-	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
 		PGconn	   *conn;
 		PQExpBuffer	buf = createPQExpBuffer();
 
-		conn = connectToServer(ctx, olddb->db_name, CLUSTER_OLD);
-		PQclear(executeQueryOrDie(ctx, conn, "set search_path='pg_catalog';"));
+		conn = connectToServer(&old_cluster, olddb->db_name);
+		PQclear(executeQueryOrDie(conn, "set search_path='pg_catalog';"));
 
-		dump_rows(ctx, buf, NULL, conn,
+		dump_rows(buf, NULL, conn,
 				  "SELECT oid, nspname FROM pg_namespace",
 				  "preassign_namespace_oid");
-		dump_rows(ctx, buf, NULL, conn,
+		dump_rows(buf, NULL, conn,
 				  "SELECT oid, typname, typnamespace FROM pg_type",
 				  "preassign_type_oid");
 
@@ -107,7 +107,7 @@ get_old_oids(migratorContext *ctx)
 		 *
 		 * We don't preserve the OIDs of AO segment tables.
 		 */
-		dump_rows(ctx, buf, NULL, conn,
+		dump_rows(buf, NULL, conn,
 				  "SELECT oid, relname, relnamespace FROM pg_class "
 				  " WHERE relnamespace NOT IN "
 				  "   ( " CppAsString2(PG_TOAST_NAMESPACE) ", "
@@ -122,36 +122,36 @@ get_old_oids(migratorContext *ctx)
 		olddb->reserved_oids = buf->data;
 	}
 
-	check_ok(ctx);
+	check_ok();
 }
 
 /*
  * Dump OIDs of all objects, after upgrading the QD cluster.
  */
 void
-dump_new_oids(migratorContext *ctx)
+dump_new_oids(void)
 {
 	PGconn	   *conn;
 	char		filename[MAXPGPATH];
 	FILE	   *oid_dump;
 	int			dbnum;
 
-	prep_status(ctx, "Exporting object OIDs from the new cluster");
+	prep_status("Exporting object OIDs from the new cluster");
 
 	/* Dump OIDs of global objects */
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, GLOBAL_OIDS_DUMP_FILE);
+	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, GLOBAL_OIDS_DUMP_FILE);
 	oid_dump = fopen(filename, "w");
 	if (!oid_dump)
-		pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", filename);
+		pg_log(PG_FATAL, "Could not create necessary file:  %s\n", filename);
 
-	conn = connectToServer(ctx, "template1", CLUSTER_NEW);
-	PQclear(executeQueryOrDie(ctx, conn, "set search_path='pg_catalog';"));
+	conn = connectToServer(&new_cluster, "template1");
+	PQclear(executeQueryOrDie(conn, "set search_path='pg_catalog';"));
 
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, spcname FROM pg_tablespace", "preassign_tablespace_oid");
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, rsqname FROM pg_resqueue", "preassign_resqueue_oid");
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, resqueueid, restypid FROM pg_resqueuecapability", "preassign_resqueuecb_oid");
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, rolname FROM pg_authid", "preassign_authid_oid");
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, datname FROM pg_database", "preassign_database_oid");
+	dump_rows(NULL, oid_dump, conn, "SELECT oid, spcname FROM pg_tablespace", "preassign_tablespace_oid");
+	dump_rows(NULL, oid_dump, conn, "SELECT oid, rsqname FROM pg_resqueue", "preassign_resqueue_oid");
+	dump_rows(NULL, oid_dump, conn, "SELECT oid, resqueueid, restypid FROM pg_resqueuecapability", "preassign_resqueuecb_oid");
+	dump_rows(NULL, oid_dump, conn, "SELECT oid, rolname FROM pg_authid", "preassign_authid_oid");
+	dump_rows(NULL, oid_dump, conn, "SELECT oid, datname FROM pg_database", "preassign_database_oid");
 
 	PQfinish(conn);
 	fclose(oid_dump);
@@ -161,57 +161,57 @@ dump_new_oids(migratorContext *ctx)
 	 * to the new OIDs when we read these back in. It doesn't really matter
 	 * which ones we use, as long as we're consistent.
 	 */
-	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
 
-		snprintf(filename, sizeof(filename), "%s/" DB_OIDS_DUMP_FILE_MASK, ctx->cwd, olddb->db_oid);
+		snprintf(filename, sizeof(filename), "%s/" DB_OIDS_DUMP_FILE_MASK, os_info.cwd, olddb->db_oid);
 		oid_dump = fopen(filename, "w");
 		if (!oid_dump)
-			pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", filename);
+			pg_log(PG_FATAL, "Could not create necessary file:  %s\n", filename);
 
-		conn = connectToServer(ctx, olddb->db_name, CLUSTER_NEW);
+		conn = connectToServer(&new_cluster, olddb->db_name);
 
-		PQclear(executeQueryOrDie(ctx, conn, "set search_path='pg_catalog';"));
+		PQclear(executeQueryOrDie(conn, "set search_path='pg_catalog';"));
 
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, typname, typnamespace FROM pg_type", "preassign_type_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, oprnamespace, oprname FROM pg_operator", "preassign_operator_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, nspname FROM pg_namespace", "preassign_namespace_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, lanname FROM pg_language", "preassign_language_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, castsource, casttarget FROM pg_cast", "preassign_cast_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, connamespace, conname FROM pg_conversion", "preassign_conversion_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, ev_class, rulename FROM pg_rewrite", "preassign_rule_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, opfname, opfnamespace FROM pg_opfamily", "preassign_opfam_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, opcname, opcnamespace FROM pg_opclass", "preassign_opclass_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, prsnamespace, prsname FROM pg_ts_parser", "preassign_tsparser_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, dictnamespace, dictname FROM pg_ts_dict", "preassign_tsdict_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, tmplnamespace, tmplname FROM pg_ts_template", "preassign_tstemplate_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, cfgnamespace, cfgname FROM pg_ts_config", "preassign_tsconfig_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, extname FROM pg_extension", "preassign_extension_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, enumtypid, enumlabel FROM pg_enum", "preassign_enum_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, connamespace, conname, conrelid, contypid FROM pg_constraint", "preassign_constraint_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, ptcname FROM pg_extprotocol", "preassign_extprotocol_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, adrelid, adnum FROM pg_attrdef", "preassign_attrdef_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, relname, relnamespace FROM pg_class", "preassign_relation_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, proname, pronamespace FROM pg_proc", "preassign_procedure_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, amopmethod FROM pg_amop", "preassign_amop_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, fdwname, fdwowner FROM pg_foreign_data_wrapper", "preassign_fdw_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, srvname, srvowner, srvfdw FROM pg_foreign_server", "preassign_fdw_server_oid");
-		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, umuser, umserver FROM pg_user_mapping", "preassign_user_mapping_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, typname, typnamespace FROM pg_type", "preassign_type_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, oprnamespace, oprname FROM pg_operator", "preassign_operator_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, nspname FROM pg_namespace", "preassign_namespace_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, lanname FROM pg_language", "preassign_language_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, castsource, casttarget FROM pg_cast", "preassign_cast_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, connamespace, conname FROM pg_conversion", "preassign_conversion_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, ev_class, rulename FROM pg_rewrite", "preassign_rule_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, opfname, opfnamespace FROM pg_opfamily", "preassign_opfam_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, opcname, opcnamespace FROM pg_opclass", "preassign_opclass_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, prsnamespace, prsname FROM pg_ts_parser", "preassign_tsparser_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, dictnamespace, dictname FROM pg_ts_dict", "preassign_tsdict_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, tmplnamespace, tmplname FROM pg_ts_template", "preassign_tstemplate_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, cfgnamespace, cfgname FROM pg_ts_config", "preassign_tsconfig_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, extname FROM pg_extension", "preassign_extension_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, enumtypid, enumlabel FROM pg_enum", "preassign_enum_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, connamespace, conname, conrelid, contypid FROM pg_constraint", "preassign_constraint_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, ptcname FROM pg_extprotocol", "preassign_extprotocol_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, adrelid, adnum FROM pg_attrdef", "preassign_attrdef_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, relname, relnamespace FROM pg_class", "preassign_relation_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, proname, pronamespace FROM pg_proc", "preassign_procedure_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, amopmethod FROM pg_amop", "preassign_amop_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, fdwname, fdwowner FROM pg_foreign_data_wrapper", "preassign_fdw_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, srvname, srvowner, srvfdw FROM pg_foreign_server", "preassign_fdw_server_oid");
+		dump_rows(NULL, oid_dump, conn, "SELECT oid, umuser, umserver FROM pg_user_mapping", "preassign_user_mapping_oid");
 
 		PQfinish(conn);
 
 		fclose(oid_dump);
 	}
 
-	check_ok(ctx);
+	check_ok();
 }
 
 /*
  * Read all OID dump files into memory.
  */
 void
-slurp_oid_files(migratorContext *ctx)
+slurp_oid_files(void)
 {
 	int			dbnum;
 	char		filename[MAXPGPATH];
@@ -222,34 +222,34 @@ slurp_oid_files(migratorContext *ctx)
 	/* Read the Oids of global objects */
 	oid_dump = fopen(GLOBAL_OIDS_DUMP_FILE, "r");
 	if (!oid_dump)
-		pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", GLOBAL_OIDS_DUMP_FILE);
+		pg_log(PG_FATAL, "Could not open necessary file:  %s\n", GLOBAL_OIDS_DUMP_FILE);
 
 	if (fstat(fileno(oid_dump), &st) != 0)
-		pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+		pg_log(PG_FATAL, "Could not read file \"%s\": %s\n",
 			   GLOBAL_OIDS_DUMP_FILE, strerror(errno));
 
-	reserved_oids = pg_malloc(ctx, st.st_size + 1);
+	reserved_oids = pg_malloc(st.st_size + 1);
 	fread(reserved_oids, st.st_size, 1, oid_dump);
 	fclose(oid_dump);
 	reserved_oids[st.st_size] = '\0';
 
-	ctx->old.global_reserved_oids = reserved_oids;
+	old_cluster.global_reserved_oids = reserved_oids;
 
 	/* Read per-DB Oids */
-	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
 
-		snprintf(filename, sizeof(filename), "%s/" DB_OIDS_DUMP_FILE_MASK, ctx->cwd, olddb->db_oid);
+		snprintf(filename, sizeof(filename), "%s/" DB_OIDS_DUMP_FILE_MASK, os_info.cwd, olddb->db_oid);
 		oid_dump = fopen(filename, "r");
 		if (!oid_dump)
-			pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", filename);
+			pg_log(PG_FATAL, "Could not open necessary file:  %s\n", filename);
 
 		if (fstat(fileno(oid_dump), &st) != 0)
-			pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+			pg_log(PG_FATAL, "Could not read file \"%s\": %s\n",
 				   filename, strerror(errno));
 
-		reserved_oids = pg_malloc(ctx, st.st_size + 1);
+		reserved_oids = pg_malloc(st.st_size + 1);
 		fread(reserved_oids, st.st_size, 1, oid_dump);
 		fclose(oid_dump);
 		reserved_oids[st.st_size] = '\0';
@@ -265,7 +265,7 @@ slurp_oid_files(migratorContext *ctx)
  * next call.
  */
 static char *
-simple_escape_literal(migratorContext *ctx, PGconn *conn, const char *s)
+simple_escape_literal(PGconn *conn, const char *s)
 {
 	static char *buf = NULL;
 	static int	buf_size = 0;
@@ -283,7 +283,7 @@ simple_escape_literal(migratorContext *ctx, PGconn *conn, const char *s)
 		if (req_size < NAMEDATALEN * 2 + 1)
 			req_size = NAMEDATALEN * 2 + 1;
 
-		buf = pg_malloc(ctx, req_size);
+		buf = pg_malloc(req_size);
 		buf_size = req_size;
 	}
 
@@ -306,7 +306,7 @@ simple_escape_literal(migratorContext *ctx, PGconn *conn, const char *s)
  *
  */
 static void
-dump_rows(migratorContext *ctx, PQExpBuffer buf, FILE *file, PGconn *conn,
+dump_rows(PQExpBuffer buf, FILE *file, PGconn *conn,
 		  const char *sql, const char *funcname)
 {
 	int			ntups;
@@ -327,11 +327,11 @@ dump_rows(migratorContext *ctx, PQExpBuffer buf, FILE *file, PGconn *conn,
 	 * other queries are very simple ones.
 	 */
 	if (strstr(sql, "WHERE ") == NULL)
-		res = executeQueryOrDie(ctx, conn, "%s WHERE oid >= %u", sql, FirstNormalObjectId);
+		res = executeQueryOrDie(conn, "%s WHERE oid >= %u", sql, FirstNormalObjectId);
 	else if (strstr(sql, "UNION ALL") == NULL)
-		res = executeQueryOrDie(ctx, conn, "%s AND oid >= %u", sql, FirstNormalObjectId);
+		res = executeQueryOrDie(conn, "%s AND oid >= %u", sql, FirstNormalObjectId);
 	else
-		res = executeQueryOrDie(ctx, conn, "%s", sql);
+		res = executeQueryOrDie(conn, "%s", sql);
 
 	ntups = PQntuples(res);
 	ncols = PQnfields(res);
@@ -340,11 +340,11 @@ dump_rows(migratorContext *ctx, PQExpBuffer buf, FILE *file, PGconn *conn,
 	{
 		appendPQExpBuffer(buf, "SELECT binary_upgrade.%s('%s'",
 						  funcname,
-						  simple_escape_literal(ctx, conn, PQgetvalue(res, row, 0)));
+						  simple_escape_literal(conn, PQgetvalue(res, row, 0)));
 
 		for (col = 1; col < ncols; col++)
 			appendPQExpBuffer(buf, ", '%s'",
-							  simple_escape_literal(ctx, conn, PQgetvalue(res, row, col)));
+							  simple_escape_literal(conn, PQgetvalue(res, row, col)));
 		appendPQExpBuffer(buf, ");\n");
 
 		if (file)

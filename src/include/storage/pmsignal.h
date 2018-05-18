@@ -4,10 +4,10 @@
  *	  routines for signaling the postmaster from its child processes
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/pmsignal.h,v 1.32 2010/07/06 19:19:00 momjian Exp $
+ * src/include/storage/pmsignal.h
  *
  *-------------------------------------------------------------------------
  */
@@ -29,6 +29,7 @@ typedef enum
 	PMSIGNAL_START_AUTOVAC_LAUNCHER,	/* start an autovacuum launcher */
 	PMSIGNAL_START_AUTOVAC_WORKER,		/* start an autovacuum worker */
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
+	PMSIGNAL_ADVANCE_STATE_MACHINE,		/* advance postmaster's state machine */
 
 	PMSIGNAL_WAKEN_FTS,         /* wake up FTS to probe segments */
 
@@ -49,8 +50,8 @@ extern int	AssignPostmasterChildSlot(void);
 extern bool ReleasePostmasterChildSlot(int slot);
 extern bool IsPostmasterChildWalSender(int slot);
 extern void MarkPostmasterChildActive(void);
-extern void MarkPostmasterChildWalSender(void);
 extern void MarkPostmasterChildInactive(void);
+extern void MarkPostmasterChildWalSender(void);
 extern bool PostmasterIsAlive(bool amDirectChild);
 extern bool ParentProcIsAlive(void);
 

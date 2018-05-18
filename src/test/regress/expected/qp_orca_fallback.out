@@ -8,7 +8,7 @@ set optimizer_enable_dml_constraints = off;
 explain insert into constr_tab values (1,2,3);
                    QUERY PLAN                   
 ------------------------------------------------
- Insert (cost=0.00..0.01 rows=1 width=0)
+ Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Optimizer status: legacy query optimizer
 (3 rows)
@@ -17,7 +17,7 @@ set optimizer_enable_dml_constraints=on;
 explain insert into constr_tab values (1,2,3);
                    QUERY PLAN                   
 ------------------------------------------------
- Insert (cost=0.00..0.01 rows=1 width=0)
+ Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Optimizer status: legacy query optimizer
 (3 rows)
@@ -30,7 +30,7 @@ ERROR:  Cannot parallelize an UPDATE statement that updates the distribution col
 explain update constr_tab set b = 10;
                            QUERY PLAN                            
 -----------------------------------------------------------------
- Update (slice0; segments: 3)  (rows=1 width=22)
+ Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
  Optimizer status: legacy query optimizer
 (3 rows)
@@ -39,7 +39,7 @@ set optimizer_enable_dml_constraints=on;
 explain update constr_tab set b = 10;
                            QUERY PLAN                            
 -----------------------------------------------------------------
- Update (slice0; segments: 3)  (rows=1 width=22)
+ Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
  Optimizer status: legacy query optimizer
 (3 rows)

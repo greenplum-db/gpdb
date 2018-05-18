@@ -576,7 +576,8 @@ AppendOnlyBlockDirectory_GetEntry(
 
 		idxScanDesc = index_beginscan(blkdirRel, blkdirIdx,
 									  blockDirectory->appendOnlyMetaDataSnapshot,
-									  numScanKeys, scanKeys);
+									  numScanKeys, 0);
+		index_rescan(idxScanDesc, scanKeys, numScanKeys, NULL, 0);
 
 		tuple = index_getnext(idxScanDesc, BackwardScanDirection);
 
@@ -802,8 +803,9 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 
 	Relation	blkdirRel = heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
 	Relation	blkdirIdx = index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
-
 	ScanKeyData scanKey;
+	IndexScanDesc indexScan;
+	HeapTuple	tuple;
 
 	ScanKeyInit(&scanKey,
 				1,				/* segno */
@@ -811,14 +813,12 @@ AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 				F_INT4EQ,
 				Int32GetDatum(segno));
 
-	IndexScanDesc indexScan = index_beginscan(
-											  blkdirRel,
-											  blkdirIdx,
-											  snapshot,
-											  1,
-											  &scanKey);
-
-	HeapTuple	tuple = NULL;
+	indexScan = index_beginscan(blkdirRel,
+								blkdirIdx,
+								snapshot,
+								1,
+								0);
+	index_rescan(indexScan, &scanKey, 1, NULL, 0);
 
 	while ((tuple = index_getnext(indexScan, ForwardScanDirection)) != NULL)
 	{
@@ -862,13 +862,14 @@ init_scankeys(TupleDesc tupleDesc,
 
 			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
 									 false, true, false,
-									 NULL, &eq_opr, NULL);
+									 NULL, &eq_opr, NULL, NULL);
 			opfuncid = get_opcode(eq_opr);
 			ScanKeyEntryInitialize(scanKey,
 								   0,	/* sk_flag */
 								   keyNo + 1,	/* attribute number to scan */
 								   BTEqualStrategyNumber,	/* strategy */
 								   InvalidOid,	/* strategy subtype */
+								   InvalidOid,	/* collation */
 								   opfuncid,	/* reg proc to use */
 								   0	/* constant */
 				);
@@ -880,7 +881,7 @@ init_scankeys(TupleDesc tupleDesc,
 
 			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
 									 false, false, true,
-									 NULL, NULL, &gtOid);
+									 NULL, NULL, &gtOid, NULL);
 			leOid = get_negator(gtOid);
 			opfuncid = get_opcode(leOid);
 
@@ -889,6 +890,7 @@ init_scankeys(TupleDesc tupleDesc,
 								   keyNo + 1,	/* attribute number to scan */
 								   strategyNumber,	/* strategy */
 								   InvalidOid,	/* strategy subtype */
+								   InvalidOid,	/* collation */
 								   opfuncid,	/* reg proc to use */
 								   0	/* constant */
 				);
@@ -1052,7 +1054,8 @@ load_last_minipage(AppendOnlyBlockDirectory *blockDirectory,
 	 */
 	idxScanDesc = index_beginscan(blkdirRel, blkdirIdx,
 								  blockDirectory->appendOnlyMetaDataSnapshot,
-								  numScanKeys, scanKeys);
+								  numScanKeys, 0);
+	index_rescan(idxScanDesc, scanKeys, numScanKeys, NULL, 0);
 
 	tuple = index_getnext(idxScanDesc, BackwardScanDirection);
 	if (tuple != NULL)

@@ -2,9 +2,7 @@
 -- m/ERROR:  tuple concurrently updated \(heapam\.c\:\d+\)/
 -- s/\(heapam\.c:\d+\)//
 -- end_matchsubs
--- start_ignore
-! psql -d isolation2resgrouptest -f ./sql/resgroup/dblink.sql;
--- end_ignore
+CREATE EXTENSION dblink;
 
 -- This function execute commands N times. 
 -- % in command will be replaced by number specified by range1 sequentially

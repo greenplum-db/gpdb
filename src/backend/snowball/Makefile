@@ -2,7 +2,7 @@
 #
 # Makefile for src/backend/snowball
 #
-# $PostgreSQL: pgsql/src/backend/snowball/Makefile,v 1.8 2009/08/28 20:26:19 petere Exp $
+# src/backend/snowball/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ include $(top_srcdir)/src/Makefile.shlib
 $(SQLSCRIPT): Makefile snowball_func.sql.in snowball.sql.in
 ifeq ($(enable_shared), yes)
 	echo '-- Language-specific snowball dictionaries' > $@
-	cat $(srcdir)/snowball_func.sql.in >> $@	
+	cat $(srcdir)/snowball_func.sql.in >> $@
 	@set -e; \
 	set $(LANGUAGES) ; \
 	while [ "$$#" -gt 0 ] ; \

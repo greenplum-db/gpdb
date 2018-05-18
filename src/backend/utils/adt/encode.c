@@ -3,11 +3,11 @@
  * encode.c
  *	  Various data encoding/decoding things.
  *
- * Copyright (c) 2001-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/encode.c,v 1.26 2010/01/02 16:57:53 momjian Exp $
+ *	  src/backend/utils/adt/encode.c
  *
  *-------------------------------------------------------------------------
  */

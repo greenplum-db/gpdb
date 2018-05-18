@@ -30,6 +30,7 @@
 #include "port/atomics.h"
 #include "storage/pg_sema.h"
 #include "storage/ipc.h"
+#include "storage/shmem.h"
 #include "utils/palloc.h"
 #include "utils/memutils.h"
 

@@ -2,6 +2,8 @@ CREATE TABLE ttable1 OF nothing;
 ERROR:  type "nothing" does not exist
 CREATE TYPE person_type AS (id int, name text);
 CREATE TABLE persons OF person_type;
+CREATE TABLE IF NOT EXISTS persons OF person_type;
+NOTICE:  relation "persons" already exists, skipping
 SELECT * FROM persons;
  id | name 
 ----+------
@@ -26,12 +28,18 @@ SELECT * FROM get_all_persons();
 ----+------
 (0 rows)
 
+-- certain ALTER TABLE operations on typed tables are not allowed
 ALTER TABLE persons ADD COLUMN comment text;
 ERROR:  cannot add column to typed table
 ALTER TABLE persons DROP COLUMN name;
 ERROR:  cannot drop column from typed table
 ALTER TABLE persons RENAME COLUMN id TO num;
 ERROR:  cannot rename column of typed table
+ALTER TABLE persons ALTER COLUMN name TYPE varchar;
+ERROR:  cannot alter column type of typed table
+CREATE TABLE stuff (id int);
+ALTER TABLE persons INHERIT stuff;
+ERROR:  cannot change inheritance of typed table
 CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL); -- error
 ERROR:  column "myname" does not exist
 -- This test comes from postgres, and we expect it to fail on Greenplum
@@ -71,7 +79,7 @@ NOTICE:  CREATE TABLE / UNIQUE will create implicit index "gppersons2_name_key" 
  id     | integer | 
  name   | text    | 
 Indexes:
-    "gppersons2_name_key" UNIQUE, btree (name)
+    "gppersons2_name_key" UNIQUE CONSTRAINT, btree (name)
 Typed table of type: person_type
 Distributed by: (name)
 
@@ -111,3 +119,21 @@ drop cascades to function get_all_persons()
 drop cascades to table gppersons1
 drop cascades to table gppersons2
 drop cascades to table persons3
+CREATE TABLE persons5 OF stuff; -- only CREATE TYPE AS types may be used
+ERROR:  type stuff is not a composite type
+DROP TABLE stuff;
+-- implicit casting
+CREATE TYPE person_type AS (id int, name text);
+CREATE TABLE persons OF person_type;
+INSERT INTO persons VALUES (1, 'test');
+CREATE FUNCTION namelen(person_type) RETURNS int LANGUAGE SQL AS $$ SELECT length($1.name) $$;
+SELECT id, namelen(persons) FROM persons;
+ id | namelen 
+----+---------
+  1 |       4
+(1 row)
+
+DROP TYPE person_type CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table persons
+drop cascades to function namelen(person_type)

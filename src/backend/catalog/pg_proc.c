@@ -3,12 +3,12 @@
  * pg_proc.c
  *	  routines to support manipulation of the pg_proc relation
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.176 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/catalog/pg_proc.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_language.h"
@@ -629,7 +630,8 @@ ProcedureCreate(const char *procedureName,
 	 * Create dependencies for the new function.  If we are updating an
 	 * existing function, first delete any existing pg_depend entries.
 	 * (However, since we are not changing ownership or permissions, the
-	 * shared dependencies do *not* need to change, and we leave them alone.)
+	 * shared dependencies do *not* need to change, and we leave them alone.
+	 * We also don't change any pre-existing extension-membership dependency.)
 	 */
 	if (is_update)
 	{
@@ -705,6 +707,9 @@ ProcedureCreate(const char *procedureName,
 
 	heap_freetuple(tup);
 
+	/* Post creation hook for new function */
+	InvokeObjectAccessHook(OAT_POST_CREATE, ProcedureRelationId, retval, 0);
+
 	heap_close(rel, RowExclusiveLock);
 
 	/* Verify function body */
@@ -751,7 +756,6 @@ fmgr_internal_validator(PG_FUNCTION_ARGS)
 {
 	Oid			funcoid = PG_GETARG_OID(0);
 	HeapTuple	tuple;
-	Form_pg_proc proc;
 	bool		isnull;
 	Datum		tmp;
 	char	   *prosrc;
@@ -767,7 +771,6 @@ fmgr_internal_validator(PG_FUNCTION_ARGS)
 	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
-	proc = (Form_pg_proc) GETSTRUCT(tuple);
 
 	tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
 	if (isnull)
@@ -800,7 +803,6 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
 	Oid			funcoid = PG_GETARG_OID(0);
 	void	   *libraryhandle;
 	HeapTuple	tuple;
-	Form_pg_proc proc;
 	bool		isnull;
 	Datum		tmp;
 	char	   *prosrc;
@@ -818,7 +820,6 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
 	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
-	proc = (Form_pg_proc) GETSTRUCT(tuple);
 
 	tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
 	if (isnull)
@@ -850,7 +851,9 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 	Oid			funcoid = PG_GETARG_OID(0);
 	HeapTuple	tuple;
 	Form_pg_proc proc;
+	List	   *raw_parsetree_list;
 	List	   *querytree_list;
+	ListCell   *lc;
 	bool		isnull;
 	Datum		tmp;
 	char	   *prosrc;
@@ -924,17 +927,37 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 		 * We can run the text through the raw parser though; this will at
 		 * least catch silly syntactic errors.
 		 */
+		raw_parsetree_list = pg_parse_query(prosrc);
+
 		if (!haspolyarg)
 		{
-			querytree_list = pg_parse_and_rewrite(prosrc,
-												  proc->proargtypes.values,
-												  proc->pronargs);
+			/*
+			 * OK to do full precheck: analyze and rewrite the queries, then
+			 * verify the result type.
+			 */
+			SQLFunctionParseInfoPtr pinfo;
+
+			/* But first, set up parameter information */
+			pinfo = prepare_sql_fn_parse_info(tuple, NULL, InvalidOid);
+
+			querytree_list = NIL;
+			foreach(lc, raw_parsetree_list)
+			{
+				Node	   *parsetree = (Node *) lfirst(lc);
+				List	   *querytree_sublist;
+
+				querytree_sublist = pg_analyze_and_rewrite_params(parsetree,
+																  prosrc,
+									   (ParserSetupHook) sql_fn_parser_setup,
+																  pinfo);
+				querytree_list = list_concat(querytree_list,
+											 querytree_sublist);
+			}
+
 			(void) check_sql_fn_retval(funcoid, proc->prorettype,
 									   querytree_list,
 									   NULL, NULL);
 		}
-		else
-			querytree_list = pg_parse_query(prosrc);
 
 		error_context_stack = sqlerrcontext.previous;
 	}

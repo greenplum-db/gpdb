@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_type.c,v 1.106 2010/02/14 18:42:15 rhaas Exp $
+ *	  src/backend/parser/parse_type.c
  *
  *-------------------------------------------------------------------------
  */
@@ -208,22 +208,39 @@ typenameType(ParseState *pstate, const TypeName *typeName, int32 *typmod_p)
 }
 
 /*
- * typenameTypeId - given a TypeName, return the type's OID and typmod
+ * typenameTypeId - given a TypeName, return the type's OID
  *
- * This is equivalent to typenameType, but we only hand back the type OID
+ * This is similar to typenameType, but we only hand back the type OID
  * not the syscache entry.
  */
 Oid
-typenameTypeId(ParseState *pstate, const TypeName *typeName, int32 *typmod_p)
+typenameTypeId(ParseState *pstate, const TypeName *typeName)
 {
 	Oid			typoid;
 	Type		tup;
 
-	tup = typenameType(pstate, typeName, typmod_p);
+	tup = typenameType(pstate, typeName, NULL);
 	typoid = HeapTupleGetOid(tup);
 	ReleaseSysCache(tup);
 
 	return typoid;
+}
+
+/*
+ * typenameTypeIdAndMod - given a TypeName, return the type's OID and typmod
+ *
+ * This is equivalent to typenameType, but we only hand back the type OID
+ * and typmod, not the syscache entry.
+ */
+void
+typenameTypeIdAndMod(ParseState *pstate, const TypeName *typeName,
+					 Oid *typeid_p, int32 *typmod_p)
+{
+	Type		tup;
+
+	tup = typenameType(pstate, typeName, typmod_p);
+	*typeid_p = HeapTupleGetOid(tup);
+	ReleaseSysCache(tup);
 }
 
 /*
@@ -415,6 +432,72 @@ TypeNameListToString(List *typenames)
 	return string.data;
 }
 
+/*
+ * LookupCollation
+ *
+ * Look up collation by name, return OID, with support for error location.
+ */
+Oid
+LookupCollation(ParseState *pstate, List *collnames, int location)
+{
+	Oid			colloid;
+	ParseCallbackState pcbstate;
+
+	if (pstate)
+		setup_parser_errposition_callback(&pcbstate, pstate, location);
+
+	colloid = get_collation_oid(collnames, false);
+
+	if (pstate)
+		cancel_parser_errposition_callback(&pcbstate);
+
+	return colloid;
+}
+
+/*
+ * GetColumnDefCollation
+ *
+ * Get the collation to be used for a column being defined, given the
+ * ColumnDef node and the previously-determined column type OID.
+ *
+ * pstate is only used for error location purposes, and can be NULL.
+ */
+Oid
+GetColumnDefCollation(ParseState *pstate, ColumnDef *coldef, Oid typeOid)
+{
+	Oid			result;
+	Oid			typcollation = get_typcollation(typeOid);
+	int			location = -1;
+
+	if (coldef->collClause)
+	{
+		/* We have a raw COLLATE clause, so look up the collation */
+		location = coldef->collClause->location;
+		result = LookupCollation(pstate, coldef->collClause->collname,
+								 location);
+	}
+	else if (OidIsValid(coldef->collOid))
+	{
+		/* Precooked collation spec, use that */
+		result = coldef->collOid;
+	}
+	else
+	{
+		/* Use the type's default collation if any */
+		result = typcollation;
+	}
+
+	/* Complain if COLLATE is applied to an uncollatable type */
+	if (OidIsValid(result) && !OidIsValid(typcollation))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("collations are not supported by type %s",
+						format_type_be(typeOid)),
+				 parser_errposition(pstate, location)));
+
+	return result;
+}
+
 /* return a Type structure, given a type id */
 /* NB: caller must ReleaseSysCache the type tuple when done with it */
 Type
@@ -447,7 +530,7 @@ typeLen(Type t)
 	return typ->typlen;
 }
 
-/* given type (as type struct), return the value of its 'byval' attribute.*/
+/* given type (as type struct), return its 'byval' attribute */
 bool
 typeByVal(Type t)
 {
@@ -457,7 +540,7 @@ typeByVal(Type t)
 	return typ->typbyval;
 }
 
-/* given type (as type struct), return the name of type */
+/* given type (as type struct), return the type's name */
 char *
 typeTypeName(Type t)
 {
@@ -468,14 +551,24 @@ typeTypeName(Type t)
 	return pstrdup(NameStr(typ->typname));
 }
 
+/* given type (as type struct), return its 'typrelid' attribute */
 Oid
 typeTypeRelid(Type typ)
 {
 	Form_pg_type typtup;
 
 	typtup = (Form_pg_type) GETSTRUCT(typ);
-
 	return typtup->typrelid;
+}
+
+/* given type (as type struct), return its 'typcollation' attribute */
+Oid
+typeTypeCollation(Type typ)
+{
+	Form_pg_type typtup;
+
+	typtup = (Form_pg_type) GETSTRUCT(typ);
+	return typtup->typcollation;
 }
 
 /*
@@ -563,7 +656,7 @@ pts_error_callback(void *arg)
  * the string and convert it to a type OID and type modifier.
  */
 void
-parseTypeString(const char *str, Oid *type_id, int32 *typmod_p)
+parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p)
 {
 	StringInfoData buf;
 	List	   *raw_parsetree_list;
@@ -636,7 +729,7 @@ parseTypeString(const char *str, Oid *type_id, int32 *typmod_p)
 	if (typeName->setof)
 		goto fail;
 
-	*type_id = typenameTypeId(NULL, typeName, typmod_p);
+	typenameTypeIdAndMod(NULL, typeName, typeid_p, typmod_p);
 
 	pfree(buf.data);
 

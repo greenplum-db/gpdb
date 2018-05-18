@@ -1,8 +1,5 @@
-libecpg_compat.a
-libecpg_compat.so
-libecpg_compat.so.2
-libecpg_compat.so.2.2
-libecpg_compat.so.3.0
-libecpg_compat.so.3
-exports.list
-libecpg_compat.so.3.1
+/compatlib.def
+/libecpg_compatdll.def
+/libecpg_compatddll.def
+/blibecpg_compatdll.def
+/exports.list

@@ -201,21 +201,23 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 		Oid			eq_function;
 		Oid			left_hash_function;
 		Oid			right_hash_function;
+		bool		hashable;
 
 		get_sort_group_operators(typid,
 								 false, true, false,
-								 NULL, &eq_opr, NULL);
-
-		eq_function = get_opcode(eq_opr);
-
-		if (!get_op_hash_functions(eq_opr,
-								   &left_hash_function,
-								   &right_hash_function))
+								 NULL, &eq_opr, NULL, &hashable);
+		if (!hashable)
 		{
 			pfree(cur_bmbuild);
 			cur_bmbuild = NULL;
 			break;
 		}
+
+		eq_function = get_opcode(eq_opr);
+		if (!get_op_hash_functions(eq_opr,
+								   &left_hash_function,
+								   &right_hash_function))
+			elog(ERROR, "could not find hash functions for operator %u", eq_opr);
 
 		Assert(left_hash_function == right_hash_function);
 		fmgr_info(eq_function, &cur_bmbuild->eq_funcs[i]);
@@ -277,18 +279,25 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 
 			get_sort_group_operators(atttypid,
 									 false, true, false,
-									 NULL, &eq_opr, NULL);
+									 NULL, &eq_opr, NULL, NULL);
 			opfuncid = get_opcode(eq_opr);
 
-			ScanKeyEntryInitialize(&(bmstate->bm_lov_scanKeys[attno]), SK_ISNULL, 
-							   attno + 1, BTEqualStrategyNumber, InvalidOid, 
-							   opfuncid, 0);
+			ScanKeyEntryInitialize(&(bmstate->bm_lov_scanKeys[attno]),
+								   SK_ISNULL,
+								   attno + 1,
+								   BTEqualStrategyNumber,
+								   InvalidOid,
+								   bmstate->bm_lov_index->rd_indcollation[attno],
+								   opfuncid, 0);
 		}
 
 		bmstate->bm_lov_scanDesc = index_beginscan(bmstate->bm_lov_heap,
 							 bmstate->bm_lov_index, GetActiveSnapshot(), 
 							 bmstate->bm_tupDesc->natts,
-							 bmstate->bm_lov_scanKeys);
+							 0);
+		index_rescan(bmstate->bm_lov_scanDesc,
+					 bmstate->bm_lov_scanKeys, bmstate->bm_tupDesc->natts,
+					 NULL, 0);
 	}
 
 	/*
@@ -297,7 +306,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 	 * writes page to the shared buffer, we can't disable WAL archiving.
 	 * We will add this shortly.
 	 */	
-	bmstate->use_wal = !index->rd_istemp;
+	bmstate->use_wal = RelationNeedsWAL(index);
 }
 
 /*

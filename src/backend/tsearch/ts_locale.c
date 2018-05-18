@@ -3,16 +3,17 @@
  * ts_locale.c
  *		locale compatibility layer for tsearch
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_locale.c,v 1.14 2010/01/02 16:57:53 momjian Exp $
+ *	  src/backend/tsearch/ts_locale.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "catalog/pg_collation.h"
 #include "storage/fd.h"
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_public.h"
@@ -27,11 +28,13 @@ t_isdigit(const char *ptr)
 {
 	int			clen = pg_mblen(ptr);
 	wchar_t		character[2];
+	Oid			collation = DEFAULT_COLLATION_OID;		/* TODO */
+	pg_locale_t mylocale = 0;	/* TODO */
 
-	if (clen == 1 || lc_ctype_is_c())
+	if (clen == 1 || lc_ctype_is_c(collation))
 		return isdigit(TOUCHAR(ptr));
 
-	char2wchar(character, 2, ptr, clen);
+	char2wchar(character, 2, ptr, clen, mylocale);
 
 	return iswdigit((wint_t) character[0]);
 }
@@ -41,11 +44,13 @@ t_isspace(const char *ptr)
 {
 	int			clen = pg_mblen(ptr);
 	wchar_t		character[2];
+	Oid			collation = DEFAULT_COLLATION_OID;		/* TODO */
+	pg_locale_t mylocale = 0;	/* TODO */
 
-	if (clen == 1 || lc_ctype_is_c())
+	if (clen == 1 || lc_ctype_is_c(collation))
 		return isspace(TOUCHAR(ptr));
 
-	char2wchar(character, 2, ptr, clen);
+	char2wchar(character, 2, ptr, clen, mylocale);
 
 	return iswspace((wint_t) character[0]);
 }
@@ -55,11 +60,13 @@ t_isalpha(const char *ptr)
 {
 	int			clen = pg_mblen(ptr);
 	wchar_t		character[2];
+	Oid			collation = DEFAULT_COLLATION_OID;		/* TODO */
+	pg_locale_t mylocale = 0;	/* TODO */
 
-	if (clen == 1 || lc_ctype_is_c())
+	if (clen == 1 || lc_ctype_is_c(collation))
 		return isalpha(TOUCHAR(ptr));
 
-	char2wchar(character, 2, ptr, clen);
+	char2wchar(character, 2, ptr, clen, mylocale);
 
 	return iswalpha((wint_t) character[0]);
 }
@@ -69,11 +76,13 @@ t_isprint(const char *ptr)
 {
 	int			clen = pg_mblen(ptr);
 	wchar_t		character[2];
+	Oid			collation = DEFAULT_COLLATION_OID;		/* TODO */
+	pg_locale_t mylocale = 0;	/* TODO */
 
-	if (clen == 1 || lc_ctype_is_c())
+	if (clen == 1 || lc_ctype_is_c(collation))
 		return isprint(TOUCHAR(ptr));
 
-	char2wchar(character, 2, ptr, clen);
+	char2wchar(character, 2, ptr, clen, mylocale);
 
 	return iswprint((wint_t) character[0]);
 }
@@ -239,6 +248,11 @@ lowerstr_with_len(const char *str, int len)
 {
 	char	   *out;
 
+#ifdef USE_WIDE_UPPER_LOWER
+	Oid			collation = DEFAULT_COLLATION_OID;		/* TODO */
+	pg_locale_t mylocale = 0;	/* TODO */
+#endif
+
 	if (len == 0)
 		return pstrdup("");
 
@@ -250,7 +264,7 @@ lowerstr_with_len(const char *str, int len)
 	 * Also, for a C locale there is no need to process as multibyte. From
 	 * backend/utils/adt/oracle_compat.c Teodor
 	 */
-	if (pg_database_encoding_max_length() > 1 && !lc_ctype_is_c())
+	if (pg_database_encoding_max_length() > 1 && !lc_ctype_is_c(collation))
 	{
 		wchar_t    *wstr,
 				   *wptr;
@@ -263,7 +277,7 @@ lowerstr_with_len(const char *str, int len)
 		 */
 		wptr = wstr = (wchar_t *) palloc(sizeof(wchar_t) * (len + 1));
 
-		wlen = char2wchar(wstr, len + 1, str, len);
+		wlen = char2wchar(wstr, len + 1, str, len, mylocale);
 		Assert(wlen <= len);
 
 		while (*wptr)
@@ -278,7 +292,7 @@ lowerstr_with_len(const char *str, int len)
 		len = pg_database_encoding_max_length() * wlen + 1;
 		out = (char *) palloc(len);
 
-		wlen = wchar2char(out, wstr, len);
+		wlen = wchar2char(out, wstr, len, mylocale);
 
 		pfree(wstr);
 

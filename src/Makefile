@@ -4,7 +4,7 @@
 #
 # Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/Makefile,v 1.50 2010/01/20 09:16:23 heikki Exp $
+# src/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -12,20 +12,24 @@ subdir = src
 top_builddir = ..
 include Makefile.global
 
+SUBDIRS = \
+	port \
+	timezone \
+	backend \
+	backend/utils/mb/conversion_procs \
+	backend/snowball \
+	include \
+	interfaces \
+	bin \
+	pl \
+	makefiles \
+	test/regress
 
-all install installdirs uninstall distprep:
-	$(MAKE) -C port $@
-	$(MAKE) -C timezone $@
-	$(MAKE) -C backend $@
-	$(MAKE) -C backend/utils/mb/conversion_procs $@
-	$(MAKE) -C backend/snowball $@
-	$(MAKE) -C include $@
-	$(MAKE) -C interfaces $@
-	$(MAKE) -C bin $@
-	$(MAKE) -C pl $@
-	$(MAKE) -C makefiles $@
-	$(MAKE) -C test/regress $@
-	$(MAKE) -C tools/fsync $@
+# There are too many interdependencies between the subdirectories, so
+# don't attempt parallel make here.
+.NOTPARALLEL:
+
+$(recurse)
 
 install: install-local
 
@@ -45,35 +49,20 @@ uninstall: uninstall-local
 uninstall-local:
 	rm -f $(addprefix '$(DESTDIR)$(pgxsdir)/$(subdir)'/, Makefile.global Makefile.port Makefile.shlib nls-global.mk)
 
+distprep:
+	$(MAKE) -C test/isolation $@
+
 clean:
-	$(MAKE) -C port $@
-	$(MAKE) -C timezone $@
-	$(MAKE) -C backend $@
-	$(MAKE) -C backend/snowball $@
-	$(MAKE) -C include $@
-	$(MAKE) -C interfaces $@
-	$(MAKE) -C bin $@
-	$(MAKE) -C pl $@
-	$(MAKE) -C makefiles $@
 	$(MAKE) -C test $@
 	$(MAKE) -C tutorial NO_PGXS=1 $@
+	$(MAKE) -C test/isolation $@
 	$(MAKE) -C test/thread $@
-	$(MAKE) -C tools/fsync $@
 
 distclean maintainer-clean:
-	$(MAKE) -C port $@
-	$(MAKE) -C timezone $@
-	$(MAKE) -C backend $@
-	$(MAKE) -C backend/snowball $@
-	$(MAKE) -C include $@
-	$(MAKE) -C interfaces $@
-	$(MAKE) -C bin $@
-	$(MAKE) -C pl $@
-	$(MAKE) -C makefiles $@
 	$(MAKE) -C test $@
 	$(MAKE) -C tutorial NO_PGXS=1 $@
+	$(MAKE) -C test/isolation $@
 	$(MAKE) -C test/thread $@
-	$(MAKE) -C tools/fsync $@
 	rm -f Makefile.port Makefile.global
 
 coverage:

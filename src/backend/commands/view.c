@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/view.c,v 1.120 2010/01/02 16:57:40 momjian Exp $
+ *	  src/backend/commands/view.c
  *
  *-------------------------------------------------------------------------
  */
@@ -76,10 +76,10 @@ isViewOnTempTable_walker(Node *node, void *context)
 			if (rte->rtekind == RTE_RELATION)
 			{
 				Relation	rel = heap_open(rte->relid, AccessShareLock);
-				bool		istemp = rel->rd_istemp;
+				char		relpersistence = rel->rd_rel->relpersistence;
 
 				heap_close(rel, AccessShareLock);
-				if (istemp)
+				if (relpersistence == RELPERSISTENCE_TEMP)
 					return true;
 			}
 		}
@@ -134,9 +134,28 @@ DefineVirtualRelation(const RangeVar *relation, List *tlist, bool replace)
 			def->inhcount = 0;
 			def->is_local = true;
 			def->is_not_null = false;
+			def->is_from_type = false;
 			def->storage = 0;
 			def->raw_default = NULL;
 			def->cooked_default = NULL;
+			def->collClause = NULL;
+			def->collOid = exprCollation((Node *) tle->expr);
+
+			/*
+			 * It's possible that the column is of a collatable type but the
+			 * collation could not be resolved, so double-check.
+			 */
+			if (type_is_collatable(exprType((Node *) tle->expr)))
+			{
+				if (!OidIsValid(def->collOid))
+					ereport(ERROR,
+							(errcode(ERRCODE_INDETERMINATE_COLLATION),
+							 errmsg("could not determine which collation to use for view column \"%s\"",
+									def->colname),
+							 errhint("Use the COLLATE clause to set the collation explicitly.")));
+			}
+			else
+				Assert(!OidIsValid(def->collOid));
 			def->constraints = NIL;
 
 			attrList = lappend(attrList, def);
@@ -183,9 +202,9 @@ DefineVirtualRelation(const RangeVar *relation, List *tlist, bool replace)
 		/*
 		 * Due to the namespace visibility rules for temporary objects, we
 		 * should only end up replacing a temporary view with another
-		 * temporary view, and vice versa.
+		 * temporary view, and similarly for permanent views.
 		 */
-		Assert(relation->istemp == rel->rd_istemp);
+		Assert(relation->relpersistence == rel->rd_rel->relpersistence);
 
 		/*
 		 * Create a tuple descriptor to compare against the existing view, and
@@ -232,6 +251,8 @@ DefineVirtualRelation(const RangeVar *relation, List *tlist, bool replace)
 	}
 	else
 	{
+		Oid			relid;
+
 		/*
 		 * now set the parameters for keys/inheritance etc. All of these are
 		 * uninteresting for views...
@@ -246,13 +267,16 @@ DefineVirtualRelation(const RangeVar *relation, List *tlist, bool replace)
 		createStmt->oncommit = ONCOMMIT_NOOP;
 		createStmt->tablespacename = NULL;
 		createStmt->relKind = RELKIND_VIEW;
+		createStmt->if_not_exists = false;
 
 		/*
 		 * finally create the relation (this will error out if there's an
 		 * existing view, so we don't need more code to complain if "replace"
 		 * is false).
 		 */
-		return DefineRelation(createStmt, RELKIND_VIEW, RELSTORAGE_VIRTUAL, false);
+		relid = DefineRelation(createStmt, RELKIND_VIEW, InvalidOid, RELSTORAGE_VIRTUAL, false);
+		Assert(relid != InvalidOid);
+		return relid;
 	}
 }
 
@@ -434,6 +458,20 @@ DefineView(ViewStmt *stmt, const char *queryString)
 		elog(ERROR, "unexpected parse analysis result");
 
 	/*
+	 * Check for unsupported cases.  These tests are redundant with ones in
+	 * DefineQueryRewrite(), but that function will complain about a bogus ON
+	 * SELECT rule, and we'd rather the message complain about a view.
+	 */
+	if (viewParse->intoClause != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("views must not contain SELECT INTO")));
+	if (viewParse->hasModifyingCTE)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		errmsg("views must not contain data-modifying statements in WITH")));
+
+	/*
 	 * Don't allow creating a view that contains dynamically typed functions.
 	 * We cannot guarantee that the future return type would be the same when
 	 * the view was used, as what it was now.
@@ -481,15 +519,22 @@ DefineView(ViewStmt *stmt, const char *queryString)
 	 * schema name.
 	 */
 	view = stmt->view;
-	if (!view->istemp && isViewOnTempTable(viewParse))
+	if (view->relpersistence == RELPERSISTENCE_PERMANENT
+		&& isViewOnTempTable(viewParse))
 	{
 		view = copyObject(view);	/* don't corrupt original command */
-		view->istemp = true;
+		view->relpersistence = RELPERSISTENCE_TEMP;
 		if (Gp_role != GP_ROLE_EXECUTE)
 			ereport(NOTICE,
 					(errmsg("view \"%s\" will be a temporary view",
 							view->relname)));
 	}
+
+	/* Unlogged views are not sensible. */
+	if (view->relpersistence == RELPERSISTENCE_UNLOGGED)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+		errmsg("views cannot be unlogged because they do not have storage")));
 
 	/*
 	 * Create the view relation

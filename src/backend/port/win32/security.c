@@ -3,10 +3,10 @@
  * security.c
  *	  Microsoft Windows Win32 Security Support Functions
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/win32/security.c,v 1.15 2010/01/02 16:57:50 momjian Exp $
+ *	  src/backend/port/win32/security.c
  *
  *-------------------------------------------------------------------------
  */
@@ -48,7 +48,7 @@ pgwin32_is_admin(void)
 	if (!pgwin32_get_dynamic_tokeninfo(AccessToken, TokenGroups,
 									   &InfoBuffer, errbuf, sizeof(errbuf)))
 	{
-		write_stderr(errbuf);
+		write_stderr("%s", errbuf);
 		exit(1);
 	}
 
@@ -138,7 +138,7 @@ pgwin32_is_service(void)
 	if (!pgwin32_get_dynamic_tokeninfo(AccessToken, TokenUser, &InfoBuffer,
 									   errbuf, sizeof(errbuf)))
 	{
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s", errbuf);
 		return -1;
 	}
 
@@ -169,7 +169,7 @@ pgwin32_is_service(void)
 	if (!pgwin32_get_dynamic_tokeninfo(AccessToken, TokenGroups, &InfoBuffer,
 									   errbuf, sizeof(errbuf)))
 	{
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s", errbuf);
 		return -1;
 	}
 

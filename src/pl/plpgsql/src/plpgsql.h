@@ -3,12 +3,12 @@
  * plpgsql.h		- Definitions for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.130 2010/02/26 02:01:35 momjian Exp $
+ *	  src/pl/plpgsql/src/plpgsql.h
  *
  *-------------------------------------------------------------------------
  */
@@ -90,6 +90,7 @@ enum PLpgSQL_stmt_types
 	PLPGSQL_STMT_FORI,
 	PLPGSQL_STMT_FORS,
 	PLPGSQL_STMT_FORC,
+	PLPGSQL_STMT_FOREACH_A,
 	PLPGSQL_STMT_EXIT,
 	PLPGSQL_STMT_RETURN,
 	PLPGSQL_STMT_RETURN_NEXT,
@@ -115,8 +116,7 @@ enum
 	PLPGSQL_RC_OK,
 	PLPGSQL_RC_EXIT,
 	PLPGSQL_RC_RETURN,
-	PLPGSQL_RC_CONTINUE,
-	PLPGSQL_RC_RERAISE
+	PLPGSQL_RC_CONTINUE
 };
 
 /* ----------
@@ -167,6 +167,7 @@ typedef struct
 	bool		typbyval;
 	Oid			typrelid;
 	Oid			typioparam;
+	Oid			collation;		/* from pg_type, but can be overridden */
 	FmgrInfo	typinput;		/* lookup info for typinput function */
 	int32		atttypmod;		/* typmod (taken from someplace else) */
 } PLpgSQL_type;
@@ -498,6 +499,18 @@ typedef struct
 
 
 typedef struct
+{								/* FOREACH item in array loop */
+	int			cmd_type;
+	int			lineno;
+	char	   *label;
+	int			varno;			/* loop target variable */
+	int			slice;			/* slice dimension, or 0 */
+	PLpgSQL_expr *expr;			/* array expression */
+	List	   *body;			/* List of statements */
+} PLpgSQL_stmt_foreach_a;
+
+
+typedef struct
 {								/* OPEN a curvar					*/
 	int			cmd_type;
 	int			lineno;
@@ -624,11 +637,18 @@ typedef struct PLpgSQL_func_hashkey
 
 	/*
 	 * For a trigger function, the OID of the relation triggered on is part of
-	 * the hashkey --- we want to compile the trigger separately for each
+	 * the hash key --- we want to compile the trigger separately for each
 	 * relation it is used with, in case the rowtype is different.	Zero if
 	 * not called as a trigger.
 	 */
 	Oid			trigrelOid;
+
+	/*
+	 * We must include the input collation as part of the hash key too,
+	 * because we have to generate different plans (with different Param
+	 * collations) for different collation settings.
+	 */
+	Oid			inputCollation;
 
 	/*
 	 * We include actual argument types in the hash key to support polymorphic
@@ -645,6 +665,7 @@ typedef struct PLpgSQL_function
 	TransactionId fn_xmin;
 	ItemPointerData fn_tid;
 	bool		fn_is_trigger;
+	Oid			fn_input_collation;
 	PLpgSQL_func_hashkey *fn_hashkey;	/* back-link to hashtable key */
 	MemoryContext fn_cxt;
 
@@ -703,6 +724,7 @@ typedef struct PLpgSQL_execstate
 	TupleDesc	rettupdesc;
 	char	   *exitlabel;		/* the "target" label of the current EXIT or
 								 * CONTINUE stmt, if any */
+	ErrorData  *cur_error;		/* current exception handler's error */
 
 	Tuplestorestate *tuple_store;		/* SRFs accumulate results here */
 	MemoryContext tuple_store_cxt;
@@ -849,7 +871,8 @@ extern PLpgSQL_type *plpgsql_parse_wordtype(char *ident);
 extern PLpgSQL_type *plpgsql_parse_cwordtype(List *idents);
 extern PLpgSQL_type *plpgsql_parse_wordrowtype(char *ident);
 extern PLpgSQL_type *plpgsql_parse_cwordrowtype(List *idents);
-extern PLpgSQL_type *plpgsql_build_datatype(Oid typeOid, int32 typmod);
+extern PLpgSQL_type *plpgsql_build_datatype(Oid typeOid, int32 typmod,
+					   Oid collation);
 extern PLpgSQL_variable *plpgsql_build_variable(const char *refname, int lineno,
 					   PLpgSQL_type *dtype,
 					   bool add2namespace);
@@ -884,8 +907,9 @@ extern void plpgsql_subxact_cb(SubXactEvent event, SubTransactionId mySubid,
 				   SubTransactionId parentSubid, void *arg);
 extern Oid exec_get_datum_type(PLpgSQL_execstate *estate,
 					PLpgSQL_datum *datum);
-extern Oid exec_get_rec_fieldtype(PLpgSQL_rec *rec, const char *fieldname,
-					   int *fieldno);
+extern void exec_get_datum_type_info(PLpgSQL_execstate *estate,
+						 PLpgSQL_datum *datum,
+						 Oid *typeid, int32 *typmod, Oid *collation);
 
 /* ----------
  * Functions for namespace handling in pl_funcs.c

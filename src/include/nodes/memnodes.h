@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/memnodes.h,v 1.37 2010/01/02 16:58:04 momjian Exp $
+ * src/include/nodes/memnodes.h
  *
  *-------------------------------------------------------------------------
  */
@@ -62,6 +62,8 @@ typedef struct MemoryContextData
 	MemoryContext firstchild;	/* head of linked list of children */
 	MemoryContext nextchild;	/* next child of same parent */
 	char	   *name;			/* context name (just for debugging) */
+	bool		isReset;		/* T = no space alloced since last reset */
+
     /* CDB: Lifetime cumulative stats for this context and all descendants */
     uint64      allBytesAlloc;  /* bytes allocated from lower level mem mgr */
     uint64      allBytesFreed;  /* bytes returned to lower level mem mgr */

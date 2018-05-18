@@ -4,10 +4,10 @@
  *		handle operator things for parser
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_oper.h,v 1.45 2010/01/02 16:58:07 momjian Exp $
+ * src/include/parser/parse_oper.h
  *
  *-------------------------------------------------------------------------
  */
@@ -48,7 +48,8 @@ extern Operator compatible_oper(ParseState *pstate, List *op,
 /* Routines for identifying "<", "=", ">" operators for a type */
 extern void get_sort_group_operators(Oid argtype,
 						 bool needLT, bool needEQ, bool needGT,
-						 Oid *ltOpr, Oid *eqOpr, Oid *gtOpr);
+						 Oid *ltOpr, Oid *eqOpr, Oid *gtOpr,
+						 bool *isHashable);
 
 /* Convenience routines for common calls on the above */
 extern Oid	compatible_oper_opid(List *op, Oid arg1, Oid arg2, bool noError);

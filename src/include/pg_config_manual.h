@@ -6,7 +6,7 @@
  * for developers.	If you edit any of these, be sure to do a *full*
  * rebuild (and an initdb if noted).
  *
- * $PostgreSQL: pgsql/src/include/pg_config_manual.h,v 1.40 2010/01/07 04:53:35 tgl Exp $
+ * src/include/pg_config_manual.h
  *------------------------------------------------------------------------
  */
 
@@ -22,7 +22,7 @@
 /*
  * Maximum number of arguments to a function.
  *
- * The minimum value is 8 (index cost estimation uses 8-argument functions).
+ * The minimum value is 9 (index cost estimation uses 9-argument functions).
  * The maximum possible value is around 600 (limited by index tuple size in
  * pg_proc's index; BLCKSZ larger than 8K would allow more).  Values larger
  * than needed will waste memory and processing time, but do not directly
@@ -162,7 +162,6 @@
  */
 #define MAX_RANDOM_VALUE  (0x7FFFFFFF)
 
-
 /*
  *------------------------------------------------------------------------
  * The following symbols are for enabling debugging code, not for
@@ -211,7 +210,7 @@
  * Enable debugging print statements for WAL-related operations; see
  * also the wal_debug GUC var.
  */
-/* #define WAL_DEBUG */
+#define WAL_DEBUG
 
 /*
  * Enable injecting faults.

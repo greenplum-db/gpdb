@@ -735,6 +735,7 @@ typedef struct xl_bm_metapage
 
 /* public routines */
 extern Datum bmbuild(PG_FUNCTION_ARGS);
+extern Datum bmbuildempty(PG_FUNCTION_ARGS);
 extern Datum bminsert(PG_FUNCTION_ARGS);
 extern Datum bmbeginscan(PG_FUNCTION_ARGS);
 extern Datum bmgettuple(PG_FUNCTION_ARGS);

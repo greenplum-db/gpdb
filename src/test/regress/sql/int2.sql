@@ -1,7 +1,5 @@
 --
 -- INT2
--- NOTE: int2 operators never check for over/underflow!
--- Some of these answers are consequently numerically incorrect.
 --
 
 CREATE TABLE INT2_TBL(f1 int2);
@@ -55,10 +53,10 @@ SELECT '' AS three, i.* FROM INT2_TBL i WHERE i.f1 >= int2 '0';
 
 SELECT '' AS three, i.* FROM INT2_TBL i WHERE i.f1 >= int4 '0';
 
--- positive odds 
+-- positive odds
 SELECT '' AS one, i.* FROM INT2_TBL i WHERE (i.f1 % int2 '2') = int2 '1';
 
--- any evens 
+-- any evens
 SELECT '' AS three, i.* FROM INT2_TBL i WHERE (i.f1 % int4 '2') = int2 '0';
 
 SELECT '' AS five, i.f1, i.f1 * int2 '2' AS x FROM INT2_TBL i;
@@ -85,6 +83,10 @@ SELECT '' AS five, i.f1, i.f1 - int4 '2' AS x FROM INT2_TBL i;
 SELECT '' AS five, i.f1, i.f1 / int2 '2' AS x FROM INT2_TBL i;
 
 SELECT '' AS five, i.f1, i.f1 / int4 '2' AS x FROM INT2_TBL i;
+
+-- corner cases
+SELECT (-1::int2<<15)::text;
+SELECT ((-1::int2<<15)+1::int2)::text;
 
 -- check sane handling of INT16_MIN overflow cases
 SELECT (-32768)::int2 * (-1)::int2;

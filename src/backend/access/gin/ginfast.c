@@ -7,19 +7,18 @@
  *	  transfer pending entries into the regular index structure.  This
  *	  wins because bulk insertion is much more efficient than retail.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginfast.c,v 1.7 2010/02/11 14:29:50 teodor Exp $
+ *			src/backend/access/gin/ginfast.c
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/genam.h"
-#include "access/gin.h"
+#include "access/gin_private.h"
 #include "catalog/index.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
@@ -30,12 +29,13 @@
 #define GIN_PAGE_FREESIZE \
 	( BLCKSZ - MAXALIGN(SizeOfPageHeaderData) - MAXALIGN(sizeof(GinPageOpaqueData)) )
 
-typedef struct DatumArray
+typedef struct KeyArray
 {
-	Datum	   *values;			/* expansible array */
+	Datum	   *keys;			/* expansible array */
+	GinNullCategory *categories;	/* another expansible array */
 	int32		nvalues;		/* current number of valid entries */
-	int32		maxvalues;		/* allocated size of array */
-} DatumArray;
+	int32		maxvalues;		/* allocated size of arrays */
+} KeyArray;
 
 
 /*
@@ -88,8 +88,9 @@ writeListPage(Relation index, Buffer buffer,
 	GinPageGetOpaque(page)->rightlink = rightlink;
 
 	/*
-	 * tail page may contain only the whole row(s) or final part of row placed
-	 * on previous pages
+	 * tail page may contain only whole row(s) or final part of row placed on
+	 * previous pages (a "row" here meaning all the index tuples generated for
+	 * one heap tuple)
 	 */
 	if (rightlink == InvalidBlockNumber)
 	{
@@ -103,7 +104,7 @@ writeListPage(Relation index, Buffer buffer,
 
 	MarkBufferDirty(buffer);
 
-	if (!index->rd_istemp)
+	if (RelationNeedsWAL(index))
 	{
 		XLogRecData rdata[2];
 		ginxlogInsertListPage data;
@@ -209,13 +210,16 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples,
 }
 
 /*
- * Inserts collected values during normal insertion. Function guarantees
- * that all values of heap will be stored sequentially, preserving order
+ * Write the index tuples contained in *collector into the index's
+ * pending list.
+ *
+ * Function guarantees that all these tuples will be inserted consecutively,
+ * preserving order
  */
 void
-ginHeapTupleFastInsert(Relation index, GinState *ginstate,
-					   GinTupleCollector *collector)
+ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 {
+	Relation	index = ginstate->index;
 	Buffer		metabuffer;
 	Page		metapage;
 	GinMetaPageData *metadata = NULL;
@@ -290,7 +294,12 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 			 */
 			START_CRIT_SECTION();
 
-			memcpy(metadata, &sublist, sizeof(GinMetaPageData));
+			metadata->head = sublist.head;
+			metadata->tail = sublist.tail;
+			metadata->tailFreeSize = sublist.tailFreeSize;
+
+			metadata->nPendingPages = sublist.nPendingPages;
+			metadata->nPendingHeapTuples = sublist.nPendingHeapTuples;
 		}
 		else
 		{
@@ -383,7 +392,7 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 	 */
 	MarkBufferDirty(metabuffer);
 
-	if (!index->rd_istemp)
+	if (RelationNeedsWAL(index))
 	{
 		XLogRecPtr	recptr;
 
@@ -418,34 +427,40 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 	END_CRIT_SECTION();
 
 	if (needCleanup)
-		ginInsertCleanup(index, ginstate, false, NULL);
+		ginInsertCleanup(ginstate, false, NULL);
 }
 
 /*
- * Collect values from one tuples to be indexed. All values for
- * one tuples should be written at once - to guarantee consistent state
+ * Create temporary index tuples for a single indexable item (one index column
+ * for the heap tuple specified by ht_ctid), and append them to the array
+ * in *collector.  They will subsequently be written out using
+ * ginHeapTupleFastInsert.	Note that to guarantee consistent state, all
+ * temp tuples for a given heap tuple must be written in one call to
+ * ginHeapTupleFastInsert.
  */
-uint32
-ginHeapTupleFastCollect(Relation index, GinState *ginstate,
+void
+ginHeapTupleFastCollect(GinState *ginstate,
 						GinTupleCollector *collector,
-						OffsetNumber attnum, Datum value, ItemPointer item)
+						OffsetNumber attnum, Datum value, bool isNull,
+						ItemPointer ht_ctid)
 {
 	Datum	   *entries;
+	GinNullCategory *categories;
 	int32		i,
 				nentries;
 
-	entries = extractEntriesSU(ginstate, attnum, value, &nentries);
-
-	if (nentries == 0)
-		/* nothing to insert */
-		return 0;
+	/*
+	 * Extract the key values that need to be inserted in the index
+	 */
+	entries = ginExtractEntries(ginstate, attnum, value, isNull,
+								&nentries, &categories);
 
 	/*
 	 * Allocate/reallocate memory for storing collected tuples
 	 */
 	if (collector->tuples == NULL)
 	{
-		collector->lentuples = nentries * index->rd_att->natts;
+		collector->lentuples = nentries * ginstate->origTupdesc->natts;
 		collector->tuples = (IndexTuple *) palloc(sizeof(IndexTuple) * collector->lentuples);
 	}
 
@@ -457,19 +472,19 @@ ginHeapTupleFastCollect(Relation index, GinState *ginstate,
 	}
 
 	/*
-	 * Creates tuple's array
+	 * Build an index tuple for each key value, and add to array.  In pending
+	 * tuples we just stick the heap TID into t_tid.
 	 */
 	for (i = 0; i < nentries; i++)
 	{
-		collector->tuples[collector->ntuples + i] =
-			GinFormTuple(index, ginstate, attnum, entries[i], NULL, 0, true);
-		collector->tuples[collector->ntuples + i]->t_tid = *item;
-		collector->sumsize += IndexTupleSize(collector->tuples[collector->ntuples + i]);
+		IndexTuple	itup;
+
+		itup = GinFormTuple(ginstate, attnum, entries[i], categories[i],
+							NULL, 0, true);
+		itup->t_tid = *ht_ctid;
+		collector->tuples[collector->ntuples++] = itup;
+		collector->sumsize += IndexTupleSize(itup);
 	}
-
-	collector->ntuples += nentries;
-
-	return nentries;
 }
 
 /*
@@ -561,7 +576,7 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 			MarkBufferDirty(buffers[i]);
 		}
 
-		if (!index->rd_istemp)
+		if (RelationNeedsWAL(index))
 		{
 			XLogRecPtr	recptr;
 
@@ -586,38 +601,55 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 	return false;
 }
 
-/* Add datum to DatumArray, resizing if needed */
+/* Initialize empty KeyArray */
 static void
-addDatum(DatumArray *datums, Datum datum)
+initKeyArray(KeyArray *keys, int32 maxvalues)
 {
-	if (datums->nvalues >= datums->maxvalues)
+	keys->keys = (Datum *) palloc(sizeof(Datum) * maxvalues);
+	keys->categories = (GinNullCategory *)
+		palloc(sizeof(GinNullCategory) * maxvalues);
+	keys->nvalues = 0;
+	keys->maxvalues = maxvalues;
+}
+
+/* Add datum to KeyArray, resizing if needed */
+static void
+addDatum(KeyArray *keys, Datum datum, GinNullCategory category)
+{
+	if (keys->nvalues >= keys->maxvalues)
 	{
-		datums->maxvalues *= 2;
-		datums->values = (Datum *) repalloc(datums->values,
-										  sizeof(Datum) * datums->maxvalues);
+		keys->maxvalues *= 2;
+		keys->keys = (Datum *)
+			repalloc(keys->keys, sizeof(Datum) * keys->maxvalues);
+		keys->categories = (GinNullCategory *)
+			repalloc(keys->categories, sizeof(GinNullCategory) * keys->maxvalues);
 	}
 
-	datums->values[datums->nvalues++] = datum;
+	keys->keys[keys->nvalues] = datum;
+	keys->categories[keys->nvalues] = category;
+	keys->nvalues++;
 }
 
 /*
- * Go through all tuples >= startoff on page and collect values in memory
+ * Collect data from a pending-list page in preparation for insertion into
+ * the main index.
  *
- * Note that da is just workspace --- it does not carry any state across
+ * Go through all tuples >= startoff on page and collect values in accum
+ *
+ * Note that ka is just workspace --- it does not carry any state across
  * calls.
  */
 static void
-processPendingPage(BuildAccumulator *accum, DatumArray *da,
+processPendingPage(BuildAccumulator *accum, KeyArray *ka,
 				   Page page, OffsetNumber startoff)
 {
 	ItemPointerData heapptr;
 	OffsetNumber i,
 				maxoff;
-	OffsetNumber attrnum,
-				curattnum;
+	OffsetNumber attrnum;
 
-	/* reset *da to empty */
-	da->nvalues = 0;
+	/* reset *ka to empty */
+	ka->nvalues = 0;
 
 	maxoff = PageGetMaxOffsetNumber(page);
 	Assert(maxoff >= FirstOffsetNumber);
@@ -627,7 +659,11 @@ processPendingPage(BuildAccumulator *accum, DatumArray *da,
 	for (i = startoff; i <= maxoff; i = OffsetNumberNext(i))
 	{
 		IndexTuple	itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, i));
+		OffsetNumber curattnum;
+		Datum		curkey;
+		GinNullCategory curcategory;
 
+		/* Check for change of heap TID or attnum */
 		curattnum = gintuple_get_attrnum(accum->ginstate, itup);
 
 		if (!ItemPointerIsValid(&heapptr))
@@ -639,18 +675,25 @@ processPendingPage(BuildAccumulator *accum, DatumArray *da,
 				   curattnum == attrnum))
 		{
 			/*
-			 * We can insert several datums per call, but only for one heap
-			 * tuple and one column.
+			 * ginInsertBAEntries can insert several datums per call, but only
+			 * for one heap tuple and one column.  So call it at a boundary,
+			 * and reset ka.
 			 */
-			ginInsertRecordBA(accum, &heapptr, attrnum, da->values, da->nvalues);
-			da->nvalues = 0;
+			ginInsertBAEntries(accum, &heapptr, attrnum,
+							   ka->keys, ka->categories, ka->nvalues);
+			ka->nvalues = 0;
 			heapptr = itup->t_tid;
 			attrnum = curattnum;
 		}
-		addDatum(da, gin_index_getattr(accum->ginstate, itup));
+
+		/* Add key to KeyArray */
+		curkey = gintuple_get_key(accum->ginstate, itup, &curcategory);
+		addDatum(ka, curkey, curcategory);
 	}
 
-	ginInsertRecordBA(accum, &heapptr, attrnum, da->values, da->nvalues);
+	/* Dump out all remaining keys */
+	ginInsertBAEntries(accum, &heapptr, attrnum,
+					   ka->keys, ka->categories, ka->nvalues);
 }
 
 /*
@@ -674,9 +717,10 @@ processPendingPage(BuildAccumulator *accum, DatumArray *da,
  * If stats isn't null, we count deleted pending pages into the counts.
  */
 void
-ginInsertCleanup(Relation index, GinState *ginstate,
+ginInsertCleanup(GinState *ginstate,
 				 bool vac_delay, IndexBulkDeleteResult *stats)
 {
+	Relation	index = ginstate->index;
 	Buffer		metabuffer,
 				buffer;
 	Page		metapage,
@@ -685,7 +729,7 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 	MemoryContext opCtx,
 				oldCtx;
 	BuildAccumulator accum;
-	DatumArray	datums;
+	KeyArray	datums;
 	BlockNumber blkno;
 
 	metabuffer = ReadBuffer(index, GIN_METAPAGE_BLKNO);
@@ -721,10 +765,7 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 
 	oldCtx = MemoryContextSwitchTo(opCtx);
 
-	datums.maxvalues = 128;
-	datums.nvalues = 0;
-	datums.values = (Datum *) palloc(sizeof(Datum) * datums.maxvalues);
-
+	initKeyArray(&datums, 128);
 	ginInitBA(&accum);
 	accum.ginstate = ginstate;
 
@@ -743,7 +784,7 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 		}
 
 		/*
-		 * read page's datums into memory
+		 * read page's datums into accum
 		 */
 		processPendingPage(&accum, &datums, page, FirstOffsetNumber);
 
@@ -764,7 +805,8 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 		{
 			ItemPointerData *list;
 			uint32		nlist;
-			Datum		entry;
+			Datum		key;
+			GinNullCategory category;
 			OffsetNumber maxoff,
 						attnum;
 
@@ -781,9 +823,12 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 			 * significant amount of time - so, run it without locking pending
 			 * list.
 			 */
-			while ((list = ginGetEntry(&accum, &attnum, &entry, &nlist)) != NULL)
+			ginBeginBAScan(&accum);
+			while ((list = ginGetBAEntry(&accum,
+								  &attnum, &key, &category, &nlist)) != NULL)
 			{
-				ginEntryInsert(index, ginstate, attnum, entry, list, nlist, FALSE);
+				ginEntryInsert(ginstate, attnum, key, category,
+							   list, nlist, NULL);
 				if (vac_delay)
 					vacuum_delay_point();
 			}
@@ -815,8 +860,11 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 				ginInitBA(&accum);
 				processPendingPage(&accum, &datums, page, maxoff + 1);
 
-				while ((list = ginGetEntry(&accum, &attnum, &entry, &nlist)) != NULL)
-					ginEntryInsert(index, ginstate, attnum, entry, list, nlist, FALSE);
+				ginBeginBAScan(&accum);
+				while ((list = ginGetBAEntry(&accum,
+								  &attnum, &key, &category, &nlist)) != NULL)
+					ginEntryInsert(ginstate, attnum, key, category,
+								   list, nlist, NULL);
 			}
 
 			/*
@@ -850,9 +898,8 @@ ginInsertCleanup(Relation index, GinState *ginstate,
 			 * release memory used so far and reinit state
 			 */
 			MemoryContextReset(opCtx);
+			initKeyArray(&datums, datums.maxvalues);
 			ginInitBA(&accum);
-			datums.nvalues = 0;
-			datums.values = (Datum *) palloc(sizeof(Datum) * datums.maxvalues);
 		}
 		else
 		{

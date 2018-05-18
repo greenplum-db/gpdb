@@ -29,7 +29,7 @@
  * subroutine is responsible for looking back to the original string and
  * replacing FF's with the corresponding original bytes.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -197,7 +197,6 @@ static void escape_variable(bool as_ident);
 %x xdolq
 %x xui
 %x xus
-%x xeu
 /* Additional exclusive states for psql only: lex backslash commands */
 %x xslashcmd
 %x xslasharg
@@ -297,8 +296,8 @@ xqinside		[^']+
 
 /* $foo$ style quotes ("dollar quoting")
  * The quoted string starts with $foo$ where "foo" is an optional string
- * in the form of an identifier, except that it may not contain "$", 
- * and extends to the first occurrence of an identical string.  
+ * in the form of an identifier, except that it may not contain "$",
+ * and extends to the first occurrence of an identical string.
  * There is *no* processing of the quoted text.
  *
  * {dolqfailed} is an error rule to avoid scanner backup when {dolqdelim}
@@ -384,7 +383,7 @@ self			[,()\[\].;\:\+\-\*\/\%\^\<\>\=]
 op_chars		[\~\!\@\#\^\&\|\`\?\+\-\*\/\%\<\>\=]
 operator		{op_chars}+
 
-/* we no longer allow unary minus in numbers. 
+/* we no longer allow unary minus in numbers.
  * instead we pass it separately to parser. there it gets
  * coerced via doNegate() -- Leon aug 20 1999
  *
@@ -1410,7 +1409,6 @@ char *
 psql_scan_slash_command(PsqlScanState state)
 {
 	PQExpBufferData mybuf;
-	int			lexresult;
 
 	/* Must be scanning already */
 	psql_assert(state->scanbufhandle);
@@ -1430,7 +1428,7 @@ psql_scan_slash_command(PsqlScanState state)
 	BEGIN(xslashcmd);
 
 	/* And lex. */
-	lexresult = yylex();
+	yylex();
 
 	/* There are no possible errors in this lex state... */
 
@@ -1667,8 +1665,6 @@ psql_scan_slash_option(PsqlScanState state,
 void
 psql_scan_slash_command_end(PsqlScanState state)
 {
-	int			lexresult;
-
 	/* Must be scanning already */
 	psql_assert(state->scanbufhandle);
 
@@ -1684,7 +1680,7 @@ psql_scan_slash_command_end(PsqlScanState state)
 	BEGIN(xslashend);
 
 	/* And lex. */
-	lexresult = yylex();
+	yylex();
 
 	/* There are no possible errors in this lex state... */
 }

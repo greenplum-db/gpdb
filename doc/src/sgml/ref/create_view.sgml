@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_view.sgml,v 1.43 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/create_view.sgml
 PostgreSQL documentation
 -->
 
@@ -50,7 +50,7 @@ CREATE [ OR REPLACE ] [ TEMP | TEMPORARY ] VIEW <replaceable class="PARAMETER">n
    schema.  Otherwise it is created in the current schema.  Temporary
    views exist in a special schema, so a schema name cannot be given
    when creating a temporary view. The name of the view must be
-   distinct from the name of any other view, table, sequence, or index
+   distinct from the name of any other view, table, sequence, index or foreign table
    in the same schema.
   </para>
  </refsect1>
@@ -159,14 +159,6 @@ CREATE VIEW vista AS SELECT text 'Hello World' AS hello;
     to replace it (this includes being a member of the owning role).
    </para>
 
-   <para>
-    When <command>CREATE OR REPLACE VIEW</> is used on an
-    existing view, only the view's defining SELECT rule is changed.
-    Other view properties, including ownership, permissions, and non-SELECT
-    rules, remain unchanged.  You must own the view
-    to replace it (this includes being a member of the owning role).
-   </para>
-
  </refsect1>
 
  <refsect1>
@@ -181,6 +173,10 @@ CREATE VIEW comedies AS
     FROM films
     WHERE kind = 'Comedy';
 </programlisting>
+   This will create a view containing the columns that are in the
+   <literal>film</> table at the time of view creation.  Though
+   <literal>*</> was used to create the view, columns added later to
+   the table will not be part of the view.
   </para>
  </refsect1>
 

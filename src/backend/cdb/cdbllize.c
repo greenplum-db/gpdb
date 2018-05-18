@@ -29,10 +29,11 @@
 #include "optimizer/planmain.h" /* for is_projection_capable_plan() */
 #include "optimizer/var.h"		/* for contain_vars_of_level_or_above() */
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "utils/lsyscache.h"	/* for getatttypetypmod() */
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "nodes/makefuncs.h"	/* for makeVar() */
 #include "nodes/value.h"		/* for makeString() */
+#include "utils/guc.h"	/* for getatttypetypmod() */
+#include "utils/lsyscache.h"	/* for getatttypetypmod() */
 #include "utils/relcache.h"		/* RelationGetPartitioningKey() */
 
 #include "cdb/cdbvars.h"
@@ -439,6 +440,18 @@ ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
 
 				Assert(first_append && first_append->flow);
 				((Plan *) node)->flow = pull_up_Flow((Plan *) node, first_append);
+				break;
+			}
+		case T_MergeAppend:
+			{
+				List	   *merge_list = (List *) ((MergeAppend *) node)->mergeplans;
+
+				if (merge_list == NULL)
+					break;
+				Plan	   *first_merge = (Plan *) (lfirst(list_head(merge_list)));
+
+				Assert(first_merge && first_merge->flow);
+				((Plan *) node)->flow = pull_up_Flow((Plan *) node, first_merge);
 				break;
 			}
 		default:
@@ -1224,6 +1237,7 @@ adjustPlanFlow(Plan *plan,
 			break;
 
 		case T_Append:			/* Maybe handle specially some day. */
+		case T_MergeAppend:
 		default:
 			break;
 	}
@@ -1423,6 +1437,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_TableFunctionScan:
 		case T_ShareInputScan:
 		case T_Append:
+		case T_MergeAppend:
 		case T_SeqScan:
 		case T_ExternalScan:
 		case T_AppendOnlyScan:

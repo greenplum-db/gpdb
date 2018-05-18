@@ -6,12 +6,12 @@
  * Since pg4_dump is long-dead code, there is no longer any useful distinction
  * between this file and pg_dump.c.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.109 2010/01/02 16:57:58 momjian Exp $
+ *	  src/bin/pg_dump/common.c
  *
  *-------------------------------------------------------------------------
  */
@@ -51,12 +51,14 @@ static DumpableObject **tblinfoindex;
 static DumpableObject **typinfoindex;
 static DumpableObject **funinfoindex;
 static DumpableObject **oprinfoindex;
+static DumpableObject **collinfoindex;
 static DumpableObject **nspinfoindex;
 static DumpableObject **extinfoindex;
 static int	numTables;
 static int	numTypes;
 static int	numFuncs;
 static int	numOperators;
+static int	numCollations;
 static int	numNamespaces;
 static int	numExtensions;
 static int  numTypeStorageOptions;
@@ -88,6 +90,7 @@ getSchemaData(int *numTablesPtr)
 	TypeInfo   *typinfo;
 	FuncInfo   *funinfo;
 	OprInfo    *oprinfo;
+	CollInfo   *collinfo;
 	NamespaceInfo *nspinfo;
 	ExtensionInfo *extinfo;
 	InhInfo    *inhinfo;
@@ -210,6 +213,11 @@ getSchemaData(int *numTablesPtr)
 	if (g_verbose)
 		write_msg(NULL, "reading default privileges\n");
 	getDefaultACLs(&numDefaultACLs);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined collations\n");
+	collinfo = getCollations(&numCollations);
+	collinfoindex = buildIndexArray(collinfo, numCollations, sizeof(CollInfo));
 
 	if (g_verbose)
 		write_msg(NULL, "reading user-defined conversions\n");
@@ -567,9 +575,9 @@ findObjectByDumpId(DumpId dumpId)
  * Returns NULL for unknown ID
  *
  * We use binary search in a sorted list that is built on first call.
- * If AssignDumpId() and findObjectByCatalogId() calls were intermixed,
+ * If AssignDumpId() and findObjectByCatalogId() calls were freely intermixed,
  * the code would work, but possibly be very slow.	In the current usage
- * pattern that does not happen, indeed we only need to build the list once.
+ * pattern that does not happen, indeed we build the list at most twice.
  */
 DumpableObject *
 findObjectByCatalogId(CatalogId catalogId)
@@ -809,6 +817,17 @@ OprInfo *
 findOprByOid(Oid oid)
 {
 	return (OprInfo *) findObjectByOid(oid, oprinfoindex, numOperators);
+}
+
+/*
+ * findCollationByOid
+ *	  finds the entry (in collinfo) of the collation with the given oid
+ *	  returns NULL if not found
+ */
+CollInfo *
+findCollationByOid(Oid oid)
+{
+	return (CollInfo *) findObjectByOid(oid, collinfoindex, numCollations);
 }
 
 /*

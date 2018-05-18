@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/execute.c,v 1.98 2010/07/06 19:19:00 momjian Exp $ */
+/* src/interfaces/ecpg/ecpglib/execute.c */
 
 /*
  * The aim is to get a simpler inteface to the database routines.
@@ -1427,7 +1427,7 @@ ecpg_execute(struct statement * stmt)
 
 	/* The request has been build. */
 
-	if (stmt->connection->committed && !stmt->connection->autocommit)
+	if (PQtransactionStatus(stmt->connection->connection) == PQTRANS_IDLE && !stmt->connection->autocommit)
 	{
 		results = PQexec(stmt->connection->connection, "begin transaction");
 		if (!ecpg_check_PQresult(results, stmt->lineno, stmt->connection->connection, stmt->compat))
@@ -1436,7 +1436,6 @@ ecpg_execute(struct statement * stmt)
 			return false;
 		}
 		PQclear(results);
-		stmt->connection->committed = false;
 	}
 
 	ecpg_log("ecpg_execute on line %d: query: %s; with %d parameter(s) on connection %s\n", stmt->lineno, stmt->command, nParams, stmt->connection->name);

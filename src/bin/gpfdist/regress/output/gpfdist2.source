@@ -153,8 +153,8 @@ CREATE EXTERNAL TABLE ext_lineitem (
                 L_SHIPDATE date,
                 L_COMMITDATE date,
                 L_RECEIPTDATE date,
-                L_SHIPINSTRUCT CHAR(2),
-                L_SHIPMODE CHAR(1)
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10)
                 )
 LOCATION
 (
@@ -183,8 +183,8 @@ CREATE EXTERNAL TABLE ext_lineitem (
                 L_SHIPDATE date,
                 L_COMMITDATE date,
                 L_RECEIPTDATE date,
-                L_SHIPINSTRUCT CHAR(2),
-                L_SHIPMODE CHAR(1),
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
                 L_COMMENT VARCHAR(44),
                 L_BLAH CHAR(1)
                 )
@@ -478,8 +478,8 @@ FORMAT 'text'
 )
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  missing data for column "l_partkey"  (seg0 slice1 172.17.0.4:25432 pid=36415)
-DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.*: "HEADER"
+ERROR:  invalid input syntax for integer: "HEADER"  (seg0 slice1 127.0.0.1:25435 pid=67886)
+DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.*, column l_orderkey
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 14
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -748,8 +748,8 @@ FORMAT 'csv'
 )
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  missing data for column "l_partkey"  (seg1 slice1 172.17.0.4:25433 pid=36416)
-DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header: "HEADER"
+ERROR:  invalid input syntax for integer: "HEADER"  (seg1 slice1 127.0.0.1:25433 pid=67887)
+DETAIL:  External table ext_lineitem, line 1 of gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header, column l_orderkey
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 20 without header row and header is not defined in format clause
 CREATE EXTERNAL TABLE ext_lineitem (

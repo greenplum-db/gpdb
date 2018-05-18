@@ -22,7 +22,7 @@ extern TupleTableSlot *ExecTableScan(TableScanState *node);
 extern void ExecEndTableScan(TableScanState *node);
 extern void ExecTableMarkPos(TableScanState *node);
 extern void ExecTableRestrPos(TableScanState *node);
-extern void ExecTableReScan(TableScanState *node, ExprContext *exprCtxt);
+extern void ExecReScanTable(TableScanState *node);
 extern void ExecEagerFreeTableScan(TableScanState *node);
 
 #endif

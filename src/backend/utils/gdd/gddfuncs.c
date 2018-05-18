@@ -14,6 +14,7 @@
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
+#include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "funcapi.h"
 #include "libpq-fe.h"

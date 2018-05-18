@@ -777,44 +777,32 @@ set enable_indexscan=on;
 set enable_bitmapscan=off;
 set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid and pt1 = 'hello0';
-                                                                                         QUERY PLAN                                                                                         
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=1.08..1203.26 rows=6 width=50)
-   ->  Nested Loop  (cost=1.08..1203.26 rows=2 width=50)
-         Join Filter: t.tid = dpe_single.pt.ptid
-         ->  Append  (cost=0.00..1201.64 rows=2 width=31)
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=20000001202.84..20000001202.91 rows=4 width=50)
+   ->  Merge Join  (cost=20000001202.84..20000001202.91 rows=2 width=50)
+         Merge Cond: t.tid = dpe_single.pt.ptid
+         ->  Sort  (cost=10000000001.12..10000000001.13 rows=2 width=19)
+               Sort Key: t.tid
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+                     ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
+         ->  Sort  (cost=1201.72..1201.73 rows=2 width=31)
+               Sort Key: dpe_single.pt.ptid
+               ->  Append  (cost=0.00..1201.64 rows=2 width=31)
                      ->  Index Scan using pt1_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-         ->  Materialize  (cost=1.08..1.12 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
-                     Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
-                           ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=off; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(35 rows)
+ Optimizer: legacy query optimizer
+(23 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 

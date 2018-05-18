@@ -3,9 +3,9 @@
  * ts_utils.h
  *	  helper utilities for tsearch
  *
- * Copyright (c) 1998-2010, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/ts_utils.h,v 1.19 2010/01/02 16:58:09 momjian Exp $
+ * src/include/tsearch/ts_utils.h
  *
  *-------------------------------------------------------------------------
  */
@@ -104,9 +104,9 @@ extern text *generateHeadline(HeadlineParsedText *prs);
 /*
  * Common check function for tsvector @@ tsquery
  */
-
 extern bool TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
 		   bool (*chkcond) (void *checkval, QueryOperand *val));
+extern bool tsquery_requires_match(QueryItem *curitem);
 
 /*
  * to_ts* - text transformation to tsvector, tsquery
@@ -149,6 +149,9 @@ extern Datum gin_cmp_tslexeme(PG_FUNCTION_ARGS);
 extern Datum gin_cmp_prefix(PG_FUNCTION_ARGS);
 extern Datum gin_extract_tsquery(PG_FUNCTION_ARGS);
 extern Datum gin_tsquery_consistent(PG_FUNCTION_ARGS);
+extern Datum gin_extract_tsvector_2args(PG_FUNCTION_ARGS);
+extern Datum gin_extract_tsquery_5args(PG_FUNCTION_ARGS);
+extern Datum gin_tsquery_consistent_6args(PG_FUNCTION_ARGS);
 
 /*
  * Possible strategy numbers for indexes

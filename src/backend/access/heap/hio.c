@@ -3,12 +3,12 @@
  * hio.c
  *	  POSTGRES heap access method input/output code.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/hio.c,v 1.78 2010/02/09 21:43:29 tgl Exp $
+ *	  src/backend/access/heap/hio.c
  *
  *-------------------------------------------------------------------------
  */
@@ -150,7 +150,7 @@ ReadBufferBI(Relation relation, BlockNumber targetBlock,
 Buffer
 RelationGetBufferForTuple(Relation relation, Size len,
 						  Buffer otherBuffer, int options,
-						  struct BulkInsertStateData *bistate)
+						  struct BulkInsertStateData * bistate)
 {
 	bool		use_fsm = !(options & HEAP_INSERT_SKIP_FSM);
 	Buffer		buffer = InvalidBuffer;

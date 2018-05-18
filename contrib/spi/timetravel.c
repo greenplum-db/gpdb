@@ -1,11 +1,11 @@
 /*
- * $PostgreSQL: pgsql/contrib/spi/timetravel.c,v 1.31 2009/06/11 14:48:52 momjian Exp $
+ * contrib/spi/timetravel.c
  *
  *
  * timetravel.c --	function to get time travel feature
  *		using general triggers.
  *
- * Modified by B?JTHE Zolt?n, Hungary, mailto:urdesobt@axelero.hu
+ * Modified by BÖJTHE Zoltán, Hungary, mailto:urdesobt@axelero.hu
  */
 #include "postgres.h"
 
@@ -118,11 +118,11 @@ timetravel(PG_FUNCTION_ARGS)
 		elog(ERROR, "timetravel: not fired by trigger manager");
 
 	/* Should be called for ROW trigger */
-	if (TRIGGER_FIRED_FOR_STATEMENT(trigdata->tg_event))
-		elog(ERROR, "timetravel: cannot process STATEMENT events");
+	if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
+		elog(ERROR, "timetravel: must be fired for row");
 
 	/* Should be called BEFORE */
-	if (TRIGGER_FIRED_AFTER(trigdata->tg_event))
+	if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
 		elog(ERROR, "timetravel: must be fired before event");
 
 	/* INSERT ? */

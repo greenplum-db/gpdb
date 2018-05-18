@@ -30,11 +30,11 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/walwriter.c,v 1.10 2010/01/02 16:57:51 momjian Exp $
+ *	  src/backend/postmaster/walwriter.c
  *
  *-------------------------------------------------------------------------
  */

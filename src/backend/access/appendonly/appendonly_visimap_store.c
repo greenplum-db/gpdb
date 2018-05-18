@@ -415,20 +415,23 @@ AppendOnlyVisimapStore_GetRelationHiddenTupleCount(
  * Parameter keys may be NULL iff nkeys is zero.
  */
 IndexScanDesc
-AppendOnlyVisimapStore_BeginScan(
-								 AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_BeginScan(AppendOnlyVisimapStore *visiMapStore,
 								 int nkeys,
 								 ScanKey keys)
 {
+	IndexScanDesc scandesc;
+
 	Assert(visiMapStore);
 	Assert(RelationIsValid(visiMapStore->visimapRelation));
 
-	return index_beginscan(
-						   visiMapStore->visimapRelation,
-						   visiMapStore->visimapIndex,
-						   visiMapStore->snapshot,
-						   nkeys,
-						   keys);
+	scandesc = index_beginscan(visiMapStore->visimapRelation,
+							   visiMapStore->visimapIndex,
+							   visiMapStore->snapshot,
+							   nkeys,
+							   0);
+	index_rescan(scandesc, keys, nkeys, NULL, 0);
+
+	return scandesc;
 }
 
 /*

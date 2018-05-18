@@ -28,12 +28,12 @@
  * all these files commit in a single map file update rather than being tied
  * to transaction commit.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/relmapper.c,v 1.3 2010/02/26 02:01:12 momjian Exp $
+ *	  src/backend/utils/cache/relmapper.c
  *
  *-------------------------------------------------------------------------
  */

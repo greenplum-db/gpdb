@@ -10,7 +10,7 @@
  * amounts are sorted using temporary files and a standard external sort
  * algorithm.
  *
- * GPDB has two implemntations of sorting. One is inherited from PostgreSQL,
+ * GPDB has two implementations of sorting. One is inherited from PostgreSQL,
  * and lives in tuplesort.c. The other one lives in tuplesort_mk.c. Both
  * provide the same API, and have the same set of functions, just with a
  * different suffix.
@@ -30,10 +30,10 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/tuplesort.h,v 1.36 2010/02/26 02:01:29 momjian Exp $
+ * src/include/utils/tuplesort.h
  *
  *-------------------------------------------------------------------------
  */
@@ -53,15 +53,18 @@
 #define Tuplesortstate Tuplesortstate_pg
 
 #define tuplesort_begin_heap tuplesort_begin_heap_pg
+#define tuplesort_begin_cluster tuplesort_begin_cluster_pg
 #define tuplesort_begin_index_btree tuplesort_begin_index_btree_pg
 #define tuplesort_begin_index_hash tuplesort_begin_index_hash_pg
 #define tuplesort_begin_datum tuplesort_begin_datum_pg
 #define tuplesort_set_bound tuplesort_set_bound_pg
 #define tuplesort_puttupleslot tuplesort_puttupleslot_pg
+#define tuplesort_putheaptuple tuplesort_putheaptuple_pg
 #define tuplesort_putindextuple tuplesort_putindextuple_pg
 #define tuplesort_putdatum tuplesort_putdatum_pg
 #define tuplesort_performsort tuplesort_performsort_pg
 #define tuplesort_gettupleslot tuplesort_gettupleslot_pg
+#define tuplesort_getheaptuple tuplesort_getheaptuple_pg
 #define tuplesort_getindextuple tuplesort_getindextuple_pg
 #define tuplesort_getdatum tuplesort_getdatum_pg
 #define tuplesort_skiptuples tuplesort_skiptuples_pg
@@ -98,29 +101,40 @@
 typedef struct Tuplesortstate Tuplesortstate;
 
 /*
- * We provide two different interfaces to what is essentially the same
- * code: one for sorting HeapTuples and one for sorting IndexTuples.
- * They differ primarily in the way that the sort key information is
- * supplied.  Also, the HeapTuple case actually stores MinimalTuples,
- * which means it doesn't preserve the "system columns" (tuple identity and
- * transaction visibility info).  The IndexTuple case does preserve all
- * the header fields of an index entry.  In the HeapTuple case we can
- * save some cycles by passing and returning the tuples in TupleTableSlots,
- * rather than forming actual HeapTuples (which'd have to be converted to
- * MinimalTuples).
+ * We provide multiple interfaces to what is essentially the same code,
+ * since different callers have different data to be sorted and want to
+ * specify the sort key information differently.  There are two APIs for
+ * sorting HeapTuples and two more for sorting IndexTuples.  Yet another
+ * API supports sorting bare Datums.
  *
- * The IndexTuple case is itself broken into two subcases, one for btree
- * indexes and one for hash indexes; the latter variant actually sorts
- * the tuples by hash code.  The API is the same except for the "begin"
- * routine.
+ * The "heap" API actually stores/sorts MinimalTuples, which means it doesn't
+ * preserve the system columns (tuple identity and transaction visibility
+ * info).  The sort keys are specified by column numbers within the tuples
+ * and sort operator OIDs.	We save some cycles by passing and returning the
+ * tuples in TupleTableSlots, rather than forming actual HeapTuples (which'd
+ * have to be converted to MinimalTuples).	This API works well for sorts
+ * executed as parts of plan trees.
  *
- * Yet another slightly different interface supports sorting bare Datums.
+ * The "cluster" API stores/sorts full HeapTuples including all visibility
+ * info. The sort keys are specified by reference to a btree index that is
+ * defined on the relation to be sorted.  Note that putheaptuple/getheaptuple
+ * go with this API, not the "begin_heap" one!
+ *
+ * The "index_btree" API stores/sorts IndexTuples (preserving all their
+ * header fields).	The sort keys are specified by a btree index definition.
+ *
+ * The "index_hash" API is similar to index_btree, but the tuples are
+ * actually sorted by their hash codes not the raw data.
  */
 
 extern Tuplesortstate *tuplesort_begin_heap(ScanState *ss, TupleDesc tupDesc,
 					 int nkeys, AttrNumber *attNums,
-					 Oid *sortOperators, bool *nullsFirstFlags,
+					 Oid *sortOperators, Oid *sortCollations,
+					 bool *nullsFirstFlags,
 					 int workMem, bool randomAccess);
+extern Tuplesortstate *tuplesort_begin_cluster(TupleDesc tupDesc,
+						Relation indexRel,
+						int workMem, bool randomAccess);
 extern Tuplesortstate *tuplesort_begin_index_btree(Relation indexRel,
 							bool enforceUnique,
 							int workMem, bool randomAccess);
@@ -128,13 +142,15 @@ extern Tuplesortstate *tuplesort_begin_index_hash(Relation indexRel,
 						   uint32 hash_mask,
 						   int workMem, bool randomAccess);
 extern Tuplesortstate *tuplesort_begin_datum(ScanState *ss, Oid datumType,
-					  Oid sortOperator, bool nullsFirstFlag,
+					  Oid sortOperator, Oid sortCollation,
+					  bool nullsFirstFlag,
 					  int workMem, bool randomAccess);
 
 extern void tuplesort_set_bound(Tuplesortstate *state, int64 bound);
 
 extern void tuplesort_puttupleslot(Tuplesortstate *state,
 					   TupleTableSlot *slot);
+extern void tuplesort_putheaptuple(Tuplesortstate *state, HeapTuple tup);
 extern void tuplesort_putindextuple(Tuplesortstate *state, IndexTuple tuple);
 extern void tuplesort_putdatum(Tuplesortstate *state, Datum val,
 				   bool isNull);
@@ -143,6 +159,8 @@ extern void tuplesort_performsort(Tuplesortstate *state);
 
 extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
 					   TupleTableSlot *slot);
+extern HeapTuple tuplesort_getheaptuple(Tuplesortstate *state, bool forward,
+					   bool *should_free);
 extern IndexTuple tuplesort_getindextuple(Tuplesortstate *state, bool forward,
 						bool *should_free);
 extern bool tuplesort_getdatum(Tuplesortstate *state, bool forward,
@@ -176,6 +194,7 @@ extern void SelectSortFunction(Oid sortOperator, bool nulls_first,
  * reverse-sort and NULLs-ordering properly.
  */
 extern int32 ApplySortFunction(FmgrInfo *sortFunction, int sortFlags,
+				  Oid collation,
 				  Datum datum1, bool isNull1,
 				  Datum datum2, bool isNull2);
 
@@ -194,15 +213,18 @@ extern int32 ApplySortFunction(FmgrInfo *sortFunction, int sortFlags,
 #ifndef COMPILING_TUPLESORT_C
 
 #undef tuplesort_begin_heap
+#undef tuplesort_begin_cluster
 #undef tuplesort_begin_index_btree
 #undef tuplesort_begin_index_hash
 #undef tuplesort_begin_datum
 #undef tuplesort_set_bound
 #undef tuplesort_puttupleslot
+#undef tuplesort_putheaptuple
 #undef tuplesort_putindextuple
 #undef tuplesort_putdatum
 #undef tuplesort_performsort
 #undef tuplesort_gettupleslot
+#undef tuplesort_getheaptuple
 #undef tuplesort_getindextuple
 #undef tuplesort_getdatum
 #undef tuplesort_skiptuples
@@ -242,7 +264,8 @@ typedef struct switcheroo_Tuplesortstate switcheroo_Tuplesortstate;
 static inline switcheroo_Tuplesortstate *
 switcheroo_tuplesort_begin_heap(ScanState *ss, TupleDesc tupDesc,
 					 int nkeys, AttrNumber *attNums,
-					 Oid *sortOperators, bool *nullsFirstFlags,
+					 Oid *sortOperators, Oid *sortCollations,
+					 bool *nullsFirstFlags,
 					 int workMem, bool randomAccess)
 {
 	switcheroo_Tuplesortstate *state;
@@ -251,17 +274,48 @@ switcheroo_tuplesort_begin_heap(ScanState *ss, TupleDesc tupDesc,
 	{
 		state = (switcheroo_Tuplesortstate *)
 			tuplesort_begin_heap_mk(ss, tupDesc, nkeys, attNums,
-									sortOperators, nullsFirstFlags,
+									sortOperators, sortCollations,
+									nullsFirstFlags,
 									workMem, randomAccess);
 	}
 	else
 	{
 		state = (switcheroo_Tuplesortstate *)
 			tuplesort_begin_heap_pg(ss, tupDesc, nkeys, attNums,
-									sortOperators, nullsFirstFlags,
+									sortOperators,sortCollations,
+									nullsFirstFlags,
 									workMem, randomAccess);
 	}
 	state->is_mk_tuplesortstate = gp_enable_mk_sort;
+	return state;
+}
+
+static inline switcheroo_Tuplesortstate *
+switcheroo_tuplesort_begin_cluster(TupleDesc tupDesc,
+						Relation indexRel,
+						int workMem, bool randomAccess)
+{
+	switcheroo_Tuplesortstate *state;
+
+	/* GPDB_91_MERGE_FIXME: The new 'cluster' variant hasn't been implemented
+	 * in mksort yet.
+	 */
+#if 0
+	if (gp_enable_mk_sort)
+	{
+		state = (switcheroo_Tuplesortstate *)
+			tuplesort_begin_cluster_mk(tupDesc, indexRel,
+									   workMem, randomAccess);
+	}
+	else
+#endif
+	{
+		state = (switcheroo_Tuplesortstate *)
+			tuplesort_begin_cluster_pg(tupDesc, indexRel,
+									   workMem, randomAccess);
+	}
+	state->is_mk_tuplesortstate = gp_enable_mk_sort;
+	state->is_mk_tuplesortstate = false;
 	return state;
 }
 
@@ -300,21 +354,24 @@ switcheroo_tuplesort_begin_index_hash(Relation indexRel,
 }
 
 static inline switcheroo_Tuplesortstate *
-switcheroo_tuplesort_begin_datum(ScanState *ss, Oid datumType,
-					  Oid sortOperator, bool nullsFirstFlag,
-					  int workMem, bool randomAccess)
+switcheroo_tuplesort_begin_datum(ScanState *ss,
+								 Oid datumType, Oid sortOperator, Oid sortCollation,
+								 bool nullsFirstFlag,
+								 int workMem, bool randomAccess)
 {
 	switcheroo_Tuplesortstate *state;
 
 	if (gp_enable_mk_sort)
 	{
 		state = (switcheroo_Tuplesortstate *)
-			tuplesort_begin_datum_mk(ss, datumType, sortOperator, nullsFirstFlag, workMem, randomAccess);
+			tuplesort_begin_datum_mk(ss, datumType, sortOperator, sortCollation,
+									 nullsFirstFlag, workMem, randomAccess);
 	}
 	else
 	{
 		state = (switcheroo_Tuplesortstate *)
-			tuplesort_begin_datum_pg(ss, datumType, sortOperator, nullsFirstFlag, workMem, randomAccess);
+			tuplesort_begin_datum_pg(ss, datumType, sortOperator, sortCollation,
+									 nullsFirstFlag, workMem, randomAccess);
 	}
 	state->is_mk_tuplesortstate = gp_enable_mk_sort;
 	return state;
@@ -336,6 +393,15 @@ switcheroo_tuplesort_puttupleslot(switcheroo_Tuplesortstate *state, TupleTableSl
 		tuplesort_puttupleslot_mk((Tuplesortstate_mk *) state, slot);
 	else
 		tuplesort_puttupleslot_pg((Tuplesortstate_pg *) state, slot);
+}
+
+static inline void
+switcheroo_tuplesort_putheaptuple(switcheroo_Tuplesortstate *state, HeapTuple tup)
+{
+	if (state->is_mk_tuplesortstate)
+		tuplesort_putheaptuple_mk((Tuplesortstate_mk *) state, tup);
+	else
+		tuplesort_putheaptuple_pg((Tuplesortstate_pg *) state, tup);
 }
 
 static inline void
@@ -373,6 +439,15 @@ switcheroo_tuplesort_gettupleslot(switcheroo_Tuplesortstate *state, bool forward
 		return tuplesort_gettupleslot_mk((Tuplesortstate_mk *) state, forward, slot);
 	else
 		return tuplesort_gettupleslot_pg((Tuplesortstate_pg *) state, forward, slot);
+}
+
+static inline HeapTuple
+switcheroo_tuplesort_getheaptuple(switcheroo_Tuplesortstate *state, bool forward, bool *should_free)
+{
+	if (state->is_mk_tuplesortstate)
+		return tuplesort_getheaptuple_mk((Tuplesortstate_mk *) state, forward, should_free);
+	else
+		return tuplesort_getheaptuple_pg((Tuplesortstate_pg *) state, forward, should_free);
 }
 
 static inline IndexTuple
@@ -445,7 +520,9 @@ switcheroo_tuplesort_begin_heap_file_readerwriter(
 		const char* rwfile_prefix, bool isWriter,
 		TupleDesc tupDesc,
 		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, bool *nullsFirstFlags,
+		Oid *sortOperators,
+		Oid *sortCollations,
+		bool *nullsFirstFlags,
 		int workMem, bool randomAccess)
 {
 	switcheroo_Tuplesortstate *state;
@@ -455,7 +532,8 @@ switcheroo_tuplesort_begin_heap_file_readerwriter(
 		state = (switcheroo_Tuplesortstate *)
 			tuplesort_begin_heap_file_readerwriter_mk(ss, rwfile_prefix, isWriter,
 													  tupDesc, nkeys, attNums,
-													  sortOperators, nullsFirstFlags,
+													  sortOperators, sortCollations,
+													  nullsFirstFlags,
 													  workMem, randomAccess);
 	}
 	else
@@ -463,7 +541,8 @@ switcheroo_tuplesort_begin_heap_file_readerwriter(
 		state = (switcheroo_Tuplesortstate *)
 			tuplesort_begin_heap_file_readerwriter_pg(ss, rwfile_prefix, isWriter,
 													  tupDesc, nkeys, attNums,
-													  sortOperators, nullsFirstFlags,
+													  sortOperators, sortCollations,
+													  nullsFirstFlags,
 													  workMem, randomAccess);
 	}
 	state->is_mk_tuplesortstate = gp_enable_mk_sort;
@@ -572,15 +651,18 @@ switcheroo_tuplesort_set_gpmon(switcheroo_Tuplesortstate *state,
 #define Tuplesortstate switcheroo_Tuplesortstate
 
 #define tuplesort_begin_heap switcheroo_tuplesort_begin_heap
+#define tuplesort_begin_cluster switcheroo_tuplesort_begin_cluster
 #define tuplesort_begin_index_btree switcheroo_tuplesort_begin_index_btree
 #define tuplesort_begin_index_hash switcheroo_tuplesort_begin_index_hash
 #define tuplesort_begin_datum switcheroo_tuplesort_begin_datum
 #define tuplesort_set_bound switcheroo_tuplesort_set_bound
 #define tuplesort_puttupleslot switcheroo_tuplesort_puttupleslot
+#define tuplesort_putheaptuple switcheroo_tuplesort_putheaptuple
 #define tuplesort_putindextuple switcheroo_tuplesort_putindextuple
 #define tuplesort_putdatum switcheroo_tuplesort_putdatum
 #define tuplesort_performsort switcheroo_tuplesort_performsort
 #define tuplesort_gettupleslot switcheroo_tuplesort_gettupleslot
+#define tuplesort_getheaptuple switcheroo_tuplesort_getheaptuple
 #define tuplesort_getindextuple switcheroo_tuplesort_getindextuple
 #define tuplesort_getdatum switcheroo_tuplesort_getdatum
 #define tuplesort_skiptuples switcheroo_tuplesort_skiptuples

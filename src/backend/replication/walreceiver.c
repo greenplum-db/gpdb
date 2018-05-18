@@ -22,7 +22,8 @@
  * normal operation.
  *
  * This file contains the server-facing parts of walreceiver. The libpq-
- * specific parts are in the libpqwalreceiver module.
+ * specific parts are in the libpqwalreceiver module. It's loaded
+ * dynamically to avoid linking the server with libpq.
  *
  * Portions Copyright (c) 2010-2012, PostgreSQL Global Development Group
  *
@@ -36,6 +37,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include "access/transam.h"
 #include "access/xlog_internal.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
@@ -45,6 +47,7 @@
 #include "storage/ipc.h"
 #include "storage/pmsignal.h"
 #include "storage/procarray.h"
+#include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
@@ -54,6 +57,8 @@
 
 /* GUC variables */
 int			wal_receiver_status_interval = 10;
+bool		hot_standby_feedback;
+
 
 #define NAPTIME_PER_CYCLE 100	/* max sleep time between cycles (100ms) */
 
@@ -92,6 +97,7 @@ static struct
 }	LogstreamResult;
 
 static StandbyReplyMessage reply_message;
+static StandbyHSFeedbackMessage feedback_message;
 
 /*
  * About SIGTERM handling:
@@ -120,6 +126,7 @@ static void XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len);
 static void XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr);
 static void XLogWalRcvFlush(bool dying);
 static void XLogWalRcvSendReply(void);
+static void XLogWalRcvSendHSFeedback(void);
 static void ProcessWalSndrMessage(XLogRecPtr walEnd, TimestampTz sendTime);
 
 /* Signal handlers */
@@ -400,6 +407,7 @@ WalReceiverMain(void)
 			 * master anyway, to report any progress in applying WAL.
 			 */
 			XLogWalRcvSendReply();
+			XLogWalRcvSendHSFeedback();
 		}
 	}
 }
@@ -762,6 +770,7 @@ XLogWalRcvFlush(bool dying)
 				wait_before_send_ack = false;
 			}
 			XLogWalRcvSendReply();
+			XLogWalRcvSendHSFeedback();
 		}
 
 		elogif(debug_walrepl_rcv, LOG,
@@ -872,6 +881,75 @@ ProcessWalSndrMessage(XLogRecPtr walEnd, TimestampTz sendTime)
 		   GetReplicationApplyDelay(),
 		   GetReplicationTransferLatency());
 }
+
+/*
+ * Send hot standby feedback message to primary, plus the current time,
+ * in case they don't have a watch.
+ */
+static void
+XLogWalRcvSendHSFeedback(void)
+{
+	char		buf[sizeof(StandbyHSFeedbackMessage) + 1];
+	TimestampTz now;
+	TransactionId nextXid;
+	uint32		nextEpoch;
+	TransactionId xmin;
+
+	/*
+	 * If the user doesn't want status to be reported to the master, be sure
+	 * to exit before doing anything at all.
+	 */
+	if (wal_receiver_status_interval <= 0 || !hot_standby_feedback)
+		return;
+
+	/* Get current timestamp. */
+	now = GetCurrentTimestamp();
+
+	/*
+	 * Send feedback at most once per wal_receiver_status_interval.
+	 */
+	if (!TimestampDifferenceExceeds(feedback_message.sendTime, now,
+									wal_receiver_status_interval * 1000))
+		return;
+
+	/*
+	 * If Hot Standby is not yet active there is nothing to send. Check this
+	 * after the interval has expired to reduce number of calls.
+	 */
+	if (!HotStandbyActive())
+		return;
+
+	/*
+	 * Make the expensive call to get the oldest xmin once we are certain
+	 * everything else has been checked.
+	 */
+	xmin = GetOldestXmin(true, false);
+
+	/*
+	 * Get epoch and adjust if nextXid and oldestXmin are different sides of
+	 * the epoch boundary.
+	 */
+	GetNextXidAndEpoch(&nextXid, &nextEpoch);
+	if (nextXid < xmin)
+		nextEpoch--;
+
+	/*
+	 * Always send feedback message.
+	 */
+	feedback_message.sendTime = now;
+	feedback_message.xmin = xmin;
+	feedback_message.epoch = nextEpoch;
+
+	elog(DEBUG2, "sending hot standby feedback xmin %u epoch %u",
+		 feedback_message.xmin,
+		 feedback_message.epoch);
+
+	/* Prepend with the message type and send it. */
+	buf[0] = 'h';
+	memcpy(&buf[1], &feedback_message, sizeof(StandbyHSFeedbackMessage));
+	walrcv_send(buf, sizeof(StandbyHSFeedbackMessage) + 1);
+}
+
 
 /*
  * Return a string constant representing the state.

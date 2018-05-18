@@ -3,17 +3,18 @@
  * spell.c
  *		Normalizing word with ISpell
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/spell.c,v 1.17 2010/01/02 16:57:53 momjian Exp $
+ *	  src/backend/tsearch/spell.c
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include "catalog/pg_collation.h"
 #include "tsearch/dicts/spell.h"
 #include "tsearch/ts_locale.h"
 #include "utils/memutils.h"
@@ -21,42 +22,114 @@
 
 /*
  * Initialization requires a lot of memory that's not needed
- * after the initialization is done.  In init function,
- * CurrentMemoryContext is a long lived memory context associated
- * with the dictionary cache entry, so we use a temporary context
- * for the short-lived stuff.
+ * after the initialization is done.  During initialization,
+ * CurrentMemoryContext is the long-lived memory context associated
+ * with the dictionary cache entry.  We keep the short-lived stuff
+ * in the Conf->buildCxt context.
  */
-static MemoryContext tmpCtx = NULL;
+#define tmpalloc(sz)  MemoryContextAlloc(Conf->buildCxt, (sz))
+#define tmpalloc0(sz)  MemoryContextAllocZero(Conf->buildCxt, (sz))
 
-#define tmpalloc(sz)  MemoryContextAlloc(tmpCtx, (sz))
-#define tmpalloc0(sz)  MemoryContextAllocZero(tmpCtx, (sz))
-
-static void
-checkTmpCtx(void)
+/*
+ * Prepare for constructing an ISpell dictionary.
+ *
+ * The IspellDict struct is assumed to be zeroed when allocated.
+ */
+void
+NIStartBuild(IspellDict *Conf)
 {
 	/*
-	 * XXX: This assumes that CurrentMemoryContext doesn't have any children
-	 * other than the one we create here.
+	 * The temp context is a child of CurTransactionContext, so that it will
+	 * go away automatically on error.
 	 */
-	if (CurrentMemoryContext->firstchild == NULL)
-	{
-		tmpCtx = AllocSetContextCreate(CurrentMemoryContext,
-									   "Ispell dictionary init context",
-									   ALLOCSET_DEFAULT_MINSIZE,
-									   ALLOCSET_DEFAULT_INITSIZE,
-									   ALLOCSET_DEFAULT_MAXSIZE);
-	}
-	else
-		tmpCtx = CurrentMemoryContext->firstchild;
+	Conf->buildCxt = AllocSetContextCreate(CurTransactionContext,
+										   "Ispell dictionary init context",
+										   ALLOCSET_DEFAULT_MINSIZE,
+										   ALLOCSET_DEFAULT_INITSIZE,
+										   ALLOCSET_DEFAULT_MAXSIZE);
 }
 
+/*
+ * Clean up when dictionary construction is complete.
+ */
+void
+NIFinishBuild(IspellDict *Conf)
+{
+	/* Release no-longer-needed temp memory */
+	MemoryContextDelete(Conf->buildCxt);
+	/* Just for cleanliness, zero the now-dangling pointers */
+	Conf->buildCxt = NULL;
+	Conf->Spell = NULL;
+	Conf->firstfree = NULL;
+}
+
+
+/*
+ * "Compact" palloc: allocate without extra palloc overhead.
+ *
+ * Since we have no need to free the ispell data items individually, there's
+ * not much value in the per-chunk overhead normally consumed by palloc.
+ * Getting rid of it is helpful since ispell can allocate a lot of small nodes.
+ *
+ * We currently pre-zero all data allocated this way, even though some of it
+ * doesn't need that.  The cpalloc and cpalloc0 macros are just documentation
+ * to indicate which allocations actually require zeroing.
+ */
+#define COMPACT_ALLOC_CHUNK 8192	/* amount to get from palloc at once */
+#define COMPACT_MAX_REQ		1024	/* must be < COMPACT_ALLOC_CHUNK */
+
+static void *
+compact_palloc0(IspellDict *Conf, size_t size)
+{
+	void	   *result;
+
+	/* Should only be called during init */
+	Assert(Conf->buildCxt != NULL);
+
+	/* No point in this for large chunks */
+	if (size > COMPACT_MAX_REQ)
+		return palloc0(size);
+
+	/* Keep everything maxaligned */
+	size = MAXALIGN(size);
+
+	/* Need more space? */
+	if (size > Conf->avail)
+	{
+		Conf->firstfree = palloc0(COMPACT_ALLOC_CHUNK);
+		Conf->avail = COMPACT_ALLOC_CHUNK;
+	}
+
+	result = (void *) Conf->firstfree;
+	Conf->firstfree += size;
+	Conf->avail -= size;
+
+	return result;
+}
+
+#define cpalloc(size) compact_palloc0(Conf, size)
+#define cpalloc0(size) compact_palloc0(Conf, size)
+
 static char *
-lowerstr_ctx(char *src)
+cpstrdup(IspellDict *Conf, const char *str)
+{
+	char	   *res = cpalloc(strlen(str) + 1);
+
+	strcpy(res, str);
+	return res;
+}
+
+
+/*
+ * Apply lowerstr(), producing a temporary result (in the buildCxt).
+ */
+static char *
+lowerstr_ctx(IspellDict *Conf, const char *src)
 {
 	MemoryContext saveCtx;
 	char	   *dst;
 
-	saveCtx = MemoryContextSwitchTo(tmpCtx);
+	saveCtx = MemoryContextSwitchTo(Conf->buildCxt);
 	dst = lowerstr(src);
 	MemoryContextSwitchTo(saveCtx);
 
@@ -120,6 +193,7 @@ strbcmp(const unsigned char *s1, const unsigned char *s2)
 
 	return 0;
 }
+
 static int
 strbncmp(const unsigned char *s1, const unsigned char *s2, size_t count)
 {
@@ -170,7 +244,7 @@ NIAddSpell(IspellDict *Conf, const char *word, const char *flag)
 	{
 		if (Conf->mspell)
 		{
-			Conf->mspell += 1024 * 20;
+			Conf->mspell *= 2;
 			Conf->Spell = (SPELL **) repalloc(Conf->Spell, Conf->mspell * sizeof(SPELL *));
 		}
 		else
@@ -195,8 +269,6 @@ NIImportDictionary(IspellDict *Conf, const char *filename)
 {
 	tsearch_readline_state trst;
 	char	   *line;
-
-	checkTmpCtx();
 
 	if (!tsearch_readline_begin(&trst, filename))
 		ereport(ERROR,
@@ -242,7 +314,7 @@ NIImportDictionary(IspellDict *Conf, const char *filename)
 			}
 			s += pg_mblen(s);
 		}
-		pstr = lowerstr_ctx(line);
+		pstr = lowerstr_ctx(Conf, line);
 
 		NIAddSpell(Conf, pstr, flag);
 		pfree(pstr);
@@ -310,7 +382,7 @@ NIAddAffix(IspellDict *Conf, int flag, char flagflags, const char *mask, const c
 	{
 		if (Conf->maffixes)
 		{
-			Conf->maffixes += 16;
+			Conf->maffixes *= 2;
 			Conf->Affix = (AFFIX *) repalloc((void *) Conf->Affix, Conf->maffixes * sizeof(AFFIX));
 		}
 		else
@@ -354,7 +426,9 @@ NIAddAffix(IspellDict *Conf, int flag, char flagflags, const char *mask, const c
 		wmask = (pg_wchar *) tmpalloc((masklen + 1) * sizeof(pg_wchar));
 		wmasklen = pg_mb2wchar_with_len(tmask, wmask, masklen);
 
-		err = pg_regcomp(&(Affix->reg.regex), wmask, wmasklen, REG_ADVANCED | REG_NOSUB);
+		err = pg_regcomp(&(Affix->reg.regex), wmask, wmasklen,
+						 REG_ADVANCED | REG_NOSUB,
+						 DEFAULT_COLLATION_OID);
 		if (err)
 		{
 			char		errstr[100];
@@ -375,9 +449,9 @@ NIAddAffix(IspellDict *Conf, int flag, char flagflags, const char *mask, const c
 	Affix->flag = flag;
 	Affix->type = type;
 
-	Affix->find = (find && *find) ? pstrdup(find) : VoidString;
+	Affix->find = (find && *find) ? cpstrdup(Conf, find) : VoidString;
 	if ((Affix->replen = strlen(repl)) > 0)
-		Affix->repl = pstrdup(repl);
+		Affix->repl = cpstrdup(Conf, repl);
 	else
 		Affix->repl = VoidString;
 	Conf->naffixes++;
@@ -545,8 +619,6 @@ NIImportOOAffixes(IspellDict *Conf, const char *filename)
 	char		scanbuf[BUFSIZ];
 	char	   *recoded;
 
-	checkTmpCtx();
-
 	/* read file to find any flag */
 	memset(Conf->flagval, 0, sizeof(Conf->flagval));
 	Conf->usecompound = false;
@@ -624,7 +696,7 @@ NIImportOOAffixes(IspellDict *Conf, const char *filename)
 
 		if (ptype)
 			pfree(ptype);
-		ptype = lowerstr_ctx(type);
+		ptype = lowerstr_ctx(Conf, type);
 		if (scanread < 4 || (STRNCMP(ptype, "sfx") && STRNCMP(ptype, "pfx")))
 			goto nextline;
 
@@ -646,7 +718,7 @@ NIImportOOAffixes(IspellDict *Conf, const char *filename)
 
 			if (strlen(sflag) != 1 || flag != *sflag || flag == 0)
 				goto nextline;
-			prepl = lowerstr_ctx(repl);
+			prepl = lowerstr_ctx(Conf, repl);
 			/* affix flag */
 			if ((ptr = strchr(prepl, '/')) != NULL)
 			{
@@ -658,8 +730,8 @@ NIImportOOAffixes(IspellDict *Conf, const char *filename)
 					ptr++;
 				}
 			}
-			pfind = lowerstr_ctx(find);
-			pmask = lowerstr_ctx(mask);
+			pfind = lowerstr_ctx(Conf, find);
+			pmask = lowerstr_ctx(Conf, mask);
 			if (t_iseq(find, '0'))
 				*pfind = '\0';
 			if (t_iseq(repl, '0'))
@@ -701,8 +773,6 @@ NIImportAffixes(IspellDict *Conf, const char *filename)
 	tsearch_readline_state trst;
 	bool		oldformat = false;
 	char	   *recoded = NULL;
-
-	checkTmpCtx();
 
 	if (!tsearch_readline_begin(&trst, filename))
 		ereport(ERROR,
@@ -833,8 +903,9 @@ MergeAffix(IspellDict *Conf, int a1, int a2)
 	}
 
 	ptr = Conf->AffixData + Conf->nAffixData;
-	*ptr = palloc(strlen(Conf->AffixData[a1]) + strlen(Conf->AffixData[a2]) +
-				  1 /* space */ + 1 /* \0 */ );
+	*ptr = cpalloc(strlen(Conf->AffixData[a1]) +
+				   strlen(Conf->AffixData[a2]) +
+				   1 /* space */ + 1 /* \0 */ );
 	sprintf(*ptr, "%s %s", Conf->AffixData[a1], Conf->AffixData[a2]);
 	ptr++;
 	*ptr = NULL;
@@ -878,7 +949,7 @@ mkSPNode(IspellDict *Conf, int low, int high, int level)
 	if (!nchar)
 		return NULL;
 
-	rs = (SPNode *) palloc0(SPNHDRSZ + nchar * sizeof(SPNodeData));
+	rs = (SPNode *) cpalloc0(SPNHDRSZ + nchar * sizeof(SPNodeData));
 	rs->length = nchar;
 	data = rs->data;
 
@@ -945,8 +1016,6 @@ NISortDictionary(IspellDict *Conf)
 	int			naffix = 0;
 	int			curaffix;
 
-	checkTmpCtx();
-
 	/* compress affixes */
 
 	/* Count the number of different flags used in the dictionary */
@@ -974,7 +1043,7 @@ NISortDictionary(IspellDict *Conf)
 		{
 			curaffix++;
 			Assert(curaffix < naffix);
-			Conf->AffixData[curaffix] = pstrdup(Conf->Spell[i]->p.flag);
+			Conf->AffixData[curaffix] = cpstrdup(Conf, Conf->Spell[i]->p.flag);
 		}
 
 		Conf->Spell[i]->p.d.affix = curaffix;
@@ -985,8 +1054,6 @@ NISortDictionary(IspellDict *Conf)
 
 	qsort((void *) Conf->Spell, Conf->nspell, sizeof(SPELL *), cmpspell);
 	Conf->Dictionary = mkSPNode(Conf, 0, Conf->nspell, 0);
-
-	Conf->Spell = NULL;
 }
 
 static AffixNode *
@@ -1014,7 +1081,7 @@ mkANode(IspellDict *Conf, int low, int high, int level, int type)
 	aff = (AFFIX **) tmpalloc(sizeof(AFFIX *) * (high - low + 1));
 	naff = 0;
 
-	rs = (AffixNode *) palloc0(ANHRDSZ + nchar * sizeof(AffixNodeData));
+	rs = (AffixNode *) cpalloc0(ANHRDSZ + nchar * sizeof(AffixNodeData));
 	rs->length = nchar;
 	data = rs->data;
 
@@ -1030,7 +1097,7 @@ mkANode(IspellDict *Conf, int low, int high, int level, int type)
 					if (naff)
 					{
 						data->naff = naff;
-						data->aff = (AFFIX **) palloc(sizeof(AFFIX *) * naff);
+						data->aff = (AFFIX **) cpalloc(sizeof(AFFIX *) * naff);
 						memcpy(data->aff, aff, sizeof(AFFIX *) * naff);
 						naff = 0;
 					}
@@ -1050,7 +1117,7 @@ mkANode(IspellDict *Conf, int low, int high, int level, int type)
 	if (naff)
 	{
 		data->naff = naff;
-		data->aff = (AFFIX **) palloc(sizeof(AFFIX *) * naff);
+		data->aff = (AFFIX **) cpalloc(sizeof(AFFIX *) * naff);
 		memcpy(data->aff, aff, sizeof(AFFIX *) * naff);
 		naff = 0;
 	}
@@ -1091,7 +1158,7 @@ mkVoidAffix(IspellDict *Conf, bool issuffix, int startsuffix)
 	if (cnt == 0)
 		return;
 
-	Affix->data->aff = (AFFIX **) palloc(sizeof(AFFIX *) * cnt);
+	Affix->data->aff = (AFFIX **) cpalloc(sizeof(AFFIX *) * cnt);
 	Affix->data->naff = (uint32) cnt;
 
 	cnt = 0;
@@ -1122,8 +1189,6 @@ NISortAffixes(IspellDict *Conf)
 	size_t		i;
 	CMPDAffix  *ptr;
 	int			firstsuffix = Conf->naffixes;
-
-	checkTmpCtx();
 
 	if (Conf->naffixes == 0)
 		return;

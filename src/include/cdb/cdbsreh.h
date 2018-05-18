@@ -74,11 +74,7 @@ typedef struct CdbSreh
 	int		rejectlimit;	/* SEGMENT REJECT LIMIT value */
 	int		rejectcount;	/* how many were rejected so far */
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
-	
-	/* COPY only vars */
-	CdbCopy *cdbcopy;		/* for QD COPY to send bad rows to random QE */
-	int		lastsegid;		/* last QE COPY segid that QD COPY sent bad row to */
-	
+
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
 	char	   filename[256];		/* "uri [filename]" */
 
@@ -96,7 +92,7 @@ extern void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected);
 extern void SendNumRows(int numrejected, int64 numcompleted);
 extern void SendNumRowsRejected(int numrejected);
 extern bool IsErrorTable(Relation rel);
-extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy);
+extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);
 extern void VerifyRejectLimit(char rejectlimittype, int rejectlimit);

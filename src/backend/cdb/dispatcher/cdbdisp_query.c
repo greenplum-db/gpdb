@@ -447,8 +447,6 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 }
 
 /*
- * cdbdisp_dispatchCommandOrSerializedQuerytree:
- *
  * Internal function to send plain command or serialized query tree to all segdbs in
  * the cluster
  */
@@ -476,17 +474,13 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	bool		needTwoPhase = flags & DF_NEED_TWO_PHASE;
 	bool		withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("cdbdisp_dispatchCommandOrSerializedQuerytree", strCommand,
+	dtmPreCommand("cdbdisp_dispatchCommandInternal", strCommand,
 				  NULL, needTwoPhase, withSnapshot,
 				  false /* inCursor */ );
 
-	if (DEBUG5 >= log_min_messages)
-		elog(DEBUG3, "cdbdisp_dispatchCommandOrSerializedQuerytree: %s (needTwoPhase = %s)",
-			 strCommand, (needTwoPhase ? "true" : "false"));
-	else
-		elog((Debug_print_full_dtm ? LOG : DEBUG3),
-			 "cdbdisp_dispatchCommandOrSerializedQuerytree: %.50s (needTwoPhase = %s)", strCommand,
-			 (needTwoPhase ? "true" : "false"));
+	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
+		   "cdbdisp_dispatchCommandInternal: %s (needTwoPhase = %s)",
+		   strCommand, (needTwoPhase ? "true" : "false"));
 
 	pQueryParms = palloc0(sizeof(*pQueryParms));
 	pQueryParms->strCommand = strCommand;
@@ -508,7 +502,7 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 		qdSerializeDtxContextInfo(&pQueryParms->serializedDtxContextInfolen,
 								  withSnapshot, false,
 								  mppTxnOptions(needTwoPhase),
-								  "cdbdisp_dispatchCommandOrSerializedQuerytree");
+								  "cdbdisp_dispatchCommandInternal");
 
 	/*
 	 * sequence server info

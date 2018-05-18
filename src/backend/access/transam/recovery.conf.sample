@@ -3,8 +3,8 @@
 # -------------------------------
 #
 # Edit this file to provide the parameters that PostgreSQL needs to
-# perform an archive recovery of a database, or to act as a log-streaming
-# replication standby.
+# perform an archive recovery of a database, or to act as a replication
+# standby.
 #
 # If "recovery.conf" is present in the PostgreSQL data directory, it is
 # read on postmaster startup.  After successful recovery, it is renamed
@@ -13,9 +13,7 @@
 #
 # This file consists of lines of the form:
 #
-#   name = 'value'
-#
-# (The quotes around the value are NOT optional, but the "=" is.)
+#   name = value
 #
 # Comments are introduced with '#'.
 #
@@ -68,16 +66,19 @@
 # If you want to stop rollforward at a specific point, you
 # must set a recovery target.
 #
-# You may set a recovery target either by transactionId, or
-# by timestamp. Recovery may either include or exclude the
+# You may set a recovery target either by transactionId, by name,
+# or by timestamp. Recovery may either include or exclude the
 # transaction(s) with the recovery target value (ie, stop either
 # just after or just before the given target, respectively).
+#
+#
+#recovery_target_name = ''  # e.g. 'daily backup 2011-01-26'
 #
 #recovery_target_time = ''	# e.g. '2004-07-14 22:39:00 EST'
 #
 #recovery_target_xid = ''
 #
-#recovery_target_inclusive = 'true'
+#recovery_target_inclusive = true
 #
 #
 # If you want to recover into a timeline other than the "main line" shown in
@@ -86,25 +87,39 @@
 #
 #recovery_target_timeline = 'latest'
 #
+#
+# If pause_at_recovery_target is enabled, recovery will pause when
+# the recovery target is reached. The pause state will continue until
+# pg_xlog_replay_resume() is called. This setting has no effect if
+# hot standby is not enabled, or if no recovery target is set.
+#
+#pause_at_recovery_target = true
+#
 #---------------------------------------------------------------------------
 # STANDBY SERVER PARAMETERS
 #---------------------------------------------------------------------------
 #
-# When standby_mode is enabled, the PostgreSQL server will work as
-# a standby. It tries to connect to the primary according to the
-# connection settings primary_conninfo, and receives XLOG records
-# continuously.
+# standby_mode
 #
-#standby_mode = 'off'
+# When standby_mode is enabled, the PostgreSQL server will work as a
+# standby. It will continuously wait for the additional XLOG records, using
+# restore_command and/or primary_conninfo.
+#
+#standby_mode = off
+#
+# primary_conninfo
+#
+# If set, the PostgreSQL server will try to connect to the primary using this
+# connection string and receive XLOG records continuously.
 #
 #primary_conninfo = ''		# e.g. 'host=localhost port=5432'
 #
 #
-# By default, a standby server keeps streaming XLOG records from the
-# primary indefinitely. If you want to stop streaming and finish recovery,
-# opening up the system in read/write mode, specify path to a trigger file.
-# Server will poll the trigger file path periodically and stop streaming
-# when it's found.
+# By default, a standby server keeps restoring XLOG records from the
+# primary indefinitely. If you want to stop the standby mode, finish recovery
+# and open the system in read/write mode, specify path to a trigger file.
+# The server will poll the trigger file path periodically and start as a
+# primary server when it's found.
 #
 #trigger_file = ''
 #

@@ -188,7 +188,7 @@ insert into update_pk_test values(1,1);
 explain update update_pk_test set b = 5;
                              QUERY PLAN                              
 ---------------------------------------------------------------------
- Update (slice0; segments: 3)  (rows=1 width=14)
+ Update on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
    ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer

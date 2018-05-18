@@ -7,12 +7,12 @@ SELECT * FROM multiout_simple();
 SELECT i, j + 2 FROM multiout_simple();
 SELECT (multiout_simple()).j + 3;
 
-CREATE FUNCTION multiout_simple_setof(n integer, OUT integer, OUT integer) RETURNS SETOF record AS $$
+CREATE FUNCTION multiout_simple_setof(n integer = 1, OUT integer, OUT integer) RETURNS SETOF record AS $$
 return [(1, 2)] * n
 $$ LANGUAGE plpythonu;
 
-SELECT multiout_simple_setof(1);
-SELECT * FROM multiout_simple_setof(1);
+SELECT multiout_simple_setof();
+SELECT * FROM multiout_simple_setof();
 SELECT * FROM multiout_simple_setof(3);
 
 CREATE FUNCTION multiout_record_as(typ text,
@@ -127,19 +127,19 @@ SELECT * FROM changing_test();
 
 -- tables of composite types (not yet implemented)
 
--- CREATE FUNCTION composite_types_table(OUT tab table_record[], OUT typ type_record[] ) RETURNS SETOF record AS $$
--- yield {'tab': [['first', 1], ['second', 2]],
---        'typ': [{'first': 'third', 'second': 3},
---               {'first': 'fourth', 'second': 4}]}
--- yield {'tab': [['first', 1], ['second', 2]],
---        'typ': [{'first': 'third', 'second': 3},
---               {'first': 'fourth', 'second': 4}]}
--- yield {'tab': [['first', 1], ['second', 2]],
---        'typ': [{'first': 'third', 'second': 3},
---               {'first': 'fourth', 'second': 4}]}
--- $$ LANGUAGE plpythonu;
+CREATE FUNCTION composite_types_table(OUT tab table_record[], OUT typ type_record[] ) RETURNS SETOF record AS $$
+yield {'tab': [['first', 1], ['second', 2]],
+      'typ': [{'first': 'third', 'second': 3},
+              {'first': 'fourth', 'second': 4}]}
+yield {'tab': [['first', 1], ['second', 2]],
+      'typ': [{'first': 'third', 'second': 3},
+              {'first': 'fourth', 'second': 4}]}
+yield {'tab': [['first', 1], ['second', 2]],
+      'typ': [{'first': 'third', 'second': 3},
+              {'first': 'fourth', 'second': 4}]}
+$$ LANGUAGE plpythonu;
 
--- SELECT * FROM composite_types_table();
+SELECT * FROM composite_types_table();
 
 -- check what happens if the output record descriptor changes
 CREATE FUNCTION return_record(t text) RETURNS record AS $$

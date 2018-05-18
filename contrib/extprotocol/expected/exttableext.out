@@ -864,6 +864,7 @@ Format options: formatter 'formatter_export_s'
 External options: {}
 External location: demoprot://exttabtest_test63
 Execute on: all segments
+Distributed by: (id)
 
     \d format_r
    External table "exttableext.format_r"

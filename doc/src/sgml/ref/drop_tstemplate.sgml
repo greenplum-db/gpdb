@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_tstemplate.sgml,v 1.3 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/drop_tstemplate.sgml
 PostgreSQL documentation
 -->
 
@@ -14,7 +14,7 @@ PostgreSQL documentation
   <refname>DROP TEXT SEARCH TEMPLATE</refname>
   <refpurpose>remove a text search template</refpurpose>
  </refnamediv>
-  
+
  <indexterm zone="sql-droptstemplate">
   <primary>DROP TEXT SEARCH TEMPLATE</primary>
  </indexterm>
@@ -33,7 +33,7 @@ DROP TEXT SEARCH TEMPLATE [ IF EXISTS ] <replaceable class="PARAMETER">name</rep
    template.  You must be a superuser to use this command.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -95,7 +95,7 @@ DROP TEXT SEARCH TEMPLATE thesaurus;
    drop such dictionaries along with the template.
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

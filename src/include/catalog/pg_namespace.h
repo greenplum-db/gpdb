@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_namespace.h,v 1.27 2010/01/05 01:06:56 tgl Exp $
+ * src/include/catalog/pg_namespace.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -93,6 +93,6 @@ DESCR("Reserved schema for Append Only segment list and eof tables");
 /*
  * prototypes for functions in pg_namespace.c
  */
-extern Oid	NamespaceCreate(const char *nspName, Oid ownerId);
+extern Oid	NamespaceCreate(const char *nspName, Oid ownerId, bool isTemp);
 
 #endif   /* PG_NAMESPACE_H */

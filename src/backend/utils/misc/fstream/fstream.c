@@ -269,11 +269,11 @@ scan_csv_records(char *p, char *q, int one, fstream_t *fs)
 {
 	switch(fs->options.eol_type)
 	{
-		case EOL_CRLF:
+		case EOL_CRNL:
 		   return scan_csv_records_crlf(p, q, one, fs);
 		case EOL_CR:
 		   return scan_csv_records_cr_or_lf(p, q, one, fs, '\r');
-		case EOL_LF:
+		case EOL_NL:
 		default:
 		   return scan_csv_records_cr_or_lf(p, q, one, fs, '\n');
 	}

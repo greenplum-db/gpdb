@@ -46,10 +46,10 @@
  * only work with varlena arrays.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/array.h,v 1.77 2010/01/02 16:58:09 momjian Exp $
+ * src/include/utils/array.h
  *
  *-------------------------------------------------------------------------
  */
@@ -113,6 +113,9 @@ typedef struct ArrayMapState
 	ArrayMetaState inp_extra;
 	ArrayMetaState ret_extra;
 } ArrayMapState;
+
+/* ArrayIteratorData is private in arrayfuncs.c */
+typedef struct ArrayIteratorData *ArrayIterator;
 
 /*
  * fmgr macros for array objects
@@ -192,6 +195,7 @@ extern Datum array_gt(PG_FUNCTION_ARGS);
 extern Datum array_le(PG_FUNCTION_ARGS);
 extern Datum array_ge(PG_FUNCTION_ARGS);
 extern Datum btarraycmp(PG_FUNCTION_ARGS);
+extern Datum hash_array(PG_FUNCTION_ARGS);
 extern Datum arrayoverlap(PG_FUNCTION_ARGS);
 extern Datum arraycontains(PG_FUNCTION_ARGS);
 extern Datum arraycontained(PG_FUNCTION_ARGS);
@@ -253,6 +257,10 @@ extern Datum makeArrayResult(ArrayBuildState *astate,
 extern Datum makeMdArrayResult(ArrayBuildState *astate, int ndims,
 				  int *dims, int *lbs, MemoryContext rcontext, bool release);
 
+extern ArrayIterator array_create_iterator(ArrayType *arr, int slice_ndim);
+extern bool array_iterate(ArrayIterator iterator, Datum *value, bool *isnull);
+extern void array_free_iterator(ArrayIterator iterator);
+
 /*
  * prototypes for functions defined in arrayutils.c
  */
@@ -275,6 +283,7 @@ extern Datum array_cat(PG_FUNCTION_ARGS);
 extern ArrayType *create_singleton_array(FunctionCallInfo fcinfo,
 					   Oid element_type,
 					   Datum element,
+					   bool isNull,
 					   int ndims);
 
 extern Datum array_agg_transfn(PG_FUNCTION_ARGS);

@@ -17,7 +17,7 @@
 #include "utils/guc.h"
 
 #define SyncRepRequested() \
-	(max_wal_senders > 0)
+	(max_wal_senders > 0 && synchronous_commit > SYNCHRONOUS_COMMIT_LOCAL_FLUSH)
 
 /* SyncRepWaitMode */
 #define SYNC_REP_NO_WAIT		-1
@@ -38,7 +38,7 @@ extern char *SyncRepStandbyNames;
 extern void SyncRepWaitForLSN(XLogRecPtr XactCommitLSN);
 
 /* called at backend exit */
-extern void SyncRepCleanupAtProcExit(void);
+extern void SyncRepCleanupAtProcExit(int code, Datum arg);
 
 /* called by wal sender */
 extern void SyncRepInitConfig(void);
@@ -49,7 +49,6 @@ extern void SyncRepUpdateSyncStandbysDefined(void);
 
 /* called by various procs */
 extern int     SyncRepWakeQueue(bool all, int mode);
-
-extern const char *check_synchronous_standby_names(const char *newval, bool doit, GucSource source);
+extern bool check_synchronous_standby_names(char **newval, void **extra, GucSource source);
 
 #endif   /* _SYNCREP_H */

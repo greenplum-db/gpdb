@@ -4,12 +4,12 @@
  *	  BTree-specific page management code for the Postgres btree access
  *	  method.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.123 2010/07/06 19:18:55 momjian Exp $
+ *	  src/backend/access/nbtree/nbtpage.c
  *
  *	NOTES
  *	   Postgres btree pages look like ordinary relation pages.	The opaque
@@ -30,6 +30,7 @@
 #include "storage/freespace.h"
 #include "storage/indexfsm.h"
 #include "storage/lmgr.h"
+#include "storage/predicate.h"
 #include "utils/inval.h"
 #include "utils/snapmgr.h"
 
@@ -225,7 +226,7 @@ _bt_getroot(Relation rel, int access)
 		MarkBufferDirty(metabuf);
 
 		/* XLOG stuff */
-		if (!rel->rd_istemp)
+		if (RelationNeedsWAL(rel))
 		{
 			xl_btree_newroot xlrec;
 			XLogRecPtr	recptr;
@@ -452,7 +453,7 @@ _bt_checkpage(Relation rel, Buffer buf)
 static void
 _bt_log_reuse_page(Relation rel, BlockNumber blkno, TransactionId latestRemovedXid)
 {
-	if (rel->rd_istemp)
+	if (!RelationNeedsWAL(rel))
 		return;
 
 	/* No ereport(ERROR) until changes are logged */
@@ -465,7 +466,6 @@ _bt_log_reuse_page(Relation rel, BlockNumber blkno, TransactionId latestRemovedX
 
 	/* XLOG stuff */
 	{
-		XLogRecPtr	recptr;
 		XLogRecData rdata[1];
 		xl_btree_reuse_page xlrec_reuse;
 
@@ -477,7 +477,7 @@ _bt_log_reuse_page(Relation rel, BlockNumber blkno, TransactionId latestRemovedX
 		rdata[0].buffer = InvalidBuffer;
 		rdata[0].next = NULL;
 
-		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_REUSE_PAGE, rdata);
+		XLogInsert(RM_BTREE_ID, XLOG_BTREE_REUSE_PAGE, rdata);
 
 		/*
 		 * We don't do PageSetLSN or PageSetTLI here because we're about
@@ -753,7 +753,7 @@ _bt_delitems_vacuum(Relation rel, Buffer buf,
 	MarkBufferDirty(buf);
 
 	/* XLOG stuff */
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 	{
 		XLogRecPtr	recptr;
 		XLogRecData rdata[2];
@@ -830,7 +830,7 @@ _bt_delitems_delete(Relation rel, Buffer buf,
 	MarkBufferDirty(buf);
 
 	/* XLOG stuff */
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 	{
 		XLogRecPtr	recptr;
 		XLogRecData rdata[3];
@@ -1184,6 +1184,12 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack)
 			 RelationGetRelationName(rel));
 
 	/*
+	 * Any insert which would have gone on the target block will now go to the
+	 * right sibling block.
+	 */
+	PredicateLockPageCombine(rel, target, rightsib);
+
+	/*
 	 * Next find and write-lock the current parent of the target page. This is
 	 * essentially the same as the corresponding step of splitting.
 	 */
@@ -1261,9 +1267,9 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack)
 
 	/*
 	 * Check that the parent-page index items we're about to delete/overwrite
-	 * contain what we expect.  This can fail if the index has become
-	 * corrupt for some reason.  We want to throw any error before entering
-	 * the critical section --- otherwise it'd be a PANIC.
+	 * contain what we expect.	This can fail if the index has become corrupt
+	 * for some reason.  We want to throw any error before entering the
+	 * critical section --- otherwise it'd be a PANIC.
 	 *
 	 * The test on the target item is just an Assert because _bt_getstackbuf
 	 * should have guaranteed it has the expected contents.  The test on the
@@ -1365,7 +1371,7 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack)
 		MarkBufferDirty(lbuf);
 
 	/* XLOG stuff */
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 	{
 		xl_btree_delete_page xlrec;
 		xl_btree_metadata xlmeta;

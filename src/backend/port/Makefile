@@ -4,16 +4,16 @@
 #    Makefile for the port-specific subsystem of the backend
 #
 # We have two different modes of operation: 1) put stuff specific to Port X
-# in subdirectory X and have that subdirectory's make file make it all, and 
+# in subdirectory X and have that subdirectory's make file make it all, and
 # 2) use conditional statements in the present make file to include what's
 # necessary for a specific port in our own output.  (1) came first, but (2)
 # is superior for many things, like when the same thing needs to be done for
-# multiple ports and you don't want to duplicate files in multiple 
+# multiple ports and you don't want to duplicate files in multiple
 # subdirectories.  Much of the stuff done via Method 1 today should probably
-# be converted to Method 2.  
+# be converted to Method 2.
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/port/Makefile,v 1.28 2010/07/05 18:54:37 tgl Exp $
+#    src/backend/port/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -22,6 +22,10 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 OBJS = atomics.o dynloader.o pg_sema.o pg_shmem.o pg_latch.o $(TAS)
+
+ifneq (,$(filter $(PORTNAME),cygwin win32))
+OBJS += pipe.o
+endif
 
 ifeq ($(PORTNAME), darwin)
 SUBDIRS += darwin

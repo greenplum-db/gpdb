@@ -2450,6 +2450,51 @@ group by t1.q2 order by 1;
 (4 rows)
 
 --
+-- test incorrect failure to NULL pulled-up subexpressions
+--
+begin;
+create temp table a (
+     code char not null,
+     constraint a_pk primary key (code)
+);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "a_pkey" for table "a"
+create temp table b (
+     a char not null,
+     num integer not null,
+     constraint b_pk primary key (a, num)
+);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "b_pkey" for table "b"
+create temp table c (
+     name char not null,
+     a char,
+     constraint c_pk primary key (name)
+);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "c_pkey" for table "c"
+insert into a (code) values ('p');
+insert into a (code) values ('q');
+insert into b (a, num) values ('p', 1);
+insert into b (a, num) values ('p', 2);
+insert into c (name, a) values ('A', 'p');
+insert into c (name, a) values ('B', 'q');
+insert into c (name, a) values ('C', null);
+select c.name, ss.code, ss.b_cnt, ss.const
+from c left join
+  (select a.code, coalesce(b_grp.cnt, 0) as b_cnt, -1 as const
+   from a left join
+     (select count(1) as cnt, b.a from b group by b.a) as b_grp
+     on a.code = b_grp.a
+  ) as ss
+  on (c.a = ss.code)
+order by c.name;
+ name | code | b_cnt | const 
+------+------+-------+-------
+ A    | p    |     2 |    -1
+ B    | q    |     0 |    -1
+ C    |      |       |      
+(3 rows)
+
+rollback;
+--
 -- test case where a PlaceHolderVar is propagated into a subquery
 --
 select * from
@@ -2555,28 +2600,28 @@ explain (costs off) SELECT a.* FROM a LEFT JOIN b ON a.b_id = b.id;
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
-   ->  Nested Loop Left Join
-         Join Filter: true
+   ->  Hash Left Join
+         Hash Cond: a.b_id = b.id
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: a.b_id
                ->  Table Scan on a
-         ->  Index Scan using b_pkey on b
-               Index Cond: b.id = a.b_id
- Optimizer: PQO version 2.54.2
+         ->  Hash
+               ->  Table Scan on b
+ Optimizer: PQO version 2.55.21
 (9 rows)
 
 explain (costs off) SELECT b.* FROM b LEFT JOIN c ON b.c_id = c.id;
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
-   ->  Nested Loop Left Join
-         Join Filter: true
+   ->  Hash Left Join
+         Hash Cond: b.c_id = c.id
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: b.c_id
                ->  Table Scan on b
-         ->  Index Scan using c_pkey on c
-               Index Cond: c.id = b.c_id
- Optimizer: PQO version 2.54.2
+         ->  Hash
+               ->  Table Scan on c
+ Optimizer: PQO version 2.55.21
 (9 rows)
 
 explain (costs off)
@@ -2593,14 +2638,14 @@ explain (costs off)
          ->  Hash
                ->  Redistribute Motion 3:3  (slice3; segments: 3)
                      Hash Key: b.id
-                     ->  Nested Loop Left Join
-                           Join Filter: true
+                     ->  Hash Left Join
+                           Hash Cond: b.c_id = c.id
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Hash Key: b.c_id
                                  ->  Table Scan on b
-                           ->  Index Scan using c_pkey on c
-                                 Index Cond: c.id = b.c_id
- Optimizer: PQO version 2.54.2
+                           ->  Hash
+                                 ->  Table Scan on c
+ Optimizer: PQO version 2.55.21
 (17 rows)
 
 -- check optimization of outer join within another special join
@@ -2608,19 +2653,19 @@ explain (costs off)
 select id from a where id in (
 	select b.id from b left join c on b.id = c.id
 );
-                      QUERY PLAN                      
-------------------------------------------------------
+                  QUERY PLAN                   
+-----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Semi Join
          Hash Cond: a.id = b.id
          ->  Table Scan on a
          ->  Hash
-               ->  Nested Loop Left Join
-                     Join Filter: true
+               ->  Hash Left Join
+                     Hash Cond: b.id = c.id
                      ->  Table Scan on b
-                     ->  Index Scan using c_pkey on c
-                           Index Cond: c.id = b.id
- Optimizer: PQO version 2.54.2
+                     ->  Hash
+                           ->  Table Scan on c
+ Optimizer: PQO version 2.55.21
 (11 rows)
 
 rollback;
@@ -2641,15 +2686,15 @@ select p.* from parent p left join child c on (p.k = c.k);
 
 explain (costs off)
   select p.* from parent p left join child c on (p.k = c.k);
-                    QUERY PLAN                     
----------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop Left Join
-         Join Filter: true
+   ->  Hash Left Join
+         Hash Cond: parent.k = child.k
          ->  Table Scan on parent
-         ->  Index Scan using child_k_key on child
-               Index Cond: child.k = parent.k
- Optimizer: PQO version 2.54.2
+         ->  Hash
+               ->  Table Scan on child
+ Optimizer: PQO version 2.55.21
 (7 rows)
 
 -- this case is not

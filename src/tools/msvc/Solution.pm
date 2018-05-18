@@ -3,7 +3,7 @@ package Solution;
 #
 # Package that encapsulates a Visual C++ solution file generation
 #
-# $PostgreSQL: pgsql/src/tools/msvc/Solution.pm,v 1.57 2010/04/09 13:05:58 mha Exp $
+# src/tools/msvc/Solution.pm
 #
 use Carp;
 use strict;
@@ -73,7 +73,7 @@ sub DetermineToolVersions
     open(P,"vcbuild /? |") || die "vcbuild command not found";
     my $line = <P>;
     close(P);
-    if ($line !~ /^Microsoft\s*\(R\) Visual C\+\+ Project Builder - \D+(\d+)\.00\.\d+/)
+    if ($line !~ /^Microsoft\s*\(R\) Visual C\+\+ [^-]+ - \D+(\d+)\.00\.\d+/)
     {
         die "Unable to determine vcbuild version from first line of output!";
     }
@@ -314,6 +314,25 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
         );
     }
 
+    if ($self->{options}->{python} && IsNewer('src\pl\plpython\spiexceptions.h','src\include\backend\errcodes.txt'))
+    {
+        print "Generating spiexceptions.h...\n";
+        system('perl src\pl\plpython\generate-spiexceptions.pl src\backend\utils\errcodes.txt > src\pl\plpython\spiexceptions.h');
+    }
+
+    if (IsNewer('src\include\utils\errcodes.h','src\backend\utils\errcodes.txt'))
+    {
+        print "Generating errcodes.h...\n";
+        system('perl src\backend\utils\generate-errcodes.pl src\backend\utils\errcodes.txt > src\backend\utils\errcodes.h');
+        copyFile('src\backend\utils\errcodes.h','src\include\utils\errcodes.h');
+    }
+
+    if (IsNewer('src\pl\plpgsql\src\plerrcodes.h','src\backend\utils\errcodes.txt'))
+    {
+        print "Generating plerrcodes.h...\n";
+        system('perl src\pl\plpgsql\src\generate-plerrcodes.pl src\backend\utils\errcodes.txt > src\pl\plpgsql\src\plerrcodes.h');
+    }
+
     if (IsNewer('src\interfaces\libpq\libpq.rc','src\interfaces\libpq\libpq.rc.in'))
     {
         print "Generating libpq.rc...\n";
@@ -437,8 +456,8 @@ EOF
 
     open(O, ">doc/src/sgml/version.sgml") || croak "Could not write to version.sgml\n";
     print O <<EOF;
-<!entity version "$self->{strver}">
-<!entity majorversion "$self->{majorver}">
+<!ENTITY version "$self->{strver}">
+<!ENTITY majorversion "$self->{majorver}">
 EOF
     close(O);
 }

@@ -2,9 +2,9 @@
 #
 # Makefile for src/bin/pg_resetxlog
 #
-# Copyright (c) 1998-2010, PostgreSQL Global Development Group
+# Copyright (c) 1998-2011, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/bin/pg_resetxlog/Makefile,v 1.24 2010/07/05 18:54:38 tgl Exp $
+# src/bin/pg_resetxlog/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -22,9 +22,9 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 OBJS= pg_resetxlog.o $(WIN32RES)
 
-all: submake-libpgport pg_resetxlog
+all: pg_resetxlog
 
-pg_resetxlog: $(OBJS)
+pg_resetxlog: $(OBJS) | submake-libpgport
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 install: all installdirs

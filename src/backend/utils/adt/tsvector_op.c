@@ -3,11 +3,11 @@
  * tsvector_op.c
  *	  operations over tsvector
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.26 2010/01/02 16:57:55 momjian Exp $
+ *	  src/backend/utils/adt/tsvector_op.c
  *
  *-------------------------------------------------------------------------
  */
@@ -549,7 +549,8 @@ tsvector_concat(PG_FUNCTION_ARGS)
 
 /*
  * Compare two strings by tsvector rules.
- * if isPrefix = true then it returns not-zero value if b has prefix a
+ *
+ * if isPrefix = true then it returns zero value iff b has prefix a
  */
 int4
 tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
@@ -559,8 +560,7 @@ tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
 	if (lena == 0)
 	{
 		if (prefix)
-			cmp = 0;			/* emtry string is equal to any if a prefix
-								 * match */
+			cmp = 0;			/* empty string is prefix of anything */
 		else
 			cmp = (lenb > 0) ? -1 : 0;
 	}
@@ -575,14 +575,9 @@ tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
 		if (prefix)
 		{
 			if (cmp == 0 && lena > lenb)
-			{
-				/*
-				 * b argument is not beginning with argument a
-				 */
-				cmp = 1;
-			}
+				cmp = 1;		/* a is longer, so not a prefix of b */
 		}
-		else if ((cmp == 0) && (lena != lenb))
+		else if (cmp == 0 && lena != lenb)
 		{
 			cmp = (lena < lenb) ? -1 : 1;
 		}
@@ -649,7 +644,7 @@ checkcondition_str(void *checkval, QueryOperand *val)
 			StopHigh = StopMiddle;
 	}
 
-	if (res == false && val->prefix == true)
+	if (!res && val->prefix)
 	{
 		/*
 		 * there was a failed exact search, so we should scan further to find
@@ -674,13 +669,13 @@ checkcondition_str(void *checkval, QueryOperand *val)
 }
 
 /*
- * check for boolean condition.
+ * Evaluate tsquery boolean expression.
  *
- * if calcnot is false, NOT expressions are always evaluated to be true. This is used in ranking.
+ * chkcond is a callback function used to evaluate each VAL node in the query.
  * checkval can be used to pass information to the callback. TS_execute doesn't
  * do anything with it.
- * chkcond is a callback function used to evaluate each VAL node in the query.
- *
+ * if calcnot is false, NOT expressions are always evaluated to be true. This
+ * is used in ranking.
  */
 bool
 TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
@@ -699,6 +694,7 @@ TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
 				return !TS_execute(curitem + 1, checkval, calcnot, chkcond);
 			else
 				return true;
+
 		case OP_AND:
 			if (TS_execute(curitem + curitem->qoperator.left, checkval, calcnot, chkcond))
 				return TS_execute(curitem + 1, checkval, calcnot, chkcond);
@@ -710,6 +706,56 @@ TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
 				return true;
 			else
 				return TS_execute(curitem + 1, checkval, calcnot, chkcond);
+
+		default:
+			elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
+	}
+
+	/* not reachable, but keep compiler quiet */
+	return false;
+}
+
+/*
+ * Detect whether a tsquery boolean expression requires any positive matches
+ * to values shown in the tsquery.
+ *
+ * This is needed to know whether a GIN index search requires full index scan.
+ * For example, 'x & !y' requires a match of x, so it's sufficient to scan
+ * entries for x; but 'x | !y' could match rows containing neither x nor y.
+ */
+bool
+tsquery_requires_match(QueryItem *curitem)
+{
+	/* since this function recurses, it could be driven to stack overflow */
+	check_stack_depth();
+
+	if (curitem->type == QI_VAL)
+		return true;
+
+	switch (curitem->qoperator.oper)
+	{
+		case OP_NOT:
+
+			/*
+			 * Assume there are no required matches underneath a NOT.  For
+			 * some cases with nested NOTs, we could prove there's a required
+			 * match, but it seems unlikely to be worth the trouble.
+			 */
+			return false;
+
+		case OP_AND:
+			/* If either side requires a match, we're good */
+			if (tsquery_requires_match(curitem + curitem->qoperator.left))
+				return true;
+			else
+				return tsquery_requires_match(curitem + 1);
+
+		case OP_OR:
+			/* Both sides must require a match */
+			if (tsquery_requires_match(curitem + curitem->qoperator.left))
+				return tsquery_requires_match(curitem + 1);
+			else
+				return false;
 
 		default:
 			elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
@@ -1281,9 +1327,9 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
 		elog(ERROR, "tsvector_update_trigger: not fired by trigger manager");
 
 	trigdata = (TriggerData *) fcinfo->context;
-	if (TRIGGER_FIRED_FOR_STATEMENT(trigdata->tg_event))
-		elog(ERROR, "tsvector_update_trigger: can't process STATEMENT events");
-	if (TRIGGER_FIRED_AFTER(trigdata->tg_event))
+	if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
+		elog(ERROR, "tsvector_update_trigger: must be fired for row");
+	if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
 		elog(ERROR, "tsvector_update_trigger: must be fired BEFORE event");
 
 	if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
@@ -1350,7 +1396,7 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("text search configuration name \"%s\" must be schema-qualified",
 							trigger->tgargs[1])));
-		cfgId = TSConfigGetCfgid(names, false);
+		cfgId = get_ts_config_oid(names, false);
 	}
 
 	/* initialize parse state */

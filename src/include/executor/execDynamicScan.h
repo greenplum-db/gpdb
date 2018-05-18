@@ -30,7 +30,7 @@ extern void
 DynamicScan_End(ScanState *scanState, PartitionEndMethod *partitionEndMethod);
 
 extern void
-DynamicScan_ReScan(ScanState *scanState, ExprContext *exprCtxt);
+DynamicScan_ReScan(ScanState *scanState);
 
 extern TupleTableSlot *
 DynamicScan_GetNextTuple(ScanState *scanState, PartitionInitMethod *partitionInitMethod,

@@ -15,10 +15,12 @@ QUICKLZ_COMPRESSION = quicklz_compression.o
 endif
 
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
-       objectaddress.o pg_aggregate.o pg_constraint.o pg_conversion.o pg_depend.o pg_enum.o \
-       pg_inherits.o pg_largeobject.o pg_namespace.o pg_operator.o pg_proc.o \
-       pg_db_role_setting.o pg_shdepend.o pg_type.o storage.o toasting.o \
-       pg_exttable.o pg_extprotocol.o \
+       objectaddress.o pg_aggregate.o pg_collation.o pg_constraint.o pg_conversion.o \
+       pg_depend.o pg_enum.o pg_inherits.o pg_largeobject.o pg_namespace.o \
+       pg_operator.o pg_proc.o pg_db_role_setting.o pg_shdepend.o pg_type.o \
+       storage.o toasting.o
+
+OBJS += pg_exttable.o pg_extprotocol.o \
        pg_proc_callback.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
@@ -49,7 +51,8 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_ts_config.h pg_ts_config_map.h pg_ts_dict.h \
 	pg_ts_parser.h pg_ts_template.h pg_extension.h \
 	pg_foreign_data_wrapper.h pg_foreign_server.h pg_user_mapping.h \
-	pg_default_acl.h \
+	pg_foreign_table.h \
+	pg_default_acl.h pg_seclabel.h pg_collation.h \
 	pg_resqueue.h pg_resqueuecapability.h pg_resourcetype.h \
 	pg_resgroup.h pg_resgroupcapability.h \
 	gp_configuration_history.h gp_id.h gp_policy.h gp_version.h \

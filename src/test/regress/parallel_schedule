@@ -1,5 +1,5 @@
 # ----------
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.61 2010/02/12 17:33:21 tgl Exp $
+# src/test/regress/parallel_schedule
 #
 # By convention, we put no more than twenty tests in any one parallel group;
 # this limits the number of connections needed to run the tests.
@@ -85,7 +85,7 @@ ignore: random
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update update_gp delete lock
+test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update delete lock
 
 # In PostgreSQL, namespace test is run as part of the fourth group, but there
 # are some GPDB additions in it that will show diff if concurrent tests use
@@ -100,7 +100,11 @@ test: namespace
 # ERROR:  function cannot execute on a QE slice because it accesses relation "public.xacttest"
 #test: transactions
 
-test: privileges
+# ----------
+# Another group of parallel tests
+# ----------
+test: privileges security_label collate
+
 test: misc
 
 # rules cannot run concurrently with any test that creates a view
@@ -117,7 +121,7 @@ test: misc
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap json
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json
 
 # Output of the 'combocid' test contains ctid and cmin values, which will
 # differ depending on how many segments are used. Hence disabled in GPDB.

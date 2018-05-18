@@ -26,9 +26,9 @@
  *		typedef struct FormData_pg_compression
  * ----------------
  */
-#define CompressionRelationId	3056
+#define CompressionRelationId	7056
 
-CATALOG(pg_compression,3056)
+CATALOG(pg_compression,7056)
 {
 	NameData	compname;			
 	regproc		compconstructor;	
@@ -69,15 +69,15 @@ typedef FormData_pg_compression *Form_pg_compression;
 #define Anum_pg_compression_compowner			7
 
 /* Initial contents */
-DATA(insert OID = 3060 ( zlib gp_zlib_constructor gp_zlib_destructor gp_zlib_compress gp_zlib_decompress gp_zlib_validator PGUID ));
+DATA(insert OID = 7060 ( zlib gp_zlib_constructor gp_zlib_destructor gp_zlib_compress gp_zlib_decompress gp_zlib_validator PGUID ));
 
-DATA(insert OID = 3061 ( quicklz gp_quicklz_constructor gp_quicklz_destructor gp_quicklz_compress gp_quicklz_decompress gp_quicklz_validator PGUID ));
+DATA(insert OID = 7061 ( quicklz gp_quicklz_constructor gp_quicklz_destructor gp_quicklz_compress gp_quicklz_decompress gp_quicklz_validator PGUID ));
 
-DATA(insert OID = 3062 ( rle_type gp_rle_type_constructor gp_rle_type_destructor gp_rle_type_compress gp_rle_type_decompress gp_rle_type_validator PGUID ));
+DATA(insert OID = 7062 ( rle_type gp_rle_type_constructor gp_rle_type_destructor gp_rle_type_compress gp_rle_type_decompress gp_rle_type_validator PGUID ));
 
-DATA(insert OID = 3063 ( none gp_dummy_compression_constructor gp_dummy_compression_destructor gp_dummy_compression_compress gp_dummy_compression_decompress gp_dummy_compression_validator PGUID ));
+DATA(insert OID = 7063 ( none gp_dummy_compression_constructor gp_dummy_compression_destructor gp_dummy_compression_compress gp_dummy_compression_decompress gp_dummy_compression_validator PGUID ));
 
-DATA(insert OID = 3070 ( zstd gp_zstd_constructor gp_zstd_destructor gp_zstd_compress gp_zstd_decompress gp_zstd_validator PGUID ));
+DATA(insert OID = 7070 ( zstd gp_zstd_constructor gp_zstd_destructor gp_zstd_compress gp_zstd_decompress gp_zstd_validator PGUID ));
 
 #define NUM_COMPRESS_FUNCS 5
 

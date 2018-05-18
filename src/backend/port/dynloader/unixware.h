@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/backend/port/dynloader/unixware.h,v 1.23 2010/01/02 16:57:50 momjian Exp $
+ * src/backend/port/dynloader/unixware.h
  *
  *-------------------------------------------------------------------------
  *
@@ -7,7 +7,7 @@
  *	  port-specific prototypes for Intel x86/UNIXWARE 7
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * unixware.h,v 1.2 1995/03/17 06:40:18 andrew Exp

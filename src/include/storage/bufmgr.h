@@ -4,10 +4,10 @@
  *	  POSTGRES buffer manager definitions.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/bufmgr.h,v 1.124 2010/01/23 16:37:12 sriggs Exp $
+ * src/include/storage/bufmgr.h
  *
  *-------------------------------------------------------------------------
  */
@@ -170,7 +170,7 @@ extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBufferExtended(Relation reln, ForkNumber forkNum,
 				   BlockNumber blockNum, ReadBufferMode mode,
 				   BufferAccessStrategy strategy);
-extern Buffer ReadBufferWithoutRelcache(RelFileNode rnode, bool isLocalBuf,
+extern Buffer ReadBufferWithoutRelcache(RelFileNode rnode,
 						  ForkNumber forkNum, BlockNumber blockNum,
 						  ReadBufferMode mode, BufferAccessStrategy strategy);
 extern void ReleaseBuffer(Buffer buffer);
@@ -187,13 +187,17 @@ extern void AtEOXact_Buffers(bool isCommit);
 extern void PrintBufferLeakWarning(Buffer buffer);
 extern void CheckPointBuffers(int flags);
 extern BlockNumber BufferGetBlockNumber(Buffer buffer);
-extern BlockNumber RelationGetNumberOfBlocks(Relation relation);
+extern BlockNumber RelationGetNumberOfBlocksInFork(Relation relation,
+								ForkNumber forkNum);
 extern void FlushRelationBuffers(Relation rel);
 extern void FlushDatabaseBuffers(Oid dbid);
-extern void DropRelFileNodeBuffers(RelFileNode rnode, ForkNumber forkNum,
-					   bool istemp, BlockNumber firstDelBlock);
+extern void DropRelFileNodeBuffers(RelFileNodeBackend rnode,
+					   ForkNumber forkNum, BlockNumber firstDelBlock);
 extern void DropDatabaseBuffers(Oid dbid);
 extern XLogRecPtr BufferGetLSNAtomic(Buffer buffer);
+
+#define RelationGetNumberOfBlocks(reln) \
+	RelationGetNumberOfBlocksInFork(reln, MAIN_FORKNUM)
 
 #ifdef NOT_USED
 extern void PrintPinnedBufs(void);

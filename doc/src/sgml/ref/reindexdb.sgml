@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL $
+doc/src/sgml/ref/reindexdb.sgml
 PostgreSQL documentation
 -->
 
@@ -26,18 +26,22 @@ PostgreSQL documentation
    <arg>--table | -t <replaceable>table</replaceable> </arg>
    <arg>--index | -i <replaceable>index</replaceable> </arg>
    <arg><replaceable>dbname</replaceable></arg>
-   <sbr>
+  </cmdsynopsis>
+
+  <cmdsynopsis>
    <command>reindexdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg>--all | -a</arg>
-   <sbr>
+  </cmdsynopsis>
+
+  <cmdsynopsis>
    <command>reindexdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg>--system | -s</arg>
    <arg><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
- 
+
 
  <refsect1>
   <title>Description</title>
@@ -62,7 +66,7 @@ PostgreSQL documentation
 
    <para>
     <application>reindexdb</application> accepts the following command-line arguments:
-    
+
     <variablelist>
      <varlistentry>
       <term><option>-a</></term>
@@ -76,7 +80,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option><optional>-d</> <replaceable class="parameter">dbname</replaceable></></term>
-      <term><option><optional>--dbname</> <replaceable class="parameter">dbname</replaceable></></term>
+      <term><option><optional>--dbname=</><replaceable class="parameter">dbname</replaceable></></term>
       <listitem>
        <para>
         Specifies the name of the database to be reindexed.
@@ -102,7 +106,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-i <replaceable class="parameter">index</replaceable></></term>
-      <term><option>--index <replaceable class="parameter">index</replaceable></></term>
+      <term><option>--index=<replaceable class="parameter">index</replaceable></></term>
       <listitem>
        <para>
         Recreate <replaceable class="parameter">index</replaceable> only.
@@ -132,7 +136,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-t <replaceable class="parameter">table</replaceable></></term>
-      <term><option>--table <replaceable class="parameter">table</replaceable></></term>
+      <term><option>--table=<replaceable class="parameter">table</replaceable></></term>
       <listitem>
        <para>
         Reindex <replaceable class="parameter">table</replaceable> only.
@@ -166,13 +170,13 @@ PostgreSQL documentation
    </para>
 
    <para>
-    <application>reindexdb</application> also accepts 
+    <application>reindexdb</application> also accepts
     the following command-line arguments for connection parameters:
 
     <variablelist>
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></></term>
-      <term><option>--host <replaceable class="parameter">host</replaceable></></term>
+      <term><option>--host=<replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
         Specifies the host name of the machine on which the server is
@@ -184,10 +188,10 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-p <replaceable class="parameter">port</replaceable></></term>
-      <term><option>--port <replaceable class="parameter">port</replaceable></></term>
+      <term><option>--port=<replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-        Specifies the TCP port or local Unix domain socket file 
+        Specifies the TCP port or local Unix domain socket file
         extension on which the server
         is listening for connections.
        </para>
@@ -196,7 +200,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></></term>
-      <term><option>--username <replaceable class="parameter">username</replaceable></></term>
+      <term><option>--username=<replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
         User name to connect as.
@@ -225,7 +229,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Force <application>reindexdb</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>

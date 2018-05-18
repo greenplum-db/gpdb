@@ -1,8 +1,5 @@
+/spiexceptions.h
 # Generated subdirectories
+/log/
 /results/
-
-libplpython.so.0
-libplpython.so.0.0
-libplpython.so
-libplpython.a
-plpython.so
+/tmp_check/

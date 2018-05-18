@@ -3,7 +3,7 @@
  * nodeGroup.c
  *	  Routines to handle group nodes (used for queries with GROUP BY clause).
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,7 +15,7 @@
  *	  locate group boundaries.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeGroup.c,v 1.77 2010/01/02 16:57:41 momjian Exp $
+ *	  src/backend/executor/nodeGroup.c
  *
  *-------------------------------------------------------------------------
  */
@@ -277,14 +277,18 @@ ExecEndGroup(GroupState *node)
 }
 
 void
-ExecReScanGroup(GroupState *node, ExprContext *exprCtxt)
+ExecReScanGroup(GroupState *node)
 {
 	node->grp_done = FALSE;
 	node->ss.ps.ps_TupFromTlist = false;
 	/* must clear first tuple */
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
-	if (((PlanState *) node)->lefttree &&
-		((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	/*
+	 * if chgParam of subnode is not null then plan will be re-scanned by
+	 * first ExecProcNode.
+	 */
+	if (node->ss.ps.lefttree &&
+		node->ss.ps.lefttree->chgParam == NULL)
+		ExecReScan(node->ss.ps.lefttree);
 }

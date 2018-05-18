@@ -3,9 +3,9 @@
  * syslogger.h
  *	  Exports from postmaster/syslogger.c.
  *
- * Copyright (c) 2004-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/postmaster/syslogger.h,v 1.16 2010/01/02 16:58:08 momjian Exp $
+ * src/include/postmaster/syslogger.h
  *
  *-------------------------------------------------------------------------
  */
@@ -171,6 +171,7 @@ extern int	Log_RotationSize;
 extern PGDLLIMPORT char *Log_directory;
 extern PGDLLIMPORT char *Log_filename;
 extern bool Log_truncate_on_rotation;
+extern int	Log_file_mode;
 extern int gp_log_format;
 
 extern bool am_syslogger;

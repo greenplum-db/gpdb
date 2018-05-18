@@ -1,8 +1,7 @@
-libpgtypes.a
-libpgtypes.so
-libpgtypes.so.2
-libpgtypes.so.2.2
-pgstrcasecmp.c
-libpgtypes.so.3
-libpgtypes.so.3.1
-exports.list
+/pgtypeslib.def
+/libpgtypesdll.def
+/libpgtypesddll.def
+/blibpgtypesdll.def
+/exports.list
+
+/pgstrcasecmp.c

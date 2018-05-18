@@ -4,10 +4,10 @@
  *	Routines for type coercion.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_coerce.h,v 1.80 2010/01/02 16:58:07 momjian Exp $
+ * src/include/parser/parse_coerce.h
  *
  *-------------------------------------------------------------------------
  */

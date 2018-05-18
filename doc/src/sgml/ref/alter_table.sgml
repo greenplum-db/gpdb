@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_table.sgml,v 1.115 2010/06/24 14:57:21 momjian Exp $
+doc/src/sgml/ref/alter_table.sgml
 PostgreSQL documentation
 -->
 
@@ -40,18 +40,21 @@ ALTER TABLE name
    partition_action
 
 where action is one of:
-  ADD [COLUMN] column_name type
+  ADD [COLUMN] column_name data_type
+      [ COLLATE collation ]
       [ ENCODING ( storage_directive [,...] ) ] 
       [column_constraint [ ... ]]
   DROP [COLUMN] [ IF EXISTS ] column [RESTRICT | CASCADE]
-  ALTER [COLUMN] column [ SET DATA ] TYPE type [USING expression]
+  ALTER [COLUMN] column [ SET DATA ] TYPE type [COLLATE collation] [USING expression]
   ALTER [COLUMN] column SET DEFAULT expression
   ALTER [COLUMN] column DROP DEFAULT
   ALTER [COLUMN] column { SET | DROP } NOT NULL
   ALTER [COLUMN] column SET STATISTICS integer
   ALTER [COLUMN] column SET ( attribute_option = value [, ... ] )
   ALTER [COLUMN] column RESET ( attribute_option [, ... ] )
-  ADD table_constraint
+  ADD table_constraint [ NOT VALID ]
+  ADD table_constraint_using_index
+  VALIDATE CONSTRAINT constraint_name
   DROP CONSTRAINT [ IF EXISTS ] constraint_name [RESTRICT | CASCADE]
   DISABLE TRIGGER [trigger_name | ALL | USER]
   ENABLE TRIGGER [trigger_name | ALL | USER]
@@ -63,6 +66,8 @@ where action is one of:
   RESET (FILLFACTOR)
   INHERIT parent_table
   NO INHERIT parent_table
+  OF type_name
+  NOT OF
   OWNER TO new_owner
   SET TABLESPACE new_tablespace
 
@@ -168,7 +173,11 @@ Where column_reference_storage_directive is:
       This form changes the type of a column of a table. Indexes and
       simple table constraints involving the column will be automatically
       converted to use the new column type by reparsing the originally
-      supplied expression.  The optional <literal>USING</literal>
+      supplied expression.
+      The optional <literal>COLLATE</literal> clause specifies a collation
+      for the new column; if omitted, the collation is the default for the
+      new column type.
+      The optional <literal>USING</literal>
       clause specifies how to compute the new column value from the old;
       if omitted, the default conversion is the same as an assignment
       cast from old data type to new.  A  <literal>USING</literal>
@@ -225,14 +234,14 @@ Where column_reference_storage_directive is:
     <term><literal>RESET ( <replaceable class="PARAMETER">attribute_option</replaceable> [, ... ] )</literal></term>
     <listitem>
      <para>
-      This form sets or resets attribute-level options.  Currently, the only
-      define attribute-level options are <literal>n_distinct</> and
+      This form sets or resets per-attribute options.  Currently, the only
+      defined per-attribute options are <literal>n_distinct</> and
       <literal>n_distinct_inherited</>, which override the
-      number-of-distinct-values estimate made by subsequent
+      number-of-distinct-values estimates made by subsequent
       <xref linkend="sql-analyze">
       operations.  <literal>n_distinct</> affects the statistics for the table
       itself, while <literal>n_distinct_inherited</> affects the statistics
-      gathered for the table and its inheritance children.  When set to a
+      gathered for the table plus its inheritance children.  When set to a
       positive value, <command>ANALYZE</> will assume that the column contains
       exactly the specified number of distinct nonnull values.  When set to a
       negative value, which must be greater
@@ -282,12 +291,79 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>ADD <replaceable class="PARAMETER">table_constraint</replaceable></literal></term>
+    <term><literal>ADD <replaceable class="PARAMETER">table_constraint</replaceable>
+          [ NOT VALID ]</literal></term>
     <listitem>
      <para>
       This form adds a new constraint to a table using the same syntax as
-      <xref linkend="SQL-CREATETABLE">.
+      <xref linkend="SQL-CREATETABLE">. Newly added foreign key constraints can
+      also be defined as <literal>NOT VALID</literal> to avoid the
+      potentially lengthy initial check that must otherwise be performed.
+      Constraint checks are skipped at create table time, so
+      <xref linkend="SQL-CREATETABLE"> does not contain this option.
      </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>VALIDATE CONSTRAINT</literal></term>
+    <listitem>
+     <para>
+      This form validates a foreign key constraint that was previously created
+      as <literal>NOT VALID</literal>. Constraints already marked valid do not
+      cause an error response.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>ADD <replaceable class="PARAMETER">table_constraint_using_index</replaceable></literal></term>
+    <listitem>
+     <para>
+      This form adds a new <literal>PRIMARY KEY</> or <literal>UNIQUE</>
+      constraint to a table based on an existing unique index.  All the
+      columns of the index will be included in the constraint.
+     </para>
+
+     <para>
+      The index cannot have expression columns nor be a partial index.
+      Also, it must be a b-tree index with default sort ordering.  These
+      restrictions ensure that the index is equivalent to one that would be
+      built by a regular <literal>ADD PRIMARY KEY</> or <literal>ADD UNIQUE</>
+      command.
+     </para>
+
+     <para>
+      If <literal>PRIMARY KEY</> is specified, and the index's columns are not
+      already marked <literal>NOT NULL</>, then this command will attempt to
+      do <literal>ALTER COLUMN SET NOT NULL</> against each such column.
+      That requires a full table scan to verify the column(s) contain no
+      nulls.  In all other cases, this is a fast operation.
+     </para>
+
+     <para>
+      If a constraint name is provided then the index will be renamed to match
+      the constraint name.  Otherwise the constraint will be named the same as
+      the index.
+     </para>
+
+     <para>
+      After this command is executed, the index is <quote>owned</> by the
+      constraint, in the same way as if the index had been built by
+      a regular <literal>ADD PRIMARY KEY</> or <literal>ADD UNIQUE</>
+      command.  In particular, dropping the constraint will make the index
+      disappear too.
+     </para>
+
+     <note>
+      <para>
+       Adding a constraint using an existing index can be helpful in
+       situations where a new constraint needs to be added without blocking
+       table updates for a long time.  To do that, create the index using
+       <command>CREATE INDEX CONCURRENTLY</>, and then install it as an
+       official constraint using this syntax.  See the example below.
+      </para>
+     </note>
     </listitem>
    </varlistentry>
 
@@ -407,9 +483,9 @@ Where column_reference_storage_directive is:
       for details on the available parameters.  Note that the table contents
       will not be modified immediately by this command; depending on the
       parameter you might need to rewrite the table to get the desired effects.
-      That can be done with <xref linkend="SQL-CLUSTER">
-      or one of the forms of <command>ALTER
-      TABLE</> that forces a table rewrite.
+      That can be done with <link linkend="SQL-VACUUM">VACUUM
+      FULL</>, <xref linkend="SQL-CLUSTER"> or one of the forms
+      of <command>ALTER TABLE</> that forces a table rewrite.
      </para>
 
      <note>
@@ -468,6 +544,30 @@ Where column_reference_storage_directive is:
       specified parent table.
       Queries against the parent table will no longer include records drawn
       from the target table.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>OF <replaceable class="PARAMETER">type_name</replaceable></literal></term>
+    <listitem>
+     <para>
+      This form links the table to a composite type as though <command>CREATE
+      TABLE OF</> had formed it.  The table's list of column names and types
+      must precisely match that of the composite type; the presence of
+      an <literal>oid</> system column is permitted to differ.  The table must
+      not inherit from any other table.  These restrictions ensure
+      that <command>CREATE TABLE OF</> would permit an equivalent table
+      definition.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>NOT OF</literal></term>
+    <listitem>
+     <para>
+      This form dissociates a typed table from its type.
      </para>
     </listitem>
    </varlistentry>
@@ -762,9 +862,14 @@ Where column_reference_storage_directive is:
    <para>
     Adding a column with a non-null default or changing the type of an
     existing column will require the entire table and indexes to be rewritten.
-    This might take a significant amount of time for a large table; and it will
-    temporarily require double the disk space.  Adding or removing a system
-    <literal>oid</> column likewise requires rewriting the entire table.
+    As an exception, if the <literal>USING</> clause does not change the column
+    contents and the old type is either binary coercible to the new type or
+    an unconstrained domain over the new type, a table rewrite is not needed,
+    but any indexes on the affected columns must still be rebuilt.  Adding or
+    removing a system <literal>oid</> column also requires rewriting the entire
+    table.  Table and/or index rebuilds may take a significant amount of time
+    for a large table; and will temporarily require as much as double the disk
+    space.
    </para>
 
    <para>
@@ -791,30 +896,23 @@ Where column_reference_storage_directive is:
    </para>
 
    <para>
-    The fact that <literal>ALTER TYPE</> requires rewriting the whole table
-    is sometimes an advantage, because the rewriting process eliminates
-    any dead space in the table.  For example, to reclaim the space occupied
-    by a dropped column immediately, the fastest way is:
-<programlisting>
-ALTER TABLE table ALTER COLUMN anycol TYPE anytype;
-</programlisting>
-    where <literal>anycol</> is any remaining table column and
-    <literal>anytype</> is the same type that column already has.
-    This results in no semantically-visible change in the table,
-    but the command forces rewriting, which gets rid of no-longer-useful
-    data.
+    To force an immediate rewrite of the table, you can use
+    <link linkend="SQL-VACUUM">VACUUM FULL</>, <xref linkend="SQL-CLUSTER">
+    or one of the forms of ALTER TABLE that forces a rewrite.  This results in
+    no semantically-visible change in the table, but gets rid of
+    no-longer-useful data.
    </para>
 
    <para>
-    The <literal>USING</literal> option of <literal>ALTER TYPE</> can actually
+    The <literal>USING</literal> option of <literal>SET DATA TYPE</> can actually
     specify any expression involving the old values of the row; that is, it
     can refer to other columns as well as the one being converted.  This allows
-    very general conversions to be done with the <literal>ALTER TYPE</>
+    very general conversions to be done with the <literal>SET DATA TYPE</>
     syntax.  Because of this flexibility, the <literal>USING</literal>
     expression is not applied to the column's default value (if any); the
     result might not be a constant expression as required for a default.
     This means that when there is no implicit or assignment cast from old to
-    new type, <literal>ALTER TYPE</> might fail to convert the default even
+    new type, <literal>SET DATA TYPE</> might fail to convert the default even
     though a <literal>USING</literal> clause is supplied.  In such cases,
     drop the default with <literal>DROP DEFAULT</>, perform the <literal>ALTER
     TYPE</>, and then use <literal>SET DEFAULT</> to add a suitable new
@@ -992,13 +1090,24 @@ ALTER TABLE myschema.distributors SET SCHEMA yourschema;
 </programlisting>
   </para>
 
+  <para>
+   To recreate a primary key constraint, without blocking updates while the
+   index is rebuilt:
+<programlisting>
+CREATE UNIQUE INDEX CONCURRENTLY dist_id_temp_idx ON distributors (dist_id);
+ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
+    ADD CONSTRAINT distributors_pkey PRIMARY KEY USING INDEX dist_id_temp_idx;
+</programlisting>
+  </para>
+
  </refsect1>
 
  <refsect1>
   <title>Compatibility</title>
 
   <para>
-   The forms <literal>ADD</literal>, <literal>DROP</>, <literal>SET DEFAULT</>,
+   The forms <literal>ADD</literal> (without <literal>USING INDEX</literal>),
+   <literal>DROP</>, <literal>SET DEFAULT</>,
    and <literal>SET DATA TYPE</literal> (without <literal>USING</literal>)
    conform with the SQL standard.  The other forms are
    <productname>PostgreSQL</productname> extensions of the SQL standard.
@@ -1011,5 +1120,13 @@ ALTER TABLE myschema.distributors SET SCHEMA yourschema;
    column of a table, leaving a zero-column table.  This is an
    extension of SQL, which disallows zero-column tables.
   </para>
+ </refsect1>
+
+ <refsect1>
+  <title>See Also</title>
+
+  <simplelist type="inline">
+   <member><xref linkend="sql-createtable"></member>
+  </simplelist>
  </refsect1>
 </refentry>

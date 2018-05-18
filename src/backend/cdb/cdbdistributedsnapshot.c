@@ -19,6 +19,7 @@
 #include "miscadmin.h"
 #include "access/transam.h"
 #include "cdb/cdbvars.h"
+#include "utils/guc.h"
 #include "utils/snapmgr.h"
 
 /*

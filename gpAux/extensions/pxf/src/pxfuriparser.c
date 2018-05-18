@@ -319,7 +319,7 @@ GPHDUri_verify_no_duplicate_options(GPHDUri *uri)
 	foreach(option, uri->options)
 	{
 		OptionData *data = (OptionData *) lfirst(option);
-		Value	   *key = makeString(str_toupper(data->key, strlen(data->key)));
+		Value	   *key = makeString(asc_toupper(data->key, strlen(data->key)));
 
 		if (!list_member(previousKeys, key))
 			previousKeys = lappend(previousKeys, key);

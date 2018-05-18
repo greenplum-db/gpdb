@@ -1,7 +1,4 @@
-#
-# Makefile for pg_upgrade
-#
-# $PostgreSQL: pgsql/contrib/pg_upgrade/Makefile,v 1.4 2010/07/03 14:23:13 momjian Exp $
+# contrib/pg_upgrade/Makefile
 
 top_builddir = ../..
 

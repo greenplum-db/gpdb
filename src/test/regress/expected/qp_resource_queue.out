@@ -366,39 +366,39 @@ select tbl16369_func10(5);
 NOTICE:  Yo there I'm number 5, next: 4
 NOTICE:  Yo there I'm number 4, next: 3
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 3, next: 2
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 2, next: 1
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 1, next: 0
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 INFO:  Alas we are at the end of our journey
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
  tbl16369_func10 
 -----------------
  (789)
@@ -411,39 +411,39 @@ select tbl16369_func11(5);
 NOTICE:  Yo there I'm number 5, next: 4
 NOTICE:  Yo there I'm number 4, next: 3
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 3, next: 2
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 2, next: 1
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 1, next: 0
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 INFO:  Alas we are at the end of our journey
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
  tbl16369_func11 
 -----------------
  (789)
@@ -480,75 +480,75 @@ select tbl16369_func1(),tbl16369_func2(),tbl16369_func4(),tbl16369_func5(),tbl16
 NOTICE:  Yo there I'm number 5, next: 4
 NOTICE:  Yo there I'm number 4, next: 3
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 3, next: 2
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 2, next: 1
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 1, next: 0
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 INFO:  Alas we are at the end of our journey
 CONTEXT:  SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 SQL statement "SELECT tbl16369_func10(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func10" line 7 at assignment
+PL/pgSQL function "tbl16369_func10" line 8 at assignment
 NOTICE:  Yo there I'm number 5, next: 4
 NOTICE:  Yo there I'm number 4, next: 3
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 3, next: 2
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 2, next: 1
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 NOTICE:  Yo there I'm number 1, next: 0
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 INFO:  Alas we are at the end of our journey
 CONTEXT:  SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
 SQL statement "SELECT tbl16369_func11(param_numcount - 1)"
-PL/pgSQL function "tbl16369_func11" line 7 at assignment
+PL/pgSQL function "tbl16369_func11" line 8 at assignment
  tbl16369_func1 | tbl16369_func2 | tbl16369_func4 | tbl16369_func5 | tbl16369_func10 | tbl16369_func11 | tbl16369_func12 | generate_series 
 ----------------+----------------+----------------+----------------+-----------------+-----------------+-----------------+-----------------
  (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               1

@@ -11,9 +11,9 @@
  *			- Add a pgstat config column to pg_database, so this
  *			  entire thing can be enabled/disabled on a per db basis.
  *
- *	Copyright (c) 2001-2010, PostgreSQL Global Development Group
+ *	Copyright (c) 2001-2011, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.204 2010/07/06 19:18:57 momjian Exp $
+ *	src/backend/postmaster/pgstat.c
  * ----------
  */
 #include "postgres.h"
@@ -58,6 +58,7 @@
 #include "storage/ipc.h"
 #include "storage/pg_shmem.h"
 #include "storage/pmsignal.h"
+#include "storage/procsignal.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -300,6 +301,7 @@ static void pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len); /* GPDB */
 static void pgstat_recv_bgwriter(PgStat_MsgBgWriter *msg, int len);
 static void pgstat_recv_funcstat(PgStat_MsgFuncstat *msg, int len);
 static void pgstat_recv_funcpurge(PgStat_MsgFuncpurge *msg, int len);
+static void pgstat_recv_recoveryconflict(PgStat_MsgRecoveryConflict *msg, int len);
 
 
 /* ------------------------------------------------------------
@@ -1341,6 +1343,25 @@ pgstat_report_analyze(Relation rel,
 	pgstat_send(&msg, sizeof(msg));
 }
 
+/* --------
+ * pgstat_report_recovery_conflict() -
+ *
+ *	Tell the collector about a Hot Standby recovery conflict.
+ * --------
+ */
+void
+pgstat_report_recovery_conflict(int reason)
+{
+	PgStat_MsgRecoveryConflict msg;
+
+	if (pgStatSock == PGINVALID_SOCKET || !pgstat_track_counts)
+		return;
+
+	pgstat_setheader(&msg.m_hdr, PGSTAT_MTYPE_RECOVERYCONFLICT);
+	msg.m_databaseid = MyDatabaseId;
+	msg.m_reason = reason;
+	pgstat_send(&msg, sizeof(msg));
+}
 
 /* ----------
  * pgstat_ping() -
@@ -1427,6 +1448,23 @@ pgstat_init_function_usage(FunctionCallInfoData *fcinfo,
 
 	/* get clock time as of function start */
 	INSTR_TIME_SET_CURRENT(fcu->f_start);
+}
+
+/*
+ * find_funcstat_entry - find any existing PgStat_BackendFunctionEntry entry
+ *		for specified function
+ *
+ * If no entry, return NULL, don't create a new one
+ */
+PgStat_BackendFunctionEntry *
+find_funcstat_entry(Oid func_id)
+{
+	if (pgStatFunctions == NULL)
+		return NULL;
+
+	return (PgStat_BackendFunctionEntry *) hash_search(pgStatFunctions,
+													   (void *) &func_id,
+													   HASH_FIND, NULL);
 }
 
 /*
@@ -1588,6 +1626,32 @@ get_tabstat_entry(Oid rel_id, bool isshared)
 }
 
 /*
+ * find_tabstat_entry - find any existing PgStat_TableStatus entry for rel
+ *
+ * If no entry, return NULL, don't create a new one
+ */
+PgStat_TableStatus *
+find_tabstat_entry(Oid rel_id)
+{
+	PgStat_TableStatus *entry;
+	TabStatusArray *tsa;
+	int			i;
+
+	for (tsa = pgStatTabList; tsa != NULL; tsa = tsa->tsa_next)
+	{
+		for (i = 0; i < tsa->tsa_used; i++)
+		{
+			entry = &tsa->tsa_entries[i];
+			if (entry->t_id == rel_id)
+				return entry;
+		}
+	}
+
+	/* Not present */
+	return NULL;
+}
+
+/*
  * get_tabstat_stack_level - add a new (sub)transaction stack entry if needed
  */
 static PgStat_SubXactStatus *
@@ -1644,7 +1708,7 @@ pgstat_count_heap_insert(Relation rel)
 {
 	PgStat_TableStatus *pgstat_info = rel->pgstat_info;
 
-	if (pgstat_track_counts && pgstat_info != NULL)
+	if (pgstat_info != NULL)
 	{
 		/* We have to log the effect at the proper transactional level */
 		int			nest_level = GetCurrentTransactionNestLevel();
@@ -1665,7 +1729,7 @@ pgstat_count_heap_update(Relation rel, bool hot)
 {
 	PgStat_TableStatus *pgstat_info = rel->pgstat_info;
 
-	if (pgstat_track_counts && pgstat_info != NULL)
+	if (pgstat_info != NULL)
 	{
 		/* We have to log the effect at the proper transactional level */
 		int			nest_level = GetCurrentTransactionNestLevel();
@@ -1690,7 +1754,7 @@ pgstat_count_heap_delete(Relation rel)
 {
 	PgStat_TableStatus *pgstat_info = rel->pgstat_info;
 
-	if (pgstat_track_counts && pgstat_info != NULL)
+	if (pgstat_info != NULL)
 	{
 		/* We have to log the effect at the proper transactional level */
 		int			nest_level = GetCurrentTransactionNestLevel();
@@ -1716,7 +1780,7 @@ pgstat_update_heap_dead_tuples(Relation rel, int delta)
 {
 	PgStat_TableStatus *pgstat_info = rel->pgstat_info;
 
-	if (pgstat_track_counts && pgstat_info != NULL)
+	if (pgstat_info != NULL)
 		pgstat_info->t_counts.t_delta_dead_tuples -= delta;
 }
 
@@ -2185,6 +2249,7 @@ pgstat_fetch_global(void)
 
 static PgBackendStatus *BackendStatusArray = NULL;
 static PgBackendStatus *MyBEEntry = NULL;
+static char *BackendClientHostnameBuffer = NULL;
 static char *BackendAppnameBuffer = NULL;
 static char *BackendActivityBuffer = NULL;
 
@@ -2202,11 +2267,13 @@ BackendStatusShmemSize(void)
 					mul_size(NAMEDATALEN, MaxBackends));
 	size = add_size(size,
 					mul_size(pgstat_track_activity_query_size, MaxBackends));
+	size = add_size(size,
+					mul_size(NAMEDATALEN, MaxBackends));
 	return size;
 }
 
 /*
- * Initialize the shared status array and activity/appname string buffers
+ * Initialize the shared status array and several string buffers
  * during postmaster startup.
  */
 void
@@ -2244,6 +2311,24 @@ CreateSharedBackendStatus(void)
 		for (i = 0; i < MaxBackends; i++)
 		{
 			BackendStatusArray[i].st_appname = buffer;
+			buffer += NAMEDATALEN;
+		}
+	}
+
+	/* Create or attach to the shared client hostname buffer */
+	size = mul_size(NAMEDATALEN, MaxBackends);
+	BackendClientHostnameBuffer = (char *)
+		ShmemInitStruct("Backend Client Host Name Buffer", size, &found);
+
+	if (!found)
+	{
+		MemSet(BackendClientHostnameBuffer, 0, size);
+
+		/* Initialize st_clienthostname pointers. */
+		buffer = BackendClientHostnameBuffer;
+		for (i = 0; i < MaxBackends; i++)
+		{
+			BackendStatusArray[i].st_clienthostname = buffer;
 			buffer += NAMEDATALEN;
 		}
 	}
@@ -2350,16 +2435,21 @@ pgstat_bestart(void)
 	beentry->st_userid = userid;
 	beentry->st_session_id = gp_session_id;  /* GPDB only */
 	beentry->st_clientaddr = clientaddr;
+	beentry->st_clienthostname[0] = '\0';
 	beentry->st_waiting = PGBE_WAITING_NONE;
 	beentry->st_appname[0] = '\0';
 	beentry->st_activity[0] = '\0';
 	/* Also make sure the last byte in each string area is always 0 */
+	beentry->st_clienthostname[NAMEDATALEN - 1] = '\0';
 	beentry->st_appname[NAMEDATALEN - 1] = '\0';
 	beentry->st_activity[pgstat_track_activity_query_size - 1] = '\0';
 	beentry->st_rsgid = InvalidOid;
 
 	beentry->st_changecount++;
 	Assert((beentry->st_changecount & 1) == 0);
+
+	if (MyProcPort && MyProcPort->remote_hostname)
+		strlcpy(beentry->st_clienthostname, MyProcPort->remote_hostname, NAMEDATALEN);
 
 	/*
 	 * GPDB: Initialize per-portal statistics hash for resource queues.
@@ -3103,6 +3193,10 @@ PgstatCollectorMain(int argc, char *argv[])
 					pgstat_recv_funcpurge((PgStat_MsgFuncpurge *) &msg, len);
 					break;
 
+				case PGSTAT_MTYPE_RECOVERYCONFLICT:
+					pgstat_recv_recoveryconflict((PgStat_MsgRecoveryConflict *) &msg, len);
+					break;
+
 				default:
 					break;
 			}
@@ -3179,6 +3273,13 @@ pgstat_get_db_entry(Oid databaseid, bool create)
 		result->n_tuples_updated = 0;
 		result->n_tuples_deleted = 0;
 		result->last_autovac_time = 0;
+		result->n_conflict_tablespace = 0;
+		result->n_conflict_lock = 0;
+		result->n_conflict_snapshot = 0;
+		result->n_conflict_bufferpin = 0;
+		result->n_conflict_startup_deadlock = 0;
+
+		result->stat_reset_timestamp = GetCurrentTimestamp();
 
 		memset(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(Oid);
@@ -3237,11 +3338,14 @@ pgstat_get_tab_entry(PgStat_StatDBEntry *dbentry, Oid tableoid, bool create)
 		result->changes_since_analyze = 0;
 		result->blocks_fetched = 0;
 		result->blocks_hit = 0;
-
 		result->vacuum_timestamp = 0;
+		result->vacuum_count = 0;
 		result->autovac_vacuum_timestamp = 0;
+		result->autovac_vacuum_count = 0;
 		result->analyze_timestamp = 0;
+		result->analyze_count = 0;
 		result->autovac_analyze_timestamp = 0;
+		result->autovac_analyze_count = 0;
 	}
 
 	return result;
@@ -3486,6 +3590,12 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 	 * load an existing statsfile.
 	 */
 	memset(&globalStats, 0, sizeof(globalStats));
+
+	/*
+	 * Set the current timestamp (will be kept only in case we can't load an
+	 * existing statsfile.
+	 */
+	globalStats.stat_reset_timestamp = GetCurrentTimestamp();
 
 	/*
 	 * Try to open the status file. If it doesn't exist, the backends simply
@@ -3977,9 +4087,13 @@ pgstat_recv_tabstat(PgStat_MsgTabstat *msg, int len)
 			tabentry->blocks_hit = tabmsg->t_counts.t_blocks_hit;
 
 			tabentry->vacuum_timestamp = 0;
+			tabentry->vacuum_count = 0;
 			tabentry->autovac_vacuum_timestamp = 0;
+			tabentry->autovac_vacuum_count = 0;
 			tabentry->analyze_timestamp = 0;
+			tabentry->analyze_count = 0;
 			tabentry->autovac_analyze_timestamp = 0;
+			tabentry->autovac_analyze_count = 0;
 		}
 		else
 		{
@@ -4119,10 +4233,23 @@ pgstat_recv_resetcounter(PgStat_MsgResetcounter *msg, int len)
 
 	dbentry->tables = NULL;
 	dbentry->functions = NULL;
+
+	/*
+	 * Reset database-level stats too.	This should match the initialization
+	 * code in pgstat_get_db_entry().
+	 */
 	dbentry->n_xact_commit = 0;
 	dbentry->n_xact_rollback = 0;
 	dbentry->n_blocks_fetched = 0;
 	dbentry->n_blocks_hit = 0;
+	dbentry->n_tuples_returned = 0;
+	dbentry->n_tuples_fetched = 0;
+	dbentry->n_tuples_inserted = 0;
+	dbentry->n_tuples_updated = 0;
+	dbentry->n_tuples_deleted = 0;
+	dbentry->last_autovac_time = 0;
+
+	dbentry->stat_reset_timestamp = GetCurrentTimestamp();
 
 	memset(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(Oid);
@@ -4155,6 +4282,7 @@ pgstat_recv_resetsharedcounter(PgStat_MsgResetsharedcounter *msg, int len)
 	{
 		/* Reset the global background writer statistics for the cluster. */
 		memset(&globalStats, 0, sizeof(globalStats));
+		globalStats.stat_reset_timestamp = GetCurrentTimestamp();
 	}
 
 	/*
@@ -4179,12 +4307,16 @@ pgstat_recv_resetsinglecounter(PgStat_MsgResetsinglecounter *msg, int len)
 	if (!dbentry)
 		return;
 
+	/* Set the reset timestamp for the whole database */
+	dbentry->stat_reset_timestamp = GetCurrentTimestamp();
 
 	/* Remove object if it exists, ignore it if not */
 	if (msg->m_resettype == RESET_TABLE)
-		(void) hash_search(dbentry->tables, (void *) &(msg->m_objectid), HASH_REMOVE, NULL);
+		(void) hash_search(dbentry->tables, (void *) &(msg->m_objectid),
+						   HASH_REMOVE, NULL);
 	else if (msg->m_resettype == RESET_FUNCTION)
-		(void) hash_search(dbentry->functions, (void *) &(msg->m_objectid), HASH_REMOVE, NULL);
+		(void) hash_search(dbentry->functions, (void *) &(msg->m_objectid),
+						   HASH_REMOVE, NULL);
 }
 
 /* ----------
@@ -4230,9 +4362,15 @@ pgstat_recv_vacuum(PgStat_MsgVacuum *msg, int len)
 	tabentry->n_dead_tuples = 0;
 
 	if (msg->m_autovacuum)
+	{
 		tabentry->autovac_vacuum_timestamp = msg->m_vacuumtime;
+		tabentry->autovac_vacuum_count++;
+	}
 	else
+	{
 		tabentry->vacuum_timestamp = msg->m_vacuumtime;
+		tabentry->vacuum_count++;
+	}
 }
 
 /* ----------
@@ -4254,11 +4392,8 @@ pgstat_recv_analyze(PgStat_MsgAnalyze *msg, int len)
 
 	tabentry = pgstat_get_tab_entry(dbentry, msg->m_tableoid, true);
 
-	if (msg->m_adopt_counts)
-	{
-		tabentry->n_live_tuples = msg->m_live_tuples;
-		tabentry->n_dead_tuples = msg->m_dead_tuples;
-	}
+	tabentry->n_live_tuples = msg->m_live_tuples;
+	tabentry->n_dead_tuples = msg->m_dead_tuples;
 
 	/*
 	 * We reset changes_since_analyze to zero, forgetting any changes that
@@ -4267,9 +4402,15 @@ pgstat_recv_analyze(PgStat_MsgAnalyze *msg, int len)
 	tabentry->changes_since_analyze = 0;
 
 	if (msg->m_autovacuum)
+	{
 		tabentry->autovac_analyze_timestamp = msg->m_analyzetime;
+		tabentry->autovac_analyze_count++;
+	}
 	else
+	{
 		tabentry->analyze_timestamp = msg->m_analyzetime;
+		tabentry->analyze_count++;
+	}
 }
 
 
@@ -4288,6 +4429,7 @@ pgstat_recv_bgwriter(PgStat_MsgBgWriter *msg, int len)
 	globalStats.buf_written_clean += msg->m_buf_written_clean;
 	globalStats.maxwritten_clean += msg->m_maxwritten_clean;
 	globalStats.buf_written_backend += msg->m_buf_written_backend;
+	globalStats.buf_fsync_backend += msg->m_buf_fsync_backend;
 	globalStats.buf_alloc += msg->m_buf_alloc;
 }
 
@@ -4482,6 +4624,46 @@ pgstat_fetch_stat_queueentry(Oid queueid)
 											  HASH_FIND, NULL);
 }
 
+
+/* ----------
+ * pgstat_recv_recoveryconflict() -
+ *
+ *	Process as RECOVERYCONFLICT message.
+ * ----------
+ */
+static void
+pgstat_recv_recoveryconflict(PgStat_MsgRecoveryConflict *msg, int len)
+{
+	PgStat_StatDBEntry *dbentry;
+
+	dbentry = pgstat_get_db_entry(msg->m_databaseid, true);
+
+	switch (msg->m_reason)
+	{
+		case PROCSIG_RECOVERY_CONFLICT_DATABASE:
+
+			/*
+			 * Since we drop the information about the database as soon as it
+			 * replicates, there is no point in counting these conflicts.
+			 */
+			break;
+		case PROCSIG_RECOVERY_CONFLICT_TABLESPACE:
+			dbentry->n_conflict_tablespace++;
+			break;
+		case PROCSIG_RECOVERY_CONFLICT_LOCK:
+			dbentry->n_conflict_lock++;
+			break;
+		case PROCSIG_RECOVERY_CONFLICT_SNAPSHOT:
+			dbentry->n_conflict_snapshot++;
+			break;
+		case PROCSIG_RECOVERY_CONFLICT_BUFFERPIN:
+			dbentry->n_conflict_bufferpin++;
+			break;
+		case PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK:
+			dbentry->n_conflict_startup_deadlock++;
+			break;
+	}
+}
 
 /* ----------
  * pgstat_recv_funcstat() -

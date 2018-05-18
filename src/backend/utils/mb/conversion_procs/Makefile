@@ -4,7 +4,7 @@
 #    Makefile for utils/mb/conversion_procs
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/utils/mb/conversion_procs/Makefile,v 1.24 2009/11/04 23:47:04 tgl Exp $
+#    src/backend/utils/mb/conversion_procs/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -25,6 +25,8 @@ SUBDIRS = \
 	utf8_and_gbk utf8_and_iso8859 utf8_and_iso8859_1 utf8_and_johab \
 	utf8_and_sjis utf8_and_win utf8_and_uhc \
 	utf8_and_euc2004 utf8_and_sjis2004 euc2004_sjis2004
+
+$(recurse)
 
 # conversion_name source_encoding destination_encoding function object
 CONVERSIONS = \
@@ -162,7 +164,6 @@ CONVERSIONS = \
 		shift_jis_2004_to_euc_jis_2004 SHIFT_JIS_2004 EUC_JIS_2004 shift_jis_2004_to_euc_jis_2004 euc2004_sjis2004
 
 all: $(SQLSCRIPT)
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
 
 $(SQLSCRIPT): Makefile
 ifeq ($(enable_shared), yes)
@@ -205,16 +206,12 @@ $(REGRESSION_SCRIPT): Makefile
 
 install: $(SQLSCRIPT) installdirs
 	$(INSTALL_DATA) $(SQLSCRIPT) '$(DESTDIR)$(datadir)'
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(datadir)' '$(DESTDIR)$(pkglibdir)'
 
 uninstall:
 	rm -f '$(DESTDIR)$(datadir)/$(SQLSCRIPT)'
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
 
 clean distclean maintainer-clean:
 	rm -f $(SQLSCRIPT)
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
-

@@ -1,15 +1,10 @@
-#-------------------------------------------------------------------------
-#
-# pageinspect Makefile
-#
-# $PostgreSQL: pgsql/contrib/pageinspect/Makefile,v 1.4 2008/09/30 10:52:09 heikki Exp $
-#
-#-------------------------------------------------------------------------
+# contrib/pageinspect/Makefile
 
 MODULE_big	= pageinspect
 OBJS		= rawpage.o heapfuncs.o btreefuncs.o fsmfuncs.o
-DATA_built	= pageinspect.sql
-DATA      	= uninstall_pageinspect.sql
+
+EXTENSION = pageinspect
+DATA = pageinspect--1.0.sql pageinspect--unpackaged--1.0.sql
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
@@ -21,4 +16,3 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
-

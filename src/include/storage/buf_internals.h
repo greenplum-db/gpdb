@@ -5,10 +5,10 @@
  *	  strategy.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/buf_internals.h,v 1.104 2010/01/02 16:58:08 momjian Exp $
+ * src/include/storage/buf_internals.h
  *
  *-------------------------------------------------------------------------
  */
@@ -37,6 +37,9 @@
 #define BM_JUST_DIRTIED			(1 << 5)		/* dirtied since write started */
 #define BM_PIN_COUNT_WAITER		(1 << 6)		/* have waiter for sole pin */
 #define BM_CHECKPOINT_NEEDED	(1 << 7)		/* must write for checkpoint */
+#define BM_PERMANENT			(1 << 8)		/* permanent relation (neither
+												 * unlogged or temporary) */
+#define BM_TEMP					(1 << 9)		/* temporary relation */
 
 typedef bits16 BufFlags;
 
@@ -58,6 +61,12 @@ typedef bits16 BufFlags;
  * possible that the backend flushing the buffer doesn't even believe the
  * relation is visible yet (its xact may have started before the xact that
  * created the rel).  The storage manager must be able to cope anyway.
+ *
+ * GPDB_91_MERGE_FIXME: The argument in the previous note doesn't quite hold in
+ * GPDB.  Temp tables in GPDB use shared buffers.  But there is no way to
+ * distinguish a temp relation's buffers from a non-temp relation's buffers
+ * from buffer tag.  The flag BM_TEMP from buffer header is used to identify a
+ * temp relation's bufffers.
  *
  * Note: if there's any pad bytes in the struct, INIT_BUFFERTAG will have
  * to be fixed to zero them, since this struct is used as a hash key.

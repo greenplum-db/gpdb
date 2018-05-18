@@ -3,11 +3,11 @@
  * wparser.c
  *		Standard interface to word parser
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser.c,v 1.12 2010/01/02 16:57:53 momjian Exp $
+ *	  src/backend/tsearch/wparser.c
  *
  *-------------------------------------------------------------------------
  */
@@ -54,7 +54,7 @@ tt_setup_firstcall(FuncCallContext *funcctx, Oid prsid)
 
 	st = (TSTokenTypeStorage *) palloc(sizeof(TSTokenTypeStorage));
 	st->cur = 0;
-	/* OidFunctionCall0 is absent */
+	/* lextype takes one dummy argument */
 	st->list = (LexDescr *) DatumGetPointer(OidFunctionCall1(prs->lextypeOid,
 															 (Datum) 0));
 	funcctx->user_fctx = (void *) st;
@@ -134,7 +134,7 @@ ts_token_type_byname(PG_FUNCTION_ARGS)
 		Oid			prsId;
 
 		funcctx = SRF_FIRSTCALL_INIT();
-		prsId = TSParserGetPrsid(textToQualifiedNameList(prsname), false);
+		prsId = get_ts_parser_oid(textToQualifiedNameList(prsname), false);
 		tt_setup_firstcall(funcctx, prsId);
 	}
 
@@ -282,7 +282,7 @@ ts_parse_byname(PG_FUNCTION_ARGS)
 		Oid			prsId;
 
 		funcctx = SRF_FIRSTCALL_INIT();
-		prsId = TSParserGetPrsid(textToQualifiedNameList(prsname), false);
+		prsId = get_ts_parser_oid(textToQualifiedNameList(prsname), false);
 		prs_setup_firstcall(funcctx, prsId, txt);
 	}
 

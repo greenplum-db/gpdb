@@ -3,12 +3,12 @@
  * indexam.c
  *	  general index access method routines
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.118 2010/02/26 02:00:34 momjian Exp $
+ *	  src/backend/access/index/indexam.c
  *
  * INTERFACE ROUTINES
  *		index_open		- open an index relation by relation OID
@@ -64,9 +64,12 @@
 
 #include "access/relscan.h"
 #include "access/transam.h"
+#include "access/xact.h"
+#include "catalog/index.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
+#include "storage/predicate.h"
 #include "utils/relcache.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
@@ -74,12 +77,21 @@
 
 /* ----------------------------------------------------------------
  *					macros used in index_ routines
+ *
+ * Note: the ReindexIsProcessingIndex() check in RELATION_CHECKS is there
+ * to check that we don't try to scan or do retail insertions into an index
+ * that is currently being rebuilt or pending rebuild.	This helps to catch
+ * things that don't work when reindexing system catalogs.  The assertion
+ * doesn't prevent the actual rebuild because we don't use RELATION_CHECKS
+ * when calling the index AM's ambuild routine, and there is no reason for
+ * ambuild to call its subsidiary routines through this file.
  * ----------------------------------------------------------------
  */
 #define RELATION_CHECKS \
 ( \
 	AssertMacro(RelationIsValid(indexRelation)), \
-	AssertMacro(PointerIsValid(indexRelation->rd_am)) \
+	AssertMacro(PointerIsValid(indexRelation->rd_am)), \
+	AssertMacro(!ReindexIsProcessingIndex(RelationGetRelid(indexRelation))) \
 )
 
 #define SCAN_CHECKS \
@@ -114,7 +126,7 @@ do { \
 } while(0)
 
 static IndexScanDesc index_beginscan_internal(Relation indexRelation,
-						 int nkeys, ScanKey key);
+						 int nkeys, int norderbys);
 
 
 /* ----------------------------------------------------------------
@@ -192,6 +204,11 @@ index_insert(Relation indexRelation,
 	RELATION_CHECKS;
 	GET_REL_PROCEDURE(aminsert);
 
+	if (!(indexRelation->rd_am->ampredlocks))
+		CheckForSerializableConflictIn(indexRelation,
+									   (HeapTuple) NULL,
+									   InvalidBuffer);
+
 	/*
 	 * have the am's insert proc do all the work.
 	 */
@@ -213,11 +230,11 @@ IndexScanDesc
 index_beginscan(Relation heapRelation,
 				Relation indexRelation,
 				Snapshot snapshot,
-				int nkeys, ScanKey key)
+				int nkeys, int norderbys)
 {
 	IndexScanDesc scan;
 
-	scan = index_beginscan_internal(indexRelation, nkeys, key);
+	scan = index_beginscan_internal(indexRelation, nkeys, norderbys);
 
 	/*
 	 * Save additional parameters into the scandesc.  Everything else was set
@@ -238,11 +255,11 @@ index_beginscan(Relation heapRelation,
 IndexScanDesc
 index_beginscan_bitmap(Relation indexRelation,
 					   Snapshot snapshot,
-					   int nkeys, ScanKey key)
+					   int nkeys)
 {
 	IndexScanDesc scan;
 
-	scan = index_beginscan_internal(indexRelation, nkeys, key);
+	scan = index_beginscan_internal(indexRelation, nkeys, 0);
 
 	/*
 	 * Save additional parameters into the scandesc.  Everything else was set
@@ -258,13 +275,16 @@ index_beginscan_bitmap(Relation indexRelation,
  */
 static IndexScanDesc
 index_beginscan_internal(Relation indexRelation,
-						 int nkeys, ScanKey key)
+						 int nkeys, int norderbys)
 {
 	IndexScanDesc scan;
 	FmgrInfo   *procedure;
 
 	RELATION_CHECKS;
 	GET_REL_PROCEDURE(ambeginscan);
+
+	if (!(indexRelation->rd_am->ampredlocks))
+		PredicateLockRelation(indexRelation);
 
 	/*
 	 * We hold a reference count to the relcache entry throughout the scan.
@@ -278,7 +298,7 @@ index_beginscan_internal(Relation indexRelation,
 		DatumGetPointer(FunctionCall3(procedure,
 									  PointerGetDatum(indexRelation),
 									  Int32GetDatum(nkeys),
-									  PointerGetDatum(key)));
+									  Int32GetDatum(norderbys)));
 
 	return scan;
 }
@@ -286,22 +306,27 @@ index_beginscan_internal(Relation indexRelation,
 /* ----------------
  *		index_rescan  - (re)start a scan of an index
  *
- * The caller may specify a new set of scankeys (but the number of keys
- * cannot change).	To restart the scan without changing keys, pass NULL
- * for the key array.
- *
- * Note that this is also called when first starting an indexscan;
- * see RelationGetIndexScan.  Keys *must* be passed in that case,
- * unless scan->numberOfKeys is zero.
+ * During a restart, the caller may specify a new set of scankeys and/or
+ * orderbykeys; but the number of keys cannot differ from what index_beginscan
+ * was told.  (Later we might relax that to "must not exceed", but currently
+ * the index AMs tend to assume that scan->numberOfKeys is what to believe.)
+ * To restart the scan without changing keys, pass NULL for the key arrays.
+ * (Of course, keys *must* be passed on the first call, unless
+ * scan->numberOfKeys is zero.)
  * ----------------
  */
 void
-index_rescan(IndexScanDesc scan, ScanKey key)
+index_rescan(IndexScanDesc scan,
+			 ScanKey keys, int nkeys,
+			 ScanKey orderbys, int norderbys)
 {
 	FmgrInfo   *procedure;
 
 	SCAN_CHECKS;
 	GET_SCAN_PROCEDURE(amrescan);
+
+	Assert(nkeys == scan->numberOfKeys);
+	Assert(norderbys == scan->numberOfOrderBys);
 
 	/* Release any held pin on a heap page */
 	if (BufferIsValid(scan->xs_cbuf))
@@ -314,9 +339,12 @@ index_rescan(IndexScanDesc scan, ScanKey key)
 
 	scan->kill_prior_tuple = false;		/* for safety */
 
-	FunctionCall2(procedure,
+	FunctionCall5(procedure,
 				  PointerGetDatum(scan),
-				  PointerGetDatum(key));
+				  PointerGetDatum(keys),
+				  Int32GetDatum(nkeys),
+				  PointerGetDatum(orderbys),
+				  Int32GetDatum(norderbys));
 }
 
 /* ----------------
@@ -518,6 +546,7 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 		{
 			ItemId		lp;
 			ItemPointer ctid;
+			bool		valid;
 
 			/* check for bogus TID */
 			if (offnum < FirstOffsetNumber ||
@@ -571,8 +600,14 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 				break;
 
 			/* If it's visible per the snapshot, we must return it */
-			if (HeapTupleSatisfiesVisibility(scan->heapRelation, heapTuple,
-											 scan->xs_snapshot, scan->xs_cbuf))
+			valid = HeapTupleSatisfiesVisibility(scan->heapRelation,
+												 heapTuple, scan->xs_snapshot,
+												 scan->xs_cbuf);
+
+			CheckForSerializableConflictOut(valid, scan->heapRelation,
+											heapTuple, scan->xs_cbuf);
+
+			if (valid)
 			{
 				/*
 				 * If the snapshot is MVCC, we know that it could accept at
@@ -591,6 +626,8 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 				}
 				else
 					scan->xs_next_hot = InvalidOffsetNumber;
+
+				PredicateLockTuple(scan->heapRelation, heapTuple);
 
 				LockBuffer(scan->xs_cbuf, BUFFER_LOCK_UNLOCK);
 

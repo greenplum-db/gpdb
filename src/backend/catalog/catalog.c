@@ -5,12 +5,12 @@
  *		bits of hard-wired knowledge
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.90 2010/04/20 23:48:47 tgl Exp $
+ *	  src/backend/catalog/catalog.c
  *
  *-------------------------------------------------------------------------
  */
@@ -77,7 +77,8 @@
 const char *forkNames[] = {
 	"main",						/* MAIN_FORKNUM */
 	"fsm",						/* FSM_FORKNUM */
-	"vm"						/* VISIBILITYMAP_FORKNUM */
+	"vm",						/* VISIBILITYMAP_FORKNUM */
+	"init"						/* INIT_FORKNUM */
 };
 
 /*
@@ -107,20 +108,59 @@ forkname_to_number(char *forkName)
 const char *
 tablespace_version_directory(void)
 {
-	static char path[MAXPGPATH];
+	static char path[MAXPGPATH] = "";
 
-	snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
+	if (!path[0])
+		snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
 
 	return path;
 }
 
 /*
- * relpath			- construct path to a relation's file
+ * forkname_chars
+ *		We use this to figure out whether a filename could be a relation
+ *		fork (as opposed to an oddly named stray file that somehow ended
+ *		up in the database directory).	If the passed string begins with
+ *		a fork name (other than the main fork name), we return its length,
+ *		and set *fork (if not NULL) to the fork number.  If not, we return 0.
+ *
+ * Note that the present coding assumes that there are no fork names which
+ * are prefixes of other fork names.
+ */
+int
+forkname_chars(const char *str, ForkNumber *fork)
+{
+	ForkNumber	forkNum;
+
+	for (forkNum = 1; forkNum <= MAX_FORKNUM; forkNum++)
+	{
+		int			len = strlen(forkNames[forkNum]);
+
+		if (strncmp(forkNames[forkNum], str, len) == 0)
+		{
+			if (fork)
+				*fork = forkNum;
+			return len;
+		}
+	}
+	return 0;
+}
+
+/*
+ * relpathbackend - construct path to a relation's file
  *
  * Result is a palloc'd string.
+ *
+ * In PostgreSQL, the 'backendid' is embedded in the filename of temporary
+ * relations. In GPDB, however, temporary relations are just prefixed with
+ * "t_*", without the backend id. For compatibility with upstream code, this
+ * function still takes 'backendid' as argument, but we only care whether
+ * it's InvalidBackendId or not. If you need to construct the path of a
+ * temporary relation, but don't know the real backend ID, pass
+ * TempRelBackendId.
  */
 char *
-relpath(RelFileNode rnode, ForkNumber forknum)
+relpathbackend(RelFileNode rnode, BackendId backend, ForkNumber forknum)
 {
 	int			pathlen;
 	char	   *path;
@@ -129,6 +169,7 @@ relpath(RelFileNode rnode, ForkNumber forknum)
 	{
 		/* Shared system relations live in {datadir}/global */
 		Assert(rnode.dbNode == 0);
+		Assert(backend == InvalidBackendId);
 		pathlen = 7 + OIDCHARS + 1 + FORKNAMECHARS + 1;
 		path = (char *) palloc(pathlen);
 		if (forknum != MAIN_FORKNUM)
@@ -140,26 +181,69 @@ relpath(RelFileNode rnode, ForkNumber forknum)
 	else if (rnode.spcNode == DEFAULTTABLESPACE_OID)
 	{
 		/* The default tablespace is {datadir}/base */
-		pathlen = 5 + OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1;
-		path = (char *) palloc(pathlen);
-		if (forknum != MAIN_FORKNUM)
-			snprintf(path, pathlen, "base/%u/%u_%s",
-					 rnode.dbNode, rnode.relNode, forkNames[forknum]);
+		if (backend == InvalidBackendId)
+		{
+			pathlen = 5 + OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1;
+			path = (char *) palloc(pathlen);
+			if (forknum != MAIN_FORKNUM)
+				snprintf(path, pathlen, "base/%u/%u_%s",
+						 rnode.dbNode, rnode.relNode,
+						 forkNames[forknum]);
+			else
+				snprintf(path, pathlen, "base/%u/%u",
+						 rnode.dbNode, rnode.relNode);
+		}
 		else
-			snprintf(path, pathlen, "base/%u/%u",
-					 rnode.dbNode, rnode.relNode);
+		{
+			/* OIDCHARS will suffice for an integer, too */
+			pathlen = 5 + OIDCHARS + 2 + OIDCHARS + 1 + OIDCHARS + 1
+				+ FORKNAMECHARS + 1;
+			path = (char *) palloc(pathlen);
+			if (forknum != MAIN_FORKNUM)
+				snprintf(path, pathlen, "base/%u/t_%u_%s",
+						 rnode.dbNode, rnode.relNode,
+						 forkNames[forknum]);
+			else
+				snprintf(path, pathlen, "base/%u/t_%u",
+						 rnode.dbNode, rnode.relNode);
+		}
 	}
 	else
 	{
 		/* All other tablespaces are accessed via symlinks */
-		if (forknum != MAIN_FORKNUM)
-			path = psprintf("pg_tblspc/%u/%s/%u/%u_%s",
-					 rnode.spcNode, tablespace_version_directory(),
-					 rnode.dbNode, rnode.relNode, forkNames[forknum]);
+		if (backend == InvalidBackendId)
+		{
+			pathlen = 9 + 1 + OIDCHARS + 1
+				+ strlen(tablespace_version_directory()) + 1 + OIDCHARS + 1
+				+ OIDCHARS + 1 + FORKNAMECHARS + 1;
+			path = (char *) palloc(pathlen);
+			if (forknum != MAIN_FORKNUM)
+				snprintf(path, pathlen, "pg_tblspc/%u/%s/%u/%u_%s",
+						 rnode.spcNode, tablespace_version_directory(),
+						 rnode.dbNode, rnode.relNode,
+						 forkNames[forknum]);
+			else
+				snprintf(path, pathlen, "pg_tblspc/%u/%s/%u/%u",
+						 rnode.spcNode, tablespace_version_directory(),
+						 rnode.dbNode, rnode.relNode);
+		}
 		else
-			path = psprintf("pg_tblspc/%u/%s/%u/%u",
-					 rnode.spcNode, tablespace_version_directory(),
-					 rnode.dbNode, rnode.relNode);
+		{
+			/* OIDCHARS will suffice for an integer, too */
+			pathlen = 9 + 1 + OIDCHARS + 1
+				+ strlen(tablespace_version_directory()) + 1 + OIDCHARS + 2
+				+ OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1;
+			path = (char *) palloc(pathlen);
+			if (forknum != MAIN_FORKNUM)
+				snprintf(path, pathlen, "pg_tblspc/%u/%s/%u/t_%u_%s",
+						 rnode.spcNode, tablespace_version_directory(),
+						 rnode.dbNode, rnode.relNode,
+						 forkNames[forknum]);
+			else
+				snprintf(path, pathlen, "pg_tblspc/%u/%s/%u/t_%u",
+						 rnode.spcNode, tablespace_version_directory(),
+						 rnode.dbNode, rnode.relNode);
+		}
 	}
 	return path;
 }
@@ -169,13 +253,13 @@ relpath(RelFileNode rnode, ForkNumber forknum)
  * and the filename separately.
  */
 void
-reldir_and_filename(RelFileNode rnode, ForkNumber forknum,
+reldir_and_filename(RelFileNode node, BackendId backend, ForkNumber forknum,
 					char **dir, char **filename)
 {
 	char	   *path;
 	int			i;
 
-	path = relpath(rnode, forknum);
+	path = relpathbackend(node, backend, forknum);
 
 	/*
 	 * The base path is like "<path>/<rnode>". Split it into
@@ -193,6 +277,30 @@ reldir_and_filename(RelFileNode rnode, ForkNumber forknum,
 	*filename = pstrdup(&path[i + 1]);
 
 	pfree(path);
+}
+
+/*
+ * Like relpathbackend(), but more convenient when dealing with
+ * AO relations. The filename pattern is the same as for heap
+ * tables, but this variant takes also 'segno' as argument.
+ */
+char *
+aorelpathbackend(RelFileNode node, BackendId backend, int32 segno)
+{
+	char	   *fullpath;
+	char	   *path;
+
+	path = relpathbackend(node, backend, MAIN_FORKNUM);
+	if (segno == 0)
+		fullpath = path;
+	else
+	{
+		/* be sure we have enough space for the '.segno' */
+		fullpath = (char *) palloc(strlen(path) + 12);
+		sprintf(fullpath, "%s.%u", path, segno);
+		pfree(path);
+	}
+	return fullpath;
 }
 
 /*
@@ -699,7 +807,8 @@ GetNewSequenceRelationOid(Relation relation)
 
 		/* see notes above about using SnapshotDirty */
 		scan = index_beginscan(relation, indexrel,
-							   &SnapshotDirty, 1, &key);
+							   &SnapshotDirty, 1, 0);
+		index_rescan(scan, &key, 1, NULL, 0);
 
 		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
 
@@ -708,7 +817,7 @@ GetNewSequenceRelationOid(Relation relation)
 		if (!collides)
 		{
 			/* Check for existing file of same name */
-			rpath = relpath(rnode, MAIN_FORKNUM);
+			rpath = relpathbackend(rnode, relation->rd_backend, MAIN_FORKNUM);
 			fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
 
 			if (fd >= 0)
@@ -754,6 +863,37 @@ GetNewSequenceRelationOid(Relation relation)
 	return newOid;
 }
 
+static bool
+GpCheckRelFileCollision(RelFileNodeBackend rnode)
+{
+	char	   *rpath;
+	bool		collides;
+
+	/* Check for existing file of same name */
+	rpath = relpath(rnode, MAIN_FORKNUM);
+	if (access(rpath, F_OK) == 0)
+		collides = true;
+	else
+	{
+		/*
+		 * Here we have a little bit of a dilemma: if errno is something
+		 * other than ENOENT, should we declare a collision and loop? In
+		 * particular one might think this advisable for, say, EPERM.
+		 * However there really shouldn't be any unreadable files in a
+		 * tablespace directory, and if the EPERM is actually complaining
+		 * that we can't read the directory itself, we'd be in an infinite
+		 * loop.  In practice it seems best to go ahead regardless of the
+		 * errno.  If there is a colliding file we will get an smgr
+		 * failure when we attempt to create the new relation file.
+		 */
+		collides = false;
+	}
+
+	pfree(rpath);
+
+	return collides;
+}
+
 /*
  * GetNewRelFileNode
  *		Generate a new relfilenode number that is unique within the given
@@ -773,57 +913,69 @@ GetNewSequenceRelationOid(Relation relation)
  * created by bootstrap have preassigned OIDs, so there's no need.
  */
 Oid
-GetNewRelFileNode(Oid reltablespace, Relation pg_class)
+GetNewRelFileNode(Oid reltablespace, Relation pg_class, char relpersistence)
 {
-	RelFileNode rnode;
-	char	   *rpath;
-	int			fd;
+	RelFileNodeBackend rnode;
 	bool		collides = true;
+	BackendId	backend;
+
+	switch (relpersistence)
+	{
+		case RELPERSISTENCE_TEMP:
+			backend = TempRelBackendId;
+			break;
+		case RELPERSISTENCE_UNLOGGED:
+		case RELPERSISTENCE_PERMANENT:
+			backend = InvalidBackendId;
+			break;
+		default:
+			elog(ERROR, "invalid relpersistence: %c", relpersistence);
+			return InvalidOid;	/* placate compiler */
+	}
 
 	/* This logic should match RelationInitPhysicalAddr */
-	rnode.spcNode = reltablespace ? reltablespace : MyDatabaseTableSpace;
-	rnode.dbNode = (rnode.spcNode == GLOBALTABLESPACE_OID) ? InvalidOid : MyDatabaseId;
+	rnode.node.spcNode = reltablespace ? reltablespace : MyDatabaseTableSpace;
+	rnode.node.dbNode = (rnode.node.spcNode == GLOBALTABLESPACE_OID) ? InvalidOid : MyDatabaseId;
+
+	/*
+	 * The relpath will vary based on the backend ID, so we must initialize
+	 * that properly here to make sure that any collisions based on filename
+	 * are properly detected.
+	 */
+	rnode.backend = backend;
 
 	do
 	{
 		CHECK_FOR_INTERRUPTS();
 
 		/* Generate the Relfilenode */
-		rnode.relNode = GetNewSegRelfilenode();
+		rnode.node.relNode = GetNewSegRelfilenode();
 
-		if (!IsOidAcceptable(rnode.relNode))
+		if (!IsOidAcceptable(rnode.node.relNode))
 			continue;
 
-		/* Check for existing file of same name */
-		rpath = relpath(rnode, MAIN_FORKNUM);
-		fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
+		collides = GpCheckRelFileCollision(rnode);
 
-		if (fd >= 0)
-		{
-			/* definite collision */
-			gp_retry_close(fd);
-			collides = true;
-		}
-		else
+		if (!collides && rnode.node.spcNode != GLOBALTABLESPACE_OID)
 		{
 			/*
-			 * Here we have a little bit of a dilemma: if errno is something
-			 * other than ENOENT, should we declare a collision and loop? In
-			 * particular one might think this advisable for, say, EPERM.
-			 * However there really shouldn't be any unreadable files in a
-			 * tablespace directory, and if the EPERM is actually complaining
-			 * that we can't read the directory itself, we'd be in an infinite
-			 * loop.  In practice it seems best to go ahead regardless of the
-			 * errno.  If there is a colliding file we will get an smgr
-			 * failure when we attempt to create the new relation file.
+			 * GPDB_91_MERGE_FIXME: check again for a collision with a temp
+			 * table (if this is a normal relation) or a normal table (if this
+			 * is a temp relation).
+			 *
+			 * The shared buffer manager currently assumes that relfilenodes of
+			 * relations stored in shared buffers can't conflict, which is
+			 * trivially true in upstream because temp tables don't use shared
+			 * buffers at all. We have to make this additional check to make
+			 * sure of that.
 			 */
-			collides = false;
+			rnode.backend = (backend == InvalidBackendId) ? TempRelBackendId
+														  : InvalidBackendId;
+			collides = GpCheckRelFileCollision(rnode);
 		}
-
-		pfree(rpath);
 	} while (collides);
 
-	elog(DEBUG1, "Calling GetNewRelFileNode returns new relfilenode = %d", rnode.relNode);
+	elog(DEBUG1, "Calling GetNewRelFileNode returns new relfilenode = %d", rnode.node.relNode);
 
-	return rnode.relNode;
+	return rnode.node.relNode;
 }

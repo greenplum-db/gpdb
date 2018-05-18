@@ -3,12 +3,12 @@
  * reloptions.c
  *	  Core support for relation options (pg_class.reloptions)
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.35 2010/06/07 02:59:02 itagaki Exp $
+ *	  src/backend/access/common/reloptions.c
  *
  *-------------------------------------------------------------------------
  */
@@ -791,6 +791,9 @@ extractRelOptions(HeapTuple tuple, TupleDesc tupdesc, Oid amoptions)
 		case RELKIND_INDEX:
 			options = index_reloptions(amoptions, datum, false);
 			break;
+		case RELKIND_FOREIGN_TABLE:
+			options = NULL;
+			break;
 		default:
 			Assert(false);		/* can't get here */
 			options = NULL;		/* keep compiler quiet */
@@ -1199,8 +1202,7 @@ heap_reloptions(char relkind, Datum reloptions, bool validate)
 		case RELKIND_RELATION:
 			return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP);
 		default:
-			/* sequences, composite types and views are not supported */
-			/* Neither are AO aux tables (AO segments, blockdir, visimap) */
+			/* other relkinds are not supported */
 			return NULL;
 	}
 }
@@ -1229,7 +1231,7 @@ index_reloptions(RegProcedure amoptions, Datum reloptions, bool validate)
 	/* Can't use OidFunctionCallN because we might get a NULL result */
 	fmgr_info(amoptions, &flinfo);
 
-	InitFunctionCallInfoData(fcinfo, &flinfo, 2, NULL, NULL);
+	InitFunctionCallInfoData(fcinfo, &flinfo, 2, InvalidOid, NULL, NULL);
 
 	fcinfo.arg[0] = reloptions;
 	fcinfo.arg[1] = BoolGetDatum(validate);

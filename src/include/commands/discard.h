@@ -4,9 +4,9 @@
  *	  prototypes for discard.c.
  *
  *
- * Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/commands/discard.h,v 1.6 2010/01/02 16:58:03 momjian Exp $
+ * src/include/commands/discard.h
  *
  *-------------------------------------------------------------------------
  */

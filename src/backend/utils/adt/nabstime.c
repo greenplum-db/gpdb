@@ -5,12 +5,12 @@
  *	  Functions for the built-in type "RelativeTime".
  *	  Functions for the built-in type "TimeInterval".
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/nabstime.c,v 1.164 2010/02/26 02:01:09 momjian Exp $
+ *	  src/backend/utils/adt/nabstime.c
  *
  *-------------------------------------------------------------------------
  */
@@ -179,13 +179,13 @@ tm2abstime(struct pg_tm * tm, int tz)
 
 	/* validate, before going out of range on some members */
 	if (tm->tm_year < 1901 || tm->tm_year > 2038 ||
-		tm->tm_mon < 1 || tm->tm_mon > 12 ||
+		tm->tm_mon < 1 || tm->tm_mon > MONTHS_PER_YEAR ||
 		tm->tm_mday < 1 || tm->tm_mday > 31 ||
 		tm->tm_hour < 0 ||
-		tm->tm_hour > 24 ||		/* test for > 24:00:00 */
-		(tm->tm_hour == 24 && (tm->tm_min > 0 || tm->tm_sec > 0)) ||
-		tm->tm_min < 0 || tm->tm_min > 59 ||
-		tm->tm_sec < 0 || tm->tm_sec > 60)
+		tm->tm_hour > HOURS_PER_DAY ||	/* test for > 24:00:00 */
+	  (tm->tm_hour == HOURS_PER_DAY && (tm->tm_min > 0 || tm->tm_sec > 0)) ||
+		tm->tm_min < 0 || tm->tm_min > MINS_PER_HOUR - 1 ||
+		tm->tm_sec < 0 || tm->tm_sec > SECS_PER_MINUTE)
 		return INVALID_ABSTIME;
 
 	day = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - UNIX_EPOCH_JDATE;
@@ -1155,9 +1155,22 @@ tintervalsame(PG_FUNCTION_ARGS)
 /*
  * tinterval comparison routines
  *
- * Note: comparison is based on the lengths of the tintervals, not on
- * endpoint value.	This is pretty bogus, but since it's only a legacy
- * datatype I'm not going to propose changing it.
+ * Note: comparison is based only on the lengths of the tintervals, not on
+ * endpoint values (as long as they're not INVALID).  This is pretty bogus,
+ * but since it's only a legacy datatype, we're not going to change it.
+ *
+ * Some other bogus things that won't be changed for compatibility reasons:
+ * 1. The interval length computations overflow at 2^31 seconds, causing
+ * intervals longer than that to sort oddly compared to those shorter.
+ * 2. infinity and minus infinity (NOEND_ABSTIME and NOSTART_ABSTIME) are
+ * just ordinary integers.	Since this code doesn't handle them specially,
+ * it's possible for [a b] to be considered longer than [c infinity] for
+ * finite abstimes a, b, c.  In combination with the previous point, the
+ * interval [-infinity infinity] is treated as being shorter than many finite
+ * intervals :-(
+ *
+ * If tinterval is ever reimplemented atop timestamp, it'd be good to give
+ * some consideration to avoiding these problems.
  */
 static int
 tinterval_cmp_internal(TimeInterval a, TimeInterval b)

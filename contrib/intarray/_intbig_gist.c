@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/intarray/_intbig_gist.c,v 1.20 2009/06/11 14:48:51 momjian Exp $
+ * contrib/intarray/_intbig_gist.c
  */
 #include "postgres.h"
 
@@ -504,7 +504,7 @@ Datum
 g_intbig_consistent(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	ArrayType  *query = (ArrayType *) PG_GETARG_ARRAYTYPE_P(1);
+	ArrayType  *query = PG_GETARG_ARRAYTYPE_P(1);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
 
 	/* Oid		subtype = PG_GETARG_OID(3); */

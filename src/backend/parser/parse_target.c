@@ -3,12 +3,12 @@
  * parse_target.c
  *	  handle target lists
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.177 2010/02/26 02:00:52 momjian Exp $
+ *	  src/backend/parser/parse_target.c
  *
  *-------------------------------------------------------------------------
  */
@@ -41,9 +41,21 @@ static Node *transformAssignmentIndirection(ParseState *pstate,
 							   bool targetIsArray,
 							   Oid targetTypeId,
 							   int32 targetTypMod,
+							   Oid targetCollation,
 							   ListCell *indirection,
 							   Node *rhs,
 							   int location);
+static Node *transformAssignmentSubscripts(ParseState *pstate,
+							  Node *basenode,
+							  const char *targetName,
+							  Oid targetTypeId,
+							  int32 targetTypMod,
+							  Oid targetCollation,
+							  List *subscripts,
+							  bool isSlice,
+							  ListCell *next_indirection,
+							  Node *rhs,
+							  int location);
 static List *ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 					bool make_target_entry);
 static List *ExpandAllTables(ParseState *pstate, int location);
@@ -302,7 +314,6 @@ markTargetListOrigin(ParseState *pstate, TargetEntry *tle,
 				markTargetListOrigin(pstate, tle, aliasvar, netlevelsup);
 			}
 			break;
-		case RTE_SPECIAL:
 		case RTE_TABLEFUNCTION:
 		case RTE_FUNCTION:
 		case RTE_VALUES:
@@ -324,10 +335,7 @@ markTargetListOrigin(ParseState *pstate, TargetEntry *tle,
 				CommonTableExpr *cte = GetCTEForRTE(pstate, rte, netlevelsup);
 				TargetEntry *ste;
 
-				/* should be analyzed by now */
-				Assert(IsA(cte->ctequery, Query));
-				ste = get_tle_by_resno(((Query *) cte->ctequery)->targetList,
-									   attnum);
+				ste = get_tle_by_resno(GetCTETargetList(cte), attnum);
 				if (ste == NULL || ste->resjunk)
 					elog(ERROR, "subquery %s does not have attribute %d",
 						 rte->eref->aliasname, attnum);
@@ -376,6 +384,7 @@ transformAssignedExpr(ParseState *pstate,
 	Oid			type_id;		/* type of value provided */
 	Oid			attrtype;		/* type of target column */
 	int32		attrtypmod;
+	Oid			attrcollation;	/* collation of target column */
 	ParseExprKind sv_expr_kind;
 
 	/*
@@ -396,14 +405,16 @@ transformAssignedExpr(ParseState *pstate,
 				 parser_errposition(pstate, location)));
 	attrtype = attnumTypeId(rd, attrno);
 	attrtypmod = rd->rd_att->attrs[attrno - 1]->atttypmod;
+	attrcollation = rd->rd_att->attrs[attrno - 1]->attcollation;
 
 	/*
 	 * If the expression is a DEFAULT placeholder, insert the attribute's
-	 * type/typmod into it so that exprType will report the right things. (We
-	 * expect that the eventually substituted default expression will in fact
-	 * have this type and typmod.)	Also, reject trying to update a subfield
-	 * or array element with DEFAULT, since there can't be any default for
-	 * portions of a column.
+	 * type/typmod/collation into it so that exprType etc will report the
+	 * right things.  (We expect that the eventually substituted default
+	 * expression will in fact have this type and typmod.  The collation
+	 * likely doesn't matter, but let's set it correctly anyway.)  Also,
+	 * reject trying to update a subfield or array element with DEFAULT, since
+	 * there can't be any default for portions of a column.
 	 */
 	if (expr && IsA(expr, SetToDefault))
 	{
@@ -411,6 +422,7 @@ transformAssignedExpr(ParseState *pstate,
 
 		def->typeId = attrtype;
 		def->typeMod = attrtypmod;
+		def->collation = attrcollation;
 		if (indirection)
 		{
 			if (IsA(linitial(indirection), A_Indices))
@@ -446,7 +458,8 @@ transformAssignedExpr(ParseState *pstate,
 			 * is not really a source value to work with. Insert a NULL
 			 * constant as the source value.
 			 */
-			colVar = (Node *) makeNullConst(attrtype, attrtypmod);
+			colVar = (Node *) makeNullConst(attrtype, attrtypmod,
+											attrcollation);
 		}
 		else
 		{
@@ -466,6 +479,7 @@ transformAssignedExpr(ParseState *pstate,
 										   false,
 										   attrtype,
 										   attrtypmod,
+										   attrcollation,
 										   list_head(indirection),
 										   (Node *) expr,
 										   location);
@@ -562,8 +576,9 @@ updateTargetListEntry(ParseState *pstate,
  * targetIsArray is true if we're subscripting it.  These are just for
  * error reporting.
  *
- * targetTypeId and targetTypMod indicate the datatype of the object to
- * be assigned to (initially the target column, later some subobject).
+ * targetTypeId, targetTypMod, targetCollation indicate the datatype and
+ * collation of the object to be assigned to (initially the target column,
+ * later some subobject).
  *
  * indirection is the sublist remaining to process.  When it's NULL, we're
  * done recursing and can just coerce and return the RHS.
@@ -583,6 +598,7 @@ transformAssignmentIndirection(ParseState *pstate,
 							   bool targetIsArray,
 							   Oid targetTypeId,
 							   int32 targetTypMod,
+							   Oid targetCollation,
 							   ListCell *indirection,
 							   Node *rhs,
 							   int location)
@@ -599,6 +615,7 @@ transformAssignmentIndirection(ParseState *pstate,
 
 		ctest->typeId = targetTypeId;
 		ctest->typeMod = targetTypMod;
+		ctest->collation = targetCollation;
 		basenode = (Node *) ctest;
 	}
 
@@ -631,33 +648,25 @@ transformAssignmentIndirection(ParseState *pstate,
 			AttrNumber	attnum;
 			Oid			fieldTypeId;
 			int32		fieldTypMod;
+			Oid			fieldCollation;
 
 			Assert(IsA(n, String));
 
 			/* process subscripts before this field selection */
 			if (subscripts)
 			{
-				Oid			elementTypeId = transformArrayType(targetTypeId);
-				Oid			typeNeeded = isSlice ? targetTypeId : elementTypeId;
-
-				/* recurse to create appropriate RHS for array assign */
-				rhs = transformAssignmentIndirection(pstate,
-													 NULL,
+				/* recurse, and then return because we're done */
+				return transformAssignmentSubscripts(pstate,
+													 basenode,
 													 targetName,
-													 true,
-													 typeNeeded,
+													 targetTypeId,
 													 targetTypMod,
+													 targetCollation,
+													 subscripts,
+													 isSlice,
 													 i,
 													 rhs,
 													 location);
-				/* process subscripts */
-				return (Node *) transformArraySubscripts(pstate,
-														 basenode,
-														 targetTypeId,
-														 elementTypeId,
-														 targetTypMod,
-														 subscripts,
-														 rhs);
 			}
 
 			/* No subscripts, so can process field selection here */
@@ -686,8 +695,8 @@ transformAssignmentIndirection(ParseState *pstate,
 								strVal(n)),
 						 parser_errposition(pstate, location)));
 
-			get_atttypetypmod(typrelid, attnum,
-							  &fieldTypeId, &fieldTypMod);
+			get_atttypetypmodcoll(typrelid, attnum,
+								&fieldTypeId, &fieldTypMod, &fieldCollation);
 
 			/* recurse to create appropriate RHS for field assign */
 			rhs = transformAssignmentIndirection(pstate,
@@ -696,6 +705,7 @@ transformAssignmentIndirection(ParseState *pstate,
 												 false,
 												 fieldTypeId,
 												 fieldTypMod,
+												 fieldCollation,
 												 lnext(i),
 												 rhs,
 												 location);
@@ -714,27 +724,18 @@ transformAssignmentIndirection(ParseState *pstate,
 	/* process trailing subscripts, if any */
 	if (subscripts)
 	{
-		Oid			elementTypeId = transformArrayType(targetTypeId);
-		Oid			typeNeeded = isSlice ? targetTypeId : elementTypeId;
-
-		/* recurse to create appropriate RHS for array assign */
-		rhs = transformAssignmentIndirection(pstate,
-											 NULL,
+		/* recurse, and then return because we're done */
+		return transformAssignmentSubscripts(pstate,
+											 basenode,
 											 targetName,
-											 true,
-											 typeNeeded,
+											 targetTypeId,
 											 targetTypMod,
+											 targetCollation,
+											 subscripts,
+											 isSlice,
 											 NULL,
 											 rhs,
 											 location);
-		/* process subscripts */
-		return (Node *) transformArraySubscripts(pstate,
-												 basenode,
-												 targetTypeId,
-												 elementTypeId,
-												 targetTypMod,
-												 subscripts,
-												 rhs);
 	}
 
 	/* base case: just coerce RHS to match target type ID */
@@ -766,6 +767,92 @@ transformAssignmentIndirection(ParseState *pstate,
 							format_type_be(targetTypeId),
 							format_type_be(exprType(rhs))),
 				 errhint("You will need to rewrite or cast the expression."),
+					 parser_errposition(pstate, location)));
+	}
+
+	return result;
+}
+
+/*
+ * helper for transformAssignmentIndirection: process array assignment
+ */
+static Node *
+transformAssignmentSubscripts(ParseState *pstate,
+							  Node *basenode,
+							  const char *targetName,
+							  Oid targetTypeId,
+							  int32 targetTypMod,
+							  Oid targetCollation,
+							  List *subscripts,
+							  bool isSlice,
+							  ListCell *next_indirection,
+							  Node *rhs,
+							  int location)
+{
+	Node	   *result;
+	Oid			arrayType;
+	int32		arrayTypMod;
+	Oid			elementTypeId;
+	Oid			typeNeeded;
+	Oid			collationNeeded;
+
+	Assert(subscripts != NIL);
+
+	/* Identify the actual array type and element type involved */
+	arrayType = targetTypeId;
+	arrayTypMod = targetTypMod;
+	elementTypeId = transformArrayType(&arrayType, &arrayTypMod);
+
+	/* Identify type that RHS must provide */
+	typeNeeded = isSlice ? arrayType : elementTypeId;
+
+	/*
+	 * Array normally has same collation as elements, but there's an
+	 * exception: we might be subscripting a domain over an array type. In
+	 * that case use collation of the base type.
+	 */
+	if (arrayType == targetTypeId)
+		collationNeeded = targetCollation;
+	else
+		collationNeeded = get_typcollation(arrayType);
+
+	/* recurse to create appropriate RHS for array assign */
+	rhs = transformAssignmentIndirection(pstate,
+										 NULL,
+										 targetName,
+										 true,
+										 typeNeeded,
+										 arrayTypMod,
+										 collationNeeded,
+										 next_indirection,
+										 rhs,
+										 location);
+
+	/* process subscripts */
+	result = (Node *) transformArraySubscripts(pstate,
+											   basenode,
+											   arrayType,
+											   elementTypeId,
+											   arrayTypMod,
+											   subscripts,
+											   rhs);
+
+	/* If target was a domain over array, need to coerce up to the domain */
+	if (arrayType != targetTypeId)
+	{
+		result = coerce_to_target_type(pstate,
+									   result, exprType(result),
+									   targetTypeId, targetTypMod,
+									   COERCION_ASSIGNMENT,
+									   COERCE_IMPLICIT_CAST,
+									   -1);
+		/* probably shouldn't fail, but check */
+		if (result == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_CANNOT_COERCE),
+					 errmsg("cannot cast type %s to %s",
+							format_type_be(exprType(result)),
+							format_type_be(targetTypeId)),
 					 parser_errposition(pstate, location)));
 	}
 
@@ -1232,6 +1319,8 @@ ExpandRowReference(ParseState *pstate, Node *expr,
 		fselect->fieldnum = i + 1;
 		fselect->resulttype = att->atttypid;
 		fselect->resulttypmod = att->atttypmod;
+		/* save attribute's collation for parse_collate.c */
+		fselect->resultcollid = att->attcollation;
 
 		if (make_target_entry)
 		{
@@ -1303,6 +1392,8 @@ expandRecordVariable(ParseState *pstate, Var *var, int levelsup)
 							   exprType(varnode),
 							   exprTypmod(varnode),
 							   0);
+			TupleDescInitEntryCollation(tupleDesc, i,
+										exprCollation(varnode));
 			i++;
 		}
 		Assert(lname == NULL && lvar == NULL);	/* lists same length? */
@@ -1315,7 +1406,6 @@ expandRecordVariable(ParseState *pstate, Var *var, int levelsup)
 	switch (rte->rtekind)
 	{
 		case RTE_RELATION:
-		case RTE_SPECIAL:
 		case RTE_VALUES:
 
 			/*
@@ -1376,10 +1466,7 @@ expandRecordVariable(ParseState *pstate, Var *var, int levelsup)
 				CommonTableExpr *cte = GetCTEForRTE(pstate, rte, netlevelsup);
 				TargetEntry *ste;
 
-				/* should be analyzed by now */
-				Assert(IsA(cte->ctequery, Query));
-				ste = get_tle_by_resno(((Query *) cte->ctequery)->targetList,
-									   attnum);
+				ste = get_tle_by_resno(GetCTETargetList(cte), attnum);
 				if (ste == NULL || ste->resjunk)
 					elog(ERROR, "subquery %s does not have attribute %d",
 						 rte->eref->aliasname, attnum);
@@ -1552,6 +1639,8 @@ FigureColnameInternal(Node *node, char **name)
 				}
 			}
 			break;
+		case T_CollateClause:
+			return FigureColnameInternal(((CollateClause *) node)->arg, name);
 		case T_CaseExpr:
 			strength = FigureColnameInternal((Node *) ((CaseExpr *) node)->defresult,
 											 name);

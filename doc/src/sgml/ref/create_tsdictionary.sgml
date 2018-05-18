@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_tsdictionary.sgml,v 1.4 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/create_tsdictionary.sgml
 PostgreSQL documentation
 -->
 
@@ -53,7 +53,7 @@ CREATE TEXT SEARCH DICTIONARY <replaceable class="parameter">name</replaceable> 
    Refer to <xref linkend="textsearch"> for further information.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -103,7 +103,7 @@ CREATE TEXT SEARCH DICTIONARY <replaceable class="parameter">name</replaceable> 
    The options can appear in any order.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Examples</title>
 
@@ -118,9 +118,9 @@ CREATE TEXT SEARCH DICTIONARY my_russian (
     language = russian,
     stopwords = myrussian
 );
-</programlisting>  
+</programlisting>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

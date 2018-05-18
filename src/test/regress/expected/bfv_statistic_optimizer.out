@@ -443,8 +443,20 @@ INSERT INTO test_broken_stats VALUES(1, 'abc'), (2, 'cde'), (3, 'efg'), (3, 'efg
 ANALYZE test_broken_stats;
 SET allow_system_table_mods='DML';
 -- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
+-- start_matchsubs
+-- m/ERROR:  invalid .* of type .*, for attribute of type .* \(selfuncs\.c\:\d+\)/
+-- s/\(selfuncs\.c:\d+\)//
+-- end_matchsubs
 -- Broken MCVs
 UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
+SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
+NOTICE:  Type mismatch between attribute b of table test_broken_stats having type 25 and statistic having type 23, please ANALYZE the table again
+NOTICE:  One or more columns in the following table(s) do not have statistics: test_broken_stats
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+ a | b | a | b 
+---+---+---+---
+(0 rows)
+
 -- Broken histogram
 UPDATE pg_statistic SET stakind2=2 WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
 UPDATE pg_statistic SET stavalues2='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2 and stakind2=2;

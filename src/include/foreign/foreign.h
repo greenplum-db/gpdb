@@ -4,9 +4,9 @@
  *	  support for foreign-data wrappers, servers and user mappings.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/foreign/foreign.h,v 1.6 2010/01/02 16:58:03 momjian Exp $
+ * src/include/foreign/foreign.h
  *
  *-------------------------------------------------------------------------
  */
@@ -37,7 +37,8 @@ typedef struct ForeignDataWrapper
 	Oid			fdwid;			/* FDW Oid */
 	Oid			owner;			/* FDW owner user Oid */
 	char	   *fdwname;		/* Name of the FDW */
-	Oid			fdwvalidator;
+	Oid			fdwhandler;		/* Oid of handler function, or 0 */
+	Oid			fdwvalidator;	/* Oid of validator function, or 0 */
 	List	   *options;		/* fdwoptions as DefElem list */
 } ForeignDataWrapper;
 
@@ -59,14 +60,23 @@ typedef struct UserMapping
 	List	   *options;		/* useoptions as DefElem list */
 } UserMapping;
 
+typedef struct ForeignTable
+{
+	Oid			relid;			/* relation Oid */
+	Oid			serverid;		/* server Oid */
+	List	   *options;		/* ftoptions as DefElem list */
+} ForeignTable;
+
 
 extern ForeignServer *GetForeignServer(Oid serverid);
 extern ForeignServer *GetForeignServerByName(const char *name, bool missing_ok);
-extern Oid	GetForeignServerOidByName(const char *name, bool missing_ok);
 extern UserMapping *GetUserMapping(Oid userid, Oid serverid);
 extern ForeignDataWrapper *GetForeignDataWrapper(Oid fdwid);
 extern ForeignDataWrapper *GetForeignDataWrapperByName(const char *name,
 							bool missing_ok);
-extern Oid	GetForeignDataWrapperOidByName(const char *name, bool missing_ok);
+extern ForeignTable *GetForeignTable(Oid relid);
+
+extern Oid	get_foreign_data_wrapper_oid(const char *fdwname, bool missing_ok);
+extern Oid	get_foreign_server_oid(const char *servername, bool missing_ok);
 
 #endif   /* FOREIGN_H */

@@ -1158,6 +1158,9 @@ set optimizer_enable_indexjoin=on;
 
 -- force_explain
 set optimizer_segments = 3;
+-- start_ignore
+-- GPDB_91_MERGE_FIXME GPORCA will fall back since we no longer generate IndexedNLJ and this test disable all other alternatives
+-- end_ignore
 EXPLAIN
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_opt tt, my_tq_agg_opt_part tq

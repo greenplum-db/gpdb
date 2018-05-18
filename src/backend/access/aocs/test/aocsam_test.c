@@ -70,11 +70,11 @@ test__aocs_addcol_init(void **state)
 
 	/* 2 newly added columns */
 	opts[3] = (StdRdOptions *) malloc(sizeof(StdRdOptions));
-	opts[3]->compresstype = "rle_type";
+	strcpy(opts[3]->compresstype, "rle_type");
 	opts[3]->compresslevel = 2;
 	opts[3]->blocksize = 8192;
 	opts[4] = (StdRdOptions *) malloc(sizeof(StdRdOptions));
-	opts[4]->compresstype = "none";
+	strcpy(opts[4]->compresstype, "none");
 	opts[4]->compresslevel = 0;
 	opts[4]->blocksize = 8192 * 2;
 
@@ -94,7 +94,6 @@ test__aocs_addcol_init(void **state)
 	expect_any_count(create_datumstreamwrite, attr, 2);
 	expect_any_count(create_datumstreamwrite, relname, 2);
 	expect_any_count(create_datumstreamwrite, title, 2);
-	expect_any_count(create_datumstreamwrite, isTempRel, 2);
 	will_return_count(create_datumstreamwrite, NULL, 2);
 
 	pgappendonly.checksum = true;

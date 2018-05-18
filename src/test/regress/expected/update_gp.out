@@ -95,7 +95,7 @@ EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                          QUERY PLAN                                                          
 -----------------------------------------------------------------------------------------------------------------------------
- Update  (cost=1931.96..5142.85 rows=2325 width=142)
+ Update on keo1  (cost=1931.96..5142.85 rows=2325 width=142)
    InitPlan 3 (returns $2)  (slice9)
      ->  Aggregate  (cost=1278.76..1278.77 rows=1 width=32)
            InitPlan 2 (returns $1)  (slice8)
@@ -148,7 +148,7 @@ INSERT INTO keo5 VALUES (1,1);
 EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
- Delete  (cost=1198.81..3343.69 rows=28700 width=10)
+ Delete on keo5  (cost=1198.81..3343.69 rows=28700 width=10)
    InitPlan 1 (returns $0)  (slice2)
      ->  Limit  (cost=0.00..0.06 rows=1 width=0)
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=0)
@@ -179,3 +179,46 @@ DROP TABLE keo2;
 DROP TABLE keo3;
 DROP TABLE keo4;
 DROP TABLE keo5;
+--
+-- text types. We should support the following updates.
+--
+CREATE TEMP TABLE ttab1 (a varchar(15), b integer) DISTRIBUTED BY (a);
+CREATE TEMP TABLE ttab2 (a varchar(15), b integer) DISTRIBUTED BY (a);
+UPDATE ttab1 SET b = ttab2.b FROM ttab2 WHERE ttab1.a = ttab2.a;
+DROP TABLE ttab1;
+DROP TABLE ttab2;
+CREATE TEMP TABLE ttab1 (a text, b integer) DISTRIBUTED BY (a);
+CREATE TEMP TABLE ttab2 (a text, b integer) DISTRIBUTED BY (a);
+UPDATE ttab1 SET b = ttab2.b FROM ttab2 WHERE ttab1.a = ttab2.a;
+DROP TABLE ttab1;
+DROP TABLE ttab2;
+CREATE TEMP TABLE ttab1 (a varchar, b integer) DISTRIBUTED BY (a);
+CREATE TEMP TABLE ttab2 (a varchar, b integer) DISTRIBUTED BY (a);
+UPDATE ttab1 SET b = ttab2.b FROM ttab2 WHERE ttab1.a = ttab2.a;
+DROP TABLE ttab1;
+DROP TABLE ttab2;
+CREATE TEMP TABLE ttab1 (a char(15), b integer) DISTRIBUTED BY (a);
+CREATE TEMP TABLE ttab2 (a char(15), b integer) DISTRIBUTED BY (a);
+UPDATE ttab1 SET b = ttab2.b FROM ttab2 WHERE ttab1.a = ttab2.a;
+DROP TABLE IF EXISTS update_distr_key;
+NOTICE:  table "update_distr_key" does not exist, skipping
+CREATE TEMP TABLE update_distr_key (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO update_distr_key select i, i* 10 from generate_series(0, 9) i;
+UPDATE update_distr_key SET a = 5 WHERE b = 10;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+SELECT * from update_distr_key;
+ a | b  
+---+----
+ 0 |  0
+ 2 | 20
+ 4 | 40
+ 6 | 60
+ 8 | 80
+ 1 | 10
+ 3 | 30
+ 5 | 50
+ 7 | 70
+ 9 | 90
+(10 rows)
+
+DROP TABLE update_distr_key;

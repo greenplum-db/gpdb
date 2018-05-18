@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/hashjoin.h,v 1.53 2010/02/01 15:43:36 rhaas Exp $
+ * src/include/executor/hashjoin.h
  *
  *-------------------------------------------------------------------------
  */
@@ -17,6 +17,7 @@
 #define HASHJOIN_H
 
 #include "fmgr.h"
+#include "nodes/execnodes.h"
 #include "executor/execWorkfile.h"
 #include "cdb/cdbpublic.h"                 /* CdbExplain_Agg */
 #include "utils/workfile_mgr.h"
@@ -73,7 +74,7 @@ typedef struct HashJoinTupleData
 	struct HashJoinTupleData *next;		/* link to next tuple in same bucket */
 	uint32		hashvalue;		/* tuple's hash code */
 	/* Tuple data, in MinimalTuple format, follows on a MAXALIGN boundary */
-} HashJoinTupleData;
+}	HashJoinTupleData;
 
 #define HJTUPLE_OVERHEAD  MAXALIGN(sizeof(HashJoinTupleData))
 #define HJTUPLE_MINTUPLE(hjtup)  \
@@ -151,6 +152,8 @@ typedef struct HashJoinTableData
 	struct HashJoinTupleData **buckets;
 	/* buckets array is per-batch storage, as are all the tuples */
 
+	bool		keepNulls;		/* true to store unmatchable NULL tuples */
+
 	bool		skewEnabled;	/* are we using skew optimization? */
 	HashSkewBucket **skewBucket;	/* hashtable of skew buckets */
 	int			skewBucketLen;	/* size of skewBucket array (a power of 2!) */
@@ -206,6 +209,6 @@ typedef struct HashJoinTableData
 
     HashJoinState * hjstate; /* reference to the enclosing HashJoinState */
     bool first_pass; /* Is this the first pass (pre-rescan) */
-} HashJoinTableData;
+}	HashJoinTableData;
 
 #endif   /* HASHJOIN_H */

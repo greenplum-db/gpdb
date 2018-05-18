@@ -1,7 +1,7 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/ecpg.c,v 1.116 2010/07/06 19:19:00 momjian Exp $ */
+/* src/interfaces/ecpg/preproc/ecpg.c */
 
 /* Main for ecpg, the PostgreSQL embedded SQL precompiler. */
-/* Copyright (c) 1996-2010, PostgreSQL Global Development Group */
+/* Copyright (c) 1996-2011, PostgreSQL Global Development Group */
 
 #include "postgres_fe.h"
 
@@ -11,8 +11,8 @@
 
 #include "extern.h"
 
-int			ret_value = 0,
-			autocommit = false,
+int			ret_value = 0;
+bool		autocommit = false,
 			auto_create_c = false,
 			system_includes = false,
 			force_indicator = true,
@@ -126,9 +126,9 @@ main(int argc, char *const argv[])
 
 	int			fnr,
 				c,
-				verbose = false,
-				header_mode = false,
 				out_option = 0;
+	bool		verbose = false,
+				header_mode = false;
 	struct _include_path *ip;
 	const char *progname;
 	char		my_exec_path[MAXPGPATH];

@@ -4,10 +4,10 @@
  *		Internal definitions for parser
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.68 2010/02/26 02:01:26 momjian Exp $
+ * src/include/parser/parse_node.h
  *
  *-------------------------------------------------------------------------
  */
@@ -158,6 +158,7 @@ struct ParseState
 	bool		p_hasAggs;
 	bool		p_hasWindowFuncs;
 	bool		p_hasSubLinks;
+	bool		p_hasModifyingCTE;
 	bool		p_is_insert;
 	bool		p_is_update;
 	LockingClause *p_lockclause_from_parent;
@@ -202,12 +203,12 @@ extern void cancel_parser_errposition_callback(ParseCallbackState *pcbstate);
 
 extern Var *make_var(ParseState *pstate, RangeTblEntry *rte, int attrno,
 		 int location);
-extern Oid	transformArrayType(Oid arrayType);
+extern Oid	transformArrayType(Oid *arrayType, int32 *arrayTypmod);
 extern ArrayRef *transformArraySubscripts(ParseState *pstate,
 						 Node *arrayBase,
 						 Oid arrayType,
 						 Oid elementType,
-						 int32 elementTypMod,
+						 int32 arrayTypMod,
 						 List *indirection,
 						 Node *assignFrom);
 extern Const *make_const(ParseState *pstate, Value *value, int location);

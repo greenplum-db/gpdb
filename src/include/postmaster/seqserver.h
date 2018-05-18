@@ -37,7 +37,7 @@ typedef struct NextValRequest
 	uint32_t    dbid;
 	uint32_t    tablespaceid;	
 	uint32_t    seq_oid;
-	uint32_t    isTemp;
+	char		relpersistence;
 	uint32_t    session_id;
 	uint32_t	endCookie;
 }	NextValRequest;

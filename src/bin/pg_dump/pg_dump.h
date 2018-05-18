@@ -5,10 +5,10 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.164 2010/02/26 02:01:17 momjian Exp $
+ * src/bin/pg_dump/pg_dump.h
  *
  *-------------------------------------------------------------------------
  */
@@ -122,6 +122,7 @@ typedef enum
 	DO_DEFAULT_ACL,
 	DO_BLOB,
 	DO_BLOB_DATA,
+	DO_COLLATION,
 	DO_EXTPROTOCOL,
 	DO_TYPE_STORAGE_OPTIONS
 } DumpableObjectType;
@@ -150,7 +151,7 @@ typedef struct _namespaceInfo
 typedef struct _extensionInfo
 {
 	DumpableObject dobj;
-	char 	   *namespace;		/* schema containing extension's objects */
+	char	   *namespace;		/* schema containing extension's objects */
 	bool		relocatable;
 	char	   *extversion;
 	char	   *extconfig;		/* info about configuration tables */
@@ -262,6 +263,12 @@ typedef struct _opfamilyInfo
 	char	   *rolname;
 } OpfamilyInfo;
 
+typedef struct _collInfo
+{
+	DumpableObject dobj;
+	char	   *rolname;
+} CollInfo;
+
 typedef struct _convInfo
 {
 	DumpableObject dobj;
@@ -278,6 +285,7 @@ typedef struct _tableInfo
 	char	   *relacl;
 	char		relkind;
 	char		relstorage;
+	char		relpersistence; /* relation persistence */
 	char	   *reltablespace;	/* relation tablespace */
 	char	   *reloptions;		/* options specified by WITH (...) */
 	char	   *toast_reloptions;		/* ditto, for the TOAST table */
@@ -286,6 +294,8 @@ typedef struct _tableInfo
 	bool		hastriggers;	/* does it have any triggers? */
 	bool		hasoids;		/* does it have OIDs? */
 	uint32		frozenxid;		/* for restore frozen xid */
+	Oid			toast_oid;		/* for restore toast frozen xid */
+	uint32		toast_frozenxid;	/* for restore toast frozen xid */
 	int			ncheck;			/* # of CHECK expressions */
 	char	   *reloftype;		/* underlying type for typed table */
 	/* these two are set only if table is a sequence owned by a column: */
@@ -310,6 +320,7 @@ typedef struct _tableInfo
 	char	   *attalign;		/* attribute align, used by binary_upgrade */
 	bool	   *attislocal;		/* true if attr has local definition */
 	char	  **attoptions;		/* per-attribute options */
+	Oid		   *attcollation;	/* per-attribute collation selection */
 	bool	   *notnull;		/* NOT NULL constraints on attributes */
 	bool	   *inhNotNull;		/* true if NOT NULL is inherited */
 	char	  **attencoding;	/* the attribute encoding values */
@@ -473,6 +484,7 @@ typedef struct _fdwInfo
 {
 	DumpableObject dobj;
 	char	   *rolname;
+	char	   *fdwhandler;
 	char	   *fdwvalidator;
 	char	   *fdwoptions;
 	char	   *fdwacl;
@@ -556,6 +568,7 @@ extern TableInfo *findTableByOid(Oid oid);
 extern TypeInfo *findTypeByOid(Oid oid);
 extern FuncInfo *findFuncByOid(Oid oid);
 extern OprInfo *findOprByOid(Oid oid);
+extern CollInfo *findCollationByOid(Oid oid);
 extern NamespaceInfo *findNamespaceByOid(Oid oid);
 extern ExtensionInfo *findExtensionByOid(Oid oid);
 
@@ -598,6 +611,7 @@ extern ExtProtInfo *getExtProtocols(int *numExtProtocols);
 extern OprInfo *getOperators(int *numOperators);
 extern OpclassInfo *getOpclasses(int *numOpclasses);
 extern OpfamilyInfo *getOpfamilies(int *numOpfamilies);
+extern CollInfo *getCollations(int *numCollations);
 extern ConvInfo *getConversions(int *numConversions);
 extern TableInfo *getTables(int *numTables);
 extern void getOwnedSeqs(TableInfo tblinfo[], int numTables);

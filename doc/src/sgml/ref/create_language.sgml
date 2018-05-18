@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_language.sgml,v 1.51 2010/05/30 02:23:09 momjian Exp $
+doc/src/sgml/ref/create_language.sgml
 PostgreSQL documentation
 -->
 
@@ -36,6 +36,21 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
    database.  Subsequently, functions and trigger procedures can be
    defined in this new language.
   </para>
+
+  <note>
+   <para>
+    As of <productname>PostgreSQL</productname> 9.1, most procedural
+    languages have been made into <quote>extensions</>, and should
+    therefore be installed with <xref linkend="sql-createextension">
+    not <command>CREATE LANGUAGE</command>.  Direct use of
+    <command>CREATE LANGUAGE</command> should now be confined to
+    extension installation scripts.  If you have a <quote>bare</>
+    language in your database, perhaps as a result of an upgrade,
+    you can convert it to an extension using
+    <literal>CREATE EXTENSION <replaceable>langname</> FROM
+    unpackaged</literal>.
+   </para>
+  </note>
 
   <para>
    <command>CREATE LANGUAGE</command> effectively associates the

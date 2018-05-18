@@ -3,10 +3,10 @@
  * varsup.c
  *	  postgres OID & XID variables support routines
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.91 2010/02/26 02:00:34 momjian Exp $
+ *	  src/backend/access/transam/varsup.c
  *
  *-------------------------------------------------------------------------
  */
@@ -422,9 +422,9 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
 		char	   *oldest_datname;
 
 		/*
-		 * We can be called when not inside a transaction, for example
-		 * during StartupXLOG().  In such a case we cannot do database
-		 * access, so we must just report the oldest DB's OID.
+		 * We can be called when not inside a transaction, for example during
+		 * StartupXLOG().  In such a case we cannot do database access, so we
+		 * must just report the oldest DB's OID.
 		 *
 		 * Note: it's also possible that get_database_name fails and returns
 		 * NULL, for example because the database just got dropped.  We'll

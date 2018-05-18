@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/hstore/hstore_op.c,v 1.16 2010/02/26 02:00:32 momjian Exp $
+ * contrib/hstore/hstore_op.c
  */
 #include "postgres.h"
 
@@ -49,7 +49,7 @@ hstoreFindKey(HStore *hs, int *lowbound, char *key, int keylen)
 		stopMiddle = stopLow + (stopHigh - stopLow) / 2;
 
 		if (HS_KEYLEN(entries, stopMiddle) == keylen)
-			difference = strncmp(HS_KEY(entries, base, stopMiddle), key, keylen);
+			difference = memcmp(HS_KEY(entries, base, stopMiddle), key, keylen);
 		else
 			difference = (HS_KEYLEN(entries, stopMiddle) > keylen) ? 1 : -1;
 
@@ -168,8 +168,7 @@ hstore_exists_any(PG_FUNCTION_ARGS)
 	 * start one entry past the previous "found" entry, or at the lower bound
 	 * of the last search.
 	 */
-
-	for (i = 0; !res && i < nkeys; ++i)
+	for (i = 0; i < nkeys; i++)
 	{
 		int			idx = hstoreFindKey(hs, &lowbound,
 									  key_pairs[i].key, key_pairs[i].keylen);
@@ -196,7 +195,7 @@ hstore_exists_all(PG_FUNCTION_ARGS)
 	Pairs	   *key_pairs = hstoreArrayToPairs(keys, &nkeys);
 	int			i;
 	int			lowbound = 0;
-	bool		res = nkeys ? true : false;
+	bool		res = true;
 
 	/*
 	 * we exploit the fact that the pairs list is already sorted into strictly
@@ -204,14 +203,16 @@ hstore_exists_all(PG_FUNCTION_ARGS)
 	 * start one entry past the previous "found" entry, or at the lower bound
 	 * of the last search.
 	 */
-
-	for (i = 0; res && i < nkeys; ++i)
+	for (i = 0; i < nkeys; i++)
 	{
 		int			idx = hstoreFindKey(hs, &lowbound,
 									  key_pairs[i].key, key_pairs[i].keylen);
 
 		if (idx < 0)
+		{
 			res = false;
+			break;
+		}
 	}
 
 	PG_RETURN_BOOL(res);
@@ -266,7 +267,7 @@ hstore_delete(PG_FUNCTION_ARGS)
 		int			len = HS_KEYLEN(es, i);
 		char	   *ptrs = HS_KEY(es, bufs, i);
 
-		if (!(len == keylen && strncmp(ptrs, keyptr, keylen) == 0))
+		if (!(len == keylen && memcmp(ptrs, keyptr, keylen) == 0))
 		{
 			int			vallen = HS_VALLEN(es, i);
 
@@ -334,9 +335,9 @@ hstore_delete_array(PG_FUNCTION_ARGS)
 			int			skeylen = HS_KEYLEN(es, i);
 
 			if (skeylen == key_pairs[j].keylen)
-				difference = strncmp(HS_KEY(es, ps, i),
-									 key_pairs[j].key,
-									 key_pairs[j].keylen);
+				difference = memcmp(HS_KEY(es, ps, i),
+									key_pairs[j].key,
+									key_pairs[j].keylen);
 			else
 				difference = (skeylen > key_pairs[j].keylen) ? 1 : -1;
 		}
@@ -419,9 +420,9 @@ hstore_delete_hstore(PG_FUNCTION_ARGS)
 			int			s2keylen = HS_KEYLEN(es2, j);
 
 			if (skeylen == s2keylen)
-				difference = strncmp(HS_KEY(es, ps, i),
-									 HS_KEY(es2, ps2, j),
-									 skeylen);
+				difference = memcmp(HS_KEY(es, ps, i),
+									HS_KEY(es2, ps2, j),
+									skeylen);
 			else
 				difference = (skeylen > s2keylen) ? 1 : -1;
 		}
@@ -436,7 +437,7 @@ hstore_delete_hstore(PG_FUNCTION_ARGS)
 			if (snullval != HS_VALISNULL(es2, j)
 				|| (!snullval
 					&& (svallen != HS_VALLEN(es2, j)
-						|| strncmp(HS_VAL(es, ps, i), HS_VAL(es2, ps2, j), svallen) != 0)))
+			|| memcmp(HS_VAL(es, ps, i), HS_VAL(es2, ps2, j), svallen) != 0)))
 			{
 				HS_COPYITEM(ed, bufd, pd,
 							HS_KEY(es, ps, i), HS_KEYLEN(es, i),
@@ -529,9 +530,9 @@ hstore_concat(PG_FUNCTION_ARGS)
 			int			s2keylen = HS_KEYLEN(es2, s2idx);
 
 			if (s1keylen == s2keylen)
-				difference = strncmp(HS_KEY(es1, ps1, s1idx),
-									 HS_KEY(es2, ps2, s2idx),
-									 s1keylen);
+				difference = memcmp(HS_KEY(es1, ps1, s1idx),
+									HS_KEY(es2, ps2, s2idx),
+									s1keylen);
 			else
 				difference = (s1keylen > s2keylen) ? 1 : -1;
 		}
@@ -999,7 +1000,7 @@ hstore_contains(PG_FUNCTION_ARGS)
 			if (nullval != HS_VALISNULL(ve, idx)
 				|| (!nullval
 					&& (vallen != HS_VALLEN(ve, idx)
-			|| strncmp(HS_VAL(te, tstr, i), HS_VAL(ve, vstr, idx), vallen))))
+			 || memcmp(HS_VAL(te, tstr, i), HS_VAL(ve, vstr, idx), vallen))))
 				res = false;
 		}
 		else

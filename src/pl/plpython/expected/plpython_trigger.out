@@ -78,7 +78,7 @@ for key in skeys:
 	val = TD[key]
 	plpy.notice("TD[" + key + "] => " + str(val))
 
-return None  
+return None
 
 $$;
 CREATE TRIGGER show_trigger_data_trig_before
@@ -234,11 +234,84 @@ NOTICE:  TD[table_schema] => public
 CONTEXT:  PL/Python function "trigger_data"
 NOTICE:  TD[when] => BEFORE
 CONTEXT:  PL/Python function "trigger_data"
+DROP TRIGGER show_trigger_data_trig_stmt on trigger_test;
+DROP TRIGGER show_trigger_data_trig_before on trigger_test;
+DROP TRIGGER show_trigger_data_trig_after on trigger_test;
+insert into trigger_test values(1,'insert');
+CREATE VIEW trigger_test_view AS SELECT * FROM trigger_test;
+--start_ignore
+-- INSTEAD OF triggers are not yet supported in Greenplum
+CREATE TRIGGER show_trigger_data_trig
+INSTEAD OF INSERT OR UPDATE OR DELETE ON trigger_test_view
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(24,'skidoo view');
+insert into trigger_test_view values(2,'insert');
+NOTICE:  TD[args] => ['24', 'skidoo view']
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[event] => INSERT
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[level] => ROW
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[name] => show_trigger_data_trig
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[new] => {'i': 2, 'v': 'insert'}
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[old] => None
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[relid] => bogus:12345
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_name] => trigger_test_view
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_schema] => public
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[when] => INSTEAD OF
+CONTEXT:  PL/Python function "trigger_data"
+update trigger_test_view set v = 'update' where i = 1;
+NOTICE:  TD[args] => ['24', 'skidoo view']
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[event] => UPDATE
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[level] => ROW
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[name] => show_trigger_data_trig
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[new] => {'i': 1, 'v': 'update'}
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[old] => {'i': 1, 'v': 'insert'}
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[relid] => bogus:12345
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_name] => trigger_test_view
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_schema] => public
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[when] => INSTEAD OF
+CONTEXT:  PL/Python function "trigger_data"
+delete from trigger_test_view;
+NOTICE:  TD[args] => ['24', 'skidoo view']
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[event] => DELETE
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[level] => ROW
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[name] => show_trigger_data_trig
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[new] => None
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[old] => {'i': 1, 'v': 'insert'}
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[relid] => bogus:12345
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_name] => trigger_test_view
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[table_schema] => public
+CONTEXT:  PL/Python function "trigger_data"
+NOTICE:  TD[when] => INSTEAD OF
+CONTEXT:  PL/Python function "trigger_data"
 DROP FUNCTION trigger_data() CASCADE;
-NOTICE:  drop cascades to 3 other objects
-DETAIL:  drop cascades to trigger show_trigger_data_trig_before on table trigger_test
-drop cascades to trigger show_trigger_data_trig_after on table trigger_test
-drop cascades to trigger show_trigger_data_trig_stmt on table trigger_test
+NOTICE:  drop cascades to trigger show_trigger_data_trig on view trigger_test_view
+--end_ignore
+DROP VIEW trigger_test_view;
+delete from trigger_test;
 --
 -- trigger error handling
 --
@@ -391,5 +464,50 @@ SELECT * FROM trigger_test;
  i | v 
 ---+---
  0 | 
+(1 row)
+
+--
+-- Test that triggers honor typmod when assigning to tuple fields,
+-- as per an early 9.0 bug report
+--
+SET DateStyle = 'ISO';
+CREATE FUNCTION set_modif_time() RETURNS trigger AS $$
+    TD['new']['modif_time'] = '2010-10-13 21:57:28.930486'
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+-- Add 'DISTRIBUTED RANDOMLY' to avoid "ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns"
+CREATE TABLE pb (a TEXT, modif_time TIMESTAMP(0) WITHOUT TIME ZONE) DISTRIBUTED RANDOMLY;
+CREATE TRIGGER set_modif_time BEFORE UPDATE ON pb
+  FOR EACH ROW EXECUTE PROCEDURE set_modif_time();
+INSERT INTO pb VALUES ('a', '2010-10-09 21:57:33.930486');
+SELECT * FROM pb;
+ a |     modif_time      
+---+---------------------
+ a | 2010-10-09 21:57:34
+(1 row)
+
+UPDATE pb SET a = 'b';
+SELECT * FROM pb;
+ a |     modif_time      
+---+---------------------
+ b | 2010-10-13 21:57:29
+(1 row)
+
+-- triggers for tables with composite types
+CREATE TABLE comp1 (i integer, j boolean);
+CREATE TYPE comp2 AS (k integer, l boolean);
+CREATE TABLE composite_trigger_test (f1 comp1, f2 comp2);
+CREATE FUNCTION composite_trigger_f() RETURNS trigger AS $$
+    TD['new']['f1'] = (3, False)
+    TD['new']['f2'] = {'k': 7, 'l': 'yes', 'ignored': 10}
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+CREATE TRIGGER composite_trigger BEFORE INSERT ON composite_trigger_test
+  FOR EACH ROW EXECUTE PROCEDURE composite_trigger_f();
+INSERT INTO composite_trigger_test VALUES (NULL, NULL);
+SELECT * FROM composite_trigger_test;
+  f1   |  f2   
+-------+-------
+ (3,f) | (7,t)
 (1 row)
 

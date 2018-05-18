@@ -3,12 +3,12 @@
  * execJunk.c
  *	  Junk attribute support stuff....
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execJunk.c,v 1.60 2010/01/02 16:57:40 momjian Exp $
+ *	  src/backend/executor/execJunk.c
  *
  *-------------------------------------------------------------------------
  */
@@ -40,9 +40,9 @@
  *
  * Finally, when at the top level we get back a tuple, we can call
  * ExecFindJunkAttribute/ExecGetJunkAttribute to retrieve the values of the
- * junk attributes we are interested in, and ExecFilterJunk or ExecRemoveJunk
- * to remove all the junk attributes from a tuple. This new "clean" tuple is
- * then printed, inserted, or updated.
+ * junk attributes we are interested in, and ExecFilterJunk to remove all the
+ * junk attributes from a tuple.  This new "clean" tuple is then printed,
+ * inserted, or updated.
  *
  *-------------------------------------------------------------------------
  */
@@ -207,9 +207,21 @@ ExecInitJunkFilterConversion(List *targetList,
 AttrNumber
 ExecFindJunkAttribute(JunkFilter *junkfilter, const char *attrName)
 {
+	return ExecFindJunkAttributeInTlist(junkfilter->jf_targetList, attrName);
+}
+
+/*
+ * ExecFindJunkAttributeInTlist
+ *
+ * Find a junk attribute given a subplan's targetlist (not necessarily
+ * part of a JunkFilter).
+ */
+AttrNumber
+ExecFindJunkAttributeInTlist(List *targetlist, const char *attrName)
+{
 	ListCell   *t;
 
-	foreach(t, junkfilter->jf_targetList)
+	foreach(t, targetlist)
 	{
 		TargetEntry *tle = lfirst(t);
 
@@ -303,16 +315,4 @@ ExecFilterJunk(JunkFilter *junkfilter, TupleTableSlot *slot)
 	 * And return the virtual tuple.
 	 */
 	return ExecStoreVirtualTuple(resultSlot);
-}
-
-/*
- * ExecRemoveJunk
- *
- * Convenience routine to generate a physical clean tuple,
- * rather than just a virtual slot.
- */
-HeapTuple
-ExecRemoveJunk(JunkFilter *junkfilter, TupleTableSlot *slot)
-{
-	return ExecCopySlotHeapTuple(ExecFilterJunk(junkfilter, slot));
 }

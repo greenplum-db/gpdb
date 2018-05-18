@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  * src/bin/psql/print.c
  */
@@ -810,7 +810,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout)
 					unsigned int nbspace;
 
 					if (opt_border != 0 ||
-						(format->wrap_right_border == false && i > 0))
+						(!format->wrap_right_border && i > 0))
 						fputs(curr_nl_line ? format->header_nl_left : " ",
 							  fout);
 
@@ -831,7 +831,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout)
 					else
 						fprintf(fout, "%*s", width_wrap[i], "");
 
-					if (opt_border != 0 || format->wrap_right_border == true)
+					if (opt_border != 0 || format->wrap_right_border)
 						fputs(!header_done[i] ? format->header_nl_right : " ",
 							  fout);
 

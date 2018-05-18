@@ -17,10 +17,10 @@
  * any database access.
  *
  *
- * Copyright (c) 2006-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2006-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/ts_cache.c,v 1.12 2010/02/14 18:42:17 rhaas Exp $
+ *	  src/backend/utils/cache/ts_cache.c
  *
  *-------------------------------------------------------------------------
  */
@@ -581,14 +581,15 @@ getTSCurrentConfig(bool emitError)
 
 	/* Look up the config */
 	TSCurrentConfigCache =
-		TSConfigGetCfgid(stringToQualifiedNameList(TSCurrentConfig),
-						 !emitError);
+		get_ts_config_oid(stringToQualifiedNameList(TSCurrentConfig),
+						  !emitError);
 
 	return TSCurrentConfigCache;
 }
 
-const char *
-assignTSCurrentConfig(const char *newval, bool doit, GucSource source)
+/* GUC check_hook for default_text_search_config */
+bool
+check_TSCurrentConfig(char **newval, void **extra, GucSource source)
 {
 	/*
 	 * If we aren't inside a transaction, we cannot do database access so
@@ -601,7 +602,7 @@ assignTSCurrentConfig(const char *newval, bool doit, GucSource source)
 		Form_pg_ts_config cfg;
 		char	   *buf;
 
-		cfgId = TSConfigGetCfgid(stringToQualifiedNameList(newval), true);
+		cfgId = get_ts_config_oid(stringToQualifiedNameList(*newval), true);
 
 		/*
 		 * When source == PGC_S_TEST, we are checking the argument of an
@@ -612,16 +613,15 @@ assignTSCurrentConfig(const char *newval, bool doit, GucSource source)
 		 */
 		if (!OidIsValid(cfgId))
 		{
-			if (source == PGC_S_TEST && !doit)
+			if (source == PGC_S_TEST)
 			{
 				ereport(NOTICE,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("text search configuration \"%s\" does not exist",
-								newval)));
-				return newval;
+						 errmsg("text search configuration \"%s\" does not exist", *newval)));
+				return true;
 			}
 			else
-				return NULL;
+				return false;
 		}
 
 		/*
@@ -640,17 +640,20 @@ assignTSCurrentConfig(const char *newval, bool doit, GucSource source)
 		ReleaseSysCache(tuple);
 
 		/* GUC wants it malloc'd not palloc'd */
-		newval = strdup(buf);
+		free(*newval);
+		*newval = strdup(buf);
 		pfree(buf);
-
-		if (doit && newval)
-			TSCurrentConfigCache = cfgId;
-	}
-	else
-	{
-		if (doit)
-			TSCurrentConfigCache = InvalidOid;
+		if (!newval)
+			return false;
 	}
 
-	return newval;
+	return true;
+}
+
+/* GUC assign_hook for default_text_search_config */
+void
+assign_TSCurrentConfig(const char *newval, void *extra)
+{
+	/* Just reset the cache to force a lookup on first use */
+	TSCurrentConfigCache = InvalidOid;
 }

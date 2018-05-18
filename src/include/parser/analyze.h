@@ -4,10 +4,10 @@
  *		parse analysis for optimizable statements
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/analyze.h,v 1.45 2010/02/26 02:01:26 momjian Exp $
+ * src/include/parser/analyze.h
  *
  *-------------------------------------------------------------------------
  */
@@ -39,7 +39,8 @@ extern void applyLockingClause(Query *qry, Index rtindex,
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct
 {
-	const char *stmtType;		/* "CREATE TABLE" or "ALTER TABLE" */
+	ParseState *pstate;			/* overall parser state */
+	const char *stmtType;		/* "CREATE [FOREIGN] TABLE" or "ALTER TABLE" */
 	RangeVar   *relation;		/* relation to create */
 	Relation	rel;			/* opened/locked rel, if ALTER */
 	List	   *inhRelations;	/* relations to inherit from */
@@ -66,8 +67,7 @@ typedef struct
 
 #define MaxPolicyAttributeNumber MaxHeapAttributeNumber
 
-int validate_partition_spec(ParseState 			*pstate,
-							CreateStmtContext 	*cxt, 
+extern int validate_partition_spec(CreateStmtContext *cxt, 
 							CreateStmt 			*stmt, 
 							PartitionBy 		*partitionBy, 	
 							char	   			*at_depth,

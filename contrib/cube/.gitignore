@@ -1,6 +1,6 @@
 /cubeparse.c
-/cubeparse.h
 /cubescan.c
-/cube.sql
 # Generated subdirectories
+/log/
 /results/
+/tmp_check/

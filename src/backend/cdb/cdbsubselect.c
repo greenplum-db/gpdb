@@ -204,7 +204,7 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  *	*eqOp and *sortOp - equality and < operators, to implement the condition as a mergejoin.
  */
 static bool
-IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sortOp)
+IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sortOp, bool *hashable)
 {
 	Oid			opfamily;
 	Oid			ltype;
@@ -221,7 +221,7 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	 * If this is an expression of the form a = b, then we want to know about
 	 * the vars involved.
 	 */
-	if (!op_mergejoinable(opexp->opno))
+	if (!op_mergejoinable(opexp->opno, exprType(linitial(opexp->args))))
 		return false;
 
 	/*
@@ -249,6 +249,8 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	if (!OidIsValid(*sortOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
 			 BTLessStrategyNumber, ltype, rtype, opfamily);
+
+	*hashable = op_hashjoinable(*eqOp, ltype);
 
 	if (!IsCorrelatedOpExpr(opexp, innerExpr))
 		return false;
@@ -405,10 +407,11 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 		 */
 		Oid			eqOp = InvalidOid;
 		Oid			sortOp = InvalidOid;
+		bool		hashable = false;
 		Expr	   *innerExpr = NULL;
 		bool		considerOpExpr = false;
 
-		considerOpExpr = IsCorrelatedEqualityOpExpr(opexp, &innerExpr, &eqOp, &sortOp);
+		considerOpExpr = IsCorrelatedEqualityOpExpr(opexp, &innerExpr, &eqOp, &sortOp, &hashable);
 
 		if (considerOpExpr)
 		{
@@ -422,9 +425,11 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 			{
 				SortGroupClause *gc = makeNode(SortGroupClause);
 
-				gc->sortop = sortOp;
-				gc->eqop = eqOp;
 				gc->tleSortGroupRef = list_length(context->groupClause) + 1;
+				gc->eqop = eqOp;
+				gc->sortop = sortOp;
+				gc->hashable = hashable;
+
 				context->groupClause = lappend(context->groupClause, gc);
 				tle->ressortgroupref = list_length(context->targetList) + 1;
 			}
@@ -625,6 +630,7 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 											 subselectAggTLE->resno,
 											 exprType((Node *) subselectAggTLE->expr),
 											 exprTypmod((Node *) subselectAggTLE->expr),
+											 exprCollation((Node *) subselectAggTLE->expr),
 											 0);
 
 		list_nth_replace(opexp->args, 1, aggVar);
@@ -713,7 +719,7 @@ add_dummy_const(List *tlist)
 	Const	   *zconst;
 	int			resno;
 
-	zconst = makeConst(INT4OID, -1, sizeof(int32), (Datum) 0,
+	zconst = makeConst(INT4OID, -1, InvalidOid, sizeof(int32), (Datum) 0,
 					   false, true);	/* isnull, byval */
 	resno = list_length(tlist) + 1;
 	dummy = makeTargetEntry((Expr *) zconst,

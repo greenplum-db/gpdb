@@ -22,7 +22,7 @@ extern int	ExecCountSlotsBitmapTableScan(BitmapTableScan *node);
 extern BitmapTableScanState *ExecInitBitmapTableScan(BitmapTableScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecBitmapTableScan(BitmapTableScanState *node);
 extern void ExecEndBitmapTableScan(BitmapTableScanState *node);
-extern void ExecBitmapTableReScan(BitmapTableScanState *node, ExprContext *exprCtxt);
+extern void ExecReScanBitmapTable(BitmapTableScanState *node);
 extern void ExecEagerFreeBitmapTableScan(BitmapTableScanState *node);
 extern void BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap);
 extern void BitmapTableScanEndPartition(ScanState *node);

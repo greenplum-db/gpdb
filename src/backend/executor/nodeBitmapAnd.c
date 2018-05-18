@@ -3,12 +3,12 @@
  * nodeBitmapAnd.c
  *	  routines to handle BitmapAnd nodes.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapAnd.c,v 1.13 2010/01/02 16:57:41 momjian Exp $
+ *	  src/backend/executor/nodeBitmapAnd.c
  *
  *-------------------------------------------------------------------------
  */
@@ -241,7 +241,7 @@ ExecEndBitmapAnd(BitmapAndState *node)
 }
 
 void
-ExecReScanBitmapAnd(BitmapAndState *node, ExprContext *exprCtxt)
+ExecReScanBitmapAnd(BitmapAndState *node)
 {
 	/*
 	 * For optimizer a rescan call on BitmapIndexScan could free up the bitmap. So,
@@ -264,9 +264,10 @@ ExecReScanBitmapAnd(BitmapAndState *node, ExprContext *exprCtxt)
 			UpdateChangedParamSet(subnode, node->ps.chgParam);
 
 		/*
-		 * Always rescan the inputs immediately, to ensure we can pass down
-		 * any outer tuple that might be used in index quals.
+		 * If chgParam of subnode is not null then plan will be re-scanned by
+		 * first ExecProcNode.
 		 */
-		ExecReScan(subnode, exprCtxt);
+		if (subnode->chgParam == NULL)
+			ExecReScan(subnode);
 	}
 }

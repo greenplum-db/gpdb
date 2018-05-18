@@ -37,6 +37,9 @@ typedef struct ExternalInsertDescData
 	Datum	   *ext_values;
 	bool	   *ext_nulls;
 
+	FmgrInfo   *ext_custom_formatter_func; /* function to convert to custom format */
+	List	   *ext_custom_formatter_params; /* list of defelems that hold user's format parameters */
+
 	FormatterData *ext_formatter_data;
 
 	struct CopyStateData *ext_pstate;	/* data parser control chars and state */
@@ -55,7 +58,7 @@ typedef enum DataLineStatus
 
 extern FileScanDesc external_beginscan(Relation relation,
 				   uint32 scancounter, List *uriList,
-				   List *fmtOpts, char fmtType, bool isMasterOnly,
+				   char *fmtOptString, char fmtType, bool isMasterOnly,
 				   int rejLimit, bool rejLimitInRows,
 				   bool logErrors, int encoding);
 extern void external_rescan(FileScanDesc scan);

@@ -5,16 +5,18 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/clausesel.c,v 1.99 2010/01/02 16:57:46 momjian Exp $
+ *	  src/backend/optimizer/path/clausesel.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
+#include <math.h>
 
 #include "catalog/pg_operator.h"
 #include "nodes/makefuncs.h"
@@ -643,6 +645,7 @@ clause_selectivity(PlannerInfo *root,
 										 list_make2(var,
 													makeBoolConst(true,
 																  false)),
+										 InvalidOid,
 										 varRelid);
 		}
 	}
@@ -717,13 +720,15 @@ clause_selectivity(PlannerInfo *root,
 	}
 	else if (is_opclause(clause) || IsA(clause, DistinctExpr))
 	{
-		Oid			opno = ((OpExpr *) clause)->opno;
+		OpExpr	   *opclause = (OpExpr *) clause;
+		Oid			opno = opclause->opno;
 
 		if (treat_as_join_clause(clause, rinfo, varRelid, sjinfo))
 		{
 			/* Estimate selectivity for a join clause. */
 			s1 = join_selectivity(root, opno,
-								  ((OpExpr *) clause)->args,
+								  opclause->args,
+								  opclause->inputcollid,
 								  jointype,
 								  sjinfo);
 		}
@@ -731,7 +736,8 @@ clause_selectivity(PlannerInfo *root,
 		{
 			/* Estimate selectivity for a restriction clause. */
 			s1 = restriction_selectivity(root, opno,
-										 ((OpExpr *) clause)->args,
+										 opclause->args,
+										 opclause->inputcollid,
 										 varRelid);
 		}
 

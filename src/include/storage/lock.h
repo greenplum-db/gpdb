@@ -4,10 +4,10 @@
  *	  POSTGRES low-level lock mechanism
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.119 2010/02/26 02:01:27 momjian Exp $
+ * src/include/storage/lock.h
  *
  *-------------------------------------------------------------------------
  */
@@ -547,6 +547,7 @@ extern LockAcquireResult LockAcquireExtended(const LOCKTAG *locktag,
 					bool report_memory_error);
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
+extern void LockReleaseSession(LOCKMETHODID lockmethodid);
 extern void LockSetHoldTillEndXact(const LOCKTAG *locktag);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
 // TODO why are we missing extern void LockReleaseSession(LOCKMETHODID lockmethodid); ?

@@ -27,7 +27,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $PostgreSQL: pgsql/src/backend/regex/regexec.c,v 1.28 2010/02/01 02:45:29 tgl Exp $
+ * src/backend/regex/regexec.c
  *
  */
 
@@ -119,8 +119,7 @@ struct vars
 
 #define VISERR(vv)	((vv)->err != 0)	/* have we seen an error yet? */
 #define ISERR() VISERR(v)
-#define VERR(vv,e)	(((vv)->err) ? (vv)->err : ((vv)->err = (e)))
-#undef ERR
+#define VERR(vv,e)	((vv)->err = ((vv)->err ? (vv)->err : (e)))
 #define ERR(e)	VERR(v, e)		/* record an error */
 #define NOERR() {if (ISERR()) return v->err;}	/* if error seen, return it */
 #define OFF(p)	((p) - v->start)
@@ -192,6 +191,9 @@ pg_regexec(regex_t *re,
 		return REG_INVARG;
 	if (re->re_csize != sizeof(chr))
 		return REG_MIXED;
+
+	/* Initialize locale-dependent support */
+	pg_set_regex_collation(re->re_collation);
 
 	/* setup */
 	v->re = re;

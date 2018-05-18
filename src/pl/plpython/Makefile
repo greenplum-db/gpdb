@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/pl/plpython/Makefile,v 1.36 2010/01/22 15:45:15 petere Exp $
+# src/pl/plpython/Makefile
 
 subdir = src/pl/plpython
 top_builddir = ../../..
@@ -39,14 +39,19 @@ override python_libspec := -L${python_configdir}/../.. ${python_libspec}
 ifneq (,$(findstring yes, $(shared_libpython)$(allow_nonpic_in_shlib)))
 
 # do not fail build due to warnings in this code
-#override CPPFLAGS := -Wno-error -I$(srcdir) $(python_includespec) $(CPPFLAGS) -DPLPYTHON_SHOW_DEBUG_INFO
-override CPPFLAGS := -Wno-error -I$(srcdir) $(python_includespec) $(CPPFLAGS) 
+#override CPPFLAGS := -Wno-error -I. -I$(srcdir) $(python_includespec) $(CPPFLAGS) -DPLPYTHON_SHOW_DEBUG_INFO
+override CPPFLAGS := -Wno-error -I. -I$(srcdir) $(python_includespec) $(CPPFLAGS)
 
 
 rpathdir = $(python_libdir):$(INSTLOC)/ext/python/lib
 
 NAME = plpython$(python_majorversion)
+
 OBJS = plpython.o
+
+DATA = plpythonu.control plpythonu--1.0.sql plpythonu--unpackaged--1.0.sql \
+       plpython2u.control plpython2u--1.0.sql plpython2u--unpackaged--1.0.sql \
+       plpython3u.control plpython3u--1.0.sql plpython3u--unpackaged--1.0.sql
 
 
 # Python on win32 ships with import libraries only for Microsoft Visual C++,
@@ -69,8 +74,9 @@ REGRESS_OPTS = --dbname=$(PL_TESTDB) --init-file=$(srcdir)/init_file
 # Only load plpythonu with Python 2.  The test files themselves load
 # the versioned language plpython(2|3)u.
 ifeq ($(python_majorversion),2)
-REGRESS_OPTS += --load-language=plpythonu
+REGRESS_OPTS += --load-extension=plpythonu
 endif
+
 REGRESS = \
 	plpython_schema \
 	plpython_populate \
@@ -88,6 +94,7 @@ REGRESS = \
 	plpython_types \
 	plpython_error \
 	plpython_unicode \
+	plpython_quote \
 	plpython_composite \
 	plpython_subtransaction \
 	plpython_returns \
@@ -99,20 +106,32 @@ PSQLDIR = $(bindir)
 
 include $(top_srcdir)/src/Makefile.shlib
 
+# Force this dependency to be known even without dependency info built:
+plpython.o: spiexceptions.h
+
+spiexceptions.h: $(top_srcdir)/src/backend/utils/errcodes.txt generate-spiexceptions.pl
+	$(PERL) $(srcdir)/generate-spiexceptions.pl $< > $@
 
 all: all-lib
 
-install: all installdirs install-lib
-ifeq ($(python_majorversion),2)
-	cd '$(DESTDIR)$(pkglibdir)' && rm -f plpython$(DLSUFFIX) && $(LN_S) $(shlib) plpython$(DLSUFFIX)
-endif
+distprep: spiexceptions.h
+
+
+install: all install-lib install-data
 
 installdirs: installdirs-lib
+	$(MKDIR_P) '$(DESTDIR)$(datadir)/extension'
 
-uninstall: uninstall-lib
-ifeq ($(python_majorversion),2)
-	rm -f '$(DESTDIR)$(pkglibdir)/plpython$(DLSUFFIX)'
-endif
+uninstall: uninstall-lib uninstall-data
+
+install-data: installdirs
+	$(INSTALL_DATA) $(addprefix $(srcdir)/, $(DATA)) '$(DESTDIR)$(datadir)/extension/'
+
+uninstall-data:
+	rm -f $(addprefix '$(DESTDIR)$(datadir)/extension'/, $(notdir $(DATA)))
+
+.PHONY: install-data uninstall-data
+
 
 ifeq ($(python_majorversion),3)
 # Adjust regression tests for Python 3 compatibility
@@ -128,32 +147,42 @@ prep3:
 	      -e "s/def next/def __next__/g" \
 	      -e "s/LANGUAGE plpythonu/LANGUAGE plpython3u/g" \
 	      -e "s/LANGUAGE plpython2u/LANGUAGE plpython3u/g" \
-	    $$file >`echo $$file | sed 's,$(srcdir),python3,'`; \
+	      -e "s/EXTENSION plpythonu/EXTENSION plpython3u/g" \
+	      -e "s/EXTENSION plpython2u/EXTENSION plpython3u/g" \
+	    $$file >`echo $$file | sed 's,$(srcdir),python3,'` || exit; \
 	done
 
 clean3:
 	rm -rf python3/
 
+check: submake prep3
+	$(pg_regress_check) --inputdir=./python3 --outputdir=./python3 $(REGRESS_OPTS) $(REGRESS)
+
 installcheck: submake prep3
-	$(top_builddir)/src/test/regress/pg_regress --inputdir=./python3 --outputdir=./python3 --psqldir=$(PSQLDIR) $(REGRESS_OPTS) $(REGRESS)
+	$(pg_regress_installcheck) --inputdir=./python3 --outputdir=./python3 $(REGRESS_OPTS) $(REGRESS)
 
 clean: clean3
 else
+check: submake
+	$(pg_regress_check) $(REGRESS_OPTS) $(REGRESS)
+
 installcheck: submake
-	$(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --psqldir="$(PSQLDIR)" $(REGRESS_OPTS) $(REGRESS)
+	$(pg_regress_installcheck) $(REGRESS_OPTS) $(REGRESS)
 endif
 
 .PHONY: submake
 submake:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress$(X)
 
-clean distclean maintainer-clean: clean-lib
+clean distclean: clean-lib
 	rm -f $(OBJS)
-	rm -rf results
-	rm -f regression.diffs regression.out
+	rm -rf $(pg_regress_clean_files)
 ifeq ($(PORTNAME), win32)
 	rm -f python${pytverstr}.def
 endif
+
+maintainer-clean: distclean
+	rm -f spiexceptions.h
 
 else # can't build
 

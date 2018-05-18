@@ -32,12 +32,12 @@
  * input group.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSetOp.c,v 1.33 2010/01/02 16:57:45 momjian Exp $
+ *	  src/backend/executor/nodeSetOp.c
  *
  *-------------------------------------------------------------------------
  */
@@ -76,7 +76,7 @@ typedef struct SetOpHashEntryData
 {
 	TupleHashEntryData shared;	/* common header for hash table entries */
 	SetOpStatePerGroupData pergroup;
-} SetOpHashEntryData;
+}	SetOpHashEntryData;
 
 
 static TupleTableSlot *setop_retrieve_direct(SetOpState *setopstate);
@@ -597,7 +597,7 @@ ExecEndSetOp(SetOpState *node)
 
 
 void
-ExecReScanSetOp(SetOpState *node, ExprContext *exprCtxt)
+ExecReScanSetOp(SetOpState *node)
 {
 	ExecClearTuple(node->ps.ps_ResultTupleSlot);
 	node->setop_done = false;
@@ -619,7 +619,7 @@ ExecReScanSetOp(SetOpState *node, ExprContext *exprCtxt)
 		 * parameter changes, then we can just rescan the existing hash table;
 		 * no need to build it again.
 		 */
-		if (((PlanState *) node)->lefttree->chgParam == NULL)
+		if (node->ps.lefttree->chgParam == NULL)
 		{
 			ResetTupleHashIterator(node->hashtable, &node->hashiter);
 			return;
@@ -648,6 +648,6 @@ ExecReScanSetOp(SetOpState *node, ExprContext *exprCtxt)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	if (node->ps.lefttree->chgParam == NULL)
+		ExecReScan(node->ps.lefttree);
 }

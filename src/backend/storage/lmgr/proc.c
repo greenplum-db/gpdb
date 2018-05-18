@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.221 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/storage/lmgr/proc.c
  *
  *-------------------------------------------------------------------------
  */
@@ -223,7 +223,6 @@ InitProcGlobal(void)
 	{
 		PGSemaphoreCreate(&(procs[i].sem));
 		InitSharedLatch(&(procs[i].procLatch));
-
 		procs[i].links.next = (SHM_QUEUE *) ProcGlobal->freeProcs;
 		ProcGlobal->freeProcs = &procs[i];
 	}
@@ -430,7 +429,7 @@ InitProcess(void)
 		MyProc->mppIsWriter = true;
 	}
     
-	/* Initialize fields for sync rep */
+	/* Initialise for sync rep */
 	MyProc->waitLSN.xlogid = 0;
 	MyProc->waitLSN.xrecoff = 0;
 	MyProc->syncRepState = SYNC_REP_NOT_WAITING;
@@ -489,6 +488,7 @@ InitProcessPhase2(void)
 	/*
 	 * Arrange to clean that up at backend exit.
 	 */
+	on_shmem_exit(SyncRepCleanupAtProcExit, 0);
 	on_shmem_exit(RemoveProcFromArray, 0);
 }
 
@@ -762,8 +762,6 @@ LockWaitCancel(void)
  * At subtransaction abort, we release all locks held by the subtransaction;
  * this is implemented by retail releasing of the locks under control of
  * the ResourceOwner mechanism.
- *
- * Note that user locks are not released in any case.
  */
 void
 ProcReleaseLocks(bool isCommit)
@@ -774,6 +772,9 @@ ProcReleaseLocks(bool isCommit)
 	LockWaitCancel();
 	/* Release locks */
 	LockReleaseAll(DEFAULT_LOCKMETHOD, !isCommit);
+
+	/* Release transaction level advisory locks */
+	LockReleaseAll(USER_LOCKMETHOD, false);
 }
 
 
@@ -819,7 +820,7 @@ ProcKill(int code, Datum arg)
 	Assert(MyProc != NULL);
 
 	/* Make sure we're out of the sync rep lists */
-	SyncRepCleanupAtProcExit();
+	SyncRepCleanupAtProcExit(0, 0);
 
 	/* 
 	 * Cleanup for any resource locks on portals - from holdable cursors or

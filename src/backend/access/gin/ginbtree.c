@@ -4,17 +4,17 @@
  *	  page utilities routines for the postgres inverted index access method.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginbtree.c,v 1.15 2010/01/02 16:57:33 momjian Exp $
+ *			src/backend/access/gin/ginbtree.c
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/gin.h"
+#include "access/gin_private.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "utils/rel.h"
@@ -104,7 +104,8 @@ ginFindLeafPage(GinBtree btree, GinBtreeStack *stack)
 		 * ok, page is correctly locked, we should check to move right ..,
 		 * root never has a right link, so small optimization
 		 */
-		while (btree->fullScan == FALSE && stack->blkno != rootBlkno && btree->isMoveRight(btree, page))
+		while (btree->fullScan == FALSE && stack->blkno != rootBlkno &&
+			   btree->isMoveRight(btree, page))
 		{
 			BlockNumber rightlink = GinPageGetOpaque(page)->rightlink;
 
@@ -173,8 +174,8 @@ freeGinBtreeStack(GinBtreeStack *stack)
  * with vacuum process
  */
 void
-findParents(GinBtree btree, GinBtreeStack *stack,
-			BlockNumber rootBlkno)
+ginFindParents(GinBtree btree, GinBtreeStack *stack,
+			   BlockNumber rootBlkno)
 {
 	Page		page;
 	Buffer		buffer;
@@ -225,7 +226,6 @@ findParents(GinBtree btree, GinBtreeStack *stack,
 	LockBuffer(root->buffer, GIN_UNLOCK);
 	Assert(blkno != InvalidBlockNumber);
 
-
 	for (;;)
 	{
 		buffer = ReadBuffer(btree->index, blkno);
@@ -266,9 +266,14 @@ findParents(GinBtree btree, GinBtreeStack *stack,
 
 /*
  * Insert value (stored in GinBtree) to tree described by stack
+ *
+ * During an index build, buildStats is non-null and the counters
+ * it contains should be incremented as needed.
+ *
+ * NB: the passed-in stack is freed, as though by freeGinBtreeStack.
  */
 void
-ginInsertValue(GinBtree btree, GinBtreeStack *stack)
+ginInsertValue(GinBtree btree, GinBtreeStack *stack, GinStatsData *buildStats)
 {
 	GinBtreeStack *parent = stack;
 	BlockNumber rootBlkno = InvalidBuffer;
@@ -298,7 +303,7 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 
 			MarkBufferDirty(stack->buffer);
 
-			if (!btree->index->rd_istemp)
+			if (RelationNeedsWAL(btree->index))
 			{
 				XLogRecPtr	recptr;
 
@@ -306,10 +311,11 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 				PageSetLSN(page, recptr);
 			}
 
-			UnlockReleaseBuffer(stack->buffer);
+			LockBuffer(stack->buffer, GIN_UNLOCK);
 			END_CRIT_SECTION();
 
-			freeGinBtreeStack(stack->parent);
+			freeGinBtreeStack(stack);
+
 			return;
 		}
 		else
@@ -323,8 +329,16 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 			 */
 			newlpage = btree->splitPage(btree, stack->buffer, rbuffer, stack->off, &rdata);
 
-
 			((ginxlogSplit *) (rdata->data))->rootBlkno = rootBlkno;
+
+			/* During index build, count the newly-split page */
+			if (buildStats)
+			{
+				if (btree->isData)
+					buildStats->nDataPages++;
+				else
+					buildStats->nEntryPages++;
+			}
 
 			parent = stack->parent;
 
@@ -338,7 +352,6 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 
 				((ginxlogSplit *) (rdata->data))->isRootSplit = TRUE;
 				((ginxlogSplit *) (rdata->data))->rrlink = InvalidBlockNumber;
-
 
 				page = BufferGetPage(stack->buffer);
 				lpage = BufferGetPage(lbuffer);
@@ -358,7 +371,7 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 				MarkBufferDirty(lbuffer);
 				MarkBufferDirty(stack->buffer);
 
-				if (!btree->index->rd_istemp)
+				if (RelationNeedsWAL(btree->index))
 				{
 					XLogRecPtr	recptr;
 
@@ -370,9 +383,19 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 
 				UnlockReleaseBuffer(rbuffer);
 				UnlockReleaseBuffer(lbuffer);
-				UnlockReleaseBuffer(stack->buffer);
-
+				LockBuffer(stack->buffer, GIN_UNLOCK);
 				END_CRIT_SECTION();
+
+				freeGinBtreeStack(stack);
+
+				/* During index build, count the newly-added root page */
+				if (buildStats)
+				{
+					if (btree->isData)
+						buildStats->nDataPages++;
+					else
+						buildStats->nEntryPages++;
+				}
 
 				return;
 			}
@@ -394,7 +417,7 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 				MarkBufferDirty(rbuffer);
 				MarkBufferDirty(stack->buffer);
 
-				if (!btree->index->rd_istemp)
+				if (RelationNeedsWAL(btree->index))
 				{
 					XLogRecPtr	recptr;
 
@@ -426,7 +449,7 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack)
 				 * rightmost page, but we don't find parent, we should use
 				 * plain search...
 				 */
-				findParents(btree, stack, rootBlkno);
+				ginFindParents(btree, stack, rootBlkno);
 				parent = stack->parent;
 				page = BufferGetPage(parent->buffer);
 				break;

@@ -3,12 +3,12 @@
  * hashfunc.c
  *	  Support functions for hash access method.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashfunc.c,v 1.62 2010/01/07 04:53:34 tgl Exp $
+ *	  src/backend/access/hash/hashfunc.c
  *
  * NOTES
  *	  These functions are stored in pg_amproc.  For each operator class

@@ -68,7 +68,7 @@ ExecEndTableScan(TableScanState *node)
 }
 
 void
-ExecTableReScan(TableScanState *node, ExprContext *exprCtxt)
+ExecReScanTable(TableScanState *node)
 {
 	ReScanRelation((ScanState *)node);
 }

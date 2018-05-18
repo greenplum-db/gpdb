@@ -294,7 +294,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 			num = DatumGetNumeric(datum);
 
-			if (NUMERIC_IS_NAN(num))
+			if (numeric_is_nan(num))
 			{
 				nanbuf = NAN_VAL;
 				buf = &nanbuf;
@@ -303,7 +303,10 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			else
 				/* not a nan */
 			{
-				buf = num->n_data;
+				/* GPDB_91_MERGE_FIXME: This doesn't know about the new
+				 * "short" representation of numerics. */
+#define NUMERIC_HDRSZ	(VARHDRSZ + sizeof(uint16) + sizeof(int16))
+				buf = VARDATA(num);
 				len = (VARSIZE(num) - NUMERIC_HDRSZ);
 			}
 
@@ -749,6 +752,16 @@ isGreenplumDbHashable(Oid typid)
 		case CHAROID:
 		case BPCHAROID:
 		case TEXTOID:
+		/*
+		 * GPDB_91_MERGE_FIXME:
+		 * "pg_node_tree" is introduced in PG 9.1 to be
+		 * the type for nodeToString output. It can be
+		 * coerced to, but not from, text.
+		 *
+		 * Make it GPDB hashable here to let gpcheckcat
+		 * pass.
+		 */
+		case PGNODETREEOID:
 		case VARCHAROID:
 		case BYTEAOID:
 		case NAMEOID:

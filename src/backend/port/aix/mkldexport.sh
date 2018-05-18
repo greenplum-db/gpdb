@@ -3,19 +3,19 @@
 # mkldexport
 #	create an AIX exports file from an object file
 #
-# $PostgreSQL: pgsql/src/backend/port/aix/mkldexport.sh,v 1.9 2006/03/11 04:38:31 momjian Exp $
+# src/backend/port/aix/mkldexport.sh
 #
 # Usage:
 #	mkldexport objectfile [location]
 # where
 #	objectfile is the current location of the object file.
-#	location is the eventual (installed) location of the 
+#	location is the eventual (installed) location of the
 #		object file (if different from the current
 #		working directory).
 #
 # [This file comes from the Postgres 4.2 distribution. - ay 7/95]
 #
-# Header: /usr/local/devel/postgres/src/tools/mkldexport/RCS/mkldexport.sh,v 1.2 1994/03/13 04:59:12 aoki Exp 
+# Header: /usr/local/devel/postgres/src/tools/mkldexport/RCS/mkldexport.sh,v 1.2 1994/03/13 04:59:12 aoki Exp
 #
 
 # setting this to nm -B might be better

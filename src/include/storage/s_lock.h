@@ -63,10 +63,10 @@
  *	when using the SysV semaphore code.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	  $PostgreSQL: pgsql/src/include/storage/s_lock.h,v 1.171 2010/01/05 11:06:28 mha Exp $
+ *	  src/include/storage/s_lock.h
  *
  *-------------------------------------------------------------------------
  */
@@ -857,7 +857,7 @@ spin_delay(void)
 
 #endif
 
-  
+
 #endif	/* !defined(HAS_TEST_AND_SET) */
 
 

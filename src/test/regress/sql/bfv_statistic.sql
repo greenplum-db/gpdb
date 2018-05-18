@@ -271,13 +271,21 @@ CREATE TABLE test_broken_stats(a int, b text);
 INSERT INTO test_broken_stats VALUES(1, 'abc'), (2, 'cde'), (3, 'efg'), (3, 'efg'), (3, 'efg'), (1, 'abc'), (2, 'cde'); 
 ANALYZE test_broken_stats;
 SET allow_system_table_mods='DML';
+
 -- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
+
+-- start_matchsubs
+-- m/ERROR:  invalid .* of type .*, for attribute of type .* \(selfuncs\.c\:\d+\)/
+-- s/\(selfuncs\.c:\d+\)//
+-- end_matchsubs
+
 -- Broken MCVs
 UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
+SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
+
 -- Broken histogram
 UPDATE pg_statistic SET stakind2=2 WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
 UPDATE pg_statistic SET stavalues2='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2 and stakind2=2;
-
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
 
 RESET allow_system_table_mods;

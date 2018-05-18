@@ -4,7 +4,7 @@
 #    Makefile for storage/lmgr
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/storage/lmgr/Makefile,v 1.23 2008/02/19 10:30:08 petere Exp $
+#    src/backend/storage/lmgr/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ subdir = src/backend/storage/lmgr
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = lmgr.o lock.o proc.o deadlock.o lwlock.o spin.o s_lock.o
+OBJS = lmgr.o lock.o proc.o deadlock.o lwlock.o spin.o s_lock.o predicate.o
 
 include $(top_srcdir)/src/backend/common.mk
 
@@ -27,5 +27,5 @@ s_lock_test: s_lock.c $(top_builddir)/src/port/libpgport.a
 check: s_lock_test
 	./s_lock_test
 
-clean distclean maintainer-clean: 
+clean distclean maintainer-clean:
 	rm -f s_lock_test

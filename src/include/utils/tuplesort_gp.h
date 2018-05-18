@@ -50,7 +50,8 @@ extern struct Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
 		const char* rwfile_prefix, bool isWriter,
 		TupleDesc tupDesc, 
 		int nkeys, AttrNumber *attNums,
-		Oid *sortOperators, bool *nullsFirstFlags,
+		Oid *sortOperators, Oid *sortCollations,
+		bool *nullsFirstFlags,
 		int workMem, bool randomAccess);
 
 extern void cdb_tuplesort_init(struct Tuplesortstate *state, int unique,

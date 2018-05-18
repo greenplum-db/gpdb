@@ -1309,7 +1309,8 @@ GetTotalTupleCountFromSegments(Relation parentrel,
 	 * assemble our query string
 	 */
 	initStringInfo(&sqlstmt);
-	appendStringInfo(&sqlstmt, "SELECT tupcount, segno FROM pg_aoseg.%s",
+	appendStringInfo(&sqlstmt, "SELECT tupcount, segno FROM %s.%s",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
 					 RelationGetRelationName(aosegrel));
 	if (segno >= 0)
 		appendStringInfo(&sqlstmt, " WHERE segno = %d", segno);
@@ -1415,7 +1416,8 @@ GetFileSegStateInfoFromSegments(Relation parentrel)
 	 * assemble our query string
 	 */
 	initStringInfo(&sqlstmt);
-	appendStringInfo(&sqlstmt, "SELECT state, segno FROM pg_aoseg.%s",
+	appendStringInfo(&sqlstmt, "SELECT state, segno FROM %s.%s",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
 					 RelationGetRelationName(aosegrel));
 	heap_close(aosegrel, AccessShareLock);
 

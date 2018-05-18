@@ -5,12 +5,12 @@
  *	  wherein you authenticate a user by seeing what IP address the system
  *	  says he comes from and choosing authentication method based on it).
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/hba.c,v 1.209 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/libpq/hba.c
  *
  *-------------------------------------------------------------------------
  */
@@ -25,8 +25,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "catalog/pg_collation.h"
 #include "libpq/ip.h"
 #include "libpq/libpq.h"
+#include "postmaster/postmaster.h"
 #include "regex/regex.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
@@ -102,8 +104,8 @@ pg_isblank(const char c)
  * whichever comes first. If no more tokens on line, position the file to the
  * beginning of the next line or EOF, whichever comes first.
  *
- * Handle comments. Treat unquoted keywords that might be role names or
- * database names specially, by appending a newline to them.  Also, when
+ * Handle comments. Treat unquoted keywords that might be role, database, or
+ * host names specially, by appending a newline to them.  Also, when
  * a token is terminated by a comma, the comma is included in the returned
  * token.
  */
@@ -198,6 +200,8 @@ next_token(FILE *fp, char *buf, int bufsz, bool *initial_quote)
 
 	if (!saw_quote &&
 		(strcmp(start_buf, "all") == 0 ||
+		 strcmp(start_buf, "samehost") == 0 ||
+		 strcmp(start_buf, "samenet") == 0 ||
 		 strcmp(start_buf, "sameuser") == 0 ||
 		 strcmp(start_buf, "samegroup") == 0 ||
 		 strcmp(start_buf, "samerole") == 0 ||
@@ -458,7 +462,7 @@ is_member(Oid userid, const char *role)
 	if (!OidIsValid(userid))
 		return false;			/* if user not exist, say "no" */
 
-	roleid = get_roleid(role);
+	roleid = get_role_oid(role, true);
 
 	if (!OidIsValid(roleid))
 		return false;			/* if target role not exist, say "no" */
@@ -489,6 +493,8 @@ check_role(const char *role, Oid roleid, char *param_str)
 				return true;
 		}
 		else if (strcmp(tok, role) == 0 ||
+				 (strcmp(tok, "replication\n") == 0 &&
+				  strcmp(role, "replication") == 0) ||
 				 strcmp(tok, "all\n") == 0)
 			return true;
 	}
@@ -537,6 +543,128 @@ check_db(const char *dbname, const char *role, Oid roleid, char *param_str)
 			return true;
 	}
 	return false;
+}
+
+static bool
+ipv4eq(struct sockaddr_in * a, struct sockaddr_in * b)
+{
+	return (a->sin_addr.s_addr == b->sin_addr.s_addr);
+}
+
+#ifdef HAVE_IPV6
+
+static bool
+ipv6eq(struct sockaddr_in6 * a, struct sockaddr_in6 * b)
+{
+	int			i;
+
+	for (i = 0; i < 16; i++)
+		if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i])
+			return false;
+
+	return true;
+}
+#endif   /* HAVE_IPV6 */
+
+/*
+ * Check whether host name matches pattern.
+ */
+static bool
+hostname_match(const char *pattern, const char *actual_hostname)
+{
+	if (pattern[0] == '.')		/* suffix match */
+	{
+		size_t		plen = strlen(pattern);
+		size_t		hlen = strlen(actual_hostname);
+
+		if (hlen < plen)
+			return false;
+
+		return (pg_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
+	}
+	else
+		return (pg_strcasecmp(pattern, actual_hostname) == 0);
+}
+
+/*
+ * Check to see if a connecting IP matches a given host name.
+ */
+static bool
+check_hostname(hbaPort *port, const char *hostname)
+{
+	struct addrinfo *gai_result,
+			   *gai;
+	int			ret;
+	bool		found;
+
+	/* Lookup remote host name if not already done */
+	if (!port->remote_hostname)
+	{
+		char		remote_hostname[NI_MAXHOST];
+
+		if (pg_getnameinfo_all(&port->raddr.addr, port->raddr.salen,
+							   remote_hostname, sizeof(remote_hostname),
+							   NULL, 0,
+							   0))
+			return false;
+
+		port->remote_hostname = pstrdup(remote_hostname);
+	}
+
+	if (!hostname_match(hostname, port->remote_hostname))
+		return false;
+
+	/* Lookup IP from host name and check against original IP */
+
+	if (port->remote_hostname_resolv == +1)
+		return true;
+	if (port->remote_hostname_resolv == -1)
+		return false;
+
+	ret = getaddrinfo(port->remote_hostname, NULL, NULL, &gai_result);
+	if (ret != 0)
+		ereport(ERROR,
+				(errmsg("could not translate host name \"%s\" to address: %s",
+						port->remote_hostname, gai_strerror(ret))));
+
+	found = false;
+	for (gai = gai_result; gai; gai = gai->ai_next)
+	{
+		if (gai->ai_addr->sa_family == port->raddr.addr.ss_family)
+		{
+			if (gai->ai_addr->sa_family == AF_INET)
+			{
+				if (ipv4eq((struct sockaddr_in *) gai->ai_addr,
+						   (struct sockaddr_in *) & port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
+#ifdef HAVE_IPV6
+			else if (gai->ai_addr->sa_family == AF_INET6)
+			{
+				if (ipv6eq((struct sockaddr_in6 *) gai->ai_addr,
+						   (struct sockaddr_in6 *) & port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
+#endif
+		}
+	}
+
+	if (gai_result)
+		freeaddrinfo(gai_result);
+
+	if (!found)
+		elog(DEBUG2, "pg_hba.conf host name \"%s\" rejected because address resolution did not return a match with IP address of client",
+			 hostname);
+
+	port->remote_hostname_resolv = found ? +1 : -1;
+
+	return found;
 }
 
 /*
@@ -695,7 +823,16 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	token = lfirst(line_item);
 	if (strcmp(token, "local") == 0)
 	{
+#ifdef HAVE_UNIX_SOCKETS
 		parsedline->conntype = ctLocal;
+#else
+		ereport(LOG,
+				(errcode(ERRCODE_CONFIG_FILE_ERROR),
+				 errmsg("local connections are not supported by this build"),
+				 errcontext("line %d of configuration file \"%s\"",
+							line_num, HbaFileName)));
+		return false;
+#endif
 	}
 	else if (strcmp(token, "host") == 0
 			 || strcmp(token, "hostssl") == 0
@@ -704,12 +841,24 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 
 		if (token[4] == 's')	/* "hostssl" */
 		{
+			/* SSL support must be actually active, else complain */
 #ifdef USE_SSL
-			parsedline->conntype = ctHostSSL;
+			if (EnableSSL)
+				parsedline->conntype = ctHostSSL;
+			else
+			{
+				ereport(LOG,
+						(errcode(ERRCODE_CONFIG_FILE_ERROR),
+						 errmsg("hostssl requires SSL to be turned on"),
+						 errhint("Set ssl = on in postgresql.conf."),
+						 errcontext("line %d of configuration file \"%s\"",
+									line_num, HbaFileName)));
+				return false;
+			}
 #else
 			ereport(LOG,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
-					 errmsg("hostssl not supported on this platform"),
+					 errmsg("hostssl is not supported by this build"),
 			  errhint("Compile with --with-openssl to use SSL connections."),
 					 errcontext("line %d of configuration file \"%s\"",
 								line_num, HbaFileName)));
@@ -780,13 +929,16 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		}
 		token = lfirst(line_item);
 
-		/* Is it equal to 'samehost' or 'samenet'? */
-		if (strcmp(token, "samehost") == 0)
+		if (strcmp(token, "all\n") == 0)
+		{
+			parsedline->ip_cmp_method = ipCmpAll;
+		}
+		else if (strcmp(token, "samehost\n") == 0)
 		{
 			/* Any IP on this host is allowed to connect */
 			parsedline->ip_cmp_method = ipCmpSameHost;
 		}
-		else if (strcmp(token, "samenet") == 0)
+		else if (strcmp(token, "samenet\n") == 0)
 		{
 			/* Any IP on the host's subnets is allowed to connect */
 			parsedline->ip_cmp_method = ipCmpSameNet;
@@ -815,7 +967,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 			hints.ai_next = NULL;
 
 			ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
-			if (ret || !gai_result)
+			if (ret == 0 && gai_result)
+				memcpy(&parsedline->addr, gai_result->ai_addr,
+					   gai_result->ai_addrlen);
+			else if (ret == EAI_NONAME)
+				parsedline->hostname = token;
+			else
 			{
 				ereport(LOG,
 						(errcode(ERRCODE_CONFIG_FILE_ERROR),
@@ -829,13 +986,24 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				return false;
 			}
 
-			memcpy(&parsedline->addr, gai_result->ai_addr,
-				   gai_result->ai_addrlen);
 			pg_freeaddrinfo_all(hints.ai_family, gai_result);
 
 			/* Get the netmask */
 			if (cidr_slash)
 			{
+				if (parsedline->hostname)
+				{
+					*cidr_slash = '/';	/* restore token for message */
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("specifying both host name and CIDR mask is invalid: \"%s\"",
+									token),
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
+					pfree(token);
+					return false;
+				}
+
 				if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
 										  parsedline->addr.ss_family) < 0)
 				{
@@ -851,7 +1019,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				}
 				pfree(token);
 			}
-			else
+			else if (!parsedline->hostname)
 			{
 				/* Read the mask field. */
 				pfree(token);
@@ -916,6 +1084,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		parsedline->auth_method = uaTrust;
 	else if (strcmp(token, "ident") == 0)
 		parsedline->auth_method = uaIdent;
+	else if (strcmp(token, "peer") == 0)
+		parsedline->auth_method = uaPeer;
 	else if (strcmp(token, "password") == 0)
 		parsedline->auth_method = uaPassword;
 	else if (strcmp(token, "krb5") == 0)
@@ -986,12 +1156,20 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	{
 		ereport(LOG,
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
-				 errmsg("invalid authentication method \"%s\": not supported on this platform",
+				 errmsg("invalid authentication method \"%s\": not supported by this build",
 						token),
 				 errcontext("line %d of configuration file \"%s\"",
 							line_num, HbaFileName)));
 		return false;
 	}
+
+	/*
+	 * XXX: When using ident on local connections, change it to peer, for
+	 * backwards compatibility.
+	 */
+	if (parsedline->conntype == ctLocal &&
+		parsedline->auth_method == uaIdent)
+		parsedline->auth_method = uaPeer;
 
 	/* Invalid authentication combinations */
 	if (parsedline->conntype == ctLocal &&
@@ -1011,6 +1189,17 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		ereport(LOG,
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
 		   errmsg("gssapi authentication is not supported on local sockets"),
+				 errcontext("line %d of configuration file \"%s\"",
+							line_num, HbaFileName)));
+		return false;
+	}
+
+	if (parsedline->conntype != ctLocal &&
+		parsedline->auth_method == uaPeer)
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_CONFIG_FILE_ERROR),
+			errmsg("peer authentication is only supported on local sockets"),
 				 errcontext("line %d of configuration file \"%s\"",
 							line_num, HbaFileName)));
 		return false;
@@ -1072,11 +1261,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 			if (strcmp(token, "map") == 0)
 			{
 				if (parsedline->auth_method != uaIdent &&
+					parsedline->auth_method != uaPeer &&
 					parsedline->auth_method != uaKrb5 &&
 					parsedline->auth_method != uaGSS &&
 					parsedline->auth_method != uaSSPI &&
 					parsedline->auth_method != uaCert)
-					INVALID_AUTH_OPTION("map", gettext_noop("ident, krb5, gssapi, sspi and cert"));
+					INVALID_AUTH_OPTION("map", gettext_noop("ident, peer, krb5, gssapi, sspi and cert"));
 				parsedline->usermap = pstrdup(c);
 			}
 			else if (strcmp(token, "clientcert") == 0)
@@ -1357,7 +1547,7 @@ check_hba(hbaPort *port)
 	HbaLine    *hba;
 
 	/* Get the target role's OID.  Note we do not error out for bad role. */
-	roleid = get_roleid(port->user_name);
+	roleid = get_role_oid(port->user_name, true);
 
 	foreach(line, parsed_hba_lines)
 	{
@@ -1398,10 +1588,21 @@ check_hba(hbaPort *port)
 			switch (hba->ip_cmp_method)
 			{
 				case ipCmpMask:
-					if (!check_ip(&port->raddr,
-								  (struct sockaddr *) & hba->addr,
-								  (struct sockaddr *) & hba->mask))
-						continue;
+					if (hba->hostname)
+					{
+						if (!check_hostname(port,
+											hba->hostname))
+							continue;
+					}
+					else
+					{
+						if (!check_ip(&port->raddr,
+									  (struct sockaddr *) & hba->addr,
+									  (struct sockaddr *) & hba->mask))
+							continue;
+					}
+					break;
+				case ipCmpAll:
 					break;
 				case ipCmpSameHost:
 				case ipCmpSameNet:
@@ -1632,7 +1833,7 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 		 * XXX: Major room for optimization: regexps could be compiled when
 		 * the file is loaded and then re-used in every connection.
 		 */
-		r = pg_regcomp(&re, wstr, wlen, REG_ADVANCED);
+		r = pg_regcomp(&re, wstr, wlen, REG_ADVANCED, C_COLLATION_OID);
 		if (r)
 		{
 			char		errstr[100];

@@ -516,30 +516,30 @@ CREATE TABLE bar (a int, b int, c int, d int)
         )
     ( DEFAULT PARTITION others, START(0) END(6) EVERY(1) );
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_others" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_3" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_4" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_5" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_6" for table "bar"
-NOTICE:  CREATE TABLE will create partition "bar_1_prt_7" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_subothers" for table "bar_1_prt_others"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_s1" for table "bar_1_prt_others"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_others_2_prt_s2" for table "bar_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_2" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_subothers" for table "bar_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_s1" for table "bar_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_2_2_prt_s2" for table "bar_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_3" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_subothers" for table "bar_1_prt_3"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_s1" for table "bar_1_prt_3"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_3_2_prt_s2" for table "bar_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_4" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_subothers" for table "bar_1_prt_4"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_s1" for table "bar_1_prt_4"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_4_2_prt_s2" for table "bar_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_5" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_subothers" for table "bar_1_prt_5"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_s1" for table "bar_1_prt_5"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_5_2_prt_s2" for table "bar_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_6" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_subothers" for table "bar_1_prt_6"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_s1" for table "bar_1_prt_6"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_6_2_prt_s2" for table "bar_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "bar_1_prt_7" for table "bar"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_subothers" for table "bar_1_prt_7"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_s1" for table "bar_1_prt_7"
 NOTICE:  CREATE TABLE will create partition "bar_1_prt_7_2_prt_s2" for table "bar_1_prt_7"
@@ -829,8 +829,8 @@ $$ language plpgsql;
 select plpgsql_uc_test();
 NOTICE:  3, 3
 ERROR:  cursor "c" is not a simply updatable scan of table "uctest3"
-CONTEXT:  SQL statement "update uctest3 set i = i * 100, j =  $1  * 2 where current of  $2 "
-PL/pgSQL function "plpgsql_uc_test" line 8 at SQL statement
+CONTEXT:  SQL statement "update uctest3 set i = i * 100, j = r.j * 2 where current of c"
+PL/pgSQL function "plpgsql_uc_test" line 9 at SQL statement
 select * from uctest3;
  i | j 
 ---+---

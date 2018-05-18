@@ -3,12 +3,12 @@
  * pgstatfuncs.c
  *	  Functions for accessing the statistics collector data
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.60 2010/02/26 02:01:09 momjian Exp $
+ *	  src/backend/utils/adt/pgstatfuncs.c
  *
  *-------------------------------------------------------------------------
  */
@@ -44,6 +44,10 @@ extern Datum pg_stat_get_last_vacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autovacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_analyze_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_vacuum_count(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_autovacuum_count(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_analyze_count(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_autoanalyze_count(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_function_calls(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_function_time(PG_FUNCTION_ARGS);
@@ -75,14 +79,37 @@ extern Datum pg_stat_get_db_tuples_fetched(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_db_tuples_inserted(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_db_tuples_updated(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_db_tuples_deleted(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_tablespace(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_lock(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_snapshot(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_bufferpin(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_startup_deadlock(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_conflict_all(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_db_stat_reset_time(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_bgwriter_timed_checkpoints(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_bgwriter_requested_checkpoints(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_bgwriter_buf_written_checkpoints(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_bgwriter_buf_written_clean(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_bgwriter_maxwritten_clean(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_bgwriter_stat_reset_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_buf_written_backend(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_buf_fsync_backend(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_buf_alloc(PG_FUNCTION_ARGS);
+
+extern Datum pg_stat_get_xact_numscans(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_returned(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_fetched(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_inserted(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_updated(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_deleted(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_tuples_hot_updated(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_blocks_fetched(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_blocks_hit(PG_FUNCTION_ARGS);
+
+extern Datum pg_stat_get_xact_function_calls(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_function_time(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_xact_function_self_time(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_queue_num_exec(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_queue_num_wait(PG_FUNCTION_ARGS);
@@ -364,6 +391,66 @@ pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_stat_get_vacuum_count(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatTabEntry *tabentry;
+
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->vacuum_count);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_autovacuum_count(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatTabEntry *tabentry;
+
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->autovac_vacuum_count);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_analyze_count(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatTabEntry *tabentry;
+
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->analyze_count);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_autoanalyze_count(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatTabEntry *tabentry;
+
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->autovac_analyze_count);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
 pg_stat_get_function_calls(PG_FUNCTION_ARGS)
 {
 	Oid			funcid = PG_GETARG_OID(0);
@@ -445,34 +532,54 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 	{
 		MemoryContext oldcontext;
 		TupleDesc	tupdesc;
-		int			nattr = 16;
+		int			nattr = 17;
 
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		tupdesc = CreateTemplateTupleDesc(nattr, false);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "datid", OIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "procpid", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "usesysid", OIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "application_name", TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "current_query", TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "waiting", BOOLOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "act_start", TIMESTAMPTZOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "query_start", TIMESTAMPTZOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "backend_start", TIMESTAMPTZOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "client_addr", INETOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "client_port", INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "sess_id", INT4OID, -1, 0);  /* GPDB */
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "datid",
+						   OIDOID, -1, 0);
+		/* This should have been called 'pid';  can't change it. 2011-06-11 */
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "procpid",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "usesysid",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "application_name",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "current_query",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "waiting",
+						   BOOLOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "act_start",
+						   TIMESTAMPTZOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "query_start",
+						   TIMESTAMPTZOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "backend_start",
+						   TIMESTAMPTZOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "client_addr",
+						   INETOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "client_hostname",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "client_port",
+						   INT4OID, -1, 0);
+
+		TupleDescInitEntry(tupdesc, (AttrNumber) 13, "sess_id",
+						   INT4OID, -1, 0);  /* GPDB */
 
 		if (nattr > 12)
-			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_reason", TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 14, "waiting_reason",
+							   TEXTOID, -1, 0);
 
 		if (nattr > 13)
 		{
-			TupleDescInitEntry(tupdesc, (AttrNumber) 14, "rsgid", OIDOID, -1, 0);
-			TupleDescInitEntry(tupdesc, (AttrNumber) 15, "rsgname", TEXTOID, -1, 0);
-			TupleDescInitEntry(tupdesc, (AttrNumber) 16, "rsgqueueduration", INTERVALOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 15, "rsgid",
+							   OIDOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 16, "rsgname",
+							   TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 17, "rsgqueueduration",
+							   INTERVALOID, -1, 0);
 		}
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -525,8 +632,8 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 	if (funcctx->call_cntr < funcctx->max_calls)
 	{
 		/* for each row */
-		Datum		values[16];
-		bool		nulls[16];
+		Datum		values[17];
+		bool		nulls[17];
 		HeapTuple	tuple;
 		PgBackendStatus *beentry;
 
@@ -604,6 +711,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			{
 				nulls[9] = true;
 				nulls[10] = true;
+				nulls[11] = true;
 			}
 			else
 			{
@@ -628,13 +736,18 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 					{
 						nulls[9] = true;
 						nulls[10] = true;
+						nulls[11] = true;
 					}
 					else
 					{
 						clean_ipv6_addr(beentry->st_clientaddr.addr.ss_family, remote_host);
 						values[9] = DirectFunctionCall1(inet_in,
 											   CStringGetDatum(remote_host));
-						values[10] = Int32GetDatum(atoi(remote_port));
+						if (beentry->st_clienthostname)
+							values[10] = CStringGetTextDatum(beentry->st_clienthostname);
+						else
+							nulls[10] = true;
+						values[11] = Int32GetDatum(atoi(remote_port));
 					}
 				}
 				else if (beentry->st_clientaddr.addr.ss_family == AF_UNIX)
@@ -646,16 +759,18 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 					 * errors.
 					 */
 					nulls[9] = true;
-					values[10] = DatumGetInt32(-1);
+					nulls[10] = true;
+					values[11] = DatumGetInt32(-1);
 				}
 				else
 				{
 					/* Unknown address type, should never happen */
 					nulls[9] = true;
 					nulls[10] = true;
+					nulls[11] = true;
 				}
 			}
-			values[11] = Int32GetDatum(beentry->st_session_id);  /* GPDB */
+			values[12] = Int32GetDatum(beentry->st_session_id);  /* GPDB */
 
 			if (funcctx->tuple_desc->natts > 12)
 			{
@@ -665,9 +780,9 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 				reason = pgstat_waiting_string(st_waiting);
 
 				if (reason != NULL)
-					values[12] = CStringGetTextDatum(reason);
+					values[13] = CStringGetTextDatum(reason);
 				else
-					nulls[12] = true;
+					nulls[13] = true;
 			}
 
 			if (funcctx->tuple_desc->natts > 13)
@@ -675,18 +790,18 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 				Datum now = TimestampTzGetDatum(GetCurrentTimestamp());
 				char *groupName = GetResGroupNameForId(beentry->st_rsgid);
 
-				values[13] = ObjectIdGetDatum(beentry->st_rsgid);
+				values[14] = ObjectIdGetDatum(beentry->st_rsgid);
 
 				if (groupName != NULL)
-					values[14] = CStringGetTextDatum(groupName);
-				else
-					nulls[14] = true;
-
-				if (beentry->st_waiting == PGBE_WAITING_RESGROUP)
-					values[15] = DirectFunctionCall2(timestamptz_age, now,
-													 TimestampTzGetDatum(beentry->st_resgroup_queue_start_timestamp));
+					values[15] = CStringGetTextDatum(groupName);
 				else
 					nulls[15] = true;
+
+				if (beentry->st_waiting == PGBE_WAITING_RESGROUP)
+					values[16] = DirectFunctionCall2(timestamptz_age, now,
+													 TimestampTzGetDatum(beentry->st_resgroup_queue_start_timestamp));
+				else
+					nulls[16] = true;
 			}
 		}
 		else
@@ -699,14 +814,16 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			nulls[8] = true;
 			nulls[9] = true;
 			nulls[10] = true;
-			values[11] = Int32GetDatum(beentry->st_session_id);
+			nulls[11] = true;
+
+			values[12] = Int32GetDatum(beentry->st_session_id);
 			if (funcctx->tuple_desc->natts > 12)
-				nulls[12] = true;
+				nulls[13] = true;
 			if (funcctx->tuple_desc->natts > 13)
 			{
-				nulls[13] = true;
 				nulls[14] = true;
 				nulls[15] = true;
+				nulls[16] = true;
 			}
 		}
 
@@ -1169,6 +1286,119 @@ pg_stat_get_db_tuples_deleted(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_stat_get_db_stat_reset_time(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	TimestampTz result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = dbentry->stat_reset_timestamp;
+
+	if (result == 0)
+		PG_RETURN_NULL();
+	else
+		PG_RETURN_TIMESTAMPTZ(result);
+}
+
+Datum
+pg_stat_get_db_conflict_tablespace(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (dbentry->n_conflict_tablespace);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_db_conflict_lock(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (dbentry->n_conflict_lock);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_db_conflict_snapshot(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (dbentry->n_conflict_snapshot);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_db_conflict_bufferpin(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (dbentry->n_conflict_bufferpin);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_db_conflict_startup_deadlock(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (dbentry->n_conflict_startup_deadlock);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_db_conflict_all(PG_FUNCTION_ARGS)
+{
+	Oid			dbid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_StatDBEntry *dbentry;
+
+	if ((dbentry = pgstat_fetch_stat_dbentry(dbid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (
+						  dbentry->n_conflict_tablespace +
+						  dbentry->n_conflict_lock +
+						  dbentry->n_conflict_snapshot +
+						  dbentry->n_conflict_bufferpin +
+						  dbentry->n_conflict_startup_deadlock);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
 pg_stat_get_bgwriter_timed_checkpoints(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_INT64(pgstat_fetch_global()->timed_checkpoints);
@@ -1199,15 +1429,213 @@ pg_stat_get_bgwriter_maxwritten_clean(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_stat_get_bgwriter_stat_reset_time(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_TIMESTAMPTZ(pgstat_fetch_global()->stat_reset_timestamp);
+}
+
+Datum
 pg_stat_get_buf_written_backend(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_INT64(pgstat_fetch_global()->buf_written_backend);
 }
 
 Datum
+pg_stat_get_buf_fsync_backend(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_INT64(pgstat_fetch_global()->buf_fsync_backend);
+}
+
+Datum
 pg_stat_get_buf_alloc(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_INT64(pgstat_fetch_global()->buf_alloc);
+}
+
+Datum
+pg_stat_get_xact_numscans(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_numscans);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_returned(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_tuples_returned);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_fetched(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_tuples_fetched);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_inserted(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+	PgStat_TableXactStatus *trans;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+	{
+		result = tabentry->t_counts.t_tuples_inserted;
+		/* live subtransactions' counts aren't in t_tuples_inserted yet */
+		for (trans = tabentry->trans; trans != NULL; trans = trans->upper)
+			result += trans->tuples_inserted;
+	}
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_updated(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+	PgStat_TableXactStatus *trans;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+	{
+		result = tabentry->t_counts.t_tuples_updated;
+		/* live subtransactions' counts aren't in t_tuples_updated yet */
+		for (trans = tabentry->trans; trans != NULL; trans = trans->upper)
+			result += trans->tuples_updated;
+	}
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_deleted(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+	PgStat_TableXactStatus *trans;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+	{
+		result = tabentry->t_counts.t_tuples_deleted;
+		/* live subtransactions' counts aren't in t_tuples_deleted yet */
+		for (trans = tabentry->trans; trans != NULL; trans = trans->upper)
+			result += trans->tuples_deleted;
+	}
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_tuples_hot_updated(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_tuples_hot_updated);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_blocks_fetched(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_blocks_fetched);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_blocks_hit(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		result;
+	PgStat_TableStatus *tabentry;
+
+	if ((tabentry = find_tabstat_entry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->t_counts.t_blocks_hit);
+
+	PG_RETURN_INT64(result);
+}
+
+Datum
+pg_stat_get_xact_function_calls(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_BackendFunctionEntry *funcentry;
+
+	if ((funcentry = find_funcstat_entry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_counts.f_numcalls);
+}
+
+Datum
+pg_stat_get_xact_function_time(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_BackendFunctionEntry *funcentry;
+
+	if ((funcentry = find_funcstat_entry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(INSTR_TIME_GET_MICROSEC(funcentry->f_counts.f_time));
+}
+
+Datum
+pg_stat_get_xact_function_self_time(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_BackendFunctionEntry *funcentry;
+
+	if ((funcentry = find_funcstat_entry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(INSTR_TIME_GET_MICROSEC(funcentry->f_counts.f_time_self));
 }
 
 

@@ -15,6 +15,7 @@
 
 #include "postgres.h"
 
+#include "optimizer/planmain.h"
 #include "optimizer/planpartition.h"
 #include "optimizer/paths.h"
 #include "optimizer/pathnode.h"
@@ -28,11 +29,16 @@
 
 static Expr *FindEqKey(PlannerInfo *root, Bitmapset *inner_relids, DynamicScanInfo *dyninfo, int partKeyAttno);
 
-static PartitionSelector *create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo, Plan *subplan, List *partTabTargetlist, Expr *printablePredicate);
-
 static void add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids);
 
 static bool IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno);
+
+static Path *create_partition_selector_path(PlannerInfo *root,
+							   Path *subpath,
+							   DynamicScanInfo *dsinfo,
+							   List *partKeyExprs,
+							   List *partKeyAttnos);
+
 
 /*
  * Try to perform "partition selection" on a join.
@@ -79,27 +85,24 @@ static bool IsPartKeyVar(Expr *expr, int partVarno, int partKeyAttno);
  * for. The One-Time Filters act as "gates" that eliminate those
  * partitions altogether.
  *
- *
- * The caller should have already built the Plan for the inner side,
- * but *not* for the outer side. This function adds quals to rels in
- * the outer side, they will become One-Time Filters when the Plan
- * is created for the inner side. For the inner side, this function
- * wraps the outer Plan with Partition Selectors.
+ * If such a plan is possible, this function returns 'true', and modifies
+ * the given JoinPath to implement it. It wraps the inner child path with
+ * suitable PartitionSelectorPaths, and adds quals to the rels in the outer
+ * side, which will become One-Time Filters when the Plan is created for
+ * the outer side.
  *
  * If any partition selectors were created, returns 'true'.
  */
 bool
 inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
-									Plan **inner_plan_p)
+									List **partSelectors_p)
 {
 	ListCell   *lc;
 	Path	   *outerpath = join_path->outerjoinpath;
 	Path	   *innerpath = join_path->innerjoinpath;
 	Bitmapset  *inner_relids = innerpath->parent->relids;
 	bool		any_selectors_created = false;
-	bool		good_type;
-	Plan	   *inner_parent;
-	Plan	   *inner_child;
+	bool		good_type = false;
 
 	if (Gp_role != GP_ROLE_DISPATCH || !root->config->gp_dynamic_partition_pruning)
 		return false;
@@ -112,8 +115,6 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 	if (join_path->path.pathtype == T_HashJoin)
 	{
 		good_type = true;
-		inner_parent = NULL;
-		inner_child = *inner_plan_p;
 	}
 	/*
 	 * If we're doing a merge join, and will sort the inner side, then the sort
@@ -123,24 +124,30 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 	else if (join_path->path.pathtype == T_MergeJoin && ((MergePath *) join_path)->innersortkeys)
 	{
 		good_type = true;
-		inner_parent = NULL;
-		inner_child = *inner_plan_p;
 	}
 	/*
-	 * For a nested loop or a merge join, if there happens to be a Material
-	 * or Sort node on the inner side, then we can place the Partition Selector
-	 * below it. Even though a nested loop join will rescan the inner side,
-	 * the Material or Sort will be executed all in one go.
+	 * For a nested loop join, if there happens to be a Material node on the inner
+	 * side, then we can place the Partition Selector below it. Even though a nested
+	 * loop join will rescan the inner side, the Material or Sort will be executed
+	 * all in one go.
+	 *
+	 * We could add a Material node, if there isn't one already, but a Material
+	 * node is expensive. It would almost certainly make this plan worse than
+	 * something else that the planner considered and rejected.
 	 */
-	else if ((join_path->path.pathtype == T_NestLoop && !path_contains_inner_index(innerpath)) ||
-			 join_path->path.pathtype == T_MergeJoin)
+	else if (join_path->path.pathtype == T_NestLoop && !path_contains_inner_index(innerpath))
 	{
-		if (IsA(*inner_plan_p, Material) || IsA(*inner_plan_p, Sort))
-		{
+		if (IsA(innerpath, MaterialPath))
 			good_type = true;
-			inner_parent = *inner_plan_p;
-			inner_child = inner_parent->lefttree;
-		}
+		else
+			good_type = false;
+	}
+	else if (join_path->path.pathtype == T_MergeJoin)
+	{
+		if (IsA(innerpath, MaterialPath))
+			good_type = true;
+		else if (((MergePath *) join_path)->innersortkeys)
+			good_type = true;
 		else
 			good_type = false;
 	}
@@ -152,22 +159,23 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 
 	/*
 	 * Cannot do it, if there inner and outer sides are not in the same slice.
+	 * (This is just a quick check to see if there is any hope. We will check
+	 * individual relations in the loop below.)
 	 */
 	if (bms_is_empty(outerpath->sameslice_relids))
 		return false;
 
 	/*
-	 * NOTE: The equivalence class logic ensures that we don't get fooled
-	 * by outer join conditions. The sides of an outer join equality are not
-	 * put in the same equivalence class.
+	 * Loop through all dynamic scans in the plan. For each one, check if
+	 * the inner side of this join can provide values to the scan on the
+	 * outer side.
 	 */
 	foreach(lc, root->dynamicScans)
 	{
 		DynamicScanInfo *dyninfo = (DynamicScanInfo *) lfirst(lc);
 		ListCell   *lpk;
-		Expr	  **partKeyExprs = NULL;
-		int			max_attr = -1;
-		List	   *printablePredicate = NIL;
+		List	   *partKeyAttnos = NIL;
+		List	   *partKeyExprs = NIL;
 		Bitmapset  *childrelids;
 
 		/*
@@ -179,6 +187,10 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 		if (bms_is_empty(childrelids))
 			continue;
 
+		/*
+		 * Find equivalence conditions between the partitioning keys and
+		 * the relations on the inner side of the join.
+		 */
 		foreach(lpk, dyninfo->partKeyAttnos)
 		{
 			int			partKeyAttno = lfirst_int(lpk);
@@ -186,81 +198,112 @@ inject_partition_selectors_for_join(PlannerInfo *root, JoinPath *join_path,
 
 			expr = FindEqKey(root, inner_relids, dyninfo, partKeyAttno);
 
-			if (!expr)
-				continue;
-
-			if (!partKeyExprs)
+			if (expr)
 			{
-				max_attr = find_base_rel(root, dyninfo->rtindex)->max_attr;
-				partKeyExprs = palloc0((max_attr + 1) * sizeof(Expr *));
+				partKeyAttnos = lappend_int(partKeyAttnos, partKeyAttno);
+				partKeyExprs = lappend(partKeyExprs, expr);
 			}
-			if (partKeyAttno > max_attr)
-				elog(ERROR, "invalid partitioning key attribute number");
-
-			partKeyExprs[partKeyAttno] = expr;
-
-			printablePredicate = lappend(printablePredicate, expr);
 		}
 
 		if (partKeyExprs)
 		{
 			/*
-			 * This can be computed from the inner side.
+			 * Found some partitioning keys that can be computed from the inner
+			 * side.
 			 *
 			 * Build a partition selector and put it on the inner side.
-			 * Add RestrictInfos on the partition scans.
+			 *
+			 * If the inner side contains a Material, then we put the
+			 * partition selector under the Material node. The Material
+			 * will shield us from rescanning, and ensures that the inner
+			 * side is scanned fully, before the outer side.
 			 */
-			List	   *partTabTargetlist = NIL;
-			int			attno;
-			PartitionSelector *partSelector;
-
-			for (attno = 1; attno <= max_attr; attno++)
+			if (IsA(innerpath, MaterialPath))
 			{
-				Expr	   *expr = partKeyExprs[attno];
-				char		attname[20];
+				MaterialPath *matsubpath = (MaterialPath *) innerpath;
 
-				if (!expr)
-					expr = (Expr *) makeBoolConst(false, true);
+				matsubpath->subpath =
+					create_partition_selector_path(root,
+												   matsubpath->subpath,
+												   dyninfo,
+												   partKeyExprs,
+												   partKeyAttnos);
 
-				snprintf(attname, sizeof(attname), "partcol_%d", attno);
-
-				partTabTargetlist = lappend(partTabTargetlist,
-											makeTargetEntry(expr,
-															attno,
-															pstrdup(attname),
-															false));
+				/*
+				 * The inner side, with the Partition Selector, must be fully
+				 * executed before the outer side.
+				 */
+				matsubpath->cdb_strict = true;
+			}
+			else
+			{
+				innerpath = create_partition_selector_path(root,
+														   innerpath,
+														   dyninfo,
+														   partKeyExprs,
+														   partKeyAttnos);
 			}
 
-			partSelector = create_partition_selector(root,
-													 dyninfo,
-													 inner_child,
-													 partTabTargetlist,
-													 (Expr *) printablePredicate);
-			inner_child = (Plan *) partSelector;
+			/*
+			 * Add RestrictInfos on the partition scans on the outer side.
+			 *
+			 * NB: This modifies the global RelOptInfo structures! Therefore,
+			 * if you tried to create the plan from some other Path, where
+			 * the partition selector cannot be used, you'll nevertheless get
+			 * the PartSelectExpr gates in the partition scans. Because of this,
+			 * this function must only be used just before turning a path into
+			 * plan.
+			 */
 			if (!dyninfo->hasSelector)
 			{
 				dyninfo->hasSelector = true;
 
 				add_restrictinfos(root, dyninfo, childrelids);
 			}
+
 			any_selectors_created = true;
 		}
 	}
 
 	if (any_selectors_created)
 	{
-		if (inner_parent)
-		{
-			inner_parent->lefttree = inner_child;
-			if (IsA(inner_parent, Material))
-				((Material *)inner_parent)->cdb_strict = true;
-		}
-		else
-			*inner_plan_p = inner_child;
+		join_path->innerjoinpath = innerpath;
 		return true;
 	}
 	else
 		return false;
+}
+
+/*
+ * Create a PartitionSelectorPath, for the inner side of a join.
+ */
+static Path *
+create_partition_selector_path(PlannerInfo *root,
+							   Path *subpath,
+							   DynamicScanInfo *dsinfo,
+							   List *partKeyExprs,
+							   List *partKeyAttnos)
+{
+	PartitionSelectorPath *pathnode = makeNode(PartitionSelectorPath);
+
+	pathnode->path.pathtype = T_PartitionSelector;
+	pathnode->path.parent = subpath->parent;
+
+	pathnode->path.startup_cost = subpath->startup_cost;
+	pathnode->path.total_cost = subpath->total_cost;
+	pathnode->path.pathkeys = subpath->pathkeys;
+
+	pathnode->path.locus = subpath->locus;
+	pathnode->path.motionHazard = subpath->motionHazard;
+	pathnode->path.rescannable = subpath->rescannable;
+	pathnode->path.sameslice_relids = subpath->sameslice_relids;
+
+	pathnode->subpath = subpath;
+	pathnode->dsinfo = dsinfo;
+	pathnode->partKeyExprs = partKeyExprs;
+	pathnode->partKeyAttnos = partKeyAttnos;
+
+	return (Path *) pathnode;
 }
 
 static Expr *
@@ -271,6 +314,11 @@ FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
 	ListCell   *lem2;
 	ListCell   *lec;
 
+	/*
+	 * NOTE: The equivalence class logic ensures that we don't get fooled
+	 * by outer join conditions. The sides of an outer join equality are not
+	 * put in the same equivalence class.
+	 */
 	foreach(lec, root->eq_classes)
 	{
 		EquivalenceClass *cur_ec = (EquivalenceClass *) lfirst(lec);
@@ -338,12 +386,57 @@ FindEqKey(PlannerInfo *root, Bitmapset *inner_relids,
 	return NULL;
 }
 
-static PartitionSelector *
-create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo,
-						  Plan *subplan, List *partTabTargetlist,
-						  Expr *printablePredicate)
+/*
+ * Create a PartitionSelector plan from a Path.
+ *
+ * This would logically belong in createplan.c, but let's keep everything
+ * related to Partition Selectors in this file.
+ */
+Plan *
+create_partition_selector_plan(PlannerInfo *root, PartitionSelectorPath *best_path)
 {
 	PartitionSelector *ps;
+	Plan	   *subplan;
+	ListCell   *lc_attno;
+	ListCell   *lc_expr;
+	List	   *partTabTargetlist;
+	int			max_attr;
+	int			attno;
+	Expr	  **partKeyExprs;
+
+	subplan = create_plan_recurse(root, best_path->subpath);
+
+	max_attr = find_base_rel(root, best_path->dsinfo->rtindex)->max_attr;
+	partKeyExprs = palloc0((max_attr + 1) * sizeof(Expr *));
+
+	forboth(lc_attno, best_path->partKeyAttnos, lc_expr, best_path->partKeyExprs)
+	{
+		int			partKeyAttno = lfirst_int(lc_attno);
+		Expr	   *partKeyExpr = (Expr *) lfirst(lc_expr);
+
+		if (partKeyAttno > max_attr)
+			elog(ERROR, "invalid partitioning key attribute number");
+
+		partKeyExprs[partKeyAttno] = partKeyExpr;
+	}
+
+	partTabTargetlist = NIL;
+	for (attno = 1; attno <= max_attr; attno++)
+	{
+		Expr	   *expr = partKeyExprs[attno];
+		char		attname[20];
+
+		if (!expr)
+			expr = (Expr *) makeBoolConst(false, true);
+
+		snprintf(attname, sizeof(attname), "partcol_%d", attno);
+
+		partTabTargetlist = lappend(partTabTargetlist,
+									makeTargetEntry(expr,
+													attno,
+													pstrdup(attname),
+													false));
+	}
 
 	ps = makeNode(PartitionSelector);
 	ps->plan.targetlist = subplan->targetlist;
@@ -356,24 +449,28 @@ create_partition_selector(PlannerInfo *root, DynamicScanInfo *dsinfo,
 	ps->plan.plan_rows = subplan->plan_rows;
 	ps->plan.plan_width = subplan->plan_width;
 
-	ps->relid = dsinfo->parentOid;
+	ps->relid = best_path->dsinfo->parentOid;
 	ps->nLevels = 1;
-	ps->scanId = dsinfo->dynamicScanId;
+	ps->scanId = best_path->dsinfo->dynamicScanId;
 	ps->selectorId = -1;
 	ps->partTabTargetlist = partTabTargetlist;
 	ps->levelExpressions = NIL;
 	ps->residualPredicate = NULL;
-	ps->printablePredicate = (Node *) printablePredicate;
+	ps->printablePredicate = (Node *) best_path->partKeyExprs;
 	ps->staticSelection = false;
 	ps->staticPartOids = NIL;
 	ps->staticScanIds = NIL;
 
 	ps->propagationExpression = (Node *)
-		makeConst(INT4OID, -1, 4, Int32GetDatum(ps->scanId), false, true);
+		makeConst(INT4OID, -1, InvalidOid, 4, Int32GetDatum(ps->scanId), false, true);
 
-	return ps;
+	return (Plan *) ps;
 }
 
+/*
+ * Add RestrictInfos representing PartSelectedExpr gating quals for
+ * all the scans of each partition in a dynamic scan.
+ */
 static void
 add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childrelids)
 {

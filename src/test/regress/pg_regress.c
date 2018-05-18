@@ -8,10 +8,10 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/test/regress/pg_regress.c,v 1.72 2010/06/12 17:21:29 momjian Exp $
+ * src/test/regress/pg_regress.c
  *
  *-------------------------------------------------------------------------
  */
@@ -92,9 +92,11 @@ bool		debug = false;
 char	   *inputdir = ".";
 char	   *outputdir = ".";
 char	   *psqldir = PGBINDIR;
+char	   *launcher = NULL;
 bool 		optimizer_enabled = false;
 bool 		resgroup_enabled = false;
 static _stringlist *loadlanguage = NULL;
+static _stringlist *loadextension = NULL;
 static int	max_connections = 0;
 static char *encoding = NULL;
 static _stringlist *schedulelist = NULL;
@@ -111,6 +113,7 @@ static bool port_specified_by_user = false;
 static char *dlpath = PKGLIBDIR;
 static char *user = NULL;
 static _stringlist *extraroles = NULL;
+static _stringlist *extra_install = NULL;
 static char *initfile = NULL;
 static char *aodir = NULL;
 static char *resgroupdir = NULL;
@@ -145,23 +148,25 @@ static void
 header(const char *fmt,...)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
-__attribute__((format(printf, 1, 2)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 static void
 status(const char *fmt,...)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
-__attribute__((format(printf, 1, 2)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 static void
 psql_command(const char *database, const char *query,...)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
-__attribute__((format(printf, 2, 3)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 #ifdef WIN32
 typedef BOOL (WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
 
-/* Windows API define missing from MingW headers */
+/* Windows API define missing from some versions of MingW headers */
+#ifndef  DISABLE_MAX_PRIVILEGE
 #define DISABLE_MAX_PRIVILEGE	0x1
+#endif
 #endif
 
 static bool detectCgroupMountPoint(char *cgdir, int len);
@@ -1019,7 +1024,7 @@ initialize_environment(void)
 	putenv("LC_MESSAGES=C");
 
 	/*
-	 * Set multibyte as requested
+	 * Set encoding as requested
 	 */
 	if (encoding)
 		doputenv("PGCLIENTENCODING", encoding);
@@ -2039,7 +2044,7 @@ run_single_test(const char *test, test_function tfunc)
 			   *tl;
 	bool		differ = false;
 
-	status(_("test %-20s ... "), test);
+	status(_("test %-24s ... "), test);
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
 	wait_for_tests(&pid, &exit_status, NULL, NULL, 1);
 
@@ -2196,6 +2201,16 @@ create_database(const char *dbname)
 	{
 		header(_("installing %s"), sl->str);
 		psql_command(dbname, "CREATE OR REPLACE LANGUAGE \"%s\"", sl->str);
+	}
+
+	/*
+	 * Install any requested extensions.  We use CREATE IF NOT EXISTS so that
+	 * this will work whether or not the extension is preinstalled.
+	 */
+	for (sl = loadextension; sl != NULL; sl = sl->next)
+	{
+		header(_("installing %s"), sl->str);
+		psql_command(dbname, "CREATE EXTENSION IF NOT EXISTS \"%s\"", sl->str);
 	}
 }
 
@@ -2364,10 +2379,12 @@ help(void)
 	printf(_("  --inputdir=DIR            take input files from DIR (default \".\")\n"));
 	printf(_("  --load-language=lang      load the named language before running the\n"));
 	printf(_("                            tests; can appear multiple times\n"));
+	printf(_("  --load-extension=ext      load the named extension before running the\n"));
+	printf(_("                            tests; can appear multiple times\n"));
 	printf(_("  --create-role=ROLE        create the specified role before testing\n"));
 	printf(_("  --max-connections=N       maximum number of concurrent connections\n"));
 	printf(_("                            (default is 0 meaning unlimited)\n"));
-	printf(_("  --multibyte=ENCODING      use ENCODING as the multibyte encoding\n"));
+	printf(_("  --encoding=ENCODING       use ENCODING as the encoding\n"));
 	printf(_("  --outputdir=DIR           place output files in DIR (default \".\")\n"));
 	printf(_("  --schedule=FILE           use test ordering schedule from FILE\n"));
 	printf(_("                            (can be used multiple times to concatenate)\n"));
@@ -2375,6 +2392,7 @@ help(void)
 	printf(_("  --dlpath=DIR              look for dynamic libraries in DIR\n"));
 	printf(_("  --temp-install=DIR        create a temporary installation in DIR\n"));
 	printf(_("  --use-existing            use an existing installation\n"));
+	printf(_("  --launcher=CMD            use CMD as launcher of psql\n"));
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
 	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
 	printf(_("                            UAO row and column tests\n"));
@@ -2385,6 +2403,7 @@ help(void)
 	printf(_("  --top-builddir=DIR        (relative) path to top level build directory\n"));
 	printf(_("  --port=PORT               start postmaster on PORT\n"));
 	printf(_("  --temp-config=PATH        append contents of PATH to temporary config\n"));
+	printf(_("  --extra-install=DIR       additional directory to install (e.g., contrib\n"));
 	printf(_("\n"));
 	printf(_("Options for using an existing installation:\n"));
 	printf(_("  --host=HOST               use postmaster running on HOST\n"));
@@ -2416,7 +2435,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"inputdir", required_argument, NULL, 3},
 		{"load-language", required_argument, NULL, 4},
 		{"max-connections", required_argument, NULL, 5},
-		{"multibyte", required_argument, NULL, 6},
+		{"encoding", required_argument, NULL, 6},
 		{"outputdir", required_argument, NULL, 7},
 		{"schedule", required_argument, NULL, 8},
 		{"temp-install", required_argument, NULL, 9},
@@ -2430,6 +2449,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"create-role", required_argument, NULL, 18},
 		{"temp-config", required_argument, NULL, 19},
 		{"use-existing", no_argument, NULL, 20},
+		{"launcher", required_argument, NULL, 21},
+		{"load-extension", required_argument, NULL, 22},
+		{"extra-install", required_argument, NULL, 23},
         {"init-file", required_argument, NULL, 25},
         {"ao-dir", required_argument, NULL, 26},
         {"resgroup-dir", required_argument, NULL, 27},
@@ -2527,6 +2549,15 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			case 20:
 				use_existing = true;
 				break;
+			case 21:
+				launcher = strdup(optarg);
+				break;
+			case 22:
+				add_stringlist_item(&loadextension, optarg);
+				break;
+			case 23:
+				add_stringlist_item(&extra_install, optarg);
+				break;
             case 25:
                 initfile = strdup(optarg);
                 break;
@@ -2584,6 +2615,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	if (temp_install)
 	{
 		FILE	   *pg_conf;
+		_stringlist *sl;
 
 		/*
 		 * Prepare the temp installation
@@ -2613,7 +2645,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		/* "make install" */
 #ifndef WIN32_ONLY_COMPILER
 		snprintf(buf, sizeof(buf),
-				 SYSTEMQUOTE "\"%s\" -C \"%s\" DESTDIR=\"%s/install\" install with_perl=no with_python=no > \"%s/log/install.log\" 2>&1" SYSTEMQUOTE,
+				 SYSTEMQUOTE "\"%s\" -C \"%s\" DESTDIR=\"%s/install\" install > \"%s/log/install.log\" 2>&1" SYSTEMQUOTE,
 				 makeprog, top_builddir, temp_install, outputdir);
 #else
 		snprintf(buf, sizeof(buf),
@@ -2624,6 +2656,24 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{
 			fprintf(stderr, _("\n%s: installation failed\nExamine %s/log/install.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
 			exit_nicely(2);
+		}
+
+		for (sl = extra_install; sl != NULL; sl = sl->next)
+		{
+#ifndef WIN32_ONLY_COMPILER
+			snprintf(buf, sizeof(buf),
+					 SYSTEMQUOTE "\"%s\" -C \"%s/%s\" DESTDIR=\"%s/install\" install >> \"%s/log/install.log\" 2>&1" SYSTEMQUOTE,
+				   makeprog, top_builddir, sl->str, temp_install, outputdir);
+#else
+			fprintf(stderr, _("\n%s: --extra-install option not supported on this platform\n"), progname);
+			exit_nicely(2);
+#endif
+
+			if (system(buf))
+			{
+				fprintf(stderr, _("\n%s: installation failed\nExamine %s/log/install.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
+				exit_nicely(2);
+			}
 		}
 
 		/* initdb */
@@ -2777,8 +2827,14 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
 		postmaster_running = true;
 
+#ifdef WIN64
+/* need a series of two casts to convert HANDLE without compiler warning */
+#define ULONGPID(x) (unsigned long) (unsigned long long) (x)
+#else
+#define ULONGPID(x) (unsigned long) (x)
+#endif
 		printf(_("running on port %d with pid %lu\n"),
-			   port, (unsigned long) postmaster_pid);
+			   port, ULONGPID(postmaster_pid));
 	}
 	else
 	{

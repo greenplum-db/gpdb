@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/btree_gist/btree_macaddr.c,v 1.10 2010/02/26 02:00:31 momjian Exp $
+ * contrib/btree_gist/btree_macaddr.c
  */
 #include "btree_gist.h"
 #include "btree_utils_num.h"
@@ -84,7 +84,8 @@ static const gbtree_ninfo tinfo =
 	gbt_macadeq,
 	gbt_macadle,
 	gbt_macadlt,
-	gbt_macadkey_cmp
+	gbt_macadkey_cmp,
+	NULL
 };
 
 

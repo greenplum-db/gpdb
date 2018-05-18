@@ -2,9 +2,9 @@
 #
 # Makefile for src/interfaces/ecpg/preproc
 #
-# Copyright (c) 1998-2010, PostgreSQL Global Development Group
+# Copyright (c) 1998-2011, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/Makefile,v 1.150 2010/07/05 18:54:38 tgl Exp $
+# src/interfaces/ecpg/preproc/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 MAJOR_VERSION= 4
-MINOR_VERSION= 6
+MINOR_VERSION= 7
 PATCHLEVEL=0
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
@@ -38,10 +38,13 @@ OBJS=	preproc.o pgc.o type.o ecpg.o output.o parser.o \
 	keywords.o c_keywords.o ecpg_keywords.o kwlookup.o ../ecpglib/typename.o descriptor.o variable.o \
 	$(WIN32RES)
 
-all: submake-libpgport ecpg
+all: ecpg
 
-ecpg: $(OBJS)
+ecpg: $(OBJS) | submake-libpgport
 	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) $^ $(LIBS) $(PTHREAD_LIBS) -o $@$(X)
+
+../ecpglib/typename.o: ../ecpglib/typename.c
+	$(MAKE) -C $(dir $@) $(notdir $@)
 
 preproc.h: preproc.c ;
 
@@ -59,8 +62,8 @@ else
 	@$(missing) flex $< $@
 endif
 
-preproc.y: ../../../backend/parser/gram.y parse.pl ecpg.addons ecpg.header ecpg.tokens ecpg.trailer ecpg.type
-	$(PERL) $(srcdir)/parse.pl $(srcdir) < $< > $@ 
+preproc.y: ../../../backend/parser/gram.y parse2.pl ecpg.addons ecpg.header ecpg.tokens ecpg.trailer ecpg.type
+	$(PERL) $(srcdir)/parse2.pl $(srcdir) < $< > $@
 	$(PERL) $(srcdir)/check_rules.pl $(srcdir) $<
 
 ecpg_keywords.o c_keywords.o keywords.o preproc.o pgc.o parser.o: preproc.h

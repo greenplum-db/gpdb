@@ -11,10 +11,10 @@
  * disappear!) and also take the entry's mutex spinlock.
  *
  *
- * Copyright (c) 2008-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2008-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/pg_stat_statements/pg_stat_statements.c,v 1.14 2010/04/28 16:54:15 tgl Exp $
+ *	  contrib/pg_stat_statements/pg_stat_statements.c
  *
  *-------------------------------------------------------------------------
  */
@@ -122,6 +122,7 @@ static int	nested_level = 0;
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 static ExecutorStart_hook_type prev_ExecutorStart = NULL;
 static ExecutorRun_hook_type prev_ExecutorRun = NULL;
+static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 static ProcessUtility_hook_type prev_ProcessUtility = NULL;
 
@@ -136,7 +137,7 @@ typedef enum
 	PGSS_TRACK_NONE,			/* track no statements */
 	PGSS_TRACK_TOP,				/* only top level statements */
 	PGSS_TRACK_ALL				/* all statements, including nested ones */
-} PGSSTrackLevel;
+}	PGSSTrackLevel;
 
 static const struct config_enum_entry track_options[] =
 {
@@ -173,6 +174,7 @@ static void pgss_ExecutorStart(QueryDesc *queryDesc, int eflags);
 static void pgss_ExecutorRun(QueryDesc *queryDesc,
 				 ScanDirection direction,
 				 long count);
+static void pgss_ExecutorFinish(QueryDesc *queryDesc);
 static void pgss_ExecutorEnd(QueryDesc *queryDesc);
 static void pgss_ProcessUtility(Node *parsetree,
 			  const char *queryString, ParamListInfo params, bool isTopLevel,
@@ -217,6 +219,7 @@ _PG_init(void)
 							PGC_POSTMASTER,
 							0,
 							NULL,
+							NULL,
 							NULL);
 
 	DefineCustomEnumVariable("pg_stat_statements.track",
@@ -228,6 +231,7 @@ _PG_init(void)
 							 PGC_SUSET,
 							 0,
 							 NULL,
+							 NULL,
 							 NULL);
 
 	DefineCustomBoolVariable("pg_stat_statements.track_utility",
@@ -238,6 +242,7 @@ _PG_init(void)
 							 PGC_SUSET,
 							 0,
 							 NULL,
+							 NULL,
 							 NULL);
 
 	DefineCustomBoolVariable("pg_stat_statements.save",
@@ -247,6 +252,7 @@ _PG_init(void)
 							 true,
 							 PGC_SIGHUP,
 							 0,
+							 NULL,
 							 NULL,
 							 NULL);
 
@@ -269,6 +275,8 @@ _PG_init(void)
 	ExecutorStart_hook = pgss_ExecutorStart;
 	prev_ExecutorRun = ExecutorRun_hook;
 	ExecutorRun_hook = pgss_ExecutorRun;
+	prev_ExecutorFinish = ExecutorFinish_hook;
+	ExecutorFinish_hook = pgss_ExecutorFinish;
 	prev_ExecutorEnd = ExecutorEnd_hook;
 	ExecutorEnd_hook = pgss_ExecutorEnd;
 	prev_ProcessUtility = ProcessUtility_hook;
@@ -285,6 +293,7 @@ _PG_fini(void)
 	shmem_startup_hook = prev_shmem_startup_hook;
 	ExecutorStart_hook = prev_ExecutorStart;
 	ExecutorRun_hook = prev_ExecutorRun;
+	ExecutorFinish_hook = prev_ExecutorFinish;
 	ExecutorEnd_hook = prev_ExecutorEnd;
 	ProcessUtility_hook = prev_ProcessUtility;
 }
@@ -539,6 +548,29 @@ pgss_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, long count)
 			prev_ExecutorRun(queryDesc, direction, count);
 		else
 			standard_ExecutorRun(queryDesc, direction, count);
+		nested_level--;
+	}
+	PG_CATCH();
+	{
+		nested_level--;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+}
+
+/*
+ * ExecutorFinish hook: all we need do is track nesting depth
+ */
+static void
+pgss_ExecutorFinish(QueryDesc *queryDesc)
+{
+	nested_level++;
+	PG_TRY();
+	{
+		if (prev_ExecutorFinish)
+			prev_ExecutorFinish(queryDesc);
+		else
+			standard_ExecutorFinish(queryDesc);
 		nested_level--;
 	}
 	PG_CATCH();

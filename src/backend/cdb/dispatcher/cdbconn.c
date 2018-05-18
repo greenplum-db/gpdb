@@ -18,6 +18,7 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "miscadmin.h"
+#include "utils/guc.h"
 #include "utils/memutils.h"
 #include "libpq/libpq-be.h"
 

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.82 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/pg_dumpall.sgml
 PostgreSQL documentation
 -->
 
@@ -196,18 +196,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>--no-tablespaces</option></term>
-      <listitem>
-       <para>
-        Do not output commands to create tablespaces nor select tablespaces
-        for objects.
-        With this option, all objects will be created in whichever
-        tablespace is the default during restore.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>--roles-only</option></term>
       <listitem>
        <para>
@@ -296,21 +284,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>--inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands (rather
-        than <command>COPY</command>).  This will make restoration very slow;
-        it is mainly useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.  Note that
-        the restore might fail altogether if you have rearranged column order.
-        The <option>--column-inserts</option> option is safer, though even
-        slower.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>--column-inserts</option></term>
       <term><option>--attribute-inserts</option></term>
       <listitem>
@@ -353,6 +326,80 @@ PostgreSQL documentation
         must be done as superuser.  So, you should also specify
         a superuser name with <option>-S</>, or preferably be careful to
         start the resulting script as a superuser.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands (rather
+        than <command>COPY</command>).  This will make restoration very slow;
+        it is mainly useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.  Note that
+        the restore might fail altogether if you have rearranged column order.
+        The <option>--column-inserts</option> option is safer, though even
+        slower.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--lock-wait-timeout=<replaceable class="parameter">timeout</replaceable></option></term>
+      <listitem>
+       <para>
+        Do not wait forever to acquire shared table locks at the beginning of
+        the dump. Instead, fail if unable to lock a table within the specified
+        <replaceable class="parameter">timeout</>. The timeout may be
+        specified in any of the formats accepted by <command>SET
+        statement_timeout</>.  Allowed values vary depending on the server
+        version you are dumping from, but an integer number of milliseconds
+        is accepted by all versions since 7.3.  This option is ignored when
+        dumping from a pre-7.3 server.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-security-labels</option></term>
+      <listitem>
+       <para>
+        Do not dump security labels.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-tablespaces</option></term>
+      <listitem>
+       <para>
+        Do not output commands to create tablespaces nor select tablespaces
+        for objects.
+        With this option, all objects will be created in whichever
+        tablespace is the default during restore.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-unlogged-table-data</option></term>
+      <listitem>
+       <para>
+        Do not dump the contents of unlogged tables.  This option has no
+        effect on whether or not the table definitions (schema) are dumped;
+        it only suppresses dumping the table data.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--quote-all-identifiers</></term>
+      <listitem>
+       <para>
+        Force quoting of all identifiers.  This may be useful when dumping a
+        database for migration to a future version that may have introduced
+        additional keywords.
        </para>
       </listitem>
      </varlistentry>
@@ -409,8 +456,8 @@ PostgreSQL documentation
        <para>
          Specifies the name of the database to connect to to dump global
          objects and discover what other databases should be dumped. If
-         not specified, the <quote>postgres</quote> database will be used,
-         and if that does not exist, <quote>template1</quote> will be used.
+         not specified, the <literal>postgres</literal> database will be used,
+         and if that does not exist, <literal>template1</literal> will be used.
        </para>
       </listitem>
      </varlistentry>
@@ -546,7 +593,7 @@ PostgreSQL documentation
 
   <para>
    <application>pg_dumpall</application> requires all needed
-   tablespace directories to exist before the restore;  otherwise, 
+   tablespace directories to exist before the restore;  otherwise,
    database creation will fail for databases in non-default
    locations.
   </para>

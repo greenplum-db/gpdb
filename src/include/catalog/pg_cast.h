@@ -10,9 +10,9 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2002-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.44 2010/01/05 01:06:56 tgl Exp $
+ * src/include/catalog/pg_cast.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -131,6 +131,10 @@ DATA(insert ( 1700	 21 1783 a f ));
 DATA(insert ( 1700	 23 1744 a f ));
 DATA(insert ( 1700	700 1745 i f ));
 DATA(insert ( 1700	701 1746 i f ));
+DATA(insert (  790 1700 3823 a f ));
+DATA(insert ( 1700	790 3824 a f ));
+DATA(insert ( 23	790 3811 a f ));
+DATA(insert ( 20	790 3812 a f ));
 
 /* Allow explicit coercions between int4 and bool */
 DATA(insert (	23	16	2557 e f ));
@@ -239,6 +243,9 @@ DATA(insert ( 1043	 19 1400 i f ));
 /* Allow explicit coercions between int4 and "char" */
 DATA(insert (	18	 23   77 e f ));
 DATA(insert (	23	 18   78 e f ));
+
+/* pg_node_tree can be coerced to, but not from, text */
+DATA(insert (  194	 25    0 i b ));
 
 /*
  * Datetime category
@@ -360,14 +367,14 @@ DATA(insert ( 1562 1562 1687 i f ));
 DATA(insert ( 1700 1700 1703 i f ));
 
 /* complex type */
-DATA(insert (701  195 3584 i f));
-DATA(insert (700  195 3585 i f));
-DATA(insert (20   195 3586 i f));
-DATA(insert (23   195 3587 i f));
-DATA(insert (21   195 3588 i f));
-DATA(insert (600  195 0 e b));
-DATA(insert (195  600 0 e b));
-DATA(insert (1700 195 3592 i f));
+DATA(insert (701  7198 3584 i f));
+DATA(insert (700  7198 3585 i f));
+DATA(insert (20   7198 3586 i f));
+DATA(insert (23   7198 3587 i f));
+DATA(insert (21   7198 3588 i f));
+DATA(insert (600  7198 0 e b));
+DATA(insert (7198  600 0 e b));
+DATA(insert (1700 7198 3592 i f));
 
 /*
  * CDB: Allow explicit cast from tid to int8

@@ -637,7 +637,7 @@ DistributedLog_BootStrap(void)
 	slotno = DistributedLog_ZeroPage(0, false);
 
 	/* Make sure it's written out */
-	SimpleLruWritePage(DistributedLogCtl, slotno, NULL);
+	SimpleLruWritePage(DistributedLogCtl, slotno);
 	Assert(!DistributedLogCtl->shared->page_dirty[slotno]);
 
 	LWLockRelease(DistributedLogControlLock);
@@ -974,7 +974,7 @@ DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
 		slotno = DistributedLog_ZeroPage(page, false);
-		SimpleLruWritePage(DistributedLogCtl, slotno, NULL);
+		SimpleLruWritePage(DistributedLogCtl, slotno);
 		Assert(!DistributedLogCtl->shared->page_dirty[slotno]);
 
 		LWLockRelease(DistributedLogControlLock);

@@ -5,10 +5,10 @@
  *	Lately it's also being used by psql and bin/scripts/ ...
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/dumputils.h,v 1.29 2010/02/26 02:01:16 momjian Exp $
+ * src/bin/pg_dump/dumputils.h
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,8 @@
 
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
+
+extern int	quote_all_identifiers;
 
 extern void init_parallel_dump_utils(void);
 extern const char *fmtId(const char *identifier);

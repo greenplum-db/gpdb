@@ -176,7 +176,7 @@ sendSequenceRequest(int     sockfd,
 	Oid     dbid = seqrel->rd_node.dbNode;
     Oid     tablespaceid = seqrel->rd_node.spcNode;
     Oid     seq_oid = seqrel->rd_id;
-    bool    isTemp = seqrel->rd_istemp;
+    char	relpersistence = seqrel->rd_rel->relpersistence;
 
 	/* request message */
     NextValRequest  request;
@@ -198,7 +198,7 @@ sendSequenceRequest(int     sockfd,
 	request.dbid = htonl(dbid);
 	request.tablespaceid = htonl(tablespaceid);
 	request.seq_oid = htonl(seq_oid);
-	request.isTemp = htonl(isTemp);
+	request.relpersistence = relpersistence;
     request.session_id = htonl(session_id);
 	request.endCookie = SEQ_SERVER_REQUEST_END;
 
@@ -812,15 +812,15 @@ processSequenceRequest(int sockfd )
 	nextValRequest.dbid    	    = ntohl(nextValRequest.dbid);
 	nextValRequest.tablespaceid = ntohl(nextValRequest.tablespaceid);
 	nextValRequest.seq_oid      = ntohl(nextValRequest.seq_oid);
-	nextValRequest.isTemp       = ntohl(nextValRequest.isTemp);
+	nextValRequest.relpersistence = nextValRequest.relpersistence;
     nextValRequest.session_id   = ntohl(nextValRequest.session_id);
 	
 	elog(DEBUG5, "Received nextval request for dbid: %ld tablespaceid: %ld seqoid: "
-				  "%ld isTemp: %s session_id: %ld",
+				  "%ld relpersistence: %c session_id: %ld",
 				  (long int)nextValRequest.dbid,
 				  (long int)nextValRequest.tablespaceid,
 				  (long int)nextValRequest.seq_oid,
-				  nextValRequest.isTemp ? "true" : "false",
+				  nextValRequest.relpersistence,
 				  (long)nextValRequest.session_id);
 
 	/*
@@ -841,7 +841,7 @@ processSequenceRequest(int sockfd )
 		cdb_sequence_nextval_server(nextValRequest.tablespaceid,
 									nextValRequest.dbid,
 									nextValRequest.seq_oid,
-									nextValRequest.isTemp,
+									nextValRequest.relpersistence,
 									&plast,
 									&pcached,
 									&pincrement,

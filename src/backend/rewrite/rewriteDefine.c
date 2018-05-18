@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteDefine.c,v 1.141 2010/02/14 18:42:15 rhaas Exp $
+ *	  src/backend/rewrite/rewriteDefine.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/objectaccess.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/storage.h"
 #include "miscadmin.h"
@@ -183,6 +184,10 @@ InsertRule(char *rulname,
 							   DEPENDENCY_NORMAL);
 	}
 
+	/* Post creation hook for new rule */
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   RewriteRelationId, rewriteObjectId, 0);
+
 	heap_close(pg_rewrite_desc, RowExclusiveLock);
 
 	return rewriteObjectId;
@@ -233,7 +238,6 @@ DefineQueryRewrite(char *rulename,
 				   List *action)
 {
 	Relation	event_relation;
-	Oid			ruleId;
 	int			event_attno;
 	ListCell   *l;
 	Query	   *query;
@@ -242,11 +246,14 @@ DefineQueryRewrite(char *rulename,
 	/*
 	 * If we are installing an ON SELECT rule, we had better grab
 	 * AccessExclusiveLock to ensure no SELECTs are currently running on the
-	 * event relation.	For other types of rules, it might be sufficient to
-	 * grab ShareLock to lock out insert/update/delete actions.  But for now,
-	 * let's just grab AccessExclusiveLock all the time.
+	 * event relation.	For other types of rules, it is sufficient to grab
+	 * ShareRowExclusiveLock to lock out insert/update/delete actions and to
+	 * ensure that we lock out current CREATE RULE statements.
 	 */
-	event_relation = heap_open(event_relid, AccessExclusiveLock);
+	if (event_type == CMD_SELECT)
+		event_relation = heap_open(event_relid, AccessExclusiveLock);
+	else
+		event_relation = heap_open(event_relid, ShareRowExclusiveLock);
 
 	/*
 	 * Verify relation is of a type that rules can sensibly be applied to.
@@ -326,6 +333,14 @@ DefineQueryRewrite(char *rulename,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("rules on SELECT must have action INSTEAD SELECT")));
+
+		/*
+		 * ... it cannot contain data-modifying WITH ...
+		 */
+		if (query->hasModifyingCTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("rules on SELECT must not contain data-modifying statements in WITH")));
 
 		/*
 		 * ... there can be no rule qual, ...
@@ -485,14 +500,14 @@ DefineQueryRewrite(char *rulename,
 	/* discard rule if it's null action and not INSTEAD; it's a no-op */
 	if (action != NIL || is_instead)
 	{
-		ruleId = InsertRule(rulename,
-							event_type,
-							event_relid,
-							event_attno,
-							is_instead,
-							event_qual,
-							action,
-							replace);
+		InsertRule(rulename,
+				   event_type,
+				   event_relid,
+				   event_attno,
+				   is_instead,
+				   event_qual,
+				   action,
+				   replace);
 
 		/*
 		 * Set pg_class 'relhasrules' field TRUE for event relation. If

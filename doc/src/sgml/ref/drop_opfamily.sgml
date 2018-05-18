@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_opfamily.sgml,v 1.3 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/drop_opfamily.sgml
 PostgreSQL documentation
 -->
 
@@ -14,7 +14,7 @@ PostgreSQL documentation
   <refname>DROP OPERATOR FAMILY</refname>
   <refpurpose>remove an operator family</refpurpose>
  </refnamediv>
-  
+
  <indexterm zone="sql-dropopfamily">
   <primary>DROP OPERATOR FAMILY</primary>
  </indexterm>
@@ -41,7 +41,7 @@ DROP OPERATOR FAMILY [ IF EXISTS ] <replaceable class="PARAMETER">name</replacea
    <literal>CASCADE</> for the drop to complete.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -111,7 +111,7 @@ DROP OPERATOR FAMILY float_ops USING btree;
    drop such indexes along with the operator family.
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

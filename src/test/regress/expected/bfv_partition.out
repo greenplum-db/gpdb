@@ -4961,7 +4961,7 @@ $$ LANGUAGE 'plpgsql';
 select mpp5431_f1();
 NOTICE:  CREATE TABLE will create partition "mpp5431_1_prt_p20090403" for table "mpp5431"
 CONTEXT:  SQL statement "alter table mpp5431 add partition p20090403 start('2009-04-03 00:00:00'::timestamp) inclusive end ('2009-04-04 00:00:00'::timestamp) exclusive"
-PL/pgSQL function "mpp5431_f1" line 2 at SQL statement
+PL/pgSQL function "mpp5431_f1" line 3 at SQL statement
  mpp5431_f1 
 ------------
  
@@ -5155,8 +5155,8 @@ NOTICE:  CREATE TABLE will create partition "mpp6573_1_prt_1" for table "mpp6573
 NOTICE:  CREATE TABLE will create partition "mpp6573_1_prt_2" for table "mpp6573"
 alter table mpp6573 add primary key (id, date) ;
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_pkey" for table "mpp6573"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_1_idx" for table "mpp6573_1_prt_1"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_2_idx" for table "mpp6573_1_prt_2"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_1_pkey" for table "mpp6573_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_2_pkey" for table "mpp6573_1_prt_2"
 \d mpp6573*
    Table "bfv_partition.mpp6573"
  Column |     Type      | Modifiers 
@@ -5177,13 +5177,13 @@ Table "bfv_partition.mpp6573_1_prt_1"
  date   | date          | not null
  amt    | numeric(10,2) | 
 Indexes:
-    "mpp6573_1_prt_1_idx" PRIMARY KEY, btree (id, date)
+    "mpp6573_1_prt_1_pkey" PRIMARY KEY, btree (id, date)
 Check constraints:
     "mpp6573_1_prt_1_check" CHECK (date >= '01-01-2008'::date AND date < '01-02-2008'::date)
 Inherits: mpp6573
 Distributed by: (id)
 
-Index "bfv_partition.mpp6573_1_prt_1_idx"
+Index "bfv_partition.mpp6573_1_prt_1_pkey"
  Column |  Type   | Definition 
 --------+---------+------------
  id     | integer | id
@@ -5197,13 +5197,13 @@ Table "bfv_partition.mpp6573_1_prt_2"
  date   | date          | not null
  amt    | numeric(10,2) | 
 Indexes:
-    "mpp6573_1_prt_2_idx" PRIMARY KEY, btree (id, date)
+    "mpp6573_1_prt_2_pkey" PRIMARY KEY, btree (id, date)
 Check constraints:
     "mpp6573_1_prt_2_check" CHECK (date >= '01-02-2008'::date AND date < '01-03-2008'::date)
 Inherits: mpp6573
 Distributed by: (id)
 
-Index "bfv_partition.mpp6573_1_prt_2_idx"
+Index "bfv_partition.mpp6573_1_prt_2_pkey"
  Column |  Type   | Definition 
 --------+---------+------------
  id     | integer | id

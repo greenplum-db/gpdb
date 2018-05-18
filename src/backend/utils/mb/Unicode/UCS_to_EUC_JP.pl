@@ -1,14 +1,14 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2001-2010, PostgreSQL Global Development Group
+# Copyright (c) 2001-2011, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/backend/utils/mb/Unicode/UCS_to_EUC_JP.pl,v 1.12 2010/01/02 16:57:56 momjian Exp $
+# src/backend/utils/mb/Unicode/UCS_to_EUC_JP.pl
 #
 # Generate UTF-8 <--> EUC_JP code conversion tables from
 # map files provided by Unicode organization.
 # Unfortunately it is prohibited by the organization
 # to distribute the map files. So if you try to use this script,
-# you have to obtain JIS0201.TXT, JIS0208.TXT, JIS0212.TXT from 
+# you have to obtain JIS0201.TXT, JIS0208.TXT, JIS0212.TXT from
 # the organization's ftp site.
 #
 # JIS0201.TXT format:

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/memory.c,v 1.12 2007/11/15 21:14:45 momjian Exp $ */
+/* src/interfaces/ecpg/ecpglib/memory.c */
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -75,6 +75,7 @@ static pthread_once_t auto_mem_once = PTHREAD_ONCE_INIT;
 static void
 auto_mem_destructor(void *arg)
 {
+	(void) arg;					/* keep the compiler quiet */
 	ECPGfree_auto_mem();
 }
 

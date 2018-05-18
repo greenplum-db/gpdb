@@ -1,5 +1,5 @@
 #! /bin/sh
-# $PostgreSQL: pgsql/src/test/mb/mbregress.sh,v 1.11 2009/11/23 16:02:24 tgl Exp $
+# src/test/mb/mbregress.sh
 
 if echo '\c' | grep -s c >/dev/null 2>&1
 then
@@ -46,7 +46,7 @@ do
 	else
 		EXPECTED="expected/${i}.out"
 	fi
-  
+
 	if [ `diff ${EXPECTED} results/${i}.out | wc -l` -ne 0 ]
 	then
 		( diff -C3 ${EXPECTED} results/${i}.out; \

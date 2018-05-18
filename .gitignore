@@ -14,7 +14,6 @@
 objfiles.txt
 .deps/
 *.log
-*.vcproj
 *.gcno
 *.gcda
 *.gcov
@@ -48,10 +47,15 @@ build.sh
 GPATH
 GRTAGS
 GTAGS
+lib*dll.def
 
 # Local excludes in root directory
 /GNUmakefile
 /config.log
 /config.status
 /VERSION
+/pgsql.sln
+/pgsql.sln.cache
+/Debug/
+/Release/
 /CMakeLists.txt

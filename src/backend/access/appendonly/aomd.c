@@ -41,7 +41,7 @@ AOSegmentFilePathNameLen(Relation rel)
 	int 		len;
 		
 	/* Get base path for this relation file */
-	basepath = relpath(rel->rd_node, MAIN_FORKNUM);
+	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	/*
 	 * The basepath will be the RelFileNode number.  Optional part is dot "." plus 
@@ -60,12 +60,11 @@ AOSegmentFilePathNameLen(Relation rel)
  * The filepathname parameter assume sufficient space.
  */
 void
-FormatAOSegmentFileName(
-							char *basepath, 
-							int segno, 
-							int col, 
-							int32 *fileSegNo,
-							char *filepathname)
+FormatAOSegmentFileName(char *basepath,
+						int segno,
+						int col,
+						int32 *fileSegNo,
+						char *filepathname)
 {
 	int	pseudoSegNo;
 	
@@ -103,18 +102,17 @@ FormatAOSegmentFileName(
  * The filepathname parameter assume sufficient space.
  */
 void
-MakeAOSegmentFileName(
-							Relation rel, 
-							int segno, 
-							int col, 
-							int32 *fileSegNo,
-							char *filepathname)
+MakeAOSegmentFileName(Relation rel,
+					  int segno,
+					  int col,
+					  int32 *fileSegNo,
+					  char *filepathname)
 {
 	char	*basepath;
 	int32   fileSegNoLocal;
 	
 	/* Get base path for this relation file */
-	basepath = relpath(rel->rd_node, MAIN_FORKNUM);
+	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 
 	FormatAOSegmentFileName(basepath, segno, col, &fileSegNoLocal, filepathname);
 	
@@ -194,6 +192,6 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 		ereport(ERROR,
 				(errmsg("\"%s\": failed to truncate data after eof: %m",
 					    relname)));
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 		xlog_ao_truncate(rel->rd_node, segFileNum, offset);
 }

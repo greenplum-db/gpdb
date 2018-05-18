@@ -101,7 +101,6 @@ create table toolkit_skew (a int);
 insert into toolkit_skew select i from generate_series(1,50000) i;
 select sifnamespace, sifrelname from gp_toolkit.gp_skew_idle_fractions where sifoid = 'toolkit_skew'::regclass;
 
------------------------------------
 -- Test gp_bloat_expected_pages and gp_bloat_diag views
 -- (re-using the toolkit_skew table)
 analyze toolkit_skew;
@@ -219,7 +218,6 @@ select lorlocktype,lorrelname,lormode,lorgranted from gp_toolkit.gp_locks_on_rel
 -- gp_roles_assigned
 select rarolename,ramemberid,ramembername from gp_toolkit.gp_roles_assigned where rarolename like 'toolkit%';
 
------------------------------------
 -- Test size views.
 --
 -- We can't include the exact sizes in the output, as they differ slightly depending
@@ -315,7 +313,6 @@ where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table
 select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
 
 
------------------------------------
 -- Test Resource Queue views
 
 

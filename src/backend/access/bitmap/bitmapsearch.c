@@ -432,7 +432,8 @@ _bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused
 								   scan->keyData[keyNo].sk_flags,
 								   scan->keyData[keyNo].sk_attno,
 								   scan->keyData[keyNo].sk_strategy,
-								   scan->keyData[keyNo].sk_subtype, 
+								   scan->keyData[keyNo].sk_subtype,
+								   scan->keyData[keyNo].sk_collation,
 								   scan->keyData[keyNo].sk_func.fn_oid,
 								   scan->keyData[keyNo].sk_argument);
 		}
@@ -453,7 +454,8 @@ _bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused
 		}
 
 		scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
-								   scan->numberOfKeys, scanKeys);
+								   scan->numberOfKeys, 0);
+		index_rescan(scanDesc, scanKeys, scan->numberOfKeys, NULL, 0);
 
 		/*
 		 * finds all lov items for this scan through lovHeap and lovIndex.

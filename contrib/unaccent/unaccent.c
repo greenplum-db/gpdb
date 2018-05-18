@@ -3,10 +3,10 @@
  * unaccent.c
  *	  Text search unaccent dictionary
  *
- * Copyright (c) 2009-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2009-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/unaccent/unaccent.c,v 1.5 2010/02/26 02:00:32 momjian Exp $
+ *	  contrib/unaccent/unaccent.c
  *
  *-------------------------------------------------------------------------
  */
@@ -279,7 +279,7 @@ unaccent_dict(PG_FUNCTION_ARGS)
 
 	if (PG_NARGS() == 1)
 	{
-		dictOid = TSDictionaryGetDictid(stringToQualifiedNameList("unaccent"), false);
+		dictOid = get_ts_dict_oid(stringToQualifiedNameList("unaccent"), false);
 		strArg = 0;
 	}
 	else

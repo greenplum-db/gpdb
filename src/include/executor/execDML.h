@@ -32,23 +32,28 @@ extern TupleTableSlot *
 ExecInsert(TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
 		   EState *estate,
+		   bool canSetTag,
 		   PlanGenerator planGen,
 		   bool isUpdate);
 
 extern TupleTableSlot *
 ExecDelete(ItemPointer tupleid,
+		   HeapTupleHeader oldtuple,
 		   TupleTableSlot *planSlot,
 		   EPQState *epqstate,
 		   EState *estate,
+		   bool canSetTag,
 		   PlanGenerator planGen,
 		   bool isUpdate);
 
 extern TupleTableSlot *
 ExecUpdate(ItemPointer tupleid,
+		   HeapTupleHeader oldtuple,
 		   TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
 		   EPQState *epqstate,
-		   EState *estate);
+		   EState *estate,
+		   bool canSetTag);
 
 
 #endif   /* EXECDML_H */

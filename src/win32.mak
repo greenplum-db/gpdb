@@ -1,15 +1,15 @@
-# $PostgreSQL: pgsql/src/win32.mak,v 1.16 2007/08/03 10:47:10 mha Exp $
+# src/win32.mak
 
 # Top-file makefile for building Win32 libpq with Visual C++ 7.1.
 # (see src/tools/msvc for tools to build with Visual C++ 2005 and newer)
 
 !IF "$(OS)" == "Windows_NT"
 NULL=
-!ELSE 
+!ELSE
 NULL=nul
-!ENDIF 
+!ENDIF
 
-ALL: 
+ALL:
    cd include
    if not exist pg_config.h copy pg_config.h.win32 pg_config.h
    if not exist pg_config_os.h copy port\win32.h pg_config_os.h

@@ -1,9 +1,9 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/common.h,v 1.59 2010/01/02 16:57:59 momjian Exp $
+ * src/bin/psql/common.h
  */
 #ifndef COMMON_H
 #define COMMON_H
@@ -36,7 +36,7 @@ extern bool setQFout(const char *fname);
 extern void
 psql_error(const char *fmt,...)
 /* This lets gcc check the format string for consistency. */
-__attribute__((format(printf, 1, 2)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 extern void NoticeProcessor(void *arg, const char *message);
 

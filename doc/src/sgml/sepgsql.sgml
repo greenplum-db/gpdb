@@ -1,0 +1,552 @@
+<!-- doc/src/sgml/sepgsql.sgml -->
+
+<sect1 id="sepgsql" xreflabel="sepgsql">
+ <title>sepgsql</title>
+
+ <indexterm zone="sepgsql">
+  <primary>sepgsql</primary>
+ </indexterm>
+
+ <para>
+  <filename>sepgsql</> is a loadable module which supports label-based
+  mandatory access control (MAC) based on <productname>SELinux</> security
+  policy.
+ </para>
+
+ <warning>
+   <para>
+     This implementation has signification limitations, and does not enforce
+     mandatory access control for all actions.  See
+     <xref linkend="sepgsql-limitations">.
+   </para>
+ </warning>
+
+ <sect2 id="sepgsql-overview">
+  <title>Overview</title>
+
+  <para>
+   This module integrates with <productname>SELinux</> to provide an
+   additional layer of security checking above and beyond what is normally
+   provided by <productname>PostgreSQL</productname>.  From the perspective of
+   <productname>SELinux</>, this module allows
+   <productname>PostgreSQL</productname> to function as a user-space object
+   manager.  Each table or function access initiated by a DML query will be
+   checked against the system security policy.  This check is an additional to
+   the usual permissions checking performed by
+   <productname>PostgreSQL</productname>.
+  </para>
+
+  <para>
+   <productname>SELinux</productname> access control decisions are made using
+   security labels, which are represented by strings such as
+   <literal>system_u:object_r:sepgsql_table_t:s0</>.  Each access control
+   decision involves two labels: the label of the subject attempting to
+   perform the action, and the label of the object on which the operation is
+   to be performed.  Since these labels can be applied to any sort of object,
+   access control decisions for objects stored within the database can be
+   (and, with this module, are) subjected to the same general criteria used
+   for objects of any other type (e.g. files).  This design is intended to
+   allow a centralized security policy to protect information assets
+   independent of the particulars of how those assets are stored.
+  </para>
+
+  <para>
+   The <xref linkend="sql-security-label"> statement allows assignment of
+   a security label to a database object.
+  </para>
+
+ </sect2>
+ <sect2 id="sepgsql-installation">
+  <title>Installation</title>
+
+  <para>
+    This module can only be used on <productname>Linux</productname> 2.6.28
+    or higher with <productname>SELinux</productname> enabled.  It is not
+    available on any other platform, and must be explicitly enabled using
+    <literal>--with-selinux</>.  You will also need <productname>libselinux</>
+    2.0.93 or higher and <productname>selinux-policy</> 3.9.13 or higher
+    (some distributions may backport the necessary rules into older policy
+    versions).
+  </para>
+
+  <para>
+   The <command>sestatus</> command allows you to check the status of
+   <productname>SELinux</productname>.
+<screen>
+$ sestatus
+SELinux status:                 enabled
+SELinuxfs mount:                /selinux
+Current mode:                   enforcing
+Mode from config file:          enforcing
+Policy version:                 24
+Policy from config file:        targeted
+</screen>
+   If <productname>SELinux</> is disabled or not installed, you must set
+   that product up first before installing this module.
+  </para>
+
+  <para>
+   To use this module, you must add include <literal>sepgsql</>
+   in <xref linkend="guc-shared-preload-libraries">.  The module will not
+   function if loaded in any other manner.  Once the module is loaded, you
+   should execute <filename>sepgsql.sql</filename> in each database.
+   This will install functions needed for security label management, and
+   assign initial security labels.
+  </para>
+
+  <para>
+   The following instructions that assume your installation is under the
+   <filename>/usr/local/pgsql</> directory. Adjust the paths shown below as
+   appropriate for your installation.
+  </para>
+
+<screen>
+$ initdb
+$ vi $PGDATA/postgresql.conf
+$ for DBNAME in template0 template1 postgres; do
+  postgres --single -F -O -c exit_on_error=true $DBNAME \
+      &lt; /usr/local/pgsql/share/contrib/sepgsql.sql &gt; /dev/null
+  done
+</screen>
+
+  <para>
+   If the installation process completes without error, you can now start the
+   server normally.
+  </para>
+ </sect2>
+
+ <sect2 id="sepgsql-regression">
+  <title>Regression Tests</title>
+  <para>
+   Due to the nature of <productname>SELinux</productname>, running the
+   regression tests for this module requires several additional configuration
+   steps.
+  </para>
+
+  <para>
+   First, build and install the policy package for the regression test.
+   The <filename>sepgsql-regtest.pp</> is a special purpose policy package
+   which provides a set of rules to be allowed during the regression tests.
+   It should be built from the policy source file 
+   (<filename>sepgsql-regtest.te</>), which is normally done using
+   <command>make</command>.  You will need to locate the appropriate
+   Makefile on your system; the path shown below is only an example.
+   Once built, you can install this policy package using the
+   <command>semodule</> command, which links supplied policy packages and
+   loads them into the kernel space.  If this package is correctly installed,
+   <literal><command>semodule</> -l</> should list sepgsql-regtest as an
+   available policy package.
+  </para>
+
+<screen>
+$ make -C ./contrib/sepgsql -f /usr/share/selinux/devel/Makefile
+$ su
+# semodule -u ./contrib/sepgsql/sepgsql-regtest.pp
+# semodule -l
+    :
+sepgsql-regtest 1.03
+    :
+</screen>
+
+  <para>
+   Second, turn on <literal>sepgsql_regression_test_mode</>.
+   We don't enable all the rules in the <filename>sepgsql-regtest.pp</>
+   by default, for your system's safety.
+   The <literal>sepgsql_regression_test_mode</literal> parameter is associated
+   with rules to launch regression test.
+   It can be turned on using <command>setsebool</> command.
+  </para>
+
+<screen>
+$ su
+# setsebool sepgsql_regression_test_mode on
+# getsebool sepgsql_regression_test_mode
+sepgsql_regression_test_mode --> on
+</screen>
+
+  <para>
+   Last, kick the regression test from the <literal>unconfined_t</> domain.
+  </para>
+
+  <para>
+   The <command>id</> command tells us the current working domain.
+   Confirm your shell is now performing with the <literal>unconfined_t</>
+   domain as follows.
+  </para>
+<screen>
+$ id -Z
+unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+</screen>
+
+  <para>
+   See <xref linkend="sepgsql-resources"> for details on adjusting your
+   working domain, if necessary.
+  </para>
+
+  <para>
+   If <command>pg_regress</> fails to launch the <command>psql</> command,
+   you may need to ensure that the <command>psql</> command is labeled
+   as <literal>bin_t</>.  If it is not, the <command>restorecon</> command can
+   often be used to fix up security labels within the
+   <productname>PostgreSQL</productname> installation directory.
+  </para>
+
+<screen>
+$ restorecon -R /usr/local/pgsql/
+</screen>
+ </sect2>
+
+ <sect2 id="sepgsql-parameters">
+  <title>GUC Parameters</title>
+
+  <variablelist>
+   <varlistentry id="guc-sepgsql-permissive" xreflabel="sepgsql.permissive">
+    <term><varname>sepgsql.permissive</> (<type>boolean</type>)</term>
+    <indexterm>
+     <primary><varname>sepgsql.permissive</> configuration parameter</primary>
+    </indexterm>
+    <listitem>
+     <para>
+      This parameter enables <productname>SE-PostgreSQL</> to function
+      in permissive mode, regardless of the system setting.
+      The default is off.
+      This parameter can only be set in the <filename>postgresql.conf</>
+      file or on the server command line.
+     </para>
+
+     <para>
+      When this parameter is on, <productname>SE-PostgreSQL</> functions
+      in permissive mode, even if the platform system is working in enforcing
+      mode.  This parameter is primarily useful for testing purposes.
+     </para>
+    </listitem>
+
+   </varlistentry>
+   <varlistentry id="guc-sepgsql-debug-audit" xreflabel="sepgsql.debug_audit">
+    <term><varname>sepgsql.debug_audit</> (<type>boolean</>)</>
+    <indexterm>
+     <primary><varname>sepgsql.debug_audit</> configuration parameter</>
+    </indexterm>
+    <listitem>
+     <para>
+      This parameter enables the printing of audit messages independent from
+      the policy setting.
+      The default is off (according to the security policy setting).
+     </para>
+
+     <para>
+      The security policy of <productname>SELinux</> also has rules to
+      control whether or not particular accesses are logged.
+      By default, access violations are logged, but allowed
+      accesses are not.
+     </para>
+
+     <para>
+      This parameter forces all possible logging to be turned on, regardless
+      of the system policy.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </sect2>
+
+ <sect2 id="sepgsql-features">
+  <title>Features</title>
+  <sect3>
+   <title>Controlled Object Classes</title>
+   <para>
+    The security model of <productname>SELinux</> describes all the access
+    control rules as a relationship between a subject entity (typically,
+    it is a client of database) and an object entity, each of which is
+    identified by a security label.  If access to an unlabelled object is
+    attempted, the object is treated as if it were assigned the label
+    <literal>unlabeled_t</>.
+   </para>
+
+   <para>
+    Currently, <productname>sepgsql</productname> allows security labels to be
+    assigned to schemas, tables, columns, sequences, views, and functions.
+    When <productname>sepgsql</productname> is in use, security labels are
+    automatically assigned to supported database objects at creation time.
+    This label is called as a default security label, being decided according
+    to the system security policy, which takes as input the creator's label
+    and the label assigned to the new object's parent object.
+   </para>
+
+   <para>
+    A new database object basically inherits the security label of the parent
+    object, except when the security policy has special rules known as
+    type-transition rules, in which case a different label may be applied.
+    For schemas, the parent object is the current database; for columns, it
+    is the corresponding table; for tables, sequences, views, and functions,
+    it is the containing schema.
+   </para>
+  </sect3>
+
+  <sect3>
+   <title>DML Permissions</title>
+
+   <para>
+    For tables, <literal>db_table:select</>, <literal>db_table:insert</>,
+    <literal>db_table:update</> or <literal>db_table:delete</> is
+    checked for all the referenced target tables depending on the sort of
+    statement;
+    in addition, <literal>db_table:select</> is also checked for
+    all the tables that contain the columns referenced in the
+    <literal>WHERE</> or <literal>RETURNING</> clause, as a data source
+    of <literal>UPDATE</>, and so on.
+   </para>
+
+   <para>
+<synopsis>
+UPDATE t1 SET x = 2, y = md5sum(y) WHERE z = 100;
+</synopsis>
+
+    In this case, we must have <literal>db_table:select</> in addition to
+    <literal>db_table:update</>, because <literal>t1.a</> is referenced
+    within the <literal>WHERE</> clause.  Column-level permissions will also be
+    checked for each referenced column.
+   </para>
+
+   <para>
+    The client must be allowed to access all referenced tables and
+    columns, even if they originated from views which were then expanded,
+    so that we apply consistent access control rules independent of the manner
+    in which the table contents are referenced.
+   </para>
+
+   <para>
+    For columns, <literal>db_column:select</> is checked on
+    not only the columns being read using <literal>SELECT</>, but being
+    referenced in other DML statements.
+   </para>
+
+   <para>
+    Of course, it also checks <literal>db_column:update</> or
+    <literal>db_column:insert</> on the column being modified by
+    <literal>UPDATE</> or <literal>INSERT</>.
+   </para>
+
+   <para>
+<synopsis>
+UPDATE t1 SET x = 2, y = md5sum(y) WHERE z = 100;
+</synopsis>
+    In this case, it checks <literal>db_column:update</> on
+    the <literal>t1.x</> being updated, <literal>db_column:{select update}</>
+    on the <literal>t1.y</> being updated and referenced,
+    and <literal>db_column:select</> on the <literal>t1.z</> being only
+    referenced in the <literal>WHERE</> clause.
+    <literal>db_table:{select update}</> will also be checked
+    at the table level.
+   </para>
+
+   <para>
+    For sequences, <literal>db_sequence:get_value</> is checked when we
+    reference a sequence object using <literal>SELECT</>; however, note that we
+    do not currently check permissions on execution of corresponding functions
+    such as <literal>lastval()</>.
+   </para>
+
+   <para>
+    For views, <literal>db_view:expand</> shall be checked, then any other
+    corresponding permissions shall be also checked on the objects being
+    expanded from the view, individually.
+   </para>
+
+   <para>
+    For functions, <literal>db_procedure:{execute}</> is defined, but not
+    checked in this version.
+   </para>
+
+   <para>
+    The default database privilege system allows database superusers to
+    modify system catalogs using DML commands, and reference or modify
+    toast tables.  These operations are prohibited when
+    <productname>sepgsql</> is enabled.
+   </para>
+  </sect3>
+
+  <sect3>
+   <title>DDL Permissions</title>
+   <para>
+    On <xref linkend="sql-security-label"> command, <literal>setattr</> and
+    <literal>relabelfrom</> shall be checked on the object being relabeled
+    with an old security label, then <literal>relabelto</> on the supplied
+    new security label.
+   </para>
+
+   <para>
+    In the case where multiple label providers are installed and the user tries
+    to set a security label, but is not managed by <productname>SELinux</>,
+    only <literal>setattr</> should be checked here.
+    This is currently not checked due to implementation restrictions.
+   </para>
+  </sect3>
+
+  <sect3>
+   <title>Trusted Procedure</title>
+   <para>
+    Trusted procedures are similar to security definer functions or set-uid
+    commands. <productname>SELinux</> provides a feature to allow trusted
+    code to run using a security label different from that of the client,
+    generally for the purpose of providing highly controlled access to
+    sensitive data (e.g. rows might be omitted, or the precision of stored
+    values might be reduced).  Whether or not a function acts as a trusted
+    procedure is controlled by its security label and the operating system
+    security policy.  For example:
+   </para>
+
+<screen>
+postgres=# CREATE TABLE customer (
+               cid     int primary key,
+               cname   text,
+               credit  text
+           );
+CREATE TABLE
+postgres=# SECURITY LABEL ON COLUMN customer.credit
+               IS 'system_u:object_r:sepgsql_secret_table_t:s0';
+SECURITY LABEL
+postgres=# CREATE FUNCTION show_credit(int) RETURNS text
+             AS 'SELECT regexp_replace(credit, ''-[0-9]+$'', ''-xxxx'', ''g'')
+                        FROM customer WHERE cid = $1'
+           LANGUAGE sql;
+CREATE FUNCTION
+postgres=# SECURITY LABEL ON FUNCTION show_credit(int)
+               IS 'system_u:object_r:sepgsql_trusted_proc_exec_t:s0';
+SECURITY LABEL
+</screen>
+
+   <para>
+    The above operations should be performed by an administrative user.
+   </para>
+
+<screen>
+postgres=# SELECT * FROM customer;
+ERROR:  SELinux: security policy violation
+postgres=# SELECT cid, cname, show_credit(cid) FROM customer;
+ cid | cname  |     show_credit
+-----+--------+---------------------
+   1 | taro   | 1111-2222-3333-xxxx
+   2 | hanako | 5555-6666-7777-xxxx
+(2 rows)
+</screen>
+
+   <para>
+    In this case, a regular user cannot reference <literal>customer.credit</>
+    directly, but a trusted procedure <literal>show_credit</> enables us
+    to print the credit card number of customers with some of the digits masked
+    out.
+   </para>
+  </sect3>
+
+  <sect3>
+   <title>Miscellaneous</title>
+   <para>
+    We reject the <xref linkend="sql-load"> command across the board, because
+    any module loaded could easily circumvent security policy enforcement.
+   </para>
+
+  </sect3>
+ </sect2>
+
+ <sect2 id="sepgsql-limitations">
+  <title>Limitations</title>
+
+  <variablelist>
+   <varlistentry>
+    <term>Userspace access vector cache</term>
+    <listitem>
+     <para>
+      <productname>sepgsql</> does not yet support an access vector cache.
+      This would likely improve performance.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>Data Definition Language (DDL) Permissions</term>
+    <listitem>
+     <para>
+      Due to implementation restrictions, DDL permissions are not checked.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>Data Control Language (DCL) Permissions</term>
+    <listitem>
+     <para>
+      Due to implementation restrictions, DCL permissions are not checked.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>Row-level access control</term>
+    <listitem>
+     <para>
+      <productname>PostgreSQL</> does not support row-level access; therefore,
+      <productname>sepgsql</productname> does not support it either.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>Covert channels</term>
+    <listitem>
+     <para>
+      <productname>sepgsql</> never tries to hide existence of
+      a certain object, even if the user is not allowed to the reference.
+      For example, we can infer the existence of an invisible object as
+      a result of primary key conflicts, foreign key violations, and so on,
+      even if we cannot reference contents of these objects.  The existence
+      of a top secret table cannot be hidden; we only hope to conceal its
+      contents.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </sect2>
+
+ <sect2 id="sepgsql-resources">
+  <title>External Resources</title>
+  <variablelist>
+   <varlistentry>
+    <term><ulink url="http://wiki.postgresql.org/wiki/SEPostgreSQL">SE-PostgreSQL Introduction</ulink></term>
+    <listitem>
+     <para>
+      This wiki page provides a brief-overview, security design, architecture,
+      administration and upcoming features.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><ulink url="http://docs.fedoraproject.org/selinux-user-guide/">Fedora SELinux User Guide</ulink></term>
+    <listitem>
+     <para>
+      This document provides a wide spectrum of knowledge to administer
+      <productname>SELinux</> on your systems.
+      It focuses primarily on Fedora, but is not limited to Fedora.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><ulink url="http://docs.fedoraproject.org/selinux-faq">Fedora SELinux FAQ</ulink></term>
+    <listitem>
+     <para>
+      This document answers frequently asked questions about
+      <productname>SELinux</productname>.
+      It focuses primarily on Fedora, but is not limited to Fedora.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </sect2>
+
+ <sect2 id="sepgsql-author">
+  <title>Author</title>
+  <para>
+   KaiGai Kohei <email>kaigai@ak.jp.nec.com</email>
+  </para>
+ </sect2>
+</sect1>

@@ -1,7 +1,7 @@
 /*
  * insert_username.c
  * $Modified: Thu Oct 16 08:13:42 1997 by brook $
- * $PostgreSQL: pgsql/contrib/spi/insert_username.c,v 1.17 2009/01/07 13:44:36 tgl Exp $
+ * contrib/spi/insert_username.c
  *
  * insert user name in response to a trigger
  * usage:  insert_username (column_name)
@@ -38,10 +38,10 @@ insert_username(PG_FUNCTION_ARGS)
 	if (!CALLED_AS_TRIGGER(fcinfo))
 		/* internal error */
 		elog(ERROR, "insert_username: not fired by trigger manager");
-	if (TRIGGER_FIRED_FOR_STATEMENT(trigdata->tg_event))
+	if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
 		/* internal error */
-		elog(ERROR, "insert_username: cannot process STATEMENT events");
-	if (TRIGGER_FIRED_AFTER(trigdata->tg_event))
+		elog(ERROR, "insert_username: must be fired for row");
+	if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
 		/* internal error */
 		elog(ERROR, "insert_username: must be fired before event");
 

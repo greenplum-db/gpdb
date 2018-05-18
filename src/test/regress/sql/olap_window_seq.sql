@@ -8,7 +8,7 @@ create schema olap_window_seq;
 set search_path to olap_window_seq, public;
 -- end_ignore
 
----- 1 -- Null window specification -- OVER () ----
+-- 1 -- Null window specification -- OVER () --
 
 select row_number() over (), cn,pn,vn 
 from sale; -- mvd 1->1
@@ -20,7 +20,7 @@ select dense_rank() over (), *
 from sale; --error - order by order by req'd
 
 
--- 2 -- Plan trivial windows over various input plan types ----
+-- 2 -- Plan trivial windows over various input plan types --
 
 select row_number() over (), pn, cn, vn, dt, qty, prc
 from sale; -- mvd 1->1
@@ -42,7 +42,7 @@ select row_number() over (), u, v
 from ( values (1,2),(3,4),(5,6) ) r(u,v); -- mvd 1->1
 
 
----- 3 -- Exercise WINDOW Clause ----
+-- 3 -- Exercise WINDOW Clause --
 
 select row_number() over (w), * from sale window w as () -- mvd 1->1
 order by 1 desc; -- order 1
@@ -99,7 +99,7 @@ select cn,
   sum(cn) over (order by cn range '1'::float8 preceding)
   from customer; -- this, however, should work
 
----- 4 -- Partitioned, non-ordered window specifications -- OVER (PARTITION BY ...) ----
+-- 4 -- Partitioned, non-ordered window specifications -- OVER (PARTITION BY ...) --
 
 -- !
 select row_number() over (partition by cn), cn, pn 
@@ -128,7 +128,7 @@ group by vn; -- mvd 3->1
 
 
 
----- 5 -- Ordered, non-partitioned window specifications -- OVER (ORDER BY ...) ----
+-- 5 -- Ordered, non-partitioned window specifications -- OVER (ORDER BY ...) --
 
 select row_number() over (order by cn), cn, pn 
 from sale; -- mvd 2->1
@@ -215,7 +215,7 @@ window w1 as (order by a nulls first, t),
 order by t;
 
 
----- X -- Miscellaneous (e.g. old bugs, etc.) ----
+-- X -- Miscellaneous (e.g. old bugs, etc.) --
 
 -- Why was this here? We can't guarantee all correct answers will pass!
 --select 
@@ -1596,35 +1596,6 @@ lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
 
--- There was a bug at one point where the planner would not recognize that the
--- distribution key of a subplan matched the distribution key needed for the
--- PARTITION BY clause, and generated an unnecessary Motion node. The
--- sub-optimal plan looked like this:
---
---                                                       QUERY PLAN                                
---                       
--- ----------------------------------------------------------------------------------------------------------------------
---  Gather Motion 2:1  (slice3; segments: 2)  (cost=3.56..3.60 rows=5 width=12)
---    ->  WindowAgg  (cost=3.56..3.60 rows=3 width=12)
---          Partition By: bar.a
---          Order By: bar.b
---          ->  Sort  (cost=3.56..3.57 rows=3 width=12)
---                Sort Key: bar.a, bar.b
---                ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=1.21..3.50 rows=3 width=12)
---                      Hash Key: bar.a
---                      ->  Hash Join  (cost=1.21..3.40 rows=3 width=12)
---                            Hash Cond: foo.a = bar.a
---                            ->  Seq Scan on foo  (cost=0.00..2.10 rows=5 width=4)
---                            ->  Hash  (cost=1.15..1.15 rows=3 width=8)
---                                  ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.15 rows=3 width=8)
---                                        Hash Key: bar.a
---                                        ->  Seq Scan on bar  (cost=0.00..1.05 rows=3 width=8)
--- (15 rows)
---
--- The Redistribute Motion node in the middle is not needed, because the
--- subplan is already distributed by bar.a, but the planner failed to
--- recognize that. The point of this test case is to test that that unneeded
--- Motion node isn't there.
 create table foo (a int4) distributed by (a);
 create table bar (a int4, b int4) distributed by (a, b);
 insert into foo select g from generate_series(1, 10) g;

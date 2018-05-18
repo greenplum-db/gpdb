@@ -3,7 +3,7 @@
  * copydir.c
  *	  copies a directory
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	While "xcopy /e /i /q" works fine for copying directories, on Windows XP
@@ -11,7 +11,7 @@
  *	as a service.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/copydir.c,v 1.2 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/storage/file/copydir.c
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "storage/copydir.h"
 #include "storage/fd.h"
 #include "miscadmin.h"
 
@@ -37,7 +38,6 @@
 #endif
 
 
-static void copy_file(char *fromfile, char *tofile);
 static void fsync_fname(char *fname, bool isdir);
 
 
@@ -55,7 +55,7 @@ copydir(char *fromdir, char *todir, bool recurse)
 	char		fromfile[MAXPGPATH];
 	char		tofile[MAXPGPATH];
 
-	if (mkdir(todir, S_IRUSR | S_IWUSR | S_IXUSR) != 0)
+	if (mkdir(todir, S_IRWXU) != 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not create directory \"%s\": %m", todir)));
@@ -141,7 +141,7 @@ copydir(char *fromdir, char *todir, bool recurse)
 /*
  * copy one file
  */
-static void
+void
 copy_file(char *fromfile, char *tofile)
 {
 	char	   *buffer;

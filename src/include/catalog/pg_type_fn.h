@@ -4,10 +4,10 @@
  *	 prototypes for functions in catalog/pg_type.c
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_type_fn.h,v 1.6 2010/01/02 16:58:02 momjian Exp $
+ * src/include/catalog/pg_type_fn.h
  *
  *-------------------------------------------------------------------------
  */
@@ -50,7 +50,8 @@ extern Oid TypeCreate(Oid newTypeOid,
 		   char storage,
 		   int32 typeMod,
 		   int32 typNDims,
-		   bool typeNotNull);
+		   bool typeNotNull,
+		   Oid typeCollation);
 
 extern Oid TypeCreateWithOptions(Oid newtypeOid,
 		   const char *typeName,
@@ -82,6 +83,7 @@ extern Oid TypeCreateWithOptions(Oid newtypeOid,
 		   int32 typeMod,
 		   int32 typNDims,
 		   bool typeNotNull,
+		   Oid typeCollation,
 		   Datum typoptions);
 
 extern void GenerateTypeDependencies(Oid typeNamespace,
@@ -99,6 +101,7 @@ extern void GenerateTypeDependencies(Oid typeNamespace,
 						 Oid elementType,
 						 bool isImplicitArray,
 						 Oid baseType,
+						 Oid typeCollation,
 						 Node *defaultExpr,
 						 bool rebuild);
 

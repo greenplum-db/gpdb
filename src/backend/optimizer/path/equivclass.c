@@ -6,17 +6,19 @@
  * See src/backend/optimizer/README for discussion of EquivalenceClasses.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/equivclass.c,v 1.23 2010/02/26 02:00:44 momjian Exp $
+ *	  src/backend/optimizer/path/equivclass.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/skey.h"
+#include "catalog/pg_type.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
@@ -78,6 +80,10 @@ static bool reconsider_full_join_clause(PlannerInfo *root,
  * join.  (This is the reason why we need a failure return.  It's more
  * convenient to check this case here than at the call sites...)
  *
+ * On success return, we have also initialized the clause's left_ec/right_ec
+ * fields to point to the EquivalenceClass representing it.  This saves lookup
+ * effort later.
+ *
  * Note: constructing merged EquivalenceClasses is a standard UNION-FIND
  * problem, for which there exist better data structures than simple lists.
  * If this code ever proves to be a bottleneck then it could be sped up ---
@@ -93,6 +99,7 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 {
 	Expr	   *clause = restrictinfo->clause;
 	Oid			opno,
+				collation,
 				item1_type,
 				item2_type;
 	Expr	   *item1;
@@ -108,13 +115,29 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 			   *em2;
 	ListCell   *lc1;
 
+	/* Should not already be marked as having generated an eclass */
+	Assert(restrictinfo->left_ec == NULL);
+	Assert(restrictinfo->right_ec == NULL);
+
 	/* Extract info from given clause */
 	Assert(is_opclause(clause));
 	opno = ((OpExpr *) clause)->opno;
+	collation = ((OpExpr *) clause)->inputcollid;
 	item1 = (Expr *) get_leftop(clause);
 	item2 = (Expr *) get_rightop(clause);
 	item1_relids = restrictinfo->left_relids;
 	item2_relids = restrictinfo->right_relids;
+
+	/*
+	 * Ensure both input expressions expose the desired collation (their types
+	 * should be OK already); see comments for canonicalize_ec_expression.
+	 */
+	item1 = canonicalize_ec_expression(item1,
+									   exprType((Node *) item1),
+									   collation);
+	item2 = canonicalize_ec_expression(item2,
+									   exprType((Node *) item2),
+									   collation);
 
 	/*
 	 * Reject clauses of the form X=X.	These are not as redundant as they
@@ -189,6 +212,13 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 			continue;
 
 		/*
+		 * The collation has to match; check this first since it's cheaper
+		 * than the opfamily comparison.
+		 */
+		if (collation != cur_ec->ec_collation)
+			continue;
+
+		/*
 		 * A "match" requires matching sets of btree opfamilies.  Use of
 		 * equal() for this test has implications discussed in the comments
 		 * for get_mergejoin_opfamilies().
@@ -244,8 +274,10 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 		{
 			ec1->ec_sources = lappend(ec1->ec_sources, restrictinfo);
 			ec1->ec_below_outer_join |= below_outer_join;
+			/* mark the RI as associated with this eclass */
+			restrictinfo->left_ec = ec1;
+			restrictinfo->right_ec = ec1;
 			/* mark the RI as usable with this pair of EMs */
-			/* NB: can't set left_ec/right_ec until merging is finished */
 			restrictinfo->left_em = em1;
 			restrictinfo->right_em = em2;
 			return true;
@@ -274,6 +306,9 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 		ec2->ec_relids = NULL;
 		ec1->ec_sources = lappend(ec1->ec_sources, restrictinfo);
 		ec1->ec_below_outer_join |= below_outer_join;
+		/* mark the RI as associated with this eclass */
+		restrictinfo->left_ec = ec1;
+		restrictinfo->right_ec = ec1;
 		/* mark the RI as usable with this pair of EMs */
 		restrictinfo->left_em = em1;
 		restrictinfo->right_em = em2;
@@ -285,6 +320,9 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 							false, item2_type);
 		ec1->ec_sources = lappend(ec1->ec_sources, restrictinfo);
 		ec1->ec_below_outer_join |= below_outer_join;
+		/* mark the RI as associated with this eclass */
+		restrictinfo->left_ec = ec1;
+		restrictinfo->right_ec = ec1;
 		/* mark the RI as usable with this pair of EMs */
 		restrictinfo->left_em = em1;
 		restrictinfo->right_em = em2;
@@ -296,6 +334,9 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 							false, item1_type);
 		ec2->ec_sources = lappend(ec2->ec_sources, restrictinfo);
 		ec2->ec_below_outer_join |= below_outer_join;
+		/* mark the RI as associated with this eclass */
+		restrictinfo->left_ec = ec2;
+		restrictinfo->right_ec = ec2;
 		/* mark the RI as usable with this pair of EMs */
 		restrictinfo->left_em = em1;
 		restrictinfo->right_em = em2;
@@ -306,6 +347,7 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 		EquivalenceClass *ec = makeNode(EquivalenceClass);
 
 		ec->ec_opfamilies = opfamilies;
+		ec->ec_collation = collation;
 		ec->ec_members = NIL;
 		ec->ec_sources = list_make1(restrictinfo);
 		ec->ec_derives = NIL;
@@ -323,12 +365,93 @@ process_equivalence(PlannerInfo *root, RestrictInfo *restrictinfo,
 
 		root->eq_classes = lappend(root->eq_classes, ec);
 
+		/* mark the RI as associated with this eclass */
+		restrictinfo->left_ec = ec;
+		restrictinfo->right_ec = ec;
 		/* mark the RI as usable with this pair of EMs */
 		restrictinfo->left_em = em1;
 		restrictinfo->right_em = em2;
 	}
 
 	return true;
+}
+
+/*
+ * canonicalize_ec_expression
+ *
+ * This function ensures that the expression exposes the expected type and
+ * collation, so that it will be equal() to other equivalence-class expressions
+ * that it ought to be equal() to.
+ *
+ * The rule for datatypes is that the exposed type should match what it would
+ * be for an input to an operator of the EC's opfamilies; which is usually
+ * the declared input type of the operator, but in the case of polymorphic
+ * operators no relabeling is wanted (compare the behavior of parse_coerce.c).
+ * Expressions coming in from quals will generally have the right type
+ * already, but expressions coming from indexkeys may not (because they are
+ * represented without any explicit relabel in pg_index), and the same problem
+ * occurs for sort expressions (because the parser is likewise cavalier about
+ * putting relabels on them).  Such cases will be binary-compatible with the
+ * real operators, so adding a RelabelType is sufficient.
+ *
+ * Also, the expression's exposed collation must match the EC's collation.
+ * This is important because in comparisons like "foo < bar COLLATE baz",
+ * only one of the expressions has the correct exposed collation as we receive
+ * it from the parser.	Forcing both of them to have it ensures that all
+ * variant spellings of such a construct behave the same.  Again, we can
+ * stick on a RelabelType to force the right exposed collation.  (It might
+ * work to not label the collation at all in EC members, but this is risky
+ * since some parts of the system expect exprCollation() to deliver the
+ * right answer for a sort key.)
+ *
+ * Note this code assumes that the expression has already been through
+ * eval_const_expressions, so there are no CollateExprs and no redundant
+ * RelabelTypes.
+ */
+Expr *
+canonicalize_ec_expression(Expr *expr, Oid req_type, Oid req_collation)
+{
+	Oid			expr_type = exprType((Node *) expr);
+
+	/*
+	 * For a polymorphic-input-type opclass, just keep the same exposed type.
+	 */
+	if (IsPolymorphicType(req_type))
+		req_type = expr_type;
+
+	/*
+	 * No work if the expression exposes the right type/collation already.
+	 */
+	if (expr_type != req_type ||
+		exprCollation((Node *) expr) != req_collation)
+	{
+		/*
+		 * Strip any existing RelabelType, then add a new one if needed. This
+		 * is to preserve the invariant of no redundant RelabelTypes.
+		 *
+		 * If we have to change the exposed type of the stripped expression,
+		 * set typmod to -1 (since the new type may not have the same typmod
+		 * interpretation).  If we only have to change collation, preserve the
+		 * exposed typmod.
+		 */
+		while (expr && IsA(expr, RelabelType))
+			expr = (Expr *) ((RelabelType *) expr)->arg;
+
+		if (exprType((Node *) expr) != req_type)
+			expr = (Expr *) makeRelabelType(expr,
+											req_type,
+											-1,
+											req_collation,
+											COERCE_DONTCARE);
+		else if (exprCollation((Node *) expr) != req_collation)
+			expr = (Expr *) makeRelabelType(expr,
+											req_type,
+											exprTypmod((Node *) expr),
+											req_collation,
+											COERCE_DONTCARE);
+	}
+
+	return expr;
 }
 
 /*
@@ -374,16 +497,20 @@ add_eq_member(EquivalenceClass *ec, Expr *expr, Relids relids,
 
 /*
  * get_eclass_for_sort_expr
- *	  Given an expression and opfamily info, find an existing equivalence
- *	  class it is a member of; if none, build a new single-member
- *	  EquivalenceClass for it.
+ *	  Given an expression and opfamily/collation info, find an existing
+ *	  equivalence class it is a member of; if none, optionally build a new
+ *	  single-member EquivalenceClass for it.
  *
  * sortref is the SortGroupRef of the originating SortGroupClause, if any,
  * or zero if not.	(It should never be zero if the expression is volatile!)
  *
+ * If create_it is TRUE, we'll build a new EquivalenceClass when there is no
+ * match.  If create_it is FALSE, we just return NULL when no match.
+ *
  * This can be used safely both before and after EquivalenceClass merging;
  * since it never causes merging it does not invalidate any existing ECs
- * or PathKeys.
+ * or PathKeys.  However, ECs added after path generation has begun are
+ * of limited usefulness, so usually it's best to create them beforehand.
  *
  * Note: opfamilies must be chosen consistently with the way
  * process_equivalence() would do; that is, generated from a mergejoinable
@@ -393,14 +520,21 @@ add_eq_member(EquivalenceClass *ec, Expr *expr, Relids relids,
 EquivalenceClass *
 get_eclass_for_sort_expr(PlannerInfo *root,
 						 Expr *expr,
-						 Oid expr_datatype,
 						 List *opfamilies,
-						 Index sortref)
+						 Oid opcintype,
+						 Oid collation,
+						 Index sortref,
+						 bool create_it)
 {
 	EquivalenceClass *newec;
 	EquivalenceMember *newem;
 	ListCell   *lc1;
 	MemoryContext oldcontext;
+
+	/*
+	 * Ensure the expression exposes the correct type and collation.
+	 */
+	expr = canonicalize_ec_expression(expr, opcintype, collation);
 
 	/*
 	 * Scan through the existing EquivalenceClasses for a match
@@ -418,6 +552,8 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 			(sortref == 0 || sortref != cur_ec->ec_sortref))
 			continue;
 
+		if (collation != cur_ec->ec_collation)
+			continue;
 		if (!equal(opfamilies, cur_ec->ec_opfamilies))
 			continue;
 
@@ -433,22 +569,26 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 				cur_em->em_is_const)
 				continue;
 
-			if (expr_datatype == cur_em->em_datatype &&
+			if (opcintype == cur_em->em_datatype &&
 				equal(expr, cur_em->em_expr))
 				return cur_ec;	/* Match! */
 		}
 	}
 
+	/* No match; does caller want a NULL result? */
+	if (!create_it)
+		return NULL;
+
 	/*
-	 * No match, so build a new single-member EC
+	 * OK, build a new single-member EC
 	 *
-	 * Here, we must be sure that we construct the EC in the right context. We
-	 * can assume, however, that the passed expr is long-lived.
+	 * Here, we must be sure that we construct the EC in the right context.
 	 */
 	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
 
 	newec = makeNode(EquivalenceClass);
 	newec->ec_opfamilies = list_copy(opfamilies);
+	newec->ec_collation = collation;
 	newec->ec_members = NIL;
 	newec->ec_sources = NIL;
 	newec->ec_derives = NIL;
@@ -463,8 +603,8 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 	if (newec->ec_has_volatile && sortref == 0) /* should not happen */
 		elog(ERROR, "volatile EquivalenceClass has no sortref");
 
-	newem = add_eq_member(newec, expr, pull_varnos((Node *) expr),
-						  NULL, false, expr_datatype);
+	newem = add_eq_member(newec, copyObject(expr), pull_varnos((Node *) expr),
+						  NULL, false, opcintype);
 
 	/*
 	 * add_eq_member doesn't check for volatile functions, set-returning
@@ -648,7 +788,7 @@ generate_base_implied_equalities_const(PlannerInfo *root,
 			ec->ec_broken = true;
 			break;
 		}
-		process_implied_equality(root, eq_op,
+		process_implied_equality(root, eq_op, ec->ec_collation,
 								 cur_em->em_expr, const_em->em_expr,
 								 bms_copy(ec->ec_relids),
 								 bms_union(cur_em->em_nullable_relids,
@@ -705,7 +845,7 @@ generate_base_implied_equalities_no_const(PlannerInfo *root,
 				ec->ec_broken = true;
 				break;
 			}
-			process_implied_equality(root, eq_op,
+			process_implied_equality(root, eq_op, ec->ec_collation,
 									 prev_em->em_expr, cur_em->em_expr,
 									 bms_copy(ec->ec_relids),
 									 bms_union(prev_em->em_nullable_relids,
@@ -882,8 +1022,8 @@ generate_join_implied_equalities_normal(PlannerInfo *root,
 	 * combination for which an opfamily member operator exists.  If we have
 	 * choices, we prefer simple Var members (possibly with RelabelType) since
 	 * these are (a) cheapest to compute at runtime and (b) most likely to
-	 * have useful statistics.	Also, if enable_hashjoin is on, we prefer
-	 * operators that are also hashjoinable.
+	 * have useful statistics. Also, prefer operators that are also
+	 * hashjoinable.
 	 */
 	if (outer_members && inner_members)
 	{
@@ -918,7 +1058,8 @@ generate_join_implied_equalities_normal(PlannerInfo *root,
 					(IsA(inner_em->em_expr, RelabelType) &&
 					 IsA(((RelabelType *) inner_em->em_expr)->arg, Var)))
 					score++;
-				if (!enable_hashjoin || op_hashjoinable(eq_op))
+				if (op_hashjoinable(eq_op,
+									exprType((Node *) outer_em->em_expr)))
 					score++;
 				if (score > best_score)
 				{
@@ -1109,6 +1250,7 @@ create_join_clause(PlannerInfo *root,
 	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
 
 	rinfo = build_implied_join_equality(opno,
+										ec->ec_collation,
 										leftem->em_expr,
 										rightem->em_expr,
 										bms_union(leftem->em_relids,
@@ -1120,8 +1262,8 @@ create_join_clause(PlannerInfo *root,
 	rinfo->parent_ec = parent_ec;
 
 	/*
-	 * We can set these now, rather than letting them be looked up later,
-	 * since this is only used after EC merging is complete.
+	 * We know the correct values for left_ec/right_ec, ie this particular EC,
+	 * so we can just set them directly instead of forcing another lookup.
 	 */
 	rinfo->left_ec = ec;
 	rinfo->right_ec = ec;
@@ -1332,6 +1474,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo,
 	Expr	   *outervar,
 			   *innervar;
 	Oid			opno,
+				collation,
 				left_type,
 				right_type,
 				inner_datatype;
@@ -1341,6 +1484,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo,
 
 	Assert(is_opclause(rinfo->clause));
 	opno = ((OpExpr *) rinfo->clause)->opno;
+	collation = ((OpExpr *) rinfo->clause)->inputcollid;
 
 	/* If clause is outerjoin_delayed, operator must be strict */
 	if (rinfo->outerjoin_delayed && !op_strict(opno))
@@ -1378,7 +1522,9 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo,
 		/* Never match to a volatile EC */
 		if (cur_ec->ec_has_volatile)
 			continue;
-		/* It has to match the outer-join clause as to opfamilies, too */
+		/* It has to match the outer-join clause as to semantics, too */
+		if (collation != cur_ec->ec_collation)
+			continue;
 		if (!equal(rinfo->mergeopfamilies, cur_ec->ec_opfamilies))
 			continue;
 		/* Does it contain a match to outervar? */
@@ -1416,6 +1562,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo,
 			if (!OidIsValid(eq_op))
 				continue;		/* can't generate equality */
 			newrinfo = build_implied_join_equality(eq_op,
+												   cur_ec->ec_collation,
 												   innervar,
 												   cur_em->em_expr,
 												   bms_copy(inner_relids),
@@ -1449,6 +1596,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 	Expr	   *leftvar;
 	Expr	   *rightvar;
 	Oid			opno,
+				collation,
 				left_type,
 				right_type;
 	Relids		left_relids,
@@ -1464,6 +1612,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 	/* Extract needed info from the clause */
 	Assert(is_opclause(rinfo->clause));
 	opno = ((OpExpr *) rinfo->clause)->opno;
+	collation = ((OpExpr *) rinfo->clause)->inputcollid;
 	op_input_types(opno, &left_type, &right_type);
 	leftvar = (Expr *) get_leftop(rinfo->clause);
 	rightvar = (Expr *) get_rightop(rinfo->clause);
@@ -1489,7 +1638,9 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 		/* Never match to a volatile EC */
 		if (cur_ec->ec_has_volatile)
 			continue;
-		/* It has to match the outer-join clause as to opfamilies, too */
+		/* It has to match the outer-join clause as to semantics, too */
+		if (collation != cur_ec->ec_collation)
+			continue;
 		if (!equal(rinfo->mergeopfamilies, cur_ec->ec_opfamilies))
 			continue;
 
@@ -1552,6 +1703,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 			if (OidIsValid(eq_op))
 			{
 				newrinfo = build_implied_join_equality(eq_op,
+													   cur_ec->ec_collation,
 													   leftvar,
 													   cur_em->em_expr,
 													   bms_copy(left_relids),
@@ -1565,6 +1717,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 			if (OidIsValid(eq_op))
 			{
 				newrinfo = build_implied_join_equality(eq_op,
+													   cur_ec->ec_collation,
 													   rightvar,
 													   cur_em->em_expr,
 													   bms_copy(right_relids),
@@ -1649,8 +1802,8 @@ exprs_known_equal(PlannerInfo *root, Node *item1, Node *item2)
  *	  Search for EC members that reference (only) the parent_rel, and
  *	  add transformed members referencing the child_rel.
  *
- * We only need to do this for ECs that could generate join conditions,
- * since the child members are only used for creating inner-indexscan paths.
+ * Note that this function won't be called at all unless we have at least some
+ * reason to believe that the EC members it generates will be useful.
  *
  * parent_rel and child_rel could be derived from appinfo, but since the
  * caller has already computed them, we might as well just pass them in.
@@ -1669,10 +1822,14 @@ add_child_rel_equivalences(PlannerInfo *root,
 		ListCell   *lc2;
 
 		/*
-		 * Won't generate joinclauses if const or single-member (the latter
-		 * test covers the volatile case too)
+		 * If this EC contains a constant, then it's not useful for sorting or
+		 * driving an inner index-scan, so we skip generating child EMs.
+		 *
+		 * If this EC contains a volatile expression, then generating child
+		 * EMs would be downright dangerous.  We rely on a volatile EC having
+		 * only one EM.
 		 */
-		if (cur_ec->ec_has_const || list_length(cur_ec->ec_members) <= 1)
+		if (cur_ec->ec_has_const || cur_ec->ec_has_volatile)
 			continue;
 
 		/* No point in searching if parent rel not mentioned in eclass */
