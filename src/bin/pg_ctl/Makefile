@@ -25,6 +25,10 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 override CPPFLAGS := -DDEF_PGPORT=$(DEF_PGPORT) -I$(libpq_srcdir) $(CPPFLAGS)
 
+ifeq ($(PORTNAME),openbsd)
+override CFLAGS += -pthread
+endif
+
 OBJS=	pg_ctl.o $(WIN32RES)
 
 all: pg_ctl

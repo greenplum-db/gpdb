@@ -25,6 +25,10 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl , $(L
 # the use of tempnam in pg_backup_tar.c causes a warning when using newer versions of GCC
 override CPPFLAGS := -Wno-deprecated-declarations -I$(libpq_srcdir) $(CPPFLAGS)
 
+ifeq ($(PORTNAME),openbsd)
+override CFLAGS += -pthread
+endif
+
 OBJS=	pg_backup_archiver.o pg_backup_db.o pg_backup_custom.o \
 	pg_backup_files.o pg_backup_null.o pg_backup_tar.o \
 	pg_backup_directory.o dumputils.o compress_io.o $(WIN32RES)
