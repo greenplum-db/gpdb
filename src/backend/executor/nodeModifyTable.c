@@ -1278,6 +1278,8 @@ ExecModifyTable(ModifyTableState *node)
 {
 	EState	   *estate = node->ps.state;
 	CmdType		operation = node->operation;
+	ResultRelInfo *saved_resultRelInfo;
+	ResultRelInfo *resultRelInfo;
 	PlanState  *subplanstate;
 	JunkFilter *junkfilter;
 	TupleTableSlot *slot;
@@ -1299,17 +1301,19 @@ ExecModifyTable(ModifyTableState *node)
 		node->fireBSTriggers = false;
 	}
 
+	/* Preload local variables */
+	resultRelInfo = estate->es_result_relations + node->mt_whichplan;
+	subplanstate = node->mt_plans[node->mt_whichplan];
+	junkfilter = resultRelInfo->ri_junkFilter;
+
 	/*
 	 * es_result_relation_info must point to the currently active result
 	 * relation.  (Note we assume that ModifyTable nodes can't be nested.) We
 	 * want it to be NULL whenever we're not within ModifyTable, though.
 	 */
-	estate->es_result_relation_info =
-		estate->es_result_relations + node->mt_whichplan;
+	saved_resultRelInfo = estate->es_result_relation_info;
 
-	/* Preload local variables */
-	subplanstate = node->mt_plans[node->mt_whichplan];
-	junkfilter = estate->es_result_relation_info->ri_junkFilter;
+	estate->es_result_relation_info = resultRelInfo;
 
 	/*
 	 * Fetch rows from subplan(s), and execute the required table modification
@@ -1385,6 +1389,16 @@ ExecModifyTable(ModifyTableState *node)
 				elog(ERROR, "unknown operation");
 				break;
 		}
+
+		/*
+		 * If the target is a partitioned table, ExecInsert / ExecUpdate /
+		 * ExecDelete might have changed es_result_relation_info to point to
+		 * a partition, instead of the top-level table. Reset it. (It would
+		 * be more tidy if those functions cleaned up after themselves, but
+		 * it's more robust to do it here just once.)
+		 */
+		resultRelInfo = estate->es_result_relations + node->mt_whichplan;
+		estate->es_result_relation_info = resultRelInfo;
 
 		/*
 		 * If we got a RETURNING result, return it to caller.  We'll continue

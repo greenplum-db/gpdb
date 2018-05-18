@@ -4024,9 +4024,15 @@ get_part(EState *estate, Datum *values, bool *isnull, TupleDesc tupdesc)
 					   &(resultRelInfo->ri_partInsertMap),
 					   TRUE); /* throw on error, so result not needed */
 
+		/*
+		 * If the partition is not physically compatible with the parent,
+		 * we need a partition-specific slot.
+		 */
 		if (resultRelInfo->ri_partInsertMap)
-			resultRelInfo->ri_partSlot = 
+		{
+			resultRelInfo->ri_resultSlot = 
 				MakeSingleTupleTableSlot(resultRelInfo->ri_RelationDesc->rd_att);
+		}
 	}
 	return resultRelInfo;
 }
@@ -4390,25 +4396,10 @@ void
 ClearPartitionState(EState *estate)
 {
 	PartitionState *pstate = estate->es_partition_state;
-	HASH_SEQ_STATUS hash_seq_status;
-	ResultPartHashEntry *entry;
 
 	if ( pstate == NULL || pstate->result_partition_hash == NULL )
 		return;
 
-	/* Examine each hash table entry. */
-	hash_freeze(pstate->result_partition_hash);
-	hash_seq_init(&hash_seq_status, pstate->result_partition_hash);
-	while ( (entry = hash_seq_search(&hash_seq_status)) )
-	{
-		ResultPartHashEntry *part = (ResultPartHashEntry*)entry;
-		ResultRelInfo *info = &estate->es_result_relations[part->offset];
-		if ( info->ri_partSlot )
-		{
-			Assert( info->ri_partInsertMap ); /* paired with slot */
-			ExecDropSingleTupleTableSlot(info->ri_partSlot);
-		}
-	}
 	/* No need for hash_seq_term() since we iterated to end. */
 	hash_destroy(pstate->result_partition_hash);
 	pstate->result_partition_hash = NULL;

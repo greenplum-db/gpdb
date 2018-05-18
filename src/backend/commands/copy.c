@@ -4274,6 +4274,12 @@ CopyFromDispatch(CopyState cstate)
 			}
 		}
 
+		if (resultRelInfo->ri_resultSlot)
+		{
+			ReleaseTupleDesc(resultRelInfo->ri_resultSlot->tts_tupleDescriptor);
+			ExecClearTuple(resultRelInfo->ri_resultSlot);
+		}
+
 		/* Close indices and then the relation itself */
 		ExecCloseIndices(resultRelInfo);
 		heap_close(resultRelInfo->ri_RelationDesc, NoLock);
@@ -4936,15 +4942,15 @@ PROCESS_SEGMENT_DATA:
 				 *
 				 * The resulting tuple is stored in 'slot'
 				 */
-				if (resultRelInfo->ri_partSlot != NULL)
+				if (resultRelInfo->ri_partInsertMap)
 				{
 					AttrMap *map = resultRelInfo->ri_partInsertMap;
 					Assert(map != NULL);
 
-					slot = resultRelInfo->ri_partSlot;
+					slot = resultRelInfo->ri_resultSlot;
 					ExecClearTuple(slot);
-					partValues = slot_get_values(resultRelInfo->ri_partSlot);
-					partNulls = slot_get_isnull(resultRelInfo->ri_partSlot);
+					partValues = slot_get_values(slot);
+					partNulls = slot_get_isnull(slot);
 					MemSet(partValues, 0, attr_count * sizeof(Datum));
 					MemSet(partNulls, true, attr_count * sizeof(bool));
 
@@ -5203,19 +5209,25 @@ PROCESS_SEGMENT_DATA:
 	resultRelInfo = estate->es_result_relations;
 	for (i = estate->es_num_result_relations; i > 0; i--)
 	{
-			if (resultRelInfo->ri_aoInsertDesc)
-					appendonly_insert_finish(resultRelInfo->ri_aoInsertDesc);
+		if (resultRelInfo->ri_aoInsertDesc)
+			appendonly_insert_finish(resultRelInfo->ri_aoInsertDesc);
 
-			if (resultRelInfo->ri_aocsInsertDesc)
-					aocs_insert_finish(resultRelInfo->ri_aocsInsertDesc);
+		if (resultRelInfo->ri_aocsInsertDesc)
+			aocs_insert_finish(resultRelInfo->ri_aocsInsertDesc);
 
-			if (resultRelInfo->ri_extInsertDesc)
-					external_insert_finish(resultRelInfo->ri_extInsertDesc);
-			
-			/* Close indices and then the relation itself */
-			ExecCloseIndices(resultRelInfo);
-			heap_close(resultRelInfo->ri_RelationDesc, NoLock);
-			resultRelInfo++;
+		if (resultRelInfo->ri_extInsertDesc)
+			external_insert_finish(resultRelInfo->ri_extInsertDesc);
+
+		if (resultRelInfo->ri_resultSlot)
+		{
+			ReleaseTupleDesc(resultRelInfo->ri_resultSlot->tts_tupleDescriptor);
+			ExecClearTuple(resultRelInfo->ri_resultSlot);
+		}
+
+		/* Close indices and then the relation itself */
+		ExecCloseIndices(resultRelInfo);
+		heap_close(resultRelInfo->ri_RelationDesc, NoLock);
+		resultRelInfo++;
 	}
 	
 	cstate->rel = NULL; /* closed above */

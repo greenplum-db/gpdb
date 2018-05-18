@@ -101,23 +101,13 @@ reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo)
 	isnull = slot_get_isnull(slot);
 
 	/*
-	 * Get the target slot ready. If this is a child partition table,
-	 * set target slot to ri_partSlot. Otherwise, use ri_resultSlot.
+	 * Get the target slot ready.
 	 */
-	if (map != NULL)
+	if (resultRelInfo->ri_resultSlot == NULL)
 	{
-		Assert(resultRelInfo->ri_partSlot != NULL);
-		partslot = resultRelInfo->ri_partSlot;
+		resultRelInfo->ri_resultSlot = MakeSingleTupleTableSlot(resultTupDesc);
 	}
-	else
-	{
-		if (resultRelInfo->ri_resultSlot == NULL)
-		{
-			resultRelInfo->ri_resultSlot = MakeSingleTupleTableSlot(resultTupDesc);
-		}
-
-		partslot = resultRelInfo->ri_resultSlot;
-	}
+	partslot = resultRelInfo->ri_resultSlot;
 
 	partslot = ExecStoreAllNullTuple(partslot);
 	partvalues = slot_get_values(partslot);

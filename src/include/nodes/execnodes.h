@@ -372,7 +372,6 @@ typedef struct ResultRelInfo
 	int			ri_aosegno;
 	uint64		ri_aoprocessed; /* tuples added/deleted for AO */
 	struct AttrMap *ri_partInsertMap;
-	TupleTableSlot *ri_partSlot;
 	TupleTableSlot *ri_resultSlot;
 	/* Parent relation in checkPartitionUpdate */
 	Relation	ri_PartitionParent;
