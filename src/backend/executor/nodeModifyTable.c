@@ -173,7 +173,8 @@ ExecInsert(TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
 		   EState *estate,
 		   PlanGenerator planGen,
-		   bool isUpdate)
+		   bool isUpdate,
+		   Oid	tupleOid)
 {
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
@@ -185,7 +186,7 @@ ExecInsert(TupleTableSlot *slot,
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
 	ItemPointerData lastTid;
-	Oid			tuple_oid = InvalidOid;
+	Oid			tuple_oid = tupleOid;
 
 	/*
 	 * get information on the (current) result relation
@@ -194,8 +195,12 @@ ExecInsert(TupleTableSlot *slot,
 	{
 		resultRelInfo = slot_get_partition(slot, estate);
 
-		/* Check whether the user provided the correct leaf part only if required */
-		if (!dml_ignore_target_partition_check)
+		/*
+		 * Check whether the user provided the correct leaf part only if required.
+		 * For isUpdate, the check for resultRelInfo equals to target partitioned relation id
+		 * has been done by checkPartitionUpdate before. So we don't need to check again here.
+		 */
+		if (!dml_ignore_target_partition_check && !isUpdate)
 		{
 			Assert(NULL != estate->es_result_partitions->part &&
 					NULL != resultRelInfo->ri_RelationDesc);
@@ -301,12 +306,10 @@ ExecInsert(TupleTableSlot *slot,
 	 */
 	if (resultRelationDesc->rd_rel->relhasoids)
 	{
-		tuple_oid = InvalidOid;
-
 		/*
 		 * But if this is really an UPDATE, try to preserve the old OID.
 		 */
-		if (isUpdate)
+		if (isUpdate && tuple_oid == InvalidOid)
 		{
 			GenericTuple gtuple;
 
@@ -418,7 +421,7 @@ ExecInsert(TupleTableSlot *slot,
 		if (resultRelInfo->ri_aocsInsertDesc == NULL)
 		{
 			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
-			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc, 
+			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc,
 																resultRelInfo->ri_aosegno, false);
 		}
 
@@ -514,7 +517,7 @@ ExecInsert(TupleTableSlot *slot,
  *		index modifications are needed
  *
  *		In GPDB, DELETE can be part of an update operation when
- *		there is a preceding SplitUpdate node. 
+ *		there is a preceding SplitUpdate node.
  *
  *		Returns RETURNING result if any, otherwise NULL.
  * ----------------------------------------------------------------
@@ -564,7 +567,8 @@ ExecDelete(ItemPointer tupleid,
 	{
 		/* BEFORE ROW DELETE Triggers */
 		if (resultRelInfo->ri_TrigDesc &&
-			resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_DELETE] > 0)
+			resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_DELETE] > 0 &&
+			!isUpdate)
 		{
 			bool		dodelete;
 
@@ -581,12 +585,12 @@ ExecDelete(ItemPointer tupleid,
 	bool isAOColsTable = RelationIsAoCols(resultRelationDesc);
 	bool isExternalTable = RelationIsExternal(resultRelationDesc);
 
-	if (isExternalTable && estate->es_result_partitions && 
+	if (isExternalTable && estate->es_result_partitions &&
 		estate->es_result_partitions->part->parrelid != 0)
 	{
 		ereport(ERROR,
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("Delete from external partitions not supported.")));			
+			errmsg("Delete from external partitions not supported.")));
 	}
 
 	/*
@@ -613,22 +617,22 @@ ldelete:;
 			if (!isUpdate)
 				ereport(ERROR,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("Deletes on append-only tables are not supported in serializable transactions.")));		
+						errmsg("Deletes on append-only tables are not supported in serializable transactions.")));
 			else
 				ereport(ERROR,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("Updates on append-only tables are not supported in serializable transactions.")));	
+						errmsg("Updates on append-only tables are not supported in serializable transactions.")));
 		}
 
 		if (resultRelInfo->ri_deleteDesc == NULL)
 		{
-			resultRelInfo->ri_deleteDesc = 
+			resultRelInfo->ri_deleteDesc =
 				appendonly_delete_init(resultRelationDesc, GetActiveSnapshot());
 		}
 
 		AOTupleId* aoTupleId = (AOTupleId*)tupleid;
 		result = appendonly_delete(resultRelInfo->ri_deleteDesc, aoTupleId);
-	} 
+	}
 	else if (isAOColsTable)
 	{
 		if (IsXactIsoLevelSerializable)
@@ -636,16 +640,16 @@ ldelete:;
 			if (!isUpdate)
 				ereport(ERROR,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("Deletes on append-only tables are not supported in serializable transactions.")));		
+						errmsg("Deletes on append-only tables are not supported in serializable transactions.")));
 			else
 				ereport(ERROR,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("Updates on append-only tables are not supported in serializable transactions.")));		
+						errmsg("Updates on append-only tables are not supported in serializable transactions.")));
 		}
 
 		if (resultRelInfo->ri_deleteDesc == NULL)
 		{
-			resultRelInfo->ri_deleteDesc = 
+			resultRelInfo->ri_deleteDesc =
 				aocs_delete_init(resultRelationDesc);
 		}
 
@@ -662,7 +666,7 @@ ldelete:;
 			/* already deleted by self; nothing to do */
 
 			/*-------
-			 * In an scenario in which R(a,b) and S(a,b) have 
+			 * In an scenario in which R(a,b) and S(a,b) have
 			 *        R               S
 			 *    ________         ________
 			 *     (1, 1)           (1, 2)
@@ -670,12 +674,12 @@ ldelete:;
  			 *
    			 *  An update query such as:
  			 *   UPDATE R SET a = S.b  FROM S WHERE R.b = S.a;
- 			 *   
- 			 *  will have an non-deterministic output. The tuple in R 
+ 			 *
+ 			 *  will have an non-deterministic output. The tuple in R
 			 * can be updated to (2,1) or (7,1).
- 			 * Since the introduction of SplitUpdate, these queries will 
-			 * send multiple requests to delete the same tuple. Therefore, 
-			 * in order to avoid a non-deterministic output, 
+ 			 * Since the introduction of SplitUpdate, these queries will
+			 * send multiple requests to delete the same tuple. Therefore,
+			 * in order to avoid a non-deterministic output,
 			 * an error is reported in such scenario.
 			 *-------
  			 */
@@ -739,7 +743,7 @@ ldelete:;
 	 * anyway, since the tuple is still visible to other transactions.
 	 */
 
-	if (!(isAORowsTable || isAOColsTable) && planGen == PLANGEN_PLANNER)
+	if (!(isAORowsTable || isAOColsTable) && planGen == PLANGEN_PLANNER && !isUpdate)
 	{
 		/* AFTER ROW DELETE Triggers */
 		ExecARDeleteTriggers(estate, resultRelInfo, tupleid);
@@ -1325,7 +1329,7 @@ ExecModifyTable(ModifyTableState *node)
 			node->mt_whichplan++;
 			if (node->mt_whichplan < node->mt_nplans)
 			{
-				estate->es_result_relation_info++;
+				estate->es_result_relation_info = estate->es_result_relations + node->mt_whichplan;
 				subplanstate = node->mt_plans[node->mt_whichplan];
 				junkfilter = estate->es_result_relation_info->ri_junkFilter;
 				EvalPlanQualSetPlan(&node->mt_epqstate, subplanstate->plan);
@@ -1369,12 +1373,52 @@ ExecModifyTable(ModifyTableState *node)
 		switch (operation)
 		{
 			case CMD_INSERT:
-				slot = ExecInsert(slot, planSlot, estate,
-								  PLANGEN_PLANNER, false /* isUpdate */);
+				slot = ExecInsert(slot, planSlot, estate, PLANGEN_PLANNER,
+								  false /* isUpdate */, InvalidOid /* tupleOid */);
 				break;
 			case CMD_UPDATE:
-				slot = ExecUpdate(tupleid, slot, planSlot,
-								  &node->mt_epqstate, estate);
+				{
+					int			action;
+					bool		isnull;
+					int			actionColIdx;
+					int			tupleoidColIdx;
+
+					actionColIdx = node->mt_action_col_idxes[node->mt_whichplan];
+					tupleoidColIdx = node->mt_oid_col_idxes[node->mt_whichplan];
+
+					/* It is planned as not split update mode */
+					if (actionColIdx <= 0)
+					{
+						slot = ExecUpdate(tupleid, slot, planSlot,
+										  &node->mt_epqstate, estate);
+						break;
+					}
+
+					action = DatumGetUInt32(slot_getattr(planSlot, actionColIdx, &isnull));
+					Assert(!isnull);
+
+					if (DML_INSERT == action)
+					{
+						Oid		tupleOid = InvalidOid;
+
+						if (tupleoidColIdx != 0)
+						{
+							bool			isnull;
+
+							tupleOid = slot_getattr(planSlot, tupleoidColIdx, &isnull);
+						}
+
+						if (estate->es_result_partitions)
+							checkPartitionUpdate(estate, slot, estate->es_result_relation_info);
+
+						slot = ExecInsert(slot, planSlot, estate,
+										  PLANGEN_PLANNER, true /* isUpdate */, tupleOid);
+					}
+					else /* DML_DELETE */
+						slot = ExecDelete(tupleid, planSlot,
+										  &node->mt_epqstate, estate,
+										  PLANGEN_PLANNER, true /* isUpdate */);
+				}
 				break;
 			case CMD_DELETE:
 				slot = ExecDelete(tupleid, planSlot,
@@ -1450,6 +1494,29 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	mtstate->operation = operation;
 	/* set up epqstate with dummy subplan pointer for the moment */
 	EvalPlanQualInit(&mtstate->mt_epqstate, estate, NULL, node->epqParam);
+
+	if (CMD_UPDATE == operation)
+	{
+		Assert(list_length(node->ctid_col_idxes) == nplans);
+		Assert(list_length(node->action_col_idxes) == nplans);
+		Assert(list_length(node->oid_col_idxes) == nplans);
+
+		mtstate->mt_action_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->action_col_idxes));
+		mtstate->mt_ctid_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->ctid_col_idxes));
+		mtstate->mt_oid_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->oid_col_idxes));
+
+		i = 0;
+		foreach(l, node->action_col_idxes)
+			mtstate->mt_action_col_idxes[i++] = lfirst_int(l);
+
+		i = 0;
+		foreach(l, node->ctid_col_idxes)
+			mtstate->mt_ctid_col_idxes[i++] = lfirst_int(l);
+
+		i = 0;
+		foreach(l, node->oid_col_idxes)
+			mtstate->mt_oid_col_idxes[i++] = lfirst_int(l);
+	}
 
 	/* GPDB: Don't fire statement-triggers in QE reader processes */
 	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)

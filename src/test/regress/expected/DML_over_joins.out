@@ -419,7 +419,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -465,7 +464,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -511,7 +509,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -557,7 +554,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -603,7 +599,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -649,7 +644,6 @@ NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
 NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
 update s set a = r.a from r where r.b = s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- start_ignore
 ------------------------------------------------------------
 --	Statement contains correlated subquery

@@ -1494,13 +1494,16 @@ typedef struct RepeatState
  */
 typedef struct ModifyTableState
 {
-	PlanState	ps;				/* its first field is NodeTag */
-	CmdType		operation;
-	PlanState **mt_plans;		/* subplans (one per target rel) */
-	int			mt_nplans;		/* number of plans in the array */
-	int			mt_whichplan;	/* which one is being executed (0..n-1) */
-	EPQState	mt_epqstate;	/* for evaluating EvalPlanQual rechecks */
-	bool		fireBSTriggers; /* do we need to fire stmt triggers? */
+	PlanState		ps;				/* its first field is NodeTag */
+	CmdType			operation;
+	PlanState	  **mt_plans;		/* subplans (one per target rel) */
+	int				mt_nplans;		/* number of plans in the array */
+	int				mt_whichplan;	/* which one is being executed (0..n-1) */
+	EPQState		mt_epqstate;	/* for evaluating EvalPlanQual rechecks */
+	bool			fireBSTriggers;	/* do we need to fire stmt triggers? */
+	AttrNumber		*mt_action_col_idxes;
+	AttrNumber		*mt_ctid_col_idxes;
+	AttrNumber		*mt_oid_col_idxes;
 } ModifyTableState;
 
 /* ----------------

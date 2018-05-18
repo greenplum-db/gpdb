@@ -3,7 +3,6 @@
 --
 
 CREATE TABLE update_test (
-	e   INT DEFAULT 1,
     a   INT DEFAULT 10,
     b   INT,
     c   TEXT

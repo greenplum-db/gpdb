@@ -18,11 +18,10 @@ SELECT * FROM dml_bitvarying ORDER BY 1;
 (1 row)
 
 UPDATE dml_bitvarying SET a = '00';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_bitvarying ORDER BY 1;
  a  
 ----
- 11
+ 00
 (1 row)
 
 -- out of range values
@@ -31,7 +30,7 @@ ERROR:  bit string too long for type bit varying(2)
 SELECT * FROM dml_bitvarying ORDER BY 1;
  a  
 ----
- 11
+ 00
 (1 row)
 
 UPDATE dml_bitvarying SET a = '000';
@@ -39,7 +38,7 @@ ERROR:  bit string too long for type bit varying(2)
 SELECT * FROM dml_bitvarying ORDER BY 1;
  a  
 ----
- 11
+ 00
 (1 row)
 
 --
@@ -65,12 +64,11 @@ SELECT * FROM dml_interval ORDER BY 1;
 (2 rows)
 
 UPDATE dml_interval SET a = '-178000000 years';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_interval ORDER BY 1;
         a         
 ------------------
  -178000000 years
- 178000000 years
+ -178000000 years
 (2 rows)
 
 -- out of range values
@@ -79,7 +77,7 @@ SELECT * FROM dml_interval ORDER BY 1;
            a           
 -----------------------
  -178000000 years
- 178000000 years
+ -178000000 years
  178000000 years 1 mon
 (3 rows)
 
@@ -88,20 +86,19 @@ SELECT * FROM dml_interval ORDER BY 1;
              a             
 ---------------------------
  -178000000 years
+ -178000000 years
  -177999999 years -11 mons
- 178000000 years
  178000000 years 1 mon
 (4 rows)
 
 UPDATE dml_interval SET a = '-178000000 years 1 month';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_interval ORDER BY 1;
              a             
 ---------------------------
- -178000000 years
  -177999999 years -11 mons
- 178000000 years
- 178000000 years 1 mon
+ -177999999 years -11 mons
+ -177999999 years -11 mons
+ -177999999 years -11 mons
 (4 rows)
 
 --
@@ -164,11 +161,10 @@ SELECT * FROM dml_numeric2 ORDER BY 1;
 (1 row)
 
 UPDATE dml_numeric2 SET a = 1.00e+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_numeric2 ORDER BY 1;
-   a    
---------
- 100.00
+   a   
+-------
+ 10.00
 (1 row)
 
 -- out of range values
@@ -176,18 +172,18 @@ INSERT  INTO  dml_numeric2 VALUES (1.00e+3);
 ERROR:  numeric field overflow
 DETAIL:  A field with precision 5, scale 2 must round to an absolute value less than 10^3. Rounded overflowing value: 1000.00
 SELECT * FROM dml_numeric2 ORDER BY 1;
-   a    
---------
- 100.00
+   a   
+-------
+ 10.00
 (1 row)
 
 UPDATE dml_numeric2 SET a = 1.00e+3;
 ERROR:  numeric field overflow
 DETAIL:  A field with precision 5, scale 2 must round to an absolute value less than 10^3. Rounded overflowing value: 1000.00
 SELECT * FROM dml_numeric2 ORDER BY 1;
-   a    
---------
- 100.00
+   a   
+-------
+ 10.00
 (1 row)
 
 --
@@ -213,12 +209,11 @@ SELECT * FROM dml_timestamp ORDER BY 1;
 (2 rows)
 
 UPDATE dml_timestamp SET a = to_date('2012-02-31', 'YYYY-MM-DD BC');
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_timestamp ORDER BY 1;
           a          
 ---------------------
  2012-03-02 00:00:00
- 4714-01-27 00:00:00
+ 2012-03-02 00:00:00
 (2 rows)
 
 -- out of range values
@@ -230,7 +225,7 @@ SELECT * FROM dml_timestamp ORDER BY 1;
           a          
 ---------------------
  2012-03-02 00:00:00
- 4714-01-27 00:00:00
+ 2012-03-02 00:00:00
 (2 rows)
 
 UPDATE dml_timestamp SET a = '294277-01-27 AD'::timestamp;
@@ -241,7 +236,7 @@ SELECT * FROM dml_timestamp ORDER BY 1;
           a          
 ---------------------
  2012-03-02 00:00:00
- 4714-01-27 00:00:00
+ 2012-03-02 00:00:00
 (2 rows)
 
 --
@@ -259,7 +254,6 @@ SELECT * FROM dml_timestamptz ORDER BY 1;
 (1 row)
 
 UPDATE dml_timestamptz SET a = to_date('4714-01-27 AD', 'YYYY-MM-DD BC');
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_timestamptz ORDER BY 1;
            a            
 ------------------------

@@ -106,8 +106,8 @@ ExecDML(DMLState *node)
 		 * triggers.)
 		 */
 		ExecInsert(node->cleanedUpSlot, NULL /* destReceiver */,
-				node->ps.state, PLANGEN_OPTIMIZER /* Plan origin */, 
-				isUpdate);
+				node->ps.state, PLANGEN_OPTIMIZER /* Plan origin */,
+				isUpdate, InvalidOid);
 	}
 	else /* DML_DELETE */
 	{
@@ -133,10 +133,10 @@ ExecDML(DMLState *node)
 DMLState*
 ExecInitDML(DML *node, EState *estate, int eflags)
 {
-	
+
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK | EXEC_FLAG_REWIND)));
-	
+
 	DMLState *dmlstate = makeNode(DMLState);
 	dmlstate->ps.plan = (Plan *)node;
 	dmlstate->ps.state = estate;
@@ -168,7 +168,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	 */
 	TupleTableSlot *childResultSlot = outerPlanState(dmlstate)->ps_ResultTupleSlot;
 	ExecAssignProjectionInfo(&dmlstate->ps, childResultSlot->tts_tupleDescriptor);
-	
+
 	/*
 	 * Initialize slot to insert/delete using output relation descriptor.
 	 */

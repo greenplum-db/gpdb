@@ -1041,6 +1041,13 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				pfree(childplan_itlist);
 			}
 			break;
+		case T_SplitUpdate:
+			{
+				SplitUpdate		*split_update = (SplitUpdate *) plan;
+				split_update->plan.targetlist =
+					fix_scan_list(glob, split_update->plan.targetlist, rtoffset);
+			}
+			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(plan));

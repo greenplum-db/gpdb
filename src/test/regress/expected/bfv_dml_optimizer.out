@@ -242,7 +242,12 @@ set optimizer_trace_fallback = on;
 -- in ORCA currently, so we can use that to trigger fallback.
 update update_pk_test set a=1 where row(1,2) = (SELECT 1, 2);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+select * from update_pk_test order by 1,2;
+ a | b 
+---+---
+ 1 | 5
+(1 row)
+
 reset optimizer_trace_fallback;
 --
 -- Check that INSERT and DELETE triggers don't fire on UPDATE.

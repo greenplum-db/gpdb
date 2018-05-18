@@ -3381,27 +3381,17 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.b+1 FROM dml_heap_pt_p,dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b and dml_heap_pt_r.a = dml_heap_pt_p.b+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.34.53.37:25432 pid=9227)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
 --Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
-UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
+begin;
+UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
+ERROR:  moving tuple from partition "dml_heap_pt_p_1_prt_def" to partition "dml_heap_pt_p_1_prt_one" not supported  (seg0 10.152.10.75:25432 pid=19629)
+rollback;
 --Update on table with composite distribution key
 begin;
 SELECT SUM(b) FROM dml_heap_pt_p;
@@ -3411,9 +3401,12 @@ SELECT SUM(b) FROM dml_heap_pt_p;
 (1 row)
 
 UPDATE dml_heap_pt_p SET b = (dml_heap_pt_p.b * 1.1)::int FROM dml_heap_pt_r WHERE dml_heap_pt_p.b = dml_heap_pt_r.a and dml_heap_pt_p.b = dml_heap_pt_r.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(b) FROM dml_heap_pt_p;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  sum  
+-------
+ 15152
+(1 row)
+
 rollback;
 --Update the partition key and move tuples across partitions( moving tuple to default partition)
 begin;

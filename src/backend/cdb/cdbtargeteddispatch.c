@@ -625,6 +625,8 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 					pushNewDirectDispatchInfo = true;
 					break;
 				}
+			case T_SplitUpdate:
+				break;
 			default:
 				elog(ERROR, "Invalid plan node %d", nodeTag(node));
 				break;

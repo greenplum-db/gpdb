@@ -388,9 +388,6 @@ DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank_1_prt_extra WHERE rank
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;	-- error out on wrong table
 ERROR:  cursor "c" is not a simply updatable scan of table "portals_updatable_rank"
 ROLLBACK;
--- Partitioning, negative, cursor-agnostic: cannot update distribution key
-UPDATE portals_updatable_rank SET id = id + 1 WHERE CURRENT OF c;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- Partitioning, negative, cursor-agnostic: cannot move tuple across partitions
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank WHERE rank = 1;
@@ -570,6 +567,33 @@ SELECT * FROM bar ORDER BY 1, 2, 3, 4;
  10 | 4 | 4 |    10
  11 | 5 | 5 |    11
 (12 rows)
+
+-- Partitioning, update distribution key
+BEGIN;
+DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank  WHERE rank = 10;
+FETCH 1 FROM c;
+ id | rank | f  
+----+------+----
+ 10 |   10 | 10
+(1 row)
+
+UPDATE portals_updatable_rank SET id = id + 1 WHERE CURRENT OF c;
+COMMIT;
+SELECT * FROM portals_updatable_rank  ORDER BY 1, 2, 3;
+ id | rank | f  
+----+------+----
+  0 |    0 |  0
+  1 |    1 | -1
+  2 |    2 |  2
+  3 |    3 |  3
+  4 |    4 |  4
+  5 |    5 |  5
+  6 |    6 |  6
+  7 |    7 |  7
+  8 |    8 |  8
+  9 |    9 |  9
+ 11 |   10 | 10
+(11 rows)
 
 -- 
 -- Expected Failure
@@ -771,9 +795,6 @@ FETCH 1 FROM c1;
 DELETE FROM ucview WHERE CURRENT OF c1;
 ERROR:  WHERE CURRENT OF on a view is not implemented
 ROLLBACK;
--- Negative, cursor-agnostic: cannot update distribution key
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- Negative, cursor-agnostic: cannot update external tables
 CREATE EXTERNAL WEB TABLE ucexttest (x text) EXECUTE 'echo "foo";' FORMAT 'TEXT';
 BEGIN;
