@@ -276,7 +276,7 @@ static void ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		  bool recurse, bool recursing);
 static void ATRewriteCatalogs(List **wqueue);
 static void ATAddToastIfNeeded(List **wqueue);
-static void ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
+static void ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 		  AlterTableCmd *cmd);
 static void ATRewriteTables(List **wqueue);
 static void ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap);
@@ -379,7 +379,7 @@ static void ATPExecPartAdd(AlteredTableInfo *tab,
                            AlterPartitionCmd *pc,
 						   AlterTableType att);				/* Add */
 static void ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, 
-							 Relation rel,
+							 Relation *rel,
                              AlterPartitionCmd *pc);		/* Alter */
 static void ATPExecPartDrop(Relation rel,
                             AlterPartitionCmd *pc);			/* Drop */
@@ -4534,7 +4534,7 @@ ATRewriteCatalogs(List **wqueue)
 			foreach(lcmd, subcmds)
 			{
 				AlterTableCmd	*atc = (AlterTableCmd *) lfirst(lcmd);
-				ATExecCmd(wqueue, tab, rel, atc);
+				ATExecCmd(wqueue, tab, &rel, atc);
 
 				/*
 				 * SET DISTRIBUTED BY() calls RelationForgetRelation(),
@@ -4585,11 +4585,17 @@ ATAddToastIfNeeded(List **wqueue)
 
 /*
  * ATExecCmd: dispatch a subcommand to appropriate execution routine
+ *
+ * NOTE: we need to use a pointer to Relation here since the relation
+ * address may be changed by ATPExecPartSplit(). This is different
+ * behavior from Postgres upstream.
  */
 static void
-ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
+ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
 		  AlterTableCmd *cmd)
 {
+	Relation rel = *rel_p;
+
 	switch (cmd->subtype)
 	{
 		case AT_AddColumn:		/* ADD COLUMN */
@@ -4758,8 +4764,8 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 						   cmd->subtype);
             break;
 		case AT_PartAlter:				/* Alter */
-            ATPExecPartAlter(wqueue, tab, rel, (AlterPartitionCmd *) cmd->def);
-            break;
+			ATPExecPartAlter(wqueue, tab, rel_p, (AlterPartitionCmd *) cmd->def);
+			break;
 		case AT_PartDrop:				/* Drop */
             ATPExecPartDrop(rel, (AlterPartitionCmd *) cmd->def);
             break;
@@ -4779,8 +4785,8 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			 * method. After the method returns, we expect to
 			 * reference a valid relcache object through rel.
 			 */
-            ATPExecPartSplit(&rel, (AlterPartitionCmd *) cmd->def);
-            break;
+			ATPExecPartSplit(rel_p, (AlterPartitionCmd *) cmd->def);
+			break;
 		case AT_PartTruncate:			/* Truncate */
 			ATPExecPartTruncate(rel, (AlterPartitionCmd *) cmd->def);
             break;
@@ -13149,7 +13155,7 @@ ATExecPartAddInternal(Relation rel, Node *def)
 
 /* ALTER TABLE ... ALTER PARTITION */
 static void
-ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
+ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
                  AlterPartitionCmd *pc)
 {
 	AlterPartitionId 	*pid		   = (AlterPartitionId *)pc->partid;
@@ -13159,7 +13165,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	AlterPartitionId 	*pid2		   = makeNode(AlterPartitionId);
 	AlterPartitionCmd 	*pc2		   = NULL;
 	bool				 bPartitionCmd = true;	/* true if a "partition" cmd */
-	Relation			 rel2		   = rel;
+	Relation			 rel2		   = NULL;
 	bool				prepCmd		= false;	/* true if the sub command of ALTER PARTITION is a SPLIT PARTITION */
 
 	while (1)
@@ -13218,7 +13224,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot ALTER PARTITION for relation \"%s\"",
-							RelationGetRelationName(rel))));
+							RelationGetRelationName(*rel))));
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade)
@@ -13227,13 +13233,13 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		pid2->partiddef = (Node *)pidlst;
 		pid2->location  = -1;
 
-		prule = get_part_rule(rel, pid2, true, true, NULL, false);
+		prule = get_part_rule(*rel, pid2, true, true, NULL, false);
 
 		if (!prule)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot ALTER PARTITION for relation \"%s\"",
-							RelationGetRelationName(rel))));
+							RelationGetRelationName(*rel))));
 		if (bPartitionCmd)
 		{
 			/* build the IDRule for the nested ALTER PARTITION cmd ... */
@@ -13252,12 +13258,12 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				PgPartRule			*prule1	= NULL;
 				bool is_at = true;
-				prule1 = get_part_rule(rel, pid2, true, true, NULL, false);
+				prule1 = get_part_rule(*rel, pid2, true, true, NULL, false);
 
 				if (linitial((List *)pc2->arg1)) /* Check if the SPLIT PARTITION command has an AT clause */
 					is_at = false;
 
-				prepSplitCmd(rel, prule1, is_at);
+				prepSplitCmd(*rel, prule1, is_at);
 			}
 		}
 		else /* treat as a table */
@@ -13287,7 +13293,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				{
 					Assert(IsA(dist, DistributedBy));
 
-					if (! can_implement_dist_on_part(rel, dist) )
+					if (! can_implement_dist_on_part(*rel, dist) )
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 								 errmsg("cannot ALTER PARTITION ... SET "
@@ -13323,7 +13329,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	}
 
 	/* execute the command */
-	ATExecCmd(wqueue, tab, rel2, atc);
+	ATExecCmd(wqueue, tab, (rel2 ? &rel2 : rel), atc);
 
 	if (!bPartitionCmd)
 	{
@@ -13331,7 +13337,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		 * ATExecSetDistributedBy rebuilds the relation, so rel2
 		 * is already gone!
 		 */
-		if (atc->subtype != AT_SetDistributedBy)
+		if (atc->subtype != AT_SetDistributedBy && rel2)
 			heap_close(rel2, NoLock);
 	}
 
