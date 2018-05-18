@@ -3513,6 +3513,7 @@ die(SIGNAL_ARGS)
 		InterruptPending = true;
 		ProcDiePending = true;
 		TermSignalReceived = true;
+
 		/* although we don't strictly need to set this to true since the
 		 * ProcDiePending will occur first.  We set this anyway since the
 		 * MPP dispatch code is triggered only off of QueryCancelPending

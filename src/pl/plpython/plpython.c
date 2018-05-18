@@ -1421,6 +1421,7 @@ PLy_procedure_call(PLyProcedure *proc, char *kargs, PyObject *vargs)
 	}
 	PG_CATCH();
 	{
+		PLy_enter_python_intepreter = false;
 		PLy_abort_open_subtransactions(save_subxact_level);
 		PG_RE_THROW();
 	}
