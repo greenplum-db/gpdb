@@ -63,6 +63,8 @@ pygresql:
 	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" LDFLAGS="-L../../../../gpAux/ext/hpux_ia64/python-2.5.6/lib" python setup.py build; \
 	elif [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    unset PYTHONPATH && cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
+	elif [ `uname -s` = 'OpenBSD' ]; then \
+	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC=cc python setup.py build; \
 	else \
 	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python setup.py build; \
 	fi
@@ -71,6 +73,8 @@ pygresql:
 	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.macosx*/* $(PYLIB_DIR)/pygresql; \
 	elif [ `uname -s` = 'AIX' ]; then \
 	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.aix*/* $(PYLIB_DIR)/pygresql; \
+	elif [ `uname -s` = 'OpenBSD' ]; then \
+	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.openbsd*/* $(PYLIB_DIR)/pygresql; \
 	else \
 	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.linux*/* $(PYLIB_DIR)/pygresql; \
 	fi
