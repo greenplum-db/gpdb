@@ -1094,6 +1094,9 @@ PING_HOST () {
 		linux )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1
                         ;;
+		openbsd )
+			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+                        ;;
 		* )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
 	esac
@@ -1383,6 +1386,16 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		DF="`findCmdInPath df` -P"
+		DU_TXT="-c" ;;
+	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
+		IPV6_ADDR_LIST_CMD="ifconfig -a inet6"
+		LIB_TYPE="LD_LIBRARY_PATH"
+		PG_METHOD="ident"
+		HOST_ARCH_TYPE="uname -m"
+		NOLINE_ECHO="echo -e"
+		DEFAULT_LOCALE_SETTING=en_US.UTF-8
+		PING_TIME="-c 1"
+		DF="df -P"
 		DU_TXT="-c" ;;
 	* ) echo unknown ;;
 esac
