@@ -2,8 +2,8 @@
 Feature: expand the cluster by adding more segments
 
     @gpexpand_no_mirrors
-    @gpexpand_segment
-    Scenario: expand a cluster that has no mirrors
+    @gpexpand_ranks
+    Scenario: redistribute tables in the user defined order after expansion
         Given a working directory of the test as '/tmp/gpexpand_behave'
         And the database is killed on hosts "mdw,sdw1"
         And the user runs command "rm -rf /tmp/gpexpand_behave/*"
