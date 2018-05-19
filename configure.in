@@ -2370,6 +2370,7 @@ fi
 # false side-effects happens.
 if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Werror=uninitialized])
+  PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-function-declaration])
 fi
 
 # Begin output steps
