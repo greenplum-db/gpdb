@@ -1,9 +1,9 @@
-$PostgreSQL: pgsql/src/backend/storage/lmgr/README,v 1.25 2009/12/19 01:32:35 sriggs Exp $
+src/backend/storage/lmgr/README
 
 Locking Overview
 ================
 
-Postgres uses three types of interprocess locks:
+Postgres uses four types of interprocess locks:
 
 * Spinlocks.  These are intended for *very* short-term locks.  If a lock
 is to be held more than a few dozen instructions, or across any sort of
@@ -31,8 +31,10 @@ arrival order.  There is no timeout.
 
 * Regular locks (a/k/a heavyweight locks).  The regular lock manager
 supports a variety of lock modes with table-driven semantics, and it has
-full deadlock detection and automatic release at transaction end. 
+full deadlock detection and automatic release at transaction end.
 Regular locks should be used for all user-driven lock requests.
+
+* SIReadLock predicate locks.  See separate README-SSI file for details.
 
 Acquisition of either a spinlock or a lightweight lock causes query
 cancel and die() interrupts to be held off until all such locks are
@@ -260,7 +262,7 @@ A key design consideration is that we want to make routine operations
 (lock grant and release) run quickly when there is no deadlock, and
 avoid the overhead of deadlock handling as much as possible.  We do this
 using an "optimistic waiting" approach: if a process cannot acquire the
-lock it wants immediately, it goes to sleep without any deadlock check. 
+lock it wants immediately, it goes to sleep without any deadlock check.
 But it also sets a delay timer, with a delay of DeadlockTimeout
 milliseconds (typically set to one second).  If the delay expires before
 the process is granted the lock it wants, it runs the deadlock
@@ -503,7 +505,7 @@ User Locks
 ----------
 
 User locks are handled totally on the application side as long term
-cooperative locks which extend beyond the normal transaction boundaries.
+cooperative locks which may extend beyond the normal transaction boundaries.
 Their purpose is to indicate to an application that someone is `working'
 on an item.  So it is possible to put an user lock on a tuple's oid,
 retrieve the tuple, work on it for an hour and then update it and remove
@@ -514,9 +516,12 @@ level by someone.
 User locks and normal locks are completely orthogonal and they don't
 interfere with each other.
 
-User locks are always held as session locks, so that they are not released at
-transaction end.  They must be released explicitly by the application --- but
-they are released automatically when a backend terminates.
+There are two types of user locks: session level and transaction level.
+Session level user locks are not released at transaction end.  They must
+be released explicitly by the application --- but they are released
+automatically when a backend terminates. On the other hand, transaction
+level user locks are released automatically at the end of the transaction
+as like as other normal locks.
 
 Locking during Hot Standby
 --------------------------

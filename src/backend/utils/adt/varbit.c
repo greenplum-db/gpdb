@@ -5,11 +5,11 @@
  *
  * Code originally contributed by Adriaan Joubert.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varbit.c,v 1.65 2010/02/26 02:01:10 momjian Exp $
+ *	  src/backend/utils/adt/varbit.c
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,9 @@ static VarBit *bitsubstring(VarBit *arg, int32 s, int32 l,
 static VarBit *bit_overlay(VarBit *t1, VarBit *t2, int sp, int sl);
 
 
-/* common code for bittypmodin and varbittypmodin */
+/*
+ * common code for bittypmodin and varbittypmodin
+ */
 static int32
 anybit_typmodin(ArrayType *ta, const char *typename)
 {
@@ -64,7 +66,9 @@ anybit_typmodin(ArrayType *ta, const char *typename)
 	return typmod;
 }
 
-/* common code for bittypmodout and varbittypmodout */
+/*
+ * common code for bittypmodout and varbittypmodout
+ */
 static char *
 anybit_typmodout(int32 typmod)
 {
@@ -243,8 +247,11 @@ bit_out(PG_FUNCTION_ARGS)
 	/* same as varbit output */
 	return varbit_out(fcinfo);
 #else
-/* This is how one would print a hex string, in case someone wants to
-   write a formatting function. */
+
+	/*
+	 * This is how one would print a hex string, in case someone wants to
+	 * write a formatting function.
+	 */
 	VarBit	   *s = PG_GETARG_VARBIT_P(0);
 	char	   *result,
 			   *r;
@@ -340,7 +347,8 @@ bit_send(PG_FUNCTION_ARGS)
 	return varbit_send(fcinfo);
 }
 
-/* bit()
+/*
+ * bit()
  * Converts a bit() type to a specific internal length.
  * len is the bitlength specified in the column definition.
  *
@@ -543,7 +551,8 @@ varbit_in(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* varbit_out -
+/*
+ * varbit_out -
  *	  Prints the string as bits to preserve length accurately
  *
  * XXX varbit_recv() and hex input to varbit_in() can load a value that this
@@ -659,7 +668,8 @@ varbit_send(PG_FUNCTION_ARGS)
 	PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/* varbit()
+/*
+ * varbit()
  * Converts a varbit() type to a specific internal length.
  * len is the maximum bitlength specified in the column definition.
  *
@@ -741,7 +751,8 @@ varbittypmodout(PG_FUNCTION_ARGS)
  * need to be so careful.
  */
 
-/* bit_cmp
+/*
+ * bit_cmp
  *
  * Compares two bitstrings and returns <0, 0, >0 depending on whether the first
  * string is smaller, equal, or bigger than the second. All bits are considered
@@ -894,7 +905,8 @@ bitcmp(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(result);
 }
 
-/* bitcat
+/*
+ * bitcat
  * Concatenation of bit strings
  */
 Datum
@@ -959,7 +971,8 @@ bit_catenate(VarBit *arg1, VarBit *arg2)
 	return result;
 }
 
-/* bitsubstr
+/*
+ * bitsubstr
  * retrieve a substring from the bit string.
  * Note, s is 1-based.
  * SQL draft 6.10 9)
@@ -1133,7 +1146,8 @@ bit_overlay(VarBit *t1, VarBit *t2, int sp, int sl)
 	return result;
 }
 
-/* bitlength, bitoctetlength
+/*
+ * bitlength, bitoctetlength
  * Return the length of a bit string
  */
 Datum
@@ -1152,11 +1166,12 @@ bitoctetlength(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(VARBITBYTES(arg));
 }
 
-/* bitand
+/*
+ * bit_and
  * perform a logical AND on two bit strings.
  */
 Datum
-bitand(PG_FUNCTION_ARGS)
+bit_and(PG_FUNCTION_ARGS)
 {
 	VarBit	   *arg1 = PG_GETARG_VARBIT_P(0);
 	VarBit	   *arg2 = PG_GETARG_VARBIT_P(1);
@@ -1192,11 +1207,12 @@ bitand(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* bitor
+/*
+ * bit_or
  * perform a logical OR on two bit strings.
  */
 Datum
-bitor(PG_FUNCTION_ARGS)
+bit_or(PG_FUNCTION_ARGS)
 {
 	VarBit	   *arg1 = PG_GETARG_VARBIT_P(0);
 	VarBit	   *arg2 = PG_GETARG_VARBIT_P(1);
@@ -1238,7 +1254,8 @@ bitor(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* bitxor
+/*
+ * bitxor
  * perform a logical XOR on two bit strings.
  */
 Datum
@@ -1285,7 +1302,8 @@ bitxor(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* bitnot
+/*
+ * bitnot
  * perform a logical NOT on a bit string.
  */
 Datum
@@ -1317,7 +1335,8 @@ bitnot(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* bitshiftleft
+/*
+ * bitshiftleft
  * do a left shift (i.e. towards the beginning of the string)
  */
 Datum
@@ -1376,7 +1395,8 @@ bitshiftleft(PG_FUNCTION_ARGS)
 	PG_RETURN_VARBIT_P(result);
 }
 
-/* bitshiftright
+/*
+ * bitshiftright
  * do a right shift (i.e. towards the end of the string)
  */
 Datum
@@ -1603,7 +1623,8 @@ bittoint8(PG_FUNCTION_ARGS)
 }
 
 
-/* Determines the position of S2 in the bitstring S1 (1-based string).
+/*
+ * Determines the position of S2 in the bitstring S1 (1-based string).
  * If S2 does not appear in S1 this function returns 0.
  * If S2 is of length 0 this function returns 1.
  * Compatible in usage with POSITION() functions for other data types.

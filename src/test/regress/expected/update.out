@@ -90,51 +90,13 @@ ERROR:  invalid reference to FROM-clause entry for table "update_test"
 LINE 1: UPDATE update_test AS t SET b = update_test.b + 10 WHERE t.a...
                                         ^
 HINT:  Perhaps you meant to reference the table alias "t".
-DROP TABLE update_test;
---
--- text types. We should support the following updates.
---
-drop table tab1;
-ERROR:  table "tab1" does not exist
-drop table tab2;
-ERROR:  table "tab2" does not exist
-CREATE TABLE tab1 (a varchar(15), b integer) DISTRIBUTED BY (a);
-CREATE TABLE tab2 (a varchar(15), b integer) DISTRIBUTED BY (a);
-UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
-drop table tab1;
-drop table tab2;
-CREATE TABLE tab1 (a text, b integer) DISTRIBUTED BY (a);
-CREATE TABLE tab2 (a text, b integer) DISTRIBUTED BY (a);
-UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
-drop table tab1;
-drop table tab2;
-CREATE TABLE tab1 (a varchar, b integer) DISTRIBUTED BY (a);
-CREATE TABLE tab2 (a varchar, b integer) DISTRIBUTED BY (a);
-UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
-drop table tab1;
-drop table tab2;
-CREATE TABLE tab1 (a char(15), b integer) DISTRIBUTED BY (a);
-CREATE TABLE tab2 (a char(15), b integer) DISTRIBUTED BY (a);
-UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
-DROP TABLE IF EXISTS update_distr_key; 
-NOTICE:  table "update_distr_key" does not exist, skipping
-CREATE TABLE update_distr_key (a int, b int) DISTRIBUTED BY (a); 
-INSERT INTO update_distr_key select i, i* 10 from generate_series(0, 9) i; 
-UPDATE update_distr_key SET a = 5 WHERE b = 10; 
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-SELECT * from update_distr_key; 
- a | b  
----+----
- 0 |  0
- 2 | 20
- 4 | 40
- 6 | 60
- 8 | 80
- 1 | 10
- 3 | 30
- 5 | 50
- 7 | 70
- 9 | 90
-(10 rows)
+-- Make sure that we can update to a TOASTed value.
+UPDATE update_test SET c = repeat('x', 10000) WHERE c = 'car';
+SELECT a, b, char_length(c) FROM update_test;
+  a  | b  | char_length 
+-----+----+-------------
+ 100 | 20 |            
+  11 | 41 |       10000
+(2 rows)
 
-DROP TABLE update_distr_key; 
+DROP TABLE update_test;

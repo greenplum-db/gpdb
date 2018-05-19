@@ -19,7 +19,7 @@
 extern DynamicBitmapIndexScanState *ExecInitDynamicBitmapIndexScan(DynamicBitmapIndexScan *node, EState *estate, int eflags);
 extern Node *MultiExecDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
-extern void ExecDynamicBitmapIndexReScan(DynamicBitmapIndexScanState *node, ExprContext *exprCtxt);
+extern void ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node);
 
 static inline gpmon_packet_t * GpmonPktFromDynamicBitmapIndexScanState(DynamicBitmapIndexScanState *node)
 {

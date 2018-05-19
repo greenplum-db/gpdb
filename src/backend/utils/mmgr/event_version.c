@@ -15,10 +15,11 @@
  *
  *-------------------------------------------------------------------------
  */
-
 #include "postgres.h"
+
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
+#include "storage/shmem.h"
 #include "utils/vmem_tracker.h"
 
 /* External dependencies within the runaway cleanup framework */

@@ -22,6 +22,9 @@
 
 #include <limits.h>
 
+#include "catalog/pg_collation.h"
+#include "catalog/pg_constraint.h"
+#include "catalog/indexing.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
@@ -49,9 +52,12 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_relation.h"
+#include "utils/array.h"
+#include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 #include "catalog/pg_aggregate.h"
 
 #include "cdb/cdbllize.h"
@@ -233,7 +239,7 @@ typedef struct MppGroupContext
 	Path	   *best_path;
 	Path	   *cheapest_path;
 	Plan	   *subplan;
-	AggClauseCounts *agg_counts;
+	AggClauseCosts *agg_costs;
 	double		tuple_fraction;
 	double	   *p_dNumGroups;	/* Group count estimate shared up the call
 								 * tree. */
@@ -398,7 +404,7 @@ static void set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaIn
 static Cost incremental_sort_cost(double rows, int width, int numKeyCols);
 static Cost incremental_agg_cost(double rows, int width, AggStrategy strategy,
 					 int numGroupCols, double numGroups,
-					 int numAggs, int transSpace);
+					 const AggClauseCosts *aggcosts);
 static Cost incremental_motion_cost(double sendrows, double recvrows);
 
 static bool contain_aggfilters(Node *node);
@@ -457,15 +463,15 @@ static Plan *add_motion_to_dqa_child(Plan *plan, PlannerInfo *root, bool *motion
 
 Plan *
 cdb_grouping_planner(PlannerInfo *root,
-					 AggClauseCounts *agg_counts,
+					 AggClauseCosts *agg_costs,
 					 GroupContext *group_context)
 {
 	MppGroupContext ctx;
 	Plan	   *result_plan = NULL;
 	List	   *sub_tlist = NIL;
 	bool		has_groups = root->parse->groupClause != NIL;
-	bool		has_aggs = agg_counts->numAggs > 0;
-	bool		has_ordered_aggs = agg_counts->hasOrderedAggs;
+	bool		has_aggs = agg_costs->numAggs > 0;
+	bool		has_ordered_aggs = agg_costs->numOrderedAggs > 0;
 	ListCell   *lc;
 
 	bool		is_grpext = false;
@@ -493,7 +499,7 @@ cdb_grouping_planner(PlannerInfo *root,
 	 * so don't waste time working on alternatives.
 	 */
 	is_grpext = is_grouping_extension(group_context->canonical_grpsets);
-	if (is_grpext && agg_counts->numOrderedAggs > 0)
+	if (is_grpext && agg_costs->numOrderedAggs > 0)
 		return NULL;
 
 	/*
@@ -584,7 +590,7 @@ cdb_grouping_planner(PlannerInfo *root,
 	 */
 	if (plan_1p.group_prep == MPP_GRP_PREP_NONE)
 	{
-		if (enable_groupagg || agg_counts->numOrderedAggs == 0)
+		if (enable_groupagg || agg_costs->numOrderedAggs == 0)
 		{
 			*(group_context->pcurrent_pathkeys) = NIL;
 			return NULL;
@@ -616,7 +622,7 @@ cdb_grouping_planner(PlannerInfo *root,
 										   &(group_context->numGroupCols),
 										   &(group_context->groupColIdx),
 										   &(group_context->groupOperators),
-										   agg_counts->dqaArgs,
+										   agg_costs->dqaArgs,
 										   &(group_context->numDistinctCols),
 										   &(group_context->distinctColIdx));
 	}
@@ -628,7 +634,7 @@ cdb_grouping_planner(PlannerInfo *root,
 									   &(group_context->numGroupCols),
 									   &(group_context->groupColIdx),
 									   &(group_context->groupOperators),
-									   agg_counts->dqaArgs,
+									   agg_costs->dqaArgs,
 									   &(group_context->numDistinctCols),
 									   &(group_context->distinctColIdx));
 
@@ -673,7 +679,7 @@ cdb_grouping_planner(PlannerInfo *root,
 		 * functions per DQA and were willing to plan some DQAs as single and
 		 * some as multiple phases.  Not currently, however.
 		 */
-		if (agg_counts->missing_prelimfunc)
+		if (agg_costs->missing_prelimfunc)
 			allowed_agg &= ~AGG_MULTIPHASE;
 
 		/*
@@ -687,7 +693,7 @@ cdb_grouping_planner(PlannerInfo *root,
 		/*
 		 * Same with DISTINCT aggregates (they are not counted as ordered aggs)
 		 */
-		if ( agg_counts->numOrderedAggs > 0 )
+		if (agg_costs->numOrderedAggs > 0)
 			allowed_agg &= ~ AGG_MULTIPHASE;
 
 		/*
@@ -717,7 +723,7 @@ cdb_grouping_planner(PlannerInfo *root,
 
 		if (gp_hash_safe_grouping(root))
 		{
-			switch (list_length(agg_counts->dqaArgs))
+			switch (list_length(agg_costs->dqaArgs))
 			{
 				case 0:
 					possible_agg |= AGG_2PHASE;
@@ -766,10 +772,10 @@ cdb_grouping_planner(PlannerInfo *root,
 			/* Either have DQA or not! */
 			Assert(!(consider_agg & AGG_2PHASE));
 
-			Insist(IsA(agg_counts->dqaArgs, List) &&
-				   list_length((List *) agg_counts->dqaArgs) == 1);
+			Insist(IsA(agg_costs->dqaArgs, List) &&
+				   list_length((List *) agg_costs->dqaArgs) == 1);
 			distinct_pathkey = cdb_make_pathkey_for_expr(root,
-														 linitial(agg_counts->dqaArgs),
+														 linitial(agg_costs->dqaArgs),
 														 list_make1(makeString("=")),
 														 true);
 			l = list_make1(distinct_pathkey);
@@ -830,7 +836,7 @@ cdb_grouping_planner(PlannerInfo *root,
 	ctx.input_locus = plan_1p.input_locus;
 	ctx.output_locus = plan_1p.output_locus;
 	ctx.distinctkey_collocate = plan_1p.distinctkey_collocate;
-	ctx.agg_counts = agg_counts;
+	ctx.agg_costs = agg_costs;
 	ctx.tuple_fraction = group_context->tuple_fraction;
 	ctx.p_dNumGroups = group_context->p_dNumGroups;
 	ctx.canonical_grpsets = group_context->canonical_grpsets;
@@ -1104,7 +1110,8 @@ make_one_stage_agg_plan(PlannerInfo *root,
 		result_plan = (Plan *) make_agg(root,
 										tlist,
 										(List *) parse->havingQual,
-										AGG_HASHED, false,
+										AGG_HASHED, ctx->agg_costs,
+										false,
 										numGroupCols,
 										groupColIdx,
 										groupOperators,
@@ -1113,8 +1120,6 @@ make_one_stage_agg_plan(PlannerInfo *root,
 										0,	/* input_grouping */
 										ctx->grouping,
 										0,	/* rollup_gs_times */
-										ctx->agg_counts->numAggs,
-										ctx->agg_counts->transitionSpace,
 										result_plan);
 		/* Hashed aggregation produces randomly-ordered results */
 		current_pathkeys = NIL;
@@ -1157,7 +1162,9 @@ make_one_stage_agg_plan(PlannerInfo *root,
 			result_plan = (Plan *) make_agg(root,
 											tlist,
 											(List *) parse->havingQual,
-											aggstrategy, false,
+											aggstrategy,
+											ctx->agg_costs,
+											false,
 											numGroupCols,
 											groupColIdx,
 											groupOperators,
@@ -1166,8 +1173,6 @@ make_one_stage_agg_plan(PlannerInfo *root,
 											0,	/* input_grouping */
 											ctx->grouping,
 											0,	/* rollup_gs_times */
-											ctx->agg_counts->numAggs,
-											ctx->agg_counts->transitionSpace,
 											result_plan);
 		}
 
@@ -1181,7 +1186,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 												  &numGroupCols,
 												  &groupColIdx,
 												  &groupOperators,
-												  ctx->agg_counts,
+												  ctx->agg_costs,
 												  ctx->canonical_grpsets,
 												  ctx->p_dNumGroups,
 												  &(ctx->querynode_changed),
@@ -1305,11 +1310,11 @@ make_two_stage_agg_plan(PlannerInfo *root,
 			break;
 
 		case MPP_GRP_PREP_HASH_DISTINCT:
-			Assert(list_length(ctx->agg_counts->dqaArgs) == 1);
-			Assert(ctx->agg_counts->dqaArgs != NIL);
+			Assert(list_length(ctx->agg_costs->dqaArgs) == 1);
+			Assert(ctx->agg_costs->dqaArgs != NIL);
 			if (!ctx->distinctkey_collocate)
 			{
-				distinctExpr = list_make1(linitial(ctx->agg_counts->dqaArgs));
+				distinctExpr = list_make1(linitial(ctx->agg_costs->dqaArgs));
 				distinctExpr = copyObject(distinctExpr);
 				result_plan = (Plan *) make_motion_hash(root, result_plan, distinctExpr);
 				result_plan->total_cost +=
@@ -1417,7 +1422,9 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		result_plan = (Plan *) make_agg(root,
 										prelim_tlist,
 										NIL,	/* no havingQual */
-										aggstrategy, root->config->gp_hashagg_streambottom,
+										aggstrategy,
+										ctx->agg_costs,
+										root->config->gp_hashagg_streambottom,
 										numGroupCols,
 										groupColIdx,
 										groupOperators,
@@ -1426,8 +1433,6 @@ make_two_stage_agg_plan(PlannerInfo *root,
 										0,	/* input_grouping */
 										0,	/* grouping */
 										0,	/* rollup_gs_times */
-										ctx->agg_counts->numAggs,
-										ctx->agg_counts->transitionSpace,
 										result_plan);
 		/* May lose useful locus and sort. Unlikely, but could do better. */
 		mark_plan_strewn(result_plan);
@@ -1444,7 +1449,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 											  &numGroupCols,
 											  &groupColIdx,
 											  &groupOperators,
-											  ctx->agg_counts,
+											  ctx->agg_costs,
 											  ctx->canonical_grpsets,
 											  ctx->p_dNumGroups,
 											  &(ctx->querynode_changed),
@@ -1549,8 +1554,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 									   ctx->grouping,
 									   0,	/* rollup_gs_times */
 									   *ctx->p_dNumGroups,
-									   ctx->agg_counts->numAggs,
-									   ctx->agg_counts->transitionSpace,
+									   ctx->agg_costs,
 									   "partial_aggregation",
 									   &current_pathkeys,
 									   result_plan,
@@ -1608,6 +1612,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 									te->resno,
 									exprType((Node *) te->expr),
 									exprTypmod((Node *) te->expr),
+									exprCollation((Node *) te->expr),
 									0);
 			new_te = makeTargetEntry(expr,
 									 list_length(result_plan->targetlist) + 1,
@@ -1707,7 +1712,7 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 
 	prepare_dqa_pruning_tlists(ctx);
 
-	if (list_length(ctx->agg_counts->dqaArgs) == 1)
+	if (list_length(ctx->agg_costs->dqaArgs) == 1)
 	{
 		/*
 		 * Note: single-DQA plans don't require a join and are handled
@@ -1846,7 +1851,7 @@ planDqaJoinOrder(PlannerInfo *root, MppGroupContext *ctx,
 	DqaInfo    *args;
 	Node	   *distinctExpr;
 
-	Assert(ctx->numDistinctCols == list_length(ctx->agg_counts->dqaArgs));
+	Assert(ctx->numDistinctCols == list_length(ctx->agg_costs->dqaArgs));
 
 	/* Collect row count estimates for the partial results. */
 	if (ctx->numDistinctCols == 0)
@@ -1998,7 +2003,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 
 		get_sort_group_operators(exprType((Node *) dqaArg->distinctExpr),
 								 true, true, false,
-								 &dqaArg_orderingop, &dqaArg_eqop, NULL);
+								 &dqaArg_orderingop, &dqaArg_eqop, NULL, NULL);
 
 		n = ctx->numGroupCols + 1;	/* add the DQA argument as a grouping key */
 		Assert(n > 0);
@@ -2093,7 +2098,15 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	result_plan = (Plan *) make_agg(root,
 									prelim_tlist,
 									NIL, /* no havingQual */
-									aggstrategy, stream_bottom_agg,
+									aggstrategy,
+									/* GPDB_91_MERGE_FIXME: we used to pass
+									 * "ctx->agg_counts->numAggs - ctx->agg_counts->numOrderedAggs + 1"
+									 * as the "numAggs" argument. That argument is gone, make_agg
+									 * gets that number directly from agg_costs now. So this changed
+									 * the costing slightly. Maybe that's OK, or not?
+									 */
+									ctx->agg_costs,
+									stream_bottom_agg,
 									ctx->numGroupCols + 1,
 									inputGroupColIdx,
 									inputGroupOperators,
@@ -2102,8 +2115,6 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 									0, /* input_grouping */
 									0, /* grouping */
 									0, /* rollup_gs_times */
-									ctx->agg_counts->numAggs - ctx->agg_counts->numOrderedAggs + 1,
-									ctx->agg_counts->transitionSpace, /* worst case */
 									result_plan);
 
 	dqaduphazard = (aggstrategy == AGG_HASHED && stream_bottom_agg);
@@ -2239,8 +2250,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 										   0,	/* grouping */
 										   0,	/* rollup_gs_times */
 										   dqaArg->num_rows,
-										   ctx->agg_counts->numAggs,
-										   ctx->agg_counts->transitionSpace,
+										   ctx->agg_costs,
 										   "partial_aggregation",
 										   &current_pathkeys,
 										   result_plan,
@@ -2318,8 +2328,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 									   ctx->grouping,
 									   0,	/* rollup_gs_times */
 									   *ctx->p_dNumGroups,
-									   ctx->agg_counts->numAggs,
-									   ctx->agg_counts->transitionSpace,
+									   ctx->agg_costs,
 									   "partial_aggregation",
 									   &current_pathkeys,
 									   result_plan,
@@ -2554,6 +2563,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			 */
 			Oid		   *mergefamilies = palloc(sizeof(Oid) * list_length(joinclause));
 			int		   *mergestrategies = palloc(sizeof(int) * list_length(joinclause));
+			Oid		   *mergecollations = palloc(sizeof(Oid) * list_length(joinclause));
 			bool	   *mergenullsfirst = palloc(sizeof(bool) * list_length(joinclause));
 			ListCell   *l;
 			int			i = 0;
@@ -2563,6 +2573,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 				RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
 
 				mergefamilies[i] = linitial_oid(rinfo->mergeopfamilies);
+				mergecollations[i] = DEFAULT_COLLATION_OID;
 				mergestrategies[i] = BTLessStrategyNumber;
 				mergenullsfirst[i] = false;
 				i++;
@@ -2573,6 +2584,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 												NIL, NIL,
 												joinclause,
 												mergefamilies,
+												mergecollations,
 												mergestrategies,
 												mergenullsfirst,
 												outer, inner,
@@ -2585,7 +2597,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 		Insist(ctx->join_strategy == DqaJoinCross);
 
 		join_plan = (Plan *) make_nestloop(join_tlist,
-										   NIL, NIL,
+										   NIL, NIL, NIL,
 										   outer, inner,
 										   JOIN_INNER);
 		((NestLoop *) join_plan)->singleton_outer = true;
@@ -2870,9 +2882,9 @@ describe_subplan_tlist(List *sub_tlist,
 			TargetEntry *tle = (TargetEntry *) lfirst(lc_tle);
 			TargetEntry *sub_tle;
 
-			sub_tle = tlist_member((Node *) tle->expr, sub_tlist);
 			Assert(tle->ressortgroupref != 0);
-			Assert(tle->ressortgroupref == sub_tle->ressortgroupref);
+			sub_tle = get_sortgroupref_tle(tle->ressortgroupref, sub_tlist);
+
 			Assert(keyno < nkeys);
 
 			cols[keyno] = sub_tle->resno;
@@ -2940,6 +2952,7 @@ generate_subquery_tlist(Index varno, List *input_tlist,
 								inputtle->resno,
 								exprType((Node *) inputtle->expr),
 								exprTypmod((Node *) inputtle->expr),
+								exprCollation((Node *) inputtle->expr),
 								0);
 
 		(*p_resno_map)[inputtle->resno - 1] = resno;
@@ -3074,6 +3087,7 @@ generate_three_tlists(List *tlist,
 					  int numGroupCols,
 					  AttrNumber *groupColIdx,
 					  Oid *groupOperators,
+					  PlannerInfo *root,
 					  List **p_tlist1,
 					  List **p_tlist2,
 					  List **p_tlist3,
@@ -3082,7 +3096,7 @@ generate_three_tlists(List *tlist,
 	ListCell   *lc;
 	int			resno = 1;
 
-	MppGroupContext ctx;		/* Just for API matching! */
+	MppGroupContext ctx = {0};		/* Just for API matching! */
 
 	/*
 	 * Similar to the final tlist entries in two-stage aggregation, we use
@@ -3102,6 +3116,7 @@ generate_three_tlists(List *tlist,
 	ctx.groupOperators = groupOperators;
 	ctx.numDistinctCols = 0;
 	ctx.distinctColIdx = NULL;
+	ctx.root = root;
 
 	generate_multi_stage_tlists(&ctx,
 								p_tlist1,
@@ -3123,12 +3138,22 @@ generate_three_tlists(List *tlist,
 		{
 			Aggref	   *aggref = (Aggref *) tle->expr;
 			Aggref	   *new_aggref = makeNode(Aggref);
+			Var		   *aggvar;
+
+			aggvar = makeVar(middle_varno,
+							 tle->resno,
+							 aggref->aggtype,
+							 -1,
+							 aggref->aggcollid,
+							 0);
 
 			new_aggref->aggfnoid = aggref->aggfnoid;
 			new_aggref->aggtype = aggref->aggtype;
+			new_aggref->aggcollid = aggref->aggcollid;
+			new_aggref->inputcollid = aggref->inputcollid;
 			new_aggref->args =
 				list_make1((Expr *)
-						   makeTargetEntry((Expr *) makeVar(middle_varno, tle->resno, aggref->aggtype, -1, 0), 1, NULL, false));
+						   makeTargetEntry((Expr *) aggvar, 1, NULL, false));
 			/* FILTER is evaluated at the PARTIAL stage. */
 			new_aggref->agglevelsup = 0;
 			new_aggref->aggstar = false;
@@ -3147,6 +3172,7 @@ generate_three_tlists(List *tlist,
 										tle->resno,
 										exprType((Node *) tle->expr),
 										exprTypmod((Node *) tle->expr),
+										exprCollation((Node *) tle->expr),
 										0);
 
 		}
@@ -3312,6 +3338,211 @@ generate_dqa_pruning_tlists(MppGroupContext *ctx,
 	}
 }
 
+/*
+ * Determines, given the range table in use by the query, whether one Var has a
+ * functional dependency on another. "Functional dependency" is defined in the
+ * same way as check_functional_grouping() in pg_constraint, and this function
+ * is a copy of that logic. This is used by find_group_dependent_targets() to
+ * discover columns that need to be added back to the grouping target list.
+ *
+ * GPDB_91_MERGE_FIXME: This duplication is brittle. We should modify our
+ * grouping planner to remove the assumptions on target list structure, and find
+ * a better way to construct a correct series of Aggref stages.
+ */
+static bool
+has_functional_dependency(Var *from, Var *to, List *rangeTable)
+{
+	Oid			relid;
+	bool		to_is_primary = false;
+	Relation	pg_constraint;
+	HeapTuple	tuple;
+	SysScanDesc scan;
+	ScanKeyData skey[1];
+	RangeTblEntry *rte;
+
+	if (from->varno != to->varno)
+	{
+		/* These aren't part of the same table; get out. */
+		return false;
+	}
+
+	/* Look up the relid of the "to" Var from the range table. */
+	rte = list_nth(rangeTable, to->varno - 1);
+	Assert(rte);
+
+	if (rte->rtekind != RTE_RELATION)
+	{
+		/* We don't have functional dependencies on subquery results. */
+		return false;
+	}
+
+	relid = rte->relid;
+
+	/* Scan pg_constraint for constraints of the target rel */
+	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
+							  SnapshotNow, 1, skey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	{
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
+		Datum		adatum;
+		bool		isNull;
+		ArrayType  *arr;
+		int16	   *attnums;
+		int			numkeys;
+		int			i;
+		bool		found_col;
+
+		/* Only PK constraints are of interest for now, see comment above */
+		if (con->contype != CONSTRAINT_PRIMARY)
+			continue;
+		/* Constraint must be non-deferrable */
+		if (con->condeferrable)
+			continue;
+
+		/* Extract the conkey array, ie, attnums of PK's columns */
+		adatum = heap_getattr(tuple, Anum_pg_constraint_conkey,
+							  RelationGetDescr(pg_constraint), &isNull);
+		if (isNull)
+			elog(ERROR, "null conkey for constraint %u",
+				 HeapTupleGetOid(tuple));
+		arr = DatumGetArrayTypeP(adatum);		/* ensure not toasted */
+		numkeys = ARR_DIMS(arr)[0];
+		if (ARR_NDIM(arr) != 1 ||
+			numkeys < 0 ||
+			ARR_HASNULL(arr) ||
+			ARR_ELEMTYPE(arr) != INT2OID)
+			elog(ERROR, "conkey is not a 1-D smallint array");
+		attnums = (int16 *) ARR_DATA_PTR(arr);
+
+		found_col = false;
+		for (i = 0; i < numkeys; i++)
+		{
+			AttrNumber	attnum = attnums[i];
+
+			found_col = false;
+
+			if (IsA(to, Var) &&
+				to->varno == from->varno &&
+				to->varlevelsup == 0 &&
+				to->varattno == attnum)
+			{
+				found_col = true;
+			}
+
+			if (!found_col)
+				break;
+		}
+
+		if (found_col)
+		{
+			to_is_primary = true;
+			break;
+		}
+	}
+
+	systable_endscan(scan);
+
+	heap_close(pg_constraint, AccessShareLock);
+
+	return to_is_primary;
+}
+
+/*
+ * State struct for find_group_dependent_targets. See that function for usage.
+ */
+struct groupdep_ctx
+{
+	List	*grps_tlist;
+	List	*rangeTable;
+	List	*add_tlist;
+};
+
+/*
+ * Callback for expression_tree_walker. Walks the node tree searching for Vars
+ * that have a functional dependency (as defined by has_functional_dependency,
+ * above) on Vars in the grouping target list. Any such Vars that are found are
+ * wrapped in a TargetEntry and added to the context's output target list.
+ *
+ * Set up the context struct as follows:
+ *
+ * ctx->grps_tlist: a List of TargetEntry nodes to be searched for targets of
+ *                  functional dependencies
+ * ctx->rangeTable: the current range table in use by the query, used to match
+ *                  Vars to the relation they reference
+ * ctx->add_tlist: the output List of TargetEntry nodes; set this to NIL
+ */
+static bool
+find_group_dependent_targets(Node *node, struct groupdep_ctx *ctx)
+{
+	if (!node)
+		return false;
+
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+		ListCell   *grp_lc;
+		bool		has_dep = false;
+
+		/* Search the grouping target list for Vars this one is dependent on. */
+		foreach (grp_lc, ctx->grps_tlist)
+		{
+			TargetEntry *grp_tle = lfirst(grp_lc);
+			Expr		*grp_expr = grp_tle->expr;
+			Var			*grp_var;
+
+			if (!IsA(grp_expr, Var))
+			{
+				/*
+				 * Ignore any expressions that aren't Vars; they can't have
+				 * functional dependencies.
+				 */
+				continue;
+			}
+
+			grp_var = (Var *) grp_expr;
+
+			if (equal(var, grp_var))
+			{
+				/* Don't add duplicates. */
+				has_dep = false;
+				break;
+			}
+
+			if (!has_dep && has_functional_dependency(var, grp_var,
+													  ctx->rangeTable))
+			{
+				has_dep = true;
+			}
+		}
+
+		if (has_dep)
+		{
+			TargetEntry *copy;
+
+			/* Copy the entry so that it can later be added to grps_tlist. */
+			copy = makeTargetEntry(copyObject(var),
+								   list_length(ctx->grps_tlist)
+								   + list_length(ctx->add_tlist) + 1,
+								   NULL,
+								   false);
+
+			ctx->add_tlist = lappend(ctx->add_tlist, copy);
+		}
+
+		return false;
+	}
+
+	return expression_tree_walker(node, find_group_dependent_targets, ctx);
+}
+
 /* Function: deconstruct_agg_info
  *
  * Top-level deconstruction of the target list and having qual of an
@@ -3360,6 +3591,32 @@ deconstruct_agg_info(MppGroupContext *ctx)
 		prelim_tle->ressortgroupref = sub_tle->ressortgroupref;
 		prelim_tle->resjunk = false;
 		ctx->grps_tlist = lappend(ctx->grps_tlist, prelim_tle);
+	}
+
+	/*
+	 * GPDB_91_MERGE_FIXME: fix up the grps_tlist to also include any columns
+	 * that have a functional dependency on a primary key in the GROUP BY clause
+	 * (i.e. they are part of a relation that's already being grouped by a
+	 * primary key, which guarantees that tuples composed of these columns are
+	 * unique). We can avoid rewriting several assumptions by doing this, but
+	 * it's really ugly...
+	 */
+	{
+		struct groupdep_ctx	gctx = {0};
+
+		gctx.grps_tlist = ctx->grps_tlist;
+		gctx.rangeTable = ctx->root->parse->rtable;
+
+		/*
+		 * Traverse the sub_tlist to find any Vars with dependencies on the
+		 * grps_tlist. They will be placed in gctx.add_tlist.
+		 */
+		expression_tree_walker((Node *) ctx->sub_tlist,
+							   find_group_dependent_targets, &gctx);
+
+		/* Add any dependent targets we found to grps_tlist. */
+		ctx->grps_tlist = list_concat(ctx->grps_tlist, gctx.add_tlist);
+		ctx->numGroupCols += list_length(gctx.add_tlist);
 	}
 
 	/*
@@ -3655,9 +3912,11 @@ deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 	tle = tlist_member_ignore_relabel(node, ctx->grps_tlist);
 	if (tle != NULL)
 	{
-		Var *var = makeVar(grp_varno, tle->resno,
-							exprType((Node*)tle->expr),
-							exprTypmod((Node*)tle->expr), 0);
+		Var			*var = makeVar(grp_varno, tle->resno,
+								   exprType((Node *) tle->expr),
+								   exprTypmod((Node *) tle->expr),
+								   exprCollation((Node *) tle->expr),
+								   0);
 
 		/*
 		 * If a target list entry is found under a relabeltype node, the newly created
@@ -3671,6 +3930,7 @@ deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 			return (Node *) makeRelabelType((Expr *) var,
 										relabeltypeNode->resulttype,
 										relabeltypeNode->resulttypmod,
+										relabeltypeNode->resultcollid,
 										relabeltypeNode->relabelformat);
 		}
 		return (Node*) var;
@@ -3776,6 +4036,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			arg_var = makeVar(ctx->final_varno, ctx->numGroupCols + 1,
 							  exprType(linitial(aggref->args)),
 							  exprTypmod(linitial(aggref->args)),
+							  exprCollation(linitial(aggref->args)),
 							  0);
 
 			dqa_aggref = makeNode(Aggref);
@@ -3796,6 +4057,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 									  dqa_attno,
 									  exprType((Node *) arg_tle->expr),
 									  exprTypmod((Node *) arg_tle->expr),
+									  exprCollation((Node *) arg_tle->expr),
 									  0);
 	}
 	else						/* Ordinary Aggref -or- DQA but
@@ -3872,7 +4134,10 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 						   ctx->numGroupCols
 						   + (ctx->use_dqa_pruning ? 1 : 0)
 						   + attrno,
-						   transtype, -1, 0);
+						   transtype,
+						   -1,
+						   aggref->aggcollid,
+						   0);
 
 			if (ctx->use_irefs_tlist)
 			{
@@ -3881,6 +4146,8 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 				iref = makeNode(Aggref);
 				iref->aggfnoid = pref->aggfnoid;
 				iref->aggtype = transtype;
+				iref->aggcollid = aggref->aggcollid;
+				iref->inputcollid = aggref->inputcollid;
 				iref->args = list_make1((Expr *) makeTargetEntry(copyObject(args), 1, NULL, false));
 				/* FILTER is evaluated at the PARTIAL stage. */
 				iref->agglevelsup = 0;
@@ -3900,6 +4167,8 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 
 			fref->aggfnoid = aggref->aggfnoid;
 			fref->aggtype = aggref->aggtype;
+			fref->aggcollid = aggref->aggcollid;
+			fref->inputcollid = aggref->inputcollid;
 			fref->args = list_make1((Expr *) makeTargetEntry((Expr *) args, 1, NULL, false));
 			/* FILTER is evaluated at the PARTIAL stage. */
 			fref->agglevelsup = 0;
@@ -3913,7 +4182,12 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			ctx->frefs_tlist = lappend(ctx->frefs_tlist, final_tle);
 		}
 
-		final_node = (Node *) makeVar(ref_varno, attrno, aggref->aggtype, -1, 0);
+		final_node = (Node *) makeVar(ref_varno,
+									  attrno,
+									  aggref->aggtype,
+									  -1,
+									  aggref->aggcollid,
+									  0);
 	}
 
 	return final_node;
@@ -3943,7 +4217,9 @@ make_vars_tlist(List *tlist, Index varno, AttrNumber offset)
 
 		new_var = makeVar(varno, attno,
 						  exprType((Node *) tle->expr),
-						  exprTypmod((Node *) tle->expr), 0);
+						  exprTypmod((Node *) tle->expr),
+						  exprCollation((Node *) tle->expr),
+						  0);
 
 		new_tle = makeTargetEntry((Expr *) new_var,
 								  attno,	/* resno always matches attnr */
@@ -4045,6 +4321,11 @@ finalize_split_expr_mutator(Node *node, MppGroupContext *ctx)
 			elog(ERROR, "Unexpected failure of multi-phase aggregation planning");
 		}
 
+		/* sanity check. */
+		if (attrno < 1 || attrno > list_length(ctx->top_tlist))
+			elog(ERROR, "invalid attrno %d, should be in the range [1, %d]",
+				 attrno, list_length(ctx->top_tlist));
+
 		tle = (TargetEntry *) list_nth(ctx->top_tlist, attrno - 1);
 
 		return (Node *) tle->expr;
@@ -4145,8 +4426,7 @@ add_second_stage_agg(PlannerInfo *root,
 					 uint64 grouping,
 					 int rollup_gs_times,
 					 double numGroups,
-					 int numAggs,
-					 int transSpace,
+					 AggClauseCosts *agg_costs,
 					 const char *alias,
 					 List **p_current_pathkeys,
 					 Plan *result_plan,
@@ -4274,7 +4554,9 @@ add_second_stage_agg(PlannerInfo *root,
 	agg_node = (Plan *) make_agg(root,
 								 upper_tlist,
 								 upper_qual,
-								 aggstrategy, false,
+								 aggstrategy,
+								 agg_costs,
+								 false,
 								 numGroupCols,
 								 prelimGroupColIdx,
 								 prelimGroupOperators,
@@ -4283,8 +4565,6 @@ add_second_stage_agg(PlannerInfo *root,
 								 input_grouping,
 								 grouping,
 								 rollup_gs_times,
-								 numAggs,
-								 transSpace,
 								 result_plan);
 
 	/*
@@ -4363,15 +4643,16 @@ static bool
 hash_safe_type(Oid type)
 {
 	Oid			eq_opr;
+	bool		hashable;
 
 	get_sort_group_operators(type,
 							 false, false, false,
-							 NULL, &eq_opr, NULL);
+							 NULL, &eq_opr, NULL, &hashable);
 
 	if (!OidIsValid(eq_opr))
 		return false;
 
-	return op_hashjoinable(eq_opr);
+	return hashable;
 }
 
 /*
@@ -4449,9 +4730,13 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 				if (!new_tle)
 					elog(ERROR, "could not find path key expression in constructed subquery's target list");
 
-				new_eclass = get_eclass_for_sort_expr(root, new_tle->expr,
+				new_eclass = get_eclass_for_sort_expr(root,
+													  new_tle->expr,
+													  pathkey->pk_eclass->ec_opfamilies,
 													  em->em_datatype,
-													  pathkey->pk_eclass->ec_opfamilies, 0);
+													  exprCollation((Node *) tle->expr),
+													  0,
+													  true);
 				new_pathkey = makePathKey(new_eclass, pathkey->pk_opfamily, pathkey->pk_strategy,
 										  pathkey->pk_nulls_first);
 
@@ -4567,8 +4852,8 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 ctx->sub_tlist, (List *) root->parse->havingQual,
 					 AGG_HASHED, false,
 					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0, ctx->agg_counts->numAggs,
-					 ctx->agg_counts->transitionSpace);
+					 numGroups, 0,
+					 ctx->agg_costs);
 	}
 	else
 	{
@@ -4579,8 +4864,8 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 ctx->sub_tlist, (List *) root->parse->havingQual,
 						 AGG_PLAIN, false,
 						 0, NULL,
-						 1, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 1, 0,
+						 ctx->agg_costs);
 		}
 		else
 		{
@@ -4593,8 +4878,8 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 ctx->sub_tlist, (List *) root->parse->havingQual,
 						 AGG_SORTED, false,
 						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 numGroups, 0,
+						 ctx->agg_costs);
 		}
 
 		/*
@@ -4609,7 +4894,14 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			double		nsorts = ngrps * ctx->numDistinctCols;
 			double		avgsize = input_dummy.plan_rows / ngrps;
 
-			cost_sort(&path_dummy, NULL, NIL, 0.0, avgsize, 32, -1);
+			cost_sort(&path_dummy,
+					  NULL,
+					  NIL,
+					  0.0,
+					  avgsize,
+					  32,
+					  0.0, work_mem,
+					  -1);
 			input_dummy.total_cost += nsorts * path_dummy.total_cost;
 		}
 	}
@@ -4673,8 +4965,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 NIL, NIL,	/* Don't know preliminary tlist, qual IS NIL */
 					 AGG_HASHED, root->config->gp_hashagg_streambottom,
 					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0, ctx->agg_counts->numAggs,
-					 ctx->agg_counts->transitionSpace);
+					 numGroups, 0,
+					 ctx->agg_costs);
 
 		if (gp_hashagg_streambottom)
 		{
@@ -4691,8 +4983,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 									 * NIL */
 						 AGG_PLAIN, false,
 						 0, NULL,
-						 1, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 1, 0,
+						 ctx->agg_costs);
 		}
 		else
 		{
@@ -4706,8 +4998,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 									 * NIL */
 						 AGG_SORTED, false,
 						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 numGroups, 0,
+						 ctx->agg_costs);
 		}
 
 		/*
@@ -4724,7 +5016,14 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 
 			Assert(ctx->numDistinctCols == 1);
 
-			cost_sort(&path_dummy, NULL, NIL, input_dummy.total_cost, avgsize, 32, -1.0);
+			cost_sort(&path_dummy,
+					  NULL,
+					  NIL,
+					  input_dummy.total_cost,
+					  avgsize,
+					  32,
+					  0.0, work_mem,
+					  -1.0);
 			run_cost = path_dummy.total_cost - path_dummy.startup_cost;
 			input_dummy.total_cost += path_dummy.startup_cost + ngrps * run_cost;
 		}
@@ -4760,8 +5059,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 NIL, NIL,	/* Don't know tlist or qual */
 					 AGG_HASHED, false,
 					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0, ctx->agg_counts->numAggs,
-					 ctx->agg_counts->transitionSpace);
+					 numGroups, 0,
+					 ctx->agg_costs);
 	}
 	else
 	{
@@ -4772,8 +5071,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 NIL, NIL,	/* Don't know tlist or qual */
 						 AGG_PLAIN, false,
 						 0, NULL,
-						 1, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 1, 0,
+						 ctx->agg_costs);
 		}
 		else
 		{
@@ -4783,8 +5082,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 NIL, NIL,	/* Don't know tlist or qual */
 						 AGG_SORTED, false,
 						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0, ctx->agg_counts->numAggs,
-						 ctx->agg_counts->transitionSpace);
+						 numGroups, 0,
+						 ctx->agg_costs);
 		}
 	}
 
@@ -4828,14 +5127,14 @@ cost_3phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 
 	total_cost = dummy.total_cost;
 
-	Assert(ctx->numDistinctCols == list_length(ctx->agg_counts->dqaArgs));
+	Assert(ctx->numDistinctCols == list_length(ctx->agg_costs->dqaArgs));
 
 	/*
 	 * Note that join order has already been established by an earlier call to
 	 * planDqaJoinOrder.  Here we just use that order, but we need to decide
 	 * on the join type.
 	 */
-	if (list_length(ctx->agg_counts->dqaArgs) < 2)
+	if (list_length(ctx->agg_costs->dqaArgs) < 2)
 	{
 		join_strategy = DqaJoinNone;
 	}
@@ -4994,11 +5293,15 @@ set_cost_of_join_strategies(MppGroupContext *ctx, Cost *hashjoin_cost, Cost *mer
 
 		outer_var = makeVar(outer_varno, resno,
 							exprType((Node *) tle->expr),
-							exprTypmod((Node *) tle->expr), 0);
+							exprTypmod((Node *) tle->expr),
+							exprCollation((Node *) tle->expr),
+							0);
 
 		inner_var = makeVar(inner_varno, resno,
 							exprType((Node *) tle->expr),
-							exprTypmod((Node *) tle->expr), 0);
+							exprTypmod((Node *) tle->expr),
+							exprCollation((Node *) tle->expr),
+							0);
 
 		/* outer should always be on the left */
 		qual = make_op(NULL, list_make1(makeString("=")),
@@ -5131,20 +5434,16 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 													ctx->numGroupCols);
 	Cost		gagg_input = incremental_agg_cost(input_rows, input_width,
 												  AGG_SORTED, ctx->numGroupCols + 1,
-												  numGroups, ctx->agg_counts->numAggs,
-												  ctx->agg_counts->transitionSpace);
+												  numGroups, ctx->agg_costs);
 	Cost		gagg_dargs = incremental_agg_cost(darg_rows, input_width,
 												  AGG_SORTED, ctx->numGroupCols,
-												  numGroups, ctx->agg_counts->numAggs,
-												  ctx->agg_counts->transitionSpace);
+												  numGroups, ctx->agg_costs);
 	Cost		hagg_input = incremental_agg_cost(input_rows, input_width,
 												  AGG_HASHED, ctx->numGroupCols + 1,
-												  numGroups, ctx->agg_counts->numAggs,
-												  ctx->agg_counts->transitionSpace);
+												  numGroups, ctx->agg_costs);
 	Cost		hagg_dargs = incremental_agg_cost(darg_rows, input_width,
 												  AGG_HASHED, ctx->numGroupCols,
-												  numGroups, ctx->agg_counts->numAggs,
-												  ctx->agg_counts->transitionSpace);
+												  numGroups, ctx->agg_costs);
 	Cost		cost_base;
 	Cost		cost_sorted;
 	Cost		cost_cheapest;
@@ -5173,8 +5472,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	{
 		Cost		pagg_dargs = incremental_agg_cost(darg_rows, input_width,
 													  AGG_PLAIN, 0,
-													  1, ctx->agg_counts->numAggs,
-													  ctx->agg_counts->transitionSpace);
+													  1, ctx->agg_costs);
 
 		type_sorted = type_cheapest = DQACOPLAN_PGS;
 		cost_sorted = cost_cheapest = sort_input + gagg_input + pagg_dargs;
@@ -5258,7 +5556,7 @@ incremental_sort_cost(double rows, int width, int numKeyCols)
 static Cost
 incremental_agg_cost(double rows, int width, AggStrategy strategy,
 					 int numGroupCols, double numGroups,
-					 int numAggs, int transSpace)
+					 const AggClauseCosts *aggcosts)
 {
 	Plan		dummy;
 
@@ -5270,7 +5568,7 @@ incremental_agg_cost(double rows, int width, AggStrategy strategy,
 				 NULL, NULL,
 				 strategy, false,
 				 numGroupCols, NULL,
-				 numGroups, 0, numAggs, transSpace);
+				 numGroups, 0, aggcosts);
 
 	return dummy.total_cost;
 }

@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/include/commands/comment.h,v 1.26 2010/01/02 16:58:03 momjian Exp $
+ * src/include/commands/comment.h
  *
  *-------------------------------------------------------------------------
  *
@@ -7,7 +7,7 @@
  *
  * Prototypes for functions in commands/comment.c
  *
- * Copyright (c) 1999-2010, PostgreSQL Global Development Group
+ * Copyright (c) 1999-2011, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */

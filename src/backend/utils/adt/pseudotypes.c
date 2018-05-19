@@ -11,12 +11,12 @@
  * we do better?)
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pseudotypes.c,v 1.23 2010/01/02 16:57:55 momjian Exp $
+ *	  src/backend/utils/adt/pseudotypes.c
  *
  *-------------------------------------------------------------------------
  */
@@ -212,6 +212,34 @@ void_out(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(pstrdup(""));
 }
 
+/*
+ * void_recv	- binary input routine for pseudo-type VOID.
+ *
+ * Note that since we consume no bytes, an attempt to send anything but
+ * an empty string will result in an "invalid message format" error.
+ */
+Datum
+void_recv(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_VOID();
+}
+
+/*
+ * void_send	- binary output routine for pseudo-type VOID.
+ *
+ * We allow this so that "SELECT function_returning_void(...)" works
+ * even when binary output is requested.
+ */
+Datum
+void_send(PG_FUNCTION_ARGS)
+{
+	StringInfoData buf;
+
+	/* send an empty string */
+	pq_begintypsend(&buf);
+	PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
+}
+
 
 /*
  * trigger_in		- input routine for pseudo-type TRIGGER.
@@ -262,6 +290,33 @@ language_handler_out(PG_FUNCTION_ARGS)
 	ereport(ERROR,
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("cannot display a value of type language_handler")));
+
+	PG_RETURN_VOID();			/* keep compiler quiet */
+}
+
+
+/*
+ * fdw_handler_in		- input routine for pseudo-type FDW_HANDLER.
+ */
+Datum
+fdw_handler_in(PG_FUNCTION_ARGS)
+{
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot accept a value of type fdw_handler")));
+
+	PG_RETURN_VOID();			/* keep compiler quiet */
+}
+
+/*
+ * fdw_handler_out		- output routine for pseudo-type FDW_HANDLER.
+ */
+Datum
+fdw_handler_out(PG_FUNCTION_ARGS)
+{
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot display a value of type fdw_handler")));
 
 	PG_RETURN_VOID();			/* keep compiler quiet */
 }
@@ -399,6 +454,59 @@ shell_out(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();			/* keep compiler quiet */
 }
 
+/*
+ * pg_node_tree_in		- input routine for type PG_NODE_TREE.
+ *
+ * pg_node_tree isn't really a pseudotype --- it's real enough to be a table
+ * column --- but it presently has no operations of its own, and disallows
+ * input too, so its I/O functions seem to fit here as much as anywhere.
+ */
+Datum
+pg_node_tree_in(PG_FUNCTION_ARGS)
+{
+	/*
+	 * We disallow input of pg_node_tree values because the SQL functions that
+	 * operate on the type are not secure against malformed input.
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot accept a value of type pg_node_tree")));
+
+	PG_RETURN_VOID();			/* keep compiler quiet */
+}
+
+/*
+ * pg_node_tree_out		- output routine for type PG_NODE_TREE.
+ *
+ * The internal representation is the same as TEXT, so just pass it off.
+ */
+Datum
+pg_node_tree_out(PG_FUNCTION_ARGS)
+{
+	return textout(fcinfo);
+}
+
+/*
+ * pg_node_tree_recv		- binary input routine for type PG_NODE_TREE.
+ */
+Datum
+pg_node_tree_recv(PG_FUNCTION_ARGS)
+{
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot accept a value of type pg_node_tree")));
+
+	PG_RETURN_VOID();			/* keep compiler quiet */
+}
+
+/*
+ * pg_node_tree_send		- binary output routine for type PG_NODE_TREE.
+ */
+Datum
+pg_node_tree_send(PG_FUNCTION_ARGS)
+{
+	return textsend(fcinfo);
+}
 
 /*
  * anytable_in		- input routine for multiset pseudotype
@@ -414,7 +522,7 @@ anytable_in(PG_FUNCTION_ARGS)
 }
 
 /*
- * shell_out		- output routine for "shell" types.
+ * anytable_out		- output routine for multiset pseudotype.
  */
 Datum
 anytable_out(PG_FUNCTION_ARGS)

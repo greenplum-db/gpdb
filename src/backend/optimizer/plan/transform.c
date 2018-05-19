@@ -502,6 +502,7 @@ static void replace_sirvf_rte(Query *query, int rteIndex)
 			rte->funccoltypes = NIL;
 			rte->funcuserdata = NULL;
 			rte->funccoltypmods = NIL;
+			rte->funccolcollations = NIL;
 
 			/**
 			 * Turn the range table entry to the kind RTE_SUBQUERY

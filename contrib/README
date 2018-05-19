@@ -28,6 +28,11 @@ adminpack -
 	File and log manipulation routines, used by pgAdmin
 	by Dave Page <dpage@vale-housing.co.uk>
 
+auth_delay
+	Add a short delay after a failed authentication attempt, to make
+	brute-force attacks on database passwords a bit harder.
+	by KaiGai Kohei <kaigai@ak.jp.nec.com>
+
 auto_explain -
 	Log EXPLAIN output for long-running queries
 	by Takahiro Itagaki <itagaki.takahiro@oss.ntt.co.jp>
@@ -66,7 +71,11 @@ dict_xsyn -
 
 earthdistance -
 	Functions for computing distances between two points on Earth
-        by Bruno Wolff III <bruno@wolff.to> and Hal Snyder <hal@vailsys.com>
+	by Bruno Wolff III <bruno@wolff.to> and Hal Snyder <hal@vailsys.com>
+
+file_fdw
+	Foreign-data wrapper for server-side CSV/TEXT files
+	by Shigeru Hanada <hanada@metrosystems.co.jp>
 
 fuzzystrmatch -
 	Levenshtein, metaphone, and soundex fuzzy string matching
@@ -86,17 +95,17 @@ intarray -
 
 isn -
 	PostgreSQL type extensions for ISBN, ISSN, ISMN, EAN13 product numbers
-	by Germ·n MÈndez Bravo (Kronuz) <kronuz@hotmail.com>
+	by Germ√°n M√©ndez Bravo (Kronuz) <kronuz@hotmail.com>
 
 lo -
 	Large Object maintenance
-	by Peter Mount <peter@retep.org.uk> 
+	by Peter Mount <peter@retep.org.uk>
 
 ltree -
 	Tree-like data structures
 	by Teodor Sigaev <teodor@sigaev.ru> and Oleg Bartunov <oleg@sai.msu.su>
 
-oid2name - 
+oid2name -
 	Maps numeric files to table names
 	by B Palmer <bpalmer@crimelabs.net>
 
@@ -123,6 +132,10 @@ pg_standby -
 pg_stat_statements -
 	Track statement execution times across a whole database cluster
 	by Takahiro Itagaki <itagaki.takahiro@oss.ntt.co.jp>
+
+pg_test_fsync -
+	Test different wal_sync_method settings
+	by Bruce Momjian <bruce@momjian.us>
 
 pg_trgm -
 	Functions for determining the similarity of text based on trigram
@@ -154,6 +167,10 @@ seg -
 	Confidence-interval datatype (GiST indexing example)
 	by Gene Selkov, Jr. <selkovjr@mcs.anl.gov>
 
+sepgsql -
+	External security provider using SELinux
+	by KaiGai Kohei <kaigai@ak.jp.nec.com>
+
 spi -
 	Various trigger functions, examples for using SPI.
 
@@ -161,7 +178,7 @@ sslinfo -
 	Functions to get information about SSL certificates
 	by Victor Wagner <vitus@cryptocom.ru>
 
-start-scripts - 
+start-scripts -
 	Scripts for starting the server at boot time on various platforms.
 
 tablefunc -

@@ -601,6 +601,7 @@ namespace gpdxl
 				const CDXLTranslateContext *pdxltrctxChild,
 				AttrNumber *pattnoSortColIds,
 				Oid *poidSortOpIds,
+				Oid *poidSortCollations,
 				bool *pboolNullsFirst
 				);
 

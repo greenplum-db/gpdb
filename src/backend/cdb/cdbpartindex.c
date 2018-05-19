@@ -26,6 +26,7 @@
 #include "cdb/cdbvars.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_expr.h"
+#include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
@@ -1359,7 +1360,13 @@ mergeIntervals(Node *intervalFst, Node *intervalSnd)
 
 				extractOpExprComponents(opexprStart1, &pvarStart1, &pconstStart1, &opnoStart1);
 
-				return (Node *) make_opclause(opnoStart1, opexprStart1->opresulttype, opexprStart1->opretset, (Expr *) pvarStart1, (Expr *) pconstStart1);
+				return (Node *) make_opclause(opnoStart1,
+											  opexprStart1->opresulttype,
+											  opexprStart1->opretset,
+											  (Expr *) pvarStart1,
+											  (Expr *) pconstStart1,
+											  opexprStart1->opcollid,
+											  opexprStart1->inputcollid);
 			}
 
 			if (NULL != pnodeEnd2)
@@ -1372,7 +1379,13 @@ mergeIntervals(Node *intervalFst, Node *intervalSnd)
 
 				extractOpExprComponents(opexprEnd2, &pvarEnd2, &pconstEnd2, &opnoEnd2);
 
-				return (Node *) make_opclause(opnoEnd2, opexprEnd2->opresulttype, opexprEnd2->opretset, (Expr *) pvarEnd2, (Expr *) pconstEnd2);
+				return (Node *) make_opclause(opnoEnd2,
+											  opexprEnd2->opresulttype,
+											  opexprEnd2->opretset,
+											  (Expr *) pvarEnd2,
+											  (Expr *) pconstEnd2,
+											  opexprEnd2->opcollid,
+											  opexprEnd2->inputcollid);
 			}
 
 			Assert(NULL == pnodeStart1 && NULL == pnodeEnd2);

@@ -20,7 +20,6 @@
 #define CDBVARS_H
 
 #include "access/xlogdefs.h"  /*XLogRecPtr*/
-#include "utils/guc.h"
 
 /*
  * ----- Declarations of Greenplum-specific global variables ------
@@ -123,13 +122,9 @@ typedef enum
 extern GpRoleValue Gp_session_role;	/* GUC var - server startup mode.  */
 extern char *gp_session_role_string;	/* Use by guc.c as staging area for
 										 * value. */
-extern const char *assign_gp_session_role(const char *newval, bool doit, GucSource source);
-extern const char *show_gp_session_role(void);
 
 extern GpRoleValue Gp_role;	/* GUC var - server operating mode.  */
 extern char *gp_role_string;	/* Use by guc.c as staging area for value. */
-extern const char *assign_gp_role(const char *newval, bool doit, GucSource source);
-extern const char *show_gp_role(void);
 
 extern bool gp_reraise_signal; /* try to force a core dump ?*/
 
@@ -331,16 +326,11 @@ extern int gp_fts_transition_timeout;
  */
 extern int	gp_connections_per_thread; /* GUC var - server operating mode.  */
 
-extern bool assign_gp_connections_per_thread(int newval, bool doit, GucSource source);
-extern const char *show_gp_connections_per_thread(void);
-
 /*
  * If number of subtransactions within a transaction exceed this limit,
  * then a warning is given to the user.
  */
 extern int32 gp_subtrans_warn_limit;
-
-extern bool assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source);
 
 extern const char *role_to_string(GpRoleValue role);
 
@@ -463,18 +453,7 @@ extern bool gp_interconnect_log_stats;
 
 extern bool gp_interconnect_cache_future_packets;
 
-/*
- * Parameter gp_segment
- *
- * The segment (content) controlled by this QE
- * content indicator: -1 for entry database, 0, ..., n-1 for segment database
- *
- * This variable is in the PGC_BACKEND context; it is set internally by the
- * Query Dispatcher, and is propagated to Query Executors in the connection
- * parameters.	It is not modifiable by any user, ever.
- */
 #define UNDEF_SEGMENT -2
-extern int	Gp_segment;		/* GUC var */
 
 extern int	getgpsegmentCount(void);
 
@@ -843,8 +822,6 @@ extern int gp_motion_slice_noop;
 extern bool gp_disable_tuple_hints;
 
 /* Enable gpmon */
-extern bool gpvars_assign_gp_enable_gpperfmon(bool newval, bool doit, GucSource source);
-extern bool gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source);
 extern bool gp_enable_gpperfmon;
 extern int gp_gpperfmon_send_interval;
 extern bool gp_enable_query_metrics;
@@ -959,7 +936,7 @@ typedef struct GpId
  */
 extern GpId GpIdentity;
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
-
+#define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
 
 /* Stores the listener port that this process uses to listen for incoming
  * Interconnect connections from other Motion nodes.
@@ -983,16 +960,6 @@ extern SeqServerControlBlock *seqServerCtl;
 extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)));
 
 extern void verifyGpIdentityIsSet(void);
-
-extern const char *gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-
-extern const char *gpvars_show_gp_resource_manager_policy(void);
-
-extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-
-extern const char *gpvars_show_gp_resqueue_memory_policy(void);
-
-extern bool gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern void increment_command_count(void);
 

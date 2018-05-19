@@ -14,13 +14,15 @@ PG_FUNCTION_INFO_V1(invalidate_buffers);
 Datum
 invalidate_buffers(PG_FUNCTION_ARGS)
 {
-	RelFileNode			rnode;
+	RelFileNodeBackend  rnodebackend;
 
-	rnode.spcNode = PG_GETARG_OID(0);
-	rnode.dbNode  = PG_GETARG_OID(1);
-	rnode.relNode = PG_GETARG_OID(2);
+	rnodebackend.node.spcNode = PG_GETARG_OID(0);
+	rnodebackend.node.dbNode  = PG_GETARG_OID(1);
+	rnodebackend.node.relNode = PG_GETARG_OID(2);
 
-	DropRelFileNodeBuffers(rnode, MAIN_FORKNUM, false, 0);
+	rnodebackend.backend = InvalidBackendId; /* not temporary/local */
+
+	DropRelFileNodeBuffers(rnodebackend, MAIN_FORKNUM, 0);
 
 	PG_RETURN_BOOL(true);
 }

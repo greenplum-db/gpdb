@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
- * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.113 2010/03/25 14:44:34 alvherre Exp $
+ * src/include/utils/guc.h
  *--------------------------------------------------------------------
  */
 #ifndef GUC_H
@@ -19,7 +19,6 @@
 #include "tcop/dest.h"
 #include "utils/array.h"
 
-#define MAX_MAX_BACKENDS (INT_MAX / BLCKSZ)
 #define MAX_AUTHENTICATION_TIMEOUT (600)
 #define MAX_PRE_AUTH_DELAY (60)
 /*
@@ -95,7 +94,8 @@ typedef enum
  */
 typedef enum
 {
-	PGC_S_DEFAULT,				/* wired-in default */
+	PGC_S_DEFAULT,				/* hard-wired default ("boot_val") */
+	PGC_S_DYNAMIC_DEFAULT,		/* default computed during initialization */
 	PGC_S_ENV_VAR,				/* postmaster environment variable */
 	PGC_S_FILE,					/* postgresql.conf */
 	PGC_S_ARGV,					/* postmaster command line */
@@ -111,15 +111,16 @@ typedef enum
 } GucSource;
 
 /*
- * Parsing the configuation file will return a list of name-value pairs
+ * Parsing the configuration file will return a list of name-value pairs
+ * with source location info.
  */
 typedef struct ConfigVariable
 {
-	char       *name;
-	char       *value;
+	char	   *name;
+	char	   *value;
 	char	   *filename;
 	int			sourceline;
-	struct ConfigVariable  *next;
+	struct ConfigVariable *next;
 } ConfigVariable;
 
 extern bool ParseConfigFile(const char *config_file, const char *calling_file,
@@ -131,7 +132,9 @@ extern bool ParseConfigFp(FILE *fp, const char *config_file,
 extern void FreeConfigVariables(ConfigVariable *list);
 
 /*
- * Enum values are made up of an array of name-value pairs
+ * The possible values of an enum variable are specified by an array of
+ * name-value pairs.  The "hidden" flag means the value is accepted but
+ * won't be displayed when guc.c is asked for a list of acceptable values.
  */
 struct config_enum_entry
 {
@@ -140,14 +143,26 @@ struct config_enum_entry
 	bool		hidden;
 };
 
-typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
-typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
-typedef bool (*GucIntAssignHook) (int newval, bool doit, GucSource source);
-typedef bool (*GucRealAssignHook) (double newval, bool doit, GucSource source);
-typedef bool (*GucEnumAssignHook) (int newval, bool doit, GucSource source);
+/*
+ * Signatures for per-variable check/assign/show hook functions
+ */
+typedef bool (*GucBoolCheckHook) (bool *newval, void **extra, GucSource source);
+typedef bool (*GucIntCheckHook) (int *newval, void **extra, GucSource source);
+typedef bool (*GucRealCheckHook) (double *newval, void **extra, GucSource source);
+typedef bool (*GucStringCheckHook) (char **newval, void **extra, GucSource source);
+typedef bool (*GucEnumCheckHook) (int *newval, void **extra, GucSource source);
+
+typedef void (*GucBoolAssignHook) (bool newval, void *extra);
+typedef void (*GucIntAssignHook) (int newval, void *extra);
+typedef void (*GucRealAssignHook) (double newval, void *extra);
+typedef void (*GucStringAssignHook) (const char *newval, void *extra);
+typedef void (*GucEnumAssignHook) (int newval, void *extra);
 
 typedef const char *(*GucShowHook) (void);
 
+/*
+ * Miscellaneous
+ */
 typedef enum
 {
 	/* Types of set_config_option actions */
@@ -393,7 +408,7 @@ extern bool optimizer_control;	/* controls whether the user can change the setti
 extern bool	optimizer_log;
 extern int  optimizer_log_failure;
 extern bool	optimizer_trace_fallback;
-extern bool optimizer_minidump;
+extern int optimizer_minidump;
 extern int  optimizer_cost_model;
 extern bool optimizer_metadata_caching;
 extern int	optimizer_mdcache_size;
@@ -566,6 +581,9 @@ extern IndexCheckType gp_indexcheck_vacuum;
 /* Max number of chars needed to hold value of a storage option. */
 #define MAX_SOPT_VALUE_LEN 15
 
+/*
+ * Functions exported by guc.c
+ */
 extern void SetConfigOption(const char *name, const char *value,
 				GucContext context, GucSource source);
 
@@ -577,6 +595,7 @@ extern void DefineCustomBoolVariable(
 						 bool bootValue,
 						 GucContext context,
 						 int flags,
+						 GucBoolCheckHook check_hook,
 						 GucBoolAssignHook assign_hook,
 						 GucShowHook show_hook);
 
@@ -590,6 +609,7 @@ extern void DefineCustomIntVariable(
 						int maxValue,
 						GucContext context,
 						int flags,
+						GucIntCheckHook check_hook,
 						GucIntAssignHook assign_hook,
 						GucShowHook show_hook);
 
@@ -603,6 +623,7 @@ extern void DefineCustomRealVariable(
 						 double maxValue,
 						 GucContext context,
 						 int flags,
+						 GucRealCheckHook check_hook,
 						 GucRealAssignHook assign_hook,
 						 GucShowHook show_hook);
 
@@ -614,6 +635,7 @@ extern void DefineCustomStringVariable(
 						   const char *bootValue,
 						   GucContext context,
 						   int flags,
+						   GucStringCheckHook check_hook,
 						   GucStringAssignHook assign_hook,
 						   GucShowHook show_hook);
 
@@ -626,6 +648,7 @@ extern void DefineCustomEnumVariable(
 						 const struct config_enum_entry * options,
 						 GucContext context,
 						 int flags,
+						 GucEnumCheckHook check_hook,
 						 GucEnumAssignHook assign_hook,
 						 GucShowHook show_hook);
 
@@ -666,7 +689,7 @@ extern ArrayType *GUCArrayAdd(ArrayType *array, const char *name, const char *va
 extern ArrayType *GUCArrayDelete(ArrayType *array, const char *name);
 extern ArrayType *GUCArrayReset(ArrayType *array);
 
-extern int	GUC_complaint_elevel(GucSource source);
+extern void pg_timezone_abbrev_initialize(void);
 
 extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
@@ -686,6 +709,27 @@ extern void write_nondefault_variables(GucContext context);
 extern void read_nondefault_variables(void);
 #endif
 
+/* Support for messages reported from GUC check hooks */
+
+extern PGDLLIMPORT char *GUC_check_errmsg_string;
+extern PGDLLIMPORT char *GUC_check_errdetail_string;
+extern PGDLLIMPORT char *GUC_check_errhint_string;
+
+extern void GUC_check_errcode(int sqlerrcode);
+
+#define GUC_check_errmsg \
+	pre_format_elog_string(errno, TEXTDOMAIN), \
+	GUC_check_errmsg_string = format_elog_string
+
+#define GUC_check_errdetail \
+	pre_format_elog_string(errno, TEXTDOMAIN), \
+	GUC_check_errdetail_string = format_elog_string
+
+#define GUC_check_errhint \
+	pre_format_elog_string(errno, TEXTDOMAIN), \
+	GUC_check_errhint_string = format_elog_string
+
+
 /*
  * The following functions are not in guc.c, but are declared here to avoid
  * having to include guc.h in some widely used headers that it really doesn't
@@ -693,18 +737,37 @@ extern void read_nondefault_variables(void);
  */
 
 /* in commands/tablespace.c */
-extern const char *assign_default_tablespace(const char *newval,
-						  bool doit, GucSource source);
-extern const char *assign_temp_tablespaces(const char *newval,
-						bool doit, GucSource source);
+extern bool check_default_tablespace(char **newval, void **extra, GucSource source);
+extern bool check_temp_tablespaces(char **newval, void **extra, GucSource source);
+extern void assign_temp_tablespaces(const char *newval, void *extra);
 
 /* in catalog/namespace.c */
-extern const char *assign_search_path(const char *newval,
-				   bool doit, GucSource source);
+extern bool check_search_path(char **newval, void **extra, GucSource source);
+extern void assign_search_path(const char *newval, void *extra);
 
 /* in access/transam/xlog.c */
-extern bool assign_xlog_sync_method(int newval,
-						bool doit, GucSource source);
+extern bool check_wal_buffers(int *newval, void **extra, GucSource source);
+extern void assign_xlog_sync_method(int new_sync_method, void *extra);
+
+/* in cdb/cdbvars.c */
+extern bool check_gp_session_role(char **newval, void **extra, GucSource source);
+extern void assign_gp_session_role(const char *newval, void *extra);
+extern const char *show_gp_session_role(void);
+extern bool check_gp_role(char **newval, void **extra, GucSource source);
+extern void assign_gp_role(const char *newval, void *extra);
+extern const char *show_gp_role(void);
+extern void assign_gp_connections_per_thread(int newval, void *extra);
+extern const char *show_gp_connections_per_thread(void);
+extern void assign_gp_write_shared_snapshot(bool newval, void *extra);
+extern bool gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source);
+extern void gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra);
+extern const char *gpvars_show_gp_resource_manager_policy(void);
+extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
+extern const char *gpvars_show_gp_resqueue_memory_policy(void);
+extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
+extern bool gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source);
+extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source);
+
 
 extern StdRdOptions *defaultStdRdOptions(char relkind);
 

@@ -220,9 +220,9 @@ extern List *GetResqueueCapabilityEntry(Oid queueid);
 /*
  * Helper method that verifies setting of default priority guc.
  */
-const char *gpvars_assign_gp_resqueue_priority_default_value(const char *newval,
-												 bool doit,
-								   GucSource source __attribute__((unused)));
+bool gpvars_check_gp_resqueue_priority_default_value(char **newval,
+													void **extra,
+													GucSource source);
 
 /**
  * Primitives on statement id.
@@ -1609,19 +1609,17 @@ BackoffPriorityIntToValue(int weight)
 /*
  * Helper method that verifies setting of default priority guc.
  */
-const char *
-gpvars_assign_gp_resqueue_priority_default_value(const char *newval,
-												 bool doit,
-									GucSource source __attribute__((unused)))
+bool
+gpvars_check_gp_resqueue_priority_default_value (char **newval,void **extra,
+												GucSource source)
 {
-	if (doit)
-	{
-		int			wt;
+	int			wt;
 
-		wt = BackoffPriorityValueToInt(newval); /* This will throw an error if
-												 * bad value is specified */
-		Assert(wt > 0);
-	}
+	wt = BackoffPriorityValueToInt(*newval); /* This will throw an error if * bad value is specified */
 
-	return newval;
+	if (wt > 0)
+		return true;
+
+	GUC_check_errmsg("invalid value for gp_resqueue_priority_default_value: \"%s\"", *newval);
+	return false;
 }

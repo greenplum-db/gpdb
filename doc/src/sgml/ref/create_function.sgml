@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_function.sgml,v 1.94 2010/04/03 07:22:58 petere Exp $
+doc/src/sgml/ref/create_function.sgml
 -->
 
 <refentry id="SQL-CREATEFUNCTION">
@@ -422,7 +422,7 @@ CREATE [ OR REPLACE ] FUNCTION
        LOCAL</> command: the effects of such a command will persist after
        function exit, unless the current transaction is rolled back.
       </para>
-   
+
       <para>
        See <xref linkend="sql-set"> and
        <xref linkend="runtime-config">

@@ -20,12 +20,12 @@
  *		to evaluate them in.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/domains.c,v 1.11 2010/02/26 02:01:07 momjian Exp $
+ *	  src/backend/utils/adt/domains.c
  *
  *-------------------------------------------------------------------------
  */

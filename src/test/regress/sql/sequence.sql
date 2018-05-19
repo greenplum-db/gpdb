@@ -1,19 +1,19 @@
 ---
 --- test creation of SERIAL column
 ---
- 
+
 CREATE TABLE serialTest (f1 text, f2 serial);
- 
+
 INSERT INTO serialTest VALUES ('foo');
 INSERT INTO serialTest VALUES ('bar');
 INSERT INTO serialTest VALUES ('force', 100);
 INSERT INTO serialTest VALUES ('wrong', NULL);
- 
+
 SELECT * FROM serialTest;
 
 -- basic sequence operations using both text and oid references
 CREATE SEQUENCE sequence_test;
- 
+
 SELECT nextval('sequence_test'::text);
 SELECT nextval('sequence_test'::regclass);
 --SELECT currval('sequence_test'::text);
@@ -84,6 +84,9 @@ ALTER SEQUENCE sequence_test2 RESTART;
 SELECT nextval('sequence_test2');
 SELECT nextval('sequence_test2');
 SELECT nextval('sequence_test2');
+
+-- Information schema
+SELECT * FROM information_schema.sequences WHERE sequence_name IN ('sequence_test2');
 
 -- Test comments
 COMMENT ON SEQUENCE asdf IS 'won''t work';

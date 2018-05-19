@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/storage/freespace/README,v 1.1 2008/09/30 10:52:13 heikki Exp $
+src/backend/storage/freespace/README
 
 Free Space Map
 --------------
@@ -84,7 +84,7 @@ backends are concurrently inserting into a relation, contention can be avoided
 by having them insert into different pages.  But it is also desirable to fill
 up pages in sequential order, to get the benefit of OS prefetching and batched
 writes.  The FSM is responsible for making that happen, and the next slot
-pointer helps provide the desired behavior. 
+pointer helps provide the desired behavior.
 
 Higher-level structure
 ----------------------
@@ -194,4 +194,3 @@ TODO
 - fastroot to avoid traversing upper nodes with just 1 child
 - use a different system for tables that fit into one FSM page, with a
   mechanism to switch to the real thing as it grows.
-

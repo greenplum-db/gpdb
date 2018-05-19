@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_opfamily.sgml,v 1.7 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_opfamily.sgml
 PostgreSQL documentation
 -->
 
@@ -13,8 +13,8 @@ PostgreSQL documentation
  <refnamediv>
   <refname>ALTER OPERATOR FAMILY</refname>
   <refpurpose>change the definition of an operator family</refpurpose>
- </refnamediv>  
-  
+ </refnamediv>
+
  <indexterm zone="sql-alteropfamily">
   <primary>ALTER OPERATOR FAMILY</primary>
  </indexterm>
@@ -22,7 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> ADD
-  {  OPERATOR <replaceable class="parameter">strategy_number</replaceable> <replaceable class="parameter">operator_name</replaceable> ( <replaceable class="parameter">op_type</replaceable>, <replaceable class="parameter">op_type</replaceable> )
+  {  OPERATOR <replaceable class="parameter">strategy_number</replaceable> <replaceable class="parameter">operator_name</replaceable> ( <replaceable class="parameter">op_type</replaceable>, <replaceable class="parameter">op_type</replaceable> ) [ FOR SEARCH | FOR ORDER BY <replaceable class="parameter">sort_family_name</replaceable> ]
    | FUNCTION <replaceable class="parameter">support_number</replaceable> [ ( <replaceable class="parameter">op_type</replaceable> [ , <replaceable class="parameter">op_type</replaceable> ] ) ] <replaceable class="parameter">function_name</replaceable> ( <replaceable class="parameter">argument_type</replaceable> [, ...] )
   } [, ... ]
 ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> DROP
@@ -31,9 +31,10 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
   } [, ... ]
 ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> RENAME TO <replaceable>new_name</replaceable>
 ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> OWNER TO <replaceable>new_owner</replaceable>
+ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="parameter">index_method</replaceable> SET SCHEMA <replaceable>new_schema</replaceable>
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1>
   <title>Description</title>
 
@@ -81,7 +82,7 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
    Refer to <xref linkend="xindex"> for further information.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -155,6 +156,22 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
    </varlistentry>
 
    <varlistentry>
+    <term><replaceable class="parameter">sort_family_name</replaceable></term>
+    <listitem>
+     <para>
+      The name (optionally schema-qualified) of an existing <literal>btree</literal> operator
+      family that describes the sort ordering associated with an ordering
+      operator.
+     </para>
+
+     <para>
+      If neither <literal>FOR SEARCH</> nor <literal>FOR ORDER BY</> is
+      specified, <literal>FOR SEARCH</> is the default.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><replaceable class="parameter">support_number</replaceable></term>
     <listitem>
      <para>
@@ -200,6 +217,15 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
      </para>
     </listitem>
    </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">new_schema</replaceable></term>
+    <listitem>
+     <para>
+      The new schema for the operator family.
+     </para>
+    </listitem>
+   </varlistentry>
  </variablelist>
 
   <para>
@@ -208,7 +234,7 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
   </para>
 
  </refsect1>
-  
+
  <refsect1>
   <title>Notes</title>
 
@@ -240,11 +266,11 @@ ALTER OPERATOR FAMILY <replaceable>name</replaceable> USING <replaceable class="
    Before <productname>PostgreSQL</productname> 8.4, the <literal>OPERATOR</>
    clause could include a <literal>RECHECK</> option.  This is no longer
    supported because whether an index operator is <quote>lossy</> is now
-   determined on-the-fly at runtime.  This allows efficient handling of
+   determined on-the-fly at run time.  This allows efficient handling of
    cases where an operator might or might not be lossy.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Examples</title>
 
@@ -272,7 +298,7 @@ ALTER OPERATOR FAMILY integer_ops USING btree ADD
   OPERATOR 4 &gt;= (int2, int4) ,
   OPERATOR 5 &gt; (int2, int4) ,
   FUNCTION 1 btint24cmp(int2, int4) ;
-</programlisting>  
+</programlisting>
 
   <para>
    To remove these entries again:
@@ -296,7 +322,7 @@ ALTER OPERATOR FAMILY integer_ops USING btree DROP
   OPERATOR 4 (int2, int4) ,
   OPERATOR 5 (int2, int4) ,
   FUNCTION 1 (int2, int4) ;
-</programlisting>  
+</programlisting>
  </refsect1>
 
  <refsect1>

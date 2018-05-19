@@ -22,6 +22,28 @@ NOTICE:  Success: fault name:'fts_probe' fault type:'skip' ddl statement:'' data
  t
 (1 row)
 
+-- skip Gdd probes always
+select gp_inject_fault('gdd_probe', 'skip', '', '', '', -1, 0, 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('gdd_probe', 'wait_until_triggered', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('gdd_probe', 'status', 1);
+NOTICE:  Success: fault name:'gdd_probe' fault type:'skip' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'0' fault injection state:'triggered'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Test quoting of GUC values and database names when they're sent to segments
 set client_min_messages='warning';
 DROP DATABASE IF EXISTS "funny""db'with\\quotes";
@@ -43,7 +65,11 @@ CREATE DATABASE "dispatch test db";
 ALTER DATABASE "dispatch test db" SET search_path="my schema",public;
 NOTICE:  schema "my schema" does not exist
 \c "dispatch test db"
+WARNING:  invalid value for parameter "search_path": ""my schema", public"
+DETAIL:  schema "my schema" does not exist
 CREATE SCHEMA "my schema";
+-- Reconnect so that the search_path includes "my schema".
+\c
 -- Create a table with the same name in both schemas, "my schema" and public.
 CREATE TABLE "my table" (t text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as the Greenplum Database data distribution key for this table.
@@ -653,6 +679,13 @@ begin isolation level read uncommitted;
 end;
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('gdd_probe', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

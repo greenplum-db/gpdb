@@ -231,7 +231,10 @@ FI_IDENT(FTSConnStartupPacket, "fts_conn_startup_packet")
  * FTSConnStartupPacket fault set to skip.
  */
 FI_IDENT(FTSRecoveryInProgress, "fts_recovery_in_progress")
-
+/* inject fault after CdbTryOpenRelation function */
+FI_IDENT(UpgradeRowLock, "upgrade_row_lock")
+/* inject fault in Gdd loop */
+FI_IDENT(GddProbe, "gdd_probe")
 #endif
 
 /*

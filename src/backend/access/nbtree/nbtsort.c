@@ -55,11 +55,11 @@
  * This code isn't concerned about the FSM at all. The caller is responsible
  * for initializing that.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.125 2010/04/28 16:10:40 heikki Exp $
+ *	  src/backend/access/nbtree/nbtsort.c
  *
  *-------------------------------------------------------------------------
  */
@@ -70,6 +70,7 @@
 #include "access/nbtree.h"
 #include "miscadmin.h"
 #include "storage/smgr.h"
+#include "tcop/tcopprot.h"
 #include "utils/rel.h"
 #include "utils/tuplesort.h"
 
@@ -213,9 +214,9 @@ _bt_leafbuild(BTSpool *btspool, BTSpool *btspool2)
 
 	/*
 	 * We need to log index creation in WAL iff WAL archiving/streaming is
-	 * enabled AND it's not a temp index.
+	 * enabled UNLESS the index isn't WAL-logged anyway.
 	 */
-	wstate.btws_use_wal = XLogIsNeeded() && !wstate.index->rd_istemp;
+	wstate.btws_use_wal = XLogIsNeeded() && RelationNeedsWAL(wstate.index);
 
 	/* reserve the metapage */
 	wstate.btws_pages_alloced = BTREE_METAPAGE + 1;
@@ -286,8 +287,6 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		if (!wstate->btws_zeropage)
 			wstate->btws_zeropage = (Page) palloc0(BLCKSZ);
 
-		// UNDONE: Unfortunately, I think we write temp relations to the mirror...
-
 		/* don't set checksum for all-zero page */
 		smgrextend(wstate->index->rd_smgr, MAIN_FORKNUM,
 				   wstate->btws_pages_written++,
@@ -295,14 +294,11 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 				   true);
 	}
 
-
-	// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 	PageSetChecksumInplace(page, blkno);
 
 	/*
-	 * Now write the page.	We say isTemp = true even if it's not a temp
-	 * index, because there's no need for smgr to schedule an fsync for this
-	 * write; we'll do it ourselves before ending the build.
+	 * Now write the page.	There's no need for smgr to schedule an fsync for
+	 * this write; we'll do it ourselves before ending the build.
 	 */
 	if (blkno == wstate->btws_pages_written)
 	{
@@ -741,9 +737,11 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 					}
 					else
 					{
-						compare = DatumGetInt32(FunctionCall2(&entry->sk_func,
-															  attrDatum1,
-															  attrDatum2));
+						compare =
+							DatumGetInt32(FunctionCall2Coll(&entry->sk_func,
+														 entry->sk_collation,
+															attrDatum1,
+															attrDatum2));
 
 						if (entry->sk_flags & SK_BT_DESC)
 							compare = -compare;
@@ -803,9 +801,9 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	_bt_uppershutdown(wstate, state);
 
 	/*
-	 * If the index isn't temp, we must fsync it down to disk before it's safe
-	 * to commit the transaction.  (For a temp index we don't care since the
-	 * index will be uninteresting after a crash anyway.)
+	 * If the index is WAL-logged, we must fsync it down to disk before it's
+	 * safe to commit the transaction.	(For a non-WAL-logged index we don't
+	 * care since the index will be uninteresting after a crash anyway.)
 	 *
 	 * It's obvious that we must do this when not WAL-logging the build. It's
 	 * less obvious that we have to do it even if we did WAL-log the index
@@ -817,7 +815,7 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	 * fsync those pages here, they might still not be on disk when the crash
 	 * occurs.
 	 */
-	if (!wstate->index->rd_istemp)
+	if (RelationNeedsWAL(wstate->index))
 	{
 		RelationOpenSmgr(wstate->index);
 		smgrimmedsync(wstate->index->rd_smgr, MAIN_FORKNUM);

@@ -10,6 +10,14 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
 
+// For GpIdentity
+#ifndef S3_STANDALONE
+extern "C" {
+#include "c.h"
+#include "cdb/cdbvars.h"
+}
+#endif
+
 // configurable parameters
 int32_t s3ext_segid = -1;
 int32_t s3ext_segnum = -1;

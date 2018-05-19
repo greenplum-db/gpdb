@@ -127,6 +127,25 @@ class GpAddMirrorsTest(GpTestCase):
         #self.assertIn("50000", result[0])
         #self.assertIn("55000", result[0])
 
+    @patch('gppylib.programs.clsAddMirrors.Command')
+    def test_pghbaconf_updated_successfully(self, mock):
+        sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
+        options, _ = self.parser.parse_args()
+        subject = GpAddMirrorsProgram(options)
+        subject.config_primaries_for_replication(self.gparrayMock)
+        self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
+        self.mock_logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
+
+    @patch('gppylib.programs.clsAddMirrors.Command', side_effect=Exception("boom"))
+    def test_pghbaconf_updated_fails(self, mock):
+        sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
+        options, _ = self.parser.parse_args()
+        subject = GpAddMirrorsProgram(options)
+        with self.assertRaisesRegexp(Exception, "boom"):
+            subject.config_primaries_for_replication(self.gparrayMock)
+        self.mock_logger.info.assert_any_call("Starting to modify pg_hba.conf on primary segments to allow replication connections")
+        self.mock_logger.error.assert_any_call("Failed while modifying pg_hba.conf on primary segments to allow replication connections: boom")
+
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
             "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")

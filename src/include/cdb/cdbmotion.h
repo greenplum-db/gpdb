@@ -145,7 +145,8 @@ extern void SendStopMessage(MotionLayerState *mlStates,
  * This is used by cdbmotion to keep track of when its seen enough EndOfStream
  * messages.
  */
-extern void setExpectedReceivers(MotionLayerState *mlStates, int16 motNodeID, int expectedReceivers);
+extern void UpdateMotionExpectedReceivers(MotionLayerState *mlStates,
+										  struct SliceTable *sliceTable);
 
 /*
  * Return a pointer to the internal "end-of-stream" message

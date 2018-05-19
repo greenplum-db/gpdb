@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.105 2010/02/26 02:00:45 momjian Exp $
+ *	  src/backend/optimizer/path/joinrels.c
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include "optimizer/joininfo.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "utils/memutils.h"
 
 
 static void make_rels_by_clause_joins(PlannerInfo *root,
@@ -33,7 +34,7 @@ static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
 static bool is_dummy_rel(RelOptInfo *rel);
 static void mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel);
 static bool restriction_is_constant_false(List *restrictlist,
-										  bool only_pushed_down);
+							  bool only_pushed_down);
 
 
 /*
@@ -625,10 +626,10 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	 *
 	 * Also, a provably constant-false join restriction typically means that
 	 * we can skip evaluating one or both sides of the join.  We do this by
-	 * marking the appropriate rel as dummy.  For outer joins, a constant-false
-	 * restriction that is pushed down still means the whole join is dummy,
-	 * while a non-pushed-down one means that no inner rows will join so we
-	 * can treat the inner rel as dummy.
+	 * marking the appropriate rel as dummy.  For outer joins, a
+	 * constant-false restriction that is pushed down still means the whole
+	 * join is dummy, while a non-pushed-down one means that no inner rows
+	 * will join so we can treat the inner rel as dummy.
 	 *
 	 * We need only consider the jointypes that appear in join_info_list, plus
 	 * JOIN_INNER.
@@ -679,6 +680,18 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 			add_paths_to_joinrel(root, joinrel, rel2, rel1,
 								 JOIN_FULL, sjinfo,
 								 restrictlist);
+
+			/*
+			 * If there are join quals that aren't mergeable or hashable, we
+			 * may not be able to build any valid plan.  Complain here so that
+			 * we can give a somewhat-useful error message.  (Since we have no
+			 * flexibility of planning for a full join, there's no chance of
+			 * succeeding later with another pair of input rels.)
+			 */
+			if (joinrel->pathlist == NIL)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("FULL JOIN is only supported with merge-joinable or hash-joinable join conditions")));
 			break;
 		case JOIN_SEMI:
 
@@ -965,11 +978,32 @@ is_dummy_rel(RelOptInfo *rel)
 }
 
 /*
- * Mark a rel as proven empty.
+ * Mark a relation as proven empty.
+ *
+ * During GEQO planning, this can get invoked more than once on the same
+ * baserel struct, so it's worth checking to see if the rel is already marked
+ * dummy.
+ *
+ * Also, when called during GEQO join planning, we are in a short-lived
+ * memory context.	We must make sure that the dummy path attached to a
+ * baserel survives the GEQO cycle, else the baserel is trashed for future
+ * GEQO cycles.  On the other hand, when we are marking a joinrel during GEQO,
+ * we don't want the dummy path to clutter the main planning context.  Upshot
+ * is that the best solution is to explicitly make the dummy path in the same
+ * context the given RelOptInfo is in.
  */
 static void
 mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 {
+	MemoryContext oldcontext;
+
+	/* Already marked? */
+	if (is_dummy_rel(rel))
+		return;
+
+	/* No, so choose correct context to make the dummy path in */
+	oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+
 	/* Set dummy size estimate */
 	rel->rows = 0;
 
@@ -981,6 +1015,8 @@ mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 
 	/* Set or update cheapest_total_path */
 	set_cheapest(root, rel);
+
+	MemoryContextSwitchTo(oldcontext);
 }
 
 

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/include/datetime.h,v 1.16 2008/02/17 18:14:29 meskes Exp $ */
+/* src/interfaces/ecpg/include/datetime.h */
 
 #ifndef _ECPG_DATETIME_H
 #define _ECPG_DATETIME_H

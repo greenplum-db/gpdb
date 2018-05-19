@@ -3,12 +3,12 @@
  * pg_depend.c
  *	  routines to support manipulation of the pg_depend relation
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_depend.c,v 1.33 2010/01/02 16:57:36 momjian Exp $
+ *	  src/backend/catalog/pg_depend.c
  *
  *-------------------------------------------------------------------------
  */
@@ -18,9 +18,9 @@
 #include "access/heapam.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
-#include "catalog/pg_extension.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_depend.h"
+#include "catalog/pg_extension.h"
 #include "commands/extension.h"
 #include "miscadmin.h"
 #include "utils/fmgroids.h"
@@ -185,7 +185,7 @@ recordDependencyOnCurrentExtension(const ObjectAddress *object,
  * (possibly with some differences from before).
  *
  * If skipExtensionDeps is true, we do not delete any dependencies that
- * show that the given object is a member of an extension.  This avoids
+ * show that the given object is a member of an extension.	This avoids
  * needing a lot of extra logic to fetch and recreate that dependency.
  */
 long
@@ -215,7 +215,7 @@ deleteDependencyRecordsFor(Oid classId, Oid objectId,
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		if (skipExtensionDeps &&
-			((Form_pg_depend) GETSTRUCT(tup))->deptype == DEPENDENCY_EXTENSION)
+		  ((Form_pg_depend) GETSTRUCT(tup))->deptype == DEPENDENCY_EXTENSION)
 			continue;
 
 		simple_heap_delete(depRel, &tup->t_self);
@@ -551,39 +551,8 @@ sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
 void
 markSequenceUnowned(Oid seqId)
 {
-	Relation	depRel;
-	ScanKeyData key[2];
-	SysScanDesc scan;
-	HeapTuple	tup;
-
-	depRel = heap_open(DependRelationId, RowExclusiveLock);
-
-	ScanKeyInit(&key[0],
-				Anum_pg_depend_classid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationRelationId));
-	ScanKeyInit(&key[1],
-				Anum_pg_depend_objid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(seqId));
-
-	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
-
-	while (HeapTupleIsValid((tup = systable_getnext(scan))))
-	{
-		Form_pg_depend depform = (Form_pg_depend) GETSTRUCT(tup);
-
-		if (depform->refclassid == RelationRelationId &&
-			depform->deptype == DEPENDENCY_AUTO)
-		{
-			simple_heap_delete(depRel, &tup->t_self);
-		}
-	}
-
-	systable_endscan(scan);
-
-	heap_close(depRel, RowExclusiveLock);
+	deleteDependencyRecordsForClass(RelationRelationId, seqId,
+									RelationRelationId, DEPENDENCY_AUTO);
 }
 
 /*

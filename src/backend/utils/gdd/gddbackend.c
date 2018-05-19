@@ -1,0 +1,624 @@
+/*-------------------------------------------------------------------------
+ *
+ * gddbackend.c
+ *	  Global DeadLock Detector - Backend
+ *
+ *
+ * Copyright (c) 2018-Present Pivotal Software, Inc.
+ *
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#include "postgres.h"
+
+
+#include <unistd.h>
+
+#include "access/xact.h"
+#include "access/transam.h"
+#include "postmaster/fork_process.h"
+#include "postmaster/postmaster.h"
+#include "catalog/catalog.h"
+#include "catalog/pg_authid.h"
+#include "storage/ipc.h"
+#include "storage/pmsignal.h"			/* PostmasterIsAlive */
+#include "storage/proc.h"
+#include "storage/procarray.h"
+#include "storage/procsignal.h"
+#include "storage/backendid.h"
+#include "storage/sinvaladt.h"
+#include "tcop/tcopprot.h"
+#include "utils/gdd.h"
+#include "utils/builtins.h"
+#include "utils/fmgroids.h"
+#include "utils/snapmgr.h"
+#include "utils/memutils.h"
+#include "utils/syscache.h"
+#include "utils/ps_status.h"
+#include "utils/faultinjector.h"
+
+#include "libpq/pqsignal.h"
+#include "libpq/libpq-be.h"
+#include "executor/spi.h"
+
+#include "gdddetector.h"
+
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#define SHUT_RDWR SD_BOTH
+#define SHUT_RD SD_RECEIVE
+#define SHUT_WR SD_SEND
+#endif
+
+#define RET_STATUS_OK 0
+#define RET_STATUS_ERROR 1
+
+#ifdef EXEC_BACKEND
+static pid_t global_deadlock_detector_forkexec(void);
+#endif
+NON_EXEC_STATIC void GlobalDeadLockDetectorMain(int argc, char *argv[]);
+
+static void GlobalDeadLockDetectorLoop(void);
+static int  doDeadLockCheck(void);
+static void buildWaitGraph(GddCtx *ctx);
+static void breakDeadLock(GddCtx *ctx);
+static void dumpCancelResult(StringInfo str, List *xids);
+static char *findSuperuser(bool try_bootstrap);
+
+static MemoryContext	gddContext;
+static MemoryContext    oldContext;
+
+static volatile sig_atomic_t got_SIGHUP = false;
+static volatile bool shutdown_requested = false;
+
+int gp_global_deadlock_detector_period;
+
+/*
+ * Main entry point for seqserver controller process.
+ *
+ * This code is heavily based on pgarch.c, q.v.
+ */
+int
+global_deadlock_detector_start(void)
+{
+	pid_t		GlobalDeadLockDetectorPID;
+
+#ifdef EXEC_BACKEND
+	switch ((GlobalDeadLockDetectorPID = global_deadlock_detector_forkexec()))
+#else
+	switch ((GlobalDeadLockDetectorPID = fork_process()))
+#endif
+	{
+		case -1:
+			ereport(LOG,
+					(errmsg("could not fork global dead lock detector process: %m")));
+			return 0;
+
+#ifndef EXEC_BACKEND
+		case 0:
+			/* in postmaster child ... */
+			/* Close the postmaster's sockets */
+			ClosePostmasterPorts(false);
+
+			GlobalDeadLockDetectorMain(0, NULL);
+			break;
+#endif
+		default:
+			return (int) GlobalDeadLockDetectorPID;
+	}
+
+	/* shouldn't get here */
+	return 0;
+}
+
+
+#ifdef EXEC_BACKEND
+/*
+ * global_deadlock_detector_forkexec()
+ *
+ * Format up the arglist for the serqserver process, then fork and exec.
+ */
+static pid_t
+global_deadlock_detector_forkexec(void)
+{
+	char	   *av[10];
+	int			ac = 0;
+
+	av[ac++] = "postgres";
+	av[ac++] = "--globaldeadlockdetector";
+	av[ac++] = NULL;			/* filled in by postmaster_forkexec */
+	av[ac] = NULL;
+
+	Assert(ac < lengthof(av));
+
+	return postmaster_forkexec(ac, av);
+}
+#endif   /* EXEC_BACKEND */
+
+static void
+RequestShutdown(SIGNAL_ARGS)
+{
+	shutdown_requested = true;
+}
+
+/* SIGHUP: set flag to reload config file */
+static void
+sigHupHandler(SIGNAL_ARGS)
+{
+	got_SIGHUP = true;
+}
+
+/*
+ * GlobalDeadLockDetectorMain
+ */
+NON_EXEC_STATIC void
+GlobalDeadLockDetectorMain(int argc, char *argv[])
+{
+	sigjmp_buf	local_sigjmp_buf;
+	char	   *fullpath;
+	char	   *ddtUser;
+	char	   *knownDatabase = "postgres";
+
+	IsUnderPostmaster = true;
+
+	/* Stay away from PMChildSlot */
+	MyPMChildSlot = -1;
+
+	/* reset MyProcPid */
+	MyProcPid = getpid();
+
+	/* Lose the postmaster's on-exit routines */
+	on_exit_reset();
+
+	/* Identify myself via ps */
+	init_ps_display("global deadlock detector process", "", "", "");
+
+	SetProcessingMode(InitProcessing);
+
+	pqsignal(SIGHUP, sigHupHandler);
+	pqsignal(SIGINT, StatementCancelHandler);
+	pqsignal(SIGTERM, die);
+	pqsignal(SIGQUIT, quickdie); /* we don't do any seq-server specific cleanup, just use the standard. */
+	pqsignal(SIGALRM, handle_sig_alarm);
+
+	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
+	/* We don't listen for async notifies */
+	pqsignal(SIGUSR2, RequestShutdown);
+	pqsignal(SIGFPE, FloatExceptionHandler);
+	pqsignal(SIGCHLD, SIG_DFL);
+
+	/* Early initialization */
+	BaseInit();
+
+	/* See InitPostgres()... */
+	InitProcess();
+	InitBufferPoolBackend();
+	InitXLOGAccess();
+
+	SetProcessingMode(NormalProcessing);
+
+	/*
+	 * If an exception is encountered, processing resumes here.
+	 *
+	 * See notes in postgres.c about the design of this coding.
+	 */
+	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
+	{
+		/* Prevents interrupts while cleaning up */
+		HOLD_INTERRUPTS();
+
+		/* Report the error to the server log */
+		EmitErrorReport();
+
+		AbortCurrentTransaction();
+		/*
+		 * We can now go away.	Note that because we'll call InitProcess, a
+		 * callback will be registered to do ProcKill, which will clean up
+		 * necessary state.
+		 */
+		proc_exit(0);
+	}
+
+	/* We can now handle ereport(ERROR) */
+	PG_exception_stack = &local_sigjmp_buf;
+
+	PG_SETMASK(&UnBlockSig);
+
+
+	/*
+	 * The following additional initialization allows us to call the persistent meta-data modules.
+	 */
+
+	/*
+	 * Create a resource owner to keep track of our resources (currently only
+	 * buffer pins).
+	 */
+	CurrentResourceOwner = ResourceOwnerCreate(NULL, "GlobalDeadLockDetector");
+
+	/*
+	 * Add my PGPROC struct to the ProcArray.
+	 *
+	 * Once I have done this, I am visible to other backends!
+	 */
+	InitProcessPhase2();
+
+	/*
+	 * Initialize my entry in the shared-invalidation manager's array of
+	 * per-backend data.
+	 *
+	 * Sets up MyBackendId, a unique backend identifier.
+	 */
+	MyBackendId = InvalidBackendId;
+
+	SharedInvalBackendInit(false);
+
+	if (MyBackendId > MaxBackends || MyBackendId <= 0)
+		elog(FATAL, "bad backend id: %d", MyBackendId);
+
+	/*
+	 * bufmgr needs another initialization call too
+	 */
+	InitBufferPoolBackend();
+
+	/* heap access requires the rel-cache */
+	RelationCacheInitialize();
+	InitCatalogCache();
+
+	/*
+	 * It's now possible to do real access to the system catalogs.
+	 *
+	 * Load relcache entries for the system catalogs.  This must create at
+	 * least the minimum set of "nailed-in" cache entries.
+	 */
+	RelationCacheInitializePhase2();
+
+	/*
+	 * Start a new transaction here before first access to db, and get a
+	 * snapshot.  We don't have a use for the snapshot itself, but we're
+	 * interested in the secondary effect that it sets RecentGlobalXmin.
+	 */
+	StartTransactionCommand();
+	(void) GetTransactionSnapshot();
+
+	/*
+	 * In order to access the catalog, we need a database, and a
+	 * tablespace; our access to the heap is going to be slightly
+	 * limited, so we'll just use some defaults.
+	 */
+	if (!FindMyDatabase(knownDatabase, &MyDatabaseId, &MyDatabaseTableSpace))
+		ereport(FATAL,
+				(errcode(ERRCODE_UNDEFINED_DATABASE),
+				 errmsg("database \"%s\" does not exit", knownDatabase)));
+
+	/* Now we can mark our PGPROC entry with the database ID */
+	/* (We assume this is an atomic store so no lock is needed) */
+	MyProc->databaseId = MyDatabaseId;
+
+	fullpath = GetDatabasePath(MyDatabaseId, MyDatabaseTableSpace);
+
+	SetDatabasePath(fullpath);
+
+	RelationCacheInitializePhase3();
+
+	ddtUser = findSuperuser(true);
+	MyProcPort = (Port *) calloc(1, sizeof(Port));
+	if (MyProcPort == NULL)
+		elog(FATAL, "Lack of memory for MyProcPort allocation in global deadlock detector backend.");
+	MyProcPort->user_name = MemoryContextStrdup(TopMemoryContext, ddtUser);
+	MyProcPort->database_name = knownDatabase;
+
+	/* close the transaction we started above */
+	CommitTransactionCommand();
+
+	/* Allocate MemoryContext */
+	gddContext = AllocSetContextCreate(TopMemoryContext,
+									   "GddContext",
+									   ALLOCSET_DEFAULT_MINSIZE,
+									   ALLOCSET_DEFAULT_INITSIZE,
+									   ALLOCSET_DEFAULT_MAXSIZE);
+
+	/* disable orca here */
+	extern bool optimizer;
+	optimizer = false;
+
+	GlobalDeadLockDetectorLoop();
+
+	/* One iteration done, go away */
+	proc_exit(0);
+}
+
+static void
+GlobalDeadLockDetectorLoop(void)
+{
+	int status;
+
+	for (;;)
+	{
+		pg_usleep(gp_global_deadlock_detector_period * 1000000L);
+
+		CHECK_FOR_INTERRUPTS();
+
+		if (shutdown_requested)
+			break;
+
+		/* no need to live on if postmaster has died */
+		if (!PostmasterIsAlive(true))
+			exit(1);
+
+		if (got_SIGHUP)
+		{
+			got_SIGHUP = false;
+			ProcessConfigFile(PGC_SIGHUP);
+		}
+
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR(GddProbe) == FaultInjectorTypeSkip)
+			continue;
+#endif
+
+		StartTransactionCommand();
+		status = doDeadLockCheck();
+		if (status == STATUS_OK)
+			CommitTransactionCommand();
+		else
+			AbortCurrentTransaction();
+	}
+
+	return;
+}
+
+static char *
+findSuperuser(bool try_bootstrap)
+{
+	char *suser = NULL;
+	Relation auth_rel;
+	HeapTuple	auth_tup;
+	ScanKeyData	scankey[3];
+	SysScanDesc	sscan;
+	int			nkeys;
+	bool	isNull;
+
+	auth_rel = heap_open(AuthIdRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey[0],
+				Anum_pg_authid_rolsuper,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(true));
+	ScanKeyInit(&scankey[1],
+				Anum_pg_authid_rolcanlogin,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(true));
+	ScanKeyInit(&scankey[2],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID));
+
+	nkeys = try_bootstrap ? 3 : 2;
+
+	/* FIXME: perform indexed scan here? */
+	sscan = systable_beginscan(auth_rel, InvalidOid, false,
+							   SnapshotNow, nkeys, scankey);
+
+	while (HeapTupleIsValid(auth_tup = systable_getnext(sscan)))
+	{
+		Datum	attrName;
+		Oid		userOid;
+		Datum	validuntil;
+
+		validuntil = heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
+								  RelationGetDescr(auth_rel), &isNull);
+		/* we actually want it to be NULL, that means always valid */
+		if (!isNull)
+			continue;
+
+		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname,
+								RelationGetDescr(auth_rel), &isNull);
+		Assert(!isNull);
+		suser = pstrdup(DatumGetCString(attrName));
+
+		userOid = HeapTupleGetOid(auth_tup);
+		SetSessionUserId(userOid, true);
+
+		break;
+	}
+
+	systable_endscan(sscan);
+	heap_close(auth_rel, AccessShareLock);
+	return suser;
+}
+
+static int
+doDeadLockCheck(void)
+{
+	GddCtx		 *ctx;
+	volatile int ret_status = RET_STATUS_OK;
+
+	oldContext = MemoryContextSwitchTo(gddContext);
+
+	PG_TRY();
+	{
+		ctx = GddCtxNew();
+
+		buildWaitGraph(ctx);
+
+		GddCtxReduce(ctx);
+
+		if (!GddCtxEmpty(ctx))
+		{
+			StringInfoData str;
+
+			/*
+			 * At least one deadlock cycle is detected, and as all the invalid
+			 * verts and edges were filtered out at the beginning, the left
+			 * deadlock cycles are all valid ones.
+			 */
+
+			initStringInfo(&str);
+			GddCtxDump(ctx, &str);
+
+			elog(LOG,
+				 "global deadlock detected! Final graph is :%s",
+				 str.data);
+
+			breakDeadLock(ctx);
+		}
+	}
+	PG_CATCH();
+	{
+		EmitErrorReport();
+		FlushErrorState();
+		ret_status = RET_STATUS_ERROR;
+	}
+	PG_END_TRY();
+
+	MemoryContextSwitchTo(oldContext);
+	MemoryContextReset(gddContext);
+
+	return ret_status;
+}
+
+static void
+buildWaitGraph(GddCtx *ctx)
+{
+	SPITupleTable *tuptable;
+	TupleDesc	tupdesc;
+	List		*gxids;
+	bool		isnull;
+	int			tuple_num;
+	int			i;
+	int         res;
+	MemoryContext spiContext = NULL;
+	volatile bool connected = false;
+
+	/*
+	 * SPI_connect() will switch to SPI memory context
+	 */
+
+	PG_TRY();
+	{
+		if (SPI_OK_CONNECT != SPI_connect())
+		{
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+							errmsg("Unable to connect to execute internal query.")));
+		}
+
+		connected = true;
+
+		PushActiveSnapshot(GetTransactionSnapshot());
+
+		res = SPI_execute("select * from pg_dist_wait_status();", true, 0);
+
+		PopActiveSnapshot();
+
+		if (res == SPI_OK_SELECT && SPI_tuptable != NULL)
+		{
+			tuple_num = (int) SPI_processed;
+			tupdesc = SPI_tuptable->tupdesc;
+			tuptable = SPI_tuptable;
+
+			/*
+			 * Switch back to gdd memory context otherwise the graphs will be
+			 * created in SPI memory context and freed in SPI_finish().
+			 */
+			spiContext = MemoryContextSwitchTo(gddContext);
+
+			/* Get all valid gxids, any other gxids are considered invalid. */
+			gxids = ListAllGxid();
+
+			for (i = 0; i < tuple_num; i++)
+			{
+				TransactionId waiter_xid;
+				TransactionId holder_xid;
+				HeapTuple	tuple;
+				Datum		d;
+				bool		solidedge;
+				int			segid;
+
+				tuple = tuptable->vals[i];
+
+				d = heap_getattr(tuple, 1, tupdesc, &isnull);
+				Assert(!isnull);
+				segid = DatumGetInt32(d);
+
+				d = heap_getattr(tuple, 2, tupdesc, &isnull);
+				Assert(!isnull);
+				waiter_xid = DatumGetTransactionId(d);
+
+				d = heap_getattr(tuple, 3, tupdesc, &isnull);
+				Assert(!isnull);
+				holder_xid = DatumGetTransactionId(d);
+
+				d = heap_getattr(tuple, 4, tupdesc, &isnull);
+				Assert(!isnull);
+				solidedge = DatumGetBool(d);
+
+				/* Skip edges with invalid gxids */
+				if (!list_member_int(gxids, waiter_xid) ||
+					!list_member_int(gxids, holder_xid))
+					continue;
+
+				GddCtxAddEdge(ctx, segid, waiter_xid, holder_xid, solidedge);
+			}
+		}
+	}
+	PG_CATCH();
+	{
+		if (connected)
+			SPI_finish();
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	SPI_finish();
+	/* Make sure we are in gddContext */
+	MemoryContextSwitchTo(gddContext);
+}
+
+static void
+breakDeadLock(GddCtx *ctx)
+{
+	List		*xids;
+	ListCell	*cell;
+	StringInfoData str;
+
+	xids = GddCtxBreakDeadLock(ctx);
+
+	/* dump results*/
+	initStringInfo(&str);
+
+	dumpCancelResult(&str, xids);
+	elog(LOG, "these gxids will be cancelled to break global deadlock: %s", str.data);
+
+	foreach(cell, xids)
+	{
+		TransactionId	xid = lfirst_int(cell);
+		int pid;
+
+		pid = GetPidByGxid(xid);
+		Assert(pid > 0);
+
+		DirectFunctionCall2(pg_cancel_backend_msg,
+							Int32GetDatum(pid),
+							CStringGetTextDatum("cancelled by global deadlock detector"));
+	}
+}
+
+static void
+dumpCancelResult(StringInfo str, List *xids)
+{
+	ListCell	*cell;
+
+	foreach(cell, xids)
+	{
+		TransactionId	xid = lfirst_int(cell);
+
+		appendStringInfo(str, "%u(Master Pid: %d)", xid, GetPidByGxid(xid));
+
+		if (lnext(cell))
+			appendStringInfo(str, ",");
+	}
+}

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tstemplate.sgml,v 1.4 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_tstemplate.sgml
 PostgreSQL documentation
 -->
 
@@ -13,8 +13,8 @@ PostgreSQL documentation
  <refnamediv>
   <refname>ALTER TEXT SEARCH TEMPLATE</refname>
   <refpurpose>change the definition of a text search template</refpurpose>
- </refnamediv>  
-  
+ </refnamediv>
+
  <indexterm zone="sql-altertstemplate">
   <primary>ALTER TEXT SEARCH TEMPLATE</primary>
  </indexterm>
@@ -22,9 +22,10 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
+ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> SET SCHEMA <replaceable>new_schema</replaceable>
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1>
   <title>Description</title>
 
@@ -38,7 +39,7 @@ ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceabl
    You must be a superuser to use <command>ALTER TEXT SEARCH TEMPLATE</>.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -57,6 +58,15 @@ ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceabl
     <listitem>
      <para>
       The new name of the text search template.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">new_schema</replaceable></term>
+    <listitem>
+     <para>
+      The new schema for the text search template.
      </para>
     </listitem>
    </varlistentry>

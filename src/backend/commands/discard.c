@@ -3,11 +3,11 @@
  * discard.c
  *	  The implementation of the DISCARD command
  *
- * Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/discard.c,v 1.7 2010/01/02 16:57:37 momjian Exp $
+ *	  src/backend/commands/discard.c
  *
  *-------------------------------------------------------------------------
  */
@@ -62,10 +62,11 @@ DiscardAll(bool isTopLevel)
 	 */
 	PreventTransactionChain(isTopLevel, "DISCARD ALL");
 
+	/* Closing portals might run user-defined code, so do that first. */
+	PortalHashTableDeleteAll();
 	SetPGVariable("session_authorization", NIL, false);
 	ResetAllOptions();
 	DropAllPreparedStatements();
-	PortalHashTableDeleteAll();
 	Async_UnlistenAll();
 	LockReleaseAll(USER_LOCKMETHOD, true);
 	ResetPlanCache();

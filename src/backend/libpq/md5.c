@@ -10,11 +10,11 @@
  *
  *	Sverre H. Huseby <sverrehu@online.no>
  *
- *	Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ *	Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *	Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/md5.c,v 1.40 2010/02/26 02:00:43 momjian Exp $
+ *	  src/backend/libpq/md5.c
  */
 
 /* This is intended to be used in both frontend and backend, so use c.h */

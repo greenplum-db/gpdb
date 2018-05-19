@@ -5,12 +5,12 @@
  *	  Routines for CREATE and DROP FUNCTION commands and CREATE and DROP
  *	  CAST commands.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.118 2010/02/26 02:00:39 momjian Exp $
+ *	  src/backend/commands/functioncmds.c
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -37,6 +37,7 @@
 #include "access/sysattr.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_cast.h"
@@ -52,6 +53,7 @@
 #include "miscadmin.h"
 #include "optimizer/var.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_type.h"
@@ -399,6 +401,7 @@ interpret_function_parameter_list(List *parameters,
 			def = transformExpr(pstate, fp->defexpr,
 								EXPR_KIND_FUNCTION_DEFAULT);
 			def = coerce_to_specific_type(pstate, def, toid, "DEFAULT");
+			assign_expr_collations(pstate, def);
 
 			/*
 			 * Make sure no variables are referred to.
@@ -1959,8 +1962,8 @@ CreateCast(CreateCastStmt *stmt)
 	ObjectAddress myself,
 				referenced;
 
-	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
-	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
+	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
+	targettypeid = typenameTypeId(NULL, stmt->targettype);
 	sourcetyptype = get_typtype(sourcetypeid);
 	targettyptype = get_typtype(targettypeid);
 
@@ -2120,6 +2123,23 @@ CreateCast(CreateCastStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("array data types are not binary-compatible")));
+
+		/*
+		 * We also disallow creating binary-compatibility casts involving
+		 * domains.  Casting from a domain to its base type is already
+		 * allowed, and casting the other way ought to go through domain
+		 * coercion to permit constraint checking.	Again, if you're intent on
+		 * having your own semantics for that, create a no-op cast function.
+		 *
+		 * NOTE: if we were to relax this, the above checks for composites
+		 * etc. would have to be modified to look through domains to their
+		 * base types.
+		 */
+		if (sourcetyptype == TYPTYPE_DOMAIN ||
+			targettyptype == TYPTYPE_DOMAIN)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("domain data types must not be marked binary-compatible")));
 	}
 
 	/*
@@ -2210,6 +2230,10 @@ CreateCast(CreateCastStmt *stmt)
 	/* dependency on extension */
 	recordDependencyOnCurrentExtension(&myself, false);
 
+	/* Post creation hook for new cast */
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   CastRelationId, myself.objectId, 0);
+
 	heap_freetuple(tuple);
 
 	heap_close(relation, RowExclusiveLock);
@@ -2236,30 +2260,23 @@ DropCast(DropCastStmt *stmt)
 {
 	Oid			sourcetypeid;
 	Oid			targettypeid;
-	HeapTuple	tuple;
 	ObjectAddress object;
 
 	/* when dropping a cast, the types must exist even if you use IF EXISTS */
-	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
-	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
+	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
+	targettypeid = typenameTypeId(NULL, stmt->targettype);
 
-	tuple = SearchSysCache2(CASTSOURCETARGET,
-							ObjectIdGetDatum(sourcetypeid),
-							ObjectIdGetDatum(targettypeid));
-	if (!HeapTupleIsValid(tuple))
+	object.classId = CastRelationId;
+	object.objectId = get_cast_oid(sourcetypeid, targettypeid,
+								   stmt->missing_ok);
+	object.objectSubId = 0;
+
+	if (!OidIsValid(object.objectId))
 	{
-		if (!stmt->missing_ok)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("cast from type %s to type %s does not exist",
-							format_type_be(sourcetypeid),
-							format_type_be(targettypeid))));
-		else
-			ereport(NOTICE,
+		ereport(NOTICE,
 			 (errmsg("cast from type %s to type %s does not exist, skipping",
 					 format_type_be(sourcetypeid),
 					 format_type_be(targettypeid))));
-
 		return;
 	}
 
@@ -2275,12 +2292,6 @@ DropCast(DropCastStmt *stmt)
 	/*
 	 * Do the deletion
 	 */
-	object.classId = CastRelationId;
-	object.objectId = HeapTupleGetOid(tuple);
-	object.objectSubId = 0;
-
-	ReleaseSysCache(tuple);
-
 	performDeletion(&object, stmt->behavior);
 	
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -2352,7 +2363,7 @@ void
 AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 					   const char *newschema)
 {
-	Oid 		procOid;
+	Oid			procOid;
 	Oid			nspOid;
 
 	/* get function OID */
@@ -2361,7 +2372,7 @@ AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 	else
 		procOid = LookupFuncNameTypeNames(name, argtypes, false);
 
-	/* get schema OID and check its permission */
+	/* get schema OID and check its permissions */
 	nspOid = LookupCreationNamespace(newschema);
 
 	AlterFunctionNamespace_oid(procOid, nspOid);
@@ -2399,9 +2410,9 @@ AlterFunctionNamespace_oid(Oid procOid, Oid nspOid)
 							  ObjectIdGetDatum(nspOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_FUNCTION),
-						errmsg("function \"%s\" already exists in schema \"%s\"",
-							   NameStr(proc->proname),
-							   get_namespace_name(nspOid))));
+				 errmsg("function \"%s\" already exists in schema \"%s\"",
+						NameStr(proc->proname),
+						get_namespace_name(nspOid))));
 
 	/* OK, modify the pg_proc row */
 

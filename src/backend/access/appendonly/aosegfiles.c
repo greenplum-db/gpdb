@@ -39,6 +39,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/int8.h"
+#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/fmgroids.h"
 #include "utils/numeric.h"
@@ -182,9 +183,9 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 			if (fstuple != NULL)
 				ereport(ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("found two entries in pg_aoseg.%s with segno %d: "
+						 errmsg("found two entries in \"%s\" with segno %d: "
 								"(ctid %s with eof " INT64_FORMAT ") and (ctid %s with eof " INT64_FORMAT ")",
-								pg_aoseg_rel->rd_rel->relname.data,
+								RelationGetRelationName(pg_aoseg_rel),
 								segno,
 								ItemPointerToString(&fstuple->t_self),
 								DatumGetInt64(
@@ -1150,7 +1151,6 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
 	bool		connected = false;
-	char		aoseg_relname[NAMEDATALEN];
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
 	int64		total_count = 0;
@@ -1159,19 +1159,18 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	Assert(RelationIsAoRows(parentrel));
 
 	/*
-	 * get the name of the aoseg relation
-	 */
-	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
-	snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-	heap_close(aosegrel, AccessShareLock);
-
-	/*
 	 * assemble our query string
 	 */
+	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
+
 	initStringInfo(&sqlstmt);
 	appendStringInfo(&sqlstmt, "select segno,sum(tupcount) "
-					 "from gp_dist_random('pg_aoseg.%s') "
-					 "group by (segno)", aoseg_relname);
+					 "from gp_dist_random('%s.%s') "
+					 "group by (segno)",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
+					 RelationGetRelationName(aosegrel));
+
+	heap_close(aosegrel, AccessShareLock);
 
 	PG_TRY();
 	{
@@ -1487,7 +1486,7 @@ gp_update_ao_master_stats_internal(Oid relid, Snapshot appendOnlyMetaDataSnapsho
 	/* open the parent (main) relation */
 	parentrel = heap_open(relid, RowExclusiveLock);
 
-	if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+	if (!RelationIsAppendOptimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",
@@ -1569,7 +1568,6 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 	StringInfoData sqlstmt;
 	Relation	parentrel;
 	Relation	aosegrel;
-	char		aoseg_relname[NAMEDATALEN];
 	int			ret;
 	Oid			relid = PG_GETARG_OID(0);
 
@@ -1605,7 +1603,7 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+		if (!RelationIsAppendOptimized(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",
@@ -1616,28 +1614,28 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 		Assert(OidIsValid(segrelid));
 
 		/*
-		 * get the name of the aoseg relation
-		 */
-		aosegrel = heap_open(segrelid, AccessShareLock);
-		snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-		heap_close(aosegrel, AccessShareLock);
-
-		/*
 		 * assemble our query string
 		 */
+		aosegrel = heap_open(segrelid, AccessShareLock);
 		initStringInfo(&sqlstmt);
 		if (RelationIsAoRows(parentrel))
 			appendStringInfo(&sqlstmt, "select gp_segment_id,sum(tupcount)::bigint "
-							 "from gp_dist_random('pg_aoseg.%s') "
-							 "group by (gp_segment_id)", aoseg_relname);
+							 "from gp_dist_random('%s.%s') "
+							 "group by (gp_segment_id)",
+							 get_namespace_name(RelationGetNamespace(aosegrel)),
+							 RelationGetRelationName(aosegrel));
 		else
 		{
 			Assert(RelationIsAoCols(parentrel));
 
 			appendStringInfo(&sqlstmt, "select gp_segment_id,sum(tupcount)::bigint "
-							 "from gp_dist_random('pg_aoseg.%s') "
-							 "group by (gp_segment_id)", aoseg_relname);
+							 "from gp_dist_random('%s.%s') "
+							 "group by (gp_segment_id)",
+							 get_namespace_name(RelationGetNamespace(aosegrel)),
+							 RelationGetRelationName(aosegrel));
 		}
+
+		heap_close(aosegrel, AccessShareLock);
 
 		PG_TRY();
 		{
@@ -1753,7 +1751,6 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 	RangeVar   *parentrv;
 	Relation	parentrel;
 	Relation	aosegrel;
-	char		aoseg_relname[NAMEDATALEN];
 	int			ret;
 	text	   *relname = PG_GETARG_TEXT_P(0);
 	Oid			relid;
@@ -1793,7 +1790,7 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+		if (!RelationIsAppendOptimized(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",
@@ -1805,19 +1802,17 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 		Assert(OidIsValid(segrelid));
 
 		/*
-		 * get the name of the aoseg relation
-		 */
-		aosegrel = heap_open(segrelid, AccessShareLock);
-		snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-		heap_close(aosegrel, AccessShareLock);
-
-		/*
 		 * assemble our query string
 		 */
+		aosegrel = heap_open(segrelid, AccessShareLock);
 		initStringInfo(&sqlstmt);
 		appendStringInfo(&sqlstmt, "select gp_segment_id,sum(tupcount) "
-						 "from gp_dist_random('pg_aoseg.%s') "
-						 "group by (gp_segment_id)", aoseg_relname);
+						 "from gp_dist_random('%s.%s') "
+						 "group by (gp_segment_id)",
+						 get_namespace_name(RelationGetNamespace(aosegrel)),
+						 RelationGetRelationName(aosegrel));
+
+		heap_close(aosegrel, AccessShareLock);
 
 		PG_TRY();
 		{
@@ -1969,7 +1964,6 @@ aorow_compression_ratio_internal(Relation parentrel)
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
 	bool		connected = false;
-	char		aoseg_relname[NAMEDATALEN];
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
 	float8		compress_ratio = -1;	/* the default, meaning "not
@@ -1982,24 +1976,22 @@ aorow_compression_ratio_internal(Relation parentrel)
 	Assert(OidIsValid(segrelid));
 
 	/*
-	 * get the name of the aoseg relation
-	 */
-	aosegrel = heap_open(segrelid, AccessShareLock);
-	snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-	heap_close(aosegrel, AccessShareLock);
-
-	/*
 	 * assemble our query string
 	 */
+	aosegrel = heap_open(segrelid, AccessShareLock);
 	initStringInfo(&sqlstmt);
 	if (Gp_role == GP_ROLE_DISPATCH)
 		appendStringInfo(&sqlstmt, "select sum(eof), sum(eofuncompressed) "
-						 "from gp_dist_random('pg_aoseg.%s')",
-						 aoseg_relname);
+						 "from gp_dist_random('%s.%s')",
+						 get_namespace_name(RelationGetNamespace(aosegrel)),
+						 RelationGetRelationName(aosegrel));
 	else
 		appendStringInfo(&sqlstmt, "select eof, eofuncompressed "
-						 "from pg_aoseg.%s",
-						 aoseg_relname);
+						 "from %s.%s",
+						 get_namespace_name(RelationGetNamespace(aosegrel)),
+						 RelationGetRelationName(aosegrel));
+
+	heap_close(aosegrel, AccessShareLock);
 
 	PG_TRY();
 	{
@@ -2086,7 +2078,7 @@ ao_compression_ratio_internal(Oid relid)
 	/* open the parent (main) relation */
 	parentrel = heap_open(relid, AccessShareLock);
 
-	if (!RelationIsAoRows(parentrel) && !RelationIsAoCols(parentrel))
+	if (!RelationIsAppendOptimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",

@@ -6,11 +6,11 @@
  * These routines represent a fairly thin layer on top of SysV shared
  * memory functionality.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/sysv_shmem.c,v 1.57 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/port/sysv_shmem.c
  *
  *-------------------------------------------------------------------------
  */
@@ -156,35 +156,36 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 		  "segment exceeded your kernel's SHMMAX parameter.  You can either "
 						 "reduce the request size or reconfigure the kernel with larger SHMMAX.  "
 				  "To reduce the request size (currently %lu bytes), reduce "
-			   "PostgreSQL's shared_buffers parameter (currently %d) and/or "
-						 "its max_connections parameter (currently %d).\n"
+						 "PostgreSQL's shared memory usage, perhaps by reducing shared_buffers "
+						 "or max_connections.\n"
 						 "If the request size is already small, it's possible that it is less than "
 						 "your kernel's SHMMIN parameter, in which case raising the request size or "
 						 "reconfiguring SHMMIN is called for.\n"
 		"The PostgreSQL documentation contains more information about shared "
 						 "memory configuration.",
-						 (unsigned long) size, NBuffers, MaxBackends) : 0,
-				 (shmget_errno == ENOMEM) ?
+						 (unsigned long) size) : 0,
+				 (errno == ENOMEM) ?
 				 errhint("This error usually means that PostgreSQL's request for a shared "
-				   "memory segment exceeded available memory or swap space. "
+				   "memory segment exceeded available memory or swap space, "
+			   "or exceeded your kernel's SHMALL parameter.  You can either "
+						 "reduce the request size or reconfigure the kernel with larger SHMALL.  "
 				  "To reduce the request size (currently %lu bytes), reduce "
-			   "PostgreSQL's shared_buffers parameter (currently %d) and/or "
-						 "its max_connections parameter (currently %d).\n"
+						 "PostgreSQL's shared memory usage, perhaps by reducing shared_buffers "
+						 "or max_connections.\n"
 		"The PostgreSQL documentation contains more information about shared "
 						 "memory configuration.",
-						 (unsigned long) size, NBuffers, MaxBackends) : 0,
-				 (shmget_errno == ENOSPC) ?
-				 errhint("This error does *not* mean that you have run out of disk space. "
+						 (unsigned long) size) : 0,
+				 (errno == ENOSPC) ?
+				 errhint("This error does *not* mean that you have run out of disk space.  "
 						 "It occurs either if all available shared memory IDs have been taken, "
 						 "in which case you need to raise the SHMMNI parameter in your kernel, "
 		  "or because the system's overall limit for shared memory has been "
 				 "reached.  If you cannot increase the shared memory limit, "
 		  "reduce PostgreSQL's shared memory request (currently %lu bytes), "
-			"by reducing its shared_buffers parameter (currently %d) and/or "
-						 "its max_connections parameter (currently %d).\n"
+				   "perhaps by reducing shared_buffers or max_connections.\n"
 		"The PostgreSQL documentation contains more information about shared "
 						 "memory configuration.",
-						 (unsigned long) size, NBuffers, MaxBackends) : 0));
+						 (unsigned long) size) : 0));
 	}
 
 	/* Register on-exit routine to delete the new segment */
@@ -199,9 +200,18 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 	/* Register on-exit routine to detach new segment before deleting */
 	on_shmem_exit(IpcMemoryDetach, PointerGetDatum(memAddress));
 
-	/* Record key and ID in lockfile for data directory. */
-	RecordSharedMemoryInLockFile((unsigned long) memKey,
-								 (unsigned long) shmid);
+	/*
+	 * Store shmem key and ID in data directory lockfile.  Format to try to
+	 * keep it the same length always (trailing junk in the lockfile won't
+	 * hurt, but might confuse humans).
+	 */
+	{
+		char		line[64];
+
+		sprintf(line, "%9lu %9lu",
+				(unsigned long) memKey, (unsigned long) shmid);
+		AddToDataDirLockFile(LOCK_FILE_LINE_SHMEM_KEY, line);
+	}
 
 	return memAddress;
 }

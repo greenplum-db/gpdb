@@ -84,22 +84,18 @@ namespace gpdxl
 				BOOL m_fFallbackToPlanner;
 
 				// ctor
-				SContextHavingQualMutator
-					(
-					IMemoryPool *pmp,
-					CMDAccessor *pmda,
-					ULONG ulTECount,
-					List *plTENewGroupByQuery
-					)
-					:
-					m_pmp(pmp),
-					m_pmda(pmda),
-					m_ulTECount(ulTECount),
-					m_plTENewGroupByQuery(plTENewGroupByQuery),
-					m_ulCurrLevelsUp(0),
-					m_fAggregateArg(false),
-					m_ulAggregateLevelUp(ULONG_MAX),
-					m_fFallbackToPlanner(false)
+				SContextHavingQualMutator(IMemoryPool *pmp,
+										  CMDAccessor *pmda,
+										  ULONG ulTECount,
+										  List *plTENewGroupByQuery)
+					: m_pmp(pmp),
+					  m_pmda(pmda),
+					  m_ulTECount(ulTECount),
+					  m_plTENewGroupByQuery(plTENewGroupByQuery),
+					  m_ulCurrLevelsUp(0),
+					  m_fAggregateArg(false),
+					  m_ulAggregateLevelUp(gpos::ulong_max),
+					  m_fFallbackToPlanner(false)
 				{
 					GPOS_ASSERT(NULL != plTENewGroupByQuery);
 				}

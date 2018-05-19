@@ -1,16 +1,8 @@
---
--- first, define the functions.  Turn off echoing so that expected file
--- does not depend on contents of pgxml.sql.
---
-SET client_min_messages = warning;
-\set ECHO none
-\i pgxml.sql
-\set ECHO all
-RESET client_min_messages;
+CREATE EXTENSION xml2;
 
 select query_to_xml('select 1 as x',true,false,'');
 
-select xslt_process( query_to_xml('select x from generate_series(1,5) as 
+select xslt_process( query_to_xml('select x from generate_series(1,5) as
 x',true,false,'')::text,
 $$<xsl:stylesheet version="1.0"
                xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -80,6 +72,56 @@ Value</attribute></attributes>');
 
 create index idx_xpath on t1 ( xpath_string
 ('/attributes/attribute[@name="attr_1"]/text()', xml_data::text));
+
+SELECT xslt_process('<employee><name>cim</name><age>30</age><pay>400</pay></employee>'::text, $$<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:output method="xml" omit-xml-declaration="yes" indent="yes"/>
+  <xsl:strip-space elements="*"/>
+  <xsl:param name="n1"/>
+  <xsl:param name="n2"/>
+  <xsl:param name="n3"/>
+  <xsl:param name="n4"/>
+  <xsl:param name="n5" select="'me'"/>
+  <xsl:template match="*">
+    <xsl:element name="samples">
+      <xsl:element name="sample">
+        <xsl:value-of select="$n1"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n2"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n3"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n4"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n5"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n6"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n7"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n8"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n9"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n10"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n11"/>
+      </xsl:element>
+      <xsl:element name="sample">
+        <xsl:value-of select="$n12"/>
+      </xsl:element>
+    </xsl:element>
+  </xsl:template>
+</xsl:stylesheet>$$::text, 'n1="v1",n2="v2",n3="v3",n4="v4",n5="v5",n6="v6",n7="v7",n8="v8",n9="v9",n10="v10",n11="v11",n12="v12"'::text);
 
 -- possible security exploit
 SELECT xslt_process('<xml><foo>Hello from XML</foo></xml>',

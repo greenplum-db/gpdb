@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.69 2010/02/26 02:01:29 momjian Exp $
+ * src/include/utils/relcache.h
  *
  *-------------------------------------------------------------------------
  */
@@ -76,7 +76,8 @@ extern Relation RelationBuildLocalRelation(const char *relname,
 						   Oid reltablespace,
 			               char relkind,            /*CDB*/
 						   bool shared_relation,
-						   bool mapped_relation);
+						   bool mapped_relation,
+						   char relpersistence);
 
 /*
  * Routine to manage assignment of new relfilenode to a relation
@@ -106,15 +107,6 @@ extern bool RelationIdIsInInitFile(Oid relationId);
 extern void RelationCacheInitFilePreInvalidate(void);
 extern void RelationCacheInitFilePostInvalidate(void);
 extern void RelationCacheInitFileRemove(void);
-
-extern void IndexSupportInitialize(oidvector *indclass,
-					   Oid *indexOperator,
-					   RegProcedure *indexSupport,
-					   Oid *opFamily,
-					   Oid *opcInType,
-					   StrategyNumber maxStrategyNumber,
-					   StrategyNumber maxSupportNumber,
-					   AttrNumber maxAttributeNumber);
 
 /* should be used only by relcache.c and catcache.c */
 extern bool criticalRelcachesBuilt;

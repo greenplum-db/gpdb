@@ -189,7 +189,7 @@ beginCurrentIndexScan(DynamicIndexScanState *node, EState *estate,
 	MemoryContextSwitchTo(oldCxt);
 
 	if (node->outer_exprContext)
-		ExecIndexReScan(node->indexScanState, node->outer_exprContext);
+		ExecReScanIndexScan(node->indexScanState);
 }
 
 static void
@@ -337,7 +337,7 @@ ExecEndDynamicIndexScan(DynamicIndexScanState *node)
  * Allow rescanning an index.
  */
 void
-ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt)
+ExecReScanDynamicIndex(DynamicIndexScanState *node)
 {
 	if (node->indexScanState)
 	{
@@ -351,13 +351,6 @@ ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt)
 		hash_seq_term(&node->pidxStatus);
 		node->shouldCallHashSeqTerm = false;
 	}
-
-	/*
-	 * If we are being passed an outer tuple, save it so that we can
-	 * pass it on to the underlying Index Scan when we create it.
-	 */
-	if (exprCtxt)
-		node->outer_exprContext = exprCtxt;
 
 	/* Force reloading the hash table */
 	node->pidxIndex = NULL;

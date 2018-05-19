@@ -22,7 +22,7 @@ GEM
       middleman-livereload
       middleman-sprockets
       middleman-syntax (= 2.1.0)
-      nokogiri (= 1.8.1)
+      nokogiri (= 1.8.2)
       puma
       rack-rewrite
       redcarpet (~> 3.2.3)
@@ -156,7 +156,7 @@ GEM
     minitest (5.11.1)
     multi_json (1.13.1)
     multipart-post (2.0.0)
-    nokogiri (1.8.1)
+    nokogiri (1.8.2)
       mini_portile2 (~> 2.3.0)
     padrino-helpers (0.13.3.4)
       i18n (~> 0.6, >= 0.6.7)

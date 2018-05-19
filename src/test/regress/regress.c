@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/test/regress/regress.c,v 1.72 2009/01/07 13:44:37 tgl Exp $
+ * src/test/regress/regress.c
  */
 
 #include "postgres.h"
@@ -495,9 +495,9 @@ ttdummy(PG_FUNCTION_ARGS)
 
 	if (!CALLED_AS_TRIGGER(fcinfo))
 		elog(ERROR, "ttdummy: not fired by trigger manager");
-	if (TRIGGER_FIRED_FOR_STATEMENT(trigdata->tg_event))
-		elog(ERROR, "ttdummy: cannot process STATEMENT events");
-	if (TRIGGER_FIRED_AFTER(trigdata->tg_event))
+	if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
+		elog(ERROR, "ttdummy: must be fired for row");
+	if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
 		elog(ERROR, "ttdummy: must be fired before event");
 	if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
 		elog(ERROR, "ttdummy: cannot process INSERT event");

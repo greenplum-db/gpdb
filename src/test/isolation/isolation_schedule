@@ -1,8 +1,23 @@
+# GPDB_91_MERGE_FIXME: GPDB acquires ExclusiveLock for update and delete SQL
+# statements.  This invalidates most of the isolation tests from upstream below.
+# E.g. an UPDATE step executed by isolationtester never returns because another
+# session run in the same permutation holds ExclusiveLock that blocks the step.
+
+#test: simple-write-skew
+#test: receipt-report
+#test: temporal-range-integrity
+#test: project-manager
+#test: classroom-scheduling
+#test: total-cash
+#test: referential-integrity
+#test: ri-trigger
+#test: partial-index
+#test: two-ids
+#test: multiple-row-versions
 
 # GPDB-specific tests
-test: heap-serializable-vacuum-freeze
-test: heap-serializable-vacuum
-test: ao-serializable-read
-test: ao-serializable-vacuum
+test: heap-repeatable-read-vacuum-freeze
+test: heap-repeatable-read-vacuum
+test: ao-repeatable-read-vacuum
 
 test: ao-insert-eof create_index_hot udf-insert-deadlock heap-repeatable-read ao-repeatable-read

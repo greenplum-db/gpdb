@@ -117,3 +117,65 @@ select array[ row(1,2), row(3,4), row(5,6) ];
 -- Check ability to compare an anonymous row to elements of an array
 select row(1,1.1) = any (array[ row(7,7.7), row(1,1.1), row(0,0.0) ]);
 select row(1,1.1) = any (array[ row(7,7.7), row(1,1.0), row(0,0.0) ]);
+
+-- Check behavior with a non-comparable rowtype
+create type cantcompare as (p point, r float8);
+create temp table cc (f1 cantcompare);
+insert into cc values('("(1,2)",3)');
+insert into cc values('("(4,5)",6)');
+select * from cc order by f1; -- fail, but should complain about cantcompare
+
+--
+-- Test case derived from bug #5716: check multiple uses of a rowtype result
+--
+
+BEGIN;
+
+CREATE TABLE price (
+    id SERIAL PRIMARY KEY,
+    active BOOLEAN NOT NULL,
+    price NUMERIC
+);
+
+CREATE TYPE price_input AS (
+    id INTEGER,
+    price NUMERIC
+);
+
+CREATE TYPE price_key AS (
+    id INTEGER
+);
+
+CREATE FUNCTION price_key_from_table(price) RETURNS price_key AS $$
+    SELECT $1.id
+$$ LANGUAGE SQL;
+
+CREATE FUNCTION price_key_from_input(price_input) RETURNS price_key AS $$
+    SELECT $1.id
+$$ LANGUAGE SQL;
+
+insert into price values (1,false,42), (10,false,100), (11,true,17.99);
+
+UPDATE price
+    SET active = true, price = input_prices.price
+    FROM unnest(ARRAY[(10, 123.00), (11, 99.99)]::price_input[]) input_prices
+    WHERE price_key_from_table(price.*) = price_key_from_input(input_prices.*);
+
+select * from price;
+
+rollback;
+
+--
+-- We allow I/O conversion casts from composite types to strings to be
+-- invoked via cast syntax, but not functional syntax.  This is because
+-- the latter is too prone to be invoked unintentionally.
+--
+select cast (fullname as text) from fullname;
+select fullname::text from fullname;
+select text(fullname) from fullname;  -- error
+select fullname.text from fullname;  -- error
+-- same, but RECORD instead of named composite type:
+select cast (row('Jim', 'Beam') as text);
+select (row('Jim', 'Beam'))::text;
+select text(row('Jim', 'Beam'));  -- error
+select (row('Jim', 'Beam')).text;  -- error

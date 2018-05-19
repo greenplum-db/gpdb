@@ -4,11 +4,11 @@
  *	  Search code for postgres btrees.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.121 2010/01/02 16:57:35 momjian Exp $
+ *	  src/backend/access/nbtree/nbtsearch.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
+#include "storage/predicate.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 
@@ -63,7 +64,10 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 
 	/* If index is empty and access = BT_READ, no root page is created. */
 	if (!BufferIsValid(*bufP))
+	{
+		PredicateLockRelation(rel);		/* Nothing finer to lock exists. */
 		return (BTStack) NULL;
+	}
 
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
@@ -88,7 +92,11 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		page = BufferGetPage(*bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 		if (P_ISLEAF(opaque))
+		{
+			if (access == BT_READ)
+				PredicateLockPage(rel, BufferGetBlockNumber(*bufP));
 			break;
+		}
 
 		/*
 		 * Find the appropriate item on the internal page, and get the child
@@ -402,9 +410,10 @@ _bt_compare(Relation rel,
 			 * to flip the sign of the comparison result.  (Unless it's a DESC
 			 * column, in which case we *don't* flip the sign.)
 			 */
-			result = DatumGetInt32(FunctionCall2(&scankey->sk_func,
-												 datum,
-												 scankey->sk_argument));
+			result = DatumGetInt32(FunctionCall2Coll(&scankey->sk_func,
+													 scankey->sk_collation,
+													 datum,
+													 scankey->sk_argument));
 
 			if (!(scankey->sk_flags & SK_BT_DESC))
 				result = -result;
@@ -713,6 +722,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 											   cur->sk_attno,
 											   InvalidStrategy,
 											   cur->sk_subtype,
+											   cur->sk_collation,
 											   procinfo,
 											   cur->sk_argument);
 			}
@@ -733,6 +743,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 									   cur->sk_attno,
 									   InvalidStrategy,
 									   cur->sk_subtype,
+									   cur->sk_collation,
 									   cmp_proc,
 									   cur->sk_argument);
 			}
@@ -1142,6 +1153,7 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 			opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 			if (!P_IGNORE(opaque))
 			{
+				PredicateLockPage(rel, blkno);
 				/* see if there are any matches on this page */
 				/* note that this will clear moreRight if we can stop */
 				if (_bt_readpage(scan, dir, P_FIRSTDATAKEY(opaque)))
@@ -1189,6 +1201,7 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 			opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 			if (!P_IGNORE(opaque))
 			{
+				PredicateLockPage(rel, BufferGetBlockNumber(so->currPos.buf));
 				/* see if there are any matches on this page */
 				/* note that this will clear moreLeft if we can stop */
 				if (_bt_readpage(scan, dir, PageGetMaxOffsetNumber(page)))
@@ -1352,6 +1365,7 @@ _bt_get_endpoint(Relation rel, uint32 level, bool rightmost)
 	if (!BufferIsValid(buf))
 	{
 		/* empty index... */
+		PredicateLockRelation(rel);		/* Nothing finer to lock exists. */
 		return InvalidBuffer;
 	}
 
@@ -1431,10 +1445,12 @@ _bt_endpoint(IndexScanDesc scan, ScanDirection dir)
 	if (!BufferIsValid(buf))
 	{
 		/* empty index... */
+		PredicateLockRelation(rel);		/* Nothing finer to lock exists. */
 		so->currPos.buf = InvalidBuffer;
 		return false;
 	}
 
+	PredicateLockPage(rel, BufferGetBlockNumber(buf));
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 	Assert(P_ISLEAF(opaque));

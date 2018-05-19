@@ -20,6 +20,7 @@
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
 #include "utils/builtins.h"
+#include "utils/memutils.h"
 
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
@@ -50,7 +51,14 @@
 /*=========================================================================
  * STRUCTS
  */
+typedef struct interconnect_handle_t
+{
+	ChunkTransportState	*interconnect_context; /* Interconnect state */
 
+	ResourceOwner owner;	/* owner of this handle */
+	struct interconnect_handle_t *next;
+	struct interconnect_handle_t *prev;
+} interconnect_handle_t;
 
 /*=========================================================================
  * GLOBAL STATE VARIABLES
@@ -65,11 +73,23 @@ static int	savedSeqServerFd = -1;
 static char *savedSeqServerHost = NULL;
 static uint16 savedSeqServerPort = 0;
 
+static interconnect_handle_t *open_interconnect_handles;
+static bool interconnect_resowner_callback_registered;
+
 /*=========================================================================
  * FUNCTIONS PROTOTYPES
  */
 
 static void setupSeqServerConnection(char *hostname, uint16 port);
+
+static void interconnect_abort_callback(ResourceReleasePhase phase,
+								   bool isCommit,
+								   bool isTopLevel,
+								   void *arg);
+static void cleanup_interconnect_handle(interconnect_handle_t *h);
+static interconnect_handle_t *allocate_interconnect_handle(void);
+static void destroy_interconnect_handle(interconnect_handle_t *h);
+static interconnect_handle_t *find_interconnect_handle(ChunkTransportState *icContext);
 
 #ifdef AMS_VERBOSE_LOGGING
 static void dumpEntryConnections(int elevel, ChunkTransportStateEntry *pEntry);
@@ -315,7 +335,7 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 
 		if (targetRoute == BROADCAST_SEGIDX)
 		{
-			doBroadcast(mlStates, transportStates, pEntry, currItem, &recount);
+			doBroadcast(transportStates, pEntry, currItem, &recount);
 		}
 		else
 		{
@@ -324,7 +344,7 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 			/* only send to interested connections */
 			if (conn->stillActive)
 			{
-				transportStates->SendChunk(mlStates, transportStates, pEntry, conn, currItem, motNodeID);
+				transportStates->SendChunk(transportStates, pEntry, conn, currItem, motNodeID);
 				if (!conn->stillActive)
 					recount = 1;
 			}
@@ -660,10 +680,39 @@ setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 void
 SetupInterconnect(EState *estate)
 {
+	interconnect_handle_t *h;
+	ChunkTransportState *icContext = NULL;
+	MemoryContext oldContext;
+
+	if (estate->interconnect_context)
+	{
+		elog(FATAL, "SetupInterconnect: already initialized.");
+	}
+	else if (!estate->es_sliceTable)
+	{
+		elog(FATAL, "SetupInterconnect: no slice table ?");
+	}
+
+	h = allocate_interconnect_handle();
+
+	Assert(InterconnectContext != NULL);
+	oldContext = MemoryContextSwitchTo(InterconnectContext);
+
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
-		SetupUDPIFCInterconnect(estate);
+		icContext = SetupUDPIFCInterconnect(estate->es_sliceTable);
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
-		SetupTCPInterconnect(estate);
+		icContext = SetupTCPInterconnect(estate->es_sliceTable);
+	else
+		Assert("unsupported expected interconnect type");
+
+	/* add back-pointer for dispatch check. */
+	icContext->estate = estate;
+
+	MemoryContextSwitchTo(oldContext);
+
+	h->interconnect_context = icContext;
+	estate->interconnect_context = icContext;
+	estate->es_interconnect_is_setup = true;
 }
 
 /*
@@ -671,8 +720,7 @@ SetupInterconnect(EState *estate)
  * tons of stuff volatile in TeardownInterconnect().
  */
 void
-forceEosToPeers(MotionLayerState *mlStates,
-				ChunkTransportState *transportStates,
+forceEosToPeers(ChunkTransportState *transportStates,
 				int motNodeID)
 {
 	if (!transportStates)
@@ -682,7 +730,7 @@ forceEosToPeers(MotionLayerState *mlStates,
 
 	transportStates->teardownActive = true;
 
-	transportStates->SendEos(mlStates, transportStates, motNodeID, get_eos_tuplechunklist());
+	transportStates->SendEos(transportStates, motNodeID, get_eos_tuplechunklist());
 
 	transportStates->teardownActive = false;
 }
@@ -694,17 +742,21 @@ forceEosToPeers(MotionLayerState *mlStates,
  */
 void
 TeardownInterconnect(ChunkTransportState *transportStates,
-					 MotionLayerState *mlStates,
 					 bool forceEOS, bool hasError)
 {
+	interconnect_handle_t *h = find_interconnect_handle(transportStates);
+
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 	{
-		TeardownUDPIFCInterconnect(transportStates, mlStates, forceEOS);
+		TeardownUDPIFCInterconnect(transportStates, forceEOS);
 	}
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
 	{
-		TeardownTCPInterconnect(transportStates, mlStates, forceEOS, hasError);
+		TeardownTCPInterconnect(transportStates, forceEOS, hasError);
 	}
+
+	if (h != NULL)
+		destroy_interconnect_handle(h);
 }
 
 /*=========================================================================
@@ -925,5 +977,104 @@ WaitInterconnectQuit(void)
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 	{
 		WaitInterconnectQuitUDPIFC();
+	}
+}
+
+interconnect_handle_t *
+allocate_interconnect_handle(void)
+{
+	interconnect_handle_t	*h;
+
+	if (InterconnectContext == NULL)
+		InterconnectContext = AllocSetContextCreate(TopMemoryContext,
+												   "Interconnect Context",
+												   ALLOCSET_DEFAULT_MINSIZE,
+												   ALLOCSET_DEFAULT_INITSIZE,
+												   ALLOCSET_DEFAULT_MAXSIZE);
+
+	h = MemoryContextAllocZero(InterconnectContext, sizeof(interconnect_handle_t));
+
+	h->owner = CurrentResourceOwner;
+	h->next = open_interconnect_handles;
+	h->prev = NULL;
+	if (open_interconnect_handles)
+		open_interconnect_handles->prev = h;
+	open_interconnect_handles = h;
+
+	if (!interconnect_resowner_callback_registered)
+	{
+		RegisterResourceReleaseCallback(interconnect_abort_callback, NULL);
+		interconnect_resowner_callback_registered = true;
+	}
+	return h;
+}
+
+static void
+destroy_interconnect_handle(interconnect_handle_t *h)
+{
+	h->interconnect_context = NULL;
+	/* unlink from linked list first */
+	if (h->prev)
+		h->prev->next = h->next;
+	else
+		open_interconnect_handles = h->next;
+	if (h->next)
+		h->next->prev = h->prev;
+
+	pfree(h);
+
+	if (open_interconnect_handles == NULL)
+		MemoryContextReset(InterconnectContext);
+}
+
+static interconnect_handle_t *
+find_interconnect_handle(ChunkTransportState *icContext)
+{
+	interconnect_handle_t *head = open_interconnect_handles;
+	while (head != NULL)
+	{
+		if (head->interconnect_context == icContext)
+			return head;
+		head = head->next;
+	}
+	return NULL;
+}
+
+static void
+cleanup_interconnect_handle(interconnect_handle_t *h)
+{
+	if (h->interconnect_context == NULL)
+	{
+		destroy_interconnect_handle(h);
+		return;
+	}
+	TeardownInterconnect(h->interconnect_context, true /* force EOS */, true);
+}
+
+static void
+interconnect_abort_callback(ResourceReleasePhase phase,
+					   bool isCommit,
+					   bool isTopLevel,
+					   void *arg)
+{
+	interconnect_handle_t *curr;
+	interconnect_handle_t *next;
+
+	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
+		return;
+
+	next = open_interconnect_handles;
+	while (next)
+	{
+		curr = next;
+		next = curr->next;
+
+		if (curr->owner == CurrentResourceOwner)
+		{
+			if (isCommit)
+				elog(WARNING, "interconnect reference leak: %p still referenced", curr);
+
+			cleanup_interconnect_handle(curr);
+		}
 	}
 }

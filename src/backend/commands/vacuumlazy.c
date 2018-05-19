@@ -24,12 +24,12 @@
  * the TID array, just enough to hold as many heap tuples as fit on one page.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.136 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/commands/vacuumlazy.c
  *
  *-------------------------------------------------------------------------
  */
@@ -228,7 +228,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	 * Execute the various vacuum operations. Appendonly tables are treated
 	 * differently.
 	 */
-	if (RelationIsAoRows(onerel) || RelationIsAoCols(onerel))
+	if (RelationIsAppendOptimized(onerel))
 	{
 		lazy_vacuum_aorel(onerel, vacstmt);
 		return;
@@ -470,10 +470,10 @@ static void
 vacuum_log_cleanup_info(Relation rel, LVRelStats *vacrelstats)
 {
 	/*
-	 * No need to log changes for temp tables, they do not contain data
-	 * visible on the standby server.
+	 * Skip this for relations for which no WAL is to be written, or if we're
+	 * not trying to support archive recovery.
 	 */
-	if (rel->rd_istemp || !XLogIsNeeded())
+	if (!RelationNeedsWAL(rel) || !XLogIsNeeded())
 		return;
 
 	/*
@@ -549,9 +549,9 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 	 * of pages.
 	 *
 	 * Before entering the main loop, establish the invariant that
-	 * next_not_all_visible_block is the next block number >= blkno that's
-	 * not all-visible according to the visibility map, or nblocks if there's
-	 * no such block.  Also, we set up the skipping_all_visible_blocks flag,
+	 * next_not_all_visible_block is the next block number >= blkno that's not
+	 * all-visible according to the visibility map, or nblocks if there's no
+	 * such block.	Also, we set up the skipping_all_visible_blocks flag,
 	 * which is needed because we need hysteresis in the decision: once we've
 	 * started skipping blocks, we may as well skip everything up to the next
 	 * not-all-visible block.
@@ -912,8 +912,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		if (nfrozen > 0)
 		{
 			MarkBufferDirty(buf);
-			/* no XLOG for temp tables, though */
-			if (!onerel->rd_istemp)
+			if (RelationNeedsWAL(onerel))
 			{
 				XLogRecPtr	recptr;
 
@@ -951,15 +950,16 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			PageSetAllVisible(page);
 			MarkBufferDirty(buf);
 		}
+
 		/*
 		 * It's possible for the value returned by GetOldestXmin() to move
 		 * backwards, so it's not wrong for us to see tuples that appear to
 		 * not be visible to everyone yet, while PD_ALL_VISIBLE is already
 		 * set. The real safe xmin value never moves backwards, but
 		 * GetOldestXmin() is conservative and sometimes returns a value
-		 * that's unnecessarily small, so if we see that contradiction it
-		 * just means that the tuples that we think are not visible to
-		 * everyone yet actually are, and the PD_ALL_VISIBLE flag is correct.
+		 * that's unnecessarily small, so if we see that contradiction it just
+		 * means that the tuples that we think are not visible to everyone yet
+		 * actually are, and the PD_ALL_VISIBLE flag is correct.
 		 *
 		 * There should never be dead tuples on a page with PD_ALL_VISIBLE
 		 * set, however.
@@ -1015,7 +1015,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 	/* now we can compute the new value for pg_class.reltuples */
 	vacrelstats->new_rel_tuples = vac_estimate_reltuples(onerel, false,
 														 nblocks,
-														 vacrelstats->scanned_pages,
+												  vacrelstats->scanned_pages,
 														 num_tuples);
 
 	/* If any tuples need to be deleted, perform final vacuum cycle */
@@ -1167,7 +1167,7 @@ lazy_vacuum_page(Relation onerel, BlockNumber blkno, Buffer buffer,
 	MarkBufferDirty(buffer);
 
 	/* XLOG stuff */
-	if (!onerel->rd_istemp)
+	if (RelationNeedsWAL(onerel))
 	{
 		XLogRecPtr	recptr;
 
@@ -1297,11 +1297,11 @@ lazy_truncate_heap(Relation onerel, LVRelStats *vacrelstats)
 	if (new_rel_pages != old_rel_pages)
 	{
 		/*
-		 * Note: we intentionally don't update vacrelstats->rel_pages with
-		 * the new rel size here.  If we did, it would amount to assuming that
-		 * the new pages are empty, which is unlikely. Leaving the numbers
-		 * alone amounts to assuming that the new pages have the same tuple
-		 * density as existing ones, which is less unlikely.
+		 * Note: we intentionally don't update vacrelstats->rel_pages with the
+		 * new rel size here.  If we did, it would amount to assuming that the
+		 * new pages are empty, which is unlikely.	Leaving the numbers alone
+		 * amounts to assuming that the new pages have the same tuple density
+		 * as existing ones, which is less unlikely.
 		 */
 		UnlockRelation(onerel, AccessExclusiveLock);
 		return;
@@ -1375,7 +1375,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 	int64       hidden_tupcount;
 	AppendOnlyVisimap visimap;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationIsAppendOptimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
@@ -1447,7 +1447,7 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 {
 	char	   *relname;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationIsAppendOptimized(aorel));
 
 	relname = RelationGetRelationName(aorel);
 	ereport(elevel,

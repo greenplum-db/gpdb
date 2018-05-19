@@ -3,7 +3,7 @@
  *
  * Resource managers definition
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/rmgr.c,v 1.29 2010/02/07 20:48:09 tgl Exp $
+ * src/backend/access/transam/rmgr.c
  */
 #include "postgres.h"
 
@@ -44,7 +44,7 @@ const RmgrData RmgrTable[RM_MAX_ID + 1] = {
 	{"Btree", btree_redo, btree_desc, btree_xlog_startup, btree_xlog_cleanup, btree_safe_restartpoint, btree_mask},
 	{"Hash", hash_redo, hash_desc, NULL, NULL, NULL, NULL},
 	{"Gin", gin_redo, gin_desc, gin_xlog_startup, gin_xlog_cleanup, gin_safe_restartpoint, gin_mask},
-	{"Gist", gist_redo, gist_desc, gist_xlog_startup, gist_xlog_cleanup, gist_safe_restartpoint, gist_mask},
+	{"Gist", gist_redo, gist_desc, gist_xlog_startup, gist_xlog_cleanup, NULL, gist_mask},
 	{"Sequence", seq_redo, seq_desc, NULL, NULL, NULL, seq_mask},
 	{"Bitmap", bitmap_redo, bitmap_desc, bitmap_xlog_startup, bitmap_xlog_cleanup, bitmap_safe_restartpoint, NULL},
 	{"DistributedLog", DistributedLog_redo, DistributedLog_desc, NULL, NULL, NULL, NULL},

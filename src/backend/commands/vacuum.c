@@ -11,16 +11,18 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.410 2010/02/26 02:00:40 momjian Exp $
+ *	  src/backend/commands/vacuum.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
+#include <math.h>
 
 #include "access/clog.h"
 #include "access/genam.h"
@@ -106,10 +108,9 @@ static MemoryContext vac_context = NULL;
 static BufferAccessStrategy vac_strategy;
 
 /* non-export function prototypes */
-static List *get_rel_oids(Oid relid, VacuumStmt *vacstmt,
-			 const char *stmttype);
+static List *get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype);
 static void vac_truncate_clog(TransactionId frozenXID);
-static void vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
+static bool vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		   bool for_wraparound);
 static void scan_index(Relation indrel, double num_tuples,
 					   bool check_stats, int elevel);
@@ -163,7 +164,7 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 {
 	const char *stmttype;
 	volatile bool in_outer_xact,
-	              use_own_xacts;
+				use_own_xacts;
 	List	   *vacuum_relations = NIL;
 	List	   *analyze_relations = NIL;
 
@@ -244,9 +245,11 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	 * partition unless GUC optimizer_analyze_midlevel_partition is set to on.
 	 */
 	if (vacstmt->options & VACOPT_VACUUM)
-		vacuum_relations = get_rel_oids(relid, vacstmt, stmttype);
+	{
+		vacuum_relations = get_rel_oids(relid, vacstmt, VACOPT_VACUUM);
+	}
 	if (vacstmt->options & VACOPT_ANALYZE)
-		analyze_relations = get_rel_oids(relid, vacstmt, stmttype);
+		analyze_relations = get_rel_oids(relid, vacstmt, VACOPT_ANALYZE);
 
 	/*
 	 * Decide whether we need to start/commit our own transactions.
@@ -420,7 +423,7 @@ vacuum_assign_compaction_segno(Relation onerel,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 	Assert(RelationIsValid(onerel));
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationIsAppendOptimized(onerel));
 
 	/*
 	 * Assign a compaction segment num and insert segment num
@@ -1013,12 +1016,19 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
  *
  * The list is built in vac_context so that it will survive across our
  * per-relation transactions.
+ *
+ * 'stmttype' is either VACOPT_VACUUM or VACOPT_ANALYZE, to indicate
+ * whether we should fetch the list for VACUUM or ANALYZE. It's
+ * passed as a separate argument, so that the caller can build
+ * separate lists for a combined "VACUUM ANALYZE".
  */
 static List *
-get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
+get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 {
 	List	   *oid_list = NIL;
 	MemoryContext oldcontext;
+
+	Assert(stmttype == VACOPT_VACUUM || stmttype == VACOPT_ANALYZE);
 
 	/* OID supplied by VACUUM's caller? */
 	if (OidIsValid(relid))
@@ -1029,12 +1039,15 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 	}
 	else if (vacstmt->relation)
 	{
-		if (strcmp(stmttype, "VACUUM") == 0)
+		if (stmttype == VACOPT_VACUUM)
 		{
 			/* Process a specific relation */
 			Oid			relid;
 			List	   *prels = NIL;
 
+			/* the caller should've separated VACUUMs and ANALYZEs into separate
+			 * commands before getting here.
+			 */
 			relid = RangeVarGetRelid(vacstmt->relation, false);
 
 			if (rel_is_partitioned(relid))
@@ -1275,7 +1288,7 @@ vacuum_set_xid_limits(int freeze_min_age,
  *		If we scanned the whole relation then we should just use the count of
  *		live tuples seen; but if we did not, we should not trust the count
  *		unreservedly, especially not in VACUUM, which may have scanned a quite
- *		nonrandom subset of the table.  When we have only partial information,
+ *		nonrandom subset of the table.	When we have only partial information,
  *		we take the old value of pg_class.reltuples as a measurement of the
  *		tuple density in the unscanned pages.
  *
@@ -1287,7 +1300,7 @@ vac_estimate_reltuples(Relation relation, bool is_analyze,
 					   BlockNumber scanned_pages,
 					   double scanned_tuples)
 {
-	BlockNumber	old_rel_pages = relation->rd_rel->relpages;
+	BlockNumber old_rel_pages = relation->rd_rel->relpages;
 	double		old_rel_tuples = relation->rd_rel->reltuples;
 	double		old_density;
 	double		new_density;
@@ -1316,23 +1329,23 @@ vac_estimate_reltuples(Relation relation, bool is_analyze,
 
 	/*
 	 * Okay, we've covered the corner cases.  The normal calculation is to
-	 * convert the old measurement to a density (tuples per page), then
-	 * update the density using an exponential-moving-average approach,
-	 * and finally compute reltuples as updated_density * total_pages.
+	 * convert the old measurement to a density (tuples per page), then update
+	 * the density using an exponential-moving-average approach, and finally
+	 * compute reltuples as updated_density * total_pages.
 	 *
-	 * For ANALYZE, the moving average multiplier is just the fraction of
-	 * the table's pages we scanned.  This is equivalent to assuming
-	 * that the tuple density in the unscanned pages didn't change.  Of
-	 * course, it probably did, if the new density measurement is different.
-	 * But over repeated cycles, the value of reltuples will converge towards
-	 * the correct value, if repeated measurements show the same new density.
+	 * For ANALYZE, the moving average multiplier is just the fraction of the
+	 * table's pages we scanned.  This is equivalent to assuming that the
+	 * tuple density in the unscanned pages didn't change.  Of course, it
+	 * probably did, if the new density measurement is different. But over
+	 * repeated cycles, the value of reltuples will converge towards the
+	 * correct value, if repeated measurements show the same new density.
 	 *
 	 * For VACUUM, the situation is a bit different: we have looked at a
 	 * nonrandom sample of pages, but we know for certain that the pages we
 	 * didn't look at are precisely the ones that haven't changed lately.
 	 * Thus, there is a reasonable argument for doing exactly the same thing
-	 * as for the ANALYZE case, that is use the old density measurement as
-	 * the value for the unscanned pages.
+	 * as for the ANALYZE case, that is use the old density measurement as the
+	 * value for the unscanned pages.
 	 *
 	 * This logic could probably use further refinement.
 	 */
@@ -1404,7 +1417,7 @@ vac_update_relstats_from_list(List *updated_stats)
  *		schema alteration such as adding an index, rule, or trigger.  Otherwise
  *		our updates of relhasindex etc might overwrite uncommitted updates.
  *
- *		This routine is shared by VACUUM and stand-alone ANALYZE.
+ *		This routine is shared by VACUUM and ANALYZE.
  */
 void
 vac_update_relstats(Relation relation,
@@ -1506,21 +1519,12 @@ vac_update_relstats(Relation relation,
 		 relid, pgcform->relpages, pgcform->reltuples);
 	/*
 	 * If we have discovered that there are no indexes, then there's no
-	 * primary key either, nor any exclusion constraints.  This could be done
-	 * more thoroughly...
+	 * primary key either.	This could be done more thoroughly...
 	 */
-	if (!hasindex)
+	if (pgcform->relhaspkey && !hasindex)
 	{
-		if (pgcform->relhaspkey)
-		{
-			pgcform->relhaspkey = false;
-			dirty = true;
-		}
-		if (pgcform->relhasexclusion && pgcform->relkind != RELKIND_INDEX)
-		{
-			pgcform->relhasexclusion = false;
-			dirty = true;
-		}
+		pgcform->relhaspkey = false;
+		dirty = true;
 	}
 
 	/* We also clear relhasrules and relhastriggers if needed */
@@ -1775,7 +1779,7 @@ vacuum_rel_ao_phase(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lm
  * the table, and have a transaction open.
  * On exit, the 'onere' will be closed, and the transaction is closed.
  */
-static void
+static bool
 vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		   bool for_wraparound)
 {
@@ -1856,14 +1860,29 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		 *
 		 * There's a race condition here: the rel may have gone away since the
 		 * last time we saw it.  If so, we don't need to vacuum it.
+		 *
+		 * If we've been asked not to wait for the relation lock, acquire it first
+		 * in non-blocking mode, before calling try_relation_open().
 		 */
-		onerel = try_relation_open(relid, lmode, false /* dontwait */);
+		if (!(vacstmt->options & VACOPT_NOWAIT))
+			onerel = try_relation_open(relid, lmode, false /* nowait */);
+		else if (ConditionalLockRelationOid(relid, lmode))
+			onerel = try_relation_open(relid, NoLock, false /* nowait */);
+		else
+		{
+			onerel = NULL;
+			if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration >= 0)
+				ereport(LOG,
+						(errcode(ERRCODE_LOCK_NOT_AVAILABLE),
+						 errmsg("skipping vacuum of \"%s\" --- lock not available",
+								vacstmt->relation->relname)));
+		}
 
 		if (!onerel)
 		{
 			PopActiveSnapshot();
 			CommitTransactionCommand();
-			return;
+			return false;
 		}
 	}
 
@@ -1898,7 +1917,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		relation_close(onerel, lmode);
 		PopActiveSnapshot();
 		CommitTransactionCommand();
-		return;
+		return false;
 	}
 
 	/*
@@ -1913,12 +1932,12 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		|| RelationIsExternal(onerel))
 	{
 		ereport(WARNING,
-				(errmsg("skipping \"%s\" --- cannot vacuum indexes, views or external tables",
+				(errmsg("skipping \"%s\" --- cannot vacuum non-tables or special system tables",
 						RelationGetRelationName(onerel))));
 		relation_close(onerel, lmode);
 		PopActiveSnapshot();
 		CommitTransactionCommand();
-		return;
+		return false;
 	}
 
 	/*
@@ -1933,7 +1952,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		relation_close(onerel, lmode);
 		PopActiveSnapshot();
 		CommitTransactionCommand();
-		return;
+		return false;
 	}
 
 	/*
@@ -1950,7 +1969,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 
 	if (!is_heap)
 	{
-		Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+		Assert(RelationIsAppendOptimized(onerel));
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), SnapshotNow,
 								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
@@ -2086,7 +2105,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	 * after the drop.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && vacstmt->appendonly_compaction_segno &&
-		(RelationIsAoRows(onerel) || RelationIsAoCols(onerel)))
+		RelationIsAppendOptimized(onerel))
 	{
 		if (vacstmt->appendonly_phase == AOVAC_COMPACT)
 		{
@@ -2187,6 +2206,9 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 			vacuum_rel(NULL, aovisimap_relid, vacstmt_ao_aux, lmode, for_wraparound);
 		}
 	}
+
+	/* Report that we really did it. */
+	return true;
 }
 
 
@@ -2204,7 +2226,7 @@ static bool vacuum_appendonly_index_should_vacuum(Relation aoRelation,
 	int64 hidden_tupcount;
 	FileSegTotals *totals;
 
-	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
+	Assert(RelationIsAppendOptimized(aoRelation));
 
 	if(Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -2262,7 +2284,7 @@ vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt)
 	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
 	int totalSegfiles;
 
-	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
+	Assert(RelationIsAppendOptimized(aoRelation));
 	Assert(vacstmt);
 
 	memset(&vacuumIndexState, 0, sizeof(vacuumIndexState));
@@ -2356,6 +2378,8 @@ vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt)
 }
 
 
+/* GDPB_91_MERGE_FIXME: 'amindexnulls' is gone. Do we need this function anymore? */
+#if 0
 /*
  * Is an index partial (ie, could it contain fewer tuples than the heap?)
  */
@@ -2374,6 +2398,7 @@ vac_is_partial_index(Relation indrel)
 
 	return false;
 }
+#endif
 
 /*
  *	scan_index() -- scan one index relation to update pg_class statistics.
@@ -2421,6 +2446,8 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 			  stats->pages_deleted, stats->pages_free,
 			  pg_rusage_show(&ru0))));
 
+	/* GDPB_91_MERGE_FIXME: vac_is_partial_index() doesn't work. Do we need this sanity check? */
+#if 0 	
 	/*
 	 * Check for tuple count mismatch.	If the index is partial, then it's OK
 	 * for it to have fewer tuples than the heap; else we got trouble.
@@ -2437,6 +2464,7 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 							stats->num_index_tuples, num_tuples),
 					 errhint("Rebuild the index with REINDEX.")));
 	}
+#endif
 
 	pfree(stats);
 }

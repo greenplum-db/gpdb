@@ -9,11 +9,11 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.83 2010/02/26 02:01:14 momjian Exp $
+ *	  src/backend/utils/mmgr/aset.c
  *
  * NOTE:
  *	This is a new (Feb. 05, 1999) implementation of the allocation set
@@ -89,6 +89,39 @@
 #endif
 
 /*--------------------
+ * Chunk freelist k holds chunks of size 1 << (k + ALLOC_MINBITS),
+ * for k = 0 .. ALLOCSET_NUM_FREELISTS-1.
+ *
+ * Note that all chunks in the freelists have power-of-2 sizes.  This
+ * improves recyclability: we may waste some space, but the wasted space
+ * should stay pretty constant as requests are made and released.
+ *
+ * A request too large for the last freelist is handled by allocating a
+ * dedicated block from malloc().  The block still has a block header and
+ * chunk header, but when the chunk is freed we'll return the whole block
+ * to malloc(), not put it on our freelists.
+ *
+ * CAUTION: ALLOC_MINBITS must be large enough so that
+ * 1<<ALLOC_MINBITS is at least MAXALIGN,
+ * or we may fail to align the smallest chunks adequately.
+ * 8-byte alignment is enough on all currently known machines.
+ *
+ * With the current parameters, request sizes up to 8K are treated as chunks,
+ * larger requests go into dedicated blocks.  Change ALLOCSET_NUM_FREELISTS
+ * to adjust the boundary point.  (But in contexts with small maxBlockSize,
+ * we may set the allocChunkLimit to less than 8K, so as to avoid space
+ * wastage.)
+ *--------------------
+ */
+
+#define ALLOC_MINBITS		3	/* smallest chunk size is 8 bytes */
+#define ALLOCSET_NUM_FREELISTS	11
+#define ALLOC_CHUNK_LIMIT	(1 << (ALLOCSET_NUM_FREELISTS-1+ALLOC_MINBITS))
+/* Size of largest chunk that we use a fixed size for */
+#define ALLOC_CHUNK_FRACTION	4
+/* We allow chunks to be at most 1/4 of maxBlockSize (less overhead) */
+
+/*--------------------
  * The first block allocated for an allocset has size initBlockSize.
  * Each time we have to allocate another block, we double the block size
  * (if possible, and without exceeding maxBlockSize), so as to reduce
@@ -125,7 +158,7 @@ typedef struct AllocBlockData
 	AllocSet	aset;			/* aset that owns this block */
 	AllocBlock	next;			/* next block in aset's blocks list */
 	char	   *freeptr;		/* start of free space in this block */
-} AllocBlockData;
+}	AllocBlockData;
 
 /*
  * AllocChunk
@@ -163,7 +196,7 @@ typedef struct AllocChunkData
 	void *prev_chunk;
 	void *next_chunk;
 #endif
-} AllocChunkData;
+}	AllocChunkData;
 
 /*
  * AllocPointerIsValid
@@ -304,9 +337,9 @@ static void dump_mc_for(FILE *file, MemoryContext mc)
 		return;
 
 	AllocSet set = (AllocSet) mc;
-	fprintf(file, "%p|%p|%d|%s|"UINT64_FORMAT"|"UINT64_FORMAT"|%zu|%zu|%zu|%zu|%d", mc, mc->parent, mc->type, mc->name,
+	fprintf(file, "%p|%p|%d|%s|"UINT64_FORMAT"|"UINT64_FORMAT"|%zu|%zu|%zu|%zu", mc, mc->parent, mc->type, mc->name,
 			mc->allBytesAlloc, mc->allBytesFreed, mc->maxBytesHeld,
-			set->initBlockSize, set->maxBlockSize, set->nextBlockSize, set->isReset);
+			set->initBlockSize, set->maxBlockSize, set->nextBlockSize);
 
 #ifdef CDB_PALLOC_CALLER_ID
 	fprintf(file, "|%s|%d", (mc->callerFile == NULL ? "NA" : mc->callerFile), mc->callerLine);
@@ -749,15 +782,20 @@ AllocSetContextCreate(MemoryContext parent,
 	/*
 	 * Compute the allocation chunk size limit for this context.  It can't be
 	 * more than ALLOC_CHUNK_LIMIT because of the fixed number of freelists.
-	 * If maxBlockSize is small then requests exceeding the maxBlockSize
-	 * should be treated as large chunks, too.	We have to have
-	 * allocChunkLimit a power of two, because the requested and
-	 * actually-allocated sizes of any chunk must be on the same side of the
-	 * limit, else we get confused about whether the chunk is "big".
+	 * If maxBlockSize is small then requests exceeding the maxBlockSize, or
+	 * even a significant fraction of it, should be treated as large chunks
+	 * too.  For the typical case of maxBlockSize a power of 2, the chunk size
+	 * limit will be at most 1/8th maxBlockSize, so that given a stream of
+	 * requests that are all the maximum chunk size we will waste at most
+	 * 1/8th of the allocated space.
+	 *
+	 * We have to have allocChunkLimit a power of two, because the requested
+	 * and actually-allocated sizes of any chunk must be on the same side of
+	 * the limit, else we get confused about whether the chunk is "big".
 	 */
 	context->allocChunkLimit = ALLOC_CHUNK_LIMIT;
-	while (context->allocChunkLimit >
-		   (Size) (maxBlockSize - ALLOC_BLOCKHDRSZ - ALLOC_CHUNKHDRSZ))
+	while ((Size) (context->allocChunkLimit + ALLOC_CHUNKHDRSZ) >
+		   (Size) ((maxBlockSize - ALLOC_BLOCKHDRSZ) / ALLOC_CHUNK_FRACTION))
 		context->allocChunkLimit >>= 1;
 
 	/*
@@ -790,8 +828,6 @@ AllocSetContextCreate(MemoryContext parent,
          * memory accounting currently wouldn't track this
          */
 	}
-
-	context->isReset = true;
 
 	context->nullAccountHeader = NULL;
 
@@ -891,10 +927,6 @@ AllocSetReset(MemoryContext context)
 
 	AssertArg(AllocSetIsValid(set));
 
-	/* Nothing to do if no pallocs since startup or last reset */
-	if (set->isReset)
-		return;
-
 #ifdef MEMORY_CONTEXT_CHECKING
 	/* Check for corruption and leaks before freeing */
 	AllocSetCheck(context);
@@ -948,8 +980,6 @@ AllocSetReset(MemoryContext context)
 
 	/* Reset block size allocation sequence, too */
 	set->nextBlockSize = set->initBlockSize;
-
-	set->isReset = true;
 
 	set->nullAccountHeader = NULL;
 }
@@ -1087,7 +1117,6 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 			set->blocks = block;
 		}
 
-		set->isReset = false;
         MemoryContextNoteAlloc(&set->header, blksize);              /*CDB*/
 
 		AllocAllocInfo(set, chunk, isHeader);
@@ -1132,9 +1161,6 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 		/* fill the allocated space with junk */
 		randomize_mem((char *) AllocChunkGetPointer(chunk), size);
 #endif
-
-		/* isReset must be false already */
-		Assert(!set->isReset);
 
 		AllocAllocInfo(set, chunk, isHeader);
 		return AllocChunkGetPointer(chunk);
@@ -1294,8 +1320,6 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	/* fill the allocated space with junk */
 	randomize_mem((char *) AllocChunkGetPointer(chunk), size);
 #endif
-
-	set->isReset = false;
 
 	AllocAllocInfo(set, chunk, isHeader);
 
@@ -1488,9 +1512,6 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 	}
 #endif
 
-	/* isReset must be false already */
-	Assert(!set->isReset);
-
 	/*
 	 * Chunk sizes are aligned to power of 2 in AllocSetAlloc(). Maybe the
 	 * allocated area already is >= the new size.  (In particular, we always
@@ -1657,15 +1678,13 @@ AllocSetGetChunkSpace(MemoryContext context, void *pointer)
 static bool
 AllocSetIsEmpty(MemoryContext context)
 {
-	AllocSet	set = (AllocSet) context;
-
 	/*
 	 * For now, we say "empty" only if the context is new or just reset. We
 	 * could examine the freelists to determine if all space has been freed,
 	 * but it's not really worth the trouble for present uses of this
 	 * functionality.
 	 */
-	if (set->isReset)
+	if (context->isReset)
 		return true;
 	return false;
 }

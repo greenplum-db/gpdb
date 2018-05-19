@@ -3,12 +3,12 @@
  * fseeko.c
  *	  64-bit versions of fseeko/ftello()
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/fseeko.c,v 1.25 2010/05/15 10:14:20 momjian Exp $
+ *	  src/port/fseeko.c
  *
  *-------------------------------------------------------------------------
  */

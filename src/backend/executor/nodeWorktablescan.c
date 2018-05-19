@@ -3,12 +3,12 @@
  * nodeWorktablescan.c
  *	  routines to handle WorkTableScan nodes.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeWorktablescan.c,v 1.10 2010/01/02 16:57:45 momjian Exp $
+ *	  src/backend/executor/nodeWorktablescan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -212,13 +212,13 @@ ExecEndWorkTableScan(WorkTableScanState *node)
 }
 
 /* ----------------------------------------------------------------
- *		ExecWorkTableScanReScan
+ *		ExecReScanWorkTableScan
  *
  *		Rescans the relation.
  * ----------------------------------------------------------------
  */
 void
-ExecWorkTableScanReScan(WorkTableScanState *node, ExprContext *exprCtxt)
+ExecReScanWorkTableScan(WorkTableScanState *node)
 {
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 

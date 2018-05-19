@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/bcc32.mak,v 1.5 2007/03/05 14:18:38 mha Exp $
+# src/bcc32.mak
 
 # Makefile for Borland C++ 5.5 (or compat)
 # Top-file makefile for building Win32 libpq with Borland C++.
@@ -19,17 +19,17 @@
 
 !IF "$(OS)" == "Windows_NT"
 NULL=
-!ELSE 
+!ELSE
 NULL=nul
-!ENDIF 
+!ENDIF
 
-ALL: 
+ALL:
    cd include
    if not exist pg_config.h copy pg_config.h.win32 pg_config.h
    if not exist pg_config_os.h copy port\win32.h pg_config_os.h
    cd ..
    cd interfaces\libpq
-   make -N -DCFG=$(CFG) /f bcc32.mak 
+   make -N -DCFG=$(CFG) /f bcc32.mak
    cd ..\..
    echo All Win32 parts have been built!
 

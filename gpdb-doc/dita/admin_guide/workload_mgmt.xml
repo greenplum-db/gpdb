@@ -239,6 +239,15 @@
         unbounded amounts of memory.</p>
       <p>For more information on configuring memory limits on a resource queue, and other memory
         utilization controls, see <xref href="#topic12" type="topic" format="dita"/>.</p>
+    <section id="topic113x" xml:lang="en">
+      <title>statement_mem and Low Memory Queries</title>
+        <p>A low <codeph>statement_mem</codeph> setting (for example, in the 
+          1-3MB range) has been shown
+          to increase the performance of queries with low memory requirements. Use
+          the <codeph>statement_mem</codeph> server configuration parameter to
+          override the setting on a per-query basis. For example:
+          <codeblock>SET statement_mem='2MB';</codeblock></p>
+    </section>
     </body>
   </topic>
   <topic id="priorities">

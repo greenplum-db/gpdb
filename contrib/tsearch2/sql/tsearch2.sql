@@ -1,12 +1,4 @@
---
--- first, define the datatype.  Turn off echoing so that expected file
--- does not depend on contents of tsearch2.sql.
---
-SET client_min_messages = warning;
-\set ECHO none
-\i tsearch2.sql
-\set ECHO all
-RESET client_min_messages;
+CREATE EXTENSION tsearch2;
 
 --tsvector
 SELECT '1'::tsvector;
@@ -170,8 +162,8 @@ SELECT length(to_tsvector('english', '345 qwe@efd.r '' http://www.com/ http://ae
 <i <b> wow  < jqw <> qwerty'));
 
 
-select to_tsquery('english', 'qwe & sKies '); 
-select to_tsquery('simple', 'qwe & sKies '); 
+select to_tsquery('english', 'qwe & sKies ');
+select to_tsquery('simple', 'qwe & sKies ');
 select to_tsquery('english', '''the wether'':dc & ''           sKies '':BC ');
 select to_tsquery('english', 'asd&(and|fghj)');
 select to_tsquery('english', '(asd&and)|fghj');
@@ -290,7 +282,7 @@ An hour of storm to place
 The sculpture of these granite seams,
 Upon a woman s face. E.  J.  Pratt  (1882 1964)
 ', to_tsquery('sea&thousand&years'));
- 
+
 select headline('Erosion It took the sea a thousand years,
 A thousand years to trace
 The granite features of this cliff
@@ -300,7 +292,7 @@ An hour of storm to place
 The sculpture of these granite seams,
 Upon a woman s face. E.  J.  Pratt  (1882 1964)
 ', to_tsquery('granite&sea'));
- 
+
 select headline('Erosion It took the sea a thousand years,
 A thousand years to trace
 The granite features of this cliff
@@ -323,7 +315,7 @@ ff-bg
        document.write(15);
 </script>
 </body>
-</html>', 
+</html>',
 to_tsquery('sea&foo'), 'HighlightAll=true');
 --check debug
 select * from public.ts_debug('Tsearch module for PostgreSQL 7.3.3');
@@ -342,4 +334,3 @@ SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
-

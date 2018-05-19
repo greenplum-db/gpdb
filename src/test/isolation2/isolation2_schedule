@@ -1,3 +1,9 @@
+test: select_for_update
+#test for global distributed deadlock detector
+test: gdd/prepare
+test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/local-deadlock-03 gdd/non-lock-105 gdd/non-lock-107
+test: gdd/avoid-qd-deadlock
+
 test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 
 test: reindex
@@ -131,6 +137,6 @@ test: reindex/reindextable_while_reindex_idx_ao_bitmap reindex/reindextable_whil
 test: reindex/serializable_reindex_with_drop_column_ao_part reindex/serializable_reindex_with_drop_column_heap
 test: reindex/serializable_reindex_with_drop_column_part_heap
 test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reindex_with_drop_index_heap
-test: reindex/serializable_reindex_with_insert_heap
-test: reindex/serializable_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
+test: reindex/repeatable_read_reindex_with_insert_heap
+test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast

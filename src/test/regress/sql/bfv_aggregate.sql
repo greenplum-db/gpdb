@@ -169,19 +169,19 @@ create table foo(a int, b text) distributed by (a);
 -- TEST
 insert into foo values (1,'aaa'), (2,'bbb'), (3,'ccc');
 -- should fall back
-select string_agg(b) over (partition by a) from foo order by 1;
-select string_agg(b) over (partition by a,b) from foo order by 1;
+select string_agg(b, '') over (partition by a) from foo order by 1;
+select string_agg(b, '') over (partition by a,b) from foo order by 1;
 -- should not fall back
 select max(b) over (partition by a) from foo order by 1;
 select count_operator('select max(b) over (partition by a) from foo order by 1;', 'Table Scan');
 -- fall back
-select string_agg(b) over (partition by a+1) from foo order by 1;
-select string_agg(b || 'txt') over (partition by a) from foo order by 1;
-select string_agg(b || 'txt') over (partition by a+1) from foo order by 1;
+select string_agg(b, '') over (partition by a+1) from foo order by 1;
+select string_agg(b || 'txt', '') over (partition by a) from foo order by 1;
+select string_agg(b || 'txt', '') over (partition by a+1) from foo order by 1;
 -- fall back
-select string_agg(b) over (partition by a order by a) from foo order by 1;
-select string_agg(b || 'txt') over (partition by a,b order by a,b) from foo order by 1;
-select '1' || string_agg(b) over (partition by a+1 order by a+1) from foo;
+select string_agg(b, '') over (partition by a order by a) from foo order by 1;
+select string_agg(b || 'txt', '') over (partition by a,b order by a,b) from foo order by 1;
+select '1' || string_agg(b, '') over (partition by a+1 order by a+1) from foo;
 
 
 -- Test for a bug in memtuple compute_null_save() function, where the result value
@@ -1380,7 +1380,7 @@ select array_agg(a order by b desc nulls last) from aggordertest;
 
 -- begin MPP-14125: if prelim function is missing, do not choose hash agg.
 create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
-explain select string_agg(a) from mpp14125 group by b;
+explain select string_agg(a, '') from mpp14125 group by b;
 -- end MPP-14125
 
 -- Test unsupported ORCA feature: agg(set returning function)

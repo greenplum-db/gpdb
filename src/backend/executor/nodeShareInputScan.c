@@ -109,11 +109,16 @@ init_tuplestore_state(ShareInputScanState *node)
 
 		node->ts_state->sortstore = tuplesort_begin_heap_file_readerwriter(
 			&node->ss,
-			rwfile_prefix, false,
-			NULL,
-			0, NULL,
-			NULL, NULL,
-			PlanStateOperatorMemKB((PlanState *) node), true);
+			rwfile_prefix,
+			false, /* isWriter */
+			NULL, /* tupDesc */
+			0, /* nkeys */
+			NULL, /* attNums */
+			NULL, /* sortOperators */
+			NULL, /* sortCollations */
+			NULL, /* nullsFirstFlags */
+			PlanStateOperatorMemKB((PlanState *) node),
+			true /* randomAccess */);
 
 		tuplesort_begin_pos(node->ts_state->sortstore, (TuplesortPos **)(&node->ts_pos));
 		tuplesort_rescan_pos(node->ts_state->sortstore, (TuplesortPos *)node->ts_pos);
@@ -321,10 +326,11 @@ void ExecEndShareInputScan(ShareInputScanState *node)
 }
 
 /* ------------------------------------------------------------------
- * 	ExecShareInputScanReScan
+ * 	ExecReScanShareInputScan
  * ------------------------------------------------------------------
  */
-void ExecShareInputScanReScan(ShareInputScanState *node, ExprContext *exprCtxt)
+void
+ExecReScanShareInputScan(ShareInputScanState *node)
 {
 	/* if first time call, need to initialize the tuplestore state */
 	if(node->ts_state == NULL)
@@ -401,7 +407,7 @@ sisc_lockname(char *p, int size, int share_id, const char* name)
 
 	snprintf(filename, sizeof(filename),
 			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
-			 Gp_segment, gp_session_id, gp_command_count, share_id, name);
+			 GpIdentity.segindex, gp_session_id, gp_command_count, share_id, name);
 
 	path = GetTempFilePath(filename, true);
 	if (strlen(path) >= size)

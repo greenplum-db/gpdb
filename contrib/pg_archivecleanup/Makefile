@@ -1,7 +1,7 @@
-# $PostgreSQL: pgsql/contrib/pg_archivecleanup/Makefile,v 1.1 2010/06/14 16:19:24 sriggs Exp $
+# contrib/pg_archivecleanup/Makefile
 
 PGFILEDESC = "pg_archivecleanup - cleans archive when used with streaming replication"
-PGAPPICON=win32
+PGAPPICON = win32
 
 PROGRAM = pg_archivecleanup
 OBJS	= pg_archivecleanup.o

@@ -2,13 +2,13 @@
 #
 # PostgreSQL documentation makefile
 #
-# $PostgreSQL: pgsql/doc/src/sgml/Makefile,v 1.148 2010/06/12 21:40:31 tgl Exp $
+# doc/src/sgml/Makefile
 #
 #----------------------------------------------------------------------------
 
 # This makefile is for building and installing the documentation.
 # When a release tarball is created, the documentation files are
-# prepared using the distprep target.  In CVS-based trees these files
+# prepared using the distprep target.  In Git-based trees these files
 # don't exist, unless explicitly built, so we skip the installation in
 # that case.
 
@@ -52,7 +52,7 @@ override XSLTPROCFLAGS += --stringparam pg.version '$(VERSION)'
 
 
 GENERATED_SGML = bookindex.sgml version.sgml \
-	features-supported.sgml features-unsupported.sgml
+	features-supported.sgml features-unsupported.sgml errcodes-table.sgml
 
 ALLSGML := $(wildcard $(srcdir)/*.sgml $(srcdir)/ref/*.sgml) $(GENERATED_SGML)
 
@@ -64,7 +64,7 @@ CATALOG = -c $(DOCBOOKSTYLE)/catalog
 endif
 
 # Enable some extra warnings
-# -wfully-tagged needed to throw a warning on missing tags 
+# -wfully-tagged needed to throw a warning on missing tags
 # for older tool chains, 2007-08-31
 # Note: try "make SPFLAGS=-wxml" to catch a lot of other dubious constructs,
 # in particular < and & that haven't been made into entities.  It's far too
@@ -126,8 +126,8 @@ bookindex.sgml: HTML.index
 # changes.
 version.sgml: $(top_srcdir)/configure
 	{ \
-	  echo "<!entity version \"$(VERSION)\">"; \
-	  echo "<!entity majorversion \"$(MAJORVERSION)\">"; \
+	  echo "<!ENTITY version \"$(VERSION)\">"; \
+	  echo "<!ENTITY majorversion \"$(MAJORVERSION)\">"; \
 	} > $@
 
 features-supported.sgml: $(top_srcdir)/src/backend/catalog/sql_feature_packages.txt $(top_srcdir)/src/backend/catalog/sql_features.txt
@@ -136,6 +136,8 @@ features-supported.sgml: $(top_srcdir)/src/backend/catalog/sql_feature_packages.
 features-unsupported.sgml: $(top_srcdir)/src/backend/catalog/sql_feature_packages.txt $(top_srcdir)/src/backend/catalog/sql_features.txt
 	$(PERL) $(srcdir)/mk_feature_tables.pl NO $^ > $@
 
+errcodes-table.sgml: $(top_srcdir)/src/backend/utils/errcodes.txt generate-errcodes-table.pl
+	$(PERL) $(srcdir)/generate-errcodes-table.pl $< > $@
 
 ##
 ## Print
@@ -218,9 +220,9 @@ HISTORY.html: generate_history.pl $(wildcard $(srcdir)/release*.sgml)
 	rm tempfile_HISTORY.sgml
 
 regress_README.html: regress.sgml
-	( echo '<!doctype chapter PUBLIC "-//OASIS//DTD DocBook V4.2//EN" ['; \
-	  echo '<!entity % standalone-ignore "IGNORE">'; \
-	  echo '<!entity % standalone-include "INCLUDE"> ]>'; \
+	( echo '<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook V4.2//EN" ['; \
+	  echo '<!ENTITY % standalone-ignore "IGNORE">'; \
+	  echo '<!ENTITY % standalone-include "INCLUDE"> ]>'; \
 	  cat $< ) >tempfile_regress_README.sgml
 	$(JADE.text) -V nochunks tempfile_regress_README.sgml > $@
 	rm tempfile_regress_README.sgml
@@ -277,7 +279,7 @@ MAKEINFO = makeinfo
 ##
 
 # Quick syntax check without style processing
-check: postgres.sgml $(ALMOSTALLSGML) check-tabs
+check maintainer-check: postgres.sgml $(ALMOSTALLSGML) check-tabs
 	$(NSGMLS) $(SPFLAGS) $(SGMLINCLUDE) -s $<
 
 

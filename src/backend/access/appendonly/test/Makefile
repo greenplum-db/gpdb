@@ -6,8 +6,6 @@ TARGETS=aomd appendonly_visimap appendonlywriter appendonly_visimap_entry
 
 include $(top_builddir)/src/backend/mock.mk
 
-aomd.t: $(MOCK_DIR)/backend/catalog/catalog_mock.o
-
 appendonly_visimap.t: \
 	$(MOCK_DIR)/backend/access/appendonly/appendonly_visimap_entry_mock.o \
 	$(MOCK_DIR)/backend/access/appendonly/appendonly_visimap_store_mock.o \

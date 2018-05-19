@@ -31,24 +31,28 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $PostgreSQL: pgsql/src/port/getopt_long.c,v 1.8 2009/06/11 14:49:15 momjian Exp $
+ * src/port/getopt_long.c
  */
 
 #include "c.h"
 
 #include "getopt_long.h"
 
-#ifndef HAVE_INT_OPTRESET
-int			optreset;
-
-/* else the "extern" was provided by getopt_long.h */
-#endif
-
 #define BADCH	'?'
 #define BADARG	':'
 #define EMSG	""
 
 
+/*
+ * getopt_long
+ *	Parse argc/argv argument vector, with long options.
+ *
+ * This implementation does not use optreset.  Instead, we guarantee that
+ * it can be restarted on a new argv array after a previous call returned -1,
+ * if the caller resets optind to 1 before the first call of the new series.
+ * (Internally, this means we must be sure to reset "place" to EMSG before
+ * returning -1.)
+ */
 int
 getopt_long(int argc, char *const argv[],
 			const char *optstring,
@@ -57,10 +61,8 @@ getopt_long(int argc, char *const argv[],
 	static char *place = EMSG;	/* option letter processing */
 	char	   *oli;			/* option letter list index */
 
-	if (optreset || !*place)
+	if (!*place)
 	{							/* update scanning pointer */
-		optreset = 0;
-
 		if (optind >= argc)
 		{
 			place = EMSG;

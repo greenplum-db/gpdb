@@ -9,6 +9,15 @@ from gp_segment_configuration where content = 0 and role = 'p';
 -- to make test deterministic and fast
 -- start_ignore
 \!gpconfig -c gp_fts_probe_retries -v 2 --masteronly
+-- end_ignore
+
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery. Approximately we want to wait 30 seconds.
+-- start_ignore
+\!gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly
+\!gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
 show gp_fts_probe_retries;
@@ -20,6 +29,7 @@ select role, preferred_role, mode from gp_segment_configuration where content = 
 -- test other scenario where recovery on primary is hung and hence FTS marks
 -- primary down and promotes mirror. When 'fts_recovery_in_progress' is set to
 -- skip it mimics the behavior of hung recovery on primary.
+
 select gp_inject_fault('fts_recovery_in_progress', 'skip', '', '', '', -1, 0, dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
 -- We call gp_request_fts_probe_scan twice to guarantee that the scan happens
@@ -67,6 +77,8 @@ select role, preferred_role, mode from gp_segment_configuration where content = 
 
 -- start_ignore
 \!gpconfig -r gp_fts_probe_retries --masteronly
+\!gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly
+\!gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
 

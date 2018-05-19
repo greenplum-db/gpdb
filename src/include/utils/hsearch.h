@@ -4,10 +4,10 @@
  *	  exported definitions for utils/hash/dynahash.c; see notes therein
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/hsearch.h,v 1.50 2010/01/02 16:58:10 momjian Exp $
+ * src/include/utils/hsearch.h
  *
  *-------------------------------------------------------------------------
  */
@@ -92,6 +92,7 @@ typedef struct HASHCTL
 #define HASH_CONTEXT	0x200	/* Set memory allocation context */
 #define HASH_COMPARE	0x400	/* Set user defined comparison function */
 #define HASH_KEYCOPY	0x800	/* Set user defined key-copying function */
+#define HASH_FIXED_SIZE 0x1000	/* Initial size is a hard limit */
 
 
 /* max_dsize value to indicate expansible directory */

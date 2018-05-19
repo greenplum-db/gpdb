@@ -17,7 +17,7 @@ SELECT * FROM rg_spill_status;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20;
 SELECT * FROM rg_spill_status;
 
--- positive, memory_spill_ratio range is [0, 2147483647]
+-- positive, memory_spill_ratio range is [0, 100]
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
 SELECT * FROM rg_spill_status;
 
@@ -30,8 +30,8 @@ ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20.0;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO a;
 SELECT * FROM rg_spill_status;
 
--- negative: memory_spill_ratio is negative
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
+-- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
 SELECT * FROM rg_spill_status;
 
 -- cleanup

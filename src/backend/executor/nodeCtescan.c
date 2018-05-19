@@ -3,12 +3,12 @@
  * nodeCtescan.c
  *	  routines to handle CteScan nodes.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeCtescan.c,v 1.8 2010/01/02 16:57:41 momjian Exp $
+ *	  src/backend/executor/nodeCtescan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -296,13 +296,13 @@ ExecEndCteScan(CteScanState *node)
 }
 
 /* ----------------------------------------------------------------
- *		ExecCteScanReScan
+ *		ExecReScanCteScan
  *
  *		Rescans the relation.
  * ----------------------------------------------------------------
  */
 void
-ExecCteScanReScan(CteScanState *node, ExprContext *exprCtxt)
+ExecReScanCteScan(CteScanState *node)
 {
 	Tuplestorestate *tuplestorestate = node->leader->cte_table;
 

@@ -255,7 +255,7 @@ extern AOCSAddColumnDesc aocs_addcol_init(
 		Relation rel, int num_newcols);
 extern void aocs_addcol_newsegfile(
 		AOCSAddColumnDesc desc, AOCSFileSegInfo *seginfo, char *basepath,
-		RelFileNode relfilenode);
+		RelFileNodeBackend relfilenode);
 extern void aocs_addcol_closefiles(AOCSAddColumnDesc desc);
 extern void aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum);
 extern void aocs_addcol_insert_datum(AOCSAddColumnDesc desc,

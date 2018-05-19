@@ -1,4 +1,0 @@
-drop view v1 cascade;
-psql:/path/sql_file:1: ERROR:  view "v1" does not exist
-drop function if exists viewfunc();
-DROP FUNCTION

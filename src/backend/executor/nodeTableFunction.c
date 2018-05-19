@@ -74,6 +74,14 @@ setupFunctionArguments(TableFunctionState *node)
 	ListCell	*arg	  = NULL;
 	bool		 argDone;
 
+	/* Initialize the function call info */
+	InitFunctionCallInfoData(node->fcinfo,                    /* Fcinfo  */
+							 &(node->fcache->func),           /* Flinfo  */
+							 list_length(node->fcache->args), /* Nargs   */
+							 InvalidOid,					  /* input_collation */
+							 (Node *) node,                   /* Context */
+							 (Node *) &(node->rsinfo));       /* ResultInfo */
+
 	/* Evaluate the static function args */
 	argDone = ExecEvalFuncArgs(&node->fcinfo, 
 							   node->fcache->args, 
@@ -373,7 +381,8 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 			/* Record data type: Construct tuple desc based on rangeTable */
 			resultdesc = BuildDescFromLists(rte->eref->colnames,
 											rte->funccoltypes,
-											rte->funccoltypmods);
+											rte->funccoltypmods,
+											rte->funccolcollations);
 			scanstate->is_rowtype = true;
 			break;
 		}
@@ -426,16 +435,8 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 
 	scanstate->userdata = rte->funcuserdata;
 	/* Initialize a function cache for the function expression */
-	init_fcache(func->funcid, scanstate->fcache, 
-				econtext->ecxt_per_query_memory, 
-				true);
-
-	/* Initialize the function call info */
-	InitFunctionCallInfoData(scanstate->fcinfo,               /* Fcinfo  */
-							 &(scanstate->fcache->func),      /* Flinfo  */
-							 0,                               /* Nargs   */
-							 (Node*) scanstate,               /* Context */
-							 (Node*) &(scanstate->rsinfo));   /* ResultInfo */
+	init_fcache(func->funcid, func->inputcollid, scanstate->fcache, 
+				econtext->ecxt_per_query_memory, true);
 
 	/* setup the AnyTable input */
 	scanstate->inputscan->econtext = econtext;
@@ -475,7 +476,7 @@ ExecEndTableFunction(TableFunctionState *node)
 }
 
 void
-ExecReScanTableFunction(TableFunctionState *node, ExprContext *exprCtxt)
+ExecReScanTableFunction(TableFunctionState *node)
 {
 	/* TableFunction Planner marks TableFunction nodes as not rescannable */
 	elog(ERROR, "invalid rescan of TableFunctionScan");
@@ -515,6 +516,7 @@ HeapTuple
 AnyTable_GetNextTuple(AnyTable t)
 {
 	MemoryContext oldcontext;
+	TupleTableSlot *slot;
 
 	if (t == NULL)
 	{
@@ -538,7 +540,14 @@ AnyTable_GetNextTuple(AnyTable t)
 	 * 3) copy result into a HeapTuple
 	 * ----------------------------------------
 	 */
-	return ExecRemoveJunk(t->junkfilter, t->econtext->ecxt_outertuple);
+
+	/* GDPB_91_MERGE_FIXME: We used to call  ExecRemoveJunk here, but it
+	 * was removed in the upstream. I copied the implementation of
+	 * ExecRemoveJunk here, but based on the commit message (2e852e541c),
+	 * I don't think we should be doing this either
+	 */
+	slot = ExecFilterJunk(t->junkfilter, t->econtext->ecxt_outertuple);
+	return ExecCopySlotHeapTuple(slot);
 }
 
 /*

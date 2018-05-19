@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/initdb.sgml,v 1.47 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/initdb.sgml
 PostgreSQL documentation
 -->
 
@@ -22,9 +22,9 @@ PostgreSQL documentation
  <refsynopsisdiv>
   <cmdsynopsis>
    <command>initdb</command>
-   <arg rep="repeat"><replaceable>option</></arg>
+   <arg rep="repeat"><replaceable>option</replaceable></arg>
    <group choice="plain">
-    <arg>--pgdata </arg>
+    <arg>--pgdata</arg>
     <arg>-D </arg>
     <replaceable>directory</replaceable>
    </group>
@@ -47,8 +47,8 @@ PostgreSQL documentation
    which the database data will live, generating the shared catalog
    tables (tables that belong to the whole cluster rather than to any
    particular database), and creating the <literal>template1</literal>
-   and <literal>postgres</literal> databases. When you later create a 
-   new database, everything in the <literal>template1</literal> database is 
+   and <literal>postgres</literal> databases. When you later create a
+   new database, everything in the <literal>template1</literal> database is
    copied.  (Therefore, anything installed in <literal>template1</literal>
    is automatically copied into each database created later.)
    The <literal>postgres</literal> database is a default database meant
@@ -89,7 +89,7 @@ PostgreSQL documentation
    <option>--lc-collate</option> and <option>--lc-ctype</option> options.
    Collation orders other than <literal>C</> or <literal>POSIX</> also have
    a performance penalty.  For these reasons it is important to choose the
-   right locale when running <command>initdb</command>. 
+   right locale when running <command>initdb</command>.
   </para>
 
   <para>
@@ -120,7 +120,7 @@ PostgreSQL documentation
        <para>
         This option specifies the authentication method for local users
         used in <filename>pg_hba.conf</>.  Do not use <literal>trust</>
-        unless you trust all local users on your system.  <literal>Trust</> 
+        unless you trust all local users on your system.  <literal>Trust</>
         is the default for ease of installation.
        </para>
       </listitem>
@@ -209,16 +209,14 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-X <replaceable class="parameter">directory</replaceable></option></term>
-      <term><option>--xlogdir=<replaceable class="parameter">directory</replaceable></option></term>
+      <term><option>--pwfile=<replaceable>filename</></option></term>
       <listitem>
        <para>
-        This option specifies the directory where the transaction log
-        should be stored.
+        Makes <command>initdb</command> read the database superuser's password
+        from a file.  The first line of the file is taken as the password.
        </para>
       </listitem>
      </varlistentry>
-
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></option></term>
       <term><option>--username=<replaceable class="parameter">username</replaceable></option></term>
@@ -233,7 +231,7 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
- 
+
      <varlistentry>
       <term><option>-W</option></term>
       <term><option>--pwprompt</option></term>
@@ -249,11 +247,12 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>--pwfile=<replaceable>filename</></option></term>
+      <term><option>-X <replaceable class="parameter">directory</replaceable></option></term>
+      <term><option>--xlogdir=<replaceable class="parameter">directory</replaceable></option></term>
       <listitem>
        <para>
-        Makes <command>initdb</command> read the database superuser's password
-        from a file.  The first line of the file is taken as the password.
+        This option specifies the directory where the transaction log
+        should be stored.
        </para>
       </listitem>
      </varlistentry>

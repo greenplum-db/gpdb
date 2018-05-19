@@ -1,21 +1,30 @@
 # Stuff shipped in tarballs
-*.html
-*.[1-9]
+/html/
+/html-stamp
+/man1/
+/man3/
+/man7/
+/man-stamp
 # Other popular build targets
 /HISTORY
 /INSTALL
 /regress_README
 /postgres-US.pdf
 /postgres-A4.pdf
+/postgres.html
+/postgres.txt
 # GENERATED_SGML
 /features-supported.sgml
 /features-unsupported.sgml
+/errcodes-table.sgml
 /version.sgml
 /bookindex.sgml
 /HTML.index
-/HTML.index.start
 # Assorted byproducts from building the above
 /postgres.xml
+/HISTORY.html
+/INSTALL.html
+/regress_README.html
 /postgres-US.aux
 /postgres-US.log
 /postgres-US.out

@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opfamily.h,v 1.14 2010/01/14 16:31:09 teodor Exp $
+ * src/include/catalog/pg_opfamily.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -65,6 +65,7 @@ typedef FormData_pg_opfamily *Form_pg_opfamily;
 
 DATA(insert OID =  421 (	403		abstime_ops		PGNSP PGUID ));
 DATA(insert OID =  397 (	403		array_ops		PGNSP PGUID ));
+DATA(insert OID =  627 (	405		array_ops		PGNSP PGUID ));
 DATA(insert OID =  423 (	403		bit_ops			PGNSP PGUID ));
 DATA(insert OID =  424 (	403		bool_ops		PGNSP PGUID ));
 #define BOOL_BTREE_FAM_OID 424

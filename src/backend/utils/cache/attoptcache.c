@@ -6,11 +6,11 @@
  * Attribute options are cached separately from the fixed-size portion of
  * pg_attribute entries, which are handled by the relcache.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/attoptcache.c,v 1.3 2010/02/26 02:01:11 momjian Exp $
+ *	  src/backend/utils/cache/attoptcache.c
  *
  *-------------------------------------------------------------------------
  */

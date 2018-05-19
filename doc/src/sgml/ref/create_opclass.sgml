@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_opclass.sgml,v 1.25 2010/04/03 07:22:58 petere Exp $
+doc/src/sgml/ref/create_opclass.sgml
 PostgreSQL documentation
 -->
 
@@ -23,7 +23,7 @@ PostgreSQL documentation
 <synopsis>
 CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAULT ] FOR TYPE <replaceable class="parameter">data_type</replaceable>
   USING <replaceable class="parameter">index_method</replaceable> [ FAMILY <replaceable class="parameter">family_name</replaceable> ] AS
-  {  OPERATOR <replaceable class="parameter">strategy_number</replaceable> <replaceable class="parameter">operator_name</replaceable> [ ( <replaceable class="parameter">op_type</replaceable>, <replaceable class="parameter">op_type</replaceable> ) ]
+  {  OPERATOR <replaceable class="parameter">strategy_number</replaceable> <replaceable class="parameter">operator_name</replaceable> [ ( <replaceable class="parameter">op_type</replaceable>, <replaceable class="parameter">op_type</replaceable> ) ] [ FOR SEARCH | FOR ORDER BY <replaceable class="parameter">sort_family_name</replaceable> ]
    | FUNCTION <replaceable class="parameter">support_number</replaceable> [ ( <replaceable class="parameter">op_type</replaceable> [ , <replaceable class="parameter">op_type</replaceable> ] ) ] <replaceable class="parameter">function_name</replaceable> ( <replaceable class="parameter">argument_type</replaceable> [, ...] )
    | STORAGE <replaceable class="parameter">storage_type</replaceable>
   } [, ... ]
@@ -39,7 +39,7 @@ CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAUL
    an index.  The operator class specifies that certain operators will fill
    particular roles or <quote>strategies</> for this data type and this
    index method.  The operator class also specifies the support procedures to
-   be used by 
+   be used by
    the index method when the operator class is selected for an
    index column.  All the operators and functions used by an operator
    class must be defined before the operator class can be created.
@@ -80,7 +80,7 @@ CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAUL
    Refer to <xref linkend="xindex"> for further information.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -181,6 +181,22 @@ CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAUL
    </varlistentry>
 
    <varlistentry>
+    <term><replaceable class="parameter">sort_family_name</replaceable></term>
+    <listitem>
+     <para>
+      The name (optionally schema-qualified) of an existing <literal>btree</literal> operator
+      family that describes the sort ordering associated with an ordering
+      operator.
+     </para>
+
+     <para>
+      If neither <literal>FOR SEARCH</> nor <literal>FOR ORDER BY</> is
+      specified, <literal>FOR SEARCH</> is the default.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><replaceable class="parameter">support_number</replaceable></term>
     <listitem>
      <para>
@@ -228,7 +244,7 @@ CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAUL
    clauses can appear in any order.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Notes</title>
 
@@ -250,18 +266,18 @@ CREATE OPERATOR CLASS <replaceable class="parameter">name</replaceable> [ DEFAUL
    Before <productname>PostgreSQL</productname> 8.4, the <literal>OPERATOR</>
    clause could include a <literal>RECHECK</> option.  This is no longer
    supported because whether an index operator is <quote>lossy</> is now
-   determined on-the-fly at runtime.  This allows efficient handling of
+   determined on-the-fly at run time.  This allows efficient handling of
    cases where an operator might or might not be lossy.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Examples</title>
 
   <para>
    The following example command defines a GiST index operator class
-   for the data type <literal>_int4</> (array of <type>int4</type>).  See
-   <filename>contrib/intarray/</> for the complete example.
+   for the data type <literal>_int4</> (array of <type>int4</type>).  See the
+   <xref linkend="intarray"> module for the complete example.
   </para>
 
 <programlisting>
@@ -279,9 +295,9 @@ CREATE OPERATOR CLASS gist__int_ops
         FUNCTION        5       g_int_penalty (internal, internal, internal),
         FUNCTION        6       g_int_picksplit (internal, internal),
         FUNCTION        7       g_int_same (_int4, _int4, internal);
-</programlisting>  
+</programlisting>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

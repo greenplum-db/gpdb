@@ -161,13 +161,14 @@ InvokeExtProtocol(void *ptr, size_t nbytes, URL_CUSTOM_FILE *file, CopyState pst
 	extprotocol->prot_databuf  = (last_call ? NULL : (char *)ptr);
 	extprotocol->prot_maxbytes = nbytes;
 	extprotocol->prot_last_call = last_call;
-	
+
 	InitFunctionCallInfoData(/* FunctionCallInfoData */ fcinfo,
 							 /* FmgrInfo */ extprotocol_udf,
 							 /* nArgs */ 0,
+							 /* collation */ InvalidOid,
 							 /* Call Context */ (Node *) extprotocol,
 							 /* ResultSetInfo */ NULL);
-	
+
 	/* invoke the protocol within a designated memory context */
 	oldcontext = MemoryContextSwitchTo(file->protcxt);
 	d = FunctionCallInvoke(&fcinfo);

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select_into.sgml,v 1.45 2010/04/03 07:23:02 petere Exp $
+doc/src/sgml/ref/select_into.sgml
 PostgreSQL documentation
 -->
 
@@ -24,12 +24,12 @@ PostgreSQL documentation
 [ WITH [ RECURSIVE ] <replaceable class="parameter">with_query</replaceable> [, ...] ]
 SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replaceable> [, ...] ) ] ]
     * | <replaceable class="parameter">expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...]
-    INTO [ TEMPORARY | TEMP ] [ TABLE ] <replaceable class="parameter">new_table</replaceable>
+    INTO [ TEMPORARY | TEMP | UNLOGGED ] [ TABLE ] <replaceable class="parameter">new_table</replaceable>
     [ FROM <replaceable class="parameter">from_item</replaceable> [, ...] ]
     [ WHERE <replaceable class="parameter">condition</replaceable> ]
     [ GROUP BY <replaceable class="parameter">expression</replaceable> [, ...] ]
     [ HAVING <replaceable class="parameter">condition</replaceable> [, ...] ]
-    [ { UNION | INTERSECT | EXCEPT } [ ALL ] <replaceable class="parameter">select</replaceable> ]
+    [ { UNION | INTERSECT | EXCEPT } [ ALL | DISTINCT ] <replaceable class="parameter">select</replaceable> ]
     [ ORDER BY <replaceable class="parameter">expression</replaceable> [ ASC | DESC | USING <replaceable class="parameter">operator</replaceable> ] [ NULLS { FIRST | LAST } ] [, ...] ]
     [ LIMIT { <replaceable class="parameter">count</replaceable> | ALL } ]
     [ OFFSET <replaceable class="parameter">start</replaceable> [ ROW | ROWS ] ]
@@ -59,6 +59,16 @@ SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replac
    <listitem>
     <para>
      If specified, the table is created as a temporary table.  Refer
+     to <xref linkend="sql-createtable"> for details.
+    </para>
+   </listitem>
+  </varlistentry>
+
+  <varlistentry>
+   <term><literal>UNLOGGED</literal></term>
+   <listitem>
+    <para>
+     If specified, the table is created as an unlogged table.  Refer
      to <xref linkend="sql-createtable"> for details.
     </para>
    </listitem>

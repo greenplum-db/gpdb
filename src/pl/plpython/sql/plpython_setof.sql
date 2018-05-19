@@ -60,3 +60,5 @@ SELECT test_setof_as_iterator(0, 'list');
 SELECT test_setof_as_iterator(1, 'list');
 SELECT test_setof_as_iterator(2, 'list');
 SELECT test_setof_as_iterator(2, null);
+
+SELECT test_setof_spi_in_iterator();

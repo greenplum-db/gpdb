@@ -49,7 +49,7 @@ static inline bool
 testmode_inject_fault(int percent)
 {
 	if (udp_testmode &&
-		(gp_udpic_dropseg == UNDEF_SEGMENT || gp_udpic_dropseg == Gp_segment))
+		(gp_udpic_dropseg == UNDEF_SEGMENT || gp_udpic_dropseg == GpIdentity.segindex))
 	{
 			if (random() % 100 < percent)
 				return true;

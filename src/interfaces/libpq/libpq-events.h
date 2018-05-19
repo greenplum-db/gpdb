@@ -5,10 +5,10 @@
  *	  that invoke the libpq "events" API, but are not interesting to
  *	  ordinary users of libpq.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/interfaces/libpq/libpq-events.h,v 1.5 2010/01/02 16:58:12 momjian Exp $
+ * src/interfaces/libpq/libpq-events.h
  *
  *-------------------------------------------------------------------------
  */

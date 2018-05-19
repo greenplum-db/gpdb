@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/commit_prepared.sgml,v 1.5 2010/04/03 07:22:58 petere Exp $
+doc/src/sgml/ref/commit_prepared.sgml
 PostgreSQL documentation
 -->
 
@@ -29,7 +29,7 @@ COMMIT PREPARED <replaceable class="PARAMETER">transaction_id</replaceable>
   <title>Description</title>
 
   <para>
-   <command>COMMIT PREPARED</command> commits a transaction that is in 
+   <command>COMMIT PREPARED</command> commits a transaction that is in
    prepared state.
   </para>
  </refsect1>
@@ -76,7 +76,7 @@ COMMIT PREPARED <replaceable class="PARAMETER">transaction_id</replaceable>
   <para>
    Commit the transaction identified by the transaction
    identifier <literal>foobar</>:
-   
+
 <programlisting>
 COMMIT PREPARED 'foobar';
 </programlisting>

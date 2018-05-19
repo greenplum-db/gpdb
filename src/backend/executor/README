@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/executor/README,v 1.11 2009/10/26 02:26:29 tgl Exp $
+src/backend/executor/README
 
 The Postgres Executor
 =====================
@@ -95,11 +95,16 @@ This is a sketch of control flow for full query processing:
 			CreateExprContext
 				creates per-tuple context
 			ExecInitExpr
+		AfterTriggerBeginQuery
 
 	ExecutorRun
 		ExecProcNode --- recursively called in per-query context
 			ExecEvalExpr --- called in per-tuple context
 			ResetExprContext --- to free memory
+
+	ExecutorFinish
+		ExecPostprocessPlan --- run any unfinished ModifyTable nodes
+		AfterTriggerEndQuery
 
 	ExecutorEnd
 		ExecEndNode --- recursively releases resources

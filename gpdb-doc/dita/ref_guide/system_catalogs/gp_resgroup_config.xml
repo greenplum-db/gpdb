@@ -113,6 +113,14 @@
             <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype> = 5</entry>
             <entry colname="col4">The pending memory spill ratio value for the resource group.</entry>
           </row>
+          <row>
+            <entry colname="col1">
+              <codeph>memory_auditor</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 6</entry>
+            <entry colname="col4">The memory auditor in use for the resource group.</entry>
+          </row>
         </tbody>
       </tgroup>
     </table>

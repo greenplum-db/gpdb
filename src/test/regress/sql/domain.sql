@@ -87,6 +87,7 @@ INSERT INTO domarrtest values (NULL, '{{"a","b","c"},{"d","e","f"}}');
 INSERT INTO domarrtest values (NULL, '{{"toolong","b","c"},{"d","e","f"}}');
 select * from domarrtest;
 select testint4arr[1], testchar4arr[2:2] from domarrtest;
+select array_dims(testint4arr), array_dims(testchar4arr) from domarrtest;
 
 COPY domarrtest FROM stdin;
 {3,4}	{q,w,e}
@@ -103,6 +104,12 @@ drop table domarrtest;
 drop domain domainint4arr restrict;
 drop domain domainchar4arr restrict;
 
+create domain dia as int[];
+select '{1,2,3}'::dia;
+select array_dims('{1,2,3}'::dia);
+select pg_typeof('{1,2,3}'::dia);
+select pg_typeof('{1,2,3}'::dia || 42); -- should be int[] not dia
+drop domain dia;
 
 create domain dnotnull varchar(15) NOT NULL;
 create domain dnull    varchar(15);
@@ -394,3 +401,76 @@ alter domain posint add constraint c2 check(value > 0); -- OK
 drop table ddtest2;
 drop type ddtest1;
 drop domain posint cascade;
+
+--
+-- Check enforcement of domain-related typmod in plpgsql (bug #5717)
+--
+
+create or replace function array_elem_check(numeric) returns numeric as $$
+declare
+  x numeric(4,2)[1];
+begin
+  x[1] := $1;
+  return x[1];
+end$$ language plpgsql;
+
+select array_elem_check(121.00);
+select array_elem_check(1.23456);
+
+create domain mynums as numeric(4,2)[1];
+
+create or replace function array_elem_check(numeric) returns numeric as $$
+declare
+  x mynums;
+begin
+  x[1] := $1;
+  return x[1];
+end$$ language plpgsql;
+
+select array_elem_check(121.00);
+select array_elem_check(1.23456);
+
+create domain mynums2 as mynums;
+
+create or replace function array_elem_check(numeric) returns numeric as $$
+declare
+  x mynums2;
+begin
+  x[1] := $1;
+  return x[1];
+end$$ language plpgsql;
+
+select array_elem_check(121.00);
+select array_elem_check(1.23456);
+
+drop function array_elem_check(numeric);
+
+--
+-- Check enforcement of array-level domain constraints
+--
+
+create domain orderedpair as int[2] check (value[1] < value[2]);
+
+select array[1,2]::orderedpair;
+select array[2,1]::orderedpair;  -- fail
+
+create temp table op (f1 orderedpair);
+insert into op values (array[1,2]);
+insert into op values (array[2,1]);  -- fail
+
+update op set f1[2] = 3;
+update op set f1[2] = 0;  -- fail
+select * from op;
+
+create or replace function array_elem_check(int) returns int as $$
+declare
+  x orderedpair := '{1,2}';
+begin
+  x[2] := $1;
+  return x[2];
+end$$ language plpgsql;
+
+select array_elem_check(3);
+select array_elem_check(-1);
+
+drop function array_elem_check(int);

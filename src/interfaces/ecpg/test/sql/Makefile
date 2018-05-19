@@ -22,10 +22,9 @@ TESTS = array array.c \
         parser parser.c \
         quote quote.c \
         show show.c \
-        insupd insupd.c 
+        insupd insupd.c
 
 all: $(TESTS)
 
 oldexec.c:	oldexec.pgc ../regression.h
 	$(ECPG) -r questionmarks -o $@ -I$(srcdir) $<
-

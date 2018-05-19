@@ -6,12 +6,12 @@
  *	  message integrity and endpoint authentication.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/be-secure.c,v 1.102 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/libpq/be-secure.c
  *
  *	  Since the server static private key ($DataDir/server.key)
  *	  will normally be stored unencrypted so that the database
@@ -107,10 +107,10 @@ int			ssl_renegotiation_limit;
 #ifdef USE_SSL
 static SSL_CTX *SSL_context = NULL;
 static bool ssl_loaded_verify_locations = false;
+#endif
 
 /* GUC variable controlling SSL cipher list */
 char	   *SSLCipherSuites = NULL;
-#endif
 
 /* ------------------------------------------------------------ */
 /*						 Hardcoded values						*/

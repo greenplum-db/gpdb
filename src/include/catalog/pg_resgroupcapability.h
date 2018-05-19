@@ -60,6 +60,8 @@ DATA(insert ( 6437, 4, 50, 50 ));
 
 DATA(insert ( 6437, 5, 20, 20 ));
 
+DATA(insert ( 6437, 6, 0, 0 ));
+
 DATA(insert ( 6438, 1, 10, 10 ));
 
 DATA(insert ( 6438, 2, 10, 10 ));
@@ -69,5 +71,7 @@ DATA(insert ( 6438, 3, 10, 10 ));
 DATA(insert ( 6438, 4, 50, 50 ));
 
 DATA(insert ( 6438, 5, 20, 20 ));
+
+DATA(insert ( 6438, 6, 0, 0 ));
 
 #endif   /* PG_RESGROUPCAPABILITY_H */

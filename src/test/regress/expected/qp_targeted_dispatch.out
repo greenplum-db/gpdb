@@ -982,7 +982,7 @@ explain select * from (select * from mpp7620 where key=200) ss where key =200;
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
                          QUERY PLAN                          
 -------------------------------------------------------------
- Insert  (cost=0.00..1.01 rows=1 width=4)
+ Insert on zoompp7620  (cost=0.00..1.01 rows=1 width=4)
    ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
          Filter: key = 200
  Optimizer status: legacy query optimizer

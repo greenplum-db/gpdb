@@ -4,11 +4,11 @@
  *	  routines for signaling the postmaster from its child processes
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/pmsignal.c,v 1.30 2010/01/15 09:19:03 heikki Exp $
+ *	  src/backend/storage/ipc/pmsignal.c
  *
  *-------------------------------------------------------------------------
  */
@@ -279,34 +279,30 @@ PostmasterIsAlive(bool amDirectChild)
 #ifndef WIN32
 	if (amDirectChild)
 	{
+		pid_t		ppid = getppid();
+
+		/* If the postmaster is still our parent, it must be alive. */
+		if (ppid == PostmasterPid)
+			return true;
+
+		/* If the init process is our parent, postmaster must be dead. */
+		if (ppid == 1)
+			return false;
+
 		/*
-		 * If the postmaster is alive, we'll still be its child.  If it's
-		 * died, we'll be reassigned as a child of the init process.
+		 * If we get here, our parent process is neither the postmaster nor
+		 * init.  This can occur on BSD and MacOS systems if a debugger has
+		 * been attached.  We fall through to the less-reliable kill() method.
 		 */
-#ifdef __darwin__
-		/*
-		 * When attached w/gdb on OSX, gdb becomes parent of debugged process!
-		 * If we are direct child of postmaster and end up as child of
-		 * init, the postmaster musta died. This, of course, fails to detect
-		 * death of postmaster while this process is attached to gdb - but
-		 * that's easier to deal w/than being difficult to use gdb in the
-		 * normal case.
-		 */
-		return(getppid() != 1 /* init's pid */);
-#else  /* __darwin__ */
-		return (getppid() == PostmasterPid);
-#endif /* __darwin__ */
 	}
-	else
-	{
-		/*
-		 * Use kill() to see if the postmaster is still alive.	This can
-		 * sometimes give a false positive result, since the postmaster's PID
-		 * may get recycled, but it is good enough for existing uses by
-		 * indirect children.
-		 */
-		return (kill(PostmasterPid, 0) == 0);
-	}
+
+	/*
+	 * Use kill() to see if the postmaster is still alive.	This can sometimes
+	 * give a false positive result, since the postmaster's PID may get
+	 * recycled, but it is good enough for existing uses by indirect children
+	 * and in debugging environments.
+	 */
+	return (kill(PostmasterPid, 0) == 0);
 #else							/* WIN32 */
 	return (WaitForSingleObject(PostmasterHandle, 0) == WAIT_TIMEOUT);
 #endif   /* WIN32 */

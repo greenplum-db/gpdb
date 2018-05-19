@@ -290,7 +290,7 @@ ExecEndDynamicTableScan(DynamicTableScanState *node)
  *		Prepares the internal states for a rescan.
  */
 void
-ExecDynamicTableReScan(DynamicTableScanState *node, ExprContext *exprCtxt)
+ExecReScanDynamicTable(DynamicTableScanState *node)
 {
 	DynamicTableScanEndCurrentScan(node);
 
@@ -301,15 +301,6 @@ ExecDynamicTableReScan(DynamicTableScanState *node, ExprContext *exprCtxt)
 
 	if (econtext)
 	{
-		/*
-		 * If we are being passed an outer tuple, save it for any expression
-		 * evaluation that may refer to the outer tuple.
-		 */
-		if (exprCtxt != NULL)
-		{
-			econtext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-		}
-
 		/*
 		 * Reset the expression context so we don't leak memory as each outer
 		 * tuple is scanned.

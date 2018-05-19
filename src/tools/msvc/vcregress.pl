@@ -26,7 +26,7 @@ if ( -e "src/tools/msvc/buildenv.pl")
 }
 
 my $what = shift || "";
-if ($what =~ /^(check|installcheck|plcheck|contribcheck|ecpgcheck)$/i)
+if ($what =~ /^(check|installcheck|plcheck|contribcheck|ecpgcheck|isolationcheck)$/i)
 {
     $what = uc $what;
 }
@@ -41,6 +41,7 @@ my $Config = -e "release/postgres/postgres.exe" ? "Release" : "Debug";
 copy("$Config/refint/refint.dll","src/test/regress");
 copy("$Config/autoinc/autoinc.dll","src/test/regress");
 copy("$Config/regress/regress.dll","src/test/regress");
+copy("$Config/dummy_seclabel/dummy_seclabel.dll","src/test/regress");
 
 $ENV{PATH} = "../../../$Config/libpq;../../$Config/libpq;$ENV{PATH}";
 
@@ -70,7 +71,8 @@ my %command = (
     PLCHECK => \&plcheck,
     INSTALLCHECK => \&installcheck,
     ECPGCHECK => \&ecpgcheck,
-    CONTRIBCHECK => \&contribcheck
+    CONTRIBCHECK => \&contribcheck,
+	ISOLATIONCHECK => \&isolationcheck,
 );
 
 my $proc = $command{$what};
@@ -88,7 +90,7 @@ sub installcheck
     my @args = (
         "../../../$Config/pg_regress/pg_regress","--dlpath=.",
         "--psqldir=../../../$Config/psql","--schedule=${schedule}_schedule",
-        "--multibyte=SQL_ASCII","--no-locale"
+        "--encoding=SQL_ASCII","--no-locale"
     );
     push(@args,$maxconn) if $maxconn;
     system(@args);
@@ -101,7 +103,7 @@ sub check
     my @args = (
         "../../../$Config/pg_regress/pg_regress","--dlpath=.",
         "--psqldir=../../../$Config/psql","--schedule=${schedule}_schedule",
-        "--multibyte=SQL_ASCII","--no-locale",
+        "--encoding=SQL_ASCII","--no-locale",
         "--temp-install=./tmp_check","--top-builddir=\"$topdir\""
     );
     push(@args,$maxconn) if $maxconn;
@@ -125,7 +127,7 @@ sub ecpgcheck
         "--dbname=regress1,connectdb",
         "--create-role=connectuser,connectdb",
         "--schedule=${schedule}_schedule",
-        "--multibyte=SQL_ASCII",
+        "--encoding=SQL_ASCII",
         "--no-locale",
         "--temp-install=./tmp_chk",
         "--top-builddir=\"$topdir\""
@@ -133,6 +135,22 @@ sub ecpgcheck
     push(@args,$maxconn) if $maxconn;
     system(@args);
     $status = $? >>8;
+    exit $status if $status;
+}
+
+sub isolationcheck
+{
+	chdir "../isolation";
+	copy("../../../$Config/isolationtester/isolationtester.exe",".");
+    my @args = (
+				"../../../$Config/pg_isolation_regress/pg_isolation_regress",
+				"--psqldir=../../../$Config/psql",
+				"--inputdir=.",  
+				"--schedule=./isolation_schedule"
+			   );
+    push(@args,$maxconn) if $maxconn;
+    system(@args);
+    my $status = $? >>8;
     exit $status if $status;
 }
 
@@ -146,14 +164,14 @@ sub plcheck
         my $lang = $pl eq 'tcl' ? 'pltcl' : $pl;
         next unless -d "../../$Config/$lang";
         $lang = 'plpythonu' if $lang eq 'plpython';
-        my @lang_args = ("--load-language=$lang");
+        my @lang_args = ("--load-extension=$lang");
         chdir $pl;
         my @tests = fetchTests();
         if ($lang eq 'plperl')
         {
 
             # run both trusted and untrusted perl tests
-            push(@lang_args, "--load-language=plperlu");
+            push(@lang_args, "--load-extension=plperlu");
 
             # assume we're using this perl to built postgres
             # test if we can run two interpreters in one backend, and if so
@@ -186,6 +204,7 @@ sub contribcheck
     my $mstat = 0;
     foreach my $module (glob("*"))
     {
+        next if ($module eq 'sepgsql');
         next if ($module eq 'xml2' && !$config->{xml});
         next
           unless -d "$module/sql"
@@ -225,6 +244,14 @@ sub fetchRegressOpts
         # ignore options that use makefile variables - can't handle those
         # ignore anything that isn't an option staring with --
         @opts = grep { $_ !~ /\$\(/ && $_ =~ /^--/ } split(/\s+/,$1);
+    }
+    if ($m =~ /^\s*ENCODING\s*=\s*(\S+)/m)
+    {
+        push @opts, "--encoding=$1";
+    }
+    if ($m =~ /^\s*NO_LOCALE\s*=\s*\S+/m)
+    {
+        push @opts, "--no-locale";
     }
     return @opts;
 }

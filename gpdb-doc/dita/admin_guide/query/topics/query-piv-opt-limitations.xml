@@ -20,6 +20,8 @@
       <p>These are unsupported features when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
+          <li>GIN and GIST indexing methods. GPORCA supports only B-tree and bitmap indexes. GPORCA
+            ignores indexes created with unsupported methods.</li>
           <li><cmdname>PERCENTILE</cmdname> window function</li>
           <li>External parameters</li>
           <li>These types of partitioned tables:<ul id="ul_v2m_mmc_bt">

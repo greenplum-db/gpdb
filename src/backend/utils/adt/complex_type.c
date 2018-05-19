@@ -1288,7 +1288,7 @@ numeric2complex(PG_FUNCTION_ARGS)
 	Numeric		num = PG_GETARG_NUMERIC(0);
 	double		float_num;
 
-	if (NUMERIC_IS_NAN(num))
+	if (numeric_is_nan(num))
 	{
 		float_num = get_float8_nan();
 	}

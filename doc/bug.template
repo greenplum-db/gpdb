@@ -27,7 +27,7 @@ System Configuration:
 
   Operating System (example: Linux 2.4.18)	:
 
-  PostgreSQL version (example: PostgreSQL 9.0beta3):  PostgreSQL 9.0beta3
+  PostgreSQL version (example: PostgreSQL 9.1beta2):  PostgreSQL 9.1beta2
 
   Compiler used (example: gcc 3.3.5)		:
 
@@ -40,7 +40,7 @@ Please enter a FULL description of your problem:
 
 
 Please describe a way to repeat the problem.   Please try to provide a
-concise reproducible example, if at all possible: 
+concise reproducible example, if at all possible:
 ----------------------------------------------------------------------
 
 

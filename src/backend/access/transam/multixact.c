@@ -39,10 +39,10 @@
  * anything we saw during replay.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.35 2010/02/26 02:00:34 momjian Exp $
+ * src/backend/access/transam/multixact.c
  *
  *-------------------------------------------------------------------------
  */
@@ -1453,7 +1453,7 @@ BootStrapMultiXact(void)
 	slotno = ZeroMultiXactOffsetPage(0, false);
 
 	/* Make sure it's written out */
-	SimpleLruWritePage(MultiXactOffsetCtl, slotno, NULL);
+	SimpleLruWritePage(MultiXactOffsetCtl, slotno);
 	Assert(!MultiXactOffsetCtl->shared->page_dirty[slotno]);
 
 	LWLockRelease(MultiXactOffsetControlLock);
@@ -1464,7 +1464,7 @@ BootStrapMultiXact(void)
 	slotno = ZeroMultiXactMemberPage(0, false);
 
 	/* Make sure it's written out */
-	SimpleLruWritePage(MultiXactMemberCtl, slotno, NULL);
+	SimpleLruWritePage(MultiXactMemberCtl, slotno);
 	Assert(!MultiXactMemberCtl->shared->page_dirty[slotno]);
 
 	LWLockRelease(MultiXactMemberControlLock);
@@ -1986,7 +1986,7 @@ multixact_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __att
 		LWLockAcquire(MultiXactOffsetControlLock, LW_EXCLUSIVE);
 
 		slotno = ZeroMultiXactOffsetPage(pageno, false);
-		SimpleLruWritePage(MultiXactOffsetCtl, slotno, NULL);
+		SimpleLruWritePage(MultiXactOffsetCtl, slotno);
 		Assert(!MultiXactOffsetCtl->shared->page_dirty[slotno]);
 
 		LWLockRelease(MultiXactOffsetControlLock);
@@ -2001,7 +2001,7 @@ multixact_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __att
 		LWLockAcquire(MultiXactMemberControlLock, LW_EXCLUSIVE);
 
 		slotno = ZeroMultiXactMemberPage(pageno, false);
-		SimpleLruWritePage(MultiXactMemberCtl, slotno, NULL);
+		SimpleLruWritePage(MultiXactMemberCtl, slotno);
 		Assert(!MultiXactMemberCtl->shared->page_dirty[slotno]);
 
 		LWLockRelease(MultiXactMemberControlLock);

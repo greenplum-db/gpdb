@@ -19,6 +19,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
+#include "catalog/namespace.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -52,9 +53,10 @@ CreateAOAuxiliaryTable(
 	Oid aoauxiliary_idxid = InvalidOid;
 	ObjectAddress baseobject;
 	ObjectAddress aoauxiliaryobject;
+	Oid			namespaceid;
 
 	Assert(RelationIsValid(rel));
-	Assert(RelationIsAoRows(rel) || RelationIsAoCols(rel));
+	Assert(RelationIsAppendOptimized(rel));
 	Assert(auxiliaryNamePrefix);
 	Assert(tupledesc);
 	if (relkind != RELKIND_AOSEGMENTS)
@@ -109,6 +111,15 @@ CreateAOAuxiliaryTable(
 			 "%s_%u_index", auxiliaryNamePrefix, relOid);
 
 	/*
+	 * Aux tables for regular relations go in pg_aoseg; those for temp
+	 * relations go into the per-backend temp-toast-table namespace.
+	 */
+	if (RelationUsesTempNamespace(rel))
+		namespaceid = GetTempToastNamespace();
+	else
+		namespaceid = PG_AOSEGMENT_NAMESPACE;
+
+	/*
 	 * We place auxiliary relation in the pg_aoseg namespace
 	 * even if its master relation is a temp table. There cannot be
 	 * any naming collision, and the auxiliary relation will be
@@ -116,7 +127,7 @@ CreateAOAuxiliaryTable(
 	 * the aovisimap relation as temp.
 	 */
 	aoauxiliary_relid = heap_create_with_catalog(aoauxiliary_relname,
-											     PG_AOSEGMENT_NAMESPACE,
+											     namespaceid,
 											     rel->rd_rel->reltablespace,
 											     InvalidOid,
 												 InvalidOid,
@@ -126,6 +137,7 @@ CreateAOAuxiliaryTable(
 												 NIL,
 											     /* relam */ InvalidOid,
 											     relkind,
+												 rel->rd_rel->relpersistence,
 											     RELSTORAGE_HEAP,
 											     shared_relation,
 												 mapped_relation,
@@ -144,19 +156,27 @@ CreateAOAuxiliaryTable(
 	/* Create an index on AO auxiliary tables (like visimap) except for pg_aoseg table */
 	if (relkind != RELKIND_AOSEGMENTS)
 	{
-		aoauxiliary_idxid = index_create(aoauxiliary_relid,
+		Oid		   *collationObjectId;
+		Relation	aoauxiliary_rel;
+
+		/* ShareLock is not really needed here, but take it anyway */
+		aoauxiliary_rel = heap_open(aoauxiliary_relid, ShareLock);
+
+		collationObjectId = palloc0(list_length(indexColNames) * sizeof(Oid));
+
+		aoauxiliary_idxid = index_create(aoauxiliary_rel,
 										 aoauxiliary_idxname,
 										 InvalidOid,
 										 indexInfo,
 										 indexColNames,
 										 BTREE_AM_OID,
 										 rel->rd_rel->reltablespace,
-										 classObjectId, coloptions, (Datum) 0,
+										 collationObjectId, classObjectId, coloptions, (Datum) 0,
 										 true, false, false, false,
 										 true, false, false, NULL);
 
 		/* Unlock target table -- no one can see it */
-		UnlockRelationOid(aoauxiliary_relid, ShareLock);
+		heap_close(aoauxiliary_rel, ShareLock);
 
 		/* Unlock the index -- no one can see it anyway */
 		UnlockRelationOid(aoauxiliary_idxid, AccessExclusiveLock);

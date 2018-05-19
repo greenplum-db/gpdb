@@ -18,12 +18,6 @@ override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
 OBJS =  specparse.o isolationtester.o
 
-all: isolationtester$(X) pg_isolation_regress$(X)
-
-pg_regress.o:
-	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
-	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pg_regress.o .
-
 gpstringsubs.pl:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpstringsubs.pl
 
@@ -39,11 +33,19 @@ atmsort.pm:
 explain.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/explain.pm
 
-pg_isolation_regress$(X): isolation_main.o pg_regress.o
-	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
+submake-regress:
+	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
 
-isolationtester$(X): $(OBJS) | submake-libpq submake-libpgport
-	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
+pg_regress.o: | submake-regress
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pg_regress.o .
+
+pg_isolation_regress: isolation_main.o pg_regress.o
+	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
+
+all: isolationtester pg_isolation_regress
+
+isolationtester: $(OBJS) | submake-libpq submake-libpgport
+	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 distprep: specparse.c specscanner.c
 
@@ -53,6 +55,8 @@ distprep: specparse.c specscanner.c
 # make, we must chain the dependencies like this.  The semicolon is
 # important, otherwise make will choose the built-in rule for
 # gram.y=>gram.c.
+
+all: isolationtester$(X) pg_isolation_regress$(X)
 
 specparse.h: specparse.c ;
 

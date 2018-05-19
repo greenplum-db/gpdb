@@ -150,6 +150,12 @@ namespace gpdb {
 	// expression type modifier
 	int32 IExprTypeMod(Node *expr);
 
+	// expression collation
+	Oid	OidExprCollation(Node *expr);
+
+	// expression collation - GDPB_91_MERGE_FIXME
+	Oid	OidTypeCollation(Oid type);
+
 	// extract nodes with specific tag from a plan tree
 	List *PlExtractNodesPlan(Plan *pl, int nodeTag, bool descendIntoSubqueries);
 
@@ -453,7 +459,7 @@ namespace gpdb {
 	double DConvertNetworkToScalar(Datum datum, Oid typid);
 
 	// is the given operator hash-joinable
-	bool FOpHashJoinable(Oid opno);
+	bool FOpHashJoinable(Oid opno, Oid inputtype);
 
 	// is the given operator strict
 	bool FOpStrict(Oid opno);
@@ -586,6 +592,10 @@ namespace gpdb {
 	// look for the given node tags in the given tree and return the index of
 	// the first one found, or -1 if there are none
 	int IFindNodes(Node *node, List *nodeTags);
+
+	// GDPB_91_MERGE_FIXME: collation
+	// look for nodes with non-default collation; returns 1 if any exist, -1 otherwise
+	int ICheckCollation(Node *node);
 
 	Node *PnodeCoerceToCommonType(ParseState *pstate, Node *pnode, Oid oidTargetType, const char *context);
 

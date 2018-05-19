@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_database.h,v 1.53 2010/01/05 01:06:56 tgl Exp $
+ * src/include/catalog/pg_database.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -75,7 +75,7 @@ typedef FormData_pg_database *Form_pg_database;
 #define Anum_pg_database_datacl			12
 
 DATA(insert OID = 1 (  template1 PGUID ENCODING "LC_COLLATE" "LC_CTYPE" t t -1 0 0 1663 _null_));
-SHDESCR("default template database");
+SHDESCR("default template for new databases");
 #define TemplateDbOid			1
 
 #endif   /* PG_DATABASE_H */

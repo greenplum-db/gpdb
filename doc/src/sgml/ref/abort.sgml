@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/abort.sgml,v 1.19 2010/04/03 07:22:56 petere Exp $
+doc/src/sgml/ref/abort.sgml
 PostgreSQL documentation
 -->
 
@@ -30,7 +30,7 @@ ABORT [ WORK | TRANSACTION ]
 
   <para>
    <command>ABORT</command> rolls back the current transaction and causes
-   all the updates made by the transaction to be discarded. 
+   all the updates made by the transaction to be discarded.
    This command is identical
    in behavior to the standard <acronym>SQL</acronym> command
    <xref linkend="SQL-ROLLBACK">,

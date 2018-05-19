@@ -185,17 +185,17 @@ SELECT count(*) FROM tenk_aocs4;
 -- The first row is good (so it grows the file), the second is bad.
 --
 COPY tenk_aocs1 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_aocs1, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_aocs1, line 2, column unique1: "bad data row"
 COPY tenk_aocs2 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_aocs2, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_aocs2, line 2, column unique1: "bad data row"
 COPY tenk_aocs3 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_aocs3, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_aocs3, line 2, column unique1: "bad data row"
 COPY tenk_aocs4 FROM STDIN;
-ERROR:  missing data for column "unique2"
-CONTEXT:  COPY tenk_aocs4, line 2: "bad data row"
+ERROR:  invalid input syntax for integer: "bad data row"
+CONTEXT:  COPY tenk_aocs4, line 2, column unique1: "bad data row"
 SELECT count(*) FROM tenk_aocs1;
  count 
 -------
@@ -1033,6 +1033,86 @@ select count(*) from (select distinct * from aocs_compress_results) temp; -- sho
 -------
      2
 (1 row)
+
+-- Same transaction truncate multiple times. This performs unsafe truncate means
+-- direct file truncate and not flipping the relfilenode.
+create table aocs_truncate_multiple_times(a int, b int) with (appendonly=true, orientation=column);
+insert into aocs_truncate_multiple_times select i,i from generate_series(0, 9)i;
+begin;
+select * from aocs_truncate_multiple_times;
+ a | b 
+---+---
+ 8 | 8
+ 9 | 9
+ 0 | 0
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+ 6 | 6
+ 7 | 7
+(10 rows)
+
+truncate table aocs_truncate_multiple_times;
+select * from aocs_truncate_multiple_times;
+ a | b 
+---+---
+(0 rows)
+
+insert into aocs_truncate_multiple_times select i from generate_series(10, 19)i;
+select * from aocs_truncate_multiple_times;
+ a  | b 
+----+---
+ 10 |  
+ 11 |  
+ 12 |  
+ 18 |  
+ 19 |  
+ 13 |  
+ 14 |  
+ 15 |  
+ 16 |  
+ 17 |  
+(10 rows)
+
+truncate table aocs_truncate_multiple_times;
+select * from aocs_truncate_multiple_times;
+ a | b 
+---+---
+(0 rows)
+
+insert into aocs_truncate_multiple_times select i,i from generate_series(20, 29)i;
+select * from aocs_truncate_multiple_times;
+ a  | b  
+----+----
+ 28 | 28
+ 29 | 29
+ 23 | 23
+ 24 | 24
+ 25 | 25
+ 26 | 26
+ 27 | 27
+ 20 | 20
+ 21 | 21
+ 22 | 22
+(10 rows)
+
+abort;
+select * from aocs_truncate_multiple_times;
+ a | b 
+---+---
+ 0 | 0
+ 1 | 1
+ 2 | 2
+ 8 | 8
+ 9 | 9
+ 3 | 3
+ 4 | 4
+ 5 | 5
+ 6 | 6
+ 7 | 7
+(10 rows)
 
 -- test case for append optimized columnar bitmap scan when row level bitmap is promoted to page level
 drop table if exists bms_ao_bug;

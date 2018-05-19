@@ -162,7 +162,7 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	MemoryContextSwitchTo(oldCxt);
 
 	if (node->outer_exprContext)
-		ExecBitmapIndexReScan(node->bitmapIndexScanState, node->outer_exprContext);
+		ExecReScanBitmapIndexScan(node->bitmapIndexScanState);
 }
 
 /*
@@ -230,20 +230,13 @@ ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node)
  * The current partition might've changed.
  */
 void
-ExecDynamicBitmapIndexReScan(DynamicBitmapIndexScanState *node, ExprContext *exprCtxt)
+ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node)
 {
 	if (node->bitmapIndexScanState)
 	{
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
-
-	/*
-	 * If we are being passed an outer tuple, save it so that we can
-	 * pass it on to the underlying Index Scan when we create it.
-	 */
-	if (exprCtxt)
-		node->outer_exprContext = exprCtxt;
 
 	node->ss.scan_state = SCAN_INIT;
 

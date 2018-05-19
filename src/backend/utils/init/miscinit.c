@@ -3,12 +3,12 @@
  * miscinit.c
  *	  miscellaneous initialization support stuff
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.184 2010/04/20 23:48:47 tgl Exp $
+ *	  src/backend/utils/init/miscinit.c
  *
  *-------------------------------------------------------------------------
  */
@@ -410,6 +410,24 @@ SetUserIdAndContext(Oid userid, bool sec_def_context)
 
 
 /*
+ * Check if the authenticated user is a replication role
+ */
+bool
+is_authenticated_user_replication_role(void)
+{
+	bool		result = false;
+	HeapTuple	utup;
+
+	utup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(AuthenticatedUserId));
+	if (HeapTupleIsValid(utup))
+	{
+		result = ((Form_pg_authid) GETSTRUCT(utup))->rolreplication;
+		ReleaseSysCache(utup);
+	}
+	return result;
+}
+
+/*
  * Initialize user identity during normal backend startup
  */
 void
@@ -707,7 +725,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 			   bool isDDLock, const char *refName)
 {
 	int			fd;
-	char		buffer[MAXPGPATH + 100];
+	char		buffer[MAXPGPATH * 2 + 256];
 	int			ntries;
 	int			len;
 	int			encoded_pid;
@@ -912,34 +930,38 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		 * looking to see if there is an associated shmem segment that is
 		 * still in use.
 		 *
-		 * Note: because postmaster.pid is written in two steps, we might not
-		 * find the shmem ID values in it; we can't treat that as an error.
+		 * Note: because postmaster.pid is written in multiple steps, we might
+		 * not find the shmem ID values in it; we can't treat that as an
+		 * error.
 		 */
 		if (isDDLock)
 		{
-			char	   *ptr;
+			char	   *ptr = buffer;
 			unsigned long id1,
 						id2;
+			int			lineno;
 
-			ptr = strchr(buffer, '\n');
-			if (ptr != NULL &&
-				(ptr = strchr(ptr + 1, '\n')) != NULL)
+			for (lineno = 1; lineno < LOCK_FILE_LINE_SHMEM_KEY; lineno++)
 			{
+				if ((ptr = strchr(ptr, '\n')) == NULL)
+					break;
 				ptr++;
-				if (sscanf(ptr, "%lu %lu", &id1, &id2) == 2)
-				{
-					if (PGSharedMemoryIsInUse(id1, id2))
-						ereport(FATAL,
-								(errcode(ERRCODE_LOCK_FILE_EXISTS),
-								 errmsg("pre-existing shared memory block "
-										"(key %lu, ID %lu) is still in use",
-										id1, id2),
-								 errhint("If you're sure there are no old "
-									"server processes still running, remove "
-										 "the shared memory block "
-										 "or just delete the file \"%s\".",
-										 filename)));
-				}
+			}
+
+			if (ptr != NULL &&
+				sscanf(ptr, "%lu %lu", &id1, &id2) == 2)
+			{
+				if (PGSharedMemoryIsInUse(id1, id2))
+					ereport(FATAL,
+							(errcode(ERRCODE_LOCK_FILE_EXISTS),
+							 errmsg("pre-existing shared memory block "
+									"(key %lu, ID %lu) is still in use",
+									id1, id2),
+							 errhint("If you're sure there are no old "
+									 "server processes still running, remove "
+									 "the shared memory block "
+									 "or just delete the file \"%s\".",
+									 filename)));
 			}
 		}
 
@@ -959,11 +981,23 @@ CreateLockFile(const char *filename, bool amPostmaster,
 	}
 
 	/*
-	 * Successfully created the file, now fill it.
+	 * Successfully created the file, now fill it.	See comment in miscadmin.h
+	 * about the contents.	Note that we write the same info into both datadir
+	 * and socket lockfiles; although more stuff may get added to the datadir
+	 * lockfile later.
 	 */
-	snprintf(buffer, sizeof(buffer), "%d\n%s\n",
+	snprintf(buffer, sizeof(buffer), "%d\n%s\n%ld\n%d\n%s\n",
 			 amPostmaster ? (int) my_pid : -((int) my_pid),
-			 DataDir);
+			 DataDir,
+			 (long) MyStartTime,
+			 PostPortNumber,
+#ifdef HAVE_UNIX_SOCKETS
+			 (*UnixSocketDir != '\0') ? UnixSocketDir : DEFAULT_PGSOCKET_DIR
+#else
+			 ""
+#endif
+		);
+
 	errno = 0;
 	if (write(fd, buffer, strlen(buffer)) != strlen(buffer))
 	{
@@ -1078,21 +1112,20 @@ TouchSocketLockFile(void)
 	}
 }
 
+
 /*
- * Append information about a shared memory segment to the data directory
- * lock file.
+ * Add (or replace) a line in the data directory lock file.
+ * The given string should not include a trailing newline.
  *
- * This may be called multiple times in the life of a postmaster, if we
- * delete and recreate shmem due to backend crash.	Therefore, be prepared
- * to overwrite existing information.  (As of 7.1, a postmaster only creates
- * one shm seg at a time; but for the purposes here, if we did have more than
- * one then any one of them would do anyway.)
+ * Caution: this erases all following lines.  In current usage that is OK
+ * because lines are added in order.  We could improve it if needed.
  */
 void
-RecordSharedMemoryInLockFile(unsigned long id1, unsigned long id2)
+AddToDataDirLockFile(int target_line, const char *str)
 {
 	int			fd;
 	int			len;
+	int			lineno;
 	char	   *ptr;
 	char		buffer[BLCKSZ];
 
@@ -1105,7 +1138,7 @@ RecordSharedMemoryInLockFile(unsigned long id1, unsigned long id2)
 						DIRECTORY_LOCK_FILE)));
 		return;
 	}
-	len = read(fd, buffer, sizeof(buffer) - 100);
+	len = read(fd, buffer, sizeof(buffer) - 1);
 	if (len < 0)
 	{
 		ereport(LOG,
@@ -1118,23 +1151,24 @@ RecordSharedMemoryInLockFile(unsigned long id1, unsigned long id2)
 	buffer[len] = '\0';
 
 	/*
-	 * Skip over first two lines (PID and path).
+	 * Skip over lines we are not supposed to rewrite.
 	 */
-	ptr = strchr(buffer, '\n');
-	if (ptr == NULL ||
-		(ptr = strchr(ptr + 1, '\n')) == NULL)
+	ptr = buffer;
+	for (lineno = 1; lineno < target_line; lineno++)
 	{
-		elog(LOG, "bogus data in \"%s\"", DIRECTORY_LOCK_FILE);
-		close(fd);
-		return;
+		if ((ptr = strchr(ptr, '\n')) == NULL)
+		{
+			elog(LOG, "bogus data in \"%s\"", DIRECTORY_LOCK_FILE);
+			close(fd);
+			return;
+		}
+		ptr++;
 	}
-	ptr++;
 
 	/*
-	 * Append key information.	Format to try to keep it the same length
-	 * always (trailing junk won't hurt, but might confuse humans).
+	 * Write or rewrite the target line.
 	 */
-	sprintf(ptr, "%9lu %9lu\n", id1, id2);
+	snprintf(ptr, buffer + sizeof(buffer) - ptr, "%s\n", str);
 
 	/*
 	 * And rewrite the data.  Since we write in a single kernel call, this

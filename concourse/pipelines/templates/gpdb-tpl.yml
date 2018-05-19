@@ -1,12 +1,13 @@
 
-{% set walrep_suites = ['walrep_1',
-                           'walrep_2'] %}
+{% set walrep_suites = ['walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
-                      'gpcheckcat'] %}
+                      'gpcheckcat',
+                      'gpaddmirrors',
+                      'gpinitstandby',
+                      'gpactivatestandby'] %}
 {% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
-                      'gpinitsystem',
-                      'gpinitstandby'] %}
+                      'gpinitsystem'] %}
 {% set CLI_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 ## ======================================================================
@@ -75,7 +76,6 @@ groups:
 {% if "Replication" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_replication_start
-  - walrep_1
   - walrep_2
   - segwalrep_mirrorless_centos6
 {% endif %}
@@ -203,7 +203,6 @@ groups:
 - name: Replication
   jobs:
   - gate_replication_start
-  - walrep_1
   - walrep_2
   - segwalrep_mirrorless_centos6
   - compile_gpdb_centos6
@@ -415,11 +414,17 @@ resources:
 
 {% endif %}
 {% if "centos7" in os_types %}
-- name: centos-gpdb-dev-7
+- name: centos-gpdb-build-7
   type: docker-image
   source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: 7-gcc6.2-llvm3.7
+    repository: pivotaldata/centos7-build
+    tag: 'gpdb5-latest'
+
+- name: centos-gpdb-test-7
+  type: docker-image
+  source:
+    repository: pivotaldata/centos7-test
+    tag: 'gpdb5-latest'
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -773,9 +778,9 @@ jobs:
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-    - get: centos-gpdb-dev-7
+    - get: centos-gpdb-build-7
   - task: compile_gpdb
-    image: centos-gpdb-dev-7
+    image: centos-gpdb-build-7
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -1129,10 +1134,10 @@ jobs:
       resource: bin_gpdb_centos7
       passed: [compile_gpdb_centos7]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-7
+    - get: centos-gpdb-test-7
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-7
+    image: centos-gpdb-test-7
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1147,10 +1152,10 @@ jobs:
       passed: [compile_gpdb_centos7]
       resource: bin_gpdb_centos7
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-7
+    - get: centos-gpdb-test-7
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-7
+    image: centos-gpdb-test-7
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1581,6 +1586,12 @@ jobs:
       passed:
       - compile_gpdb_sles11
 {% endif %}
+{% if "centos6" in os_types or "centos7" in os_types %}
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: [[ test_trigger ]]
+{% endif %}
 
 - name: resource_group_centos6
   plan:
@@ -1594,7 +1605,7 @@ jobs:
     - get: ccp_src
     - get: centos-gpdb-dev-6
     - get: binary_swap_gpdb
-      passed: [compile_gpdb_binary_swap_centos6]
+      passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
   - put: terraform
@@ -1632,7 +1643,7 @@ jobs:
     - get: ccp_src
     - get: centos-gpdb-dev-6
     - get: binary_swap_gpdb
-      passed: [compile_gpdb_binary_swap_centos6]
+      passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
   - put: terraform
@@ -2227,7 +2238,6 @@ jobs:
     - resource_group_centos7
     - resource_group_sles12
     - segwalrep_mirrorless_centos6
-    - walrep_1
     - walrep_2
     - QP_memory-accounting
     - regression_tests_gphdfs_centos

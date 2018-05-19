@@ -1,16 +1,19 @@
-# $PostgreSQL: pgsql/contrib/Makefile,v 1.93 2010/06/14 16:17:56 sriggs Exp $
+# contrib/Makefile
 
 subdir = contrib
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
 SUBDIRS = \
+		auth_delay	\
 		auto_explain	\
 		btree_gin	\
 		citext		\
 		dblink		\
 		dict_int	\
 		dict_xsyn	\
+		dummy_seclabel	\
+		file_fdw	\
 		fuzzystrmatch	\
 		hstore		\
 		intarray	\
@@ -21,6 +24,7 @@ SUBDIRS = \
 		pg_freespacemap \
 		pg_standby	\
 		pg_stat_statements \
+		pg_test_fsync	\
 		pg_trgm		\
 		pg_upgrade	\
 		pg_upgrade_support \
@@ -38,6 +42,7 @@ SUBDIRS += \
 		gp_internal_tools \
 		gp_inject_fault \
 		gp_cancel_query \
+		gp_sparse_vector \
 		indexscan \
 
 ifeq ($(with_openssl),yes)
@@ -52,6 +57,10 @@ ifeq ($(with_libxml),yes)
 SUBDIRS += xml2
 endif
 
+ifeq ($(with_selinux),yes)
+SUBDIRS += sepgsql
+endif
+
 ifeq ($(enable_orca),yes)
 SUBDIRS += orca_debug
 endif
@@ -62,14 +71,4 @@ SUBDIRS += gp_replica_check
 #		start-scripts	\ (does not have a makefile)
 
 
-all install installdirs uninstall distprep clean distclean maintainer-clean:
-	@for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir $@ || exit; \
-	done
-
-# We'd like check operations to run all the subtests before failing.
-check installcheck:
-	@CHECKERR=0; for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir $@ || CHECKERR=$$?; \
-	done; \
-	exit $$CHECKERR
+$(recurse)

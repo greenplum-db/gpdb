@@ -318,6 +318,14 @@ CTranslatorQueryToDXL::CheckUnsupportedNodeTypes
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, rgUnsupported[iUnsupported].m_wsz);
 	}
+
+	// GDPB_91_MERGE_FIXME: collation
+	INT iNonDefaultCollation = gpdb::ICheckCollation((Node *) pquery);
+
+	if (0 < iNonDefaultCollation)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Non-default collation"));
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -882,7 +890,7 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 									GPOS_NEW(m_pmp) CDXLCtasStorageOptions(pmdnameTableSpace, ectascommit, pdrgpctasopt),
 									ereldistrpolicy,
 									pdrgpulDistr,  
-									pintocl->rel->istemp, 
+									pintocl->rel->relpersistence == RELPERSISTENCE_TEMP,
 									fHasOids,
 									erelstorage, 
 									pdrgpulSource,
@@ -1199,11 +1207,11 @@ CTranslatorQueryToDXL::PdxlnUpdate()
 HMIUl *
 CTranslatorQueryToDXL::PhmiulUpdateCols()
 {
-	GPOS_ASSERT(gpdb::UlListLength(m_pquery->targetList) == m_pdrgpdxlnQueryOutput->UlLength());
 	HMIUl *phmiulUpdateCols = GPOS_NEW(m_pmp) HMIUl(m_pmp);
 
 	ListCell *plc = NULL;
 	ULONG ul = 0;
+	ULONG ulOutputCols = 0;
 	ForEach (plc, m_pquery->targetList)
 	{
 		TargetEntry *pte = (TargetEntry *) lfirst(plc);
@@ -1211,14 +1219,26 @@ CTranslatorQueryToDXL::PhmiulUpdateCols()
 		ULONG ulResno = pte->resno;
 		GPOS_ASSERT(0 < ulResno);
 
-		CDXLNode *pdxlnCol = (*m_pdrgpdxlnQueryOutput)[ul];
-		CDXLScalarIdent *pdxlopIdent = CDXLScalarIdent::PdxlopConvert(pdxlnCol->Pdxlop());
-		ULONG ulColId = pdxlopIdent->Pdxlcr()->UlID();
+		// resjunk true columns may be now existing in the query tree, for instance
+		// ctid column in case of relations, see rewriteTargetListUD in GPDB.
+		// In ORCA, resjunk true columns (ex ctid) required to identify the tuple
+		// are included later, so, its safe to not include them here in the output query list.
+		// In planner, a MODIFYTABLE node is created on top of the plan instead of DML node,
+		// once we plan generating MODIFYTABLE node from ORCA, we may revisit it.
+		if (!pte->resjunk)
+		{
+			CDXLNode *pdxlnCol = (*m_pdrgpdxlnQueryOutput)[ul];
+			CDXLScalarIdent *pdxlopIdent = CDXLScalarIdent::PdxlopConvert(
+					pdxlnCol->Pdxlop());
+			ULONG ulColId = pdxlopIdent->Pdxlcr()->UlID();
 
-		StoreAttnoColIdMapping(phmiulUpdateCols, ulResno, ulColId);
+			StoreAttnoColIdMapping(phmiulUpdateCols, ulResno, ulColId);
+			ulOutputCols++;
+		}
 		ul++;
 	}
 
+	GPOS_ASSERT(ulOutputCols == m_pdrgpdxlnQueryOutput->UlLength());
 	return phmiulUpdateCols;
 }
 
@@ -2949,7 +2969,6 @@ CTranslatorQueryToDXL::UnsupportedRTEKind
 	static const SRTENameElem rgStrMap[] =
 		{
 		{RTE_JOIN, GPOS_WSZ_LIT("RangeTableEntry of type Join")},
-		{RTE_SPECIAL, GPOS_WSZ_LIT("RangeTableEntry of type Special")},
 		{RTE_VOID, GPOS_WSZ_LIT("RangeTableEntry of type Void")},
 		{RTE_TABLEFUNCTION, GPOS_WSZ_LIT("RangeTableEntry of type Table Function")}
 		};
@@ -3084,7 +3103,7 @@ CTranslatorQueryToDXL::PdxlnFromValues
 			Expr *pexpr = (Expr *) lfirst(plcColumn);
 
 			CHAR *szColName = (CHAR *) strVal(gpdb::PvListNth(plColnames, ulColPos));
-			ULONG ulColId = ULONG_MAX;	
+			ULONG ulColId = gpos::ulong_max;
 			if (IsA(pexpr, Const))
 			{
 				// extract the datum
@@ -3144,7 +3163,7 @@ CTranslatorQueryToDXL::PdxlnFromValues
 				}
 			}
 
-			GPOS_ASSERT(ULONG_MAX != ulColId);
+			GPOS_ASSERT(gpos::ulong_max != ulColId);
 
 			pdrgpulColIds->Append(GPOS_NEW(m_pmp) ULONG(ulColId));
 			ulColPos++;

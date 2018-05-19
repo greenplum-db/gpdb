@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.124 2010/02/26 02:01:29 momjian Exp $
+ * src/include/utils/rel.h
  *
  *-------------------------------------------------------------------------
  */
@@ -74,26 +74,31 @@ typedef struct Trigger
 
 typedef struct TriggerDesc
 {
+	Trigger    *triggers;		/* array of Trigger structs */
+	int			numtriggers;	/* number of array entries */
+
 	/*
-	 * Index data to identify which triggers are which.  Since each trigger
-	 * can appear in more than one class, for each class we provide a list of
-	 * integer indexes into the triggers array.  The class codes are defined
-	 * by TRIGGER_EVENT_xxx macros in commands/trigger.h.
+	 * These flags indicate whether the array contains at least one of each
+	 * type of trigger.  We use these to skip searching the array if not.
 	 */
-#define TRIGGER_NUM_EVENT_CLASSES  4
-
-	uint16		n_before_statement[TRIGGER_NUM_EVENT_CLASSES];
-	uint16		n_before_row[TRIGGER_NUM_EVENT_CLASSES];
-	uint16		n_after_row[TRIGGER_NUM_EVENT_CLASSES];
-	uint16		n_after_statement[TRIGGER_NUM_EVENT_CLASSES];
-	int		   *tg_before_statement[TRIGGER_NUM_EVENT_CLASSES];
-	int		   *tg_before_row[TRIGGER_NUM_EVENT_CLASSES];
-	int		   *tg_after_row[TRIGGER_NUM_EVENT_CLASSES];
-	int		   *tg_after_statement[TRIGGER_NUM_EVENT_CLASSES];
-
-	/* The actual array of triggers is here */
-	Trigger    *triggers;
-	int			numtriggers;
+	bool		trig_insert_before_row;
+	bool		trig_insert_after_row;
+	bool		trig_insert_instead_row;
+	bool		trig_insert_before_statement;
+	bool		trig_insert_after_statement;
+	bool		trig_update_before_row;
+	bool		trig_update_after_row;
+	bool		trig_update_instead_row;
+	bool		trig_update_before_statement;
+	bool		trig_update_after_statement;
+	bool		trig_delete_before_row;
+	bool		trig_delete_after_row;
+	bool		trig_delete_instead_row;
+	bool		trig_delete_before_statement;
+	bool		trig_delete_after_statement;
+	/* there are no row-level truncate triggers */
+	bool		trig_truncate_before_statement;
+	bool		trig_truncate_after_statement;
 } TriggerDesc;
 
 
@@ -112,6 +117,7 @@ typedef struct RelationAmInfo
 	FmgrInfo	ammarkpos;
 	FmgrInfo	amrestrpos;
 	FmgrInfo	ambuild;
+	FmgrInfo	ambuildempty;
 	FmgrInfo	ambulkdelete;
 	FmgrInfo	amvacuumcleanup;
 	FmgrInfo	amcostestimate;
@@ -129,8 +135,8 @@ typedef struct RelationData
 	/* use "struct" here to avoid needing to include smgr.h: */
 	struct SMgrRelationData *rd_smgr;	/* cached file handle, or NULL */
 	int			rd_refcnt;		/* reference count */
-	bool		rd_istemp;		/* CDB: true => skip locking, logging, fsync */
-	bool		rd_islocaltemp; /* rel is a temp rel of this session */
+	BackendId	rd_backend;		/* owning backend id, if temporary relation */
+	// GPDB_91_MERGE_FIXME: is rd_issyscat still needed?
 	bool		rd_issyscat;	/* GP: true => system catalog table (has "pg_" prefix) */
 	bool		rd_isnailed;	/* rel is nailed in cache */
 	bool		rd_isvalid;		/* relcache entry is valid */
@@ -162,7 +168,6 @@ typedef struct RelationData
 	TriggerDesc *trigdesc;		/* Trigger info, or NULL if rel has none */
     struct GpPolicy *rd_cdbpolicy; /* Partitioning info if distributed rel */
     bool        rd_cdbDefaultStatsWarningIssued;
-	bool		rd_isLocalBuf;  /* CDB: true => rel uses the local buffer mgr */
 
 	/*
 	 * rd_options is set whenever rd_rel is loaded into the relcache entry.
@@ -180,10 +185,10 @@ typedef struct RelationData
 	/*
 	 * index access support info (used only for an index relation)
 	 *
-	 * Note: only default operators and support procs for each opclass are
-	 * cached, namely those with lefttype and righttype equal to the opclass's
-	 * opcintype.  The arrays are indexed by strategy or support number, which
-	 * is a sufficient identifier given that restriction.
+	 * Note: only default support procs for each opclass are cached, namely
+	 * those with lefttype and righttype equal to the opclass's opcintype. The
+	 * arrays are indexed by support function number, which is a sufficient
+	 * identifier given that restriction.
 	 *
 	 * Note: rd_amcache is available for index AMs to cache private data about
 	 * an index.  This must be just a cache since it may get reset at any time
@@ -196,7 +201,6 @@ typedef struct RelationData
 	RelationAmInfo *rd_aminfo;	/* lookup info for funcs found in pg_am */
 	Oid		   *rd_opfamily;	/* OIDs of op families for each index col */
 	Oid		   *rd_opcintype;	/* OIDs of opclass declared input data types */
-	Oid		   *rd_operator;	/* OIDs of index operators */
 	RegProcedure *rd_support;	/* OIDs of support procedures */
 	FmgrInfo   *rd_supportinfo; /* lookup info for support procedures */
 	int16	   *rd_indoption;	/* per-column AM-specific flags */
@@ -206,6 +210,7 @@ typedef struct RelationData
 	Oid		   *rd_exclprocs;	/* OIDs of exclusion ops' procs, if any */
 	uint16	   *rd_exclstrats;	/* exclusion ops' strategy numbers, if any */
 	void	   *rd_amcache;		/* available for use by index AM */
+	Oid		   *rd_indcollation;	/* OIDs of index collations */
 
 	/*
 	 * Hack for CLUSTER, rewriting ALTER TABLE, etc: when writing a new
@@ -259,10 +264,10 @@ typedef struct StdRdOptions
 	bool		appendonly;		/* is this an appendonly relation? */
 	int			blocksize;		/* max varblock size (AO rels only) */
 	int			compresslevel;  /* compression level (AO rels only) */
-	char	   *compresstype;	/* compression type (AO rels only) */
+	char		compresstype[NAMEDATALEN]; /* compression type (AO rels only) */
 	bool		checksum;		/* checksum (AO rels only) */
 	bool 		columnstore;	/* columnstore (AO only) */
-	char	   *orientation;	/* orientation (AO only) */
+	char		orientation[NAMEDATALEN]; /* orientation (AO only) */
 } StdRdOptions;
 
 #define HEAP_MIN_FILLFACTOR			10
@@ -325,6 +330,13 @@ typedef struct StdRdOptions
  */
 #define RelationIsAoCols(relation) \
 	((bool)(((relation)->rd_rel->relstorage == RELSTORAGE_AOCOLS)))
+
+/*
+ * RelationIsAppendOptimized
+ * 		True iff relation has append only storage (can be row or column orientation)
+ */
+#define RelationIsAppendOptimized(relation) \
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
 
 /*
  * RelationIsForeign
@@ -410,7 +422,7 @@ typedef struct StdRdOptions
 #define RelationOpenSmgr(relation) \
 	do { \
 		if ((relation)->rd_smgr == NULL) \
-			smgrsetowner(&((relation)->rd_smgr), smgropen((relation)->rd_node)); \
+			smgrsetowner(&((relation)->rd_smgr), smgropen((relation)->rd_node, (relation)->rd_backend)); \
 	} while (0)
 
 /*
@@ -449,6 +461,30 @@ typedef struct StdRdOptions
 	} while (0)
 
 /*
+ * RelationNeedsWAL
+ *		True if relation needs WAL.
+ */
+#define RelationNeedsWAL(relation) \
+	((relation)->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT)
+
+/*
+ * RelationUsesLocalBuffers
+ *		True if relation's pages are stored in local buffers.
+ *
+ * In GPDB, we do not use local buffers for temp tables because segmates need
+ * to share temp table contents.  Currently, there is no other reason to use
+ * local buffers.
+ */
+#define RelationUsesLocalBuffers(relation) false
+
+/*
+ * RelationUsesTempNamespace
+ *		True if relation's catalog entries live in a private namespace.
+ */
+#define RelationUsesTempNamespace(relation) \
+	((relation)->rd_rel->relpersistence == RELPERSISTENCE_TEMP)
+
+/*
  * RELATION_IS_LOCAL
  *		If a rel is either temp or newly created in the current transaction,
  *		it can be assumed to be visible only to the current backend.
@@ -456,7 +492,7 @@ typedef struct StdRdOptions
  * Beware of multiple eval of argument
  */
 #define RELATION_IS_LOCAL(relation) \
-	((relation)->rd_islocaltemp || \
+	((relation)->rd_backend == TempRelBackendId || \
 	 (relation)->rd_createSubid != InvalidSubTransactionId)
 
 /*
@@ -466,7 +502,8 @@ typedef struct StdRdOptions
  * Beware of multiple eval of argument
  */
 #define RELATION_IS_OTHER_TEMP(relation) \
-	((relation)->rd_istemp && !(relation)->rd_islocaltemp)
+	((relation)->rd_rel->relpersistence == RELPERSISTENCE_TEMP \
+	 && (relation)->rd_backend != TempRelBackendId)
 
 /* routines in utils/cache/relcache.c */
 extern void RelationIncrementReferenceCount(Relation rel);

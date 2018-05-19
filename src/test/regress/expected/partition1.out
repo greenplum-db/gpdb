@@ -2908,7 +2908,9 @@ NOTICE:  CREATE TABLE will create partition "part_expr_test_list_1_prt_p1" for t
 set session authorization part_expr_role;
 -- This should throw a "not allowed" error.
 select pg_get_expr('bogus', 'pg_class'::regclass);
-ERROR:  argument to pg_get_expr() must come from system catalogs
+ERROR:  cannot accept a value of type pg_node_tree
+LINE 1: select pg_get_expr('bogus', 'pg_class'::regclass);
+                           ^
 -- But this should
 select p.parrelid::regclass, pr.parchildrelid::regclass,
        pg_get_expr(parrangestart, pr.parchildrelid),

@@ -66,10 +66,13 @@ _bitmap_create_lov_heapandindex(Relation rel,
 	ObjectAddress	objAddr, referenced;
 	Oid		   *classObjectId;
 	int16	   *coloptions;
+	Oid		   *colcollations;
 	Oid			heapid;
 	Oid			idxid;
 	int			indattrs;
 	int			i;
+	Relation	lov_heap_rel;
+	Oid			namespaceid;
 
 	Assert(rel != NULL);
 
@@ -79,7 +82,17 @@ _bitmap_create_lov_heapandindex(Relation rel,
 	snprintf(lovIndexName, sizeof(lovIndexName),
 			 "pg_bm_%u_index", RelationGetRelid(rel));
 
-	heapid = get_relname_relid(lovHeapName, PG_BITMAPINDEX_NAMESPACE);
+	/*
+	 * The LOV heap and index go in special pg_bitmapindex schema. Those for
+	 * temp relations go into the per-backend temp-toast-table namespace,
+	 * however!
+	 */
+	if (RelationUsesTempNamespace(rel))
+		namespaceid = GetTempToastNamespace();
+	else
+		namespaceid = PG_BITMAPINDEX_NAMESPACE;
+
+	heapid = get_relname_relid(lovHeapName, namespaceid);
 
 	/*
 	 * If heapid exists, then this is happening during re-indexing.
@@ -98,7 +111,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
 		*lovHeapOid = heapid;
 
-		idxid = get_relname_relid(lovIndexName, PG_BITMAPINDEX_NAMESPACE);
+		idxid = get_relname_relid(lovIndexName, namespaceid);
 		Assert(OidIsValid(idxid));
 		*lovIndexOid = idxid;
 
@@ -106,7 +119,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		lovIndex = index_open(idxid, AccessExclusiveLock);
 
 		RelationSetNewRelfilenode(lovHeap, RecentXmin);
-		RelationSetNewRelfilenode(lovIndex, RecentXmin);
+		RelationSetNewRelfilenode(lovIndex, InvalidTransactionId);
 
 		/*
 		 * After creating the new relfilenode for a btee index, this is not
@@ -119,7 +132,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
 		/* XLOG the metapage */
 
-		if (!lovIndex->rd_istemp)
+		if (RelationNeedsWAL(lovIndex))
 		{
 			log_newpage_rel(lovIndex, BufferGetBlockNumber(btree_metabuf), MAIN_FORKNUM,
 						btree_metapage);
@@ -150,7 +163,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
   	heapid =
 		heap_create_with_catalog(lovHeapName,
-								 PG_BITMAPINDEX_NAMESPACE,
+								 namespaceid,
 								 rel->rd_rel->reltablespace,
 								 InvalidOid,
 								 InvalidOid,
@@ -159,6 +172,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 								 tupDesc, NIL,
 								 /* relam */ InvalidOid,
 								 RELKIND_RELATION,
+								 rel->rd_rel->relpersistence,
 								 RELSTORAGE_HEAP,
 								 rel->rd_rel->relisshared,
 								 false, /* mapped_relation */
@@ -173,6 +187,9 @@ _bitmap_create_lov_heapandindex(Relation rel,
 	 * tuple visible for opening.
 	 */
 	CommandCounterIncrement();
+
+	/* ShareLock is not really needed here, but take it anyway */
+	lov_heap_rel = heap_open(heapid, ShareLock);
 
 	objAddr.classId = RelationRelationId;
 	objAddr.objectId = heapid;
@@ -199,6 +216,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
 	classObjectId = (Oid *) palloc(indattrs * sizeof(Oid));
 	coloptions = (int16 *) palloc(indattrs * sizeof(int16));
+	colcollations = (Oid *) palloc(indattrs * sizeof(Oid));
 	indexColNames = NIL;
 	for (i = 0; i < indattrs; i++)
 	{
@@ -207,15 +225,17 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		indexInfo->ii_KeyAttrNumbers[i] = i + 1;
 		classObjectId[i] = GetDefaultOpClass(typid, BTREE_AM_OID);
 		coloptions[i] = 0;
+		colcollations[i] = rel->rd_indcollation[i];
 
 		indexColNames = lappend(indexColNames, NameStr(tupDesc->attrs[i]->attname));
 	}
 
-	idxid = index_create(heapid, lovIndexName, InvalidOid,
+	idxid = index_create(lov_heap_rel, lovIndexName, InvalidOid,
 						 indexInfo,
 						 indexColNames,
 						 BTREE_AM_OID,
 						 rel->rd_rel->reltablespace,
+						 colcollations,
 						 classObjectId, coloptions, (Datum) 0,
 						 /* isprimary */ false,
 						 /* isconstraint */ false,
@@ -224,6 +244,8 @@ _bitmap_create_lov_heapandindex(Relation rel,
 						 /* allow_system_table_mods */ true,
 						 false, false, NULL);
 	*lovIndexOid = idxid;
+
+	heap_close(lov_heap_rel, NoLock);
 }
 
 /*

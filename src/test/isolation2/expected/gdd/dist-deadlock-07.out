@@ -1,0 +1,59 @@
+DROP TABLE IF EXISTS t07a;
+DROP
+DROP TABLE IF EXISTS t07b;
+DROP
+CREATE TABLE t07a (c1 int, c2 int);
+CREATE
+CREATE TABLE t07b (c1 int, c2 int);
+CREATE
+INSERT INTO t07a (c1, c2) SELECT i, i FROM generate_series(1, 20) i;
+INSERT 20
+INSERT INTO t07b (c1, c2) SELECT i, i FROM generate_series(1, 20) i;
+INSERT 20
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+30: BEGIN;
+BEGIN
+40: BEGIN;
+BEGIN
+
+10: UPDATE t07b SET c2 = 11 WHERE c1 = segid(0,1);
+UPDATE 1
+
+20: UPDATE t07b SET c2 = 22 WHERE c1 = segid(1,1);
+UPDATE 1
+
+30: LOCK t07a;
+LOCK
+-- seg 0: con30 ==> con10, xid lock
+30&: UPDATE t07b SET c2 = 21 WHERE c1 = segid(0,1);  <waiting ...>
+
+-- seg 1: con10 ==> con20, xid lock
+10&: UPDATE t07b SET c2 = 12 WHERE c1 = segid(1,1);  <waiting ...>
+
+40: UPDATE t07b SET c2 = 13 WHERE c1 = segid(0,2);
+UPDATE 1
+-- seg -1: con40 ==> con30, relation lock
+40&: LOCK t07a;  <waiting ...>
+
+-- set 0: con20 ==> con40, xid lock
+20>: UPDATE t07b SET c2 = 23 WHERE c1 = segid(0,2);  <waiting ...>
+
+-- con40 will be cancelled by gdd
+40<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+40q: ... <quitting>
+
+-- no more deadlock
+20<:  <... completed>
+UPDATE 1
+20q: ... <quitting>
+10<:  <... completed>
+UPDATE 1
+10q: ... <quitting>
+30<:  <... completed>
+UPDATE 1
+30q: ... <quitting>

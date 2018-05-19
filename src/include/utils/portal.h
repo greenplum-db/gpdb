@@ -36,10 +36,10 @@
  * to look like NO SCROLL cursors.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/portal.h,v 1.83 2010/07/05 09:27:17 heikki Exp $
+ * src/include/utils/portal.h
  *
  *-------------------------------------------------------------------------
  */
@@ -71,6 +71,11 @@
  * can't cope, and also because we don't want to risk failing to execute
  * all the auxiliary queries.)
  *
+ * PORTAL_ONE_MOD_WITH: the portal contains one single SELECT query, but
+ * it has data-modifying CTEs.	This is currently treated the same as the
+ * PORTAL_ONE_RETURNING case because of the possibility of needing to fire
+ * triggers.  It may act more like PORTAL_ONE_SELECT in future.
+ *
  * PORTAL_UTIL_SELECT: the portal contains a utility statement that returns
  * a SELECT-like result (for example, EXPLAIN or SHOW).  On first execution,
  * we run the statement and dump its results into the portal tuplestore;
@@ -83,6 +88,7 @@ typedef enum PortalStrategy
 {
 	PORTAL_ONE_SELECT,
 	PORTAL_ONE_RETURNING,
+	PORTAL_ONE_MOD_WITH,
 	PORTAL_UTIL_SELECT,
 	PORTAL_MULTI_QUERY
 } PortalStrategy;
@@ -183,7 +189,7 @@ typedef struct PortalData
 
 	/* MPP: is this portal a CURSOR, or protocol level portal? */
 	bool		is_extended_query; /* simple or extended query protocol? */
-} PortalData;
+}	PortalData;
 
 /*
  * PortalIsValid
@@ -201,9 +207,7 @@ typedef struct PortalData
 
 /* Prototypes for functions in utils/mmgr/portalmem.c */
 extern void EnablePortalManager(void);
-extern bool CommitHoldablePortals(void);
-extern bool PrepareHoldablePortals(void);
-extern void AtCommit_Portals(void);
+extern bool PreCommit_Portals(bool isPrepare);
 extern void AtAbort_Portals(void);
 extern void AtCleanup_Portals(void);
 extern void AtSubCommit_Portals(SubTransactionId mySubid,
@@ -217,6 +221,7 @@ extern Portal CreatePortal(const char *name, bool allowDup, bool dupSilent);
 extern Portal CreateNewPortal(void);
 extern void PinPortal(Portal portal);
 extern void UnpinPortal(Portal portal);
+extern void MarkPortalDone(Portal portal);
 extern void PortalDrop(Portal portal, bool isTopCommit);
 extern Portal GetPortalByName(const char *name);
 extern void PortalDefineQuery(Portal portal,

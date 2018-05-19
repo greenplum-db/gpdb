@@ -1420,7 +1420,7 @@ insert into IFace values ('IF', 'orion', 'ethernet_interface_name_too_long', '')
 
 --
 -- The following tests are unrelated to the scenario outlined above;
--- they merely exercise specific parts of PL/PgSQL
+-- they merely exercise specific parts of PL/pgSQL
 --
 
 --
@@ -1965,6 +1965,31 @@ end;
 $$ language plpgsql;
 
 select raise_test2(10);
+
+-- Test re-RAISE inside a nested exception block.  This case is allowed
+-- by Oracle's PL/SQL but was handled differently by PG before 9.1.
+
+CREATE FUNCTION reraise_test() RETURNS void AS $$
+BEGIN
+   BEGIN
+       RAISE syntax_error;
+   EXCEPTION
+       WHEN syntax_error THEN
+           BEGIN
+               raise notice 'exception % thrown in inner block, reraising', sqlerrm;
+               RAISE;
+           EXCEPTION
+               WHEN OTHERS THEN
+                   raise notice 'RIGHT - exception % caught in inner block', sqlerrm;
+           END;
+   END;
+EXCEPTION
+   WHEN OTHERS THEN
+       raise notice 'WRONG - exception % caught in outer block', sqlerrm;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT reraise_test();
 
 --
 -- reject function definitions that contain malformed SQL queries at
@@ -2641,7 +2666,7 @@ select exc_using(5, 'foobar');
 drop function exc_using(int, text);
 
 create or replace function exc_using(int) returns void as $$
-declare 
+declare
   c refcursor;
   i int;
 begin
@@ -2652,7 +2677,7 @@ begin
     raise notice '%', i;
   end loop;
   close c;
-  return;  
+  return;
 end;
 $$ language plpgsql;
 
@@ -3379,3 +3404,117 @@ $$ language plpgsql;
 select unreserved_test();
 
 drop function unreserved_test();
+
+--
+-- Test FOREACH over arrays
+--
+
+create function foreach_test(anyarray)
+returns void as $$
+declare x int;
+begin
+  foreach x in array $1
+  loop
+    raise notice '%', x;
+  end loop;
+  end;
+$$ language plpgsql;
+
+select foreach_test(ARRAY[1,2,3,4]);
+select foreach_test(ARRAY[[1,2],[3,4]]);
+
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare x int;
+begin
+  foreach x slice 1 in array $1
+  loop
+    raise notice '%', x;
+  end loop;
+  end;
+$$ language plpgsql;
+
+-- should fail
+select foreach_test(ARRAY[1,2,3,4]);
+select foreach_test(ARRAY[[1,2],[3,4]]);
+
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare x int[];
+begin
+  foreach x slice 1 in array $1
+  loop
+    raise notice '%', x;
+  end loop;
+  end;
+$$ language plpgsql;
+
+select foreach_test(ARRAY[1,2,3,4]);
+select foreach_test(ARRAY[[1,2],[3,4]]);
+
+-- higher level of slicing
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare x int[];
+begin
+  foreach x slice 2 in array $1
+  loop
+    raise notice '%', x;
+  end loop;
+  end;
+$$ language plpgsql;
+
+-- should fail
+select foreach_test(ARRAY[1,2,3,4]);
+-- ok
+select foreach_test(ARRAY[[1,2],[3,4]]);
+select foreach_test(ARRAY[[[1,2]],[[3,4]]]);
+
+create type xy_tuple AS (x int, y int);
+
+-- iteration over array of records
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare r record;
+begin
+  foreach r in array $1
+  loop
+    raise notice '%', r;
+  end loop;
+  end;
+$$ language plpgsql;
+
+select foreach_test(ARRAY[(10,20),(40,69),(35,78)]::xy_tuple[]);
+select foreach_test(ARRAY[[(10,20),(40,69)],[(35,78),(88,76)]]::xy_tuple[]);
+
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare x int; y int;
+begin
+  foreach x, y in array $1
+  loop
+    raise notice 'x = %, y = %', x, y;
+  end loop;
+  end;
+$$ language plpgsql;
+
+select foreach_test(ARRAY[(10,20),(40,69),(35,78)]::xy_tuple[]);
+select foreach_test(ARRAY[[(10,20),(40,69)],[(35,78),(88,76)]]::xy_tuple[]);
+
+-- slicing over array of composite types
+create or replace function foreach_test(anyarray)
+returns void as $$
+declare x xy_tuple[];
+begin
+  foreach x slice 1 in array $1
+  loop
+    raise notice '%', x;
+  end loop;
+  end;
+$$ language plpgsql;
+
+select foreach_test(ARRAY[(10,20),(40,69),(35,78)]::xy_tuple[]);
+select foreach_test(ARRAY[[(10,20),(40,69)],[(35,78),(88,76)]]::xy_tuple[]);
+
+drop function foreach_test(anyarray);
+drop type xy_tuple;

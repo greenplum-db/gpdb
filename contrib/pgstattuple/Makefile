@@ -1,15 +1,10 @@
-#-------------------------------------------------------------------------
-#
-# pgstattuple Makefile
-#
-# $PostgreSQL: pgsql/contrib/pgstattuple/Makefile,v 1.10 2009/04/28 17:07:50 momjian Exp $
-#
-#-------------------------------------------------------------------------
+# contrib/pgstattuple/Makefile
 
 MODULE_big	= pgstattuple
 OBJS		= pgstattuple.o pgstatindex.o
-DATA_built	= pgstattuple.sql
-DATA      	= uninstall_pgstattuple.sql
+
+EXTENSION = pgstattuple
+DATA = pgstattuple--1.0.sql pgstattuple--unpackaged--1.0.sql
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

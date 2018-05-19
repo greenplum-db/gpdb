@@ -243,7 +243,7 @@ struct pg_result
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int			numRejected;
 	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
-	int			numCompleted;
+	int64		numCompleted;
 	/* GPDB: number of processed tuples for each AO partition */
 	int			naotupcounts;
 	PQaoRelTupCount *aotupcounts;
@@ -568,7 +568,7 @@ extern PGresult *pqPrepareAsyncResult(PGconn *conn);
 extern void
 pqInternalNotice(const PGNoticeHooks *hooks, const char *fmt,...)
 /* This lets gcc check the format string for consistency. */
-__attribute__((format(printf, 2, 3)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 extern void pqSaveMessageField(PGresult *res, char code,
 				   const char *value);
 extern void pqSaveParameterStatus(PGconn *conn, const char *name,

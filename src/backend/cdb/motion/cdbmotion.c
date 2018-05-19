@@ -381,11 +381,38 @@ UpdateMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool preserve
 }
 
 void
-setExpectedReceivers(MotionLayerState *mlStates, int16 motNodeID, int expectedReceivers)
+UpdateMotionExpectedReceivers(MotionLayerState *mlStates, SliceTable *sliceTable)
 {
-	MotionNodeEntry *pEntry = getMotionNodeEntry(mlStates, motNodeID, "setExpectedReceivers");
+	Slice	   *mySlice;
+	Slice	   *aSlice;
+	ListCell   *cell;
+	CdbProcess *cdbProc;
+	MotionNodeEntry *pEntry;
 
-	pEntry->num_senders = expectedReceivers;
+	mySlice = (Slice *) list_nth(sliceTable->slices, sliceTable->localSlice);
+	foreach(cell, mySlice->children)
+	{
+		int			totalNumProcs, activeNumProcs, i;
+		int			childId = lfirst_int(cell);
+
+		aSlice = (Slice *) list_nth(sliceTable->slices, childId);
+
+		/*
+		 * If we're using directed-dispatch we have dummy primary-process
+		 * entries, so we count the entries.
+		 */
+		activeNumProcs = 0;
+		totalNumProcs = list_length(aSlice->primaryProcesses);
+		for (i = 0; i < totalNumProcs; i++)
+		{
+			cdbProc = list_nth(aSlice->primaryProcesses, i);
+			if (cdbProc)
+				activeNumProcs++;
+		}
+
+		pEntry = getMotionNodeEntry(mlStates, childId, "setExpectedReceivers");
+		pEntry->num_senders = activeNumProcs;
+	}
 }
 
 void
@@ -600,7 +627,7 @@ SendEndOfStream(MotionLayerState *mlStates,
 	 */
 	pMNEntry = getMotionNodeEntry(mlStates, motNodeID, "SendEndOfStream");
 
-	transportStates->SendEos(mlStates, transportStates, motNodeID, s_eos_chunk_data);
+	transportStates->SendEos(transportStates, motNodeID, s_eos_chunk_data);
 
 	/*
 	 * We increment our own "stream-ends received" count when we send our own,
@@ -756,7 +783,7 @@ processIncomingChunks(MotionLayerState *mlStates,
 	 * the chunk-sorter.
 	 */
 	if (srcRoute == ANY_ROUTE)
-		tcItem = transportStates->RecvTupleChunkFromAny(mlStates, transportStates, motNodeID, &srcRoute);
+		tcItem = transportStates->RecvTupleChunkFromAny(transportStates, motNodeID, &srcRoute);
 	else
 		tcItem = transportStates->RecvTupleChunkFrom(transportStates, motNodeID, srcRoute);
 
@@ -896,7 +923,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 			elog(LOG, "Interconnect seg%d slice%d sent " UINT64_FORMAT " tuples, "
 				 UINT64_FORMAT " total bytes, " UINT64_FORMAT " tuple bytes, "
 				 UINT64_FORMAT " chunks; waited " UINT64_FORMAT " usec.",
-				 Gp_segment,
+				 GpIdentity.segindex,
 				 currentSliceId,
 				 pMNEntry->stat_total_sends,
 				 pMNEntry->stat_total_bytes_sent,
@@ -911,7 +938,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 			elog(LOG, "Interconnect seg%d slice%d received from slice%d: " UINT64_FORMAT " tuples, "
 				 UINT64_FORMAT " total bytes, " UINT64_FORMAT " tuple bytes, "
 				 UINT64_FORMAT " chunks; waited " UINT64_FORMAT " usec.",
-				 Gp_segment,
+				 GpIdentity.segindex,
 				 currentSliceId,
 				 motNodeID,
 				 pMNEntry->stat_total_recvs,

@@ -13,10 +13,14 @@
  *
  * NB: this code should match downcase_truncate_identifier() in scansup.c.
  *
+ * We also provide strict ASCII-only case conversion functions, which can
+ * be used to implement C/POSIX case folding semantics no matter what the
+ * C library thinks the locale is.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/port/pgstrcasecmp.c,v 1.12 2010/01/02 16:58:13 momjian Exp $
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ *
+ * src/port/pgstrcasecmp.c
  *
  *-------------------------------------------------------------------------
  */
@@ -121,5 +125,27 @@ pg_tolower(unsigned char ch)
 		ch += 'a' - 'A';
 	else if (IS_HIGHBIT_SET(ch) && isupper(ch))
 		ch = tolower(ch);
+	return ch;
+}
+
+/*
+ * Fold a character to upper case, following C/POSIX locale rules.
+ */
+unsigned char
+pg_ascii_toupper(unsigned char ch)
+{
+	if (ch >= 'a' && ch <= 'z')
+		ch += 'A' - 'a';
+	return ch;
+}
+
+/*
+ * Fold a character to lower case, following C/POSIX locale rules.
+ */
+unsigned char
+pg_ascii_tolower(unsigned char ch)
+{
+	if (ch >= 'A' && ch <= 'Z')
+		ch += 'a' - 'A';
 	return ch;
 }

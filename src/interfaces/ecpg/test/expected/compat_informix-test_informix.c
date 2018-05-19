@@ -36,7 +36,7 @@ int main(void)
  int i = 14 ;
 
 #line 14 "test_informix.pgc"
- 
+
 	
 #line 15 "test_informix.pgc"
  decimal j , m , n ;
@@ -253,4 +253,3 @@ if (sqlca.sqlcode < 0) dosqlprint ( );}
 #line 95 "test_informix.pgc"
 
 }
-

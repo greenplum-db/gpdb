@@ -2,10 +2,10 @@
  *
  * createdb
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/createdb.c,v 1.35 2010/01/02 16:58:00 momjian Exp $
+ * src/bin/scripts/createdb.c
  *
  *-------------------------------------------------------------------------
  */
@@ -192,6 +192,11 @@ main(int argc, char *argv[])
 
 	appendPQExpBuffer(&sql, ";\n");
 
+	/*
+	 * Connect to the 'postgres' database by default, except have the
+	 * 'postgres' user use 'template1' so he can create the 'postgres'
+	 * database.
+	 */
 	conn = connectDatabase(strcmp(dbname, "postgres") == 0 ? "template1" : "postgres",
 						   host, port, username, prompt_password, progname);
 
@@ -208,12 +213,9 @@ main(int argc, char *argv[])
 	}
 
 	PQclear(result);
-	PQfinish(conn);
 
 	if (comment)
 	{
-		conn = connectDatabase(dbname, host, port, username, prompt_password, progname);
-
 		printfPQExpBuffer(&sql, "COMMENT ON DATABASE %s IS ", fmtId(dbname));
 		appendStringLiteralConn(&sql, comment, conn);
 		appendPQExpBuffer(&sql, ";\n");
@@ -231,8 +233,9 @@ main(int argc, char *argv[])
 		}
 
 		PQclear(result);
-		PQfinish(conn);
 	}
+
+	PQfinish(conn);
 
 	exit(0);
 }

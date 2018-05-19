@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/values.sgml,v 1.7 2010/04/03 07:23:02 petere Exp $
+doc/src/sgml/ref/values.sgml
 PostgreSQL documentation
 -->
 
@@ -115,7 +115,7 @@ VALUES ( <replaceable class="PARAMETER">expression</replaceable> [, ...] ) [, ..
     <listitem>
      <para>
       The number of rows to skip before starting to return rows.
-      For details see 
+      For details see
       <xref linkend="sql-limit" endterm="sql-limit-title">.
      </para>
     </listitem>

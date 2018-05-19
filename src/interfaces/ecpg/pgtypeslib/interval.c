@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/pgtypeslib/interval.c,v 1.42 2009/09/03 09:59:20 meskes Exp $ */
+/* src/interfaces/ecpg/pgtypeslib/interval.c */
 
 #include "postgres_fe.h"
 #include <time.h>

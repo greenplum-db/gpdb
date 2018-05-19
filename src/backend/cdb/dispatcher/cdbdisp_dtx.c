@@ -52,8 +52,7 @@ typedef struct DispatchCommandDtxProtocolParms
  */
 static DtxContextInfo TempQDDtxContextInfo = DtxContextInfo_StaticInit;
 
-static char *buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
-						  DispatchCommandDtxProtocolParms *pDtxProtocolParms,
+static char *buildGpDtxProtocolCommand(DispatchCommandDtxProtocolParms *pDtxProtocolParms,
 						  int *finalLen);
 
 /*
@@ -80,9 +79,8 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  char *serializedDtxContextInfo,
 							  int serializedDtxContextInfoLen)
 {
-	CdbDispatcherState ds = {NULL, NULL, NULL};
-
-	CdbDispatchResults *pr = NULL;
+	CdbDispatcherState *ds;
+	MemoryContext oldContext;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
@@ -128,48 +126,26 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	/*
 	 * Dispatch the command.
 	 */
+	ds = cdbdisp_makeDispatcherState();
+	oldContext = MemoryContextSwitchTo(DispatcherContext);
+	queryText = buildGpDtxProtocolCommand(&dtxProtocolParms, &queryTextLen);
+	ds->primaryResults = cdbdisp_makeDispatchResults(1, false);
+	ds->dispatchParams = cdbdisp_makeDispatchParams (1, queryText, queryTextLen);
+	ds->primaryResults->writer_gang = primaryGang;
+	MemoryContextSwitchTo(oldContext);
 
-	queryText = buildGpDtxProtocolCommand(&ds, &dtxProtocolParms, &queryTextLen);
-	cdbdisp_makeDispatcherState(&ds, /* slice count */ 1, /* cancelOnError */ false,
-								queryText, queryTextLen);
-	ds.primaryResults->writer_gang = primaryGang;
+	cdbdisp_dispatchToGang(ds, primaryGang, -1, direct);
 
-	PG_TRY();
+	cdbdisp_waitDispatchFinish(ds);
+
+	cdbdisp_finishCommand(ds, qeError, &cdb_pgresults, false);
+	if (!GangOK(primaryGang))
 	{
-		cdbdisp_dispatchToGang(&ds, primaryGang, -1, direct);
-
-		cdbdisp_waitDispatchFinish(&ds);
-
-		/*
-		 * Wait for all QEs to finish.	Don't cancel.
-		 */
-		pr = cdbdisp_getDispatchResults(&ds, qeError);
-
-		if (!GangOK(primaryGang))
-		{
-			*badGangs = true;
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-				 dtxProtocolCommandLoggingStr, gid);
-		}
-
-		/*
-		 * No errors happens in QEs
-		 */
-		if (pr)
-		{
-			cdbdisp_returnResults(pr, &cdb_pgresults);
-		}
-
-		cdbdisp_destroyDispatcherState(&ds);
+		*badGangs = true;
+		elog((Debug_print_full_dtm ? LOG : DEBUG5),
+			 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
+			 dtxProtocolCommandLoggingStr, gid);
 	}
-	PG_CATCH();
-	{
-		cdbdisp_cancelDispatch(&ds);
-		cdbdisp_destroyDispatcherState(&ds);
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
 
 	*numresults = cdb_pgresults.numResults;
 	return cdb_pgresults.pg_results;
@@ -252,9 +228,8 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
  * Build a dtx protocol command string to be dispatched to QE.
  */
 static char *
-buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
-						  DispatchCommandDtxProtocolParms *pDtxProtocolParms,
-						  int *finalLen)
+buildGpDtxProtocolCommand(DispatchCommandDtxProtocolParms *pDtxProtocolParms,
+						 int *finalLen)
 {
 	int			dtxProtocolCommand = (int) pDtxProtocolParms->dtxProtocolCommand;
 	int			flags = pDtxProtocolParms->flags;
@@ -283,14 +258,7 @@ buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
 	char	   *shared_query = NULL;
 	char	   *pos = NULL;
 
-	if (ds->dispatchStateContext == NULL)
-		ds->dispatchStateContext = AllocSetContextCreate(TopMemoryContext,
-														 "Dispatch Context",
-														 ALLOCSET_DEFAULT_MINSIZE,
-														 ALLOCSET_DEFAULT_INITSIZE,
-														 ALLOCSET_DEFAULT_MAXSIZE);
-
-	shared_query = MemoryContextAlloc(ds->dispatchStateContext, total_query_len);
+	shared_query = palloc0(total_query_len);
 	pos = shared_query;
 
 	*pos++ = 'T';

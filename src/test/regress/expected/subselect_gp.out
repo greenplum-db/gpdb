@@ -913,21 +913,18 @@ select * from subselect_t1 where x in (select y from subselect_t2);
 -- Known_opt_diff: MPP-21351
 -- end_ignore
 explain select * from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.38..3.44 rows=4 width=4)
-   ->  Hash Semi Join  (cost=2.38..3.44 rows=2 width=4)
-         Hash Cond: subselect_t1.x = "IN_subquery".y
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.20..3.26 rows=4 width=4)
+   ->  Hash Semi Join  (cost=2.20..3.26 rows=2 width=4)
+         Hash Cond: subselect_t1.x = subselect_gp.subselect_t2.y
          ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
-         ->  Hash  (cost=2.30..2.30 rows=2 width=4)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.30 rows=2 width=4)
-                     Hash Key: "IN_subquery".y
-                     ->  Append  (cost=0.00..2.12 rows=2 width=4)
-                           ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
-                           ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
-(12 rows)
+         ->  Hash  (cost=2.12..2.12 rows=2 width=4)
+               ->  Append  (cost=0.00..2.06 rows=2 width=4)
+                     ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
+ Optimizer: legacy query optimizer
+(9 rows)
 
 select * from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
  x 
@@ -961,23 +958,20 @@ select count(*) from subselect_t1 where x in (select y from subselect_t2);
 -- Known_opt_diff: MPP-21351
 -- end_ignore
 explain select count(*) from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=3.51..3.52 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.45..3.50 rows=1 width=8)
-         ->  Aggregate  (cost=3.45..3.46 rows=1 width=8)
-               ->  Hash Semi Join  (cost=2.38..3.44 rows=2 width=0)
-                     Hash Cond: subselect_t1.x = "IN_subquery".y
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3.33..3.34 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.26..3.31 rows=1 width=8)
+         ->  Aggregate  (cost=3.26..3.27 rows=1 width=8)
+               ->  Hash Semi Join  (cost=2.20..3.26 rows=2 width=0)
+                     Hash Cond: subselect_t1.x = subselect_gp.subselect_t2.y
                      ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
-                     ->  Hash  (cost=2.30..2.30 rows=2 width=4)
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.30 rows=2 width=4)
-                                 Hash Key: "IN_subquery".y
-                                 ->  Append  (cost=0.00..2.12 rows=2 width=4)
-                                       ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
-                                       ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
-(14 rows)
+                     ->  Hash  (cost=2.12..2.12 rows=2 width=4)
+                           ->  Append  (cost=0.00..2.06 rows=2 width=4)
+                                 ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
+                                 ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
+ Optimizer: legacy query optimizer
+(11 rows)
 
 select count(*) from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
  count 

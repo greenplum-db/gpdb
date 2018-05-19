@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2001-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/instrument.c,v 1.25 2010/02/26 02:00:41 momjian Exp $
+ *	  src/backend/executor/instrument.c
  *
  *-------------------------------------------------------------------------
  */
@@ -350,7 +350,7 @@ pickInstrFromShmem(const Plan *plan, int instrument_options)
 		memset(slot, 0x00, sizeof(InstrumentationSlot));
 		/* initialize the picked slot */
 		instr = &(slot->data);
-		slot->segid = (int16) Gp_segment;
+		slot->segid = (int16) GpIdentity.segindex;
 		slot->pid = MyProcPid;
 		gpmon_gettmid(&(slot->tmid));
 		slot->ssid = gp_session_id;

@@ -449,24 +449,12 @@ ExecBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node)
 }
 
 /* ----------------------------------------------------------------
- *		ExecBitmapAppendOnlyReScan(node)
+ *		ExecReScanBitmapAppendOnly(node)
  * ----------------------------------------------------------------
  */
 void
-ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtxt)
+ExecReScanBitmapAppendOnly(BitmapAppendOnlyScanState *node)
 {
-	/*
-	 * If we are being passed an outer tuple, link it into the "regular"
-	 * per-tuple econtext for possible qual eval.
-	 */
-	if (exprCtxt != NULL)
-	{
-		ExprContext *stdecontext;
-
-		stdecontext = node->ss.ps.ps_ExprContext;
-		stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-	}
-
 	/*
 	 * NOTE: The appendonly_fetch routine can fetch randomly, so no need to reset it.
 	 */
@@ -477,7 +465,7 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	ExecReScan(outerPlanState(node), exprCtxt);
+	ExecReScan(outerPlanState(node));
 }
 
 /* ----------------------------------------------------------------

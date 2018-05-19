@@ -6,10 +6,10 @@
  *	   including abstime, reltime, date, and time.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/datetime.h,v 1.79 2010/02/26 02:01:29 momjian Exp $
+ * src/include/utils/datetime.h
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,9 @@
 #include <math.h>
 
 #include "utils/timestamp.h"
-#include "utils/tzparser.h"
+
+/* this struct is declared in utils/tzparser.h: */
+struct tzEntry;
 
 
 /* ----------------------------------------------------------------
@@ -208,6 +210,13 @@ typedef struct
 	char		value;			/* this may be unsigned, alas */
 } datetkn;
 
+/* one of its uses is in tables of time zone abbreviations */
+typedef struct TimeZoneAbbrevTable
+{
+	int			numabbrevs;
+	datetkn		abbrevs[1];		/* VARIABLE LENGTH ARRAY */
+} TimeZoneAbbrevTable;
+
 
 /* FMODULO()
  * Macro to replace modf(), which is broken on some platforms.
@@ -322,7 +331,10 @@ extern int	DecodeUnits(int field, char *lowtoken, int *val);
 extern int	j2day(int jd);
 
 extern bool CheckDateTokenTables(void);
-extern void InstallTimeZoneAbbrevs(tzEntry *abbrevs, int n);
+
+extern void ConvertTimeZoneAbbrevs(TimeZoneAbbrevTable *tbl,
+					   struct tzEntry *abbrevs, int n);
+extern void InstallTimeZoneAbbrevs(TimeZoneAbbrevTable *tbl);
 
 extern Datum pg_timezone_abbrevs(PG_FUNCTION_ARGS);
 extern Datum pg_timezone_names(PG_FUNCTION_ARGS);

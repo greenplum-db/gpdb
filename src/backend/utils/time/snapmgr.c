@@ -15,11 +15,11 @@
  * long.)
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/snapmgr.c,v 1.15 2010/02/26 02:01:15 momjian Exp $
+ *	  src/backend/utils/time/snapmgr.c
  *
  *-------------------------------------------------------------------------
  */
@@ -27,6 +27,7 @@
 
 #include "access/transam.h"
 #include "access/xact.h"
+#include "storage/predicate.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/memutils.h"
@@ -36,14 +37,15 @@
 #include "utils/tqual.h"
 
 #include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h"
 #include "utils/guc.h"
 
 
 /*
- * CurrentSnapshot points to the only snapshot taken in a serializable
- * transaction, and to the latest one taken in a read-committed transaction.
+ * CurrentSnapshot points to the only snapshot taken in transaction-snapshot
+ * mode, and to the latest one taken in a read-committed transaction.
  * SecondarySnapshot is a snapshot that's always up-to-date as of the current
- * instant, even on a serializable transaction.  It should only be used for
+ * instant, even in transaction-snapshot mode.	It should only be used for
  * special-purpose code (say, RI checking.)
  *
  * These SnapshotData structs are static to simplify memory allocation
@@ -100,11 +102,11 @@ static int	RegisteredSnapshots = 0;
 bool		FirstSnapshotSet = false;
 
 /*
- * Remembers whether this transaction registered a serializable snapshot at
+ * Remembers whether this transaction registered a transaction snapshot at
  * start.  We cannot trust FirstSnapshotSet in combination with
- * IsXactIsoLevelSerializable, because GUC may be reset before us.
+ * IsolationUsesXactSnapshot(), because GUC may be reset before us.
  */
-static bool registered_serializable = false;
+static bool registered_xact_snapshot = false;
 
 
 static Snapshot CopySnapshot(Snapshot snapshot);
@@ -129,25 +131,31 @@ GetTransactionSnapshot(void)
 	{
 		Assert(RegisteredSnapshots == 0);
 
-		CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
-		FirstSnapshotSet = true;
-
 		/*
-		 * In serializable mode, the first snapshot must live until end of
-		 * xact regardless of what the caller does with it, so we must
+		 * In transaction-snapshot mode, the first snapshot must live until
+		 * end of xact regardless of what the caller does with it, so we must
 		 * register it internally here and unregister it at end of xact.
 		 */
-		if (IsXactIsoLevelSerializable)
+		if (IsolationUsesXactSnapshot())
 		{
-			CurrentSnapshot = RegisterSnapshotOnOwner(CurrentSnapshot,
+			if (IsolationIsSerializable())
+				CurrentSnapshot = RegisterSerializableTransaction(&CurrentSnapshotData);
+			else
+			{
+				CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
+				CurrentSnapshot = RegisterSnapshotOnOwner(CurrentSnapshot,
 												TopTransactionResourceOwner);
-			registered_serializable = true;
+			}
+			registered_xact_snapshot = true;
 		}
+		else
+			CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
 
+		FirstSnapshotSet = true;
 		return CurrentSnapshot;
 	}
 
-	if (IsXactIsoLevelSerializable)
+	if (IsolationUsesXactSnapshot())
 	{
 		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 			 "[Distributed Snapshot #%u] *Serializable* (gxid = %u, '%s')",
@@ -155,6 +163,10 @@ GetTransactionSnapshot(void)
 			 getDistributedTransactionId(),
 			 DtxContextToString(DistributedTransactionContext));
 
+		// GPDB_91_MERGE_FIXME: the name of UpdateSerializableCommandId is a bit
+		// wrong, now that SERIALIZABLE and REPEATABLE READ are not the same.
+		// From comparison, the if-check above was changed from checking
+		// IsXactIsoLevelSerializable to IsolationUsesXactSnapshot()
 		UpdateSerializableCommandId(CurrentSnapshot->curcid);
 
 		return CurrentSnapshot;
@@ -174,7 +186,7 @@ GetTransactionSnapshot(void)
 /*
  * GetLatestSnapshot
  *		Get a snapshot that is up-to-date as of the current instant,
- *		even if we are executing in SERIALIZABLE mode.
+ *		even if we are executing in transaction-snapshot mode.
  */
 Snapshot
 GetLatestSnapshot(void)
@@ -283,6 +295,9 @@ CopySnapshot(Snapshot snapshot)
 			   snapshot->distribSnapshotWithLocalMapping.ds.count *
 			   sizeof(DistributedTransactionId));
 
+		Assert(snapshot->distribSnapshotWithLocalMapping.ds.count ==
+			   newsnap->distribSnapshotWithLocalMapping.ds.count);
+
 		/* Store -1 as the maxCount, to indicate that the array was not malloc'd */
 		newsnap->distribSnapshotWithLocalMapping.ds.maxCount = -1;
 
@@ -294,15 +309,23 @@ CopySnapshot(Snapshot snapshot)
 			sizeof(DistributedTransactionId);
 
 		/* Copy the local xid cache */
-		newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
-			(TransactionId*) ((char *) newsnap + dsoff);
-		memcpy(newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-			   snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-			   snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
-			   sizeof(TransactionId));
-
-		newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount =
-			snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
+		if (IS_QUERY_DISPATCHER())
+		{
+			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids = NULL;
+			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount = 0;
+			newsnap->distribSnapshotWithLocalMapping.currentLocalXidsCount = 0;
+		}
+		else
+		{
+			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
+				(TransactionId*) ((char *) newsnap + dsoff);
+			memcpy(newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+				   snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+				   snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
+				   sizeof(TransactionId));
+			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount =
+				snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
+		}
 	}
 	else
 	{
@@ -364,22 +387,33 @@ PushActiveSnapshot(Snapshot snap)
 }
 
 /*
- * PushUpdatedSnapshot
- *		As above, except we set the snapshot's CID to the current CID.
+ * PushCopiedSnapshot
+ *		As above, except forcibly copy the presented snapshot.
+ *
+ * This should be used when the ActiveSnapshot has to be modifiable, for
+ * example if the caller intends to call UpdateActiveSnapshotCommandId.
+ * The new snapshot will be released when popped from the stack.
  */
 void
-PushUpdatedSnapshot(Snapshot snapshot)
+PushCopiedSnapshot(Snapshot snapshot)
 {
-	Snapshot	newsnap;
+	PushActiveSnapshot(CopySnapshot(snapshot));
+}
 
-	/*
-	 * We cannot risk modifying a snapshot that's possibly already used
-	 * elsewhere, so make a new copy to scribble on.
-	 */
-	newsnap = CopySnapshot(snapshot);
-	newsnap->curcid = GetCurrentCommandId(false);
+/*
+ * UpdateActiveSnapshotCommandId
+ *
+ * Update the current CID of the active snapshot.  This can only be applied
+ * to a snapshot that is not referenced elsewhere.
+ */
+void
+UpdateActiveSnapshotCommandId(void)
+{
+	Assert(ActiveSnapshot != NULL);
+	Assert(ActiveSnapshot->as_snap->active_count == 1);
+	Assert(ActiveSnapshot->as_snap->regd_count == 0);
 
-	PushActiveSnapshot(newsnap);
+	ActiveSnapshot->as_snap->curcid = GetCurrentCommandId(false);
 }
 
 /*
@@ -587,13 +621,13 @@ void
 AtEarlyCommit_Snapshot(void)
 {
 	/*
-	 * On a serializable transaction we must unregister our private refcount
-	 * to the serializable snapshot.
+	 * In transaction-snapshot mode we must unregister our private refcount to
+	 * the transaction-snapshot.
 	 */
-	if (registered_serializable)
+	if (registered_xact_snapshot)
 		UnregisterSnapshotFromOwner(CurrentSnapshot,
 									TopTransactionResourceOwner);
-	registered_serializable = false;
+	registered_xact_snapshot = false;
 
 }
 
@@ -629,7 +663,7 @@ AtEOXact_Snapshot(bool isCommit)
 	SecondarySnapshot = NULL;
 
 	FirstSnapshotSet = false;
-	registered_serializable = false;
+	registered_xact_snapshot = false;
 }
 
 DistributedSnapshotWithLocalMapping *

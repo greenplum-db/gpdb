@@ -3,22 +3,24 @@
  * alter.c
  *	  Drivers for generic alter commands
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/alter.c,v 1.36 2010/06/13 17:43:12 rhaas Exp $
+ *	  src/backend/commands/alter.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
 #include "commands/alter.h"
+#include "commands/collationcmds.h"
 #include "commands/conversioncmds.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
@@ -54,6 +56,10 @@ ExecRenameStmt(RenameStmt *stmt)
 	{
 		case OBJECT_AGGREGATE:
 			RenameAggregate(stmt->object, stmt->objarg, stmt->newname);
+			break;
+
+		case OBJECT_COLLATION:
+			RenameCollation(stmt->object, stmt->newname);
 			break;
 
 		case OBJECT_CONVERSION:
@@ -101,7 +107,9 @@ ExecRenameStmt(RenameStmt *stmt)
 		case OBJECT_VIEW:
 		case OBJECT_INDEX:
 		case OBJECT_COLUMN:
+		case OBJECT_ATTRIBUTE:
 		case OBJECT_TRIGGER:
+		case OBJECT_FOREIGN_TABLE:
 			{
 				Oid			relid;
 
@@ -124,6 +132,7 @@ ExecRenameStmt(RenameStmt *stmt)
 					case OBJECT_SEQUENCE:
 					case OBJECT_VIEW:
 					case OBJECT_INDEX:
+					case OBJECT_FOREIGN_TABLE:
 						{
 							/*
 							 * RENAME TABLE requires that we (still) hold
@@ -144,11 +153,8 @@ ExecRenameStmt(RenameStmt *stmt)
 							break;
 						}
 					case OBJECT_COLUMN:
-						renameatt(relid,
-								  stmt->subname,		/* old att name */
-								  stmt->newname,		/* new att name */
-								  interpretInhOption(stmt->relation->inhOpt),	/* recursive? */
-								  0);	/* expected inhcount */
+					case OBJECT_ATTRIBUTE:
+						renameatt(relid, stmt);
 						break;
 					case OBJECT_TRIGGER:
 						renametrig(relid,
@@ -211,6 +217,10 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 								   stmt->newschema);
 			break;
 
+		case OBJECT_COLLATION:
+			AlterCollationNamespace(stmt->object, stmt->newschema);
+			break;
+
 		case OBJECT_CONVERSION:
 			AlterConversionNamespace(stmt->object, stmt->newschema);
 			break;
@@ -239,9 +249,26 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 		case OBJECT_SEQUENCE:
 		case OBJECT_TABLE:
 		case OBJECT_VIEW:
+		case OBJECT_FOREIGN_TABLE:
 			CheckRelationOwnership(stmt->relation, true);
 			AlterTableNamespace(stmt->relation, stmt->newschema,
-								stmt->objectType);
+								stmt->objectType, AccessExclusiveLock);
+			break;
+
+		case OBJECT_TSPARSER:
+			AlterTSParserNamespace(stmt->object, stmt->newschema);
+			break;
+
+		case OBJECT_TSDICTIONARY:
+			AlterTSDictionaryNamespace(stmt->object, stmt->newschema);
+			break;
+
+		case OBJECT_TSTEMPLATE:
+			AlterTSTemplateNamespace(stmt->object, stmt->newschema);
+			break;
+
+		case OBJECT_TSCONFIGURATION:
+			AlterTSConfigurationNamespace(stmt->object, stmt->newschema);
 			break;
 
 		case OBJECT_TYPE:
@@ -312,6 +339,10 @@ AlterObjectNamespace_oid(Oid classId, Oid objid, Oid nspOid,
 			oldNspOid = AlterTypeNamespace_oid(objid, nspOid, objsMoved);
 			break;
 
+		case OCLASS_COLLATION:
+			oldNspOid = AlterCollationNamespace_oid(objid, nspOid);
+			break;
+
 		case OCLASS_CONVERSION:
 			oldNspOid = AlterConversionNamespace_oid(objid, nspOid);
 			break;
@@ -326,6 +357,22 @@ AlterObjectNamespace_oid(Oid classId, Oid objid, Oid nspOid,
 
 		case OCLASS_OPFAMILY:
 			oldNspOid = AlterOpFamilyNamespace_oid(objid, nspOid);
+			break;
+
+		case OCLASS_TSPARSER:
+			oldNspOid = AlterTSParserNamespace_oid(objid, nspOid);
+			break;
+
+		case OCLASS_TSDICT:
+			oldNspOid = AlterTSDictionaryNamespace_oid(objid, nspOid);
+			break;
+
+		case OCLASS_TSTEMPLATE:
+			oldNspOid = AlterTSTemplateNamespace_oid(objid, nspOid);
+			break;
+
+		case OCLASS_TSCONFIG:
+			oldNspOid = AlterTSConfigurationNamespace_oid(objid, nspOid);
 			break;
 
 		default:
@@ -466,12 +513,16 @@ AlterObjectNamespace(Relation rel, int oidCacheId, int nameCacheId,
 void
 ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 {
-	Oid			newowner = get_roleid_checked(stmt->newowner);
+	Oid			newowner = get_role_oid(stmt->newowner, false);
 
 	switch (stmt->objectType)
 	{
 		case OBJECT_AGGREGATE:
 			AlterAggregateOwner(stmt->object, stmt->objarg, newowner);
+			break;
+
+		case OBJECT_COLLATION:
+			AlterCollationOwner(stmt->object, newowner);
 			break;
 
 		case OBJECT_CONVERSION:

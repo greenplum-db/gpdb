@@ -3,12 +3,12 @@
  * int.c
  *	  Functions for the built-in integer types (except int8).
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/int.c,v 1.89 2010/02/26 02:01:08 momjian Exp $
+ *	  src/backend/utils/adt/int.c
  *
  *-------------------------------------------------------------------------
  */
@@ -211,7 +211,8 @@ int2vectorrecv(PG_FUNCTION_ARGS)
 	 * fcinfo->flinfo->fn_extra.  So we need to pass it our own flinfo
 	 * parameter.
 	 */
-	InitFunctionCallInfoData(locfcinfo, fcinfo->flinfo, 3, NULL, NULL);
+	InitFunctionCallInfoData(locfcinfo, fcinfo->flinfo, 3,
+							 InvalidOid, NULL, NULL);
 
 	locfcinfo.arg[0] = PointerGetDatum(buf);
 	locfcinfo.arg[1] = ObjectIdGetDatum(INT2OID);

@@ -3,12 +3,12 @@
  * nodeRecursiveunion.c
  *	  routines to handle RecursiveUnion nodes.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeRecursiveunion.c,v 1.6 2010/01/02 16:57:45 momjian Exp $
+ *	  src/backend/executor/nodeRecursiveunion.c
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,7 @@ typedef struct RUHashEntryData *RUHashEntry;
 typedef struct RUHashEntryData
 {
 	TupleHashEntryData shared;	/* common header for hash table entries */
-} RUHashEntryData;
+}	RUHashEntryData;
 
 
 /*
@@ -79,7 +79,6 @@ ExecRecursiveUnion(RecursiveUnionState *node)
 	PlanState  *innerPlan = innerPlanState(node);
 	RecursiveUnion *plan = (RecursiveUnion *) node->ps.plan;
 	TupleTableSlot *slot;
-	RUHashEntry entry;
 	bool		isnew;
 
 	/* 1. Evaluate non-recursive term */
@@ -97,8 +96,7 @@ ExecRecursiveUnion(RecursiveUnionState *node)
 			if (plan->numCols > 0)
 			{
 				/* Find or build hashtable entry for this tuple's group */
-				entry = (RUHashEntry)
-					LookupTupleHashEntry(node->hashtable, slot, &isnew);
+				LookupTupleHashEntry(node->hashtable, slot, &isnew);
 				/* Must reset temp context after each hashtable lookup */
 				MemoryContextReset(node->tempContext);
 				/* Ignore tuple if already seen */
@@ -149,8 +147,7 @@ ExecRecursiveUnion(RecursiveUnionState *node)
 		if (plan->numCols > 0)
 		{
 			/* Find or build hashtable entry for this tuple's group */
-			entry = (RUHashEntry)
-				LookupTupleHashEntry(node->hashtable, slot, &isnew);
+			LookupTupleHashEntry(node->hashtable, slot, &isnew);
 			/* Must reset temp context after each hashtable lookup */
 			MemoryContextReset(node->tempContext);
 			/* Ignore tuple if already seen */
@@ -316,13 +313,13 @@ ExecEndRecursiveUnion(RecursiveUnionState *node)
 }
 
 /* ----------------------------------------------------------------
- *		ExecRecursiveUnionReScan
+ *		ExecReScanRecursiveUnion
  *
  *		Rescans the relation.
  * ----------------------------------------------------------------
  */
 void
-ExecRecursiveUnionReScan(RecursiveUnionState *node, ExprContext *exprCtxt)
+ExecReScanRecursiveUnion(RecursiveUnionState *node)
 {
 	PlanState  *outerPlan = outerPlanState(node);
 	PlanState  *innerPlan = innerPlanState(node);
@@ -340,7 +337,7 @@ ExecRecursiveUnionReScan(RecursiveUnionState *node, ExprContext *exprCtxt)
 	 * non-recursive term.
 	 */
 	if (outerPlan->chgParam == NULL)
-		ExecReScan(outerPlan, exprCtxt);
+		ExecReScan(outerPlan);
 
 	/* Release any hashtable storage */
 	if (node->tableContext)

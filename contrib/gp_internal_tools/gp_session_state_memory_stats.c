@@ -117,7 +117,7 @@ gp_session_state_memory_entries(PG_FUNCTION_ARGS)
 			bool		nulls[NUM_SESSION_STATE_MEMORY_ELEM];
 			MemSet(nulls, 0, sizeof(nulls));
 
-			values[0] = Int32GetDatum(Gp_segment);
+			values[0] = Int32GetDatum(GpIdentity.segindex);
 			values[1] = Int32GetDatum(sessionState.sessionId);
 			values[2] = Int32GetDatum(VmemTracker_ConvertVmemChunksToMB(sessionState.sessionVmem));
 			values[3] = Int32GetDatum(sessionState.runawayStatus);

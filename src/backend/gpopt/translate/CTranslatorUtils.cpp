@@ -16,6 +16,8 @@
 
 #include "postgres.h"
 
+#include "utils/guc.h"
+
 #include "nodes/plannodes.h"
 #include "nodes/parsenodes.h"
 #include "access/sysattr.h"
@@ -933,7 +935,7 @@ CTranslatorUtils::UlSystemColLength
 				gpdxl::ExmiPlStmt2DXLConversion,
 				GPOS_WSZ_LIT("Invalid attribute number")
 				);
-			return ULONG_MAX;
+			return gpos::ulong_max;
 	}
 }
 
@@ -1374,7 +1376,7 @@ CTranslatorUtils::PdrgpulGenerateColIds
 		OID oidExprType = gpdb::OidExprType((Node*) pte->expr);
 		if (!pte->resjunk)
 		{
-			ULONG ulColId = ULONG_MAX;
+			ULONG ulColId = gpos::ulong_max;
 			IMDId *pmdid = (*pdrgpmdidInput)[ulColPos];
 			if (CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId() != oidExprType || 
 				pfOuterRef[ulColPos])
@@ -1389,7 +1391,7 @@ CTranslatorUtils::PdrgpulGenerateColIds
 				// use the column identifier of the input
 				ulColId = *(*pdrgpulInput)[ulColPos];
 			}
-			GPOS_ASSERT(ULONG_MAX != ulColId);
+			GPOS_ASSERT(gpos::ulong_max != ulColId);
 			
 			pdrgpul->Append(GPOS_NEW(pmp) ULONG(ulColId));
 
@@ -1606,7 +1608,7 @@ CTranslatorUtils::Pdxlcd
 	)
 {
 	GPOS_ASSERT(NULL != pte);
-	GPOS_ASSERT(ULONG_MAX != ulColId);
+	GPOS_ASSERT(gpos::ulong_max != ulColId);
 
 	CMDName *pmdname = NULL;
 	if (NULL == pte->resname)

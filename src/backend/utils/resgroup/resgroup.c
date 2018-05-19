@@ -72,8 +72,7 @@
 /*
  * GUC variables.
  */
-char                		*gp_resgroup_memory_policy_str = NULL;
-ResManagerMemoryPolicy     	gp_resgroup_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
+int							gp_resgroup_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
 bool						gp_log_resgroup_memory = false;
 int							gp_resgroup_memory_policy_auto_fixed_mem;
 bool						gp_resgroup_print_operator_memory_limits = false;
@@ -185,7 +184,6 @@ struct ResGroupData
 	 * give back to MEM POOL.
 	 */
 	int32       memGap;
-	int32		memAuditor;
 
 	int32		memExpected;		/* expected memory chunks according to current caps */
 	int32		memQuotaGranted;	/* memory chunks for quota part */
@@ -275,7 +273,7 @@ static ResGroupData *groupHashNew(Oid groupId);
 static ResGroupData *groupHashFind(Oid groupId, bool raise);
 static ResGroupData *groupHashRemove(Oid groupId);
 static void waitOnGroup(ResGroupData *group);
-static ResGroupData *createGroup(Oid groupId, const ResGroupOptions *groupOptions);
+static ResGroupData *createGroup(Oid groupId, const ResGroupCaps *caps);
 static void removeGroup(Oid groupId);
 static void AtProcExit_ResGroup(int code, Datum arg);
 static void groupWaitCancel(void);
@@ -472,13 +470,13 @@ error_out:
  * Allocate a resource group entry from a hash table
  */
 void
-AllocResGroupEntry(Oid groupId, const ResGroupOptions *groupOptions)
+AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 {
 	ResGroupData	*group;
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = createGroup(groupId, groupOptions);
+	group = createGroup(groupId, caps);
 	Assert(group != NULL);
 
 	LWLockRelease(ResGroupLock);
@@ -497,6 +495,7 @@ InitResGroups(void)
 	int			numGroups;
 	CdbComponentDatabases *cdbComponentDBs;
 	CdbComponentDatabaseInfo *qdinfo;
+	ResGroupCaps		caps;
 	Relation			relResGroup;
 	Relation			relResGroupCapability;
 
@@ -516,7 +515,7 @@ InitResGroups(void)
 
 	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
 	{
-		Assert(GpIdentity.segindex == MASTER_CONTENT_ID);
+		Assert(IS_QUERY_DISPATCHER());
 		cdbComponentDBs = getCdbComponentDatabases();
 		qdinfo = &cdbComponentDBs->entry_db_info[0];
 		pResGroupControl->segmentsOnMaster = qdinfo->hostSegs;
@@ -552,19 +551,18 @@ InitResGroups(void)
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		ResGroupData	*group;
-		ResGroupOptions groupOptions;
+		int cpuRateLimit;
 		Oid groupId = HeapTupleGetOid(tuple);
 
-		groupOptions.memAuditor = GetResGroupMemAuditorFromTuple(relResGroup, tuple);
+		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
+		cpuRateLimit = caps.cpuRateLimit;
 
-		GetResGroupCapabilities(relResGroupCapability, groupId, &groupOptions.caps);
-
-		group = createGroup(groupId, &groupOptions);
+		group = createGroup(groupId, &caps);
 		Assert(group != NULL);
 
 		ResGroupOps_CreateGroup(groupId);
-		ResGroupOps_SetCpuRateLimit(groupId, groupOptions.caps.cpuRateLimit);
-		ResGroupOps_SetMemoryLimit(groupId, groupOptions.caps.memLimit);
+		ResGroupOps_SetCpuRateLimit(groupId, cpuRateLimit);
+		ResGroupOps_SetMemoryLimit(groupId, caps.memLimit);
 
 		numGroups++;
 		Assert(numGroups <= MaxResourceGroups);
@@ -657,7 +655,7 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 			bool		migrate;
 
 			/* Only migrate processes out of vmtracker groups */
-			migrate = group->memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER;
+			migrate = group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER;
 
 			removeGroup(groupId);
 
@@ -1056,7 +1054,7 @@ removeGroup(Oid groupId)
  *	calling this - unless we are the startup process.
  */
 static ResGroupData *
-createGroup(Oid groupId, const ResGroupOptions *groupOptions)
+createGroup(Oid groupId, const ResGroupCaps *caps)
 {
 	ResGroupData	*group;
 	int32			chunks;
@@ -1068,13 +1066,12 @@ createGroup(Oid groupId, const ResGroupOptions *groupOptions)
 	Assert(group != NULL);
 
 	group->groupId = groupId;
-	group->caps = groupOptions->caps;
+	group->caps = *caps;
 	group->nRunning = 0;
 	ProcQueueInit(&group->waitProcs);
 	group->totalExecuted = 0;
 	group->totalQueued = 0;
 	group->memGap = 0;
-	group->memAuditor = groupOptions->memAuditor;
 	group->memUsage = 0;
 	group->memSharedUsage = 0;
 	group->memQuotaUsed = 0;
@@ -1084,10 +1081,10 @@ createGroup(Oid groupId, const ResGroupOptions *groupOptions)
 
 	group->memQuotaGranted = 0;
 	group->memSharedGranted = 0;
-	group->memExpected = groupGetMemExpected(&groupOptions->caps);
+	group->memExpected = groupGetMemExpected(caps);
 
 	chunks = mempoolReserve(groupId, group->memExpected);
-	groupRebalanceQuota(group, chunks, &groupOptions->caps);
+	groupRebalanceQuota(group, chunks, caps);
 
 	bindGroupOperation(group);
 
@@ -1102,14 +1099,14 @@ bindGroupOperation(ResGroupData *group)
 {
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
-	if (group->memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER)
+	if (group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER)
 		group->groupMemOps = &resgroup_memory_operations_vmtracker;
-	else if (group->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
+	else if (group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
 		group->groupMemOps = &resgroup_memory_operations_cgroup;
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid memory auditor: %d", group->memAuditor)));
+				 errmsg("invalid memory auditor: %d", group->caps.memAuditor)));
 }
 
 /*

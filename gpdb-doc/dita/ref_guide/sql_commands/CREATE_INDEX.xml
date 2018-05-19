@@ -29,9 +29,9 @@
                                 For example, an index computed on <codeph>upper(col)</codeph> would
                                 allow the clause <codeph>WHERE upper(col) = 'JIM'</codeph> to use an
                                 index. </p>
-                        <p>Greenplum Database provides the index methods B-tree, bitmap, GiST, and GIN.
-                                Users can also define their own index methods, but that is fairly
-                                complicated. </p>
+                        <p>Greenplum Database provides the index methods B-tree, bitmap, GiST, and
+                                GIN. Users can also define their own index methods, but that is
+                                fairly complicated. </p>
                         <p>When the <codeph>WHERE</codeph> clause is present, a partial index is
                                 created. A partial index is an index that contains entries for only
                                 a portion of a table, usually a portion that is more useful for
@@ -89,8 +89,15 @@
                                         </pt>
                                         <pd>The name of the index method to be used. Choices are
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
-                                                <codeph>gist</codeph>, and <codeph>gin</codeph>. The default method is
-                                                  <codeph>btree</codeph>. </pd>
+                                                  <codeph>gist</codeph>, and <codeph>gin</codeph>.
+                                                The default method is <codeph>btree</codeph>. </pd>
+                                        <pd>Currently, only the B-tree, GiST and GIN index methods
+                                                support multicolumn indexes. Up to 32 fields can be
+                                                specified by default. Only B-tree currently supports
+                                                unique indexes.</pd>
+                                        <pd>GPORCA supports only B-tree and bitmap indexes. GPORCA
+                                                ignores indexes created with unsupported indexing
+                                                methods.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
@@ -179,8 +186,7 @@
                                                 tables a smaller fillfactor is better to minimize
                                                 the need for page splits. The other index methods
                                                 use fillfactor in different but roughly analogous
-                                                ways; the default fillfactor varies between methods.
-                                        </pd>
+                                                ways; the default fillfactor varies between methods. </pd>
                                         <pd><codeph>FASTUPDATE</codeph> is a Boolean parameter that
                                                 disables or enables the GIN index fast update
                                                 technique. A value of ON enables fast update (the
@@ -213,9 +219,6 @@
                 </section>
                 <section id="section5">
                         <title>Notes</title>
-                        <p>Currently, only the B-tree, GiST and GIN index methods support
-                                multicolumn indexes. Up to 32 fields can be specified by default.
-                                Only B-tree currently supports unique indexes.</p>
                         <p>An <i>operator class</i> can be specified for each column of an index.
                                 The operator class identifies the operators to be used by the index
                                 for that column. For example, a B-tree index on four-byte integers
@@ -285,8 +288,7 @@
                                         href="https://www.postgresql.org/docs/8.3/static/indexes-types.html"
                                         scope="external" format="html">PostgreSQL
                                         documentation</xref>.</p>
-                        <p>The use of hash indexes has been disabled in Greenplum
-                                Database.</p>
+                        <p>The use of hash indexes has been disabled in Greenplum Database.</p>
                 </section>
                 <section id="section6">
                         <title>Examples</title>

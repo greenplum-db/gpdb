@@ -336,7 +336,7 @@ select t1.a, t2.b from t1 left join t2 on  (t1.a=t2.a and ((t1.a,t2.b) not in (s
 
 select t1.a, t2.b from t1 full outer join t2 on  (t1.a=t2.a) where ((t1.a,t2.b) not in (select i1.a,i1.b from i1));
 
--- unsupported case
+-- not in subquery with a row var in FULL JOIN condition
 select t1.a, t2.b from t1 full outer join t2 on  (t1.a=t2.a and ((t1.a,t2.b) not in (select i1.a,i1.b from i1))); 
 
 --

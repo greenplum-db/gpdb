@@ -16,7 +16,7 @@
 #include "parser/analyze.h"
 #include "parser/parse_node.h"
 
-extern void transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
+extern void transformPartitionBy(CreateStmtContext *cxt,
 					 CreateStmt *stmt, Node *partitionBy, GpPolicy *policy);
 extern void PartitionRangeItemIsValid(ParseState *pstate, PartitionRangeItem *pri);
 extern Node *coerce_partition_value(Node *node, Oid typid, int32 typmod,

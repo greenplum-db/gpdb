@@ -169,6 +169,18 @@ class GpStart(GpTestCase):
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
         self.assertIn("DBID:5  FAILED  host:'sdw1' datadir:'/data/mirror1' with reason:'fictitious reason'", messages)
 
+    def test_standby_startup_skipped(self):
+        sys.argv = ["gpstart", "-a", "-y"]
+
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args()
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        return_value = gpstart._start_standby()
+        self.assertFalse(return_value)
+        messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
+        self.assertIn("No standby master configured.  skipping...", messages)
+
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
             "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")

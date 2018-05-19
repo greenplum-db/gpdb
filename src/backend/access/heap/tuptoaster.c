@@ -4,11 +4,11 @@
  *	  Support routines for external and compressed storage of
  *	  variable size attributes.
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.98 2010/02/26 02:00:33 momjian Exp $
+ *	  src/backend/access/heap/tuptoaster.c
  *
  *
  * INTERFACE ROUTINES
@@ -985,8 +985,11 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 	 * externally unless really necessary.
 	 */
 	/*
-	 * GPDB_90_MERGE_FIXME: Should we do something like this with memtuples on
-	 * AO tables too?
+	 * FIXME: Should we do something like this with memtuples on
+	 * AO tables too? Currently we do not increase the target tuple size for AO
+	 * table, so there are occasions when columns of type 'm' will be stored
+	 * out-of-line but they could otherwise be accommodated in-block
+	 * c.f. upstream Postgres commit ca7c8168de76459380577eda56a3ed09b4f6195c
 	 */
 	if (!ismemtuple)
 		maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;

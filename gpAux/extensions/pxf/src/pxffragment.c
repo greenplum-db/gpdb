@@ -5,6 +5,7 @@
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
+#include "utils/guc.h"
 #include "utils/jsonapi.h"
 
 static List *get_data_fragment_list(GPHDUri *hadoop_uri, ClientContext *client_context);

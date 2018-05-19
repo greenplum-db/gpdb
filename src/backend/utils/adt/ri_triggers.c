@@ -13,9 +13,9 @@
  *	plan --- consider improving this someday.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.118 2010/02/14 18:42:16 rhaas Exp $
+ * src/backend/utils/adt/ri_triggers.c
  *
  * ----------
  */
@@ -31,10 +31,13 @@
 #include "postgres.h"
 
 #include "access/xact.h"
+#include "access/sysattr.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "commands/trigger.h"
+#include "executor/executor.h"
 #include "executor/spi.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
@@ -80,6 +83,7 @@
 
 #define RIAttName(rel, attnum)	NameStr(*attnumAttName(rel, attnum))
 #define RIAttType(rel, attnum)	attnumTypeId(rel, attnum)
+#define RIAttCollation(rel, attnum) attnumCollationId(rel, attnum)
 
 #define RI_TRIGTYPE_INSERT 1
 #define RI_TRIGTYPE_UPDATE 2
@@ -192,6 +196,7 @@ static void ri_GenerateQual(StringInfo buf,
 				Oid opoid,
 				const char *rightop, Oid rightoptype);
 static void ri_add_cast_to(StringInfo buf, Oid typid);
+static void ri_GenerateQualCollation(StringInfo buf, Oid collation);
 static int ri_NullCheck(Relation rel, HeapTuple tup,
 			 RI_QueryKey *key, int pairidx);
 static void ri_BuildQueryKeyFull(RI_QueryKey *key,
@@ -253,7 +258,6 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 	Relation	fk_rel;
 	Relation	pk_rel;
 	HeapTuple	new_row;
-	HeapTuple	old_row;
 	Buffer		new_row_buf;
 	RI_QueryKey qkey;
 	SPIPlanPtr	qplan;
@@ -272,13 +276,11 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 
 	if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
 	{
-		old_row = trigdata->tg_trigtuple;
 		new_row = trigdata->tg_newtuple;
 		new_row_buf = trigdata->tg_newtuplebuf;
 	}
 	else
 	{
-		old_row = NULL;
 		new_row = trigdata->tg_trigtuple;
 		new_row_buf = trigdata->tg_trigtuplebuf;
 	}
@@ -2606,8 +2608,11 @@ RI_FKey_keyequal_upd_fk(Trigger *trigger, Relation fk_rel,
  *	This is not a trigger procedure, but is called during ALTER TABLE
  *	ADD FOREIGN KEY to validate the initial table contents.
  *
- *	We expect that an exclusive lock has been taken on rel and pkrel;
- *	hence, we do not need to lock individual rows for the check.
+ *	We expect that the caller has made provision to prevent any problems
+ *	caused by concurrent actions. This could be either by locking rel and
+ *	pkrel at ShareRowExclusiveLock or higher, or by otherwise ensuring
+ *	that triggers implementing the checks are already active.
+ *	Hence, we do not need to lock individual rows for the check.
  *
  *	If the check fails because the current user doesn't have permissions
  *	to read both tables, return false to let our caller know that they will
@@ -2624,12 +2629,17 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	char		fkrelname[MAX_QUOTED_REL_NAME_LEN];
 	char		pkattname[MAX_QUOTED_NAME_LEN + 3];
 	char		fkattname[MAX_QUOTED_NAME_LEN + 3];
+	RangeTblEntry *pkrte;
+	RangeTblEntry *fkrte;
 	const char *sep;
 	int			i;
 	int			old_work_mem;
 	char		workmembuf[32];
 	int			spi_result;
 	SPIPlanPtr	qplan;
+
+	/* Fetch constraint info. */
+	ri_FetchConstraintInfo(&riinfo, trigger, fk_rel, false);
 
 	/*
 	 * Check to make sure current user has enough permissions to do the test
@@ -2638,12 +2648,31 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	 *
 	 * XXX are there any other show-stopper conditions to check?
 	 */
-	if (pg_class_aclcheck(RelationGetRelid(fk_rel), GetUserId(), ACL_SELECT) != ACLCHECK_OK)
-		return false;
-	if (pg_class_aclcheck(RelationGetRelid(pk_rel), GetUserId(), ACL_SELECT) != ACLCHECK_OK)
-		return false;
+	pkrte = makeNode(RangeTblEntry);
+	pkrte->rtekind = RTE_RELATION;
+	pkrte->relid = RelationGetRelid(pk_rel);
+	pkrte->relkind = pk_rel->rd_rel->relkind;
+	pkrte->requiredPerms = ACL_SELECT;
 
-	ri_FetchConstraintInfo(&riinfo, trigger, fk_rel, false);
+	fkrte = makeNode(RangeTblEntry);
+	fkrte->rtekind = RTE_RELATION;
+	fkrte->relid = RelationGetRelid(fk_rel);
+	fkrte->relkind = fk_rel->rd_rel->relkind;
+	fkrte->requiredPerms = ACL_SELECT;
+
+	for (i = 0; i < riinfo.nkeys; i++)
+	{
+		int			attno;
+
+		attno = riinfo.pk_attnums[i] - FirstLowInvalidHeapAttributeNumber;
+		pkrte->selectedCols = bms_add_member(pkrte->selectedCols, attno);
+
+		attno = riinfo.fk_attnums[i] - FirstLowInvalidHeapAttributeNumber;
+		fkrte->selectedCols = bms_add_member(fkrte->selectedCols, attno);
+	}
+
+	if (!ExecCheckRTPerms(list_make2(fkrte, pkrte), false))
+		return false;
 
 	/*----------
 	 * The query string built is:
@@ -2655,6 +2684,9 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	 *	 (fk.keycol1 IS NOT NULL [AND ...])
 	 * For MATCH FULL:
 	 *	 (fk.keycol1 IS NOT NULL [OR ...])
+	 *
+	 * We attach COLLATE clauses to the operators when comparing columns
+	 * that have different collations.
 	 *----------
 	 */
 	initStringInfo(&querybuf);
@@ -2681,6 +2713,8 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	{
 		Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
 		Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+		Oid			pk_coll = RIAttCollation(pk_rel, riinfo.pk_attnums[i]);
+		Oid			fk_coll = RIAttCollation(fk_rel, riinfo.fk_attnums[i]);
 
 		quoteOneName(pkattname + 3,
 					 RIAttName(pk_rel, riinfo.pk_attnums[i]));
@@ -2690,6 +2724,8 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 						pkattname, pk_type,
 						riinfo.pf_eq_oprs[i],
 						fkattname, fk_type);
+		if (pk_coll != fk_coll)
+			ri_GenerateQualCollation(&querybuf, pk_coll);
 		sep = "AND";
 	}
 
@@ -2760,10 +2796,10 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 
 	/*
 	 * Run the plan.  For safety we force a current snapshot to be used. (In
-	 * serializable mode, this arguably violates serializability, but we
-	 * really haven't got much choice.)  We don't need to register the
-	 * snapshot, because SPI_execute_snapshot will see to it.  We need at most
-	 * one tuple returned, so pass limit = 1.
+	 * transaction-snapshot mode, this arguably violates transaction isolation
+	 * rules, but we really haven't got much choice.) We don't need to
+	 * register the snapshot, because SPI_execute_snapshot will see to it. We
+	 * need at most one tuple returned, so pass limit = 1.
 	 */
 	spi_result = SPI_execute_snapshot(qplan,
 									  NULL, NULL,
@@ -2950,6 +2986,53 @@ ri_add_cast_to(StringInfo buf, Oid typid)
 					 quote_identifier(nspname), quote_identifier(typname));
 
 	ReleaseSysCache(typetup);
+}
+
+/*
+ * ri_GenerateQualCollation --- add a COLLATE spec to a WHERE clause
+ *
+ * At present, we intentionally do not use this function for RI queries that
+ * compare a variable to a $n parameter.  Since parameter symbols always have
+ * default collation, the effect will be to use the variable's collation.
+ * Now that is only strictly correct when testing the referenced column, since
+ * the SQL standard specifies that RI comparisons should use the referenced
+ * column's collation.  However, so long as all collations have the same
+ * notion of equality (which they do, because texteq reduces to bitwise
+ * equality), there's no visible semantic impact from using the referencing
+ * column's collation when testing it, and this is a good thing to do because
+ * it lets us use a normal index on the referencing column.  However, we do
+ * have to use this function when directly comparing the referencing and
+ * referenced columns, if they are of different collations; else the parser
+ * will fail to resolve the collation to use.
+ */
+static void
+ri_GenerateQualCollation(StringInfo buf, Oid collation)
+{
+	HeapTuple	tp;
+	Form_pg_collation colltup;
+	char	   *collname;
+	char		onename[MAX_QUOTED_NAME_LEN];
+
+	/* Nothing to do if it's a noncollatable data type */
+	if (!OidIsValid(collation))
+		return;
+
+	tp = SearchSysCache1(COLLOID, ObjectIdGetDatum(collation));
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for collation %u", collation);
+	colltup = (Form_pg_collation) GETSTRUCT(tp);
+	collname = NameStr(colltup->collname);
+
+	/*
+	 * We qualify the name always, for simplicity and to ensure the query is
+	 * not search-path-dependent.
+	 */
+	quoteOneName(onename, get_namespace_name(colltup->collnamespace));
+	appendStringInfo(buf, " COLLATE %s", onename);
+	quoteOneName(onename, collname);
+	appendStringInfo(buf, ".%s", onename);
+
+	ReleaseSysCache(tp);
 }
 
 /* ----------
@@ -3308,15 +3391,15 @@ ri_PerformCheck(RI_QueryKey *qkey, SPIPlanPtr qplan,
 	/*
 	 * In READ COMMITTED mode, we just need to use an up-to-date regular
 	 * snapshot, and we will see all rows that could be interesting. But in
-	 * SERIALIZABLE mode, we can't change the transaction snapshot. If the
-	 * caller passes detectNewRows == false then it's okay to do the query
+	 * transaction-snapshot mode, we can't change the transaction snapshot. If
+	 * the caller passes detectNewRows == false then it's okay to do the query
 	 * with the transaction snapshot; otherwise we use a current snapshot, and
 	 * tell the executor to error out if it finds any rows under the current
 	 * snapshot that wouldn't be visible per the transaction snapshot.  Note
 	 * that SPI_execute_snapshot will register the snapshots, so we don't need
 	 * to bother here.
 	 */
-	if (IsXactIsoLevelSerializable && detectNewRows)
+	if (IsolationUsesXactSnapshot() && detectNewRows)
 	{
 		CommandCounterIncrement();		/* be sure all my own work is visible */
 		test_snapshot = GetLatestSnapshot();
@@ -3880,7 +3963,10 @@ ri_AttributesEqual(Oid eq_opr, Oid typeid,
 								 BoolGetDatum(false));	/* implicit coercion */
 	}
 
-	/* Apply the comparison operator */
+	/*
+	 * Apply the comparison operator.  We assume it doesn't care about
+	 * collations.
+	 */
 	return DatumGetBool(FunctionCall2(&entry->eq_opr_finfo,
 									  oldvalue, newvalue));
 }

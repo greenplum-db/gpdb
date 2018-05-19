@@ -4,10 +4,10 @@
  *	  postgres transaction system definitions
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/xact.h,v 1.103 2010/02/26 02:01:21 momjian Exp $
+ * src/include/access/xact.h
  *
  *-------------------------------------------------------------------------
  */
@@ -33,20 +33,44 @@ extern int	DefaultXactIsoLevel;
 extern int	XactIsoLevel;
 
 /*
- * We only implement two isolation levels internally.  This macro should
- * be used to check which one is selected.
+ * We implement three isolation levels internally.
+ * The two stronger ones use one snapshot per database transaction;
+ * the others use one snapshot per statement.
+ * Serializable uses predicate locks in addition to snapshots.
+ * These macros should be used to check which isolation level is selected.
  */
-#define IsXactIsoLevelSerializable (XactIsoLevel >= XACT_REPEATABLE_READ)
+#define IsolationUsesXactSnapshot() (XactIsoLevel >= XACT_REPEATABLE_READ)
+#define IsolationIsSerializable() (XactIsoLevel == XACT_SERIALIZABLE)
 
 /* Xact read-only state */
 extern bool DefaultXactReadOnly;
 extern bool XactReadOnly;
 
-/* Asynchronous commits */
-extern bool XactSyncCommit;
+/*
+ * Xact is deferrable -- only meaningful (currently) for read only
+ * SERIALIZABLE transactions
+ */
+extern bool DefaultXactDeferrable;
+extern bool XactDeferrable;
 
+typedef enum
+{
+	SYNCHRONOUS_COMMIT_OFF,		/* asynchronous commit */
+	SYNCHRONOUS_COMMIT_LOCAL_FLUSH,		/* wait for local flush only */
+	SYNCHRONOUS_COMMIT_REMOTE_FLUSH		/* wait for local and remote flush */
+}	SyncCommitLevel;
+
+/* Define the default setting for synchonous_commit */
+#define SYNCHRONOUS_COMMIT_ON	SYNCHRONOUS_COMMIT_REMOTE_FLUSH
+
+/* Synchronous commit level */
+extern int	synchronous_commit;
+
+/* Disabled in GPDB as per comment in PrepareTransaction(). */
+#if 0
 /* Kluge for 2PC support */
 extern bool MyXactAccessedTempRel;
+#endif
 
 /*
  *	start- and end-of-transaction callbacks for dynamically loaded modules

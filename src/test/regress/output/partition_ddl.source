@@ -2968,4 +2968,4 @@ partition by range (f1)
   start (time '09:00') end (time '17:00') EVERY (INTERVAL '1 hour'),
   default partition default_part
 );
-ERROR:  cannot inherit from temporary relation "temp_hour_range"
+ERROR:  cannot create partition inherited from temporary relation

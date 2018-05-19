@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.53 2010/05/15 21:41:16 tgl Exp $
+ *		src/bin/pg_dump/pg_backup.h
  *
  *-------------------------------------------------------------------------
  */
@@ -50,7 +50,8 @@ typedef enum _archiveFormat
 	archCustom = 1,
 	archFiles = 2,
 	archTar = 3,
-	archNull = 4
+	archNull = 4,
+	archDirectory = 5
 } ArchiveFormat;
 
 typedef enum _archiveMode
@@ -103,6 +104,7 @@ typedef struct _restoreOptions
 										 * restore */
 	int			use_setsessauth;/* Use SET SESSION AUTHORIZATION commands
 								 * instead of OWNER TO */
+	int			no_security_labels;		/* Skip security label entries */
 	char	   *superuser;		/* Username to use as superuser */
 	char	   *use_role;		/* Issue SET ROLE to this */
 	int			dataOnly;
@@ -151,7 +153,7 @@ typedef struct _restoreOptions
 
 extern void
 exit_horribly(Archive *AH, const char *modulename, const char *fmt,...)
-__attribute__((format(printf, 3, 4)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 
 
 /* Lets the archive know we have a DB connection to shutdown if it dies */
@@ -207,7 +209,7 @@ extern int	archputs(const char *s, Archive *AH);
 extern int
 archprintf(Archive *AH, const char *fmt,...)
 /* This extension allows gcc to check the format string */
-__attribute__((format(printf, 2, 3)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 #define appendStringLiteralAH(buf,str,AH) \
 	appendStringLiteral(buf, str, (AH)->encoding, (AH)->std_strings)

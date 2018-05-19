@@ -1,10 +1,10 @@
-# $PostgreSQL: pgsql/contrib/pg_freespacemap/Makefile,v 1.5 2008/09/30 11:17:07 heikki Exp $
+# contrib/pg_freespacemap/Makefile
 
 MODULE_big = pg_freespacemap
-OBJS	= pg_freespacemap.o
+OBJS = pg_freespacemap.o
 
-DATA_built = pg_freespacemap.sql 
-DATA = uninstall_pg_freespacemap.sql 
+EXTENSION = pg_freespacemap
+DATA = pg_freespacemap--1.0.sql pg_freespacemap--unpackaged--1.0.sql
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

@@ -28,6 +28,13 @@ insert into inserttest values(10, 20, '40'), (-1, 2, DEFAULT),
 
 select * from inserttest;
 
+--
+-- TOASTed value test
+--
+insert into inserttest values(30, 50, repeat('x', 10000));
+
+select col1, col2, char_length(col3) from inserttest;
+
 drop table inserttest;
 
 -- MPP-6775 : Adding and dropping a column. Then perform an insert.

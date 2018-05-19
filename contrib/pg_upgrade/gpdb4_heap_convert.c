@@ -62,14 +62,14 @@ static char		overflow_buf[BLCKSZ];
 static int		overflow_blkno;
 static int		curr_dstfd;
 
-static void make_room(migratorContext *ctx, char *page);
-static void convert_heaptuple(migratorContext *ctx, HeapTupleHeader htup);
-static void overflow_tuple(migratorContext *ctx, HeapTupleHeader htup, int len);
+static void make_room(char *page);
+static void convert_heaptuple(HeapTupleHeader htup);
+static void overflow_tuple(HeapTupleHeader htup, int len);
 static void page_init(Page page);
 
 
 static const char *
-convert_gpdb4_heap_page(migratorContext *ctx, char *page)
+convert_gpdb4_heap_page(char *page)
 {
 	VERSION4_PageHeaderData *oldhdr;
 	PageHeader	newhdr;
@@ -120,7 +120,7 @@ convert_gpdb4_heap_page(migratorContext *ctx, char *page)
 	/*
 	 * If there isn't enough space on this page for the new header field, relocate a tuple
 	 */
-	make_room(ctx, page);
+	make_room(page);
 
 	/*
 	 * There is space. Move the line pointers. We also convert the line pointer flags
@@ -163,7 +163,7 @@ convert_gpdb4_heap_page(migratorContext *ctx, char *page)
 
 		htup = (HeapTupleHeader) PageGetItem(page, iid);
 
-		convert_heaptuple(ctx, htup);
+		convert_heaptuple(htup);
 	}
 
 	/*
@@ -175,7 +175,7 @@ convert_gpdb4_heap_page(migratorContext *ctx, char *page)
 }
 
 static void
-make_room(migratorContext *ctx, char *page)
+make_room(char *page)
 {
 	VERSION4_PageHeaderData *oldhdr = (VERSION4_PageHeaderData *) page;
 	int			i;
@@ -224,7 +224,7 @@ make_room(migratorContext *ctx, char *page)
 		if (iid.lp_flags == VERSION4_LP_UNUSED)
 		{
 			/* shouldn't happen, as we just squeezed out all unused line pointers */
-			pg_log(ctx, PG_FATAL, "unexpected LP_UNUSED line pointer on old-format page\n");
+			pg_log(PG_FATAL, "unexpected LP_UNUSED line pointer on old-format page\n");
 		}
 		else if (iid.lp_flags == VERSION4_LP_USED)
 		{
@@ -238,24 +238,24 @@ make_room(migratorContext *ctx, char *page)
 		else
 		{
 			/* LP_DEAD nor LP_DELETE were used on heap pages in GPDB4. */
-			pg_log(ctx, PG_FATAL, "unexpected line pointer flags on old-format page: 0x%x\n", iid.lp_flags);
+			pg_log(PG_FATAL, "unexpected line pointer flags on old-format page: 0x%x\n", iid.lp_flags);
 		}
 	}
 
 	/* Ensure that we have a victim tuple here before assuming so */
 	if (victim_lp_len == -1)
-		pg_log(ctx, PG_FATAL, "victim tuple for moving wasn't found\n");
+		pg_log(PG_FATAL, "victim tuple for moving wasn't found\n");
 
 	/* Cross-check */
 	if (oldhdr->pd_upper != victim_lp_off)
-		pg_log(ctx, PG_FATAL, "mismatch between lp_off in line pointers and pd_upper\n");
+		pg_log(PG_FATAL, "mismatch between lp_off in line pointers and pd_upper\n");
 
 	/* Convert the victim tuple, as it's still in the old format */
 	htup = (HeapTupleHeader) (((char *) page) + victim_lp_off);
-	convert_heaptuple(ctx, htup);
+	convert_heaptuple(htup);
 
 	/* Add it to the overflow page */
-	overflow_tuple(ctx, htup, victim_lp_len);
+	overflow_tuple(htup, victim_lp_len);
 
 	/* Mark the line pointer as unused, and adjust pd_upper */
 	oldhdr->pd_linp[victim_i - 1].lp_flags = VERSION4_LP_UNUSED;
@@ -263,17 +263,17 @@ make_room(migratorContext *ctx, char *page)
 }
 
 static void
-flush_overflow_page(migratorContext *ctx)
+flush_overflow_page(void)
 {
 	if (!PageIsNew(overflow_buf))
 	{
-		if (ctx->checksum_mode == CHECKSUM_ADD)
+		if (user_opts.checksum_mode == CHECKSUM_ADD)
 			((PageHeader) overflow_buf)->pd_checksum =
 				pg_checksum_page(overflow_buf, overflow_blkno);
 
 		if (write(curr_dstfd, overflow_buf, BLCKSZ) != BLCKSZ)
-			pg_log(ctx, PG_FATAL, "can't write overflow page to destination\n");
-		pg_log(ctx, PG_DEBUG, "flushed overflow block\n");
+			pg_log(PG_FATAL, "can't write overflow page to destination\n");
+		pg_log(PG_DEBUG, "flushed overflow block\n");
 
 		overflow_blkno++;
 	}
@@ -301,7 +301,7 @@ page_init(Page page)
 }
 
 static void
-overflow_tuple(migratorContext *ctx, HeapTupleHeader htup, int size)
+overflow_tuple(HeapTupleHeader htup, int size)
 {
 	PageHeader	phdr = (PageHeader) overflow_buf;
 	Size		alignedSize;
@@ -316,8 +316,8 @@ overflow_tuple(migratorContext *ctx, HeapTupleHeader htup, int size)
 
 	if (offsetNumber > MaxHeapTuplesPerPage)
 	{
-		flush_overflow_page(ctx);
-		overflow_tuple(ctx, htup, size);
+		flush_overflow_page();
+		overflow_tuple(htup, size);
 		return;
 	}
 
@@ -329,8 +329,8 @@ overflow_tuple(migratorContext *ctx, HeapTupleHeader htup, int size)
 
 	if (lower > upper)
 	{
-		flush_overflow_page(ctx);
-		overflow_tuple(ctx, htup, size);
+		flush_overflow_page();
+		overflow_tuple(htup, size);
 		return;
 	}
 	
@@ -350,7 +350,7 @@ overflow_tuple(migratorContext *ctx, HeapTupleHeader htup, int size)
 }
 
 static void
-convert_heaptuple(migratorContext *ctx, HeapTupleHeader htup)
+convert_heaptuple(HeapTupleHeader htup)
 {
 	/* HEAP_HASEXTENDED and HEAP_HASCOMPRESSED flags were removed. Clear them out */
 	htup->t_infomask &= ~(VERSION4_HEAP_HASEXTENDED | VERSION4_HEAP_HASCOMPRESSED);
@@ -406,9 +406,9 @@ convert_heaptuple(migratorContext *ctx, HeapTupleHeader htup)
 				Datum		datum = PointerGetDatum(tp + off);
 
 				if (VARATT_IS_COMPRESSED(datum))
-					pg_log(ctx, PG_FATAL, "converting compressed numeric datums is not implemented\n");
+					pg_log(PG_FATAL, "converting compressed numeric datums is not implemented\n");
 				else if (VARATT_IS_EXTERNAL(datum))
-					pg_log(ctx, PG_FATAL, "converting toasted numeric datums is not implemented\n");
+					pg_log(PG_FATAL, "converting toasted numeric datums is not implemented\n");
 				else
 				{
 					char	   *numericdata = VARDATA_ANY(DatumGetPointer(datum));
@@ -416,7 +416,7 @@ convert_heaptuple(migratorContext *ctx, HeapTupleHeader htup)
 					uint16		tmp;
 
 					if (sz < 4)
-						pg_log(ctx, PG_FATAL, "unexpected size for numeric datum: %d\n", sz);
+						pg_log(PG_FATAL, "unexpected size for numeric datum: %d\n", sz);
 
 					memcpy(&tmp, &numericdata[0], 2);
 					memcpy(&numericdata[0], &numericdata[2], 2);
@@ -430,8 +430,7 @@ convert_heaptuple(migratorContext *ctx, HeapTupleHeader htup)
 }
 
 const char *
-convert_gpdb4_heap_file(migratorContext *ctx,
-						const char *src, const char *dst,
+convert_gpdb4_heap_file(const char *src, const char *dst,
 						bool has_numerics, AttInfo *atts, int natts)
 {
 	int			src_fd;
@@ -462,7 +461,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 	
 	while ((bytesRead = read(src_fd, buf, BLCKSZ)) == BLCKSZ)
 	{
-		msg = convert_gpdb4_heap_page(ctx, buf);
+		msg = convert_gpdb4_heap_page(buf);
 		if (msg)
 			break;
 
@@ -471,7 +470,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 		 * retaining an existing checksum like for upgrades from 5.x. If we're
 		 * not adding them we want a zeroed out portion in the header
 		 */
-		if (ctx->checksum_mode == CHECKSUM_ADD)
+		if (user_opts.checksum_mode == CHECKSUM_ADD)
 			((PageHeader) buf)->pd_checksum = pg_checksum_page(buf, blkno);
 		else
 			memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));
@@ -485,7 +484,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 		blkno++;
 	}
 
-	flush_overflow_page(ctx);
+	flush_overflow_page();
 	
 	close(src_fd);
 	close(dstfd);

@@ -1,13 +1,19 @@
-/* $PostgreSQL: pgsql/src/include/port/win32.h,v 1.96 2010/07/06 19:19:00 momjian Exp $ */
+/* src/include/port/win32.h */
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 #define WIN32_ONLY_COMPILER
 #endif
 
+/*
+ * Make sure _WIN32_WINNT has the minumum required value.
+ * Leave a higher value in place.
+*/
+#if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0501
+#undef _WIN32_WINNT
+#endif
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
 #endif
-
 /*
  * Always build with SSPI support. Keep it as a #define in case
  * we want a switch to disable it sometime in the future.
@@ -20,10 +26,18 @@
 #undef mkdir
 
 #undef ERROR
+
+/*
+ * The Mingw64 headers choke if this is already defined - they
+ * define it themselves.
+ */
+#if !defined(WIN64) || defined(WIN32_ONLY_COMPILER)
 #define _WINSOCKAPI_
+#endif
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #undef small
 #include <process.h>
 #include <signal.h>
@@ -68,7 +82,7 @@
 #ifdef _MSC_VER
 #define PGDLLEXPORT __declspec (dllexport)
 #else
-#define PGDLLEXPORT __declspec (dllimport)
+#define PGDLLEXPORT
 #endif
 #else							/* not CYGWIN, not MSVC, not MingW */
 #define PGDLLIMPORT
@@ -276,6 +290,38 @@ typedef int pid_t;
 #undef EOPNOTSUPP
 #define EOPNOTSUPP WSAEOPNOTSUPP
 
+/*
+ * Extended locale functions with gratuitous underscore prefixes.
+ * (These APIs are nevertheless fully documented by Microsoft.)
+ */
+#define locale_t _locale_t
+#define tolower_l _tolower_l
+#define toupper_l _toupper_l
+#define towlower_l _towlower_l
+#define towupper_l _towupper_l
+#define isdigit_l _isdigit_l
+#define iswdigit_l _iswdigit_l
+#define isalpha_l _isalpha_l
+#define iswalpha_l _iswalpha_l
+#define isalnum_l _isalnum_l
+#define iswalnum_l _iswalnum_l
+#define isupper_l _isupper_l
+#define iswupper_l _iswupper_l
+#define islower_l _islower_l
+#define iswlower_l _iswlower_l
+#define isgraph_l _isgraph_l
+#define iswgraph_l _iswgraph_l
+#define isprint_l _isprint_l
+#define iswprint_l _iswprint_l
+#define ispunct_l _ispunct_l
+#define iswpunct_l _iswpunct_l
+#define isspace_l _isspace_l
+#define iswspace_l _iswspace_l
+#define strcoll_l _strcoll_l
+#define wcscoll_l _wcscoll_l
+#define wcstombs_l _wcstombs_l
+#define mbstowcs_l _mbstowcs_l
+
 
 /* In backend/port/win32/signal.c */
 extern PGDLLIMPORT volatile int pg_signal_queue;
@@ -305,7 +351,7 @@ SOCKET		pgwin32_accept(SOCKET s, struct sockaddr * addr, int *addrlen);
 int			pgwin32_connect(SOCKET s, const struct sockaddr * name, int namelen);
 int			pgwin32_select(int nfds, fd_set *readfs, fd_set *writefds, fd_set *exceptfds, const struct timeval * timeout);
 int			pgwin32_recv(SOCKET s, char *buf, int len, int flags);
-int			pgwin32_send(SOCKET s, char *buf, int len, int flags);
+int			pgwin32_send(SOCKET s, const void *buf, int len, int flags);
 
 const char *pgwin32_socket_strerror(int err);
 int			pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout);
@@ -319,6 +365,9 @@ extern int	pgwin32_is_service(void);
 
 /* in backend/port/win32_shmem.c */
 extern int	pgwin32_ReserveSharedMemoryRegion(HANDLE);
+
+/* in backend/port/win32/crashdump.c */
+extern void pgwin32_install_crashdump_handler(void);
 
 /* in port/win32error.c */
 extern void _dosmaperr(unsigned long);
@@ -346,6 +395,7 @@ extern void pgwin32_unsetenv(const char *);
 
 /* Things that exist in MingW headers, but need to be added to MSVC & BCC */
 #ifdef WIN32_ONLY_COMPILER
+
 #ifndef _WIN64
 typedef long ssize_t;
 #else
@@ -354,19 +404,15 @@ typedef __int64 ssize_t;
 
 #ifndef __BORLANDC__
 typedef unsigned short mode_t;
-#endif
 
-#ifndef __BORLANDC__
-#define _S_IRWXU	(_S_IREAD | _S_IWRITE | _S_IEXEC)
-#define _S_IXUSR	_S_IEXEC
-#define _S_IWUSR	_S_IWRITE
-#define _S_IRUSR	_S_IREAD
-#define S_IRUSR		_S_IRUSR
-#define S_IWUSR		_S_IWUSR
-#define S_IXUSR		_S_IXUSR
+#define S_IRUSR _S_IREAD
+#define S_IWUSR _S_IWRITE
+#define S_IXUSR _S_IEXEC
+#define S_IRWXU (S_IRUSR | S_IWUSR | S_IXUSR)
+/* see also S_IRGRP etc below */
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
-#endif
+#endif   /* __BORLANDC__ */
 
 #define F_OK 0
 #define W_OK 2
@@ -389,10 +435,22 @@ typedef unsigned short mode_t;
 #ifndef O_RANDOM
 #define O_RANDOM		0x0010	/* File access is primarily random */
 #define O_SEQUENTIAL	0x0020	/* File access is primarily sequential */
-#define O_TEMPORARY 0x0040		/* Temporary file bit */
+#define O_TEMPORARY		0x0040	/* Temporary file bit */
 #define O_SHORT_LIVED	0x1000	/* Temporary storage file, try not to flush */
 #define _O_SHORT_LIVED	O_SHORT_LIVED
 #endif   /* ifndef O_RANDOM */
 #endif   /* __BORLANDC__ */
+#endif   /* WIN32_ONLY_COMPILER */
 
-#endif
+/* These aren't provided by either MingW or MSVC */
+#ifndef __BORLANDC__
+#define S_IRGRP 0
+#define S_IWGRP 0
+#define S_IXGRP 0
+#define S_IRWXG 0
+#define S_IROTH 0
+#define S_IWOTH 0
+#define S_IXOTH 0
+#define S_IRWXO 0
+
+#endif   /* __BORLANDC__ */

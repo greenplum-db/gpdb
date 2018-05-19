@@ -2,6 +2,29 @@
 -- the trigger handler once. the errors and subsequent core dump were
 -- interesting.
 
+/* Flat out Python syntax error
+ */
+CREATE FUNCTION python_syntax_error() RETURNS text
+        AS
+'.syntaxerror'
+        LANGUAGE plpythonu;
+
+/* With check_function_bodies = false the function should get defined
+ * and the error reported when called
+ */
+SET check_function_bodies = false;
+
+CREATE FUNCTION python_syntax_error() RETURNS text
+        AS
+'.syntaxerror'
+        LANGUAGE plpythonu;
+
+SELECT python_syntax_error();
+/* Run the function twice to check if the hashtable entry gets cleaned up */
+SELECT python_syntax_error();
+
+RESET check_function_bodies;
+
 /* Flat out syntax error
  */
 CREATE FUNCTION sql_syntax_error() RETURNS text
@@ -107,3 +130,151 @@ return None
 	LANGUAGE plpythonu;
 
 SELECT valid_type('rick');
+
+/* error in nested functions to get a traceback
+*/
+CREATE FUNCTION nested_error() RETURNS text
+	AS
+'def fun1():
+	plpy.error("boom")
+
+def fun2():
+	fun1()
+
+def fun3():
+	fun2()
+
+fun3()
+return "not reached"
+'
+	LANGUAGE plpythonu;
+
+SELECT nested_error();
+
+/* raising plpy.Error is just like calling plpy.error
+*/
+CREATE FUNCTION nested_error_raise() RETURNS text
+	AS
+'def fun1():
+	raise plpy.Error("boom")
+
+def fun2():
+	fun1()
+
+def fun3():
+	fun2()
+
+fun3()
+return "not reached"
+'
+	LANGUAGE plpythonu;
+
+SELECT nested_error_raise();
+
+/* using plpy.warning should not produce a traceback
+*/
+CREATE FUNCTION nested_warning() RETURNS text
+	AS
+'def fun1():
+	plpy.warning("boom")
+
+def fun2():
+	fun1()
+
+def fun3():
+	fun2()
+
+fun3()
+return "you''ve been warned"
+'
+	LANGUAGE plpythonu;
+
+SELECT nested_warning();
+
+/* AttributeError at toplevel used to give segfaults with the traceback
+*/
+CREATE FUNCTION toplevel_attribute_error() RETURNS void AS
+$$
+plpy.nonexistent
+$$ LANGUAGE plpythonu;
+
+SELECT toplevel_attribute_error();
+
+/* Calling PL/Python functions from SQL and vice versa should not lose context.
+ */
+CREATE OR REPLACE FUNCTION python_traceback() RETURNS void AS $$
+def first():
+  second()
+
+def second():
+  third()
+
+def third():
+  plpy.execute("select sql_error()")
+
+first()
+$$ LANGUAGE plpythonu;
+
+CREATE OR REPLACE FUNCTION sql_error() RETURNS void AS $$
+begin
+  select 1/0;
+end
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION python_from_sql_error() RETURNS void AS $$
+begin
+  select python_traceback();
+end
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION sql_from_python_error() RETURNS void AS $$
+plpy.execute("select sql_error()")
+$$ LANGUAGE plpythonu;
+
+SELECT python_traceback();
+SELECT sql_error();
+SELECT python_from_sql_error();
+SELECT sql_from_python_error();
+
+/* check catching specific types of exceptions
+ */
+CREATE TABLE specific (
+    i integer PRIMARY KEY
+);
+
+CREATE FUNCTION specific_exception(i integer) RETURNS void AS
+$$
+from plpy import spiexceptions
+try:
+    plpy.execute("insert into specific values (%s)" % (i or "NULL"));
+except spiexceptions.NotNullViolation, e:
+    plpy.notice("Violated the NOT NULL constraint, sqlstate %s" % e.sqlstate)
+except spiexceptions.UniqueViolation, e:
+    plpy.notice("Violated the UNIQUE constraint, sqlstate %s" % e.sqlstate)
+$$ LANGUAGE plpythonu;
+
+SELECT specific_exception(2);
+SELECT specific_exception(NULL);
+SELECT specific_exception(2);
+
+/* manually starting subtransactions - a bad idea
+ */
+CREATE FUNCTION manual_subxact() RETURNS void AS $$
+plpy.execute("savepoint save")
+plpy.execute("create table foo(x integer)")
+plpy.execute("rollback to save")
+$$ LANGUAGE plpythonu;
+
+SELECT manual_subxact();
+
+/* same for prepared plans
+ */
+CREATE FUNCTION manual_subxact_prepared() RETURNS void AS $$
+save = plpy.prepare("savepoint save")
+rollback = plpy.prepare("rollback to save")
+plpy.execute(save)
+plpy.execute("create table foo(x integer)")
+plpy.execute(rollback)
+$$ LANGUAGE plpythonu;
+
+SELECT manual_subxact_prepared();

@@ -12,12 +12,12 @@
  *	  This information is needed by routines manipulating tuples
  *	  (getattribute, formtuple, etc.).
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.112 2010/02/26 02:00:41 momjian Exp $
+ *	  src/backend/executor/execTuples.c
  *
  *-------------------------------------------------------------------------
  */
@@ -101,7 +101,7 @@
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
-#include "cdb/cdbvars.h"                    /* Gp_segment */
+#include "cdb/cdbvars.h"                    /* GpIdentity.segindex */
 
 static TupleDesc ExecTypeFromTLInternal(List *targetList,
 					   bool hasoid, bool skipjunk);
@@ -1114,11 +1114,15 @@ ExecTypeFromTLInternal(List *targetList, bool hasoid, bool skipjunk)
 		if (skipjunk && tle->resjunk)
 			continue;
 		TupleDescInitEntry(typeInfo,
-						   cur_resno++,
+						   cur_resno,
 						   tle->resname,
 						   exprType((Node *) tle->expr),
 						   exprTypmod((Node *) tle->expr),
 						   0);
+		TupleDescInitEntryCollation(typeInfo,
+									cur_resno,
+									exprCollation((Node *) tle->expr));
+		cur_resno++;
 	}
 
 	return typeInfo;
@@ -1146,11 +1150,15 @@ ExecTypeFromExprList(List *exprList)
 		sprintf(fldname, "f%d", cur_resno);
 
 		TupleDescInitEntry(typeInfo,
-						   cur_resno++,
+						   cur_resno,
 						   fldname,
 						   exprType(e),
 						   exprTypmod(e),
 						   0);
+		TupleDescInitEntryCollation(typeInfo,
+									cur_resno,
+									exprCollation(e));
+		cur_resno++;
 	}
 
 	return typeInfo;
@@ -1447,7 +1455,7 @@ slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
 								result = ObjectIdGetDatum(InvalidOid);
 							break;
                         case GpSegmentIdAttributeNumber:
-							result = Int32GetDatum(Gp_segment);
+							result = Int32GetDatum(GpIdentity.segindex);
 							break;
                         case TableOidAttributeNumber:
 							result = ObjectIdGetDatum(slot->tts_tableOid);

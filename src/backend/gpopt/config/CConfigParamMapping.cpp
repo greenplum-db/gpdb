@@ -14,6 +14,7 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
+
 #include "utils/guc.h"
 
 #include "gpopt/config/CConfigParamMapping.h"
@@ -112,7 +113,9 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elem[] =
 
 		{
 		EopttraceMinidump,
-		&optimizer_minidump,
+		// GPDB_91_MERGE_FIXME: I turned optimizer_minidump from bool into
+		// an enum-type GUC. It's a bit dirty to cast it like this..
+		(bool *) &optimizer_minidump,
 		false, // m_fNegate
 		GPOS_WSZ_LIT("Generate optimizer minidump.")
 		},
@@ -413,7 +416,10 @@ CConfigParamMapping::PbsPack
 	}
 
 	// disable index-join if the corresponding GUC is turned off
-	if (!optimizer_enable_indexjoin)
+	// GPDB_91_MERGE_FIXME - Disabling index scans under nested loop joins,
+	// as the executor now expects a Param, rather than a Var with an OUTER
+	// table reference for rescans.
+	/*if (!optimizer_enable_indexjoin) */
 	{
 		CBitSet *pbsIndexJoin = CXform::PbsIndexJoinXforms(pmp);
 		pbs->Union(pbsIndexJoin);

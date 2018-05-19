@@ -1,0 +1,71 @@
+DROP TABLE IF EXISTS t104;
+DROP
+CREATE TABLE t104 (id int, val int);
+CREATE
+INSERT INTO t104 (id, val) SELECT i, i FROM generate_series(1, 20) i;
+INSERT 20
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+30: BEGIN;
+BEGIN
+40: BEGIN;
+BEGIN
+50: BEGIN;
+BEGIN
+
+10: UPDATE t104 SET val=val WHERE id=segid(0,1);
+UPDATE 1
+
+40: UPDATE t104 SET val=val WHERE id=segid(1,4);
+UPDATE 1
+
+30: UPDATE t104 SET val=val WHERE id IN (segid(0,3), segid(1,3));
+UPDATE 2
+-- seg 1: con30 ==> con40, xid lock
+30&: UPDATE t104 SET val=val WHERE id=segid(1,4);  <waiting ...>
+
+50: UPDATE t104 SET val=val WHERE id=segid(1,5);
+UPDATE 1
+-- seg 1: con50 ==> con30, xid lock
+50&: UPDATE t104 SET val=val WHERE id=segid(1,3);  <waiting ...>
+
+20: UPDATE t104 SET val=val WHERE id=segid(1,2);
+UPDATE 1
+-- seg 0: con20 ==> con10, xid lock
+-- seg 1: con20 ==> con50, xid lock
+20&: UPDATE t104 SET val=val WHERE id IN (segid(0,1), segid(1,5));  <waiting ...>
+
+-- below two queries will cause two connected small deadlocks which form a big
+-- deadlock, to break this big one at least two transactions should be
+-- cancelled, but current logic will cancel the youngest transactions in turn,
+-- so one extra transaction will be cancelled.
+--
+-- this might be improved in the future.
+
+-- seg 0: con40 ==> con30, xid lock
+40>: UPDATE t104 SET val=val WHERE id=segid(0,3);  <waiting ...>
+
+-- seg 1: con10 ==> con20, xid lock
+10>: UPDATE t104 SET val=val WHERE id=segid(1,2);  <waiting ...>
+
+-- con50, con40, con20 will be cancelled by gdd
+50<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+50q: ... <quitting>
+40<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+40q: ... <quitting>
+20<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+20q: ... <quitting>
+
+-- no more deadlock
+30<:  <... completed>
+UPDATE 1
+30q: ... <quitting>
+10<:  <... completed>
+UPDATE 1
+10q: ... <quitting>

@@ -4,10 +4,10 @@
  *	  POSTGRES low-level lock mechanism
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.119 2010/02/26 02:01:27 momjian Exp $
+ * src/include/storage/lock.h
  *
  *-------------------------------------------------------------------------
  */
@@ -326,6 +326,7 @@ typedef struct LOCKTAG
  * nRequested -- total requested locks of all types.
  * granted -- count of each lock type currently granted on the lock.
  * nGranted -- total granted locks of all types.
+ * holdTillEndXact -- if the lock is releasable before the end of the transaction.
  *
  * Note: these counts count 1 for each backend.  Internally to a backend,
  * there may be multiple grabs on a particular lock, but this is not reflected
@@ -345,6 +346,7 @@ typedef struct LOCK
 	int			nRequested;		/* total of requested[] array */
 	int			granted[MAX_LOCKMODES]; /* counts of granted locks */
 	int			nGranted;		/* total of granted[] array */
+	bool		holdTillEndXact;     /* flag for global deadlock detector */
 } LOCK;
 
 #define LOCK_LOCKMETHOD(lock) ((LOCKMETHODID) (lock).tag.locktag_lockmethodid)
@@ -545,6 +547,8 @@ extern LockAcquireResult LockAcquireExtended(const LOCKTAG *locktag,
 					bool report_memory_error);
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
+extern void LockReleaseSession(LOCKMETHODID lockmethodid);
+extern void LockSetHoldTillEndXact(const LOCKTAG *locktag);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
 // TODO why are we missing extern void LockReleaseSession(LOCKMETHODID lockmethodid); ?
 extern void LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks);

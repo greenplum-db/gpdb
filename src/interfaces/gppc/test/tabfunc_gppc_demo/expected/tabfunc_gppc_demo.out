@@ -3009,6 +3009,7 @@ typnotnull     | f
 typbasetype    | 0
 typtypmod      | -1
 typndims       | 0
+typcollation   | 0
 typdefaultbin  | 
 typdefault     | 
 
@@ -3045,7 +3046,7 @@ proargmodes |
 proargnames | 
 -[ RECORD 2 ]--------
 prorettype  | 2249
-proargtypes | 3053 23
+proargtypes | 7053 23
 proargmodes | 
 proargnames | 
 

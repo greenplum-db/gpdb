@@ -1,9 +1,9 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/help.h,v 1.21 2010/01/02 16:57:59 momjian Exp $
+ * src/bin/psql/help.h
  */
 #ifndef HELP_H
 #define HELP_H

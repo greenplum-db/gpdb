@@ -1,15 +1,10 @@
-#-------------------------------------------------------------------------
-#
-# pgrowlocks Makefile
-#
-# $PostgreSQL: pgsql/contrib/pgrowlocks/Makefile,v 1.6 2009/04/28 17:07:50 momjian Exp $
-#
-#-------------------------------------------------------------------------
+# contrib/pgrowlocks/Makefile
 
 MODULE_big	= pgrowlocks
 OBJS		= pgrowlocks.o
-DATA_built	= pgrowlocks.sql
-DATA		= uninstall_pgrowlocks.sql
+
+EXTENSION = pgrowlocks
+DATA = pgrowlocks--1.0.sql pgrowlocks--unpackaged--1.0.sql
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

@@ -4,10 +4,10 @@
  *	  prototypes for postgres.c.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/tcop/tcopprot.h,v 1.104 2010/02/26 02:01:28 momjian Exp $
+ * src/include/tcop/tcopprot.h
  *
  * OLD COMMENTS
  *	  This file was created so that other c files could get the two
@@ -45,8 +45,6 @@ typedef enum
 
 extern int	log_statement;
 
-extern List *pg_parse_and_rewrite(const char *query_string,
-					 Oid *paramTypes, int numParams);
 extern List *pg_parse_query(const char *query_string);
 extern List *pg_analyze_and_rewrite(Node *parsetree, const char *query_string,
 					   Oid *paramTypes, int numParams);
@@ -59,7 +57,8 @@ extern PlannedStmt *pg_plan_query(Query *querytree, int cursorOptions,
 extern List *pg_plan_queries(List *querytrees, int cursorOptions,
 				ParamListInfo boundParams);
 
-extern bool assign_max_stack_depth(int newval, bool doit, GucSource source);
+extern bool check_max_stack_depth(int *newval, void **extra, GucSource source);
+extern void assign_max_stack_depth(int newval, void *extra);
 
 extern void die(SIGNAL_ARGS);
 extern void quickdie(SIGNAL_ARGS);

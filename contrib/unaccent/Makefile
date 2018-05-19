@@ -1,15 +1,17 @@
-# $PostgreSQL: pgsql/contrib/unaccent/Makefile,v 1.2 2009/08/18 15:51:16 tgl Exp $
+# contrib/unaccent/Makefile
 
 MODULE_big = unaccent
 OBJS = unaccent.o
 
-DATA_built = unaccent.sql
-DATA = uninstall_unaccent.sql
+EXTENSION = unaccent
+DATA = unaccent--1.0.sql unaccent--unpackaged--1.0.sql
 DATA_TSEARCH = unaccent.rules
+
 REGRESS = unaccent
 
-# Adjust REGRESS_OPTS because we need a UTF8 database
-REGRESS_OPTS = --dbname=$(CONTRIB_TESTDB) --multibyte=UTF8 --no-locale 
+# We need a UTF8 database
+ENCODING = UTF8
+NO_LOCALE = 1
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

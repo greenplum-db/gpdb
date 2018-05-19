@@ -3,12 +3,12 @@
  * nbtinsert.c
  *	  Item insertion in Lehman and Yao btrees for Postgres.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtinsert.c,v 1.178 2010/03/28 09:27:01 sriggs Exp $
+ *	  src/backend/access/nbtree/nbtinsert.c
  *
  *-------------------------------------------------------------------------
  */
@@ -23,6 +23,7 @@
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
+#include "storage/predicate.h"
 #include "utils/inval.h"
 #include "utils/tqual.h"
 
@@ -181,6 +182,14 @@ top:
 
 	if (checkUnique != UNIQUE_CHECK_EXISTING)
 	{
+		/*
+		 * The only conflict predicate locking cares about for indexes is when
+		 * an index tuple insert conflicts with an existing lock.  Since the
+		 * actual location of the insert is hard to predict because of the
+		 * random search used to prevent O(N^2) performance when there are
+		 * many duplicate entries, we can just use the "first valid" page.
+		 */
+		CheckForSerializableConflictIn(rel, NULL, buf);
 		/* do the insertion */
 		_bt_findinsertloc(rel, &buf, &offset, natts, itup_scankey, itup, heapRel);
 		_bt_insertonpg(rel, buf, stack, itup, offset, false);
@@ -212,8 +221,7 @@ _bt_ao_check_unique(Relation rel, Relation aoRel, ItemPointer tid)
 	SnapshotData SnapshotDirty;
 	TransactionId xwait = InvalidTransactionId;
 	
-	Assert(RelationIsAoRows(aoRel) ||
-		   RelationIsAoCols(aoRel));
+	Assert(RelationIsAppendOptimized(aoRel));
 
 	InitDirtySnapshot(SnapshotDirty);
 	
@@ -368,7 +376,7 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 				 * If the parent relation is an AO/CO table, we have to find out
 				 * if this tuple is actually in the table.
 				 */
-				if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
+				if (RelationIsAppendOptimized(heapRel))
 				{
 					TransactionId xwait =
 						_bt_ao_check_unique(rel, heapRel, &curitup->t_tid);
@@ -797,6 +805,9 @@ _bt_insertonpg(Relation rel,
 		/* split the buffer into left and right halves */
 		rbuf = _bt_split(rel, buf, firstright,
 						 newitemoff, itemsz, itup, newitemonleft);
+		PredicateLockPageSplit(rel,
+							   BufferGetBlockNumber(buf),
+							   BufferGetBlockNumber(rbuf));
 
 		/*----------
 		 * By here,
@@ -867,7 +878,7 @@ _bt_insertonpg(Relation rel,
 		}
 
 		/* XLOG stuff */
-		if (!rel->rd_istemp)
+		if (RelationNeedsWAL(rel))
 		{
 			xl_btree_insert xlrec;
 			BlockNumber xldownlink;
@@ -1002,13 +1013,13 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 	/*
 	 * origpage is the original page to be split.  leftpage is a temporary
 	 * buffer that receives the left-sibling data, which will be copied back
-	 * into origpage on success.  rightpage is the new page that receives
-	 * the right-sibling data.  If we fail before reaching the critical
-	 * section, origpage hasn't been modified and leftpage is only workspace.
-	 * In principle we shouldn't need to worry about rightpage either,
-	 * because it hasn't been linked into the btree page structure; but to
-	 * avoid leaving possibly-confusing junk behind, we are careful to rewrite
-	 * rightpage as zeroes before throwing any error.
+	 * into origpage on success.  rightpage is the new page that receives the
+	 * right-sibling data.	If we fail before reaching the critical section,
+	 * origpage hasn't been modified and leftpage is only workspace. In
+	 * principle we shouldn't need to worry about rightpage either, because it
+	 * hasn't been linked into the btree page structure; but to avoid leaving
+	 * possibly-confusing junk behind, we are careful to rewrite rightpage as
+	 * zeroes before throwing any error.
 	 */
 	origpage = BufferGetPage(buf);
 	leftpage = PageGetTempPage(origpage);
@@ -1204,7 +1215,7 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 		{
 			memset(rightpage, 0, BufferGetPageSize(rbuf));
 			elog(ERROR, "right sibling's left-link doesn't match: "
-				 "block %u links to %u instead of expected %u in index \"%s\"",
+			   "block %u links to %u instead of expected %u in index \"%s\"",
 				 oopaque->btpo_next, sopaque->btpo_prev, origpagenumber,
 				 RelationGetRelationName(rel));
 		}
@@ -1262,17 +1273,8 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 		MarkBufferDirty(sbuf);
 	}
 
-	MarkBufferDirty(buf);
-	MarkBufferDirty(rbuf);
-
-	if (!P_RIGHTMOST(ropaque))
-	{
-		sopaque->btpo_prev = BufferGetBlockNumber(rbuf);
-		MarkBufferDirty(sbuf);
-	}
-
 	/* XLOG stuff */
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 	{
 		xl_btree_split xlrec;
 		uint8		xlinfo;
@@ -2025,7 +2027,7 @@ _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 	MarkBufferDirty(metabuf);
 
 	/* XLOG stuff */
-	if (!rel->rd_istemp)
+	if (RelationNeedsWAL(rel))
 	{
 		xl_btree_newroot xlrec;
 		XLogRecPtr	recptr;
@@ -2140,9 +2142,10 @@ _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
 		if (isNull || (scankey->sk_flags & SK_ISNULL))
 			return false;
 
-		result = DatumGetInt32(FunctionCall2(&scankey->sk_func,
-											 datum,
-											 scankey->sk_argument));
+		result = DatumGetInt32(FunctionCall2Coll(&scankey->sk_func,
+												 scankey->sk_collation,
+												 datum,
+												 scankey->sk_argument));
 
 		if (result != 0)
 			return false;

@@ -4,9 +4,9 @@
  *
  * Declarations for ISpell dictionary
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/dicts/spell.h,v 1.9 2010/04/02 15:21:20 mha Exp $
+ * src/include/tsearch/dicts/spell.h
  *
  *-------------------------------------------------------------------------
  */
@@ -138,14 +138,6 @@ typedef struct
 	int			naffixes;
 	AFFIX	   *Affix;
 
-	/*
-	 * Temporary array of all words in the dict file. Only used during
-	 * initialization
-	 */
-	SPELL	  **Spell;
-	int			nspell;			/* number of valid entries in Spell array */
-	int			mspell;			/* allocated length of Spell array */
-
 	AffixNode  *Suffix;
 	AffixNode  *Prefix;
 
@@ -158,12 +150,30 @@ typedef struct
 
 	unsigned char flagval[256];
 	bool		usecompound;
+
+	/*
+	 * Remaining fields are only used during dictionary construction; they are
+	 * set up by NIStartBuild and cleared by NIFinishBuild.
+	 */
+	MemoryContext buildCxt;		/* temp context for construction */
+
+	/* Temporary array of all words in the dict file */
+	SPELL	  **Spell;
+	int			nspell;			/* number of valid entries in Spell array */
+	int			mspell;			/* allocated length of Spell array */
+
+	/* These are used to allocate "compact" data without palloc overhead */
+	char	   *firstfree;		/* first free address (always maxaligned) */
+	size_t		avail;			/* free space remaining at firstfree */
 } IspellDict;
 
 extern TSLexeme *NINormalizeWord(IspellDict *Conf, char *word);
+
+extern void NIStartBuild(IspellDict *Conf);
 extern void NIImportAffixes(IspellDict *Conf, const char *filename);
 extern void NIImportDictionary(IspellDict *Conf, const char *filename);
 extern void NISortDictionary(IspellDict *Conf);
 extern void NISortAffixes(IspellDict *Conf);
+extern void NIFinishBuild(IspellDict *Conf);
 
 #endif

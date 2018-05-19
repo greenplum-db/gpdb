@@ -34,7 +34,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.102 2010/05/15 21:41:16 tgl Exp $
+ *		src/bin/pg_dump/pg_restore.c
  *
  *-------------------------------------------------------------------------
  */
@@ -76,6 +76,7 @@ main(int argc, char **argv)
 	static int	no_data_for_failed_tables = 0;
 	static int	outputNoTablespaces = 0;
 	static int	use_setsessauth = 0;
+	static int	no_security_labels = 0;
 
 	struct option cmdopts[] = {
 		{"clean", 0, NULL, 'c'},
@@ -116,6 +117,7 @@ main(int argc, char **argv)
 		{"no-tablespaces", no_argument, &outputNoTablespaces, 1},
 		{"role", required_argument, NULL, 2},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
+		{"no-security-labels", no_argument, &no_security_labels, 1},
 
 		{NULL, 0, NULL, 0}
 	};
@@ -142,7 +144,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((c = getopt_long(argc, argv, "acCd:ef:F:h:iI:j:lL:n:Op:P:RsS:t:T:uU:vwWxX:1",
+	while ((c = getopt_long(argc, argv, "acCd:ef:F:h:iI:j:lL:n:Op:P:RsS:t:T:uU:vwWx:1",
 							cmdopts, NULL)) != -1)
 	{
 		switch (c)
@@ -257,26 +259,6 @@ main(int argc, char **argv)
 				opts->aclsSkip = 1;
 				break;
 
-			case 'X':
-				/* -X is a deprecated alternative to long options */
-				if (strcmp(optarg, "disable-triggers") == 0)
-					disable_triggers = 1;
-				else if (strcmp(optarg, "no-data-for-failed-tables") == 0)
-					no_data_for_failed_tables = 1;
-				else if (strcmp(optarg, "no-tablespaces") == 0)
-					outputNoTablespaces = 1;
-				else if (strcmp(optarg, "use-set-session-authorization") == 0)
-					use_setsessauth = 1;
-				else
-				{
-					fprintf(stderr,
-							_("%s: invalid -X option -- %s\n"),
-							progname, optarg);
-					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
-					exit(1);
-				}
-				break;
-
 			case '1':			/* Restore data in a single transaction */
 				opts->single_txn = true;
 				opts->exit_on_error = true;
@@ -285,8 +267,7 @@ main(int argc, char **argv)
 			case 0:
 
 				/*
-				 * This covers the long options without a short equivalent,
-				 * including those equivalent to -X xxx.
+				 * This covers the long options without a short equivalent.
 				 */
 				break;
 
@@ -300,10 +281,21 @@ main(int argc, char **argv)
 		}
 	}
 
+	/* Get file name from command line */
 	if (optind < argc)
-		inputFileSpec = argv[optind];
+		inputFileSpec = argv[optind++];
 	else
 		inputFileSpec = NULL;
+
+	/* Complain if any arguments remain */
+	if (optind < argc)
+	{
+		fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
+				progname, argv[optind]);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
+				progname);
+		exit(1);
+	}
 
 	/* Should get at most one of -d and -f, else user is confused */
 	if (opts->dbname)
@@ -331,6 +323,7 @@ main(int argc, char **argv)
 	opts->noDataForFailedTables = no_data_for_failed_tables;
 	opts->noTablespace = outputNoTablespaces;
 	opts->use_setsessauth = use_setsessauth;
+	opts->no_security_labels = no_security_labels;
 
 	if (opts->formatName)
 	{
@@ -339,6 +332,11 @@ main(int argc, char **argv)
 			case 'c':
 			case 'C':
 				opts->format = archCustom;
+				break;
+
+			case 'd':
+			case 'D':
+				opts->format = archDirectory;
 				break;
 
 			case 'f':
@@ -352,7 +350,7 @@ main(int argc, char **argv)
 				break;
 
 			default:
-				write_msg(NULL, "unrecognized archive format \"%s\"; please specify \"c\" or \"t\"\n",
+				write_msg(NULL, "unrecognized archive format \"%s\"; please specify \"c\", \"d\", or \"t\"\n",
 						  opts->formatName);
 				exit(1);
 		}
@@ -407,7 +405,7 @@ usage(const char *progname)
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -d, --dbname=NAME        connect to database name\n"));
 	printf(_("  -f, --file=FILENAME      output file name\n"));
-	printf(_("  -F, --format=c|t         backup file format (should be automatic)\n"));
+	printf(_("  -F, --format=c|d|t       backup file format (should be automatic)\n"));
 	printf(_("  -l, --list               print summarized TOC of the archive\n"));
 	printf(_("  -v, --verbose            verbose mode\n"));
 	printf(_("  --help                   show this help, then exit\n"));
@@ -432,17 +430,17 @@ usage(const char *progname)
 	printf(_("  -t, --table=NAME         restore named table\n"));
 	printf(_("  -T, --trigger=NAME       restore named trigger\n"));
 	printf(_("  -x, --no-privileges      skip restoration of access privileges (grant/revoke)\n"));
+	printf(_("  -1, --single-transaction\n"
+			 "                           restore as a single transaction\n"));
 	printf(_("  --disable-triggers       disable triggers during data-only restore\n"));
 	printf(_("  --no-data-for-failed-tables\n"
 			 "                           do not restore data of tables that could not be\n"
 			 "                           created\n"));
+	printf(_("  --no-security-labels     do not restore security labels\n"));
 	printf(_("  --no-tablespaces         do not restore tablespace assignments\n"));
-	printf(_("  --role=ROLENAME          do SET ROLE before restore\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                           use SET SESSION AUTHORIZATION commands instead of\n"
 	  "                           ALTER OWNER commands to set ownership\n"));
-	printf(_("  -1, --single-transaction\n"
-			 "                           restore as a single transaction\n"));
 
 	printf(_("\nConnection options:\n"));
 	printf(_("  -h, --host=HOSTNAME      database server host or socket directory\n"));
@@ -450,6 +448,7 @@ usage(const char *progname)
 	printf(_("  -U, --username=NAME      connect as specified database user\n"));
 	printf(_("  -w, --no-password        never prompt for password\n"));
 	printf(_("  -W, --password           force password prompt (should happen automatically)\n"));
+	printf(_("  --role=ROLENAME          do SET ROLE before restore\n"));
 
 	printf(_("\nIf no input file name is supplied, then standard input is used.\n\n"));
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));

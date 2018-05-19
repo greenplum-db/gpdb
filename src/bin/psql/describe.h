@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  * src/bin/psql/describe.h
  */
@@ -81,8 +81,11 @@ extern bool listConversions(const char *pattern, bool showSystem);
 /* \dC */
 extern bool listCasts(const char *pattern);
 
+/* \dO */
+extern bool listCollations(const char *pattern, bool verbose, bool showSystem);
+
 /* \dn */
-extern bool listSchemas(const char *pattern, bool verbose);
+extern bool listSchemas(const char *pattern, bool verbose, bool showSystem);
 
 /* \dew */
 extern bool listForeignDataWrappers(const char *pattern, bool verbose);
@@ -92,6 +95,12 @@ extern bool listForeignServers(const char *pattern, bool verbose);
 
 /* \deu */
 extern bool listUserMappings(const char *pattern, bool verbose);
+
+/* \det */
+extern bool listForeignTables(const char *pattern, bool verbose);
+
+/* \dL */
+extern bool listLanguages(const char *pattern, bool verbose, bool showSystem);
 
 /* \dx */
 extern bool listExtensions(const char *pattern);

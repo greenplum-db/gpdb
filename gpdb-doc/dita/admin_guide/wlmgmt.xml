@@ -88,6 +88,11 @@
               certain operators and functions</entry>
             <entry colname="col3">Limits are not enforced on <codeph>SET</codeph>, <codeph>RESET</codeph>, and <codeph>SHOW</codeph> commands</entry>
           </row>
+          <row>
+            <entry colname="col1">External Components</entry>
+            <entry colname="col2">None</entry>
+            <entry colname="col3">Manage PL/Container CPU and memory resources</entry>
+          </row>
         </tbody>
       </tgroup>
     </table>

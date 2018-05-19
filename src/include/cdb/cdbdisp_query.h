@@ -58,8 +58,7 @@ struct CdbPgResults;
 void
 CdbDispatchPlan(struct QueryDesc *queryDesc,
 					 bool planRequiresTxn,
-					 bool cancelOnError,
-					 struct CdbDispatcherState *ds);
+					 bool cancelOnError);
 
 /*
  * Special for sending SET commands that change GUC variables, so they go to all

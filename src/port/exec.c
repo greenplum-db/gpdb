@@ -4,12 +4,12 @@
  *		Functions for finding and validating executable files
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/exec.c,v 1.68 2010/02/26 02:01:38 momjian Exp $
+ *	  src/port/exec.c
  *
  *-------------------------------------------------------------------------
  */
@@ -168,7 +168,7 @@ find_my_exec(const char *argv0, char *retpath)
 			else
 				startp = endp + 1;
 
-			endp = first_path_separator(startp);
+			endp = first_path_var_separator(startp);
 			if (!endp)
 				endp = startp + strlen(startp); /* point to end */
 

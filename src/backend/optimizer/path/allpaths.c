@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.194 2010/03/28 22:59:32 tgl Exp $
+ *	  src/backend/optimizer/path/allpaths.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 
 #include <math.h>
 
+#include "catalog/pg_class.h"
 #include "nodes/nodeFuncs.h"
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
@@ -38,6 +39,7 @@
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
+#include "utils/lsyscache.h"
 
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
@@ -58,6 +60,7 @@ static void set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 static void set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 						Index rti, RangeTblEntry *rte);
 static bool has_multiple_baserels(PlannerInfo *root);
+static List *accumulate_append_subpath(List *subpaths, Path *path);
 static void set_dummy_rel_pathlist(PlannerInfo *root, RelOptInfo *rel);
 static void set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					  Index rti, RangeTblEntry *rte);
@@ -71,6 +74,8 @@ static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel,
 				 RangeTblEntry *rte);
 static void set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					   RangeTblEntry *rte);
+static void set_foreign_pathlist(PlannerInfo *root, RelOptInfo *rel,
+					 RangeTblEntry *rte);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti, Query *subquery);
@@ -215,39 +220,49 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		/* It's an "append relation", process accordingly */
 		set_append_rel_pathlist(root, rel, rti, rte);
 	}
-	else if (rel->rtekind == RTE_SUBQUERY)
-	{
-		/* Subquery --- generate a separate plan for it */
-		set_subquery_pathlist(root, rel, rti, rte);
-	}
-	else if (rel->rtekind == RTE_FUNCTION)
-	{
-		/* RangeFunction --- generate a suitable path for it */
-		set_function_pathlist(root, rel, rte);
-	}
-	else if (rel->rtekind == RTE_TABLEFUNCTION)
-	{
-		/* RangeFunction --- generate a separate plan for it */
-		set_tablefunction_pathlist(root, rel, rte);
-	}
-	else if (rel->rtekind == RTE_VALUES)
-	{
-		/* Values list --- generate a suitable path for it */
-		set_values_pathlist(root, rel, rte);
-	}
-	else if (rel->rtekind == RTE_CTE)
-	{
-		/* CTE reference --- generate a suitable path for it */
-		if (rte->self_reference)
-			set_worktable_pathlist(root, rel, rte);
-		else
-			set_cte_pathlist(root, rel, rte);
-	}
 	else
 	{
-		/* Plain relation */
-		Assert(rel->rtekind == RTE_RELATION);
-		set_plain_rel_pathlist(root, rel, rte);
+		switch (rel->rtekind)
+		{
+			case RTE_RELATION:
+				if (rte->relkind == RELKIND_FOREIGN_TABLE)
+				{
+					/* Foreign table */
+					set_foreign_pathlist(root, rel, rte);
+				}
+				else
+				{
+					/* Plain relation */
+					set_plain_rel_pathlist(root, rel, rte);
+				}
+				break;
+			case RTE_SUBQUERY:
+				/* Subquery --- generate a separate plan for it */
+				set_subquery_pathlist(root, rel, rti, rte);
+				break;
+			case RTE_FUNCTION:
+				/* RangeFunction --- generate a suitable path for it */
+				set_function_pathlist(root, rel, rte);
+				break;
+			case RTE_TABLEFUNCTION:
+				/* RangeFunction --- generate a suitable path for it */
+				set_tablefunction_pathlist(root, rel, rte);
+				break;
+			case RTE_VALUES:
+				/* Values list --- generate a suitable path for it */
+				set_values_pathlist(root, rel, rte);
+				break;
+			case RTE_CTE:
+				/* CTE reference --- generate a suitable path for it */
+				if (rte->self_reference)
+					set_worktable_pathlist(root, rel, rte);
+				else
+					set_cte_pathlist(root, rel, rte);
+				break;
+			default:
+				elog(ERROR, "unexpected rtekind: %d", (int) rel->rtekind);
+				break;
+		}
 	}
 
 #ifdef OPTIMIZER_DEBUG
@@ -424,7 +439,9 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 						Index rti, RangeTblEntry *rte)
 {
 	int			parentRTindex = rti;
+	List	   *live_childrels = NIL;
 	List	   *subpaths = NIL;
+	List	   *all_child_pathkeys = NIL;
 	double		parent_rows;
 	double		parent_size;
 	double	   *parent_attrsizes;
@@ -468,7 +485,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		RelOptInfo *childrel;
 		List	   *childquals;
 		Node	   *childqual;
-		Path	   *childpath;
+		ListCell   *lcp;
 		ListCell   *parentvars;
 		ListCell   *childvars;
 
@@ -542,13 +559,15 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 		/*
 		 * We have to make child entries in the EquivalenceClass data
-		 * structures as well.
+		 * structures as well.	This is needed either if the parent
+		 * participates in some eclass joins (because we will want to consider
+		 * inner-indexscan joins on the individual children) or if the parent
+		 * has useful pathkeys (because we should try to build MergeAppend
+		 * paths that produce those sort orderings).
 		 */
-		if (rel->has_eclass_joins)
-		{
+		if (rel->has_eclass_joins || has_useful_pathkeys(root, rel))
 			add_child_rel_equivalences(root, appinfo, rel, childrel);
-			childrel->has_eclass_joins = true;
-		}
+		childrel->has_eclass_joins = rel->has_eclass_joins;
 
 		/*
 		 * Note: we could compute appropriate attr_needed data for the child's
@@ -558,23 +577,52 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		 * otherrels.  So we just leave the child's attr_needed empty.
 		 */
 
+		/* Remember which childrels are live, for MergeAppend logic below */
+		live_childrels = lappend(live_childrels, childrel);
+
 		/*
 		 * Compute the child's access paths, and add the cheapest one to the
 		 * Append path we are constructing for the parent.
-		 *
-		 * It's possible that the child is itself an appendrel, in which case
-		 * we can "cut out the middleman" and just add its child paths to our
-		 * own list.  (We don't try to do this earlier because we need to
-		 * apply both levels of transformation to the quals.)
 		 */
 		set_rel_pathlist(root, childrel, childRTindex, childRTE);
 
-		childpath = childrel->cheapest_total_path;
-		if (IsA(childpath, AppendPath))
-			subpaths = list_concat(subpaths,
-							list_copy(((AppendPath *) childpath)->subpaths));
-		else
-			subpaths = lappend(subpaths, childpath);
+		subpaths = accumulate_append_subpath(subpaths,
+											 childrel->cheapest_total_path);
+
+		/*
+		 * Collect a list of all the available path orderings for all the
+		 * children.  We use this as a heuristic to indicate which sort
+		 * orderings we should build MergeAppend paths for.
+		 */
+		foreach(lcp, childrel->pathlist)
+		{
+			Path	   *childpath = (Path *) lfirst(lcp);
+			List	   *childkeys = childpath->pathkeys;
+			ListCell   *lpk;
+			bool		found = false;
+
+			/* Ignore unsorted paths */
+			if (childkeys == NIL)
+				continue;
+
+			/* Have we already seen this ordering? */
+			foreach(lpk, all_child_pathkeys)
+			{
+				List	   *existing_pathkeys = (List *) lfirst(lpk);
+
+				if (compare_pathkeys(existing_pathkeys,
+									 childkeys) == PATHKEYS_EQUAL)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				/* No, so add it to all_child_pathkeys */
+				all_child_pathkeys = lappend(all_child_pathkeys, childkeys);
+			}
+		}
 
 		/*
 		 * Accumulate size information from each child.
@@ -641,14 +689,104 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	pfree(parent_attrsizes);
 
 	/*
-	 * Finally, build Append path and install it as the only access path for
-	 * the parent rel.	(Note: this is correct even if we have zero or one
-	 * live subpath due to constraint exclusion.)
+	 * Next, build an unordered Append path for the rel.  (Note: this is
+	 * correct even if we have zero or one live subpath due to constraint
+	 * exclusion.)
 	 */
 	add_path(root, rel, (Path *) create_append_path(root, rel, subpaths));
 
-	/* Select cheapest path (pretty easy in this case...) */
+	/*
+	 * Next, build MergeAppend paths based on the collected list of child
+	 * pathkeys.  We consider both cheapest-startup and cheapest-total cases,
+	 * ie, for each interesting ordering, collect all the cheapest startup
+	 * subpaths and all the cheapest total paths, and build a MergeAppend path
+	 * for each list.
+	 */
+	foreach(l, all_child_pathkeys)
+	{
+		List	   *pathkeys = (List *) lfirst(l);
+		List	   *startup_subpaths = NIL;
+		List	   *total_subpaths = NIL;
+		bool		startup_neq_total = false;
+		ListCell   *lcr;
+
+		/* Select the child paths for this ordering... */
+		foreach(lcr, live_childrels)
+		{
+			RelOptInfo *childrel = (RelOptInfo *) lfirst(lcr);
+			Path	   *cheapest_startup,
+					   *cheapest_total;
+
+			/* Locate the right paths, if they are available. */
+			cheapest_startup =
+				get_cheapest_path_for_pathkeys(childrel->pathlist,
+											   pathkeys,
+											   STARTUP_COST);
+			cheapest_total =
+				get_cheapest_path_for_pathkeys(childrel->pathlist,
+											   pathkeys,
+											   TOTAL_COST);
+
+			/*
+			 * If we can't find any paths with the right order just add the
+			 * cheapest-total path; we'll have to sort it.
+			 */
+			if (cheapest_startup == NULL)
+				cheapest_startup = childrel->cheapest_total_path;
+			if (cheapest_total == NULL)
+				cheapest_total = childrel->cheapest_total_path;
+
+			/*
+			 * Notice whether we actually have different paths for the
+			 * "cheapest" and "total" cases; frequently there will be no point
+			 * in two create_merge_append_path() calls.
+			 */
+			if (cheapest_startup != cheapest_total)
+				startup_neq_total = true;
+
+			startup_subpaths =
+				accumulate_append_subpath(startup_subpaths, cheapest_startup);
+			total_subpaths =
+				accumulate_append_subpath(total_subpaths, cheapest_total);
+		}
+
+		/* ... and build the MergeAppend paths */
+		add_path(root, rel, (Path *) create_merge_append_path(root,
+														rel,
+														startup_subpaths,
+														pathkeys));
+		if (startup_neq_total)
+			add_path(root, rel, (Path *) create_merge_append_path(root,
+															rel,
+															total_subpaths,
+															pathkeys));
+	}
+
+	/* Select cheapest path */
 	set_cheapest(root, rel);
+}
+
+/*
+ * accumulate_append_subpath
+ *		Add a subpath to the list being built for an Append or MergeAppend
+ *
+ * It's possible that the child is itself an Append path, in which case
+ * we can "cut out the middleman" and just add its child paths to our
+ * own list.  (We don't try to do this earlier because we need to
+ * apply both levels of transformation to the quals.)
+ */
+static List *
+accumulate_append_subpath(List *subpaths, Path *path)
+{
+	if (IsA(path, AppendPath))
+	{
+		AppendPath *apath = (AppendPath *) path;
+
+		/* list_copy is important here to avoid sharing list substructure */
+		return list_concat(subpaths, list_copy(apath->subpaths));
+	}
+	else
+		return lappend(subpaths, path);
 }
 
 /*
@@ -791,14 +929,8 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		/* XXX rel->onerow = ??? */
 	}
 
-	/* Copy number of output rows from subplan */
-	if (rel->onerow)
-		rel->tuples = 1;
-	else
-		rel->tuples = rel->subplan->plan_rows;
-
 	/* Mark rel with estimated output rows, width, etc */
-	set_baserel_size_estimates(root, rel);
+	set_subquery_size_estimates(root, rel, subroot);
 
 	/* Convert subquery pathkeys to outer representation */
 	pathkeys = convert_subquery_pathkeys(root, rel, subroot->query_pathkeys);
@@ -1148,6 +1280,23 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	ctelocus = cteplan->flow->locustype;
 	/* Generate appropriate path */
 	add_path(root, rel, create_worktablescan_path(root, rel, ctelocus));
+
+	/* Select cheapest path (pretty easy in this case...) */
+	set_cheapest(root, rel);
+}
+
+/*
+ * set_foreign_pathlist
+ *		Build the (single) access path for a foreign table RTE
+ */
+static void
+set_foreign_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
+{
+	/* Mark rel with estimated output rows, width, etc */
+	set_foreign_size_estimates(root, rel);
+
+	/* Generate appropriate path */
+	add_path(root, rel, (Path *) create_foreignscan_path(root, rel));
 
 	/* Select cheapest path (pretty easy in this case...) */
 	set_cheapest(root, rel);
@@ -2034,8 +2183,14 @@ print_path(PlannerInfo *root, Path *path, int indent)
 		case T_TidPath:
 			ptype = "TidScan";
 			break;
+		case T_ForeignPath:
+			ptype = "ForeignScan";
+			break;
 		case T_AppendPath:
 			ptype = "Append";
+			break;
+		case T_MergeAppendPath:
+			ptype = "MergeAppend";
 			break;
 		case T_ResultPath:
 			ptype = "Result";

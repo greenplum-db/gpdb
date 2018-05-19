@@ -3,33 +3,32 @@
  *
  *	dump functions
  *
- *	Copyright (c) 2010, PostgreSQL Global Development Group
- *	$PostgreSQL: pgsql/contrib/pg_upgrade/dump.c,v 1.7 2010/07/06 19:18:55 momjian Exp $
+ *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	contrib/pg_upgrade/dump.c
  */
 
 #include "pg_upgrade.h"
 
 
-
 void
-generate_old_dump(migratorContext *ctx)
+generate_old_dump(void)
 {
 	/* run new pg_dumpall binary */
-	prep_status(ctx, "Creating catalog dump");
+	prep_status("Creating catalog dump");
 
 	/*
 	 * --binary-upgrade records the width of dropped columns in pg_class, and
 	 * restores the frozenid's for databases and relations.
 	 */
-	exec_prog(ctx, true,
+	exec_prog(true,
 			  SYSTEMQUOTE "\"%s/pg_dumpall\" --port %d --username \"%s\" "
 			  "--schema-only --binary-upgrade -f \"%s/" ALL_DUMP_FILE "\""
-		   SYSTEMQUOTE, ctx->new.bindir, ctx->old.port, ctx->user, ctx->cwd);
-	check_ok(ctx);
+			  SYSTEMQUOTE, new_cluster.bindir, old_cluster.port, os_info.user, os_info.cwd);
+	check_ok();
 }
 
 static char *
-get_preassigned_oids_for_db(migratorContext *ctx, char *line)
+get_preassigned_oids_for_db(char *line)
 {
 	char	   *dbname;
 	int			dbnum;
@@ -47,9 +46,9 @@ get_preassigned_oids_for_db(migratorContext *ctx, char *line)
 		return NULL;
 	dbname[strlen(dbname) - 1] = '\0';
 
-	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
 
 		if (strcmp(olddb->db_name, dbname) == 0)
 		{
@@ -64,8 +63,8 @@ get_preassigned_oids_for_db(migratorContext *ctx, char *line)
  *	split_old_dump
  *
  *	This function splits pg_dumpall output into global values and
- *	database creation, and per-db schemas.  This allows us to create
- *	the toast place holders between restoring these two parts of the
+ *	database creation, and per-db schemas.	This allows us to create
+ *	the support functions between restoring these two parts of the
  *	dump.  We split on the first "\connect " after a CREATE ROLE
  *	username match;  this is where the per-db restore starts.
  *
@@ -73,7 +72,7 @@ get_preassigned_oids_for_db(migratorContext *ctx, char *line)
  *	an error during restore
  */
 void
-split_old_dump(migratorContext *ctx)
+split_old_dump(void)
 {
 	FILE	   *all_dump,
 			   *globals_dump,
@@ -87,29 +86,29 @@ split_old_dump(migratorContext *ctx)
 	bool		suppressed_username = false;
 
 	/* If this is a QE node, read the pre-assigned OIDs into memory. */
-	if (!ctx->dispatcher_mode)
-		slurp_oid_files(ctx);
+	if (!user_opts.dispatcher_mode)
+		slurp_oid_files();
 
 	/* 
 	 * Open all files in binary mode to avoid line end translation on Windows,
 	 * both for input and output.
 	 */
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, ALL_DUMP_FILE);
+	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, ALL_DUMP_FILE);
 	if ((all_dump = fopen(filename, PG_BINARY_R)) == NULL)
-		pg_log(ctx, PG_FATAL, "Cannot open dump file %s\n", filename);
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, GLOBALS_DUMP_FILE);
+		pg_log(PG_FATAL, "Cannot open dump file %s\n", filename);
+	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, GLOBALS_DUMP_FILE);
 	if ((globals_dump = fopen(filename, PG_BINARY_W)) == NULL)
-		pg_log(ctx, PG_FATAL, "Cannot write to dump file %s\n", filename);
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, DB_DUMP_FILE);
+		pg_log(PG_FATAL, "Cannot write to dump file %s\n", filename);
+	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, DB_DUMP_FILE);
 	if ((db_dump = fopen(filename, PG_BINARY_W)) == NULL)
-		pg_log(ctx, PG_FATAL, "Cannot write to dump file %s\n", filename);
+		pg_log(PG_FATAL, "Cannot write to dump file %s\n", filename);
 	current_output = globals_dump;
 
 	/* patterns used to prevent our own username from being recreated */
 	snprintf(create_role_str, sizeof(create_role_str),
-			 "CREATE ROLE %s;", ctx->user);
+			 "CREATE ROLE %s;", os_info.user);
 	snprintf(create_role_str_quote, sizeof(create_role_str_quote),
-			 "CREATE ROLE %s;", quote_identifier(ctx, ctx->user));
+			 "CREATE ROLE %s;", quote_identifier(os_info.user));
 
 	while (fgets(line, sizeof(line), all_dump) != NULL)
 	{
@@ -146,10 +145,10 @@ split_old_dump(migratorContext *ctx)
 		{
 			char	   *preassigned_oids;
 
-			if (current_output == globals_dump && ctx->old.global_reserved_oids)
-				fputs(ctx->old.global_reserved_oids, current_output);
+			if (current_output == globals_dump && old_cluster.global_reserved_oids)
+				fputs(old_cluster.global_reserved_oids, current_output);
 
-			preassigned_oids = get_preassigned_oids_for_db(ctx, line);
+			preassigned_oids = get_preassigned_oids_for_db(line);
 			if (preassigned_oids)
 				fputs(preassigned_oids, current_output);
 		}

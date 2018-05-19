@@ -3,12 +3,12 @@
  * shmem.c
  *	  create shared memory and initialize shared memory data structures.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/shmem.c,v 1.105 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/storage/ipc/shmem.c
  *
  *-------------------------------------------------------------------------
  */
@@ -214,7 +214,7 @@ ShmemAlloc(Size size)
  * Returns TRUE if the pointer points within the shared memory segment.
  */
 bool
-ShmemAddrIsValid(void *addr)
+ShmemAddrIsValid(const void *addr)
 {
 	return (addr >= ShmemBase) && (addr < ShmemEnd);
 }

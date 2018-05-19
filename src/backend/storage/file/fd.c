@@ -5,11 +5,11 @@
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.157 2010/07/06 22:55:26 rhaas Exp $
+ *	  src/backend/storage/file/fd.c
  *
  * NOTES:
  *
@@ -150,13 +150,12 @@ static int	max_safe_fds = 32;	/* default if not changed */
 
 /* these are the assigned bits in fdstate below: */
 #define FD_TEMPORARY		(1 << 0)	/* T = delete when closed */
-#define FD_CLOSE_AT_EOXACT	(1 << 1)	/* T = close at eoXact */
+#define FD_XACT_TEMPORARY	(1 << 1)	/* T = delete at eoXact */
+#define FD_XACT_TRANSIENT	(1 << 2)	/* T = close (not delete) at aoXact,
+										 * but keep VFD */
 
-/*
- * Flag to tell whether it's worth scanning VfdCache looking for temp files to
- * close
- */
-static bool have_xact_temporary_files = false;
+/* Flag to tell whether there are files to close/delete at end of transaction */
+static bool have_pending_fd_cleanup = false;
 
 typedef struct vfd
 {
@@ -278,6 +277,9 @@ static File OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError,
 static void AtProcExit_Files(int code, Datum arg);
 static void CleanupTempFiles(bool isProcExit);
 static void RemovePgTempFilesInDir(const char *tmpdirname);
+static void RemovePgTempRelationFiles(const char *tsdirname);
+static void RemovePgTempRelationFilesInDbspace(const char *dbspacedirname);
+static bool looks_like_temp_rel_name(const char *name);
 
 
 /*
@@ -604,7 +606,7 @@ _dump_lru(void)
 		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%d ", mru);
 	}
 	snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "LEAST");
-	elog(LOG, buf);
+	elog(LOG, "%s", buf);
 }
 #endif   /* FDDEBUG */
 
@@ -633,6 +635,7 @@ LruDelete(File file)
 	Vfd		   *vfdP;
 
 	Assert(file != 0);
+	Assert(!FileIsNotOpen(file));
 
 	DO_DB(elog(LOG, "LruDelete %d (%s)",
 			   file, VfdCache[file].fileName));
@@ -992,14 +995,14 @@ OpenNamedTemporaryFile(const char *fileName,
 	/* Register it with the current resource owner */
 	if (!interXact)
 	{
-		VfdCache[file].fdstate |= FD_CLOSE_AT_EOXACT;
+		VfdCache[file].fdstate |= FD_XACT_TEMPORARY;
 
 		ResourceOwnerEnlargeFiles(CurrentResourceOwner);
 		ResourceOwnerRememberFile(CurrentResourceOwner, file);
 		VfdCache[file].resowner = CurrentResourceOwner;
 
 		/* ensure cleanup happens at eoxact */
-		have_xact_temporary_files = true;
+		have_pending_fd_cleanup = true;
 	}
 
 	return file;
@@ -1069,14 +1072,14 @@ OpenTemporaryFile(bool interXact, const char *filePrefix)
 	/* Register it with the current resource owner */
 	if (!interXact)
 	{
-		VfdCache[file].fdstate |= FD_CLOSE_AT_EOXACT;
+		VfdCache[file].fdstate |= FD_XACT_TEMPORARY;
 
 		ResourceOwnerEnlargeFiles(CurrentResourceOwner);
 		ResourceOwnerRememberFile(CurrentResourceOwner, file);
 		VfdCache[file].resowner = CurrentResourceOwner;
 
 		/* ensure cleanup happens at eoxact */
-		have_xact_temporary_files = true;
+		have_pending_fd_cleanup = true;
 	}
 
 	return file;
@@ -1232,6 +1235,25 @@ OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError,
 }
 
 /*
+ * Set the transient flag on a file
+ *
+ * This flag tells CleanupTempFiles to close the kernel-level file descriptor
+ * (but not the VFD itself) at end of transaction.
+ */
+void
+FileSetTransient(File file)
+{
+	Vfd		  *vfdP;
+
+	Assert(FileIsValid(file));
+
+	vfdP = &VfdCache[file];
+	vfdP->fdstate |= FD_XACT_TRANSIENT;
+
+	have_pending_fd_cleanup = true;
+}
+
+/*
  * close a file when done with it
  */
 void
@@ -1268,14 +1290,15 @@ FileClose(File file)
 		 * If we get an error, as could happen within the ereport/elog calls,
 		 * we'll come right back here during transaction abort.  Reset the
 		 * flag to ensure that we can't get into an infinite loop.  This code
-		 * is arranged to ensure that the worst-case consequence is failing
-		 * to emit log message(s), not failing to attempt the unlink.
+		 * is arranged to ensure that the worst-case consequence is failing to
+		 * emit log message(s), not failing to attempt the unlink.
 		 */
 		vfdP->fdstate &= ~FD_TEMPORARY;
+
 		if (log_temp_files >= 0)
 		{
 			struct stat filestats;
-			int		stat_errno;
+			int			stat_errno;
 
 			/* first try the stat() */
 			if (stat(vfdP->fileName, &filestats))
@@ -1707,7 +1730,8 @@ AllocateFile(const char *name, const char *mode)
 	 */
 	if (numAllocatedDescs >= MAX_ALLOCATED_DESCS ||
 		numAllocatedDescs >= max_safe_fds - 1)
-		elog(ERROR, "too many private files demanded");
+		elog(ERROR, "exceeded MAX_ALLOCATED_DESCS while trying to open file \"%s\"",
+			 name);
 
 TryAgain:
 	if ((file = fopen(name, mode)) != NULL)
@@ -1908,7 +1932,8 @@ AllocateDir(const char *dirname)
 	 */
 	if (numAllocatedDescs >= MAX_ALLOCATED_DESCS ||
 		numAllocatedDescs >= max_safe_fds - 1)
-		elog(ERROR, "too many private dirs demanded");
+		elog(ERROR, "exceeded MAX_ALLOCATED_DESCS while trying to open directory \"%s\"",
+			 dirname);
 
 TryAgain:
 	if ((dir = opendir(dirname)) != NULL)
@@ -2144,8 +2169,9 @@ AtEOSubXact_Files(bool isCommit, SubTransactionId mySubid,
  * particularly care which).  All still-open per-transaction temporary file
  * VFDs are closed, which also causes the underlying files to be deleted
  * (although they should've been closed already by the ResourceOwner
- * cleanup). Furthermore, all "allocated" stdio files are closed. We also
- * forget any transaction-local temp tablespace list.
+ * cleanup). Transient files have their kernel file descriptors closed.
+ * Furthermore, all "allocated" stdio files are closed. We also forget any
+ * transaction-local temp tablespace list.
  */
 void
 AtEOXact_Files(void)
@@ -2168,7 +2194,10 @@ AtProcExit_Files(int code, Datum arg)
 }
 
 /*
- * Close temporary files and delete their underlying files.
+ * General cleanup routine for fd.c.
+ *
+ * Temporary files are closed, and their underlying files deleted.
+ * Transient files are closed.
  *
  * isProcExit: if true, this is being called as the backend process is
  * exiting. If that's the case, we should remove all temporary files; if
@@ -2185,35 +2214,51 @@ CleanupTempFiles(bool isProcExit)
 	 * Careful here: at proc_exit we need extra cleanup, not just
 	 * xact_temporary files.
 	 */
-	if (isProcExit || have_xact_temporary_files)
+	if (isProcExit || have_pending_fd_cleanup)
 	{
 		Assert(FileIsNotOpen(0));		/* Make sure ring not corrupted */
 		for (i = 1; i < SizeVfdCache; i++)
 		{
 			unsigned short fdstate = VfdCache[i].fdstate;
 
-			if ((fdstate & (FD_TEMPORARY | FD_CLOSE_AT_EOXACT)) && VfdCache[i].fileName != NULL)
+			if (VfdCache[i].fileName != NULL)
 			{
-				/*
-				 * If we're in the process of exiting a backend process, close
-				 * all temporary files. Otherwise, only close temporary files
-				 * local to the current transaction. They should be closed by
-				 * the ResourceOwner mechanism already, so this is just a
-				 * debugging cross-check.
-				 */
-				if (isProcExit)
-					FileClose(i);
-				else if (fdstate & FD_CLOSE_AT_EOXACT)
+				if (fdstate & FD_TEMPORARY)
 				{
-					elog(WARNING,
-						 "temporary file %s not closed at end-of-transaction",
-						 VfdCache[i].fileName);
-					FileClose(i);
+					/*
+					 * If we're in the process of exiting a backend process, close
+					 * all temporary files. Otherwise, only close temporary files
+					 * local to the current transaction. They should be closed by
+					 * the ResourceOwner mechanism already, so this is just a
+					 * debugging cross-check.
+					 */
+					if (isProcExit)
+						FileClose(i);
+					else if (fdstate & FD_XACT_TEMPORARY)
+					{
+						elog(WARNING,
+							 "temporary file %s not closed at end-of-transaction",
+							 VfdCache[i].fileName);
+						FileClose(i);
+					}
+				}
+				else if (fdstate & FD_XACT_TRANSIENT)
+				{
+					/*
+					 * Close the FD, and remove the entry from the LRU ring,
+					 * but also remove the flag from the VFD.  This is to
+					 * ensure that if the VFD is reused in the future for
+					 * non-transient access, we don't close it inappropriately
+					 * then.
+					 */
+					if (!FileIsNotOpen(i))
+						LruDelete(i);
+					VfdCache[i].fdstate &= ~FD_XACT_TRANSIENT;
 				}
 			}
 		}
 
-		have_xact_temporary_files = false;
+		have_pending_fd_cleanup = false;
 	}
 
 	workfile_mgr_cleanup();
@@ -2225,10 +2270,12 @@ CleanupTempFiles(bool isProcExit)
 
 
 /*
- * Remove temporary files left over from a prior postmaster session
+ * Remove temporary and temporary relation files left over from a prior
+ * postmaster session
  *
  * This should be called during postmaster startup.  It will forcibly
- * remove any leftover files created by OpenTemporaryFile.
+ * remove any leftover files created by OpenTemporaryFile and any leftover
+ * temporary relation files created by mdcreate.
  *
  * NOTE: we could, but don't, call this during a post-backend-crash restart
  * cycle.  The argument for not doing it is that someone might want to examine
@@ -2248,6 +2295,7 @@ RemovePgTempFiles(void)
 	 */
 	snprintf(temp_path, sizeof(temp_path), "base/%s", PG_TEMP_FILES_DIR);
 	RemovePgTempFilesInDir(temp_path);
+	RemovePgTempRelationFiles("base");
 
 	/*
 	 * Cycle through temp directories for all non-default tablespaces.
@@ -2263,6 +2311,10 @@ RemovePgTempFiles(void)
 		snprintf(temp_path, sizeof(temp_path), "pg_tblspc/%s/%s/%s",
 				 spc_de->d_name, tablespace_version_directory(), PG_TEMP_FILES_DIR);
 		RemovePgTempFilesInDir(temp_path);
+
+		snprintf(temp_path, sizeof(temp_path), "pg_tblspc/%s/%s",
+				 spc_de->d_name, tablespace_version_directory());
+		RemovePgTempRelationFiles(temp_path);
 	}
 
 	FreeDir(spc_dir);
@@ -2324,4 +2376,136 @@ RemovePgTempFilesInDir(const char *tmpdirname)
 	}
 
 	FreeDir(temp_dir);
+}
+
+/* Process one tablespace directory, look for per-DB subdirectories */
+static void
+RemovePgTempRelationFiles(const char *tsdirname)
+{
+	DIR		   *ts_dir;
+	struct dirent *de;
+	char		dbspace_path[MAXPGPATH];
+
+	ts_dir = AllocateDir(tsdirname);
+	if (ts_dir == NULL)
+	{
+		/* anything except ENOENT is fishy */
+		if (errno != ENOENT)
+			elog(LOG,
+				 "could not open tablespace directory \"%s\": %m",
+				 tsdirname);
+		return;
+	}
+
+	while ((de = ReadDir(ts_dir, tsdirname)) != NULL)
+	{
+		int			i = 0;
+
+		/*
+		 * We're only interested in the per-database directories, which have
+		 * numeric names.  Note that this code will also (properly) ignore "."
+		 * and "..".
+		 */
+		while (isdigit((unsigned char) de->d_name[i]))
+			++i;
+		if (de->d_name[i] != '\0' || i == 0)
+			continue;
+
+		snprintf(dbspace_path, sizeof(dbspace_path), "%s/%s",
+				 tsdirname, de->d_name);
+		RemovePgTempRelationFilesInDbspace(dbspace_path);
+	}
+
+	FreeDir(ts_dir);
+}
+
+/* Process one per-dbspace directory for RemovePgTempRelationFiles */
+static void
+RemovePgTempRelationFilesInDbspace(const char *dbspacedirname)
+{
+	DIR		   *dbspace_dir;
+	struct dirent *de;
+	char		rm_path[MAXPGPATH];
+
+	dbspace_dir = AllocateDir(dbspacedirname);
+	if (dbspace_dir == NULL)
+	{
+		/* we just saw this directory, so it really ought to be there */
+		elog(LOG,
+			 "could not open dbspace directory \"%s\": %m",
+			 dbspacedirname);
+		return;
+	}
+
+	while ((de = ReadDir(dbspace_dir, dbspacedirname)) != NULL)
+	{
+		if (!looks_like_temp_rel_name(de->d_name))
+			continue;
+
+		snprintf(rm_path, sizeof(rm_path), "%s/%s",
+				 dbspacedirname, de->d_name);
+
+		unlink(rm_path);		/* note we ignore any error */
+	}
+
+	FreeDir(dbspace_dir);
+}
+
+/*
+ * In PostgreSQL, the pattern is:
+ *
+ * t<digits>_<digits>, or t<digits>_<digits>_<forkname>
+ *
+ * In GPDB, however, we leave out the first <digits>. In PostgreSQL it's
+ * used for the backend ID, but we don't use that in GPDB because even
+ * temporary relation are kept in shared buffers, and need to be accessible
+ * from multiple backends. So the pattern in GPDB is:
+ *
+ * t_<digits>, or t<digits>_<digits>_<forkname>
+ */
+static bool
+looks_like_temp_rel_name(const char *name)
+{
+	int			pos;
+	int			savepos;
+
+	/* Must start with "t". */
+	if (name[0] != 't')
+		return false;
+
+	/* Followed by underscode. */
+	if (name[1] != '_')
+		return false;
+	pos = 1;
+
+	/* Followed by another nonempty string of digits. */
+	for (savepos = ++pos; isdigit((unsigned char) name[pos]); ++pos)
+		;
+	if (savepos == pos)
+		return false;
+
+	/* We might have _forkname or .segment or both. */
+	if (name[pos] == '_')
+	{
+		int			forkchar = forkname_chars(&name[pos + 1], NULL);
+
+		if (forkchar <= 0)
+			return false;
+		pos += forkchar + 1;
+	}
+	if (name[pos] == '.')
+	{
+		int			segchar;
+
+		for (segchar = 1; isdigit((unsigned char) name[pos + segchar]); ++segchar)
+			;
+		if (segchar <= 1)
+			return false;
+		pos += segchar;
+	}
+
+	/* Now we should be at the end. */
+	if (name[pos] != '\0')
+		return false;
+	return true;
 }

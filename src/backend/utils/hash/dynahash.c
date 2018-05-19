@@ -26,12 +26,12 @@
  * in local memory, we typically use palloc() which will throw error on
  * failure.  The code in this file has to cope with both cases.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/hash/dynahash.c,v 1.80 2010/01/02 16:57:56 momjian Exp $
+ *	  src/backend/utils/hash/dynahash.c
  *
  *-------------------------------------------------------------------------
  */
@@ -167,6 +167,7 @@ struct HTAB
 	MemoryContext hcxt;			/* memory context if default allocator used */
 	char	   *tabname;		/* table name (for error messages) */
 	bool		isshared;		/* true if table is in shared memory */
+	bool		isfixed;		/* if true, don't enlarge */
 
 	/* freezing a shared table isn't allowed, so we can keep state here */
 	bool		frozen;			/* true = no more inserts allowed */
@@ -449,6 +450,8 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
 					 errmsg("out of memory")));
 	}
 
+	if (flags & HASH_FIXED_SIZE)
+		hashp->isfixed = true;
 	return hashp;
 }
 
@@ -1359,6 +1362,9 @@ element_alloc(HTAB *hashp, int nelem)
 	HASHELEMENT *tmpElement;
 	HASHELEMENT *prevElement;
 	int			i;
+
+	if (hashp->isfixed)
+		return false;
 
 	/* Each element has a HASHELEMENT header plus user data. */
 	elementSize = MAXALIGN(sizeof(HASHELEMENT)) + MAXALIGN(hctlv->entrysize);

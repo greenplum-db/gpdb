@@ -4,11 +4,11 @@
  *	  Split page algorithm
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistsplit.c,v 1.12 2010/01/02 16:57:34 momjian Exp $
+ *	  src/backend/access/gist/gistsplit.c
  *
  *-------------------------------------------------------------------------
  */
@@ -325,16 +325,18 @@ genericPickSplit(GISTSTATE *giststate, GistEntryVector *entryvec, GIST_SPLITVEC 
 	evec->n = v->spl_nleft;
 	memcpy(evec->vector, entryvec->vector + FirstOffsetNumber,
 		   sizeof(GISTENTRY) * evec->n);
-	v->spl_ldatum = FunctionCall2(&giststate->unionFn[attno],
-								  PointerGetDatum(evec),
-								  PointerGetDatum(&nbytes));
+	v->spl_ldatum = FunctionCall2Coll(&giststate->unionFn[attno],
+									  giststate->supportCollation[attno],
+									  PointerGetDatum(evec),
+									  PointerGetDatum(&nbytes));
 
 	evec->n = v->spl_nright;
 	memcpy(evec->vector, entryvec->vector + FirstOffsetNumber + v->spl_nleft,
 		   sizeof(GISTENTRY) * evec->n);
-	v->spl_rdatum = FunctionCall2(&giststate->unionFn[attno],
-								  PointerGetDatum(evec),
-								  PointerGetDatum(&nbytes));
+	v->spl_rdatum = FunctionCall2Coll(&giststate->unionFn[attno],
+									  giststate->supportCollation[attno],
+									  PointerGetDatum(evec),
+									  PointerGetDatum(&nbytes));
 }
 
 /*
@@ -361,9 +363,10 @@ gistUserPicksplit(Relation r, GistEntryVector *entryvec, int attno, GistSplitVec
 	sv->spl_ldatum = v->spl_lattr[attno];
 	sv->spl_rdatum = v->spl_rattr[attno];
 
-	FunctionCall2(&giststate->picksplitFn[attno],
-				  PointerGetDatum(entryvec),
-				  PointerGetDatum(sv));
+	FunctionCall2Coll(&giststate->picksplitFn[attno],
+					  giststate->supportCollation[attno],
+					  PointerGetDatum(entryvec),
+					  PointerGetDatum(sv));
 
 	if (sv->spl_nleft == 0 || sv->spl_nright == 0)
 	{
@@ -500,58 +503,6 @@ gistSplitHalf(GIST_SPLITVEC *v, int len)
 }
 
 /*
- * if it was invalid tuple then we need special processing.
- * We move all invalid tuples on right page.
- *
- * if there is no place on left page, gistSplit will be called one more
- * time for left page.
- *
- * Normally, we never exec this code, but after crash replay it's possible
- * to get 'invalid' tuples (probability is low enough)
- */
-static void
-gistSplitByInvalid(GISTSTATE *giststate, GistSplitVector *v, IndexTuple *itup, int len)
-{
-	int			i;
-	static OffsetNumber offInvTuples[MaxOffsetNumber];
-	int			nOffInvTuples = 0;
-
-	for (i = 1; i <= len; i++)
-		if (GistTupleIsInvalid(itup[i - 1]))
-			offInvTuples[nOffInvTuples++] = i;
-
-	if (nOffInvTuples == len)
-	{
-		/* corner case, all tuples are invalid */
-		v->spl_rightvalid = v->spl_leftvalid = false;
-		gistSplitHalf(&v->splitVector, len);
-	}
-	else
-	{
-		GistSplitUnion gsvp;
-
-		v->splitVector.spl_right = offInvTuples;
-		v->splitVector.spl_nright = nOffInvTuples;
-		v->spl_rightvalid = false;
-
-		v->splitVector.spl_left = (OffsetNumber *) palloc(len * sizeof(OffsetNumber));
-		v->splitVector.spl_nleft = 0;
-		for (i = 1; i <= len; i++)
-			if (!GistTupleIsInvalid(itup[i - 1]))
-				v->splitVector.spl_left[v->splitVector.spl_nleft++] = i;
-		v->spl_leftvalid = true;
-
-		gsvp.equiv = NULL;
-		gsvp.attr = v->spl_lattr;
-		gsvp.len = v->splitVector.spl_nleft;
-		gsvp.entries = v->splitVector.spl_left;
-		gsvp.isnull = v->spl_lisnull;
-
-		gistunionsubkeyvec(giststate, itup, &gsvp, 0);
-	}
-}
-
-/*
  * trys to split page by attno key, in a case of null
  * values move its to separate page.
  */
@@ -568,12 +519,6 @@ gistSplitByKey(Relation r, Page page, IndexTuple *itup, int len, GISTSTATE *gist
 		Datum		datum;
 		bool		IsNull;
 
-		if (!GistPageIsLeaf(page) && GistTupleIsInvalid(itup[i - 1]))
-		{
-			gistSplitByInvalid(giststate, v, itup, len);
-			return;
-		}
-
 		datum = index_getattr(itup[i - 1], attno + 1, giststate->tupdesc, &IsNull);
 		gistdentryinit(giststate, attno, &(entryvec->vector[i]),
 					   datum, r, page, i,
@@ -581,8 +526,6 @@ gistSplitByKey(Relation r, Page page, IndexTuple *itup, int len, GISTSTATE *gist
 		if (IsNull)
 			offNullTuples[nOffNullTuples++] = i;
 	}
-
-	v->spl_leftvalid = v->spl_rightvalid = true;
 
 	if (nOffNullTuples == len)
 	{

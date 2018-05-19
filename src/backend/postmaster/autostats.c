@@ -24,12 +24,13 @@
 #include "commands/vacuum.h"
 #include "executor/execdesc.h"
 #include "executor/executor.h"
+#include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/plannodes.h"
 #include "parser/parsetree.h"
 #include "postmaster/autostats.h"
 #include "utils/acl.h"
-#include "miscadmin.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -192,7 +193,6 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 	PlannedStmt *stmt = queryDesc->plannedstmt;
 	Oid			relationOid = InvalidOid;		/* relation that is modified */
 	AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL;		/* command type */
-	RangeTblEntry *rte = NULL;
 
 	switch (stmt->commandType)
 	{
@@ -204,25 +204,33 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 				cmdType = AUTOSTATS_CMDTYPE_CTAS;
 			}
 			break;
+
 		case CMD_INSERT:
-			rte = rt_fetch(lfirst_int(list_head(stmt->resultRelations)), stmt->rtable);
-			relationOid = rte->relid;
-			cmdType = AUTOSTATS_CMDTYPE_INSERT;
-			break;
 		case CMD_UPDATE:
-			rte = rt_fetch(lfirst_int(list_head(stmt->resultRelations)), stmt->rtable);
-			relationOid = rte->relid;
-			cmdType = AUTOSTATS_CMDTYPE_UPDATE;
-			break;
 		case CMD_DELETE:
-			rte = rt_fetch(lfirst_int(list_head(stmt->resultRelations)), stmt->rtable);
-			relationOid = rte->relid;
-			cmdType = AUTOSTATS_CMDTYPE_DELETE;
+			{
+				RangeTblEntry *rte;
+
+				if (stmt->resultRelations)
+				{
+					rte = rt_fetch(lfirst_int(list_head(stmt->resultRelations)), stmt->rtable);
+					relationOid = rte->relid;
+				}
+
+				if (stmt->commandType == CMD_INSERT)
+					cmdType = AUTOSTATS_CMDTYPE_INSERT;
+				else if (stmt->commandType == CMD_UPDATE)
+					cmdType = AUTOSTATS_CMDTYPE_UPDATE;
+				else
+					cmdType = AUTOSTATS_CMDTYPE_DELETE;
+			}
 			break;
+
 		case CMD_UTILITY:
 		case CMD_UNKNOWN:
 		case CMD_NOTHING:
 			break;
+
 		default:
 			Assert(false);
 			break;
@@ -249,7 +257,10 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 
 	start = GetCurrentTimestamp();
 
-	if (Gp_role != GP_ROLE_DISPATCH || relationOid == InvalidOid || rel_is_partitioned(relationOid))
+	if (Gp_role != GP_ROLE_DISPATCH || relationOid == InvalidOid
+		|| rel_is_partitioned(relationOid)
+		/* Updates on views are possible via triggers, but we can't analyze views. */
+		|| get_rel_relkind(relationOid) == RELKIND_VIEW)
 	{
 		return;
 	}

@@ -100,7 +100,6 @@ typedef struct ExtTableEntry
 
 extern void InsertExtTableEntry(Oid 	tbloid,
 					bool 	iswritable,
-					bool 	isweb,
 					bool	issreh,
 					char	formattype,
 					char	rejectlimittype,

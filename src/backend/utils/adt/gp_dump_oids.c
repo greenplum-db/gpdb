@@ -68,7 +68,8 @@ Datum
 gp_dump_query_oids(PG_FUNCTION_ARGS)
 {
 	char	   *sqlText = text_to_cstring(PG_GETARG_TEXT_P(0));
-	List	   *queryList;
+	List	   *raw_parsetree_list;
+	List	   *flat_query_list;
 	ListCell   *lc;
 	HASHCTL		ctl;
 	HTAB	   *dedup_htab;
@@ -91,12 +92,26 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 	/*
 	 * Parse and analyze the query.
 	 */
-	queryList = pg_parse_and_rewrite(sqlText, NULL, 0);
+	raw_parsetree_list = pg_parse_query(sqlText);
+
+	flat_query_list = NIL;
+	foreach(lc, raw_parsetree_list)
+	{
+		Node	   *parsetree = (Node *) lfirst(lc);
+		List	   *queryTree_sublist;
+
+		queryTree_sublist = pg_analyze_and_rewrite(parsetree,
+												   sqlText,
+												   NULL,
+												   0);
+		flat_query_list = list_concat(flat_query_list,
+									  list_copy(queryTree_sublist));
+	}
 
 	error_context_stack = sqlerrcontext.previous;
 
 	/* Then scan each Query and scrape any relation and function OIDs */
-	foreach(lc, queryList)
+	foreach(lc, flat_query_list)
 	{
 		Query	   *q = lfirst(lc);
 		List	   *q_relationOids = NIL;

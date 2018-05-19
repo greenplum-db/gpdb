@@ -2,10 +2,10 @@
  *
  * vacuumdb
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/vacuumdb.c,v 1.38 2010/06/11 23:58:24 tgl Exp $
+ * src/bin/scripts/vacuumdb.c
  *
  *-------------------------------------------------------------------------
  */

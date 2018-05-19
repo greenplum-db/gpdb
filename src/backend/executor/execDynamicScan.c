@@ -194,7 +194,7 @@ DynamicScan_MapRelationColumns(ScanState *scanState, Relation oldRelation, Relat
 {
 	AttrNumber *attMap = NULL;
 
-	if (isDynamicScan((Scan *)scanState->ps.plan) && (oldRelation != newRelation))
+	if (isDynamicScan(scanState->ps.plan) && (oldRelation != newRelation))
 	{
 		TupleDesc oldTupDesc = RelationGetDescr(oldRelation);
 		TupleDesc newTupDesc = RelationGetDescr(newRelation);
@@ -238,7 +238,7 @@ DynamicScan_UpdateScanStateForNewPart(ScanState *scanState, Relation newRelation
 static bool
 DynamicScan_InitNextPartition(ScanState *scanState, PartitionInitMethod *partitionInitMethod, PartitionEndMethod *partitionEndMethod, PartitionReScanMethod *partitionReScanMethod)
 {
-	Assert(isDynamicScan((Scan *)scanState->ps.plan));
+	Assert(isDynamicScan(scanState->ps.plan));
 	AssertImply(scanState->scan_state != SCAN_INIT, NULL != scanState->ss_currentRelation);
 
 	Scan *scan = (Scan *)scanState->ps.plan;
@@ -321,7 +321,7 @@ DynamicScan_InitNextPartition(ScanState *scanState, PartitionInitMethod *partiti
 static bool
 DynamicScan_InitSingleRelation(ScanState *scanState, PartitionInitMethod *partitionInitMethod, PartitionReScanMethod *partitionReScanMethod)
 {
-	Assert(!isDynamicScan((Scan *)scanState->ps.plan));
+	Assert(!isDynamicScan(scanState->ps.plan));
 
 	if (NULL == scanState->ss_currentRelation)
 	{
@@ -469,7 +469,7 @@ DynamicScan_CleanupOneRelation(ScanState *scanState, Relation relation, Partitio
 bool
 DynamicScan_RemapExpression(ScanState *scanState, AttrNumber *attMap, Node *expr)
 {
-	if (!isDynamicScan((Scan *)scanState->ps.plan))
+	if (!isDynamicScan(scanState->ps.plan))
 	{
 		return false;
 	}
@@ -490,7 +490,7 @@ DynamicScan_RemapExpression(ScanState *scanState, AttrNumber *attMap, Node *expr
 DynamicPartitionIterator*
 DynamicScan_GetIterator(ScanState *scanState)
 {
-	Assert(isDynamicScan((Scan *)scanState->ps.plan));
+	Assert(isDynamicScan(scanState->ps.plan));
 	Assert(NULL != scanState->ps.state->dynamicTableScanInfo);
 
 	int partIndex = ((Scan*)scanState->ps.plan)->partIndex;
@@ -523,22 +523,12 @@ DynamicScan_Begin(ScanState *scanState, Plan *plan, EState *estate, int eflags)
  *		Prepares for the rescanning of one or more relations (partitions).
  */
 void
-DynamicScan_ReScan(ScanState *scanState, ExprContext *exprCtxt)
+DynamicScan_ReScan(ScanState *scanState)
 {
 	/* Only BitmapTableScanState supports this unified iteration of partitions */
 	Assert(T_BitmapTableScanState == scanState->ps.type);
 
 	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
-	/*
-	 * If we are being passed an outer tuple, link it into the "regular"
-	 * per-tuple econtext for possible qual eval.
-	 */
-	if (exprCtxt != NULL)
-	{
-		ExprContext *stdecontext = scanState->ps.ps_ExprContext;
-		stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-	}
 
 	/* Notify controller about the request for rescan */
 	DynamicScan_Controller(scanState, SCAN_RESCAN, NULL /* PartitionInitMethod */,
@@ -560,11 +550,9 @@ DynamicScan_End(ScanState *scanState, PartitionEndMethod *partitionEndMethod)
 		return;
 	}
 
-	Scan *scan = (Scan *)scanState->ps.plan;
-
 	DynamicScan_CleanupOneRelation(scanState, scanState->ss_currentRelation, partitionEndMethod);
 
-	if (isDynamicScan(scan))
+	if (isDynamicScan(scanState->ps.plan))
 	{
 		DynamicScan_EndIterator(scanState);
 	}
@@ -589,9 +577,7 @@ DynamicScan_InitNextRelation(ScanState *scanState, PartitionInitMethod *partitio
 {
 	Assert(T_BitmapTableScanState == scanState->ps.type);
 
-	Scan *scan = (Scan *)scanState->ps.plan;
-
-	if (isDynamicScan(scan))
+	if (isDynamicScan(scanState->ps.plan))
 	{
 		return DynamicScan_InitNextPartition(scanState, partitionInitMethod, partitionEndMethod, partitionReScanMethod);
 	}
@@ -636,7 +622,7 @@ DynamicScan_StateToString(ScanStatus status)
 static void
 DynamicScan_RewindIterator(ScanState *scanState)
 {
-	if (!isDynamicScan((Scan *)scanState->ps.plan))
+	if (!isDynamicScan(scanState->ps.plan))
 	{
 		return;
 	}
@@ -739,7 +725,7 @@ DynamicScan_Controller(ScanState *scanState, ScanStatus desiredState, PartitionI
 	}
 	else if (SCAN_NEXT == desiredState && SCAN_SCAN == startState)
 	{
-		scanState->scan_state = isDynamicScan((Scan *)scanState->ps.plan) ? SCAN_NEXT : SCAN_DONE;
+		scanState->scan_state = isDynamicScan(scanState->ps.plan) ? SCAN_NEXT : SCAN_DONE;
 	}
 	else
 	{
@@ -798,15 +784,13 @@ DynamicScan_GetPartitionMemoryContext(ScanState *scanState)
 {
 	Assert(T_BitmapTableScanState == scanState->ps.type);
 
-	Scan *scan = (Scan *)scanState->ps.plan;
-
 	/*
 	 * TODO rahmaf2 05/08/2014 [JIRA: MPP-23513] We currently
 	 * return NULL memory context during initialization. So,
 	 * for partitioned case, we will leak memory for all the
 	 * expression initialization allocations during ExecInit.
 	 */
-	if (!isDynamicScan(scan) || SCAN_INIT == scanState->scan_state)
+	if (!isDynamicScan(scanState->ps.plan) || SCAN_INIT == scanState->scan_state)
 	{
 		return NULL;
 	}
@@ -824,9 +808,32 @@ DynamicScan_GetPartitionMemoryContext(ScanState *scanState)
  * 		relations to scan at runtime).
  */
 bool
-isDynamicScan(const Scan *scan)
+isDynamicScan(const Plan *plan)
 {
-	return (scan->partIndex != INVALID_PART_INDEX);
+	switch (nodeTag(plan))
+	{
+		/*
+		 * GPDB_91_MERGE: I'm not sure which of these can actually be dynamic.
+		 * This list corresponds to the cases that the call in explain.c used to
+		 * pass here, and excludes node types that are definitely not dynamic.
+		 */
+		case T_SeqScan:
+		case T_IndexScan:
+		case T_BitmapHeapScan:
+		case T_TidScan:
+		case T_AppendOnlyScan:
+		case T_AOCSScan:
+		case T_TableScan:
+		case T_DynamicTableScan:
+		case T_DynamicIndexScan:
+		case T_DynamicBitmapIndexScan:
+		case T_BitmapAppendOnlyScan:
+		case T_BitmapTableScan:
+			return (((Scan *) plan)->partIndex != INVALID_PART_INDEX);
+
+		default:
+			return false;
+	}
 }
 
 /*
@@ -840,7 +847,7 @@ Oid
 DynamicScan_GetTableOid(ScanState *scanState)
 {
 	/* For non-partitioned scan, just lookup the RTE */
-	if (!isDynamicScan((Scan *)scanState->ps.plan))
+	if (!isDynamicScan(scanState->ps.plan))
 	{
 		return getrelid(((Scan *)scanState->ps.plan)->scanrelid, scanState->ps.state->es_range_table);
 	}

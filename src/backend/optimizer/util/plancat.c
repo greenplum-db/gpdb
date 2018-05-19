@@ -6,12 +6,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.163 2010/03/30 21:58:10 tgl Exp $
+ *	  src/backend/optimizer/util/plancat.c
  *
  *-------------------------------------------------------------------------
  */
@@ -54,15 +54,10 @@ int			constraint_exclusion = CONSTRAINT_EXCLUSION_PARTITION;
 get_relation_info_hook_type get_relation_info_hook = NULL;
 
 
+static int32 get_rel_data_width(Relation rel, int32 *attr_widths);
 static List *get_relation_constraints(PlannerInfo *root,
 						 Oid relationObjectId, RelOptInfo *rel,
 						 bool include_notnull);
-
-static void
-estimate_tuple_width(Relation   rel,
-                     int32     *attr_widths,
-                     int32     *bytes_per_tuple,
-                     double    *tuples_per_page);
 
 static void
 cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
@@ -118,6 +113,12 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 	 */
 	relation = heap_open(relationObjectId, NoLock);
 	needs_longlock = rel_needs_long_lock(relationObjectId);
+
+	/* Temporary and unlogged relations are inaccessible during recovery. */
+	if (!RelationNeedsWAL(relation) && RecoveryInProgress())
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot access temporary or unlogged relations during recovery")));
 
 	rel->min_attr = FirstLowInvalidHeapAttributeNumber + 1;
 	rel->max_attr = RelationGetNumberOfAttributes(relation);
@@ -243,77 +244,111 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 				RelationGetForm(indexRelation)->reltablespace;
 			info->rel = rel;
 			info->ncolumns = ncolumns = index->indnatts;
-
-			/*
-			 * Allocate per-column info arrays.  To save a few palloc cycles
-			 * we allocate all the Oid-type arrays in one request.	Note that
-			 * the opfamily array needs an extra, terminating zero at the end.
-			 * We pre-zero the ordering info in case the index is unordered.
-			 */
 			info->indexkeys = (int *) palloc(sizeof(int) * ncolumns);
-			info->opfamily = (Oid *) palloc0(sizeof(Oid) * (4 * ncolumns + 1));
-			info->opcintype = info->opfamily + (ncolumns + 1);
-			info->fwdsortop = info->opcintype + ncolumns;
-			info->revsortop = info->fwdsortop + ncolumns;
-			info->nulls_first = (bool *) palloc0(sizeof(bool) * ncolumns);
+			info->indexcollations = (Oid *) palloc(sizeof(Oid) * ncolumns);
+			info->opfamily = (Oid *) palloc(sizeof(Oid) * ncolumns);
+			info->opcintype = (Oid *) palloc(sizeof(Oid) * ncolumns);
 
 			for (i = 0; i < ncolumns; i++)
 			{
 				info->indexkeys[i] = index->indkey.values[i];
+				info->indexcollations[i] = indexRelation->rd_indcollation[i];
 				info->opfamily[i] = indexRelation->rd_opfamily[i];
 				info->opcintype[i] = indexRelation->rd_opcintype[i];
 			}
 
 			info->relam = indexRelation->rd_rel->relam;
 			info->amcostestimate = indexRelation->rd_am->amcostestimate;
+			info->amcanorderbyop = indexRelation->rd_am->amcanorderbyop;
 			info->amoptionalkey = indexRelation->rd_am->amoptionalkey;
 			info->amsearchnulls = indexRelation->rd_am->amsearchnulls;
 			info->amhasgettuple = OidIsValid(indexRelation->rd_am->amgettuple);
 			info->amhasgetbitmap = OidIsValid(indexRelation->rd_am->amgetbitmap);
 
 			/*
-			 * Fetch the ordering operators associated with the index, if any.
-			 * We expect that all ordering-capable indexes use btree's
-			 * strategy numbers for the ordering operators.
+			 * Fetch the ordering information for the index, if any.
 			 */
-			if (indexRelation->rd_am->amcanorder)
+			if (info->relam == BTREE_AM_OID)
 			{
-				int			nstrat = indexRelation->rd_am->amstrategies;
+				/*
+				 * If it's a btree index, we can use its opfamily OIDs
+				 * directly as the sort ordering opfamily OIDs.
+				 */
+				Assert(indexRelation->rd_am->amcanorder);
+
+				info->sortopfamily = info->opfamily;
+				info->reverse_sort = (bool *) palloc(sizeof(bool) * ncolumns);
+				info->nulls_first = (bool *) palloc(sizeof(bool) * ncolumns);
 
 				for (i = 0; i < ncolumns; i++)
 				{
 					int16		opt = indexRelation->rd_indoption[i];
-					int			fwdstrat;
-					int			revstrat;
 
-					if (opt & INDOPTION_DESC)
+					info->reverse_sort[i] = (opt & INDOPTION_DESC) != 0;
+					info->nulls_first[i] = (opt & INDOPTION_NULLS_FIRST) != 0;
+				}
+			}
+			else if (indexRelation->rd_am->amcanorder)
+			{
+				/*
+				 * Otherwise, identify the corresponding btree opfamilies by
+				 * trying to map this index's "<" operators into btree.  Since
+				 * "<" uniquely defines the behavior of a sort order, this is
+				 * a sufficient test.
+				 *
+				 * XXX This method is rather slow and also requires the
+				 * undesirable assumption that the other index AM numbers its
+				 * strategies the same as btree.  It'd be better to have a way
+				 * to explicitly declare the corresponding btree opfamily for
+				 * each opfamily of the other index type.  But given the lack
+				 * of current or foreseeable amcanorder index types, it's not
+				 * worth expending more effort on now.
+				 */
+				info->sortopfamily = (Oid *) palloc(sizeof(Oid) * ncolumns);
+				info->reverse_sort = (bool *) palloc(sizeof(bool) * ncolumns);
+				info->nulls_first = (bool *) palloc(sizeof(bool) * ncolumns);
+
+				for (i = 0; i < ncolumns; i++)
+				{
+					int16		opt = indexRelation->rd_indoption[i];
+					Oid			ltopr;
+					Oid			btopfamily;
+					Oid			btopcintype;
+					int16		btstrategy;
+
+					info->reverse_sort[i] = (opt & INDOPTION_DESC) != 0;
+					info->nulls_first[i] = (opt & INDOPTION_NULLS_FIRST) != 0;
+
+					ltopr = get_opfamily_member(info->opfamily[i],
+												info->opcintype[i],
+												info->opcintype[i],
+												BTLessStrategyNumber);
+					if (OidIsValid(ltopr) &&
+						get_ordering_op_properties(ltopr,
+												   &btopfamily,
+												   &btopcintype,
+												   &btstrategy) &&
+						btopcintype == info->opcintype[i] &&
+						btstrategy == BTLessStrategyNumber)
 					{
-						fwdstrat = BTGreaterStrategyNumber;
-						revstrat = BTLessStrategyNumber;
+						/* Successful mapping */
+						info->sortopfamily[i] = btopfamily;
 					}
 					else
 					{
-						fwdstrat = BTLessStrategyNumber;
-						revstrat = BTGreaterStrategyNumber;
+						/* Fail ... quietly treat index as unordered */
+						info->sortopfamily = NULL;
+						info->reverse_sort = NULL;
+						info->nulls_first = NULL;
+						break;
 					}
-
-					/*
-					 * Index AM must have a fixed set of strategies for it to
-					 * make sense to specify amcanorder, so we need not allow
-					 * the case amstrategies == 0.
-					 */
-					if (fwdstrat > 0)
-					{
-						Assert(fwdstrat <= nstrat);
-						info->fwdsortop[i] = indexRelation->rd_operator[i * nstrat + fwdstrat - 1];
-					}
-					if (revstrat > 0)
-					{
-						Assert(revstrat <= nstrat);
-						info->revsortop[i] = indexRelation->rd_operator[i * nstrat + revstrat - 1];
-					}
-					info->nulls_first[i] = (opt & INDOPTION_NULLS_FIRST) != 0;
 				}
+			}
+			else
+			{
+				info->sortopfamily = NULL;
+				info->reverse_sort = NULL;
+				info->nulls_first = NULL;
 			}
 
 			/*
@@ -330,6 +365,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 				ChangeVarNodes((Node *) info->indpred, 1, varno, 0);
 			info->predOK = false;		/* set later in indxpath.c */
 			info->unique = index->indisunique;
+			info->hypothetical = false;
 
 			/*
 			 * Estimate the index size.  If it's not a partial index, we lock
@@ -412,7 +448,6 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	BlockNumber relpages;
 	double		reltuples;
 	double		density;
-    int32       tuple_width;
     BlockNumber curpages = 0;
 
     *default_stats_used = false;
@@ -485,10 +520,16 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
         /*
          * When we have no data because the relation was truncated,
          * estimate tuples per page from attribute datatypes.
-         * (CDB: The code that was here has been moved into the
-         * estimate_tuple_width function below.)
+		 *
+		 * (This is the same computation as in get_relation_info()
          */
-        estimate_tuple_width(rel, attr_widths, &tuple_width, &density);
+		int32		tuple_width;
+
+		tuple_width = get_rel_data_width(rel, attr_widths);
+		tuple_width += sizeof(HeapTupleHeaderData);
+		tuple_width += sizeof(ItemPointerData);
+		/* note: integer division is intentional here */
+		density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 	}
 	*tuples = ceil(density * curpages);
 
@@ -501,7 +542,7 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
  * estimate_rel_size - estimate # pages and # tuples in a table or index
  *
  * If attr_widths isn't NULL, it points to the zero-index entry of the
- * relation's attr_width[] cache; we fill this in if we have need to compute
+ * relation's attr_widths[] cache; we fill this in if we have need to compute
  * the attribute widths for estimation purposes.
  */
 void
@@ -512,7 +553,6 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 	BlockNumber relpages;
 	double		reltuples;
 	double		density;
-    int32       tuple_width;
 
 	switch (rel->rd_rel->relkind)
 	{
@@ -597,13 +637,28 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				density = reltuples / (double) relpages;
 			else
 			{
-	            /*
-	             * When we have no data because the relation was truncated,
-	             * estimate tuples per page from attribute datatypes.
-                 * (CDB: The code that was here has been moved into the
-                 * estimate_tuple_width function below.)
-                 */
-                estimate_tuple_width(rel, attr_widths, &tuple_width, &density);
+				/*
+				 * When we have no data because the relation was truncated,
+				 * estimate tuple width from attribute datatypes.  We assume
+				 * here that the pages are completely full, which is OK for
+				 * tables (since they've presumably not been VACUUMed yet) but
+				 * is probably an overestimate for indexes.  Fortunately
+				 * get_relation_info() can clamp the overestimate to the
+				 * parent table's size.
+				 *
+				 * Note: this code intentionally disregards alignment
+				 * considerations, because (a) that would be gilding the lily
+				 * considering how crude the estimate is, and (b) it creates
+				 * platform dependencies in the default plans which are kind
+				 * of a headache for regression testing.
+				 */
+				int32		tuple_width;
+
+				tuple_width = get_rel_data_width(rel, attr_widths);
+				tuple_width += sizeof(HeapTupleHeaderData);
+				tuple_width += sizeof(ItemPointerData);
+				/* note: integer division is intentional here */
+				density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 			}
 			*tuples = ceil(density * curpages);
 			break;
@@ -611,6 +666,11 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			/* Sequences always have a known size */
 			*pages = 1;
 			*tuples = 1;
+			break;
+		case RELKIND_FOREIGN_TABLE:
+			/* Just use whatever's in pg_class */
+			*pages = rel->rd_rel->relpages;
+			*tuples = rel->rd_rel->reltuples;
 			break;
 		default:
 			/* else it has no disk storage; probably shouldn't get here? */
@@ -622,33 +682,22 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 
 
 /*
- * estimate_tuple_width
+ * get_rel_data_width
  *
- * CDB: Pulled this code out of estimate_rel_size below to make a
- * separate function.
+ * Estimate the average width of (the data part of) the relation's tuples.
+ *
+ * If attr_widths isn't NULL, it points to the zero-index entry of the
+ * relation's attr_widths[] cache; use and update that cache as appropriate.
+ *
+ * Currently we ignore dropped columns.  Ideally those should be included
+ * in the result, but we haven't got any way to get info about them; and
+ * since they might be mostly NULLs, treating them as zero-width is not
+ * necessarily the wrong thing anyway.
  */
-void
-estimate_tuple_width(Relation   rel,
-                     int32     *attr_widths,
-                     int32     *bytes_per_tuple,
-                     double    *tuples_per_page)
+static int32
+get_rel_data_width(Relation rel, int32 *attr_widths)
 {
-	/*
-	 * Estimate tuple width from attribute datatypes.  We assume
-	 * here that the pages are completely full, which is OK for
-	 * tables (since they've presumably not been VACUUMed yet) but
-	 * is probably an overestimate for indexes.  Fortunately
-	 * get_relation_info() can clamp the overestimate to the
-	 * parent table's size.
-	 *
-	 * Note: this code intentionally disregards alignment
-	 * considerations, because (a) that would be gilding the lily
-	 * considering how crude the estimate is, and (b) it creates
-	 * platform dependencies in the default plans which are kind
-	 * of a headache for regression testing.
-	 */
-    double      density;
-    int32		tuple_width = 0;
+	int32		tuple_width = 0;
 	int			i;
 
 	for (i = 1; i <= RelationGetNumberOfAttributes(rel); i++)
@@ -658,26 +707,50 @@ estimate_tuple_width(Relation   rel,
 
 		if (att->attisdropped)
 			continue;
+
+		/* use previously cached data, if any */
+		if (attr_widths != NULL && attr_widths[i] > 0)
+		{
+			tuple_width += attr_widths[i];
+			continue;
+		}
+
 		/* This should match set_rel_width() in costsize.c */
 		item_width = get_attavgwidth(RelationGetRelid(rel), i);
 		if (item_width <= 0)
 		{
-			item_width = get_typavgwidth(att->atttypid,
-										 att->atttypmod);
+			item_width = get_typavgwidth(att->atttypid, att->atttypmod);
 			Assert(item_width > 0);
 		}
 		if (attr_widths != NULL)
 			attr_widths[i] = item_width;
 		tuple_width += item_width;
 	}
-	tuple_width += sizeof(HeapTupleHeaderData);
-	tuple_width += sizeof(ItemPointerData);
-    /* note: integer division is intentional here */
-	density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 
-    *bytes_per_tuple = tuple_width;
-    *tuples_per_page = Max(1.0, density);
-}                               /* estimate_tuple_width */
+	return tuple_width;
+}
+
+/*
+ * get_relation_data_width
+ *
+ * External API for get_rel_data_width: same behavior except we have to
+ * open the relcache entry.
+ */
+int32
+get_relation_data_width(Oid relid, int32 *attr_widths)
+{
+	int32		result;
+	Relation	relation;
+
+	/* As above, assume relation is already locked */
+	relation = heap_open(relid, NoLock);
+
+	result = get_rel_data_width(relation, attr_widths);
+
+	heap_close(relation, NoLock);
+
+	return result;
+}
 
 
 /*
@@ -773,6 +846,7 @@ get_relation_constraints(PlannerInfo *root,
 												  i,
 												  att->atttypid,
 												  att->atttypmod,
+												  att->attcollation,
 												  0);
 					ntest->nulltesttype = IS_NOT_NULL;
 					ntest->argisrow = type_is_rowtype(att->atttypid);
@@ -960,6 +1034,7 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 							  attrno,
 							  att_tup->atttypid,
 							  att_tup->atttypmod,
+							  att_tup->attcollation,
 							  0);
 
 				tlist = lappend(tlist,
@@ -988,11 +1063,7 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 				 * A resjunk column of the subquery can be reflected as
 				 * resjunk in the physical tlist; we need not punt.
 				 */
-				var = makeVar(varno,
-							  tle->resno,
-							  exprType((Node *) tle->expr),
-							  exprTypmod((Node *) tle->expr),
-							  0);
+				var = makeVarFromTargetEntry(varno, tle);
 
 				tlist = lappend(tlist,
 								makeTargetEntry((Expr *) var,
@@ -1054,6 +1125,7 @@ Selectivity
 restriction_selectivity(PlannerInfo *root,
 						Oid operatorid,
 						List *args,
+						Oid inputcollid,
 						int varRelid)
 {
 	RegProcedure oprrest = get_oprrest(operatorid);
@@ -1066,11 +1138,12 @@ restriction_selectivity(PlannerInfo *root,
 	if (!oprrest)
 		return (Selectivity) 0.5;
 
-	result = DatumGetFloat8(OidFunctionCall4(oprrest,
-											 PointerGetDatum(root),
-											 ObjectIdGetDatum(operatorid),
-											 PointerGetDatum(args),
-											 Int32GetDatum(varRelid)));
+	result = DatumGetFloat8(OidFunctionCall4Coll(oprrest,
+												 inputcollid,
+												 PointerGetDatum(root),
+												 ObjectIdGetDatum(operatorid),
+												 PointerGetDatum(args),
+												 Int32GetDatum(varRelid)));
 
 	if (result < 0.0 || result > 1.0)
 		elog(ERROR, "invalid restriction selectivity: %f", result);
@@ -1089,6 +1162,7 @@ Selectivity
 join_selectivity(PlannerInfo *root,
 				 Oid operatorid,
 				 List *args,
+				 Oid inputcollid,
 				 JoinType jointype,
 				 SpecialJoinInfo *sjinfo)
 {
@@ -1102,12 +1176,13 @@ join_selectivity(PlannerInfo *root,
 	if (!oprjoin)
 		return (Selectivity) 0.5;
 
-	result = DatumGetFloat8(OidFunctionCall5(oprjoin,
-											 PointerGetDatum(root),
-											 ObjectIdGetDatum(operatorid),
-											 PointerGetDatum(args),
-											 Int16GetDatum(jointype),
-											 PointerGetDatum(sjinfo)));
+	result = DatumGetFloat8(OidFunctionCall5Coll(oprjoin,
+												 inputcollid,
+												 PointerGetDatum(root),
+												 ObjectIdGetDatum(operatorid),
+												 PointerGetDatum(args),
+												 Int16GetDatum(jointype),
+												 PointerGetDatum(sjinfo)));
 
 	if (result < 0.0 || result > 1.0)
 		elog(ERROR, "invalid join selectivity: %f", result);
@@ -1162,7 +1237,7 @@ cdb_default_stats_warning_needed(Oid reloid)
     relation = relation_open(reloid, NoLock);
 
     /* Keep quiet if temporary or system table. */
-    if (relation->rd_istemp ||
+    if (relation->rd_rel->relpersistence == RELPERSISTENCE_TEMP ||
         IsSystemClass(relation->rd_rel))
         warn = false;
 

@@ -3,10 +3,10 @@
  * array_userfuncs.c
  *	  Misc user-visible array support functions
  *
- * Copyright (c) 2003-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/array_userfuncs.c,v 1.35 2010/02/26 02:01:06 momjian Exp $
+ *	  src/backend/utils/adt/array_userfuncs.c
  *
  *-------------------------------------------------------------------------
  */
@@ -408,9 +408,11 @@ ArrayType *
 create_singleton_array(FunctionCallInfo fcinfo,
 					   Oid element_type,
 					   Datum element,
+					   bool isNull,
 					   int ndims)
 {
 	Datum		dvalues[1];
+	bool		nulls[1];
 	int16		typlen;
 	bool		typbyval;
 	char		typalign;
@@ -430,6 +432,7 @@ create_singleton_array(FunctionCallInfo fcinfo,
 						ndims, MAXDIM)));
 
 	dvalues[0] = element;
+	nulls[0] = isNull;
 
 	for (i = 0; i < ndims; i++)
 	{
@@ -463,7 +466,7 @@ create_singleton_array(FunctionCallInfo fcinfo,
 	typbyval = my_extra->typbyval;
 	typalign = my_extra->typalign;
 
-	return construct_md_array(dvalues, NULL, ndims, dims, lbs, element_type,
+	return construct_md_array(dvalues, nulls, ndims, dims, lbs, element_type,
 							  typlen, typbyval, typalign);
 }
 

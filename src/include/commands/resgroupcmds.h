@@ -34,12 +34,12 @@ extern void AlterResourceGroup(AlterResourceGroupStmt *stmt);
 /* catalog access function */
 extern Oid GetResGroupIdForName(const char *name);
 extern char *GetResGroupNameForId(Oid oid);
-extern int32 GetResGroupMemAuditorFromTuple(Relation rel, HeapTuple tuple);
-extern int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode);
 extern Oid GetResGroupIdForRole(Oid roleid);
 extern void GetResGroupCapabilities(Relation rel,
 									Oid groupId,
 									ResGroupCaps *resgroupCaps);
 extern void ResGroupCheckForRole(Oid groupId);
+
+extern int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode);
 
 #endif   /* RESGROUPCMDS_H */

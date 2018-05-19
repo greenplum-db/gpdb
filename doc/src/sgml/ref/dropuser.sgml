@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/dropuser.sgml,v 1.43 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/dropuser.sgml
 PostgreSQL documentation
 -->
 
@@ -61,7 +61,7 @@ PostgreSQL documentation
       <term><replaceable class="parameter">username</replaceable></term>
       <listitem>
        <para>
-        Specifies the name of the <productname>PostgreSQL</productname> user to be removed. 
+        Specifies the name of the <productname>PostgreSQL</productname> user to be removed.
         You will be prompted for a name if none is specified on the command line.
        </para>
       </listitem>
@@ -115,16 +115,16 @@ PostgreSQL documentation
   <para>
    <application>dropuser</application> also accepts the following
    command-line arguments for connection parameters:
-    
+
    <variablelist>
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></></term>
-      <term><option>--host <replaceable class="parameter">host</replaceable></></term>
+      <term><option>--host=<replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
-        Specifies the host name of the machine on which the 
+        Specifies the host name of the machine on which the
         server
-        is running.  If the value begins with a slash, it is used 
+        is running.  If the value begins with a slash, it is used
         as the directory for the Unix domain socket.
        </para>
       </listitem>
@@ -132,10 +132,10 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-p <replaceable class="parameter">port</replaceable></></term>
-      <term><option>--port <replaceable class="parameter">port</replaceable></></term>
+      <term><option>--port=<replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-        Specifies the TCP port or local Unix domain socket file 
+        Specifies the TCP port or local Unix domain socket file
         extension on which the server
         is listening for connections.
        </para>
@@ -144,7 +144,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></></term>
-      <term><option>--username <replaceable class="parameter">username</replaceable></></term>
+      <term><option>--username=<replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
         User name to connect as (not the user name to drop).
@@ -173,7 +173,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Force <application>dropuser</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>

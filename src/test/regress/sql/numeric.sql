@@ -732,7 +732,7 @@ DROP TABLE width_bucket_test;
 
 -- TO_CHAR()
 --
-SELECT '' AS to_char_1, to_char(val, '9G999G999G999G999G999') 
+SELECT '' AS to_char_1, to_char(val, '9G999G999G999G999G999')
 	FROM num_data;
 
 SELECT '' AS to_char_2, to_char(val, '9G999G999G999G999G999D999G999G999G999G999')

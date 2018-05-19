@@ -28,8 +28,6 @@ CATALOG(pg_resgroup,6436) BKI_SHARED_RELATION
 	NameData	rsgname;		/* name of resource group */
 
 	Oid		parent;			/* parent resource group */
-
-	int4	memauditor;
 } FormData_pg_resgroup;
 
 /* no foreign keys */
@@ -45,16 +43,15 @@ typedef FormData_pg_resgroup *Form_pg_resgroup;
  *	compiler constants for pg_resqueue
  * ----------------
  */
-#define Natts_pg_resgroup			3
+#define Natts_pg_resgroup			2
 #define Anum_pg_resgroup_rsgname		1
 #define Anum_pg_resgroup_parent			2
-#define Anum_pg_resgroup_memauditor		3
 
 /* Create initial default resource group */
 
-DATA(insert OID = 6437 ( default_group, 0, 0 ));
+DATA(insert OID = 6437 ( default_group, 0 ));
 
-DATA(insert OID = 6438 ( admin_group, 0, 0 ));
+DATA(insert OID = 6438 ( admin_group, 0 ));
 
 #define DEFAULTRESGROUP_OID 	6437
 #define ADMINRESGROUP_OID 	6438
@@ -75,6 +72,7 @@ typedef enum ResGroupLimitType
 	RESGROUP_LIMIT_TYPE_MEMORY,
 	RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA,
 	RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO,
+	RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR,
 
 	RESGROUP_LIMIT_TYPE_COUNT,
 } ResGroupLimitType;

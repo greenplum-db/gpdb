@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_large_object.sgml,v 1.3 2010/04/03 07:22:57 petere Exp $
+doc/src/sgml/ref/alter_large_object.sgml
 PostgreSQL documentation
 -->
 
@@ -62,7 +62,7 @@ ALTER LARGE OBJECT <replaceable class="PARAMETER">large_object_oid</replaceable>
 
  <refsect1>
   <title>Compatibility</title>
-    
+
   <para>
    There is no <command>ALTER LARGE OBJECT</command> statement in the SQL
    standard.

@@ -4,11 +4,11 @@
  *	  Routines to support inter-object dependencies.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/dependency.c,v 1.96 2010/02/26 02:00:36 momjian Exp $
+ *	  src/backend/catalog/dependency.c
  *
  *-------------------------------------------------------------------------
  */
@@ -29,17 +29,18 @@
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
-#include "catalog/pg_compression.h"
+#include "catalog/pg_collation.h"
+#include "catalog/pg_collation_fn.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_conversion_fn.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_default_acl.h"
 #include "catalog/pg_depend.h"
-#include "catalog/pg_extprotocol.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
+#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
@@ -63,9 +64,9 @@
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
 #include "commands/extension.h"
-#include "commands/extprotocolcmds.h"
 #include "commands/proclang.h"
 #include "commands/schemacmds.h"
+#include "commands/seclabel.h"
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
@@ -83,7 +84,10 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_compression.h"
+#include "catalog/pg_extprotocol.h"
 #include "cdb/cdbvars.h"
+#include "commands/extprotocolcmds.h"
 #include "commands/tablecmds.h"
 
 
@@ -141,6 +145,7 @@ static const Oid object_classes[MAX_OCLASS] = {
 	ProcedureRelationId,		/* OCLASS_PROC */
 	TypeRelationId,				/* OCLASS_TYPE */
 	CastRelationId,				/* OCLASS_CAST */
+	CollationRelationId,		/* OCLASS_COLLATION */
 	ConstraintRelationId,		/* OCLASS_CONSTRAINT */
 	ConversionRelationId,		/* OCLASS_CONVERSION */
 	AttrDefaultRelationId,		/* OCLASS_DEFAULT */
@@ -578,7 +583,8 @@ findDependentObjects(const ObjectAddress *object,
 
 				/*
 				 * This object is part of the internal implementation of
-				 * another object.	We have three cases:
+				 * another object, or is part of the extension that is the
+				 * other object.  We have three cases:
 				 *
 				 * 1. At the outermost recursion level, disallow the DROP. (We
 				 * just ereport here, rather than proceeding, since no other
@@ -1054,10 +1060,12 @@ deleteOneObject(const ObjectAddress *object, Relation depRel)
 	doDeletion(object);
 
 	/*
-	 * Delete any comments associated with this object.  (This is a convenient
-	 * place to do it instead of having every object type know to do it.)
+	 * Delete any comments or security labels associated with this object.
+	 * (This is a convenient place to do these things, rather than having
+	 * every object type know to do it.)
 	 */
 	DeleteComments(object->objectId, object->classId, object->objectSubId);
+	DeleteSecurityLabel(object);
 
 	/*
 	 * CommandCounterIncrement here to ensure that preceding changes are all
@@ -1108,6 +1116,10 @@ doDeletion(const ObjectAddress *object)
 
 		case OCLASS_CAST:
 			DropCastById(object->objectId);
+			break;
+
+		case OCLASS_COLLATION:
+			RemoveCollationById(object->objectId);
 			break;
 
 		case OCLASS_CONSTRAINT:
@@ -1329,7 +1341,7 @@ recordDependencyOnExpr(const ObjectAddress *depender,
  * whereas 'behavior' is used for everything else.
  *
  * NOTE: the caller should ensure that a whole-table dependency on the
- * specified relation is created separately, if one is needed.  In particular,
+ * specified relation is created separately, if one is needed.	In particular,
  * a whole-row Var "relation.*" will not cause this routine to emit any
  * dependency item.  This is appropriate behavior for subexpressions of an
  * ordinary query, so other cases need to cope as necessary.
@@ -1350,6 +1362,7 @@ recordDependencyOnSingleRelExpr(const ObjectAddress *depender,
 	rte.type = T_RangeTblEntry;
 	rte.rtekind = RTE_RELATION;
 	rte.relid = relId;
+	rte.relkind = RELKIND_RELATION;		/* no need for exactness here */
 
 	context.rtables = list_make1(list_make1(&rte));
 
@@ -1422,6 +1435,9 @@ recordDependencyOnSingleRelExpr(const ObjectAddress *depender,
  * on the datatype, and OpExpr nodes depend on the operator which depends on
  * the datatype.  However we do need a type dependency if there is no such
  * indirect dependency, as for example in Const and CoerceToDomain nodes.
+ *
+ * Similarly, we don't need to create dependencies on collations except where
+ * the collation is being freshly introduced to the expression.
  */
 static bool
 find_expr_references_walker(Node *node,
@@ -1445,7 +1461,7 @@ find_expr_references_walker(Node *node,
 
 		/*
 		 * A whole-row Var references no specific columns, so adds no new
-		 * dependency.  (We assume that there is a whole-table dependency
+		 * dependency.	(We assume that there is a whole-table dependency
 		 * arising from each underlying rangetable entry.  While we could
 		 * record such a dependency when finding a whole-row Var that
 		 * references a relation directly, it's quite unclear how to extend
@@ -1490,6 +1506,17 @@ find_expr_references_walker(Node *node,
 		/* A constant must depend on the constant's datatype */
 		add_object_address(OCLASS_TYPE, con->consttype, 0,
 						   context->addrs);
+
+		/*
+		 * We must also depend on the constant's collation: it could be
+		 * different from the datatype's, if a CollateExpr was const-folded to
+		 * a simple constant.  However we can save work in the most common
+		 * case where the collation is "default", since we know that's pinned.
+		 */
+		if (OidIsValid(con->constcollid) &&
+			con->constcollid != DEFAULT_COLLATION_OID)
+			add_object_address(OCLASS_COLLATION, con->constcollid, 0,
+							   context->addrs);
 
 		/*
 		 * If it's a regclass or similar literal referring to an existing
@@ -1556,6 +1583,11 @@ find_expr_references_walker(Node *node,
 		/* A parameter must depend on the parameter's datatype */
 		add_object_address(OCLASS_TYPE, param->paramtype, 0,
 						   context->addrs);
+		/* and its collation, just as for Consts */
+		if (OidIsValid(param->paramcollid) &&
+			param->paramcollid != DEFAULT_COLLATION_OID)
+			add_object_address(OCLASS_COLLATION, param->paramcollid, 0,
+							   context->addrs);
 	}
 	else if (IsA(node, FuncExpr))
 	{
@@ -1581,19 +1613,19 @@ find_expr_references_walker(Node *node,
 						   context->addrs);
 		/* fall through to examine arguments */
 	}
-	else if (IsA(node, ScalarArrayOpExpr))
-	{
-		ScalarArrayOpExpr *opexpr = (ScalarArrayOpExpr *) node;
-
-		add_object_address(OCLASS_OPERATOR, opexpr->opno, 0,
-						   context->addrs);
-		/* fall through to examine arguments */
-	}
 	else if (IsA(node, NullIfExpr))
 	{
 		NullIfExpr *nullifexpr = (NullIfExpr *) node;
 
 		add_object_address(OCLASS_OPERATOR, nullifexpr->opno, 0,
+						   context->addrs);
+		/* fall through to examine arguments */
+	}
+	else if (IsA(node, ScalarArrayOpExpr))
+	{
+		ScalarArrayOpExpr *opexpr = (ScalarArrayOpExpr *) node;
+
+		add_object_address(OCLASS_OPERATOR, opexpr->opno, 0,
 						   context->addrs);
 		/* fall through to examine arguments */
 	}
@@ -1625,6 +1657,11 @@ find_expr_references_walker(Node *node,
 		/* since there is no function dependency, need to depend on type */
 		add_object_address(OCLASS_TYPE, relab->resulttype, 0,
 						   context->addrs);
+		/* the collation might not be referenced anywhere else, either */
+		if (OidIsValid(relab->resultcollid) &&
+			relab->resultcollid != DEFAULT_COLLATION_OID)
+			add_object_address(OCLASS_COLLATION, relab->resultcollid, 0,
+							   context->addrs);
 	}
 	else if (IsA(node, CoerceViaIO))
 	{
@@ -1651,6 +1688,13 @@ find_expr_references_walker(Node *node,
 
 		/* since there is no function dependency, need to depend on type */
 		add_object_address(OCLASS_TYPE, cvt->resulttype, 0,
+						   context->addrs);
+	}
+	else if (IsA(node, CollateExpr))
+	{
+		CollateExpr *coll = (CollateExpr *) node;
+
+		add_object_address(OCLASS_COLLATION, coll->collOid, 0,
 						   context->addrs);
 	}
 	else if (IsA(node, RowExpr))
@@ -1699,19 +1743,25 @@ find_expr_references_walker(Node *node,
 	{
 		/* Recurse into RTE subquery or not-yet-planned sublink subquery */
 		Query	   *query = (Query *) node;
-		ListCell   *rtable;
+		ListCell   *lc;
 		bool		result;
 
 		/*
 		 * Add whole-relation refs for each plain relation mentioned in the
-		 * subquery's rtable, as well as datatype refs for any datatypes used
-		 * as a RECORD function's output.  (Note: query_tree_walker takes care
-		 * of recursing into RTE_FUNCTION RTEs, subqueries, etc, so no need to
-		 * do that here.  But keep it from looking at join alias lists.)
+		 * subquery's rtable, as well as refs for any datatypes and collations
+		 * used in a RECORD function's output.
+		 *
+		 * Note: query_tree_walker takes care of recursing into RTE_FUNCTION
+		 * RTEs, subqueries, etc, so no need to do that here.  But keep it
+		 * from looking at join alias lists.
+		 *
+		 * Note: we don't need to worry about collations mentioned in
+		 * RTE_VALUES or RTE_CTE RTEs, because those must just duplicate
+		 * collations referenced in other parts of the Query.
 		 */
-		foreach(rtable, query->rtable)
+		foreach(lc, query->rtable)
 		{
-			RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable);
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 			ListCell   *ct;
 
 			switch (rte->rtekind)
@@ -1727,10 +1777,28 @@ find_expr_references_walker(Node *node,
 						add_object_address(OCLASS_TYPE, lfirst_oid(ct), 0,
 										   context->addrs);
 					}
+					foreach(ct, rte->funccolcollations)
+					{
+						Oid			collid = lfirst_oid(ct);
+
+						if (OidIsValid(collid) &&
+							collid != DEFAULT_COLLATION_OID)
+							add_object_address(OCLASS_COLLATION, collid, 0,
+											   context->addrs);
+					}
 					break;
 				default:
 					break;
 			}
+		}
+
+		/*
+		 * Add dependencies on constraints listed in query's constraintDeps
+		 */
+		foreach(lc, query->constraintDeps)
+		{
+			add_object_address(OCLASS_CONSTRAINT, lfirst_oid(lc), 0,
+							   context->addrs);
 		}
 
 		/* query_tree_walker ignores ORDER BY etc, but we need those opers */
@@ -2062,6 +2130,12 @@ free_object_addresses(ObjectAddresses *addrs)
 ObjectClass
 getObjectClass(const ObjectAddress *object)
 {
+	/* only pg_class entries can have nonzero objectSubId */
+	if (object->classId != RelationRelationId &&
+		object->objectSubId != 0)
+		elog(ERROR, "invalid objectSubId 0 for object class %u",
+			 object->classId);
+
 	switch (object->classId)
 	{
 		case RelationRelationId:
@@ -2069,115 +2143,90 @@ getObjectClass(const ObjectAddress *object)
 			return OCLASS_CLASS;
 
 		case ProcedureRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_PROC;
 
 		case TypeRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TYPE;
 
 		case CastRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_CAST;
 
+		case CollationRelationId:
+			return OCLASS_COLLATION;
+
 		case ConstraintRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_CONSTRAINT;
 
 		case ConversionRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_CONVERSION;
 
 		case AttrDefaultRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_DEFAULT;
 
 		case LanguageRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_LANGUAGE;
 
 		case LargeObjectRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_LARGEOBJECT;
 
 		case OperatorRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_OPERATOR;
 
 		case OperatorClassRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_OPCLASS;
 
 		case OperatorFamilyRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_OPFAMILY;
 
 		case AccessMethodOperatorRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_AMOP;
 
 		case AccessMethodProcedureRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_AMPROC;
 
 		case RewriteRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_REWRITE;
 
 		case TriggerRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TRIGGER;
 
 		case NamespaceRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_SCHEMA;
 
 		case TSParserRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TSPARSER;
 
 		case TSDictionaryRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TSDICT;
 
 		case TSTemplateRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TSTEMPLATE;
 
 		case TSConfigRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TSCONFIG;
 
 		case AuthIdRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_ROLE;
 
 		case DatabaseRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_DATABASE;
 
 		case TableSpaceRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_TBLSPACE;
 
 		case ForeignDataWrapperRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_FDW;
 
 		case ForeignServerRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_FOREIGN_SERVER;
 
 		case UserMappingRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_USER_MAPPING;
 
 		case DefaultAclRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_DEFACL;
 
 		case ExtensionRelationId:
-			Assert(object->objectSubId == 0);
 			return OCLASS_EXTENSION;
 
 		case ExtprotocolRelationId:
@@ -2258,6 +2307,23 @@ getObjectDescription(const ObjectAddress *object)
 
 				systable_endscan(rcscan);
 				heap_close(castDesc, AccessShareLock);
+				break;
+			}
+
+		case OCLASS_COLLATION:
+			{
+				HeapTuple	collTup;
+				Form_pg_collation coll;
+
+				collTup = SearchSysCache1(COLLOID,
+										  ObjectIdGetDatum(object->objectId));
+				if (!HeapTupleIsValid(collTup))
+					elog(ERROR, "cache lookup failed for collation %u",
+						 object->objectId);
+				coll = (Form_pg_collation) GETSTRUCT(collTup);
+				appendStringInfo(&buffer, _("collation %s"),
+								 NameStr(coll->collname));
+				ReleaseSysCache(collTup);
 				break;
 			}
 
@@ -2446,13 +2512,17 @@ getObjectDescription(const ObjectAddress *object)
 
 				/*
 				 * translator: %d is the operator strategy (a number), the
-				 * first %s is the textual form of the operator, and the
-				 * second %s is the description of the operator family.
+				 * first two %s's are data type names, the third %s is the
+				 * description of the operator family, and the last %s is the
+				 * textual form of the operator with arguments.
 				 */
-				appendStringInfo(&buffer, _("operator %d %s of %s"),
+				appendStringInfo(&buffer, _("operator %d (%s, %s) of %s: %s"),
 								 amopForm->amopstrategy,
-								 format_operator(amopForm->amopopr),
-								 opfam.data);
+								 format_type_be(amopForm->amoplefttype),
+								 format_type_be(amopForm->amoprighttype),
+								 opfam.data,
+								 format_operator(amopForm->amopopr));
+
 				pfree(opfam.data);
 
 				systable_endscan(amscan);
@@ -2492,14 +2562,18 @@ getObjectDescription(const ObjectAddress *object)
 				getOpFamilyDescription(&opfam, amprocForm->amprocfamily);
 
 				/*
-				 * translator: %d is the function number, the first %s is the
-				 * textual form of the function with arguments, and the second
-				 * %s is the description of the operator family.
+				 * translator: %d is the function number, the first two %s's
+				 * are data type names, the third %s is the description of the
+				 * operator family, and the last %s is the textual form of the
+				 * function with arguments.
 				 */
-				appendStringInfo(&buffer, _("function %d %s of %s"),
+				appendStringInfo(&buffer, _("function %d (%s, %s) of %s: %s"),
 								 amprocForm->amprocnum,
-								 format_procedure(amprocForm->amproc),
-								 opfam.data);
+								 format_type_be(amprocForm->amproclefttype),
+								 format_type_be(amprocForm->amprocrighttype),
+								 opfam.data,
+								 format_procedure(amprocForm->amproc));
+
 				pfree(opfam.data);
 
 				systable_endscan(amscan);
@@ -2788,7 +2862,7 @@ getObjectDescription(const ObjectAddress *object)
 
 		case OCLASS_EXTENSION:
 			{
-				char       *extname;
+				char	   *extname;
 
 				extname = get_extension_name(object->objectId);
 				if (!extname)
@@ -2909,6 +2983,10 @@ getRelationDescription(StringInfo buffer, Oid relid)
 			appendStringInfo(buffer, _("composite type %s"),
 							 relname);
 			break;
+		case RELKIND_FOREIGN_TABLE:
+			appendStringInfo(buffer, _("foreign table %s"),
+							 relname);
+			break;
 		default:
 			/* shouldn't get here */
 			appendStringInfo(buffer, _("relation %s"),
@@ -2955,4 +3033,28 @@ getOpFamilyDescription(StringInfo buffer, Oid opfid)
 
 	ReleaseSysCache(amTup);
 	ReleaseSysCache(opfTup);
+}
+
+/*
+ * SQL-level callable version of getObjectDescription
+ */
+Datum
+pg_describe_object(PG_FUNCTION_ARGS)
+{
+	Oid			classid = PG_GETARG_OID(0);
+	Oid			objid = PG_GETARG_OID(1);
+	int32		subobjid = PG_GETARG_INT32(2);
+	char	   *description = NULL;
+	ObjectAddress address;
+
+	/* for "pinned" items in pg_depend, return null */
+	if (!OidIsValid(classid) && !OidIsValid(objid))
+		PG_RETURN_NULL();
+
+	address.classId = classid;
+	address.objectId = objid;
+	address.objectSubId = subobjid;
+
+	description = getObjectDescription(&address);
+	PG_RETURN_TEXT_P(cstring_to_text(description));
 }

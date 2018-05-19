@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_aggregate.h,v 1.71 2010/02/01 03:14:43 itagaki Exp $
+ * src/include/catalog/pg_aggregate.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -313,8 +313,7 @@ DATA(insert ( 6129	o 1 ordered_set_transition	- - -		percentile_cont_timestamp_f
 DATA(insert ( 6130	o 1 ordered_set_transition	- - -		percentile_cont_timestamptz_final		f 0	2281	_null_ ));
 
 /* text */
-DATA(insert ( 3537	n 0 string_agg_transfn       - - - string_agg_finalfn f 0 2281 _null_));
-DATA(insert ( 3538	n 0 string_agg_delim_transfn - - - string_agg_finalfn f 0 2281 _null_));
+DATA(insert ( 3538	n 0 string_agg_transfn - - - string_agg_finalfn f 0 2281 _null_));
 
 /*
  * prototypes for functions in pg_aggregate.c

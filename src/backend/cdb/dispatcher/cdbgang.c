@@ -670,7 +670,7 @@ makeOptions(void)
  * thread, so mustn't use palloc/elog/ereport/etc.
  */
 void
-build_gpqeid_param(char *buf, int bufsz, int segIndex,
+build_gpqeid_param(char *buf, int bufsz,
 				   bool is_writer, int gangId, int hostSegs)
 {
 #ifdef HAVE_INT64_TIMESTAMP
@@ -683,8 +683,8 @@ build_gpqeid_param(char *buf, int bufsz, int segIndex,
 #endif
 #endif
 
-	snprintf(buf, bufsz, "%d;%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
-			 gp_session_id, segIndex, PgStartTime,
+	snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
+			 gp_session_id, PgStartTime,
 			 (is_writer ? "true" : "false"), gangId, hostSegs);
 }
 
@@ -715,8 +715,8 @@ gpqeid_next_param(char **cpp, char **npp)
  * inherited from the postmaster; etc; so don't try to do too much in here.
  */
 void
-			cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
-										const char *gpqeid_value)
+cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
+							const char *gpqeid_value)
 {
 	char	   *gpqeid = pstrdup(gpqeid_value);
 	char	   *cp;
@@ -728,10 +728,6 @@ void
 	/* gp_session_id */
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_session_id", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
-
-	/* gp_segment */
-	if (gpqeid_next_param(&cp, &np))
-		SetConfigOption("gp_segment", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
 
 	/* PgStartTime */
 	if (gpqeid_next_param(&cp, &np))

@@ -4,10 +4,10 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_func.h,v 1.68 2010/01/02 16:58:07 momjian Exp $
+ * src/include/parser/parse_func.h
  *
  *-------------------------------------------------------------------------
  */
@@ -28,7 +28,7 @@ typedef struct _InhPaths
 	int			nsupers;		/* number of superclasses */
 	Oid			self;			/* this class */
 	Oid		   *supervec;		/* vector of superclasses */
-} InhPaths;
+}	InhPaths;
 
 /* Result codes for func_get_detail */
 typedef enum

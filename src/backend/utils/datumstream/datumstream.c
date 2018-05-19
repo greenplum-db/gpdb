@@ -786,7 +786,8 @@ destroy_datumstreamread(DatumStreamRead * ds)
 
 
 void
-datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eofUncompressed, RelFileNode relFileNode, int32 segmentFileNum, int version)
+datumstreamwrite_open_file(DatumStreamWrite *ds, char *fn, int64 eof, int64 eofUncompressed,
+						   RelFileNodeBackend *relFileNode, int32 segmentFileNum, int version)
 {
 	ds->eof = eof;
 	ds->eofUncompress = eofUncompressed;
@@ -803,7 +804,7 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 	{
 		AppendOnlyStorageWrite_TransactionCreateFile(&ds->ao_write,
 													 fn,
-													 &relFileNode,
+													 relFileNode,
 													 segmentFileNum);
 	}
 
@@ -815,7 +816,7 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 									version,
 									eof,
 									eofUncompressed,
-									&relFileNode,
+									relFileNode,
 									segmentFileNum);
 
 	ds->need_close_file = true;

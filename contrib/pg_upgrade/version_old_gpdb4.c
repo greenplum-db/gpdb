@@ -16,21 +16,19 @@
  *  support for converting it.
  */
 void
-old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichCluster)
+old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster)
 {
-	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
-	&ctx->old : &ctx->new;
 	int			dbnum;
 	FILE	   *script = NULL;
 	bool		found = false;
 	char		output_path[MAXPGPATH];
 
-	prep_status(ctx, "Checking for invalid 'money' user columns");
+	prep_status("Checking for invalid 'money' user columns");
 
 	snprintf(output_path, sizeof(output_path), "%s/tables_using_money.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -39,13 +37,13 @@ old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichClu
 		int			i_nspname,
 					i_relname,
 					i_attname;
-		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
 
 		/*
 		 * 
 		 */
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname, a.attname "
 								"FROM	pg_catalog.pg_class c, "
 								"		pg_catalog.pg_namespace n, "
@@ -68,7 +66,7 @@ old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichClu
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -88,8 +86,8 @@ old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichClu
 	if (found)
 	{
 		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains the \"money\" data type in\n"
 			   "| user tables.  This data type changed its internal\n"
 			   "| format between your old and new clusters so this\n"
@@ -99,7 +97,7 @@ old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichClu
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }
 
 /*
@@ -111,21 +109,19 @@ old_GPDB4_check_for_money_data_type_usage(migratorContext *ctx, Cluster whichClu
  *	all 127 segfiles.
  */
 void
-old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster)
+old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster)
 {
 	int			dbnum;
 	char		output_path[MAXPGPATH];
 	bool		found = false;
 	FILE	   *logfile = NULL;
-	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
-		&ctx->old : &ctx->new;
 
-	prep_status(ctx, "Checking for AO tables with no free segfiles");
+	prep_status("Checking for AO tables with no free segfiles");
 
 	snprintf(output_path, sizeof(output_path), "%s/tables_no_free_aosegs.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -134,10 +130,10 @@ old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster)
 		int			i_nspname,
 					i_relname,
 					i_attname;
-		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
 
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname, a.attname "
 								"FROM	pg_catalog.pg_class c, "
 								"		pg_catalog.pg_namespace n, "
@@ -167,7 +163,7 @@ old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster)
 		if (ntups > 0)
 		{
 			if (logfile == NULL && (logfile = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			found = true;
 			for (rowno = 0; rowno < ntups; rowno++)
 			{
@@ -191,8 +187,8 @@ old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster)
 	{
 		if (logfile)
 			fclose(logfile);
-		pg_log(ctx, PG_REPORT, "warning\n");
-		pg_log(ctx, PG_WARNING,
+		pg_log(PG_REPORT, "warning\n");
+		pg_log(PG_WARNING,
 			   "| Your installation contains the \"numeric\" data type in\n"
 			   "| one or more AO tables without free segments.  In order to\n"
 			   "| rewrite the table(s), please recreate them using a CREATE\n"
@@ -201,5 +197,5 @@ old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster)
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }

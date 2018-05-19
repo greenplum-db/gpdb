@@ -277,7 +277,7 @@ extern void datumstreamwrite_open_file(
 						   char *fn,
 						   int64 eof,
 						   int64 eofUncompressed,
-						   RelFileNode relFileNode,
+						   RelFileNodeBackend *relFileNode,
 						   int32 segmentFileNum,
 						   int version);
 

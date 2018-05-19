@@ -4,10 +4,10 @@
  *	  POSTGRES process array definitions.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/procarray.h,v 1.33 2010/07/06 19:19:00 momjian Exp $
+ * src/include/storage/procarray.h
  *
  *-------------------------------------------------------------------------
  */
@@ -33,7 +33,6 @@ extern void ProcArrayEndGxact(void);
 extern void ProcArrayClearTransaction(PGPROC *proc, bool commit);
 extern void ClearTransactionFromPgProc_UnderLock(PGPROC *proc, bool commit);
 
-extern void ProcArrayInitRecoveryInfo(TransactionId oldestActiveXid);
 extern void ProcArrayApplyRecoveryInfo(RunningTransactions running);
 extern void ProcArrayApplyXidAssignment(TransactionId topxid,
 							int nsubxids, TransactionId *subxids);
@@ -67,7 +66,7 @@ extern VirtualTransactionId *GetCurrentVirtualXIDs(TransactionId limitXmin,
 extern VirtualTransactionId *GetConflictingVirtualXIDs(TransactionId limitXmin, Oid dbOid);
 extern pid_t CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode);
 
-extern int	CountActiveBackends(void);
+extern bool MinimumActiveBackends(int min);
 extern int	CountDBBackends(Oid databaseid);
 extern void CancelDBBackends(Oid databaseid, ProcSignalReason sigmode, bool conflictPending);
 extern int	CountUserBackends(Oid roleid);
@@ -90,5 +89,8 @@ extern void GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots);
 extern bool FindAndSignalProcess(int sessionId, int commandId);
 
 extern void getDtxCheckPointInfo(char **result, int *result_size);
+
+extern List *ListAllGxid(void);
+extern int GetPidByGxid(DistributedTransactionId gxid);
 
 #endif   /* PROCARRAY_H */

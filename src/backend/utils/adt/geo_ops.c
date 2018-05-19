@@ -3,12 +3,12 @@
  * geo_ops.c
  *	  2D geometric operations
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/geo_ops.c,v 1.108 2010/02/26 02:01:08 momjian Exp $
+ *	  src/backend/utils/adt/geo_ops.c
  *
  *-------------------------------------------------------------------------
  */
@@ -3925,7 +3925,7 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
 	t.p[1] = *b;
 	s.p[0] = poly->p[(start == 0) ? (poly->npts - 1) : (start - 1)];
 
-	for (i = start; i < poly->npts && res == true; i++)
+	for (i = start; i < poly->npts && res; i++)
 	{
 		Point	   *interpt;
 
@@ -4001,7 +4001,7 @@ poly_contain(PG_FUNCTION_ARGS)
 		s.p[0] = polyb->p[polyb->npts - 1];
 		result = true;
 
-		for (i = 0; i < polyb->npts && result == true; i++)
+		for (i = 0; i < polyb->npts && result; i++)
 		{
 			s.p[1] = polyb->p[i];
 			result = lseg_inside_poly(s.p, s.p + 1, polya, 0);
@@ -5450,4 +5450,64 @@ plist_same(int npts, Point *p1, Point *p2)
 	}
 
 	return FALSE;
+}
+
+
+/*-------------------------------------------------------------------------
+ * Determine the hypotenuse.
+ *
+ * If required, x and y are swapped to make x the larger number. The
+ * traditional formula of x^2+y^2 is rearranged to factor x outside the
+ * sqrt. This allows computation of the hypotenuse for significantly
+ * larger values, and with a higher precision than when using the naive
+ * formula.  In particular, this cannot overflow unless the final result
+ * would be out-of-range.
+ *
+ * sqrt( x^2 + y^2 ) = sqrt( x^2( 1 + y^2/x^2) )
+ *					 = x * sqrt( 1 + y^2/x^2 )
+ *					 = x * sqrt( 1 + y/x * y/x )
+ *
+ * It is expected that this routine will eventually be replaced with the
+ * C99 hypot() function.
+ *
+ * This implementation conforms to IEEE Std 1003.1 and GLIBC, in that the
+ * case of hypot(inf,nan) results in INF, and not NAN.
+ *-----------------------------------------------------------------------
+ */
+double
+pg_hypot(double x, double y)
+{
+	double		yx;
+
+	/* Handle INF and NaN properly */
+	if (isinf(x) || isinf(y))
+		return get_float8_infinity();
+
+	if (isnan(x) || isnan(y))
+		return get_float8_nan();
+
+	/* Else, drop any minus signs */
+	x = fabs(x);
+	y = fabs(y);
+
+	/* Swap x and y if needed to make x the larger one */
+	if (x < y)
+	{
+		double		temp = x;
+
+		x = y;
+		y = temp;
+	}
+
+	/*
+	 * If y is zero, the hypotenuse is x.  This test saves a few cycles in
+	 * such cases, but more importantly it also protects against
+	 * divide-by-zero errors, since now x >= y.
+	 */
+	if (y == 0.0)
+		return x;
+
+	/* Determine the hypotenuse */
+	yx = y / x;
+	return x * sqrt(1.0 + (yx * yx));
 }

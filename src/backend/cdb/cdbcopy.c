@@ -1,7 +1,7 @@
 /*--------------------------------------------------------------------------
  *
  * cdbcopy.c
- * 	 Rrovides routines that executed a COPY command on an MPP cluster. These
+ * 	 Provides routines that executed a COPY command on an MPP cluster. These
  * 	 routines are called from the backend COPY command whenever MPP is in the
  * 	 default dispatch mode.
  *
@@ -50,7 +50,6 @@ makeCdbCopy(bool is_copy_in)
 	/* fresh start */
 	c->total_segs = 0;
 	c->primary_writer = NULL;
-	c->remote_data_err = false;
 	c->io_errors = false;
 	c->copy_in = is_copy_in;
 	c->skip_ext_partition = false;
@@ -99,96 +98,37 @@ makeCdbCopy(bool is_copy_in)
  * may pg_throw via elog/ereport.
  */
 void
-cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
+cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
 {
 	int			seg;
-	MemoryContext oldcontext;
-	List	   *parsetree_list;
-	Node	   *parsetree = NULL;
-	List	   *querytree_list;
-	Query	   *q = makeNode(Query);
 
 	/* clean err message */
 	c->err_msg.len = 0;
 	c->err_msg.data[0] = '\0';
 	c->err_msg.cursor = 0;
 
-	/*
-	 * A context it is safe to build parse trees in. We don't want them in
-	 * TopMemory, as the trees should only last for this one statement
-	 */
-	oldcontext = MemoryContextSwitchTo(MessageContext);
-
-	/* dispatch copy command to both primary and mirror writer gangs */
-
-	/*
-	 * Let's parse the copy command into a query tree, serialize it, and send
-	 * it down to the QE or DA.
-	 *
-	 * Note that we can't just use the original CopyStmt node in this routine,
-	 * but we need to use the re-created command that copy.c prepared for us
-	 * as it may be different from the original command in several cases (such
-	 * as COPY into tables where a default value is evaluated on the QD).
-	 */
-
-	/*
-	 * parse it to a raw parsetree
-	 */
-
-	parsetree_list = pg_parse_query(copyCmd);
-
-	/*
-	 * Assume it will be one statement node, not multiple ones.
-	 */
-
-	parsetree = (Node *) linitial(parsetree_list);
-	Assert(nodeTag(parsetree) == T_CopyStmt);
-
-	/*
-	 * Ok, we have a raw parse tree of the copy stmt.
-	 *
-	 * I don't think analyze and rewrite will do much to it, but it will at
-	 * least package it up as a query node, which we need for serializing. And
-	 * if the copy statement has a "select" statement embedded, this is
-	 * essential.
-	 */
-
-	querytree_list = pg_analyze_and_rewrite(parsetree, copyCmd,
-											NULL, 0);
-
-	/*
-	 * Again, assume it is one query node, not multiple
-	 */
-	q = (Query *) linitial(querytree_list);
-
-
-	Assert(IsA(q, Query));
-	Assert(q->commandType == CMD_UTILITY);
-	Assert(q->utilityStmt != NULL);
-	Assert(IsA(q->utilityStmt, CopyStmt));
+	stmt = copyObject(stmt);
 
 	/* add in partitions for dispatch */
-	((CopyStmt *) q->utilityStmt)->partitions = c->partitions;
+	stmt->partitions = c->partitions;
 
 	/* add in AO segno map for dispatch */
-	((CopyStmt *) q->utilityStmt)->ao_segnos = c->ao_segnos;
+	stmt->ao_segnos = c->ao_segnos;
 
-	((CopyStmt *) q->utilityStmt)->skip_ext_partition = c->skip_ext_partition;
+	stmt->skip_ext_partition = c->skip_ext_partition;
 
 	if (policy)
 	{
-		((CopyStmt *) q->utilityStmt)->policy = GpPolicyCopy(CurrentMemoryContext, policy);
+		stmt->policy = GpPolicyCopy(CurrentMemoryContext, policy);
 	}
 	else
 	{
-		((CopyStmt *) q->utilityStmt)->policy = createRandomPartitionedPolicy(NULL);
+		stmt->policy = createRandomPartitionedPolicy(NULL);
 	}
 
-	MemoryContextSwitchTo(oldcontext);
-
-	CdbDispatchUtilityStatement((Node *) q->utilityStmt,
+	CdbDispatchUtilityStatement((Node *) stmt,
 								(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT) | DF_CANCEL_ON_ERROR,
-								NIL,	/* FIXME */
+								NIL,
 								NULL);
 
 	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
@@ -198,8 +138,6 @@ cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
 	{
 		c->segdb_state[seg][0] = SEGDB_COPY;	/* we be jammin! */
 	}
-
-	return;
 }
 
 /*
@@ -361,7 +299,6 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 					{
 						appendStringInfo(&(c->err_msg), "Error from segment %d: %s\n",
 										 source_seg, PQresultErrorMessage(res));
-						c->remote_data_err = true;
 						first_error = false;
 					}
 
@@ -404,6 +341,11 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 
 				if (nbytes == -2)
 				{
+					/* GPDB_91_MERGE_FIXME: How should we handle errors here? We used
+					 * to append them to err_msg, but that doesn't seem right. Surely
+					 * we should ereport()? I put in just a quick elog() for now..
+					 */
+					elog(ERROR, "could not dispatch COPY: %s", PQerrorMessage(q->conn));
 					appendStringInfo(&(c->err_msg),
 									 "Failed to get data from segment %d: %s\n",
 									 source_seg, PQerrorMessage(q->conn));
@@ -439,17 +381,16 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 /*
  * Process the results from segments after sending the end of copy command.
  */
-static void
+static ErrorData *
 processCopyEndResults(CdbCopy *c,
 					  SegmentDatabaseDescriptor *db_descriptors,
 					  int *results,
 					  int size,
 					  SegmentDatabaseDescriptor **failedSegDBs,
 					  bool *err_header,
-					  bool *first_error,
 					  int *failed_count,
 					  int *total_rows_rejected,
-					  int *total_rows_completed)
+					  int64 *total_rows_completed)
 {
 	SegmentDatabaseDescriptor *q;
 	int			seg;
@@ -458,6 +399,7 @@ processCopyEndResults(CdbCopy *c,
 	int			segment_rows_rejected = 0;	/* num of rows rejected by this QE */
 	int			segment_rows_completed = 0; /* num of rows completed by this
 											 * QE */
+	ErrorData *first_error = NULL;
 
 	for (seg = 0; seg < size; seg++)
 	{
@@ -528,40 +470,8 @@ processCopyEndResults(CdbCopy *c,
 				 * We get the error message in pieces so that we could append
 				 * whoami to the primary error message only.
 				 */
-				if (*first_error)
-				{
-					char	   *pri = PQresultErrorField(res, PG_DIAG_MESSAGE_PRIMARY);
-					char	   *dtl = PQresultErrorField(res, PG_DIAG_MESSAGE_DETAIL);
-					char	   *ctx = PQresultErrorField(res, PG_DIAG_CONTEXT);
-
-					if (pri)
-						appendStringInfo(&(c->err_msg), "%s", pri);
-					else
-						appendStringInfo(&(c->err_msg), "Unknown primary error.");
-
-					if (q->whoami)
-						appendStringInfo(&(c->err_msg), "  (%s)", q->whoami);
-
-					if (dtl)
-						appendStringInfo(&(c->err_msg), "\n%s", dtl);
-
-					/*
-					 * note that due to cdb_tidy_message() in elog.c "If more
-					 * than one line, move lines after the first to errdetail"
-					 * so we save the context in another stringInfo and fetch
-					 * it in the error callback in copy.c, so it wouldn't
-					 * appear as DETAIL...
-					 */
-					if (ctx)
-						appendStringInfo(&(c->err_context), "%s", ctx);
-
-					/*
-					 * Indicate that the err_msg already was filled with one
-					 * error
-					 */
-					*first_error = false;
-				}
-				c->remote_data_err = true;
+				if (!first_error)
+					first_error = cdbdisp_get_PQerror(res);
 			}
 
 			/*
@@ -681,6 +591,8 @@ processCopyEndResults(CdbCopy *c,
 			(*failed_count)++;
 		}
 	}
+
+	return first_error;
 }
 
 /*
@@ -694,15 +606,25 @@ processCopyEndResults(CdbCopy *c,
 int
 cdbCopyEnd(CdbCopy *c)
 {
-	return cdbCopyEndAndFetchRejectNum(c, NULL);
+	return cdbCopyEndAndFetchRejectNum(c, NULL, NULL);
+}
+
+int
+cdbCopyAbort(CdbCopy *c)
+{
+	return cdbCopyEndAndFetchRejectNum(c, NULL,
+									   "aborting COPY in QE due to error in QD");
 }
 
 /*
  * End the copy command on all segment databases,
  * and fetch the total number of rows completed by all QEs
+ * 
+ * GPDB_91_MERGE_FIXME: we allow % value to be specified as segment reject
+ * limit, however, the total rejected rows is not allowed to be > INT_MAX.
  */
 int
-cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
+cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort_msg)
 {
 	SegmentDatabaseDescriptor *q;
 	SegmentDatabaseDescriptor **failedSegDBs;
@@ -714,9 +636,20 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
 	int			total_rows_rejected = 0;	/* total num rows rejected by all
 											 * QEs */
 	bool		err_header = false;
-	bool		first_error = true;
 	struct SegmentDatabaseDescriptor *db_descriptors;
 	int			size;
+	ErrorData *edata;
+
+	/*
+	 * Don't try to end a copy that already ended with the destruction of the
+	 * writer gang. We know that this has happened if the CdbCopy's
+	 * primary_writer is NULL.
+	 *
+	 * GPDB_91_MERGE_FIXME: ugh, this is nasty. We shouldn't be calling
+	 * cdbCopyEnd twice on the same CdbCopy in the first place!
+	 */
+	if (!c->primary_writer)
+		return -1;
 
 	/* clean err message */
 	c->err_msg.len = 0;
@@ -738,16 +671,16 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
 		q = &db_descriptors[seg];
 		elog(DEBUG1, "PQputCopyEnd seg %d    ", q->segindex);
 		/* end this COPY command */
-		results[seg] = PQputCopyEnd(q->conn, NULL);
+		results[seg] = PQputCopyEnd(q->conn, abort_msg);
 	}
 
 	if (NULL != total_rows_completed)
 		*total_rows_completed = 0;
 
-	processCopyEndResults(c, db_descriptors, results, size,
-						  failedSegDBs, &err_header,
-						  &first_error, &failed_count, &total_rows_rejected,
-						  total_rows_completed);
+	edata = processCopyEndResults(c, db_descriptors, results, size,
+								  failedSegDBs, &err_header,
+								  &failed_count, &total_rows_rejected,
+								  total_rows_completed);
 
 	/* If lost contact with segment db, try to reconnect. */
 	if (failed_count > 0)
@@ -756,6 +689,7 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
 		elog(LOG, "COPY signals FTS to probe segments");
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
 		DisconnectAndDestroyAllGangs(true);
+		c->primary_writer = NULL;
 		ereport(ERROR,
 				(errmsg_internal("MPP detected %d segment failures, system is reconnected", failed_count),
 				 errSendAlert(true)));
@@ -763,6 +697,10 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
 
 	pfree(results);
 	pfree(failedSegDBs);
+
+	/* If we are aborting the COPY, ignore errors sent by the server. */
+	if (edata && !abort_msg)
+		ReThrowError(edata);
 
 	return total_rows_rejected;
 }

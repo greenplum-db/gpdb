@@ -4,12 +4,12 @@
  *	  lexical scanning for PL/pgSQL
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_scanner.c,v 1.5 2010/02/26 02:01:35 momjian Exp $
+ *	  src/pl/plpgsql/src/pl_scanner.c
  *
  *-------------------------------------------------------------------------
  */
@@ -64,6 +64,7 @@ static const ScanKeyword reserved_keywords[] = {
 	PG_KEYWORD("by", K_BY, RESERVED_KEYWORD)
 	PG_KEYWORD("case", K_CASE, RESERVED_KEYWORD)
 	PG_KEYWORD("close", K_CLOSE, RESERVED_KEYWORD)
+	PG_KEYWORD("collate", K_COLLATE, RESERVED_KEYWORD)
 	PG_KEYWORD("continue", K_CONTINUE, RESERVED_KEYWORD)
 	PG_KEYWORD("declare", K_DECLARE, RESERVED_KEYWORD)
 	PG_KEYWORD("default", K_DEFAULT, RESERVED_KEYWORD)
@@ -77,6 +78,7 @@ static const ScanKeyword reserved_keywords[] = {
 	PG_KEYWORD("exit", K_EXIT, RESERVED_KEYWORD)
 	PG_KEYWORD("fetch", K_FETCH, RESERVED_KEYWORD)
 	PG_KEYWORD("for", K_FOR, RESERVED_KEYWORD)
+	PG_KEYWORD("foreach", K_FOREACH, RESERVED_KEYWORD)
 	PG_KEYWORD("from", K_FROM, RESERVED_KEYWORD)
 	PG_KEYWORD("get", K_GET, RESERVED_KEYWORD)
 	PG_KEYWORD("if", K_IF, RESERVED_KEYWORD)
@@ -105,6 +107,7 @@ static const int num_reserved_keywords = lengthof(reserved_keywords);
 static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("absolute", K_ABSOLUTE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("alias", K_ALIAS, UNRESERVED_KEYWORD)
+	PG_KEYWORD("array", K_ARRAY, UNRESERVED_KEYWORD)
 	PG_KEYWORD("backward", K_BACKWARD, UNRESERVED_KEYWORD)
 	PG_KEYWORD("constant", K_CONSTANT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("cursor", K_CURSOR, UNRESERVED_KEYWORD)
@@ -133,6 +136,7 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("row_count", K_ROW_COUNT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("rowtype", K_ROWTYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("scroll", K_SCROLL, UNRESERVED_KEYWORD)
+	PG_KEYWORD("slice", K_SLICE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("sqlstate", K_SQLSTATE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("type", K_TYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("use_column", K_USE_COLUMN, UNRESERVED_KEYWORD)
@@ -518,19 +522,6 @@ location_lineno_init(void)
 {
 	cur_line_start = scanorig;
 	cur_line_num = 1;
-
-	/*----------
-	 * Hack: skip any initial newline, so that in the common coding layout
-	 *		CREATE FUNCTION ... AS $$
-	 *			code body
-	 *		$$ LANGUAGE plpgsql;
-	 * we will think "line 1" is what the programmer thinks of as line 1.
-	 *----------
-	 */
-	if (*cur_line_start == '\r')
-		cur_line_start++;
-	if (*cur_line_start == '\n')
-		cur_line_start++;
 
 	cur_line_end = strchr(cur_line_start, '\n');
 }

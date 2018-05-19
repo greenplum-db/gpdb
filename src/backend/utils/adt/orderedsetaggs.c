@@ -131,6 +131,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 
 			sortColIdx[i] = tle->resno;
 			sortOperators[i] = sortcl->sortop;
+			sortCollations[i] = exprCollation((Node *) tle->expr);
 			sortNullsFirst[i] = sortcl->nulls_first;
 			i++;
 		}
@@ -140,6 +141,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 			/* Add an integer flag column as the last sort column */
 			sortColIdx[i] = list_length(aggref->args) + 1;
 			sortOperators[i] = Int4LessOperator;
+			sortCollations[i] = InvalidOid;
 			sortNullsFirst[i] = false;
 			i++;
 		}
@@ -182,6 +184,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 												   numSortCols,
 												   sortColIdx,
 												   sortOperators,
+												   sortCollations,
 												   sortNullsFirst,
 												   work_mem, false);
 
@@ -195,6 +198,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 		TargetEntry *tle;
 		Oid			sortColType;
 		Oid			sortOperator;
+		Oid			sortCollation;
 		Oid			eqOperator;
 		bool		sortNullsFirst;
 
@@ -210,6 +214,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 		sortColType = exprType((Node *) tle->expr);
 		sortOperator = sortcl->sortop;
 		eqOperator = sortcl->eqop;
+		sortCollation = exprCollation((Node *) tle->expr);
 		sortNullsFirst = sortcl->nulls_first;
 
 		/* Save datatype info */
@@ -227,6 +232,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 		osastate->sortstate = tuplesort_begin_datum(NULL,
 													sortColType,
 													sortOperator,
+													sortCollation,
 													sortNullsFirst,
 													work_mem, false);
 	}

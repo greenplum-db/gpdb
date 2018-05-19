@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.373 2010/04/05 01:09:52 tgl Exp $
+ *	  src/backend/catalog/heap.c
  *
  *
  * INTERFACE ROUTINES
@@ -44,14 +44,17 @@
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/objectaccess.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_auth_members.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_exttable.h"
+#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_partition.h"
@@ -69,10 +72,12 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/var.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
 #include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/predicate.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -101,9 +106,9 @@ static void MetaTrackAddUpdInternal(Oid			classid,
 
 
 
-/* Kluge for upgrade-in-place support */
-Oid			binary_upgrade_next_heap_relfilenode = InvalidOid;
-Oid			binary_upgrade_next_toast_relfilenode = InvalidOid;
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_heap_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_toast_pg_class_oid = InvalidOid;
 
 static void AddNewRelationTuple(Relation pg_class_desc,
 					Relation new_rel_desc,
@@ -274,6 +279,7 @@ heap_create(const char *relname,
 			TupleDesc tupDesc,
 			Oid relam,
 			char relkind,
+			char relpersistence,
 			char relstorage,
 			bool shared_relation,
 			bool mapped_relation,
@@ -305,6 +311,7 @@ heap_create(const char *relname,
 	{
 		case RELKIND_VIEW:
 		case RELKIND_COMPOSITE_TYPE:
+		case RELKIND_FOREIGN_TABLE:
 			create_storage = false;
 
 			/*
@@ -352,7 +359,8 @@ heap_create(const char *relname,
 									 reltablespace,
                                      relkind,           /*CDB*/
 									 shared_relation,
-									 mapped_relation);
+									 mapped_relation,
+									 relpersistence);
 
 	/*
 	 * Have the storage manager create the relation's disk file, if needed.
@@ -368,7 +376,7 @@ heap_create(const char *relname,
 		isAppendOnly = (relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS);
 
 		RelationOpenSmgr(rel);
-		RelationCreateStorage(rel->rd_node, rel->rd_istemp);
+		RelationCreateStorage(rel->rd_node, relpersistence);
 
 		/*
 		 * AO tables don't use the buffer manager, better to not keep the
@@ -477,7 +485,8 @@ CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind,
 	{
 		CheckAttributeType(NameStr(tupdesc->attrs[i]->attname),
 						   tupdesc->attrs[i]->atttypid,
-						   NIL,	/* assume we're creating a new rowtype */
+						   tupdesc->attrs[i]->attcollation,
+						   NIL, /* assume we're creating a new rowtype */
 						   allow_system_table_mods);
 	}
 }
@@ -498,7 +507,8 @@ CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind,
  * --------------------------------
  */
 void
-CheckAttributeType(const char *attname, Oid atttypid,
+CheckAttributeType(const char *attname,
+				   Oid atttypid, Oid attcollation,
 				   List *containing_rowtypes,
 				   bool allow_system_table_mods)
 {
@@ -539,19 +549,26 @@ CheckAttributeType(const char *attname, Oid atttypid,
 					 errmsg("column \"%s\" has pseudo-type %s",
 							attname, format_type_be(atttypid))));
 	}
+	else if (att_typtype == TYPTYPE_DOMAIN)
+	{
+		/*
+		 * If it's a domain, recurse to check its base type.
+		 */
+		CheckAttributeType(attname, getBaseType(atttypid), attcollation,
+						   containing_rowtypes,
+						   allow_system_table_mods);
+	}
 	else if (att_typtype == TYPTYPE_COMPOSITE)
 	{
 		/*
-		 * For a composite type, recurse into its attributes.  You might think
-		 * this isn't necessary, but since we allow system catalogs to break
-		 * the rule, we have to guard against the case.
+		 * For a composite type, recurse into its attributes.
 		 */
 		Relation	relation;
 		TupleDesc	tupdesc;
 		int			i;
 
 		/*
-		 * Check for self-containment.  Eventually we might be able to allow
+		 * Check for self-containment.	Eventually we might be able to allow
 		 * this (just return without complaint, if so) but it's not clear how
 		 * many other places would require anti-recursion defenses before it
 		 * would be safe to allow tables to contain their own rowtype.
@@ -559,8 +576,8 @@ CheckAttributeType(const char *attname, Oid atttypid,
 		if (list_member_oid(containing_rowtypes, atttypid))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("composite type %s cannot be made a member of itself",
-							format_type_be(atttypid))));
+				errmsg("composite type %s cannot be made a member of itself",
+					   format_type_be(atttypid))));
 
 		containing_rowtypes = lcons_oid(atttypid, containing_rowtypes);
 
@@ -574,7 +591,8 @@ CheckAttributeType(const char *attname, Oid atttypid,
 
 			if (attr->attisdropped)
 				continue;
-			CheckAttributeType(NameStr(attr->attname), attr->atttypid,
+			CheckAttributeType(NameStr(attr->attname),
+							   attr->atttypid, attr->attcollation,
 							   containing_rowtypes,
 							   allow_system_table_mods);
 		}
@@ -588,10 +606,21 @@ CheckAttributeType(const char *attname, Oid atttypid,
 		/*
 		 * Must recurse into array types, too, in case they are composite.
 		 */
-		CheckAttributeType(attname, att_typelem,
+		CheckAttributeType(attname, att_typelem, attcollation,
 						   containing_rowtypes,
 						   allow_system_table_mods);
 	}
+
+	/*
+	 * This might not be strictly invalid per SQL standard, but it is pretty
+	 * useless, and it cannot be dumped, so we must disallow it.
+	 */
+	if (!OidIsValid(attcollation) && type_is_collatable(atttypid))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("no collation was derived for column \"%s\" with collatable type %s",
+						attname, format_type_be(atttypid)),
+		errhint("Use the COLLATE clause to set the collation explicitly.")));
 }
 
 /* MPP-6929: metadata tracking */
@@ -902,6 +931,7 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	values[Anum_pg_attribute_attisdropped - 1] = BoolGetDatum(new_attribute->attisdropped);
 	values[Anum_pg_attribute_attislocal - 1] = BoolGetDatum(new_attribute->attislocal);
 	values[Anum_pg_attribute_attinhcount - 1] = Int32GetDatum(new_attribute->attinhcount);
+	values[Anum_pg_attribute_attcollation - 1] = ObjectIdGetDatum(new_attribute->attcollation);
 
 	/* start out with empty permissions and empty options */
 	nulls[Anum_pg_attribute_attacl - 1] = true;
@@ -951,7 +981,7 @@ AddNewAttributeTuples(Oid new_rel_oid,
 
 	/*
 	 * First we add the user attributes.  This is also a convenient place to
-	 * add dependencies on their datatypes.
+	 * add dependencies on their datatypes and collations.
 	 */
 	for (i = 0; i < natts; i++)
 	{
@@ -972,6 +1002,16 @@ AddNewAttributeTuples(Oid new_rel_oid,
 		referenced.objectId = attr->atttypid;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+
+		/* The default collation is pinned, so don't bother recording it */
+		if (OidIsValid(attr->attcollation) &&
+			attr->attcollation != DEFAULT_COLLATION_OID)
+		{
+			referenced.classId = CollationRelationId;
+			referenced.objectId = attr->attcollation;
+			referenced.objectSubId = 0;
+			recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+		}
 	}
 
 	/*
@@ -1057,14 +1097,13 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_reltoastidxid - 1] = ObjectIdGetDatum(rd_rel->reltoastidxid);
 	values[Anum_pg_class_relhasindex - 1] = BoolGetDatum(rd_rel->relhasindex);
 	values[Anum_pg_class_relisshared - 1] = BoolGetDatum(rd_rel->relisshared);
-	values[Anum_pg_class_relistemp - 1] = BoolGetDatum(rd_rel->relistemp);
+	values[Anum_pg_class_relpersistence - 1] = CharGetDatum(rd_rel->relpersistence);
 	values[Anum_pg_class_relkind - 1] = CharGetDatum(rd_rel->relkind);
 	values[Anum_pg_class_relstorage - 1] = CharGetDatum(rd_rel->relstorage);
 	values[Anum_pg_class_relnatts - 1] = Int16GetDatum(rd_rel->relnatts);
 	values[Anum_pg_class_relchecks - 1] = Int16GetDatum(rd_rel->relchecks);
 	values[Anum_pg_class_relhasoids - 1] = BoolGetDatum(rd_rel->relhasoids);
 	values[Anum_pg_class_relhaspkey - 1] = BoolGetDatum(rd_rel->relhaspkey);
-	values[Anum_pg_class_relhasexclusion - 1] = BoolGetDatum(rd_rel->relhasexclusion);
 	values[Anum_pg_class_relhasrules - 1] = BoolGetDatum(rd_rel->relhasrules);
 	values[Anum_pg_class_relhastriggers - 1] = BoolGetDatum(rd_rel->relhastriggers);
 	values[Anum_pg_class_relhassubclass - 1] = BoolGetDatum(rd_rel->relhassubclass);
@@ -1233,7 +1272,8 @@ AddNewRelationType(const char *typeName,
 				   'x',			/* fully TOASTable */
 				   -1,			/* typmod */
 				   0,			/* array dimensions for typBaseType */
-				   false);		/* Type NOT NULL */
+				   false,		/* Type NOT NULL */
+				   InvalidOid); /* rowtypes never have a collation */
 }
 
 /* --------------------------------
@@ -1276,6 +1316,7 @@ heap_create_with_catalog(const char *relname,
 						 List *cooked_constraints,
 						 Oid relam,
 						 char relkind,
+						 char relpersistence,
 						 char relstorage,
 						 bool shared_relation,
 						 bool mapped_relation,
@@ -1291,6 +1332,7 @@ heap_create_with_catalog(const char *relname,
 	Relation	pg_class_desc;
 	Relation	new_rel_desc;
 	Acl		   *relacl;
+	Oid			existing_relid;
 	Oid			old_type_oid;
 	Oid			new_type_oid;
 	Oid			new_array_oid = InvalidOid;
@@ -1345,7 +1387,12 @@ heap_create_with_catalog(const char *relname,
 
 	CheckAttributeNamesTypes(tupdesc, relkind, allow_system_table_mods);
 
-	if (get_relname_relid(relname, relnamespace))
+	/*
+	 * This would fail later on anyway, if the relation already exists.  But
+	 * by catching it here we can emit a nicer error message.
+	 */
+	existing_relid = get_relname_relid(relname, relnamespace);
+	if (existing_relid != InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_TABLE),
 				 errmsg("relation \"%s\" already exists", relname)));
@@ -1410,6 +1457,7 @@ heap_create_with_catalog(const char *relname,
 		{
 			case RELKIND_RELATION:
 			case RELKIND_VIEW:
+			case RELKIND_FOREIGN_TABLE:
 				relacl = get_user_default_acl(ACL_OBJECT_RELATION, ownerid,
 											  relnamespace);
 				break;
@@ -1437,6 +1485,7 @@ heap_create_with_catalog(const char *relname,
 							   tupdesc,
 							   relam,
 							   relkind,
+							   relpersistence,
 							   relstorage,
 							   shared_relation,
 							   mapped_relation,
@@ -1448,13 +1497,15 @@ heap_create_with_catalog(const char *relname,
 	 * Decide whether to create an array type over the relation's rowtype. We
 	 * do not create any array types for system catalogs (ie, those made
 	 * during initdb).	We create array types for regular relations, views,
-	 * and composite types ... but not, eg, for toast tables or sequences.
+	 * composite types and foreign tables ... but not, eg, for toast tables or
+	 * sequences.
 	 *
 	 * Also not for the auxiliary heaps created for bitmap indexes or append-
 	 * only tables.
 	 */
 	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION && !appendOnlyRel) ||
 							  relkind == RELKIND_VIEW ||
+							  relkind == RELKIND_FOREIGN_TABLE ||
 							  relkind == RELKIND_COMPOSITE_TYPE) &&
 		relnamespace != PG_BITMAPINDEX_NAMESPACE)
 	{
@@ -1537,7 +1588,8 @@ heap_create_with_catalog(const char *relname,
 				   'x',			/* fully TOASTable */
 				   -1,			/* typmod */
 				   0,			/* array dimensions for typBaseType */
-				   false);		/* Type NOT NULL */
+				   false,		/* Type NOT NULL */
+				   InvalidOid); /* rowtypes never have a collation */
 
 		pfree(relarrayname);
 	}
@@ -1595,7 +1647,8 @@ heap_create_with_catalog(const char *relname,
 	 * entry, so we needn't record them here.  Likewise, TOAST tables don't
 	 * need a namespace dependency (they live in a pinned namespace) nor an
 	 * owner dependency (they depend indirectly through the parent table), nor
-	 * should they have any ACL entries.
+	 * should they have any ACL entries.  The same applies for extension
+	 * dependencies.
 	 *
 	 * Also, skip this in bootstrap mode, since we don't make dependencies
 	 * while bootstrapping.
@@ -1638,6 +1691,9 @@ heap_create_with_catalog(const char *relname,
 								  nnewmembers, newmembers);
 		}
 	}
+
+	/* Post creation hook for new relation */
+	InvokeObjectAccessHook(OAT_POST_CREATE, RelationRelationId, relid, 0);
 
 	/*
 	 * Store any supplied constraints and defaults.
@@ -1721,6 +1777,25 @@ heap_create_with_catalog(const char *relname,
 							   relid, GetUserId(), /* not ownerid */
 							   "CREATE", subtyp
 					);
+	}
+
+	/*
+	 * If this is an unlogged relation, it needs an init fork so that it can
+	 * be correctly reinitialized on restart.  Since we're going to do an
+	 * immediate sync, we ony need to xlog this if archiving or streaming is
+	 * enabled.  And the immediate sync is required, because otherwise there's
+	 * no guarantee that this will hit the disk before the next checkpoint
+	 * moves the redo pointer.
+	 */
+	if (relpersistence == RELPERSISTENCE_UNLOGGED)
+	{
+		Assert(relkind == RELKIND_RELATION || relkind == RELKIND_TOASTVALUE);
+
+		smgrcreate(new_rel_desc->rd_smgr, INIT_FORKNUM, false);
+		if (XLogIsNeeded())
+			log_smgrcreate(&new_rel_desc->rd_smgr->smgr_rnode.node,
+						   INIT_FORKNUM);
+		smgrimmedsync(new_rel_desc->rd_smgr, INIT_FORKNUM);
 	}
 
 	/*
@@ -2145,7 +2220,7 @@ heap_drop_with_catalog(Oid relid)
 
 	relkind = rel->rd_rel->relkind;
 
-	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
+	is_appendonly_rel = RelationIsAppendOptimized(rel);
 	is_external_rel = RelationIsExternal(rel);
 
 	/*
@@ -2157,20 +2232,45 @@ heap_drop_with_catalog(Oid relid)
 
 	/*
 	 * There can no longer be anyone *else* touching the relation, but we
-	 * might still have open queries or cursors in our own session.
+	 * might still have open queries or cursors, or pending trigger events, in
+	 * our own session.
 	 */
-	if (rel->rd_refcnt != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_OBJECT_IN_USE),
-				 errmsg("cannot drop \"%s\" because "
-						"it is being used by active queries in this session",
-						RelationGetRelationName(rel))));
+	CheckTableNotInUse(rel, "DROP TABLE");
+
+	/*
+	 * This effectively deletes all rows in the table, and may be done in a
+	 * serializable transaction.  In that case we must record a rw-conflict in
+	 * to this transaction from each transaction holding a predicate lock on
+	 * the table.
+	 */
+	CheckTableForSerializableConflictIn(rel);
+
+	/*
+	 * Delete pg_foreign_table tuple first.
+	 */
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+	{
+		Relation	rel;
+		HeapTuple	tuple;
+
+		rel = heap_open(ForeignTableRelationId, RowExclusiveLock);
+
+		tuple = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for foreign table %u", relid);
+
+		simple_heap_delete(rel, &tuple->t_self);
+
+		ReleaseSysCache(tuple);
+		heap_close(rel, RowExclusiveLock);
+	}
 
 	/*
 	 * Schedule unlinking of the relation's physical files at commit.
 	 */
 	if (relkind != RELKIND_VIEW &&
 		relkind != RELKIND_COMPOSITE_TYPE &&
+		relkind != RELKIND_FOREIGN_TABLE &&
 		!RelationIsExternal(rel))
 	{
 		RelationDropStorage(rel);
@@ -2431,6 +2531,7 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  CONSTRAINT_CHECK,		/* Constraint Type */
 						  false,	/* Is Deferrable */
 						  false,	/* Is Deferred */
+						  true, /* Is Validated */
 						  RelationGetRelid(rel),		/* relation */
 						  attNos,		/* attrs in the constraint */
 						  keycount,		/* # attrs in the constraint */
@@ -2949,6 +3050,11 @@ cookDefault(ParseState *pstate,
 			   errhint("You will need to rewrite or cast the expression.")));
 	}
 
+	/*
+	 * Finally, take care of collations in the finished expression.
+	 */
+	assign_expr_collations(pstate, expr);
+
 	return expr;
 }
 
@@ -2975,6 +3081,11 @@ cookConstraint(ParseState *pstate,
 	 * Make sure it yields a boolean result.
 	 */
 	expr = coerce_to_boolean(pstate, expr, "CHECK");
+
+	/*
+	 * Take care of collations.
+	 */
+	assign_expr_collations(pstate, expr);
 
 	/*
 	 * Make sure no outside relations are referred to.
@@ -3105,49 +3216,45 @@ heap_truncate(List *relids)
 	{
 		Relation	rel = lfirst(cell);
 
-		/*
-		 * Truncating AO and auxiliary tables' relfiles, like in case
-		 * of heap tables, leaves the AO table in an inconsistent
-		 * state at the end of commit:
-		 *
-		 *    - The aoseg table indicates no segfiles on disk.
-		 *    - AO segment files are truncated, with EOF = 0.
-		 *    - The EOF recorded in persistent tables for the AO
-		 *      segment files, however, is greater than 0 if the
-		 *      transaction inserted tuples in the AO table.
-		 *
-		 * One may think of resetting the EOF in persistent tables to
-		 * 0.  Beware, EOF of AO segfiles can only increase.  Filerep
-		 * incremental recovery relies on this assumption.
-		 *
-		 * Therefore, ON COMMIT DELETE ROWS action for AO tables is
-		 * implemented by creating new segment file and scheduling
-		 * existing one for drop at the end of commit.  TRUNCATE TABLE
-		 * command works the same way.  At some point, all temporary
-		 * tables should be exempt from persistent tables/lifecycle
-		 * management.
-		 */
-
-		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
-		{
-			/*
-			 * GPDB_90_MERGE_FIXME: see commit cab9a0656, which changed how
-			 * truncation was done for heap tables. Do we need a matching change
-			 * here, and does the removal of filerep change any of the
-			 * assumptions in the above comment?
-			 */
-			TruncateRelfiles(rel, InvalidSubTransactionId);
-			reindex_relation(RelationGetRelid(rel), true, true);
-		}
-		else
-		{
-			/* Truncate the relation */
-			heap_truncate_one_rel(rel);
-		}
+		/* Truncate the relation */
+		heap_truncate_one_rel(rel);
 
 		/* Close the relation, but keep exclusive lock on it until commit */
 		heap_close(rel, NoLock);
 	}
+}
+
+static void
+heap_truncate_one_relid(Oid relid)
+{
+	if (OidIsValid(relid))
+	{
+		Relation rel = relation_open(relid, AccessExclusiveLock);
+		heap_truncate_one_rel(rel);
+		heap_close(rel, NoLock);
+	}
+}
+
+static void
+ao_aux_tables_truncate(Relation rel)
+{
+	Oid ao_base_relid = RelationGetRelid(rel);
+
+	Oid			aoseg_relid = InvalidOid;
+	Oid			aoblkdir_relid = InvalidOid;
+	Oid			aovisimap_relid = InvalidOid;
+
+	if (!RelationIsAppendOptimized(rel))
+		return;
+
+	GetAppendOnlyEntryAuxOids(ao_base_relid, SnapshotNow,
+							  &aoseg_relid,
+							  &aoblkdir_relid, NULL,
+							  &aovisimap_relid, NULL);
+
+	heap_truncate_one_relid(aoseg_relid);
+	heap_truncate_one_relid(aoblkdir_relid);
+	heap_truncate_one_relid(aovisimap_relid);
 }
 
 /*
@@ -3181,6 +3288,8 @@ heap_truncate_one_rel(Relation rel)
 		/* keep the lock... */
 		heap_close(toastrel, NoLock);
 	}
+
+	ao_aux_tables_truncate(rel);
 }
 
 /*

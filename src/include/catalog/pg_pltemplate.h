@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_pltemplate.h,v 1.14 2010/06/29 00:18:11 petere Exp $
+ * src/include/catalog/pg_pltemplate.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -75,9 +75,9 @@ DATA(insert ( "pltcl"		t t "pltcl_call_handler" _null_ _null_ "$libdir/pltcl" _n
 DATA(insert ( "pltclu"		f f "pltclu_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
 DATA(insert ( "plperl"		t t "plperl_call_handler" "plperl_inline_handler" "plperl_validator" "$libdir/plperl" _null_ ));
 DATA(insert ( "plperlu"		f f "plperlu_call_handler" "plperlu_inline_handler" "plperlu_validator" "$libdir/plperl" _null_ ));
-DATA(insert ( "plpythonu"	f f "plpython_call_handler" "plpython_inline_handler" _null_ "$libdir/plpython" _null_ ));
-DATA(insert ( "plpython2u"	f f "plpython_call_handler" "plpython_inline_handler" _null_ "$libdir/plpython2" _null_ ));
-DATA(insert ( "plpython3u"	f f "plpython3_call_handler" "plpython3_inline_handler" _null_ "$libdir/plpython3" _null_ ));
+DATA(insert ( "plpythonu"	f f "plpython_call_handler" "plpython_inline_handler" "plpython_validator" "$libdir/plpython2" _null_ ));
+DATA(insert ( "plpython2u"	f f "plpython2_call_handler" "plpython2_inline_handler" "plpython2_validator" "$libdir/plpython2" _null_ ));
+DATA(insert ( "plpython3u"	f f "plpython3_call_handler" "plpython3_inline_handler" "plpython3_validator" "$libdir/plpython3" _null_ ));
 
 /* Additional languages installed in GPDB */
 DATA(insert ( "plr"         f f "plr_call_handler" _null_ _null_ "$libdir/plr" _null_ ));

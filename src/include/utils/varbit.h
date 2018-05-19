@@ -5,10 +5,10 @@
  *
  * Code originally contributed by Adriaan Joubert.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/varbit.h,v 1.31 2010/01/25 20:55:32 tgl Exp $
+ * src/include/utils/varbit.h
  *
  *-------------------------------------------------------------------------
  */
@@ -87,8 +87,10 @@ extern Datum bitle(PG_FUNCTION_ARGS);
 extern Datum bitgt(PG_FUNCTION_ARGS);
 extern Datum bitge(PG_FUNCTION_ARGS);
 extern Datum bitcmp(PG_FUNCTION_ARGS);
-extern Datum bitand(PG_FUNCTION_ARGS);
-extern Datum bitor(PG_FUNCTION_ARGS);
+
+/* avoid the names bitand and bitor, since they are C++ keywords */
+extern Datum bit_and(PG_FUNCTION_ARGS);
+extern Datum bit_or(PG_FUNCTION_ARGS);
 extern Datum bitxor(PG_FUNCTION_ARGS);
 extern Datum bitnot(PG_FUNCTION_ARGS);
 extern Datum bitshiftleft(PG_FUNCTION_ARGS);

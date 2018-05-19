@@ -1,0 +1,76 @@
+DROP TABLE IF EXISTS reindex_serialize_tab_heap;
+DROP
+
+CREATE TABLE reindex_serialize_tab_heap (a INT, b text, c date, d numeric, e bigint, f char(10), g float) distributed by (a);
+CREATE
+insert into reindex_serialize_tab_heap select i, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,10) i;
+INSERT 10
+create index idxa_reindex_serialize_tab_heap on reindex_serialize_tab_heap(a);
+CREATE
+create index idxb_reindex_serialize_tab_heap on reindex_serialize_tab_heap(b);
+CREATE
+create index idxc_reindex_serialize_tab_heap on reindex_serialize_tab_heap(c);
+CREATE
+create index idxd_reindex_serialize_tab_heap on reindex_serialize_tab_heap(d);
+CREATE
+create index idxe_reindex_serialize_tab_heap on reindex_serialize_tab_heap(e);
+CREATE
+create index idxf_reindex_serialize_tab_heap on reindex_serialize_tab_heap(f);
+CREATE
+create index idxg_reindex_serialize_tab_heap on reindex_serialize_tab_heap(g);
+CREATE
+-- start_ignore
+SET gp_create_table_random_default_distribution=off;
+SET
+-- end_ignore
+1: BEGIN;
+BEGIN
+1: SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SET
+1: select 'dummy select to establish snapshot';
+?column?                          
+----------------------------------
+dummy select to establish snapshot
+(1 row)
+2: BEGIN;
+BEGIN
+2: insert into reindex_serialize_tab_heap values(99,'green',now(),10,15.10);
+INSERT 1
+2: COMMIT;
+COMMIT
+1: select a,b,d,e,f,g from reindex_serialize_tab_heap order by 1;
+a |b    |d      |e    |f         |g    
+--+-----+-------+-----+----------+-----
+1 |abc1 |100.43 |-187 |a-1       |2.23 
+2 |abc2 |200.86 |-374 |a-2       |4.46 
+3 |abc3 |301.29 |-561 |a-3       |6.69 
+4 |abc4 |401.72 |-748 |a-4       |8.92 
+5 |abc5 |502.15 |-935 |a-5       |11.15
+6 |abc6 |602.58 |-1122|a-6       |13.38
+7 |abc7 |703.01 |-1309|a-7       |15.61
+8 |abc8 |803.44 |-1496|a-8       |17.84
+9 |abc9 |903.87 |-1683|a-9       |20.07
+10|abc10|1004.30|-1870|a-10      |22.3 
+(10 rows)
+1: select a,b,d,e,f,g from reindex_serialize_tab_heap where a = 99;
+a|b|d|e|f|g
+-+-+-+-+-+-
+(0 rows)
+1: reindex table reindex_serialize_tab_heap;
+REINDEX
+1: COMMIT;
+COMMIT
+4: select a,b,d,e,f,g from reindex_serialize_tab_heap where a = 99;
+a |b    |d |e |f|g
+--+-----+--+--+-+-
+99|green|10|15| | 
+(1 row)
+3: set enable_seqscan=false;
+SET
+3: set enable_indexscan=true;
+SET
+3: select a,b,d,e,f,g from reindex_serialize_tab_heap where a = 99;
+a |b    |d |e |f|g
+--+-----+--+--+-+-
+99|green|10|15| | 
+(1 row)

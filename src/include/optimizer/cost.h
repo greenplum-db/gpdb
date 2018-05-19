@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.101 2010/04/19 00:55:26 rhaas Exp $
+ * src/include/optimizer/cost.h
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +36,7 @@ typedef enum
 	CONSTRAINT_EXCLUSION_OFF,	/* do not use c_e */
 	CONSTRAINT_EXCLUSION_ON,	/* apply c_e to all rels */
 	CONSTRAINT_EXCLUSION_PARTITION		/* apply c_e to otherrels only */
-} ConstraintExclusionType;
+}	ConstraintExclusionType;
 
 
 /*
@@ -94,7 +94,7 @@ extern void cost_externalscan(ExternalPath *path, PlannerInfo *root, RelOptInfo 
 extern void cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root, RelOptInfo *baserel);
 extern void cost_aocsscan(AOCSPath *path, PlannerInfo *root, RelOptInfo *baserel);
 extern void cost_index(IndexPath *path, PlannerInfo *root, IndexOptInfo *index,
-		   List *indexQuals, RelOptInfo *outer_rel);
+		   List *indexQuals, List *indexOrderBys, RelOptInfo *outer_rel);
 extern void cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 					  Path *bitmapqual, RelOptInfo *outer_rel);
 extern void cost_bitmap_appendonly_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
@@ -117,18 +117,24 @@ extern void cost_ctescan(Path *path, PlannerInfo *root, RelOptInfo *baserel);
 extern void cost_recursive_union(Plan *runion, Plan *nrterm, Plan *rterm);
 extern void cost_sort(Path *path, PlannerInfo *root,
 		  List *pathkeys, Cost input_cost, double tuples, int width,
+		  Cost comparison_cost, int sort_mem,
 		  double limit_tuples);
+extern void cost_merge_append(Path *path, PlannerInfo *root,
+				  List *pathkeys, int n_streams,
+				  Cost input_startup_cost, Cost input_total_cost,
+				  double tuples);
 extern void cost_material(Path *path, PlannerInfo *root,
 			  Cost input_startup_cost, Cost input_total_cost,
 			  double tuples, int width);
 extern void cost_agg(Path *path, PlannerInfo *root,
-					 AggStrategy aggstrategy, int numAggs,
-					 int numGroupCols, double numGroups,
-					 Cost input_startup_cost, Cost input_total_cost,
-					 double input_tuples, double input_width, double hash_batches,
-					 double hashentry_width, bool hash_streaming);
+		 AggStrategy aggstrategy, const AggClauseCosts *aggcosts,
+		 int numGroupCols, double numGroups,
+		 Cost input_startup_cost, Cost input_total_cost,
+		 double input_tuples,
+		 double input_width, double hash_batches,
+		 double hashentry_width, bool hash_streaming);
 extern void cost_windowagg(Path *path, PlannerInfo *root,
-			   int numWindowFuncs, int numPartCols, int numOrderCols,
+			   List *windowFuncs, int numPartCols, int numOrderCols,
 			   Cost input_startup_cost, Cost input_total_cost,
 			   double input_tuples);
 extern void cost_group(Path *path, PlannerInfo *root,
@@ -151,12 +157,15 @@ extern void set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 						   RelOptInfo *inner_rel,
 						   SpecialJoinInfo *sjinfo,
 						   List *restrictlist);
+extern void set_subquery_size_estimates(PlannerInfo *root, RelOptInfo *rel,
+							PlannerInfo *subroot);
 extern void set_function_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_table_function_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_rel_width(PlannerInfo *root, RelOptInfo *rel);
 extern void set_values_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 					   Plan *cteplan);
+extern void set_foreign_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 
 /* Additional costsize.c prototypes for CDB incremental cost functions. */
 extern Cost incremental_hashjoin_cost(double rows, 

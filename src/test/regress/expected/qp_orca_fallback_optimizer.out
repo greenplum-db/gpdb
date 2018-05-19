@@ -7,13 +7,12 @@ CREATE TABLE constr_tab ( a int check (a>0) , b int, c int, d int, CHECK (a+b>5)
 set optimizer_enable_dml_constraints = off;
 explain insert into constr_tab values (1,2,3);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                   QUERY PLAN                   
-------------------------------------------------
- Insert (cost=0.00..0.01 rows=1 width=0)
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
- Settings:  optimizer=on
- Optimizer status: legacy query optimizer
-(4 rows)
+ Optimizer: legacy query optimizer
+(3 rows)
 
 set optimizer_enable_dml_constraints=on;
 explain insert into constr_tab values (1,2,3);
@@ -39,11 +38,10 @@ explain update constr_tab set b = 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
                            QUERY PLAN                            
 -----------------------------------------------------------------
- Update (slice0; segments: 3)  (rows=1 width=22)
+ Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Settings:  optimizer=on
- Optimizer status: legacy query optimizer
-(4 rows)
+ Optimizer: legacy query optimizer
+(3 rows)
 
 set optimizer_enable_dml_constraints=on;
 explain update constr_tab set b = 10;
@@ -87,14 +85,13 @@ explain update constr_tab set a = 10;
  Update  (cost=0.00..431.09 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=34)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=30)
-               Hash Key: (10)
+               Hash Key: "outer".a
                ->  Result  (cost=0.00..431.00 rows=1 width=30)
                      ->  Split  (cost=0.00..431.00 rows=1 width=30)
                            ->  Result  (cost=0.00..431.00 rows=1 width=30)
                                  ->  Table Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
- Settings:  optimizer=on
- Optimizer status: PQO version 2.7.0
-(10 rows)
+ Optimizer: PQO version 2.55.21
+(9 rows)
 
 -- Test ORCA fallback on "FROM ONLY"
 CREATE TABLE homer (a int, b int, c int)

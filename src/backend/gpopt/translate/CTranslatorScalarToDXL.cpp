@@ -14,12 +14,20 @@
 //---------------------------------------------------------------------------
 
 #include "postgres.h"
+
 #include "nodes/plannodes.h"
 #include "nodes/parsenodes.h"
 #include "nodes/primnodes.h"
 #include "utils/datum.h"
 #include "utils/date.h"
+
+/*
+ * GPDB_91_MERGE_FIXME: This allows us to call numeric_is_nan(). This is probably
+ * a violation of some ORCA coding rule, because we don't do this elsewhere...
+ */
+extern "C" {
 #include "utils/numeric.h"
+}
 
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
@@ -453,7 +461,7 @@ CTranslatorScalarToDXL::PdxlnScNullIfFromExpr
 
 	GPOS_ASSERT(2 == gpdb::UlListLength(pnullifexpr->args));
 
-	CDXLScalarNullIf *pdxlop = GPOS_NEW(m_pmp) CDXLScalarNullIf(m_pmp, GPOS_NEW(m_pmp) CMDIdGPDB(pnullifexpr->opno), GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node *)pnullifexpr)));
+	CDXLScalarNullIf *pdxlop = GPOS_NEW(m_pmp) CDXLScalarNullIf(m_pmp, GPOS_NEW(m_pmp) CMDIdGPDB(pnullifexpr->opno), GPOS_NEW(m_pmp) CMDIdGPDB(pnullifexpr->opresulttype));
 
 	CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode(m_pmp, pdxlop);
 
@@ -2320,7 +2328,9 @@ CTranslatorScalarToDXL::DValue
 	if (pmdid->FEquals(&CMDIdGPDB::m_mdidNumeric))
 	{
 		Numeric num = (Numeric) (pba);
-		if (NUMERIC_IS_NAN(num))
+
+		// NOTE: we assume that numeric_is_nan() cannot throw an error!
+		if (numeric_is_nan(num))
 		{
 			// in GPDB NaN is considered the largest numeric number.
 			return CDouble(GPOS_FP_ABS_MAX);

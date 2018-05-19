@@ -3,12 +3,12 @@
  * postinit.c
  *	  postgres initialization utilities
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.213 2010/07/06 19:18:58 momjian Exp $
+ *	  src/backend/utils/init/postinit.c
  *
  *
  *-------------------------------------------------------------------------
@@ -371,7 +371,7 @@ CheckMyDatabase(const char *name, bool am_superuser)
 					PGC_INTERNAL, PGC_S_OVERRIDE);
 	/* If we have no other source of client_encoding, use server encoding */
 	SetConfigOption("client_encoding", GetDatabaseEncodingName(),
-					PGC_BACKEND, PGC_S_DEFAULT);
+					PGC_BACKEND, PGC_S_DYNAMIC_DEFAULT);
 
 	/* assign locale variables */
 	collate = NameStr(dbform->datcollate);
@@ -673,7 +673,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * transaction or create a snapshot.  Neither are they required to
 	 * respond to a FTS message.
 	 */
-	if (!bootstrap && !(am_ftshandler && am_mirror))
+	if (!bootstrap && !am_mirror)
 	{
 		StartTransactionCommand();
 		(void) GetTransactionSnapshot();
@@ -702,8 +702,9 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 					 errhint("You should immediately run CREATE USER \"%s\" SUPERUSER;.",
 							 username)));
 	}
-	else if (am_ftshandler && am_mirror)
+	else if (am_mirror)
 	{
+		Assert(am_ftshandler);
 		/*
 		 * A mirror must receive and act upon FTS messages.  Performing proper
 		 * authentication involves reading pg_authid.  Heap access is not
@@ -748,7 +749,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("must be superuser to connect in binary upgrade mode")));
+			 errmsg("must be superuser to connect in binary upgrade mode")));
 	}
 
 	/*
@@ -776,21 +777,31 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		check_superuser_connection_limit();
 
 	/*
-	 * If walsender or fts handler, we don't want to connect to any particular
-	 * database. Just finish the backend startup by processing any options from
-	 * the startup packet, and we're done.
+	 * If walsender or fts handler, we don't want to connect to any particular database. Just
+	 * finish the backend startup by processing any options from the startup
+	 * packet, and we're done.
 	 */
 	if (am_walsender || am_ftshandler)
 	{
 		Assert(!bootstrap);
 
 		/*
-		 * We don't have replication role, which existed in postgres.
+		 * must have authenticated as a replication role
+		 *
+		 * In Greenplum, this code path is overloaded for handling FTS messages
+		 * on primary as well as mirror.
+		 * is_authenticated_user_replication_role() performs a syscache lookup,
+		 * which cannot happen on mirror/standby.
 		 */
-		if (!am_superuser)
+		if (am_walsender && !is_authenticated_user_replication_role())
 			ereport(FATAL,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be superuser role to start walsender")));
+					 errmsg("must be replication role to start walsender")));
+
+		if (am_ftshandler && !am_superuser)
+			ereport(FATAL,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("must be superuser role to handle FTS request")));
 
 		/* process any options passed in the startup packet */
 		if (MyProcPort != NULL)
@@ -807,7 +818,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		pgstat_bestart();
 
 		/* close the transaction we started above */
-		if (!(am_ftshandler && am_mirror))
+		if (!am_mirror)
 			CommitTransactionCommand();
 
 		return;
@@ -956,15 +967,12 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		CheckMyDatabase(dbname, am_superuser);
 
 	/*
-	 * Now process any command-line switches that were included in the startup
-	 * packet, if we are in a regular backend.	We couldn't do this before
+	 * Now process any command-line switches and any additional GUC variable
+	 * settings passed in the startup packet.	We couldn't do this before
 	 * because we didn't know if client is a superuser.
 	 */
 	if (MyProcPort != NULL)
 		process_startup_options(MyProcPort, am_superuser);
-
-	/* Process pg_db_role_setting options */
-	process_settings(MyDatabaseId, GetSessionUserId());
 
 	/*
 	 * Maintenance Mode: allow superuser to connect when
@@ -1035,7 +1043,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	{
 		addSharedSnapshot("Query Dispatcher", gp_session_id);
 	}
-    else if (Gp_segment == -1 && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+    else if (IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
     {
 		/* 
 		 * Entry db singleton QE is a user of the shared snapshot -- not a creator.
@@ -1063,8 +1071,6 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	/* close the transaction we started above */
 	if (!bootstrap)
 		CommitTransactionCommand();
-
-	return;
 }
 
 /*
@@ -1078,6 +1084,7 @@ process_startup_options(Port *port, bool am_superuser)
 	ListCell   *gucopts;
 
 	gucctx = am_superuser ? PGC_SUSET : PGC_BACKEND;
+
 	/*
 	 * First process any command-line switches that were included in the
 	 * startup packet, if we are in a regular backend.
@@ -1100,6 +1107,7 @@ process_startup_options(Port *port, bool am_superuser)
 
 		av[ac++] = "postgres";
 
+		/* Note this mangles port->cmdline_options */
 		pg_split_opts(av, &ac, port->cmdline_options);
 
 		av[ac] = NULL;

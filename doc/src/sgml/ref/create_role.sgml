@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_role.sgml,v 1.14 2010/04/03 07:22:58 petere Exp $
+doc/src/sgml/ref/create_role.sgml
 PostgreSQL documentation
 -->
 
@@ -24,7 +24,7 @@ PostgreSQL documentation
 CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replaceable class="PARAMETER">option</replaceable> [ ... ] ]
 
 <phrase>where <replaceable class="PARAMETER">option</replaceable> can be:</phrase>
-    
+
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
@@ -35,15 +35,16 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
            protocol='gpfdist'|'http'|'gphdfs'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | REPLICATION | NOREPLICATION
     | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
-    | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>' 
+    | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
     | IN ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | IN GROUP <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | ADMIN <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
-    | SYSID <replaceable class="PARAMETER">uid</replaceable> 
+    | SYSID <replaceable class="PARAMETER">uid</replaceable>
     | RESOURCE QUEUE queue_name
     | RESOURCE GROUP group_name
 </synopsis>
@@ -176,6 +177,22 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
         <literal>NOLOGIN</literal> is the default, except when
         <command>CREATE ROLE</> is invoked through its alternative spelling
         <command>CREATE USER</>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><literal>REPLICATION</literal></term>
+      <term><literal>NOREPLICATION</literal></term>
+      <listitem>
+       <para>
+        These clauses determine whether a role is allowed to initiate
+        streaming replication or put the system in and out of backup mode.
+        A role having the <literal>REPLICATION</> attribute is a very
+        highly privileged role, and should only be used on roles actually
+        used for replication. If not specified,
+        <literal>NOREPLICATION</literal> is the default for all roles except
+        superusers.
        </para>
       </listitem>
      </varlistentry>
@@ -347,7 +364,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
       </listitem>
      </varlistentry>
     </variablelist>
- </refsect1> 
+ </refsect1>
 
  <refsect1>
   <title>Notes</title>
@@ -463,14 +480,14 @@ CREATE ROLE miriam WITH LOGIN PASSWORD 'jw8s0F4' VALID UNTIL '2005-01-01';
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    Create a role that can create databases and manage roles:
 <programlisting>
 CREATE ROLE admin WITH CREATEDB CREATEROLE;
 </programlisting>
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 
@@ -484,7 +501,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</> [ WITH ADMIN <replaceable cla
    <command>CREATE ROLE</command>, are
    <productname>PostgreSQL</productname> extensions.
   </para>
-  
+
   <para>
    The SQL standard defines the concepts of users and roles, but it
    regards them as distinct concepts and leaves all commands defining

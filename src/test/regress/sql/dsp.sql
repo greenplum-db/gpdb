@@ -164,6 +164,7 @@ select relid::regclass,compresslevel,compresstype,blocksize,checksum,columnstore
 	from pg_appendonly order by 1;
 select attrelid::regclass,attnum,attoptions
 	from pg_attribute_encoding order by 1,2;
+drop database if exists dsp3;
 create database dsp3;
 \c dsp3
 set gp_default_storage_options=
@@ -354,12 +355,14 @@ set gp_default_storage_options='appendonly=true';
 create external table ext_t1 (a int, b int)
     location ('file:///tmp/test.txt') format 'text';
 \d+ ext_t1
+create external table ext_error_logging_off (a int, b int)
+    location ('file:///tmp/test.txt') format 'text'
+    segment reject limit 100;
+\d+ ext_error_logging_off
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     log errors segment reject limit 100;
 \d+ ext_t2
-drop external table ext_t1;
-drop external table ext_t2;
 
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped
@@ -420,9 +423,6 @@ RESET gp_default_storage_options;
 
 -- cleanup
 \c postgres
-drop database dsp1;
-drop database dsp2;
-drop database dsp3;
 
 -- start_matchsubs
 -- m/.*\[ERROR\]*/

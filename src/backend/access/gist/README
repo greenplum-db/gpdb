@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/access/gist/README,v 1.5 2010/04/14 20:17:26 rhaas Exp $
+src/backend/access/gist/README
 
 GiST Indexing
 =============
@@ -20,33 +20,34 @@ The current implementation of GiST supports:
 
   * Variable length keys
   * Composite keys (multi-key)
+  * Ordered search (nearest-neighbor search)
   * provides NULL-safe interface to GiST core
   * Concurrency
   * Recovery support via WAL logging
 
-The support for concurrency implemented in PostgreSQL was developed based on 
-the paper "Access Methods for Next-Generation Database Systems" by 
+The support for concurrency implemented in PostgreSQL was developed based on
+the paper "Access Methods for Next-Generation Database Systems" by
 Marcel Kornaker:
 
     http://www.sai.msu.su/~megera/postgres/gist/papers/concurrency/access-methods-for-next-generation.pdf.gz
 
 The original algorithms were modified in several ways:
 
-* They should be adapted to PostgreSQL conventions. For example, the SEARCH 
-  algorithm was considerably changed, because in PostgreSQL function search 
-  should return one tuple (next), not all tuples at once. Also, it should 
+* They had to be adapted to PostgreSQL conventions. For example, the SEARCH
+  algorithm was considerably changed, because in PostgreSQL the search function
+  should return one tuple (next), not all tuples at once. Also, it should
   release page locks between calls.
-* Since we added support for variable length keys, it's not possible to 
-  guarantee enough free space for all keys on pages after splitting. User 
-  defined function picksplit doesn't have information about size of tuples 
+* Since we added support for variable length keys, it's not possible to
+  guarantee enough free space for all keys on pages after splitting. User
+  defined function picksplit doesn't have information about size of tuples
   (each tuple may contain several keys as in multicolumn index while picksplit
   could work with only one key) and pages.
-* We modified original INSERT algorithm for performance reason. In particular,
+* We modified original INSERT algorithm for performance reasons. In particular,
   it is now a single-pass algorithm.
 * Since the papers were theoretical, some details were omitted and we
-  have to find out ourself how to solve some specific problems.
+  had to find out ourself how to solve some specific problems.
 
-Because of the above reasons, we have to revised interaction of GiST
+Because of the above reasons, we have revised the interaction of GiST
 core and PostgreSQL WAL system. Moreover, we encountered (and solved)
 a problem of uncompleted insertions when recovering after crash, which
 was not touched in the paper.
@@ -54,96 +55,127 @@ was not touched in the paper.
 Search Algorithm
 ----------------
 
-Function gettuple finds a tuple which satisfies the search
-predicate. It store their state and returns next tuple under
-subsequent calls. Stack contains page, its LSN and LSN of parent page
-and currentposition is saved between calls.
+The search code maintains a queue of unvisited items, where an "item" is
+either a heap tuple known to satisfy the search conditions, or an index
+page that is consistent with the search conditions according to inspection
+of its parent page's downlink item.  Initially the root page is searched
+to find unvisited items in it.  Then we pull items from the queue.  A
+heap tuple pointer is just returned immediately; an index page entry
+causes that page to be searched, generating more queue entries.
 
-gettuple(search-pred)
-	if ( firsttime )
-		push(stack, [root, 0, 0]) // page, LSN, parentLSN
-		currentposition=0
-	end
-	ptr = top of stack
-	while(true)
-		latch( ptr->page, S-mode )
-		if ( ptr->page->lsn != ptr->lsn ) 
-			ptr->lsn = ptr->page->lsn
-			currentposition=0
-			if ( ptr->parentlsn < ptr->page->nsn )
-				add to stack rightlink
-		else
-			currentposition++
-		end
+The queue is kept ordered with heap tuple items at the front, then
+index page entries, with any newly-added index page entry inserted
+before existing index page entries.  This ensures depth-first traversal
+of the index, and in particular causes the first few heap tuples to be
+returned as soon as possible.  That is helpful in case there is a LIMIT
+that requires only a few tuples to be produced.
 
-		while(true)
-			currentposition = find_first_match( currentposition )
-			if ( currentposition is invalid )
-				unlatch( ptr->page )
-				pop stack
-				ptr = top of stack
-				if (ptr is NULL)
-					return NULL
-				break loop
-			else if ( ptr->page is leaf )
-				unlatch( ptr->page )
-				return tuple
-			else 
-				add to stack child page
-			end
-			currentposition++
-		end
-	end
+To implement nearest-neighbor search, the queue entries are augmented
+with distance data: heap tuple entries are labeled with exact distance
+from the search argument, while index-page entries must be labeled with
+the minimum distance that any of their children could have.  Then,
+queue entries are retrieved in smallest-distance-first order, with
+entries having identical distances managed as stated in the previous
+paragraph.
+
+The search algorithm keeps an index page locked only long enough to scan
+its entries and queue those that satisfy the search conditions.  Since
+insertions can occur concurrently with searches, it is possible for an
+index child page to be split between the time we make a queue entry for it
+(while visiting its parent page) and the time we actually reach and scan
+the child page.  To avoid missing the entries that were moved to the right
+sibling, we detect whether a split has occurred by comparing the child
+page's NSN to the LSN that the parent had when visited.  If it did, the
+sibling page is immediately added to the front of the queue, ensuring that
+its items will be scanned in the same order as if they were still on the
+original child page.
+
+As is usual in Postgres, the search algorithm only guarantees to find index
+entries that existed before the scan started; index entries added during
+the scan might or might not be visited.  This is okay as long as all
+searches use MVCC snapshot rules to reject heap tuples newer than the time
+of scan start.  In particular, this means that we need not worry about
+cases where a parent page's downlink key is "enlarged" after we look at it.
+Any such enlargement would be to add child items that we aren't interested
+in returning anyway.
 
 
 Insert Algorithm
 ----------------
 
-INSERT guarantees that the GiST tree remains balanced. User defined key method 
-Penalty is used for choosing a subtree to insert; method PickSplit is used for 
-the node splitting algorithm; method Union is used for propagating changes 
+INSERT guarantees that the GiST tree remains balanced. User defined key method
+Penalty is used for choosing a subtree to insert; method PickSplit is used for
+the node splitting algorithm; method Union is used for propagating changes
 upward to maintain the tree properties.
 
-NOTICE: We modified original INSERT algorithm for performance reason. In 
-particularly, it is now a single-pass algorithm.
+To insert a tuple, we first have to find a suitable leaf page to insert to.
+The algorithm walks down the tree, starting from the root, along the path
+of smallest Penalty. At each step:
 
-Function findLeaf is used to identify subtree for insertion. Page, in which 
-insertion is proceeded, is locked as well as its parent page. Functions 
-findParent and findPath are used to find parent pages, which could be changed 
-because of concurrent access. Function pageSplit is recurrent and could split 
-page by more than 2 pages, which could be necessary if keys have different 
-lengths or more than one key are inserted (in such situation, user defined 
-function pickSplit cannot guarantee free space on page).
+1. Has this page been split since we looked at the parent? If so, it's
+possible that we should be inserting to the other half instead, so retreat
+back to the parent.
+2. If this is a leaf node, we've found our target node.
+3. Otherwise use Penalty to pick a new target subtree.
+4. Check the key representing the target subtree. If it doesn't already cover
+the key we're inserting, replace it with the Union of the old downlink key
+and the key being inserted. (Actually, we always call Union, and just skip
+the replacement if the Unioned key is the same as the existing key)
+5. Replacing the key in step 4 might cause the page to be split. In that case,
+propagate the change upwards and restart the algorithm from the first parent
+that didn't need to be split.
+6. Walk down to the target subtree, and goto 1.
 
-findLeaf(new-key)
-	push(stack, [root, 0]) //page, LSN
-	while(true)
-		ptr = top of stack
-		latch( ptr->page, S-mode )
-		ptr->lsn = ptr->page->lsn
-		if ( exists ptr->parent AND ptr->parent->lsn < ptr->page->nsn )
-			unlatch( ptr->page )
-			pop stack
-		else if ( ptr->page is not leaf )
-			push( stack, [get_best_child(ptr->page, new-key), 0] )
-			unlatch( ptr->page )
-		else
-			unlatch( ptr->page )
-			latch( ptr->page, X-mode )
-			if ( ptr->page is not leaf )
-				//the only root page can become a non-leaf
-				unlatch( ptr->page )
-			else if ( ptr->parent->lsn < ptr->page->nsn )
-				unlatch( ptr->page )
-				pop stack
-			else
-				return stack
-			end
-		end
-	end
+This differs from the insertion algorithm in the original paper. In the
+original paper, you first walk down the tree until you reach a leaf page, and
+then you adjust the downlink in the parent, and propagating the adjustment up,
+all the way up to the root in the worst case. But we adjust the downlinks to
+cover the new key already when we walk down, so that when we reach the leaf
+page, we don't need to update the parents anymore, except to insert the
+downlinks if we have to split the page. This makes crash recovery simpler:
+after inserting a key to the page, the tree is immediately self-consistent
+without having to update the parents. Even if we split a page and crash before
+inserting the downlink to the parent, the tree is self-consistent because the
+right half of the split is accessible via the rightlink of the left page
+(which replaced the original page).
+
+Note that the algorithm can walk up and down the tree before reaching a leaf
+page, if internal pages need to split while adjusting the downlinks for the
+new key. Eventually, you should reach the bottom, and proceed with the
+insertion of the new tuple.
+
+Once we've found the target page to insert to, we check if there's room
+for the new tuple. If there is, the tuple is inserted, and we're done.
+If it doesn't fit, however, the page needs to be split. Note that it is
+possible that a page needs to be split into more than two pages, if keys have
+different lengths or more than one key is being inserted at a time (which can
+happen when inserting downlinks for a page split that resulted in more than
+two pages at the lower level). After splitting a page, the parent page needs
+to be updated. The downlink for the new page needs to be inserted, and the
+downlink for the old page, which became the left half of the split, needs to
+be updated to only cover those tuples that stayed on the left page. Inserting
+the downlink in the parent can again lead to a page split, recursing up to the
+root page in the worst case.
+
+gistplacetopage is the workhorse function that performs one step of the
+insertion. If the tuple fits, it inserts it to the given page, otherwise
+it splits the page, and constructs the new downlink tuples for the split
+pages. The caller must then call gistplacetopage() on the parent page to
+insert the downlink tuples. The parent page that holds the downlink to
+the child might have migrated as a result of concurrent splits of the
+parent, gistfindCorrectParent() is used to find the parent page.
+
+Splitting the root page works slightly differently. At root split,
+gistplacetopage() allocates the new child pages and replaces the old root
+page with the new root containing downlinks to the new children, all in one
+operation.
+
+
+findPath is a subroutine of findParent, used when the correct parent page
+can't be found by following the rightlinks at the parent level:
 
 findPath( stack item )
-	push stack, [root, 0, 0] // page, LSN, parent 
+	push stack, [root, 0, 0] // page, LSN, parent
 	while( stack )
 		ptr = top of stack
 		latch( ptr->page, S-mode )
@@ -152,7 +184,7 @@ findPath( stack item )
 		end
 		for( each tuple on page )
 			if ( tuple->pagepointer == item->page )
-				return stack	
+				return stack
 			else
 				add to stack at the end [tuple->pagepointer,0, ptr]
 			end
@@ -160,12 +192,16 @@ findPath( stack item )
 		unlatch( ptr->page )
 		pop stack
 	end
-	
+
+
+gistFindCorrectParent is used to re-find the parent of a page during
+insertion. It might have migrated to the right since we traversed down the
+tree because of page splits.
+
 findParent( stack item )
 	parent = item->parent
-	latch( parent->page, X-mode )
 	if ( parent->page->lsn != parent->lsn )
-		while(true) 
+		while(true)
 			search parent tuple on parent->page, if found the return
 			rightlink = parent->page->rightlink
 			unlatch( parent->page )
@@ -177,8 +213,12 @@ findParent( stack item )
 		end
 		newstack = findPath( item->parent )
 		replace part of stack to new one
+		latch( parent->page, X-mode )
 		return findParent( item )
 	end
+
+pageSplit function decides how to distribute keys to the new pages after
+page split:
 
 pageSplit(page, allkeys)
 	(lkeys, rkeys) = pickSplit( allkeys )
@@ -200,40 +240,45 @@ pageSplit(page, allkeys)
 	return newkeys
 
 
-placetopage(page, keysarray)
-	if ( no space left on page )
-		keysarray = pageSplit(page, [ extract_keys(page), keysarray])
-		last page in chain gets old NSN,
-		original and others - new NSN equals to LSN
-		if ( page is root )
-			make new root with keysarray
-		end
-	else
-		put keysarray on page
-		if ( length of keysarray > 1 )
-			keysarray = [ union(keysarray) ]
-		end
-	end
-	
-insert(new-key)
-	stack = findLeaf(new-key)
-	keysarray = [new-key]
-	ptr = top of stack
-	while(true)
-		findParent( ptr ) //findParent latches parent page
-		keysarray = placetopage(ptr->page, keysarray)
-		unlatch( ptr->page )
-		pop stack;
-		ptr = top of stack
-		if (length of keysarray == 1)
-			newboundingkey = union(oldboundingkey, keysarray)
-			if (newboundingkey == oldboundingkey)
-				unlatch ptr->page
-				break loop
-			end
-		end
-	end
+
+Concurrency control
+-------------------
+As a rule of thumb, if you need to hold a lock on multiple pages at the
+same time, the locks should be acquired in the following order: child page
+before parent, and left-to-right at the same level. Always acquiring the
+locks in the same order avoids deadlocks.
+
+The search algorithm only looks at and locks one page at a time. Consequently
+there's a race condition between a search and a page split. A page split
+happens in two phases: 1. The page is split 2. The downlink is inserted to the
+parent. If a search looks at the parent page between those steps, before the
+downlink is inserted, it will still find the new right half by following the
+rightlink on the left half. But it must not follow the rightlink if it saw the
+downlink in the parent, or the page will be visited twice!
+
+A split initially marks the left page with the F_FOLLOW_RIGHT flag. If a scan
+sees that flag set, it knows that the right page is missing the downlink, and
+should be visited too. When split inserts the downlink to the parent, it
+clears the F_FOLLOW_RIGHT flag in the child, and sets the NSN field in the
+child page header to match the LSN of the insertion on the parent. If the
+F_FOLLOW_RIGHT flag is not set, a scan compares the NSN on the child and the
+LSN it saw in the parent. If NSN < LSN, the scan looked at the parent page
+before the downlink was inserted, so it should follow the rightlink. Otherwise
+the scan saw the downlink in the parent page, and will/did follow that as
+usual.
+
+A scan can't normally see a page with the F_FOLLOW_RIGHT flag set, because
+a page split keeps the child pages locked until the downlink has been inserted
+to the parent and the flag cleared again. But if a crash happens in the middle
+of a page split, before the downlinks are inserted into the parent, that will
+leave a page with F_FOLLOW_RIGHT in the tree. Scans handle that just fine,
+but we'll eventually want to fix that for performance reasons. And more
+importantly, dealing with pages with missing downlink pointers in the parent
+would complicate the insertion algorithm. So when an insertion sees a page
+with F_FOLLOW_RIGHT set, it immediately tries to bring the split that
+crashed in the middle to completion by adding the downlink in the parent.
+
 
 Authors:
 	Teodor Sigaev	<teodor@sigaev.ru>
-	Oleg Bartunov   <oleg@sai.msu.su>
+	Oleg Bartunov	<oleg@sai.msu.su>

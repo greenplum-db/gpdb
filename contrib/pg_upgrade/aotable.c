@@ -14,12 +14,12 @@
  * on the query.
  */
 static void
-executeLargeCommandOrDie(migratorContext *ctx, PGconn *conn, const char *command)
+executeLargeCommandOrDie(PGconn *conn, const char *command)
 {
 	PGresult   *result;
 	ExecStatusType status;
 
-	pg_log(ctx, PG_DEBUG, "executing: %s\n", command);
+	pg_log(PG_DEBUG, "executing: %s\n", command);
 	result = PQexec(conn, command);
 	status = PQresultStatus(result);
 
@@ -30,12 +30,14 @@ executeLargeCommandOrDie(migratorContext *ctx, PGconn *conn, const char *command
 		 * pg_log truncates it. We don't want the error message to be truncated
 		 * even if that happens.
 		 */
-		pg_log(ctx, PG_REPORT, "DB command failed\n%s\n%s\n", command);
-		pg_log(ctx, PG_REPORT, "libpq error was: %s\n",
+		pg_log(PG_REPORT, "DB command failed\n%s\n%s\n", command);
+		pg_log(PG_REPORT, "libpq error was: %s\n",
 			   PQerrorMessage(conn));
 		PQclear(result);
 		PQfinish(conn);
-		exit_nicely(ctx, true);
+
+		printf("Failure, exiting\n");
+		exit(1);
 	}
 
 	PQclear(result);
@@ -46,7 +48,7 @@ executeLargeCommandOrDie(migratorContext *ctx, PGconn *conn, const char *command
  * map tables (pg_ao{cs}seg_<oid>), for one AO relation.
  */
 static void
-restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
+restore_aosegment_table(PGconn *conn, RelInfo *rel)
 {
 	PQExpBuffer query;
 	int			i;
@@ -88,7 +90,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 
 			vpinfo_escaped = PQescapeLiteral(conn, seg->vpinfo, strlen(seg->vpinfo));
 			if (vpinfo_escaped == NULL)
-				pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
+				pg_log(PG_FATAL, "%s: out of memory\n", os_info.progname);
 
 			appendPQExpBuffer(query,
 							  "INSERT INTO pg_aoseg.pg_aocsseg_%u (segno, tupcount, varblockcount, vpinfo, modcount, formatversion, state) "
@@ -106,7 +108,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 			segno = seg->segno;
 		}
 
-		executeLargeCommandOrDie(ctx, conn, query->data);
+		executeLargeCommandOrDie(conn, query->data);
 	}
 
 	/* Restore the entries in the AO visimap table. */
@@ -119,7 +121,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 
 		visimap_escaped = PQescapeLiteral(conn, seg->visimap, strlen(seg->visimap));
 		if (visimap_escaped == NULL)
-			pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
+			pg_log(PG_FATAL, "%s: out of memory\n", os_info.progname);
 
 		appendPQExpBuffer(query,
 						  "INSERT INTO pg_aoseg.pg_aovisimap_%u (segno, first_row_no, visimap) "
@@ -130,7 +132,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 						  visimap_escaped);
 		PQfreemem(visimap_escaped);
 
-		executeLargeCommandOrDie(ctx, conn, query->data);
+		executeLargeCommandOrDie(conn, query->data);
 	}
 
 	/* Restore the entries in the AO blkdir table. */
@@ -143,7 +145,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 
 		minipage_escaped = PQescapeLiteral(conn, seg->minipage, strlen(seg->minipage));
 		if (minipage_escaped == NULL)
-			pg_log(ctx, PG_FATAL, "%s: out of memory\n", ctx->progname);
+			pg_log(PG_FATAL, "%s: out of memory\n", os_info.progname);
 
 		appendPQExpBuffer(query,
 						  "INSERT INTO pg_aoseg.pg_aoblkdir_%u (segno, columngroup_no, first_row_no, minipage) "
@@ -154,45 +156,44 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 						  seg->first_row_no,
 						  minipage_escaped);
 
-		executeLargeCommandOrDie(ctx, conn, query->data);
+		executeLargeCommandOrDie(conn, query->data);
 	}
 
 	destroyPQExpBuffer(query);
 }
 
 void
-restore_aosegment_tables(migratorContext *ctx)
+restore_aosegment_tables(void)
 {
 	int			dbnum;
 
-	prep_status(ctx, "Restoring append-only auxiliary tables in new cluster");
+	prep_status("Restoring append-only auxiliary tables in new cluster");
 
 	/*
 	 * Rebuilding AO auxiliary tables can potentially take some time in a large
 	 * cluster so swap out the current progress file before starting so that
 	 * the user can see what's going on.
 	 */
-	report_progress(ctx, CLUSTER_NEW, FIXUP, "Rebuilding AO auxiliary tables");
-	close_progress(ctx);
+	report_progress(&new_cluster, FIXUP, "Rebuilding AO auxiliary tables");
+	close_progress();
 
-	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, olddb->db_name, CLUSTER_NEW);
+		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&new_cluster, olddb->db_name);
 		int			relnum;
 
 		/*
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(ctx, conn,
-								  "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
 
 		for (relnum = 0; relnum < olddb->rel_arr.nrels; relnum++)
-			restore_aosegment_table(ctx, conn, &olddb->rel_arr.rels[relnum]);
+			restore_aosegment_table(conn, &olddb->rel_arr.rels[relnum]);
 
 		PQfinish(conn);
 	}
 
-	check_ok(ctx);
+	check_ok();
 }

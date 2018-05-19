@@ -51,7 +51,7 @@ WHERE (p1.typtype = 'c' AND p1.typrelid = 0) OR
     (p1.typtype != 'c' AND p1.typrelid != 0);
 
 -- Look for basic or enum types that don't have an array type.
--- NOTE: as of 8.0, this check finds smgr and unknown.
+-- NOTE: as of 9.1, this check finds pg_node_tree, smgr, and unknown.
 
 SELECT p1.oid, p1.typname
 FROM pg_type as p1
@@ -61,7 +61,7 @@ WHERE p1.typtype in ('b','e') AND p1.typname NOT LIKE E'\\_%' AND NOT EXISTS
            p2.typelem = p1.oid and p1.typarray = p2.oid);
 
 -- Make sure typarray points to a varlena array type of our own base
-SELECT p1.oid, p1.typname as basetype, p2.typname as arraytype, 
+SELECT p1.oid, p1.typname as basetype, p2.typname as arraytype,
        p2.typelem, p2.typlen
 FROM   pg_type p1 LEFT JOIN pg_type p2 ON (p1.typarray = p2.oid)
 WHERE  p1.typarray <> 0 AND
@@ -235,7 +235,7 @@ WHERE p1.typanalyze = p2.oid AND p1.typtype in ('b', 'p') AND NOT
 
 SELECT p1.oid, p1.relname
 FROM pg_class as p1
-WHERE p1.relkind NOT IN ('r', 'i', 's', 'S', 'c', 't', 'v');
+WHERE p1.relkind NOT IN ('r', 'i', 's', 'S', 'c', 't', 'v', 'f');
 
 -- Indexes should have an access method, others not.
 

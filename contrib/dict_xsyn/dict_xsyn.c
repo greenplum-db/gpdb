@@ -3,10 +3,10 @@
  * dict_xsyn.c
  *	  Extended synonym dictionary
  *
- * Copyright (c) 2007-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/dict_xsyn/dict_xsyn.c,v 1.9 2010/02/26 02:00:32 momjian Exp $
+ *	  contrib/dict_xsyn/dict_xsyn.c
  *
  *-------------------------------------------------------------------------
  */

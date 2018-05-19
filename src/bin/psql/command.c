@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
  * src/bin/psql/command.c
  */
@@ -57,11 +57,12 @@ static backslashResult exec_command(const char *cmd,
 			 PsqlScanState scan_state,
 			 PQExpBuffer query_buf);
 static bool do_edit(const char *filename_arg, PQExpBuffer query_buf,
-		bool *edited);
+		int lineno, bool *edited);
 static bool do_connect(char *dbname, char *user, char *host, char *port);
 static bool do_shell(const char *command);
 static bool lookup_function_oid(PGconn *conn, const char *desc, Oid *foid);
 static bool get_create_function_cmd(PGconn *conn, Oid oid, PQExpBuffer buf);
+static int	strip_lineno_from_funcdesc(char *func);
 static void minimal_error_message(PGresult *res);
 
 static void printSSLInfo(void);
@@ -301,7 +302,7 @@ exec_command(const char *cmd,
 		char	   *host = PQhost(pset.db);
 
 		if (db == NULL)
-			printf(_("You are not connected.\n"));
+			printf(_("You are currently not connected to a database.\n"));
 		else
 		{
 			if (host == NULL)
@@ -415,11 +416,17 @@ exec_command(const char *cmd,
 			case 'l':
 				success = do_lo_list();
 				break;
+			case 'L':
+				success = listLanguages(pattern, show_verbose, show_system);
+				break;
 			case 'n':
-				success = listSchemas(pattern, show_verbose);
+				success = listSchemas(pattern, show_verbose, show_system);
 				break;
 			case 'o':
 				success = describeOperators(pattern, show_system);
+				break;
+			case 'O':
+				success = listCollations(pattern, show_verbose, show_system);
 				break;
 			case 'p':
 				success = permissionsList(pattern);
@@ -485,6 +492,9 @@ exec_command(const char *cmd,
 					case 'w':
 						success = listForeignDataWrappers(pattern, show_verbose);
 						break;
+					case 't':
+						success = listForeignTables(pattern, show_verbose);
+						break;
 					default:
 						status = PSQL_CMD_UNKNOWN;
 						break;
@@ -519,17 +529,51 @@ exec_command(const char *cmd,
 		else
 		{
 			char	   *fname;
+			char	   *ln = NULL;
+			int			lineno = -1;
 
 			fname = psql_scan_slash_option(scan_state,
 										   OT_NORMAL, NULL, true);
-			expand_tilde(&fname);
 			if (fname)
-				canonicalize_path(fname);
-			if (do_edit(fname, query_buf, NULL))
-				status = PSQL_CMD_NEWEDIT;
-			else
-				status = PSQL_CMD_ERROR;
-			free(fname);
+			{
+				/* try to get separate lineno arg */
+				ln = psql_scan_slash_option(scan_state,
+											OT_NORMAL, NULL, true);
+				if (ln == NULL)
+				{
+					/* only one arg; maybe it is lineno not fname */
+					if (fname[0] &&
+						strspn(fname, "0123456789") == strlen(fname))
+					{
+						/* all digits, so assume it is lineno */
+						ln = fname;
+						fname = NULL;
+					}
+				}
+			}
+			if (ln)
+			{
+				lineno = atoi(ln);
+				if (lineno < 1)
+				{
+					psql_error("invalid line number: %s\n", ln);
+					status = PSQL_CMD_ERROR;
+				}
+			}
+			if (status != PSQL_CMD_ERROR)
+			{
+				expand_tilde(&fname);
+				if (fname)
+					canonicalize_path(fname);
+				if (do_edit(fname, query_buf, lineno, NULL))
+					status = PSQL_CMD_NEWEDIT;
+				else
+					status = PSQL_CMD_ERROR;
+			}
+			if (fname)
+				free(fname);
+			if (ln)
+				free(ln);
 		}
 	}
 
@@ -539,6 +583,8 @@ exec_command(const char *cmd,
 	 */
 	else if (strcmp(cmd, "ef") == 0)
 	{
+		int			lineno = -1;
+
 		if (pset.sversion < 80400)
 		{
 			psql_error("The server (version %d.%d) does not support editing function source.\n",
@@ -557,7 +603,13 @@ exec_command(const char *cmd,
 
 			func = psql_scan_slash_option(scan_state,
 										  OT_WHOLE_LINE, NULL, true);
-			if (!func)
+			lineno = strip_lineno_from_funcdesc(func);
+			if (lineno == 0)
+			{
+				/* error already reported */
+				status = PSQL_CMD_ERROR;
+			}
+			else if (!func)
 			{
 				/* set up an empty command to fill in */
 				printfPQExpBuffer(query_buf,
@@ -578,6 +630,32 @@ exec_command(const char *cmd,
 				/* error already reported */
 				status = PSQL_CMD_ERROR;
 			}
+			else if (lineno > 0)
+			{
+				/*
+				 * lineno "1" should correspond to the first line of the
+				 * function body.  We expect that pg_get_functiondef() will
+				 * emit that on a line beginning with "AS ", and that there
+				 * can be no such line before the real start of the function
+				 * body.  Increment lineno by the number of lines before that
+				 * line, so that it becomes relative to the first line of the
+				 * function definition.
+				 */
+				const char *lines = query_buf->data;
+
+				while (*lines != '\0')
+				{
+					if (strncmp(lines, "AS ", 3) == 0)
+						break;
+					lineno++;
+					/* find start of next line */
+					lines = strchr(lines, '\n');
+					if (!lines)
+						break;
+					lines++;
+				}
+			}
+
 			if (func)
 				free(func);
 		}
@@ -586,7 +664,7 @@ exec_command(const char *cmd,
 		{
 			bool		edited = false;
 
-			if (!do_edit(0, query_buf, &edited))
+			if (!do_edit(NULL, query_buf, lineno, &edited))
 				status = PSQL_CMD_ERROR;
 			else if (!edited)
 				puts(_("No changes"));
@@ -1040,6 +1118,121 @@ exec_command(const char *cmd,
 		free(opt0);
 	}
 
+	/* \sf -- show a function's source code */
+	else if (strcmp(cmd, "sf") == 0 || strcmp(cmd, "sf+") == 0)
+	{
+		bool		show_linenumbers = (strcmp(cmd, "sf+") == 0);
+		PQExpBuffer func_buf;
+		char	   *func;
+		Oid			foid = InvalidOid;
+
+		func_buf = createPQExpBuffer();
+		func = psql_scan_slash_option(scan_state,
+									  OT_WHOLE_LINE, NULL, true);
+		if (!func)
+		{
+			psql_error("function name is required\n");
+			status = PSQL_CMD_ERROR;
+		}
+		else if (!lookup_function_oid(pset.db, func, &foid))
+		{
+			/* error already reported */
+			status = PSQL_CMD_ERROR;
+		}
+		else if (!get_create_function_cmd(pset.db, foid, func_buf))
+		{
+			/* error already reported */
+			status = PSQL_CMD_ERROR;
+		}
+		else
+		{
+			FILE	   *output;
+			bool		is_pager;
+
+			/* Select output stream: stdout, pager, or file */
+			if (pset.queryFout == stdout)
+			{
+				/* count lines in function to see if pager is needed */
+				int			lineno = 0;
+				const char *lines = func_buf->data;
+
+				while (*lines != '\0')
+				{
+					lineno++;
+					/* find start of next line */
+					lines = strchr(lines, '\n');
+					if (!lines)
+						break;
+					lines++;
+				}
+
+				output = PageOutput(lineno, pset.popt.topt.pager);
+				is_pager = true;
+			}
+			else
+			{
+				/* use previously set output file, without pager */
+				output = pset.queryFout;
+				is_pager = false;
+			}
+
+			if (show_linenumbers)
+			{
+				bool		in_header = true;
+				int			lineno = 0;
+				char	   *lines = func_buf->data;
+
+				/*
+				 * lineno "1" should correspond to the first line of the
+				 * function body.  We expect that pg_get_functiondef() will
+				 * emit that on a line beginning with "AS ", and that there
+				 * can be no such line before the real start of the function
+				 * body.
+				 *
+				 * Note that this loop scribbles on func_buf.
+				 */
+				while (*lines != '\0')
+				{
+					char	   *eol;
+
+					if (in_header && strncmp(lines, "AS ", 3) == 0)
+						in_header = false;
+					/* increment lineno only for body's lines */
+					if (!in_header)
+						lineno++;
+
+					/* find and mark end of current line */
+					eol = strchr(lines, '\n');
+					if (eol != NULL)
+						*eol = '\0';
+
+					/* show current line as appropriate */
+					if (in_header)
+						fprintf(output, "        %s\n", lines);
+					else
+						fprintf(output, "%-7d %s\n", lineno, lines);
+
+					/* advance to next line, if any */
+					if (eol == NULL)
+						break;
+					lines = ++eol;
+				}
+			}
+			else
+			{
+				/* just send the function definition to output */
+				fputs(func_buf->data, output);
+			}
+
+			if (is_pager)
+				ClosePager(output);
+		}
+
+		if (func)
+			free(func);
+		destroyPQExpBuffer(func_buf);
+	}
+
 	/* \t -- turn off headers and row count */
 	else if (strcmp(cmd, "t") == 0)
 	{
@@ -1049,7 +1242,6 @@ exec_command(const char *cmd,
 		success = do_pset("tuples_only", opt, &pset.popt, pset.quiet);
 		free(opt);
 	}
-
 
 	/* \T -- define html <table ...> attributes */
 	else if (strcmp(cmd, "T") == 0)
@@ -1314,7 +1506,7 @@ do_connect(char *dbname, char *user, char *host, char *port)
 
 	while (true)
 	{
-#define PARAMS_ARRAY_SIZE	7
+#define PARAMS_ARRAY_SIZE	8
 		const char **keywords = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*keywords));
 		const char **values = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*values));
 
@@ -1330,8 +1522,10 @@ do_connect(char *dbname, char *user, char *host, char *port)
 		values[4] = dbname;
 		keywords[5] = "fallback_application_name";
 		values[5] = pset.progname;
-		keywords[6] = NULL;
-		values[6] = NULL;
+		keywords[6] = "client_encoding";
+		values[6] = (pset.notty || getenv("PGCLIENTENCODING")) ? NULL : "auto";
+		keywords[7] = NULL;
+		values[7] = NULL;
 
 		n_conn = PQconnectdbParams(keywords, values, true);
 
@@ -1398,7 +1592,7 @@ do_connect(char *dbname, char *user, char *host, char *port)
 		if (param_is_newly_set(PQhost(o_conn), PQhost(pset.db)) ||
 			param_is_newly_set(PQport(o_conn), PQport(pset.db)))
 		{
-			char	*host = PQhost(pset.db);
+			char	   *host = PQhost(pset.db);
 
 			if (host == NULL)
 				host = DEFAULT_PGSOCKET_DIR;
@@ -1569,11 +1763,11 @@ UnsyncVariables(void)
  * If you do not specify a filename, the current query buffer will be copied
  * into a temporary one.
  */
-
 static bool
-editFile(const char *fname)
+editFile(const char *fname, int lineno)
 {
 	const char *editorName;
+	const char *editor_lineno_switch = NULL;
 	char	   *sys;
 	int			result;
 
@@ -1588,6 +1782,26 @@ editFile(const char *fname)
 	if (!editorName)
 		editorName = DEFAULT_EDITOR;
 
+	/* Get line number switch, if we need it. */
+	if (lineno > 0)
+	{
+		editor_lineno_switch = GetVariable(pset.vars,
+										   "EDITOR_LINENUMBER_SWITCH");
+		if (editor_lineno_switch == NULL)
+		{
+			psql_error("EDITOR_LINENUMBER_SWITCH variable must be set to specify a line number\n");
+			return false;
+		}
+	}
+
+	/* Allocate sufficient memory for command line. */
+	if (lineno > 0)
+		sys = pg_malloc(strlen(editorName)
+						+ strlen(editor_lineno_switch) + 10		/* for integer */
+						+ 1 + strlen(fname) + 10 + 1);
+	else
+		sys = pg_malloc(strlen(editorName) + strlen(fname) + 10 + 1);
+
 	/*
 	 * On Unix the EDITOR value should *not* be quoted, since it might include
 	 * switches, eg, EDITOR="pico -t"; it's up to the user to put quotes in it
@@ -1595,11 +1809,20 @@ editFile(const char *fname)
 	 * severe brain damage in their command shell plus the fact that standard
 	 * program paths include spaces.
 	 */
-	sys = pg_malloc(strlen(editorName) + strlen(fname) + 10 + 1);
 #ifndef WIN32
-	sprintf(sys, "exec %s '%s'", editorName, fname);
+	if (lineno > 0)
+		sprintf(sys, "exec %s %s%d '%s'",
+				editorName, editor_lineno_switch, lineno, fname);
+	else
+		sprintf(sys, "exec %s '%s'",
+				editorName, fname);
 #else
-	sprintf(sys, SYSTEMQUOTE "\"%s\" \"%s\"" SYSTEMQUOTE, editorName, fname);
+	if (lineno > 0)
+		sprintf(sys, SYSTEMQUOTE "\"%s\" %s%d \"%s\"" SYSTEMQUOTE,
+				editorName, editor_lineno_switch, lineno, fname);
+	else
+		sprintf(sys, SYSTEMQUOTE "\"%s\" \"%s\"" SYSTEMQUOTE,
+				editorName, fname);
 #endif
 	result = system(sys);
 	if (result == -1)
@@ -1614,7 +1837,8 @@ editFile(const char *fname)
 
 /* call this one */
 static bool
-do_edit(const char *filename_arg, PQExpBuffer query_buf, bool *edited)
+do_edit(const char *filename_arg, PQExpBuffer query_buf,
+		int lineno, bool *edited)
 {
 	char		fnametmp[MAXPGPATH];
 	FILE	   *stream = NULL;
@@ -1706,7 +1930,7 @@ do_edit(const char *filename_arg, PQExpBuffer query_buf, bool *edited)
 
 	/* call editor */
 	if (!error)
-		error = !editFile(fname);
+		error = !editFile(fname, lineno);
 
 	if (!error && stat(fname, &after) != 0)
 	{
@@ -1827,7 +2051,8 @@ process_file(char *filename, bool single_txn)
 
 error:
 	if (fd != stdin)
-	fclose(fd);
+		fclose(fd);
+
 	pset.inputfile = oldfilename;
 	return result;
 }
@@ -2240,6 +2465,69 @@ get_create_function_cmd(PGconn *conn, Oid oid, PQExpBuffer buf)
 	destroyPQExpBuffer(query);
 
 	return result;
+}
+
+/*
+ * If the given argument of \ef ends with a line number, delete the line
+ * number from the argument string and return it as an integer.  (We need
+ * this kluge because we're too lazy to parse \ef's function name argument
+ * carefully --- we just slop it up in OT_WHOLE_LINE mode.)
+ *
+ * Returns -1 if no line number is present, 0 on error, or a positive value
+ * on success.
+ */
+static int
+strip_lineno_from_funcdesc(char *func)
+{
+	char	   *c;
+	int			lineno;
+
+	if (!func || func[0] == '\0')
+		return -1;
+
+	c = func + strlen(func) - 1;
+
+	/*
+	 * This business of parsing backwards is dangerous as can be in a
+	 * multibyte environment: there is no reason to believe that we are
+	 * looking at the first byte of a character, nor are we necessarily
+	 * working in a "safe" encoding.  Fortunately the bitpatterns we are
+	 * looking for are unlikely to occur as non-first bytes, but beware of
+	 * trying to expand the set of cases that can be recognized.  We must
+	 * guard the <ctype.h> macros by using isascii() first, too.
+	 */
+
+	/* skip trailing whitespace */
+	while (c > func && isascii((unsigned char) *c) && isspace((unsigned char) *c))
+		c--;
+
+	/* must have a digit as last non-space char */
+	if (c == func || !isascii((unsigned char) *c) || !isdigit((unsigned char) *c))
+		return -1;
+
+	/* find start of digit string */
+	while (c > func && isascii((unsigned char) *c) && isdigit((unsigned char) *c))
+		c--;
+
+	/* digits must be separated from func name by space or closing paren */
+	/* notice also that we are not allowing an empty func name ... */
+	if (c == func || !isascii((unsigned char) *c) ||
+		!(isspace((unsigned char) *c) || *c == ')'))
+		return -1;
+
+	/* parse digit string */
+	c++;
+	lineno = atoi(c);
+	if (lineno < 1)
+	{
+		psql_error("invalid line number: %s\n", c);
+		return 0;
+	}
+
+	/* strip digit string from func */
+	*c = '\0';
+
+	return lineno;
 }
 
 /*

@@ -3,12 +3,12 @@
  * aclchk.c
  *	  Routines to check access control permissions.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/aclchk.c,v 1.168 2010/07/06 19:18:55 momjian Exp $
+ *	  src/backend/catalog/aclchk.c
  *
  * NOTES
  *	  See acl.h.
@@ -26,6 +26,7 @@
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_default_acl.h"
@@ -46,7 +47,9 @@
 #include "catalog/pg_ts_config.h"
 #include "catalog/pg_ts_dict.h"
 #include "commands/dbcommands.h"
+#include "commands/proclang.h"
 #include "commands/tablecmds.h"
+#include "commands/tablespace.h"
 #include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -511,7 +514,7 @@ ExecuteGrantStmt(GrantStmt *stmt)
 		else
 			istmt.grantees =
 				lappend_oid(istmt.grantees,
-							get_roleid_checked(grantee->rolname));
+							get_role_oid(grantee->rolname, false));
 	}
 
 	/*
@@ -764,18 +767,10 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 			foreach(cell, objnames)
 			{
 				char	   *langname = strVal(lfirst(cell));
-				HeapTuple	tuple;
+				Oid			oid;
 
-				tuple = SearchSysCache1(LANGNAME, PointerGetDatum(langname));
-				if (!HeapTupleIsValid(tuple))
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-							 errmsg("language \"%s\" does not exist",
-									langname)));
-
-				objects = lappend_oid(objects, HeapTupleGetOid(tuple));
-
-				ReleaseSysCache(tuple);
+				oid = get_language_oid(langname, false);
+				objects = lappend_oid(objects, oid);
 			}
 			break;
 		case ACL_OBJECT_LARGEOBJECT:
@@ -802,56 +797,27 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 			foreach(cell, objnames)
 			{
 				char	   *nspname = strVal(lfirst(cell));
-				HeapTuple	tuple;
+				Oid			oid;
 
-				tuple = SearchSysCache1(NAMESPACENAME,
-										CStringGetDatum(nspname));
-				if (!HeapTupleIsValid(tuple))
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_SCHEMA),
-							 errmsg("schema \"%s\" does not exist",
-									nspname)));
-
-				objects = lappend_oid(objects, HeapTupleGetOid(tuple));
-
-				ReleaseSysCache(tuple);
+				oid = get_namespace_oid(nspname, false);
+				objects = lappend_oid(objects, oid);
 			}
 			break;
 		case ACL_OBJECT_TABLESPACE:
 			foreach(cell, objnames)
 			{
 				char	   *spcname = strVal(lfirst(cell));
-				ScanKeyData entry[1];
-				HeapScanDesc scan;
-				HeapTuple	tuple;
-				Relation	relation;
+				Oid			spcoid;
 
-				relation = heap_open(TableSpaceRelationId, AccessShareLock);
-
-				ScanKeyInit(&entry[0],
-							Anum_pg_tablespace_spcname,
-							BTEqualStrategyNumber, F_NAMEEQ,
-							CStringGetDatum(spcname));
-
-				scan = heap_beginscan(relation, SnapshotNow, 1, entry);
-				tuple = heap_getnext(scan, ForwardScanDirection);
-				if (!HeapTupleIsValid(tuple))
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-					   errmsg("tablespace \"%s\" does not exist", spcname)));
-
-				objects = lappend_oid(objects, HeapTupleGetOid(tuple));
-
-				heap_endscan(scan);
-
-				heap_close(relation, AccessShareLock);
+				spcoid = get_tablespace_oid(spcname, false);
+				objects = lappend_oid(objects, spcoid);
 			}
 			break;
 		case ACL_OBJECT_FDW:
 			foreach(cell, objnames)
 			{
 				char	   *fdwname = strVal(lfirst(cell));
-				Oid			fdwid = GetForeignDataWrapperOidByName(fdwname, false);
+				Oid			fdwid = get_foreign_data_wrapper_oid(fdwname, false);
 
 				objects = lappend_oid(objects, fdwid);
 			}
@@ -860,7 +826,7 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 			foreach(cell, objnames)
 			{
 				char	   *srvname = strVal(lfirst(cell));
-				Oid			srvid = GetForeignServerOidByName(srvname, false);
+				Oid			srvid = get_foreign_server_oid(srvname, false);
 
 				objects = lappend_oid(objects, srvid);
 			}
@@ -906,10 +872,12 @@ objectsInSchemaToOids(GrantObjectType objtype, List *nspnames)
 		switch (objtype)
 		{
 			case ACL_OBJECT_RELATION:
-				/* Process both regular tables and views */
+				/* Process regular tables, views and foreign tables */
 				objs = getRelationsInNamespace(namespaceId, RELKIND_RELATION);
 				objects = list_concat(objects, objs);
 				objs = getRelationsInNamespace(namespaceId, RELKIND_VIEW);
+				objects = list_concat(objects, objs);
+				objs = getRelationsInNamespace(namespaceId, RELKIND_FOREIGN_TABLE);
 				objects = list_concat(objects, objs);
 				break;
 			case ACL_OBJECT_SEQUENCE:
@@ -1061,7 +1029,7 @@ ExecAlterDefaultPrivilegesStmt(AlterDefaultPrivilegesStmt *stmt)
 		else
 			iacls.grantees =
 				lappend_oid(iacls.grantees,
-							get_roleid_checked(grantee->rolname));
+							get_role_oid(grantee->rolname, false));
 	}
 
 	/*
@@ -1144,7 +1112,7 @@ ExecAlterDefaultPrivilegesStmt(AlterDefaultPrivilegesStmt *stmt)
 		{
 			char	   *rolename = strVal(lfirst(rolecell));
 
-			iacls.roleid = get_roleid_checked(rolename);
+			iacls.roleid = get_role_oid(rolename, false);
 
 			/*
 			 * We insist that calling user be a member of each target role. If
@@ -1195,18 +1163,12 @@ SetDefaultACLsInSchemas(InternalDefaultACL *iacls, List *nspnames)
 			AclResult	aclresult;
 
 			/*
-			 * Normally we'd use LookupCreationNamespace here, but it's
-			 * important to do the permissions check against the target role
-			 * not the calling user, so write it out in full.  We require
-			 * CREATE privileges, since without CREATE you won't be able to do
-			 * anything using the default privs anyway.
+			 * Note that we must do the permissions check against the target
+			 * role not the calling user.  We require CREATE privileges, since
+			 * without CREATE you won't be able to do anything using the
+			 * default privs anyway.
 			 */
-			iacls->nspid = GetSysCacheOid1(NAMESPACENAME,
-										   CStringGetDatum(nspname));
-			if (!OidIsValid(iacls->nspid))
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_SCHEMA),
-						 errmsg("schema \"%s\" does not exist", nspname)));
+			iacls->nspid = get_namespace_oid(nspname, false);
 
 			aclresult = pg_namespace_aclcheck(iacls->nspid, iacls->roleid,
 											  ACL_CREATE);
@@ -1490,7 +1452,7 @@ RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid)
 			case DEFACLOBJ_RELATION:
 				iacls.objtype = ACL_OBJECT_RELATION;
 				break;
-			case ACL_OBJECT_SEQUENCE:
+			case DEFACLOBJ_SEQUENCE:
 				iacls.objtype = ACL_OBJECT_SEQUENCE;
 				break;
 			case DEFACLOBJ_FUNCTION:
@@ -1543,6 +1505,12 @@ RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid)
 				break;
 			case TableSpaceRelationId:
 				istmt.objtype = ACL_OBJECT_TABLESPACE;
+				break;
+			case ForeignServerRelationId:
+				istmt.objtype = ACL_OBJECT_FOREIGN_SERVER;
+				break;
+			case ForeignDataWrapperRelationId:
+				istmt.objtype = ACL_OBJECT_FDW;
 				break;
 			default:
 				elog(ERROR, "unexpected object class %u", classid);
@@ -1887,7 +1855,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 					 errmsg("\"%s\" is not a sequence",
 							NameStr(pg_class_tuple->relname))));
 
-		/* Adjust the default permissions based on whether it is a sequence */
+		/* Adjust the default permissions based on object type */
 		if (istmt->all_privs && istmt->privileges == ACL_NO_RIGHTS)
 		{
 			if (pg_class_tuple->relkind == RELKIND_SEQUENCE)
@@ -1979,9 +1947,15 @@ ExecGrant_Relation(InternalGrant *istmt)
 								   &isNull);
 		if (isNull)
 		{
-			old_acl = acldefault(pg_class_tuple->relkind == RELKIND_SEQUENCE ?
-								 ACL_OBJECT_SEQUENCE : ACL_OBJECT_RELATION,
-								 ownerId);
+			switch (pg_class_tuple->relkind)
+			{
+				case RELKIND_SEQUENCE:
+					old_acl = acldefault(ACL_OBJECT_SEQUENCE, ownerId);
+					break;
+				default:
+					old_acl = acldefault(ACL_OBJECT_RELATION, ownerId);
+					break;
+			}
 			/* There are no old member roles according to the catalogs */
 			noldmembers = 0;
 			oldmembers = NULL;
@@ -2010,11 +1984,22 @@ ExecGrant_Relation(InternalGrant *istmt)
 			bool		replaces[Natts_pg_class];
 			int			nnewmembers;
 			Oid		   *newmembers;
+			AclObjectKind aclkind;
 
 			/* Determine ID to do the grant as, and available grant options */
 			select_best_grantor(GetUserId(), this_privileges,
 								old_acl, ownerId,
 								&grantorId, &avail_goptions);
+
+			switch (pg_class_tuple->relkind)
+			{
+				case RELKIND_SEQUENCE:
+					aclkind = ACL_KIND_SEQUENCE;
+					break;
+				default:
+					aclkind = ACL_KIND_CLASS;
+					break;
+			}
 
 			/*
 			 * Restrict the privileges to what we can actually grant, and emit
@@ -2023,9 +2008,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 			this_privileges =
 				restrict_and_check_grant(istmt->is_grant, avail_goptions,
 										 istmt->all_privs, this_privileges,
-										 relOid, grantorId,
- 								  pg_class_tuple->relkind == RELKIND_SEQUENCE
-										 ? ACL_KIND_SEQUENCE : ACL_KIND_CLASS,
+										 relOid, grantorId, aclkind,
 										 NameStr(pg_class_tuple->relname),
 										 0, NULL);
 
@@ -3647,6 +3630,8 @@ static const char *const no_priv_msg[MAX_ACL_KIND] =
 	gettext_noop("permission denied for operator class %s"),
 	/* ACL_KIND_OPFAMILY */
 	gettext_noop("permission denied for operator family %s"),
+	/* ACL_KIND_COLLATION */
+	gettext_noop("permission denied for collation %s"),
 	/* ACL_KIND_CONVERSION */
 	gettext_noop("permission denied for conversion %s"),
 	/* ACL_KIND_TABLESPACE */
@@ -3659,6 +3644,8 @@ static const char *const no_priv_msg[MAX_ACL_KIND] =
 	gettext_noop("permission denied for foreign-data wrapper %s"),
 	/* ACL_KIND_FOREIGN_SERVER */
 	gettext_noop("permission denied for foreign server %s"),
+	/* ACL_KIND_EXTENSION */
+	gettext_noop("permission denied for extension %s"),
 	/* ACL_KIND_EXTPROTOCOL */
 	gettext_noop("permission denied for external protocol %s")	
 };
@@ -3689,6 +3676,8 @@ static const char *const not_owner_msg[MAX_ACL_KIND] =
 	gettext_noop("must be owner of operator class %s"),
 	/* ACL_KIND_OPFAMILY */
 	gettext_noop("must be owner of operator family %s"),
+	/* ACL_KIND_COLLATION */
+	gettext_noop("must be owner of collation %s"),
 	/* ACL_KIND_CONVERSION */
 	gettext_noop("must be owner of conversion %s"),
 	/* ACL_KIND_TABLESPACE */
@@ -3701,6 +3690,8 @@ static const char *const not_owner_msg[MAX_ACL_KIND] =
 	gettext_noop("must be owner of foreign-data wrapper %s"),
 	/* ACL_KIND_FOREIGN_SERVER */
 	gettext_noop("must be owner of foreign server %s"),
+	/* ACL_KIND_EXTENSION */
+	gettext_noop("must be owner of extension %s"),
 	/* ACL_KIND_EXTPROTOCOL */
 	gettext_noop("must be owner of external protocol %s")
 };
@@ -3996,9 +3987,15 @@ pg_class_aclmask(Oid table_oid, Oid roleid,
 	if (isNull)
 	{
 		/* No ACL, so build default ACL */
-		acl = acldefault(classForm->relkind == RELKIND_SEQUENCE ?
-						 ACL_OBJECT_SEQUENCE : ACL_OBJECT_RELATION,
-						 ownerId);
+		switch (classForm->relkind)
+		{
+			case RELKIND_SEQUENCE:
+				acl = acldefault(ACL_OBJECT_SEQUENCE, ownerId);
+				break;
+			default:
+				acl = acldefault(ACL_OBJECT_RELATION, ownerId);
+				break;
+		}
 		aclDatum = (Datum) 0;
 	}
 	else
@@ -5182,6 +5179,33 @@ pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid)
 }
 
 /*
+ * Ownership check for a foreign-data wrapper (specified by OID).
+ */
+bool
+pg_foreign_data_wrapper_ownercheck(Oid srv_oid, Oid roleid)
+{
+	HeapTuple	tuple;
+	Oid			ownerId;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	tuple = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(srv_oid));
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("foreign-data wrapper with OID %u does not exist",
+						srv_oid)));
+
+	ownerId = ((Form_pg_foreign_data_wrapper) GETSTRUCT(tuple))->fdwowner;
+
+	ReleaseSysCache(tuple);
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
+/*
  * Ownership check for a foreign server (specified by OID).
  */
 bool
@@ -5235,6 +5259,32 @@ pg_database_ownercheck(Oid db_oid, Oid roleid)
 }
 
 /*
+ * Ownership check for a collation (specified by OID).
+ */
+bool
+pg_collation_ownercheck(Oid coll_oid, Oid roleid)
+{
+	HeapTuple	tuple;
+	Oid			ownerId;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	tuple = SearchSysCache1(COLLOID, ObjectIdGetDatum(coll_oid));
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("collation with OID %u does not exist", coll_oid)));
+
+	ownerId = ((Form_pg_collation) GETSTRUCT(tuple))->collowner;
+
+	ReleaseSysCache(tuple);
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
+/*
  * Ownership check for a conversion (specified by OID).
  */
 bool
@@ -5261,7 +5311,7 @@ pg_conversion_ownercheck(Oid conv_oid, Oid roleid)
 }
 
 /*
- * Ownership check for a extension (specified by OID).
+ * Ownership check for an extension (specified by OID).
  */
 bool
 pg_extension_ownercheck(Oid ext_oid, Oid roleid)
@@ -5292,7 +5342,7 @@ pg_extension_ownercheck(Oid ext_oid, Oid roleid)
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("extension with OID %u does not exist", ext_oid)));
+				 errmsg("extension with OID %u does not exist", ext_oid)));
 
 	ownerId = ((Form_pg_extension) GETSTRUCT(tuple))->extowner;
 

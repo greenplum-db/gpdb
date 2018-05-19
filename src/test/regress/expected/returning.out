@@ -311,8 +311,8 @@ CREATE RULE joinview_u AS ON UPDATE TO joinview DO INSTEAD
     RETURNING foo.*, other;
 ERROR:  column "f2j" does not exist
 UPDATE joinview SET f1 = f1 + 1 WHERE f3 = 57 RETURNING *, other + 1;
-ERROR:  cannot update a view
-HINT:  You need an unconditional ON UPDATE DO INSTEAD rule.
+ERROR:  cannot change view "joinview"
+HINT:  changing views is not supported in Greenplum
 SELECT * FROM joinview;
  f1 |  f2  | f3 | f4  | other 
 ----+------+----+-----+-------

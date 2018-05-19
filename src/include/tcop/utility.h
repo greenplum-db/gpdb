@@ -4,10 +4,10 @@
  *	  prototypes for utility.c.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/tcop/utility.h,v 1.40 2010/02/26 02:01:28 momjian Exp $
+ * src/include/tcop/utility.h
  *
  *-------------------------------------------------------------------------
  */

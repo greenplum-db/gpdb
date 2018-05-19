@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/contrib/pg_upgrade/IMPLEMENTATION,v 1.3 2010/07/03 14:23:13 momjian Exp $
+contrib/pg_upgrade/IMPLEMENTATION
 
 ------------------------------------------------------------------------------
 PG_UPGRADE: IN-PLACE UPGRADES FOR POSTGRESQL
@@ -13,7 +13,7 @@ old data. If you have a lot of data, that can take a considerable amount
 of time. If you have too much data, you may have to buy more storage
 since you need enough room to hold the original data plus the exported
 data.  pg_upgrade can reduce the amount of time and disk space required
-for many upgrades.  
+for many upgrades.
 
 The URL http://momjian.us/main/writings/pgsql/pg_upgrade.pdf contains a
 presentation about pg_upgrade internals that mirrors the text

@@ -3,12 +3,12 @@
  * conversioncmds.c
  *	  conversion creation command support code
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/conversioncmds.c,v 1.41 2010/02/14 18:42:14 rhaas Exp $
+ *	  src/backend/commands/conversioncmds.c
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_conversion_fn.h"
+#include "catalog/pg_namespace.h"
 #include "catalog/pg_type.h"
 #include "commands/alter.h"
 #include "commands/conversioncmds.h"
@@ -161,20 +162,10 @@ DropConversionsCommand(DropStmt *drop)
 
 		if (!OidIsValid(conversionOid))
 		{
-			if (!drop->missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("conversion \"%s\" does not exist",
-								NameListToString(name))));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE,
-							(errmsg("conversion \"%s\" does not exist, skipping",
-									NameListToString(name))));
-			}
+			if (Gp_role != GP_ROLE_EXECUTE)
+				ereport(NOTICE,
+					(errmsg("conversion \"%s\" does not exist, skipping",
+							NameListToString(name))));
 			continue;
 		}
 

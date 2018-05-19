@@ -2,10 +2,10 @@
  * dbsize.c
  *		Database object size functions, and related inquiries
  *
- * Copyright (c) 2002-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/dbsize.c,v 1.31 2010/02/26 02:01:07 momjian Exp $
+ *	  src/backend/utils/adt/dbsize.c
  *
  */
 
@@ -394,7 +394,7 @@ calculate_relation_size(Relation rel, ForkNumber forknum)
 	char		pathname[MAXPGPATH];
 	unsigned int segcount = 0;
 
-	relationpath = relpath(rel->rd_node, forknum);
+	relationpath = relpathbackend(rel->rd_node, rel->rd_backend, forknum);
 
 if (RelationIsHeap(rel))
 {
@@ -458,7 +458,7 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	 * It does not work on entry db since we do not support dispatching
 	 * from entry-db currently.
 	 */
-	if (Gp_role == GP_ROLE_EXECUTE && Gp_segment == -1)
+	if (Gp_role == GP_ROLE_EXECUTE && IS_QUERY_DISPATCHER())
 		elog(ERROR, "This query is not currently supported by GPDB.");
 
 	rel = try_relation_open(relOid, AccessShareLock, false);
@@ -570,7 +570,7 @@ calculate_table_size(Oid relOid)
 	if (OidIsValid(rel->rd_rel->reltoastrelid))
 		size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
 
-	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		Assert(OidIsValid(rel->rd_appendonly->segrelid));
 		size += calculate_total_relation_size(rel->rd_appendonly->segrelid);
@@ -832,6 +832,7 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	Form_pg_class relform;
 	RelFileNode rnode;
+	BackendId	backend;
 	char	   *path;
 
 	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
@@ -866,15 +867,44 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
 		default:
 			/* no storage, return NULL */
 			rnode.relNode = InvalidOid;
+			/* some compilers generate warnings without these next two lines */
+			rnode.dbNode = InvalidOid;
+			rnode.spcNode = InvalidOid;
+			break;
+	}
+
+	if (!OidIsValid(rnode.relNode))
+	{
+		ReleaseSysCache(tuple);
+		PG_RETURN_NULL();
+	}
+
+	/* Determine owning backend. */
+	switch (relform->relpersistence)
+	{
+		case RELPERSISTENCE_UNLOGGED:
+		case RELPERSISTENCE_PERMANENT:
+			backend = InvalidBackendId;
+			break;
+		case RELPERSISTENCE_TEMP:
+			if (isTempOrToastNamespace(relform->relnamespace))
+				backend = MyBackendId;
+			else
+			{
+				/* Do it the hard way. */
+				backend = GetTempNamespaceBackendId(relform->relnamespace);
+				Assert(backend != InvalidBackendId);
+			}
+			break;
+		default:
+			elog(ERROR, "invalid relpersistence: %c", relform->relpersistence);
+			backend = InvalidBackendId; /* placate compiler */
 			break;
 	}
 
 	ReleaseSysCache(tuple);
 
-	if (!OidIsValid(rnode.relNode))
-		PG_RETURN_NULL();
-
-	path = relpath(rnode, MAIN_FORKNUM);
+	path = relpathbackend(rnode, backend, MAIN_FORKNUM);
 
 	PG_RETURN_TEXT_P(cstring_to_text(path));
 }

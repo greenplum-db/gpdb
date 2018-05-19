@@ -30,11 +30,11 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/combocid.c,v 1.7 2010/01/02 16:57:58 momjian Exp $
+ *	  src/backend/utils/time/combocid.c
  *
  *-------------------------------------------------------------------------
  */
@@ -239,7 +239,7 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 
 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
 	{
-		if (Gp_segment == -1)
+		if (IS_QUERY_DISPATCHER())
 			elog(ERROR, "EntryReader qExec tried to allocate a Combo Command Id");
 		else
 			elog(ERROR, "Reader qExec tried to allocate a Combo Command Id");

@@ -1,8 +1,8 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2007-2010, PostgreSQL Global Development Group
+# Copyright (c) 2007-2011, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/backend/utils/mb/Unicode/UCS_to_SHIFT_JIS_2004.pl,v 1.4 2010/01/02 16:57:56 momjian Exp $
+# src/backend/utils/mb/Unicode/UCS_to_SHIFT_JIS_2004.pl
 #
 # Generate UTF-8 <--> SHIFT_JIS_2004 code conversion tables from
 # "sjis-0213-2004-std.txt" (http://x0213.org)
@@ -43,7 +43,7 @@ while($line = <FILE> ){
 	} else {
 		next;
 	}
-	
+
 	$ucs = hex($u);
 	$code = hex($c);
 	$utf = &ucs2utf($ucs);
@@ -71,7 +71,7 @@ for $index ( sort {$a <=> $b} keys( %array ) ){
 	if( $count == 0 ){
 		printf FILE "  {0x%08x, 0x%06x}	/* %s */\n", $index, $code, $comment{ $code };
 	} else {
-		printf FILE "  {0x%08x, 0x%06x},	/* %s */\n", $index, $code, $comment{ $code }; 
+		printf FILE "  {0x%08x, 0x%06x},	/* %s */\n", $index, $code, $comment{ $code };
 	}
 }
 
@@ -132,7 +132,7 @@ while($line = <FILE> ){
 	} else {
 		next;
 	}
-	
+
 	$ucs = hex($u);
 	$code = hex($c);
 	$utf = &ucs2utf($ucs);
@@ -161,7 +161,7 @@ for $index ( sort {$a <=> $b} keys( %array ) ){
 	if( $count == 0 ){
 		printf FILE "  {0x%04x, 0x%08x}	/* %s */\n", $index, $code, $comment{ $code };
 	} else {
-		printf FILE "  {0x%04x, 0x%08x},	/* %s */\n", $index, $code, $comment{ $code }; 
+		printf FILE "  {0x%04x, 0x%08x},	/* %s */\n", $index, $code, $comment{ $code };
 	}
 }
 

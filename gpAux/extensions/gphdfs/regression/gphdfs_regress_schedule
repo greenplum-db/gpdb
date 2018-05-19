@@ -46,3 +46,5 @@ test: varchar_ExtwriteToHdfsToExtread
 test: varchar_hdfsTextToGPDB
 #test: MPP16780
 test: int_ExtreadwriteParquet
+#test: MPP29330
+test: optional_ExtreadParquet

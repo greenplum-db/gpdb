@@ -104,7 +104,7 @@ static int
 			constrNodeMatch(const void *keyPtr1, const void *keyPtr2, Size keysize);
 
 static void parruleord_open_gap(Oid partid, int2 level, Oid parent,
-					int2 ruleord, int stopkey, bool closegap);
+					int2 ruleord, int2 stopkey, bool closegap);
 static bool has_external_partition(List *rules);
 
 /*
@@ -169,7 +169,6 @@ static Oid selectPartition1(PartitionNode *partnode, Datum *values, bool *isnull
 				 PartitionNode **ppn_out);
 static int atpxPart_validate_spec(
 					   PartitionBy *pBy,
-					   CreateStmtContext *pcxt,
 					   Relation rel,
 					   CreateStmt *ct,
 					   PartitionElem *pelem,
@@ -224,7 +223,7 @@ rel_is_default_partition(Oid relid)
 	 * entry database, we accept calls from QEs running a segment, but return
 	 * false.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
@@ -270,7 +269,7 @@ rel_is_partitioned(Oid relid)
 	 * entry database, we accept calls from QEs running a segment, but return
 	 * false.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
@@ -512,7 +511,7 @@ rel_has_appendonly_partition(Oid relid)
 
 		heap_close(rel, NoLock);
 
-		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		if (RelationIsAppendOptimized(rel))
 		{
 			return true;
 		}
@@ -545,7 +544,7 @@ rel_is_child_partition(Oid relid)
 	 * entry database, are some unguarded calles that may come from segments,
 	 * so we return false, even though we don't actually know.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return false;
 
 	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
@@ -1487,7 +1486,7 @@ get_part_oid(Oid rootrelid, int16 parlevel, bool istemplate)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrel = heap_open(PartitionRelationId, AccessShareLock);
 	ScanKeyInit(&scankey[0], Anum_pg_partition_parrelid,
@@ -1938,13 +1937,23 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
  */
 static void
 parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
-					int stopkey, bool closegap)
+					int2 stopkey, bool closegap)
 {
 	Relation	rel;
 	Relation	irel;
 	HeapTuple	tuple;
 	ScanKeyData scankey[3];
 	IndexScanDesc sd;
+
+	/*
+	 * Ensure that ruleord argument did not wrap around due to int2
+	 * typecast. We check if ruleord is less than 1 to also ensure that 0
+	 * (default partition) is not given as an argument.
+	 */
+	if (ruleord < 1)
+		ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			errmsg("too many partitions, parruleord overflow")));
 
 	/*---
 	 * This is equivalent to:
@@ -1971,10 +1980,10 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 	ScanKeyInit(&scankey[2], 3,
 				BTLessEqualStrategyNumber, F_INT2LE,
 				Int16GetDatum(ruleord));
-	sd = index_beginscan(rel, irel, SnapshotNow, 3, scankey);
+	sd = index_beginscan(rel, irel, SnapshotNow, 3, 0);
+	index_rescan(sd, scankey, 3, NULL, 0);
 	while (HeapTupleIsValid(tuple = index_getnext(sd, BackwardScanDirection)))
 	{
-		int			old_ruleord;
 		Form_pg_partition_rule rule_desc;
 
 		Insist(HeapTupleIsValid(tuple));
@@ -1984,16 +1993,15 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 		rule_desc =
 			(Form_pg_partition_rule) GETSTRUCT(tuple);
 
-		old_ruleord = rule_desc->parruleord;
+		if (rule_desc->parruleord < stopkey)
+			break;
+
 		closegap ? rule_desc->parruleord-- : rule_desc->parruleord++;
 
 		simple_heap_update(rel, &tuple->t_self, tuple);
 		CatalogUpdateIndexes(rel, tuple);
 
 		heap_freetuple(tuple);
-
-		if (old_ruleord <= stopkey)
-			break;
 	}
 	index_endscan(sd);
 	heap_close(irel, RowExclusiveLock);
@@ -2200,7 +2208,7 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	 * but always return NULL; so our result is only meaningful on the entry
 	 * database.
 	 */
-	if (Gp_segment != -1)
+	if (!IS_QUERY_DISPATCHER())
 		return pnode;
 
 	/*
@@ -2338,7 +2346,7 @@ get_partition_key_bitmapset(Oid relid)
 	 * Reject calls from QEs running on a segment database, since pg_partition
 	 * and  pg_partition_rule are populated only on the entry database.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	/*
 	 * select paratts from pg_partition where parrelid = :relid and not
@@ -3207,7 +3215,7 @@ rel_partition_get_master(Oid relid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
@@ -3261,7 +3269,7 @@ rel_get_part_path1(Oid relid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so our result is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
@@ -3773,7 +3781,7 @@ compare_partn_opfuncid(PartitionNode *partnode,
 			}
 
 			opfuncid = get_opfuncid_by_opname(opname, lhsid, rhsid);
-			res = OidFunctionCall2(opfuncid, c->constvalue, d);
+			res = OidFunctionCall2Coll(opfuncid, c->constcollid, c->constvalue, d);
 
 			if (!DatumGetBool(res))
 				return false;
@@ -3923,7 +3931,7 @@ selectListPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					}
 
 					finfo = &(ls->eqfuncs[i]);
-					res = FunctionCall2(finfo, d, c->constvalue);
+					res = FunctionCall2Coll(finfo, c->constcollid, d, c->constvalue);
 
 					if (!DatumGetBool(res))
 					{
@@ -4101,7 +4109,7 @@ range_test(Datum tupval, Oid ruleTypeOid, Oid exprTypeOid, PartitionRangeState *
 		 * strictly_less = true)
 		 */
 		finfo = get_less_than_comparator(keyno, rs, ruleTypeOid, exprTypeOid, !rule->parrangestartincl /* strictly_less */ , false /* is_direct */ );
-		res = FunctionCall2(finfo, c->constvalue, tupval);
+		res = FunctionCall2Coll(finfo, c->constcollid, c->constvalue, tupval);
 
 		if (!DatumGetBool(res))
 			return -1;
@@ -4123,7 +4131,7 @@ range_test(Datum tupval, Oid ruleTypeOid, Oid exprTypeOid, PartitionRangeState *
 		 * strictly_less = true)
 		 */
 		finfo = get_less_than_comparator(keyno, rs, ruleTypeOid, exprTypeOid, !rule->parrangeendincl /* strictly_less */ , true /* is_direct */ );
-		res = FunctionCall2(finfo, tupval, c->constvalue);
+		res = FunctionCall2Coll(finfo, c->constcollid, tupval, c->constvalue);
 
 		if (!DatumGetBool(res))
 		{
@@ -5095,9 +5103,7 @@ apply_template_storage_encodings(CreateStmt *ct, Oid relid, Oid paroid,
  */
 
 static int
-atpxPart_validate_spec(
-					   PartitionBy *pBy,
-					   CreateStmtContext *pcxt,
+atpxPart_validate_spec(PartitionBy *pBy,
 					   Relation rel,
 					   CreateStmt *ct,
 					   PartitionElem *pelem,
@@ -5108,7 +5114,6 @@ atpxPart_validate_spec(
 					   char *partDesc)
 {
 	PartitionSpec *spec = makeNode(PartitionSpec);
-	ParseState *pstate = NULL;
 	List	   *schema = NIL;
 	List	   *inheritOids;
 	List	   *old_constraints;
@@ -5124,10 +5129,9 @@ atpxPart_validate_spec(
 												get_namespace_name(
 																   RelationGetNamespace(rel)),
 												pstrdup(RelationGetRelationName(rel)), -1)),
-						false, true /* isPartitioned */ ,
+						RELPERSISTENCE_PERMANENT, /* GPDB_91_MERGE_FIXME: what if it's unlogged or temp? Where to get a proper value for this? */
+						true /* isPartitioned */ ,
 						&inheritOids, &old_constraints, &parentOidCount, NULL);
-
-	pcxt->columns = schema;
 
 	spec->partElem = list_make1(pelem);
 
@@ -5424,9 +5428,15 @@ atpxPart_validate_spec(
 		}						/* end while */
 	}
 
-	pstate = make_parsestate(NULL);
-	result = validate_partition_spec(pstate, pcxt, ct, pBy, "", -1);
-	free_parsestate(pstate);
+	CreateStmtContext cxt;
+
+	MemSet(&cxt, 0, sizeof(cxt));
+
+	cxt.pstate = make_parsestate(NULL);
+	cxt.columns = schema;
+
+	result = validate_partition_spec(&cxt, ct, pBy, "", -1);
+	free_parsestate(cxt.pstate);
 
 	return result;
 }								/* end atpxPart_validate_spec */
@@ -5456,7 +5466,6 @@ atpxPartAddList(Relation rel,
 	NewPosition newPos = MIDDLE;
 	bool		bOpenGap = false;
 	PartitionBy *pBy;
-	CreateStmtContext cxt;
 	Node	   *pSubSpec = NULL;	/* return the subpartition spec */
 	Relation	par_rel = rel;
 	PartitionNode pNodebuf;
@@ -5467,8 +5476,6 @@ atpxPartAddList(Relation rel,
 	if (par_prule && par_prule->topRule)
 		par_rel =
 			heap_open(par_prule->topRule->parchildrelid, AccessShareLock);
-
-	MemSet(&cxt, 0, sizeof(cxt));
 
 	Assert((PARTTYP_LIST == part_type) || (PARTTYP_RANGE == part_type));
 
@@ -6609,7 +6616,7 @@ atpxPartAddList(Relation rel,
 		ct->distributedBy = (Node *)make_dist_clause(rel);
 
 	/* this function does transformExpr on the boundary specs */
-	(void) atpxPart_validate_spec(pBy, &cxt, rel, ct, pelem, pNode, partName,
+	(void) atpxPart_validate_spec(pBy, rel, ct, pelem, pNode, partName,
 								  isDefault, part_type, "");
 
 	if (pelem && pelem->boundSpec)
@@ -6674,9 +6681,11 @@ atpxPartAddList(Relation rel,
 		}
 	}
 
-	if (maxpartno < 0)
+	if (maxpartno < 0 || maxpartno > PG_INT16_MAX)
 	{
-		elog(ERROR, "too many partitions, parruleord overflow");
+		ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			errmsg("too many partitions, parruleord overflow")));
 	}
 
 	if (newPos == FIRST && pNode && list_length(pNode->rules) > 0)
@@ -7103,7 +7112,7 @@ exchange_part_rule(Oid oldrelid, Oid newrelid)
 	 * pg_partition and  pg_partition_rule are populated only on the entry
 	 * database, so a call to this function is only meaningful there.
 	 */
-	Insist(Gp_segment == -1);
+	Insist(IS_QUERY_DISPATCHER());
 
 	catalogRelation = heap_open(PartitionRuleRelationId, RowExclusiveLock);
 
@@ -7227,9 +7236,6 @@ atpxModifyListOverlap(Relation rel,
 		PartitionValuesSpec *pVSpec;
 		AlterPartitionId pid2;
 		PartitionNode *pNode = prule->pNode;
-		CreateStmtContext cxt;
-
-		MemSet(&cxt, 0, sizeof(cxt));
 
 		Assert(IsA(pelem->boundSpec, PartitionValuesSpec));
 
@@ -7237,7 +7243,6 @@ atpxModifyListOverlap(Relation rel,
 
 		/* this function does transformExpr on the boundary specs */
 		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  &cxt,
 									  rel,
 									  NULL, /* CreateStmt */
 									  pelem,
@@ -7743,13 +7748,8 @@ atpxModifyRangeOverlap(Relation rel,
 						prule2->partIdStr : "")));
 
 	{
-		CreateStmtContext cxt;
-
-		MemSet(&cxt, 0, sizeof(cxt));
-
 		/* this function does transformExpr on the boundary specs */
 		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  &cxt,
 									  rel,
 									  NULL, /* CreateStmt */
 									  pelem,
@@ -8408,6 +8408,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  con->contype,
 									  con->condeferrable,
 									  con->condeferred,
+									  con->convalidated,
 									  RelationGetRelid(cand),
 									  keys,
 									  nkeys,
@@ -8460,6 +8461,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  con->contype,
 									  con->condeferrable,
 									  con->condeferred,
+									  con->convalidated,
 									  RelationGetRelid(cand),
 									  keys,
 									  nkeys,

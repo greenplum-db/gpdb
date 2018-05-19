@@ -1763,37 +1763,29 @@ GRANT SELECT ON gp_toolkit.gp_resqueue_status TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_resgroup_config AS
-    SELECT
-        G.oid        AS groupid,
-        G.rsgname    AS groupname,
-        G.memauditor AS memauditor,
-        T1.value     AS concurrency,
-        T1.proposed  AS proposed_concurrency,
-        T2.value     AS cpu_rate_limit,
-        T3.value     AS memory_limit,
-        T3.proposed  AS proposed_memory_limit,
-        T4.value     AS memory_shared_quota,
-        T4.proposed  AS proposed_memory_shared_quota,
-        T5.value     AS memory_spill_ratio,
-        T5.proposed  AS proposed_memory_spill_ratio
-    FROM
-        pg_resgroup G,
-        pg_resgroupcapability T1,
-        pg_resgroupcapability T2,
-        pg_resgroupcapability T3,
-        pg_resgroupcapability T4,
-        pg_resgroupcapability T5
-    WHERE
-        G.oid = T1.resgroupid
-    AND G.oid = T2.resgroupid
-    AND G.oid = T3.resgroupid
-    AND G.oid = T4.resgroupid
-    AND G.oid = T5.resgroupid
-    AND T1.reslimittype = 1
-    AND T2.reslimittype = 2
-    AND T3.reslimittype = 3
-    AND T4.reslimittype = 4
-    AND T5.reslimittype = 5
+    SELECT G.oid       AS groupid
+         , G.rsgname   AS groupname
+         , T1.value    AS concurrency
+         , T1.proposed AS proposed_concurrency
+         , T2.value    AS cpu_rate_limit
+         , T3.value    AS memory_limit
+         , T3.proposed AS proposed_memory_limit
+         , T4.value    AS memory_shared_quota
+         , T4.proposed AS proposed_memory_shared_quota
+         , T5.value    AS memory_spill_ratio
+         , T5.proposed AS proposed_memory_spill_ratio
+         , CASE WHEN T6.value IS NULL THEN 'vmtracker'
+                WHEN T6.value='0'     THEN 'vmtracker'
+                WHEN T6.value='1'     THEN 'cgroup'
+                ELSE 'unknown'
+           END         AS memory_auditor
+    FROM pg_resgroup G
+         JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1
+         JOIN pg_resgroupcapability T2 ON G.oid = T2.resgroupid AND T2.reslimittype = 2
+         JOIN pg_resgroupcapability T3 ON G.oid = T3.resgroupid AND T3.reslimittype = 3
+         JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
+         JOIN pg_resgroupcapability T5 ON G.oid = T5.resgroupid AND T5.reslimittype = 5
+    LEFT JOIN pg_resgroupcapability T6 ON G.oid = T6.resgroupid AND T6.reslimittype = 6
     ;
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;

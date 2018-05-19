@@ -1,6 +1,0 @@
--- start_matchsubs
--- m/psql:/
--- s/psql:.+\//psql:\/PATH1\//
--- m/WARNING:  column \"\?column\?\" has type \"unknown\"/
--- s/psql:.+:?/WARNING:  column \"\?column\?\" has type \"unknown\"/
--- end_matchsubs

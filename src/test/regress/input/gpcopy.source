@@ -280,10 +280,14 @@ COPY copy_regression_text3 from stdin with delimiter '|';
 the at sign: \100|6|c text data|d text data|e text data
 a single backslash \\ in col a|8|c text data|d text data|e text data
 \.
+-- This works in PostgreSQL, and these days in GPDB as well, but used to not
+-- work until GPDB 6. This is just one line, because the newlines are
+-- escaped. (Even on PostgreSQL, the COPY documentation recommends not to do
+-- this, but let's test it.)
 COPY copy_regression_text3 from stdin with delimiter '|';
-an embedded linefeed is not supported\
-and another one that should fail\
-in column a|7|c text data|d text data|e text data
+an embedded linefeed \
+and another one\
+ in column a|7|c text data|d text data|e text data
 \.
 COPY copy_regression_text3 from stdin with delimiter '|';
 an embedded linefeed sequence\nin column a|7|c text data|d text data|e text data
@@ -675,16 +679,19 @@ COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on se
 SELECT * FROM segment_reject_limit_from;
 
 -- STDIN is not support by copy from on segment and copy program
-COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
-COPY segment_reject_limit_from from PROGRAM STDIN log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from from STDIN on segment;
+COPY segment_reject_limit_from from PROGRAM STDIN;
 SELECT * FROM segment_reject_limit_from;
 
 -- STDOUT is not support by copy to on segment and copy program
-COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
-COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from to STDOUT on segment;
+COPY segment_reject_limit_from to PROGRAM STDOUT;
 
 -- 'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'
 COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
+
+-- SREH is not supported by COPY TO.
+COPY segment_reject_limit_from to STDOUT log errors segment reject limit 3 rows;
 
 -- \copy from doesn't support on segment
 --on segment lower case
@@ -966,6 +973,7 @@ COPY COPY_ON_SEGMENT_CHECK_DISTKEY to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY0.csv' 
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 
 CREATE TABLE COPY_ON_SEGMENT_CHECK_TOW_DSITKEY(a int,b int)DISTRIBUTED BY(a,b);
@@ -995,6 +1003,7 @@ set gp_vmem_idle_resource_timeout=1;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
 
@@ -1074,6 +1083,7 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_ID\n<SEGID>"' on segment;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_I\n<SEGID>"' on segment;
+ALTER TABLE COPY_FROM_PROGRAM_ERROR SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 
 -- Test that xlog records are generated for COPY in the same transaction as

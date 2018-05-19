@@ -5,10 +5,10 @@
  *	Lately it's also being used by psql and bin/scripts/ ...
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/dumputils.c,v 1.56 2010/03/03 20:10:48 heikki Exp $
+ * src/bin/pg_dump/dumputils.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,9 @@
 #include "dumputils.h"
 
 #include "parser/keywords.h"
+
+
+int			quote_all_identifiers = 0;
 
 
 #define supports_grant_options(version) ((version) >= 70400)
@@ -102,8 +105,10 @@ fmtId(const char *rawid)
 	 * These checks need to match the identifier production in scan.l. Don't
 	 * use islower() etc.
 	 */
+	if (quote_all_identifiers)
+		need_quotes = true;
 	/* slightly different rules for first character */
-	if (!((rawid[0] >= 'a' && rawid[0] <= 'z') || (rawid[0] == '_')))
+	else if (!((rawid[0] >= 'a' && rawid[0] <= 'z') || rawid[0] == '_'))
 		need_quotes = true;
 	else
 	{
@@ -865,6 +870,8 @@ do { \
 		CONVERT_PRIV('U', "USAGE");
 	else if (strcmp(type, "FOREIGN SERVER") == 0)
 		CONVERT_PRIV('U', "USAGE");
+	else if (strcmp(type, "FOREIGN TABLE") == 0)
+		CONVERT_PRIV('r', "SELECT");
 	else if (strcmp(type, "LARGE OBJECT") == 0)
 	{
 		CONVERT_PRIV('r', "SELECT");

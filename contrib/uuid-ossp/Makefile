@@ -1,9 +1,10 @@
-# $PostgreSQL: pgsql/contrib/uuid-ossp/Makefile,v 1.4 2007/11/13 00:13:19 tgl Exp $
+# contrib/uuid-ossp/Makefile
 
 MODULE_big = uuid-ossp
 OBJS = uuid-ossp.o
-DATA_built = uuid-ossp.sql
-DATA = uninstall_uuid-ossp.sql
+
+EXTENSION = uuid-ossp
+DATA = uuid-ossp--1.0.sql uuid-ossp--unpackaged--1.0.sql
 
 SHLIB_LINK += $(OSSP_UUID_LIBS)
 

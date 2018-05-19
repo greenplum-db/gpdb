@@ -3,12 +3,12 @@
  * pg_type.c
  *	  routines to support manipulation of the pg_type relation
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.133 2010/02/26 02:00:37 momjian Exp $
+ *	  src/backend/catalog/pg_type.c
  *
  *-------------------------------------------------------------------------
  */
@@ -18,7 +18,9 @@
 #include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -147,6 +149,7 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typbasetype */
 	values[i++] = Int32GetDatum(-1);	/* typtypmod */
 	values[i++] = Int32GetDatum(0);		/* typndims */
+	values[i++] = ObjectIdGetDatum(InvalidOid); /* typcollation */
 	nulls[i++] = true;			/* typdefaultbin */
 	nulls[i++] = true;			/* typdefault */
 
@@ -181,8 +184,12 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 								 InvalidOid,
 								 false,
 								 InvalidOid,
+								 InvalidOid,
 								 NULL,
 								 false);
+
+	/* Post creation hook for new shell type */
+	InvokeObjectAccessHook(OAT_POST_CREATE, TypeRelationId, typoid, 0);
 
 	/*
 	 * clean up and return the type-oid
@@ -234,6 +241,7 @@ TypeCreateWithOptions(Oid newTypeOid,
 		   int32 typeMod,
 		   int32 typNDims,		/* Array dimensions for baseType */
 		   bool typeNotNull,
+		   Oid typeCollation,
 		   Datum typoptions)
 {
 	Relation	pg_type_desc;
@@ -372,6 +380,7 @@ TypeCreateWithOptions(Oid newTypeOid,
 	values[i++] = ObjectIdGetDatum(baseType);	/* typbasetype */
 	values[i++] = Int32GetDatum(typeMod);		/* typtypmod */
 	values[i++] = Int32GetDatum(typNDims);		/* typndims */
+	values[i++] = ObjectIdGetDatum(typeCollation);		/* typcollation */
 
 	/*
 	 * initialize the default binary value for this type.  Check for nulls of
@@ -476,10 +485,14 @@ TypeCreateWithOptions(Oid newTypeOid,
 								 elementType,
 								 isImplicitArray,
 								 baseType,
+								 typeCollation,
 								 (defaultTypeBin ?
 								  stringToNode(defaultTypeBin) :
 								  NULL),
 								 rebuildDeps);
+
+	/* Post creation hook for new type */
+	InvokeObjectAccessHook(OAT_POST_CREATE, TypeRelationId, typeObjectId, 0);
 
 	/*
 	 * finish up with pg_type
@@ -523,7 +536,8 @@ TypeCreate(Oid newTypeOid,
 		   char storage,
 		   int32 typeMod,
 		   int32 typNDims,
-		   bool typeNotNull)
+		   bool typeNotNull,
+		   Oid typeCollation)
 {
 	return TypeCreateWithOptions(newTypeOid,
 		   typeName,
@@ -555,6 +569,7 @@ TypeCreate(Oid newTypeOid,
 		   typeMod,
 		   typNDims,
 		   typeNotNull,
+		   typeCollation,
 		   (Datum) 0);
 }
 
@@ -563,7 +578,7 @@ TypeCreate(Oid newTypeOid,
  *
  * If rebuild is true, we remove existing dependencies and rebuild them
  * from scratch.  This is needed for ALTER TYPE, and also when replacing
- * a shell type.
+ * a shell type.  We don't remove/rebuild extension dependencies, though.
  */
 void
 GenerateTypeDependencies(Oid typeNamespace,
@@ -581,6 +596,7 @@ GenerateTypeDependencies(Oid typeNamespace,
 						 Oid elementType,
 						 bool isImplicitArray,
 						 Oid baseType,
+						 Oid typeCollation,
 						 Node *defaultExpr,
 						 bool rebuild)
 {
@@ -603,7 +619,7 @@ GenerateTypeDependencies(Oid typeNamespace,
 	 * For a relation rowtype (that's not a composite type), we should skip
 	 * these because we'll depend on them indirectly through the pg_class
 	 * entry.  Likewise, skip for implicit arrays since we'll depend on them
-	 * through the element type.
+	 * through the element type.  The same goes for extension membership.
 	 */
 	if ((!OidIsValid(relationOid) || relationKind == RELKIND_COMPOSITE_TYPE) &&
 		!isImplicitArray)
@@ -715,6 +731,16 @@ GenerateTypeDependencies(Oid typeNamespace,
 	{
 		referenced.classId = TypeRelationId;
 		referenced.objectId = baseType;
+		referenced.objectSubId = 0;
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
+
+	/* Normal dependency from a domain to its collation. */
+	/* We know the default collation is pinned, so don't bother recording it */
+	if (OidIsValid(typeCollation) && typeCollation != DEFAULT_COLLATION_OID)
+	{
+		referenced.classId = CollationRelationId;
+		referenced.objectId = typeCollation;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}

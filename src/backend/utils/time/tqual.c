@@ -46,11 +46,11 @@
  *	 HeapTupleSatisfiesAny()
  *		  all tuples are visible
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/tqual.c,v 1.118 2010/02/26 02:01:15 momjian Exp $
+ *	  src/backend/utils/time/tqual.c
  *
  *-------------------------------------------------------------------------
  */
@@ -78,7 +78,7 @@ SnapshotData SnapshotToastData = {HeapTupleSatisfiesToast};
 
 /* local functions */
 static bool XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
-			  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
+                              bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
 static bool XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot);
 
 /*
@@ -91,7 +91,8 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		if (!relation->rd_istemp)
+		/* GPDB_91_MERGE_FIXME: what is the rationale of not dirtying local buffers? */
+		if (relation->rd_rel->relpersistence != RELPERSISTENCE_TEMP)
 			MarkBufferDirtyHint(buffer);
 		return;
 	}
@@ -1351,7 +1352,7 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 	 * as the corresponding local ones, so we can rely on the local XIDs.
 	 */
 	if (snapshot->haveDistribSnapshot && !distributedSnapshotIgnore &&
-		Gp_segment != -1)
+		!IS_QUERY_DISPATCHER())
 	{
 		DistributedSnapshotCommitted	distributedSnapshotCommitted;
 

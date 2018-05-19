@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_table_as.sgml,v 1.41 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/create_table_as.sgml
 PostgreSQL documentation
 -->
 
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} ] TABLE table_name
+CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE table_name
    [(column_name [, ...] )]
    [ WITH ( storage_parameter=value [, ... ] )
    [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
@@ -40,7 +40,7 @@ where storage_parameter is:
 
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1>
   <title>Description</title>
 
@@ -86,6 +86,16 @@ where storage_parameter is:
     <listitem>
      <para>
       If specified, the table is created as a temporary table.
+      Refer to <xref linkend="sql-createtable"> for details.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>UNLOGGED</></term>
+    <listitem>
+     <para>
+      If specified, the table is created as an unlogged table.
       Refer to <xref linkend="sql-createtable"> for details.
      </para>
     </listitem>
@@ -356,5 +366,5 @@ CREATE TEMP TABLE films_recent WITH (OIDS) ON COMMIT DROP AS
    <member><xref linkend="sql-values"></member>
   </simplelist>
  </refsect1>
- 
+
 </refentry>

@@ -20,7 +20,7 @@ test: instr_in_shmem_setup
 # run separately - because slot counter may influenced by other parallel queries
 test: instr_in_shmem
 
-test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan
+test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan update_gp
 test: spi_processed64bit
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
@@ -56,7 +56,7 @@ test: query_finish_pending
 
 test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
 
-test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
+test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 gp_transactions distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
@@ -91,6 +91,7 @@ test: resource_queue
 test: resource_queue_function
 test: resource_queue_stat
 test: resource_group
+test: resource_group_gucs
 test: wrkloadadmin
 
 test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats

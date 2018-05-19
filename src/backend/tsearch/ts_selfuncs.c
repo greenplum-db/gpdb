@@ -3,11 +3,11 @@
  * ts_selfuncs.c
  *	  Selectivity estimation functions for text search operators.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_selfuncs.c,v 1.7 2010/01/04 02:44:39 tgl Exp $
+ *	  src/backend/tsearch/ts_selfuncs.c
  *
  *-------------------------------------------------------------------------
  */
@@ -51,6 +51,9 @@ static Selectivity mcelem_tsquery_selec(TSQuery query,
 static Selectivity tsquery_opr_selec(QueryItem *item, char *operand,
 				  TextFreq *lookup, int length, float4 minfreq);
 static int	compare_lexeme_textfreq(const void *e1, const void *e2);
+
+#define tsquery_opr_selec_no_stats(query) \
+	tsquery_opr_selec(GETQUERY(query), GETOPERAND(query), NULL, 0, 0)
 
 
 /*
@@ -101,21 +104,20 @@ tsmatchsel(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * OK, there's a Var and a Const we're dealing with here. We need the Var
-	 * to be a TSVector (or else we don't have any useful statistic for it).
-	 * We have to check this because the Var might be the TSQuery not the
-	 * TSVector.
+	 * OK, there's a Var and a Const we're dealing with here.  We need the
+	 * Const to be a TSQuery, else we can't do anything useful.  We have to
+	 * check this because the Var might be the TSQuery not the TSVector.
 	 */
-	if (vardata.vartype == TSVECTOROID)
+	if (((Const *) other)->consttype == TSQUERYOID)
 	{
 		/* tsvector @@ tsquery or the other way around */
-		Assert(((Const *) other)->consttype == TSQUERYOID);
+		Assert(vardata.vartype == TSVECTOROID);
 
 		selec = tsquerysel(&vardata, ((Const *) other)->constvalue);
 	}
 	else
 	{
-		/* The Var is something we don't have useful statistics for */
+		/* If we can't see the query structure, must punt */
 		selec = DEFAULT_TS_MATCH_SEL;
 	}
 
@@ -178,14 +180,20 @@ tsquerysel(VariableStatData *vardata, Datum constval)
 		}
 		else
 		{
-			/* No most-common-elements info, so we must punt */
-			selec = (Selectivity) DEFAULT_TS_MATCH_SEL;
+			/* No most-common-elements info, so do without */
+			selec = tsquery_opr_selec_no_stats(query);
 		}
+
+		/*
+		 * MCE stats count only non-null rows, so adjust for null rows.
+		 */
+		selec *= (1.0 - stats->stanullfrac);
 	}
 	else
 	{
-		/* No stats at all, so we must punt */
-		selec = (Selectivity) DEFAULT_TS_MATCH_SEL;
+		/* No stats at all, so do without */
+		selec = tsquery_opr_selec_no_stats(query);
+		/* we assume no nulls here, so no stanullfrac correction */
 	}
 
 	return selec;
@@ -208,7 +216,7 @@ mcelem_tsquery_selec(TSQuery query, Datum *mcelem, int nmcelem,
 	 * cells are taken for minimal and maximal frequency.  Punt if not.
 	 */
 	if (nnumbers != nmcelem + 2)
-		return DEFAULT_TS_MATCH_SEL;
+		return tsquery_opr_selec_no_stats(query);
 
 	/*
 	 * Transpose the data into a single array so we can use bsearch().
@@ -249,22 +257,23 @@ mcelem_tsquery_selec(TSQuery query, Datum *mcelem, int nmcelem,
  *
  *	 1 - select(oper) in NOT nodes
  *
- *	 freq[val] in VAL nodes, if the value is in MCELEM
- *	 min(freq[MCELEM]) / 2 in VAL nodes, if it is not
+ *	 histogram-based estimation in prefix VAL nodes
  *
+ *	 freq[val] in exact VAL nodes, if the value is in MCELEM
+ *	 min(freq[MCELEM]) / 2 in VAL nodes, if it is not
  *
  * The MCELEM array is already sorted (see ts_typanalyze.c), so we can use
  * binary search for determining freq[MCELEM].
+ *
+ * If we don't have stats for the tsvector, we still use this logic,
+ * except we use default estimates for VAL nodes.  This case is signaled
+ * by lookup == NULL.
  */
 static Selectivity
 tsquery_opr_selec(QueryItem *item, char *operand,
 				  TextFreq *lookup, int length, float4 minfreq)
 {
-	LexemeKey	key;
-	TextFreq   *searchres;
-	Selectivity selec,
-				s1,
-				s2;
+	Selectivity selec;
 
 	/* since this function recurses, it could be driven to stack overflow */
 	check_stack_depth();
@@ -272,6 +281,7 @@ tsquery_opr_selec(QueryItem *item, char *operand,
 	if (item->type == QI_VAL)
 	{
 		QueryOperand *oper = (QueryOperand *) item;
+		LexemeKey	key;
 
 		/*
 		 * Prepare the key for bsearch().
@@ -279,56 +289,115 @@ tsquery_opr_selec(QueryItem *item, char *operand,
 		key.lexeme = operand + oper->distance;
 		key.length = oper->length;
 
-		searchres = (TextFreq *) bsearch(&key, lookup, length,
-										 sizeof(TextFreq),
-										 compare_lexeme_textfreq);
-
-		if (searchres)
+		if (oper->prefix)
 		{
+			/* Prefix match, ie the query item is lexeme:* */
+			Selectivity matched,
+						allmcvs;
+			int			i;
+
 			/*
-			 * The element is in MCELEM. Return precise selectivity (or at
-			 * least as precise as ANALYZE could find out).
+			 * Our strategy is to scan through the MCV list and add up the
+			 * frequencies of the ones that match the prefix, thereby assuming
+			 * that the MCVs are representative of the whole lexeme population
+			 * in this respect.  Compare histogram_selectivity().
+			 *
+			 * This is only a good plan if we have a pretty fair number of
+			 * MCVs available; we set the threshold at 100.  If no stats or
+			 * insufficient stats, arbitrarily use DEFAULT_TS_MATCH_SEL*4.
 			 */
-			return (Selectivity) searchres->frequency;
+			if (lookup == NULL || length < 100)
+				return (Selectivity) (DEFAULT_TS_MATCH_SEL * 4);
+
+			matched = allmcvs = 0;
+			for (i = 0; i < length; i++)
+			{
+				TextFreq   *t = lookup + i;
+				int			tlen = VARSIZE_ANY_EXHDR(t->element);
+
+				if (tlen >= key.length &&
+					strncmp(key.lexeme, VARDATA_ANY(t->element),
+							key.length) == 0)
+					matched += t->frequency;
+				allmcvs += t->frequency;
+			}
+
+			if (allmcvs > 0)	/* paranoia about zero divide */
+				selec = matched / allmcvs;
+			else
+				selec = (Selectivity) (DEFAULT_TS_MATCH_SEL * 4);
+
+			/*
+			 * In any case, never believe that a prefix match has selectivity
+			 * less than DEFAULT_TS_MATCH_SEL.
+			 */
+			selec = Max(DEFAULT_TS_MATCH_SEL, selec);
 		}
 		else
 		{
-			/*
-			 * The element is not in MCELEM. Punt, but assert that the
-			 * selectivity cannot be more than minfreq / 2.
-			 */
-			return (Selectivity) Min(DEFAULT_TS_MATCH_SEL, minfreq / 2);
+			/* Regular exact lexeme match */
+			TextFreq   *searchres;
+
+			/* If no stats for the variable, use DEFAULT_TS_MATCH_SEL */
+			if (lookup == NULL)
+				return (Selectivity) DEFAULT_TS_MATCH_SEL;
+
+			searchres = (TextFreq *) bsearch(&key, lookup, length,
+											 sizeof(TextFreq),
+											 compare_lexeme_textfreq);
+
+			if (searchres)
+			{
+				/*
+				 * The element is in MCELEM.  Return precise selectivity (or
+				 * at least as precise as ANALYZE could find out).
+				 */
+				selec = searchres->frequency;
+			}
+			else
+			{
+				/*
+				 * The element is not in MCELEM.  Punt, but assume that the
+				 * selectivity cannot be more than minfreq / 2.
+				 */
+				selec = Min(DEFAULT_TS_MATCH_SEL, minfreq / 2);
+			}
 		}
 	}
-
-	/* Current TSQuery node is an operator */
-	switch (item->qoperator.oper)
+	else
 	{
-		case OP_NOT:
-			selec = 1.0 - tsquery_opr_selec(item + 1, operand,
-											lookup, length, minfreq);
-			break;
+		/* Current TSQuery node is an operator */
+		Selectivity s1,
+					s2;
 
-		case OP_AND:
-			s1 = tsquery_opr_selec(item + 1, operand,
-								   lookup, length, minfreq);
-			s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
-								   lookup, length, minfreq);
-			selec = s1 * s2;
-			break;
+		switch (item->qoperator.oper)
+		{
+			case OP_NOT:
+				selec = 1.0 - tsquery_opr_selec(item + 1, operand,
+												lookup, length, minfreq);
+				break;
 
-		case OP_OR:
-			s1 = tsquery_opr_selec(item + 1, operand,
-								   lookup, length, minfreq);
-			s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
-								   lookup, length, minfreq);
-			selec = s1 + s2 - s1 * s2;
-			break;
+			case OP_AND:
+				s1 = tsquery_opr_selec(item + 1, operand,
+									   lookup, length, minfreq);
+				s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
+									   lookup, length, minfreq);
+				selec = s1 * s2;
+				break;
 
-		default:
-			elog(ERROR, "unrecognized operator: %d", item->qoperator.oper);
-			selec = 0;			/* keep compiler quiet */
-			break;
+			case OP_OR:
+				s1 = tsquery_opr_selec(item + 1, operand,
+									   lookup, length, minfreq);
+				s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
+									   lookup, length, minfreq);
+				selec = s1 + s2 - s1 * s2;
+				break;
+
+			default:
+				elog(ERROR, "unrecognized operator: %d", item->qoperator.oper);
+				selec = 0;		/* keep compiler quiet */
+				break;
+		}
 	}
 
 	/* Clamp intermediate results to stay sane despite roundoff error */

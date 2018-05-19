@@ -3934,14 +3934,14 @@ select schemaname, tablename, indexname from pg_indexes where schemaname = 'publ
 
 alter table it add constraint it_unique_i unique (i);
 NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_i_key" for table "it"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_1_idx" for table "it_1_prt_1"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_2_idx" for table "it_1_prt_2"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_1_i_key" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_2_i_key" for table "it_1_prt_2"
 select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
- schemaname | tablename  |   indexname    
-------------+------------+----------------
+ schemaname | tablename  |    indexname     
+------------+------------+------------------
  public     | it         | it_i_key
- public     | it_1_prt_1 | it_1_prt_1_idx
- public     | it_1_prt_2 | it_1_prt_2_idx
+ public     | it_1_prt_1 | it_1_prt_1_i_key
+ public     | it_1_prt_2 | it_1_prt_2_i_key
 (3 rows)
 
 alter table it drop constraint it_unique_i;
@@ -3962,14 +3962,14 @@ select schemaname, tablename, indexname from pg_indexes where schemaname = 'publ
 
 alter table it add primary key(i);
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_pkey" for table "it"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_idx" for table "it_1_prt_1"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_idx" for table "it_1_prt_2"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_pkey" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_pkey" for table "it_1_prt_2"
 select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
- schemaname | tablename  |   indexname    
-------------+------------+----------------
+ schemaname | tablename  |    indexname    
+------------+------------+-----------------
  public     | it         | it_pkey
- public     | it_1_prt_1 | it_1_prt_1_idx
- public     | it_1_prt_2 | it_1_prt_2_idx
+ public     | it_1_prt_1 | it_1_prt_1_pkey
+ public     | it_1_prt_2 | it_1_prt_2_pkey
 (3 rows)
 
 -- FIXME: dropping a primary key doesn't currently work correctly. It doesn't
@@ -3989,14 +3989,14 @@ select schemaname, tablename, indexname from pg_indexes where schemaname = 'publ
 
 alter table it add primary key(i);
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_pkey" for table "it"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_idx" for table "it_1_prt_1"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_idx" for table "it_1_prt_2"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_pkey" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_pkey" for table "it_1_prt_2"
 select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
- schemaname | tablename  |   indexname    
-------------+------------+----------------
+ schemaname | tablename  |    indexname    
+------------+------------+-----------------
  public     | it         | it_pkey
- public     | it_1_prt_1 | it_1_prt_1_idx
- public     | it_1_prt_2 | it_1_prt_2_idx
+ public     | it_1_prt_1 | it_1_prt_1_pkey
+ public     | it_1_prt_2 | it_1_prt_2_pkey
 (3 rows)
 
 drop table it;
@@ -6622,29 +6622,29 @@ analyze bar;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 explain select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = (array[1])[1];
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=412.08..636.60 rows=13400 width=36)
-   ->  Hash Left Join  (cost=412.08..636.60 rows=6700 width=36)
-         Hash Cond: public.foo_p.a = bar.k
-         ->  Append  (cost=0.00..23.50 rows=3 width=35)
-               ->  Seq Scan on foo_p_1_prt_other foo_p  (cost=0.00..1.00 rows=1 width=40)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-               ->  Seq Scan on foo_p_1_prt_2 foo_p  (cost=0.00..4.50 rows=1 width=34)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-               ->  Seq Scan on foo_p_1_prt_3 foo_p  (cost=0.00..4.50 rows=1 width=34)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-               ->  Seq Scan on foo_p_1_prt_4 foo_p  (cost=0.00..4.50 rows=1 width=34)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-               ->  Seq Scan on foo_p_1_prt_5 foo_p  (cost=0.00..4.50 rows=1 width=34)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-               ->  Seq Scan on foo_p_1_prt_6 foo_p  (cost=0.00..4.50 rows=1 width=34)
-                     Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
-         ->  Hash  (cost=356.25..356.25 rows=2234 width=4)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..356.25 rows=2234 width=4)
-                     ->  Seq Scan on bar  (cost=0.00..289.25 rows=1117 width=4)
-                           Filter: k = ('{1}'::integer[])[1]
- Settings:  optimizer_segments=3
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=28.57..566.28 rows=13400 width=31)
+   ->  Hash Right Join  (cost=28.57..566.28 rows=4467 width=31)
+         Hash Cond: bar.k = public.foo_p.a
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..378.58 rows=2234 width=4)
+               ->  Seq Scan on bar  (cost=0.00..289.25 rows=745 width=4)
+                     Filter: k = ('{1}'::integer[])[1]
+         ->  Hash  (cost=28.50..28.50 rows=2 width=35)
+               ->  Append  (cost=0.00..28.50 rows=2 width=35)
+                     ->  Seq Scan on foo_p_1_prt_other foo_p  (cost=0.00..1.00 rows=1 width=40)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+                     ->  Seq Scan on foo_p_1_prt_2 foo_p  (cost=0.00..5.50 rows=1 width=34)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+                     ->  Seq Scan on foo_p_1_prt_3 foo_p  (cost=0.00..5.50 rows=1 width=34)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+                     ->  Seq Scan on foo_p_1_prt_4 foo_p  (cost=0.00..5.50 rows=1 width=34)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+                     ->  Seq Scan on foo_p_1_prt_5 foo_p  (cost=0.00..5.50 rows=1 width=34)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+                     ->  Seq Scan on foo_p_1_prt_6 foo_p  (cost=0.00..5.50 rows=1 width=34)
+                           Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
+ Optimizer: legacy query optimizer
 (21 rows)
 
 reset optimizer_segments;

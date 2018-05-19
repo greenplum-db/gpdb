@@ -4,10 +4,10 @@
  *	  prototypes for nodeWindowAgg.c
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeWindowAgg.h,v 1.4 2010/01/02 16:58:03 momjian Exp $
+ * src/include/executor/nodeWindowAgg.h
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +19,7 @@
 extern WindowAggState *ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecWindowAgg(WindowAggState *node);
 extern void ExecEndWindowAgg(WindowAggState *node);
-extern void ExecReScanWindowAgg(WindowAggState *node, ExprContext *exprCtxt);
+extern void ExecReScanWindowAgg(WindowAggState *node);
 
 extern void ExecEagerFreeWindowAgg(WindowAggState *node);
 

@@ -85,7 +85,7 @@ pqParseInput3(PGconn *conn)
 	int			avail;
 #ifndef FRONTEND
 	int			numRejected  = 0;
-	int			numCompleted = 0;
+	int64		numCompleted = 0;
 #endif
 
 
@@ -458,7 +458,7 @@ pqParseInput3(PGconn *conn)
 					conn->result->numRejected += numRejected;
 
 					/* Optionally receive completed number when COPY FROM ON SEGMENT */
-					if (msgLength >= 8 && !pqGetInt(&numCompleted, 4, conn))
+					if (msgLength >= 8 && !pqGetInt64(&numCompleted, conn))
 					{
 						conn->result->numCompleted += numCompleted;
 					}

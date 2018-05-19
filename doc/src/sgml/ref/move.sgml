@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/move.sgml,v 1.35 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/move.sgml
 PostgreSQL documentation
 -->
 
@@ -25,8 +25,26 @@ PostgreSQL documentation
  </indexterm>
 
  <refsynopsisdiv>
+<!-- Note the "direction" bit is also in ref/fetch.sgml -->
 <synopsis>
 MOVE [ <replaceable class="PARAMETER">direction</replaceable> [ FROM | IN ] ] <replaceable class="PARAMETER">cursor_name</replaceable>
+
+<phrase>where <replaceable class="PARAMETER">direction</replaceable> can be empty or one of:</phrase>
+
+    NEXT
+    PRIOR
+    FIRST
+    LAST
+    ABSOLUTE <replaceable class="PARAMETER">count</replaceable>
+    RELATIVE <replaceable class="PARAMETER">count</replaceable>
+    <replaceable class="PARAMETER">count</replaceable>
+    ALL
+    FORWARD
+    FORWARD <replaceable class="PARAMETER">count</replaceable>
+    FORWARD ALL
+    BACKWARD
+    BACKWARD <replaceable class="PARAMETER">count</replaceable>
+    BACKWARD ALL
 </synopsis>
  </refsynopsisdiv>
 
@@ -40,7 +58,7 @@ MOVE [ <replaceable class="PARAMETER">direction</replaceable> [ FROM | IN ] ] <r
   </para>
 
   <para>
-   The parameters for the <command>MOVE</command> command are identical to 
+   The parameters for the <command>MOVE</command> command are identical to
    those of the <command>FETCH</command> command; refer to
    <xref linkend="sql-fetch">
    for details on syntax and usage.

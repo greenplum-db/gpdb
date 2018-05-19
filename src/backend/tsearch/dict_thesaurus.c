@@ -3,11 +3,11 @@
  * dict_thesaurus.c
  *		Thesaurus dictionary: phrase to phrase substitution
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/dict_thesaurus.c,v 1.16 2010/01/02 16:57:53 momjian Exp $
+ *	  src/backend/tsearch/dict_thesaurus.c
  *
  *-------------------------------------------------------------------------
  */
@@ -642,7 +642,7 @@ thesaurus_init(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("missing Dictionary parameter")));
 
-	d->subdictOid = TSDictionaryGetDictid(stringToQualifiedNameList(subdictname), false);
+	d->subdictOid = get_ts_dict_oid(stringToQualifiedNameList(subdictname), false);
 	d->subdict = lookup_ts_dictionary_cache(d->subdictOid);
 
 	compileTheLexeme(d);

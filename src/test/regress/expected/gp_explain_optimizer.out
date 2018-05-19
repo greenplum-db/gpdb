@@ -33,21 +33,16 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO explaintest SELECT generate_series(1, 10);
 EXPLAIN ANALYZE SELECT * FROM explaintest;
-                                                               QUERY PLAN                                                               
-----------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4)
-   Rows out:  10 rows at destination with 0.412 ms to first row, 0.425 ms to end, start offset by 0.288 ms.
-   ->  Table Scan on explaintest  (cost=0.00..431.00 rows=4 width=4)
-         Rows out:  Avg 3.3 rows x 3 workers.  Max 5 rows (seg1) with 0.021 ms to first row, 0.023 ms to end, start offset by 0.607 ms.
- Slice statistics:
-   (slice0)    Executor memory: 318K bytes.
-   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
- Statement statistics:
-   Memory used: 128000K bytes
- Settings:  optimizer=on
- Optimizer status: PQO version 2.5.0
- Total runtime: 1.269 ms
-(12 rows)
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.365..0.380 rows=10 loops=1)
+   ->  Table Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.019..0.021 rows=5 loops=1)
+   (slice0)    Executor memory: 290K bytes.
+   (slice1)    Executor memory: 135K bytes avg x 3 workers, 135K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: PQO version 2.55.21
+ Total runtime: 0.710 ms
+(7 rows)
 
 set explain_memory_verbosity='summary';
 -- The plan should consist of a Gather and a Seq Scan, with a
@@ -89,18 +84,16 @@ CREATE TABLE mpp22263 (
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
-   ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
-         Join Filter: true
-         ->  Result  (cost=0.00..0.00 rows=1 width=12)
-               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
-         ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: mpp22263.unique1 = "Values".column1
-               Filter: mpp22263.stringu1::text = "Values".column2
- Optimizer status: PQO version 2.35.1
-(9 rows)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..431.01 rows=1 width=256)
+   Hash Cond: mpp22263.unique1 = "Values".column1 AND mpp22263.stringu1::text = "Values".column2
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=244)
+         ->  Table Scan on mpp22263  (cost=0.00..431.00 rows=1 width=244)
+   ->  Hash  (cost=0.00..0.00 rows=1 width=12)
+         ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
+ Optimizer: PQO version 2.55.21
+(7 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
@@ -111,11 +104,9 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
-                                et                                
-------------------------------------------------------------------
-         Join Filter: true
-               Filter: mpp22263.stringu1::text = "Values".column2
-(2 rows)
+ et 
+----
+(0 rows)
 
 --
 -- Join condition in explain plan should represent constants with proper

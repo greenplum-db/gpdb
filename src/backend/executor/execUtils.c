@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.173 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/executor/execUtils.c
  *
  *-------------------------------------------------------------------------
  */
@@ -168,13 +168,17 @@ CreateExecutorState(void)
 	estate->es_processed = 0;
 	estate->es_lastoid = InvalidOid;
 
-	estate->es_instrument = false;
+	estate->es_top_eflags = 0;
+	estate->es_instrument = 0;
 	estate->es_select_into = false;
 	estate->es_into_oids = false;
+	estate->es_finished = false;
 
 	estate->es_exprcontexts = NIL;
 
 	estate->es_subplanstates = NIL;
+
+	estate->es_auxmodifytables = NIL;
 
 	estate->es_per_tuple_exprcontext = NULL;
 
@@ -190,7 +194,7 @@ CreateExecutorState(void)
 	estate->es_got_eos = false;
 	estate->cancelUnfinished = false;
 
-	estate->dispatcherState = palloc0(sizeof(struct CdbDispatcherState));
+	estate->dispatcherState = NULL;
 
 	estate->currentSliceIdInPlan = 0;
 	estate->currentExecutingSliceId = 0;
@@ -267,11 +271,7 @@ FreeExecutorState(EState *estate)
 		/* FreeExprContext removed the list link for us */
 	}
 
-	if (estate->dispatcherState)
-	{
-		pfree(estate->dispatcherState);
-		estate->dispatcherState = NULL;
-	}
+	estate->dispatcherState = NULL;
 
 	/*
 	 * Free dynamicTableScanInfo.
@@ -280,14 +280,6 @@ FreeExecutorState(EState *estate)
 	{
 		freeDynamicTableScanInfo(estate->dynamicTableScanInfo);
 		estate->dynamicTableScanInfo = NULL;
-	}
-
-	/*
-	 * Greenplum: release partition-related resources (esp. TupleDesc ref counts).
-	 */
-	if (estate->es_partition_state)
-	{
-		ClearPartitionState(estate);
 	}
 
 	/*
@@ -1291,6 +1283,7 @@ check_exclusion_constraint(Relation heap, Relation index, IndexInfo *indexInfo,
 {
 	Oid		   *constr_procs = indexInfo->ii_ExclusionProcs;
 	uint16	   *constr_strats = indexInfo->ii_ExclusionStrats;
+	Oid		   *index_collations = index->rd_indcollation;
 	int			index_natts = index->rd_index->indnatts;
 	IndexScanDesc index_scan;
 	HeapTuple	tup;
@@ -1321,11 +1314,14 @@ check_exclusion_constraint(Relation heap, Relation index, IndexInfo *indexInfo,
 
 	for (i = 0; i < index_natts; i++)
 	{
-		ScanKeyInit(&scankeys[i],
-					i + 1,
-					constr_strats[i],
-					constr_procs[i],
-					values[i]);
+		ScanKeyEntryInitialize(&scankeys[i],
+							   0,
+							   i + 1,
+							   constr_strats[i],
+							   InvalidOid,
+							   index_collations[i],
+							   constr_procs[i],
+							   values[i]);
 	}
 
 	/*
@@ -1348,8 +1344,8 @@ check_exclusion_constraint(Relation heap, Relation index, IndexInfo *indexInfo,
 retry:
 	conflict = false;
 	found_self = false;
-	index_scan = index_beginscan(heap, index, &DirtySnapshot,
-								 index_natts, scankeys);
+	index_scan = index_beginscan(heap, index, &DirtySnapshot, index_natts, 0);
+	index_rescan(index_scan, scankeys, index_natts, NULL, 0);
 
 	while ((tup = index_getnext(index_scan,
 								ForwardScanDirection)) != NULL)
@@ -1446,16 +1442,12 @@ retry:
 	index_endscan(index_scan);
 
 	/*
-	 * We should have found our tuple in the index, unless we exited the loop
-	 * early because of conflict.  Complain if not.  If we ever implement '<>'
-	 * index opclasses, this check will fail and will have to be removed.
+	 * Ordinarily, at this point the search should have found the originally
+	 * inserted tuple, unless we exited the loop early because of conflict.
+	 * However, it is possible to define exclusion constraints for which that
+	 * wouldn't be true --- for instance, if the operator is <>. So we no
+	 * longer complain if found_self is still false.
 	 */
-	if (!found_self && !conflict)
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("failed to re-find tuple within index \"%s\"",
-						RelationGetRelationName(index)),
-		errhint("This may be because of a non-immutable index expression.")));
 
 	econtext->ecxt_scantuple = save_scantuple;
 
@@ -1482,9 +1474,10 @@ index_recheck_constraint(Relation index, Oid *constr_procs,
 		if (existing_isnull[i])
 			return false;
 
-		if (!DatumGetBool(OidFunctionCall2(constr_procs[i],
-										   existing_values[i],
-										   new_values[i])))
+		if (!DatumGetBool(OidFunctionCall2Coll(constr_procs[i],
+											   index->rd_indcollation[i],
+											   existing_values[i],
+											   new_values[i])))
 			return false;
 	}
 
@@ -1511,7 +1504,7 @@ ExecUpdateAOtupCount(ResultRelInfo *result_rels,
 
 	for (i = num_result_rels; i > 0; i--)
 	{
-		if(RelationIsAoRows(result_rels->ri_RelationDesc) || RelationIsAoCols(result_rels->ri_RelationDesc))
+		if(RelationIsAppendOptimized(result_rels->ri_RelationDesc))
 		{
 			Assert(result_rels->ri_aosegno != InvalidFileSegNumber);
 
@@ -2255,7 +2248,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	/*
 	 * If QD, wait for QEs to finish and check their results.
 	 */
-	if (estate->dispatcherState->primaryResults)
+	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
 	{
 		CdbDispatchResults *pr = estate->dispatcherState->primaryResults;
 		HTAB 			   *aopartcounts = NULL;
@@ -2353,7 +2346,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		 * error, report it and exit to our error handler via PG_THROW.
 		 * NB: This call doesn't wait, because we already waited above.
 		 */
-		cdbdisp_finishCommand(estate->dispatcherState);
+		cdbdisp_finishCommand(estate->dispatcherState, NULL, NULL, true);
 	}
 
 	/* Teardown the Interconnect */
@@ -2366,7 +2359,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		 * mark the estate to "cancelUnfinished" and then try to do a
 		 * normal interconnect teardown).
 		 */
-		TeardownInterconnect(estate->interconnect_context, estate->motionlayer_context, estate->cancelUnfinished, false);
+		TeardownInterconnect(estate->interconnect_context, estate->cancelUnfinished, false);
 		estate->es_interconnect_is_setup = false;
 	}
 }
@@ -2438,7 +2431,7 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	/* Clean up the interconnect. */
 	if (estate->es_interconnect_is_setup)
 	{
-		TeardownInterconnect(estate->interconnect_context, estate->motionlayer_context, true /* force EOS */, true);
+		TeardownInterconnect(estate->interconnect_context, true /* force EOS */, true);
 		estate->es_interconnect_is_setup = false;
 	}
 
@@ -2908,6 +2901,7 @@ int RootSliceIndex(EState *estate)
 
 	return result;
 }
+
 
 #ifdef USE_ASSERT_CHECKING
 /**

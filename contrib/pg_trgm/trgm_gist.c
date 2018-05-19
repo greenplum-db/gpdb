@@ -1,14 +1,18 @@
 /*
- * $PostgreSQL: pgsql/contrib/pg_trgm/trgm_gist.c,v 1.16 2009/06/11 14:48:51 momjian Exp $
+ * contrib/pg_trgm/trgm_gist.c
  */
+#include "postgres.h"
+
 #include "trgm.h"
 
 #include "access/gist.h"
 #include "access/itup.h"
+#include "access/skey.h"
 #include "access/tuptoaster.h"
 #include "storage/bufpage.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
+
 
 PG_FUNCTION_INFO_V1(gtrgm_in);
 Datum		gtrgm_in(PG_FUNCTION_ARGS);
@@ -24,6 +28,9 @@ Datum		gtrgm_decompress(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gtrgm_consistent);
 Datum		gtrgm_consistent(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(gtrgm_distance);
+Datum		gtrgm_distance(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gtrgm_union);
 Datum		gtrgm_union(PG_FUNCTION_ARGS);
@@ -159,22 +166,175 @@ gtrgm_decompress(PG_FUNCTION_ARGS)
 	}
 }
 
+static int4
+cnt_sml_sign_common(TRGM *qtrg, BITVECP sign)
+{
+	int4		count = 0;
+	int4		k,
+				len = ARRNELEM(qtrg);
+	trgm	   *ptr = GETARR(qtrg);
+	int4		tmp = 0;
+
+	for (k = 0; k < len; k++)
+	{
+		CPTRGM(((char *) &tmp), ptr + k);
+		count += GETBIT(sign, HASHVAL(tmp));
+	}
+
+	return count;
+}
+
 Datum
 gtrgm_consistent(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 	text	   *query = PG_GETARG_TEXT_P(1);
+	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
 
-	/* StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2); */
 	/* Oid		subtype = PG_GETARG_OID(3); */
 	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
 	TRGM	   *key = (TRGM *) DatumGetPointer(entry->key);
 	TRGM	   *qtrg;
-	bool		res = false;
-	char	   *cache = (char *) fcinfo->flinfo->fn_extra;
+	bool		res;
+	char	   *cache = (char *) fcinfo->flinfo->fn_extra,
+			   *cacheContents = cache + MAXALIGN(sizeof(StrategyNumber));
 
-	/* All cases served by this function are exact */
-	*recheck = false;
+	/*
+	 * Store both the strategy number and extracted trigrams in cache, because
+	 * trigram extraction is relatively CPU-expensive.	We must include
+	 * strategy number because trigram extraction depends on strategy.
+	 */
+	if (cache == NULL || strategy != *((StrategyNumber *) cache) ||
+		VARSIZE(cacheContents) != VARSIZE(query) ||
+		memcmp(cacheContents, query, VARSIZE(query)) != 0)
+	{
+		switch (strategy)
+		{
+			case SimilarityStrategyNumber:
+				qtrg = generate_trgm(VARDATA(query), VARSIZE(query) - VARHDRSZ);
+				break;
+			case ILikeStrategyNumber:
+#ifndef IGNORECASE
+				elog(ERROR, "cannot handle ~~* with case-sensitive trigrams");
+#endif
+				/* FALL THRU */
+			case LikeStrategyNumber:
+				qtrg = generate_wildcard_trgm(VARDATA(query), VARSIZE(query) - VARHDRSZ);
+				break;
+			default:
+				elog(ERROR, "unrecognized strategy number: %d", strategy);
+				qtrg = NULL;	/* keep compiler quiet */
+				break;
+		}
+
+		if (cache)
+			pfree(cache);
+
+		fcinfo->flinfo->fn_extra =
+			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
+							   MAXALIGN(sizeof(StrategyNumber)) +
+							   MAXALIGN(VARSIZE(query)) +
+							   VARSIZE(qtrg));
+		cache = (char *) fcinfo->flinfo->fn_extra;
+		cacheContents = cache + MAXALIGN(sizeof(StrategyNumber));
+
+		*((StrategyNumber *) cache) = strategy;
+		memcpy(cacheContents, query, VARSIZE(query));
+		memcpy(cacheContents + MAXALIGN(VARSIZE(query)), qtrg, VARSIZE(qtrg));
+	}
+
+	qtrg = (TRGM *) (cacheContents + MAXALIGN(VARSIZE(query)));
+
+	switch (strategy)
+	{
+		case SimilarityStrategyNumber:
+			/* Similarity search is exact */
+			*recheck = false;
+
+			if (GIST_LEAF(entry))
+			{					/* all leafs contains orig trgm */
+				float4		tmpsml = cnt_sml(key, qtrg);
+
+				/* strange bug at freebsd 5.2.1 and gcc 3.3.3 */
+				res = (*(int *) &tmpsml == *(int *) &trgm_limit || tmpsml > trgm_limit) ? true : false;
+			}
+			else if (ISALLTRUE(key))
+			{					/* non-leaf contains signature */
+				res = true;
+			}
+			else
+			{					/* non-leaf contains signature */
+				int4		count = cnt_sml_sign_common(qtrg, GETSIGN(key));
+				int4		len = ARRNELEM(qtrg);
+
+				if (len == 0)
+					res = false;
+				else
+					res = (((((float8) count) / ((float8) len))) >= trgm_limit) ? true : false;
+			}
+			break;
+		case ILikeStrategyNumber:
+#ifndef IGNORECASE
+			elog(ERROR, "cannot handle ~~* with case-sensitive trigrams");
+#endif
+			/* FALL THRU */
+		case LikeStrategyNumber:
+			/* Wildcard search is inexact */
+			*recheck = true;
+
+			/*
+			 * Check if all the extracted trigrams can be present in child
+			 * nodes.
+			 */
+			if (GIST_LEAF(entry))
+			{					/* all leafs contains orig trgm */
+				res = trgm_contained_by(qtrg, key);
+			}
+			else if (ISALLTRUE(key))
+			{					/* non-leaf contains signature */
+				res = true;
+			}
+			else
+			{					/* non-leaf contains signature */
+				int32		k,
+							tmp = 0,
+							len = ARRNELEM(qtrg);
+				trgm	   *ptr = GETARR(qtrg);
+				BITVECP		sign = GETSIGN(key);
+
+				res = true;
+				for (k = 0; k < len; k++)
+				{
+					CPTRGM(((char *) &tmp), ptr + k);
+					if (!GETBIT(sign, HASHVAL(tmp)))
+					{
+						res = false;
+						break;
+					}
+				}
+			}
+			break;
+		default:
+			elog(ERROR, "unrecognized strategy number: %d", strategy);
+			res = false;		/* keep compiler quiet */
+			break;
+	}
+
+	PG_RETURN_BOOL(res);
+}
+
+Datum
+gtrgm_distance(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+	text	   *query = PG_GETARG_TEXT_P(1);
+	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
+
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	TRGM	   *key = (TRGM *) DatumGetPointer(entry->key);
+	TRGM	   *qtrg;
+	float8		res;
+	char	   *cache = (char *) fcinfo->flinfo->fn_extra;
 
 	if (cache == NULL || VARSIZE(cache) != VARSIZE(query) || memcmp(cache, query, VARSIZE(query)) != 0)
 	{
@@ -193,39 +353,32 @@ gtrgm_consistent(PG_FUNCTION_ARGS)
 
 	qtrg = (TRGM *) (cache + MAXALIGN(VARSIZE(query)));
 
-	if (GIST_LEAF(entry))
-	{							/* all leafs contains orig trgm */
-		float4		tmpsml = cnt_sml(key, qtrg);
+	switch (strategy)
+	{
+		case DistanceStrategyNumber:
+			if (GIST_LEAF(entry))
+			{					/* all leafs contains orig trgm */
+				res = 1.0 - cnt_sml(key, qtrg);
+			}
+			else if (ISALLTRUE(key))
+			{					/* all leafs contains orig trgm */
+				res = 0.0;
+			}
+			else
+			{					/* non-leaf contains signature */
+				int4		count = cnt_sml_sign_common(qtrg, GETSIGN(key));
+				int4		len = ARRNELEM(qtrg);
 
-		/* strange bug at freebsd 5.2.1 and gcc 3.3.3 */
-		res = (*(int *) &tmpsml == *(int *) &trgm_limit || tmpsml > trgm_limit) ? true : false;
-	}
-	else if (ISALLTRUE(key))
-	{							/* non-leaf contains signature */
-		res = true;
-	}
-	else
-	{							/* non-leaf contains signature */
-		int4		count = 0;
-		int4		k,
-					len = ARRNELEM(qtrg);
-		trgm	   *ptr = GETARR(qtrg);
-		BITVECP		sign = GETSIGN(key);
-		int4		tmp = 0;
-
-		for (k = 0; k < len; k++)
-		{
-			CPTRGM(((char *) &tmp), ptr + k);
-			count += GETBIT(sign, HASHVAL(tmp));
-		}
-#ifdef DIVUNION
-		res = (len == count) ? true : ((((((float4) count) / ((float4) (len - count)))) >= trgm_limit) ? true : false);
-#else
-		res = (len == 0) ? false : ((((((float4) count) / ((float4) len))) >= trgm_limit) ? true : false);
-#endif
+				res = (len == 0) ? -1.0 : 1.0 - ((float8) count) / ((float8) len);
+			}
+			break;
+		default:
+			elog(ERROR, "unrecognized strategy number: %d", strategy);
+			res = 0;			/* keep compiler quiet */
+			break;
 	}
 
-	PG_RETURN_BOOL(res);
+	PG_RETURN_FLOAT8(res);
 }
 
 static int4

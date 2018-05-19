@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/lock.sgml,v 1.54 2010/04/03 07:23:01 petere Exp $
+doc/src/sgml/ref/lock.sgml
 PostgreSQL documentation
 -->
 
@@ -67,16 +67,18 @@ LOCK [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ...
   </para>
 
   <para>
-   To achieve a similar effect when running a transaction at the Serializable
+   To achieve a similar effect when running a transaction at the
+   <literal>REPEATABLE READ</> or <literal>SERIALIZABLE</>
    isolation level, you have to execute the <command>LOCK TABLE</> statement
    before executing any <command>SELECT</> or data modification statement.
-   A serializable transaction's view of data will be frozen when its first
+   A <literal>REPEATABLE READ</> or <literal>SERIALIZABLE</> transaction's
+   view of data will be frozen when its first
    <command>SELECT</> or data modification statement begins.  A <command>LOCK
    TABLE</> later in the transaction will still prevent concurrent writes
    &mdash; but it won't ensure that what the transaction reads corresponds to
    the latest committed values.
   </para>
-  
+
   <para>
    If a transaction of this sort is going to change the data in the
    table, then it should use <literal>SHARE ROW EXCLUSIVE</> lock mode
@@ -158,7 +160,7 @@ LOCK [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ...
    <para>
     <literal>LOCK TABLE ... IN ACCESS SHARE MODE</> requires <literal>SELECT</>
     privileges on the target table.  All other forms of <command>LOCK</>
-    require at least one of <literal>UPDATE</>, <literal>DELETE</>, or
+    require table-level <literal>UPDATE</>, <literal>DELETE</>, or
     <literal>TRUNCATE</> privileges.
    </para>
 
@@ -189,7 +191,7 @@ LOCK [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ...
    reference documentation.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Examples</title>
 
@@ -200,10 +202,10 @@ LOCK [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ...
 <programlisting>
 BEGIN WORK;
 LOCK TABLE films IN SHARE MODE;
-SELECT id FROM films 
+SELECT id FROM films
     WHERE name = 'Star Wars: Episode I - The Phantom Menace';
 -- Do ROLLBACK if record was not returned
-INSERT INTO films_user_comments VALUES 
+INSERT INTO films_user_comments VALUES
     (_id_, 'GREAT! I was waiting for it for so long!');
 COMMIT WORK;
 </programlisting>

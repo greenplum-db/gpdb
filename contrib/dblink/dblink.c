@@ -8,8 +8,8 @@
  * Darko Prenosil <Darko.Prenosil@finteh.hr>
  * Shridhar Daithankar <shridhar_daithankar@persistent.co.in>
  *
- * $PostgreSQL: pgsql/contrib/dblink/dblink.c,v 1.99 2010/07/06 19:18:54 momjian Exp $
- * Copyright (c) 2001-2010, PostgreSQL Global Development Group
+ * contrib/dblink/dblink.c
+ * Copyright (c) 2001-2011, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
  * Permission to use, copy, modify, and distribute this software and its
@@ -91,7 +91,6 @@ static char **get_text_array_contents(ArrayType *array, int *numitems);
 static char *get_sql_insert(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals);
 static char *get_sql_delete(Relation rel, int *pkattnums, int pknumatts, char **tgt_pkattvals);
 static char *get_sql_update(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals);
-static char *quote_literal_cstr(char *rawstr);
 static char *quote_ident_cstr(char *rawstr);
 static int	get_attnum_pk_pos(int *pkattnums, int pknumatts, int key);
 static HeapTuple get_tuple_of_interest(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals);
@@ -1903,25 +1902,6 @@ get_sql_update(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals
 	}
 
 	return (buf.data);
-}
-
-/*
- * Return a properly quoted literal value.
- * Uses quote_literal in quote.c
- */
-static char *
-quote_literal_cstr(char *rawstr)
-{
-	text	   *rawstr_text;
-	text	   *result_text;
-	char	   *result;
-
-	rawstr_text = cstring_to_text(rawstr);
-	result_text = DatumGetTextP(DirectFunctionCall1(quote_literal,
-											  PointerGetDatum(rawstr_text)));
-	result = text_to_cstring(result_text);
-
-	return result;
 }
 
 /*

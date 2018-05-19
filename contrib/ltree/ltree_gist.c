@@ -1,7 +1,7 @@
 /*
  * GiST support for ltree
  * Teodor Sigaev <teodor@stack.net>
- * $PostgreSQL: pgsql/contrib/ltree/ltree_gist.c,v 1.26 2010/02/24 18:02:24 tgl Exp $
+ * contrib/ltree/ltree_gist.c
  */
 #include "postgres.h"
 
@@ -546,7 +546,7 @@ gist_tqcmp(ltree *t, lquery *q)
 	while (an > 0 && bn > 0)
 	{
 		bl = LQL_FIRST(ql);
-		if ((res = strncmp(al->name, bl->name, Min(al->len, bl->len))) == 0)
+		if ((res = memcmp(al->name, bl->name, Min(al->len, bl->len))) == 0)
 		{
 			if (al->len != bl->len)
 				return al->len - bl->len;
@@ -606,7 +606,7 @@ arrq_cons(ltree_gist *key, ArrayType *_query)
 		ereport(ERROR,
 				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 				 errmsg("array must be one-dimensional")));
-	if (ARR_HASNULL(_query))
+	if (array_contains_nulls(_query))
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
 				 errmsg("array must not contain nulls")));

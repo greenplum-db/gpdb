@@ -3,6 +3,12 @@
  * elog.c
  *	  error logging and reporting
  *
+ * Because of the extremely high rate at which log messages can be generated,
+ * we need to be mindful of the performance cost of obtaining any information
+ * that may be logged.	Also, it's important to keep in mind that this code may
+ * get called from within an aborted transaction, in which case operations
+ * such as syscache lookups are unsafe.
+ *
  * Some notes about recursion and errors during error processing:
  *
  * We need to be robust about recursive-error scenarios --- for example,
@@ -39,12 +45,12 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.224 2010/05/08 16:39:51 tgl Exp $
+ *	  src/backend/utils/error/elog.c
  *
  *-------------------------------------------------------------------------
  */
@@ -83,7 +89,7 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 
-#include "cdb/cdbvars.h"  /*Gp_segment */
+#include "cdb/cdbvars.h"  /* GpIdentity.segindex */
 #include "cdb/cdbtm.h"
 #include "utils/ps_status.h"    /* get_ps_display_username() */
 #include "cdb/cdbselect.h"
@@ -966,8 +972,10 @@ sqlstate_to_errcode(const char *sqlstate)
 		/* Expand %m in format string */ \
 		fmtbuf = expand_fmt_string(fmt, edata); \
 		initStringInfo(&buf); \
-		if ((appendval) && edata->targetfield) \
-			appendStringInfo(&buf, "%s\n", edata->targetfield); \
+		if ((appendval) && edata->targetfield) { \
+			appendStringInfoString(&buf, edata->targetfield); \
+			appendStringInfoChar(&buf, '\n'); \
+		} \
 		/* Generate actual output --- have to use appendStringInfoVA */ \
 		for (;;) \
 		{ \
@@ -1007,8 +1015,10 @@ sqlstate_to_errcode(const char *sqlstate)
 		/* Expand %m in format string */ \
 		fmtbuf = expand_fmt_string(fmt, edata); \
 		initStringInfo(&buf); \
-		if ((appendval) && edata->targetfield) \
-			appendStringInfo(&buf, "%s\n", edata->targetfield); \
+		if ((appendval) && edata->targetfield) { \
+			appendStringInfoString(&buf, edata->targetfield); \
+			appendStringInfoChar(&buf, '\n'); \
+		} \
 		/* Generate actual output --- have to use appendStringInfoVA */ \
 		for (;;) \
 		{ \
@@ -1547,6 +1557,62 @@ elog_finish(int elevel, const char *fmt,...)
 	 */
 	errfinish(0);
 }
+
+
+/*
+ * Functions to allow construction of error message strings separately from
+ * the ereport() call itself.
+ *
+ * The expected calling convention is
+ *
+ *	pre_format_elog_string(errno, domain), var = format_elog_string(format,...)
+ *
+ * which can be hidden behind a macro such as GUC_check_errdetail().  We
+ * assume that any functions called in the arguments of format_elog_string()
+ * cannot result in re-entrant use of these functions --- otherwise the wrong
+ * text domain might be used, or the wrong errno substituted for %m.  This is
+ * okay for the current usage with GUC check hooks, but might need further
+ * effort someday.
+ *
+ * The result of format_elog_string() is stored in ErrorContext, and will
+ * therefore survive until FlushErrorState() is called.
+ */
+static int	save_format_errnumber;
+static const char *save_format_domain;
+
+void
+pre_format_elog_string(int errnumber, const char *domain)
+{
+	/* Save errno before evaluation of argument functions can change it */
+	save_format_errnumber = errnumber;
+	/* Save caller's text domain */
+	save_format_domain = domain;
+}
+
+char *
+format_elog_string(const char *fmt,...)
+{
+	ErrorData	errdata;
+	ErrorData  *edata;
+	MemoryContext oldcontext;
+
+	/* Initialize a mostly-dummy error frame */
+	edata = &errdata;
+	MemSet(edata, 0, sizeof(ErrorData));
+	/* the default text domain is the backend's */
+	edata->domain = save_format_domain ? save_format_domain : PG_TEXTDOMAIN("postgres");
+	/* set the errno to be used to interpret %m */
+	edata->saved_errno = save_format_errnumber;
+
+	oldcontext = MemoryContextSwitchTo(ErrorContext);
+
+	EVALUATE_MESSAGE(message, false, true);
+
+	MemoryContextSwitchTo(oldcontext);
+
+	return edata->message;
+}
+
 
 /*
  * Actual output of the top-of-stack error message
@@ -2359,10 +2425,15 @@ write_console(const char *line, int len)
 	/*
 	 * WriteConsoleW() will fail of stdout is redirected, so just fall through
 	 * to writing unconverted to the logfile in this case.
+	 *
+	 * Since we palloc the structure required for conversion, also fall
+	 * through to writing unconverted if we have not yet set up
+	 * CurrentMemoryContext.
 	 */
 	if (GetDatabaseEncoding() != GetPlatformEncoding() &&
 		!in_error_recursion_trouble() &&
-		!redirection_done)
+		!redirection_done &&
+		CurrentMemoryContext != NULL)
 	{
 		WCHAR	   *utf16;
 		int			utf16len;
@@ -2503,7 +2574,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 
 					if (appname == NULL || *appname == '\0')
 						appname = _("[unknown]");
-					appendStringInfo(buf, "%s", appname);
+					appendStringInfoString(buf, appname);
 				}
 				break;
 			case 'u':
@@ -2513,7 +2584,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 
 					if (username == NULL || *username == '\0')
 						username = _("[unknown]");
-					appendStringInfo(buf, "%s", username);
+					appendStringInfoString(buf, username);
 				}
 				break;
 			case 'd':
@@ -2523,7 +2594,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 
 					if (dbname == NULL || *dbname == '\0')
 						dbname = _("[unknown]");
-					appendStringInfo(buf, "%s", dbname);
+					appendStringInfoString(buf, dbname);
 				}
 				break;
 			case 'c':
@@ -2568,7 +2639,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 			case 'r':
 				if (MyProcPort && MyProcPort->remote_host)
 				{
-					appendStringInfo(buf, "%s", MyProcPort->remote_host);
+					appendStringInfoString(buf, MyProcPort->remote_host);
 					if (MyProcPort->remote_port &&
 						MyProcPort->remote_port[0] != '\0')
 						appendStringInfo(buf, "(%s)",
@@ -2577,7 +2648,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 				break;
 			case 'h':
 				if (MyProcPort && MyProcPort->remote_host)
-					appendStringInfo(buf, "%s", MyProcPort->remote_host);
+					appendStringInfoString(buf, MyProcPort->remote_host);
 				break;
 			case 'q':
 				/* in postmaster and friends, stop if %q is seen */
@@ -2601,8 +2672,8 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 				 * choose to not write anything for the very early log messages
 				 * before GUC variables are set.
 				 */
-				if( Gp_segment != UNDEF_SEGMENT )
-					appendStringInfo(buf, "%d", Gp_segment );
+				if( GpIdentity.segindex != UNDEF_SEGMENT )
+					appendStringInfo(buf, "%d", GpIdentity.segindex);
 				break;
 			case 'I':
 				/* prints a succinct description of an MPP process. */
@@ -2624,7 +2695,7 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 				if (gp_command_count > 0)
 					appendStringInfo(buf, "cmd%d ", gp_command_count);
 				if (Gp_role == GP_ROLE_EXECUTE)
-					appendStringInfo(buf, "seg%d ", Gp_segment);
+					appendStringInfo(buf, "seg%d ", GpIdentity.segindex);
 				if (currentSliceId > 0)
 					appendStringInfo(buf, "slice%d ", currentSliceId);
 				if (j < buf->len &&
@@ -2784,9 +2855,12 @@ write_csvlog(ErrorData *edata)
 	if (MyProcPort && MyProcPort->remote_host)
 	{
 		appendStringInfoChar(&buf, '"');
-		appendStringInfo(&buf, "%s", MyProcPort->remote_host);
+		appendStringInfoString(&buf, MyProcPort->remote_host);
 		if (MyProcPort->remote_port && MyProcPort->remote_port[0] != '\0')
-			appendStringInfo(&buf, ":%s", MyProcPort->remote_port);
+		{
+			appendStringInfoChar(&buf, ':');
+			appendStringInfoString(&buf, MyProcPort->remote_port);
+		}
 		appendStringInfoChar(&buf, '"');
 	}
 	appendStringInfoChar(&buf, ',');
@@ -2833,40 +2907,40 @@ write_csvlog(ErrorData *edata)
 	appendStringInfoChar(&buf, ',');
 
 	/* Error severity */
-	appendStringInfo(&buf, "%s", error_severity(edata->elevel));
+	appendStringInfoString(&buf, error_severity(edata->elevel));
 	appendStringInfoChar(&buf, ',');
 
 	/* SQL state code */
-	appendStringInfo(&buf, "%s", unpack_sql_state(edata->sqlerrcode));
+	appendStringInfoString(&buf, unpack_sql_state(edata->sqlerrcode));
 	appendStringInfoChar(&buf, ',');
 
 	/* errmessage */
 	appendCSVLiteral(&buf, edata->message);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* errdetail or errdetail_log */
 	if (edata->detail_log)
 		appendCSVLiteral(&buf, edata->detail_log);
 	else
 		appendCSVLiteral(&buf, edata->detail);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* errhint */
 	appendCSVLiteral(&buf, edata->hint);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* internal query */
 	appendCSVLiteral(&buf, edata->internalquery);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* if printed internal query, print internal pos too */
 	if (edata->internalpos > 0 && edata->internalquery != NULL)
 		appendStringInfo(&buf, "%d", edata->internalpos);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* errcontext */
 	appendCSVLiteral(&buf, edata->context);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* user query --- only reported if not disabled by the caller */
 	if (is_log_level_output(edata->elevel, log_min_error_statement) &&
@@ -2875,10 +2949,10 @@ write_csvlog(ErrorData *edata)
 		print_stmt = true;
 	if (print_stmt)
 		appendCSVLiteral(&buf, debug_query_string);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 	if (print_stmt && edata->cursorpos > 0)
 		appendStringInfo(&buf, "%d", edata->cursorpos);
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* file error location */
 	if (Log_error_verbosity >= PGERROR_VERBOSE)
@@ -2897,7 +2971,7 @@ write_csvlog(ErrorData *edata)
 		appendCSVLiteral(&buf, msgbuf.data);
 		pfree(msgbuf.data);
 	}
-	appendStringInfoCharMacro(&buf, ',');
+	appendStringInfoChar(&buf, ',');
 
 	/* application name */
 	if (application_name)
@@ -3361,7 +3435,7 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 	/* GPDB specific options */
 	syslogger_write_int32(true, "con", gp_session_id, amsyslogger, true);
 	syslogger_write_int32(true, "cmd", gp_command_count, amsyslogger, true);
-	syslogger_write_int32(false, "seg", Gp_segment, amsyslogger, true);
+	syslogger_write_int32(false, "seg", GpIdentity.segindex, amsyslogger, true);
 	syslogger_write_int32(true, "slice", currentSliceId, amsyslogger, true);
 	{
 		DistributedTransactionId dist_trans_id;
@@ -3498,7 +3572,7 @@ write_message_to_server_log(int elevel,
 	fix_fields.gp_is_primary = 't';
 	fix_fields.gp_session_id = gp_session_id;
 	fix_fields.gp_command_count = gp_command_count;
-	fix_fields.gp_segment_id = Gp_segment;
+	fix_fields.gp_segment_id = GpIdentity.segindex;
 	fix_fields.slice_id = currentSliceId;
 	fix_fields.error_cursor_pos = cursorpos;
 	fix_fields.internal_query_pos = internalpos;
@@ -3894,15 +3968,13 @@ send_message_to_server_log(ErrorData *edata)
 		}
 		else
 		{
-			const char *msg = _("Not safe to send CSV data\n");
-
-			write_console(msg, strlen(msg));
+			/*
+			 * syslogger not up (yet), so just dump the message to stderr,
+			 * unless we already did so above.
+			 */
 			if (!(Log_destination & LOG_DESTINATION_STDERR) &&
 				whereToSendOutput != DestDebug)
-			{
-				/* write message to stderr unless we just sent it above */
 				write_console(buf.data, buf.len);
-			}
 			pfree(buf.data);
 		}
 	}
@@ -4422,12 +4494,19 @@ is_log_level_output(int elevel, int log_min_level)
 }
 
 /*
- * If trace_recovery_messages is set to make this visible, then show as LOG,
- * else display as whatever level is set. It may still be shown, but only
- * if log_min_messages is set lower than trace_recovery_messages.
+ * Adjust the level of a recovery-related message per trace_recovery_messages.
+ *
+ * The argument is the default log level of the message, eg, DEBUG2.  (This
+ * should only be applied to DEBUGn log messages, otherwise it's a no-op.)
+ * If the level is >= trace_recovery_messages, we return LOG, causing the
+ * message to be logged unconditionally (for most settings of
+ * log_min_messages).  Otherwise, we return the argument unchanged.
+ * The message will then be shown based on the setting of log_min_messages.
  *
  * Intention is to keep this for at least the whole of the 9.0 production
  * release, so we can more easily diagnose production problems in the field.
+ * It should go away eventually, though, because it's an ugly and
+ * hard-to-explain kluge.
  */
 int
 trace_recovery(int trace_level)
@@ -4745,7 +4824,7 @@ StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, SIGNAL_ARG
 
 	errorData->gp_session_id = gp_session_id;
 	errorData->gp_command_count = gp_command_count;
-	errorData->gp_segment_id = Gp_segment;
+	errorData->gp_segment_id = GpIdentity.segindex;
 	errorData->slice_id = currentSliceId;
 	errorData->signal_num = (int32)postgres_signal_arg;
 	errorData->frame_depth = 0;

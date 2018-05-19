@@ -3,24 +3,27 @@
  * foreigncmds.c
  *	  foreign-data wrapper/server creation/manipulation commands
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/foreigncmds.c,v 1.11 2010/02/14 18:42:14 rhaas Exp $
+ *	  src/backend/commands/foreigncmds.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/xact.h"
 #include "access/reloptions.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
+#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
@@ -91,7 +94,7 @@ optionListToArray(List *options)
  *
  * This is used by CREATE/ALTER of FOREIGN DATA WRAPPER/SERVER/USER MAPPING.
  */
-static Datum
+Datum
 transformGenericOptions(Oid catalogId,
 						Datum oldOptions,
 						List *options,
@@ -166,7 +169,7 @@ transformGenericOptions(Oid catalogId,
 
 	result = optionListToArray(resultOptions);
 
-	if (fdwvalidator)
+	if (OidIsValid(fdwvalidator) && DatumGetPointer(result) != NULL)
 		OidFunctionCall2(fdwvalidator, result, ObjectIdGetDatum(catalogId));
 
 	return result;
@@ -188,7 +191,7 @@ GetUserOidFromMapping(const char *username, bool missing_ok)
 		return GetUserId();
 
 	/* map to provided user */
-	return missing_ok ? get_roleid(username) : get_roleid_checked(username);
+	return get_role_oid(username, missing_ok);
 }
 
 
@@ -247,8 +250,9 @@ AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId)
 								newOwnerId);
 	}
 
-	heap_close(rel, NoLock);
 	heap_freetuple(tup);
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -309,25 +313,98 @@ AlterForeignServerOwner(const char *name, Oid newOwnerId)
 								newOwnerId);
 	}
 
-	heap_close(rel, NoLock);
 	heap_freetuple(tup);
+
+	heap_close(rel, RowExclusiveLock);
 }
 
+
+/*
+ * Convert a handler function name passed from the parser to an Oid.
+ */
+static Oid
+lookup_fdw_handler_func(DefElem *handler)
+{
+	Oid			handlerOid;
+
+	if (handler == NULL || handler->arg == NULL)
+		return InvalidOid;
+
+	/* handlers have no arguments */
+	handlerOid = LookupFuncName((List *) handler->arg, 0, NULL, false);
+
+	/* check that handler has correct return type */
+	if (get_func_rettype(handlerOid) != FDW_HANDLEROID)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("function %s must return type \"fdw_handler\"",
+						NameListToString((List *) handler->arg))));
+
+	return handlerOid;
+}
 
 /*
  * Convert a validator function name passed from the parser to an Oid.
  */
 static Oid
-lookup_fdw_validator_func(List *validator)
+lookup_fdw_validator_func(DefElem *validator)
 {
 	Oid			funcargtypes[2];
 
+	if (validator == NULL || validator->arg == NULL)
+		return InvalidOid;
+
+	/* validators take text[], oid */
 	funcargtypes[0] = TEXTARRAYOID;
 	funcargtypes[1] = OIDOID;
-	return LookupFuncName(validator, 2, funcargtypes, false);
-	/* return value is ignored, so we don't check the type */
+
+	return LookupFuncName((List *) validator->arg, 2, funcargtypes, false);
+	/* validator's return value is ignored, so we don't check the type */
 }
 
+/*
+ * Process function options of CREATE/ALTER FDW
+ */
+static void
+parse_func_options(List *func_options,
+				   bool *handler_given, Oid *fdwhandler,
+				   bool *validator_given, Oid *fdwvalidator)
+{
+	ListCell   *cell;
+
+	*handler_given = false;
+	*validator_given = false;
+	/* return InvalidOid if not given */
+	*fdwhandler = InvalidOid;
+	*fdwvalidator = InvalidOid;
+
+	foreach(cell, func_options)
+	{
+		DefElem    *def = (DefElem *) lfirst(cell);
+
+		if (strcmp(def->defname, "handler") == 0)
+		{
+			if (*handler_given)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			*handler_given = true;
+			*fdwhandler = lookup_fdw_handler_func(def);
+		}
+		else if (strcmp(def->defname, "validator") == 0)
+		{
+			if (*validator_given)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			*validator_given = true;
+			*fdwvalidator = lookup_fdw_validator_func(def);
+		}
+		else
+			elog(ERROR, "option \"%s\" not recognized",
+				 def->defname);
+	}
+}
 
 /*
  * Create a foreign-data wrapper
@@ -340,9 +417,14 @@ CreateForeignDataWrapper(CreateFdwStmt *stmt)
 	bool		nulls[Natts_pg_foreign_data_wrapper];
 	HeapTuple	tuple;
 	Oid			fdwId;
+	bool		handler_given;
+	bool		validator_given;
+	Oid			fdwhandler;
 	Oid			fdwvalidator;
 	Datum		fdwoptions;
 	Oid			ownerId;
+	ObjectAddress myself;
+	ObjectAddress referenced;
 
 	/* Must be super user */
 	if (!superuser())
@@ -376,12 +458,13 @@ CreateForeignDataWrapper(CreateFdwStmt *stmt)
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->fdwname));
 	values[Anum_pg_foreign_data_wrapper_fdwowner - 1] = ObjectIdGetDatum(ownerId);
 
-	if (stmt->validator)
-		fdwvalidator = lookup_fdw_validator_func(stmt->validator);
-	else
-		fdwvalidator = InvalidOid;
+	/* Lookup handler and validator functions, if given */
+	parse_func_options(stmt->func_options,
+					   &handler_given, &fdwhandler,
+					   &validator_given, &fdwvalidator);
 
-	values[Anum_pg_foreign_data_wrapper_fdwvalidator - 1] = fdwvalidator;
+	values[Anum_pg_foreign_data_wrapper_fdwhandler - 1] = ObjectIdGetDatum(fdwhandler);
+	values[Anum_pg_foreign_data_wrapper_fdwvalidator - 1] = ObjectIdGetDatum(fdwvalidator);
 
 	nulls[Anum_pg_foreign_data_wrapper_fdwacl - 1] = true;
 
@@ -402,15 +485,21 @@ CreateForeignDataWrapper(CreateFdwStmt *stmt)
 
 	heap_freetuple(tuple);
 
-	if (fdwvalidator)
+	/* record dependencies */
+	myself.classId = ForeignDataWrapperRelationId;
+	myself.objectId = fdwId;
+	myself.objectSubId = 0;
+
+	if (OidIsValid(fdwhandler))
 	{
-		ObjectAddress myself;
-		ObjectAddress referenced;
+		referenced.classId = ProcedureRelationId;
+		referenced.objectId = fdwhandler;
+		referenced.objectSubId = 0;
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
 
-		myself.classId = ForeignDataWrapperRelationId;
-		myself.objectId = fdwId;
-		myself.objectSubId = 0;
-
+	if (OidIsValid(fdwvalidator))
+	{
 		referenced.classId = ProcedureRelationId;
 		referenced.objectId = fdwvalidator;
 		referenced.objectSubId = 0;
@@ -419,7 +508,12 @@ CreateForeignDataWrapper(CreateFdwStmt *stmt)
 
 	recordDependencyOnOwner(ForeignDataWrapperRelationId, fdwId, ownerId);
 
-	heap_close(rel, NoLock);
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
+
+	/* Post creation hook for new foreign data wrapper */
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   ForeignDataWrapperRelationId, fdwId, 0);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -428,6 +522,8 @@ CreateForeignDataWrapper(CreateFdwStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -439,12 +535,16 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 {
 	Relation	rel;
 	HeapTuple	tp;
+	Form_pg_foreign_data_wrapper fdwForm;
 	Datum		repl_val[Natts_pg_foreign_data_wrapper];
 	bool		repl_null[Natts_pg_foreign_data_wrapper];
 	bool		repl_repl[Natts_pg_foreign_data_wrapper];
 	Oid			fdwId;
 	bool		isnull;
 	Datum		datum;
+	bool		handler_given;
+	bool		validator_given;
+	Oid			fdwhandler;
 	Oid			fdwvalidator;
 
 	/* Must be super user */
@@ -463,15 +563,32 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 		errmsg("foreign-data wrapper \"%s\" does not exist", stmt->fdwname)));
 
+	fdwForm = (Form_pg_foreign_data_wrapper) GETSTRUCT(tp);
 	fdwId = HeapTupleGetOid(tp);
 
 	memset(repl_val, 0, sizeof(repl_val));
 	memset(repl_null, false, sizeof(repl_null));
 	memset(repl_repl, false, sizeof(repl_repl));
 
-	if (stmt->change_validator)
+	parse_func_options(stmt->func_options,
+					   &handler_given, &fdwhandler,
+					   &validator_given, &fdwvalidator);
+
+	if (handler_given)
 	{
-		fdwvalidator = stmt->validator ? lookup_fdw_validator_func(stmt->validator) : InvalidOid;
+		repl_val[Anum_pg_foreign_data_wrapper_fdwhandler - 1] = ObjectIdGetDatum(fdwhandler);
+		repl_repl[Anum_pg_foreign_data_wrapper_fdwhandler - 1] = true;
+
+		/*
+		 * It could be that the behavior of accessing foreign table changes
+		 * with the new handler.  Warn about this.
+		 */
+		ereport(WARNING,
+				(errmsg("changing the foreign-data wrapper handler can change behavior of existing foreign tables")));
+	}
+
+	if (validator_given)
+	{
 		repl_val[Anum_pg_foreign_data_wrapper_fdwvalidator - 1] = ObjectIdGetDatum(fdwvalidator);
 		repl_repl[Anum_pg_foreign_data_wrapper_fdwvalidator - 1] = true;
 
@@ -479,7 +596,7 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 		 * It could be that the options for the FDW, SERVER and USER MAPPING
 		 * are no longer valid with the new validator.	Warn about this.
 		 */
-		if (stmt->validator)
+		if (OidIsValid(fdwvalidator))
 			ereport(WARNING,
 			 (errmsg("changing the foreign-data wrapper validator can cause "
 					 "the options for dependent objects to become invalid")));
@@ -489,16 +606,11 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 		/*
 		 * Validator is not changed, but we need it for validating options.
 		 */
-		datum = SysCacheGetAttr(FOREIGNDATAWRAPPEROID,
-								tp,
-								Anum_pg_foreign_data_wrapper_fdwvalidator,
-								&isnull);
-		Assert(!isnull);
-		fdwvalidator = DatumGetObjectId(datum);
+		fdwvalidator = fdwForm->fdwvalidator;
 	}
 
 	/*
-	 * Options specified, validate and update.
+	 * If options specified, validate and update.
 	 */
 	if (stmt->options)
 	{
@@ -534,8 +646,44 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 	simple_heap_update(rel, &tp->t_self, tp);
 	CatalogUpdateIndexes(rel, tp);
 
-	heap_close(rel, RowExclusiveLock);
 	heap_freetuple(tp);
+
+	/* Update function dependencies if we changed them */
+	if (handler_given || validator_given)
+	{
+		ObjectAddress myself;
+		ObjectAddress referenced;
+
+		/*
+		 * Flush all existing dependency records of this FDW on functions; we
+		 * assume there can be none other than the ones we are fixing.
+		 */
+		deleteDependencyRecordsForClass(ForeignDataWrapperRelationId,
+										fdwId,
+										ProcedureRelationId,
+										DEPENDENCY_NORMAL);
+
+		/* And build new ones. */
+		myself.classId = ForeignDataWrapperRelationId;
+		myself.objectId = fdwId;
+		myself.objectSubId = 0;
+
+		if (OidIsValid(fdwhandler))
+		{
+			referenced.classId = ProcedureRelationId;
+			referenced.objectId = fdwhandler;
+			referenced.objectSubId = 0;
+			recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+		}
+
+		if (OidIsValid(fdwvalidator))
+		{
+			referenced.classId = ProcedureRelationId;
+			referenced.objectId = fdwvalidator;
+			referenced.objectSubId = 0;
+			recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+		}
+	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -544,6 +692,8 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -556,7 +706,7 @@ RemoveForeignDataWrapper(DropFdwStmt *stmt)
 	Oid			fdwId;
 	ObjectAddress object;
 
-	fdwId = GetForeignDataWrapperOidByName(stmt->fdwname, true);
+	fdwId = get_foreign_data_wrapper_oid(stmt->fdwname, true);
 
 	if (!superuser())
 		ereport(ERROR,
@@ -712,7 +862,7 @@ CreateForeignServer(CreateForeignServerStmt *stmt)
 
 	heap_freetuple(tuple);
 
-	/* Add dependency on FDW and owner */
+	/* record dependencies */
 	myself.classId = ForeignServerRelationId;
 	myself.objectId = srvId;
 	myself.objectSubId = 0;
@@ -724,7 +874,11 @@ CreateForeignServer(CreateForeignServerStmt *stmt)
 
 	recordDependencyOnOwner(ForeignServerRelationId, srvId, ownerId);
 
-	heap_close(rel, NoLock);
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
+
+	/* Post creation hook for new foreign server */
+	InvokeObjectAccessHook(OAT_POST_CREATE, ForeignServerRelationId, srvId, 0);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -733,6 +887,8 @@ CreateForeignServer(CreateForeignServerStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -824,7 +980,6 @@ AlterForeignServer(AlterForeignServerStmt *stmt)
 	simple_heap_update(rel, &tp->t_self, tp);
 	CatalogUpdateIndexes(rel, tp);
 
-	heap_close(rel, RowExclusiveLock);
 	heap_freetuple(tp);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -834,6 +989,8 @@ AlterForeignServer(AlterForeignServerStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -846,7 +1003,7 @@ RemoveForeignServer(DropForeignServerStmt *stmt)
 	Oid			srvId;
 	ObjectAddress object;
 
-	srvId = GetForeignServerOidByName(stmt->servername, true);
+	srvId = get_foreign_server_oid(stmt->servername, true);
 
 	if (!OidIsValid(srvId))
 	{
@@ -1016,10 +1173,16 @@ CreateUserMapping(CreateUserMappingStmt *stmt)
 	recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 	if (OidIsValid(useId))
+	{
 		/* Record the mapped user dependency */
 		recordDependencyOnOwner(UserMappingRelationId, umId, useId);
+	}
 
-	heap_close(rel, NoLock);
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
+
+	/* Post creation hook for new user mapping */
+	InvokeObjectAccessHook(OAT_POST_CREATE, UserMappingRelationId, umId, 0);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -1028,6 +1191,8 @@ CreateUserMapping(CreateUserMappingStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -1112,7 +1277,6 @@ AlterUserMapping(AlterUserMappingStmt *stmt)
 	simple_heap_update(rel, &tp->t_self, tp);
 	CatalogUpdateIndexes(rel, tp);
 
-	heap_close(rel, RowExclusiveLock);
 	heap_freetuple(tp);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -1122,6 +1286,8 @@ AlterUserMapping(AlterUserMappingStmt *stmt)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -1222,4 +1388,86 @@ RemoveUserMappingById(Oid umId)
 	ReleaseSysCache(tp);
 
 	heap_close(rel, RowExclusiveLock);
+}
+
+/*
+ * Create a foreign table
+ * call after DefineRelation().
+ */
+void
+CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
+{
+	Relation	ftrel;
+	Datum		ftoptions;
+	Datum		values[Natts_pg_foreign_table];
+	bool		nulls[Natts_pg_foreign_table];
+	HeapTuple	tuple;
+	AclResult	aclresult;
+	ObjectAddress myself;
+	ObjectAddress referenced;
+	Oid			ownerId;
+	ForeignDataWrapper *fdw;
+	ForeignServer *server;
+
+	/*
+	 * Advance command counter to ensure the pg_attribute tuple visible; the
+	 * tuple might be updated to add constraints in previous step.
+	 */
+	CommandCounterIncrement();
+
+	/*
+	 * For now the owner cannot be specified on create. Use effective user ID.
+	 */
+	ownerId = GetUserId();
+
+	/*
+	 * Check that the foreign server exists and that we have USAGE on it. Also
+	 * get the actual FDW for option validation etc.
+	 */
+	server = GetForeignServerByName(stmt->servername, false);
+	aclresult = pg_foreign_server_aclcheck(server->serverid, ownerId, ACL_USAGE);
+	if (aclresult != ACLCHECK_OK)
+		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, server->servername);
+
+	fdw = GetForeignDataWrapper(server->fdwid);
+
+	/*
+	 * Insert tuple into pg_foreign_table.
+	 */
+	ftrel = heap_open(ForeignTableRelationId, RowExclusiveLock);
+
+	memset(values, 0, sizeof(values));
+	memset(nulls, false, sizeof(nulls));
+
+	values[Anum_pg_foreign_table_ftrelid - 1] = ObjectIdGetDatum(relid);
+	values[Anum_pg_foreign_table_ftserver - 1] = ObjectIdGetDatum(server->serverid);
+	/* Add table generic options */
+	ftoptions = transformGenericOptions(ForeignTableRelationId,
+										PointerGetDatum(NULL),
+										stmt->options,
+										fdw->fdwvalidator);
+
+	if (PointerIsValid(DatumGetPointer(ftoptions)))
+		values[Anum_pg_foreign_table_ftoptions - 1] = ftoptions;
+	else
+		nulls[Anum_pg_foreign_table_ftoptions - 1] = true;
+
+	tuple = heap_form_tuple(ftrel->rd_att, values, nulls);
+
+	simple_heap_insert(ftrel, tuple);
+	CatalogUpdateIndexes(ftrel, tuple);
+
+	heap_freetuple(tuple);
+
+	/* Add pg_class dependency on the server */
+	myself.classId = RelationRelationId;
+	myself.objectId = relid;
+	myself.objectSubId = 0;
+
+	referenced.classId = ForeignServerRelationId;
+	referenced.objectId = server->serverid;
+	referenced.objectSubId = 0;
+	recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+
+	heap_close(ftrel, RowExclusiveLock);
 }

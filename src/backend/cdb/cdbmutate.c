@@ -335,10 +335,11 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 								 */
 								else
 									new_var = makeVar(OUTER,
-											n,
-											exprType((Node *) target->expr),
-											exprTypmod((Node *) target->expr),
-											0);
+													  n,
+													  exprType((Node *) target->expr),
+													  exprTypmod((Node *) target->expr),
+													  exprCollation((Node *) target->expr),
+													  0);
 
 								if (equal(var1, new_var))
 								{
@@ -1574,6 +1575,7 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 	List	   *colnames = NIL;
 	List	   *coltypes = NIL;
 	List	   *coltypmods = NIL;
+	List	   *colcollations = NIL;
 	ShareInputScan *producer;
 
 	Assert(ctxt->producer_count > share_id);
@@ -1585,10 +1587,12 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
 		Oid			vartype;
 		int32		vartypmod;
+		Oid			varcollid;
 		char	   *resname;
 
 		vartype = exprType((Node *) tle->expr);
 		vartypmod = exprTypmod((Node *) tle->expr);
+		varcollid = exprCollation((Node *) tle->expr);
 
 		/*
 		 * We should've filled in tle->resname in shareinput_save_producer().
@@ -1603,6 +1607,7 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 		colnames = lappend(colnames, makeString(resname));
 		coltypes = lappend_oid(coltypes, vartype);
 		coltypmods = lappend_int(coltypmods, vartypmod);
+		colcollations = lappend_oid(colcollations, varcollid);
 		attno++;
 	}
 
@@ -1622,6 +1627,7 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 	rte->eref = makeAlias(rte->ctename, colnames);
 	rte->ctecoltypes = coltypes;
 	rte->ctecoltypmods = coltypmods;
+	rte->ctecolcollations = colcollations;
 
 	rte->inh = false;
 	rte->inFromCl = false;
@@ -1898,6 +1904,7 @@ replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glob, bool fPop
 			newtle->expr = (Expr *) makeVar(sisc->scan.scanrelid, attno,
 											exprType((Node *) tle->expr),
 											exprTypmod((Node *) tle->expr),
+											exprCollation((Node *) tle->expr),
 											0);
 			newtargetlist = lappend(newtargetlist, newtle);
 			attno++;
@@ -2391,7 +2398,6 @@ rte_param_walker(List *rtable, ParamWalkerContext *context)
 		switch (rte->rtekind)
 		{
 			case RTE_RELATION:
-			case RTE_SPECIAL:
 			case RTE_VOID:
 			case RTE_CTE:
 				/* nothing to do */
@@ -2748,8 +2754,13 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 		newexpr->funcid = expr->funcid;
 		newexpr->funcresulttype = expr->funcresulttype;
 		newexpr->funcretset = expr->funcretset;
+		newexpr->funcvariadic = expr->funcvariadic;
 		newexpr->funcformat = expr->funcformat;
+		newexpr->funccollid = expr->funccollid;
+		newexpr->inputcollid = expr->inputcollid;
 		newexpr->args = args;
+		newexpr->location = expr->location;
+		newexpr->is_tablefunc = expr->is_tablefunc;
 
 		/*
 		 * Check for constant inputs
@@ -2864,7 +2875,10 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 			/*
 			 * Make the constant result node.
 			 */
-			simple = (Expr *) makeConst(expr->funcresulttype, -1, resultTypLen,
+			simple = (Expr *) makeConst(expr->funcresulttype,
+										-1,
+										expr->funccollid,
+										resultTypLen,
 										const_val, const_is_null,
 										resultTypByVal);
 
@@ -2907,7 +2921,10 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 		newexpr->opfuncid = expr->opfuncid;
 		newexpr->opresulttype = expr->opresulttype;
 		newexpr->opretset = expr->opretset;
+		newexpr->opcollid = expr->opcollid;
+		newexpr->inputcollid = expr->inputcollid;
 		newexpr->args = args;
+		newexpr->location = expr->location;
 
 		return (Node *) newexpr;
 	}
@@ -3080,7 +3097,7 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 			estate->es_num_result_relations = 1;
 			estate->es_result_relation_info = rri;
 			rri = values_get_partition(values, nulls, RelationGetDescr(rel),
-									   estate);
+									   estate, false);
 
 			/*
 			 * 5: get target policy for destination table
@@ -3090,7 +3107,6 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 			if ((*targetPolicy)->ptype != POLICYTYPE_PARTITIONED)
 				elog(ERROR, "policy must be partitioned");
 
-			ExecCloseIndices(rri);
 			heap_close(rri->ri_RelationDesc, NoLock);
 			FreeExecutorState(estate);
 		}

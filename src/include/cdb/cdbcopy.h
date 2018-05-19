@@ -41,7 +41,6 @@ typedef struct CdbCopy
 	int			total_segs;		/* total number of segments in cdb */
 	int		   *mirror_map;		/* indicates how many db's each segment has */
 	bool		copy_in;		/* direction: true for COPY FROM false for COPY TO */
-	bool		remote_data_err;/* data error occurred on a remote COPY session */
 	bool		io_errors;		/* true if any I/O error occurred trying to
 								 * communicate with segDB's */
 	bool		skip_ext_partition;/* skip external partition */ 
@@ -64,12 +63,17 @@ typedef struct CdbCopy
 
 
 /* global function declarations */
-CdbCopy    *makeCdbCopy(bool copy_in);
-void		cdbCopyStart(CdbCopy *cdbCopy, char *copyCmd, struct GpPolicy *policy);
-void		cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
-void		cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
-bool		cdbCopyGetData(CdbCopy *c, bool cancel, uint64 *rows_processed);
-int			cdbCopyEnd(CdbCopy *c);
-int			cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed);
+extern CdbCopy *makeCdbCopy(bool copy_in);
+extern void cdbCopyStart(CdbCopy *cdbCopy, CopyStmt *stmt, struct GpPolicy *policy);
+extern void cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
+extern void cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
+extern bool cdbCopyGetData(CdbCopy *c, bool cancel, uint64 *rows_processed);
+extern int cdbCopyEnd(CdbCopy *c);
+extern int cdbCopyAbort(CdbCopy *c);
+/*
+ * GPDB_91_MERGE_FIXME: let's consistently use uint64 as type for counting rows
+ * of any kind.
+ */
+extern int cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort_msg);
 
 #endif   /* CDBCOPY_H */

@@ -2,10 +2,10 @@
  *
  * dropdb
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/dropdb.c,v 1.28 2010/01/02 16:58:00 momjian Exp $
+ * src/bin/scripts/dropdb.c
  *
  *-------------------------------------------------------------------------
  */
@@ -113,6 +113,10 @@ main(int argc, char *argv[])
 	appendPQExpBuffer(&sql, "DROP DATABASE %s;\n",
 					  fmtId(dbname));
 
+	/*
+	 * Connect to the 'postgres' database by default, except have the
+	 * 'postgres' user use 'template1' so he can drop the 'postgres' database.
+	 */
 	conn = connectDatabase(strcmp(dbname, "postgres") == 0 ? "template1" : "postgres",
 						   host, port, username, prompt_password, progname);
 

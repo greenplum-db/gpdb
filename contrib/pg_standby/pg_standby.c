@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/pg_standby/pg_standby.c,v 1.29 2010/05/15 09:31:57 heikki Exp $
+ * contrib/pg_standby/pg_standby.c
  *
  *
  * pg_standby.c
@@ -119,7 +119,7 @@ struct stat stat_buf;
  *	accessible directory. If you want to make other assumptions,
  *	such as using a vendor-specific archive and access API, these
  *	routines are the ones you'll need to change. You're
- *	enouraged to submit any changes to pgsql-hackers@postgresql.org
+ *	encouraged to submit any changes to pgsql-hackers@postgresql.org
  *	or personally to the current maintainer. Those changes may be
  *	folded in to later versions of this program.
  */
@@ -252,7 +252,7 @@ CustomizableCleanupPriorWALFiles(void)
 		/*
 		 * Assume it's OK to keep failing. The failure situation may change
 		 * over time, so we'd rather keep going on the main processing than
-		 * fail because we couldnt clean up yet.
+		 * fail because we couldn't clean up yet.
 		 */
 		if ((xldir = opendir(archiveLocation)) != NULL)
 		{
@@ -520,11 +520,6 @@ usage(void)
 	printf("%s allows PostgreSQL warm standby servers to be configured.\n\n", progname);
 	printf("Usage:\n");
 	printf("  %s [OPTION]... ARCHIVELOCATION NEXTWALFILE XLOGFILEPATH [RESTARTWALFILE]\n", progname);
-	printf("\n"
-		"with main intended use as a restore_command in the recovery.conf:\n"
-		   "  restore_command = 'pg_standby [OPTION]... ARCHIVELOCATION %%f %%p %%r'\n"
-		   "e.g.\n"
-		   "  restore_command = 'pg_standby -l /mnt/server/archiverdir %%f %%p %%r'\n");
 	printf("\nOptions:\n");
 	printf("  -c                 copies file from archive (default)\n");
 	printf("  -d                 generate lots of debugging output (testing only)\n");
@@ -539,6 +534,11 @@ usage(void)
 	printf("  -w MAXWAITTIME     max seconds to wait for a file (0=no limit) (default=0)\n");
 	printf("  --help             show this help, then exit\n");
 	printf("  --version          output version information, then exit\n");
+	printf("\n"
+		   "Main intended use as restore_command in recovery.conf:\n"
+		   "  restore_command = 'pg_standby [OPTION]... ARCHIVELOCATION %%f %%p %%r'\n"
+		   "e.g.\n"
+	"  restore_command = 'pg_standby /mnt/server/archiverdir %%f %%p %%r'\n");
 	printf("\nReport bugs to <pgsql-bugs@postgresql.org>.\n");
 }
 
@@ -727,20 +727,20 @@ main(int argc, char **argv)
 
 	if (debug)
 	{
-		fprintf(stderr, "Trigger file 		: %s\n", triggerPath ? triggerPath : "<not set>");
-		fprintf(stderr, "Waiting for WAL file	: %s\n", nextWALFileName);
-		fprintf(stderr, "WAL file path		: %s\n", WALFilePath);
-		fprintf(stderr, "Restoring to		: %s\n", xlogFilePath);
-		fprintf(stderr, "Sleep interval		: %d second%s\n",
+		fprintf(stderr, "Trigger file:         %s\n", triggerPath ? triggerPath : "<not set>");
+		fprintf(stderr, "Waiting for WAL file: %s\n", nextWALFileName);
+		fprintf(stderr, "WAL file path:        %s\n", WALFilePath);
+		fprintf(stderr, "Restoring to:         %s\n", xlogFilePath);
+		fprintf(stderr, "Sleep interval:       %d second%s\n",
 				sleeptime, (sleeptime > 1 ? "s" : " "));
-		fprintf(stderr, "Max wait interval	: %d %s\n",
+		fprintf(stderr, "Max wait interval:    %d %s\n",
 				maxwaittime, (maxwaittime > 0 ? "seconds" : "forever"));
-		fprintf(stderr, "Command for restore	: %s\n", restoreCommand);
-		fprintf(stderr, "Keep archive history	: ");
+		fprintf(stderr, "Command for restore:  %s\n", restoreCommand);
+		fprintf(stderr, "Keep archive history: ");
 		if (need_cleanup)
 			fprintf(stderr, "%s and later\n", exclusiveCleanupFileName);
 		else
-			fprintf(stderr, "No cleanup required\n");
+			fprintf(stderr, "no cleanup required\n");
 		fflush(stderr);
 	}
 

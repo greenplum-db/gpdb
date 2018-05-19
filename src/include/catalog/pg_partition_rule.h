@@ -35,10 +35,10 @@ CATALOG(pg_partition_rule,5011)
 	int2		parruleord;			
 	bool		parrangestartincl;	
 	bool		parrangeendincl;	
-	text		parrangestart;		
-	text		parrangeend;		
-	text		parrangeevery;		
-	text		parlistvalues;		
+	pg_node_tree parrangestart;
+	pg_node_tree parrangeend;
+	pg_node_tree parrangeevery;
+	pg_node_tree parlistvalues;
 	text		parreloptions[1];	
 	Oid			partemplatespace;	
 } FormData_pg_partition_rule;

@@ -389,7 +389,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
 			if (!rinfo->left_ec)
-				cache_mergeclause_eclasses(ctx->root, rinfo);
+				update_mergeclause_eclasses(ctx->root, rinfo);
 
 			if (CdbPathLocus_IsHashed(ctx->locus))
 			{
@@ -553,7 +553,7 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo *root,
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
 			if (!rinfo->left_ec)
-				cache_mergeclause_eclasses(root, rinfo);
+				update_mergeclause_eclasses(root, rinfo);
 
 			/* Skip predicate if neither side matches outer partkey item. */
 			if (CdbPathLocus_IsHashed(outer_locus))
@@ -677,7 +677,7 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 
 		if (!rinfo->left_ec)
 		{
-			cache_mergeclause_eclasses(root, rinfo);
+			update_mergeclause_eclasses(root, rinfo);
 			Assert(rinfo->left_ec);
 		}
 
@@ -1354,6 +1354,7 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 				ctid_exprs = lappend(ctid_exprs,
 									 makeFuncExpr(CDB_PROC_TIDTOI8, INT8OID,
 												  list_make1(var),
+												  InvalidOid, InvalidOid,
 												  COERCE_EXPLICIT_CAST));
 				ctid_operators = lappend_oid(ctid_operators, Int8EqualOperator);
 			}
@@ -1384,7 +1385,7 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 
 			get_sort_group_operators(exprType((Node *) var),
 									 false, true, false,
-									 NULL, &eqop, NULL);
+									 NULL, &eqop, NULL, NULL);
 
 			other_operators = lappend_oid(other_operators, eqop);
 		}
@@ -1463,7 +1464,8 @@ cdbpath_dedup_fixup_baserel(Path *path, CdbpathDedupFixupContext *ctx)
 	if (ctx->need_subplan_id)
 	{
 		/* Make a Const node containing the current subplan id. */
-		con = makeConst(INT4OID, -1, sizeof(int32), Int32GetDatum(ctx->subplan_id),
+		con = makeConst(INT4OID, -1, InvalidOid, sizeof(int32),
+						Int32GetDatum(ctx->subplan_id),
 						false, true);
 
 		/* Set up a pseudo column whose value will be the constant. */
@@ -1687,7 +1689,7 @@ cdbpath_dedup_fixup_walker(Path *path, void *context)
 			break;
 
 		default:
-			Insist(0);
+			elog(ERROR, "cannot create a unique ID for path type: %d", path->pathtype);
 	}
 	return CdbVisit_Skip;		/* already visited kids, don't revisit them */
 }								/* cdbpath_dedup_fixup_walker */

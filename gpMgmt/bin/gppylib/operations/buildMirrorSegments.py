@@ -300,6 +300,8 @@ class GpMirrorListToBuild:
 
             self.__logger.info("Updating mirrors")
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
+            if actionName ==  "add":
+                self.__registerMirrorsInCatalog(gpArray)
 
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
@@ -616,6 +618,27 @@ class GpMirrorListToBuild:
                                                     gpEnv.getGpVersion(),
                                                     gpEnv.getGpHome(), gpEnv.getMasterDataDir()
                                                     )
+
+    def __registerMirrorsInCatalog(self, gpArray):
+        self.__logger.info("Updating gp_segment_configuration with mirror info")
+        dburl = dbconn.DbURL(dbname='template1', port=gpArray.master.port)
+        conn = dbconn.connect(dburl, utility=False)
+        query = "select pg_catalog.gp_add_segment_mirror(%s::int2, '%s', '%s', %s, '%s');"
+
+        try:
+            for segmentPair in gpArray.getSegmentList():
+                mirror = segmentPair.mirrorDB
+                filledInQuery = query % (mirror.getSegmentContentId(), mirror.getSegmentAddress(),
+                                         mirror.getSegmentAddress(), mirror.getSegmentPort(), mirror.getSegmentDataDirectory())
+                dbconn.execSQL(conn, filledInQuery)
+
+        except Exception as e:
+            self.__logger.error("Failed while updating mirror info in gp_segment_configuration: %s" % str(e))
+            raise
+
+        else:
+            conn.commit()
+            self.__logger.info("Successfully updated gp_segment_configuration with mirror info")
 
     def __updateGpIdFile(self, gpEnv, gpArray, segments):
         segmentByHost = GpArray.getSegmentsByHostName(segments)

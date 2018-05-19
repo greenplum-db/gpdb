@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lmgr.c,v 1.100 2010/01/02 16:57:52 momjian Exp $
+ *	  src/backend/storage/lmgr/lmgr.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 
 #include "access/subtrans.h"
 #include "access/transam.h"
+#include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/namespace.h"
@@ -669,6 +670,9 @@ LockDatabaseObject(Oid classid, Oid objid, uint16 objsubid,
 					   objsubid);
 
 	(void) LockAcquire(&tag, lockmode, false, false);
+
+	/* Make sure syscaches are up-to-date with any changes we waited for */
+	AcceptInvalidationMessages();
 }
 
 /*
@@ -901,4 +905,28 @@ LockTagIsTemp(const LOCKTAG *tag)
 			break;
 	}
 	return false;				/* default case */
+}
+
+/*
+ * Because of the current disign of AO table's visibility map,
+ * we have to keep upgrading locks for AO table.
+ */
+bool
+CondUpgradeRelLock(Oid relid)
+{
+	Relation rel;
+	bool upgrade = false;
+
+	rel = try_relation_open(relid, NoLock, true);
+
+	if (!rel)
+		elog(ERROR, "Relation open failed!");
+	else if (RelationIsAppendOptimized(rel))
+		upgrade = true;
+	else
+		upgrade = false;
+
+	relation_close(rel, NoLock);
+
+	return upgrade;
 }

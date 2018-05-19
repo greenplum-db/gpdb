@@ -4,7 +4,7 @@
 #    Makefile for utils/misc
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/utils/misc/Makefile,v 1.30 2010/02/11 14:29:50 teodor Exp $
+#    src/backend/utils/misc/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -42,5 +42,5 @@ endif
 
 # Note: guc-file.c is not deleted by 'make clean',
 # since we want to ship it in distribution tarballs.
-clean: 
+clean:
 	@rm -f lex.yy.c

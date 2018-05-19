@@ -4,11 +4,11 @@
  *	  utilities routines for the postgres GiST index access method.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gist/gistutil.c,v 1.35 2010/01/02 16:57:34 momjian Exp $
+ *			src/backend/access/gist/gistutil.c
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
@@ -154,7 +154,7 @@ gistfillitupvec(IndexTuple *vec, int veclen, int *memlen)
  * invalid tuple. Resulting Datums aren't compressed.
  */
 
-bool
+void
 gistMakeUnionItVec(GISTSTATE *giststate, IndexTuple *itvec, int len, int startkey,
 				   Datum *attr, bool *isnull)
 {
@@ -181,10 +181,6 @@ gistMakeUnionItVec(GISTSTATE *giststate, IndexTuple *itvec, int len, int startke
 		{
 			Datum		datum;
 			bool		IsNull;
-
-			if (GistTupleIsInvalid(itvec[j]))
-				return FALSE;	/* signals that union with invalid tuple =>
-								 * result is invalid */
 
 			datum = index_getattr(itvec[j], i + 1, giststate->tupdesc, &IsNull);
 			if (IsNull)
@@ -213,15 +209,14 @@ gistMakeUnionItVec(GISTSTATE *giststate, IndexTuple *itvec, int len, int startke
 			}
 
 			/* Make union and store in attr array */
-			attr[i] = FunctionCall2(&giststate->unionFn[i],
-									PointerGetDatum(evec),
-									PointerGetDatum(&attrsize));
+			attr[i] = FunctionCall2Coll(&giststate->unionFn[i],
+										giststate->supportCollation[i],
+										PointerGetDatum(evec),
+										PointerGetDatum(&attrsize));
 
 			isnull[i] = FALSE;
 		}
 	}
-
-	return TRUE;
 }
 
 /*
@@ -233,8 +228,7 @@ gistunion(Relation r, IndexTuple *itvec, int len, GISTSTATE *giststate)
 {
 	memset(isnullS, TRUE, sizeof(bool) * giststate->tupdesc->natts);
 
-	if (!gistMakeUnionItVec(giststate, itvec, len, 0, attrS, isnullS))
-		return gist_form_invalid_tuple(InvalidBlockNumber);
+	gistMakeUnionItVec(giststate, itvec, len, 0, attrS, isnullS);
 
 	return gistFormTuple(giststate, r, attrS, isnullS, false);
 }
@@ -280,9 +274,10 @@ gistMakeUnionKey(GISTSTATE *giststate, int attno,
 		}
 
 		*dstisnull = FALSE;
-		*dst = FunctionCall2(&giststate->unionFn[attno],
-							 PointerGetDatum(evec),
-							 PointerGetDatum(&dstsize));
+		*dst = FunctionCall2Coll(&giststate->unionFn[attno],
+								 giststate->supportCollation[attno],
+								 PointerGetDatum(evec),
+								 PointerGetDatum(&dstsize));
 	}
 }
 
@@ -291,9 +286,10 @@ gistKeyIsEQ(GISTSTATE *giststate, int attno, Datum a, Datum b)
 {
 	bool		result;
 
-	FunctionCall3(&giststate->equalFn[attno],
-				  a, b,
-				  PointerGetDatum(&result));
+	FunctionCall3Coll(&giststate->equalFn[attno],
+					  giststate->supportCollation[attno],
+					  a, b,
+					  PointerGetDatum(&result));
 	return result;
 }
 
@@ -329,9 +325,6 @@ gistgetadjusted(Relation r, IndexTuple oldtup, IndexTuple addtup, GISTSTATE *gis
 				addisnull[INDEX_MAX_KEYS];
 	IndexTuple	newtup = NULL;
 	int			i;
-
-	if (GistTupleIsInvalid(oldtup) || GistTupleIsInvalid(addtup))
-		return gist_form_invalid_tuple(ItemPointerGetBlockNumber(&(oldtup->t_tid)));
 
 	gistDeCompressAtt(giststate, r, oldtup, NULL,
 					  (OffsetNumber) 0, oldentries, oldisnull);
@@ -422,14 +415,6 @@ gistchoose(Relation r, Page p, IndexTuple it,	/* it has compressed entry */
 		bool		zero_penalty;
 		int			j;
 
-		if (!GistPageIsLeaf(p) && GistTupleIsInvalid(itup))
-		{
-			ereport(LOG,
-					(errmsg("index \"%s\" needs VACUUM or REINDEX to finish crash recovery",
-							RelationGetRelationName(r))));
-			continue;
-		}
-
 		zero_penalty = true;
 
 		/* Loop over index attributes. */
@@ -510,8 +495,9 @@ gistdentryinit(GISTSTATE *giststate, int nkey, GISTENTRY *e,
 
 		gistentryinit(*e, k, r, pg, o, l);
 		dep = (GISTENTRY *)
-			DatumGetPointer(FunctionCall1(&giststate->decompressFn[nkey],
-										  PointerGetDatum(e)));
+			DatumGetPointer(FunctionCall1Coll(&giststate->decompressFn[nkey],
+										   giststate->supportCollation[nkey],
+											  PointerGetDatum(e)));
 		/* decompressFn may just return the given pointer */
 		if (dep != e)
 			gistentryinit(*e, dep->key, dep->rel, dep->page, dep->offset,
@@ -536,8 +522,9 @@ gistcentryinit(GISTSTATE *giststate, int nkey,
 
 		gistentryinit(*e, k, r, pg, o, l);
 		cep = (GISTENTRY *)
-			DatumGetPointer(FunctionCall1(&giststate->compressFn[nkey],
-										  PointerGetDatum(e)));
+			DatumGetPointer(FunctionCall1Coll(&giststate->compressFn[nkey],
+										   giststate->supportCollation[nkey],
+											  PointerGetDatum(e)));
 		/* compressFn may just return the given pointer */
 		if (cep != e)
 			gistentryinit(*e, cep->key, cep->rel, cep->page, cep->offset,
@@ -571,7 +558,12 @@ gistFormTuple(GISTSTATE *giststate, Relation r,
 	}
 
 	res = index_form_tuple(giststate->tupdesc, compatt, isnull);
-	GistTupleSetValid(res);
+
+	/*
+	 * The offset number on tuples on internal pages is unused. For historical
+	 * reasons, it is set 0xffff.
+	 */
+	ItemPointerSetOffsetNumber(&(res->t_tid), 0xffff);
 	return res;
 }
 
@@ -585,10 +577,11 @@ gistpenalty(GISTSTATE *giststate, int attno,
 	if (giststate->penaltyFn[attno].fn_strict == FALSE ||
 		(isNullOrig == FALSE && isNullAdd == FALSE))
 	{
-		FunctionCall3(&giststate->penaltyFn[attno],
-					  PointerGetDatum(orig),
-					  PointerGetDatum(add),
-					  PointerGetDatum(&penalty));
+		FunctionCall3Coll(&giststate->penaltyFn[attno],
+						  giststate->supportCollation[attno],
+						  PointerGetDatum(orig),
+						  PointerGetDatum(add),
+						  PointerGetDatum(&penalty));
 		/* disallow negative or NaN penalty */
 		if (isnan(penalty) || penalty < 0.0)
 			penalty = 0.0;

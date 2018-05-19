@@ -3,10 +3,10 @@
  * nodeFuncs.h
  *		Various general-purpose manipulations of Node trees
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodeFuncs.h,v 1.32 2010/01/02 16:58:04 momjian Exp $
+ * src/include/nodes/nodeFuncs.h
  *
  *-------------------------------------------------------------------------
  */
@@ -21,14 +21,20 @@
 #define QTW_IGNORE_CTE_SUBQUERIES	0x02		/* subqueries in cteList */
 #define QTW_IGNORE_RC_SUBQUERIES	0x03		/* both of above */
 #define QTW_IGNORE_JOINALIASES		0x04		/* JOIN alias var lists */
-#define QTW_EXAMINE_RTES			0x08		/* examine RTEs */
-#define QTW_DONT_COPY_QUERY			0x10		/* do not copy top Query */
+#define QTW_IGNORE_RANGE_TABLE		0x08		/* skip rangetable entirely */
+#define QTW_EXAMINE_RTES			0x10		/* examine RTEs */
+#define QTW_DONT_COPY_QUERY			0x20		/* do not copy top Query */
 
 
 extern Oid	exprType(Node *expr);
 extern int32 exprTypmod(Node *expr);
 extern bool exprIsLengthCoercion(Node *expr, int32 *coercedTypmod);
 extern bool expression_returns_set(Node *clause);
+
+extern Oid	exprCollation(Node *expr);
+extern Oid	exprInputCollation(Node *expr);
+extern void exprSetCollation(Node *expr, Oid collation);
+extern void exprSetInputCollation(Node *expr, Oid inputcollation);
 
 extern int	exprLocation(Node *expr);
 

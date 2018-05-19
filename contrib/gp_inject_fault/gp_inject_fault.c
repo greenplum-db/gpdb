@@ -155,11 +155,11 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 		char	   *sql;
 
 		sql = psprintf("select gp_inject_fault(%s, %s, %s, %s, %s, %d, %d, %d)",
-					   quote_literal_internal(faultName),
-					   quote_literal_internal(type),
-					   quote_literal_internal(ddlStatement),
-					   quote_literal_internal(databaseName),
-					   quote_literal_internal(tableName),
+					   quote_literal_cstr(faultName),
+					   quote_literal_cstr(type),
+					   quote_literal_cstr(ddlStatement),
+					   quote_literal_cstr(databaseName),
+					   quote_literal_cstr(tableName),
 					   numOccurrences,
 					   sleepTimeSeconds,
 					   dbid);

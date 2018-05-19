@@ -313,6 +313,7 @@ SELECT proname, pronargs
 FROM pg_proc 
 WHERE pronargs > 8 and prolang = 12 AND
 	proname NOT IN ('gp_add_segment') AND
+	proname NOT LIKE '%costestimate' AND
     NOT proisagg AND 
     NOT proiswindow;
  proname | pronargs 
@@ -409,6 +410,15 @@ WHERE proargmodes IS NOT NULL AND proargnames IS NOT NULL AND
 -----+---------
 (0 rows)
 
+-- Insist that all built-in pg_proc entries have descriptions
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1 LEFT JOIN pg_description as d
+     ON p1.tableoid = d.classoid and p1.oid = d.objoid and d.objsubid = 0
+WHERE d.classoid IS NULL AND p1.oid <= 9999;
+ oid | proname 
+-----+---------
+(0 rows)
+
 -- **************** pg_cast ****************
 -- Catch bogus values in pg_cast columns (other than cases detected by
 -- oidjoins test).
@@ -485,22 +495,25 @@ WHERE c.castfunc = p.oid AND
 -- As of 8.3, this finds the casts from xml to text, varchar, and bpchar,
 -- because those are binary-compatible while the reverse goes through
 -- texttoxml(), which does an XML syntax check.
-SELECT *
+-- As of 9.1, this finds the cast from pg_node_tree to text, which we
+-- intentionally do not provide a reverse pathway for.
+SELECT castsource::regtype, casttarget::regtype, castfunc, castcontext
 FROM pg_cast c
 WHERE c.castmethod = 'b' AND
     NOT EXISTS (SELECT 1 FROM pg_cast k
                 WHERE k.castmethod = 'b' AND
                     k.castsource = c.casttarget AND
                     k.casttarget = c.castsource);
- castsource | casttarget | castfunc | castcontext | castmethod 
-------------+------------+----------+-------------+------------
-         25 |       1042 |        0 | i           | b
-       1043 |       1042 |        0 | i           | b
-        650 |        869 |        0 | i           | b
-        142 |         25 |        0 | a           | b
-        142 |       1043 |        0 | a           | b
-        142 |       1042 |        0 | a           | b
-(6 rows)
+    castsource     |    casttarget     | castfunc | castcontext 
+-------------------+-------------------+----------+-------------
+ text              | character         |        0 | i
+ character varying | character         |        0 | i
+ pg_node_tree      | text              |        0 | i
+ cidr              | inet              |        0 | i
+ xml               | text              |        0 | a
+ xml               | character varying |        0 | a
+ xml               | character         |        0 | a
+(7 rows)
 
 -- **************** pg_operator ****************
 -- Look for illegal values in pg_operator fields.
@@ -724,6 +737,37 @@ WHERE p1.oprjoin = p2.oid AND
 -----+---------+-----+---------
 (0 rows)
 
+-- Insist that all built-in pg_operator entries have descriptions
+SELECT p1.oid, p1.oprname
+FROM pg_operator as p1 LEFT JOIN pg_description as d
+     ON p1.tableoid = d.classoid and p1.oid = d.objoid and d.objsubid = 0
+WHERE d.classoid IS NULL AND p1.oid <= 9999;
+ oid | oprname 
+-----+---------
+(0 rows)
+
+-- Check that operators' underlying functions have suitable comments,
+-- namely 'implementation of XXX operator'.  In some cases involving legacy
+-- names for operators, there are multiple operators referencing the same
+-- pg_proc entry, so ignore operators whose comments say they are deprecated.
+-- We also have a few functions that are both operator support and meant to
+-- be called directly; those should have comments matching their operator.
+WITH funcdescs AS (
+  SELECT p.oid as p_oid, proname, o.oid as o_oid,
+    obj_description(p.oid, 'pg_proc') as prodesc,
+    'implementation of ' || oprname || ' operator' as expecteddesc,
+    obj_description(o.oid, 'pg_operator') as oprdesc
+  FROM pg_proc p JOIN pg_operator o ON oprcode = p.oid
+  WHERE o.oid <= 9999
+)
+SELECT * FROM funcdescs
+  WHERE prodesc IS DISTINCT FROM expecteddesc
+    AND oprdesc NOT LIKE 'deprecated%'
+    AND prodesc IS DISTINCT FROM oprdesc;
+ p_oid | proname | o_oid | prodesc | expecteddesc | oprdesc 
+-------+---------+-------+---------+--------------+---------
+(0 rows)
+
 -- **************** pg_aggregate ****************
 -- Look for illegal values in pg_aggregate fields.
 SELECT ctid, aggfnoid::oid
@@ -887,25 +931,12 @@ WHERE p1.oid < p2.oid AND p1.proname = p2.proname AND
     p1.proisagg AND p2.proisagg AND
     array_dims(p1.proargtypes) != array_dims(p2.proargtypes)
 ORDER BY 1;
-       oid        |          oid          
-------------------+-----------------------
- count("any")     | count()
- string_agg(text) | string_agg(text,text)
-(2 rows)
+     oid      |   oid   
+--------------+---------
+ count("any") | count()
+(1 row)
 
--- For the same reason, we avoid creating built-in variadic aggregates.
-SELECT oid, proname
-FROM pg_proc AS p
-WHERE proisagg AND provariadic != 0;
- oid  |   proname    
-------+--------------
- 3986 | rank
- 3988 | percent_rank
- 3990 | cume_dist
- 3992 | dense_rank
-(4 rows)
-
--- For the same reason, built-in aggregates with default arguments are no good.
+-- For the same reason, aggregates with default arguments are no good.
 SELECT oid, proname
 FROM pg_proc AS p
 WHERE proisagg AND proargdefaults IS NOT NULL;
@@ -971,6 +1002,14 @@ WHERE p1.amopfamily = 0 OR p1.amoplefttype = 0 OR p1.amoprighttype = 0
 ------------+--------------
 (0 rows)
 
+SELECT p1.amopfamily, p1.amopstrategy
+FROM pg_amop as p1
+WHERE NOT ((p1.amoppurpose = 's' AND p1.amopsortfamily = 0) OR
+           (p1.amoppurpose = 'o' AND p1.amopsortfamily <> 0));
+ amopfamily | amopstrategy 
+------------+--------------
+(0 rows)
+
 -- amoplefttype/amoprighttype must match the operator
 SELECT p1.oid, p2.oid
 FROM pg_amop AS p1, pg_operator AS p2
@@ -986,6 +1025,25 @@ FROM pg_amop AS p1, pg_opfamily AS p2
 WHERE p1.amopfamily = p2.oid AND p1.amopmethod != p2.opfmethod;
  oid | oid 
 -----+-----
+(0 rows)
+
+-- amopsortfamily, if present, must reference a btree family
+SELECT p1.amopfamily, p1.amopstrategy
+FROM pg_amop AS p1
+WHERE p1.amopsortfamily <> 0 AND NOT EXISTS
+    (SELECT 1 from pg_opfamily op WHERE op.oid = p1.amopsortfamily
+     AND op.opfmethod = (SELECT oid FROM pg_am WHERE amname = 'btree'));
+ amopfamily | amopstrategy 
+------------+--------------
+(0 rows)
+
+-- check for ordering operators not supported by parent AM
+SELECT p1.amopfamily, p1.amopopr, p2.oid, p2.amname
+FROM pg_amop AS p1, pg_am AS p2
+WHERE p1.amopmethod = p2.oid AND
+    p1.amoppurpose = 'o' AND NOT p2.amcanorderbyop;
+ amopfamily | amopopr | oid | amname 
+------------+---------+-----+--------
 (0 rows)
 
 -- Cross-check amopstrategy index against parent AM
@@ -1007,17 +1065,45 @@ WHERE p2.amopmethod = p1.oid AND
     p1.amstrategies != (SELECT count(*) FROM pg_amop AS p3
                         WHERE p3.amopfamily = p2.amopfamily AND
                               p3.amoplefttype = p2.amoplefttype AND
-                              p3.amoprighttype = p2.amoprighttype);
+                              p3.amoprighttype = p2.amoprighttype AND
+                              p3.amoppurpose = 's');
  amname | amoplefttype | amoprighttype 
 --------+--------------+---------------
 (0 rows)
 
+-- Currently, none of the AMs with fixed strategy sets support ordering ops.
+SELECT p1.amname, p2.amopfamily, p2.amopstrategy
+FROM pg_am AS p1, pg_amop AS p2
+WHERE p2.amopmethod = p1.oid AND
+    p1.amstrategies <> 0 AND p2.amoppurpose <> 's';
+ amname | amopfamily | amopstrategy 
+--------+------------+--------------
+(0 rows)
+
 -- Check that amopopr points at a reasonable-looking operator, ie a binary
--- operator yielding boolean.
+-- operator.  If it's a search operator it had better yield boolean,
+-- otherwise an input type of its sort opfamily.
 SELECT p1.amopfamily, p1.amopopr, p2.oid, p2.oprname
 FROM pg_amop AS p1, pg_operator AS p2
 WHERE p1.amopopr = p2.oid AND
-    (p2.oprkind != 'b' OR p2.oprresult != 'bool'::regtype);
+    p2.oprkind != 'b';
+ amopfamily | amopopr | oid | oprname 
+------------+---------+-----+---------
+(0 rows)
+
+SELECT p1.amopfamily, p1.amopopr, p2.oid, p2.oprname
+FROM pg_amop AS p1, pg_operator AS p2
+WHERE p1.amopopr = p2.oid AND p1.amoppurpose = 's' AND
+    p2.oprresult != 'bool'::regtype;
+ amopfamily | amopopr | oid | oprname 
+------------+---------+-----+---------
+(0 rows)
+
+SELECT p1.amopfamily, p1.amopopr, p2.oid, p2.oprname
+FROM pg_amop AS p1, pg_operator AS p2
+WHERE p1.amopopr = p2.oid AND p1.amoppurpose = 'o' AND NOT EXISTS
+    (SELECT 1 FROM pg_opclass op
+     WHERE opcfamily = p1.amopsortfamily AND opcintype = p2.oprresult);
  amopfamily | amopopr | oid | oprname 
 ------------+---------+-----+---------
 (0 rows)
@@ -1062,6 +1148,7 @@ ORDER BY 1, 2, 3;
         783 |           12 | |&>
         783 |           13 | ~
         783 |           14 | @
+        783 |           15 | <->
         783 |           27 | @>
         783 |           28 | <@
         783 |           47 | @>
@@ -1083,14 +1170,14 @@ ORDER BY 1, 2, 3;
        7013 |            4 | ~>=~
        7013 |            5 | >
        7013 |            5 | ~>~
-(52 rows)
+(53 rows)
 
--- Check that all operators linked to by opclass entries have selectivity
--- estimators.  This is not absolutely required, but it seems a reasonable
--- thing to insist on for all standard datatypes.
+-- Check that all opclass search operators have selectivity estimators.
+-- This is not absolutely required, but it seems a reasonable thing
+-- to insist on for all standard datatypes.
 SELECT p1.amopfamily, p1.amopopr, p2.oid, p2.oprname
 FROM pg_amop AS p1, pg_operator AS p2
-WHERE p1.amopopr = p2.oid AND
+WHERE p1.amopopr = p2.oid AND p1.amoppurpose = 's' AND
     (p2.oprrest = 0 OR p2.oprjoin = 0);
  amopfamily | amopopr | oid | oprname 
 ------------+---------+-----+---------
@@ -1216,11 +1303,11 @@ WHERE p1.amprocfamily = p3.oid AND p3.opfmethod = p2.oid AND
 
 -- Detect missing pg_amproc entries: should have as many support functions
 -- as AM expects for each datatype combination supported by the opfamily.
--- GIN is a special case because it has an optional support function.
+-- GiST/GIN are special cases because each has an optional support function.
 SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
 FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
 WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
-    p1.amname <> 'gin' AND
+    p1.amname <> 'gist' AND p1.amname <> 'gin' AND
     p1.amsupport != (SELECT count(*) FROM pg_amproc AS p4
                      WHERE p4.amprocfamily = p2.oid AND
                            p4.amproclefttype = p3.amproclefttype AND
@@ -1229,26 +1316,27 @@ WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
 --------+---------+----------------+-----------------
 (0 rows)
 
--- Similar check for GIN, allowing one optional proc
+-- Similar check for GiST/GIN, allowing one optional proc
 SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
 FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
 WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
-    p1.amname = 'gin' AND
-    p1.amsupport - 1 >  (SELECT count(*) FROM pg_amproc AS p4
-                         WHERE p4.amprocfamily = p2.oid AND
-                           p4.amproclefttype = p3.amproclefttype AND
-                           p4.amprocrighttype = p3.amprocrighttype);
+    (p1.amname = 'gist' OR p1.amname = 'gin') AND
+    (SELECT count(*) FROM pg_amproc AS p4
+     WHERE p4.amprocfamily = p2.oid AND
+           p4.amproclefttype = p3.amproclefttype AND
+           p4.amprocrighttype = p3.amprocrighttype)
+      NOT IN (p1.amsupport, p1.amsupport - 1);
  amname | opfname | amproclefttype | amprocrighttype 
 --------+---------+----------------+-----------------
 (0 rows)
 
 -- Also, check if there are any pg_opclass entries that don't seem to have
--- pg_amproc support.  Again, GIN has to be checked separately.
+-- pg_amproc support.  Again, GiST/GIN have to be checked specially.
 SELECT amname, opcname, count(*)
 FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
      LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
          amproclefttype = amprocrighttype AND amproclefttype = opcintype
-WHERE am.amname <> 'gin'
+WHERE am.amname <> 'gist' AND am.amname <> 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) != amsupport OR amprocfamily IS NULL;
  amname | opcname | count 
@@ -1259,9 +1347,10 @@ SELECT amname, opcname, count(*)
 FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
      LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
          amproclefttype = amprocrighttype AND amproclefttype = opcintype
-WHERE am.amname = 'gin'
+WHERE am.amname = 'gist' OR am.amname = 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
-HAVING count(*) < amsupport - 1 OR amprocfamily IS NULL;
+HAVING (count(*) != amsupport AND count(*) != amsupport - 1)
+    OR amprocfamily IS NULL;
  amname |   opcname    | count 
 --------+--------------+-------
  gin    | _complex_ops |     1

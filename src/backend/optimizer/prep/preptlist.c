@@ -3,23 +3,23 @@
  * preptlist.c
  *	  Routines to preprocess the parse tree target list
  *
- * This module takes care of altering the query targetlist as needed for
- * INSERT, UPDATE, and DELETE queries.	For INSERT and UPDATE queries,
- * the targetlist must contain an entry for each attribute of the target
- * relation in the correct order.  For both UPDATE and DELETE queries,
- * we need a junk targetlist entry holding the CTID attribute --- the
- * executor relies on this to find the tuple to be replaced/deleted.
- * We may also need junk tlist entries for Vars used in the RETURNING list
- * and row ID information needed for EvalPlanQual checking.
+ * For INSERT and UPDATE queries, the targetlist must contain an entry for
+ * each attribute of the target relation in the correct order.	For all query
+ * types, we may need to add junk tlist entries for Vars used in the RETURNING
+ * list and row ID information needed for EvalPlanQual checking.
+ *
+ * NOTE: the rewriter's rewriteTargetListIU and rewriteTargetListUD
+ * routines also do preprocessing of the targetlist.  The division of labor
+ * between here and there is a bit arbitrary and historical.
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.100 2010/02/26 02:00:46 momjian Exp $
+ *	  src/backend/optimizer/prep/preptlist.c
  *
  *-------------------------------------------------------------------------
  */
@@ -64,6 +64,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	List	   *range_table = parse->rtable;
 	CmdType		command_type = parse->commandType;
 	ListCell   *lc;
+	RangeTblEntry *rte = NULL;
 
 	/*
 	 * Sanity check: if there is a result relation, it'd better be a real
@@ -71,7 +72,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	 */
 	if (result_relation)
 	{
-		RangeTblEntry *rte = rt_fetch(result_relation, range_table);
+		rte = rt_fetch(result_relation, range_table);
 
 		if (rte->subquery != NULL || rte->relid == InvalidOid)
 			elog(ERROR, "subquery cannot be result relation");
@@ -87,62 +88,52 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 								  result_relation, range_table);
 
 	/*
-	 * for "update" and "delete" queries, add ctid of the result relation into
-	 * the target list so that the ctid will propagate through execution and
-	 * ExecutePlan() will be able to identify the right tuple to replace or
-	 * delete.	This extra field is marked "junk" so that it is not stored
-	 * back into the tuple.
+	 * GPDB_91_MERGE_FIXME:
+	 * We seem to need to handle relkind other than RELKIND_RELATION.
+	 * Previously there is no RELKIND_RELATION checking below, and that causes
+	 * returning.sql test failure during pg 9.1 merging:
+	 * "no relation entry for relid 2 (relnode.c:199)"
+	 * That is because result_relation is the view relation while after
+	 * we call makeVar() below, the code will finally call into
+	 * add_vars_to_targetlist()->find_base_rel(), which accesses
+	 * simple_rel_array[result_relation], however apparently
+	 * simple_rel_array[] is not for a view relation.
+	 * The key point is that after previous pullup, we should not use
+	 * result_relation for varno in MakeVar(). It seems that we should move the
+	 * code below to rewriteTargetListUD() and thus we could have
+	 * the 'gp_segment_id' column with a correct varno in the Var.
 	 */
-	if (command_type == CMD_UPDATE || command_type == CMD_DELETE)
+	if ((command_type == CMD_UPDATE || command_type == CMD_DELETE) &&
+		(rte->relkind == RELKIND_RELATION))
 	{
-		TargetEntry *tleCtid = NULL;
-		Var			*varCtid = NULL;
-		
 		TargetEntry *tleSegid = NULL;
 		Var 		*varSegid = NULL;
 		
-		varCtid = makeVar(result_relation, SelfItemPointerAttributeNumber,
-					  TIDOID, -1, 0);
-
-		tleCtid = makeTargetEntry((Expr *) varCtid,
-							  list_length(tlist) + 1, 	/* resno */
-							  pstrdup("ctid"),			/* resname */
-							  true);					/* resjunk */
 		/* Get type info for segid column */
 		Oid			reloid,
 					vartypeid;
 		int32		type_mod;
-		
+		Oid			type_coll;
+
 		reloid = getrelid(result_relation, parse->rtable);
 		
-		get_atttypetypmod(reloid, GpSegmentIdAttributeNumber, &vartypeid, &type_mod);
+		get_atttypetypmodcoll(reloid, GpSegmentIdAttributeNumber, &vartypeid, &type_mod, &type_coll);
 
-		varSegid = makeVar
-					(
-					result_relation,
-					GpSegmentIdAttributeNumber,
-					vartypeid,
-					type_mod,
-					0
-					);
+		varSegid = makeVar(result_relation,
+						   GpSegmentIdAttributeNumber,
+						   vartypeid,
+						   type_mod,
+						   type_coll,
+						   0
+			);
 
 		tleSegid = makeTargetEntry((Expr *) varSegid,
-							  list_length(tlist) + 2,	/* resno */
+							  list_length(tlist) + 1,	/* resno */
 							  pstrdup("gp_segment_id"),	/* resname */
 							  true);					/* resjunk */
 		
-
-		/*
-		 * For an UPDATE, expand_targetlist already created a fresh tlist. For
-		 * DELETE, better do a listCopy so that we don't destructively modify
-		 * the original tlist (is this really necessary?).
-		 */
-		if (command_type == CMD_DELETE)
-			tlist = list_copy(tlist);
-
-		tlist = lappend(tlist, tleCtid);
 		tlist = lappend(tlist, tleSegid);
-	} 
+	}
 
 	/* simply updatable cursors */
 	if (root->glob->simplyUpdatable)
@@ -151,8 +142,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	/*
 	 * Add necessary junk columns for rowmarked rels.  These values are needed
 	 * for locking of rels selected FOR UPDATE/SHARE, and to do EvalPlanQual
-	 * rechecking.	While we are at it, store these junk attnos in the
-	 * PlanRowMark list so that we don't have to redetermine them at runtime.
+	 * rechecking.	See comments for PlanRowMark in plannodes.h.
 	 */
 	foreach(lc, root->rowMarks)
 	{
@@ -160,34 +150,10 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 		Var		   *var;
 		char		resname[32];
 		TargetEntry *tle;
-		RangeTblEntry  *rte;
-		Relation    relation;
-		bool        isdistributed = false;
 
-		/* CDB: Don't try to fetch CTIDs for distributed relation. */
-		rte = rt_fetch(rc->rti, parse->rtable);
-		if (rte->rtekind == RTE_RELATION)
-		{
-			relation = heap_open(rte->relid, NoLock);
-			if (GpPolicyIsPartitioned(relation->rd_cdbpolicy))
-				isdistributed = true;
-			heap_close(relation, NoLock);
-			if (isdistributed)
-				continue;
-		}
-
-		/* child rels should just use the same junk attrs as their parents */
+		/* child rels use the same junk attrs as their parents */
 		if (rc->rti != rc->prti)
-		{
-			PlanRowMark *prc = get_plan_rowmark(root->rowMarks, rc->prti);
-
-			/* parent should have appeared earlier in list */
-			if (prc == NULL || prc->toidAttNo == InvalidAttrNumber)
-				elog(ERROR, "parent PlanRowMark not processed yet");
-			rc->ctidAttNo = prc->ctidAttNo;
-			rc->toidAttNo = prc->toidAttNo;
 			continue;
-		}
 
 		if (rc->markType != ROW_MARK_COPY)
 		{
@@ -196,14 +162,14 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 						  SelfItemPointerAttributeNumber,
 						  TIDOID,
 						  -1,
+						  InvalidOid,
 						  0);
-			snprintf(resname, sizeof(resname), "ctid%u", rc->rti);
+			snprintf(resname, sizeof(resname), "ctid%u", rc->rowmarkId);
 			tle = makeTargetEntry((Expr *) var,
 								  list_length(tlist) + 1,
 								  pstrdup(resname),
 								  true);
 			tlist = lappend(tlist, tle);
-			rc->ctidAttNo = tle->resno;
 
 			/* if parent of inheritance tree, need the tableoid too */
 			if (rc->isParent)
@@ -212,31 +178,28 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 							  TableOidAttributeNumber,
 							  OIDOID,
 							  -1,
+							  InvalidOid,
 							  0);
-				snprintf(resname, sizeof(resname), "tableoid%u", rc->rti);
+				snprintf(resname, sizeof(resname), "tableoid%u", rc->rowmarkId);
 				tle = makeTargetEntry((Expr *) var,
 									  list_length(tlist) + 1,
 									  pstrdup(resname),
 									  true);
 				tlist = lappend(tlist, tle);
-				rc->toidAttNo = tle->resno;
 			}
 		}
 		else
 		{
 			/* Not a table, so we need the whole row as a junk var */
-			var = makeVar(rc->rti,
-						  InvalidAttrNumber,
-						  RECORDOID,
-						  -1,
-						  0);
-			snprintf(resname, sizeof(resname), "wholerow%u", rc->rti);
+			var = makeWholeRowVar(rt_fetch(rc->rti, range_table),
+								  rc->rti,
+								  0);
+			snprintf(resname, sizeof(resname), "wholerow%u", rc->rowmarkId);
 			tle = makeTargetEntry((Expr *) var,
 								  list_length(tlist) + 1,
 								  pstrdup(resname),
 								  true);
 			tlist = lappend(tlist, tle);
-			rc->wholeAttNo = tle->resno;
 		}
 	}
 
@@ -291,9 +254,6 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
  *	  Given a target list as generated by the parser and a result relation,
  *	  add targetlist entries for any missing attributes, and ensure the
  *	  non-junk attributes appear in proper field order.
- *
- * NOTE: if you are tempted to put more processing here, consider whether
- * it shouldn't go in the rewriter's rewriteTargetList() instead.
  */
 static List *
 expand_targetlist(List *tlist, int command_type,
@@ -362,6 +322,7 @@ expand_targetlist(List *tlist, int command_type,
 			 */
 			Oid			atttype = att_tup->atttypid;
 			int32		atttypmod = att_tup->atttypmod;
+			Oid			attcollation = att_tup->attcollation;
 			Node	   *new_expr;
 
 			switch (command_type)
@@ -371,6 +332,7 @@ expand_targetlist(List *tlist, int command_type,
 					{
 						new_expr = (Node *) makeConst(atttype,
 													  -1,
+													  attcollation,
 													  att_tup->attlen,
 													  (Datum) 0,
 													  true,		/* isnull */
@@ -388,6 +350,7 @@ expand_targetlist(List *tlist, int command_type,
 						/* Insert NULL for dropped column */
 						new_expr = (Node *) makeConst(INT4OID,
 													  -1,
+													  InvalidOid,
 													  sizeof(int32),
 													  (Datum) 0,
 													  true,		/* isnull */
@@ -401,6 +364,7 @@ expand_targetlist(List *tlist, int command_type,
 													attrno,
 													atttype,
 													atttypmod,
+													attcollation,
 													0);
 					}
 					else
@@ -408,6 +372,7 @@ expand_targetlist(List *tlist, int command_type,
 						/* Insert NULL for dropped column */
 						new_expr = (Node *) makeConst(INT4OID,
 													  -1,
+													  InvalidOid,
 													  sizeof(int32),
 													  (Datum) 0,
 													  true,		/* isnull */
@@ -502,6 +467,7 @@ supplement_simply_updatable_targetlist(List *range_table, List *tlist)
 								   SelfItemPointerAttributeNumber,
 								   TIDOID,
 								   -1,
+								   InvalidOid,
 								   0);
 	TargetEntry *tleCtid = makeTargetEntry((Expr *) varCtid,
 										   list_length(tlist) + 1,   /* resno */
@@ -513,12 +479,15 @@ supplement_simply_updatable_targetlist(List *range_table, List *tlist)
 	Oid         reloid 		= InvalidOid,
 				vartypeid 	= InvalidOid;
 	int32       type_mod 	= -1;
+	Oid			type_coll	= InvalidOid;
 	reloid = getrelid(varno, range_table);
-	get_atttypetypmod(reloid, GpSegmentIdAttributeNumber, &vartypeid, &type_mod);
+	get_atttypetypmodcoll(reloid, GpSegmentIdAttributeNumber,
+						  &vartypeid, &type_mod, &type_coll);
 	Var         *varSegid = makeVar(varno,
 									GpSegmentIdAttributeNumber,
 									vartypeid,
 									type_mod,
+									type_coll,
 									0);
 	TargetEntry *tleSegid = makeTargetEntry((Expr *) varSegid,
 											list_length(tlist) + 1,   /* resno */
@@ -538,6 +507,7 @@ supplement_simply_updatable_targetlist(List *range_table, List *tlist)
 										   TableOidAttributeNumber,
 										   OIDOID,
 										   -1,
+										   InvalidOid,
 										   0);
 		TargetEntry *tleTableoid = makeTargetEntry((Expr *) varTableoid,
 												   list_length(tlist) + 1,  /* resno */

@@ -3,12 +3,12 @@
  * catcache.c
  *	  System catalog cache for tuples matching a key.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.153 2010/07/06 19:18:58 momjian Exp $
+ *	  src/backend/utils/cache/catcache.c
  *
  *-------------------------------------------------------------------------
  */
@@ -948,6 +948,8 @@ CatalogCacheInitializeCache(CatCache *cache)
 		/* Fill in sk_strategy as well --- always standard equality */
 		cache->cc_skey[i].sk_strategy = BTEqualStrategyNumber;
 		cache->cc_skey[i].sk_subtype = InvalidOid;
+		/* Currently, there are no catcaches on collation-aware data types */
+		cache->cc_skey[i].sk_collation = InvalidOid;
 
 		CACHE4_elog(DEBUG2, "CatalogCacheInitializeCache %s %d %p",
 					cache->cc_relname,

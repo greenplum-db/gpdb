@@ -1154,7 +1154,7 @@ AlterQueue(AlterQueueStmt *stmt)
 	}
 	else
 	{
-		char *tempo = str_toupper(alter_subtype, strlen(alter_subtype));
+		char *tempo = asc_toupper(alter_subtype, strlen(alter_subtype));
 
 		alter_subtype = tempo;
 	}

@@ -27,7 +27,7 @@
 /*
  * GUC variables.
  */
-extern ResManagerMemoryPolicy   gp_resgroup_memory_policy;
+extern int						gp_resgroup_memory_policy;
 extern int						gp_resqueue_memory_policy;
 extern bool						gp_log_resqueue_memory;
 extern int						gp_resqueue_memory_policy_auto_fixed_mem;

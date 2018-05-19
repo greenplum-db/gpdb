@@ -3,10 +3,10 @@
  * snapmgr.h
  *	  POSTGRES snapshot manager
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/snapmgr.h,v 1.8 2010/01/02 16:58:10 momjian Exp $
+ * src/include/utils/snapmgr.h
  *
  *-------------------------------------------------------------------------
  */
@@ -28,7 +28,8 @@ extern Snapshot GetLatestSnapshot(void);
 extern void SnapshotSetCommandId(CommandId curcid);
 
 extern void PushActiveSnapshot(Snapshot snapshot);
-extern void PushUpdatedSnapshot(Snapshot snapshot);
+extern void PushCopiedSnapshot(Snapshot snapshot);
+extern void UpdateActiveSnapshotCommandId(void);
 extern void PopActiveSnapshot(void);
 extern Snapshot GetActiveSnapshot(void);
 extern bool ActiveSnapshotSet(void);

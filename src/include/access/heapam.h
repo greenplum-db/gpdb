@@ -4,10 +4,10 @@
  *	  POSTGRES heap access method definitions.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/heapam.h,v 1.149 2010/04/21 17:20:56 sriggs Exp $
+ * src/include/access/heapam.h
  *
  *-------------------------------------------------------------------------
  */
@@ -74,8 +74,8 @@ extern Relation try_heap_openrv(const RangeVar *relation, LOCKMODE lockmode);
 /* CDB */
 extern Relation CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
 								bool *lockUpgraded);
-extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, 
-								   bool *lockUpgraded);
+extern Relation CdbTryOpenRelation(Oid relid, LOCKMODE reqmode,
+								   bool noWait, bool *lockUpgraded);
 extern Relation CdbOpenRelationRv(const RangeVar *relation, LOCKMODE reqmode, 
 								  bool noWait, bool *lockUpgraded);
 
@@ -105,8 +105,8 @@ extern void heap_getnextx(HeapScanDesc scan, ScanDirection direction,
 extern bool heap_fetch(Relation relation, Snapshot snapshot,
 		   HeapTuple tuple, Buffer *userbuf, bool keep_buf,
 		   Relation stats_relation);
-extern bool heap_hot_search_buffer(Relation rel, ItemPointer tid, Buffer buffer,
-					   Snapshot snapshot, bool *all_dead);
+extern bool heap_hot_search_buffer(ItemPointer tid, Relation relation,
+					   Buffer buffer, Snapshot snapshot, bool *all_dead);
 extern bool heap_hot_search(ItemPointer tid, Relation relation,
 				Snapshot snapshot, bool *all_dead);
 

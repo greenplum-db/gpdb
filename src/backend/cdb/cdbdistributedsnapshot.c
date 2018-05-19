@@ -19,6 +19,7 @@
 #include "miscadmin.h"
 #include "access/transam.h"
 #include "cdb/cdbvars.h"
+#include "utils/guc.h"
 #include "utils/snapmgr.h"
 
 /*
@@ -39,6 +40,8 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	DistributedSnapshot *ds = &dslm->ds;
 	uint32		i;
 	DistributedTransactionId distribXid = InvalidDistributedTransactionId;
+
+	Assert(!IS_QUERY_DISPATCHER());
 
 	/*
 	 * Return early if local xid is not normal as it cannot have distributed

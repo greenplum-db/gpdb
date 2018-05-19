@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_index.h,v 1.50 2010/01/05 01:06:56 tgl Exp $
+ * src/include/catalog/pg_index.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -35,6 +35,7 @@ CATALOG(pg_index,2610) BKI_WITHOUT_OIDS BKI_SCHEMA_MACRO
 	int2		indnatts;		/* number of columns in index */
 	bool		indisunique;	/* is this a unique index? */
 	bool		indisprimary;	/* is this index for primary key? */
+	bool		indisexclusion; /* is this index for exclusion constraint? */
 	bool		indimmediate;	/* is uniqueness enforced immediately? */
 	bool		indisclustered; /* is this the index last clustered by? */
 	bool		indisvalid;		/* is this index valid for use by queries? */
@@ -43,12 +44,13 @@ CATALOG(pg_index,2610) BKI_WITHOUT_OIDS BKI_SCHEMA_MACRO
 
 	/* VARIABLE LENGTH FIELDS: */
 	int2vector	indkey;			/* column numbers of indexed cols, or 0 */
+	oidvector	indcollation;	/* collation identifiers */
 	oidvector	indclass;		/* opclass identifiers */
 	int2vector	indoption;		/* per-column flags (AM-specific meanings) */
-	text		indexprs;		/* expression trees for index attributes that
+	pg_node_tree indexprs;		/* expression trees for index attributes that
 								 * are not simple column references; one for
 								 * each zero entry in indkey[] */
-	text		indpred;		/* expression tree for predicate, if a partial
+	pg_node_tree indpred;		/* expression tree for predicate, if a partial
 								 * index; else NULL */
 } FormData_pg_index;
 
@@ -69,22 +71,24 @@ typedef FormData_pg_index *Form_pg_index;
  *		compiler constants for pg_index
  * ----------------
  */
-#define Natts_pg_index					15
+#define Natts_pg_index					17
 #define Anum_pg_index_indexrelid		1
 #define Anum_pg_index_indrelid			2
 #define Anum_pg_index_indnatts			3
 #define Anum_pg_index_indisunique		4
 #define Anum_pg_index_indisprimary		5
-#define Anum_pg_index_indimmediate		6
-#define Anum_pg_index_indisclustered	7
-#define Anum_pg_index_indisvalid		8
-#define Anum_pg_index_indcheckxmin		9
-#define Anum_pg_index_indisready		10
-#define Anum_pg_index_indkey			11
-#define Anum_pg_index_indclass			12
-#define Anum_pg_index_indoption			13
-#define Anum_pg_index_indexprs			14
-#define Anum_pg_index_indpred			15
+#define Anum_pg_index_indisexclusion	6
+#define Anum_pg_index_indimmediate		7
+#define Anum_pg_index_indisclustered	8
+#define Anum_pg_index_indisvalid		9
+#define Anum_pg_index_indcheckxmin		10
+#define Anum_pg_index_indisready		11
+#define Anum_pg_index_indkey			12
+#define Anum_pg_index_indcollation		13
+#define Anum_pg_index_indclass			14
+#define Anum_pg_index_indoption			15
+#define Anum_pg_index_indexprs			16
+#define Anum_pg_index_indpred			17
 
 /*
  * Index AMs that support ordered scans must support these two indoption

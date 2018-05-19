@@ -3,12 +3,12 @@
  * execQual.c
  *	  Routines to evaluate qualification and targetlist expressions
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.263 2010/02/26 02:00:41 momjian Exp $
+ *	  src/backend/executor/execQual.c
  *
  *-------------------------------------------------------------------------
  */
@@ -96,8 +96,10 @@ static Datum ExecEvalWholeRowSlow(WholeRowVarExprState *wrvstate,
 					 bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalConst(ExprState *exprstate, ExprContext *econtext,
 			  bool *isNull, ExprDoneCond *isDone);
-static Datum ExecEvalParam(ExprState *exprstate, ExprContext *econtext,
-			  bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalParamExec(ExprState *exprstate, ExprContext *econtext,
+				  bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalParamExtern(ExprState *exprstate, ExprContext *econtext,
+					bool *isNull, ExprDoneCond *isDone);
 static void ShutdownFuncExpr(Datum arg);
 static TupleDesc get_cached_rowtype(Oid type_id, int32 typmod,
 				   TupleDesc *cache_field, ExprContext *econtext);
@@ -1116,12 +1118,9 @@ ExecEvalConst(ExprState *exprstate, ExprContext *econtext,
 }
 
 /* ----------------------------------------------------------------
- *		ExecEvalParam
+ *		ExecEvalParamExec
  *
- *		Returns the value of a parameter.  A param node contains
- *		something like ($.name) and the expression context contains
- *		the current parameter bindings (name = "sam") (age = 34)...
- *		so our job is to find and return the appropriate datum ("sam").
+ *		Returns the value of a PARAM_EXEC parameter.
  * ----------------------------------------------------------------
  */
 
@@ -1134,71 +1133,81 @@ ExecEvalConst(ExprState *exprstate, ExprContext *econtext,
  * So, this function was changed to just do a lookup in that case.
  */
 static Datum
-ExecEvalParam(ExprState *exprstate, ExprContext *econtext,
-			  bool *isNull, ExprDoneCond *isDone)
+ExecEvalParamExec(ExprState *exprstate, ExprContext *econtext,
+				  bool *isNull, ExprDoneCond *isDone)
 {
 	Param	   *expression = (Param *) exprstate->expr;
 	int			thisParamId = expression->paramid;
+	ParamExecData *prm;
 
 	if (isDone)
 		*isDone = ExprSingleResult;
 
-	if (expression->paramkind == PARAM_EXEC)
+	/*
+	 * PARAM_EXEC params (internal executor parameters) are stored in the
+	 * ecxt_param_exec_vals array, and can be accessed by array index.
+	 */
+	prm = &(econtext->ecxt_param_exec_vals[thisParamId]);
+	if (prm->execPlan != NULL)
 	{
-		/*
-		 * PARAM_EXEC params (internal executor parameters) are stored in the
-		 * ecxt_param_exec_vals array, and can be accessed by array index.
-		 */
-		ParamExecData *prm;
-
-		prm = &(econtext->ecxt_param_exec_vals[thisParamId]);
-		if (prm->execPlan != NULL)
-		{
-			/* Parameter not evaluated yet, so go do it */
-			ExecSetParamPlan(prm->execPlan, econtext, NULL);
-			/* ExecSetParamPlan should have processed this param... */
-			Assert(prm->execPlan == NULL);
-		}
-		*isNull = prm->isnull;
-		return prm->value;
+		/* Parameter not evaluated yet, so go do it */
+		ExecSetParamPlan(prm->execPlan, econtext, NULL);
+		/* ExecSetParamPlan should have processed this param... */
+		Assert(prm->execPlan == NULL);
 	}
-	else
+	*isNull = prm->isnull;
+	return prm->value;
+}
+
+/* ----------------------------------------------------------------
+ *		ExecEvalParamExtern
+ *
+ *		Returns the value of a PARAM_EXTERN parameter.
+ * ----------------------------------------------------------------
+ */
+static Datum
+ExecEvalParamExtern(ExprState *exprstate, ExprContext *econtext,
+					bool *isNull, ExprDoneCond *isDone)
+{
+	Param	   *expression = (Param *) exprstate->expr;
+	int			thisParamId = expression->paramid;
+	ParamListInfo paramInfo = econtext->ecxt_param_list_info;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	/*
+	 * PARAM_EXTERN parameters must be sought in ecxt_param_list_info.
+	 */
+	if (paramInfo &&
+		thisParamId > 0 && thisParamId <= paramInfo->numParams)
 	{
-		/*
-		 * PARAM_EXTERN parameters must be sought in ecxt_param_list_info.
-		 */
-		ParamListInfo paramInfo = econtext->ecxt_param_list_info;
+		ParamExternData *prm = &paramInfo->params[thisParamId - 1];
 
-		Assert(expression->paramkind == PARAM_EXTERN);
-		if (paramInfo &&
-			thisParamId > 0 && thisParamId <= paramInfo->numParams)
+		/* give hook a chance in case parameter is dynamic */
+		if (!OidIsValid(prm->ptype) && paramInfo->paramFetch != NULL)
+			(*paramInfo->paramFetch) (paramInfo, thisParamId);
+
+		if (OidIsValid(prm->ptype))
 		{
-			ParamExternData *prm = &paramInfo->params[thisParamId - 1];
+			/* safety check in case hook did something unexpected */
+			if (prm->ptype != expression->paramtype)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("type of parameter %d (%s) does not match that when preparing the plan (%s)",
+								thisParamId,
+								format_type_be(prm->ptype),
+								format_type_be(expression->paramtype))));
 
-			/* give hook a chance in case parameter is dynamic */
-			if (!OidIsValid(prm->ptype) && paramInfo->paramFetch != NULL)
-				(*paramInfo->paramFetch) (paramInfo, thisParamId);
-
-			if (OidIsValid(prm->ptype))
-			{
-				/* safety check in case hook did something unexpected */
-				if (prm->ptype != expression->paramtype)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATATYPE_MISMATCH),
-							 errmsg("type of parameter %d (%s) does not match that when preparing the plan (%s)",
-									thisParamId,
-									format_type_be(prm->ptype),
-									format_type_be(expression->paramtype))));
-
-				*isNull = prm->isnull;
-				return prm->value;
-			}
+			*isNull = prm->isnull;
+			return prm->value;
 		}
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("no value found for parameter %d", thisParamId)));
-		return (Datum) 0;		/* keep compiler quiet */
 	}
+
+	ereport(ERROR,
+			(errcode(ERRCODE_UNDEFINED_OBJECT),
+			 errmsg("no value found for parameter %d", thisParamId)));
+	return (Datum) 0;			/* keep compiler quiet */
 }
 
 
@@ -1329,7 +1338,7 @@ GetAttributeByName(HeapTupleHeader tuple, const char *attname, bool *isNull)
  * init_fcache - initialize a FuncExprState node during first use
  */
 void
-init_fcache(Oid foid, FuncExprState *fcache,
+init_fcache(Oid foid, Oid input_collation, FuncExprState *fcache,
 			MemoryContext fcacheCxt, bool needDescForSets)
 {
 	AclResult	aclresult;
@@ -1355,7 +1364,12 @@ init_fcache(Oid foid, FuncExprState *fcache,
 
 	/* Set up the primary fmgr lookup information */
 	fmgr_info_cxt(foid, &(fcache->func), fcacheCxt);
-	fcache->func.fn_expr = (Node *) fcache->xprstate.expr;
+	fmgr_info_set_expr((Node *) fcache->xprstate.expr, &(fcache->func));
+
+	/* Initialize the function call parameter struct as well */
+	InitFunctionCallInfoData(fcache->fcinfo_data, &(fcache->func),
+							 list_length(fcache->args),
+							 input_collation, NULL, NULL);
 
 	/* If function returns set, prepare expected tuple descriptor */
 	if (fcache->func.fn_retset && needDescForSets)
@@ -1538,7 +1552,7 @@ ExecEvalFuncArgs(FunctionCallInfo fcinfo,
 		i++;
 	}
 
-	fcinfo->nargs = i;
+	Assert(i == fcinfo->nargs);
 
 	return argIsDone;
 }
@@ -1688,7 +1702,6 @@ ExecMakeFunctionResult(FuncExprState *fcache,
 {
 	List	   *arguments;
 	Datum		result;
-	FunctionCallInfoData fcinfo_data;
 	FunctionCallInfo fcinfo;
 	PgStat_FunctionCallUsage fcusage;
 	ReturnSetInfo rsinfo;		/* for functions returning sets */
@@ -1740,30 +1753,15 @@ restart:
 	}
 
 	/*
-	 * For non-set-returning functions, we just use a local-variable
-	 * FunctionCallInfoData.  For set-returning functions we keep the callinfo
-	 * record in fcache->setArgs so that it can survive across multiple
-	 * value-per-call invocations.	(The reason we don't just do the latter
-	 * all the time is that plpgsql expects to be able to use simple
-	 * expression trees re-entrantly.  Which might not be a good idea, but the
-	 * penalty for not doing so is high.)
-	 */
-	if (fcache->func.fn_retset)
-		fcinfo = &fcache->setArgs;
-	else
-		fcinfo = &fcinfo_data;
-
-	/*
 	 * arguments is a list of expressions to evaluate before passing to the
 	 * function manager.  We skip the evaluation if it was already done in the
 	 * previous call (ie, we are continuing the evaluation of a set-valued
 	 * function).  Otherwise, collect the current argument values into fcinfo.
 	 */
+	fcinfo = &fcache->fcinfo_data;
 	arguments = fcache->args;
 	if (!fcache->setArgsValid)
 	{
-		/* Need to prep callinfo structure */
-		InitFunctionCallInfoData(*fcinfo, &(fcache->func), 0, NULL, NULL);
 		argDone = ExecEvalFuncArgs(fcinfo, arguments, econtext);
 		if (argDone == ExprEndResult)
 		{
@@ -1879,7 +1877,6 @@ restart:
 					if (fcache->func.fn_retset &&
 						*isDone == ExprMultipleResult)
 					{
-						Assert(fcinfo == &fcache->setArgs);
 						fcache->setHasSetArg = hasSetArg;
 						fcache->setArgsValid = true;
 						/* Register cleanup callback if we didn't already */
@@ -2009,7 +2006,7 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 {
 	ListCell   *arg;
 	Datum		result;
-	FunctionCallInfoData fcinfo;
+	FunctionCallInfo fcinfo;
 	PgStat_FunctionCallUsage fcusage;
 	int			i;
 
@@ -2020,19 +2017,18 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 		*isDone = ExprSingleResult;
 
 	/* inlined, simplified version of ExecEvalFuncArgs */
+	fcinfo = &fcache->fcinfo_data;
 	i = 0;
 	foreach(arg, fcache->args)
 	{
 		ExprState  *argstate = (ExprState *) lfirst(arg);
 
-		fcinfo.arg[i] = ExecEvalExpr(argstate,
-									 econtext,
-									 &fcinfo.argnull[i],
-									 NULL);
+		fcinfo->arg[i] = ExecEvalExpr(argstate,
+									  econtext,
+									  &fcinfo->argnull[i],
+									  NULL);
 		i++;
 	}
-
-	InitFunctionCallInfoData(fcinfo, &(fcache->func), i, NULL, NULL);
 
 	/*
 	 * If function is strict, and there are any NULL arguments, skip calling
@@ -2042,7 +2038,7 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 	{
 		while (--i >= 0)
 		{
-			if (fcinfo.argnull[i])
+			if (fcinfo->argnull[i])
 			{
 				*isNull = true;
 				return (Datum) 0;
@@ -2050,11 +2046,11 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 		}
 	}
 
-	pgstat_init_function_usage(&fcinfo, &fcusage);
+	pgstat_init_function_usage(fcinfo, &fcusage);
 
-	/* fcinfo.isnull = false; */	/* handled by InitFunctionCallInfoData */
-	result = FunctionCallInvoke(&fcinfo);
-	*isNull = fcinfo.isnull;
+	fcinfo->isnull = false;
+	result = FunctionCallInvoke(fcinfo);
+	*isNull = fcinfo->isnull;
 
 	pgstat_end_function_usage(&fcusage, true);
 
@@ -2103,7 +2099,6 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 	 * resultinfo, but set it up anyway because we use some of the fields as
 	 * our own state variables.
 	 */
-	InitFunctionCallInfoData(fcinfo, NULL, 0, NULL, (Node *) &rsinfo);
 	rsinfo.type = T_ReturnSetInfo;
 	rsinfo.econtext = econtext;
 	rsinfo.expectedDesc = expectedDesc;
@@ -2143,10 +2138,14 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 		{
 			FuncExpr   *func = (FuncExpr *) fcache->xprstate.expr;
 
-			init_fcache(func->funcid, fcache,
+			init_fcache(func->funcid, func->inputcollid, fcache,
 						econtext->ecxt_per_query_memory, false);
 		}
 		returnsSet = fcache->func.fn_retset;
+		InitFunctionCallInfoData(fcinfo, &(fcache->func),
+								 list_length(fcache->args),
+								 fcache->fcinfo_data.fncollation,
+								 NULL, (Node *) &rsinfo);
 
 		/*
 		 * Evaluate the function's argument list.
@@ -2156,7 +2155,6 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 		 * inner loop.	So do it in caller context.  Perhaps we should make a
 		 * separate context just to hold the evaluated arguments?
 		 */
-		fcinfo.flinfo = &(fcache->func);
 		argDone = ExecEvalFuncArgs(&fcinfo, fcache->args, econtext);
 		/* We don't allow sets in the arguments of the table function */
 		if (argDone != ExprSingleResult)
@@ -2184,6 +2182,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 	{
 		/* Treat funcexpr as a generic expression */
 		direct_function_call = false;
+		InitFunctionCallInfoData(fcinfo, NULL, 0, InvalidOid, NULL, NULL);
 	}
 
 	/*
@@ -2449,7 +2448,8 @@ ExecEvalFunc(FuncExprState *fcache,
 	FuncExpr   *func = (FuncExpr *) fcache->xprstate.expr;
 
 	/* Initialize function lookup info */
-	init_fcache(func->funcid, fcache, econtext->ecxt_per_query_memory, true);
+	init_fcache(func->funcid, func->inputcollid, fcache,
+				econtext->ecxt_per_query_memory, true);
 
 	/* Go directly to ExecMakeFunctionResult on subsequent uses */
 	fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
@@ -2471,7 +2471,8 @@ ExecEvalOper(FuncExprState *fcache,
 	OpExpr	   *op = (OpExpr *) fcache->xprstate.expr;
 
 	/* Initialize function lookup info */
-	init_fcache(op->opfuncid, fcache, econtext->ecxt_per_query_memory, true);
+	init_fcache(op->opfuncid, op->inputcollid, fcache,
+				econtext->ecxt_per_query_memory, true);
 
 	/* Go directly to ExecMakeFunctionResult on subsequent uses */
 	fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
@@ -2497,9 +2498,8 @@ ExecEvalDistinct(FuncExprState *fcache,
 				 ExprDoneCond *isDone)
 {
 	Datum		result;
-	FunctionCallInfoData fcinfo;
+	FunctionCallInfo fcinfo;
 	ExprDoneCond argDone;
-	List	   *argList;
 
 	/* Set default values for result flags: non-null, not a set result */
 	*isNull = false;
@@ -2513,40 +2513,37 @@ ExecEvalDistinct(FuncExprState *fcache,
 	{
 		DistinctExpr *op = (DistinctExpr *) fcache->xprstate.expr;
 
-		init_fcache(op->opfuncid, fcache,
+		init_fcache(op->opfuncid, op->inputcollid, fcache,
 					econtext->ecxt_per_query_memory, true);
 		Assert(!fcache->func.fn_retset);
 	}
 
 	/*
-	 * extract info from fcache
+	 * Evaluate arguments
 	 */
-	argList = fcache->args;
-
-	/* Need to prep callinfo structure */
-	InitFunctionCallInfoData(fcinfo, &(fcache->func), 0, NULL, NULL);
-	argDone = ExecEvalFuncArgs(&fcinfo, argList, econtext);
+	fcinfo = &fcache->fcinfo_data;
+	argDone = ExecEvalFuncArgs(fcinfo, fcache->args, econtext);
 	if (argDone != ExprSingleResult)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("IS DISTINCT FROM does not support set arguments")));
-	Assert(fcinfo.nargs == 2);
+	Assert(fcinfo->nargs == 2);
 
-	if (fcinfo.argnull[0] && fcinfo.argnull[1])
+	if (fcinfo->argnull[0] && fcinfo->argnull[1])
 	{
 		/* Both NULL? Then is not distinct... */
 		result = BoolGetDatum(FALSE);
 	}
-	else if (fcinfo.argnull[0] || fcinfo.argnull[1])
+	else if (fcinfo->argnull[0] || fcinfo->argnull[1])
 	{
 		/* Only one is NULL? Then is distinct... */
 		result = BoolGetDatum(TRUE);
 	}
 	else
 	{
-		fcinfo.isnull = false;
-		result = FunctionCallInvoke(&fcinfo);
-		*isNull = fcinfo.isnull;
+		fcinfo->isnull = false;
+		result = FunctionCallInvoke(fcinfo);
+		*isNull = fcinfo->isnull;
 		/* Must invert result of "=" */
 		result = BoolGetDatum(!DatumGetBool(result));
 	}
@@ -2914,7 +2911,7 @@ ExecEvalScalarArrayOp(ScalarArrayOpExprState *sstate,
 	int			nitems;
 	Datum		result;
 	bool		resultnull;
-	FunctionCallInfoData fcinfo;
+	FunctionCallInfo fcinfo;
 	ExprDoneCond argDone;
 	int			i;
 	int16		typlen;
@@ -2934,31 +2931,33 @@ ExecEvalScalarArrayOp(ScalarArrayOpExprState *sstate,
 	 */
 	if (sstate->fxprstate.func.fn_oid == InvalidOid)
 	{
-		init_fcache(opexpr->opfuncid, &sstate->fxprstate,
+		init_fcache(opexpr->opfuncid, opexpr->inputcollid, &sstate->fxprstate,
 					econtext->ecxt_per_query_memory, true);
 		Assert(!sstate->fxprstate.func.fn_retset);
 	}
 
-	/* Need to prep callinfo structure */
-	InitFunctionCallInfoData(fcinfo, &(sstate->fxprstate.func), 0, NULL, NULL);
-	argDone = ExecEvalFuncArgs(&fcinfo, sstate->fxprstate.args, econtext);
+	/*
+	 * Evaluate arguments
+	 */
+	fcinfo = &sstate->fxprstate.fcinfo_data;
+	argDone = ExecEvalFuncArgs(fcinfo, sstate->fxprstate.args, econtext);
 	if (argDone != ExprSingleResult)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 			   errmsg("op ANY/ALL (array) does not support set arguments")));
-	Assert(fcinfo.nargs == 2);
+	Assert(fcinfo->nargs == 2);
 
 	/*
 	 * If the array is NULL then we return NULL --- it's not very meaningful
 	 * to do anything else, even if the operator isn't strict.
 	 */
-	if (fcinfo.argnull[1])
+	if (fcinfo->argnull[1])
 	{
 		*isNull = true;
 		return (Datum) 0;
 	}
 	/* Else okay to fetch and detoast the array */
-	arr = DatumGetArrayTypeP(fcinfo.arg[1]);
+	arr = DatumGetArrayTypeP(fcinfo->arg[1]);
 
 	/*
 	 * If the array is empty, we return either FALSE or TRUE per the useOr
@@ -2974,7 +2973,7 @@ ExecEvalScalarArrayOp(ScalarArrayOpExprState *sstate,
 	 * If the scalar is NULL, and the function is strict, return NULL; no
 	 * point in iterating the loop.
 	 */
-	if (fcinfo.argnull[0] && sstate->fxprstate.func.fn_strict)
+	if (fcinfo->argnull[0] && sstate->fxprstate.func.fn_strict)
 	{
 		*isNull = true;
 		return (Datum) 0;
@@ -3012,32 +3011,32 @@ ExecEvalScalarArrayOp(ScalarArrayOpExprState *sstate,
 		/* Get array element, checking for NULL */
 		if (bitmap && (*bitmap & bitmask) == 0)
 		{
-			fcinfo.arg[1] = (Datum) 0;
-			fcinfo.argnull[1] = true;
+			fcinfo->arg[1] = (Datum) 0;
+			fcinfo->argnull[1] = true;
 		}
 		else
 		{
 			elt = fetch_att(s, typbyval, typlen);
 			s = att_addlength_pointer(s, typlen, s);
 			s = (char *) att_align_nominal(s, typalign);
-			fcinfo.arg[1] = elt;
-			fcinfo.argnull[1] = false;
+			fcinfo->arg[1] = elt;
+			fcinfo->argnull[1] = false;
 		}
 
 		/* Call comparison function */
-		if (fcinfo.argnull[1] && sstate->fxprstate.func.fn_strict)
+		if (fcinfo->argnull[1] && sstate->fxprstate.func.fn_strict)
 		{
-			fcinfo.isnull = true;
+			fcinfo->isnull = true;
 			thisresult = (Datum) 0;
 		}
 		else
 		{
-			fcinfo.isnull = false;
-			thisresult = FunctionCallInvoke(&fcinfo);
+			fcinfo->isnull = false;
+			thisresult = FunctionCallInvoke(fcinfo);
 		}
 
 		/* Combine results per OR or AND semantics */
-		if (fcinfo.isnull)
+		if (fcinfo->isnull)
 			resultnull = true;
 		else if (useOr)
 		{
@@ -3701,6 +3700,7 @@ ExecEvalRowCompare(RowCompareExprState *rstate,
 		FunctionCallInfoData locfcinfo;
 
 		InitFunctionCallInfoData(locfcinfo, &(rstate->funcs[i]), 2,
+								 rstate->collations[i],
 								 NULL, NULL);
 		locfcinfo.arg[0] = ExecEvalExpr(le, econtext,
 										&locfcinfo.argnull[0], NULL);
@@ -3807,7 +3807,9 @@ ExecEvalMinMax(MinMaxExprState *minmaxExpr, ExprContext *econtext,
 			   bool *isNull, ExprDoneCond *isDone)
 {
 	Datum		result = (Datum) 0;
-	MinMaxOp	op = ((MinMaxExpr *) minmaxExpr->xprstate.expr)->op;
+	MinMaxExpr *minmax = (MinMaxExpr *) minmaxExpr->xprstate.expr;
+	Oid			collation = minmax->inputcollid;
+	MinMaxOp	op = minmax->op;
 	FunctionCallInfoData locfcinfo;
 	ListCell   *arg;
 
@@ -3815,7 +3817,8 @@ ExecEvalMinMax(MinMaxExprState *minmaxExpr, ExprContext *econtext,
 		*isDone = ExprSingleResult;
 	*isNull = true;				/* until we get a result */
 
-	InitFunctionCallInfoData(locfcinfo, &minmaxExpr->cfunc, 2, NULL, NULL);
+	InitFunctionCallInfoData(locfcinfo, &minmaxExpr->cfunc, 2,
+							 collation, NULL, NULL);
 	locfcinfo.argnull[0] = false;
 	locfcinfo.argnull[1] = false;
 
@@ -4089,9 +4092,8 @@ ExecEvalNullIf(FuncExprState *nullIfExpr,
 			   bool *isNull, ExprDoneCond *isDone)
 {
 	Datum		result;
-	FunctionCallInfoData fcinfo;
+	FunctionCallInfo fcinfo;
 	ExprDoneCond argDone;
-	List	   *argList;
 
 	if (isDone)
 		*isDone = ExprSingleResult;
@@ -4103,32 +4105,29 @@ ExecEvalNullIf(FuncExprState *nullIfExpr,
 	{
 		NullIfExpr *op = (NullIfExpr *) nullIfExpr->xprstate.expr;
 
-		init_fcache(op->opfuncid, nullIfExpr,
+		init_fcache(op->opfuncid, op->inputcollid, nullIfExpr,
 					econtext->ecxt_per_query_memory, true);
 		Assert(!nullIfExpr->func.fn_retset);
 	}
 
 	/*
-	 * extract info from nullIfExpr
+	 * Evaluate arguments
 	 */
-	argList = nullIfExpr->args;
-
-	/* Need to prep callinfo structure */
-	InitFunctionCallInfoData(fcinfo, &(nullIfExpr->func), 0, NULL, NULL);
-	argDone = ExecEvalFuncArgs(&fcinfo, argList, econtext);
+	fcinfo = &nullIfExpr->fcinfo_data;
+	argDone = ExecEvalFuncArgs(fcinfo, nullIfExpr->args, econtext);
 	if (argDone != ExprSingleResult)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("NULLIF does not support set arguments")));
-	Assert(fcinfo.nargs == 2);
+	Assert(fcinfo->nargs == 2);
 
 	/* if either argument is NULL they can't be equal */
-	if (!fcinfo.argnull[0] && !fcinfo.argnull[1])
+	if (!fcinfo->argnull[0] && !fcinfo->argnull[1])
 	{
-		fcinfo.isnull = false;
-		result = FunctionCallInvoke(&fcinfo);
+		fcinfo->isnull = false;
+		result = FunctionCallInvoke(fcinfo);
 		/* if the arguments are equal return null */
-		if (!fcinfo.isnull && DatumGetBool(result))
+		if (!fcinfo->isnull && DatumGetBool(result))
 		{
 			*isNull = true;
 			return (Datum) 0;
@@ -4136,8 +4135,8 @@ ExecEvalNullIf(FuncExprState *nullIfExpr,
 	}
 
 	/* else return first argument */
-	*isNull = fcinfo.argnull[0];
-	return fcinfo.arg[0];
+	*isNull = fcinfo->argnull[0];
+	return fcinfo->arg[0];
 }
 
 /* ----------------------------------------------------------------
@@ -5067,9 +5066,7 @@ ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 		/* Set up the primary fmgr lookup information */
 		fmgr_info_cxt(acoerce->elemfuncid, &(astate->elemfunc),
 					  econtext->ecxt_per_query_memory);
-
-		/* Initialize additional info */
-		astate->elemfunc.fn_expr = (Node *) acoerce;
+		fmgr_info_set_expr((Node *) acoerce, &(astate->elemfunc));
 	}
 
 	/*
@@ -5077,9 +5074,11 @@ ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 	 *
 	 * We pass on the desttypmod and isExplicit flags whether or not the
 	 * function wants them.
+	 *
+	 * Note: coercion functions are assumed to not use collation.
 	 */
 	InitFunctionCallInfoData(locfcinfo, &(astate->elemfunc), 3,
-							 NULL, NULL);
+							 InvalidOid, NULL, NULL);
 	locfcinfo.arg[0] = PointerGetDatum(array);
 	locfcinfo.arg[1] = Int32GetDatum(acoerce->resulttypmod);
 	locfcinfo.arg[2] = BoolGetDatum(acoerce->isExplicit);
@@ -5181,7 +5180,19 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			break;
 		case T_Param:
 			state = (ExprState *) makeNode(ExprState);
-			state->evalfunc = ExecEvalParam;
+			switch (((Param *) node)->paramkind)
+			{
+				case PARAM_EXEC:
+					state->evalfunc = ExecEvalParamExec;
+					break;
+				case PARAM_EXTERN:
+					state->evalfunc = ExecEvalParamExtern;
+					break;
+				default:
+					elog(ERROR, "unrecognized paramkind: %d",
+						 (int) ((Param *) node)->paramkind);
+					break;
+			}
 			break;
 		case T_CoerceToDomainValue:
 			state = (ExprState *) makeNode(ExprState);
@@ -5354,6 +5365,18 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				fstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalDistinct;
 				fstate->args = (List *)
 					ExecInitExpr((Expr *) distinctexpr->args, parent);
+				fstate->func.fn_oid = InvalidOid;		/* not initialized */
+				state = (ExprState *) fstate;
+			}
+			break;
+		case T_NullIfExpr:
+			{
+				NullIfExpr *nullifexpr = (NullIfExpr *) node;
+				FuncExprState *fstate = makeNode(FuncExprState);
+
+				fstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalNullIf;
+				fstate->args = (List *)
+					ExecInitExpr((Expr *) nullifexpr->args, parent);
 				fstate->func.fn_oid = InvalidOid;		/* not initialized */
 				state = (ExprState *) fstate;
 			}
@@ -5616,7 +5639,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 						 * don't really care what type of NULL it is, so
 						 * always make an int4 NULL.
 						 */
-						e = (Expr *) makeNullConst(INT4OID, -1);
+						e = (Expr *) makeNullConst(INT4OID, -1, InvalidOid);
 					}
 					estate = ExecInitExpr(e, parent);
 					outlist = lappend(outlist, estate);
@@ -5634,6 +5657,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				List	   *outlist;
 				ListCell   *l;
 				ListCell   *l2;
+				ListCell   *l3;
 				int			i;
 
 				rstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalRowCompare;
@@ -5661,17 +5685,19 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				rstate->rargs = outlist;
 				Assert(list_length(rcexpr->opfamilies) == nopers);
 				rstate->funcs = (FmgrInfo *) palloc(nopers * sizeof(FmgrInfo));
+				rstate->collations = (Oid *) palloc(nopers * sizeof(Oid));
 				i = 0;
-				forboth(l, rcexpr->opnos, l2, rcexpr->opfamilies)
+				forthree(l, rcexpr->opnos, l2, rcexpr->opfamilies, l3, rcexpr->inputcollids)
 				{
 					Oid			opno = lfirst_oid(l);
 					Oid			opfamily = lfirst_oid(l2);
+					Oid			inputcollid = lfirst_oid(l3);
 					int			strategy;
 					Oid			lefttype;
 					Oid			righttype;
 					Oid			proc;
 
-					get_op_opfamily_properties(opno, opfamily,
+					get_op_opfamily_properties(opno, opfamily, false,
 											   &strategy,
 											   &lefttype,
 											   &righttype);
@@ -5687,6 +5713,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 					 * does this code.
 					 */
 					fmgr_info(proc, &(rstate->funcs[i]));
+					rstate->collations[i] = inputcollid;
 					i++;
 				}
 				state = (ExprState *) rstate;
@@ -5784,18 +5811,6 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				xstate->args = outlist;
 
 				state = (ExprState *) xstate;
-			}
-			break;
-		case T_NullIfExpr:
-			{
-				NullIfExpr *nullifexpr = (NullIfExpr *) node;
-				FuncExprState *fstate = makeNode(FuncExprState);
-
-				fstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalNullIf;
-				fstate->args = (List *)
-					ExecInitExpr((Expr *) nullifexpr->args, parent);
-				fstate->func.fn_oid = InvalidOid;		/* not initialized */
-				state = (ExprState *) fstate;
 			}
 			break;
 		case T_NullTest:
@@ -6440,6 +6455,7 @@ ExecEvalFunctionArgToConst(FuncExpr *fexpr, int argno, bool *isnull)
 	Expr		   *aexpr;
 	Oid				argtype;
 	int32			argtypmod;
+	Oid				argcollation;
 	Const		   *result;
 
 	/* argument number sanity check */
@@ -6463,8 +6479,9 @@ ExecEvalFunctionArgToConst(FuncExpr *fexpr, int argno, bool *isnull)
 				 errmsg("unable to resolve function argument type"),
 				 errposition(exprLocation((Node *) aexpr))));
 	argtypmod = exprTypmod((Node *) aexpr);
+	argcollation = exprCollation((Node *) aexpr);
 
-	result = (Const *) evaluate_expr(aexpr, argtype, argtypmod);
+	result = (Const *) evaluate_expr(aexpr, argtype, argtypmod, argcollation);
 	/* evaluate_expr always returns Const */
 	Assert(IsA(result, Const));
 

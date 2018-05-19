@@ -4,10 +4,10 @@
  *	  POSTGRES scan key definitions.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/skey.h,v 1.40 2010/02/26 02:01:21 momjian Exp $
+ * src/include/access/skey.h
  *
  *-------------------------------------------------------------------------
  */
@@ -52,18 +52,26 @@ typedef uint16 StrategyNumber;
  * the operator.  When using a ScanKey in a heap scan, these fields are not
  * used and may be set to InvalidStrategy/InvalidOid.
  *
+ * If the operator is collation-sensitive, sk_collation must be set
+ * correctly as well.
+ *
  * A ScanKey can also represent a condition "column IS NULL" or "column
  * IS NOT NULL"; these cases are signaled by the SK_SEARCHNULL and
  * SK_SEARCHNOTNULL flag bits respectively.  The argument is always NULL,
- * and the sk_strategy, sk_subtype, and sk_func fields are not used (unless
- * set by the index AM).  Currently, SK_SEARCHNULL and SK_SEARCHNOTNULL are
- * supported only for index scans, not heap scans; and not all index AMs
- * support them.
+ * and the sk_strategy, sk_subtype, sk_collation, and sk_func fields are
+ * not used (unless set by the index AM).  Currently, SK_SEARCHNULL and
+ * SK_SEARCHNOTNULL are supported only for index scans, not heap scans;
+ * and not all index AMs support them.
+ *
+ * A ScanKey can also represent an ordering operator invocation, that is
+ * an ordering requirement "ORDER BY indexedcol op constant".  This looks
+ * the same as a comparison operator, except that the operator doesn't
+ * (usually) yield boolean.  We mark such ScanKeys with SK_ORDER_BY.
  *
  * Note: in some places, ScanKeys are used as a convenient representation
  * for the invocation of an access method support procedure.  In this case
- * sk_strategy/sk_subtype are not meaningful, and sk_func may refer to a
- * function that returns something other than boolean.
+ * sk_strategy/sk_subtype are not meaningful (but sk_collation can be); and
+ * sk_func may refer to a function that returns something other than boolean.
  */
 typedef struct ScanKeyData
 {
@@ -71,6 +79,7 @@ typedef struct ScanKeyData
 	AttrNumber	sk_attno;		/* table or index column number */
 	StrategyNumber sk_strategy; /* operator strategy number */
 	Oid			sk_subtype;		/* strategy subtype */
+	Oid			sk_collation;	/* collation to use, if needed */
 	FmgrInfo	sk_func;		/* lookup info for function to call */
 	Datum		sk_argument;	/* data to compare */
 } ScanKeyData;
@@ -91,7 +100,7 @@ typedef ScanKeyData *ScanKey;
  *		sk_attno = index column number for leading column of row comparison
  *		sk_strategy = btree strategy code for semantics of row comparison
  *				(ie, < <= > or >=)
- *		sk_subtype, sk_func: not used
+ *		sk_subtype, sk_collation, sk_func: not used
  *		sk_argument: pointer to subsidiary ScanKey array
  * If the header is part of a ScanKey array that's sorted by attno, it
  * must be sorted according to the leading column number.
@@ -122,6 +131,7 @@ typedef ScanKeyData *ScanKey;
 #define SK_SEARCHNULL		0x0020		/* scankey represents "col IS NULL" */
 #define SK_SEARCHNOTNULL	0x0040		/* scankey represents "col IS NOT
 										 * NULL" */
+#define SK_ORDER_BY			0x0080		/* scankey is for ORDER BY op */
 
 
 /*
@@ -137,6 +147,7 @@ extern void ScanKeyEntryInitialize(ScanKey entry,
 					   AttrNumber attributeNumber,
 					   StrategyNumber strategy,
 					   Oid subtype,
+					   Oid collation,
 					   RegProcedure procedure,
 					   Datum argument);
 extern void ScanKeyEntryInitializeWithInfo(ScanKey entry,
@@ -144,6 +155,7 @@ extern void ScanKeyEntryInitializeWithInfo(ScanKey entry,
 							   AttrNumber attributeNumber,
 							   StrategyNumber strategy,
 							   Oid subtype,
+							   Oid collation,
 							   FmgrInfo *finfo,
 							   Datum argument);
 

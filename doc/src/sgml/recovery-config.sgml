@@ -1,6 +1,6 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/recovery-config.sgml,v 2.8 2010/06/11 10:13:09 heikki Exp $ -->
+<!-- doc/src/sgml/recovery-config.sgml -->
 
-<chapter Id="recovery-config">
+<chapter id="recovery-config">
   <title>Recovery Configuration</title>
 
   <indexterm>
@@ -31,7 +31,7 @@
 
   <sect1 id="archive-recovery-settings">
 
-    <title>Archive recovery settings</title>
+    <title>Archive Recovery Settings</title>
      <variablelist>
 
      <varlistentry id="restore-command" xreflabel="restore_command">
@@ -80,20 +80,29 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
       </indexterm>
       <listitem>
        <para>
-        This parameter specifies a shell command that will be executed at
-        every restartpoint. This parameter is optional. The purpose of the
-        <varname>archive_cleanup_command</> is to provide a mechanism for cleaning
-        up old archived WAL files that are no longer needed by the standby
-        server.
-        Any <literal>%r</> is replaced by the name of the file
-        containing the last valid restart point. That is the earliest file that
-        must be kept to allow a restore to be restartable, so this information
-        can be used to truncate the archive to just the minimum required to
-        support restart from the current restore. <literal>%r</> would
-        typically be used in a warm-standby configuration
-        (see <xref linkend="warm-standby">).
-        Write <literal>%%</> to embed an actual <literal>%</> character
-        in the command.
+        This optional parameter specifies a shell command that will be executed
+        at every restartpoint.  The purpose of
+        <varname>archive_cleanup_command</> is to provide a mechanism for
+        cleaning up old archived WAL files that are no longer needed by the
+        standby server.
+        Any <literal>%r</> is replaced by the name of the file containing the
+        last valid restart point.
+        That is the earliest file that must be <emphasis>kept</> to allow a
+        restore to be restartable, and so all files earlier than <literal>%r</>
+        may be safely removed.
+        This information can be used to truncate the archive to just the
+        minimum required to support restart from the current restore.
+        The <xref linkend="pgarchivecleanup"> module
+        is often used in <varname>archive_cleanup_command</> for
+        single-standby configurations, for example:
+<programlisting>archive_cleanup_command = 'pg_archivecleanup /mnt/server/archivedir %r'</programlisting>
+        Note however that if multiple standby servers are restoring from the
+        same archive directory, you will need to ensure that you do not delete
+        WAL files until they are no longer needed by any of the servers.
+        <varname>archive_cleanup_command</> would typically be used in a
+        warm-standby configuration (see <xref linkend="warm-standby">).
+        Write <literal>%%</> to embed an actual <literal>%</> character in the
+        command.
        </para>
        <para>
         If the command returns a non-zero exit status then a WARNING log
@@ -131,8 +140,27 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
 
   <sect1 id="recovery-target-settings">
 
-    <title>Recovery target settings</title>
+    <title>Recovery Target Settings</title>
      <variablelist>
+
+     <varlistentry id="recovery-target-name" xreflabel="recovery_target_name">
+      <term><varname>recovery_target_name</varname>
+           (<type>string</type>)
+      </term>
+      <indexterm>
+        <primary><varname>recovery_target_name</> recovery parameter</primary>
+      </indexterm>
+      <listitem>
+       <para>
+        This parameter specifies the named restore point, created with
+        <function>pg_create_restore_point()</> to which recovery will proceed.
+        At most one of <varname>recovery_target_name</>,
+        <xref linkend="recovery-target-time"> or
+        <xref linkend="recovery-target-xid"> can be specified.  The default is to
+        recover to the end of the WAL log.
+       </para>
+      </listitem>
+     </varlistentry>
 
      <varlistentry id="recovery-target-time" xreflabel="recovery_target_time">
       <term><varname>recovery_target_time</varname>
@@ -145,7 +173,8 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
        <para>
         This parameter specifies the time stamp up to which recovery
         will proceed.
-        At most one of <varname>recovery_target_time</> and
+        At most one of <varname>recovery_target_time</>,
+        <xref linkend="recovery-target-name"> or
         <xref linkend="recovery-target-xid"> can be specified.
         The default is to recover to the end of the WAL log.
         The precise stopping point is also influenced by
@@ -167,7 +196,8 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
         start, transactions can complete in a different numeric order.
         The transactions that will be recovered are those that committed
         before (and optionally including) the specified one.
-        At most one of <varname>recovery_target_xid</> and
+        At most one of <varname>recovery_target_xid</>,
+        <xref linkend="recovery-target-name"> or
         <xref linkend="recovery-target-time"> can be specified.
         The default is to recover to the end of the WAL log.
         The precise stopping point is also influenced by
@@ -210,10 +240,41 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
        <para>
         Specifies recovering into a particular timeline.  The default is
         to recover along the same timeline that was current when the
-        base backup was taken.  You only need to set this parameter
+        base backup was taken. Setting this to <literal>latest</> recovers
+        to the latest timeline found in the archive, which is useful in
+        a standby server. Other than that you only need to set this parameter
         in complex re-recovery situations, where you need to return to
         a state that itself was reached after a point-in-time recovery.
         See <xref linkend="backup-timelines"> for discussion.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="pause-at-recovery-target"
+                   xreflabel="pause_at_recovery_target">
+      <term><varname>pause_at_recovery_target</varname>
+        (<type>boolean</type>)
+      </term>
+      <indexterm>
+        <primary><varname>pause_at_recovery_target</> recovery parameter</primary>
+      </indexterm>
+      <listitem>
+       <para>
+        Specifies whether recovery should pause when the recovery target
+        is reached. The default is true.
+        This is intended to allow queries to be executed against the
+        database to check if this recovery target is the most desirable
+        point for recovery. The paused state can be resumed by using
+        <function>pg_xlog_replay_resume()</> (See
+        <xref linkend="functions-recovery-control-table">), which then
+        causes recovery to end. If this recovery target is not the
+        desired stopping point, then shutdown the server, change the
+        recovery target settings to a later target and restart to
+        continue recovery.
+       </para>
+       <para>
+        This setting has no effect if <xref linkend="guc-hot-standby"> is not
+        enabled, or if no recovery target is set.
        </para>
       </listitem>
      </varlistentry>
@@ -223,7 +284,7 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
 
   <sect1 id="standby-settings">
 
-    <title>Standby server settings</title>
+    <title>Standby Server Settings</title>
      <variablelist>
 
        <varlistentry id="standby-mode" xreflabel="standby_mode">
@@ -288,8 +349,8 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
         <listitem>
          <para>
           Specifies a trigger file whose presence ends recovery in the
-          standby. If no trigger file is specified, the standby never exits
-          recovery.
+          standby.  Even if this value is not set, you can still promote
+          the standby using <command>pg_ctl promote</>.
           This setting has no effect if <varname>standby_mode</> is <literal>off</>.
          </para>
         </listitem>

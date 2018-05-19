@@ -1,8 +1,8 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2007-2010, PostgreSQL Global Development Group
+# Copyright (c) 2007-2011, PostgreSQL Global Development Group
 #
-# $Id: UCS_to_GB18030.pl,v 1.6 2010/02/16 20:35:07 momjian Exp $
+# src/backend/utils/mb/Unicode/UCS_to_GB18030.pl
 #
 # Generate UTF-8 <--> GB18030 code conversion tables from
 # "ISO10646-GB18030.TXT"

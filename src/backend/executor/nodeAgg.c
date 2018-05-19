@@ -91,11 +91,11 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.175 2010/02/26 02:00:41 momjian Exp $
+ *	  src/backend/executor/nodeAgg.c
  *
  *-------------------------------------------------------------------------
  */
@@ -149,7 +149,7 @@ typedef struct AggHashEntryData
 	TupleHashEntryData shared;	/* common header for hash table entries */
 	/* per-aggregate transition status array - must be last! */
 	AggStatePerGroupData pergroup[1];	/* VARIABLE LENGTH ARRAY */
-} AggHashEntryData;				/* VARIABLE LENGTH STRUCT */
+}	AggHashEntryData;	/* VARIABLE LENGTH STRUCT */
 
 static void advance_transition_function(AggState *aggstate,
 							AggStatePerAgg peraggstate,
@@ -262,6 +262,7 @@ initialize_aggregates(AggState *aggstate,
 					tuplesort_begin_datum(&aggstate->ss,
 										  peraggstate->evaldesc->attrs[0]->atttypid,
 										  peraggstate->sortOperators[0],
+										  peraggstate->sortCollations[0],
 										  peraggstate->sortNullsFirst[0],
 										  PlanStateOperatorMemKB((PlanState *) aggstate), false);
 			}
@@ -272,6 +273,7 @@ initialize_aggregates(AggState *aggstate,
 										 peraggstate->evaldesc,
 										 peraggstate->numSortCols, peraggstate->sortColIdx,
 										 peraggstate->sortOperators,
+										 peraggstate->sortCollations,
 										 peraggstate->sortNullsFirst,
 										 PlanStateOperatorMemKB((PlanState *) aggstate), false);
 			}
@@ -445,6 +447,7 @@ invoke_agg_trans_func(AggState *aggstate,
 	 */
 	InitFunctionCallInfoData(*fcinfo, transfn,
 							 numTransInputs + 1,
+							 peraggstate->aggCollation,
 							 (void *) funcctx, NULL);
 	fcinfo->arg[0] = transValue;
 	fcinfo->argnull[0] = *transValueIsNull;
@@ -635,6 +638,8 @@ process_ordered_aggregate_single(AggState *aggstate,
 
 		/*
 		 * If DISTINCT mode, and not distinct from prior, skip it.
+		 *
+		 * Note: we assume equality functions don't care about collation.
 		 */
 		if (isDistinct &&
 			haveOldVal &&
@@ -805,6 +810,7 @@ finalize_aggregate(AggState *aggstate,
 
 		InitFunctionCallInfoData(fcinfo, &(peraggstate->finalfn),
 								 numFinalArgs,
+								 peraggstate->aggCollation,
 								 (void *) aggstate, NULL);
 
 		/* Fill in the transition state value */
@@ -950,7 +956,7 @@ hash_agg_entry_size(int numAggs)
 
 	/* This must match build_hash_table */
 	entrysize = sizeof(AggHashEntryData) +
-		(numAggs - 1) *sizeof(AggStatePerGroupData);
+		(numAggs - 1) * sizeof(AggStatePerGroupData);
 	entrysize = MAXALIGN(entrysize);
 	/* Account for hashtable overhead (assuming fill factor = 1) */
 	entrysize += 3 * sizeof(void *);
@@ -2056,6 +2062,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 								aggref->aggvariadic,
 								aggtranstype,
 								aggref->aggtype,
+								aggref->inputcollid,
 								transfn_oid,
 								finalfn_oid,
 								peraggstate->prelimfn_oid /* prelim */ ,
@@ -2068,12 +2075,12 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 								NULL);
 
 		fmgr_info(transfn_oid, &peraggstate->transfn);
-		peraggstate->transfn.fn_expr = (Node *) transfnexpr;
+		fmgr_info_set_expr((Node *) transfnexpr, &peraggstate->transfn);
 
 		if (OidIsValid(finalfn_oid))
 		{
 			fmgr_info(finalfn_oid, &peraggstate->finalfn);
-			peraggstate->finalfn.fn_expr = (Node *) finalfnexpr;
+			fmgr_info_set_expr((Node *) finalfnexpr, &peraggstate->finalfn);
 		}
 
 		if (OidIsValid(peraggstate->prelimfn_oid))
@@ -2081,6 +2088,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			fmgr_info(peraggstate->prelimfn_oid, &peraggstate->prelimfn);
 			peraggstate->prelimfn.fn_expr = (Node *) prelimfnexpr;
 		}
+
+		peraggstate->aggCollation = aggref->inputcollid;
 
 		get_typlenbyval(aggref->aggtype,
 						&peraggstate->resulttypeLen,
@@ -2194,6 +2203,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 				(AttrNumber *) palloc(numSortCols * sizeof(AttrNumber));
 			peraggstate->sortOperators =
 				(Oid *) palloc(numSortCols * sizeof(Oid));
+			peraggstate->sortCollations =
+				(Oid *) palloc(numSortCols * sizeof(Oid));
 			peraggstate->sortNullsFirst =
 				(bool *) palloc(numSortCols * sizeof(bool));
 
@@ -2209,6 +2220,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 				peraggstate->sortColIdx[i] = tle->resno;
 				peraggstate->sortOperators[i] = sortcl->sortop;
+				peraggstate->sortCollations[i] = exprCollation((Node *) tle->expr);
 				peraggstate->sortNullsFirst[i] = sortcl->nulls_first;
 				i++;
 			}
@@ -2322,7 +2334,7 @@ ExecEndAgg(AggState *node)
 }
 
 void
-ExecReScanAgg(AggState *node, ExprContext *exprCtxt)
+ExecReScanAgg(AggState *node)
 {
 	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 
@@ -2369,8 +2381,8 @@ ExecReScanAgg(AggState *node, ExprContext *exprCtxt)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	if (node->ss.ps.lefttree->chgParam == NULL)
+		ExecReScan(node->ss.ps.lefttree);
 }
 
 

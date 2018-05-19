@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/tlist.c,v 1.87 2010/01/02 16:57:48 momjian Exp $
+ *	  src/backend/optimizer/util/tlist.c
  *
  *-------------------------------------------------------------------------
  */
@@ -242,6 +242,40 @@ tlist_same_datatypes(List *tlist, List *colTypes, bool junkOK)
 	}
 	if (curColType != NULL)
 		return false;			/* tlist shorter than colTypes */
+	return true;
+}
+
+/*
+ * Does tlist have same exposed collations as listed in colCollations?
+ *
+ * Identical logic to the above, but for collations.
+ */
+bool
+tlist_same_collations(List *tlist, List *colCollations, bool junkOK)
+{
+	ListCell   *l;
+	ListCell   *curColColl = list_head(colCollations);
+
+	foreach(l, tlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(l);
+
+		if (tle->resjunk)
+		{
+			if (!junkOK)
+				return false;
+		}
+		else
+		{
+			if (curColColl == NULL)
+				return false;	/* tlist longer than colCollations */
+			if (exprCollation((Node *) tle->expr) != lfirst_oid(curColColl))
+				return false;
+			curColColl = lnext(curColColl);
+		}
+	}
+	if (curColColl != NULL)
+		return false;			/* tlist shorter than colCollations */
 	return true;
 }
 
@@ -617,10 +651,7 @@ grouping_is_sortable(List *groupClause)
 /*
  * grouping_is_hashable - is it possible to implement grouping list by hashing?
  *
- * We assume hashing is OK if the equality operators are marked oprcanhash.
- * (If there isn't actually a supporting hash function, the executor will
- * complain at runtime; but this is a misdeclaration of the operator, not
- * a system bug.)
+ * We rely on the parser to have set the hashable flag correctly.
  */
 bool
 grouping_is_hashable(List *groupClause)
@@ -648,7 +679,7 @@ grouping_is_hashable(List *groupClause)
 		{
 			SortGroupClause *groupcl = (SortGroupClause *) node;
 
-			if (!op_hashjoinable(groupcl->eqop))
+			if (!groupcl->hashable)
 				return false;
 		}
 	}

@@ -4,11 +4,11 @@
  *		Functions for handling locale-related info
  *
  *
- * Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/chklocale.c,v 1.17 2010/05/06 02:12:38 itagaki Exp $
+ *	  src/port/chklocale.c
  *
  *-------------------------------------------------------------------------
  */
@@ -227,7 +227,7 @@ win32_langinfo(const char *ctype)
  * with any desired encoding.
  */
 int
-pg_get_encoding_from_locale(const char *ctype)
+pg_get_encoding_from_locale(const char *ctype, bool write_message)
 {
 	char	   *sys;
 	int			i;
@@ -322,17 +322,20 @@ pg_get_encoding_from_locale(const char *ctype)
 	 * We print a warning if we got a CODESET string but couldn't recognize
 	 * it.	This means we need another entry in the table.
 	 */
+	if (write_message)
+	{
 #ifdef FRONTEND
-	fprintf(stderr, _("could not determine encoding for locale \"%s\": codeset is \"%s\""),
-			ctype, sys);
-	/* keep newline separate so there's only one translatable string */
-	fputc('\n', stderr);
+		fprintf(stderr, _("could not determine encoding for locale \"%s\": codeset is \"%s\""),
+				ctype, sys);
+		/* keep newline separate so there's only one translatable string */
+		fputc('\n', stderr);
 #else
-	ereport(WARNING,
-			(errmsg("could not determine encoding for locale \"%s\": codeset is \"%s\"",
-					ctype, sys),
+		ereport(WARNING,
+				(errmsg("could not determine encoding for locale \"%s\": codeset is \"%s\"",
+						ctype, sys),
 		   errdetail("Please report this to <bugs@greenplum.org>.")));
 #endif
+	}
 
 	free(sys);
 	return -1;
@@ -340,14 +343,14 @@ pg_get_encoding_from_locale(const char *ctype)
 #else							/* (HAVE_LANGINFO_H && CODESET) || WIN32 */
 
 /*
- * stub if no platform support
+ * stub if no multi-language platform support
  *
  * Note: we could return -1 here, but that would have the effect of
  * forcing users to specify an encoding to initdb on such platforms.
  * It seems better to silently default to SQL_ASCII.
  */
 int
-pg_get_encoding_from_locale(const char *ctype)
+pg_get_encoding_from_locale(const char *ctype, bool write_message)
 {
 	return PG_SQL_ASCII;
 }

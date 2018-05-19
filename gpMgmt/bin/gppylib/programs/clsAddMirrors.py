@@ -12,6 +12,7 @@ from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRE
 import os, sys, getopt, socket, StringIO, signal, copy
 
 from gppylib import gparray, gplog, pgconf, userinput, utils, heapchecksum
+from gppylib.commands.base import Command
 from gppylib.util import gp_utils
 from gppylib.commands import base, gp, pg, unix
 from gppylib.db import catalog, dbconn
@@ -504,6 +505,24 @@ class GpAddMirrorsProgram:
         else:
             logger.info("Heap checksum setting consistent across cluster")
 
+    def config_primaries_for_replication(self, gpArray):
+        logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
+        replicationStr = ". {0}/greenplum_path.sh; echo 'host  replication {1} samenet trust' >> {2}/pg_hba.conf; pg_ctl -D {2} reload"
+
+        try:
+            for segmentPair in gpArray.getSegmentList():
+                cmdStr = replicationStr.format(os.environ["GPHOME"], unix.getUserName(), segmentPair.primaryDB.datadir)
+                logger.debug(cmdStr)
+                cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
+                cmd.run(validateAfter=True)
+
+        except Exception, e:
+            logger.error("Failed while modifying pg_hba.conf on primary segments to allow replication connections: %s" % str(e))
+            raise
+
+        else:
+            logger.info("Successfully modified pg_hba.conf on primary segments to allow replication connections")
+
 
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
@@ -525,7 +544,7 @@ class GpAddMirrorsProgram:
             raise ExceptionNoStackTraceNeeded( \
                 "GPDB physical mirroring cannot be added.  The cluster is already configured with Mirrors.")
 
-        # figure out what needs to be done
+        # figure out what needs to be done (AND update the gpArray!)
         mirrorBuilder = self.__getMirrorsToBuildBasedOnOptions(gpEnv, gpArray)
         mirrorBuilder.checkForPortAndDirectoryConflicts(gpArray)
 
@@ -539,6 +558,7 @@ class GpAddMirrorsProgram:
                 if not userinput.ask_yesno(None, "\nContinue with add mirrors procedure", 'N'):
                     raise UserAbortedException()
 
+            self.config_primaries_for_replication(gpArray)
             if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
                 return 1
 

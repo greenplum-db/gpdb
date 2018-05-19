@@ -160,8 +160,8 @@ CREATE EXTERNAL TABLE ext_lineitem (
                 L_SHIPDATE date,
                 L_COMMITDATE date,
                 L_RECEIPTDATE date,
-                L_SHIPINSTRUCT CHAR(2),
-                L_SHIPMODE CHAR(1)
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10)
                 )
 LOCATION
 (
@@ -189,8 +189,8 @@ CREATE EXTERNAL TABLE ext_lineitem (
                 L_SHIPDATE date,
                 L_COMMITDATE date,
                 L_RECEIPTDATE date,
-                L_SHIPINSTRUCT CHAR(2),
-                L_SHIPMODE CHAR(1),
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
                 L_COMMENT VARCHAR(44),
                 L_BLAH CHAR(1)
                 )

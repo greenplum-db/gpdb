@@ -17,13 +17,11 @@
 
 #include "nodes/execnodes.h"
 
-extern TupleTableSlot*         ExecTableFunction(TableFunctionState *repeatstate);
+extern TupleTableSlot *ExecTableFunction(TableFunctionState *repeatstate);
 extern TableFunctionState *ExecInitTableFunction(TableFunctionScan *node, 
 												 EState *estate, 
 												 int eflags);
-extern int           ExecCountSlotsTableFunction(TableFunctionScan *node);
-extern void                 ExecEndTableFunction(TableFunctionState *node);
-extern void              ExecReScanTableFunction(TableFunctionState *node, 
-												 ExprContext *exprCtxt);
+extern void ExecEndTableFunction(TableFunctionState *node);
+extern void ExecReScanTableFunction(TableFunctionState *node);
 
 #endif /* NODE_TABLE_FUNCTION_H */

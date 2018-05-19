@@ -3,12 +3,12 @@
  * auth.c
  *	  Routines to handle network authentication
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.203 2010/07/06 19:18:56 momjian Exp $
+ *	  src/backend/libpq/auth.c
  *
  *-------------------------------------------------------------------------
  */
@@ -17,17 +17,9 @@
 
 #include <sys/param.h>
 #include <sys/socket.h>
-#if defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)
-#include <sys/uio.h>
-#include <sys/ucred.h>
-#endif
-#ifdef HAVE_UCRED_H
-#include <ucred.h>
-#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <stddef.h>
 
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
@@ -79,8 +71,11 @@ static int	recv_and_check_password_packet(Port *port);
 /* Standard TCP port number for Ident service.	Assigned by IANA */
 #define IDENT_PORT 113
 
-static int	authident(hbaPort *port);
-static bool ident_unix(int sock, char *ident_user);
+static int	ident_inet(hbaPort *port);
+
+#ifdef HAVE_UNIX_SOCKETS
+static int	auth_peer(hbaPort *port);
+#endif
 
 
 /*----------------------------------------------------------------
@@ -200,7 +195,7 @@ static int check_valid_until_for_gssapi(Port *port);
  *----------------------------------------------------------------
  */
 #ifdef ENABLE_SSPI
-typedef		SECURITY_STATUS
+typedef SECURITY_STATUS
 			(WINAPI * QUERY_SECURITY_CONTEXT_TOKEN_FN) (
 													   PCtxtHandle, void **);
 static int	pg_SSPI_recvauth(Port *port);
@@ -236,6 +231,13 @@ static int	CheckRADIUSAuth(Port *port);
  * Global authentication functions
  *----------------------------------------------------------------
  */
+
+/*
+ * This hook allows plugins to get control following client authentication,
+ * but before the user has been informed about the results.  It could be used
+ * to record login events, insert a delay after failed authentication, etc.
+ */
+ClientAuthentication_hook_type ClientAuthentication_hook = NULL;
 
 /*
  * Tell the user the authentication failed, but not (much about) why.
@@ -276,49 +278,52 @@ auth_failed(Port *port, int status)
 	}
 	else
 	{
-		switch (port->hba->auth_method)
-		{
-			case uaReject:
-			case uaImplicitReject:
-				errstr = gettext_noop("authentication failed for user \"%s\": host rejected");
-				break;
-			case uaKrb5:
-				errstr = gettext_noop("Kerberos 5 authentication failed for user \"%s\"");
-				break;
-			case uaTrust:
-				errstr = gettext_noop("\"trust\" authentication failed for user \"%s\"");
-				break;
-			case uaIdent:
-				errstr = gettext_noop("Ident authentication failed for user \"%s\"");
-				break;
-			case uaPassword:
-			case uaMD5:
-				errstr = gettext_noop("password authentication failed for user \"%s\"");
-				/* We use it to indicate if a .pgpass password failed. */
-				errcode_return = ERRCODE_INVALID_PASSWORD;
-				break;
-			case uaGSS:
-				errstr = gettext_noop("GSSAPI authentication failed for user \"%s\"");
-				break;
-			case uaSSPI:
-				errstr = gettext_noop("SSPI authentication failed for user \"%s\"");
-				break;
-			case uaPAM:
-				errstr = gettext_noop("PAM authentication failed for user \"%s\"");
-				break;
-			case uaLDAP:
-				errstr = gettext_noop("LDAP authentication failed for user \"%s\"");
-				break;
-			case uaCert:
-				errstr = gettext_noop("certificate authentication failed for user \"%s\"");
-				break;
-			case uaRADIUS:
-				errstr = gettext_noop("RADIUS authentication failed for user \"%s\"");
-				break;
-			default:
-				errstr = gettext_noop("authentication failed for user \"%s\": invalid authentication method");
-				break;
-		}
+	  switch (port->hba->auth_method)
+	  {
+		case uaReject:
+		case uaImplicitReject:
+			errstr = gettext_noop("authentication failed for user \"%s\": host rejected");
+			break;
+		case uaKrb5:
+			errstr = gettext_noop("Kerberos 5 authentication failed for user \"%s\"");
+			break;
+		case uaTrust:
+			errstr = gettext_noop("\"trust\" authentication failed for user \"%s\"");
+			break;
+		case uaIdent:
+			errstr = gettext_noop("Ident authentication failed for user \"%s\"");
+			break;
+		case uaPeer:
+			errstr = gettext_noop("Peer authentication failed for user \"%s\"");
+			break;
+		case uaPassword:
+		case uaMD5:
+			errstr = gettext_noop("password authentication failed for user \"%s\"");
+			/* We use it to indicate if a .pgpass password failed. */
+			errcode_return = ERRCODE_INVALID_PASSWORD;
+			break;
+		case uaGSS:
+			errstr = gettext_noop("GSSAPI authentication failed for user \"%s\"");
+			break;
+		case uaSSPI:
+			errstr = gettext_noop("SSPI authentication failed for user \"%s\"");
+			break;
+		case uaPAM:
+			errstr = gettext_noop("PAM authentication failed for user \"%s\"");
+			break;
+		case uaLDAP:
+			errstr = gettext_noop("LDAP authentication failed for user \"%s\"");
+			break;
+		case uaCert:
+			errstr = gettext_noop("certificate authentication failed for user \"%s\"");
+			break;
+		case uaRADIUS:
+			errstr = gettext_noop("RADIUS authentication failed for user \"%s\"");
+			break;
+		default:
+			errstr = gettext_noop("authentication failed for user \"%s\": invalid authentication method");
+			break;
+	  }
 	}
 
 	ereport(FATAL,
@@ -332,10 +337,10 @@ auth_failed(Port *port, int status)
  * QE. This is non-trivial because a QE some times runs at the master (i.e., an
  * entry-DB for things like master only tables).
  */
-static bool
+static int
 internal_client_authentication(Port *port)
 {
-	if (GpIdentity.segindex == MASTER_CONTENT_ID)
+	if (IS_QUERY_DISPATCHER())
 	{
 		/* 
 		 * The entry-DB (or QE at the master) case.
@@ -370,13 +375,13 @@ internal_client_authentication(Port *port)
 			}
 			return true;
 		}
+#ifdef HAVE_UNIX_SOCKETS
 		else if (port->raddr.addr.ss_family == AF_UNIX)
 		{
 			/* 
 			 * Internal connection via a domain socket -- use ident
 			 */
 			char *local_name;
-			char remote_name[IDENT_USERNAME_MAX + 1];
 			struct passwd *pw;
 
 			pw = getpwuid(geteuid());
@@ -388,16 +393,15 @@ internal_client_authentication(Port *port)
 
 			local_name = pw->pw_name;
 
-			remote_name[0] = '\0';
-
-			if (!ident_unix(port->sock, remote_name) ||
-				!strlen(remote_name) ||
-				strcmp(local_name, remote_name) != 0)
+			if (!auth_peer(port))
 				return false;
 			else
+			{
 				FakeClientAuthentication(port);
-			return true;
+				return true;
+			}
 		}
+#endif   /* HAVE_UNIX_SOCKETS */
 		else
 		{
 			/* Security violation? */
@@ -650,36 +654,16 @@ ClientAuthentication(Port *port)
 #endif
 			break;
 
+		case uaPeer:
+#ifdef HAVE_UNIX_SOCKETS
+			status = auth_peer(port);
+#else
+			Assert(false);
+#endif
+			break;
+
 		case uaIdent:
-
-			/*
-			 * If we are doing ident on unix-domain sockets, use SCM_CREDS
-			 * only if it is defined and SO_PEERCRED isn't.
-			 */
-#if !defined(HAVE_GETPEEREID) && !defined(SO_PEERCRED) && \
-	(defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || \
-	 (defined(HAVE_STRUCT_SOCKCRED) && defined(LOCAL_CREDS)))
-			if (port->raddr.addr.ss_family == AF_UNIX)
-			{
-#if defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)
-
-				/*
-				 * Receive credentials on next message receipt, BSD/OS,
-				 * NetBSD. We need to set this before the client sends the
-				 * next packet.
-				 */
-				int			on = 1;
-
-				if (setsockopt(port->sock, 0, LOCAL_CREDS, &on, sizeof(on)) < 0)
-					ereport(FATAL,
-							(errcode_for_socket_access(),
-					   errmsg("could not enable credential reception: %m")));
-#endif
-
-				sendAuthRequest(port, AUTH_REQ_SCM_CREDS);
-			}
-#endif
-			status = authident(port);
+			status = ident_inet(port);
 			break;
 
 		case uaMD5:
@@ -726,6 +710,9 @@ ClientAuthentication(Port *port)
 			status = STATUS_OK;
 			break;
 	}
+
+	if (ClientAuthentication_hook)
+		(*ClientAuthentication_hook) (port, status);
 
 	if (status == STATUS_OK)
 	{
@@ -985,7 +972,7 @@ pg_krb5_recvauth(Port *port)
 		return ret;
 
 	retval = krb5_recvauth(pg_krb5_context, &auth_context,
-						   (krb5_pointer) & port->sock, pg_krb_srvnam,
+						   (krb5_pointer) &port->sock, pg_krb_srvnam,
 						   pg_krb5_server, 0, pg_krb5_keytab, &ticket);
 	if (retval)
 	{
@@ -1097,16 +1084,15 @@ static void
 pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 {
 	gss_buffer_desc gmsg;
-	OM_uint32	lmaj_s,
-				lmin_s,
+	OM_uint32	lmin_s,
 				msg_ctx;
 	char		msg_major[128],
 				msg_minor[128];
 
 	/* Fetch major status message */
 	msg_ctx = 0;
-	lmaj_s = gss_display_status(&lmin_s, maj_stat, GSS_C_GSS_CODE,
-								GSS_C_NO_OID, &msg_ctx, &gmsg);
+	gss_display_status(&lmin_s, maj_stat, GSS_C_GSS_CODE,
+					   GSS_C_NO_OID, &msg_ctx, &gmsg);
 	strlcpy(msg_major, gmsg.value, sizeof(msg_major));
 	gss_release_buffer(&lmin_s, &gmsg);
 
@@ -1121,8 +1107,8 @@ pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 
 	/* Fetch mechanism minor status message */
 	msg_ctx = 0;
-	lmaj_s = gss_display_status(&lmin_s, min_stat, GSS_C_MECH_CODE,
-								GSS_C_NO_OID, &msg_ctx, &gmsg);
+	gss_display_status(&lmin_s, min_stat, GSS_C_MECH_CODE,
+					   GSS_C_NO_OID, &msg_ctx, &gmsg);
 	strlcpy(msg_minor, gmsg.value, sizeof(msg_minor));
 	gss_release_buffer(&lmin_s, &gmsg);
 
@@ -1811,11 +1797,12 @@ interpret_ident_response(const char *ident_response,
  *
  *	But iff we're unable to get the information from ident, return false.
  */
-static bool
-ident_inet(const SockAddr remote_addr,
-		   const SockAddr local_addr,
-		   char *ident_user)
+static int
+ident_inet(hbaPort *port)
 {
+	const SockAddr remote_addr = port->raddr;
+	const SockAddr local_addr = port->laddr;
+	char		ident_user[IDENT_USERNAME_MAX + 1];
 	pgsocket	sock_fd = PGINVALID_SOCKET;		/* for talking to Ident server */
 	int			rc;				/* Return code from a locally called function */
 	bool		ident_return;
@@ -1965,35 +1952,42 @@ ident_inet_done:
 	if (la)
 		pg_freeaddrinfo_all(local_addr.addr.ss_family, la);
 
-	return ident_return;
+	if (ident_return)
+		/* Success! Check the usermap */
+		return check_usermap(port->hba->usermap, port->user_name, ident_user, false);
+	return STATUS_ERROR;
 }
 
 /*
- *	Ask kernel about the credentials of the connecting process and
- *	determine the symbolic name of the corresponding user.
+ *	Ask kernel about the credentials of the connecting process,
+ *	determine the symbolic name of the corresponding user, and check
+ *	if valid per the usermap.
  *
- *	Returns either true and the username put into "ident_user",
- *	or false if we were unable to determine the username.
+ *	Iff authorized, return STATUS_OK, otherwise return STATUS_ERROR.
  */
 #ifdef HAVE_UNIX_SOCKETS
 
-static bool
-ident_unix(int sock, char *ident_user)
+static int
+auth_peer(hbaPort *port)
 {
-#if defined(HAVE_GETPEEREID)
-	/* OpenBSD style:  */
+	char		ident_user[IDENT_USERNAME_MAX + 1];
 	uid_t		uid;
 	gid_t		gid;
 	struct passwd *pass;
 
 	errno = 0;
-	if (getpeereid(sock, &uid, &gid) != 0)
+	if (getpeereid(port->sock, &uid, &gid) != 0)
 	{
-		/* We didn't get a valid credentials struct. */
-		ereport(LOG,
-				(errcode_for_socket_access(),
-				 errmsg("could not get peer credentials: %m")));
-		return false;
+		/* Provide special error message if getpeereid is a stub */
+		if (errno == ENOSYS)
+			ereport(LOG,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			errmsg("peer authentication is not supported on this platform")));
+		else
+			ereport(LOG,
+					(errcode_for_socket_access(),
+					 errmsg("could not get peer credentials: %m")));
+		return STATUS_ERROR;
 	}
 
 	pass = getpwuid(uid);
@@ -2003,195 +1997,20 @@ ident_unix(int sock, char *ident_user)
 		ereport(LOG,
 				(errmsg("local user with ID %d does not exist",
 						(int) uid)));
-		return false;
+		return STATUS_ERROR;
 	}
 
 	strlcpy(ident_user, pass->pw_name, IDENT_USERNAME_MAX + 1);
-
-	return true;
-#elif defined(SO_PEERCRED)
-	/* Linux style: use getsockopt(SO_PEERCRED) */
-	struct ucred peercred;
-	socklen_t so_len = sizeof(peercred);
-	struct passwd *pass;
-
-	errno = 0;
-	if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 ||
-		so_len != sizeof(peercred))
-	{
-		/* We didn't get a valid credentials struct. */
-		ereport(LOG,
-				(errcode_for_socket_access(),
-				 errmsg("could not get peer credentials: %m")));
-		return false;
-	}
-
-	pass = getpwuid(peercred.uid);
-
-	if (pass == NULL)
-	{
-		ereport(LOG,
-				(errmsg("local user with ID %d does not exist",
-						(int) peercred.uid)));
-		return false;
-	}
-
-	strlcpy(ident_user, pass->pw_name, IDENT_USERNAME_MAX + 1);
-
-	return true;
-#elif defined(HAVE_GETPEERUCRED)
-	/* Solaris > 10 */
-	uid_t		uid;
-	struct passwd *pass;
-	ucred_t    *ucred;
-
-	ucred = NULL;				/* must be initialized to NULL */
-	if (getpeerucred(sock, &ucred) == -1)
-	{
-		ereport(LOG,
-				(errcode_for_socket_access(),
-				 errmsg("could not get peer credentials: %m")));
-		return false;
-	}
-
-	if ((uid = ucred_geteuid(ucred)) == -1)
-	{
-		ereport(LOG,
-				(errcode_for_socket_access(),
-		   errmsg("could not get effective UID from peer credentials: %m")));
-		return false;
-	}
-
-	ucred_free(ucred);
-
-	pass = getpwuid(uid);
-	if (pass == NULL)
-	{
-		ereport(LOG,
-				(errmsg("local user with ID %d does not exist",
-						(int) uid)));
-		return false;
-	}
-
-	strlcpy(ident_user, pass->pw_name, IDENT_USERNAME_MAX + 1);
-
-	return true;
-#elif defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || (defined(HAVE_STRUCT_SOCKCRED) && defined(LOCAL_CREDS))
-	struct msghdr msg;
-
-/* Credentials structure */
-#if defined(HAVE_STRUCT_CMSGCRED)
-	typedef struct cmsgcred Cred;
-
-#define cruid cmcred_uid
-#elif defined(HAVE_STRUCT_FCRED)
-	typedef struct fcred Cred;
-
-#define cruid fc_uid
-#elif defined(HAVE_STRUCT_SOCKCRED)
-	typedef struct sockcred Cred;
-
-#define cruid sc_uid
-#endif
-	Cred	   *cred;
-
-	/* Compute size without padding */
-	char		cmsgmem[ALIGN(sizeof(struct cmsghdr)) + ALIGN(sizeof(Cred))];	/* for NetBSD */
-
-	/* Point to start of first structure */
-	struct cmsghdr *cmsg = (struct cmsghdr *) cmsgmem;
-
-	struct iovec iov;
-	char		buf;
-	struct passwd *pw;
-
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = (char *) cmsg;
-	msg.msg_controllen = sizeof(cmsgmem);
-	memset(cmsg, 0, sizeof(cmsgmem));
 
 	/*
-	 * The one character which is received here is not meaningful; its
-	 * purposes is only to make sure that recvmsg() blocks long enough for the
-	 * other side to send its credentials.
+	 * GPDB: check for port->hba == NULL here, because auth_peer is used
+	 * without an HBA entry in the short-circuited QD->QE authentication,
+	 * from internal_client_authentication().
 	 */
-	iov.iov_base = &buf;
-	iov.iov_len = 1;
-
-	if (recvmsg(sock, &msg, 0) < 0 ||
-		cmsg->cmsg_len < sizeof(cmsgmem) ||
-		cmsg->cmsg_type != SCM_CREDS)
-	{
-		ereport(LOG,
-				(errcode_for_socket_access(),
-				 errmsg("could not get peer credentials: %m")));
-		return false;
-	}
-
-	cred = (Cred *) CMSG_DATA(cmsg);
-
-	pw = getpwuid(cred->cruid);
-
-	if (pw == NULL)
-	{
-		ereport(LOG,
-				(errmsg("local user with ID %d does not exist",
-						(int) cred->cruid)));
-		return false;
-	}
-
-	strlcpy(ident_user, pw->pw_name, IDENT_USERNAME_MAX + 1);
-
-	return true;
-#else
-	ereport(LOG,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("Ident authentication is not supported on local connections on this platform")));
-
-	return false;
-#endif
+	return check_usermap(port->hba ? port->hba->usermap : NULL,
+						 port->user_name, ident_user, false);
 }
 #endif   /* HAVE_UNIX_SOCKETS */
-
-
-/*
- *	Determine the username of the initiator of the connection described
- *	by "port".	Then look in the usermap file under the usermap
- *	port->hba->usermap and see if that user is equivalent to Postgres user
- *	port->user.
- *
- *	Return STATUS_OK if yes, STATUS_ERROR if no match (or couldn't get info).
- */
-static int
-authident(hbaPort *port)
-{
-	char		ident_user[IDENT_USERNAME_MAX + 1];
-
-	switch (port->raddr.addr.ss_family)
-	{
-		case AF_INET:
-#ifdef	HAVE_IPV6
-		case AF_INET6:
-#endif
-			if (!ident_inet(port->raddr, port->laddr, ident_user))
-				return STATUS_ERROR;
-			break;
-
-#ifdef HAVE_UNIX_SOCKETS
-		case AF_UNIX:
-			if (!ident_unix(port->sock, ident_user))
-				return STATUS_ERROR;
-			break;
-#endif
-
-		default:
-			return STATUS_ERROR;
-	}
-
-	return check_usermap(port->hba->usermap, port->user_name, ident_user, false);
-}
 
 /*----------------------------------------------------------------
  * PAM authentication system
@@ -2864,7 +2683,7 @@ CheckRADIUSAuth(Port *port)
 	char		portstr[128];
 	ACCEPT_TYPE_ARG3 addrsize;
 	fd_set		fdset;
-	struct timeval timeout;
+	struct timeval endtime;
 	int			i,
 				r;
 
@@ -3022,14 +2841,36 @@ CheckRADIUSAuth(Port *port)
 	/* Don't need the server address anymore */
 	pg_freeaddrinfo_all(hint.ai_family, serveraddrs);
 
-	/* Wait for a response */
-	timeout.tv_sec = RADIUS_TIMEOUT;
-	timeout.tv_usec = 0;
-	FD_ZERO(&fdset);
-	FD_SET(sock, &fdset);
+	/*
+	 * Figure out at what time we should time out. We can't just use a single
+	 * call to select() with a timeout, since somebody can be sending invalid
+	 * packets to our port thus causing us to retry in a loop and never time
+	 * out.
+	 */
+	gettimeofday(&endtime, NULL);
+	endtime.tv_sec += RADIUS_TIMEOUT;
 
 	while (true)
 	{
+		struct timeval timeout;
+		struct timeval now;
+		int64		timeoutval;
+
+		gettimeofday(&now, NULL);
+		timeoutval = (endtime.tv_sec * 1000000 + endtime.tv_usec) - (now.tv_sec * 1000000 + now.tv_usec);
+		if (timeoutval <= 0)
+		{
+			ereport(LOG,
+					(errmsg("timeout waiting for RADIUS response")));
+			closesocket(sock);
+			return STATUS_ERROR;
+		}
+		timeout.tv_sec = timeoutval / 1000000;
+		timeout.tv_usec = timeoutval % 1000000;
+
+		FD_ZERO(&fdset);
+		FD_SET(sock, &fdset);
+
 		r = select(sock + 1, &fdset, NULL, NULL, &timeout);
 		if (r < 0)
 		{
@@ -3050,109 +2891,119 @@ CheckRADIUSAuth(Port *port)
 			return STATUS_ERROR;
 		}
 
-		/* else we actually have a packet ready to read */
-		break;
-	}
+		/*
+		 * Attempt to read the response packet, and verify the contents.
+		 *
+		 * Any packet that's not actually a RADIUS packet, or otherwise does
+		 * not validate as an explicit reject, is just ignored and we retry
+		 * for another packet (until we reach the timeout). This is to avoid
+		 * the possibility to denial-of-service the login by flooding the
+		 * server with invalid packets on the port that we're expecting the
+		 * RADIUS response on.
+		 */
 
-	/* Read the response packet */
-	addrsize = sizeof(remoteaddr);
-	packetlength = recvfrom(sock, receive_buffer, RADIUS_BUFFER_SIZE, 0,
-							(struct sockaddr *) & remoteaddr, &addrsize);
-	if (packetlength < 0)
-	{
-		ereport(LOG,
-				(errmsg("could not read RADIUS response: %m")));
-		closesocket(sock);
-		return STATUS_ERROR;
-	}
-
-	closesocket(sock);
+		addrsize = sizeof(remoteaddr);
+		packetlength = recvfrom(sock, receive_buffer, RADIUS_BUFFER_SIZE, 0,
+								(struct sockaddr *) & remoteaddr, &addrsize);
+		if (packetlength < 0)
+		{
+			ereport(LOG,
+					(errmsg("could not read RADIUS response: %m")));
+			return STATUS_ERROR;
+		}
 
 #ifdef HAVE_IPV6
-	if (remoteaddr.sin6_port != htons(port->hba->radiusport))
+		if (remoteaddr.sin6_port != htons(port->hba->radiusport))
 #else
-	if (remoteaddr.sin_port != htons(port->hba->radiusport))
+		if (remoteaddr.sin_port != htons(port->hba->radiusport))
 #endif
-	{
+		{
 #ifdef HAVE_IPV6
-		ereport(LOG,
-				(errmsg("RADIUS response was sent from incorrect port: %i",
-						ntohs(remoteaddr.sin6_port))));
+			ereport(LOG,
+				  (errmsg("RADIUS response was sent from incorrect port: %i",
+						  ntohs(remoteaddr.sin6_port))));
 #else
-		ereport(LOG,
-				(errmsg("RADIUS response was sent from incorrect port: %i",
-						ntohs(remoteaddr.sin_port))));
+			ereport(LOG,
+				  (errmsg("RADIUS response was sent from incorrect port: %i",
+						  ntohs(remoteaddr.sin_port))));
 #endif
-		return STATUS_ERROR;
-	}
+			continue;
+		}
 
-	if (packetlength < RADIUS_HEADER_LENGTH)
-	{
-		ereport(LOG,
-				(errmsg("RADIUS response too short: %i", packetlength)));
-		return STATUS_ERROR;
-	}
+		if (packetlength < RADIUS_HEADER_LENGTH)
+		{
+			ereport(LOG,
+					(errmsg("RADIUS response too short: %i", packetlength)));
+			continue;
+		}
 
-	if (packetlength != ntohs(receivepacket->length))
-	{
-		ereport(LOG,
-		 (errmsg("RADIUS response has corrupt length: %i (actual length %i)",
-				 ntohs(receivepacket->length), packetlength)));
-		return STATUS_ERROR;
-	}
+		if (packetlength != ntohs(receivepacket->length))
+		{
+			ereport(LOG,
+					(errmsg("RADIUS response has corrupt length: %i (actual length %i)",
+							ntohs(receivepacket->length), packetlength)));
+			continue;
+		}
 
-	if (packet->id != receivepacket->id)
-	{
-		ereport(LOG,
-				(errmsg("RADIUS response is to a different request: %i (should be %i)",
-						receivepacket->id, packet->id)));
-		return STATUS_ERROR;
-	}
+		if (packet->id != receivepacket->id)
+		{
+			ereport(LOG,
+					(errmsg("RADIUS response is to a different request: %i (should be %i)",
+							receivepacket->id, packet->id)));
+			continue;
+		}
 
-	/*
-	 * Verify the response authenticator, which is calculated as
-	 * MD5(Code+ID+Length+RequestAuthenticator+Attributes+Secret)
-	 */
-	cryptvector = palloc(packetlength + strlen(port->hba->radiussecret));
+		/*
+		 * Verify the response authenticator, which is calculated as
+		 * MD5(Code+ID+Length+RequestAuthenticator+Attributes+Secret)
+		 */
+		cryptvector = palloc(packetlength + strlen(port->hba->radiussecret));
 
-	memcpy(cryptvector, receivepacket, 4);		/* code+id+length */
-	memcpy(cryptvector + 4, packet->vector, RADIUS_VECTOR_LENGTH);		/* request
+		memcpy(cryptvector, receivepacket, 4);	/* code+id+length */
+		memcpy(cryptvector + 4, packet->vector, RADIUS_VECTOR_LENGTH);	/* request
 																		 * authenticator, from
 																		 * original packet */
-	if (packetlength > RADIUS_HEADER_LENGTH)	/* there may be no attributes
-												 * at all */
-		memcpy(cryptvector + RADIUS_HEADER_LENGTH, receive_buffer + RADIUS_HEADER_LENGTH, packetlength - RADIUS_HEADER_LENGTH);
-	memcpy(cryptvector + packetlength, port->hba->radiussecret, strlen(port->hba->radiussecret));
+		if (packetlength > RADIUS_HEADER_LENGTH)		/* there may be no
+														 * attributes at all */
+			memcpy(cryptvector + RADIUS_HEADER_LENGTH, receive_buffer + RADIUS_HEADER_LENGTH, packetlength - RADIUS_HEADER_LENGTH);
+		memcpy(cryptvector + packetlength, port->hba->radiussecret, strlen(port->hba->radiussecret));
 
-	if (!pg_md5_binary(cryptvector,
-					   packetlength + strlen(port->hba->radiussecret),
-					   encryptedpassword))
-	{
-		ereport(LOG,
+		if (!pg_md5_binary(cryptvector,
+						   packetlength + strlen(port->hba->radiussecret),
+						   encryptedpassword))
+		{
+			ereport(LOG,
 			(errmsg("could not perform MD5 encryption of received packet")));
+			pfree(cryptvector);
+			continue;
+		}
 		pfree(cryptvector);
-		return STATUS_ERROR;
-	}
-	pfree(cryptvector);
 
-	if (memcmp(receivepacket->vector, encryptedpassword, RADIUS_VECTOR_LENGTH) != 0)
-	{
-		ereport(LOG,
-				(errmsg("RADIUS response has incorrect MD5 signature")));
-		return STATUS_ERROR;
-	}
+		if (memcmp(receivepacket->vector, encryptedpassword, RADIUS_VECTOR_LENGTH) != 0)
+		{
+			ereport(LOG,
+					(errmsg("RADIUS response has incorrect MD5 signature")));
+			continue;
+		}
 
-	if (receivepacket->code == RADIUS_ACCESS_ACCEPT)
-		return STATUS_OK;
-	else if (receivepacket->code == RADIUS_ACCESS_REJECT)
-		return STATUS_ERROR;
-	else
-	{
-		ereport(LOG,
+		if (receivepacket->code == RADIUS_ACCESS_ACCEPT)
+		{
+			closesocket(sock);
+			return STATUS_OK;
+		}
+		else if (receivepacket->code == RADIUS_ACCESS_REJECT)
+		{
+			closesocket(sock);
+			return STATUS_ERROR;
+		}
+		else
+		{
+			ereport(LOG,
 			 (errmsg("RADIUS response has invalid code (%i) for user \"%s\"",
 					 receivepacket->code, port->user_name)));
-		return STATUS_ERROR;
-	}
+			continue;
+		}
+	}							/* while (true) */
 }
 
 /*----------------------------------------------------------------

@@ -4,10 +4,10 @@
  *		Tablespace management commands (create/drop tablespace).
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/tablespace.h,v 1.23 2010/01/07 03:53:08 rhaas Exp $
+ * src/include/commands/tablespace.h
  *
  *-------------------------------------------------------------------------
  */
@@ -49,7 +49,7 @@ extern void AlterTableSpaceOptions(AlterTableSpaceOptionsStmt *stmt);
 
 extern void TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo);
 
-extern Oid	GetDefaultTablespace(bool forTemp);
+extern Oid	GetDefaultTablespace(char relpersistence);
 
 extern void PrepareTempTablespaces(void);
 

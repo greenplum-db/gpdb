@@ -23,6 +23,7 @@
 #define CDB_MOTION_LOST_CONTACT_STRING "Interconnect error master lost contact with segment."
 
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
+struct CdbPgResults;
 struct Gang; /* #include "cdb/cdbgang.h" */
 
 /*
@@ -49,7 +50,6 @@ typedef struct CdbDispatcherState
 {
 	struct CdbDispatchResults *primaryResults;
 	void *dispatchParams;
-	MemoryContext dispatchStateContext;
 } CdbDispatcherState;
 
 typedef struct DispatcherInternalFuncs
@@ -143,7 +143,10 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError);
  * instead call CdbCheckDispatchResult(), etc., directly.
  */
 void
-cdbdisp_finishCommand(struct CdbDispatcherState *ds);
+cdbdisp_finishCommand(struct CdbDispatcherState *ds,
+					 ErrorData **qeError,
+					 struct CdbPgResults *cdb_pgresults,
+					 bool throwError);
 
 /*
  * CdbDispatchHandleError
@@ -169,15 +172,8 @@ cdbdisp_cancelDispatch(CdbDispatcherState *ds);
  * Allocate memory and initialize CdbDispatcherState.
  *
  * Call cdbdisp_destroyDispatcherState to free it.
- *
- *   maxSlices: max number of slices of the query/command.
  */
-void
-cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
-							int maxSlices,
-							bool cancelOnError,
-							char *queryText,
-							int queryTextLen);
+CdbDispatcherState * cdbdisp_makeDispatcherState(void);
 
 /*
  * Free memory in CdbDispatcherState
@@ -186,6 +182,11 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
  * Free dispatcher memory context.
  */
 void cdbdisp_destroyDispatcherState(CdbDispatcherState *ds);
+
+void *
+cdbdisp_makeDispatchParams(int maxSlices,
+						  char *queryText,
+						  int queryTextLen);
 
 bool cdbdisp_checkForCancel(CdbDispatcherState * ds);
 int cdbdisp_getWaitSocketFd(CdbDispatcherState *ds);

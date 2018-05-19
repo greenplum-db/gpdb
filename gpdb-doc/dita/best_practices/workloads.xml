@@ -12,6 +12,9 @@
         <xref href="#topic_hhc_z5w_r4/section_jqw_qbl_zt" format="dita"/>
       </li>
       <li>
+        <xref href="#topic_hhc_z5w_r4/section113x" format="dita"/>
+      </li>
+      <li>
         <xref href="#topic_hhc_z5w_r4/section_r52_rbl_zt" format="dita"/>
       </li>
       <li>
@@ -55,6 +58,15 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         and it is set when the query is invoked. However, if adding more hosts allows decreasing the
         number of segments per host, then the amount of memory allocated in
           <codeph>gp_vmem_protect_limit</codeph> can be raised.</p>
+    </section>
+    <section id="section113x" xml:lang="en">
+      <title>Low Memory Queries</title>
+        <p>A low <codeph>statement_mem</codeph> setting (for example, in the
+          1-3MB range) has been shown
+          to increase the performance of queries with low memory requirements. Use
+          the <codeph>statement_mem</codeph> server configuration parameter to
+          override the setting on a per-query basis. For example:
+          <codeblock>SET statement_mem='2MB';</codeblock></p>
     </section>
     <section id="section_r52_rbl_zt">
       <title>Configuring Memory for Greenplum Database</title>

@@ -123,6 +123,7 @@ typedef struct
 	int			ckpt_flags;		/* checkpoint flags, as defined in xlog.h */
 
 	uint32		num_backend_writes;		/* counts user backend buffer writes */
+	uint32		num_backend_fsync;		/* counts user backend fsync calls */
 
 	int			num_requests;	/* current # of requests */
 	int			max_requests;	/* allocated array size */
@@ -1038,6 +1039,12 @@ ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 		(CheckpointerShmem->num_requests >= CheckpointerShmem->max_requests &&
 		 !CompactCheckpointerRequestQueue()))
 	{
+		/*
+		 * Count the subset of writes where backends have to do their own
+		 * fsync
+		 */
+		if (!AmBackgroundWriterProcess())
+			CheckpointerShmem->num_backend_fsync++;
 		LWLockRelease(CheckpointerCommLock);
 		return false;
 	}
@@ -1204,8 +1211,10 @@ AbsorbFsyncRequests(void)
 
 	/* Transfer stats counts into pending pgstats message */
 	BgWriterStats.m_buf_written_backend += CheckpointerShmem->num_backend_writes;
+	BgWriterStats.m_buf_fsync_backend += CheckpointerShmem->num_backend_fsync;
 
 	CheckpointerShmem->num_backend_writes = 0;
+	CheckpointerShmem->num_backend_fsync = 0;
 
 	n = CheckpointerShmem->num_requests;
 	if (n > 0)

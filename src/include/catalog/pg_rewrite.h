@@ -8,10 +8,10 @@
  * --- ie, rule names are only unique among the rules of a given table.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_rewrite.h,v 1.35 2010/01/05 01:06:57 tgl Exp $
+ * src/include/catalog/pg_rewrite.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -41,8 +41,8 @@ CATALOG(pg_rewrite,2618)
 	bool		is_instead;
 
 	/* NB: remaining fields must be accessed via heap_getattr */
-	text		ev_qual;
-	text		ev_action;
+	pg_node_tree ev_qual;
+	pg_node_tree ev_action;
 } FormData_pg_rewrite;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

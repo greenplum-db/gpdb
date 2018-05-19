@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/ecpg-ref.sgml,v 1.34 2010/02/19 14:36:45 momjian Exp $
+doc/src/sgml/ref/ecpg-ref.sgml
 PostgreSQL documentation
 -->
 
@@ -135,9 +135,38 @@ PostgreSQL documentation
      <term><option>-r <replaceable>option</replaceable></option></term>
      <listitem>
       <para>
-       Selects a run-time behavior.  Currently,
-       <replaceable>option</replaceable> can only be
-       <literal>no_indicator</literal>.
+       Selects run-time behavior.  <replaceable>Option</replaceable> can be
+       one of the following:
+       <variablelist>
+        <varlistentry>
+         <term><option>no_indicator</option></term>
+         <listitem>
+         <para>
+         Do not use indicators but instead use special values to represent
+         null values. Historically there have been databases using this approach.
+         </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><option>prepare</option></term>
+         <listitem>
+         <para>
+         Prepare all statements before using them. Libecpg will keep a cache of
+         prepared statements and reuse a statement if it gets executed again. If the
+         cache runs full, libecpg will free the least used statement.
+         </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><option>questionmarks</option></term>
+         <listitem>
+         <para>
+         Allow question mark as placeholder for compatibility reasons.
+         This used to be the default long ago.
+         </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
       </para>
      </listitem>
     </varlistentry>
@@ -153,7 +182,7 @@ PostgreSQL documentation
       </para>
      </listitem>
     </varlistentry>
-    
+
     <varlistentry>
      <term><option>-v</option></term>
      <listitem>

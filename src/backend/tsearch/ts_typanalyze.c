@@ -3,11 +3,11 @@
  * ts_typanalyze.c
  *	  functions for gathering statistics from tsvector columns
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_typanalyze.c,v 1.10 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/tsearch/ts_typanalyze.c
  *
  *-------------------------------------------------------------------------
  */

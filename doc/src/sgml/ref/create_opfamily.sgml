@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_opfamily.sgml,v 1.5 2010/04/03 07:22:58 petere Exp $
+doc/src/sgml/ref/create_opfamily.sgml
 PostgreSQL documentation
 -->
 
@@ -67,7 +67,7 @@ CREATE OPERATOR FAMILY <replaceable class="parameter">name</replaceable> USING <
    Refer to <xref linkend="xindex"> for further information.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -92,7 +92,7 @@ CREATE OPERATOR FAMILY <replaceable class="parameter">name</replaceable> USING <
    </varlistentry>
   </variablelist>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 

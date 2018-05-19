@@ -121,7 +121,7 @@ AppendOnlyCompaction_ShouldCompact(
 	int64		hiddenTupcount;
 	double		hideRatio;
 
-	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
+	Assert(RelationIsAppendOptimized(aoRelation));
 
 	if (!gp_appendonly_compaction)
 	{
@@ -770,7 +770,7 @@ AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 	int			Anum_tupcount;
 	bool		empty = true;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationIsAppendOptimized(aorel));
 
 	pg_aoseg_rel = heap_open(aorel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);

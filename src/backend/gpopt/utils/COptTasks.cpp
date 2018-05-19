@@ -757,7 +757,7 @@ COptTasks::PoconfCreate
 						pcm,
 						GPOS_NEW(pmp) CHint
 								(
-								INT_MAX /* optimizer_parts_to_force_sort_on_insert */,
+								gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
 								ulJoinArityForAssociativityCommutativity,
 								ulArrayExpansionThreshold,
 								ulJoinOrderThreshold,
@@ -1744,7 +1744,7 @@ COptTasks::DumpMDObjs
 	const char *szFilename
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, ULONG_MAX /*ulCmpt*/, szFilename);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, szFilename);
 	Execute(&PvDXLFromMDObjsTask, &ctxrelcache);
 }
 
@@ -1763,7 +1763,7 @@ COptTasks::SzMDObjs
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, ULONG_MAX /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
 	Execute(&PvDXLFromMDObjsTask, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;
@@ -1783,7 +1783,7 @@ COptTasks::SzMDCast
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, ULONG_MAX /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
 	Execute(&PvMDCast, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;
@@ -1825,7 +1825,7 @@ COptTasks::SzRelStats
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, ULONG_MAX /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
 	Execute(&PvDXLFromRelStatsTask, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;

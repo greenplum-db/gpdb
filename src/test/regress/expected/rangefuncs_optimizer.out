@@ -15,6 +15,8 @@ SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
 (11 rows)
 
 CREATE TABLE foo2(fooid int, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'fooid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO foo2 VALUES(1, 11);
 INSERT INTO foo2 VALUES(2, 22);
 INSERT INTO foo2 VALUES(1, 111);
@@ -31,7 +33,7 @@ HINT:  likely caused by a function that reads or modifies data in a distributed 
 CONTEXT:  SQL function "foot" statement 1
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(1) z where z.fooid = foo2.fooid) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2"  (entry db 192.168.0.13:15432 pid=5692)
 CONTEXT:  SQL function "foot" during startup
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(foo2.fooid) z where z.fooid = 1) ORDER BY 1,2;
@@ -271,14 +273,14 @@ INSERT INTO foorescan values(5007,5,'abc.5007.5');
 INSERT INTO foorescan values(5008,5,'abc.5008.5');
 INSERT INTO foorescan values(5009,5,'abc.5009.5');
 CREATE FUNCTION foorescan(int,int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid >= $1 and fooid < $2 ;' LANGUAGE SQL;
---invokes ExecFunctionReScan
+--invokes ExecReScanFunctionScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM foorescan(5002,5004)) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 192.168.0.13:15432 pid=5692)
 CONTEXT:  SQL function "foorescan" during startup
 CREATE VIEW vw_foorescan AS SELECT * FROM foorescan(5002,5004);
---invokes ExecFunctionReScan
+--invokes ExecReScanFunctionScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM vw_foorescan) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 192.168.0.13:15432 pid=5692)
 CONTEXT:  SQL function "foorescan" during startup
 CREATE TABLE barrescan (fooid int primary key);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "barrescan_pkey" for table "barrescan"
@@ -289,21 +291,25 @@ INSERT INTO barrescan values(5006);
 INSERT INTO barrescan values(5007);
 INSERT INTO barrescan values(5008);
 CREATE FUNCTION foorescan(int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid = $1;' LANGUAGE SQL;
---invokes ExecFunctionReScan with chgParam != NULL
+--invokes ExecReScanFunctionScan with chgParam != NULL
 SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
-CONTEXT:  SQL function "foorescan" during startup
+ERROR:  query plan with multiple segworker groups is not supported
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL function "foorescan" statement 1
 SELECT b.fooid, max(f.foosubid) FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
-CONTEXT:  SQL function "foorescan" during startup
+ERROR:  query plan with multiple segworker groups is not supported
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL function "foorescan" statement 1
 CREATE VIEW fooview1 AS SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
 SELECT * FROM fooview1 AS fv WHERE fv.fooid = 5004;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
-CONTEXT:  SQL function "foorescan" during startup
+ERROR:  query plan with multiple segworker groups is not supported
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL function "foorescan" statement 1
 CREATE VIEW fooview2 AS SELECT b.fooid, max(f.foosubid) AS maxsubid FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
 SELECT * FROM fooview2 AS fv WHERE fv.maxsubid = 5;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
-CONTEXT:  SQL function "foorescan" during startup
+ERROR:  query plan with multiple segworker groups is not supported
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL function "foorescan" statement 1
 DROP VIEW vw_foorescan;
 DROP VIEW fooview1;
 DROP VIEW fooview2;

@@ -1,16 +1,16 @@
-$PostgreSQL: pgsql/src/tools/pgindent/README,v 1.42 2010/07/06 19:26:28 momjian Exp $
+src/tools/pgindent/README
 
 pgindent
 ========
 
 This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
-*.l files. 
+*.l files.
 
 1) Change directory to the top of the build tree.
 
 2) Download the typedef file from the buildfarm:
 
-	wget -O src/tools/pgindent/typedefs.list http://www.pgbuildfarm.org/cgi-bin/typedefs.pl
+	wget -O src/tools/pgindent/typedefs.list http://buildfarm.postgresql.org/cgi-bin/typedefs.pl
 
 3) Remove all derived files (pgindent has trouble with one of the flex macros):
 
@@ -23,12 +23,14 @@ This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
 	xargs -n100 pgindent src/tools/pgindent/typedefs.list
 
 5) Remove any files that generate errors and restore their original
-   versions, e.g. ./src/backend/tsearch/wparser_def.c has problems
-   because of a DECIMAL listed as a typedef.
+   versions.
 
 6) Do a full test build:
 
 	run configure
+	# stop is only necessary if it's going to install in a location with an
+	# already running server
+	pg_ctl stop
 	gmake -C src install
 	gmake -C contrib install
 	gmake installcheck-world
@@ -36,8 +38,8 @@ This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
 
 ---------------------------------------------------------------------------
 
-We have standardized on NetBSD's indent.  We have fixed a few bugs which 
-requre the NetBSD source to be patched with indent.bsd.patch patch.  A 
+We have standardized on NetBSD's indent.  We have fixed a few bugs which
+requre the NetBSD source to be patched with indent.bsd.patch patch.  A
 fully patched version is available at ftp://ftp.postgresql.org/pub/dev.
 
 GNU indent, version 2.2.6, has several problems, and is not recommended.
@@ -75,4 +77,3 @@ To use pgindent:
 4) Save a list of typedefs by running:
 
 	src/tools/find_typedef /usr/local/pgsql/bin /usr/local/pgsql/lib > /tmp/pgtypedefs
-

@@ -25,10 +25,10 @@
  * AMs support this.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opclass.h,v 1.88 2010/01/14 16:31:09 teodor Exp $
+ * src/include/catalog/pg_opclass.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -96,6 +96,7 @@ typedef FormData_pg_opclass *Form_pg_opclass;
 
 DATA(insert (	403		abstime_ops			PGNSP PGUID  421  702 t 0 ));
 DATA(insert (	403		array_ops			PGNSP PGUID  397 2277 t 0 ));
+DATA(insert (	405		array_ops			PGNSP PGUID  627 2277 t 0 ));
 DATA(insert (	403		bit_ops				PGNSP PGUID  423 1560 t 0 ));
 DATA(insert (	403		bool_ops			PGNSP PGUID  424   16 t 0 ));
 DATA(insert (	403		bpchar_ops			PGNSP PGUID  426 1042 t 0 ));
@@ -137,7 +138,7 @@ DATA(insert (	403		name_ops			PGNSP PGUID 1986   19 t 2275 ));
 DATA(insert (	405		name_ops			PGNSP PGUID 1987   19 t 0 ));
 DATA(insert (	403		numeric_ops			PGNSP PGUID 1988 1700 t 0 ));
 DATA(insert (	405		numeric_ops			PGNSP PGUID 1998 1700 t 0 ));
-DATA(insert (	403		complex_ops			PGNSP PGUID 3221 195 t 0 ));
+DATA(insert (	403		complex_ops			PGNSP PGUID 3221 7198 t 0 ));
 DATA(insert OID = 1981 ( 403	oid_ops		PGNSP PGUID 1989   26 t 0 ));
 #define OID_BTREE_OPS_OID 1981
 DATA(insert (	405		oid_ops				PGNSP PGUID 1990   26 t 0 ));
@@ -198,7 +199,7 @@ DATA(insert (	2742	_interval_ops		PGNSP PGUID 2745  1187 t 1186 ));
 DATA(insert (	2742	_macaddr_ops		PGNSP PGUID 2745  1040 t 829 ));
 DATA(insert (	2742	_name_ops			PGNSP PGUID 2745  1003 t 19 ));
 DATA(insert (	2742	_numeric_ops		PGNSP PGUID 2745  1231 t 1700 ));
-DATA(insert (	2742	_complex_ops		PGNSP PGUID 2745  196 t 1700 ));
+DATA(insert (	2742	_complex_ops		PGNSP PGUID 2745  7199 t 1700 ));
 DATA(insert (	2742	_oid_ops			PGNSP PGUID 2745  1028 t 26 ));
 DATA(insert (	2742	_oidvector_ops		PGNSP PGUID 2745  1013 t 30 ));
 DATA(insert (	2742	_time_ops			PGNSP PGUID 2745  1183 t 1083 ));

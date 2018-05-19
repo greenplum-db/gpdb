@@ -2,7 +2,7 @@
 #
 # duplicate_oids
 #
-# $PostgreSQL: pgsql/src/include/catalog/duplicate_oids,v 1.9 2009/09/26 22:42:01 tgl Exp $
+# src/include/catalog/duplicate_oids
 #
 # finds manually-assigned oids that are duplicated in the system tables.
 #
@@ -12,7 +12,7 @@
 # note: we exclude BKI_BOOTSTRAP relations since they are expected to have
 # matching DATA lines in pg_class.h and pg_type.h
 
-DUPS=`cat pg_*.h gp_*.h toasting.h indexing.h | \
+cat pg_*.h gp_*.h toasting.h indexing.h | \
 egrep -v -e '^CATALOG\(.*BKI_BOOTSTRAP' | \
 sed -n	-e 's/^DATA(insert *OID *= *\([0-9][0-9]*\).*$/\1/p' \
 	-e 's/^CATALOG([^,]*, *\([0-9][0-9]*\).*BKI_ROWTYPE_OID(\([0-9][0-9]*\)).*$/\1,\2/p' \
@@ -22,8 +22,9 @@ sed -n	-e 's/^DATA(insert *OID *= *\([0-9][0-9]*\).*$/\1/p' \
 	-e 's/^DECLARE_TOAST([^,]*, *\([0-9][0-9]*\), *\([0-9][0-9]*\).*$/\1,\2/p' | \
 tr ',' '\n' | \
 sort -n | \
-uniq -d`
+uniq -d | \
+grep '.'
 
-test "$DUPS" && echo "Duplicate OIDS\n--------------\n$DUPS" && exit 1
-
-exit 0
+# nonzero exit code if lines were produced
+[ $? -eq 1 ]
+exit

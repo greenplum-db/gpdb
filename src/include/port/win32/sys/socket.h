@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/include/port/win32/sys/socket.h,v 1.7 2006/10/04 00:30:10 momjian Exp $
+ * src/include/port/win32/sys/socket.h
  */
 #ifndef WIN32_SYS_SOCKET_H
 #define WIN32_SYS_SOCKET_H
@@ -13,6 +13,7 @@
  */
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 
 #undef ERROR
 #undef small

@@ -3,12 +3,12 @@
  * pg_conversion.c
  *	  routines to support manipulation of the pg_conversion relation
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_conversion.c,v 1.50 2010/02/14 18:42:13 rhaas Exp $
+ *	  src/backend/catalog/pg_conversion.c
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 #include "access/sysattr.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaccess.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_conversion_fn.h"
 #include "catalog/pg_namespace.h"
@@ -132,6 +133,10 @@ ConversionCreate(const char *conname, Oid connamespace,
 							conowner);
 	/* dependency on extension */
 	recordDependencyOnCurrentExtension(&myself, false);
+
+	/* Post creation hook for new conversion */
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   ConversionRelationId, HeapTupleGetOid(tup), 0);
 
 	heap_freetuple(tup);
 	heap_close(rel, RowExclusiveLock);

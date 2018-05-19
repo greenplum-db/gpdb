@@ -435,7 +435,10 @@ public class GpdbParquetFileReader {
 				newFatherNode = xmldoc.createElement(type.getName());
 				((Element)newFatherNode).setAttribute("type", "repeated");
 			}
-
+			if(group.getFieldRepetitionCount(i) == 0) {
+				// Ignore Empty element
+				continue;
+			}
 			for (int j = 0; j < eleNum; j++) {
 				Node eleNode = xmldoc.createElement(type.getName());
 				if (!type.isPrimitive()) {

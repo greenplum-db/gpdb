@@ -9,12 +9,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.70 2010/01/02 16:57:41 momjian Exp $
+ *	  src/backend/executor/execProcnode.c
  *
  *-------------------------------------------------------------------------
  */
@@ -89,6 +89,7 @@
 #include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
 #include "executor/nodeCtescan.h"
+#include "executor/nodeForeignscan.h"
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
@@ -96,6 +97,7 @@
 #include "executor/nodeLimit.h"
 #include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
+#include "executor/nodeMergeAppend.h"
 #include "executor/nodeMergejoin.h"
 #include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
@@ -244,7 +246,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 * gathering stats from all slices.
 	 */
 	bool isAlienPlanNode = !((localMotionId == parentMotionId) || (parentMotionId == UNSET_SLICE_ID) ||
-			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || Gp_segment == -1);
+							 (nodeTag(node) == T_Motion && ((Motion*)node)->motionID == localMotionId) || IS_QUERY_DISPATCHER());
 
 	/* We cannot have alien nodes if we are eliminating aliens */
 	AssertImply(estate->eliminateAliens, !isAlienPlanNode);
@@ -315,6 +317,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 													estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_MergeAppend:
+			result = (PlanState *) ExecInitMergeAppend((MergeAppend *) node,
+													   estate, eflags);
 			break;
 
 		case T_RecursiveUnion:
@@ -543,6 +550,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 														 estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_ForeignScan:
+			result = (PlanState *) ExecInitForeignScan((ForeignScan *) node,
+													   estate, eflags);
 			break;
 
 			/*
@@ -882,10 +894,10 @@ ExecProcNode(PlanState *node)
 		return NULL;
 
 	if (node->plan)
-		TRACE_POSTGRESQL_EXECPROCNODE_ENTER(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
+		TRACE_POSTGRESQL_EXECPROCNODE_ENTER(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 	if (node->chgParam != NULL) /* something changed */
-		ExecReScan(node, NULL); /* let ReScan handle this */
+		ExecReScan(node);		/* let ReScan handle this */
 
 	if (node->instrument)
 		INSTR_START_NODE(node->instrument);
@@ -916,6 +928,10 @@ ExecProcNode(PlanState *node)
 
 		case T_AppendState:
 			result = ExecAppend((AppendState *) node);
+			break;
+
+		case T_MergeAppendState:
+			result = ExecMergeAppend((MergeAppendState *) node);
 			break;
 
 		case T_RecursiveUnionState:
@@ -993,6 +1009,10 @@ ExecProcNode(PlanState *node)
 
 		case T_WorkTableScanState:
 			result = ExecWorkTableScan((WorkTableScanState *) node);
+			break;
+
+		case T_ForeignScanState:
+			result = ExecForeignScan((ForeignScanState *) node);
 			break;
 
 			/*
@@ -1097,7 +1117,7 @@ ExecProcNode(PlanState *node)
 		INSTR_STOP_NODE(node->instrument, TupIsNull(result) ? 0 : 1);
 
 	if (node->plan)
-		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
+		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 	/*
 	 * Eager free and squelch the subplans, unless it's a nested subplan.
@@ -1153,10 +1173,10 @@ MultiExecProcNode(PlanState *node)
 
 	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
 {
-	TRACE_POSTGRESQL_EXECPROCNODE_ENTER(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
+	TRACE_POSTGRESQL_EXECPROCNODE_ENTER(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 	if (node->chgParam != NULL) /* something changed */
-		ExecReScan(node, NULL); /* let ReScan handle this */
+		ExecReScan(node);		/* let ReScan handle this */
 
 	switch (nodeTag(node))
 	{
@@ -1190,7 +1210,7 @@ MultiExecProcNode(PlanState *node)
 			break;
 	}
 
-	TRACE_POSTGRESQL_EXECPROCNODE_EXIT(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
+	TRACE_POSTGRESQL_EXECPROCNODE_EXIT(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 }
 	END_MEMORY_ACCOUNT();
 	return result;
@@ -1361,6 +1381,10 @@ ExecEndNode(PlanState *node)
 			ExecEndAppend((AppendState *) node);
 			break;
 
+		case T_MergeAppendState:
+			ExecEndMergeAppend((MergeAppendState *) node);
+			break;
+
 		case T_RecursiveUnionState:
 			ExecEndRecursiveUnion((RecursiveUnionState *) node);
 			break;
@@ -1452,6 +1476,10 @@ ExecEndNode(PlanState *node)
 
 		case T_WorkTableScanState:
 			ExecEndWorkTableScan((WorkTableScanState *) node);
+			break;
+
+		case T_ForeignScanState:
+			ExecEndForeignScan((ForeignScanState *) node);
 			break;
 
 			/*

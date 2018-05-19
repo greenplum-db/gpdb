@@ -76,11 +76,11 @@
  *	simplicity we keep the controlling list-of-lists in TopTransactionContext.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.98 2010/02/26 02:01:11 momjian Exp $
+ *	  src/backend/utils/cache/inval.c
  *
  *-------------------------------------------------------------------------
  */
@@ -325,7 +325,8 @@ AddCatcacheInvalidationMessage(InvalidationListHeader *hdr,
 {
 	SharedInvalidationMessage msg;
 
-	msg.cc.id = (int16) id;
+	Assert(id < CHAR_MAX);
+	msg.cc.id = (int8) id;
 	msg.cc.tuplePtr = *tuplePtr;
 	msg.cc.dbId = dbId;
 	msg.cc.hashValue = hashValue;
@@ -551,7 +552,11 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 		 * We could have smgr entries for relations of other databases, so no
 		 * short-circuit test is possible here.
 		 */
-		smgrclosenode(msg->sm.rnode);
+		RelFileNodeBackend rnode;
+
+		rnode.node = msg->sm.rnode;
+		rnode.backend = (msg->sm.backend_hi << 16) | (int) msg->sm.backend_lo;
+		smgrclosenode(rnode);
 	}
 	else if (msg->id == SHAREDINVALRELMAP_ID)
 	{
@@ -1218,14 +1223,20 @@ CacheInvalidateRelcacheByRelid(Oid relid)
  * in commit/abort WAL entries.  Instead, calls to CacheInvalidateSmgr()
  * should happen in low-level smgr.c routines, which are executed while
  * replaying WAL as well as when creating it.
+ *
+ * Note: In order to avoid bloating SharedInvalidationMessage, we store only
+ * three bytes of the backend ID using what would otherwise be padding space.
+ * Thus, the maximum possible backend ID is 2^23-1.
  */
 void
-CacheInvalidateSmgr(RelFileNode rnode)
+CacheInvalidateSmgr(RelFileNodeBackend rnode)
 {
 	SharedInvalidationMessage msg;
 
 	msg.sm.id = SHAREDINVALSMGR_ID;
-	msg.sm.rnode = rnode;
+	msg.sm.backend_hi = rnode.backend >> 16;
+	msg.sm.backend_lo = rnode.backend & 0xffff;
+	msg.sm.rnode = rnode.node;
 	SendSharedInvalidMessages(&msg, 1);
 }
 

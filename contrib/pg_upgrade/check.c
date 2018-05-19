@@ -3,25 +3,27 @@
  *
  *	server checks and output routines
  *
- *	Copyright (c) 2010, PostgreSQL Global Development Group
- *	$PostgreSQL: pgsql/contrib/pg_upgrade/check.c,v 1.11.2.3 2010/07/25 03:47:33 momjian Exp $
+ *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	contrib/pg_upgrade/check.c
  */
 
 #include "pg_upgrade.h"
 
 
-static void set_locale_and_encoding(migratorContext *ctx, Cluster whichCluster);
-static void check_new_db_is_empty(migratorContext *ctx);
-static void check_locale_and_encoding(migratorContext *ctx, ControlData *oldctrl,
+static void set_locale_and_encoding(ClusterInfo *cluster);
+static void check_new_cluster_is_empty(void);
+static void check_old_cluster_has_new_cluster_dbs(void);
+static void check_locale_and_encoding(ControlData *oldctrl,
 						  ControlData *newctrl);
-static void check_proper_datallowconn(migratorContext *ctx, Cluster whichCluster);
-static void check_for_isn_and_int8_passing_mismatch(migratorContext *ctx,
-												Cluster whichCluster);
-static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster);
-static void check_external_partition(migratorContext *ctx);
-static void check_covering_aoindex(migratorContext *ctx);
-static void check_hash_partition_usage(migratorContext *ctx);
-static void check_partition_indexes(migratorContext *ctx);
+static void check_is_super_user(ClusterInfo *cluster);
+static void check_proper_datallowconn(ClusterInfo *cluster);
+static void check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster);
+static void check_for_reg_data_type_usage(ClusterInfo *cluster);
+
+static void check_external_partition(void);
+static void check_covering_aoindex(void);
+static void check_hash_partition_usage(void);
+static void check_partition_indexes(void);
 
 
 /*
@@ -32,14 +34,14 @@ static void check_partition_indexes(migratorContext *ctx);
  * like RMDIR and DEL.
  */
 static char *
-fix_path_separator(migratorContext *ctx, char *path)
+fix_path_separator(char *path)
 {
 #ifdef WIN32
 
 	char *result;
 	char *c;
 
-	result = pg_strdup(ctx, path);
+	result = pg_strdup(path);
 
 	for (c = result; *c != '\0'; c++)
 		if (*c == '/')
@@ -55,58 +57,60 @@ fix_path_separator(migratorContext *ctx, char *path)
 }
 
 void
-output_check_banner(migratorContext *ctx, bool *live_check)
+output_check_banner(bool *live_check)
 {
-	if (ctx->check && is_server_running(ctx, ctx->old.pgdata))
+	if (user_opts.check && is_server_running(old_cluster.pgdata))
 	{
 		*live_check = true;
-		if (ctx->old.port == ctx->new.port)
-			pg_log(ctx, PG_FATAL, "When checking a live server, "
+		if (old_cluster.port == new_cluster.port)
+			pg_log(PG_FATAL, "When checking a live server, "
 				   "the old and new port numbers must be different.\n");
-		pg_log(ctx, PG_REPORT, "Performing Consistency Checks on Old Live Server\n");
-		pg_log(ctx, PG_REPORT, "------------------------------------------------\n");
+		pg_log(PG_REPORT, "Performing Consistency Checks on Old Live Server\n");
+		pg_log(PG_REPORT, "------------------------------------------------\n");
 	}
 	else
 	{
-		pg_log(ctx, PG_REPORT, "Performing Consistency Checks\n");
-		pg_log(ctx, PG_REPORT, "-----------------------------\n");
+		pg_log(PG_REPORT, "Performing Consistency Checks\n");
+		pg_log(PG_REPORT, "-----------------------------\n");
 	}
 }
 
 
 void
-check_old_cluster(migratorContext *ctx, bool live_check,
+check_old_cluster(bool live_check,
 				  char **sequence_script_file_name)
 {
 	/* -- OLD -- */
 
 	if (!live_check)
-		start_postmaster(ctx, CLUSTER_OLD, false);
+		start_postmaster(&old_cluster);
 
-	set_locale_and_encoding(ctx, CLUSTER_OLD);
+	set_locale_and_encoding(&old_cluster);
 
-	get_pg_database_relfilenode(ctx, CLUSTER_OLD);
+	get_pg_database_relfilenode(&old_cluster);
 
 	/* Extract a list of databases and tables from the old cluster */
-	get_db_and_rel_infos(ctx, &ctx->old.dbarr, CLUSTER_OLD);
+	get_db_and_rel_infos(&old_cluster);
 
-	init_tablespaces(ctx);
+	init_tablespaces();
 
-	get_loadable_libraries(ctx);
+	get_loadable_libraries();
 
 
 	/*
 	 * Check for various failure cases
 	 */
+	report_progress(&old_cluster, CHECK, "Failure checks");
 
-	report_progress(ctx, CLUSTER_OLD, CHECK, "Failure checks");
-	check_proper_datallowconn(ctx, CLUSTER_OLD);
-	check_for_reg_data_type_usage(ctx, CLUSTER_OLD);
-	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
-	check_external_partition(ctx);
-	check_covering_aoindex(ctx);
-	check_hash_partition_usage(ctx);
-	check_partition_indexes(ctx);
+	check_is_super_user(&old_cluster);
+	check_proper_datallowconn(&old_cluster);
+	check_for_reg_data_type_usage(&old_cluster);
+	check_for_isn_and_int8_passing_mismatch(&old_cluster);
+
+	check_external_partition();
+	check_covering_aoindex();
+	check_hash_partition_usage();
+	check_partition_indexes();
 
 	/* old = PG 8.3 checks? */
 	/*
@@ -114,28 +118,31 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 * this to upgrade only to 8.3. Needs to be removed when we merge
 	 * with PostgreSQL 8.4.
 	 *
+	 * GPDB_91_MERGE_FIXME: that comment doesn't make sense to me; what checks
+	 * have been disabled?
+	 *
 	 * The change to name datatype's alignment was backported to GPDB 5.0,
 	 * so we need to check even when upgradeing to GPDB 5.0.
 	 */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 802)
 	{
-		old_8_3_check_for_name_data_type_usage(ctx, CLUSTER_OLD);
+		old_8_3_check_for_name_data_type_usage(&old_cluster);
 
-		old_GPDB4_check_for_money_data_type_usage(ctx, CLUSTER_OLD);
-		old_GPDB4_check_no_free_aoseg(ctx, CLUSTER_OLD);
+		old_GPDB4_check_for_money_data_type_usage(&old_cluster);
+		old_GPDB4_check_no_free_aoseg(&old_cluster);
 	}
 
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 803 &&
-		GET_MAJOR_VERSION(ctx->new.major_version) >= 804)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803 &&
+		GET_MAJOR_VERSION(new_cluster.major_version) >= 804)
 	{
-		old_8_3_check_for_name_data_type_usage(ctx, CLUSTER_OLD);
-		old_8_3_check_for_tsquery_usage(ctx, CLUSTER_OLD);
-		old_8_3_check_ltree_usage(ctx, CLUSTER_OLD);
-		if (ctx->check)
+		old_8_3_check_for_name_data_type_usage(&old_cluster);
+		old_8_3_check_for_tsquery_usage(&old_cluster);
+		old_8_3_check_ltree_usage(&old_cluster);
+		if (user_opts.check)
 		{
-			old_8_3_rebuild_tsvector_tables(ctx, true, CLUSTER_OLD);
-			old_8_3_invalidate_hash_gin_indexes(ctx, true, CLUSTER_OLD);
-			old_8_3_invalidate_bpchar_pattern_ops_indexes(ctx, true, CLUSTER_OLD);
+			old_8_3_rebuild_tsvector_tables(&old_cluster, true);
+			old_8_3_invalidate_hash_gin_indexes(&old_cluster, true);
+			old_8_3_invalidate_bpchar_pattern_ops_indexes(&old_cluster, true);
 		}
 		else
 
@@ -145,134 +152,137 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 			 * end.
 			 */
 			*sequence_script_file_name =
-				old_8_3_create_sequence_script(ctx, CLUSTER_OLD);
+				old_8_3_create_sequence_script(&old_cluster);
 	}
 
 #ifdef GPDB_90_MERGE_FIXME
 	/* Pre-PG 9.0 had no large object permissions */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 804)
-		new_9_0_populate_pg_largeobject_metadata(ctx, true, CLUSTER_OLD);
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
+		new_9_0_populate_pg_largeobject_metadata(&old_cluster, true);
 #endif
 
 	/*
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.
 	 */
-	if (!ctx->check)
+	if (!user_opts.check)
 	{
-		if (ctx->dispatcher_mode)
-			get_old_oids(ctx);
+		if (user_opts.dispatcher_mode)
+			get_old_oids();
 
-		report_progress(ctx, CLUSTER_OLD, SCHEMA_DUMP, "Creating catalog dump");
-		generate_old_dump(ctx);
-		split_old_dump(ctx);
+		report_progress(&old_cluster, SCHEMA_DUMP, "Creating catalog dump");
+		generate_old_dump();
+		split_old_dump();
 	}
 
 	if (!live_check)
-		stop_postmaster(ctx, false, false);
+		stop_postmaster(false);
 }
 
 
 void
-check_new_cluster(migratorContext *ctx)
+check_new_cluster(void)
 {
-	set_locale_and_encoding(ctx, CLUSTER_NEW);
+	set_locale_and_encoding(&new_cluster);
 
-	check_new_db_is_empty(ctx);
+	get_db_and_rel_infos(&new_cluster);
 
-	check_loadable_libraries(ctx);
+	check_new_cluster_is_empty();
+	check_old_cluster_has_new_cluster_dbs();
 
-	check_locale_and_encoding(ctx, &ctx->old.controldata, &ctx->new.controldata);
+	check_loadable_libraries();
 
-	if (ctx->transfer_mode == TRANSFER_MODE_LINK)
-		check_hard_link(ctx);
+	check_locale_and_encoding(&old_cluster.controldata, &new_cluster.controldata);
+
+	if (user_opts.transfer_mode == TRANSFER_MODE_LINK)
+		check_hard_link();
 }
 
 
 void
-report_clusters_compatible(migratorContext *ctx)
+report_clusters_compatible(void)
 {
-	if (ctx->check)
+	if (user_opts.check)
 	{
-		pg_log(ctx, PG_REPORT, "\n*Clusters are compatible*\n");
+		pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
 		/* stops new cluster */
-		stop_postmaster(ctx, false, false);
-		exit_nicely(ctx, false);
+		stop_postmaster(false);
+		exit(0);
 	}
 
-	pg_log(ctx, PG_REPORT, "\n"
+	pg_log(PG_REPORT, "\n"
 		   "| If pg_upgrade fails after this point, you must\n"
 		   "| re-initdb the new cluster before continuing.\n"
 		   "| You will also need to remove the \".old\" suffix\n"
-		   "| from %s/global/pg_control.old.\n", ctx->old.pgdata);
+		   "| from %s/global/pg_control.old.\n", old_cluster.pgdata);
 }
 
 
 void
-issue_warnings(migratorContext *ctx, char *sequence_script_file_name)
+issue_warnings(char *sequence_script_file_name)
 {
-	start_postmaster(ctx, CLUSTER_NEW, true);
+	start_postmaster(&new_cluster);
 
 	/* old == GPDB4 warnings */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 802)
 	{
-		new_gpdb5_0_invalidate_indexes(ctx, false, CLUSTER_NEW);
+		new_gpdb5_0_invalidate_indexes(false);
 	}
 
 	/* old = PG 8.3 warnings? */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 803 &&
-		GET_MAJOR_VERSION(ctx->new.major_version) >= 804)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803 &&
+		GET_MAJOR_VERSION(new_cluster.major_version) >= 804)
 	{
 		/* restore proper sequence values using file created from old server */
 		if (sequence_script_file_name)
 		{
-			prep_status(ctx, "Adjusting sequences");
-			exec_prog(ctx, true,
+			prep_status("Adjusting sequences");
+			exec_prog(true,
 					  SYSTEMQUOTE "\"%s/psql\" --set ON_ERROR_STOP=on "
 					  "--no-psqlrc --port %d --username \"%s\" "
 					  "-f \"%s\" --dbname template1 >> \"%s\"" SYSTEMQUOTE,
-					  ctx->new.bindir, ctx->new.port, ctx->user,
-					  sequence_script_file_name, ctx->logfile);
+					  new_cluster.bindir, new_cluster.port, os_info.user,
+					  sequence_script_file_name, log_opts.filename);
 			unlink(sequence_script_file_name);
-			check_ok(ctx);
+			check_ok();
 		}
 
-		old_8_3_rebuild_tsvector_tables(ctx, false, CLUSTER_NEW);
-		old_8_3_invalidate_hash_gin_indexes(ctx, false, CLUSTER_NEW);
-		old_8_3_invalidate_bpchar_pattern_ops_indexes(ctx, false, CLUSTER_NEW);
+		old_8_3_rebuild_tsvector_tables(&new_cluster, false);
+		old_8_3_invalidate_hash_gin_indexes(&new_cluster, false);
+		old_8_3_invalidate_bpchar_pattern_ops_indexes(&new_cluster, false);
 	}
 
 #ifdef GPDB_90_MERGE_FIXME
 	/* Create dummy large object permissions for old < PG 9.0? */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 804)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 	{
-		new_9_0_populate_pg_largeobject_metadata(ctx, false, CLUSTER_NEW);
+		new_9_0_populate_pg_largeobject_metadata(&new_cluster, false);
 	}
 #endif
 
-	stop_postmaster(ctx, false, true);
+	stop_postmaster(false);
 }
 
 
 void
-output_completion_banner(migratorContext *ctx, char *deletion_script_file_name)
+output_completion_banner(char *deletion_script_file_name)
 {
-	/* Did we migrate the free space files? */
-	if (GET_MAJOR_VERSION(ctx->old.major_version) >= 804)
-		pg_log(ctx, PG_REPORT,
-			   "| Optimizer statistics is not transferred by pg_upgrade\n"
+	/* Did we copy the free space files? */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
+		pg_log(PG_REPORT,
+			   "| Optimizer statistics are not transferred by pg_upgrade\n"
 			   "| so consider running:\n"
 			   "| \tvacuumdb --all --analyze-only\n"
 			   "| on the newly-upgraded cluster.\n\n");
 	else
-		pg_log(ctx, PG_REPORT,
+		pg_log(PG_REPORT,
 			   "| Optimizer statistics and free space information\n"
 			   "| are not transferred by pg_upgrade so consider\n"
 			   "| running:\n"
 			   "| \tvacuumdb --all --analyze\n"
 			   "| on the newly-upgraded cluster.\n\n");
 
-	pg_log(ctx, PG_REPORT,
+	pg_log(PG_REPORT,
 		   "| Running this script will delete the old cluster's data files:\n"
 		   "| \t%s\n",
 		   deletion_script_file_name);
@@ -280,33 +290,36 @@ output_completion_banner(migratorContext *ctx, char *deletion_script_file_name)
 
 
 void
-check_cluster_versions(migratorContext *ctx)
+check_cluster_versions(void)
 {
 	/* get old and new cluster versions */
-	ctx->old.major_version = get_major_server_version(ctx, &ctx->old.major_version_str, CLUSTER_OLD);
-	ctx->new.major_version = get_major_server_version(ctx, &ctx->new.major_version_str, CLUSTER_NEW);
+	old_cluster.major_version = get_major_server_version(&old_cluster);
+	new_cluster.major_version = get_major_server_version(&new_cluster);
 
-	/* We allow migration from/to the same major version for beta upgrades */
+	/*
+	 * We allow upgrades from/to the same major version for alpha/beta
+	 * upgrades
+	 */
 
-	if (GET_MAJOR_VERSION(ctx->old.major_version) < 802)
-		pg_log(ctx, PG_FATAL, "This utility can only upgrade from Greenplum version 4.3.XX and later.\n");
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
+		pg_log(PG_FATAL, "This utility can only upgrade from Greenplum version 4.3.XX and later.\n");
 
 	/* Only current PG version is supported as a target */
-	if (GET_MAJOR_VERSION(ctx->new.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
-		pg_log(ctx, PG_FATAL, "This utility can only upgrade to PostgreSQL version %s.\n",
+	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
+		pg_log(PG_FATAL, "This utility can only upgrade to PostgreSQL version %s.\n",
 			   PG_MAJORVERSION);
 
 	/*
 	 * We can't allow downgrading because we use the target pg_dumpall, and
 	 * pg_dumpall cannot operate on new datbase versions, only older versions.
 	 */
-	if (ctx->old.major_version > ctx->new.major_version)
-		pg_log(ctx, PG_FATAL, "This utility cannot be used to downgrade to older major PostgreSQL versions.\n");
+	if (old_cluster.major_version > new_cluster.major_version)
+		pg_log(PG_FATAL, "This utility cannot be used to downgrade to older major PostgreSQL versions.\n");
 }
 
 
 void
-check_cluster_compatibility(migratorContext *ctx, bool live_check)
+check_cluster_compatibility(bool live_check)
 {
 	char		libfile[MAXPGPATH];
 	FILE	   *lib_test;
@@ -315,24 +328,24 @@ check_cluster_compatibility(migratorContext *ctx, bool live_check)
 	 * Test pg_upgrade_support.so is in the proper place.    We cannot copy it
 	 * ourselves because install directories are typically root-owned.
 	 */
-	snprintf(libfile, sizeof(libfile), "%s/pg_upgrade_support%s", ctx->new.libpath,
+	snprintf(libfile, sizeof(libfile), "%s/pg_upgrade_support%s", new_cluster.libpath,
 			 DLSUFFIX);
 
 	if ((lib_test = fopen(libfile, "r")) == NULL)
-		pg_log(ctx, PG_FATAL,
-			   "\npg_upgrade_support%s must be created and installed in %s\n", DLSUFFIX, libfile);
+		pg_log(PG_FATAL,
+			   "pg_upgrade_support%s must be created and installed in %s\n", DLSUFFIX, libfile);
 	else
 		fclose(lib_test);
 
 	/* get/check pg_control data of servers */
-	get_control_data(ctx, &ctx->old, live_check);
-	get_control_data(ctx, &ctx->new, false);
-	check_control_data(ctx, &ctx->old.controldata, &ctx->new.controldata);
+	get_control_data(&old_cluster, live_check);
+	get_control_data(&new_cluster, false);
+	check_control_data(&old_cluster.controldata, &new_cluster.controldata);
 
 	/* Is it 9.0 but without tablespace directories? */
-	if (GET_MAJOR_VERSION(ctx->new.major_version) == 900 &&
-		ctx->new.controldata.cat_ver < TABLE_SPACE_SUBDIRS_CAT_VER)
-		pg_log(ctx, PG_FATAL, "This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
+	if (GET_MAJOR_VERSION(new_cluster.major_version) == 900 &&
+		new_cluster.controldata.cat_ver < TABLE_SPACE_SUBDIRS_CAT_VER)
+		pg_log(PG_FATAL, "This utility can only upgrade to PostgreSQL version 9.0 after 2010-01-11\n"
 			   "because of backend API changes made during development.\n");
 }
 
@@ -343,17 +356,15 @@ check_cluster_compatibility(migratorContext *ctx, bool live_check)
  * query the database to get the template0 locale
  */
 static void
-set_locale_and_encoding(migratorContext *ctx, Cluster whichCluster)
+set_locale_and_encoding(ClusterInfo *cluster)
 {
+	ControlData *ctrl = &cluster->controldata;
 	PGconn	   *conn;
 	PGresult   *res;
 	int			i_encoding;
-	ControlData *ctrl = (whichCluster == CLUSTER_OLD) ?
-	&ctx->old.controldata : &ctx->new.controldata;
-	int			cluster_version = (whichCluster == CLUSTER_OLD) ?
-	ctx->old.major_version : ctx->new.major_version;
+	int			cluster_version = cluster->major_version;
 
-	conn = connectToServer(ctx, "template1", whichCluster);
+	conn = connectToServer(cluster, "template1");
 
 	/* for pg < 80400, we got the values from pg_controldata */
 	if (cluster_version >= 80400)
@@ -361,7 +372,7 @@ set_locale_and_encoding(migratorContext *ctx, Cluster whichCluster)
 		int			i_datcollate;
 		int			i_datctype;
 
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"SELECT datcollate, datctype "
 								"FROM 	pg_catalog.pg_database "
 								"WHERE	datname = 'template0' ");
@@ -370,20 +381,20 @@ set_locale_and_encoding(migratorContext *ctx, Cluster whichCluster)
 		i_datcollate = PQfnumber(res, "datcollate");
 		i_datctype = PQfnumber(res, "datctype");
 
-		ctrl->lc_collate = pg_strdup(ctx, PQgetvalue(res, 0, i_datcollate));
-		ctrl->lc_ctype = pg_strdup(ctx, PQgetvalue(res, 0, i_datctype));
+		ctrl->lc_collate = pg_strdup(PQgetvalue(res, 0, i_datcollate));
+		ctrl->lc_ctype = pg_strdup(PQgetvalue(res, 0, i_datctype));
 
 		PQclear(res);
 	}
 
-	res = executeQueryOrDie(ctx, conn,
+	res = executeQueryOrDie(conn,
 							"SELECT pg_catalog.pg_encoding_to_char(encoding) "
 							"FROM 	pg_catalog.pg_database "
 							"WHERE	datname = 'template0' ");
 	assert(PQntuples(res) == 1);
 
 	i_encoding = PQfnumber(res, "pg_encoding_to_char");
-	ctrl->encoding = pg_strdup(ctx, PQgetvalue(res, 0, i_encoding));
+	ctrl->encoding = pg_strdup(PQgetvalue(res, 0, i_encoding));
 
 	PQclear(res);
 
@@ -398,50 +409,70 @@ set_locale_and_encoding(migratorContext *ctx, Cluster whichCluster)
  *	we probably had to get via a database query.
  */
 static void
-check_locale_and_encoding(migratorContext *ctx, ControlData *oldctrl,
+check_locale_and_encoding(ControlData *oldctrl,
 						  ControlData *newctrl)
 {
-	if (strcmp(oldctrl->lc_collate, newctrl->lc_collate) != 0)
-		pg_log(ctx, PG_FATAL,
+	/* These are often defined with inconsistent case, so use pg_strcasecmp(). */
+	if (pg_strcasecmp(oldctrl->lc_collate, newctrl->lc_collate) != 0)
+		pg_log(PG_FATAL,
 			   "old and new cluster lc_collate values do not match\n");
-	if (strcmp(oldctrl->lc_ctype, newctrl->lc_ctype) != 0)
-		pg_log(ctx, PG_FATAL,
+	if (pg_strcasecmp(oldctrl->lc_ctype, newctrl->lc_ctype) != 0)
+		pg_log(PG_FATAL,
 			   "old and new cluster lc_ctype values do not match\n");
-	if (strcmp(oldctrl->encoding, newctrl->encoding) != 0)
-		pg_log(ctx, PG_FATAL,
+	if (pg_strcasecmp(oldctrl->encoding, newctrl->encoding) != 0)
+		pg_log(PG_FATAL,
 			   "old and new cluster encoding values do not match\n");
 }
 
 
 static void
-check_new_db_is_empty(migratorContext *ctx)
+check_new_cluster_is_empty(void)
 {
 	int			dbnum;
-	bool		found = false;
 
-	get_db_and_rel_infos(ctx, &ctx->new.dbarr, CLUSTER_NEW);
-
-	for (dbnum = 0; dbnum < ctx->new.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)
 	{
 		int			relnum;
-		RelInfoArr *rel_arr = &ctx->new.dbarr.dbs[dbnum].rel_arr;
+		RelInfoArr *rel_arr = &new_cluster.dbarr.dbs[dbnum].rel_arr;
 
 		for (relnum = 0; relnum < rel_arr->nrels;
 			 relnum++)
 		{
 			/* pg_largeobject and its index should be skipped */
 			if (strcmp(rel_arr->rels[relnum].nspname, "pg_catalog") != 0)
-			{
-				found = true;
-				break;
-			}
+				pg_log(PG_FATAL, "New cluster database \"%s\" is not empty\n",
+					   new_cluster.dbarr.dbs[dbnum].db_name);
 		}
 	}
 
-	dbarr_free(&ctx->new.dbarr);
+}
 
-	if (found)
-		pg_log(ctx, PG_FATAL, "New cluster is not empty; exiting\n");
+
+/*
+ *	If someone removes the 'postgres' database from the old cluster and
+ *	the new cluster has a 'postgres' database, the number of databases
+ *	will not match.  We actually could upgrade such a setup, but it would
+ *	violate the 1-to-1 mapping of database counts, so we throw an error
+ *	instead.  We would detect this as a database count mismatch during
+ *	upgrade, but we want to detect it during the check phase and report
+ *	the database name.
+ */
+static void
+check_old_cluster_has_new_cluster_dbs(void)
+{
+	int			old_dbnum,
+				new_dbnum;
+
+	for (new_dbnum = 0; new_dbnum < new_cluster.dbarr.ndbs; new_dbnum++)
+	{
+		for (old_dbnum = 0; old_dbnum < old_cluster.dbarr.ndbs; old_dbnum++)
+			if (strcmp(old_cluster.dbarr.dbs[old_dbnum].db_name,
+					   new_cluster.dbarr.dbs[new_dbnum].db_name) == 0)
+				break;
+		if (old_dbnum == old_cluster.dbarr.ndbs)
+			pg_log(PG_FATAL, "New cluster database \"%s\" does not exist in the old cluster\n",
+				   new_cluster.dbarr.dbs[new_dbnum].db_name);
+	}
 }
 
 
@@ -451,21 +482,21 @@ check_new_db_is_empty(migratorContext *ctx)
  *	This is particularly useful for tablespace deletion.
  */
 void
-create_script_for_old_cluster_deletion(migratorContext *ctx,
+create_script_for_old_cluster_deletion(
 									   char **deletion_script_file_name)
 {
 	FILE	   *script = NULL;
 	int			tblnum;
 
-	*deletion_script_file_name = pg_malloc(ctx, MAXPGPATH);
+	*deletion_script_file_name = pg_malloc(MAXPGPATH);
 
-	prep_status(ctx, "Creating script to delete old cluster");
+	prep_status("Creating script to delete old cluster");
 
 	snprintf(*deletion_script_file_name, MAXPGPATH, "%s/delete_old_cluster.%s",
-			 ctx->cwd, SHELL_EXT);
+			 os_info.cwd, SCRIPT_EXT);
 
 	if ((script = fopen(*deletion_script_file_name, "w")) == NULL)
-		pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+		pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
 			   *deletion_script_file_name);
 
 #ifndef WIN32
@@ -474,34 +505,34 @@ create_script_for_old_cluster_deletion(migratorContext *ctx,
 #endif
 
 	/* delete old cluster's default tablespace */
-	fprintf(script, RMDIR_CMD " \"%s\"\n", fix_path_separator(ctx, ctx->old.pgdata));
+	fprintf(script, RMDIR_CMD " \"%s\"\n", fix_path_separator(old_cluster.pgdata));
 
 	/* delete old cluster's alternate tablespaces */
-	for (tblnum = 0; tblnum < ctx->num_tablespaces; tblnum++)
+	for (tblnum = 0; tblnum < os_info.num_tablespaces; tblnum++)
 	{
 		/*
 		 * Do the old cluster's per-database directories share a directory
 		 * with a new version-specific tablespace?
 		 */
-		if (strlen(ctx->old.tablespace_suffix) == 0)
+		if (strlen(old_cluster.tablespace_suffix) == 0)
 		{
 			/* delete per-database directories */
 			int			dbnum;
 
 			fprintf(script, "\n");
 			/* remove PG_VERSION? */
-			if (GET_MAJOR_VERSION(ctx->old.major_version) <= 804)
+			if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 				fprintf(script, RM_CMD " %s%s%cPG_VERSION\n",
-						fix_path_separator(ctx, ctx->tablespaces[tblnum]),
-						fix_path_separator(ctx, ctx->old.tablespace_suffix),
+						fix_path_separator(os_info.tablespaces[tblnum]),
+						fix_path_separator(old_cluster.tablespace_suffix),
 						PATH_SEPARATOR);
 
-			for (dbnum = 0; dbnum < ctx->new.dbarr.ndbs; dbnum++)
+			for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)
 			{
 				fprintf(script, RMDIR_CMD " \"%s%s%c%d\"\n",
-						fix_path_separator(ctx, ctx->tablespaces[tblnum]),
-						fix_path_separator(ctx, ctx->old.tablespace_suffix),
-						PATH_SEPARATOR, ctx->old.dbarr.dbs[dbnum].db_oid);
+						fix_path_separator(os_info.tablespaces[tblnum]),
+						fix_path_separator(old_cluster.tablespace_suffix),
+						PATH_SEPARATOR, old_cluster.dbarr.dbs[dbnum].db_oid);
 			}
 		}
 		else
@@ -511,105 +542,82 @@ create_script_for_old_cluster_deletion(migratorContext *ctx,
 			 * or a version-specific subdirectory.
 			 */
 			fprintf(script, RMDIR_CMD " \"%s%s\"\n",
-					fix_path_separator(ctx, ctx->tablespaces[tblnum]),
-					fix_path_separator(ctx, ctx->old.tablespace_suffix));
+					fix_path_separator(os_info.tablespaces[tblnum]),
+					fix_path_separator(old_cluster.tablespace_suffix));
 	}
 
 	fclose(script);
 
 #ifndef WIN32
 	if (chmod(*deletion_script_file_name, S_IRWXU) != 0)
-		pg_log(ctx, PG_FATAL, "Could not add execute permission to file:  %s\n",
+		pg_log(PG_FATAL, "Could not add execute permission to file:  %s\n",
 			   *deletion_script_file_name);
 #endif
 
-	check_ok(ctx);
-}
-
-
-static void
-check_proper_datallowconn(migratorContext *ctx, Cluster whichCluster)
-{
-	int			dbnum;
-	PGconn	   *conn_template1;
-	PGresult   *dbres;
-	int			ntups;
-	int			i_datname;
-	int			i_datallowconn;
-
-	prep_status(ctx, "Checking database connection settings");
-
-	conn_template1 = connectToServer(ctx, "template1", whichCluster);
-
-	/* get database names */
-	dbres = executeQueryOrDie(ctx, conn_template1,
-							  "SELECT	datname, datallowconn "
-							  "FROM	pg_catalog.pg_database");
-
-	i_datname = PQfnumber(dbres, "datname");
-	i_datallowconn = PQfnumber(dbres, "datallowconn");
-
-	ntups = PQntuples(dbres);
-	for (dbnum = 0; dbnum < ntups; dbnum++)
-	{
-		char	   *datname = PQgetvalue(dbres, dbnum, i_datname);
-		char	   *datallowconn = PQgetvalue(dbres, dbnum, i_datallowconn);
-
-		if (strcmp(datname, "template0") == 0)
-		{
-			/* avoid restore failure when pg_dumpall tries to create template0 */
-			if (strcmp(datallowconn, "t") == 0)
-				pg_log(ctx, PG_FATAL, "template0 must not allow connections, "
-						 "i.e. its pg_database.datallowconn must be false\n");
-		}
-		else
-		{
-			/* avoid datallowconn == false databases from being skipped on restore */
-			if (strcmp(datallowconn, "f") == 0)
-				pg_log(ctx, PG_FATAL, "All non-template0 databases must allow connections, "
-						 "i.e. their pg_database.datallowconn must be true\n");
-		}
-	}
-
-	PQclear(dbres);
-
-	PQfinish(conn_template1);
-
-	check_ok(ctx);
+	check_ok();
 }
 
 
 /*
- * 	check_for_isn_and_int8_passing_mismatch()
+ *	check_is_super_user()
  *
- *	/contrib/isn relies on data type int8, and in 8.4 int8 can now be passed
+ *	Make sure we are the super-user.
+ */
+static void
+check_is_super_user(ClusterInfo *cluster)
+{
+	PGresult   *res;
+	PGconn	   *conn = connectToServer(cluster, "template1");
+
+	prep_status("Checking database user is a superuser");
+
+	/* Can't use pg_authid because only superusers can view it. */
+	res = executeQueryOrDie(conn,
+							"SELECT rolsuper "
+							"FROM pg_catalog.pg_roles "
+							"WHERE rolname = current_user");
+
+	if (PQntuples(res) != 1 || strcmp(PQgetvalue(res, 0, 0), "t") != 0)
+		pg_log(PG_FATAL, "database user \"%s\" is not a superuser\n",
+			   os_info.user);
+
+	PQclear(res);
+
+	PQfinish(conn);
+
+	check_ok();
+}
+
+
+/*
+ *	check_for_isn_and_int8_passing_mismatch()
+ *
+ *	contrib/isn relies on data type int8, and in 8.4 int8 can now be passed
  *	by value.  The schema dumps the CREATE TYPE PASSEDBYVALUE setting so
  *	it must match for the old and new servers.
  */
-void
-check_for_isn_and_int8_passing_mismatch(migratorContext *ctx, Cluster whichCluster)
+static void
+check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 {
-	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
-	&ctx->old : &ctx->new;
 	int			dbnum;
 	FILE	   *script = NULL;
 	bool		found = false;
 	char		output_path[MAXPGPATH];
 
-	prep_status(ctx, "Checking for /contrib/isn with bigint-passing mismatch");
+	prep_status("Checking for contrib/isn with bigint-passing mismatch");
 
-	if (ctx->old.controldata.float8_pass_by_value ==
-		ctx->new.controldata.float8_pass_by_value)
+	if (old_cluster.controldata.float8_pass_by_value ==
+		new_cluster.controldata.float8_pass_by_value)
 	{
 		/* no mismatch */
-		check_ok(ctx);
+		check_ok();
 		return;
 	}
 
 	snprintf(output_path, sizeof(output_path), "%s/contrib_isn_and_int8_pass_by_value.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -617,11 +625,11 @@ check_for_isn_and_int8_passing_mismatch(migratorContext *ctx, Cluster whichClust
 		int			rowno;
 		int			i_nspname,
 					i_proname;
-		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
 
 		/* Find any functions coming from contrib/isn */
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, p.proname "
 								"FROM	pg_catalog.pg_proc p, "
 								"		pg_catalog.pg_namespace n "
@@ -635,7 +643,7 @@ check_for_isn_and_int8_passing_mismatch(migratorContext *ctx, Cluster whichClust
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -651,23 +659,25 @@ check_for_isn_and_int8_passing_mismatch(migratorContext *ctx, Cluster whichClust
 		PQfinish(conn);
 	}
 
+	if (script)
+		fclose(script);
+
 	if (found)
 	{
-		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
-			   "| Your installation contains \"/contrib/isn\" functions\n"
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| Your installation contains \"contrib/isn\" functions\n"
 			   "| which rely on the bigint data type.  Your old and\n"
 			   "| new clusters pass bigint values differently so this\n"
 			   "| cluster cannot currently be upgraded.  You can\n"
-			   "| manually migrate data that use \"/contrib/isn\"\n"
-			   "| facilities and remove \"/contrib/isn\" from the\n"
-			   "| old cluster and restart the migration.  A list\n"
+			   "| manually upgrade data that use \"contrib/isn\"\n"
+			   "| facilities and remove \"contrib/isn\" from the\n"
+			   "| old cluster and restart the upgrade.  A list\n"
 			   "| of the problem functions is in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }
 
 
@@ -678,26 +688,24 @@ check_for_isn_and_int8_passing_mismatch(migratorContext *ctx, Cluster whichClust
  *		pg_type.oid
  *		pg_enum.oid
  *
- *  Most of the reg* data types reference system catalog info that is
+ *	Most of the reg* data types reference system catalog info that is
  *	not preserved, and hence these data types cannot be used in user
  *	tables upgraded by pg_upgrade.
  */
-void
-check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
+static void
+check_for_reg_data_type_usage(ClusterInfo *cluster)
 {
-	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
-	&ctx->old : &ctx->new;
 	int			dbnum;
 	FILE	   *script = NULL;
 	bool		found = false;
 	char		output_path[MAXPGPATH];
 
-	prep_status(ctx, "Checking for reg* system oid user data types");
+	prep_status("Checking for reg* system oid user data types");
 
 	snprintf(output_path, sizeof(output_path), "%s/tables_using_reg.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -706,12 +714,12 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 		int			i_nspname,
 					i_relname,
 					i_attname;
-		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
 		char		query[QUERY_ALLOC];
 		char	   *pg83_atts_str;
 
-		if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
+		if (GET_MAJOR_VERSION(old_cluster.major_version) <= 802)
 			pg83_atts_str = "0";
 		else
 			pg83_atts_str =		"'pg_catalog.regconfig'::pg_catalog.regtype, "
@@ -725,21 +733,21 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 								"WHERE	c.oid = a.attrelid AND "
 								"		NOT a.attisdropped AND "
 								"		a.atttypid IN ( "
-								"			'pg_catalog.regproc'::pg_catalog.regtype, "
+		  "			'pg_catalog.regproc'::pg_catalog.regtype, "
 								"			'pg_catalog.regprocedure'::pg_catalog.regtype, "
-								"			'pg_catalog.regoper'::pg_catalog.regtype, "
+		  "			'pg_catalog.regoper'::pg_catalog.regtype, "
 								"			'pg_catalog.regoperator'::pg_catalog.regtype, "
-/*	allow						"			'pg_catalog.regclass'::pg_catalog.regtype, " */
-								/* regtype.oid is preserved, so 'regtype' is OK */
-								"			%s "
-								"			) AND "
+#if 0 /* allowed in GPDB */
+		 "			'pg_catalog.regclass'::pg_catalog.regtype, "
+#endif
+		/* regtype.oid is preserved, so 'regtype' is OK */
+								"			%s) AND "
 								"		c.relnamespace = n.oid AND "
 							  "		n.nspname != 'pg_catalog' AND "
-								"		n.nspname != 'information_schema'",
+						 "		n.nspname != 'information_schema'",
 				 pg83_atts_str);
 
-		
-		res = executeQueryOrDie(ctx, conn, query);
+		res = executeQueryOrDie(conn, query);
 
 		ntups = PQntuples(res);
 		i_nspname = PQfnumber(res, "nspname");
@@ -749,7 +757,7 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -766,22 +774,77 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
 		PQfinish(conn);
 	}
 
+	if (script)
+		fclose(script);
+
 	if (found)
 	{
-		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains one of the reg* data types in\n"
 			   "| user tables.  These data types reference system oids that\n"
 			   "| are not preserved by pg_upgrade, so this cluster cannot\n"
 			   "| currently be upgraded.  You can remove the problem tables\n"
-			   "| and restart the migration.  A list of the problem columns\n"
+			   "| and restart the upgrade.  A list of the problem columns\n"
 			   "| is in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }
+
+
+static void
+check_proper_datallowconn(ClusterInfo *cluster)
+{
+	int			dbnum;
+	PGconn	   *conn_template1;
+	PGresult   *dbres;
+	int			ntups;
+	int			i_datname;
+	int			i_datallowconn;
+
+	prep_status("Checking database connection settings");
+
+	conn_template1 = connectToServer(cluster, "template1");
+
+	/* get database names */
+	dbres = executeQueryOrDie(conn_template1,
+							  "SELECT	datname, datallowconn "
+							  "FROM	pg_catalog.pg_database");
+
+	i_datname = PQfnumber(dbres, "datname");
+	i_datallowconn = PQfnumber(dbres, "datallowconn");
+
+	ntups = PQntuples(dbres);
+	for (dbnum = 0; dbnum < ntups; dbnum++)
+	{
+		char	   *datname = PQgetvalue(dbres, dbnum, i_datname);
+		char	   *datallowconn = PQgetvalue(dbres, dbnum, i_datallowconn);
+
+		if (strcmp(datname, "template0") == 0)
+		{
+			/* avoid restore failure when pg_dumpall tries to create template0 */
+			if (strcmp(datallowconn, "t") == 0)
+				pg_log(PG_FATAL, "template0 must not allow connections, "
+						 "i.e. its pg_database.datallowconn must be false\n");
+		}
+		else
+		{
+			/* avoid datallowconn == false databases from being skipped on restore */
+			if (strcmp(datallowconn, "f") == 0)
+				pg_log(PG_FATAL, "All non-template0 databases must allow connections, "
+						 "i.e. their pg_database.datallowconn must be true\n");
+		}
+	}
+
+	PQclear(dbres);
+
+	PQfinish(conn_template1);
+
+	check_ok();
+}
+
 
 /*
  *	check_external_partition
@@ -798,19 +861,18 @@ check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster)
  *	found.
  */
 static void
-check_external_partition(migratorContext *ctx)
+check_external_partition(void)
 {
-	ClusterInfo *old_cluster = &ctx->old;
 	char		query[QUERY_ALLOC];
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
 	bool		found = false;
 	int			dbnum;
 
-	prep_status(ctx, "Checking for external tables used in partitioning");
+	prep_status("Checking for external tables used in partitioning");
 
 	snprintf(output_path, sizeof(output_path), "%s/external_partitions.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 	/*
 	 * We need to query the inheritance catalog rather than the partitioning
 	 * catalogs since they are not available on the segments.
@@ -822,16 +884,16 @@ check_external_partition(migratorContext *ctx)
 			 "       JOIN pg_class cc ON (i.inhparent = cc.oid);",
 			 RELSTORAGE_EXTERNAL);
 
-	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
-		res = executeQueryOrDie(ctx, conn, query);
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn, query);
 
 		ntups = PQntuples(res);
 
@@ -840,7 +902,7 @@ check_external_partition(migratorContext *ctx)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -857,8 +919,8 @@ check_external_partition(migratorContext *ctx)
 	if (found)
 	{
 		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains partitioned tables with external\n"
 			   "| tables as partitions.  These partitions need to be removed\n"
 			   "| from the partition hierarchy before the upgrade.  A list of\n"
@@ -867,7 +929,7 @@ check_external_partition(migratorContext *ctx)
 	}
 	else
 	{
-		check_ok(ctx);
+		check_ok();
 	}
 }
 
@@ -911,19 +973,18 @@ check_external_partition(migratorContext *ctx)
  *	cluster which exhibits this.
  */
 static void
-check_covering_aoindex(migratorContext *ctx)
+check_covering_aoindex(void)
 {
-	ClusterInfo	   *old_cluster = &ctx->old;
 	char			query[QUERY_ALLOC];
 	char			output_path[MAXPGPATH];
 	FILE		   *script = NULL;
 	bool			found = false;
 	int				dbnum;
 
-	prep_status(ctx, "Checking for non-covering indexes on partitioned AO tables");
+	prep_status("Checking for non-covering indexes on partitioned AO tables");
 
 	snprintf(output_path, sizeof(output_path), "%s/mismatched_aopartition_indexes.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
 	snprintf(query, sizeof(query),
 			 "SELECT DISTINCT ao.relid, inh.inhrelid "
@@ -936,16 +997,16 @@ check_covering_aoindex(migratorContext *ctx)
 			 "         ON (i.indrelid = ao.relid) "
 			 "WHERE  ao.blkdirrelid <> 0;");
 
-	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		PGconn	   *conn;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
 
-		conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
-		res = executeQueryOrDie(ctx, conn, query);
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn, query);
 
 		ntups = PQntuples(res);
 
@@ -954,7 +1015,7 @@ check_covering_aoindex(migratorContext *ctx)
 			found = true;
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
 					   output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
@@ -972,8 +1033,8 @@ check_covering_aoindex(migratorContext *ctx)
 	if (found)
 	{
 		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains partitioned append-only tables\n"
 			   "| with an index defined on the partition parent which isn't\n"
 			   "| present on all partition members.  These indexes must be\n"
@@ -984,7 +1045,7 @@ check_covering_aoindex(migratorContext *ctx)
 	}
 	else
 	{
-		check_ok(ctx);
+		check_ok();
 	}
 }
 
@@ -1000,20 +1061,19 @@ check_covering_aoindex(migratorContext *ctx)
  *	This is basically the same problem as with hash indexes in PostgreSQL.
  */
 static void
-check_hash_partition_usage(migratorContext *ctx)
+check_hash_partition_usage(void)
 {
-	ClusterInfo	   *old_cluster = &ctx->old;
 	int				dbnum;
 	FILE		   *script = NULL;
 	bool			found = false;
 	char			output_path[MAXPGPATH];
 
-	prep_status(ctx, "Checking for hash partitioned tables");
+	prep_status("Checking for hash partitioned tables");
 
 	snprintf(output_path, sizeof(output_path), "%s/hash_partitioned_tables.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -1021,10 +1081,10 @@ check_hash_partition_usage(migratorContext *ctx)
 		int			rowno;
 		int			i_nspname,
 					i_relname;
-		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
 
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname "
 								"FROM pg_catalog.pg_partition p, pg_catalog.pg_class c, pg_catalog.pg_namespace n "
 								"WHERE p.parrelid = c.oid AND c.relnamespace = n.oid "
@@ -1037,7 +1097,7 @@ check_hash_partition_usage(migratorContext *ctx)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -1056,8 +1116,8 @@ check_hash_partition_usage(migratorContext *ctx)
 	if (found)
 	{
 		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains hash partitioned tables.\n"
 			   "| Upgrading hash partitioned tables is not supported,\n"
 			   "| so this cluster cannot currently be upgraded.  You\n"
@@ -1067,7 +1127,7 @@ check_hash_partition_usage(migratorContext *ctx)
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }
 
 /*
@@ -1080,20 +1140,19 @@ check_hash_partition_usage(migratorContext *ctx)
  *	handling them for the end-user.
  */
 static void
-check_partition_indexes(migratorContext *ctx)
+check_partition_indexes(void)
 {
-	ClusterInfo	   *old_cluster = &ctx->old;
 	int				dbnum;
 	FILE		   *script = NULL;
 	bool			found = false;
 	char			output_path[MAXPGPATH];
 
-	prep_status(ctx, "Checking for indexes on partitioned tables");
+	prep_status("Checking for indexes on partitioned tables");
 
 	snprintf(output_path, sizeof(output_path), "%s/partitioned_tables_indexes.txt",
-			 ctx->cwd);
+			 os_info.cwd);
 
-	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -1102,10 +1161,10 @@ check_partition_indexes(migratorContext *ctx)
 		int			i_nspname;
 		int			i_relname;
 		int			i_indexes;
-		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
 
-		res = executeQueryOrDie(ctx, conn,
+		res = executeQueryOrDie(conn,
 								"WITH partitions AS ("
 								"    SELECT DISTINCT n.nspname, "
 								"           c.relname "
@@ -1136,7 +1195,7 @@ check_partition_indexes(migratorContext *ctx)
 		{
 			found = true;
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
 			if (!db_used)
 			{
 				fprintf(script, "Database:  %s\n", active_db->db_name);
@@ -1155,8 +1214,8 @@ check_partition_indexes(migratorContext *ctx)
 	if (found)
 	{
 		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
 			   "| Your installation contains partitioned tables with\n"
 			   "| indexes defined on them.  Indexes on partition parents,\n"
 			   "| as well as children, must be dropped before upgrade.\n"
@@ -1164,5 +1223,5 @@ check_partition_indexes(migratorContext *ctx)
 			   "| \t%s\n\n", output_path);
 	}
 	else
-		check_ok(ctx);
+		check_ok();
 }

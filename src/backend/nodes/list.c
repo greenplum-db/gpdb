@@ -4,12 +4,12 @@
  *	  implementation for PostgreSQL generic linked list package
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/list.c,v 1.74 2010/02/13 02:34:11 tgl Exp $
+ *	  src/backend/nodes/list.c
  *
  *-------------------------------------------------------------------------
  */

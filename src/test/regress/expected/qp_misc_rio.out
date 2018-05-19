@@ -566,7 +566,7 @@ AS $$
         return plpy.execute(sqlstm);
 $$ LANGUAGE plpythonu;
 INSERT INTO testdata_in SELECT * FROM func_plpythonu(2);
-ERROR:  plpy.SPIError: function cannot execute on a QE slice because it accesses relation "qp_misc_rio.testdata_in"  (entry db krajaraman:15432 pid=63091)
+ERROR:  spiexceptions.FeatureNotSupported: function cannot execute on a QE slice because it accesses relation "qp_misc_rio.testdata_in"  (entry db krajaraman:15432 pid=63091)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "func_plpythonu", line 3, in <module>
     return plpy.execute(sqlstm);

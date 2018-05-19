@@ -1,9 +1,9 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/large_obj.c,v 1.56 2010/02/26 02:01:19 momjian Exp $
+ * src/bin/psql/large_obj.c
  */
 #include "postgres_fe.h"
 #include "large_obj.h"
@@ -14,7 +14,7 @@
 
 static void
 print_lo_result(const char *fmt,...)
-__attribute__((format(printf, 1, 2)));
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 static void
 print_lo_result(const char *fmt,...)

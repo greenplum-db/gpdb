@@ -2313,11 +2313,8 @@ BEGIN
 END;
 $$ language plpgsql NO SQL;
 ERROR:  PL/pgSQL functions cannot accept type anytable
--- python functions have no validator, error at call time.
 CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpythonu NO SQL;
-SELECT * FROM tf_python( TABLE(SELECT 1) );
 ERROR:  PL/Python functions cannot accept type anytable
-DROP FUNCTION tf_python(anytable);
 -- ====================================
 -- Test support of dynamic return types (aka the DESCRIBE callback)
 -- ====================================

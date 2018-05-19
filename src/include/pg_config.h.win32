@@ -41,7 +41,7 @@
  * changes to be valid for Visual C++ (and compatible):
  *
  * HAVE_CBRT, HAVE_FUNCNAME_FUNC, HAVE_FUNCNAME_FUNCTION, HAVE_GETOPT,
- * HAVE_GETOPT_H, HAVE_GETOPT_LONG, HAVE_RINT, HAVE_STRINGS_H,
+ * HAVE_GETOPT_H, HAVE_GETOPT_LONG, HAVE_LOCALE_T, HAVE_RINT, HAVE_STRINGS_H,
  * HAVE_STRTOLL, HAVE_STRTOULL, HAVE_STRUCT_OPTION, ENABLE_THREAD_SAFETY,
  * USE_INLINE, inline, USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
  *
@@ -281,6 +281,9 @@
 #define HAVE_LL_CONSTANTS 1
 #endif
 
+/* Define to 1 if the system has the type `locale_t'. */
+#define HAVE_LOCALE_T 1
+
 /* Define to 1 if `long int' works and is 64 bits. */
 /* #undef HAVE_LONG_INT_64 */
 
@@ -294,6 +297,9 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
+
+/* Define to 1 if the system has the type `MINIDUMP_TYPE'. */
+#define HAVE_MINIDUMP_TYPE 1
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #define HAVE_NETINET_IN_H 1
@@ -438,9 +444,6 @@
 /* Define to 1 if the system has the type `struct cmsgcred'. */
 /* #undef HAVE_STRUCT_CMSGCRED */
 
-/* Define to 1 if the system has the type `struct fcred'. */
-/* #undef HAVE_STRUCT_FCRED */
-
 /* Define to 1 if the system has the type `struct option'. */
 //#define HAVE_STRUCT_OPTION 1
 
@@ -468,9 +471,6 @@
 
 /* Define to 1 if the system has the type `struct sockaddr_un'. */
 /* #undef HAVE_STRUCT_SOCKADDR_UN */
-
-/* Define to 1 if the system has the type `struct sockcred'. */
-/* #undef HAVE_STRUCT_SOCKCRED */
 
 /* Define to 1 if `tm_zone' is member of `struct tm'. */
 /* #undef HAVE_STRUCT_TM_TM_ZONE */
@@ -516,6 +516,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the <sys/ucred.h> header file. */
+/* #undef HAVE_SYS_UCRED_H */
 
 /* Define to 1 if you have the <sys/un.h> header file. */
 /* #undef HAVE_SYS_UN_H */
@@ -572,6 +575,9 @@
 /* Define to 1 if you have the `wcstombs' function. */
 #define HAVE_WCSTOMBS 1
 
+/* Define to 1 if you have the `wcstombs_l' function. */
+#define HAVE_WCSTOMBS_L 1
+
 /* Define to 1 if you have the <wctype.h> header file. */
 #define HAVE_WCTYPE_H 1
 
@@ -605,6 +611,9 @@
 /* Define to build with Kerberos 5 support. (--with-krb5) */
 /* #undef KRB5 */
 
+/* Define to 1 if `locale_t' requires <xlocale.h>. */
+/* #undef LOCALE_T_IN_XLOCALE */
+
 /* Define to the location of locale files. */
 /* #undef LOCALEDIR */
 
@@ -624,13 +633,13 @@
 #define PACKAGE_STRING "Greenplum Database 6.0.0-alpha"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "9.0beta3"
+#define PACKAGE_VERSION "9.1beta2"
 
 /* PostgreSQL version as a string */
-#define PG_VERSION "9.0beta3"
+#define PG_VERSION "9.1beta2"
 
 /* PostgreSQL version as a number */
-#define PG_VERSION_NUM 90000
+#define PG_VERSION_NUM 90100
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "greenplum"

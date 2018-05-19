@@ -3,11 +3,11 @@
  * async.c
  *	  Asynchronous notification: NOTIFY, LISTEN, UNLISTEN
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/async.c,v 1.157 2010/04/28 16:54:15 tgl Exp $
+ *	  src/backend/commands/async.c
  *
  *-------------------------------------------------------------------------
  */
@@ -508,7 +508,7 @@ AsyncShmemInit(void)
 		LWLockAcquire(AsyncCtlLock, LW_EXCLUSIVE);
 		slotno = SimpleLruZeroPage(AsyncCtl, QUEUE_POS_PAGE(QUEUE_HEAD));
 		/* This write is just to verify that pg_notify/ is writable */
-		SimpleLruWritePage(AsyncCtl, slotno, NULL);
+		SimpleLruWritePage(AsyncCtl, slotno);
 		LWLockRelease(AsyncCtlLock);
 	}
 }
@@ -1091,6 +1091,7 @@ Exec_UnlistenAllCommit(void)
 void
 ProcessCompletedNotifies(void)
 {
+	MemoryContext caller_context;
 	bool		signalled;
 
 	/* Nothing to do if we didn't send any notifications */
@@ -1103,6 +1104,12 @@ ProcessCompletedNotifies(void)
 	 * right back here after error cleanup.
 	 */
 	backendHasSentNotifications = false;
+
+	/*
+	 * We must preserve the caller's memory context (probably MessageContext)
+	 * across the transaction we do here.
+	 */
+	caller_context = CurrentMemoryContext;
 
 	if (Trace_notify)
 		elog(DEBUG1, "ProcessCompletedNotifies");
@@ -1135,6 +1142,8 @@ ProcessCompletedNotifies(void)
 	}
 
 	CommitTransactionCommand();
+
+	MemoryContextSwitchTo(caller_context);
 
 	/* We don't need pq_flush() here since postgres.c will do one shortly */
 }
@@ -2091,7 +2100,10 @@ ProcessIncomingNotify(void)
 	bool		catchup_enabled;
 	bool		client_wait_timeout_enabled;
 
-	/* Do nothing if we aren't actively listening */
+	/* We *must* reset the flag */
+	notifyInterruptOccurred = 0;
+
+	/* Do nothing else if we aren't actively listening */
 	if (listenChannels == NIL)
 		return;
 
@@ -2103,8 +2115,6 @@ ProcessIncomingNotify(void)
 		elog(DEBUG1, "ProcessIncomingNotify");
 
 	set_ps_display("notify interrupt", false);
-
-	notifyInterruptOccurred = 0;
 
 	/*
 	 * We must run asyncQueueReadAllNotifications inside a transaction, else

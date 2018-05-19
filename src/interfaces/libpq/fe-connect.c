@@ -27,8 +27,6 @@
 #include <poll.h>
 #endif
 
-#include "utils/elog.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -52,7 +50,7 @@
 #endif
 #define near
 #include <shlobj.h>
-#ifdef WIN32_ONLY_COMPILER /* mstcpip.h is missing on mingw */
+#ifdef WIN32_ONLY_COMPILER		/* mstcpip.h is missing on mingw */
 #include <mstcpip.h>
 #endif
 #else
@@ -107,6 +105,13 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
  * rather than that of the current code.
  */
 #define ERRCODE_APPNAME_UNKNOWN "42704"
+
+/* This is part of the protocol so just define it */
+#define ERRCODE_INVALID_PASSWORD "28P01"
+/* This too */
+#define ERRCODE_CANNOT_CONNECT_NOW "57P03"
+/* And this GPDB-specific one, too */
+#define ERRCODE_MIRROR_READY "57M02"
 
 /*
  * fall back options if they are not specified by arguments or defined
@@ -706,19 +711,19 @@ PQconnectStart(const char *conninfo)
 	return conn;
 }
 
+/*
+ * Move option values into conn structure
+ *
+ * Don't put anything cute here --- intelligence should be in
+ * connectOptions2 ...
+ *
+ * Returns true on success. On failure, returns false and sets error message.
+ */
 static bool
 fillPGconn(PGconn *conn, PQconninfoOption *connOptions)
 {
 	const internalPQconninfoOption *option;
 
-	/*
-	 * Move option values into conn structure
-	 *
-	 * Don't put anything cute here --- intelligence should be in
-	 * connectOptions2 ...
-	 *
-	 * XXX: probably worth checking strdup() return value here...
-	 */
 	for (option = PQconninfoOptions; option->keyword; option++)
 	{
 		if (option->connofs >= 0)
@@ -902,6 +907,16 @@ connectOptions2(PGconn *conn)
 //		free(conn->client_encoding_initial);
 //		conn->client_encoding_initial = strdup(pg_encoding_to_char(pg_get_encoding_from_locale(NULL, true)));
 //	}
+
+	/*
+	 * Resolve special "auto" client_encoding from the locale
+	 */
+	if (conn->client_encoding_initial &&
+		strcmp(conn->client_encoding_initial, "auto") == 0)
+	{
+		free(conn->client_encoding_initial);
+		conn->client_encoding_initial = strdup(pg_encoding_to_char(pg_get_encoding_from_locale(NULL, true)));
+	}
 
 	/*
 	 * Only if we get this far is it appropriate to try to connect. (We need a
@@ -1269,10 +1284,10 @@ setKeepalivesIdle(PGconn *conn)
 	if (setsockopt(conn->sock, IPPROTO_TCP, TCP_KEEPALIVE,
 				   (char *) &idle, sizeof(idle)) < 0)
 	{
-		char	sebuf[256];
+		char		sebuf[256];
 
 		appendPQExpBuffer(&conn->errorMessage,
-						  libpq_gettext("setsockopt(TCP_KEEPALIVE) failed: %s\n"),
+					 libpq_gettext("setsockopt(TCP_KEEPALIVE) failed: %s\n"),
 						  SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)));
 		return 0;
 	}
@@ -1344,8 +1359,7 @@ setKeepalivesCount(PGconn *conn)
 
 	return 1;
 }
-
-#else /* Win32 */
+#else							/* Win32 */
 #ifdef SIO_KEEPALIVE_VALS
 /*
  * Enable keepalives and set the keepalive values on Win32,
@@ -1354,20 +1368,20 @@ setKeepalivesCount(PGconn *conn)
 static int
 setKeepalivesWin32(PGconn *conn)
 {
-	struct tcp_keepalive 	ka;
-	DWORD					retsize;
-	int						idle = 0;
-	int						interval = 0;
+	struct tcp_keepalive ka;
+	DWORD		retsize;
+	int			idle = 0;
+	int			interval = 0;
 
 	if (conn->keepalives_idle)
 		idle = atoi(conn->keepalives_idle);
 	if (idle <= 0)
-		idle = 2 * 60 * 60; /* 2 hours = default */
+		idle = 2 * 60 * 60;		/* 2 hours = default */
 
 	if (conn->keepalives_interval)
 		interval = atoi(conn->keepalives_interval);
 	if (interval <= 0)
-		interval = 1; /* 1 second = default */
+		interval = 1;			/* 1 second = default */
 
 	ka.onoff = 1;
 	ka.keepalivetime = idle * 1000;
@@ -1385,14 +1399,14 @@ setKeepalivesWin32(PGconn *conn)
 		!= 0)
 	{
 		appendPQExpBuffer(&conn->errorMessage,
-						  libpq_gettext("WSAIoctl(SIO_KEEPALIVE_VALS) failed: %ui\n"),
+				 libpq_gettext("WSAIoctl(SIO_KEEPALIVE_VALS) failed: %ui\n"),
 						  WSAGetLastError());
 		return 0;
 	}
 	return 1;
 }
-#endif /* SIO_KEEPALIVE_VALS */
-#endif /* WIN32 */
+#endif   /* SIO_KEEPALIVE_VALS */
+#endif   /* WIN32 */
 
 /* ----------
  * connectDBStart -
@@ -2700,8 +2714,6 @@ error_return:
 static PGPing
 internal_ping(PGconn *conn)
 {
-	int last_sqlstate;
-
 	/* Say "no attempt" if we never got to PQconnectPoll */
 	if (!conn || !conn->options_valid)
 		return PQPING_NO_ATTEMPT;
@@ -2743,18 +2755,14 @@ internal_ping(PGconn *conn)
 	if (strlen(conn->last_sqlstate) != 5)
 		return PQPING_NO_RESPONSE;
 
-	last_sqlstate = MAKE_SQLSTATE(conn->last_sqlstate[0], conn->last_sqlstate[1],
-								  conn->last_sqlstate[2], conn->last_sqlstate[3],
-								  conn->last_sqlstate[4]);
-
-	if (last_sqlstate == ERRCODE_MIRROR_READY)
+	if (strcmp(conn->last_sqlstate, ERRCODE_MIRROR_READY) == 0)
 		return PQPING_MIRROR_READY;
 
 	/*
 	 * Report PQPING_REJECT if server says it's not accepting connections. (We
 	 * distinguish this case mainly for the convenience of pg_ctl.)
 	 */
-	if (last_sqlstate == ERRCODE_CANNOT_CONNECT_NOW)
+	if (strcmp(conn->last_sqlstate, ERRCODE_CANNOT_CONNECT_NOW) == 0)
 		return PQPING_REJECT;
 
 	/*
@@ -5578,10 +5586,8 @@ PQsetClientEncoding(PGconn *conn, const char *encoding)
 		return -1;
 
 	/* Resolve special "auto" value from the locale */
-	/* TODO */
-//	if (strcmp(encoding, "auto") == 0)
-//		encoding = pg_encoding_to_char(pg_get_encoding_from_locale(NULL, true));
-//		encoding = pg_encoding_to_char(pg_get_encoding_from_locale(NULL));
+	if (strcmp(encoding, "auto") == 0)
+		encoding = pg_encoding_to_char(pg_get_encoding_from_locale(NULL, true));
 
 	/* check query buffer overflow */
 	if (sizeof(qbuf) < (sizeof(query) + strlen(encoding)))
@@ -5895,21 +5901,12 @@ static void
 dot_pg_pass_warning(PGconn *conn)
 {
 	/* If it was 'invalid authorization', add .pgpass mention */
+	if (conn->dot_pgpass_used && conn->password_needed && conn->result &&
 	/* only works with >= 9.0 servers */
-	if (conn->dot_pgpass_used && conn->password_needed && conn->result)
+		strcmp(PQresultErrorField(conn->result, PG_DIAG_SQLSTATE),
+			   ERRCODE_INVALID_PASSWORD) == 0)
 	{
 		char		pgpassfile[MAXPGPATH];
-		char		*sqlstate;
-		int			sqlstate_errcode;
-
-		sqlstate = PQresultErrorField(conn->result, PG_DIAG_SQLSTATE);
-		if (sqlstate == NULL)
-			return;
-
-		sqlstate_errcode = MAKE_SQLSTATE(sqlstate[0], sqlstate[1], sqlstate[2],
-										 sqlstate[3], sqlstate[4]);
-		if (sqlstate_errcode != ERRCODE_INVALID_PASSWORD)
-			return;
 
 		if (!getPgPassFilename(pgpassfile))
 			return;

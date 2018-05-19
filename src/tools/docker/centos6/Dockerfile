@@ -4,19 +4,25 @@ FROM centos:centos6
 RUN yum makecache && \
     rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6 && \
     yum -y install epel-release java-1.7.0-openjdk-devel && \
-    yum -y install autoconf bison createrepo flex git gperf indent libtool && \
-    yum -y install openssh-server rpm-build rsync sudo svn vim wget && \
-    #
-    # install all other software we need
-    yum -y install python-paramiko python-pip python-devel python-psutil python-setuptools && \
+    yum -y install createrepo git iproute net-tools openssh-server rpm-build rsync sudo svn vim wget && \
+    yum -y install ant-junit autoconf bison flex gperf indent libtool && \
+    yum clean all
+
+# install all software we need
+RUN yum makecache && \
+    yum -y install python-paramiko python-devel python-pip python-psutil python-setuptools && \
     yum -y install apr-devel bzip2-devel expat-devel libcurl-devel libevent-devel libuuid-devel && \
     yum -y install libxml2-devel libyaml-devel openssl-devel pam-devel readline-devel snappy-devel && \
-    yum -y install ant-junit libicu perl-ExtUtils-Embed perl-JSON json-c-devel libgsasl-devel protobuf && \
-    pip install --upgrade pip && pip install psi lockfile && yum clean all
+    yum -y install apache-ivy libicu perl-ExtUtils-Embed perl-Env perl-JSON && \
+    yum -y install json-c-devel libgsasl-devel protobuf-devel && \
+    pip install psi lockfile && \
+    yum clean all
 
-RUN rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel6/x86_64/city-fan.org-release-2-1.rhel6.noarch.rpm && \
-    yum --enablerepo city-fan.org install -y libcurl && yum remove -y city-fan.org-release && \
-    wget https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo \
+RUN cd /tmp && wget -q http://curl.haxx.se/download/curl-7.45.0.tar.bz2 && \
+    tar -xjf curl-*.tar.bz2 && rm curl-*.tar.bz2 && cd curl-* && \
+    ./configure --prefix=/usr > log-file 2>&1 && make -j4 >> log-file 2>&1 && \
+    make install >> log-file 2>&1 && rm -rf /tmp/curl-* && \
+    wget -q https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo \
     -O /etc/yum.repos.d/epel-apache-maven.repo && yum install -y apache-maven && \
     rm /etc/yum.repos.d/epel-apache-maven.repo && yum clean all
 

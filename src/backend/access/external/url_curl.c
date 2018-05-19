@@ -1602,7 +1602,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 			 */
 			memcpy(&line_number, file->in.ptr + file->in.bot, len);
 			line_number = local_ntohll(line_number);
-			pstate->cur_lineno = line_number ? line_number - 1 : INT64_MIN;
+			pstate->cur_lineno = line_number ? line_number : INT64_MIN;
 			file->in.bot += 8;
 			Assert(file->in.bot <= file->in.top);
 			continue;

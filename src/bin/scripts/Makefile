@@ -2,10 +2,10 @@
 #
 # Makefile for src/bin/scripts
 #
-# Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/bin/scripts/Makefile,v 1.46 2010/07/05 18:54:38 tgl Exp $
+# src/bin/scripts/Makefile
 #
 #-------------------------------------------------------------------------
 
@@ -26,24 +26,20 @@ PROGRAMS = createdb createlang createuser dropdb droplang dropuser clusterdb vac
 
 override CPPFLAGS := -I$(top_srcdir)/src/bin/pg_dump -I$(top_srcdir)/src/bin/psql -I$(libpq_srcdir) $(CPPFLAGS)
 
-# I don't think we really need libpgport for any of the scripts, but
-# if we don't have it, we'd need to filter out -lpgport, otherwise we get a link error on solaris and win32
-# we should revisit this and see if that is the better way to go.
-
-all: submake-libpq submake-libpgport $(PROGRAMS)
+all: $(PROGRAMS)
 
 %: %.o $(WIN32RES)
 	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
-createdb: createdb.o common.o dumputils.o kwlookup.o keywords.o
-createlang: createlang.o common.o print.o mbprint.o
-createuser: createuser.o common.o dumputils.o kwlookup.o keywords.o
-dropdb: dropdb.o common.o dumputils.o kwlookup.o keywords.o
-droplang: droplang.o common.o print.o mbprint.o
-dropuser: dropuser.o common.o dumputils.o kwlookup.o keywords.o
-clusterdb: clusterdb.o common.o dumputils.o kwlookup.o keywords.o
-vacuumdb: vacuumdb.o common.o
-reindexdb: reindexdb.o common.o dumputils.o kwlookup.o keywords.o
+createdb: createdb.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
+createlang: createlang.o common.o print.o mbprint.o | submake-libpq
+createuser: createuser.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
+dropdb: dropdb.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
+droplang: droplang.o common.o print.o mbprint.o | submake-libpq
+dropuser: dropuser.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
+clusterdb: clusterdb.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
+vacuumdb: vacuumdb.o common.o | submake-libpq
+reindexdb: reindexdb.o common.o dumputils.o kwlookup.o keywords.o | submake-libpq
 
 dumputils.c keywords.c: % : $(top_srcdir)/src/bin/pg_dump/%
 	rm -f $@ && $(LN_S) $< .

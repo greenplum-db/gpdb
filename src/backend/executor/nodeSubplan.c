@@ -5,11 +5,11 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubplan.c,v 1.101 2010/01/02 16:57:45 momjian Exp $
+ *	  src/backend/executor/nodeSubplan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -266,7 +266,7 @@ ExecScanSubPlan(SubPlanState *node,
 	/*
 	 * Now that we've set up its parameters, we can reset the subplan.
 	 */
-	ExecReScan(planstate, NULL);
+	ExecReScan(planstate);
 
 	/*
 	 * For all sublink types except EXPR_SUBLINK and ARRAY_SUBLINK, the result
@@ -457,7 +457,7 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 	int			ncols = list_length(subplan->paramIds);
 	ExprContext *innerecontext = node->innerecontext;
 	MemoryContext oldcontext;
-	int			nbuckets;
+	long		nbuckets;
 	TupleTableSlot *slot;
 
 	Assert(subplan->subLinkType == ANY_SUBLINK);
@@ -483,7 +483,7 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 	node->havehashrows = false;
 	node->havenullrows = false;
 
-	nbuckets = (int) ceil(planstate->plan->plan_rows);
+	nbuckets = (long) Min(planstate->plan->plan_rows, (double) LONG_MAX);
 	if (nbuckets < 1)
 		nbuckets = 1;
 
@@ -525,7 +525,7 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 	/*
 	 * Reset subplan to start.
 	 */
-	ExecReScan(planstate, NULL);
+	ExecReScan(planstate);
 
 	/*
 	 * Scan the subplan and load the hash table(s).  Note that when there are
@@ -867,7 +867,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
 
 			/* Lookup the equality function (potentially cross-type) */
 			fmgr_info(opexpr->opfuncid, &sstate->cur_eq_funcs[i - 1]);
-			sstate->cur_eq_funcs[i - 1].fn_expr = (Node *) opexpr;
+			fmgr_info_set_expr((Node *) opexpr, &sstate->cur_eq_funcs[i - 1]);
 
 			/* Look up the equality function for the RHS type */
 			if (!get_compatible_hash_operators(opexpr->opno,
@@ -920,7 +920,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
  *
  *		Executes an InitPlan subplan and sets its output parameters.
  *
- * This is called from ExecEvalParam() when the value of a PARAM_EXEC
+ * This is called from ExecEvalParamExec() when the value of a PARAM_EXEC
  * parameter is requested and the param's execPlan field is set (indicating
  * that the param has not yet been evaluated).	This allows lazy evaluation
  * of initplans: we don't run the subplan until/unless we need its output.
@@ -954,7 +954,6 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 
 	bool		needDtxTwoPhase;
 	bool		shouldDispatch = false;
-	volatile bool shouldTeardownInterconnect = false;
 	volatile bool explainRecvStats = false;
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
@@ -988,15 +987,16 @@ PG_TRY();
 		 * command to the appropriate segdbs.  It does not wait for them
 		 * to finish unless an error is detected before all are dispatched.
 		 */
-		CdbDispatchPlan(queryDesc, needDtxTwoPhase, true, queryDesc->estate->dispatcherState);
+		CdbDispatchPlan(queryDesc, needDtxTwoPhase, true);
 
 		/*
 		 * Set up the interconnect for execution of the initplan root slice.
 		 */
-		shouldTeardownInterconnect = true;
 		Assert(!(queryDesc->estate->interconnect_context));
 		SetupInterconnect(queryDesc->estate);
 		Assert((queryDesc->estate->interconnect_context));
+
+		UpdateMotionExpectedReceivers(queryDesc->estate->motionlayer_context, queryDesc->estate->es_sliceTable);
 
 		ExecUpdateTransportState(planstate, queryDesc->estate->interconnect_context);
 
@@ -1176,21 +1176,19 @@ PG_TRY();
 		 * If the dispatcher or any QE had an error, report it and
 		 * exit to our error handler (below) via PG_THROW.
 		 */
-		cdbdisp_finishCommand(queryDesc->estate->dispatcherState);
+		cdbdisp_finishCommand(queryDesc->estate->dispatcherState, NULL, NULL, true);
 	}
 
 	/* teardown the sequence server */
 	TeardownSequenceServer();
 
 	/* Clean up the interconnect. */
-	if (shouldTeardownInterconnect)
+	if (queryDesc && queryDesc->estate && queryDesc->estate->es_interconnect_is_setup)
 	{
-		shouldTeardownInterconnect = false;
-
 		TeardownInterconnect(queryDesc->estate->interconnect_context,
-							 queryDesc->estate->motionlayer_context,
 							 false, false); /* following success on QD */
 		queryDesc->estate->interconnect_context = NULL;
+		queryDesc->estate->es_interconnect_is_setup = false;
 	}
 }
 PG_CATCH();
@@ -1200,13 +1198,11 @@ PG_CATCH();
 	{
 		cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
 		if (!explainRecvStats &&
-			shouldDispatch)
+			shouldDispatch &&
+			queryDesc->estate->dispatcherState)
 		{
-			Assert(queryDesc != NULL &&
-				   queryDesc->estate != NULL);
 			/* Wait for all gangs to finish.  Cancel slowpokes. */
-			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
-								   DISPATCH_WAIT_CANCEL);
+			cdbdisp_cancelDispatch(queryDesc->estate->dispatcherState);
 
 			cdbexplain_recvExecStats(planstate,
 									 queryDesc->estate->dispatcherState->primaryResults,
@@ -1223,8 +1219,11 @@ PG_CATCH();
 	 * Wait for them to finish and clean up the dispatching structures.
 	 * Replace current error info with QE error info if more interesting.
 	 */
-	if (shouldDispatch && queryDesc && queryDesc->estate && queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+	if (shouldDispatch && queryDesc && queryDesc->estate &&
+		queryDesc->estate->dispatcherState)
+	{
 		CdbDispatchHandleError(queryDesc->estate->dispatcherState);
+	}
 		
 	/* teardown the sequence server */
 	TeardownSequenceServer();
@@ -1233,12 +1232,12 @@ PG_CATCH();
 	 * Clean up the interconnect.
 	 * CDB TODO: Is this needed following failure on QD?
 	 */
-	if (shouldTeardownInterconnect)
+	if (queryDesc && queryDesc->estate && queryDesc->estate->es_interconnect_is_setup)
 	{
 		TeardownInterconnect(queryDesc->estate->interconnect_context,
-							 queryDesc->estate->motionlayer_context,
 							 true, false);
 		queryDesc->estate->interconnect_context = NULL;
+		queryDesc->estate->es_interconnect_is_setup = false;
 	}
 	PG_RE_THROW();
 }

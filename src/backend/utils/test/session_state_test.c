@@ -208,7 +208,10 @@ test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
 {
 	IsUnderPostmaster = false;
 
-	int allMaxBackends[] = {1, 100, MAX_MAX_BACKENDS};
+	/* The intention is that MAX_BACKENDS here would match the value in guc.c */
+#define MAX_BACKENDS 0x7fffff
+
+	int allMaxBackends[] = {1, 100, MAX_BACKENDS};
 
 	for (int i = 0; i < sizeof(allMaxBackends) / sizeof(int); i++)
 	{

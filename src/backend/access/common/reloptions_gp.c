@@ -316,8 +316,8 @@ resetAOStorageOpts(StdRdOptions *ao_opts)
 	ao_opts->checksum = AO_DEFAULT_CHECKSUM;
 	ao_opts->columnstore = AO_DEFAULT_COLUMNSTORE;
 	ao_opts->compresslevel = AO_DEFAULT_COMPRESSLEVEL;
-	ao_opts->compresstype = NULL;
-	ao_opts->orientation = NULL;
+	ao_opts->compresstype[0] = '\0';
+	ao_opts->orientation[0] = '\0';
 }
 
 /*
@@ -327,12 +327,6 @@ resetAOStorageOpts(StdRdOptions *ao_opts)
 void
 resetDefaultAOStorageOpts(void)
 {
-	if (ao_storage_opts.compresstype)
-		free(ao_storage_opts.compresstype);
-
-	if (ao_storage_opts.orientation)
-		free(ao_storage_opts.orientation);
-
 	resetAOStorageOpts(&ao_storage_opts);
 	ao_storage_opts_changed = false;
 }
@@ -350,38 +344,16 @@ void
 setDefaultAOStorageOpts(StdRdOptions *copy)
 {
 	if (ao_storage_opts.compresstype)
-	{
-		free(ao_storage_opts.compresstype);
-		ao_storage_opts.compresstype = NULL;
-	}
+		ao_storage_opts.compresstype[0] = '\0';
 
 	if (ao_storage_opts.orientation)
-	{
-		free(ao_storage_opts.orientation);
-		ao_storage_opts.orientation = NULL;
-	}
+		ao_storage_opts.orientation[0] = '\0';
 
 	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
-	if (copy->compresstype != NULL)
+	if (pg_strcasecmp(copy->compresstype, "none") == 0)
 	{
-		if (pg_strcasecmp(copy->compresstype, "none") == 0)
-		{
-			/* Represent compresstype=none as NULL (MPP-25073). */
-			ao_storage_opts.compresstype = NULL;
-		}
-		else
-		{
-			ao_storage_opts.compresstype = strdup(copy->compresstype);
-			if (ao_storage_opts.compresstype == NULL)
-				elog(ERROR, "out of memory");
-		}
-	}
-
-	if (copy->orientation != NULL)
-	{
-		ao_storage_opts.orientation = strdup(copy->orientation);
-		if (ao_storage_opts.orientation == NULL)
-			elog(ERROR, "out of memory");
+		/* Represent compresstype=none as an empty string (MPP-25073). */
+		ao_storage_opts.compresstype[0] = '\0';
 	}
 
 	ao_storage_opts_changed = true;
@@ -697,7 +669,7 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				 * Record "none" as compresstype in reloptions if it was
 				 * explicitly specified in WITH clause.
 				 */
-				strval = (opts->compresstype != NULL) ?
+				strval = (opts->compresstype[0]) ?
 					opts->compresstype : "none";
 				len = VARHDRSZ + strlen(SOPT_COMPTYPE) + 1 + strlen(strval);
 				/* +1 leaves room for sprintf's trailing null */
@@ -803,7 +775,7 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 	 * been set by default_reloptions() correctly.
 	 */
 	if (opts->compresslevel > AO_DEFAULT_COMPRESSLEVEL &&
-		opts->compresstype != NULL)
+		opts->compresstype[0])
 	{
 		if (!foundComptype && (
 							   (pg_strcasecmp(opts->compresstype, AO_DEFAULT_COMPRESSTYPE) == 0
@@ -947,14 +919,14 @@ validate_and_adjust_options(StdRdOptions *result,
 					 errmsg("invalid option \"compresstype\" for base relation."
 							" Only valid for Append Only relations")));
 
-		result->compresstype = pstrdup(comptype_opt->values.string_val);
-		if (!compresstype_is_valid(result->compresstype))
+		if (!compresstype_is_valid(comptype_opt->values.string_val))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("unknown compresstype \"%s\"",
-							result->compresstype)));
-		for (i = 0; i < strlen(result->compresstype); i++)
-			result->compresstype[i] = pg_tolower(result->compresstype[i]);
+							comptype_opt->values.string_val)));
+		for (i = 0; i < strlen(comptype_opt->values.string_val); i++)
+			result->compresstype[i] = pg_tolower(comptype_opt->values.string_val[i]);
+		result->compresstype[i] = '\0';
 	}
 
 	/* compression level */
@@ -974,7 +946,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		result->compresslevel = complevel_opt->values.int_val;
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			pg_strcasecmp(result->compresstype, "none") != 0 &&
 			result->compresslevel == 0 && validate)
 			ereport(ERROR,
@@ -996,12 +968,12 @@ validate_and_adjust_options(StdRdOptions *result,
 		 * compresstype. must make a copy otherwise str_tolower below will
 		 * crash.
 		 */
-		if (result->compresslevel > 0 && !result->compresstype)
-			result->compresstype = pstrdup(AO_DEFAULT_COMPRESSTYPE);
+		if (result->compresslevel > 0 && !result->compresstype[0])
+			strlcpy(result->compresstype, AO_DEFAULT_COMPRESSTYPE, sizeof(result->compresstype));
 
 		/* Check upper bound of compresslevel for each compression type */
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "zlib") == 0) &&
 			(result->compresslevel > 9))
 		{
@@ -1015,7 +987,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 		}
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "zstd") == 0) &&
 			(result->compresslevel > 19))
 		{
@@ -1029,7 +1001,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 		}
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "quicklz") == 0) &&
 			(result->compresslevel != 1))
 		{
@@ -1043,7 +1015,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 		}
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
 			(result->compresslevel > 4))
 		{
@@ -1108,7 +1080,7 @@ validate_and_adjust_options(StdRdOptions *result,
 		result->columnstore = (pg_strcasecmp(orientation_opt->values.string_val, "column") == 0 ?
 							   true : false);
 
-		if (result->compresstype &&
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
 			!result->columnstore)
 		{
@@ -1120,7 +1092,7 @@ validate_and_adjust_options(StdRdOptions *result,
 		}
 	}
 
-	if (result->appendonly && result->compresstype != NULL)
+	if (result->appendonly && result->compresstype[0])
 		if (result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
 }
@@ -1146,7 +1118,7 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 			result->compresslevel = ao_storage_opts.compresslevel;
 
 		if (!(get_option_set(options, numrelopts, SOPT_COMPTYPE)))
-			result->compresstype = ao_storage_opts.compresstype;
+			strlcpy(result->compresstype, ao_storage_opts.compresstype, sizeof(result->compresstype));
 
 		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
 			result->checksum = ao_storage_opts.checksum;

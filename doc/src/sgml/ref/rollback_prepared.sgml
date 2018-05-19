@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/rollback_prepared.sgml,v 1.5 2010/04/03 07:23:02 petere Exp $
+doc/src/sgml/ref/rollback_prepared.sgml
 PostgreSQL documentation
 -->
 
@@ -29,7 +29,7 @@ ROLLBACK PREPARED <replaceable class="PARAMETER">transaction_id</replaceable>
   <title>Description</title>
 
   <para>
-   <command>ROLLBACK PREPARED</command> rolls back a transaction that is in 
+   <command>ROLLBACK PREPARED</command> rolls back a transaction that is in
    prepared state.
   </para>
  </refsect1>
@@ -76,7 +76,7 @@ ROLLBACK PREPARED <replaceable class="PARAMETER">transaction_id</replaceable>
   <para>
    Roll back the transaction identified by the transaction
    identifier <literal>foobar</>:
-   
+
 <programlisting>
 ROLLBACK PREPARED 'foobar';
 </programlisting>

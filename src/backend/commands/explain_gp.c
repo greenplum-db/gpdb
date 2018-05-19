@@ -25,7 +25,7 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbpullup.h"              /* cdbpullup_targetlist() */
 #include "cdb/cdbutil.h"
-#include "cdb/cdbvars.h"		/* Gp_segment */
+#include "cdb/cdbvars.h"		/* GpIdentity.segindex */
 #include "cdb/memquota.h"
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "miscadmin.h"
@@ -349,15 +349,16 @@ static int cdbexplain_collectExtraText(PlanState *planstate,
 									   StringInfo notebuf);
 static int cdbexplain_countLeafPartTables(PlanState *planstate);
 
-static void show_motion_keys(Plan *plan, List *hashExpr, int nkeys,
+static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 							 AttrNumber *keycols, const char *qlabel,
-							 ExplainState *es);
-static void explain_partition_selector(PartitionSelector *ps, Plan *parent,
-						   ExplainState *es);
-static void show_grouping_keys(Plan *plan, int numCols,
+							 List *ancestors, ExplainState *es);
+static void explain_partition_selector(PartitionSelector *ps,
+						   PlanState *parentstate,
+						   List *ancestors, ExplainState *es);
+static void show_grouping_keys(PlanState *planstate, int numCols,
 							   AttrNumber *subplanColIdx,
 							   const char  *qlabel,
-							   ExplainState *es);
+							   List *ancestors, ExplainState *es);
 
 /*
  * Convert the sort method in string to corresponding
@@ -444,7 +445,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	/* Set up a temporary StatHdr for both collecting and depositing stats. */
 	ctx.msgptrs[0] = &ctx.send.hdr;
-	ctx.send.hdr.segindex = Gp_segment;
+	ctx.send.hdr.segindex = GpIdentity.segindex;
 	ctx.send.hdr.nInst = 1;
 
 	/* Set up receive context area referencing our temp StatHdr. */
@@ -538,7 +539,7 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	/* Start building the message header in our context area. */
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.hdr.type = T_CdbExplain_StatHdr;
-	ctx.hdr.segindex = Gp_segment;
+	ctx.hdr.segindex = GpIdentity.segindex;
 	ctx.hdr.nInst = 0;
 
 	/* Allocate a separate buffer where nodes can append extra message text. */
@@ -1695,7 +1696,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			{
 				ScanState  *scanState = (ScanState *) planstate;
 
-				if (!isDynamicScan((Scan *) scanState->ps.plan))
+				if (!isDynamicScan(scanState->ps.plan))
 				{
 					displayPartitionScanned = false;
 				}
@@ -2160,9 +2161,10 @@ cdbexplain_countLeafPartTables(PlanState *planstate)
  * Show the hash and merge keys for a Motion node.
  */
 static void
-show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
-			     const char *qlabel, ExplainState *es)
+show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys, AttrNumber *keycols,
+			     const char *qlabel, List *ancestors, ExplainState *es)
 {
+	Plan	   *plan = planstate->plan;
 	List	   *context;
 	char	   *exprstr;
 	bool		useprefix = list_length(es->rtable) > 1;
@@ -2173,10 +2175,9 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 		return;
 
 	/* Set up deparse context */
-	context = deparse_context_for_plan((Node *) plan,
-									   (Node *) outerPlan(plan),
-									   es->rtable,
-									   es->pstmt->subplans);
+	context = deparse_context_for_planstate((Node *) planstate,
+											ancestors,
+											es->rtable);
 
     /* Merge Receive ordering key */
     for (keyno = 0; keyno < nkeys; keyno++)
@@ -2216,8 +2217,8 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
  * expression and number of statically selected partitions, if available.
  */
 static void
-explain_partition_selector(PartitionSelector *ps, Plan *parent,
-						   ExplainState *es)
+explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
+						   List *ancestors, ExplainState *es)
 {
 	if (ps->printablePredicate)
 	{
@@ -2226,10 +2227,9 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 		char	   *exprstr;
 
 		/* Set up deparsing context */
-		context = deparse_context_for_plan((Node *) parent,
-										   (Node *) outerPlan(parent),
-										   es->rtable,
-										   es->pstmt->subplans);
+		context = deparse_context_for_planstate((Node *) parentstate,
+												ancestors,
+												es->rtable);
 		useprefix = list_length(es->rtable) > 1;
 
 		/* Deparse the expression */
@@ -2251,14 +2251,16 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
  * Show GROUP BY keys for an Agg or Group node.
  */
 static void
-show_grouping_keys(Plan *plan, int nkeys, AttrNumber *subplanColIdx,
-                   const char *qlabel, ExplainState *es)
+show_grouping_keys(PlanState *planstate, int nkeys, AttrNumber *subplanColIdx,
+                   const char *qlabel, List *ancestors, ExplainState *es)
 {
-    Plan       *subplan = plan->lefttree;
+	Plan	   *plan = planstate->plan;
+	PlanState  *subplanstate = outerPlanState(planstate);
+	Plan	   *subplan = subplanstate->plan;
     List	   *context;
 	List	   *result = NIL;
     char	   *exprstr;
-    bool		useprefix = list_length(es->rtable) > 1;
+    bool		useprefix;
     int			keyno;
 	int         num_null_cols = 0;
 	int         rollup_gs_times = 0;
@@ -2266,22 +2268,11 @@ show_grouping_keys(Plan *plan, int nkeys, AttrNumber *subplanColIdx,
     if (nkeys <= 0)
 		return;
 
-    Node *outerPlan = (Node *) outerPlan(subplan);
-
-	/*
-	 * Dig the child nodes of the subplan. This logic should match that in
-	 * push_plan function, in ruleutils.c!
-	 */
-	if (IsA(subplan, Append))
-		outerPlan = linitial(((Append *) subplan)->appendplans);
-	else if (IsA(subplan, Sequence))
-		outerPlan = (Node *) llast(((Sequence *) subplan)->subplans);
-
 	/* Set up deparse context */
-	context = deparse_context_for_plan((Node *) subplan,
-									   outerPlan,
-									   es->rtable,
-									   es->pstmt->subplans);
+	context = deparse_context_for_planstate((Node *) subplanstate,
+											ancestors,
+											es->rtable);
+	useprefix = (list_length(es->rtable) > 1 || es->verbose);
 
 	if (IsA(plan, Agg))
 	{
@@ -2294,22 +2285,19 @@ show_grouping_keys(Plan *plan, int nkeys, AttrNumber *subplanColIdx,
 	    /* find key expression in tlist */
 	    AttrNumber      keyresno = subplanColIdx[keyno];
 	    TargetEntry    *target = get_tle_by_resno(subplan->targetlist, keyresno);
-		char grping_str[50];
 
 	    if (!target)
 		    elog(ERROR, "no tlist entry for key %d", keyresno);
 
 		if (IsA(target->expr, Grouping))
 		{
-			sprintf(grping_str, "grouping");
 			/* Append "grouping" explicitly. */
-			exprstr = grping_str;
+			exprstr = "grouping";
 		}
 		else if (IsA(target->expr, GroupId))
 		{
-			sprintf(grping_str, "groupid");
 			/* Append "groupid" explicitly. */
-			exprstr = grping_str;
+			exprstr = "groupid";
 		}
 		else
 			/* Deparse the expression, showing any top-level cast */

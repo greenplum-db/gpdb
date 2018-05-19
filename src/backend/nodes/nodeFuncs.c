@@ -3,17 +3,18 @@
  * nodeFuncs.c
  *		Various general-purpose manipulations of Node trees
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.46 2010/02/12 17:33:20 tgl Exp $
+ *	  src/backend/nodes/nodeFuncs.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
@@ -77,6 +78,9 @@ exprType(Node *expr)
 			break;
 		case T_DistinctExpr:
 			type = ((DistinctExpr *) expr)->opresulttype;
+			break;
+		case T_NullIfExpr:
+			type = ((NullIfExpr *) expr)->opresulttype;
 			break;
 		case T_ScalarArrayOpExpr:
 			type = BOOLOID;
@@ -170,6 +174,9 @@ exprType(Node *expr)
 		case T_ConvertRowtypeExpr:
 			type = ((ConvertRowtypeExpr *) expr)->resulttype;
 			break;
+		case T_CollateExpr:
+			type = exprType((Node *) ((CollateExpr *) expr)->arg);
+			break;
 		case T_CaseExpr:
 			type = ((CaseExpr *) expr)->casetype;
 			break;
@@ -201,9 +208,6 @@ exprType(Node *expr)
 				type = TEXTOID;
 			else
 				type = XMLOID;
-			break;
-		case T_NullIfExpr:
-			type = exprType((Node *) linitial(((NullIfExpr *) expr)->args));
 			break;
 		case T_NullTest:
 			type = BOOLOID;
@@ -299,6 +303,17 @@ exprTypmod(Node *expr)
 			break;
 		case T_NamedArgExpr:
 			return exprTypmod((Node *) ((NamedArgExpr *) expr)->arg);
+		case T_NullIfExpr:
+			{
+				/*
+				 * Result is either first argument or NULL, so we can report
+				 * first argument's typmod if known.
+				 */
+				NullIfExpr *nexpr = (NullIfExpr *) expr;
+
+				return exprTypmod((Node *) linitial(nexpr->args));
+			}
+			break;
 		case T_SubLink:
 			{
 				SubLink    *sublink = (SubLink *) expr;
@@ -352,6 +367,8 @@ exprTypmod(Node *expr)
 			return ((RelabelType *) expr)->resulttypmod;
 		case T_ArrayCoerceExpr:
 			return ((ArrayCoerceExpr *) expr)->resulttypmod;
+		case T_CollateExpr:
+			return exprTypmod((Node *) ((CollateExpr *) expr)->arg);
 		case T_CaseExpr:
 			{
 				/*
@@ -471,13 +488,6 @@ exprTypmod(Node *expr)
 						return -1;
 				}
 				return typmod;
-			}
-			break;
-		case T_NullIfExpr:
-			{
-				NullIfExpr *nexpr = (NullIfExpr *) expr;
-
-				return exprTypmod((Node *) linitial(nexpr->args));
 			}
 			break;
 		case T_CoerceToDomain:
@@ -615,6 +625,8 @@ expression_returns_set_walker(Node *node, void *context)
 		return false;
 	if (IsA(node, DistinctExpr))
 		return false;
+	if (IsA(node, NullIfExpr))
+		return false;
 	if (IsA(node, ScalarArrayOpExpr))
 		return false;
 	if (IsA(node, BoolExpr))
@@ -637,11 +649,489 @@ expression_returns_set_walker(Node *node, void *context)
 		return false;
 	if (IsA(node, XmlExpr))
 		return false;
-	if (IsA(node, NullIfExpr))
-		return false;
 
 	return expression_tree_walker(node, expression_returns_set_walker,
 								  context);
+}
+
+
+/*
+ *	exprCollation -
+ *	  returns the Oid of the collation of the expression's result.
+ *
+ * Note: expression nodes that can invoke functions generally have an
+ * "inputcollid" field, which is what the function should use as collation.
+ * That is the resolved common collation of the node's inputs.  It is often
+ * but not always the same as the result collation; in particular, if the
+ * function produces a non-collatable result type from collatable inputs
+ * or vice versa, the two are different.
+ */
+Oid
+exprCollation(Node *expr)
+{
+	Oid			coll;
+
+	if (!expr)
+		return InvalidOid;
+
+	switch (nodeTag(expr))
+	{
+		case T_Var:
+			coll = ((Var *) expr)->varcollid;
+			break;
+		case T_Const:
+			coll = ((Const *) expr)->constcollid;
+			break;
+		case T_Param:
+			coll = ((Param *) expr)->paramcollid;
+			break;
+		case T_Aggref:
+			coll = ((Aggref *) expr)->aggcollid;
+			break;
+		case T_WindowFunc:
+			coll = ((WindowFunc *) expr)->wincollid;
+			break;
+		case T_ArrayRef:
+			coll = ((ArrayRef *) expr)->refcollid;
+			break;
+		case T_FuncExpr:
+			coll = ((FuncExpr *) expr)->funccollid;
+			break;
+		case T_NamedArgExpr:
+			coll = exprCollation((Node *) ((NamedArgExpr *) expr)->arg);
+			break;
+		case T_OpExpr:
+			coll = ((OpExpr *) expr)->opcollid;
+			break;
+		case T_DistinctExpr:
+			coll = ((DistinctExpr *) expr)->opcollid;
+			break;
+		case T_NullIfExpr:
+			coll = ((NullIfExpr *) expr)->opcollid;
+			break;
+		case T_ScalarArrayOpExpr:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_BoolExpr:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_SubLink:
+			{
+				SubLink    *sublink = (SubLink *) expr;
+
+				if (sublink->subLinkType == EXPR_SUBLINK ||
+					sublink->subLinkType == ARRAY_SUBLINK)
+				{
+					/* get the collation of subselect's first target column */
+					Query	   *qtree = (Query *) sublink->subselect;
+					TargetEntry *tent;
+
+					if (!qtree || !IsA(qtree, Query))
+						elog(ERROR, "cannot get collation for untransformed sublink");
+					tent = (TargetEntry *) linitial(qtree->targetList);
+					Assert(IsA(tent, TargetEntry));
+					Assert(!tent->resjunk);
+					coll = exprCollation((Node *) tent->expr);
+					/* collation doesn't change if it's converted to array */
+				}
+				else
+				{
+					/* for all other sublink types, result is boolean */
+					coll = InvalidOid;
+				}
+			}
+			break;
+		case T_SubPlan:
+			{
+				SubPlan    *subplan = (SubPlan *) expr;
+
+				if (subplan->subLinkType == EXPR_SUBLINK ||
+					subplan->subLinkType == ARRAY_SUBLINK)
+				{
+					/* get the collation of subselect's first target column */
+					coll = subplan->firstColCollation;
+					/* collation doesn't change if it's converted to array */
+				}
+				else
+				{
+					/* for all other subplan types, result is boolean */
+					coll = InvalidOid;
+				}
+			}
+			break;
+		case T_AlternativeSubPlan:
+			{
+				AlternativeSubPlan *asplan = (AlternativeSubPlan *) expr;
+
+				/* subplans should all return the same thing */
+				coll = exprCollation((Node *) linitial(asplan->subplans));
+			}
+			break;
+		case T_FieldSelect:
+			coll = ((FieldSelect *) expr)->resultcollid;
+			break;
+		case T_FieldStore:
+			coll = InvalidOid;	/* result is always composite */
+			break;
+		case T_RelabelType:
+			coll = ((RelabelType *) expr)->resultcollid;
+			break;
+		case T_CoerceViaIO:
+			coll = ((CoerceViaIO *) expr)->resultcollid;
+			break;
+		case T_ArrayCoerceExpr:
+			coll = ((ArrayCoerceExpr *) expr)->resultcollid;
+			break;
+		case T_ConvertRowtypeExpr:
+			coll = InvalidOid;	/* result is always composite */
+			break;
+		case T_CollateExpr:
+			coll = ((CollateExpr *) expr)->collOid;
+			break;
+		case T_CaseExpr:
+			coll = ((CaseExpr *) expr)->casecollid;
+			break;
+		case T_CaseTestExpr:
+			coll = ((CaseTestExpr *) expr)->collation;
+			break;
+		case T_ArrayExpr:
+			coll = ((ArrayExpr *) expr)->array_collid;
+			break;
+		case T_RowExpr:
+			coll = InvalidOid;	/* result is always composite */
+			break;
+		case T_TableValueExpr:
+			coll = InvalidOid;  /* result is always anytable */
+			break;
+		case T_RowCompareExpr:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_CoalesceExpr:
+			coll = ((CoalesceExpr *) expr)->coalescecollid;
+			break;
+		case T_MinMaxExpr:
+			coll = ((MinMaxExpr *) expr)->minmaxcollid;
+			break;
+		case T_XmlExpr:
+
+			/*
+			 * XMLSERIALIZE returns text from non-collatable inputs, so its
+			 * collation is always default.  The other cases return boolean or
+			 * XML, which are non-collatable.
+			 */
+			if (((XmlExpr *) expr)->op == IS_XMLSERIALIZE)
+				coll = DEFAULT_COLLATION_OID;
+			else
+				coll = InvalidOid;
+			break;
+		case T_NullTest:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_BooleanTest:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_CoerceToDomain:
+			coll = ((CoerceToDomain *) expr)->resultcollid;
+			break;
+		case T_CoerceToDomainValue:
+			coll = ((CoerceToDomainValue *) expr)->collation;
+			break;
+		case T_SetToDefault:
+			coll = ((SetToDefault *) expr)->collation;
+			break;
+		case T_CurrentOfExpr:
+			coll = InvalidOid;	/* result is always boolean */
+			break;
+		case T_PlaceHolderVar:
+			coll = exprCollation((Node *) ((PlaceHolderVar *) expr)->phexpr);
+			break;
+
+		case T_GroupingFunc:
+			coll = InvalidOid;	/* result is always int8 */
+			break;
+		case T_Grouping:
+			coll = InvalidOid;	/* result is always int8 */
+			break;
+		case T_GroupId:
+			coll = InvalidOid;	/* result is always int4 */
+			break;
+
+		case T_DMLActionExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartSelectedExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartDefaultExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartBoundExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartBoundInclusionExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartBoundOpenExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartListRuleExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		case T_PartListNullTestExpr:
+			coll = InvalidOid;	/* GPDB_91_MERGE_FIXME: ORCA only expression */
+			break;
+		default:
+			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
+			coll = InvalidOid;	/* keep compiler quiet */
+			break;
+	}
+	return coll;
+}
+
+/*
+ *	exprInputCollation -
+ *	  returns the Oid of the collation a function should use, if available.
+ *
+ * Result is InvalidOid if the node type doesn't store this information.
+ */
+Oid
+exprInputCollation(Node *expr)
+{
+	Oid			coll;
+
+	if (!expr)
+		return InvalidOid;
+
+	switch (nodeTag(expr))
+	{
+		case T_Aggref:
+			coll = ((Aggref *) expr)->inputcollid;
+			break;
+		case T_WindowFunc:
+			coll = ((WindowFunc *) expr)->inputcollid;
+			break;
+		case T_FuncExpr:
+			coll = ((FuncExpr *) expr)->inputcollid;
+			break;
+		case T_OpExpr:
+			coll = ((OpExpr *) expr)->inputcollid;
+			break;
+		case T_DistinctExpr:
+			coll = ((DistinctExpr *) expr)->inputcollid;
+			break;
+		case T_NullIfExpr:
+			coll = ((NullIfExpr *) expr)->inputcollid;
+			break;
+		case T_ScalarArrayOpExpr:
+			coll = ((ScalarArrayOpExpr *) expr)->inputcollid;
+			break;
+		case T_MinMaxExpr:
+			coll = ((MinMaxExpr *) expr)->inputcollid;
+			break;
+		default:
+			coll = InvalidOid;
+			break;
+	}
+	return coll;
+}
+
+/*
+ *	exprSetCollation -
+ *	  Assign collation information to an expression tree node.
+ *
+ * Note: since this is only used during parse analysis, we don't need to
+ * worry about subplans or PlaceHolderVars.
+ */
+void
+exprSetCollation(Node *expr, Oid collation)
+{
+	switch (nodeTag(expr))
+	{
+		case T_Var:
+			((Var *) expr)->varcollid = collation;
+			break;
+		case T_Const:
+			((Const *) expr)->constcollid = collation;
+			break;
+		case T_Param:
+			((Param *) expr)->paramcollid = collation;
+			break;
+		case T_Aggref:
+			((Aggref *) expr)->aggcollid = collation;
+			break;
+		case T_WindowFunc:
+			((WindowFunc *) expr)->wincollid = collation;
+			break;
+		case T_ArrayRef:
+			((ArrayRef *) expr)->refcollid = collation;
+			break;
+		case T_FuncExpr:
+			((FuncExpr *) expr)->funccollid = collation;
+			break;
+		case T_NamedArgExpr:
+			Assert(collation == exprCollation((Node *) ((NamedArgExpr *) expr)->arg));
+			break;
+		case T_OpExpr:
+			((OpExpr *) expr)->opcollid = collation;
+			break;
+		case T_DistinctExpr:
+			((DistinctExpr *) expr)->opcollid = collation;
+			break;
+		case T_NullIfExpr:
+			((NullIfExpr *) expr)->opcollid = collation;
+			break;
+		case T_ScalarArrayOpExpr:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+		case T_BoolExpr:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+		case T_SubLink:
+#ifdef USE_ASSERT_CHECKING
+			{
+				SubLink    *sublink = (SubLink *) expr;
+
+				if (sublink->subLinkType == EXPR_SUBLINK ||
+					sublink->subLinkType == ARRAY_SUBLINK)
+				{
+					/* get the collation of subselect's first target column */
+					Query	   *qtree = (Query *) sublink->subselect;
+					TargetEntry *tent;
+
+					if (!qtree || !IsA(qtree, Query))
+						elog(ERROR, "cannot set collation for untransformed sublink");
+					tent = (TargetEntry *) linitial(qtree->targetList);
+					Assert(IsA(tent, TargetEntry));
+					Assert(!tent->resjunk);
+					Assert(collation == exprCollation((Node *) tent->expr));
+				}
+				else
+				{
+					/* for all other sublink types, result is boolean */
+					Assert(!OidIsValid(collation));
+				}
+			}
+#endif   /* USE_ASSERT_CHECKING */
+			break;
+		case T_FieldSelect:
+			((FieldSelect *) expr)->resultcollid = collation;
+			break;
+		case T_FieldStore:
+			Assert(!OidIsValid(collation));		/* result is always composite */
+			break;
+		case T_RelabelType:
+			((RelabelType *) expr)->resultcollid = collation;
+			break;
+		case T_CoerceViaIO:
+			((CoerceViaIO *) expr)->resultcollid = collation;
+			break;
+		case T_ArrayCoerceExpr:
+			((ArrayCoerceExpr *) expr)->resultcollid = collation;
+			break;
+		case T_ConvertRowtypeExpr:
+			Assert(!OidIsValid(collation));		/* result is always composite */
+			break;
+		case T_CaseExpr:
+			((CaseExpr *) expr)->casecollid = collation;
+			break;
+		case T_ArrayExpr:
+			((ArrayExpr *) expr)->array_collid = collation;
+			break;
+		case T_RowExpr:
+			Assert(!OidIsValid(collation));		/* result is always composite */
+			break;
+		case T_TableValueExpr:
+			Assert(!OidIsValid(collation));		/* result is always anytable */
+			break;
+		case T_RowCompareExpr:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+		case T_CoalesceExpr:
+			((CoalesceExpr *) expr)->coalescecollid = collation;
+			break;
+		case T_MinMaxExpr:
+			((MinMaxExpr *) expr)->minmaxcollid = collation;
+			break;
+		case T_XmlExpr:
+			Assert((((XmlExpr *) expr)->op == IS_XMLSERIALIZE) ?
+				   (collation == DEFAULT_COLLATION_OID) :
+				   (collation == InvalidOid));
+			break;
+		case T_NullTest:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+		case T_BooleanTest:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+		case T_CoerceToDomain:
+			((CoerceToDomain *) expr)->resultcollid = collation;
+			break;
+		case T_CoerceToDomainValue:
+			((CoerceToDomainValue *) expr)->collation = collation;
+			break;
+		case T_SetToDefault:
+			((SetToDefault *) expr)->collation = collation;
+			break;
+		case T_CurrentOfExpr:
+			Assert(!OidIsValid(collation));		/* result is always boolean */
+			break;
+
+		case T_GroupingFunc:
+			Assert(!OidIsValid(collation));		/* result is always int8 */
+			break;
+		case T_Grouping:
+			Assert(!OidIsValid(collation));		/* result is always int8 */
+			break;
+		case T_GroupId:
+			Assert(!OidIsValid(collation));		/* result is always int4 */
+			break;
+
+		default:
+			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
+			break;
+	}
+}
+
+/*
+ *	exprSetInputCollation -
+ *	  Assign input-collation information to an expression tree node.
+ *
+ * This is a no-op for node types that don't store their input collation.
+ * Note we omit RowCompareExpr, which needs special treatment since it
+ * contains multiple input collation OIDs.
+ */
+void
+exprSetInputCollation(Node *expr, Oid inputcollation)
+{
+	switch (nodeTag(expr))
+	{
+		case T_Aggref:
+			((Aggref *) expr)->inputcollid = inputcollation;
+			break;
+		case T_WindowFunc:
+			((WindowFunc *) expr)->inputcollid = inputcollation;
+			break;
+		case T_FuncExpr:
+			((FuncExpr *) expr)->inputcollid = inputcollation;
+			break;
+		case T_OpExpr:
+			((OpExpr *) expr)->inputcollid = inputcollation;
+			break;
+		case T_DistinctExpr:
+			((DistinctExpr *) expr)->inputcollid = inputcollation;
+			break;
+		case T_NullIfExpr:
+			((NullIfExpr *) expr)->inputcollid = inputcollation;
+			break;
+		case T_ScalarArrayOpExpr:
+			((ScalarArrayOpExpr *) expr)->inputcollid = inputcollation;
+			break;
+		case T_MinMaxExpr:
+			((MinMaxExpr *) expr)->inputcollid = inputcollation;
+			break;
+		default:
+			break;
+	}
 }
 
 
@@ -811,6 +1301,10 @@ exprLocation(Node *expr)
 								  exprLocation((Node *) cexpr->arg));
 			}
 			break;
+		case T_CollateExpr:
+			/* just use argument's location */
+			loc = exprLocation((Node *) ((CollateExpr *) expr)->arg);
+			break;
 		case T_CaseExpr:
 			/* CASE keyword should always be the first thing */
 			loc = ((CaseExpr *) expr)->location;
@@ -946,6 +1440,10 @@ exprLocation(Node *expr)
 				loc = leftmostLoc(loc, tc->typeName->location);
 				loc = leftmostLoc(loc, tc->location);
 			}
+			break;
+		case T_CollateClause:
+			/* just use argument's location */
+			loc = exprLocation(((CollateClause *) expr)->arg);
 			break;
 		case T_SortBy:
 			/* just use argument's location (ignore operator, if any) */
@@ -1199,17 +1697,10 @@ expression_tree_walker(Node *node,
 		case T_NamedArgExpr:
 			return walker(((NamedArgExpr *) node)->arg, context);
 		case T_OpExpr:
+		case T_DistinctExpr:	/* struct-equivalent to OpExpr */
+		case T_NullIfExpr:		/* struct-equivalent to OpExpr */
 			{
 				OpExpr	   *expr = (OpExpr *) node;
-
-				if (expression_tree_walker((Node *) expr->args,
-										   walker, context))
-					return true;
-			}
-			break;
-		case T_DistinctExpr:
-			{
-				DistinctExpr *expr = (DistinctExpr *) node;
 
 				if (expression_tree_walker((Node *) expr->args,
 										   walker, context))
@@ -1283,6 +1774,8 @@ expression_tree_walker(Node *node,
 			return walker(((ArrayCoerceExpr *) node)->arg, context);
 		case T_ConvertRowtypeExpr:
 			return walker(((ConvertRowtypeExpr *) node)->arg, context);
+		case T_CollateExpr:
+			return walker(((CollateExpr *) node)->arg, context);
 		case T_CaseExpr:
 			{
 				CaseExpr   *caseexpr = (CaseExpr *) node;
@@ -1334,8 +1827,6 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
-		case T_NullIfExpr:
-			return walker(((NullIfExpr *) node)->args, context);
 		case T_NullTest:
 			return walker(((NullTest *) node)->arg, context);
 		case T_BooleanTest:
@@ -1536,8 +2027,11 @@ query_tree_walker(Query *query,
 		if (walker((Node *) query->cteList, context))
 			return true;
 	}
-	if (range_table_walker(query->rtable, walker, context, flags))
-		return true;
+	if (!(flags & QTW_IGNORE_RANGE_TABLE))
+	{
+		if (range_table_walker(query->rtable, walker, context, flags))
+			return true;
+	}
 	if (query->utilityStmt)
 	{
 		/*
@@ -1598,7 +2092,6 @@ range_table_walker(List *rtable,
 		switch (rte->rtekind)
 		{
 			case RTE_RELATION:
-			case RTE_SPECIAL:
 			case RTE_VOID:
 			case RTE_CTE:
 				/* nothing to do */
@@ -1861,6 +2354,16 @@ expression_tree_mutator(Node *node,
 				return (Node *) newnode;
 			}
 			break;
+		case T_NullIfExpr:
+			{
+				NullIfExpr *expr = (NullIfExpr *) node;
+				NullIfExpr *newnode;
+
+				FLATCOPY(newnode, expr, NullIfExpr);
+				MUTATE(newnode->args, expr->args, List *);
+				return (Node *) newnode;
+			}
+			break;
 		case T_ScalarArrayOpExpr:
 			{
 				ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *) node;
@@ -1983,6 +2486,16 @@ expression_tree_mutator(Node *node,
 				return (Node *) newnode;
 			}
 			break;
+		case T_CollateExpr:
+			{
+				CollateExpr *collate = (CollateExpr *) node;
+				CollateExpr *newnode;
+
+				FLATCOPY(newnode, collate, CollateExpr);
+				MUTATE(newnode->arg, collate->arg, Expr *);
+				return (Node *) newnode;
+			}
+			break;
 		case T_CaseExpr:
 			{
 				CaseExpr   *caseexpr = (CaseExpr *) node;
@@ -2067,16 +2580,6 @@ expression_tree_mutator(Node *node,
 				MUTATE(newnode->named_args, xexpr->named_args, List *);
 				/* assume mutator does not care about arg_names */
 				MUTATE(newnode->args, xexpr->args, List *);
-				return (Node *) newnode;
-			}
-			break;
-		case T_NullIfExpr:
-			{
-				NullIfExpr *expr = (NullIfExpr *) node;
-				NullIfExpr *newnode;
-
-				FLATCOPY(newnode, expr, NullIfExpr);
-				MUTATE(newnode->args, expr->args, List *);
 				return (Node *) newnode;
 			}
 			break;
@@ -2397,7 +2900,6 @@ range_table_mutator(List *rtable,
 		switch (rte->rtekind)
 		{
 			case RTE_RELATION:
-			case RTE_SPECIAL:
 			case RTE_VOID:
 			case RTE_CTE:
 				/* we don't bother to copy eref, aliases, etc; OK? */
@@ -2618,6 +3120,56 @@ bool
 					return true;
 			}
 			break;
+		case T_InsertStmt:
+			{
+				InsertStmt *stmt = (InsertStmt *) node;
+
+				if (walker(stmt->relation, context))
+					return true;
+				if (walker(stmt->cols, context))
+					return true;
+				if (walker(stmt->selectStmt, context))
+					return true;
+				if (walker(stmt->returningList, context))
+					return true;
+				if (walker(stmt->withClause, context))
+					return true;
+			}
+			break;
+		case T_DeleteStmt:
+			{
+				DeleteStmt *stmt = (DeleteStmt *) node;
+
+				if (walker(stmt->relation, context))
+					return true;
+				if (walker(stmt->usingClause, context))
+					return true;
+				if (walker(stmt->whereClause, context))
+					return true;
+				if (walker(stmt->returningList, context))
+					return true;
+				if (walker(stmt->withClause, context))
+					return true;
+			}
+			break;
+		case T_UpdateStmt:
+			{
+				UpdateStmt *stmt = (UpdateStmt *) node;
+
+				if (walker(stmt->relation, context))
+					return true;
+				if (walker(stmt->targetList, context))
+					return true;
+				if (walker(stmt->whereClause, context))
+					return true;
+				if (walker(stmt->fromClause, context))
+					return true;
+				if (walker(stmt->returningList, context))
+					return true;
+				if (walker(stmt->withClause, context))
+					return true;
+			}
+			break;
 		case T_SelectStmt:
 			{
 				SelectStmt *stmt = (SelectStmt *) node;
@@ -2727,6 +3279,8 @@ bool
 					return true;
 			}
 			break;
+		case T_CollateClause:
+			return walker(((CollateClause *) node)->arg, context);
 		case T_SortBy:
 			return walker(((SortBy *) node)->node, context);
 		case T_WindowDef:
@@ -2781,6 +3335,8 @@ bool
 				if (walker(coldef->typeName, context))
 					return true;
 				if (walker(coldef->raw_default, context))
+					return true;
+				if (walker(coldef->collClause, context))
 					return true;
 				/* for now, constraints are ignored */
 			}

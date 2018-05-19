@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/test/regress/serial_schedule,v 1.56 2010/02/12 17:33:21 tgl Exp $
+# src/test/regress/serial_schedule
 # This should probably be in an order similar to parallel_schedule.
 test: tablespace
 test: boolean
@@ -88,6 +88,8 @@ test: delete
 test: namespace
 ignore: prepared_xacts
 test: privileges
+test: security_label
+test: collate
 test: lock
 test: misc
 test: rules
@@ -104,6 +106,8 @@ test: tsdicts
 test: foreign_data
 test: window
 test: xmlmap
+test: functional_deps
+test: advisory_lock
 test: plancache
 test: json
 test: limit

@@ -50,12 +50,12 @@
  * there is a window (caused by pgstat delay) on which a worker may choose a
  * table that was already vacuumed; this is a bug in the current design.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/autovacuum.c,v 1.110 2010/04/28 16:54:15 tgl Exp $
+ *	  src/backend/postmaster/autovacuum.c
  *
  *-------------------------------------------------------------------------
  */
@@ -214,7 +214,7 @@ typedef struct WorkerInfoData
 	int			wi_cost_delay;
 	int			wi_cost_limit;
 	int			wi_cost_limit_base;
-} WorkerInfoData;
+}	WorkerInfoData;
 
 typedef struct WorkerInfoData *WorkerInfo;
 
@@ -228,7 +228,7 @@ typedef enum
 	AutoVacForkFailed,			/* failed trying to start a worker */
 	AutoVacRebalance,			/* rebalance the cost limits */
 	AutoVacNumSignals			/* must be last */
-} AutoVacuumSignal;
+}	AutoVacuumSignal;
 
 /*-------------
  * The main autovacuum shmem struct.  On shared memory we store this main
@@ -1112,6 +1112,7 @@ do_start_worker(void)
 	recentXid = ReadNewTransactionId();
 	xidForceLimit = recentXid - autovacuum_freeze_max_age;
 	/* ensure it's a "normal" XID, else TransactionIdPrecedes misbehaves */
+	/* this can cause the limit to go backwards by 3, but that's OK */
 	if (xidForceLimit < FirstNormalTransactionId)
 		xidForceLimit -= FirstNormalTransactionId;
 
@@ -1534,6 +1535,14 @@ AutoVacWorkerMain(int argc, char *argv[])
 	SetConfigOption("statement_timeout", "0", PGC_SUSET, PGC_S_OVERRIDE);
 
 	/*
+	 * Force synchronous replication off to allow regular maintenance even if
+	 * we are waiting for standbys to connect. This is important to ensure we
+	 * aren't blocked from performing anti-wraparound tasks.
+	 */
+	if (synchronous_commit > SYNCHRONOUS_COMMIT_LOCAL_FLUSH)
+		SetConfigOption("synchronous_commit", "local", PGC_SUSET, PGC_S_OVERRIDE);
+
+	/*
 	 * Get the info about the database we're going to work on.
 	 */
 	LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
@@ -1688,8 +1697,8 @@ autovac_balance_cost(void)
 {
 	/*
 	 * The idea here is that we ration out I/O equally.  The amount of I/O
-	 * that a worker can consume is determined by cost_limit/cost_delay, so
-	 * we try to equalize those ratios rather than the raw limit settings.
+	 * that a worker can consume is determined by cost_limit/cost_delay, so we
+	 * try to equalize those ratios rather than the raw limit settings.
 	 *
 	 * note: in cost_limit, zero also means use value from elsewhere, because
 	 * zero is not a valid value.
@@ -1744,7 +1753,7 @@ autovac_balance_cost(void)
 
 			/*
 			 * We put a lower bound of 1 on the cost_limit, to avoid division-
-			 * by-zero in the vacuum code.  Also, in case of roundoff trouble
+			 * by-zero in the vacuum code.	Also, in case of roundoff trouble
 			 * in these calculations, let's be sure we don't ever set
 			 * cost_limit to more than the base value.
 			 */
@@ -1768,6 +1777,9 @@ autovac_balance_cost(void)
  * get_database_list
  *		Return a list of all databases found in pg_database.
  *
+ * The list and associated data is allocated in the caller's memory context,
+ * which is in charge of ensuring that it's properly cleaned up afterwards.
+ *
  * Note: this is the only function in which the autovacuum launcher uses a
  * transaction.  Although we aren't attached to any particular database and
  * therefore can't access most catalogs, we do have enough infrastructure
@@ -1780,6 +1792,10 @@ get_database_list(void)
 	Relation	rel;
 	HeapScanDesc scan;
 	HeapTuple	tup;
+	MemoryContext resultcxt;
+
+	/* This is the context that we will allocate our output data in */
+	resultcxt = CurrentMemoryContext;
 
 	/*
 	 * Start a transaction so we can access pg_database, and get a snapshot.
@@ -1791,9 +1807,6 @@ get_database_list(void)
 	StartTransactionCommand();
 	(void) GetTransactionSnapshot();
 
-	/* Allocate our results in AutovacMemCxt, not transaction context */
-	MemoryContextSwitchTo(AutovacMemCxt);
-
 	rel = heap_open(DatabaseRelationId, AccessShareLock);
 	scan = heap_beginscan(rel, SnapshotNow, 0, NULL);
 
@@ -1801,6 +1814,15 @@ get_database_list(void)
 	{
 		Form_pg_database pgdatabase = (Form_pg_database) GETSTRUCT(tup);
 		avw_dbase  *avdb;
+		MemoryContext oldcxt;
+
+		/*
+		 * Allocate our results in the caller's context, not the
+		 * transaction's. We do this inside the loop, and restore the original
+		 * context at the end, so that leaky things like heap_getnext() are
+		 * not called in a potentially long-lived context.
+		 */
+		oldcxt = MemoryContextSwitchTo(resultcxt);
 
 		/*
 		 * In GPDB, autovacuum is currently disabled, except for the
@@ -1821,6 +1843,7 @@ get_database_list(void)
 		avdb->adw_entry = NULL;
 
 		dblist = lappend(dblist, avdb);
+		MemoryContextSwitchTo(oldcxt);
 	}
 
 	heap_endscan(scan);
@@ -1977,10 +2000,19 @@ do_autovacuum(void)
 		 * Check if it is a temp table (presumably, of some other backend's).
 		 * We cannot safely process other backends' temp tables.
 		 */
-		if (classForm->relistemp)
+		if (classForm->relpersistence == RELPERSISTENCE_TEMP)
 		{
 			int			backendID;
 
+			/*
+			 * GPDB_91_MERGE_FIXME: Autovacuum operates only on template0
+			 * database in Greenplum.  We expect no temp tables in template0.
+			 * Whenever we allow autovacuum to operate on user databases, we
+			 * must deal with the logic to detect other backend's temp tables
+			 * below.
+			 */
+			Assert(false);
+			
 			backendID = GetTempNamespaceBackendId(classForm->relnamespace);
 
 			/* We just ignore it if the owning backend is still active */
@@ -2074,7 +2106,7 @@ do_autovacuum(void)
 		/*
 		 * We cannot safely process other backends' temp tables, so skip 'em.
 		 */
-		if (classForm->relistemp)
+		if (classForm->relpersistence == RELPERSISTENCE_TEMP)
 			continue;
 
 		relid = HeapTupleGetOid(tuple);
@@ -2211,9 +2243,9 @@ do_autovacuum(void)
 		LWLockRelease(AutovacuumScheduleLock);
 
 		/*
-		 * Remember the prevailing values of the vacuum cost GUCs.  We have
-		 * to restore these at the bottom of the loop, else we'll compute
-		 * wrong values in the next iteration of autovac_balance_cost().
+		 * Remember the prevailing values of the vacuum cost GUCs.	We have to
+		 * restore these at the bottom of the loop, else we'll compute wrong
+		 * values in the next iteration of autovac_balance_cost().
 		 */
 		stdVacuumCostDelay = VacuumCostDelay;
 		stdVacuumCostLimit = VacuumCostLimit;
@@ -2673,19 +2705,34 @@ autovacuum_do_vac_analyze(autovac_table *tab,
 						  BufferAccessStrategy bstrategy)
 {
 	VacuumStmt	vacstmt;
+	RangeVar	rangevar;
 
-	/* Set up command parameters --- use a local variable instead of palloc */
+	/* Set up command parameters --- use local variables instead of palloc */
 	MemSet(&vacstmt, 0, sizeof(vacstmt));
+	MemSet(&rangevar, 0, sizeof(rangevar));
+
+	/*
+	 * In GPDB, vacuumStatement_Relation() is called to vacuum relation,
+	 * which will copy VacuumStmt as its first operation.
+	 * We need a valid NodeTag to make copyObject() work correctly.
+	 */
+	rangevar.type = T_RangeVar;
+
+	rangevar.schemaname = tab->at_nspname;
+	rangevar.relname = tab->at_relname;
+	rangevar.location = -1;
 
 	vacstmt.type = T_VacuumStmt;
-	vacstmt.options = 0;
+	if (!tab->at_wraparound)
+		vacstmt.options = VACOPT_NOWAIT;
 	if (tab->at_dovacuum)
 		vacstmt.options |= VACOPT_VACUUM;
 	if (tab->at_doanalyze)
 		vacstmt.options |= VACOPT_ANALYZE;
 	vacstmt.freeze_min_age = tab->at_freeze_min_age;
 	vacstmt.freeze_table_age = tab->at_freeze_table_age;
-	vacstmt.relation = NULL;	/* not used since we pass a relid */
+	/* we pass the OID, but might need this anyway for an error message */
+	vacstmt.relation = &rangevar;
 	vacstmt.va_cols = NIL;
 
 	/* Let pgstat know what we're doing */

@@ -38,10 +38,10 @@
  * by re-setting the page's page_dirty flag.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/slru.c,v 1.50 2010/04/28 16:54:15 tgl Exp $
+ * src/backend/access/transam/slru.c
  *
  *-------------------------------------------------------------------------
  */
@@ -77,6 +77,8 @@ typedef struct SlruFlushData
 	int			fd[MAX_FLUSH_BUFFERS];	/* their FD's */
 	int			segno[MAX_FLUSH_BUFFERS];		/* their log seg#s */
 } SlruFlushData;
+
+typedef struct SlruFlushData *SlruFlush;
 
 /*
  * Macro to mark a buffer slot "most recently used".  Note multiple evaluation
@@ -123,6 +125,7 @@ static int	slru_errno;
 
 static void SimpleLruZeroLSNs(SlruCtl ctl, int slotno);
 static void SimpleLruWaitIO(SlruCtl ctl, int slotno);
+static void SlruInternalWritePage(SlruCtl ctl, int slotno, SlruFlush fdata);
 static bool SlruPhysicalReadPage(SlruCtl ctl, int pageno, int slotno);
 static bool SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno,
 					  SlruFlush fdata);
@@ -485,8 +488,8 @@ SimpleLruReadPage_ReadOnly(SlruCtl ctl, int pageno, TransactionId xid)
  *
  * Control lock must be held at entry, and will be held at exit.
  */
-void
-SimpleLruWritePage(SlruCtl ctl, int slotno, SlruFlush fdata)
+static void
+SlruInternalWritePage(SlruCtl ctl, int slotno, SlruFlush fdata)
 {
 	SlruShared	shared = ctl->shared;
 	int			pageno = shared->page_number[slotno];
@@ -551,6 +554,17 @@ SimpleLruWritePage(SlruCtl ctl, int slotno, SlruFlush fdata)
 	if (!ok)
 		SlruReportIOError(ctl, pageno, InvalidTransactionId);
 }
+
+/*
+ * Wrapper of SlruInternalWritePage, for external callers.
+ * fdata is always passed a NULL here.
+ */
+void
+SimpleLruWritePage(SlruCtl ctl, int slotno)
+{
+	SlruInternalWritePage(ctl, slotno, NULL);
+}
+
 
 /*
  * Physical read of a (previously existing) page into a buffer slot
@@ -975,7 +989,7 @@ SlruSelectLRUPage(SlruCtl ctl, int pageno)
 		 * we wait for the existing I/O to complete.
 		 */
 		if (shared->page_status[bestslot] == SLRU_PAGE_VALID)
-			SimpleLruWritePage(ctl, bestslot, NULL);
+			SlruInternalWritePage(ctl, bestslot, NULL);
 		else
 			SimpleLruWaitIO(ctl, bestslot);
 
@@ -1009,7 +1023,7 @@ SimpleLruFlush(SlruCtl ctl, bool checkpoint)
 
 	for (slotno = 0; slotno < shared->num_slots; slotno++)
 	{
-		SimpleLruWritePage(ctl, slotno, &fdata);
+		SlruInternalWritePage(ctl, slotno, &fdata);
 
 		/*
 		 * When called during a checkpoint, we cannot assert that the slot is
@@ -1117,7 +1131,7 @@ restart:;
 		 * keep the logic the same as it was.)
 		 */
 		if (shared->page_status[slotno] == SLRU_PAGE_VALID)
-			SimpleLruWritePage(ctl, slotno, NULL);
+			SlruInternalWritePage(ctl, slotno, NULL);
 		else
 			SimpleLruWaitIO(ctl, slotno);
 		goto restart;

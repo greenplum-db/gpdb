@@ -247,9 +247,11 @@ SELECT * FROM copy_regression_text2;
 COPY copy_regression_text3 from stdin with delimiter '|' escape '#';
 COPY copy_regression_text3 from stdin with delimiter '|' escape 'off';
 COPY copy_regression_text3 from stdin with delimiter '|';
+-- This works in PostgreSQL, and these days in GPDB as well, but used to not
+-- work until GPDB 6. This is just one line, because the newlines are
+-- escaped. (Even on PostgreSQL, the COPY documentation recommends not to do
+-- this, but let's test it.)
 COPY copy_regression_text3 from stdin with delimiter '|';
-ERROR:  missing data for column "b"
-CONTEXT:  COPY copy_regression_text3, line 1: "an embedded linefeed is not supported\"
 COPY copy_regression_text3 from stdin with delimiter '|';
 SELECT * FROM copy_regression_text3 ORDER BY b;
                  a                  | b |      c      |      d      |      e       
@@ -262,8 +264,11 @@ SELECT * FROM copy_regression_text3 ORDER BY b;
  the at sign: @                     | 6 | c text data | d text data | e text data
  an embedded linefeed sequence     +| 7 | c text data | d text data | e text data
  in column a                        |   |             |             | 
+ an embedded linefeed              +| 7 | c text data | d text data | e text data
+ and another one                   +|   |             |             | 
+  in column a                       |   |             |             | 
  a single backslash \ in col a      | 8 | c text data | d text data | e text data
-(8 rows)
+(9 rows)
 
 DROP TABLE copy_regression_text1;
 DROP TABLE copy_regression_text2;
@@ -560,24 +565,15 @@ SELECT * FROM errcopy;
 SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
  relname |                        errmsg                         |    rawdata    
 ---------+-------------------------------------------------------+---------------
- errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text   +
-         |                                                       | 
- errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text+
-         |                                                       | 
+ errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text
+ errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text
+ errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text
+ errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text
+ errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text
+ errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text
+ errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text
+ errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text
+ errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text
 (9 rows)
 
 -- reject one row with extra column, one row with fewer columns
@@ -607,10 +603,8 @@ SELECT * FROM errcopy ORDER BY a;
 SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
  relname |                errmsg                 | rawdata 
 ---------+---------------------------------------+---------
- errcopy | missing data for column "c"           | 4,4    +
-         |                                       | 
- errcopy | extra data after last expected column | 5,5,5,5+
-         |                                       | 
+ errcopy | missing data for column "c"           | 4,4
+ errcopy | extra data after last expected column | 5,5,5,5
 (2 rows)
 
 -- metacharacter
@@ -633,19 +627,20 @@ SELECT gp_truncate_error_log('errcopy');
 (1 row)
 
 COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"
-CONTEXT:  COPY errcopy, line 3: "1       4"
+ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "1       4", column a
+CONTEXT:  COPY errcopy, line 3, column a: "1       4"
 SELECT * FROM errcopy;
  a | b | c 
 ---+---+---
 (0 rows)
 
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
- relname | filename | bytenum |           errmsg            
----------+----------+---------+-----------------------------
- errcopy | <stdin>  |         | missing data for column "b"
- errcopy | <stdin>  |         | missing data for column "b"
-(2 rows)
+ relname | filename | bytenum |                             errmsg                              
+---------+----------+---------+-----------------------------------------------------------------
+ errcopy | <stdin>  |         | invalid input syntax for integer: "1       2       0", column a
+ errcopy | <stdin>  |         | invalid input syntax for integer: "1       3       4", column a
+ errcopy | <stdin>  |         | invalid input syntax for integer: "1       4", column a
+(3 rows)
 
 -- abort and keep
 TRUNCATE errcopy;
@@ -661,9 +656,10 @@ CONTEXT:  COPY errcopy, line 5: "1"
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
  relname | filename | bytenum |                errmsg                 
 ---------+----------+---------+---------------------------------------
- errcopy | <stdin>  |         | missing data for column "c"
  errcopy | <stdin>  |         | extra data after last expected column
-(2 rows)
+ errcopy | <stdin>  |         | missing data for column "b"
+ errcopy | <stdin>  |         | missing data for column "c"
+(3 rows)
 
 -- exceed reject limit on segment
 DROP TABLE IF EXISTS segment_reject_limit;
@@ -704,9 +700,9 @@ SELECT * FROM segment_reject_limit_from;
 (2 rows)
 
 -- STDIN is not support by copy from on segment and copy program
-COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
-ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
-COPY segment_reject_limit_from from PROGRAM STDIN log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from from STDIN on segment;
+ERROR:  STDIN is not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from from PROGRAM STDIN;
 ERROR:  STDIN/STDOUT not allowed with PROGRAM
 SELECT * FROM segment_reject_limit_from;
  a | b 
@@ -716,13 +712,16 @@ SELECT * FROM segment_reject_limit_from;
 (2 rows)
 
 -- STDOUT is not support by copy to on segment and copy program
-COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
-ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
-COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from to STDOUT on segment;
+ERROR:  STDOUT is not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from to PROGRAM STDOUT;
 ERROR:  STDIN/STDOUT not allowed with PROGRAM
 -- 'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'
 COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
 ERROR:  'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'.
+-- SREH is not supported by COPY TO.
+COPY segment_reject_limit_from to STDOUT log errors segment reject limit 3 rows;
+ERROR:  COPY single row error handling only available using COPY FROM
 -- \copy from doesn't support on segment
 --on segment lower case
 \COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment;
@@ -765,8 +764,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SET gp_initial_bad_row_limit = 2;
 COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
-ERROR:  All 2 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: missing data for column "b"
-CONTEXT:  COPY test_first_segment_reject_limit, line 2: "error1"
+ERROR:  All 2 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: invalid input syntax for integer: "error1", column a
+CONTEXT:  COPY test_first_segment_reject_limit, line 2, column a: "error1"
 -- should go through fine
 SET gp_initial_bad_row_limit = 6;
 COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
@@ -1082,6 +1081,7 @@ ERROR:  value of distribution key doesn't belong to segment with ID 0, it belong
 CONTEXT:  COPY copy_on_segment_check_distkey, line 2: "0"
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 CREATE TABLE COPY_ON_SEGMENT_CHECK_TOW_DSITKEY(a int,b int)DISTRIBUTED BY(a,b);
 INSERT INTO COPY_ON_SEGMENT_CHECK_TOW_DSITKEY SELECT generate_series(0,10),generate_series(0,10);
@@ -1122,6 +1122,7 @@ set gp_vmem_idle_resource_timeout=1;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
 -- COPY FROM ON SEGMENT partitoned table distributed randomly
@@ -1211,7 +1212,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo && echo "error" >&2 && exit 255';
 ERROR:  command error message: error
 COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo <SEGID>&& echo "error" >&2 && exit 255' on segment;
-ERROR:  Error from segment 0: ERROR:  command error message: error
+ERROR:  command error message: error  (seg1 127.0.0.1:40001 pid=23883)
 CREATE TABLE COPY_FROM_PROGRAM_ERROR(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -1226,8 +1227,7 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 INSERT INTO COPY_FROM_PROGRAM_ERROR VALUES(0);
 COPY COPY_FROM_PROGRAM_ERROR TO '/tmp/program_error_<SEGID>.csv' ON SEGMENT;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'cat /tmp/program_error_<SEGID>.csv && echo "error" >&2 && exit 255' ON SEGMENT;
-ERROR:  command error message: error
-CONTEXT:  COPY copy_from_program_error, line 0: ""
+ERROR:  command error message: error  (seg1 127.0.0.1:40001 pid=23883)
 SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
  count 
 -------
@@ -1265,6 +1265,7 @@ COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_ID\n<SEGID>"' on 
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_I\n<SEGID>"' on segment;
 ERROR:  invalid input syntax for integer: ""  (seg0 172.17.0.2:40000 pid=27935)
 CONTEXT:  COPY copy_from_program_error, line 1, column 
+ALTER TABLE COPY_FROM_PROGRAM_ERROR SET DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 -- Test that xlog records are generated for COPY in the same transaction as
 -- created table. The actual validation for this test will be performed once the

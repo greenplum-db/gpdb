@@ -3,12 +3,12 @@
  * spi.c
  *				Server Programming Interface
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.215 2010/02/26 02:00:42 momjian Exp $
+ *	  src/backend/executor/spi.c
  *
  *-------------------------------------------------------------------------
  */
@@ -1782,7 +1782,7 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 					 * This method will error out if the query cannot be
 					 * safely executed on segment.
 					 */
-					querytree_safe_for_qe(query);
+					querytree_safe_for_qe((Node *) query);
 				}
 			}
 		}
@@ -1841,7 +1841,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 	Oid			my_lastoid = InvalidOid;
 	SPITupleTable *my_tuptable = NULL;
 	int			res = 0;
-	bool		have_active_snap = ActiveSnapshotSet();
+	bool		pushed_active_snap = false;
 	ErrorContextCallback spierrcontext;
 	CachedPlan *cplan = NULL;
 	ListCell   *lc1;
@@ -1853,6 +1853,40 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 	spierrcontext.arg = NULL;
 	spierrcontext.previous = error_context_stack;
 	error_context_stack = &spierrcontext;
+
+	/*
+	 * We support four distinct snapshot management behaviors:
+	 *
+	 * snapshot != InvalidSnapshot, read_only = true: use exactly the given
+	 * snapshot.
+	 *
+	 * snapshot != InvalidSnapshot, read_only = false: use the given snapshot,
+	 * modified by advancing its command ID before each querytree.
+	 *
+	 * snapshot == InvalidSnapshot, read_only = true: use the entry-time
+	 * ActiveSnapshot, if any (if there isn't one, we run with no snapshot).
+	 *
+	 * snapshot == InvalidSnapshot, read_only = false: take a full new
+	 * snapshot for each user command, and advance its command ID before each
+	 * querytree within the command.
+	 *
+	 * In the first two cases, we can just push the snap onto the stack once
+	 * for the whole plan list.
+	 */
+	if (snapshot != InvalidSnapshot)
+	{
+		if (read_only)
+		{
+			PushActiveSnapshot(snapshot);
+			pushed_active_snap = true;
+		}
+		else
+		{
+			/* Make sure we have a private copy of the snapshot to modify */
+			PushCopiedSnapshot(snapshot);
+			pushed_active_snap = true;
+		}
+	}
 
 	foreach(lc1, plan->plancache_list)
 	{
@@ -1875,12 +1909,23 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			stmt_list = plansource->plan->stmt_list;
 		}
 
+		/*
+		 * In the default non-read-only case, get a new snapshot, replacing
+		 * any that we pushed in a previous cycle.
+		 */
+		if (snapshot == InvalidSnapshot && !read_only)
+		{
+			if (pushed_active_snap)
+				PopActiveSnapshot();
+			PushActiveSnapshot(GetTransactionSnapshot());
+			pushed_active_snap = true;
+		}
+
 		foreach(lc2, stmt_list)
 		{
 			Node	   *stmt = (Node *) lfirst(lc2);
 			bool		canSetTag;
 			DestReceiver *dest;
-			bool		pushed_active_snap = false;
 
 			_SPI_current->processed = 0;
 			_SPI_current->lastoid = InvalidOid;
@@ -1921,47 +1966,15 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 
 			/*
 			 * If not read-only mode, advance the command counter before each
-			 * command.
+			 * command and update the snapshot.
 			 */
 			if (!read_only)
+			{
 				CommandCounterIncrement();
+				UpdateActiveSnapshotCommandId();
+			}
 
 			dest = CreateDestReceiver(canSetTag ? DestSPI : DestNone);
-
-			if (snapshot == InvalidSnapshot)
-			{
-				/*
-				 * Default read_only behavior is to use the entry-time
-				 * ActiveSnapshot, if any; if read-write, grab a full new
-				 * snap.
-				 */
-				if (read_only)
-				{
-					if (have_active_snap)
-					{
-						PushActiveSnapshot(GetActiveSnapshot());
-						pushed_active_snap = true;
-					}
-				}
-				else
-				{
-					PushActiveSnapshot(GetTransactionSnapshot());
-					pushed_active_snap = true;
-				}
-			}
-			else
-			{
-				/*
-				 * We interpret read_only with a specified snapshot to be
-				 * exactly that snapshot, but read-write means use the snap
-				 * with advancing of command ID.
-				 */
-				if (read_only)
-					PushActiveSnapshot(snapshot);
-				else
-					PushUpdatedSnapshot(snapshot);
-				pushed_active_snap = true;
-			}
 
 			if (IsA(stmt, PlannedStmt) &&
 				((PlannedStmt *) stmt)->utilityStmt == NULL)
@@ -2022,9 +2035,6 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				res = SPI_OK_UTILITY;
 			}
 
-			if (pushed_active_snap)
-				PopActiveSnapshot();
-
 			/*
 			 * The last canSetTag query sets the status values returned to the
 			 * caller.	Be careful to free any tuptables not returned, to
@@ -2066,6 +2076,10 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 	}
 
 fail:
+
+	/* Pop the snapshot off the stack if we pushed one */
+	if (pushed_active_snap)
+		PopActiveSnapshot();
 
 	/* We no longer need the cached plan refcount, if any */
 	if (cplan)
@@ -2112,7 +2126,7 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 
 		/* sizeof(ParamListInfoData) includes the first array element */
 		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-									   (nargs - 1) *sizeof(ParamExternData));
+									  (nargs - 1) * sizeof(ParamExternData));
 		/* we have static list of params, so no hooks needed */
 		paramLI->paramFetch = NULL;
 		paramLI->paramFetchArg = NULL;
@@ -2171,6 +2185,7 @@ static int
 _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 {
 	int			operation = queryDesc->operation;
+	int			eflags;
 	int			res;
 
 	_SPI_assign_query_mem(queryDesc);
@@ -2257,10 +2272,13 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		ResetUsage();
 #endif
 
-	if (!cdbpathlocus_querysegmentcatalogs && fire_triggers)
-		AfterTriggerBeginQuery();
-
 	bool orig_gp_enable_gpperfmon = gp_enable_gpperfmon;
+
+	/* Select execution options */
+	if (fire_triggers)
+		eflags = 0;				/* default run-to-completion flags */
+	else
+		eflags = EXEC_FLAG_SKIP_TRIGGERS;
 
 	PG_TRY();
 	{
@@ -2295,16 +2313,10 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		else
 			checkTuples = false;
 
-		if (!cdbpathlocus_querysegmentcatalogs)
-		{
-			/* Take care of any queued AFTER triggers */
-			if (fire_triggers)
-				AfterTriggerEndQuery(queryDesc->estate);
-		}
-
 		if (Gp_role == GP_ROLE_DISPATCH)
 			autostats_get_cmdtype(queryDesc, &cmdType, &relationOid);
 
+		ExecutorFinish(queryDesc);
 		ExecutorEnd(queryDesc);
 		/* FreeQueryDesc is done by the caller */
 

@@ -3,18 +3,19 @@
  * parse_coerce.c
  *		handle type coercions/conversions for parser
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.182 2010/03/04 09:39:53 heikki Exp $
+ *	  src/backend/parser/parse_coerce.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "catalog/pg_cast.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -55,6 +56,7 @@ static Var *coerce_unknown_var(ParseState *pstate, Var *var,
 							   CoercionContext ccontext, CoercionForm cformat,
 							   int levelsup);
 static bool is_complex_array(Oid typid);
+static bool typeIsOfTypedTable(Oid reltypeId, Oid reloftypeId);
 
 /*
  * coerce_to_target_type()
@@ -127,6 +129,9 @@ coerce_to_target_type(ParseState *pstate, Node *expr, Oid exprtype,
  * pstate is only used in the case that we are able to resolve the type of
  * a previously UNKNOWN Param.	It is okay to pass pstate = NULL if the
  * caller does not want type information updated for Params.
+ *
+ * Note: this function must not modify the given expression tree, only add
+ * decoration on top of it.  See transformSetOperationTree, for example.
  */
 Node *
 coerce_type(ParseState *pstate, Node *node,
@@ -145,9 +150,7 @@ coerce_type(ParseState *pstate, Node *node,
 	}
 	if (targetTypeId == ANYOID ||
 		targetTypeId == ANYELEMENTOID ||
-		targetTypeId == ANYNONARRAYOID ||
-		(targetTypeId == ANYARRAYOID && inputTypeId != UNKNOWNOID) ||
-		(targetTypeId == ANYENUMOID && inputTypeId != UNKNOWNOID))
+		targetTypeId == ANYNONARRAYOID)
 	{
 		/*
 		 * Assume can_coerce_type verified that implicit coercion is okay.
@@ -156,12 +159,29 @@ coerce_type(ParseState *pstate, Node *node,
 		 * it's OK to treat an UNKNOWN constant as a valid input for a
 		 * function accepting ANY, ANYELEMENT, or ANYNONARRAY.	This should be
 		 * all right, since an UNKNOWN value is still a perfectly valid Datum.
-		 * However an UNKNOWN value is definitely *not* an array, and so we
-		 * mustn't accept it for ANYARRAY.  (Instead, we will call anyarray_in
-		 * below, which will produce an error.)  Likewise, UNKNOWN input is no
-		 * good for ANYENUM.
 		 *
-		 * NB: we do NOT want a RelabelType here.
+		 * NB: we do NOT want a RelabelType here: the exposed type of the
+		 * function argument must be its actual type, not the polymorphic
+		 * pseudotype.
+		 */
+		return node;
+	}
+	if (targetTypeId == ANYARRAYOID ||
+		targetTypeId == ANYENUMOID)
+	{
+		/*
+		 * Assume can_coerce_type verified that implicit coercion is okay.
+		 *
+		 * These cases are unlike the ones above because the exposed type of
+		 * the argument must be an actual array or enum type.  In particular
+		 * the argument must *not* be an UNKNOWN constant.	If it is, we just
+		 * fall through; below, we'll call anyarray_in or anyenum_in, which
+		 * will produce an error.  Also, if what we have is a domain over
+		 * array or enum, we have to relabel it to its base type.
+		 *
+		 * Note: currently, we can't actually see a domain-over-enum here,
+		 * since the other functions in this file will not match such a
+		 * parameter to ANYENUM.  But that should get changed eventually.
 		 */
 
 		/*
@@ -170,7 +190,7 @@ coerce_type(ParseState *pstate, Node *node,
 		 *
 		 * Special handling for ANYARRAY type.  
 		 */
-		if(targetTypeId == ANYARRAYOID && IsA(node, Const))
+		if(targetTypeId == ANYARRAYOID && IsA(node, Const) && inputTypeId != UNKNOWNOID)
 		{
 			Const	   *con = (Const *) node;
 			Const	   *newcon = makeNode(Const);
@@ -187,7 +207,23 @@ coerce_type(ParseState *pstate, Node *node,
 			return (Node *) newcon;
 		}
 
-		return node;
+		if (inputTypeId != UNKNOWNOID)
+		{
+			Oid			baseTypeId = getBaseType(inputTypeId);
+
+			if (baseTypeId != inputTypeId)
+			{
+				RelabelType *r = makeRelabelType((Expr *) node,
+												 baseTypeId, -1,
+												 InvalidOid,
+												 cformat);
+
+				r->location = location;
+				return (Node *) r;
+			}
+			/* Not a domain type, so return it as-is */
+			return node;
+		}
 	}
 	if (inputTypeId == UNKNOWNOID && IsA(node, Const))
 	{
@@ -245,6 +281,7 @@ coerce_type(ParseState *pstate, Node *node,
 
 		newcon->consttype = baseTypeId;
 		newcon->consttypmod = inputTypeMod;
+		newcon->constcollid = typeTypeCollation(targetType);
 		newcon->constlen = typeLen(targetType);
 		newcon->constbyval = typeByVal(targetType);
 		newcon->constisnull = con->constisnull;
@@ -277,8 +314,6 @@ coerce_type(ParseState *pstate, Node *node,
 
 		cancel_parser_errposition_callback(&pcbstate);
 
-		cancel_parser_errposition_callback(&pcbstate);
-
 		result = (Node *) newcon;
 
 		/* If target is a domain, apply constraints. */
@@ -307,6 +342,25 @@ coerce_type(ParseState *pstate, Node *node,
 												 location);
 		if (result)
 			return result;
+	}
+	if (IsA(node, CollateExpr))
+	{
+		/*
+		 * If we have a COLLATE clause, we have to push the coercion
+		 * underneath the COLLATE.	This is really ugly, but there is little
+		 * choice because the above hacks on Consts and Params wouldn't happen
+		 * otherwise.
+		 */
+		CollateExpr *coll = (CollateExpr *) node;
+		CollateExpr *newcoll = makeNode(CollateExpr);
+
+		newcoll->arg = (Expr *)
+			coerce_type(pstate, (Node *) coll->arg,
+						inputTypeId, targetTypeId, targetTypeMod,
+						ccontext, cformat, location);
+		newcoll->collOid = coll->collOid;
+		newcoll->location = coll->location;
+		return (Node *) newcoll;
 	}
 
 	/*
@@ -351,7 +405,8 @@ coerce_type(ParseState *pstate, Node *node,
 			Insist(OidIsValid(infunc));
 
 			/* do unknownout(Var) */
-			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node), cformat);
+			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node),
+							  InvalidOid, InvalidOid, cformat);
 			fe->location = location;
 
 			if (location >= 0 &&
@@ -363,13 +418,14 @@ coerce_type(ParseState *pstate, Node *node,
 			 * type we're casting to
 			 */
 			args = list_make3(fe,
-							  makeConst(OIDOID, -1, sizeof(Oid),
+							  makeConst(OIDOID, -1, InvalidOid, sizeof(Oid),
 										ObjectIdGetDatum(intypioparam),
 										false, true),
-							  makeConst(INT4OID, -1, sizeof(int32),
+							  makeConst(INT4OID, -1, InvalidOid, sizeof(int32),
 										Int32GetDatum(-1),
 										false, true));
-			fe = makeFuncExpr(infunc, targetTypeId, args, cformat);
+			fe = makeFuncExpr(infunc, targetTypeId, args,
+							  InvalidOid, InvalidOid, cformat);
 			fe->location = location;
 
 			return (Node *)fe;
@@ -435,6 +491,7 @@ coerce_type(ParseState *pstate, Node *node,
 				 */
 				RelabelType *r = makeRelabelType((Expr *) result,
 												 targetTypeId, -1,
+												 InvalidOid,
 												 cformat);
 
 				r->location = location;
@@ -472,7 +529,8 @@ coerce_type(ParseState *pstate, Node *node,
 		/* NB: we do NOT want a RelabelType here */
 		return node;
 	}
-	if (typeInheritsFrom(inputTypeId, targetTypeId))
+	if (typeInheritsFrom(inputTypeId, targetTypeId)
+		|| typeIsOfTypedTable(inputTypeId, targetTypeId))
 	{
 		/*
 		 * Input class type is a subclass of target, so generate an
@@ -565,9 +623,10 @@ coerce_unknown_var(ParseState *pstate, Var *var,
             /* Make a new Var for the caller */
             if (joinvar->vartype != UNKNOWNOID)
             {
-                var = (Var *)copyObject(var);
+                var = (Var *) copyObject(var);
                 var->vartype = joinvar->vartype;
                 var->vartypmod = joinvar->vartypmod;
+				var->varcollid = joinvar->varcollid;
             }
             break;
         }
@@ -608,6 +667,7 @@ coerce_unknown_var(ParseState *pstate, Var *var,
                 var = (Var *)copyObject(var);
                 var->vartype = exprtype;
                 var->vartypmod = exprTypmod(targetexpr);
+				var->varcollid = exprCollation(targetexpr);
             }
             break;
 		}
@@ -862,7 +922,8 @@ can_coerce_type(int nargs, Oid *input_typeids, Oid *target_typeids,
 		/*
 		 * If input is a class type that inherits from target, accept
 		 */
-		if (typeInheritsFrom(inputTypeId, targetTypeId))
+		if (typeInheritsFrom(inputTypeId, targetTypeId)
+			|| typeIsOfTypedTable(inputTypeId, targetTypeId))
 			continue;
 
 		/*
@@ -951,6 +1012,7 @@ coerce_to_domain(Node *arg, Oid baseTypeId, int32 baseTypeMod, Oid typeId,
 	result->arg = (Expr *) arg;
 	result->resulttype = typeId;
 	result->resulttypmod = -1;	/* currently, always -1 for domains */
+	/* resultcollid will be set by parse_collate.c */
 	result->coercionformat = cformat;
 	result->location = location;
 
@@ -1104,6 +1166,7 @@ build_coercion_expression(Node *node,
 			/* Pass target typmod as an int4 constant */
 			cons = makeConst(INT4OID,
 							 -1,
+							 InvalidOid,
 							 sizeof(int32),
 							 Int32GetDatum(targetTypMod),
 							 false,
@@ -1117,6 +1180,7 @@ build_coercion_expression(Node *node,
 			/* Pass it a boolean isExplicit parameter, too */
 			cons = makeConst(BOOLOID,
 							 -1,
+							 InvalidOid,
 							 sizeof(bool),
 							 BoolGetDatum(isExplicit),
 							 false,
@@ -1125,7 +1189,8 @@ build_coercion_expression(Node *node,
 			args = lappend(args, cons);
 		}
 
-		fexpr = makeFuncExpr(funcId, targetTypeId, args, cformat);
+		fexpr = makeFuncExpr(funcId, targetTypeId, args,
+							 InvalidOid, InvalidOid, cformat);
 		fexpr->location = location;
 		return (Node *) fexpr;
 	}
@@ -1144,6 +1209,7 @@ build_coercion_expression(Node *node,
 		 * one argument.
 		 */
 		acoerce->resulttypmod = (nargs >= 2) ? targetTypMod : -1;
+		/* resultcollid will be set by parse_collate.c */
 		acoerce->isExplicit = isExplicit;
 		acoerce->coerceformat = cformat;
 		acoerce->location = location;
@@ -1159,6 +1225,7 @@ build_coercion_expression(Node *node,
 
 		iocoerce->arg = (Expr *) node;
 		iocoerce->resulttype = targetTypeId;
+		/* resultcollid will be set by parse_collate.c */
 		iocoerce->coerceformat = cformat;
 		iocoerce->location = location;
 
@@ -1240,7 +1307,8 @@ coerce_record_to_complex(ParseState *pstate, Node *node,
 			 * can't use atttypid here, but it doesn't really matter what type
 			 * the Const claims to be.
 			 */
-			newargs = lappend(newargs, makeNullConst(INT4OID, -1));
+			newargs = lappend(newargs,
+							  makeNullConst(INT4OID, -1, InvalidOid));
 			continue;
 		}
 
@@ -1602,6 +1670,11 @@ coerce_to_common_type(ParseState *pstate, Node *node,
  *	  (This is a no-op if used in combination with ANYARRAY or ANYENUM, but
  *	  is an extra restriction if not.)
  *
+ * Domains over arrays match ANYARRAY, and are immediately flattened to their
+ * base type.  (Thus, for example, we will consider it a match if one ANYARRAY
+ * argument is a domain over int4[] while another one is just int4[].)	Also
+ * notice that such a domain does *not* match ANYNONARRAY.
+ *
  * If we have UNKNOWN input (ie, an untyped literal) for any polymorphic
  * argument, assume it is okay.
  *
@@ -1654,6 +1727,7 @@ check_generic_type_consistency(Oid *actual_arg_types,
 		{
 			if (actual_type == UNKNOWNOID)
 				continue;
+			actual_type = getBaseType(actual_type);		/* flatten domains */
 			if (OidIsValid(array_typeid) && actual_type != array_typeid)
 				return false;
 			array_typeid = actual_type;
@@ -1691,8 +1765,8 @@ check_generic_type_consistency(Oid *actual_arg_types,
 
 	if (have_anynonarray)
 	{
-		/* require the element type to not be an array */
-		if (type_is_array(elem_typeid))
+		/* require the element type to not be an array or domain over array */
+		if (type_is_array_domain(elem_typeid))
 			return false;
 	}
 
@@ -1750,6 +1824,10 @@ check_generic_type_consistency(Oid *actual_arg_types,
  *	  we add the extra condition that the ANYELEMENT type must not be an array.
  *	  (This is a no-op if used in combination with ANYARRAY or ANYENUM, but
  *	  is an extra restriction if not.)
+ *
+ * Domains over arrays match ANYARRAY arguments, and are immediately flattened
+ * to their base type.	(In particular, if the return type is also ANYARRAY,
+ * we'll set it to the base type not the domain type.)
  *
  * When allow_poly is false, we are not expecting any of the actual_arg_types
  * to be polymorphic, and we should not return a polymorphic result type
@@ -1830,6 +1908,7 @@ enforce_generic_type_consistency(Oid *actual_arg_types,
 			}
 			if (allow_poly && decl_type == actual_type)
 				continue;		/* no new information here */
+			actual_type = getBaseType(actual_type);		/* flatten domains */
 			if (OidIsValid(array_typeid) && actual_type != array_typeid)
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
@@ -1902,8 +1981,8 @@ enforce_generic_type_consistency(Oid *actual_arg_types,
 
 	if (have_anynonarray && elem_typeid != ANYELEMENTOID)
 	{
-		/* require the element type to not be an array */
-		if (type_is_array(elem_typeid))
+		/* require the element type to not be an array or domain over array */
+		if (type_is_array_domain(elem_typeid))
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 				   errmsg("type matched to anynonarray is an array type: %s",
@@ -2000,15 +2079,19 @@ resolve_generic_type(Oid declared_type,
 	{
 		if (context_declared_type == ANYARRAYOID)
 		{
-			/* Use actual type, but it must be an array */
-			Oid			array_typelem = get_element_type(context_actual_type);
+			/*
+			 * Use actual type, but it must be an array; or if it's a domain
+			 * over array, use the base array type.
+			 */
+			Oid			context_base_type = getBaseType(context_actual_type);
+			Oid			array_typelem = get_element_type(context_base_type);
 
 			if (!OidIsValid(array_typelem))
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
 						 errmsg("argument declared \"anyarray\" is not an array but type %s",
-								format_type_be(context_actual_type))));
-			return context_actual_type;
+								format_type_be(context_base_type))));
+			return context_base_type;
 		}
 		else if (context_declared_type == ANYELEMENTOID ||
 				 context_declared_type == ANYNONARRAYOID ||
@@ -2032,13 +2115,14 @@ resolve_generic_type(Oid declared_type,
 		if (context_declared_type == ANYARRAYOID)
 		{
 			/* Use the element type corresponding to actual type */
-			Oid			array_typelem = get_element_type(context_actual_type);
+			Oid			context_base_type = getBaseType(context_actual_type);
+			Oid			array_typelem = get_element_type(context_base_type);
 
 			if (!OidIsValid(array_typelem))
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
 						 errmsg("argument declared \"anyarray\" is not an array but type %s",
-								format_type_be(context_actual_type))));
+								format_type_be(context_base_type))));
 			return array_typelem;
 		}
 		else if (context_declared_type == ANYELEMENTOID ||
@@ -2145,12 +2229,12 @@ IsBinaryCoercible(Oid srctype, Oid targettype)
 
 	/* Also accept any array type as coercible to ANYARRAY */
 	if (targettype == ANYARRAYOID)
-		if (type_is_array(srctype))
+		if (type_is_array_domain(srctype))
 			return true;
 
 	/* Also accept any non-array type as coercible to ANYNONARRAY */
 	if (targettype == ANYNONARRAYOID)
-		if (!type_is_array(srctype))
+		if (!type_is_array_domain(srctype))
 			return true;
 
 	/* Also accept any enum type as coercible to ANYENUM */
@@ -2294,6 +2378,9 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 		 * array types.  If so, and if the element types have a suitable cast,
 		 * report that we can coerce with an ArrayCoerceExpr.
 		 *
+		 * Note that the source type can be a domain over array, but not the
+		 * target, because ArrayCoerceExpr won't check domain constraints.
+		 *
 		 * Hack: disallow coercions to oidvector and int2vector, which
 		 * otherwise tend to capture coercions that should go to "real" array
 		 * types.  We want those types to be considered "real" arrays for many
@@ -2307,7 +2394,7 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 			Oid			sourceElem;
 
 			if ((targetElem = get_element_type(targetTypeId)) != InvalidOid &&
-				(sourceElem = get_element_type(sourceTypeId)) != InvalidOid)
+			(sourceElem = get_base_element_type(sourceTypeId)) != InvalidOid)
 			{
 				CoercionPathType elempathtype;
 				Oid			elemfuncid;
@@ -2387,10 +2474,8 @@ find_typmod_coercion_function(Oid typeId,
 	targetType = typeidType(typeId);
 	typeForm = (Form_pg_type) GETSTRUCT(targetType);
 
-	/* Check for a varlena array type (and not a domain) */
-	if (OidIsValid(typeForm->typelem) &&
-		typeForm->typlen == -1 &&
-		typeForm->typtype != TYPTYPE_DOMAIN)
+	/* Check for a varlena array type */
+	if (typeForm->typelem != InvalidOid && typeForm->typlen == -1)
 	{
 		/* Yes, switch our attention to the element type */
 		typeId = typeForm->typelem;
@@ -2430,4 +2515,35 @@ is_complex_array(Oid typid)
 	Oid			elemtype = get_element_type(typid);
 
 	return (OidIsValid(elemtype) && ISCOMPLEX(elemtype));
+}
+
+
+/*
+ * Check whether reltypeId is the row type of a typed table of type
+ * reloftypeId.  (This is conceptually similar to the subtype
+ * relationship checked by typeInheritsFrom().)
+ */
+static bool
+typeIsOfTypedTable(Oid reltypeId, Oid reloftypeId)
+{
+	Oid			relid = typeidTypeRelid(reltypeId);
+	bool		result = false;
+
+	if (relid)
+	{
+		HeapTuple	tp;
+		Form_pg_class reltup;
+
+		tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+		if (!HeapTupleIsValid(tp))
+			elog(ERROR, "cache lookup failed for relation %u", relid);
+
+		reltup = (Form_pg_class) GETSTRUCT(tp);
+		if (reltup->reloftype == reloftypeId)
+			result = true;
+
+		ReleaseSysCache(tp);
+	}
+
+	return result;
 }

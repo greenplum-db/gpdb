@@ -3,10 +3,10 @@
  * execCurrent.c
  *	  executor support for WHERE CURRENT OF cursor
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execCurrent.c,v 1.15 2010/01/02 16:57:40 momjian Exp $
+ *	src/backend/executor/execCurrent.c
  *
  *-------------------------------------------------------------------------
  */
@@ -97,7 +97,7 @@ execCurrentOf(CurrentOfExpr *cexpr,
 	/*
 	 * Found the cursor. Does the table and segment match?
 	 */
-	if (current_gp_segment_id == Gp_segment &&
+	if (current_gp_segment_id == GpIdentity.segindex &&
 		(current_table_oid == InvalidOid || current_table_oid == table_oid))
 	{
 		return true;
@@ -502,6 +502,29 @@ search_plan_tree(PlanState *node, Oid table_oid)
 				for (i = 0; i < astate->as_nplans; i++)
 				{
 					ScanState  *elem = search_plan_tree(astate->appendplans[i],
+														table_oid);
+
+					if (!elem)
+						continue;
+					if (result)
+						return NULL;	/* multiple matches */
+					result = elem;
+				}
+				return result;
+			}
+
+			/*
+			 * Similarly for MergeAppend
+			 */
+		case T_MergeAppendState:
+			{
+				MergeAppendState *mstate = (MergeAppendState *) node;
+				ScanState  *result = NULL;
+				int			i;
+
+				for (i = 0; i < mstate->ms_nplans; i++)
+				{
+					ScanState  *elem = search_plan_tree(mstate->mergeplans[i],
 														table_oid);
 
 					if (!elem)

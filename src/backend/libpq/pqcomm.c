@@ -27,10 +27,10 @@
  * the backend's "backend/libpq" is quite separate from "interfaces/libpq".
  * All that remains is similarities of names to trap the unwary...
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/libpq/pqcomm.c,v 1.212 2010/07/08 16:19:50 mha Exp $
+ *	src/backend/libpq/pqcomm.c
  *
  *-------------------------------------------------------------------------
  */
@@ -55,10 +55,12 @@
  *		pq_peekbyte		- peek at next byte from connection
  *		pq_putbytes		- send bytes to connection (not flushed until pq_flush)
  *		pq_flush		- flush pending output
+ *		pq_flush_if_writable - flush pending output if writable without blocking
  *		pq_getbyte_if_available - get a byte if available without blocking
  *
  * message-level I/O (and old-style-COPY-OUT cruft):
  *		pq_putmessage	- send a normal message (suppressed in COPY OUT mode)
+ *		pq_putmessage_noblock - buffer a normal message (suppressed in COPY OUT)
  *		pq_startcopyout - inform libpq that a COPY OUT transfer is beginning
  *		pq_endcopyout	- end a COPY OUT transfer
  *
@@ -84,7 +86,7 @@
 #ifdef HAVE_UTIME_H
 #include <utime.h>
 #endif
-#ifdef WIN32_ONLY_COMPILER /* mstcpip.h is missing on mingw */
+#ifdef WIN32_ONLY_COMPILER		/* mstcpip.h is missing on mingw */
 #include <mstcpip.h>
 #endif
 
@@ -129,6 +131,10 @@ static int	PqRecvLength;		/* End of data available in PqRecvBuffer */
 
 static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/*
+ * Message status
+ */
+static bool PqCommBusy;			/* busy sending data to the client */
 /* XXX This flag is used by frontend protocal 1 and 2 only.  That is 
  * VERY OLD (We should be on Protocol 3).
  */
@@ -157,6 +163,7 @@ pq_init(void)
 	PqSendBufferSize = PQ_SEND_BUFFER_SIZE;
 	PqSendBuffer = MemoryContextAlloc(TopMemoryContext, PqSendBufferSize);
 	PqSendPointer = PqSendStart = PqRecvPointer = PqRecvLength = 0;
+	PqCommBusy = false;
 	DoingCopyOut = false;
 	on_proc_exit(pq_close, 0);
 }
@@ -677,7 +684,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 	 * Set a send timeout on the socket if specified, on the master only
 	 * Solaris doesn't support setting SO_SNDTIMEO, so setting this won't work on Solaris (MPP-22526) 
 	 */ 
-	if (GpIdentity.segindex == MASTER_CONTENT_ID && gp_connection_send_timeout > 0)
+	if (IS_QUERY_DISPATCHER() && gp_connection_send_timeout > 0)
 	{
 	  struct timeval timeout;
 	  timeout.tv_sec = gp_connection_send_timeout;
@@ -1378,8 +1385,18 @@ pq_flush(void)
 			return EOF;
 		}
 	}
+
+	/* No-op if reentrant call */
+	if (PqCommBusy)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
+			pthread_mutex_unlock(&send_mutex);
+		return 0;
+	}
+	PqCommBusy = true;
 	pq_set_nonblocking(false);
 	res = internal_flush();
+	PqCommBusy = false;
 
 	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
@@ -1479,6 +1496,7 @@ pq_flush_if_writable(void)
 	/* Quick exit if nothing to do */
 	if (PqSendPointer == PqSendStart)
 		return 0;
+
 	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 	{
 		if (!pq_send_mutex_lock())
@@ -1486,10 +1504,21 @@ pq_flush_if_writable(void)
 			return EOF;
 		}
 	}
+
+	/* No-op if reentrant call */
+	if (PqCommBusy)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
+			pthread_mutex_unlock(&send_mutex);
+		return 0;
+	}
+
 	/* Temporarily put the socket into non-blocking mode */
 	pq_set_nonblocking(true);
 
+	PqCommBusy = true;
 	res = internal_flush();
+	PqCommBusy = false;
 	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
 	return res;
@@ -1668,13 +1697,13 @@ pq_endcopyout(bool errorAbort)
 static int
 pq_setkeepaliveswin32(Port *port, int idle, int interval)
 {
-	struct tcp_keepalive	ka;
-	DWORD					retsize;
+	struct tcp_keepalive ka;
+	DWORD		retsize;
 
 	if (idle <= 0)
-		idle = 2 * 60 * 60; /* default = 2 hours */
+		idle = 2 * 60 * 60;		/* default = 2 hours */
 	if (interval <= 0)
-		interval = 1;       /* default = 1 second */
+		interval = 1;			/* default = 1 second */
 
 	ka.onoff = 1;
 	ka.keepalivetime = idle * 1000;
@@ -1734,11 +1763,11 @@ pq_getkeepalivesidle(Port *port)
 			elog(LOG, "getsockopt(TCP_KEEPALIVE) failed: %m");
 			port->default_keepalives_idle = -1; /* don't know */
 		}
-#endif /* TCP_KEEPIDLE */
-#else /* WIN32 */
+#endif   /* TCP_KEEPIDLE */
+#else							/* WIN32 */
 		/* We can't get the defaults on Windows, so return "don't know" */
 		port->default_keepalives_idle = -1;
-#endif /* WIN32 */
+#endif   /* WIN32 */
 	}
 
 	return port->default_keepalives_idle;
@@ -1789,10 +1818,10 @@ pq_setkeepalivesidle(int idle, Port *port)
 #endif
 
 	port->keepalives_idle = idle;
-#else /* WIN32 */
+#else							/* WIN32 */
 	return pq_setkeepaliveswin32(port, idle, port->keepalives_interval);
 #endif
-#else /* TCP_KEEPIDLE || SIO_KEEPALIVE_VALS */
+#else							/* TCP_KEEPIDLE || SIO_KEEPALIVE_VALS */
 	if (idle != 0)
 	{
 		elog(LOG, "setting the keepalive idle time is not supported");
@@ -1827,7 +1856,7 @@ pq_getkeepalivesinterval(Port *port)
 #else
 		/* We can't get the defaults on Windows, so return "don't know" */
 		port->default_keepalives_interval = -1;
-#endif /* WIN32 */
+#endif   /* WIN32 */
 	}
 
 	return port->default_keepalives_interval;
@@ -1869,7 +1898,7 @@ pq_setkeepalivesinterval(int interval, Port *port)
 	}
 
 	port->keepalives_interval = interval;
-#else /* WIN32 */
+#else							/* WIN32 */
 	return pq_setkeepaliveswin32(port, port->keepalives_idle, interval);
 #endif
 #else

@@ -43,7 +43,6 @@
 #include "utils/builtins.h"
 #include "utils/bytea.h"
 
-static int	GetNextSegid(CdbSreh *cdbsreh);
 static void PreprocessByteaData(char *src);
 static void ErrorLogWrite(CdbSreh *cdbsreh);
 
@@ -95,8 +94,6 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h->is_limit_in_rows = is_limit_in_rows;
 	h->rejectcount = 0;
 	h->is_server_enc = false;
-	h->cdbcopy = NULL;
-	h->lastsegid = 0;
 	h->consec_csv_err = 0;
 	h->log_to_file = log_to_file;
 
@@ -162,18 +159,9 @@ HandleSingleRowError(CdbSreh *cdbsreh)
 	if (cdbsreh->log_to_file)
 	{
 		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			cdbCopySendData(cdbsreh->cdbcopy,
-							GetNextSegid(cdbsreh),
-							cdbsreh->rawdata,
-							strlen(cdbsreh->rawdata));
+			elog(ERROR, "cannot not log suppressed input error in dispatcher");
 
-		}
-		else
-		{
-			ErrorLogWrite(cdbsreh);
-		}
-
+		ErrorLogWrite(cdbsreh);
 	}
 
 	return;						/* OK */
@@ -293,7 +281,7 @@ ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
 }
 
 static void
-sendnumrows_internal(int numrejected, int numcompleted)
+sendnumrows_internal(int numrejected, int64 numcompleted)
 {
 	StringInfoData buf;
 
@@ -304,7 +292,7 @@ sendnumrows_internal(int numrejected, int numcompleted)
 	pq_sendint(&buf, numrejected, 4);
 	if (numcompleted > 0)		/* optional send completed num for COPY FROM
 								 * ON SEGMENT */
-		pq_sendint(&buf, numcompleted, 4);
+		pq_sendint64(&buf, numcompleted);
 	pq_endmessage(&buf);
 }
 
@@ -327,7 +315,7 @@ SendNumRowsRejected(int numrejected)
  * of rows that were rejected and completed in this last data load
  */
 void
-SendNumRows(int numrejected, int numcompleted)
+SendNumRows(int numrejected, int64 numcompleted)
 {
 	sendnumrows_internal(numrejected, numcompleted);
 }
@@ -373,7 +361,7 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
  * it will call cdbCopyEnd to stop QE work before erroring out.
  * */
 void
-ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy)
+ErrorIfRejectLimitReached(CdbSreh *cdbsreh)
 {
 	RejectLimitCode code;
 
@@ -381,12 +369,6 @@ ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy)
 
 	if (code == REJECT_NONE)
 		return;
-
-	/*
-	 * Stop QE copy when we error out.
-	 */
-	if (cdbCopy)
-		cdbCopyEnd(cdbCopy);
 
 	switch (code)
 	{
@@ -453,24 +435,6 @@ IsRejectLimitReached(CdbSreh *cdbsreh)
 {
 	return GetRejectLimitCode(cdbsreh) != REJECT_NONE;
 }
-
-/*
- * GetNextSegid
- *
- * Return the next sequential segment id of available segids (roundrobin).
- */
-static
-int
-GetNextSegid(CdbSreh *cdbsreh)
-{
-	int			total_segs = cdbsreh->cdbcopy->total_segs;
-
-	if (cdbsreh->lastsegid == total_segs)
-		cdbsreh->lastsegid = 0; /* start over from first segid */
-
-	return (cdbsreh->lastsegid++ % total_segs);
-}
-
 
 /*
  * This function is called when we are preparing to insert a bad row that
@@ -960,17 +924,13 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		int			i = 0;
-		StringInfoData sql;
+		char	   *sql;
 		CdbPgResults cdb_pgresults = {NULL, 0};
 
-		initStringInfo(&sql);
+		sql = psprintf("SELECT pg_catalog.gp_truncate_error_log(%s)",
+					   quote_literal_cstr(text_to_cstring(relname)));
 
-
-		appendStringInfo(&sql,
-						 "SELECT pg_catalog.gp_truncate_error_log(%s)",
-						 quote_literal_internal(text_to_cstring(relname)));
-
-		CdbDispatchCommand(sql.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+		CdbDispatchCommand(sql, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
 		for (i = 0; i < cdb_pgresults.numResults; i++)
 		{
@@ -990,7 +950,7 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 		}
 
 		cdbdisp_clearCdbPgResults(&cdb_pgresults);
-		pfree(sql.data);
+		pfree(sql);
 	}
 
 	/* Return true iif all segments return true. */

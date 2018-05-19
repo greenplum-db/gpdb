@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_tablespace.sgml,v 1.11 2010/04/03 07:23:00 petere Exp $
+doc/src/sgml/ref/create_tablespace.sgml
 PostgreSQL documentation
 -->
 
@@ -81,7 +81,7 @@ CREATE TABLESPACE <replaceable class="parameter">tablespace_name</replaceable> [
       <listitem>
        <para>
         The directory that will be used for the tablespace. The directory
-        must be empty and must be owned by the
+        should be empty and must be owned by the
         <productname>PostgreSQL</> system user.  The directory must be
         specified by an absolute path name.
        </para>

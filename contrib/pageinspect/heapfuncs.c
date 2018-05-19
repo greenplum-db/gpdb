@@ -15,10 +15,10 @@
  * there's hardly any use case for using these without superuser-rights
  * anyway.
  *
- * Copyright (c) 2007-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2011, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/pageinspect/heapfuncs.c,v 1.9 2010/04/02 15:19:22 mha Exp $
+ *	  contrib/pageinspect/heapfuncs.c
  *
  *-------------------------------------------------------------------------
  */
@@ -170,8 +170,8 @@ heap_page_items(PG_FUNCTION_ARGS)
 			values[5] = UInt32GetDatum(HeapTupleHeaderGetXmax(tuphdr));
 			values[6] = UInt32GetDatum(HeapTupleHeaderGetRawCommandId(tuphdr)); /* shared with xvac */
 			values[7] = PointerGetDatum(&tuphdr->t_ctid);
-			values[8] = UInt16GetDatum(tuphdr->t_infomask2);
-			values[9] = UInt16GetDatum(tuphdr->t_infomask);
+			values[8] = UInt32GetDatum(tuphdr->t_infomask2);
+			values[9] = UInt32GetDatum(tuphdr->t_infomask);
 			values[10] = UInt8GetDatum(tuphdr->t_hoff);
 
 			/*

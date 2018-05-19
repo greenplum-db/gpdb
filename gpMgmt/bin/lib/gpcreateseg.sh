@@ -141,7 +141,7 @@ PROCESS_QE () {
         RUN_COMMAND_REMOTE ${COPY_FROM_PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${COPY_FROM_PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${COPY_FROM_PRIMARY_DIR} reload"
         RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${COPY_FROM_PRIMARY_HOSTADDRESS} -p ${COPY_FROM_PRIMARY_PORT}; mkdir ${GP_DIR}/pg_log; mkdir ${GP_DIR}/pg_xlog/archive_status"
         REGISTER_MIRROR
-        START_QE ""
+        START_QE "-w"
         RETVAL=$?
         PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${COPY_FROM_PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"
     fi
@@ -213,9 +213,6 @@ PROCESS_QE () {
 	        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
 	        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
         done
-
-        # start primary
-        START_QE "-w"
     fi
 
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"

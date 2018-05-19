@@ -24,7 +24,7 @@ extern int	ExecCountSlotsBitmapAppendOnlyScan(BitmapAppendOnlyScan *node);
 extern BitmapAppendOnlyScanState *ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
 extern void ExecEndBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
-extern void ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtxt);
+extern void ExecReScanBitmapAppendOnly(BitmapAppendOnlyScanState *node);
 extern void ExecEagerFreeBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
 
 #endif   /* NODEBITMAPAPPENDONLYSCAN_H */

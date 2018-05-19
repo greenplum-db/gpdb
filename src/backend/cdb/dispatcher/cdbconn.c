@@ -18,6 +18,7 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "miscadmin.h"
+#include "utils/guc.h"
 #include "utils/memutils.h"
 #include "libpq/libpq-be.h"
 
@@ -313,7 +314,7 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
 	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
-		GpIdentity.segindex == MASTER_CONTENT_ID)
+		IS_QUERY_DISPATCHER())
 	{
 		keywords[nkeywords] = "hostaddr";
 		values[nkeywords] = "";
@@ -458,7 +459,7 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
 	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
-		GpIdentity.segindex == MASTER_CONTENT_ID)
+		IS_QUERY_DISPATCHER())
 	{
 		keywords[nkeywords] = "hostaddr";
 		values[nkeywords] = "";

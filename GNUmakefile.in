@@ -1,18 +1,18 @@
 #
 # PostgreSQL top level makefile
 #
-# $PostgreSQL: pgsql/GNUmakefile.in,v 1.58 2010/03/30 00:10:46 petere Exp $
+# GNUmakefile.in
 #
 
 subdir =
 top_builddir = .
 include $(top_builddir)/src/Makefile.global
 
+$(call recurse,all install,src config)
 
 all:
-	$(MAKE) -C src all
-	$(MAKE) -C config all
 	$(MAKE) -C contrib/xlogdump all
+	$(MAKE) -C contrib/file_fdw all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
@@ -31,25 +31,21 @@ all:
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
-	@echo "All of Greenplum Database successfully made. Ready to install."
+	+@echo "All of Greenplum Database successfully made. Ready to install."
 
 docs:
 	$(MAKE) -C doc all
 
+$(call recurse,world,doc src config contrib,all)
 world:
-	$(MAKE) -C doc all
-	$(MAKE) -C src all
-	$(MAKE) -C config all
-	$(MAKE) -C contrib all
-	@echo "PostgreSQL, contrib, and documentation successfully made. Ready to install."
+	+@echo "PostgreSQL, contrib, and documentation successfully made. Ready to install."
 
 html man:
 	$(MAKE) -C doc $@
 
 install:
-	$(MAKE) -C src $@
-	$(MAKE) -C config $@
 	$(MAKE) -C contrib/xlogdump $@
+	#$(MAKE) -C contrib/file_fdw $@ # GPDB_91_MERGE_FIXME: disable installation until it's officially supported.
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
@@ -69,68 +65,25 @@ install:
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
-	@echo "Greenplum Database installation complete."
+	+@echo "Greenplum Database installation complete."
 
 install-docs:
 	$(MAKE) -C doc install
 
+$(call recurse,install-world,doc src config contrib,install)
 install-world:
-	$(MAKE) -C doc install
-	$(MAKE) -C src install
-	$(MAKE) -C config install
-	$(MAKE) -C contrib install
-	@echo "PostgreSQL, contrib, and documentation installation complete."
+	+@echo "PostgreSQL, contrib, and documentation installation complete."
 
-installdirs uninstall coverage:
-#	$(MAKE) -C doc $@
-	$(MAKE) -C src $@
-	$(MAKE) -C config $@
-	$(MAKE) -C contrib/xlogdump $@
-	$(MAKE) -C contrib/formatter $@
-	$(MAKE) -C contrib/formatter_fixedwidth $@
-	$(MAKE) -C contrib/fuzzystrmatch $@
-	$(MAKE) -C contrib/extprotocol $@
-	$(MAKE) -C contrib/dblink $@
-	$(MAKE) -C contrib/gp_sparse_vector $@
-	$(MAKE) -C contrib/gp_distribution_policy $@
-	$(MAKE) -C contrib/gp_inject_fault $@
-	$(MAKE) -C contrib/gp_internal_tools $@
-	$(MAKE) -C contrib/gp_cancel_query $@
-	$(MAKE) -C contrib/indexscan $@ 
-	$(MAKE) -C contrib/pg_upgrade_support $@
-	$(MAKE) -C contrib/pg_upgrade $@
-	$(MAKE) -C contrib/hstore $@
-	$(MAKE) -C contrib/pgcrypto $@
+$(call recurse,installdirs uninstall coverage,doc src config)
 
-distprep:
-#	$(MAKE) -C doc $@
-	$(MAKE) -C src $@
-	$(MAKE) -C config $@
-	$(MAKE) -C contrib $@
+$(call recurse,distprep,doc src config contrib)
 
 # clean, distclean, etc should apply to contrib too, even though
 # it's not built by default
+$(call recurse,clean,doc contrib src config)
 clean:
-#	$(MAKE) -C doc $@
-	$(MAKE) -C contrib $@
-	$(MAKE) -C src $@
-	$(MAKE) -C config $@
-	$(MAKE) -C contrib/xlogdump $@
-	$(MAKE) -C contrib/formatter $@
-	$(MAKE) -C contrib/formatter_fixedwidth $@
-	$(MAKE) -C contrib/fuzzystrmatch $@
-	$(MAKE) -C contrib/extprotocol $@
-	$(MAKE) -C contrib/dblink $@
-	$(MAKE) -C contrib/gp_sparse_vector $@
-	$(MAKE) -C contrib/gp_distribution_policy $@
-	$(MAKE) -C contrib/gp_inject_fault $@
-	$(MAKE) -C contrib/gp_internal_tools $@
-	$(MAKE) -C contrib/gp_cancel_query $@
-	$(MAKE) -C contrib/indexscan $@
-	$(MAKE) -C contrib/pg_upgrade_support $@
-	$(MAKE) -C contrib/pg_upgrade $@
-	$(MAKE) -C contrib/hstore $@
-	$(MAKE) -C contrib/pgcrypto $@
+# Garbage from autoconf:
+	@rm -rf autom4te.cache/
 # leap over gpAux/Makefile into subdirectories to avoid circular dependency.
 # gpAux/Makefile is the entry point for the enterprise build, which ends up
 # calling top-level configure and this Makefile
@@ -138,8 +91,6 @@ clean:
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
-# Garbage from autoconf:
-	@rm -rf autom4te.cache/
 
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
@@ -156,35 +107,6 @@ distclean maintainer-clean:
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
-# This is a top-level target that runs "all" regression test suites against
-# a running server. This is what the CI pipeline runs.
-installcheck-world:
-	$(MAKE) -C src/test installcheck-good
-	$(MAKE) -C src/test/fsync install && $(MAKE) -C src/test/fsync installcheck
-	$(MAKE) -C src/test/walrep install && $(MAKE) -C src/test/walrep installcheck
-	$(MAKE) -C src/test/heap_checksum install && $(MAKE) -C src/test/heap_checksum installcheck
-	$(MAKE) -C src/test/isolation installcheck
-	$(MAKE) -C src/test/isolation2 installcheck
-	$(MAKE) -C src/pl installcheck
-	#$(MAKE) -C src/interfaces/ecpg installcheck
-	#$(MAKE) -C contrib installcheck
-	$(MAKE) -C contrib/formatter_fixedwidth installcheck
-	$(MAKE) -C contrib/extprotocol installcheck
-	$(MAKE) -C contrib/dblink installcheck
-	$(MAKE) -C contrib/indexscan installcheck
-	$(MAKE) -C contrib/hstore installcheck
-	$(MAKE) -C contrib/pgcrypto installcheck
-	$(MAKE) -C gpAux/extensions installcheck
-	$(MAKE) -C src/bin/gpfdist installcheck
-	$(MAKE) -C src/interfaces/gppc installcheck
-	$(MAKE) -C src/test/kerberos installcheck
-	$(MAKE) -C gpMgmt/bin installcheck
-	gpcheckcat -A
-	# Verify the filesystem objects are consistent between primary and mirror
-	$(MAKE) -C contrib/gp_replica_check installcheck
-
-	$(MAKE) -C contrib/pg_upgrade check
-
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
 
@@ -198,6 +120,50 @@ destroy-demo-cluster:
 create-tinc-test-cluster: destroy-demo-cluster
 	$(MAKE) -C gpAux/gpdemo DEFAULT_QD_MAX_CONNECT=150 NUM_PRIMARY_MIRROR_PAIRS=2
 	. gpAux/gpdemo/gpdemo-env.sh && createdb gptest
+
+check: all
+
+check installcheck installcheck-parallel:
+	$(MAKE) -C src/test $@
+
+$(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib,check)
+
+# This is a top-level target that runs "all" regression test suites against
+# a running server. This is what the CI pipeline runs.
+.PHONY: installcheck-world
+
+# Run all ICW targets in different directories under a recurse call, so
+# that make -k works as expected. Order is significant here (for some reason,
+# which probably indicates that we're relying on undefined behavior... we should
+# probably pull anything order-dependent out of recurse() and back into the
+# recipe body).
+$(call recurse,installcheck-world,src/test,installcheck-good)
+$(call recurse,installcheck-world, \
+			   src/test/fsync \
+			   src/test/walrep \
+			   src/test/heap_checksum \
+			   src/test/isolation \
+			   src/test/isolation2 \
+			   src/pl \
+			   contrib/formatter_fixedwidth \
+			   contrib/extprotocol \
+			   contrib/dblink \
+			   contrib/indexscan \
+			   contrib/hstore \
+			   contrib/pgcrypto \
+			   gpAux/extensions \
+			   src/bin/gpfdist \
+			   src/interfaces/gppc \
+			   src/test/kerberos \
+			   gpMgmt/bin,installcheck)
+.PHONY: installcheck-gpcheckcat
+installcheck-world: installcheck-gpcheckcat
+installcheck-gpcheckcat:
+	gpcheckcat -A
+$(call recurse,installcheck-world,contrib/gp_replica_check,installcheck)
+$(call recurse,installcheck-world,contrib/pg_upgrade,check)
+
+$(call recurse,maintainer-check,doc src config contrib)
 
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of
@@ -268,4 +234,4 @@ distcheck: dist
 	rm -rf $(distdir) $(dummy)
 	@echo "Distribution integrity checks out."
 
-.PHONY: dist distdir distcheck docs install-docs
+.PHONY: dist distdir distcheck docs install-docs world check-world install-world installcheck-world

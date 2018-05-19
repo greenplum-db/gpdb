@@ -1,12 +1,13 @@
 /*
  * op function for ltree and lquery
  * Teodor Sigaev <teodor@stack.net>
- * $PostgreSQL: pgsql/contrib/ltree/lquery_op.c,v 1.15 2010/02/24 18:02:24 tgl Exp $
+ * contrib/ltree/lquery_op.c
  */
 #include "postgres.h"
 
 #include <ctype.h>
 
+#include "catalog/pg_collation.h"
 #include "utils/array.h"
 #include "utils/formatting.h"
 #include "ltree.h"
@@ -90,8 +91,8 @@ bool
 int
 ltree_strncasecmp(const char *a, const char *b, size_t s)
 {
-	char	   *al = str_tolower(a, s);
-	char	   *bl = str_tolower(b, s);
+	char	   *al = str_tolower(a, s, DEFAULT_COLLATION_OID);
+	char	   *bl = str_tolower(b, s, DEFAULT_COLLATION_OID);
 	int			res;
 
 	res = strncmp(al, bl, s);
@@ -348,7 +349,7 @@ lt_q_regex(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 				 errmsg("array must be one-dimensional")));
-	if (ARR_HASNULL(_query))
+	if (array_contains_nulls(_query))
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
 				 errmsg("array must not contain nulls")));

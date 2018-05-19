@@ -8,12 +8,12 @@
  * exit-time cleanup for either a postmaster or a backend.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipc.c,v 1.108 2010/07/06 19:18:57 momjian Exp $
+ *	  src/backend/storage/ipc/ipc.c
  *
  *-------------------------------------------------------------------------
  */
@@ -128,8 +128,8 @@ proc_exit(int code)
 		else
 			snprintf(gprofDirName, 32, "gprof/%d", (int) getpid());
 
-		mkdir("gprof", 0777);
-		mkdir(gprofDirName, 0777);
+		mkdir("gprof", S_IRWXU | S_IRWXG | S_IRWXO);
+		mkdir(gprofDirName, S_IRWXU | S_IRWXG | S_IRWXO);
 		chdir(gprofDirName);
 	}
 #endif

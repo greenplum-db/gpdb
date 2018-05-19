@@ -12,11 +12,13 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 (1 row)
 
 \dx+ gp_inject*
-                           List of installed extensions
-      Name       | Version | Schema |                 Description                  
------------------+---------+--------+----------------------------------------------
- gp_inject_fault | 1.0     | public | simulate various faults for testing purposes
-(1 row)
+                   Objects in extension "gp_inject_fault"
+                             Object Description                             
+----------------------------------------------------------------------------
+ function gp_inject_fault(text,text,integer)
+ function gp_inject_fault(text,text,text,text,text,integer,integer,integer)
+ function gp_wait_until_triggered_fault(text,integer,integer)
+(3 rows)
 
 --
 -- Test extended \du flags
@@ -36,28 +38,28 @@ CREATE ROLE test_psql_du_1 WITH SUPERUSER;
 DROP ROLE test_psql_du_1;
 CREATE ROLE test_psql_du_2 WITH SUPERUSER CREATEDB CREATEROLE CREATEEXTTABLE LOGIN CONNECTION LIMIT 5;
 \du test_psql_du_2
-                                   List of roles
-   Role name    |                      Attributes                      | Member of 
-----------------+------------------------------------------------------+-----------
- test_psql_du_2 | Superuser, Create role, Create DB, Ext gpfdist Table+| {}
-                | 5 connections                                        | 
+                                         List of roles
+   Role name    |                            Attributes                             | Member of 
+----------------+-------------------------------------------------------------------+-----------
+ test_psql_du_2 | Superuser, Create role, Create DB, Ext gpfdist Table, Replication+| {}
+                | 5 connections                                                     | 
 
 DROP ROLE test_psql_du_2;
 -- pg_catalog.pg_roles.rolcreaterextgpfd
 CREATE ROLE test_psql_du_e1 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gpfdist');
 \du test_psql_du_e1
-                              List of roles
-    Role name    |                 Attributes                 | Member of 
------------------+--------------------------------------------+-----------
- test_psql_du_e1 | Superuser, Ext gpfdist Table, Cannot login | {}
+                                     List of roles
+    Role name    |                       Attributes                        | Member of 
+-----------------+---------------------------------------------------------+-----------
+ test_psql_du_e1 | Superuser, Ext gpfdist Table, Cannot login, Replication | {}
 
 DROP ROLE test_psql_du_e1;
 CREATE ROLE test_psql_du_e2 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gpfdists');
 \du test_psql_du_e2
-                              List of roles
-    Role name    |                 Attributes                 | Member of 
------------------+--------------------------------------------+-----------
- test_psql_du_e2 | Superuser, Ext gpfdist Table, Cannot login | {}
+                                     List of roles
+    Role name    |                       Attributes                        | Member of 
+-----------------+---------------------------------------------------------+-----------
+ test_psql_du_e2 | Superuser, Ext gpfdist Table, Cannot login, Replication | {}
 
 DROP ROLE test_psql_du_e2;
 -- pg_catalog.pg_roles.rolcreatewextgpfd

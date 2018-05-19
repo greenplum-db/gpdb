@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSort.c,v 1.67 2010/01/02 16:57:45 momjian Exp $
+ *	  src/backend/executor/nodeSort.c
  *
  *-------------------------------------------------------------------------
  */
@@ -120,7 +120,9 @@ ExecSort(SortState *node)
 				tupDesc,
 				plannode->numCols,
 				plannode->sortColIdx,
-				plannode->sortOperators, plannode->nullsFirst,
+				plannode->sortOperators,
+				plannode->collations,
+				plannode->nullsFirst,
 				PlanStateOperatorMemKB((PlanState *) node),
 				true
 				);
@@ -130,7 +132,9 @@ ExecSort(SortState *node)
 			tuplesortstate = tuplesort_begin_heap(&node->ss, tupDesc,
 												  plannode->numCols,
 												  plannode->sortColIdx,
-												  plannode->sortOperators, plannode->nullsFirst,
+												  plannode->sortOperators,
+												  plannode->collations,
+												  plannode->nullsFirst,
 												  PlanStateOperatorMemKB((PlanState *) node),
 												  node->randomAccess);
 		}
@@ -453,11 +457,11 @@ ExecSortRestrPos(SortState *node)
 }
 
 void
-ExecReScanSort(SortState *node, ExprContext *exprCtxt)
+ExecReScanSort(SortState *node)
 {
 	/*
-	 * If we haven't sorted yet, just return. If outerplan' chgParam is not
-	 * NULL then it will be re-scanned by ExecProcNode, else - no reason to
+	 * If we haven't sorted yet, just return. If outerplan's chgParam is not
+	 * NULL then it will be re-scanned by ExecProcNode, else no reason to
 	 * re-scan it at all.
 	 */
 	if (!node->sort_Done)
@@ -473,7 +477,7 @@ ExecReScanSort(SortState *node, ExprContext *exprCtxt)
 	 *
 	 * Otherwise we can just rewind and rescan the sorted output.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam != NULL ||
+	if (node->ss.ps.lefttree->chgParam != NULL ||
 		node->bounded != node->bounded_Done ||
 		node->bound != node->bound_Done ||
 		!node->randomAccess ||
@@ -490,8 +494,8 @@ ExecReScanSort(SortState *node, ExprContext *exprCtxt)
 		 * if chgParam of subnode is not null then plan will be re-scanned by
 		 * first ExecProcNode.
 		 */
-		if (((PlanState *) node)->lefttree->chgParam == NULL)
-			ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+		if (node->ss.ps.lefttree->chgParam == NULL)
+			ExecReScan(node->ss.ps.lefttree);
 	}
 	else
 		tuplesort_rescan(node->tuplesortstate->sortstore);

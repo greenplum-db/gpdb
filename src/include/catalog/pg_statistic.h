@@ -7,10 +7,10 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_statistic.h,v 1.42 2010/01/05 01:06:57 tgl Exp $
+ * src/include/catalog/pg_statistic.h
  *
  * NOTES
  *	  the genbki.pl script reads this file and generates .bki
@@ -255,6 +255,8 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  * type with identifiable elements (for instance, tsvector).  staop contains
  * the equality operator appropriate to the element type.  stavalues contains
  * the most common element values, and stanumbers their frequencies.  Unlike
+ * MCV slots, frequencies are measured as the fraction of non-null rows the
+ * element value appears in, not the frequency of all rows.  Also unlike
  * MCV slots, the values are sorted into order (to support binary search
  * for a particular value).  Since this puts the minimum and maximum
  * frequencies at unpredictable spots in stanumbers, there are two extra

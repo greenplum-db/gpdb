@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/connect.c,v 1.56 2010/07/06 19:19:00 momjian Exp $ */
+/* src/interfaces/ecpg/ecpglib/connect.c */
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -165,27 +165,25 @@ ECPGsetcommit(int lineno, const char *mode, const char *connection_name)
 
 	ecpg_log("ECPGsetcommit on line %d: action \"%s\"; connection \"%s\"\n", lineno, mode, con->name);
 
-	if (con->autocommit == true && strncmp(mode, "off", strlen("off")) == 0)
+	if (con->autocommit && strncmp(mode, "off", strlen("off")) == 0)
 	{
-		if (con->committed)
+		if (PQtransactionStatus(con->connection) == PQTRANS_IDLE)
 		{
 			results = PQexec(con->connection, "begin transaction");
 			if (!ecpg_check_PQresult(results, lineno, con->connection, ECPG_COMPAT_PGSQL))
 				return false;
 			PQclear(results);
-			con->committed = false;
 		}
 		con->autocommit = false;
 	}
-	else if (con->autocommit == false && strncmp(mode, "on", strlen("on")) == 0)
+	else if (!con->autocommit && strncmp(mode, "on", strlen("on")) == 0)
 	{
-		if (!con->committed)
+		if (PQtransactionStatus(con->connection) != PQTRANS_IDLE)
 		{
 			results = PQexec(con->connection, "commit");
 			if (!ecpg_check_PQresult(results, lineno, con->connection, ECPG_COMPAT_PGSQL))
 				return false;
 			PQclear(results);
-			con->committed = true;
 		}
 		con->autocommit = true;
 	}
@@ -216,9 +214,9 @@ ECPGnoticeReceiver(void *arg, const PGresult *result)
 	char	   *sqlstate = PQresultErrorField(result, PG_DIAG_SQLSTATE);
 	char	   *message = PQresultErrorField(result, PG_DIAG_MESSAGE_PRIMARY);
 	struct sqlca_t *sqlca = ECPGget_sqlca();
-
 	int			sqlcode;
 
+	(void) arg;					/* keep the compiler quiet */
 	if (sqlstate == NULL)
 		sqlstate = ECPG_SQLSTATE_ECPG_INTERNAL_ERROR;
 
@@ -540,7 +538,6 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
 	pthread_mutex_unlock(&connections_mutex);
 #endif
 
-	this->committed = true;
 	this->autocommit = autocommit;
 
 	PQsetNoticeReceiver(this->connection, &ECPGnoticeReceiver, (void *) this);

@@ -2284,7 +2284,7 @@ build_inserttuple(Relation rel, uint64 tidnum,
 				}
 			}
 
-			index_rescan(state->bm_lov_scanDesc, state->bm_lov_scanKeys);	
+			index_rescan(state->bm_lov_scanDesc, state->bm_lov_scanKeys, tupDesc->natts, NULL, 0);
 
 			found = _bitmap_findvalue(state->bm_lov_heap, state->bm_lov_index,
 									  state->bm_lov_scanKeys, state->bm_lov_scanDesc,
@@ -2476,28 +2476,24 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 
 		get_sort_group_operators(tupDesc->attrs[attno]->atttypid,
 								 false, true, false,
-								 NULL, &eq_opr, NULL);
+								 NULL, &eq_opr, NULL, NULL);
 		opfuncid = get_opcode(eq_opr);
 
 		scanKey = (ScanKey) (((char *)scanKeys) + attno * sizeof(ScanKeyData));
 
-		ScanKeyEntryInitialize(scanKey, SK_ISNULL, attno + 1, 
-							   BTEqualStrategyNumber, InvalidOid, opfuncid, 0);
-
-		if (nulls[attno])
-		{
-			scanKey->sk_flags = SK_ISNULL;
-			scanKey->sk_argument = attdata[attno];
-		}
-		else
-		{
-			scanKey->sk_flags = 0;
-			scanKey->sk_argument = attdata[attno];
-		}
+		ScanKeyEntryInitialize(scanKey,
+							   nulls[attno] ? SK_ISNULL : 0,
+							   attno + 1,
+							   BTEqualStrategyNumber,
+							   InvalidOid,
+							   lovIndex->rd_indcollation[attno],
+							   opfuncid,
+							   attdata[attno]);
 	}
 
 	scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
-							   tupDesc->natts, scanKeys);
+							   tupDesc->natts, 0);
+	index_rescan(scanDesc, scanKeys, tupDesc->natts, NULL, 0);
 
 	/* insert this new tuple into the bitmap index. */
 	inserttuple(rel, metabuf, tidOffset, ht_ctid, tupDesc, attdata, nulls, 

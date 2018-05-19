@@ -534,79 +534,11 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 	for (ires = 0; ires < nres; ++ires)
 	{
 		PGresult   *pgresult = cdbdisp_getPGresult(dispatchResult, ires);
-		ExecStatusType resultStatus = PQresultStatus(pgresult);
 
-		/*
-		 * QE success
-		 */
-		if (resultStatus == PGRES_COMMAND_OK ||
-			resultStatus == PGRES_TUPLES_OK ||
-			resultStatus == PGRES_COPY_IN ||
-			resultStatus == PGRES_COPY_OUT ||
-			resultStatus == PGRES_EMPTY_QUERY)
-			continue;
+		errdata = cdbdisp_get_PQerror(pgresult);
 
-		/*
-		 * QE error or libpq error
-		 */
-
-		/* These will be overwritten below with the values from QE, if the QE sent them. */
-		char	   *filename = __FILE__;
-		int			lineno = __LINE__;
-		const char *funcname = PG_FUNCNAME_MACRO;
-		int			qe_errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
-
-		char	   *whoami;
-		char	   *fld;
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FILE);
-		if (fld)
-			filename = fld;
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_LINE);
-		if (fld)
-			lineno = atoi(fld);
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FUNCTION);
-		if (fld)
-			funcname = fld;
-
-		/*
-		 * We should only get errors with ERROR level or above, if the
-		 * command failed. And if a QE disconnected with FATAL, or PANICed,
-		 * we don't want to do the same in the QD. So, always an ERROR.
-		 */
-		errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN);
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_SQLSTATE);
-		if (fld)
-			qe_errcode = sqlstate_to_errcode(fld);
-		errcode(qe_errcode);
-
-		whoami = PQresultErrorField(pgresult, PG_DIAG_GP_PROCESS_TAG);
-		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_PRIMARY);
-		if (!fld)
-			fld = "no primary message received";
-
-		if (whoami)
-			errmsg("%s  (%s)", fld, whoami);
-		else
-			errmsg("%s", fld);
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_DETAIL);
-		if (fld)
-			errdetail("%s", fld);
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_HINT);
-		if (fld)
-			errhint("%s", fld);
-
-		fld = PQresultErrorField(pgresult, PG_DIAG_CONTEXT);
-		if (fld)
-			errcontext("%s", fld);
-
-		errdata = errfinish_and_return(0);
-		return errdata;
+		if (errdata)
+			return errdata;
 	}
 
 	/*
@@ -623,6 +555,85 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 	}
 
 	return NULL;
+}
+
+ErrorData *
+cdbdisp_get_PQerror(PGresult *pgresult)
+{
+	ExecStatusType resultStatus = PQresultStatus(pgresult);
+
+	/*
+	 * QE success
+	 */
+	if (resultStatus == PGRES_COMMAND_OK ||
+		resultStatus == PGRES_TUPLES_OK ||
+		resultStatus == PGRES_COPY_IN ||
+		resultStatus == PGRES_COPY_OUT ||
+		resultStatus == PGRES_EMPTY_QUERY)
+	{
+		return NULL;
+	}
+
+	/*
+	 * QE error or libpq error
+	 */
+
+	/* These will be overwritten below with the values from QE, if the QE sent them. */
+	char	   *filename = __FILE__;
+	int			lineno = __LINE__;
+	const char *funcname = PG_FUNCNAME_MACRO;
+	int			qe_errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
+
+	char	   *whoami;
+	char	   *fld;
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FILE);
+	if (fld)
+		filename = fld;
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_LINE);
+	if (fld)
+		lineno = atoi(fld);
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FUNCTION);
+	if (fld)
+		funcname = fld;
+
+	/*
+	 * We should only get errors with ERROR level or above, if the
+	 * command failed. And if a QE disconnected with FATAL, or PANICed,
+	 * we don't want to do the same in the QD. So, always an ERROR.
+	 */
+	errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN);
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_SQLSTATE);
+	if (fld)
+		qe_errcode = sqlstate_to_errcode(fld);
+	errcode(qe_errcode);
+
+	whoami = PQresultErrorField(pgresult, PG_DIAG_GP_PROCESS_TAG);
+	fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_PRIMARY);
+	if (!fld)
+		fld = "no primary message received";
+
+	if (whoami)
+		errmsg("%s  (%s)", fld, whoami);
+	else
+		errmsg("%s", fld);
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_DETAIL);
+	if (fld)
+		errdetail("%s", fld);
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_HINT);
+	if (fld)
+		errhint("%s", fld);
+
+	fld = PQresultErrorField(pgresult, PG_DIAG_CONTEXT);
+	if (fld)
+		errcontext("%s", fld);
+
+	return errfinish_and_return(0);
 }
 
 /*
@@ -871,7 +882,6 @@ cdbdisp_returnResults(CdbDispatchResults *primaryResults, CdbPgResults *cdb_pgre
 
 	/* tell the caller how many sets we're returning. */
 	cdb_pgresults->numResults = nresults;
-
 }
 
 /*

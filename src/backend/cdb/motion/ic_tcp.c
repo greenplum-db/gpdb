@@ -146,8 +146,7 @@ static void flushInterconnectListenerBacklog(void);
 
 static void waitOnOutbound(ChunkTransportStateEntry *pEntry);
 
-static TupleChunkListItem RecvTupleChunkFromAnyTCP(MotionLayerState *mlStates,
-						 ChunkTransportState *transportStates,
+static TupleChunkListItem RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 						 int16 motNodeID,
 						 int16 *srcRoute);
 
@@ -155,13 +154,13 @@ static TupleChunkListItem RecvTupleChunkFromTCP(ChunkTransportState *transportSt
 					  int16 motNodeID,
 					  int16 srcRoute);
 
-static void SendEosTCP(MotionLayerState *mlStates, ChunkTransportState *transportStates,
+static void SendEosTCP(ChunkTransportState *transportStates,
 		   int motNodeID, TupleChunkListItem tcItem);
 
-static bool SendChunkTCP(MotionLayerState *mlStates, ChunkTransportState *transportStates,
+static bool SendChunkTCP(ChunkTransportState *transportStates,
 			 ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId);
 
-static bool flushBuffer(MotionLayerState *mlStates, ChunkTransportState *transportStates,
+static bool flushBuffer(ChunkTransportState *transportStates,
 			ChunkTransportStateEntry *pEntry, MotionConn *conn, int16 motionId);
 
 static void doSendStopMessageTCP(ChunkTransportState *transportStates, int16 motNodeID);
@@ -576,7 +575,7 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG4, "Interconnect seg%d slice%d setting up sending motion node (aggressive retry is %s)",
-			 Gp_segment, sendSlice->sliceIndex,
+			 GpIdentity.segindex, sendSlice->sliceIndex,
 			 (transportStates->aggressiveRetry ? "active" : "inactive"));
 
 	pEntry = createChunkTransportState(transportStates,
@@ -950,7 +949,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 								 pEntry->recvSlice->sliceIndex,
 								 conn->remoteHostAndPort,
 								 conn->cdbProc->pid,
-								 Gp_segment,
+								 GpIdentity.segindex,
 								 pEntry->sendSlice->sliceIndex,
 								 conn->localHostAndPort,
 								 conn->sockfd)));
@@ -959,7 +958,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 		regMsg->recvSliceIndex = pEntry->recvSlice->sliceIndex;
 		regMsg->sendSliceIndex = pEntry->sendSlice->sliceIndex;
 
-		regMsg->srcContentId = Gp_segment;
+		regMsg->srcContentId = GpIdentity.segindex;
 		regMsg->srcListenerPort = Gp_listener_port & 0x0ffff;
 		regMsg->srcPid = MyProcPid;
 		regMsg->srcSessionId = gp_session_id;
@@ -1200,7 +1199,7 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	{
 		ereport(LOG, (errmsg("Interconnect seg%d slice%d sockfd=%d accepted "
 							 "registration message from seg%d slice%d %s pid=%d",
-							 Gp_segment,
+							 GpIdentity.segindex,
 							 msg.recvSliceIndex,
 							 conn->sockfd,
 							 msg.srcContentId,
@@ -1383,8 +1382,8 @@ acceptIncomingConnection(void)
 }								/* acceptIncomingConnection */
 
 /* See ml_ipc.h */
-void
-SetupTCPInterconnect(EState *estate)
+ChunkTransportState *
+SetupTCPInterconnect(SliceTable *sliceTable)
 {
 	int			i,
 				index,
@@ -1404,74 +1403,58 @@ SetupTCPInterconnect(EState *estate)
 
 	/* we can have at most one of these. */
 	ChunkTransportStateEntry *sendingChunkTransportState = NULL;
-
-	if (estate->interconnect_context)
-	{
-		elog(FATAL, "SetupTCPInterconnect: already initialized.");
-	}
-	else if (!estate->es_sliceTable)
-	{
-		elog(FATAL, "SetupTCPInterconnect: no slice table ?");
-	}
+	ChunkTransportState *interconnect_context;
 
 	SIMPLE_FAULT_INJECTOR(InterconnectSetupPalloc);
-	estate->interconnect_context = palloc0(sizeof(ChunkTransportState));
-
-	estate->interconnect_context->estate = estate;
+	interconnect_context = palloc0(sizeof(ChunkTransportState));
 
 	/* initialize state variables */
-	Assert(estate->interconnect_context->size == 0);
-	estate->interconnect_context->size = CTS_INITIAL_SIZE;
-	estate->interconnect_context->states = palloc0(CTS_INITIAL_SIZE * sizeof(ChunkTransportStateEntry));
+	Assert(interconnect_context->size == 0);
+	interconnect_context->size = CTS_INITIAL_SIZE;
+	interconnect_context->states = palloc0(CTS_INITIAL_SIZE * sizeof(ChunkTransportStateEntry));
 
-	estate->interconnect_context->teardownActive = false;
-	estate->interconnect_context->activated = false;
-	estate->interconnect_context->incompleteConns = NIL;
-	estate->interconnect_context->sliceTable = NULL;
-	estate->interconnect_context->sliceId = -1;
+	interconnect_context->teardownActive = false;
+	interconnect_context->activated = false;
+	interconnect_context->incompleteConns = NIL;
+	interconnect_context->sliceTable = copyObject(sliceTable);
+	interconnect_context->sliceId = sliceTable->localSlice;
 
-	estate->interconnect_context->sliceTable = estate->es_sliceTable;
+	interconnect_context->RecvTupleChunkFrom = RecvTupleChunkFromTCP;
+	interconnect_context->RecvTupleChunkFromAny = RecvTupleChunkFromAnyTCP;
+	interconnect_context->SendEos = SendEosTCP;
+	interconnect_context->SendChunk = SendChunkTCP;
+	interconnect_context->doSendStopMessage = doSendStopMessageTCP;
 
-	estate->interconnect_context->sliceId = LocallyExecutingSliceIndex(estate);
+	mySlice = (Slice *) list_nth(interconnect_context->sliceTable->slices, sliceTable->localSlice);
 
-	estate->interconnect_context->RecvTupleChunkFrom = RecvTupleChunkFromTCP;
-	estate->interconnect_context->RecvTupleChunkFromAny = RecvTupleChunkFromAnyTCP;
-	estate->interconnect_context->SendEos = SendEosTCP;
-	estate->interconnect_context->SendChunk = SendChunkTCP;
-	estate->interconnect_context->doSendStopMessage = doSendStopMessageTCP;
-
-	mySlice = (Slice *) list_nth(estate->interconnect_context->sliceTable->slices, LocallyExecutingSliceIndex(estate));
-
-	Assert(estate->es_sliceTable &&
+	Assert(sliceTable &&
 		   IsA(mySlice, Slice) &&
-		   mySlice->sliceIndex == LocallyExecutingSliceIndex(estate));
+		   mySlice->sliceIndex == sliceTable->localSlice);
 
-	gp_interconnect_id = estate->interconnect_context->sliceTable->ic_instance_id;
+	gp_interconnect_id = interconnect_context->sliceTable->ic_instance_id;
 
 	gp_set_monotonic_begin_time(&startTime);
 
 	/* Initiate outgoing connections. */
 	if (mySlice->parentIndex != -1)
-		sendingChunkTransportState = startOutgoingConnections(estate->interconnect_context, mySlice, &expectedTotalOutgoing);
+		sendingChunkTransportState = startOutgoingConnections(interconnect_context, mySlice, &expectedTotalOutgoing);
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */
 	foreach(cell, mySlice->children)
 	{
-		int			totalNumProcs,
-					activeNumProcs;
+		int			totalNumProcs;
 		int			childId = lfirst_int(cell);
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "Setting up RECEIVING motion node %d", childId);
 #endif
 
-		aSlice = (Slice *) list_nth(estate->interconnect_context->sliceTable->slices, childId);
+		aSlice = (Slice *) list_nth(interconnect_context->sliceTable->slices, childId);
 
 		/*
 		 * If we're using directed-dispatch we have dummy primary-process
 		 * entries, so we count the entries.
 		 */
-		activeNumProcs = 0;
 		totalNumProcs = list_length(aSlice->primaryProcesses);
 		for (i = 0; i < totalNumProcs; i++)
 		{
@@ -1479,15 +1462,10 @@ SetupTCPInterconnect(EState *estate)
 
 			cdbProc = list_nth(aSlice->primaryProcesses, i);
 			if (cdbProc)
-				activeNumProcs++;
+				expectedTotalIncoming++;
 		}
 
-		(void) createChunkTransportState(estate->interconnect_context, aSlice, mySlice, totalNumProcs);
-
-		/* let cdbmotion now how many receivers to expect. */
-		setExpectedReceivers(estate->motionlayer_context, childId, activeNumProcs);
-
-		expectedTotalIncoming += activeNumProcs;
+		(void) createChunkTransportState(interconnect_context, aSlice, mySlice, totalNumProcs);
 	}
 
 	if (expectedTotalIncoming > listenerBacklog)
@@ -1534,7 +1512,7 @@ SetupTCPInterconnect(EState *estate)
 		}
 
 		/* Inbound connections awaiting registration message */
-		foreach(cell, estate->interconnect_context->incompleteConns)
+		foreach(cell, interconnect_context->incompleteConns)
 		{
 			conn = (MotionConn *) lfirst(cell);
 
@@ -1578,7 +1556,7 @@ SetupTCPInterconnect(EState *estate)
 			if (conn->state == mcsSetupOutgoingConnection &&
 				conn->wakeup_ms <= elapsed_ms + 20)
 			{
-				setupOutgoingConnection(estate->interconnect_context, sendingChunkTransportState, conn);
+				setupOutgoingConnection(interconnect_context, sendingChunkTransportState, conn);
 				switch (conn->state)
 				{
 					case mcsSetupOutgoingConnection:
@@ -1587,7 +1565,7 @@ SetupTCPInterconnect(EState *estate)
 						break;
 					case mcsConnecting:
 						/* Set time limit for connect() to complete. */
-						if (estate->interconnect_context->aggressiveRetry)
+						if (interconnect_context->aggressiveRetry)
 							conn->wakeup_ms = CONNECT_AGGRESSIVERETRY_MS + elapsed_ms;
 						else
 							conn->wakeup_ms = CONNECT_RETRY_MS + elapsed_ms;
@@ -1687,9 +1665,9 @@ SetupTCPInterconnect(EState *estate)
 			/* Wait until earliest wakeup time or overall timeout. */
 			if (timeout_ms > 0)
 			{
-				ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
+				ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 				pg_usleep(timeout_ms * 1000);
-				ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
+				ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 			}
 
 			/* Back to top of loop and look again. */
@@ -1732,9 +1710,9 @@ SetupTCPInterconnect(EState *estate)
 			MemSet(&logbuf, 0, sizeof(logbuf));
 		}
 
-		ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
+		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		n = select(highsock + 1, (fd_set *) &rset, (fd_set *) &wset, (fd_set *) &eset, &timeout);
-		ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
+		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 
 		elapsed_ms = gp_get_elapsed_ms(&startTime);
 
@@ -1789,7 +1767,7 @@ SetupTCPInterconnect(EState *estate)
 		 * expectedTotalIncoming, but that causes problems if some connections
 		 * are left over -- better to just process them here.
 		 */
-		cell = list_head(estate->interconnect_context->incompleteConns);
+		cell = list_head(interconnect_context->incompleteConns);
 		while (n > 0 && cell != NULL)
 		{
 			conn = (MotionConn *) lfirst(cell);
@@ -1803,14 +1781,14 @@ SetupTCPInterconnect(EState *estate)
 			if (MPP_FD_ISSET(conn->sockfd, &rset))
 			{
 				n--;
-				if (readRegisterMessage(estate->interconnect_context, conn))
+				if (readRegisterMessage(interconnect_context, conn))
 				{
 					/*
 					 * We're done with this connection (either it is bogus
 					 * (and has been dropped), or we've added it to the
 					 * appropriate hash table)
 					 */
-					estate->interconnect_context->incompleteConns = list_delete_ptr(estate->interconnect_context->incompleteConns, conn);
+					interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
 
 					/* is the connection ready ? */
 					if (conn->sockfd != -1)
@@ -1841,7 +1819,7 @@ SetupTCPInterconnect(EState *estate)
 				conn->msgPos = conn->pBuff;
 				conn->remapper = CreateTupleRemapper();
 
-				estate->interconnect_context->incompleteConns = lappend(estate->interconnect_context->incompleteConns, conn);
+				interconnect_context->incompleteConns = lappend(interconnect_context->incompleteConns, conn);
 			}
 		}
 
@@ -1862,7 +1840,7 @@ SetupTCPInterconnect(EState *estate)
 						MPP_FD_ISSET(conn->sockfd, &eset))
 					{
 						n--;
-						updateOutgoingConnection(estate->interconnect_context, sendingChunkTransportState, conn, -1);
+						updateOutgoingConnection(interconnect_context, sendingChunkTransportState, conn, -1);
 						switch (conn->state)
 						{
 							case mcsSetupOutgoingConnection:
@@ -1888,7 +1866,7 @@ SetupTCPInterconnect(EState *estate)
 					if (MPP_FD_ISSET(conn->sockfd, &wset))
 					{
 						n--;
-						sendRegisterMessage(estate->interconnect_context, sendingChunkTransportState, conn);
+						sendRegisterMessage(interconnect_context, sendingChunkTransportState, conn);
 						if (conn->state == mcsStarted)
 							outgoing_count++;
 					}
@@ -1915,13 +1893,13 @@ SetupTCPInterconnect(EState *estate)
 	 * out here. It would obviously be better if we could avoid these
 	 * connections in the first place!
 	 */
-	if (list_length(estate->interconnect_context->incompleteConns) != 0)
+	if (list_length(interconnect_context->incompleteConns) != 0)
 	{
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG2, "Incomplete connections after known connections done, cleaning %d",
-				 list_length(estate->interconnect_context->incompleteConns));
+				 list_length(interconnect_context->incompleteConns));
 
-		while ((cell = list_head(estate->interconnect_context->incompleteConns)) != NULL)
+		while ((cell = list_head(interconnect_context->incompleteConns)) != NULL)
 		{
 			conn = (MotionConn *) lfirst(cell);
 
@@ -1933,7 +1911,7 @@ SetupTCPInterconnect(EState *estate)
 				conn->sockfd = -1;
 			}
 
-			estate->interconnect_context->incompleteConns = list_delete_ptr(estate->interconnect_context->incompleteConns, conn);
+			interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
 
 			if (conn->pBuff)
 				pfree(conn->pBuff);
@@ -1941,7 +1919,7 @@ SetupTCPInterconnect(EState *estate)
 		}
 	}
 
-	estate->interconnect_context->activated = true;
+	interconnect_context->activated = true;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_TERSE)
 	{
@@ -1952,6 +1930,7 @@ SetupTCPInterconnect(EState *estate)
 				 "%d outgoing routes.",
 				 elapsed_ms, incoming_count, outgoing_count);
 	}
+	return interconnect_context;
 }								/* SetupInterconnect */
 
 /* TeardownInterconnect() function is used to cleanup interconnect resources that
@@ -1972,7 +1951,6 @@ SetupTCPInterconnect(EState *estate)
  */
 void
 TeardownTCPInterconnect(ChunkTransportState *transportStates,
-						MotionLayerState *mlStates,
 						bool forceEOS, bool hasError)
 {
 	ListCell   *cell;
@@ -2014,7 +1992,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates,
 		if (elevel)
 			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
 									"%s; setup was %s",
-									Gp_segment, mySlice->sliceIndex,
+									GpIdentity.segindex, mySlice->sliceIndex,
 									forceEOS ? "force" : "normal",
 									transportStates->activated ? "completed" : "exited")));
 
@@ -2087,12 +2065,12 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates,
 		/* cleanup a Sending motion node. */
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			elog(DEBUG3, "Interconnect seg%d slice%d closing connections to slice%d",
-				 Gp_segment, mySlice->sliceIndex, mySlice->parentIndex);
+				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex);
 
 		getChunkTransportState(transportStates, mySlice->sliceIndex, &pEntry);
 
 		if (forceEOS && !hasError)
-			forceEosToPeers(mlStates, transportStates, mySlice->sliceIndex);
+			forceEosToPeers(transportStates, mySlice->sliceIndex);
 
 		for (i = 0; i < pEntry->numConns; i++)
 		{
@@ -2628,13 +2606,12 @@ RecvTupleChunkFromTCP(ChunkTransportState *transportStates,
 }
 
 static TupleChunkListItem
-RecvTupleChunkFromAnyTCP(MotionLayerState *mlStates,
-						 ChunkTransportState *transportStates,
+RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 						 int16 motNodeID,
 						 int16 *srcRoute)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
-	MotionNodeEntry *pMNEntry;
+	MotionNodeEntry *pMNEntry = NULL;
 	MotionConn *conn;
 	TupleChunkListItem tcItem;
 	mpp_fd_set	rset;
@@ -2650,7 +2627,8 @@ RecvTupleChunkFromAnyTCP(MotionLayerState *mlStates,
 #endif
 
 	getChunkTransportState(transportStates, motNodeID, &pEntry);
-	pMNEntry = getMotionNodeEntry(mlStates, motNodeID, "RecvTupleChunkFromAny");
+	if (transportStates->estate && transportStates->estate->motionlayer_context)
+		pMNEntry = getMotionNodeEntry(transportStates->estate->motionlayer_context, motNodeID, "flushBuffer");
 
 	int			retry = 0;
 
@@ -2696,7 +2674,8 @@ RecvTupleChunkFromAnyTCP(MotionLayerState *mlStates,
 			break;
 
 		n = select(pEntry->highReadSock + 1, (fd_set *) &rset, NULL, NULL, &timeout);
-		pMNEntry->sel_rd_wait += (tval.tv_sec - timeout.tv_sec) * 1000000 + (tval.tv_usec - timeout.tv_usec);
+		if (pMNEntry)
+			pMNEntry->sel_rd_wait += (tval.tv_sec - timeout.tv_sec) * 1000000 + (tval.tv_usec - timeout.tv_usec);
 		if (n < 0)
 		{
 			if (errno == EINTR)
@@ -2759,8 +2738,7 @@ RecvTupleChunkFromAnyTCP(MotionLayerState *mlStates,
 
 /* See ml_ipc.h */
 static void
-SendEosTCP(MotionLayerState *mlStates,
-		   ChunkTransportState *transportStates,
+SendEosTCP(ChunkTransportState *transportStates,
 		   int motNodeID,
 		   TupleChunkListItem tcItem)
 {
@@ -2784,13 +2762,13 @@ SendEosTCP(MotionLayerState *mlStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG3, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
-			 Gp_segment, motNodeID, pEntry->recvSlice->sliceIndex);
+			 GpIdentity.segindex, motNodeID, pEntry->recvSlice->sliceIndex);
 
 	/*
 	 * we want to add our tcItem onto each of the outgoing buffers -- this is
 	 * guaranteed to leave things in a state where a flush is *required*.
 	 */
-	doBroadcast(mlStates, transportStates, pEntry, tcItem, NULL);
+	doBroadcast(transportStates, pEntry, tcItem, NULL);
 
 	/* now flush all of the buffers. */
 	for (i = 0; i < pEntry->numConns; i++)
@@ -2798,7 +2776,7 @@ SendEosTCP(MotionLayerState *mlStates,
 		conn = pEntry->conns + i;
 
 		if (conn->sockfd >= 0 && conn->state == mcsStarted)
-			flushBuffer(mlStates, transportStates, pEntry, conn, motNodeID);
+			flushBuffer(transportStates, pEntry, conn, motNodeID);
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "SendEosTCP() Leaving");
@@ -2809,11 +2787,11 @@ SendEosTCP(MotionLayerState *mlStates,
 }
 
 static bool
-flushBuffer(MotionLayerState *mlStates, ChunkTransportState *transportStates,
+flushBuffer(ChunkTransportState *transportStates,
 			ChunkTransportStateEntry *pEntry, MotionConn *conn, int16 motionId)
 {
 	char	   *sendptr;
-	MotionNodeEntry *pMNEntry;
+	MotionNodeEntry *pMNEntry = NULL;
 	int			n,
 				sent = 0;
 	mpp_fd_set	wset;
@@ -2829,7 +2807,8 @@ flushBuffer(MotionLayerState *mlStates, ChunkTransportState *transportStates,
 	}
 #endif
 
-	pMNEntry = getMotionNodeEntry(mlStates, motionId, "flushBuffer");
+	if (transportStates->estate && transportStates->estate->motionlayer_context)
+		pMNEntry = getMotionNodeEntry(transportStates->estate->motionlayer_context, motionId, "flushBuffer");
 
 	/* first set header length */
 	*(uint32 *) conn->pBuff = conn->msgSize;
@@ -2881,7 +2860,8 @@ flushBuffer(MotionLayerState *mlStates, ChunkTransportState *transportStates,
 					MPP_FD_SET(conn->sockfd, &wset);
 					MPP_FD_SET(conn->sockfd, &rset);
 					n = select(conn->sockfd + 1, (fd_set *) &rset, (fd_set *) &wset, NULL, &timeout);
-					pMNEntry->sel_wr_wait += (tval.tv_sec - timeout.tv_sec) * 1000000 + (tval.tv_usec - timeout.tv_usec);
+					if (pMNEntry)
+						pMNEntry->sel_wr_wait += (tval.tv_sec - timeout.tv_sec) * 1000000 + (tval.tv_usec - timeout.tv_usec);
 					if (n < 0)
 					{
 						if (errno == EINTR)
@@ -2966,7 +2946,7 @@ flushBuffer(MotionLayerState *mlStates, ChunkTransportState *transportStates,
  *	 motionId - Node Motion Id.
  */
 static bool
-SendChunkTCP(MotionLayerState *mlStates, ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId)
+SendChunkTCP(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId)
 {
 	int			length = TYPEALIGN(TUPLE_CHUNK_ALIGN, tcItem->chunk_length);
 
@@ -2978,7 +2958,7 @@ SendChunkTCP(MotionLayerState *mlStates, ChunkTransportState *transportStates, C
 
 	if (conn->msgSize + length > Gp_max_packet_size)
 	{
-		if (!flushBuffer(mlStates, transportStates, pEntry, conn, motionId))
+		if (!flushBuffer(transportStates, pEntry, conn, motionId))
 			return false;
 	}
 

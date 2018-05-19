@@ -22,6 +22,7 @@
 #include "miscadmin.h"
 #include "port/atomics.h"
 #include "utils/faultinjection.h"
+#include "utils/guc.h"
 #include "utils/vmem_tracker.h"
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"

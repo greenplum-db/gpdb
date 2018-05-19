@@ -35,6 +35,7 @@
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
 #include "utils/acl.h"
+#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/numeric.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
@@ -162,8 +163,8 @@ GetAOCSFileSegInfo(Relation prel,
 			if (fssegtup != NULL)
 				ereport(ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("found two entries in pg_aoseg.%s with segno %d: ctid %s and ctid %s",
-								segrel->rd_rel->relname.data,
+						 errmsg("found two entries in %s with segno %d: ctid %s and ctid %s",
+								RelationGetRelationName(segrel),
 								segno,
 								ItemPointerToString(&fssegtup->t_self),
 								ItemPointerToString2(&segtup->t_self))));
@@ -1518,7 +1519,6 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
 	bool		connected = false;
-	char		aoseg_relname[NAMEDATALEN];
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
 	int64		total_count = 0;
@@ -1526,20 +1526,16 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	int32		nvp = RelationGetNumberOfAttributes(parentrel);
 
 	/*
-	 * get the name of the aoseg relation
-	 */
-	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
-	snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-	heap_close(aosegrel, AccessShareLock);
-
-	/*
 	 * assemble our query string
 	 */
+	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	initStringInfo(&sqlstmt);
 	appendStringInfo(&sqlstmt, "select segno,sum(tupcount) "
-					 "from gp_dist_random('pg_aoseg.%s') "
-					 "group by (segno)", aoseg_relname);
-
+					 "from gp_dist_random('%s.%s') "
+					 "group by (segno)",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
+					 RelationGetRelationName(aosegrel));
+	heap_close(aosegrel, AccessShareLock);
 
 	PG_TRY();
 	{
@@ -1738,12 +1734,14 @@ aocol_compression_ratio_internal(Relation parentrel)
 	initStringInfo(&sqlstmt);
 	if (Gp_role == GP_ROLE_DISPATCH)
 		appendStringInfo(&sqlstmt, "select vpinfo "
-						 "from gp_dist_random('pg_aoseg.%s')",
-						 aocsseg_relname);
+						 "from gp_dist_random('%s.%s')",
+						 get_namespace_name(RelationGetNamespace(aosegrel)),
+						 RelationGetRelationName(aosegrel));
 	else
 		appendStringInfo(&sqlstmt, "select vpinfo "
-						 "from pg_aoseg.%s",
-						 aocsseg_relname);
+						 "from %s.%s",
+						 get_namespace_name(RelationGetNamespace(aosegrel)),
+						 RelationGetRelationName(aosegrel));
 
 	PG_TRY();
 	{

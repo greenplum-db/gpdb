@@ -17,6 +17,7 @@
 #include "nodes/parsenodes.h"
 #include "nodes/primnodes.h"
 #include "nodes/makefuncs.h"
+#include "catalog/pg_collation.h"
 #include "utils/datum.h"
 
 #include "gpos/base.h"
@@ -165,6 +166,8 @@ CTranslatorDXLToScalar::PcaseexprFromDXLNodeScIfStmt
 
 	CaseExpr *pcaseexpr = MakeNode(CaseExpr);
 	pcaseexpr->casetype = CMDIdGPDB::PmdidConvert(pdxlopIfStmt->PmdidResultType())->OidObjectId();
+	// GDPB_91_MERGE_FIXME: collation
+	pcaseexpr->casecollid = gpdb::OidTypeCollation(pcaseexpr->casetype);
 
 	CDXLNode *pdxlnCurr = const_cast<CDXLNode*>(pdxlnIfStmt);
 	Expr *pexprElse = NULL;
@@ -229,6 +232,8 @@ CTranslatorDXLToScalar::PcaseexprFromDXLNodeScSwitch
 
 	CaseExpr *pcaseexpr = MakeNode(CaseExpr);
 	pcaseexpr->casetype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+	// GDPB_91_MERGE_FIXME: collation
+	pcaseexpr->casecollid = gpdb::OidTypeCollation(pcaseexpr->casetype);
 
 	// translate arg child
 	pcaseexpr->arg = PexprFromDXLNodeScalar((*pdxlnSwitch)[0], pmapcidvar);
@@ -278,6 +283,8 @@ CTranslatorDXLToScalar::PcasetestexprFromDXLNodeScCaseTest
 	CaseTestExpr *pcasetestexpr = MakeNode(CaseTestExpr);
 	pcasetestexpr->typeId = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
 	pcasetestexpr->typeMod = -1;
+	// GDPB_91_MERGE_FIXME: collation
+	pcasetestexpr->collation = gpdb::OidTypeCollation(pcasetestexpr->typeId);
 
 	return (Expr *)pcasetestexpr;
 }
@@ -304,7 +311,7 @@ CTranslatorDXLToScalar::PopexprFromDXLNodeScOpExpr
 
 	const IMDScalarOp *pmdscop = m_pmda->Pmdscop(pdxlopOpExpr->Pmdid());
 	popexpr->opfuncid = CMDIdGPDB::PmdidConvert(pmdscop->PmdidFunc())->OidObjectId();
-	
+
 	IMDId *pmdidReturnType = pdxlopOpExpr->PmdidReturnType();
 	if (NULL != pmdidReturnType)
 	{
@@ -322,6 +329,10 @@ CTranslatorDXLToScalar::PopexprFromDXLNodeScOpExpr
 
 	// translate children
 	popexpr->args = PlistTranslateScalarChildren(popexpr->args, pdxlnOpExpr, pmapcidvar);
+
+	// GDPB_91_MERGE_FIXME: collation
+	popexpr->inputcollid = gpdb::OidExprCollation((Node *) popexpr->args);
+	popexpr->opcollid = gpdb::OidTypeCollation(popexpr->opresulttype);
 
 	return (Expr *)popexpr;
 }
@@ -379,6 +390,8 @@ CTranslatorDXLToScalar::PstrarrayopexprFromDXLNodeScArrayComp
 	Expr *pexprRight = PexprFromDXLNodeScalar(pdxlnRight, pmapcidvar);
 
 	parrayopexpr->args = ListMake2(pexprLeft, pexprRight);
+	// GDPB_91_MERGE_FIXME: collation
+	parrayopexpr->inputcollid = gpdb::OidExprCollation((Node *) parrayopexpr->args);
 
 	return (Expr *)parrayopexpr;
 }
@@ -408,6 +421,8 @@ CTranslatorDXLToScalar::PdistexprFromDXLNodeScDistinctComp
 
 	pdistexpr->opfuncid = CMDIdGPDB::PmdidConvert(pmdscop->PmdidFunc())->OidObjectId();
 	pdistexpr->opresulttype = OidFunctionReturnType(pmdscop->PmdidFunc());
+	// GDPB_91_MERGE_FIXME: collation
+	pdistexpr->opcollid = gpdb::OidTypeCollation(pdistexpr->opresulttype);
 
 	// translate left and right child
 	GPOS_ASSERT(2 == pdxlnDistComp->UlArity());
@@ -523,6 +538,10 @@ CTranslatorDXLToScalar::PaggrefFromDXLNodeScAggref
 		paggref->args = gpdb::PlAppendElement(paggref->args, pteNew);
 	}
 
+	// GDPB_91_MERGE_FIXME: collation
+	paggref->inputcollid = gpdb::OidExprCollation((Node *) argExprs);
+	paggref->aggcollid = gpdb::OidTypeCollation(paggref->aggtype);
+
 	return (Expr *)paggref;
 }
 
@@ -577,6 +596,9 @@ CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef
 
 	// translate the arguments of the window function
 	pwindowfunc->args = PlistTranslateScalarChildren(pwindowfunc->args, pdxlnWinref, pmapcidvar);
+	// GDPB_91_MERGE_FIXME: collation
+	pwindowfunc->wincollid = gpdb::OidTypeCollation(pwindowfunc->wintype);
+	pwindowfunc->inputcollid = gpdb::OidExprCollation((Node *) pwindowfunc->args);
 
 	return (Expr *) pwindowfunc;
 }
@@ -605,6 +627,10 @@ CTranslatorDXLToScalar::PfuncexprFromDXLNodeScFuncExpr
 	pfuncexpr->funcformat = COERCE_DONTCARE;
 	pfuncexpr->funcresulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidRetType())->OidObjectId();
 	pfuncexpr->args = PlistTranslateScalarChildren(pfuncexpr->args, pdxlnFuncExpr, pmapcidvar);
+
+	// GDPB_91_MERGE_FIXME: collation
+	pfuncexpr->inputcollid = gpdb::OidExprCollation((Node *) pfuncexpr->args);
+	pfuncexpr->funccollid = gpdb::OidTypeCollation(pfuncexpr->funcresulttype);
 
 	return (Expr *)pfuncexpr;
 }
@@ -894,6 +920,8 @@ CTranslatorDXLToScalar::PsubplanFromChildPlan
 	psubplan->plan_name = SzSubplanAlias(psubplan->plan_id);
 	psubplan->is_initplan = false;
 	psubplan->firstColType = gpdb::OidExprType( (Node*) ((TargetEntry*) gpdb::PvListNth(pplan->targetlist, 0))->expr);
+	// GDPB_91_MERGE_FIXME: collation
+	psubplan->firstColCollation = gpdb::OidTypeCollation(psubplan->firstColType);
 	psubplan->firstColTypmod = -1;
 	psubplan->subLinkType = slink;
 	psubplan->is_multirow = false;
@@ -948,6 +976,8 @@ CTranslatorDXLToScalar::PparamFromMapping
 	pparam->paramkind = PARAM_EXEC;
 	pparam->paramtype = CMDIdGPDB::PmdidConvert(pmecolidparamid->PmdidType())->OidObjectId();
 	pparam->paramtypmod = pmecolidparamid->ITypeModifier();
+	// GDPB_91_MERGE_FIXME: collation
+	pparam->paramcollid = gpdb::OidTypeCollation(pparam->paramtype);
 
 	return pparam;
 }
@@ -1121,12 +1151,15 @@ CTranslatorDXLToScalar::PnullifFromDXLNodeScNullIf
 	const IMDScalarOp *pmdscop = m_pmda->Pmdscop(pdxlop->PmdidOp());
 
 	pnullifexpr->opfuncid = CMDIdGPDB::PmdidConvert(pmdscop->PmdidFunc())->OidObjectId();
-	pnullifexpr->opresulttype = OidFunctionReturnType(pmdscop->PmdidFunc());
+	pnullifexpr->opresulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
 	pnullifexpr->opretset = false;
 
 	// translate children
 	GPOS_ASSERT(2 == pdxlnNullIf->UlArity());
 	pnullifexpr->args = PlistTranslateScalarChildren(pnullifexpr->args, pdxlnNullIf, pmapcidvar);
+	// GDPB_91_MERGE_FIXME: collation
+	pnullifexpr->opcollid = gpdb::OidTypeCollation(pnullifexpr->opresulttype);
+	pnullifexpr->inputcollid = gpdb::OidExprCollation((Node *) pnullifexpr->args);
 
 	return (Expr *) pnullifexpr;
 }
@@ -1148,6 +1181,10 @@ CTranslatorDXLToScalar::PrelabeltypeOrFuncexprFromDXLNodeScalarCast(const CDXLSc
 		pfuncexpr->args = NIL;
 		pfuncexpr->args = gpdb::PlAppendElement(pfuncexpr->args, pexprChild);
 
+		// GDPB_91_MERGE_FIXME: collation
+		pfuncexpr->inputcollid = gpdb::OidExprCollation((Node *) pfuncexpr->args);
+		pfuncexpr->funccollid = gpdb::OidTypeCollation(pfuncexpr->funcresulttype);
+
 		return (Expr *) pfuncexpr;
 	}
 
@@ -1158,6 +1195,8 @@ CTranslatorDXLToScalar::PrelabeltypeOrFuncexprFromDXLNodeScalarCast(const CDXLSc
 	prelabeltype->resulttypmod = -1;
 	prelabeltype->location = -1;
 	prelabeltype->relabelformat = COERCE_DONTCARE;
+	// GDPB_91_MERGE_FIXME: collation
+	prelabeltype->resultcollid = gpdb::OidTypeCollation(prelabeltype->resulttype);
 
 	return (Expr *) prelabeltype;
 }
@@ -1192,29 +1231,29 @@ CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
 //---------------------------------------------------------------------------
 Expr *
 CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain
-        (
-        const CDXLNode *pdxlnCoerce,
-        CMappingColIdVar *pmapcidvar
-        )
+	(
+	const CDXLNode *pdxlnCoerce,
+	CMappingColIdVar *pmapcidvar
+	)
 {
-        GPOS_ASSERT(NULL != pdxlnCoerce);
-        CDXLScalarCoerceToDomain *pdxlop = CDXLScalarCoerceToDomain::PdxlopConvert(pdxlnCoerce->Pdxlop());
+	GPOS_ASSERT(NULL != pdxlnCoerce);
+	CDXLScalarCoerceToDomain *pdxlop = CDXLScalarCoerceToDomain::PdxlopConvert(pdxlnCoerce->Pdxlop());
 
-        GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
-        CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+	GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
+	CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
 
-        Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+	CoerceToDomain *pcoerce = MakeNode(CoerceToDomain);
 
+	pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
+	pcoerce->arg = pexprChild;
+	pcoerce->resulttypmod = pdxlop->ITypeModifier();
+	pcoerce->location = pdxlop->ILoc();
+	pcoerce->coercionformat = (CoercionForm)  pdxlop->Edxlcf();
+	// GDPB_91_MERGE_FIXME: collation
+	pcoerce->resultcollid = gpdb::OidTypeCollation(pcoerce->resulttype);
 
-        CoerceToDomain *pcoerce = MakeNode(CoerceToDomain);
-
-        pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
-        pcoerce->arg = pexprChild;
-        pcoerce->resulttypmod = pdxlop->ITypeModifier();
-        pcoerce->location = pdxlop->ILoc();
-        pcoerce->coercionformat = (CoercionForm)  pdxlop->Edxlcf();
-
-        return (Expr *) pcoerce;
+	return (Expr *) pcoerce;
 }
 
 //---------------------------------------------------------------------------
@@ -1227,27 +1266,28 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain
 //---------------------------------------------------------------------------
 Expr *
 CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO
-        (
-        const CDXLNode *pdxlnCoerce,
-        CMappingColIdVar *pmapcidvar
-        )
+	(
+	const CDXLNode *pdxlnCoerce,
+	CMappingColIdVar *pmapcidvar
+	)
 {
-        GPOS_ASSERT(NULL != pdxlnCoerce);
-        CDXLScalarCoerceViaIO *pdxlop = CDXLScalarCoerceViaIO::PdxlopConvert(pdxlnCoerce->Pdxlop());
+	GPOS_ASSERT(NULL != pdxlnCoerce);
+	CDXLScalarCoerceViaIO *pdxlop = CDXLScalarCoerceViaIO::PdxlopConvert(pdxlnCoerce->Pdxlop());
 
-        GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
-        CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+	GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
+	CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
 
-        Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+	CoerceViaIO *pcoerce = MakeNode(CoerceViaIO);
 
-        CoerceViaIO *pcoerce = MakeNode(CoerceViaIO);
+	pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
+	pcoerce->arg = pexprChild;
+	pcoerce->location = pdxlop->ILoc();
+	pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
+	// GDPB_91_MERGE_FIXME: collation
+	pcoerce->resultcollid = gpdb::OidTypeCollation(pcoerce->resulttype);
 
-        pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
-        pcoerce->arg = pexprChild;
-        pcoerce->location = pdxlop->ILoc();
-        pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
-
-        return (Expr *) pcoerce;
+  return (Expr *) pcoerce;
 }
 
 //---------------------------------------------------------------------------
@@ -1260,30 +1300,32 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO
 //---------------------------------------------------------------------------
 Expr *
 CTranslatorDXLToScalar::PcoerceFromDXLNodeScArrayCoerceExpr
-        (
-        const CDXLNode *pdxlnCoerce,
-        CMappingColIdVar *pmapcidvar
-        )
+	(
+	const CDXLNode *pdxlnCoerce,
+	CMappingColIdVar *pmapcidvar
+	)
 {
-        GPOS_ASSERT(NULL != pdxlnCoerce);
-        CDXLScalarArrayCoerceExpr *pdxlop = CDXLScalarArrayCoerceExpr::PdxlopConvert(pdxlnCoerce->Pdxlop());
+	GPOS_ASSERT(NULL != pdxlnCoerce);
+	CDXLScalarArrayCoerceExpr *pdxlop = CDXLScalarArrayCoerceExpr::PdxlopConvert(pdxlnCoerce->Pdxlop());
 
-        GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
-        CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+	GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
+	CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
 
-        Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
 
-        ArrayCoerceExpr *pcoerce = MakeNode(ArrayCoerceExpr);
+	ArrayCoerceExpr *pcoerce = MakeNode(ArrayCoerceExpr);
 
-        pcoerce->arg = pexprChild;
-        pcoerce->elemfuncid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElementFunc())->OidObjectId();
-        pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
-        pcoerce->resulttypmod = pdxlop->ITypeModifier();
-        pcoerce->isExplicit = pdxlop->FIsExplicit();
-        pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
-        pcoerce->location = pdxlop->ILoc();
+	pcoerce->arg = pexprChild;
+	pcoerce->elemfuncid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElementFunc())->OidObjectId();
+	pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
+	pcoerce->resulttypmod = pdxlop->ITypeModifier();
+	// GDPB_91_MERGE_FIXME: collation
+	pcoerce->resultcollid = gpdb::OidTypeCollation(pcoerce->resulttype);
+	pcoerce->isExplicit = pdxlop->FIsExplicit();
+	pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
+	pcoerce->location = pdxlop->ILoc();
 
-        return (Expr *) pcoerce;
+	return (Expr *) pcoerce;
 }
 
 //---------------------------------------------------------------------------
@@ -1306,6 +1348,8 @@ CTranslatorDXLToScalar::PcoalesceFromDXLNodeScCoalesce
 	CoalesceExpr *pcoalesce = MakeNode(CoalesceExpr);
 
 	pcoalesce->coalescetype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+	// GDPB_91_MERGE_FIXME: collation
+	pcoalesce->coalescecollid = gpdb::OidTypeCollation(pcoalesce->coalescetype);
 	pcoalesce->args = PlistTranslateScalarChildren(pcoalesce->args, pdxlnCoalesce, pmapcidvar);
 	pcoalesce->location = -1;
 
@@ -1332,7 +1376,10 @@ CTranslatorDXLToScalar::PminmaxFromDXLNodeScMinMax
 	MinMaxExpr *pminmax = MakeNode(MinMaxExpr);
 
 	pminmax->minmaxtype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+	pminmax->minmaxcollid = gpdb::OidTypeCollation(pminmax->minmaxtype);
 	pminmax->args = PlistTranslateScalarChildren(pminmax->args, pdxlnMinMax, pmapcidvar);
+	// GDPB_91_MERGE_FIXME: collation
+	pminmax->inputcollid = gpdb::OidExprCollation((Node *) pminmax->args);
 	pminmax->location = -1;
 
 	CDXLScalarMinMax::EdxlMinMaxType emmt = pdxlop->Emmt();
@@ -1415,7 +1462,7 @@ CTranslatorDXLToScalar::PconstFromDXLDatum
 	)
 {
 	GPOS_ASSERT(NULL != pdxldatum);
-	
+
 	static const SDatumTranslatorElem rgTranslators[] =
 		{
 			{CDXLDatum::EdxldatumInt2 , &CTranslatorDXLToScalar::PconstInt2},
@@ -1470,6 +1517,7 @@ CTranslatorDXLToScalar::PconstOid
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumOid->Pmdid())->OidObjectId();
 	pconst->consttypmod = -1;
+	pconst->constcollid = InvalidOid;
 	pconst->constbyval = pdxldatumOid->FByValue();
 	pconst->constisnull = pdxldatumOid->FNull();
 	pconst->constlen = pdxldatumOid->UlLength();
@@ -1506,6 +1554,7 @@ CTranslatorDXLToScalar::PconstInt2
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint2->Pmdid())->OidObjectId();
 	pconst->consttypmod = -1;
+	pconst->constcollid = InvalidOid;
 	pconst->constbyval = pdxldatumint2->FByValue();
 	pconst->constisnull = pdxldatumint2->FNull();
 	pconst->constlen = pdxldatumint2->UlLength();
@@ -1542,6 +1591,7 @@ CTranslatorDXLToScalar::PconstInt4
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint4->Pmdid())->OidObjectId();
 	pconst->consttypmod = -1;
+	pconst->constcollid = InvalidOid;
 	pconst->constbyval = pdxldatumint4->FByValue();
 	pconst->constisnull = pdxldatumint4->FNull();
 	pconst->constlen = pdxldatumint4->UlLength();
@@ -1577,6 +1627,7 @@ CTranslatorDXLToScalar::PconstInt8
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint8->Pmdid())->OidObjectId();
 	pconst->consttypmod = -1;
+	pconst->constcollid = InvalidOid;
 	pconst->constbyval = pdxldatumint8->FByValue();
 	pconst->constisnull = pdxldatumint8->FNull();
 	pconst->constlen = pdxldatumint8->UlLength();
@@ -1612,6 +1663,7 @@ CTranslatorDXLToScalar::PconstBool
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumbool->Pmdid())->OidObjectId();
 	pconst->consttypmod = -1;
+	pconst->constcollid = InvalidOid;
 	pconst->constbyval = pdxldatumbool->FByValue();
 	pconst->constisnull = pdxldatumbool->FNull();
 	pconst->constlen = pdxldatumbool->UlLength();
@@ -1648,6 +1700,8 @@ CTranslatorDXLToScalar::PconstGeneric
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumgeneric->Pmdid())->OidObjectId();
 	pconst->consttypmod = pdxldatumgeneric->ITypeModifier();
+	// GDPB_91_MERGE_FIXME: collation
+	pconst->constcollid = gpdb::OidTypeCollation(pconst->consttype);
 	pconst->constbyval = pdxldatumgeneric->FByValue();
 	pconst->constisnull = pdxldatumgeneric->FNull();
 	pconst->constlen = pdxldatumgeneric->UlLength();
@@ -1898,6 +1952,10 @@ CTranslatorDXLToScalar::PopexprFromDXLNodeScCmp
 
 	popexpr->args = ListMake2(pexprLeft, pexprRight);
 
+	// GDPB_91_MERGE_FIXME: collation
+	popexpr->inputcollid = gpdb::OidExprCollation((Node *) popexpr->args);
+	popexpr->opcollid = gpdb::OidTypeCollation(popexpr->opresulttype);;
+
 	return (Expr *) popexpr;
 }
 
@@ -1922,6 +1980,8 @@ CTranslatorDXLToScalar::PexprArray
 	ArrayExpr *pexpr = MakeNode(ArrayExpr);
 	pexpr->element_typeid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElem())->OidObjectId();
 	pexpr->array_typeid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidArray())->OidObjectId();
+	// GDPB_91_MERGE_FIXME: collation
+	pexpr->array_collid = gpdb::OidTypeCollation(pexpr->array_typeid);
 	pexpr->multidims = pdxlop->FMultiDimensional();
 	pexpr->elements = PlistTranslateScalarChildren(pexpr->elements, pdxlnArray, pmapcidvar);
 
@@ -1957,6 +2017,8 @@ CTranslatorDXLToScalar::PexprArrayRef
 	ArrayRef *parrayref = MakeNode(ArrayRef);
 	parrayref->refarraytype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidArray())->OidObjectId();
 	parrayref->refelemtype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElem())->OidObjectId();
+	// GDPB_91_MERGE_FIXME: collation
+	parrayref->refcollid = gpdb::OidTypeCollation(parrayref->refelemtype);
 	parrayref->reftypmod = pdxlop->ITypeModifier();
 
 	const ULONG ulArity = pdxlnArrayref->UlArity();

@@ -1,3 +1,4 @@
-/dblink.sql
 # Generated subdirectories
+/log/
 /results/
+/tmp_check/

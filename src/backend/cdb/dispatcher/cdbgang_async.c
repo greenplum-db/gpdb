@@ -123,7 +123,6 @@ create_gang_retry:
 			 * options are recognized.
 			 */
 			build_gpqeid_param(gpqeid, sizeof(gpqeid),
-							   segdbDesc->segindex,
 							   type == GANGTYPE_PRIMARY_WRITER,
 							   gang_id,
 							   segdbDesc->segment_database_info->hostSegs);

@@ -14,7 +14,10 @@
 
 #include "postgres.h"
 
+#include <limits.h>
+
 #include "cdb/cdbvars.h"
+#include "miscadmin.h"
 #include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "utils/vmem_tracker.h"

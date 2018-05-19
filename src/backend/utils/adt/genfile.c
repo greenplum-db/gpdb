@@ -4,12 +4,12 @@
  *		Functions for direct access to files
  *
  *
- * Copyright (c) 2004-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2011, PostgreSQL Global Development Group
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/genfile.c,v 1.23 2010/01/05 01:29:36 itagaki Exp $
+ *	  src/backend/utils/adt/genfile.c
  *
  *-------------------------------------------------------------------------
  */
@@ -64,31 +64,31 @@ convert_and_check_filename(text *arg)
 	filename = text_to_cstring(arg);
 	canonicalize_path(filename);	/* filename can change length here */
 
-	/* Disallow ".." in the path */
-	if (path_contains_parent_reference(filename))
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-			(errmsg("reference to parent directory (\"..\") not allowed"))));
-
 	if (is_absolute_path(filename))
 	{
-		/* Allow absolute references within DataDir */
-		if (path_is_prefix_of_path(DataDir, filename))
-			return filename;
-		/* The log directory might be outside our datadir, but allow it */
-		if (is_absolute_path(Log_directory) &&
-			path_is_prefix_of_path(Log_directory, filename))
-			return filename;
+		/* Disallow '/a/b/data/..' */
+		if (path_contains_parent_reference(filename))
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			(errmsg("reference to parent directory (\"..\") not allowed"))));
 
+		/*
+		 * Allow absolute paths if within DataDir or Log_directory, even
+		 * though Log_directory might be outside DataDir.
+		 */
+		if (!path_is_prefix_of_path(DataDir, filename) &&
+			(!is_absolute_path(Log_directory) ||
+			 !path_is_prefix_of_path(Log_directory, filename)))
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 (errmsg("absolute path not allowed"))));
+	}
+	else if (!path_is_relative_and_below_cwd(filename))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("absolute path not allowed"))));
-		return NULL;			/* keep compiler quiet */
-	}
-	else
-	{
-		return filename;
-	}
+				 (errmsg("path must be in or below the current directory"))));
+
+	return filename;
 }
 
 /*
@@ -169,6 +169,24 @@ read_binary_file(const char *filename, int64 seek_offset, int64 bytes_to_read)
 }
 
 /*
+ * Similar to read_binary_file, but we verify that the contents are valid
+ * in the database encoding.
+ */
+static text *
+read_text_file(const char *filename, int64 seek_offset, int64 bytes_to_read)
+{
+	bytea	   *buf;
+
+	buf = read_binary_file(filename, seek_offset, bytes_to_read);
+
+	/* Make sure the input is valid */
+	pg_verifymbstr(VARDATA(buf), VARSIZE(buf) - VARHDRSZ, false);
+
+	/* OK, we can cast it to text safely */
+	return (text *) buf;
+}
+
+/*
  * Read a section of a file, returning it as text
  */
 Datum
@@ -177,9 +195,6 @@ pg_read_file(PG_FUNCTION_ARGS)
 	text	   *filename_t = PG_GETARG_TEXT_P(0);
 	int64		seek_offset = PG_GETARG_INT64(1);
 	int64		bytes_to_read = PG_GETARG_INT64(2);
-	char	   *buf;
-	size_t		nbytes;
-	FILE	   *file;
 	char	   *filename;
 
 	if (!superuser())
@@ -189,47 +204,76 @@ pg_read_file(PG_FUNCTION_ARGS)
 
 	filename = convert_and_check_filename(filename_t);
 
-	if ((file = AllocateFile(filename, PG_BINARY_R)) == NULL)
+	if (bytes_to_read < 0)
 		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open file \"%s\" for reading: %m",
-						filename)));
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("requested length cannot be negative")));
 
-	if (fseeko(file, (off_t) seek_offset,
-			   (seek_offset >= 0) ? SEEK_SET : SEEK_END) != 0)
+	PG_RETURN_TEXT_P(read_text_file(filename, seek_offset, bytes_to_read));
+}
+
+/*
+ * Read the whole of a file, returning it as text
+ */
+Datum
+pg_read_file_all(PG_FUNCTION_ARGS)
+{
+	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	char	   *filename;
+
+	if (!superuser())
 		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not seek in file \"%s\": %m", filename)));
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to read files"))));
+
+	filename = convert_and_check_filename(filename_t);
+
+	PG_RETURN_TEXT_P(read_text_file(filename, 0, -1));
+}
+
+/*
+ * Read a section of a file, returning it as bytea
+ */
+Datum
+pg_read_binary_file(PG_FUNCTION_ARGS)
+{
+	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	int64		seek_offset = PG_GETARG_INT64(1);
+	int64		bytes_to_read = PG_GETARG_INT64(2);
+	char	   *filename;
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to read files"))));
+
+	filename = convert_and_check_filename(filename_t);
 
 	if (bytes_to_read < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("requested length cannot be negative")));
 
-	/* not sure why anyone thought that int64 length was a good idea */
-	if (bytes_to_read > (MaxAllocSize - VARHDRSZ))
+	PG_RETURN_BYTEA_P(read_binary_file(filename, seek_offset, bytes_to_read));
+}
+
+/*
+ * Read the whole of a file, returning it as bytea
+ */
+Datum
+pg_read_binary_file_all(PG_FUNCTION_ARGS)
+{
+	text	   *filename_t = PG_GETARG_TEXT_P(0);
+	char	   *filename;
+
+	if (!superuser())
 		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("requested length too large")));
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to read files"))));
 
-	buf = palloc((Size) bytes_to_read + VARHDRSZ);
+	filename = convert_and_check_filename(filename_t);
 
-	nbytes = fread(VARDATA(buf), 1, (size_t) bytes_to_read, file);
-
-	if (ferror(file))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not read file \"%s\": %m", filename)));
-
-	/* Make sure the input is valid */
-	pg_verifymbstr(VARDATA(buf), nbytes, false);
-
-	SET_VARSIZE(buf, nbytes + VARHDRSZ);
-
-	FreeFile(file);
-	pfree(filename);
-
-	PG_RETURN_TEXT_P(buf);
+	PG_RETURN_BYTEA_P(read_binary_file(filename, 0, -1));
 }
 
 /*

@@ -1,13 +1,11 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2010, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2011, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.159 2010/05/26 19:29:22 rhaas Exp $
+ * src/bin/psql/help.c
  */
 #include "postgres_fe.h"
-
-#include <signal.h>
 
 #ifndef WIN32
 #ifdef HAVE_PWD_H
@@ -26,8 +24,6 @@
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #endif
-
-#include "pqsignal.h"
 
 #include "common.h"
 #include "help.h"
@@ -167,7 +163,7 @@ slashUsage(unsigned short int pager)
 	if (currdb == NULL)
 		currdb = "";
 
-	output = PageOutput(90, pager);
+	output = PageOutput(92, pager);
 
 	/* if you add/remove a line here, change the row count above */
 
@@ -179,8 +175,8 @@ slashUsage(unsigned short int pager)
 	fprintf(output, "\n");
 
 	fprintf(output, _("Query Buffer\n"));
-	fprintf(output, _("  \\e [FILE]              edit the query buffer (or file) with external editor\n"));
-	fprintf(output, _("  \\ef [FUNCNAME]         edit function definition with external editor\n"));
+	fprintf(output, _("  \\e [FILE] [LINE]       edit the query buffer (or file) with external editor\n"));
+	fprintf(output, _("  \\ef [FUNCNAME [LINE]]  edit function definition with external editor\n"));
 	fprintf(output, _("  \\p                     show the contents of the query buffer\n"));
 	fprintf(output, _("  \\r                     reset (clear) the query buffer\n"));
 #ifdef USE_READLINE
@@ -208,6 +204,7 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\dd[S]  [PATTERN]      show comments on objects\n"));
 	fprintf(output, _("  \\ddp    [PATTERN]      list default privileges\n"));
 	fprintf(output, _("  \\dD[S]  [PATTERN]      list domains\n"));
+	fprintf(output, _("  \\det[+] [PATTERN]      list foreign tables\n"));
 	fprintf(output, _("  \\des[+] [PATTERN]      list foreign servers\n"));
 	fprintf(output, _("  \\deu[+] [PATTERN]      list user mappings\n"));
 	fprintf(output, _("  \\dew[+] [PATTERN]      list foreign-data wrappers\n"));
@@ -216,22 +213,27 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\dFd[+] [PATTERN]      list text search dictionaries\n"));
 	fprintf(output, _("  \\dFp[+] [PATTERN]      list text search parsers\n"));
 	fprintf(output, _("  \\dFt[+] [PATTERN]      list text search templates\n"));
-	fprintf(output, _("  \\dg[+]  [PATTERN]      list roles (groups)\n"));
-	fprintf(output, _("  \\dx[+]  [PATTERN]      list extensions\n"));
+	fprintf(output, _("  \\dg[+]  [PATTERN]      list roles\n"));
 	fprintf(output, _("  \\di[S+] [PATTERN]      list indexes\n"));
 	fprintf(output, _("  \\dl                    list large objects, same as \\lo_list\n"));
-	fprintf(output, _("  \\dn[+]  [PATTERN]      list schemas\n"));
+	fprintf(output, _("  \\dL[S+] [PATTERN]      list procedural languages\n"));
+	fprintf(output, _("  \\dn[S+] [PATTERN]      list schemas\n"));
 	fprintf(output, _("  \\do[S]  [PATTERN]      list operators\n"));
+	fprintf(output, _("  \\dO[S+] [PATTERN]      list collations\n"));
 	fprintf(output, _("  \\dp     [PATTERN]      list table, view, and sequence access privileges\n"));
 	fprintf(output, _("  \\dr[S+] [PATTERN]      list foreign tables\n"));  /* GPDB Only */
 	fprintf(output, _("  \\drds [PATRN1 [PATRN2]] list per-database role settings\n"));
 	fprintf(output, _("  \\ds[S+] [PATTERN]      list sequences\n"));
 	fprintf(output, _("  \\dt[S+] [PATTERN]      list tables\n"));
 	fprintf(output, _("  \\dT[S+] [PATTERN]      list data types\n"));
-	fprintf(output, _("  \\du[+]  [PATTERN]      list roles (users)\n"));
+	fprintf(output, _("  \\du[+]  [PATTERN]      list roles\n"));
 	fprintf(output, _("  \\dv[S+] [PATTERN]      list views\n"));
+	/* GPDB_91_MERGE_FIXME: can we use \dE for both external and foreign tables? */
 	fprintf(output, _("  \\dE     [PATTERN]      list external tables\n"));
+	fprintf(output, _("  \\dE[S+] [PATTERN]      list foreign tables\n"));
+	fprintf(output, _("  \\dx[+]  [PATTERN]      list extensions\n"));
 	fprintf(output, _("  \\l[+]                  list all databases\n"));
+	fprintf(output, _("  \\sf[+] FUNCNAME        show a function's definition\n"));
 	fprintf(output, _("  \\z      [PATTERN]      same as \\dp\n"));
 	fprintf(output, "\n");
 
@@ -279,13 +281,7 @@ slashUsage(unsigned short int pager)
 					  "  \\lo_list\n"
 					  "  \\lo_unlink LOBOID      large object operations\n"));
 
-	if (output != stdout)
-	{
-		pclose(output);
-#ifndef WIN32
-		pqsignal(SIGPIPE, SIG_DFL);
-#endif
-	}
+	ClosePager(output);
 }
 
 
@@ -342,14 +338,7 @@ helpSQL(const char *topic, unsigned short int pager)
 			fputc('\n', output);
 		}
 
-		/* Only close if we used the pager */
-		if (output != stdout)
-		{
-			pclose(output);
-#ifndef WIN32
-			pqsignal(SIGPIPE, SIG_DFL);
-#endif
-		}
+		ClosePager(output);
 	}
 	else
 	{
@@ -357,7 +346,7 @@ helpSQL(const char *topic, unsigned short int pager)
 					j,
 					x = 0;
 		bool		help_found = false;
-		FILE	   *output;
+		FILE	   *output = NULL;
 		size_t		len,
 					wordlen;
 		int			nl_count = 0;
@@ -384,7 +373,8 @@ helpSQL(const char *topic, unsigned short int pager)
 				}
 				if (wordlen >= len)		/* Don't try again if the same word */
 				{
-					output = PageOutput(nl_count, pager);
+					if (!output)
+						output = PageOutput(nl_count, pager);
 					break;
 				}
 				len = wordlen;
@@ -404,7 +394,8 @@ helpSQL(const char *topic, unsigned short int pager)
 				}
 			}
 
-			output = PageOutput(nl_count, pager);
+			if (!output)
+				output = PageOutput(nl_count, pager);
 
 			for (i = 0; QL_HELP[i].cmd; i++)
 			{
@@ -434,14 +425,7 @@ helpSQL(const char *topic, unsigned short int pager)
 		if (!help_found)
 			fprintf(output, _("No help available for \"%s\".\nTry \\h with no arguments to see available help.\n"), topic);
 
-		/* Only close if we used the pager */
-		if (output != stdout)
-		{
-			pclose(output);
-#ifndef WIN32
-			pqsignal(SIGPIPE, SIG_DFL);
-#endif
-		}
+		ClosePager(output);
 	}
 }
 
@@ -458,19 +442,19 @@ print_copyright(void)
 		 "This software is based on Postgres95, formerly known as Postgres, which\n"
 		 "contains the following notice:\n\n"
 		 "Portions Copyright (c) 1994, The Regents of the University of California\n\n"
-		 "Permission to use, copy, modify, and distribute this software and its\n"
+	"Permission to use, copy, modify, and distribute this software and its\n"
 		 "documentation for any purpose, without fee, and without a written agreement\n"
-		 "is hereby granted, provided that the above copyright notice and this paragraph\n"
-		 "and the following two paragraphs appear in all copies.\n\n"
+	 "is hereby granted, provided that the above copyright notice and this\n"
+	   "paragraph and the following two paragraphs appear in all copies.\n\n"
 		 "IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR\n"
-		 "DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST\n"
-		 "PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF\n"
-		 "THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH\n"
-		 "DAMAGE.\n\n"
-		 "THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,\n"
-		 "BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A\n"
-		 "PARTICULAR PURPOSE.THE SOFTWARE PROVIDED HEREUNDER IS ON AN \"AS IS\" BASIS,\n"
-		 "AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,\n"
-		 "SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
+		 "DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING\n"
+		 "LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS\n"
+		 "DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE\n"
+		 "POSSIBILITY OF SUCH DAMAGE.\n\n"
+	  "THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,\n"
+		 "INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY\n"
+		 "AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS\n"
+		 "ON AN \"AS IS\" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO\n"
+	"PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.\n"
 		);
 }

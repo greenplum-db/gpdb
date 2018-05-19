@@ -512,6 +512,24 @@ insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'
 
 select count(*) from (select distinct * from aocs_compress_results) temp; -- should give 2 after reclaiming space
 
+-- Same transaction truncate multiple times. This performs unsafe truncate means
+-- direct file truncate and not flipping the relfilenode.
+
+create table aocs_truncate_multiple_times(a int, b int) with (appendonly=true, orientation=column);
+insert into aocs_truncate_multiple_times select i,i from generate_series(0, 9)i;
+begin;
+select * from aocs_truncate_multiple_times;
+truncate table aocs_truncate_multiple_times;
+select * from aocs_truncate_multiple_times;
+insert into aocs_truncate_multiple_times select i from generate_series(10, 19)i;
+select * from aocs_truncate_multiple_times;
+truncate table aocs_truncate_multiple_times;
+select * from aocs_truncate_multiple_times;
+insert into aocs_truncate_multiple_times select i,i from generate_series(20, 29)i;
+select * from aocs_truncate_multiple_times;
+abort;
+select * from aocs_truncate_multiple_times;
+
 -- test case for append optimized columnar bitmap scan when row level bitmap is promoted to page level
 
 drop table if exists bms_ao_bug;

@@ -12,12 +12,12 @@
  * Note that other approaches to parameters are possible using the parser
  * hooks defined in ParseState.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_param.c,v 2.4 2010/02/26 02:00:52 momjian Exp $
+ *	  src/backend/parser/parse_param.c
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +30,7 @@
 #include "nodes/nodeFuncs.h"
 #include "parser/parse_param.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
 
 
 typedef struct FixedParamState
@@ -113,6 +114,7 @@ fixed_paramref_hook(ParseState *pstate, ParamRef *pref)
 	param->paramid = paramno;
 	param->paramtype = parstate->paramTypes[paramno - 1];
 	param->paramtypmod = -1;
+	param->paramcollid = get_typcollation(param->paramtype);
 	param->location = pref->location;
 
 	return (Node *) param;
@@ -165,6 +167,7 @@ variable_paramref_hook(ParseState *pstate, ParamRef *pref)
 	param->paramid = paramno;
 	param->paramtype = *pptype;
 	param->paramtypmod = -1;
+	param->paramcollid = get_typcollation(param->paramtype);
 	param->location = pref->location;
 
 	return (Node *) param;
@@ -227,6 +230,13 @@ variable_coerce_param_hook(ParseState *pstate, Param *param,
 		 * run-time length check/coercion will occur if needed.
 		 */
 		param->paramtypmod = -1;
+
+		/*
+		 * This module always sets a Param's collation to be the default for
+		 * its datatype.  If that's not what you want, you should be using the
+		 * more general parser substitution hooks.
+		 */
+		param->paramcollid = get_typcollation(param->paramtype);
 
 		/* Use the leftmost of the param's and coercion's locations */
 		if (location >= 0 &&

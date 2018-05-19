@@ -44,6 +44,7 @@
 
 #include "cdb/cdbllize.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/snapmgr.h"
@@ -2483,7 +2484,7 @@ gatherRMInDoubtTransactions(void)
 			{
 				elog(DEBUG3, "Found in-doubt transaction with GID: %s on remote RM", gid);
 
-				strcpy(lastDtx->gid, gid);
+				strncpy(lastDtx->gid, gid, TMGIDSIZE);
 			}
 
 		}
@@ -2593,20 +2594,20 @@ verify_shared_snapshot_ready(void)
  *
  * See verify_shared_snapshot_ready(...) for additional information.
  */
-bool
-assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source __attribute__((unused)))
+void
+assign_gp_write_shared_snapshot(bool newval, void *extra)
 {
 
 #if FALSE
-	elog(DEBUG1, "SET gp_write_shared_snapshot: %s, doit=%s",
-		 (newval ? "true" : "false"), (doit ? "true" : "false"));
+	elog(DEBUG1, "SET gp_write_shared_snapshot: %s",
+		 (newval ? "true" : "false"));
 #endif
 
 	/*
 	 * Make sure newval is "true". if it's "false" this could be a part of a
 	 * ROLLBACK so we don't want to set the snapshot then.
 	 */
-	if (doit && newval)
+	if (newval)
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
@@ -2620,8 +2621,6 @@ assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source __attri
 			PopActiveSnapshot();
 		}
 	}
-
-	return true;
 }
 
 static void
@@ -2798,7 +2797,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	switch (Gp_role)
 	{
 		case GP_ROLE_EXECUTE:
-			if (Gp_segment == -1 && !Gp_is_writer)
+			if (IS_QUERY_DISPATCHER() && !Gp_is_writer)
 			{
 				isEntryDbSingleton = true;
 			}

@@ -1,0 +1,33 @@
+DROP TABLE IF EXISTS t;
+DROP
+
+CREATE TABLE t (c1 int, c2 int);
+CREATE
+ INSERT INTO t values (1,1), (2,2), (3,3), (4,4);
+INSERT 4
+
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+
+1: SELECT c2 FROM t WHERE c1 = 3 FOR UPDATE;
+c2
+--
+3 
+(1 row)
+2&: UPDATE t SET c2 = 999 where c1 = 3;  <waiting ...>
+
+1: END;
+END
+
+2<:  <... completed>
+UPDATE 1
+2: END;
+END
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+DROP TABLE t;
+DROP

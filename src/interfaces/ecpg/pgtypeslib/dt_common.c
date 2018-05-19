@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/pgtypeslib/dt_common.c,v 1.54 2010/06/16 00:54:16 petere Exp $ */
+/* src/interfaces/ecpg/pgtypeslib/dt_common.c */
 
 #include "postgres_fe.h"
 
@@ -512,24 +512,27 @@ char	   *pgtypes_date_months[] = {"January", "February", "March", "April", "May"
 static datetkn *
 datebsearch(char *key, datetkn *base, unsigned int nel)
 {
-	datetkn    *last = base + nel - 1,
-			   *position;
-	int			result;
-
-	while (last >= base)
+	if (nel > 0)
 	{
-		position = base + ((last - base) >> 1);
-		result = key[0] - position->token[0];
-		if (result == 0)
+		datetkn    *last = base + nel - 1,
+				   *position;
+		int			result;
+
+		while (last >= base)
 		{
-			result = strncmp(key, position->token, TOKMAXLEN);
+			position = base + ((last - base) >> 1);
+			result = key[0] - position->token[0];
 			if (result == 0)
-				return position;
+			{
+				result = strncmp(key, position->token, TOKMAXLEN);
+				if (result == 0)
+					return position;
+			}
+			if (result < 0)
+				last = position - 1;
+			else
+				base = position + 1;
 		}
-		if (result < 0)
-			last = position - 1;
-		else
-			base = position + 1;
 	}
 	return NULL;
 }

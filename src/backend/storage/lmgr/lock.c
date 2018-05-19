@@ -3,12 +3,12 @@
  * lock.c
  *	  POSTGRES primary lock mechanism
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.197 2010/04/28 16:54:16 tgl Exp $
+ *	  src/backend/storage/lmgr/lock.c
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -139,7 +139,7 @@ const LockMethodData default_lockmethod = {
 
 const LockMethodData user_lockmethod = {
 	AccessExclusiveLock,		/* highest valid lock mode number */
-	false,
+	true,
 	LockConflicts,
 	lock_mode_names,
 #ifdef LOCK_DEBUG
@@ -378,7 +378,7 @@ InitLocks(void)
 	hash_flags = (HASH_ELEM | HASH_FUNCTION);
 
 	LockMethodLocalHash = hash_create("LOCALLOCK hash",
-									  128,
+									  16,
 									  &info,
 									  hash_flags);
 }
@@ -513,6 +513,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 	int			partition;
 	LWLockId	partitionLock;
 	int			status;
+	bool		log_lock = false;
 
 	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
 		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
@@ -641,6 +642,25 @@ LockAcquireExtended(const LOCKTAG *locktag,
 	}
 
 	/*
+	 * Emit a WAL record if acquisition of this lock needs to be replayed in a
+	 * standby server. Only AccessExclusiveLocks can conflict with lock types
+	 * that read-only transactions can acquire in a standby server.
+	 *
+	 * Make sure this definition matches the one in
+	 * GetRunningTransactionLocks().
+	 *
+	 * First we prepare to log, then after lock acquired we issue log record.
+	 */
+	if (lockmode >= AccessExclusiveLock &&
+		locktag->locktag_type == LOCKTAG_RELATION &&
+		!RecoveryInProgress() &&
+		XLogStandbyInfoActive())
+	{
+		LogAccessExclusiveLockPrepare();
+		log_lock = true;
+	}
+
+	/*
 	 * Otherwise we've got to mess with the shared lock table.
 	 */
 	hashcode = locallock->hashcode;
@@ -686,6 +706,7 @@ LockAcquireExtended(const LOCKTAG *locktag,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
+		lock->holdTillEndXact = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("LockAcquire: new", lock, lockmode);
@@ -1045,15 +1066,9 @@ LockAcquireExtended(const LOCKTAG *locktag,
 
 	/*
 	 * Emit a WAL record if acquisition of this lock need to be replayed in a
-	 * standby server. Only AccessExclusiveLocks can conflict with lock types
-	 * that read-only transactions can acquire in a standby server.
-	 *
-	 * Make sure this definition matches the one GetRunningTransactionLocks().
+	 * standby server.
 	 */
-	if (lockmode >= AccessExclusiveLock &&
-		locktag->locktag_type == LOCKTAG_RELATION &&
-		!RecoveryInProgress() &&
-		XLogStandbyInfoActive())
+	if (log_lock)
 	{
 		/*
 		 * Decode the locktag back to the original values, to avoid sending
@@ -1707,6 +1722,45 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 	return TRUE;
 }
 
+void
+LockSetHoldTillEndXact(const LOCKTAG *locktag)
+{
+	LOCKMETHODID lockmethodid = locktag->locktag_lockmethodid;
+	LockMethod	lockMethodTable;
+	LOCALLOCKTAG localtag;
+	LOCALLOCK  *locallock;
+	LOCKMODE    lm;
+
+	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
+		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
+	lockMethodTable = LockMethods[lockmethodid];
+
+	for (lm = 1; lm <= lockMethodTable->numLockModes; lm++)
+	{
+#ifdef LOCK_DEBUG
+		if (LOCK_DEBUG_ENABLED(locktag))
+			elog(LOG, "LockRelease: lock [%u,%u] %s",
+				 locktag->locktag_field1, locktag->locktag_field2,
+				 lockMethodTable->lockModeNames[lm]);
+#endif
+		/*
+		 * Find the LOCALLOCK entry for this lock and lockmode
+		 */
+		MemSet(&localtag, 0, sizeof(localtag));		/* must clear padding */
+		localtag.lock = *locktag;
+		localtag.mode = lm;
+
+		locallock = (LOCALLOCK *) hash_search(LockMethodLocalHash,
+											  (void *) &localtag,
+											  HASH_FIND, NULL);
+
+		if (!locallock || locallock->nLocks <= 0)
+			continue;
+
+		locallock->lock->holdTillEndXact = true;
+	}
+}
+
 /*
  * LockReleaseAll -- Release all locks of the specified lock method that
  *		are held by the current process.
@@ -1893,6 +1947,31 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 	if (*(lockMethodTable->trace_flag))
 		elog(LOG, "LockReleaseAll done");
 #endif
+}
+
+/*
+ * LockReleaseSession -- Release all session locks of the specified lock method
+ *		that are held by the current process.
+ */
+void
+LockReleaseSession(LOCKMETHODID lockmethodid)
+{
+	HASH_SEQ_STATUS status;
+	LOCALLOCK  *locallock;
+
+	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
+		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
+
+	hash_seq_init(&status, LockMethodLocalHash);
+
+	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+	{
+		/* Ignore items that are not of the specified lock method */
+		if (LOCALLOCK_LOCKMETHOD(*locallock) != lockmethodid)
+			continue;
+
+		ReleaseLockIfHeld(locallock, true);
+	}
 }
 
 /*
@@ -2870,6 +2949,7 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 		ProcQueueInit(&(lock->waitProcs));
 		lock->nRequested = 0;
 		lock->nGranted = 0;
+		lock->holdTillEndXact = false;
 		MemSet(lock->requested, 0, sizeof(int) * MAX_LOCKMODES);
 		MemSet(lock->granted, 0, sizeof(int) * MAX_LOCKMODES);
 		LOCK_PRINT("lock_twophase_recover: new", lock, lockmode);

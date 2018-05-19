@@ -3,10 +3,10 @@
  * geqo_random.c
  *	   random number generator
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/optimizer/geqo/geqo_random.c,v 1.3 2010/02/26 02:00:44 momjian Exp $
+ * src/backend/optimizer/geqo/geqo_random.c
  *
  *-------------------------------------------------------------------------
  */

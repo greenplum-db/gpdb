@@ -4,10 +4,10 @@
  *	  POSTGRES cache invalidation dispatcher definitions.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/inval.h,v 1.49 2010/02/08 04:33:55 tgl Exp $
+ * src/include/utils/inval.h
  *
  *-------------------------------------------------------------------------
  */
@@ -49,7 +49,7 @@ extern void CacheInvalidateRelcacheByTuple(HeapTuple classTuple);
 
 extern void CacheInvalidateRelcacheByRelid(Oid relid);
 
-extern void CacheInvalidateSmgr(RelFileNode rnode);
+extern void CacheInvalidateSmgr(RelFileNodeBackend rnode);
 
 extern void CacheInvalidateRelmap(Oid databaseId);
 

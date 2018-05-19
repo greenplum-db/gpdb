@@ -1,4 +1,3 @@
-\set ECHO all
 --
 -- Test explicit subtransactions
 --
@@ -6,10 +5,8 @@
 CREATE TABLE subtransaction_tbl (
     i integer
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Explicit case for Python <2.6
-CREATE OR REPLACE FUNCTION subtransaction_test(what_error text) RETURNS text
+CREATE FUNCTION subtransaction_test(what_error text = NULL) RETURNS text
 AS $$
 import sys
 subxact = plpy.subtransaction()
@@ -31,13 +28,13 @@ finally:
     if exc:
         subxact.__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
-SELECT subtransaction_test(NULL);
+SELECT subtransaction_test();
  subtransaction_test 
 ---------------------
  
 (1 row)
 
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
  1
@@ -46,7 +43,7 @@ SELECT * FROM subtransaction_tbl order by i;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_test('SPI');
-ERROR:  plpy.SPIError: invalid input syntax for integer: "oops"
+ERROR:  spiexceptions.InvalidTextRepresentation: invalid input syntax for integer: "oops"
 LINE 1: INSERT INTO subtransaction_tbl VALUES ('oops')
                                                ^
 QUERY:  INSERT INTO subtransaction_tbl VALUES ('oops')
@@ -54,26 +51,26 @@ CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_test", line 11, in <module>
     plpy.execute("INSERT INTO subtransaction_tbl VALUES ('oops')")
 PL/Python function "subtransaction_test"
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
 (0 rows)
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_test('Python');
-ERROR:  AttributeError: 'module' object has no attribute 'attribute_error' (plpython.c:4718)
+ERROR:  AttributeError: 'module' object has no attribute 'attribute_error'
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_test", line 13, in <module>
     plpy.attribute_error
 PL/Python function "subtransaction_test"
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
 (0 rows)
 
 TRUNCATE subtransaction_tbl;
 -- Context manager case for Python >=2.6
-CREATE OR REPLACE FUNCTION subtransaction_ctx_test(what_error text) RETURNS text
+CREATE FUNCTION subtransaction_ctx_test(what_error text = NULL) RETURNS text
 AS $$
 with plpy.subtransaction():
     plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
@@ -83,13 +80,13 @@ with plpy.subtransaction():
     elif what_error == "Python":
         plpy.attribute_error
 $$ LANGUAGE plpythonu;
-SELECT subtransaction_ctx_test(NULL);
+SELECT subtransaction_ctx_test();
  subtransaction_ctx_test 
 -------------------------
  
 (1 row)
 
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
  1
@@ -98,7 +95,7 @@ SELECT * FROM subtransaction_tbl order by i;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_ctx_test('SPI');
-ERROR:  plpy.SPIError: invalid input syntax for integer: "oops"
+ERROR:  spiexceptions.InvalidTextRepresentation: invalid input syntax for integer: "oops"
 LINE 1: INSERT INTO subtransaction_tbl VALUES ('oops')
                                                ^
 QUERY:  INSERT INTO subtransaction_tbl VALUES ('oops')
@@ -106,87 +103,129 @@ CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_ctx_test", line 6, in <module>
     plpy.execute("INSERT INTO subtransaction_tbl VALUES ('oops')")
 PL/Python function "subtransaction_ctx_test"
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
 (0 rows)
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_ctx_test('Python');
-ERROR:  AttributeError: 'module' object has no attribute 'attribute_error' (plpython.c:4718)
+ERROR:  AttributeError: 'module' object has no attribute 'attribute_error'
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_ctx_test", line 8, in <module>
     plpy.attribute_error
 PL/Python function "subtransaction_ctx_test"
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
 (0 rows)
 
 TRUNCATE subtransaction_tbl;
 -- Nested subtransactions
--- CREATE OR REPLACE FUNCTION subtransaction_nested_test(swallow boolean) RETURNS text
--- AS $$
--- plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
--- with plpy.subtransaction():
---    plpy.execute("INSERT INTO subtransaction_tbl VALUES (2)")
---    try:
---        with plpy.subtransaction():
---            plpy.execute("INSERT INTO subtransaction_tbl VALUES (3)")
---            plpy.execute("error")
---    except plpy.SPIError, e:
---        if not swallow:
---            raise
---        plpy.notice("Swallowed %r" % e)
---return "ok"
---$$ LANGUAGE plpythonu;
---SELECT subtransaction_nested_test('f');
---SELECT * FROM subtransaction_tbl;
---TRUNCATE subtransaction_tbl;
---SELECT subtransaction_nested_test('t');
---SELECT * FROM subtransaction_tbl;
---TRUNCATE subtransaction_tbl;
+CREATE FUNCTION subtransaction_nested_test(swallow boolean = 'f') RETURNS text
+AS $$
+plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+with plpy.subtransaction():
+    plpy.execute("INSERT INTO subtransaction_tbl VALUES (2)")
+    try:
+        with plpy.subtransaction():
+            plpy.execute("INSERT INTO subtransaction_tbl VALUES (3)")
+            plpy.execute("error")
+    except plpy.SPIError, e:
+        if not swallow:
+            raise
+        plpy.notice("Swallowed %r" % e)
+return "ok"
+$$ LANGUAGE plpythonu;
+SELECT subtransaction_nested_test();
+ERROR:  spiexceptions.SyntaxError: syntax error at or near "error"
+LINE 1: error
+        ^
+QUERY:  error
+CONTEXT:  Traceback (most recent call last):
+  PL/Python function "subtransaction_nested_test", line 8, in <module>
+    plpy.execute("error")
+PL/Python function "subtransaction_nested_test"
+SELECT * FROM subtransaction_tbl;
+ i 
+---
+(0 rows)
+
+TRUNCATE subtransaction_tbl;
+SELECT subtransaction_nested_test('t');
+NOTICE:  Swallowed SyntaxError('syntax error at or near "error"',)
+CONTEXT:  PL/Python function "subtransaction_nested_test"
+ subtransaction_nested_test 
+----------------------------
+ ok
+(1 row)
+
+SELECT * FROM subtransaction_tbl;
+ i 
+---
+ 1
+ 2
+(2 rows)
+
+TRUNCATE subtransaction_tbl;
 -- Nested subtransactions that recursively call code dealing with
 -- subtransactions
---CREATE OR REPLACE FUNCTION subtransaction_deeply_nested_test() RETURNS text
---AS $$
---plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
---with plpy.subtransaction():
---    plpy.execute("INSERT INTO subtransaction_tbl VALUES (2)")
---    plpy.execute("SELECT subtransaction_nested_test('t')")
---return "ok"
---$$ LANGUAGE plpythonu;
---SELECT subtransaction_deeply_nested_test();
---SELECT * FROM subtransaction_tbl;
---TRUNCATE subtransaction_tbl;
+CREATE FUNCTION subtransaction_deeply_nested_test() RETURNS text
+AS $$
+plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+with plpy.subtransaction():
+    plpy.execute("INSERT INTO subtransaction_tbl VALUES (2)")
+    plpy.execute("SELECT subtransaction_nested_test('t')")
+return "ok"
+$$ LANGUAGE plpythonu;
+SELECT subtransaction_deeply_nested_test();
+NOTICE:  Swallowed SyntaxError('syntax error at or near "error"',)
+CONTEXT:  PL/Python function "subtransaction_nested_test"
+SQL statement "SELECT subtransaction_nested_test('t')"
+PL/Python function "subtransaction_nested_test"
+ subtransaction_deeply_nested_test 
+-----------------------------------
+ ok
+(1 row)
+
+SELECT * FROM subtransaction_tbl;
+ i 
+---
+ 1
+ 2
+ 1
+ 2
+(4 rows)
+
+TRUNCATE subtransaction_tbl;
 -- Error conditions from not opening/closing subtransactions
-CREATE OR REPLACE FUNCTION subtransaction_exit_without_enter() RETURNS void
+CREATE FUNCTION subtransaction_exit_without_enter() RETURNS void
 AS $$
 plpy.subtransaction().__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_enter_without_exit() RETURNS void
+CREATE FUNCTION subtransaction_enter_without_exit() RETURNS void
 AS $$
 plpy.subtransaction().__enter__()
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_exit_twice() RETURNS void
+CREATE FUNCTION subtransaction_exit_twice() RETURNS void
 AS $$
 plpy.subtransaction().__enter__()
 plpy.subtransaction().__exit__(None, None, None)
 plpy.subtransaction().__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_enter_twice() RETURNS void
+CREATE FUNCTION subtransaction_enter_twice() RETURNS void
 AS $$
 plpy.subtransaction().__enter__()
 plpy.subtransaction().__enter__()
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_exit_same_subtransaction_twice() RETURNS void
+CREATE FUNCTION subtransaction_exit_same_subtransaction_twice() RETURNS void
 AS $$
 s = plpy.subtransaction()
 s.__enter__()
 s.__exit__(None, None, None)
 s.__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_enter_same_subtransaction_twice() RETURNS void
+CREATE FUNCTION subtransaction_enter_same_subtransaction_twice() RETURNS void
 AS $$
 s = plpy.subtransaction()
 s.__enter__()
@@ -194,18 +233,18 @@ s.__enter__()
 s.__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
 -- No warnings here, as the subtransaction gets indeed closed
-CREATE OR REPLACE FUNCTION subtransaction_enter_subtransaction_in_with() RETURNS void
+CREATE FUNCTION subtransaction_enter_subtransaction_in_with() RETURNS void
 AS $$
 with plpy.subtransaction() as s:
     s.__enter__()
 $$ LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION subtransaction_exit_subtransaction_in_with() RETURNS void
+CREATE FUNCTION subtransaction_exit_subtransaction_in_with() RETURNS void
 AS $$
 with plpy.subtransaction() as s:
     s.__exit__(None, None, None)
 $$ LANGUAGE plpythonu;
 SELECT subtransaction_exit_without_enter();
-ERROR:  ValueError: this subtransaction has not been entered (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has not been entered
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_exit_without_enter", line 2, in <module>
     plpy.subtransaction().__exit__(None, None, None)
@@ -221,7 +260,7 @@ CONTEXT:  PL/Python function "subtransaction_enter_without_exit"
 SELECT subtransaction_exit_twice();
 WARNING:  forcibly aborting a subtransaction that has not been exited
 CONTEXT:  PL/Python function "subtransaction_exit_twice"
-ERROR:  ValueError: this subtransaction has not been entered (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has not been entered
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_exit_twice", line 3, in <module>
     plpy.subtransaction().__exit__(None, None, None)
@@ -237,7 +276,7 @@ CONTEXT:  PL/Python function "subtransaction_enter_twice"
 (1 row)
 
 SELECT subtransaction_exit_same_subtransaction_twice();
-ERROR:  ValueError: this subtransaction has already been exited (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has already been exited
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_exit_same_subtransaction_twice", line 5, in <module>
     s.__exit__(None, None, None)
@@ -245,19 +284,19 @@ PL/Python function "subtransaction_exit_same_subtransaction_twice"
 SELECT subtransaction_enter_same_subtransaction_twice();
 WARNING:  forcibly aborting a subtransaction that has not been exited
 CONTEXT:  PL/Python function "subtransaction_enter_same_subtransaction_twice"
-ERROR:  ValueError: this subtransaction has already been entered (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has already been entered
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_enter_same_subtransaction_twice", line 4, in <module>
     s.__enter__()
 PL/Python function "subtransaction_enter_same_subtransaction_twice"
 SELECT subtransaction_enter_subtransaction_in_with();
-ERROR:  ValueError: this subtransaction has already been entered (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has already been entered
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_enter_subtransaction_in_with", line 3, in <module>
     s.__enter__()
 PL/Python function "subtransaction_enter_subtransaction_in_with"
 SELECT subtransaction_exit_subtransaction_in_with();
-ERROR:  ValueError: this subtransaction has already been exited (plpython.c:4718)
+ERROR:  ValueError: this subtransaction has already been exited
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_exit_subtransaction_in_with", line 3, in <module>
     s.__exit__(None, None, None)
@@ -270,28 +309,44 @@ SELECT 1 as test;
 (1 row)
 
 -- Mix explicit subtransactions and normal SPI calls
---CREATE OR REPLACE FUNCTION subtransaction_mix_explicit_and_implicit() RETURNS void
---AS $$
---p = plpy.prepare("INSERT INTO subtransaction_tbl VALUES ($1)", ["integer"])
---try:
---    with plpy.subtransaction():
---        plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
---        plpy.execute(p, [2])
---        plpy.execute(p, ["wrong"])
---except plpy.SPIError:
---    plpy.warning("Caught a SPI error from an explicit subtransaction")
---try:
---    plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
---    plpy.execute(p, [2])
---    plpy.execute(p, ["wrong"])
---except plpy.SPIError:
---    plpy.warning("Caught a SPI error")
---$$ LANGUAGE plpythonu;
---SELECT subtransaction_mix_explicit_and_implicit();
---SELECT * FROM subtransaction_tbl;
---TRUNCATE subtransaction_tbl;
+CREATE FUNCTION subtransaction_mix_explicit_and_implicit() RETURNS void
+AS $$
+p = plpy.prepare("INSERT INTO subtransaction_tbl VALUES ($1)", ["integer"])
+try:
+    with plpy.subtransaction():
+        plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+        plpy.execute(p, [2])
+        plpy.execute(p, ["wrong"])
+except plpy.SPIError:
+    plpy.warning("Caught a SPI error from an explicit subtransaction")
+
+try:
+    plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+    plpy.execute(p, [2])
+    plpy.execute(p, ["wrong"])
+except plpy.SPIError:
+    plpy.warning("Caught a SPI error")
+$$ LANGUAGE plpythonu;
+SELECT subtransaction_mix_explicit_and_implicit();
+WARNING:  Caught a SPI error from an explicit subtransaction
+CONTEXT:  PL/Python function "subtransaction_mix_explicit_and_implicit"
+WARNING:  Caught a SPI error
+CONTEXT:  PL/Python function "subtransaction_mix_explicit_and_implicit"
+ subtransaction_mix_explicit_and_implicit 
+------------------------------------------
+ 
+(1 row)
+
+SELECT * FROM subtransaction_tbl;
+ i 
+---
+ 1
+ 2
+(2 rows)
+
+TRUNCATE subtransaction_tbl;
 -- Alternative method names for Python <2.6
-CREATE OR REPLACE FUNCTION subtransaction_alternative_names() RETURNS void
+CREATE FUNCTION subtransaction_alternative_names() RETURNS void
 AS $$
 s = plpy.subtransaction()
 s.enter()
@@ -304,7 +359,7 @@ SELECT subtransaction_alternative_names();
 (1 row)
 
 -- try/catch inside a subtransaction block
-CREATE OR REPLACE FUNCTION try_catch_inside_subtransaction() RETURNS void
+CREATE FUNCTION try_catch_inside_subtransaction() RETURNS void
 AS $$
 with plpy.subtransaction():
      plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
@@ -321,23 +376,36 @@ CONTEXT:  PL/Python function "try_catch_inside_subtransaction"
  
 (1 row)
 
-SELECT * FROM subtransaction_tbl order by i;
+SELECT * FROM subtransaction_tbl;
  i 
 ---
  1
 (1 row)
 
 TRUNCATE subtransaction_tbl;
---ALTER TABLE subtransaction_tbl ADD PRIMARY KEY (i);
---CREATE OR REPLACE FUNCTION pk_violation_inside_subtransaction() RETURNS void
---AS $$
---with plpy.subtransaction():
---     plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
---     try:
---         plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
---     except plpy.SPIError:
---         plpy.notice("caught")
---$$ LANGUAGE plpythonu;
---SELECT pk_violation_inside_subtransaction();
---SELECT * FROM subtransaction_tbl;
+ALTER TABLE subtransaction_tbl ADD PRIMARY KEY (i);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "subtransaction_tbl_pkey" for table "subtransaction_tbl"
+CREATE FUNCTION pk_violation_inside_subtransaction() RETURNS void
+AS $$
+with plpy.subtransaction():
+     plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+     try:
+         plpy.execute("INSERT INTO subtransaction_tbl VALUES (1)")
+     except plpy.SPIError:
+         plpy.notice("caught")
+$$ LANGUAGE plpythonu;
+SELECT pk_violation_inside_subtransaction();
+NOTICE:  caught
+CONTEXT:  PL/Python function "pk_violation_inside_subtransaction"
+ pk_violation_inside_subtransaction 
+------------------------------------
+ 
+(1 row)
+
+SELECT * FROM subtransaction_tbl;
+ i 
+---
+ 1
+(1 row)
+
 DROP TABLE subtransaction_tbl;

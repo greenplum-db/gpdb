@@ -26,14 +26,17 @@
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
 #include "catalog/pg_class.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_extension.h"
+#include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
+#include "catalog/pg_largeobject_metadata.h"
 #include "catalog/pg_namespace.h"
-#include "catalog/objectaccess.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_operator.h"
@@ -52,6 +55,7 @@
 #include "commands/proclang.h"
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
+#include "foreign/foreign.h"
 #include "libpq/be-fsstubs.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -117,6 +121,7 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 		case OBJECT_SEQUENCE:
 		case OBJECT_TABLE:
 		case OBJECT_VIEW:
+		case OBJECT_FOREIGN_TABLE:
 			relation =
 				get_relation_by_qualified_name(objtype, objname, lockmode);
 			address.classId = RelationRelationId;
@@ -139,13 +144,15 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 		case OBJECT_ROLE:
 		case OBJECT_SCHEMA:
 		case OBJECT_LANGUAGE:
+		case OBJECT_FDW:
+		case OBJECT_FOREIGN_SERVER:
 			address = get_object_address_unqualified(objtype, objname);
 			break;
 		case OBJECT_TYPE:
 		case OBJECT_DOMAIN:
 			address.classId = TypeRelationId;
 			address.objectId =
-				typenameTypeId(NULL, makeTypeNameFromNameList(objname), NULL);
+				typenameTypeId(NULL, makeTypeNameFromNameList(objname));
 			address.objectSubId = 0;
 			break;
 		case OBJECT_AGGREGATE:
@@ -168,22 +175,63 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 										false, -1);
 			address.objectSubId = 0;
 			break;
+		case OBJECT_COLLATION:
+			address.classId = CollationRelationId;
+			address.objectId = get_collation_oid(objname, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_CONVERSION:
+			address.classId = ConversionRelationId;
+			address.objectId = get_conversion_oid(objname, false);
+			address.objectSubId = 0;
+			break;
 		case OBJECT_OPCLASS:
 		case OBJECT_OPFAMILY:
 			address = get_object_address_opcf(objtype, objname, objargs);
+			break;
+		case OBJECT_LARGEOBJECT:
+			Assert(list_length(objname) == 1);
+			address.classId = LargeObjectRelationId;
+			address.objectId = oidparse(linitial(objname));
+			address.objectSubId = 0;
+			if (!LargeObjectExists(address.objectId))
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("large object %u does not exist",
+								address.objectId)));
 			break;
 		case OBJECT_CAST:
 			{
 				TypeName   *sourcetype = (TypeName *) linitial(objname);
 				TypeName   *targettype = (TypeName *) linitial(objargs);
-				Oid			sourcetypeid = typenameTypeId(NULL, sourcetype, NULL);
-				Oid			targettypeid = typenameTypeId(NULL, targettype, NULL);
+				Oid			sourcetypeid = typenameTypeId(NULL, sourcetype);
+				Oid			targettypeid = typenameTypeId(NULL, targettype);
 
 				address.classId = CastRelationId;
 				address.objectId =
 					get_cast_oid(sourcetypeid, targettypeid, false);
 				address.objectSubId = 0;
 			}
+			break;
+		case OBJECT_TSPARSER:
+			address.classId = TSParserRelationId;
+			address.objectId = get_ts_parser_oid(objname, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_TSDICTIONARY:
+			address.classId = TSDictionaryRelationId;
+			address.objectId = get_ts_dict_oid(objname, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_TSTEMPLATE:
+			address.classId = TSTemplateRelationId;
+			address.objectId = get_ts_template_oid(objname, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_TSCONFIGURATION:
+			address.classId = TSConfigRelationId;
+			address.objectId = get_ts_config_oid(objname, false);
+			address.objectSubId = 0;
 			break;
 		default:
 			elog(ERROR, "unrecognized objtype: %d", (int) objtype);
@@ -195,7 +243,7 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 
 	/*
 	 * If we're dealing with a relation or attribute, then the relation is
-	 * already locked.  If we're dealing with any other type of object, we
+	 * already locked.	If we're dealing with any other type of object, we
 	 * need to lock it and then verify that it still exists.
 	 */
 	if (address.classId != RelationRelationId)
@@ -253,6 +301,12 @@ get_object_address_unqualified(ObjectType objtype, List *qualname)
 			case OBJECT_LANGUAGE:
 				msg = gettext_noop("language name cannot be qualified");
 				break;
+			case OBJECT_FDW:
+				msg = gettext_noop("foreign-data wrapper name cannot be qualified");
+				break;
+			case OBJECT_FOREIGN_SERVER:
+				msg = gettext_noop("server name cannot be qualified");
+				break;
 			default:
 				elog(ERROR, "unrecognized objtype: %d", (int) objtype);
 				msg = NULL;		/* placate compiler */
@@ -296,6 +350,16 @@ get_object_address_unqualified(ObjectType objtype, List *qualname)
 		case OBJECT_LANGUAGE:
 			address.classId = LanguageRelationId;
 			address.objectId = get_language_oid(name, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_FDW:
+			address.classId = ForeignDataWrapperRelationId;
+			address.objectId = get_foreign_data_wrapper_oid(name, false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_FOREIGN_SERVER:
+			address.classId = ForeignServerRelationId;
+			address.objectId = get_foreign_server_oid(name, false);
 			address.objectSubId = 0;
 			break;
 		default:
@@ -347,6 +411,13 @@ get_relation_by_qualified_name(ObjectType objtype, List *objname,
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("\"%s\" is not a view",
+								RelationGetRelationName(relation))));
+			break;
+		case OBJECT_FOREIGN_TABLE:
+			if (relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("\"%s\" is not a foreign table",
 								RelationGetRelationName(relation))));
 			break;
 		default:
@@ -569,6 +640,9 @@ object_exists(ObjectAddress address)
 		case DatabaseRelationId:
 			cache = DATABASEOID;
 			break;
+		case TableSpaceRelationId:
+			cache = TABLESPACEOID;
+			break;
 		case AuthIdRelationId:
 			cache = AUTHOID;
 			break;
@@ -587,6 +661,9 @@ object_exists(ObjectAddress address)
 		case OperatorRelationId:
 			cache = OPEROID;
 			break;
+		case CollationRelationId:
+			cache = COLLOID;
+			break;
 		case ConversionRelationId:
 			cache = CONVOID;
 			break;
@@ -596,8 +673,25 @@ object_exists(ObjectAddress address)
 		case OperatorFamilyRelationId:
 			cache = OPFAMILYOID;
 			break;
+		case LargeObjectRelationId:
+
+			/*
+			 * Weird backward compatibility hack: ObjectAddress notation uses
+			 * LargeObjectRelationId for large objects, but since PostgreSQL
+			 * 9.0, the relevant catalog is actually
+			 * LargeObjectMetadataRelationId.
+			 */
+			address.classId = LargeObjectMetadataRelationId;
+			indexoid = LargeObjectMetadataOidIndexId;
+			break;
 		case CastRelationId:
 			indexoid = CastOidIndexId;
+			break;
+		case ForeignDataWrapperRelationId:
+			cache = FOREIGNDATAWRAPPEROID;
+			break;
+		case ForeignServerRelationId:
+			cache = FOREIGNSERVEROID;
 			break;
 		case TSParserRelationId:
 			cache = TSPARSEROID;
@@ -636,6 +730,7 @@ object_exists(ObjectAddress address)
 	return found;
 }
 
+
 /*
  * Check ownership of an object previously identified by get_object_address.
  */
@@ -649,6 +744,7 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_SEQUENCE:
 		case OBJECT_TABLE:
 		case OBJECT_VIEW:
+		case OBJECT_FOREIGN_TABLE:
 		case OBJECT_COLUMN:
 		case OBJECT_RULE:
 		case OBJECT_TRIGGER:
@@ -664,6 +760,7 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 			break;
 		case OBJECT_TYPE:
 		case OBJECT_DOMAIN:
+		case OBJECT_ATTRIBUTE:
 			if (!pg_type_ownercheck(address.objectId, roleid))
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
 							   format_type_be(address.objectId));
@@ -684,6 +781,11 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_NAMESPACE,
 							   NameListToString(objname));
 			break;
+		case OBJECT_COLLATION:
+			if (!pg_collation_ownercheck(address.objectId, roleid))
+				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_COLLATION,
+							   NameListToString(objname));
+			break;
 		case OBJECT_CONVERSION:
 			if (!pg_conversion_ownercheck(address.objectId, roleid))
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CONVERSION,
@@ -692,6 +794,16 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_EXTENSION:
 			if (!pg_extension_ownercheck(address.objectId, roleid))
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTENSION,
+							   NameListToString(objname));
+			break;
+		case OBJECT_FDW:
+			if (!pg_foreign_data_wrapper_ownercheck(address.objectId, roleid))
+				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_FDW,
+							   NameListToString(objname));
+			break;
+		case OBJECT_FOREIGN_SERVER:
+			if (!pg_foreign_server_ownercheck(address.objectId, roleid))
+				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_FOREIGN_SERVER,
 							   NameListToString(objname));
 			break;
 		case OBJECT_LANGUAGE:
@@ -709,13 +821,21 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_OPFAMILY,
 							   NameListToString(objname));
 			break;
+		case OBJECT_LARGEOBJECT:
+			if (!lo_compat_privileges &&
+				!pg_largeobject_ownercheck(address.objectId, roleid))
+				ereport(ERROR,
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("must be owner of large object %u",
+								address.objectId)));
+			break;
 		case OBJECT_CAST:
 			{
 				/* We can only check permissions on the source/target types */
 				TypeName   *sourcetype = (TypeName *) linitial(objname);
 				TypeName   *targettype = (TypeName *) linitial(objargs);
-				Oid			sourcetypeid = typenameTypeId(NULL, sourcetype, NULL);
-				Oid			targettypeid = typenameTypeId(NULL, targettype, NULL);
+				Oid			sourcetypeid = typenameTypeId(NULL, sourcetype);
+				Oid			targettypeid = typenameTypeId(NULL, targettype);
 
 				if (!pg_type_ownercheck(sourcetypeid, roleid)
 					&& !pg_type_ownercheck(targettypeid, roleid))

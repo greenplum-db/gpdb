@@ -26,11 +26,11 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.68 2010/04/28 16:54:15 tgl Exp $
+ *	  src/backend/postmaster/bgwriter.c
  *
  *-------------------------------------------------------------------------
  */
@@ -47,6 +47,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
+#include "replication/syncrep.h"
 #include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -232,6 +233,9 @@ BackgroundWriterMain(void)
 	if (RecoveryInProgress())
 		ThisTimeLineID = GetRecoveryTargetTLI();
 
+	/* Do this once before starting the loop, then just at SIGHUP time. */
+	SyncRepUpdateSyncStandbysDefined();
+
 	/*
 	 * Loop forever
 	 */
@@ -251,6 +255,8 @@ BackgroundWriterMain(void)
 		{
 			got_SIGHUP = false;
 			ProcessConfigFile(PGC_SIGHUP);
+			/* update global shmem state for sync rep */
+			SyncRepUpdateSyncStandbysDefined();
 		}
 		if (shutdown_requested)
 		{

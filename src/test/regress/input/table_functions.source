@@ -589,10 +589,7 @@ BEGIN
 END;
 $$ language plpgsql NO SQL;
 
--- python functions have no validator, error at call time.
 CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpythonu NO SQL;
-SELECT * FROM tf_python( TABLE(SELECT 1) );
-DROP FUNCTION tf_python(anytable);
 
 
 -- ====================================
