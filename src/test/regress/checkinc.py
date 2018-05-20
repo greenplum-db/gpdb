@@ -8,12 +8,12 @@ if os.path.exists('../../bin/pg_config'):
 
 p1 = subprocess.Popen(bindir + 'pg_config --includedir', stdout=subprocess.PIPE, shell=True)
 p2 = subprocess.Popen(bindir + 'pg_config --pkgincludedir', stdout=subprocess.PIPE, shell=True)
-inc    = p1.communicate()[0].strip();
-pkginc = p2.communicate()[0].strip();
+inc    = p1.communicate()[0].strip().decode('utf-8');
+pkginc = p2.communicate()[0].strip().decode('utf-8');
 
-print "Greenplum INCLUDEDIR:    %s" % inc
-print "Greenplum PKGINCLUDEDIR: %s" % pkginc
-print "Checking includes..."
+print ("Greenplum INCLUDEDIR:    %s" % inc)
+print ("Greenplum PKGINCLUDEDIR: %s" % pkginc)
+print ("Checking includes...")
 
 include = re.compile('\s*#include\s*["<](\S*)[">]')
 
@@ -107,9 +107,9 @@ for inc_dir in inc_dirs:
 # For all files, check to see if the list of includes is in the list
 missing = False
 keys = fileset.keys()
-keys.sort()
+keys = sorted(keys)
 for f in keys:
-    for i in filter(lambda(x): None == fileset.get(x), fileset[f]):
+    for i in filter(lambda x: None == fileset.get(x), fileset[f]):
         # There are a couple reasons an included file might not be listed:
 
         # 1. It might be a standard include
@@ -128,11 +128,11 @@ for f in keys:
         # But if it's not one of those then it's probably a file that we have
         # omitted
         missing = True
-        print '  %-30s includes missing file "%s" ' % (f, i)
+        print ('  %-30s includes missing file "%s" ' % (f, i))
 
 if missing:
-    print "Include files... FAILED"
+    print ("Include files... FAILED")
     sys.exit(1)
 else:
-    print "Include files are ok" 
+    print ("Include files are ok")
     sys.exit(0)
