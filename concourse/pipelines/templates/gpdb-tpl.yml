@@ -18,14 +18,11 @@
                                 'filerep_end_to_end_incr_primary'] %}
 {% set MM_1_suites = ['gprecoverseg',
                       'gpcheckcat',
-                      'gpaddmirrors',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
 {% set MM_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem'] %}
-{% set MM_gpexpand_suites = ['gpexpand_1',
-                             'gpexpand_2'] %}
 {% set aa_Test_suites = ['Planner_centos6',
                          'Orca_centos6',
                          'Planner_centos7',
@@ -97,13 +94,13 @@ groups:
   ## --------------------------------------------------------------------
   - gate_mm_start
 {% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
+                    MM_2_suites %}
   - MM_[[ test_name ]]
 {% endfor %}
   - MM_gppkg
   - MM_gpcheck
   - MM_gpexpand
+  - MM_gpaddmirrors
   - MM_pt-rebuild
   - MU_check_centos
   - gate_mm_end
@@ -235,8 +232,7 @@ groups:
   jobs:
   - gate_mm_start
 {% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
+                    MM_2_suites %}
   - MM_[[ test_name ]]
 {% endfor %}
   - MM_gppkg
@@ -278,7 +274,6 @@ groups:
   - MADlib_Test_[[ test_name ]]
   - Postgis_Test_[[ test_name ]]
 {% endfor %}
-  - gate_advanced_analytics_end
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -2437,10 +2432,8 @@ jobs:
     params:
       TEST_OS: centos
 
-{% for test_name in MM_gpexpand_suites %}
-- name: MM_[[ test_name ]]
+- name: MM_gpaddmirrors
   plan:
-  - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
       params:
@@ -2458,36 +2451,30 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        number_of_nodes: 5
+        number_of_nodes: 4
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
-    image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
+    file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      TINC_TARGET: [[ test_name ]]
-      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      BEHAVE_FLAGS: --tags=gpaddmirrors
     on_success:
       <<: *ccp_destroy
   ensure:
     <<: *set_failed
 
-{% endfor %}
 - name: gate_mm_end
   plan:
   - aggregate:
     - get: gpdb_src
       passed: &gate_mm_end_passed
 {% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
+                    MM_2_suites %}
       - MM_[[ test_name ]]
 {% endfor %}
       - MM_gppkg
@@ -3660,8 +3647,7 @@ jobs:
       # - DPM_backup-restore_netbackup_part3
       - DPM_backup_43_restore_5
 {% for test_name in MM_1_suites +
-                    MM_2_suites +
-                    MM_gpexpand_suites %}
+                    MM_2_suites %}
       - MM_[[ test_name ]]
 {% endfor %}
       - gptransfer-43x-to-5x
