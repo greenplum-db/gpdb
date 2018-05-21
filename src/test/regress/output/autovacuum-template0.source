@@ -1,3 +1,4 @@
+create extension if not exists gp_inject_fault;
 create or replace function test_consume_xids(int4) returns void
 as '@abs_srcdir@/regress.so', 'test_consume_xids'
 language C;
@@ -8,6 +9,14 @@ set debug_burn_xids=on;
 select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0';
  ?column? 
 ----------
+ t
+(1 row)
+
+-- track that we've updated the row in pg_database for template0
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'skip', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
  t
 (1 row)
 
@@ -29,20 +38,43 @@ select test_consume_xids(10 * 1000000);
  
 (1 row)
 
--- Wait until autovacuum has processed template0. (But give up after 2 minutes)
+-- wait until autovacuum worker updates pg_database
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'wait_until_triggered', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT gp_inject_fault('vacuum_update_dat_frozen_xid', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+-- Wait until autovacuum commits the pg_database change
+-- Or timeout after 30 seconds
 do $$
 begin
-  for i in 1..120 loop
+  for i in 1..300 loop
     if (select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0') then
       raise notice 'template0 is young again';
       return;
     end if;
-    perform pg_sleep(1);
+    perform pg_sleep(0.1);
   end loop;
   raise notice 'FAIL: template0 is not being frozen!';
 end;
 $$;
 NOTICE:  template0 is young again
+-- template0 should be young
+select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0';
+ ?column? 
+----------
+ t
+(1 row)
+
 -- But autovacuum should not touch other databases. Hence, our database
 -- should be well above the 200 million mark.
 select age(datfrozenxid) > 200 * 1000000 from pg_database where datname=current_database();

@@ -235,6 +235,8 @@ FI_IDENT(FTSRecoveryInProgress, "fts_recovery_in_progress")
 FI_IDENT(UpgradeRowLock, "upgrade_row_lock")
 /* inject fault in Gdd loop */
 FI_IDENT(GddProbe, "gdd_probe")
+/* inject fault after updating pg_database.datfrozenxid (but before committing) */
+FI_IDENT(VacuumUpdateDatFrozenXid, "vacuum_update_dat_frozen_xid")
 #endif
 
 /*

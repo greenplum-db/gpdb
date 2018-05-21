@@ -284,7 +284,8 @@ FaultInjector_InjectFaultNameIfSet(
 	 * using fault injector framework, this restriction needs to be lifted and
 	 * some other mechanism needs to be placed to avoid flaky failures.
 	 */
-	if (IsAutoVacuumLauncherProcess() || IsAutoVacuumWorkerProcess())
+	if (IsAutoVacuumLauncherProcess() ||
+		(IsAutoVacuumWorkerProcess() && 0 != strcmp("vacuum_update_dat_frozen_xid", faultName)))
 		return FaultInjectorTypeNotSpecified;
 
 	/*
