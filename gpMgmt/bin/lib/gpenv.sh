@@ -21,7 +21,7 @@ export PYTHONPATH
 PYTHONHOME=$GPHOME/ext/python
 export PYTHONHOME
 
-# Add in library paths apropriate for this system
+# Add in library paths appropriate for this system
 case `uname` in
   Darwin) 
      if [ $DYLD_LIBRARY_PATH ]
