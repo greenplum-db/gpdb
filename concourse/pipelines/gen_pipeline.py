@@ -47,10 +47,39 @@ TEMPLATE_ENVIRONMENT = Environment(
 
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
-JOBS_THAT_ARE_GATES = ['gate_icw_start', 'gate_icw_end', 'gate_replication_start',
-                       'gate_resource_groups_start', 'gate_cli_start', 'gate_ud_start']
+JOBS_THAT_ARE_GATES = ['gate_icw_start',
+                       'gate_icw_end',
+                       'gate_replication_start',
+                       'gate_resource_groups_start',
+                       'gate_cli_start',
+                       'gate_ud_start']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'icw_gporca_centos6_gpos_memory'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
+
+def suggested_git_remote():
+    default_remote = "<https://github.com/<github-user>/gpdb>"
+
+    remote = subprocess.check_output("git ls-remote --get-url", shell=True).rstrip()
+
+    if "greenplum-db/gpdb"  in remote:
+        return default_remote
+
+    if "git@" in remote:
+        git_uri = remote.split('@')[1]
+        hostname, path = git_uri.split(':')
+        return 'https://%s/%s' % (hostname, path)
+
+    return remote
+
+def suggested_git_branch():
+    default_branch = "<branch-name>"
+
+    branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD", shell=True).rstrip()
+
+    if branch == "master" or branch == "5X_STABLE":
+        return default_branch
+    else:
+        return branch
 
 
 def render_template(template_filename, context):
@@ -150,8 +179,8 @@ def how_to_use_generated_pipeline_message():
         msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
         msg += '    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \\\n'
         msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
-        msg += '    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \\\n'
-        msg += '    -v gpdb-git-branch=<branch-name>\n'
+        msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
+        msg += '    -v gpdb-git-branch=%s \n' % suggested_git_branch()
 
     return msg
 
