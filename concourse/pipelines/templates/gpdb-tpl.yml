@@ -2,7 +2,6 @@
 {% set walrep_suites = ['walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
                       'gpcheckcat',
-                      'gpaddmirrors',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
 {% set CLI_2_suites = ['analyzedb',
@@ -102,6 +101,7 @@ groups:
                     CLI_gpexpand_suites %}
   - [[ test_name ]]
 {% endfor %}
+  - gpaddmirrors
   - gpexpand
   - gpcheck
   - gppkg
@@ -247,6 +247,7 @@ groups:
                     CLI_gpexpand_suites %}
   - [[ test_name ]]
 {% endfor %}
+  - gpaddmirrors
   - gpexpand
   - gpcheck
   - gppkg
@@ -1842,6 +1843,41 @@ jobs:
     params:
       TEST_OS: centos
 
+- name: gpaddmirrors
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_cli_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_cli_start]
+      trigger: [[ test_trigger ]]
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 4
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gpaddmirrors
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
 
 - name: gpexpand
   plan:
@@ -2131,6 +2167,7 @@ jobs:
                     CLI_gpexpand_suites %}
     - [[ test_name ]]
 {% endfor %}
+    - gpaddmirrors
     - gpexpand
     - gpcheck
     - gppkg
