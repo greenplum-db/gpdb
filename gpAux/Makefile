@@ -365,6 +365,7 @@ define BUILD_STEPS
 	rm -rf $(INSTLOC)
 	cd $(BUILDDIR)/gpMgmt/ && $(MAKE) generate_greenplum_path_file
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/parser/gram.h
+	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/utils/errcodes.h
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/utils/fmgroids.h
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	cd $(BUILDDIR)/src/interfaces/libpq/ && $(MAKE) install
@@ -395,6 +396,7 @@ define BUILD_STEPS
 	fi
 	cd $(BUILDDIR)/gpMgmt/ && $(MAKE) generate_greenplum_path_file
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/parser/gram.h
+	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/utils/errcodes.h
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/utils/fmgroids.h
 	cd $(BUILDDIR)/src/port/ && $(MAKE) install
 	cd $(BUILDDIR)/src/bin/scripts/ && $(MAKE) install
