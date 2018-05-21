@@ -54,6 +54,7 @@
 #include "utils/memutils.h"
 #include "utils/resscheduler.h"
 #include "utils/metrics_utils.h"
+#include "utils/faultinjector.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbcopy.h"
@@ -4167,7 +4168,32 @@ CopyFromDispatch(CopyState cstate)
 		ReportSrehResults(cstate->cdbsreh, total_rejected);
 	}
 
+	bool total_completed_injection = false;
+	#ifdef FAULT_INJECTOR
+	/*
+	 * Allow testing of very high number of processed rows, without spending
+	 * hours actually processing that many rows.
+	 */
+	if (FaultInjector_InjectFaultIfSet(CopyFromHighProcessed,
+									   DDLNotSpecified,
+									   "" /* databaseName */,
+									   "" /* tableName */) == FaultInjectorTypeSkip)
+	{
+		/*
+		 * For testing purposes, pretend that we have already processed
+		 * almost 2^32 rows.
+		 */
+		total_completed_from_qes = UINT_MAX - 10;
+		total_completed_injection = true;
+	}
+#endif /* FAULT_INJECTOR */
+
 	cstate->processed += total_completed_from_qes;
+
+	if (total_completed_injection) {
+		ereport(NOTICE,
+				(errmsg("Copied %lu lines", cstate->processed)));
+	}
 
 	/*
 	 * Done, clean up

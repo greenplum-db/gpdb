@@ -346,6 +346,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to report ERROR just after resource group is assigned on master */
 	_("before_read_command"),
 		/* inject fault before reading command */
+	_("copy_from_high_processed"),
+		/* inject fault to pretend copying from very high number of processed rows */
 	_("not recognized"),
 };
 
@@ -1067,6 +1069,7 @@ FaultInjector_NewHashEntry(
 			case InterconnectStopAckIsLost:
 			case SendQEDetailsInitBackend:
 			case AppendOnlySkipCompression:
+			case CopyFromHighProcessed:
 
 				break;
 			default:
