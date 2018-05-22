@@ -1,4 +1,4 @@
-argparse=1.2.1
+argparse==1.2.1
 behave==1.2.4
 ecdsa==0.13
 epydoc==3.0.1
