@@ -8908,7 +8908,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		appendPQExpBuffer(query,
 						  "SELECT proretset, prosrc, probin, "
 						  "proallargtypes, proargmodes, proargnames, "
-						  "proiswindow, "
+						  "proiswin as proiswindow, "
 						  "provolatile, proisstrict, prosecdef, "
 						  "null as proconfig, 0 as procost, 0 as prorows, %s"
 						  "'a' as proexeclocation, "
