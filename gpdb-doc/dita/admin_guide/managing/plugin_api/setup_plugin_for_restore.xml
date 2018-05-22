@@ -21,7 +21,7 @@
         </plentry>
         <plentry>
           <pt><varname>local_backup_dir</varname></pt>
-          <pd>The local directory on the Greenplum Database host (master and segments) from which <codeph>gprestore</codeph> reads backup files. <codeph>setup_plugin_for_restore</codeph> must create this directory if it does not already exist.</pd>
+          <pd>The local directory on the Greenplum Database host (master and segments) from which <codeph>gprestore</codeph> reads backup files. <codeph>gprestore</codeph> creates this local directory.</pd>
         </plentry>
         </parml>
     </section>
