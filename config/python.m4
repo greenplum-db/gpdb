@@ -32,7 +32,7 @@ fi
 AC_MSG_CHECKING([Python configuration directory])
 python_majorversion=`${PYTHON} -c "import sys; print(sys.version[[0]])"`
 python_version=`${PYTHON} -c "import sys; print(sys.version[[:3]])"`
-python_configdir=`${PYTHON} -c "from distutils.sysconfig import get_python_lib as f; import os; print(os.path.join(f(plat_specific=1,standard_lib=1),'config'))"`
+python_configdir=`${PYTHON} -c "import distutils.sysconfig; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LIBPL'))))"`
 python_includespec=`${PYTHON} -c "import distutils.sysconfig; print('-I'+distutils.sysconfig.get_python_inc())"`
 
 AC_SUBST(python_majorversion)[]dnl
