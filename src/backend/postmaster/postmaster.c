@@ -1395,7 +1395,7 @@ getInstallationPaths(const char *argv0)
 				(errcode_for_file_access(),
 				 errmsg("could not open directory \"%s\": %m",
 						pkglib_path),
-				 errSendAlert(true),
+				 errSendAlert(ALERT_SEVERITY_ERROR),
 				 errhint("This may indicate an incomplete PostgreSQL installation, or that the file \"%s\" has been moved away from its proper location.",
 						 my_exec_path)));
 	FreeDir(pdir);
@@ -2253,13 +2253,11 @@ retry1:
 				break;
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg(POSTMASTER_IN_STARTUP_MSG)));
 			break;
 		case CAC_SHUTDOWN:
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg("the database system is shutting down")));
 			break;
 		case CAC_RECOVERY:
@@ -2267,7 +2265,7 @@ retry1:
 
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(true),
+					 errSendAlert(ALERT_SEVERITY_FATAL),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 						   XLogLocationToString(&recptr))));
@@ -2275,7 +2273,7 @@ retry1:
 		case CAC_TOOMANY:
 			ereport(FATAL,
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
-					 errSendAlert(true),
+					 errSendAlert(ALERT_SEVERITY_FATAL),
 					 errmsg("sorry, too many clients already")));
 			break;
 		case CAC_WAITBACKUP:
@@ -2668,7 +2666,7 @@ pmdie(SIGNAL_ARGS)
 			Shutdown = SmartShutdown;
 			ereport(LOG,
 					(errmsg("received smart shutdown request"),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 
 			if (pmState == PM_STARTUP)
 			{
@@ -2736,7 +2734,7 @@ pmdie(SIGNAL_ARGS)
 			Shutdown = FastShutdown;
 			ereport(LOG,
 					(errmsg("received fast shutdown request"),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 
 			if (StartupPID != 0)
 				signal_child(StartupPID, SIGTERM);
@@ -2797,7 +2795,7 @@ pmdie(SIGNAL_ARGS)
 			 */
 			ereport(LOG,
 					(errmsg("received immediate shutdown request"),
-				     errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 
 			SignalChildren(SIGQUIT);
 			if (StartupPID != 0)
@@ -2955,7 +2953,7 @@ reaper(SIGNAL_ARGS)
 				ereport(LOG,
 						(errmsg("database system is ready to accept connections"),
 						 errdetail("%s",version),
-						 errSendAlert(true)));
+						 errSendAlert(ALERT_SEVERITY_OK)));
 
 				PMAcceptingConnectionsStartTime = (pg_time_t) time(NULL);
 			}

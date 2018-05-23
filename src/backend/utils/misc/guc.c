@@ -5414,8 +5414,7 @@ set_config_option(const char *name, const char *value,
 	{
 		ereport(elevel,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-			   errmsg("unrecognized configuration parameter \"%s\"", name),
-			   errSendAlert(false)));
+			   errmsg("unrecognized configuration parameter \"%s\"", name)));
 		return false;
 	}
 

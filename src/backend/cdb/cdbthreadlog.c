@@ -114,8 +114,19 @@ write_log(const char *fmt,...)
 	if (Logging_collector && gp_log_format == 1)
 	{
 		char		errbuf[2048];	/* Arbitrary size? */
+		int			alert_severity;
 
 		vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
+
+		/*
+		 * This is a real hack... We want to send alerts on these errors, but
+		 * we aren't using ereport()
+		 */
+		if (strstr(errbuf, "Master unable to connect") != NULL ||
+			strstr(errbuf, "Found a fault with a segment") != NULL)
+			alert_severity = ALERT_SEVERITY_SYSTEM_DOWN;
+		else
+			alert_severity = 0;
 
 		/* Write the message in the CSV format */
 		write_message_to_server_log(LOG,
@@ -134,13 +145,7 @@ write_log(const char *fmt,...)
 									0,
 									0,
 									true,
-
-		/*
-		 * This is a real hack... We want to send alerts on these errors, but
-		 * we aren't using ereport()
-		 */
-									strstr(errbuf, "Master unable to connect") != NULL ||
-									strstr(errbuf, "Found a fault with a segment") != NULL,
+									alert_severity,
 									NULL,
 									false);
 

@@ -6731,21 +6731,21 @@ StartupXLOG(void)
 				   str_time(ControlFile->time)),
 			errhint("This probably means that some data is corrupted and"
 					" you will have to use the last backup for recovery."),
-			errSendAlert(true)));
+			errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 	else if (ControlFile->state == DB_IN_STANDBY_MODE)
 		ereport(LOG,
 				(errmsg("database system was interrupted while in standby mode at  %s",
 						str_time(ControlFile->checkPointCopy.time)),
 						errhint("This probably means something unexpected happened either"
 								" during replay at standby or receipt of XLog from primary."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 	else if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
 		ereport(LOG,
 				(errmsg("database system was interrupted after standby was promoted at %s",
 						str_time(ControlFile->checkPointCopy.time)),
 				 errhint("If this has occurred more than once something unexpected is happening"
 				" after standby has been promoted"),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 	else if (ControlFile->state == DB_IN_PRODUCTION)
 		ereport(LOG,
 				(errmsg("database system was interrupted; last known up at %s",
@@ -8525,7 +8525,7 @@ ShutdownXLOG(int code __attribute__((unused)) , Datum arg __attribute__((unused)
 
 	ereport(LOG,
 			(errmsg("database system is shut down"),
-					errSendAlert(true)));
+			 errSendAlert(ALERT_SEVERITY_SYSTEM_DOWN)));
 }
 
 /*

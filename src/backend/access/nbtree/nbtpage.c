@@ -444,7 +444,7 @@ _bt_checkpage(Relation rel, Buffer buf)
 						RelationGetRelationName(rel),
 						BufferGetBlockNumber(buf)),
 				 errhint("Please REINDEX it."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 }
 
 /*

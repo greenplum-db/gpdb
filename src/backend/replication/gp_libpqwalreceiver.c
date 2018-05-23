@@ -73,7 +73,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 		ereport(ERROR,
 				(errmsg("could not connect to the primary server: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * Get the system identifier and timeline ID as a DataRow message from the
@@ -87,7 +87,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 				(errmsg("could not receive database system identifier and timeline ID from "
 						"the primary server: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 	if (PQnfields(res) != 3 || PQntuples(res) != 1)
 	{
@@ -99,7 +99,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 				(errmsg("invalid response from primary server"),
 				 errdetail("Expected 1 tuple with 3 fields, got %d tuples with %d fields.",
 						   ntuples, nfields),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 	primary_sysid = PQgetvalue(res, 0, 0);
 	primary_tli = pg_atoi(PQgetvalue(res, 0, 1), 4, 0);
@@ -116,7 +116,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 				(errmsg("database system identifier differs between the primary and standby"),
 				 errdetail("The primary's identifier is %s, the standby's identifier is %s.",
 						   primary_sysid, standby_sysid),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 
 	/*
@@ -129,7 +129,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 		ereport(ERROR,
 				(errmsg("timeline %u of the primary does not match recovery target timeline %u",
 						primary_tli, standby_tli),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	ThisTimeLineID = primary_tli;
 
 	/*
@@ -145,7 +145,7 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 		ereport(ERROR,
 				(errmsg("could not start WAL streaming: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 	PQclear(res);
 
@@ -182,7 +182,7 @@ libpq_select(int timeout_ms)
 		ereport(ERROR,
 				(errcode_for_socket_access(),
 				 errmsg("socket not open"),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/* We use poll(2) if available, otherwise select(2) */
 	{
@@ -223,7 +223,7 @@ libpq_select(int timeout_ms)
 		ereport(ERROR,
 				(errcode_for_socket_access(),
 				 errmsg("select() failed: %m"),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	return true;
 }
 
@@ -363,7 +363,7 @@ walrcv_receive(int timeout, unsigned char *type, char **buffer, int *len)
 			ereport(ERROR,
 					(errmsg("could not receive data from WAL stream: %s",
 							PQerrorMessage(streamConn)),
-					errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 		/* Now that we've consumed some input, try again */
 		rawlen = PQgetCopyData(streamConn, &recvBuf, 1);
@@ -385,19 +385,19 @@ walrcv_receive(int timeout, unsigned char *type, char **buffer, int *len)
 			PQclear(res);
 			ereport(ERROR,
 					(errmsg("replication terminated by primary server"),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 		}
 		PQclear(res);
 		ereport(ERROR,
 				(errmsg("could not receive data from WAL stream: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 	if (rawlen < -1)
 		ereport(ERROR,
 				(errmsg("could not receive data from WAL stream: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/* Return received messages to caller */
 	*type = *((unsigned char *) recvBuf);
@@ -424,5 +424,5 @@ walrcv_send(const char *buffer, int nbytes)
 		ereport(ERROR,
 				(errmsg("could not send data to WAL stream: %s",
 						PQerrorMessage(streamConn)),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 }

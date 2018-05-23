@@ -371,9 +371,9 @@ _bitmap_init(Relation indexrel, bool use_wal)
 	if (RelationGetNumberOfBlocks(indexrel) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
-				errmsg("cannot initialize non-empty bitmap index \"%s\"",
-				RelationGetRelationName(indexrel)),
-				errSendAlert(true)));
+				 errmsg("cannot initialize non-empty bitmap index \"%s\"",
+						RelationGetRelationName(indexrel)),
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/* create the metapage */
 	metabuf = _bitmap_getbuf(indexrel, P_NEW, BM_WRITE);

@@ -16,6 +16,6 @@ override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 OBJS = autovacuum.o bgwriter.o checkpointer.o fork_process.o pgarch.o pgstat.o \
 	postmaster.o syslogger.o \
 	perfmon.o backoff.o perfmon_segmentinfo.o \
-	sendalert.o alertseverity.o autostats.o walwriter.o
+	sendalert.o autostats.o walwriter.o
 
 include $(top_srcdir)/src/backend/common.mk

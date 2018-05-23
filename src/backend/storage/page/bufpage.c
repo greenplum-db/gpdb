@@ -443,7 +443,7 @@ PageRepairFragmentation(Page page)
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u",
 						pd_lower, pd_upper, pd_special),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	nline = PageGetMaxOffsetNumber(page);
 	nunused = nstorage = 0;
@@ -487,7 +487,7 @@ PageRepairFragmentation(Page page)
 							(errcode(ERRCODE_DATA_CORRUPTED),
 							 errmsg("corrupted item pointer: %u",
 									itemidptr->itemoff),
-							 errSendAlert(true)));
+							 errSendAlert(ALERT_SEVERITY_ERROR)));
 				itemidptr->alignedlen = MAXALIGN(ItemIdGetLength(lp));
 				totallen += itemidptr->alignedlen;
 				itemidptr++;
@@ -499,7 +499,7 @@ PageRepairFragmentation(Page page)
 					(errcode(ERRCODE_DATA_CORRUPTED),
 			   errmsg("corrupted item lengths: total %u, available space %u",
 					  (unsigned int) totallen, pd_special - pd_lower),
-			   errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 		/* sort itemIdSortData array into decreasing itemoff order */
 		qsort((char *) itemidbase, nstorage, sizeof(itemIdSortData),
@@ -679,7 +679,7 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u",
 						phdr->pd_lower, phdr->pd_upper, phdr->pd_special),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	nline = PageGetMaxOffsetNumber(page);
 	if ((int) offnum <= 0 || (int) offnum > nline)
@@ -699,7 +699,7 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("corrupted item pointer: offset = %u, size = %u",
 						offset, (unsigned int) size),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * First, we want to get rid of the pd_linp entry for the index tuple. We
@@ -811,7 +811,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u",
 						pd_lower, pd_upper, pd_special),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * Scan the item pointer array and build a list of just the ones we are
@@ -837,7 +837,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 					(errcode(ERRCODE_DATA_CORRUPTED),
 					 errmsg("corrupted item pointer: offset = %u, size = %u",
 							offset, (unsigned int) size),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 		if (nextitm < nitems && offnum == itemnos[nextitm])
 		{
@@ -865,7 +865,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 				(errcode(ERRCODE_DATA_CORRUPTED),
 			   errmsg("corrupted item lengths: total %u, available space %u",
 					  (unsigned int) totallen, pd_special - pd_lower),
-			   errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/* sort itemIdSortData array into decreasing itemoff order */
 	qsort((char *) itemidbase, nused, sizeof(itemIdSortData),

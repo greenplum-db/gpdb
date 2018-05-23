@@ -181,7 +181,7 @@ GetOptions(
 				   {
 					   my $l2 = $lines[$jj];
 
-					   if ($l2 =~ m/errSendAlert\(\s*true\s*\)/)
+					   if ($l2 =~ m/errSendAlert\(\s*.+\s*\)/)
 					   {
 						   $gotmsg = 1;
 						   $msgcnt++;

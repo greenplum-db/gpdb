@@ -73,11 +73,11 @@ bmbuild(PG_FUNCTION_ARGS)
 
 	/* We expect this to be called exactly once. */
 	if (RelationGetNumberOfBlocks(index) != 0)
-		ereport (ERROR,
+		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
-				errmsg("index \"%s\" already contains data",
-				RelationGetRelationName(index)),
-				errSendAlert(true)));
+				 errmsg("index \"%s\" already contains data",
+						RelationGetRelationName(index)),
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	tupDesc = RelationGetDescr(index);
 

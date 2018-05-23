@@ -40,7 +40,6 @@
 #include "utils/elog.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-#include "sendalert_common.h"
 
 extern int	PostPortNumber;
 
@@ -79,6 +78,26 @@ oid				objid_gpdbAlertSqlStmt[] = { 1, 3, 6, 1, 4, 1, 31327, 1, 5 };
 oid				objid_gpdbAlertSystemName[] = { 1, 3, 6, 1, 4, 1, 31327, 1, 6 };
 #endif
 
+struct SendAlertPriorities
+{
+	AlertSeverity		severity;
+	SnmpSeverity		snmp_severity;
+	EmailPriority		email_priority;
+};
+
+static const struct SendAlertPriorities sendalert_prio[] = {
+	{ALERT_SEVERITY_OK, SNMP_OK, EMAIL_NORMAL},
+	{ALERT_SEVERITY_TEST, SNMP_OK, EMAIL_LOWEST},
+	{ALERT_SEVERITY_PANIC, SNMP_PANIC, EMAIL_HIGHEST},
+	{ALERT_SEVERITY_FATAL, SNMP_FATAL, EMAIL_NORMAL},
+	{ALERT_SEVERITY_ERROR, SNMP_ERROR, EMAIL_NORMAL},
+	{ALERT_SEVERITY_WARNING, SNMP_WARNING, EMAIL_NORMAL},
+	{ALERT_SEVERITY_LOG, SNMP_OK, EMAIL_NORMAL},
+	{ALERT_SEVERITY_SYSTEM_DOWN, SNMP_SYSTEM_DOWN, EMAIL_HIGHEST},
+	{ALERT_SEVERITY_SYSTEM_DEGRADED, SNMP_SYSTEM_DEGRADED, EMAIL_HIGHEST},
+	{0, 0, 0}
+};
+
 #if defined(HAVE_DECL_CURLOPT_MAIL_FROM) && HAVE_DECL_CURLOPT_MAIL_FROM
 /* state information for messagebody_cb function */
 typedef struct
@@ -89,10 +108,10 @@ typedef struct
 
 static size_t messagebody_cb(void *ptr, size_t size, size_t nmemb, void *userp);
 static void build_messagebody(StringInfo buf, const GpErrorData *errorData,
-				  const char *subject, const char *email_priority);
+				  const char *subject, int email_priority);
 
 static void send_alert_via_email(const GpErrorData * errorData,
-					 const char * subject, const char * email_priority);
+					 const char * subject, int email_priority);
 static char *extract_email_addr(char *str);
 static bool SplitMailString(char *rawstring, char delimiter, List **namelist);
 #endif
@@ -277,38 +296,6 @@ static int send_snmp_inform_or_trap(const GpErrorData * errorData, const char * 
 	 */
 
 	sprintf(csysuptime, "%ld", (long)(time(NULL) - MyStartTime));
-
-
-	/*
-	// ERRCODE_DISK_FULL could be reported vi rbmsMIB rdbmsTraps rdbmsOutOfSpace trap.
-	// But it appears we never generate that error?
-
-	// ERRCODE_ADMIN_SHUTDOWN means SysAdmin aborted somebody's request.  Not interesting?
-
-	// ERRCODE_CRASH_SHUTDOWN sounds interesting, but I don't see that we ever generate it.
-
-	// ERRCODE_CANNOT_CONNECT_NOW means we are starting up, shutting down, in recovery, or Too many users are logged on.
-
-	// abnormal database system shutdown
-	*/
-
-
-
-	/*
-	 * The gpdbAlertSeverity is a crude attempt to classify some of these messages based on severity,
-	 * where OK means everything is running normal, Down means everything is shut down, degraded would be
-	 * for times when some segments are down, but the system is up, The others are maybe useful in the future
-	 *
-	 *  gpdbSevUnknown(0),
-	 *	gpdbSevOk(1),
-	 *	gpdbSevWarning(2),
-	 *	gpdbSevError(3),
-	 *	gpdbSevFatal(4),
-	 *	gpdbSevPanic(5),
-	 *	gpdbSevSystemDegraded(6),
-	 *	gpdbSevSystemDown(7)
-	 */
-
 
 	char detail[MAX_ALERT_STRING+1];
 	snprintf(detail, MAX_ALERT_STRING, "%s", errorData->error_detail);
@@ -526,7 +513,7 @@ static int send_snmp_inform_or_trap(const GpErrorData * errorData, const char * 
 #if defined(HAVE_DECL_CURLOPT_MAIL_FROM) && HAVE_DECL_CURLOPT_MAIL_FROM
 static void
 send_alert_via_email(const GpErrorData *errorData,
-					 const char *subject, const char *email_priority)
+					 const char *subject, int email_priority)
 {
 	CURL	   *curl;
 	upload_ctx	upload_ctx;
@@ -771,19 +758,25 @@ send_alert_via_email(const GpErrorData *errorData,
 }
 #endif
 
-int send_alert(const GpErrorData * errorData)
+int
+send_alert(const GpErrorData * errorData)
 {
+	char		subject[MAX_ALERT_STRING + 1];
+	int			email_priority;
+	char		snmp_severity[2];
+	bool		found;
+	bool		send_via_snmp;
 
-	char subject[128];
-	bool send_via_email = true;
-	char email_priority[2];
-	bool send_via_snmp = true;
-	char snmp_severity[2];
-
-	static char previous_subject[128];
-	pg_time_t current_time;
+	static char	previous_subject[MAX_ALERT_STRING + 1];
+	pg_time_t	current_time;
 	static pg_time_t previous_time;
 	static GpErrorDataFixFields previous_fix_fields;
+
+#if USE_SNMP
+	send_via_snmp = true;
+#else
+	send_via_snmp = false;
+#endif
 
 	elog(DEBUG2, "send_alert: %s: %s",
 		 error_severity(errorData->fix_fields.elevel),
@@ -793,20 +786,55 @@ int send_alert(const GpErrorData * errorData)
 	 * SIGPIPE must be ignored, or we will have problems.
 	 *
 	 * but this is already set in syslogger.c, so we are OK
-	 * //pqsignal(SIGPIPE, SIG_IGN);  // already set in syslogger.c
-	 *
+	 * pqsignal(SIGPIPE, SIG_IGN);
 	 */
 
-	/* Set up a subject line for the alert.  set_alert_severity will limit it to 127 bytes just to be safe. */
-	/* Assign a severity and email priority for this alert*/
+	/*
+	 * Set up a subject line for the alert. The subject is limited to 127 bytes
+	 * just to be safe, as SNMP inform/trap messages are limited in size.
+	 */
+	memset(subject, '\0', sizeof(subject));
+	if (errorData->fix_fields.elevel == LOG)
+		snprintf(subject, MAX_ALERT_STRING, "%s", errorData->error_message);
+	/* 57P03 - cannot_connect_now */
+	else if (errorData->sql_state && strcmp(errorData->sql_state,"57P03") == 0)
+		snprintf(subject, MAX_ALERT_STRING, "%s", errorData->error_message);
+	else
+		snprintf(subject, MAX_ALERT_STRING, "%s: %s",
+				 error_severity(errorData->fix_fields.elevel),
+				 errorData->error_message);
 
-	set_alert_severity(errorData,
-						subject,
-						&send_via_email,
-						email_priority,
-						&send_via_snmp,
-						snmp_severity);
+	/*
+	 * Assign a severity and email priority for this alert. Since the SEVERITY
+	 * values are an enum we could start the enum on zero rather than 1 and use
+	 * the SEVERITY enum value as array index rather than looping the array of
+	 * email/snmp values. That would however put a strict requirement on the
+	 * array and enum being in perfect sync, else we risk false positives or
+	 * negatives. Looping seems a cheap price to pay to avoid that.
+	 */
+	const struct SendAlertPriorities *p;
+	found = false;
+	for (p = sendalert_prio; p && p->severity != 0; p++)
+	{
+		if (p->severity == errorData->fix_fields.send_alert)
+		{
+			email_priority = p->email_priority;
+			snprintf(snmp_severity, sizeof(snmp_severity), "%i", p->snmp_severity);
+			found = true;
+			break;
+		}
+	}
 
+	/*
+	 * If we don't have a severity, assume things were normal. This shouldn't
+	 * really happen in practice but it's good practice and makes compilers
+	 * happy
+	 */
+	if (!found)
+	{
+		email_priority = EMAIL_NORMAL;
+		snprintf(snmp_severity, sizeof(snmp_severity), "%i", SNMP_OK);
+	}
 
 	/*
 	 * Check to see if we are sending the same message as last time.
@@ -883,10 +911,7 @@ int send_alert(const GpErrorData * errorData)
 #endif
 
 #if defined(HAVE_DECL_CURLOPT_MAIL_FROM) && HAVE_DECL_CURLOPT_MAIL_FROM
-	if (send_via_email)
-		send_alert_via_email(errorData, subject, email_priority);
-	else
-		elog(DEBUG4,"Not sending via e-mail");
+	send_alert_via_email(errorData, subject, email_priority);
 #endif
 
 	return 0;
@@ -1087,15 +1112,15 @@ messagebody_cb(void *ptr, size_t size, size_t nmemb, void *userp)
 
 static void
 build_messagebody(StringInfo buf, const GpErrorData *errorData, const char *subject,
-		const char *email_priority)
+		int email_priority)
 {
 	/* Perhaps better to use text/html ? */
 
 	appendStringInfo(buf, "From: %s\r\n", gp_email_from);
 	appendStringInfo(buf, "To: %s\r\n", gp_email_to);
 	appendStringInfo(buf, "Subject: %s\r\n", subject);
-	if (email_priority[0] != '\0' && email_priority[0] != '3') // priority not the default?
-		appendStringInfo(buf, "X-Priority: %s", email_priority); // set a priority.  1 == highest priority, 5 lowest
+	if (email_priority != EMAIL_NORMAL) // priority not the default?
+		appendStringInfo(buf, "X-Priority: %i", email_priority); // set a priority.  1 == highest priority, 5 lowest
 
 	appendStringInfoString(buf,	"MIME-Version: 1.0\r\n"
 			"Content-Type: text/plain;\r\n"

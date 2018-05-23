@@ -638,7 +638,7 @@ gistcheckpage(Relation rel, Buffer buf)
 					RelationGetRelationName(rel),
 					BufferGetBlockNumber(buf)),
 				 errhint("Please REINDEX it."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * Additionally check that the special area looks sane.
@@ -650,7 +650,7 @@ gistcheckpage(Relation rel, Buffer buf)
 						RelationGetRelationName(rel),
 						BufferGetBlockNumber(buf)),
 				 errhint("Please REINDEX it."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 }
 
 

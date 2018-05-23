@@ -355,7 +355,7 @@ WalReceiverMain(void)
 		if (!RecoveryInProgress())
 			ereport(FATAL,
 					(errmsg("cannot continue WAL streaming, recovery has already ended"),
-					errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_FATAL)));
 
 		/* Process any requests or signals received recently */
 		ProcessWalRcvInterrupts();
@@ -561,7 +561,7 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 					ereport(ERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
 							 errmsg_internal("invalid WAL message received from primary"),
-							 errSendAlert(true)));
+							 errSendAlert(ALERT_SEVERITY_ERROR)));
 				/* memcpy is required here for alignment reasons */
 				memcpy(&msghdr, buf, sizeof(WalDataMessageHeader));
 
@@ -585,7 +585,7 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 					ereport(ERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
 							 errmsg_internal("invalid keepalive message received from primary"),
-							 errSendAlert(true)));
+							 errSendAlert(ALERT_SEVERITY_ERROR)));
 				/* memcpy is required here for alignment reasons */
 				memcpy(&keepalive, buf, sizeof(PrimaryKeepaliveMessage));
 
@@ -596,7 +596,8 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg_internal("invalid replication message type %d",
-									 type),	errSendAlert(true)));
+									 type),
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 }
 
@@ -672,7 +673,7 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 						 errmsg("could not seek in log file %u, "
 								"segment %u to offset %u: %m",
 								recvId, recvSeg, startoff),
-								errSendAlert(true)));
+								errSendAlert(ALERT_SEVERITY_PANIC)));
 			recvOff = startoff;
 		}
 
@@ -691,7 +692,7 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 							"at offset %u, length %lu: %m",
 							recvId, recvSeg,
 							recvOff, (unsigned long) segbytes),
-							errSendAlert(true)));
+							errSendAlert(ALERT_SEVERITY_PANIC)));
 		}
 
 		/* Update state for write */

@@ -171,7 +171,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 					RelationGetRelationName(rel),
 					BufferGetBlockNumber(buf)),
 				 errhint("Please REINDEX it."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * Additionally check that the special area looks sane.
@@ -183,7 +183,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 						RelationGetRelationName(rel),
 						BufferGetBlockNumber(buf)),
 				 errhint("Please REINDEX it."),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	if (flags)
 	{
@@ -196,7 +196,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 						  RelationGetRelationName(rel),
 						  BufferGetBlockNumber(buf)),
 					 errhint("Please REINDEX it."),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 
 	/*
@@ -218,7 +218,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 					 errmsg("index \"%s\" has wrong hash version",
 							RelationGetRelationName(rel)),
 					 errhint("Please REINDEX it."),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 }
 

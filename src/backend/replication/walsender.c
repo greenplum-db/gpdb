@@ -390,7 +390,7 @@ exec_replication_command(const char *cmd_string)
 			ereport(FATAL,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("invalid standby query string: %s", cmd_string),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_FATAL)));
 	}
 
 	/* done */
@@ -420,7 +420,7 @@ ProcessRepliesIfAny(void)
 			ereport(COMMERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("unexpected EOF on standby connection"),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 			proc_exit(0);
 		}
 		if (r == 0)
@@ -465,7 +465,7 @@ ProcessRepliesIfAny(void)
 						(errcode(ERRCODE_PROTOCOL_VIOLATION),
 						 errmsg("invalid standby message type \"%c\"",
 								firstchar),
-						 errSendAlert(true)));
+						 errSendAlert(ALERT_SEVERITY_FATAL)));
 		}
 	}
 
@@ -503,7 +503,7 @@ ProcessStandbyMessage(void)
 			ereport(COMMERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("unexpected message type \"%c\"", msgtype),
-					 errSendAlert(true)));
+					 errSendAlert(ALERT_SEVERITY_ERROR)));
 			proc_exit(0);
 	}
 }
@@ -806,7 +806,7 @@ WalSndLoop(void)
 				 */
 				ereport(COMMERROR,
 						(errmsg("terminating walsender process due to replication timeout"),
-						 errSendAlert(true)));
+						 errSendAlert(ALERT_SEVERITY_ERROR)));
 				break;
 			}
 		}

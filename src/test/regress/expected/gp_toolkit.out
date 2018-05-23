@@ -138,10 +138,7 @@ select logseverity from gp_toolkit.gp_log_system where logseverity='LOG' limit 5
 select logseverity from gp_toolkit.gp_log_database where logseverity='LOG' limit 3;
  logseverity 
 -------------
- LOG
- LOG
- LOG
-(3 rows)
+(0 rows)
 
 select logseverity from gp_toolkit.gp_log_master_concise where logseverity='LOG' limit 5; -- superuser only
  logseverity 

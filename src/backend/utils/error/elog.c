@@ -1427,17 +1427,22 @@ getinternalerrposition(void)
 }
 
 /*
- * GPDB: errSendAlert -- set flag indicating the error should trigger an alert via e-mail or SNMP
+ * errSendAlert --- set flags indicating the error should trigger an alert via
+ * e-mail or SNMP.
+ *
+ * The alert_severity define the severity, and thus priority, of the occurred
+ * error, the caller is responsible for setting this. errSendAlert() is a GPDB
+ * addition.
  */
 int
-errSendAlert(bool sendAlert)
+errSendAlert(int alert_severity)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 
 	/* we don't bother incrementing recursion_depth */
 	CHECK_STACK_DEPTH();
 
-	edata->send_alert = sendAlert;
+	edata->send_alert = alert_severity;
 
 	return 0;					/* return value does not matter */
 }
@@ -3537,7 +3542,7 @@ write_message_to_server_log(int elevel,
 							int lineno,
 							int stacktracesize,
 							bool omit_location,
-							bool send_alert,
+							int send_alert,
 							void* const *stacktracearray,
 							bool printstack)
 {
@@ -3566,7 +3571,7 @@ write_message_to_server_log(int elevel,
 
 	fix_fields.session_start_time =
 		(MyProcPort == NULL) ? 0 : (pg_time_t) timestamptz_to_time_t(MyProcPort->SessionStartTime);
-	fix_fields.send_alert = send_alert ? 't' : 'f';
+	fix_fields.send_alert = send_alert;
 	fix_fields.omit_location = omit_location ? 't' : 'f';
 	fix_fields.gp_is_primary = 't';
 	fix_fields.gp_session_id = gp_session_id;
@@ -4416,7 +4421,7 @@ write_stderr(const char *fmt,...)
 										0,
 										0,
 										true,
-										false,
+										0,
 										NULL,
 										false);
 		}

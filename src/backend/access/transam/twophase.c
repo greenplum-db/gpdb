@@ -1349,7 +1349,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("xlog record is invalid"),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 	}
 
 	buf = XLogRecGetData(tfRecord);
@@ -1359,7 +1359,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("two-phase state information for transaction %u is corrupt",
 						xid),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_ERROR)));
 
 	/*
 	 * Disassemble the header area

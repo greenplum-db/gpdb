@@ -521,7 +521,7 @@ static void check_superuser_connection_limit()
 						errmsg("connection limit exceeded for superusers (need "
 									   "at least %d connections reserved for FTS handler)",
 							   RESERVED_FTS_CONNECTIONS),
-						errSendAlert(true)));
+						errSendAlert(ALERT_SEVERITY_FATAL)));
 }
 
 /* --------------------------------
@@ -771,7 +771,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		ereport(FATAL,
 				(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 				 errmsg("remaining connection slots are reserved for non-replication superuser connections"),
-				 errSendAlert(true)));
+				 errSendAlert(ALERT_SEVERITY_FATAL)));
 
 	if (am_superuser)
 		check_superuser_connection_limit();
@@ -983,8 +983,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		!(am_superuser && gp_maintenance_conn))
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("maintenance mode: connected by superuser only"),
-				 errSendAlert(false)));
+				 errmsg("maintenance mode: connected by superuser only")));
 
 	/*
 	 * MPP:  If we were started in utility mode then we only want to allow
