@@ -1,280 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gptransfer">
-  <title>Migrating Data with Gptransfer</title>
+  <title>Migrating Data with gptransfer</title>
   <shortdesc>Information about the <codeph>gptransfer</codeph> migration utility, which transfers
     Greenplum Database metadata and data from one Greenplum database to another.</shortdesc>
   <body>
-    <p><codeph>gptransfer</codeph> enables you to migrate the entire contents of a database, or just
-      selected tables, to another database. The source and destination databases may be in the same
-      or a different cluster. <codeph>gptransfer</codeph> moves data in parallel across all the
-      segments, using the <codeph>gpfdist</codeph> data loading utility to attain the highest
-      transfer rates. </p>
-    <p><codeph>gptransfer</codeph> handles the setup and execution of the data transfer.
-      Participating clusters must already exist, have network access between all hosts in both
-      clusters, and have certificate-authenticated ssh access between all hosts in both clusters. </p>
-    <p>The <codeph>gptransfer</codeph> interface includes options to transfer one or more full
-      databases, or one or more database tables. A full database transfer includes the database
-      schema, table data, indexes, views, roles, user-defined functions, and resource queues.
-      Configuration files, including <codeph>postgres.conf</codeph> and
-      <codeph>pg_hba.conf</codeph>, must be transferred manually by an administrator. Extensions
-      installed in the database with <codeph>gppkg</codeph>, such as MADlib and programming language
-      extensions, must be installed in the destination database by an administrator. </p>
-    <section>
-      <title>What gptransfer Does</title>
-      <p><codeph>gptransfer</codeph> uses writable and readable external tables, the Greenplum
-          <codeph>gpfdist</codeph> parallel data-loading utility, and named pipes to transfer data
-        from the source database to the destination database. Segments on the source cluster select
-        from the source database table and insert into a writable external table. Segments in the
-        destination cluster select from a readable external table and insert into the destination
-        database table. The writable and readable external tables are backed by named pipes on the
-        source cluster's segment hosts, and each named pipe has a <codeph>gpfdist</codeph> process
-        serving the pipe's output to the readable external table on the destination segments. </p>
-      <p><codeph>gptransfer</codeph> orchestrates the process by processing the database objects to
-        be transferred in batches. For each table to be transferred, it performs the following
-          tasks:<ul id="ul_wsd_4tg_dp">
-          <li>creates a writable external table in the source database</li>
-          <li>creates a readable external table in the destination database</li>
-          <li>creates named pipes and <codeph>gpfdist</codeph> processes on segment hosts in the
-            source cluster</li>
-          <li>executes a <codeph>SELECT INTO</codeph> statement in the source database to insert the
-            source data into the writable external table</li>
-          <li>executes a <codeph>SELECT INTO</codeph> statement in the destination database to
-            insert the data from the readable external table into the destination table</li>
-          <li>optionally validates the data by comparing row counts or MD5 hashes of the rows in the
-            source and destination</li>
-          <li>cleans up the external tables, named pipes, and <codeph>gpfdist</codeph>
-            processes</li>
-        </ul></p>
-    </section>
-    <section>
-      <title>Prerequisites</title>
-      <ul id="ul_wkb_xqd_cp">
-        <li>The <codeph>gptransfer</codeph> utility can only be used with Greenplum Database,
-          including the Dell EMC DCA appliance. Pivotal HAWQ is not supported as a source or destination. </li>
-        <li>The source and destination Greenplum clusters must both be version 4.2 or higher.</li>
-        <li>At least one Greenplum instance must include the <codeph>gptransfer</codeph> utility in
-          its distribution. The utility is included with Greenplum Database version 4.2.8.1 and
-          higher and 4.3.2.0 and higher. If neither the source or destination includes
-            <codeph>gptransfer</codeph>, you must upgrade one of the clusters to use
-            <codeph>gptransfer</codeph>. </li>
-        <li>The <codeph>gptransfer</codeph> utility can be run from the cluster with the source or
-          destination database.</li>
-        <li>The number of <i>segments</i> in the destination cluster must be greater than or equal
-          to the number of <i>hosts</i> in the source cluster. The number of segments in the
-          destination may be smaller than the number of segments in the source, but the data will
-          transfer at a slower rate.</li>
-        <li>The segment hosts in both clusters must have network connectivity with each other.</li>
-        <li>Every host in both clusters must be able to connect to every other host with
-          certificate-authenticated SSH. You can use the <codeph>gpssh_exkeys</codeph> utility to
-          exchange public keys between the hosts of both clusters.</li>
-      </ul>
-    </section>
-    <section>
-      <title>Fast Mode and Slow Mode</title>
-      <p><codeph>gptransfer</codeph> sets up data transfer using the <codeph>gpfdist</codeph>
-        parallel file serving utility, which serves the data evenly to the destination segments.
-        Running more <codeph>gpfdist</codeph> processes increases the parallelism and the data
-        transfer rate. When the destination cluster has the same or a greater number of segments
-        than the source cluster, <codeph>gptransfer</codeph> sets up one named pipe and one
-          <codeph>gpfdist</codeph> process for each source segment. This is the configuration for
-        optimal data transfer rates and is called <i>fast mode</i>. </p>
-      <p>The configuration of the input end of the named pipes differs when there are fewer segments
-        in the destination cluster than in the source cluster. <codeph>gptransfer</codeph> handles
-        this alternative setup automatically. The difference in configuration means that
-        transferring data into a destination cluster with fewer segments than the source cluster is
-        not as fast as transferring into a destination cluster of the same or greater size. It is
-        called <i>slow mode</i> because there are fewer <codeph>gpfdist</codeph> processes serving
-        the data to the destination cluster, although the transfer is still quite fast with one
-          <codeph>gpfdist</codeph> per segment host.</p>
-      <p>When the destination cluster is smaller than the source cluster, there is one named pipe
-        per segment host and all segments on the host send their data through it. The segments on
-        the source host write their data to a writable external web table connected to a
-          <codeph>gpfdist</codeph> process on the input end of the named pipe. This consolidates the
-        table data into a single named pipe. A <codeph>gpfdist</codeph> process on the output of the
-        named pipe serves the consolidated data to the destination cluster. </p>
-      <p>On the destination side, <codeph>gptransfer</codeph> defines a readable external table with
-        the <codeph>gpfdist</codeph> server on the source host as input and selects from the
-        readable external table into the destination table. The data is distributed evenly to all
-        the segments in the destination cluster. </p>
-    </section>
-    <section>
-      <title>Batch Size and Sub-batch Size</title>
-      <p>The degree of parallelism of a <codeph>gptransfer</codeph> execution is determined by two
-        command-line options: <codeph>--batch-size</codeph> and <codeph>--sub-batch-size</codeph>.
-        The <codeph>--batch-size</codeph> option specifies the number of tables to transfer in a
-        batch. The default batch size is 2, which means that two table transfers are in process at
-        any time. The minimum batch size is 1 and the maximum is 10. The
-          <codeph>--sub-batch-size</codeph> parameter specifies the maximum number of parallel
-        sub-processes to start to do the work of transferring a table. The default is 25 and the
-        maximum is 50. The product of the batch size and sub-batch size is the amount of
-        parallelism. If set to the defaults, for example, <codeph>gptransfer</codeph> can perform 50
-        concurrent tasks. Each thread is a Python process and consumes memory, so setting these
-        values too high can cause a Python Out of Memory error. For this reason, the batch sizes
-        should be tuned for your environment. </p>
-    </section>
-    <section>
-      <title>Preparing Hosts for gptransfer</title>
-      <p>When you install a Greenplum Database cluster, you set up all the master and segment hosts
-        so that the Greenplum Database administrative user (<codeph>gpadmin</codeph>) can connect
-        with ssh from every host in the cluster to any other host in the cluster without providing a
-        password. The <codeph>gptransfer</codeph> utility requires this capability between every
-        host in the source and destination clusters. First, ensure that the clusters have network
-        connectivity with each other. Then, prepare a hosts file containing a list of all the hosts
-        in both clusters, and use the <codeph>gpssh-exkeys</codeph> utility to exchange keys. See
-        the reference for <codeph>gpssh-exkeys</codeph> in the <i>Greenplum Database Utility
-          Guide</i>.</p>
-      <p>The host map file is a text file that lists the segment hosts in the source cluster. It is
-        used to enable communication between the hosts in Greenplum clusters. The file is specified
-        on the <codeph>gptransfer</codeph> command line with the
-            <codeph>--source-map-file=<i>host_map_file</i></codeph> command option. It is a required
-        option when using <codeph>gptransfer</codeph> to copy data between two separate Greenplum
-        clusters.</p>
-      <p>The file contains a list in the following
-        format:<codeblock>host1_name,host1_ip_addr
-host2_name,host2_ipaddr
-...</codeblock>The file
-        uses IP addresses instead of host names to avoid any problems with name resolution between
-        the clusters. </p>
-    </section>
-    <section>
-      <title>Limitations</title>
-      <p><codeph>gptransfer</codeph> transfers data from user databases only; the
-          <codeph>postgres</codeph>, <codeph>template0</codeph>, and <codeph>template1</codeph>
-        databases cannot be transferred. Administrators must transfer configuration files manually
-        and install extensions into the destination database with <codeph>gppkg</codeph>.</p>
-      <p>The destination cluster must have at least as many segments as the source cluster has
-        segment hosts. Transferring data to a smaller cluster is not as fast as transferring data to
-        a larger cluster. </p>
-      <p>Transferring small or empty tables can be unexpectedly slow. There is significant fixed
-        overhead in setting up external tables and communications processes for parallel data
-        loading between segments that occurs whether or not there is actual data to transfer.</p>
-      <p>When transferring data between databases, you can run only one instance of
-          <codeph>gptransfer</codeph> at a time.<ph otherprops="op-pivotal"> Running multiple,
-          concurrent instances of <codeph>gptransfer</codeph> is not supported.</ph></p>
-    </section>
-    <section>
-      <title>Full Mode and Table Mode</title>
-      <p>When run with the <codeph>--full</codeph> option, <codeph>gptransfer</codeph> copies all
-        tables, views, indexes, roles, user-defined functions, and resource queues in the source
-        database to the destination database. Databases to be transferred must not already exist on
-        the destination cluster. If <codeph>gptransfer</codeph> finds the database on the
-        destination it fails with a message like the
-        following:<codeblock>[ERROR]:- gptransfer: error: --full option specified but tables exist on destination system</codeblock></p>
-      <p>To copy tables individually, specify the tables using either the <codeph>-t</codeph>
-        command-line option (one option per table) or by using the <codeph>-f</codeph> command-line
-        option to specify a file containing a list of tables to transfer. Tables are specified in
-        the fully-qualified format <codeph><i>database</i>.<i>schema</i>.<i>table</i></codeph>. The
-        table definition, indexes, and table data are copied. The database must already exist on the
-        destination cluster.</p>
-      <p>By default, <codeph>gptransfer</codeph> fails if you attempt to transfer a table that
-        already exists in the destination database:</p>
-      <codeblock>[INFO]:-Validating transfer table set...
-[CRITICAL]:- gptransfer failed. (Reason='Table <i>database.schema.table</i> exists in database <i>database</i> .') exiting...</codeblock>
-      <p>Override this behavior with the <codeph>--skip-existing</codeph>,
-          <codeph>--truncate</codeph>, or <codeph>--drop</codeph> options.</p>
-      <p>The following table shows the objects that are copied in full mode and table mode.</p>
-      <table id="table_ydp_rtd_cp">
-        <tgroup cols="3">
-          <thead>
-            <row>
-              <entry>Object</entry>
-              <entry>Full Mode</entry>
-              <entry>Table Mode</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>Data</entry>
-              <entry>Yes</entry>
-              <entry>Yes</entry>
-            </row>
-            <row>
-              <entry>Indexes</entry>
-              <entry>Yes</entry>
-              <entry>Yes</entry>
-            </row>
-            <row>
-              <entry>Roles</entry>
-              <entry>Yes</entry>
-              <entry>No</entry>
-            </row>
-            <row>
-              <entry>Functions</entry>
-              <entry>Yes</entry>
-              <entry>No</entry>
-            </row>
-            <row>
-              <entry>Resource Queues</entry>
-              <entry>Yes</entry>
-              <entry>No</entry>
-            </row>
-            <row>
-              <entry>
-                <codeph>postgres.conf</codeph>
-              </entry>
-              <entry>No</entry>
-              <entry>No</entry>
-            </row>
-            <row>
-              <entry>
-                <codeph>pg_hba.conf</codeph>
-              </entry>
-              <entry>No</entry>
-              <entry>No</entry>
-            </row>
-            <row>
-              <entry>
-                <codeph>gppkg</codeph>
-              </entry>
-              <entry>No</entry>
-              <entry>No</entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-      <p>The <codeph>--full</codeph> option and the <codeph>--schema-only</codeph> option can be
-        used together if you want to copy a database in phases, for example, during scheduled
-        periods of downtime or low activity. Run <codeph>gptransfer --full --schema-only ...</codeph>
-        to create the full database schema on the destination
-        cluster, but with no data. You can then transfer the tables in stages during scheduled down
-        times or periods of low activity. Be sure to include the <codeph>--truncate</codeph> or
-          <codeph>--drop</codeph> option when you later transfer tables to prevent the transfer from
-        failing because the table already exists at the destination.</p>
-    </section>
-    <section>
-      <title>Locking</title>
-      <p>The <codeph>-x</codeph> option enables table locking. An exclusive lock is placed on the
-        source table until the copy and validation, if requested, are complete. </p>
-    </section>
-    <section>
-      <title>Validation</title>
-      <p>By default, <codeph>gptransfer</codeph> does not validate the data transferred. You can
-        request validation using the <codeph>--validate=<i>type</i></codeph> option. The validation
-          <i>type</i> can be one of the following:<ul id="ul_lqh_wnh_dp">
-          <li><codeph>count</codeph> &#8211; Compares the row counts for the tables in the source
-            and destination databases. </li>
-          <li><codeph>md5</codeph> &#8211; Sorts tables on both source and destination, and then
-            performs a row-by-row comparison of the MD5 hashes of the sorted rows.</li>
-        </ul></p>
-      <p>If the database is accessible during the transfer, be sure to add the <codeph>-x</codeph>
-        option to lock the table. Otherwise, the table could be modified during the transfer,
-        causing validation to fail.</p>
-    </section>
-    <section>
-      <title>Failed Transfers</title>
-      <p>A failure on a table does not end the <codeph>gptransfer</codeph> job. When a transfer
-        fails, <codeph>gptransfer</codeph> displays an error message and adds the table name to a
-        failed transfers file. At the end of the <codeph>gptransfer</codeph> session,
-          <codeph>gptransfer</codeph> writes a message telling you there were failures, and
-        providing the name of the failed transfer file. For
-        example:<codeblock>[WARNING]:-Some tables failed to transfer. A list of these tables
-[WARNING]:-has been written to the file failed_transfer_tables_20140808_101813.txt
-[WARNING]:-This file can be used with the -f option to continue</codeblock></p>
-      <p>The failed transfers file is in the format required by the <codeph>-f</codeph> option, so
-        you can use it to start a new <codeph>gptransfer</codeph> session to retry the failed
-        transfers.</p>
-    </section>
+    <!-- conref'ing to content from admin_guide. -->
+    <note conref="../admin_guide/managing/gptransfer.xml#note1"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#intro1"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#intro2"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#intro3"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#intro4"/>
+
+    <section conref="../admin_guide/managing/gptransfer.xml#prereqs"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#whatgptdoes"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#fastslow"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#batch"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#prephosts"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#limitations"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#fulltblmode"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#locking"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#validation"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#failedtran"/>
+
     <section>
       <title>Best Practices</title>
       <p><codeph>gptransfer</codeph> creates a configuration that allows transferring large amounts
@@ -286,11 +34,8 @@ host2_name,host2_ipaddr
         <li>Before you begin to transfer data, replicate the schema or schemas from the source
           cluster to the destination cluster. Options for copying the
             schema include:<ul id="ul_q1y_1hh_1s">
-            <li>Use the <codeph>gpsd</codeph> (Greenplum Statistics Dump) support utility. This
-              method includes statistics, so be sure to run <codeph>ANALYZE</codeph> after creating
-              the schema on the destination cluster.</li>
             <li>Use the PostgreSQL <codeph>pg_dump</codeph> or <codeph>pg_dumpall</codeph> utility
-              with the <codeph>–schema-only</codeph> option.</li>
+              with the <codeph>–-schema-only</codeph> option.</li>
             <li>DDL scripts, or any other method for recreating schema in the destination
               database.</li>
           </ul>
@@ -333,7 +78,7 @@ host2_name,host2_ipaddr
             <li>Ensure any roles, functions, and resource queues are created in the destination
               database. These objects are not transferred when you use the <codeph>gptransfer
                 -t</codeph> option. </li>
-            <li>Copy the <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph>
+            <li>Copy the <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>
               configuration files from the source to the destination cluster. </li>
             <li>Install needed extensions in the destination database with
               <codeph>gppkg</codeph>.</li>

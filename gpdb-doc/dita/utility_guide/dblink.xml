@@ -12,7 +12,7 @@
       installations that use compatible <codeph>libpq</codeph> libraries.</p>
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
       other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
-      tables or for administrative tools such as <codeph>gptransfer</codeph>.</p>
+      tables or for administrative tools such as <codeph>gpcopy</codeph>.</p>
   </body>
   <topic id="topic_ikh_dsm_bdb">
     <title>Limitations</title>

@@ -7,6 +7,8 @@
     <body>
         <p>The <codeph>gptransfer</codeph> utility copies objects from databases in a source
             Greenplum Database system to databases in a destination Greenplum Database system. </p>
+        <!-- conref'ing to content from admin_guide. -->
+        <note conref="../../admin_guide/managing/gptransfer.xml#note1"/>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gptransfer</b>
