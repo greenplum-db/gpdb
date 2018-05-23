@@ -540,6 +540,7 @@ int         elog_geterrcode(void);
 int         elog_getelevel(void);      
 char        *elog_message(void);
 
+const char * error_severity(int elevel);
 
 /* GUC-configurable parameters */
 

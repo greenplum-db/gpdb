@@ -109,6 +109,7 @@ typedef struct
 	int32 error_cursor_pos;
 	int32 internal_query_pos;
 	int32 error_fileline;
+	int32 elevel;
 	TransactionId top_trans_id;
 	DistributedTransactionId dist_trans_id;
 	TransactionId local_trans_id;
@@ -128,7 +129,6 @@ typedef struct
 	char *databasename;
 	char *remote_host;
 	char *remote_port;
-	const char *error_severity;
 	char *sql_state;
 	char *error_message;
 	char *error_detail;

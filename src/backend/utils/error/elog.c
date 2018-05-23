@@ -230,7 +230,6 @@ static void send_message_to_server_log(ErrorData *edata);
 static void send_message_to_frontend(ErrorData *edata);
 static char *expand_fmt_string(const char *fmt, ErrorData *edata);
 static const char *useful_strerror(int errnum);
-static const char *error_severity(int elevel);
 static void append_with_tabs(StringInfo buf, const char *str);
 static bool is_log_level_output(int elevel, int log_min_level);
 static void write_pipe_chunks(char *data, int len, int dest);
@@ -4301,7 +4300,7 @@ useful_strerror(int errnum)
 /*
  * error_severity --- get localized string representing elevel
  */
-static const char *
+const char *
 error_severity(int elevel)
 {
 	const char *prefix;

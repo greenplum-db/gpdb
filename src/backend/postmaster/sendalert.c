@@ -131,7 +131,6 @@ int send_alert_from_chunks(const PipeProtoChunk *chunk,
 	errorData.databasename = get_str_from_chunk(&chunkstr,saved_chunks_in);
 	errorData.remote_host = get_str_from_chunk(&chunkstr,saved_chunks_in);
 	errorData.remote_port = get_str_from_chunk(&chunkstr,saved_chunks_in);
-	errorData.error_severity = get_str_from_chunk(&chunkstr,saved_chunks_in);
 	errorData.sql_state = get_str_from_chunk(&chunkstr,saved_chunks_in);
 	errorData.error_message = get_str_from_chunk(&chunkstr,saved_chunks_in);
 	errorData.error_detail = get_str_from_chunk(&chunkstr,saved_chunks_in);
@@ -161,7 +160,6 @@ int send_alert_from_chunks(const PipeProtoChunk *chunk,
 		free(errorData.error_detail ); errorData.error_detail = NULL;
 		free(errorData.error_message ); errorData.error_message = NULL;
 		free(errorData.sql_state ); errorData.sql_state = NULL;
-		free((char *)errorData.error_severity ); errorData.error_severity = NULL;
 		free(errorData.remote_port ); errorData.remote_port = NULL;
 		free(errorData.remote_host ); errorData.remote_host = NULL;
 		free(errorData.databasename ); errorData.databasename = NULL;
@@ -183,7 +181,6 @@ int send_alert_from_chunks(const PipeProtoChunk *chunk,
 	free(errorData.error_detail ); errorData.error_detail = NULL;
 	free(errorData.error_message ); errorData.error_message = NULL;
 	free(errorData.sql_state ); errorData.sql_state = NULL;
-	free((char *)errorData.error_severity ); errorData.error_severity = NULL;
 	free(errorData.remote_port ); errorData.remote_port = NULL;
 	free(errorData.remote_host ); errorData.remote_host = NULL;
 	free(errorData.databasename ); errorData.databasename = NULL;
@@ -788,7 +785,9 @@ int send_alert(const GpErrorData * errorData)
 	static pg_time_t previous_time;
 	static GpErrorDataFixFields previous_fix_fields;
 
-	elog(DEBUG2,"send_alert: %s: %s",errorData->error_severity, errorData->error_message);
+	elog(DEBUG2, "send_alert: %s: %s",
+		 error_severity(errorData->fix_fields.elevel),
+		 errorData->error_message);
 
 	/*
 	 * SIGPIPE must be ignored, or we will have problems.
@@ -839,7 +838,7 @@ int send_alert(const GpErrorData * errorData)
 		 * that crashes (SIGSEGV) will get a new session ID each time
 		 */
 		if (errorData->fix_fields.gp_session_id != previous_fix_fields.gp_session_id)
-			if (strcmp(errorData->error_severity,"FATAL") != 0)
+			if (errorData->fix_fields.elevel != FATAL)
 				same_message_repeated = false;
 		/*
 		 * Don't consider gp_command_count, because a loop where the application is repeatedly
@@ -1145,7 +1144,7 @@ build_messagebody(StringInfo buf, const GpErrorData *errorData, const char *subj
 	}
 	appendStringInfoString(buf, "\r\n");
 
-	appendStringInfo(buf, "%s: ", errorData->error_severity);
+	appendStringInfo(buf, "%s: ", error_severity(errorData->fix_fields.elevel));
 	if (errorData->sql_state != NULL && pg_strnlen(errorData->sql_state,5)>4 &&
 		strncmp(errorData->sql_state,"XX100",5)!=0 &&
 		strncmp(errorData->sql_state,"00000",5)!=0)

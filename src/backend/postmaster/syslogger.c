@@ -1255,12 +1255,12 @@ fillinErrorDataFromSegvChunk(GpErrorData *errorData, PipeProtoChunk *chunk)
 	errorData->fix_fields.dist_trans_id = 0;
 	errorData->fix_fields.local_trans_id = 0;
 	errorData->fix_fields.subtrans_id = 0;
+	errorData->fix_fields.elevel = PANIC;
 
 	errorData->username = NULL;
 	errorData->databasename = NULL;
 	errorData->remote_host = NULL;
 	errorData->remote_port = NULL;
-	errorData->error_severity = "PANIC";
 	errorData->sql_state = "XX000";
 	errorData->error_message = palloc0(ERROR_MESSAGE_MAX_SIZE);
 
@@ -1399,9 +1399,8 @@ syslogger_write_errordata(PipeProtoHeader *chunkHeader, GpErrorData *errorData, 
 	syslogger_write_int32(true, "dx", errorData->fix_fields.dist_trans_id, true, true);
 	syslogger_write_int32(true, "x", errorData->fix_fields.local_trans_id, true, true); 
 	syslogger_write_int32(true, "sx", errorData->fix_fields.subtrans_id, true, true); 
+	syslogger_write_int32(true, "e", errorData->fix_fields.elevel, true, true);
 	
-	/* error severity */
-	syslogger_write_str_with_comma(errorData->error_severity, true, csv, true);
 	/* sql state code */
 	syslogger_write_str_with_comma(errorData->sql_state, true, csv, true);
 	/* errmsg */
@@ -1464,11 +1463,13 @@ syslogger_write_errordata(PipeProtoHeader *chunkHeader, GpErrorData *errorData, 
 	}
 }
 
-static void set_write_to_alert_log(const char *severity)
+static void
+set_write_to_alert_log(int elevel)
 {
     if (alert_log_level_opened)
     {
-        GpperfmonLogAlertLevel alert_level = lookup_loglevel_by_name(severity);
+        GpperfmonLogAlertLevel alert_level =
+			lookup_loglevel_by_name(error_severity(elevel));
         /*
          * gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
          * because alert_log_level_opened is true
@@ -1500,7 +1501,7 @@ syslogger_log_segv_chunk(PipeProtoChunk *chunk)
 
 	GpErrorData errorData;
 	fillinErrorDataFromSegvChunk(&errorData, chunk);
-    set_write_to_alert_log(errorData.error_severity);
+    set_write_to_alert_log(errorData.fix_fields.elevel);
 	syslogger_write_errordata(&chunk->hdr, &errorData, chunk->hdr.log_format == 'c');
 	freeErrorDataFields(&errorData);
 	
@@ -1528,7 +1529,6 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         errorData.databasename = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.remote_host = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.remote_port = get_str_from_chunk(&chunkstr,saved_chunks);
-        errorData.error_severity = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.sql_state = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.error_message = get_str_from_chunk(&chunkstr,saved_chunks);
         errorData.error_detail = get_str_from_chunk(&chunkstr,saved_chunks);
@@ -1541,7 +1541,7 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         errorData.stacktrace = get_str_from_chunk(&chunkstr,saved_chunks);
 
         // We only send to alert for csv format log.
-        set_write_to_alert_log(errorData.error_severity);
+        set_write_to_alert_log(errorData.fix_fields.elevel);
 
         /*
          * timestamp_with_milliseconds 
@@ -1580,7 +1580,7 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         syslogger_write_int32(true, "sx", pfixed->subtrans_id, true, true); 
 
         /* error severity */
-        syslogger_write_str_with_comma(errorData.error_severity, true, true, false);
+        syslogger_write_str_with_comma(error_severity(errorData.fix_fields.elevel), true, true, false);
         /* sql state code */
         syslogger_write_str_with_comma(errorData.sql_state, true, true, false);
         /* errmsg */
@@ -1621,7 +1621,6 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         free(errorData.error_detail ); errorData.error_detail = NULL;
         free(errorData.error_message ); errorData.error_message = NULL;
         free(errorData.sql_state ); errorData.sql_state = NULL;
-        free((char *)errorData.error_severity ); errorData.error_severity = NULL;
         free(errorData.remote_port ); errorData.remote_port = NULL;
         free(errorData.remote_host ); errorData.remote_host = NULL;
         free(errorData.databasename ); errorData.databasename = NULL;

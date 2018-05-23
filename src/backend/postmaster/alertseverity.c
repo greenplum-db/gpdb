@@ -49,12 +49,12 @@ int set_alert_severity(const GpErrorData * errorData,
 	 * Let's limit it to 127 bytes just to be safe, as SNMP inform/trap messages are limited in size.
 	 *
 	 */
-	if (strcmp(errorData->error_severity,"LOG") == 0)
+	if (errorData->fix_fields.elevel == LOG)
 		snprintf(subject, MAX_ALERT_STRING, "%s",errorData->error_message);
 	else if (errorData->sql_state && strcmp(errorData->sql_state,"57P03") == 0)
 		snprintf(subject, MAX_ALERT_STRING, "%s",errorData->error_message);
 	else
-		snprintf(subject, MAX_ALERT_STRING, "%s: %s",errorData->error_severity, errorData->error_message);
+		snprintf(subject, MAX_ALERT_STRING, "%s: %s", error_severity(errorData->fix_fields.elevel), errorData->error_message);
 	subject[MAX_ALERT_STRING] = '\0'; /* Guarantee subject is zero terminated */
 
 	
@@ -164,19 +164,19 @@ int set_alert_severity(const GpErrorData * errorData,
 		email_priority[0] = '5'; // 5  == lowest priority
 	}
 
-	else if (strcmp(errorData->error_severity,gettext("PANIC")) == 0)
+	else if (errorData->fix_fields.elevel == PANIC)
 	{
 		snmp_severity[0] = '5';
 		email_priority[0] = '1'; // 1 == highest priority
 	}
 
-	else if (strcmp(errorData->error_severity,gettext("FATAL")) == 0)
+	else if (errorData->fix_fields.elevel == FATAL)
 		snmp_severity[0] = '4';
 
-	else if (strcmp(errorData->error_severity,gettext("ERROR")) == 0)
+	else if (errorData->fix_fields.elevel == ERROR)
 		snmp_severity[0] = '3';
 
-	else if (strcmp(errorData->error_severity,gettext("WARNING")) == 0)
+	else if (errorData->fix_fields.elevel == WARNING)
 		snmp_severity[0] = '2';
 
 	else
