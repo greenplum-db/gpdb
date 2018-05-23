@@ -9,7 +9,7 @@
         C++ programming languages. Functions that you develop with the GPPC API
         require no recompilation or modification to work with older or newer
         Greenplum Database versions.</p>
-      <p>The GPPC API makes a function that you write to the API SQL-invokable
+      <p>Functions that you write to the GPPC API can be invoked using SQL
         in Greenplum Database. The API provides a set of functions and macros
         that you can use to issue SQL commands through the Server Programming
         Interface (SPI), manipulate simple and composite data type function
@@ -63,7 +63,7 @@
       <p>The GPPC API shares some concepts with C language functions as defined
         by PostgreSQL. Refer to <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html" format="html" scope="external">C-Language Functions</xref>
         in the PostgreSQL documentation for detailed information about developing
-        these functions.</p>
+        C language functions.</p>
       <p>The GPPC API is a wrapper that makes a C/C++ function SQL-invokable
         in Greenplum Database. This wrapper shields GPPC functions that you
          write from Greenplum Database library changes by normalizing table
@@ -74,8 +74,8 @@
         <li>Process function arguments and return values.</li>
         <li>Allocate and free memory.</li>
         <li>Log and report errors to the client.</li>
-        <li>Issue SPI queries from an SQL-invoked function.</li>
-        <li>Return a table or set of rows from an SQL-invoked function.</li>
+        <li>Issue SPI queries.</li>
+        <li>Return a table or set of rows.</li>
         <li>Process tables as function input arguments.</li>
       </ul>
     </body>
@@ -92,8 +92,8 @@
             Function API, header files, functions, or macros.</li>
           <li>The function code must <i>not</i> <codeph>#include</codeph> the
             <codeph>postgres.h</codeph> header file or use <codeph>PG_MODULE_MAGIC</codeph>.</li>
-          <li>You must allocate and free memory with the GPPC-wrapped memory
-            functions described in <xref href="#topic_mem" format="dita"/>.</li>
+          <li>You must use only the GPPC-wrapped memory functions to allocate
+            and free memory. See <xref href="#topic_mem" format="dita"/>.</li>
           <li>Symbol names in your object files must not conflict with each
             other nor with symbols defined in the Greenplum Database server.
             You must rename your functions or variables if you get error messages
@@ -246,7 +246,7 @@
         <p>Example GPPC base data type declarations:<codeblock>GppcText       message;
 GppcInt4       arg1;
 GppcNumeric    total_sales;</codeblock></p>
-        <p>The GPPC API defines frunctions to convert between the generic
+        <p>The GPPC API defines functions to convert between the generic
           <codeph>GppcDatum</codeph> type and the GPPC specific types. For
           example, to convert from an integer to a datum:<codeblock>
 GppcInt4 num = 13;
@@ -262,7 +262,7 @@ GppcDatum num_dat = GppcInt4GetDatum(num);</codeblock></p>
             to as a tuple or row. A tuple does not have a fixed layout and can
             contain null fields.</p>
           <p>The GPPC API provides an interface that you can use to define
-            the structure of, access, and set tuples. You will use this
+            the structure of, to access, and to set tuples. You will use this
             interface when your GPPC function takes a table as an input
             argument or returns table or set of record types. Using tuples
             in table and set returning functions is covered later in this
@@ -424,7 +424,7 @@ for( int i=0; i&lt;attnum; i++ ) {
         <p>When you allocate memory for a GPPC function, you allocate it in
           the current context. The GPPC API includes functions to return, 
           create, switch, and reset memory contexts.</p>
-        <p>Greenplum Database typically calls an SQL-invoked function in a 
+        <p>Greenplum Database typically calls a SQL-invoked function in a
           per-tuple context that it creates and deletes every time the server
           backend processes a table row. Do not assume that memory allocated
           in the current memory context is available across multiple function
@@ -615,24 +615,24 @@ GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));</cod
             <row>
               <entry colname="col1">SPI_exec()</entry>
               <entry colname="col2">GppcSPIExec()</entry>
-              <entry colname="col3">Execute an SQL statement, returning the number of rows.</entry>
+              <entry colname="col3">Execute a SQL statement, returning the number of rows.</entry>
             </row>
             <row>
               <entry colname="col1" morerows="3">SPI_getvalue()</entry>
               <entry colname="col2">GppcSPIGetValue()</entry>
-              <entry colname="col3">Retrieve the value of a specific attribute by number from an SQL result as a character string.</entry>
+              <entry colname="col3">Retrieve the value of a specific attribute by number from a SQL result as a character string.</entry>
             </row>
             <row>
               <entry colname="col2">GppcSPIGetDatum()</entry>
-              <entry colname="col3">Retrieve the value of a specific attribute by number from an SQL result as a <codeph>GppcDatum</codeph>.</entry>
+              <entry colname="col3">Retrieve the value of a specific attribute by number from a SQL result as a <codeph>GppcDatum</codeph>.</entry>
             </row>
             <row>
               <entry colname="col2">GppcSPIGetValueByName()</entry>
-              <entry colname="col3">Retrieve the value of a specific attribute by name from an SQL result as a character string.</entry>
+              <entry colname="col3">Retrieve the value of a specific attribute by name from a SQL result as a character string.</entry>
             </row>
             <row>
               <entry colname="col2">GppcSPIGetDatumByName()</entry>
-              <entry colname="col3">Retrieve the value of a specific attribute by name from an SQL result as a <codeph>GppcDatum</codeph>.</entry>
+              <entry colname="col3">Retrieve the value of a specific attribute by name from a SQL result as a <codeph>GppcDatum</codeph>.</entry>
             </row>
           </tbody>
         </tgroup>
@@ -787,11 +787,11 @@ GppcTupleDescInitEntry(tdesc, 1,
 GppcTupleDescInitEntry(tdesc, 2, "is_active", GppcOidBool, 0);
 </codeblock></p>
         <p>The GPPC API defines an abstract type, <codeph>GppcHeapTuple</codeph>,
-          to represent a tuple/record/row. A tuple is defined by it's tuple
+          to represent a tuple/record/row. A tuple is defined by its tuple
           descriptor, the value for each tuple attribute, and an indicator
           of whether or not each value is NULL.</p>
         <p>The GPPC API provides functions that you can use to set and access
-          a tuple and it's attributes:</p>
+          a tuple and its attributes:</p>
         <table id="in201681">
           <tgroup cols="2">
             <colspec colname="col1" colnum="1" colwidth="65*"/>
@@ -826,8 +826,8 @@ GppcTupleDescInitEntry(tdesc, 2, "is_active", GppcOidBool, 0);
              <p>The signatures for the tuple-building GPPC functions are:<codeblock>GppcHeapTuple GppcHeapFormTuple(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls);
 GppcDatum    GppcBuildHeapTupleDatum(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls);</codeblock></p>
              <p>The following code excerpt constructs a <codeph>GppcDatum</codeph>
-               tuple from the tuple descriptor in the above code example and
-                integer and boolean input arguments to a function:<codeblock>GppcDatum intarg = GPPC_GETARG_INT4(0);
+               tuple from the tuple descriptor in the above code example, and
+                from integer and boolean input arguments to a function:<codeblock>GppcDatum intarg = GPPC_GETARG_INT4(0);
 GppcDatum boolarg = GPPC_GETARG_BOOL(1);
 GppcDatum result, values[2];
 bool nulls[2] = { false, false };
@@ -846,14 +846,14 @@ result = GppcBuildHeapTupleDatum( tdesc, values, nulls );
           <p>Greenplum Database UDFs whose signatures include
             <codeph>RETURNS SETOF RECORD</codeph> or
             <codeph>RETURNS TABLE( ... )</codeph> are set-returning functions.</p>
-          <p>The GPPC API provides support for returning sets (i.e. multiple
+          <p>The GPPC API provides support for returning sets (for example, multiple
             rows/tuples) from a GPPC function. Greenplum Database calls a
             set-returning function (SRF) once for each row or item. The
             function must save enough state to remember what it was doing
             and to return the next row on each call. Memory that you allocate
             in the SRF context must survive across multiple function calls.</p>
           <p>The GPPC API provides macros and functions to help keep track
-            of and set this context and allocate SRF memory. They include:</p>
+            of and set this context, and to allocate SRF memory. They include:</p>
         <table id="in201681">
         <tgroup cols="2">
           <colspec colname="col1" colnum="1" colwidth="40*"/>
@@ -927,9 +927,9 @@ fctx = GPPC_SRF_PERCALL_SETUP();
 GPPC_SRF_RETURN_DONE(fctx);</codeblock></p>
 
         <p>Use a <codeph>DESCRIBE</codeph> function to define the output
-          tuple descriptor of a function that <codeph>RETURNS SETOF RECORD</codeph>.
+          tuple descriptor of a function that uses the <codeph>RETURNS SETOF RECORD</codeph> clause.
           Use the <codeph>GPPC_SRF_RESULT_DESC()</codeph> macro to get the
-          output tuple descriptor of a function that <codeph>RETURNS TABLE( ... )</codeph>.</p>
+          output tuple descriptor of a function that uses the <codeph>RETURNS TABLE( ... )</codeph> clause.</p>
         <p>Refer to the <xref href="#topic_example_srf" type="topic" format="dita"/>
           for a set-returning function code and deployment example.</p>
       </body>
@@ -1056,22 +1056,16 @@ include $(PGXS)</codeblock></p>
           settings and the <codeph>include</codeph> statement are required
           and typically reside in the last three lines of the
           <codeph>Makefile</codeph>.</p>
-      <section id="shlib_pkg" xml:lang="en">
-        <title>Packaging Considerations</title>
-        <p>The GPPC shared library that you create must be packaged for
-          eventual deployment in the Greenplum Database cluster. Include the
-          shared library in your GPPC deployment package.</p>
-      </section>
       </body>
   </topic>
 
   <topic id="topic_reg" xml:lang="en">
       <title id="py21716799">Registering a GPPC Function with Greenplum Database</title>
       <body>
-        <p>To make a GPPC function SQL-invokable by a user, you register the
-          function with Greenplum Database.</p>
+        <p>Before users can invoke a GPPC function from SQL, you must
+          register the function with Greenplum Database.</p>
         <p>Registering a GPPC function involves mapping the GPPC function
-          signature to an SQL user-defined function. You define this mapping
+          signature to a SQL user-defined function. You define this mapping
           with the <codeph>CREATE FUNCTION .. AS </codeph> command specifying
           the GPPC shared library name. You may choose to use the same name
           or differing names for the GPPC and SQL functions.</p>
@@ -1082,20 +1076,12 @@ LANGUAGE C STRICT [WITH (DESCRIBE=<varname>describe_function</varname>)];</codeb
          <p>You may omit the shared library <codeph>.so</codeph> extension
            when you specify <codeph><varname>shared_library_path</varname></codeph>.</p>
         <p>The following command registers the example <codeph>add_int4s()</codeph>
-          function referenced earlier in this topic to an SQL UDF named
+          function referenced earlier in this topic to a SQL UDF named
           <codeph>add_two_int4s()</codeph> if the GPPC function was compiled
           and linked in a shared library named gppc_try.so:
           <codeblock>CREATE FUNCTION add_two_int4s_gppc(int4, int4) RETURNS int8
   AS 'gppc_try.so', 'add_int4s'
 LANGUAGE C STRICT;</codeblock></p>
-      <section id="reg_pkg" xml:lang="en">
-        <title>Packaging Considerations</title>
-         <p>The GPPC functions that you create must be registered in the
-           Greenplum Database deployment. You enable this deployment task
-           by providing a <codeph>.sql</codeph> script file that registers
-           an SQL UDF for each GPPC function in your GPPC shared library.
-           Include this script in your GPPC deployment package.</p>
-      </section>
       </body>
 
   <topic id="topic_dynload" xml:lang="en">
@@ -1108,8 +1094,8 @@ LANGUAGE C STRICT;</codeblock></p>
         the first time that a user invokes a user-defined function linked in
         that shared library. If you do not provide an absolute path to the
         shared library in the <codeph>CREATE FUNCTION ... AS</codeph>
-        command, Greenplum Database attempts to locate the library relative
-        to the following:</p><ol>
+        command, Greenplum Database attempts to locate the library using these
+        ordered steps:</p><ol>
         <li>If the shared library file path begins with the string
           <codeph>$libdir</codeph>, Greenplum Database looks for the file
           in the PostgreSQL package library directory. Run the
@@ -1120,14 +1106,6 @@ LANGUAGE C STRICT;</codeblock></p>
           identified by the <codeph>dynamic_library_path</codeph> server
           configuration paramater value.</li>
         <li>The current working directory.</li></ol>
-      <p>In that order.</p>
-      <section id="reg_pkg" xml:lang="en">
-        <title>Packaging Considerations</title>
-         <p>Keep in mind that the file system location of your GPPC shared
-           library after it is installed in the Greenplum Database deployment
-           determines how you identify the shared library in the
-           <codeph>CREATE FUNCTION ... AS</codeph> command.</p>
-      </section>
     </body>
   </topic>
   </topic>
@@ -1144,7 +1122,7 @@ LANGUAGE C STRICT;</codeblock></p>
             Database administrator runs to both install the shared library to
             the desired file system location and register the GPPC functions.</li>
           <li>The GPPC shared library must be installed to the same file
-            system location on the master and every segment host in the
+            system location on the master host and on every segment host in the
             Greenplum Database cluster.</li>
           <li>The <codeph>gpadmin</codeph> user must have permission to
             traverse the complete file system path to the GPPC shared 
@@ -1153,10 +1131,12 @@ LANGUAGE C STRICT;</codeblock></p>
            is installed in the Greenplum Database deployment determines how
            you reference the shared library when you register a function in
            the library with the <codeph>CREATE FUNCTION ... AS</codeph>
-           command. The functions that you create in the <codeph>.sql</codeph>
+           command.</li>
+          <li> Create a <codeph>.sql</codeph> script file that registers
+           a SQL UDF for each GPPC function in your GPPC shared library.
+           The functions that you create in the <codeph>.sql</codeph>
            registration script must reference the deployment location of the
-           GPPC shared library.</li>
-          <li>Identify the file system location of the GPPC shared library.</li>
+           GPPC shared library. Include this script in your GPPC deployment package.</li>
           <li>Document the instructions for running your GPPC package deployment
              script, if you provide one.</li>
           <li>Document the instructions for installing the GPPC shared library
