@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_ddb-plugin">
+  <title>Using the DD Boost Storage Plugin with gpbackup and gprestore</title>
+  <body>
+    <note type="warning">The DD Boost storage plugin for <codeph>gpbackup</codeph> and
+        <codeph>gprestore</codeph> is an experimental feature is not intended for use in a
+      production environment. Experimental features are subject to change without notice in future
+      releases.</note>
+    <note>The DD Boost storage plugin is available only in the commercial release of Pivotal
+      Greenplum Database.</note>
+    <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
+          <codeph><xref href="../../utility_guide/admin_utilities/gpbackup.xml"
+        >gpbackup</xref></codeph> and <codeph><xref
+          href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref></codeph>
+      utilities to perform faster backups to the Dell EMC Data Domain storage appliance.</p>
+    <p>To use the DD Boost storage plugin application, you specify the location of the plugin and
+      the DD Boost login and backup location in a configuration file. When you run
+        <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, you specify the configuration file
+      with the option <codeph>--plugin-config</codeph>. For information about the configuration
+      file, see <xref href="#topic_ddb-plugin/s3-plugin-config" format="dita"/>.</p>
+    <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
+        <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
+      option when you restore the backup with <codeph>gprestore</codeph>. </p>
+    <section id="s3-plugin-config">
+      <title>DD Boost Storage Plugin Configuration File Format</title>
+      <p>The configuration file specifies the absolute path to the Greenplum Database DD Boost
+        storage plugin executable, DD Boost connection credentials, and Data Domain location. </p>
+      <p>The DD Boost storage plugin configuration file uses the <xref
+          href="http://yaml.org/spec/1.1/" scope="external" format="html">YAML 1.1</xref> document
+        format and implements its own schema for specifying the DD Boost information. </p>
+      <p>The configuration file must be a valid YAML document. The <codeph>gpbackup</codeph> and
+          <codeph>gprestore</codeph> utilities process the control file document in order and use
+        indentation (spaces) to determine the document hierarchy and the relationships of the
+        sections to one another. The use of white space is significant. White space should not be
+        used simply for formatting purposes, and tabs should not be used at all.</p>
+      <p>This is the structure of a DD Boost storage plugin configuration file.</p>
+      <codeblock><xref href="#topic_ddb-plugin/plugin-exe" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_ddboost_plugin</varname>>
+<xref href="#topic_ddb-plugin/ddb-options" format="dita">options</xref>: 
+  <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: &lt;<varname>data-domain-host</varname>>
+  <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: &lt;<varname>ddboost-ID</varname>>
+  <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: &lt;<varname>ddboost-pwd</varname>>
+  <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: &lt;<varname>data-domain-id</varname>>
+  <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: &lt;<varname>data-domain-dir</varname>></codeblock>
+      <parml id="s3-exe-path">
+        <plentry id="plugin-exe">
+          <pt>executablepath</pt>
+          <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
+            Database installation location is
+            <codeph>$GPHOME/bin/gpbackup_ddboost_plugin</codeph>.</pd>
+          <pd>
+            <parml>
+              <plentry id="ddb-options">
+                <pt>options</pt>
+                <pd>Required. Begins the DD Boost storage plugin options section.<parml>
+                    <plentry id="ddb-host">
+                      <pt>hostname</pt>
+                      <pd>Required. The IP address or hostname of the host. There is a 30-character
+                        limit. </pd>
+                    </plentry>
+                    <plentry id="ddb-user">
+                      <pt>username</pt>
+                      <pd>Required. the Data Domain Boost user name. There is a 30-character
+                        limit.</pd>
+                    </plentry>
+                    <plentry id="ddb-pwd">
+                      <pt>password</pt>
+                      <pd>Required. The passcode for the DD Boost user to access the Data Domain
+                        storage unit.</pd>
+                    </plentry>
+                    <plentry id="ddb-s-unit">
+                      <pt>storage-unit</pt>
+                      <pd>Required. A valid storage unit name for the Data Domain system that is
+                        used for backup and restore operations.</pd>
+                    </plentry>
+                    <plentry id="ddb-dir">
+                      <pt>directory</pt>
+                      <pd>Required. the location for the backup files, configuration files, and
+                        global objects on the Data Domain system. The location on the system is
+                          <codeph>GPDB/</codeph><varname>backup_directory</varname>.</pd>
+                      <pd>During a backup operation, the plugin creates the directory location if it
+                        does not exist in the storage unit. </pd>
+                    </plentry>
+                  </parml></pd>
+              </plentry>
+            </parml>
+          </pd>
+        </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Example</title>
+      <p>This is an example DD Boost storage plugin configuration file that is used in the next
+          <codeph>gpbackup</codeph> example command. The name of the file is
+          <codeph>ddboost-test-config.yaml</codeph>.</p>
+      <codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
+options: 
+  hostname: 192.0.2.230
+  username: test-ddb-user
+  password: asdf1234asdf
+  storage_unit: gpdb-backup
+  directory: test/backup</codeblock>
+      <p>This <codeph>gpbackup</codeph> example backs up the database demo using the DD Boost
+        storage plugin. The absolute path to the DD Boost storage plugin configuration file is
+          <codeph>/home/gpadmin/ddboost-test-config.yml</codeph>.<codeblock>gpbackup --dbname demo --single-data-file --plugin-config /home/gpadmin/ddboost-test-config.yaml</codeblock></p>
+      <p>The DD Boost storage plugin writes the backup files to this directory of the Data Domain
+        storage unit <codeph>gpdb-backup</codeph>. </p>
+      <p>
+        <codeblock>/test/backup/backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+      </p>
+    </section>
+    <section>
+      <title>Notes</title>
+      <p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database and requires a DD Boost
+        license. Open source Greenplum Database cannot use the DD Boost software, but can back up to
+        a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment
+        hosts.</p>
+      <p>For external tables, the table definition is backed up, however the data is not backed up.
+        For leaf child partition of a partitioned table that is a readable external table, the leaf
+        child partition data is not backed up. </p>
+      <p>The DD Boost storage plugin application must be in the same location on every Greenplum
+        Database host. The configuration file is required only on the master host.</p>
+      <p>When running <codeph>gpbackup</codeph>, the <codeph>--plugin-config</codeph> option is
+        supported only with <codeph>--single-data-file</codeph> or
+        <codeph>--metadata-only</codeph>.</p>
+      <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
+        files in this location in the Data Domain storage unit. </p>
+      <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <p>Where <varname>directory</varname> is the location you specified in the S3 configuration
+        file, and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date
+        and time stamps. </p>
+    </section>
+  </body>
+</topic>
