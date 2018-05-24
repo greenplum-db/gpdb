@@ -8,7 +8,9 @@
         /></codeph> utility. The <codeph>gpcrondump</codeph> utility can be called directly or from
       a <codeph>crontab</codeph> entry.</p>
     <note>This utility is deprecated and will not be supported after the end of Greenplum Database
-      5.x Support Life.</note>
+      5.x Support Life. Also, support of third-party software such as Veritas NetBackup software and
+      DD Boost software when used with the utility is deprecated and will not be supported after the
+      end of Greenplum Database 5.x Support Life.</note>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpcrondump</b> <b>-x</b> <varname>database_name</varname> 

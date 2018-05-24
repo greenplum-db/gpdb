@@ -4,15 +4,20 @@
 <topic id="topic17" xml:lang="en">
   <title id="kk171433">Backing Up Databases with Data Domain Boost</title>
   <body>
+    <note>The <codeph>gpconrdump</codeph>, <codeph>gpdbrestore</codeph> and <codeph>gpmfr</codeph>
+      utilities are deprecated and will not be supported after the end of Greenplum Database 5.x
+      Support Life. Also, support of and DD Boost software when used with the utilities is
+      deprecated and will not be supported after the end of Greenplum Database 5.x Support
+      Life.</note>
     <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
         <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities to perform faster
-      backups to the Dell EMC Data Domain storage appliance. Data Domain performs deduplication on the
-      data it stores, so after the initial backup operation, the appliance stores only pointers to
-      data that is unchanged. This reduces the size of backups on disk. When DD Boost is used with
-        <codeph>gpcrondump</codeph>, Greenplum Database participates in the deduplication process,
-      reducing the volume of data sent over the network. When you restore files from the Data Domain
-      system with Data Domain Boost, some files are copied to the master local disk and are restored
-      from there, and others are restored directly.</p>
+      backups to the Dell EMC Data Domain storage appliance. Data Domain performs deduplication on
+      the data it stores, so after the initial backup operation, the appliance stores only pointers
+      to data that is unchanged. This reduces the size of backups on disk. When DD Boost is used
+      with <codeph>gpcrondump</codeph>, Greenplum Database participates in the deduplication
+      process, reducing the volume of data sent over the network. When you restore files from the
+      Data Domain system with Data Domain Boost, some files are copied to the master local disk and
+      are restored from there, and others are restored directly.</p>
     <p>With Data Domain Boost managed file replication, you can replicate Greenplum Database backup
       images that are stored on a Data Domain system for disaster recover purposes. The
         <codeph>gpmfr</codeph> utility manages the Greenplum Database backup sets that are on the
@@ -43,9 +48,10 @@
     <body>
       <p>Using Data Domain Boost requires the following.</p>
       <ul>
-        <li>Data Domain Boost is included only with the commercial release of Pivotal Greenplum Database. </li>
-        <li id="kk169399">Purchase and install Dell EMC Data Domain Boost and Replicator licenses on the
-          Data Domain systems.</li>
+        <li>Data Domain Boost is included only with the commercial release of Pivotal Greenplum
+          Database. </li>
+        <li id="kk169399">Purchase and install Dell EMC Data Domain Boost and Replicator licenses on
+          the Data Domain systems.</li>
         <li id="kk169390">Obtain sizing recommendations for Data Domain Boost. Make sure the Data
           Domain system supports sufficient write and read streams for the number of segment hosts
           in your Greenplum cluster.</li>

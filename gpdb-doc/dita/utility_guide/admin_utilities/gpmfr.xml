@@ -8,6 +8,10 @@
          and a remote Data Domain system that is used for disaster recovery. Managed file
          replication is used for disaster recovery by the Data Domain Boost software option to
          transfer a backup image from one Data Domain system to another.</p>
+      <note>This utility is deprecated and will not be supported after the end of Greenplum Database
+         5.x Support Life. Also, support of DD Boost software when used with the utility is
+         deprecated and will not be supported after the end of Greenplum Database 5.x Support
+         Life.</note>
       <section id="section2">
          <title>Synopsis</title>
          <codeblock><b>gpmfr</b> <b>--delete</b> {<b>LATEST</b> | <b>OLDEST</b> | <varname>timestamp</varname>}[<b>--remote</b>]
