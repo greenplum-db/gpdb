@@ -41,6 +41,8 @@
 #include "utils/typcache.h"
 #include "utils/tqual.h"
 
+/* GPDB additions */
+#include "utils/guc.h"
 
 #undef TOAST_DEBUG
 
@@ -1481,6 +1483,8 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 	int32		data_todo;
 	Pointer		dval = DatumGetPointer(value);
 
+	int32		max_chunk_size;
+
 	/*
 	 * Open the toast relation and its index.  We can use the index to check
 	 * uniqueness of the OID we assign to the toasted item, even though it has
@@ -1576,6 +1580,16 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 	t_isnull[2] = false;
 
 	/*
+	 * GPDB: for upgrade testing purposes, allow the maximum chunk size to be
+	 * overridden via GUC. The result must still fit into TOAST_MAX_CHUNK_SIZE
+	 * so that it doesn't overflow our chunk_data struct.
+	 */
+	max_chunk_size = (gp_test_toast_max_chunk_size_override ?
+					  gp_test_toast_max_chunk_size_override :
+					  TOAST_MAX_CHUNK_SIZE);
+	Assert(max_chunk_size <= TOAST_MAX_CHUNK_SIZE);
+
+	/*
 	 * Split up the item into chunks
 	 */
 	while (data_todo > 0)
@@ -1583,7 +1597,7 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 		/*
 		 * Calculate the size of this chunk
 		 */
-		chunk_size = Min(TOAST_MAX_CHUNK_SIZE, data_todo);
+		chunk_size = Min(max_chunk_size, data_todo);
 
 		/*
 		 * Build a tuple and store it

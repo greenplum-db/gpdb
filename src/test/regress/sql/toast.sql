@@ -58,3 +58,18 @@ DROP TABLE toastable_heap;
 DROP TABLE toastable_ao;
 
 -- TODO: figure out a way to verify that the toast tables are dropped
+
+-- Test TOAST_MAX_CHUNK_SIZE changes for upgrade.
+CREATE TABLE toast_chunk_test (a bytea);
+ALTER TABLE toast_chunk_test ALTER COLUMN a SET STORAGE EXTERNAL;
+
+-- Alter our TOAST_MAX_CHUNK_SIZE and insert a value we know will be toasted.
+SET gp_test_toast_max_chunk_size_override = 7993;
+INSERT INTO toast_chunk_test VALUES (repeat('abcdefghijklmnopqrstuvwxyz', 1000)::bytea);
+RESET gp_test_toast_max_chunk_size_override;
+
+-- The toasted value should still be read correctly.
+SELECT * FROM toast_chunk_test WHERE a <> repeat('abcdefghijklmnopqrstuvwxyz', 1000)::bytea;
+
+-- Random access into the toast table should work equally well.
+SELECT encode(substring(a from 521*26+1 for 26), 'escape') FROM toast_chunk_test;
