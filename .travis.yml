@@ -33,6 +33,8 @@ addons:
     packages:
     - libevent-dev
     - g++-6
+    - python-dev
+    - python-yaml
 
 ## ----------------------------------------------------------------------
 ## Build tools
@@ -98,6 +100,8 @@ script:
   - make install USE_PGXS=1
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpmapreduce
   - make install
+  - cd ${TRAVIS_BUILD_DIR}
+  - make unittest-check
   - postgres --version
   - initdb --version
   - createdb --version

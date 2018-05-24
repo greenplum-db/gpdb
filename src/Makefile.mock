@@ -7,7 +7,7 @@ override CPPFLAGS+= -I$(CMOCKERY_DIR)
 
 $(MOCK_DIR)/%_mock.c: $(abs_top_srcdir)/src/%.c
 	@echo mocking $<
-	@(cd $(MOCK_DIR) && PYTHONPATH=$(python_libdir) $(PYTHON) mocker.py $<)
+	PYTHONPATH=$(python_libdir) $(MOCK_DIR)/mocker.py $<
 
 # For some reason, mock.o files are intermediate files sometimes.
 # Mark them as secondary in order not to be deleted automatically.
