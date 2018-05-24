@@ -1955,7 +1955,7 @@ from pg_class where relname like 'granttest%';
 drop table granttest;
 drop role part_role;
 -- deep inline + optional subpartition comma:
-CREATE TABLE partsupp (
+CREATE TABLE partsupp_1 (
     ps_partkey integer,
     ps_suppkey integer,
     ps_availqty integer,
@@ -2018,35 +2018,34 @@ CREATE TABLE partsupp (
                           )
                   )
           );
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1" for table "partsupp"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_1" for table "partsupp_1_prt_p1_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_1_3_prt_1" for table "partsupp_1_prt_p1_1_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_1_3_prt_2" for table "partsupp_1_prt_p1_1_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_2" for table "partsupp_1_prt_p1_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_2_3_prt_1" for table "partsupp_1_prt_p1_1_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_1_2_prt_2_3_prt_2" for table "partsupp_1_prt_p1_1_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2" for table "partsupp"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_1" for table "partsupp_1_prt_p1_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_1_3_prt_1" for table "partsupp_1_prt_p1_2_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_1_3_prt_2" for table "partsupp_1_prt_p1_2_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_2" for table "partsupp_1_prt_p1_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_2_3_prt_1" for table "partsupp_1_prt_p1_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_2_3_prt_2" for table "partsupp_1_prt_p1_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3" for table "partsupp"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_1" for table "partsupp_1_prt_p1_3"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_1_3_prt_1" for table "partsupp_1_prt_p1_3_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_1_3_prt_2" for table "partsupp_1_prt_p1_3_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_2" for table "partsupp_1_prt_p1_3"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_2_3_prt_1" for table "partsupp_1_prt_p1_3_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_3_2_prt_2_3_prt_2" for table "partsupp_1_prt_p1_3_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4" for table "partsupp"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_1" for table "partsupp_1_prt_p1_4"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_1_3_prt_1" for table "partsupp_1_prt_p1_4_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_1_3_prt_2" for table "partsupp_1_prt_p1_4_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_2" for table "partsupp_1_prt_p1_4"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_2_3_prt_1" for table "partsupp_1_prt_p1_4_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_4_2_prt_2_3_prt_2" for table "partsupp_1_prt_p1_4_2_prt_2"
-drop table partsupp;
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1" for table "partsupp_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_1" for table "partsupp_1_1_prt_p1_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_1_3_prt_1" for table "partsupp_1_1_prt_p1_1_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_1_3_prt_2" for table "partsupp_1_1_prt_p1_1_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_2" for table "partsupp_1_1_prt_p1_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_2_3_prt_1" for table "partsupp_1_1_prt_p1_1_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_1_2_prt_2_3_prt_2" for table "partsupp_1_1_prt_p1_1_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2" for table "partsupp_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_1" for table "partsupp_1_1_prt_p1_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_1_3_prt_1" for table "partsupp_1_1_prt_p1_2_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_1_3_prt_2" for table "partsupp_1_1_prt_p1_2_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_2" for table "partsupp_1_1_prt_p1_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_2_3_prt_1" for table "partsupp_1_1_prt_p1_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_2_2_prt_2_3_prt_2" for table "partsupp_1_1_prt_p1_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3" for table "partsupp_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_1" for table "partsupp_1_1_prt_p1_3"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_1_3_prt_1" for table "partsupp_1_1_prt_p1_3_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_1_3_prt_2" for table "partsupp_1_1_prt_p1_3_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_2" for table "partsupp_1_1_prt_p1_3"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_2_3_prt_1" for table "partsupp_1_1_prt_p1_3_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_3_2_prt_2_3_prt_2" for table "partsupp_1_1_prt_p1_3_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4" for table "partsupp_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_1" for table "partsupp_1_1_prt_p1_4"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_1_3_prt_1" for table "partsupp_1_1_prt_p1_4_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_1_3_prt_2" for table "partsupp_1_1_prt_p1_4_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_2" for table "partsupp_1_1_prt_p1_4"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_2_3_prt_1" for table "partsupp_1_1_prt_p1_4_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "partsupp_1_1_prt_p1_4_2_prt_2_3_prt_2" for table "partsupp_1_1_prt_p1_4_2_prt_2"
 -- Accept negative values trivially:
 create table partition_g (i int) partition by range(i) (start((-1)) end(10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -2216,7 +2215,6 @@ NOTICE:  CREATE TABLE will create partition "orders_1_prt_p1_5_2_prt_sp2_3_prt_1
 NOTICE:  CREATE TABLE will create partition "orders_1_prt_p1_5_2_prt_sp2_3_prt_2" for table "orders_1_prt_p1_5_2_prt_sp2"
 NOTICE:  CREATE TABLE will create partition "orders_1_prt_p1_5_2_prt_sp2_3_prt_3" for table "orders_1_prt_p1_5_2_prt_sp2"
 NOTICE:  CREATE TABLE will create partition "orders_1_prt_p1_5_2_prt_sp2_3_prt_4" for table "orders_1_prt_p1_5_2_prt_sp2"
-drop table orders;
 -- grammar bug: MPP-3361
 create table i2 (i int) partition by range(i) (start(-2::int) end(20));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -3414,7 +3412,6 @@ select tablename, partitionboundary from pg_partitions where tablename like 'mpp
  mpp5878a  | VALUES( ('e', 'f'),  ('g', 'h'))
 (4 rows)
 
-drop table mpp5878, mpp5878a;
 -- MPP-5941: work with many levels of templates
 CREATE TABLE mpp5941 (a int, b date, c char, 
 	   		 		 d char(4), e varchar(20), f timestamp)
@@ -4395,7 +4392,6 @@ select pg_get_partition_def('mpp6589a'::regclass,true);
            )
 (1 row)
 
-drop table mpp6589a;
 CREATE TABLE mpp6589i(a int, b int) 
 partition by range (b) (start (1) end (3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -4429,7 +4425,6 @@ select pg_get_partition_def('mpp6589i'::regclass,true);
            )
 (1 row)
 
-DROP TABLE mpp6589i;
 -- test open-ended SPLIT
 CREATE TABLE mpp6589b
 (
@@ -4469,7 +4464,6 @@ select pg_get_partition_def('mpp6589b'::regclass,true);
            )
 (1 row)
 
-drop table mpp6589b;
 -- MPP-7191, MPP-7193: partitioned tables - fully-qualify storage type
 -- if not specified (and not a template)
 CREATE TABLE mpp5992 (a int, b date, c char,
@@ -5285,7 +5279,6 @@ select pg_get_partition_def('mpp5992'::regclass,true, true);
            )
 (1 row)
 
-drop table mpp5992;
 -- MPP-10223: split subpartitions
 CREATE TABLE MPP10223pk
 (
@@ -5504,7 +5497,6 @@ select pg_get_partition_def('mpp10223'::regclass,true);
            )
 (1 row)
 
-drop table mpp10223;
 -- simpler version
 create table mpp10223b (a int, b int , d int)
 partition by range (b)
@@ -5547,7 +5539,6 @@ select pg_get_partition_def('mpp10223b'::regclass,true);
            )
 (1 row)
 
-drop table mpp10223b;
 -- MPP-10480: dump templates (but don't use "foo")
 create table MPP10480 (a int, b int, d int)
 partition by range (b)
@@ -5675,7 +5666,6 @@ select pg_get_partition_template_def('MPP10480'::regclass, true, true);
  
 (1 row)
 
-drop table MPP10480;
 -- MPP-10421: fix SPLIT of partitions with PRIMARY KEY constraint/indexes
 CREATE TABLE mpp10321a
 (
@@ -6951,8 +6941,6 @@ select * from parttest_t;
 reset optimizer_nestloop_factor;
 -- Sub-partition insertion with checking if the user provided correct leaf part
 set dml_ignore_target_partition_check=false;
-drop table if exists part_tab;
-NOTICE:  table "part_tab" does not exist, skipping
 create table part_tab ( i int, j int) distributed by (i) partition by range(j) (start(0) end(10) every(2));
 NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_1" for table "part_tab"
 NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_2" for table "part_tab"
@@ -7105,8 +7093,6 @@ select * from part_tab;
 (13 rows)
 
 -- Multi-level partitioning
-drop table if exists deep_part;
-NOTICE:  table "deep_part" does not exist, skipping
 create table deep_part ( i int, j int, k int, s char(5)) 
 distributed by (i) 
 partition by list(s)
@@ -7639,8 +7625,6 @@ select * from deep_part;
 
 drop table input2;
 drop table input1;
-drop table part_tab;
-drop table deep_part;
 -- Avoid TupleDesc leak when COPY partition table from files
 -- This also covers the bug reported in MPP-9548 where insertion
 -- into a dropped/added column yielded incorrect results
