@@ -87,7 +87,7 @@
             software architecture as that of your Greenplum Database hosts.</li>
           <li>You must write the GPPC function(s) in the C or C++ programming 
             languages.</li>
-          <li>The function code must use the GPPC API and macros.</li>
+          <li>The function code must use the GPPC API, data types, and macros.</li>
           <li>The function code must <i>not</i> use the PostgreSQL C-Language
             Function API, header files, functions, or macros.</li>
           <li>The function code must <i>not</i> <codeph>#include</codeph> the
@@ -118,8 +118,7 @@
       <title id="py217167">Data Types</title>
       <body>
         <p>The GPPC functions that you create will operate on data residing
-          in Greenplum Database. To shield GPPC functions from data type
-          changes, the GPPC API includes data type definitions for equivalent
+          in Greenplum Database. The GPPC API includes data type definitions for equivalent
           Greenplum Database SQL data types. You must use these types in your
           GPPC functions.</p>
         <p>The GPPC API defines a generic data type that you can use to
