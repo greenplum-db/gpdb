@@ -58,7 +58,7 @@ options:
   aws_access_key_id: notarealID
   aws_secret_access_key: notarealkey
   bucket: gp_backup_bucket
-  backupdir: greenplum_backups</codeblock></p> 
+  folder: greenplum_backups</codeblock></p> 
     </body>
   </topic>
 

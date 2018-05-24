@@ -4,7 +4,7 @@
   <title>Using the DD Boost Storage Plugin with gpbackup and gprestore</title>
   <body>
     <note type="warning">The DD Boost storage plugin for <codeph>gpbackup</codeph> and
-        <codeph>gprestore</codeph> is an experimental feature is not intended for use in a
+        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
       production environment. Experimental features are subject to change without notice in future
       releases.</note>
     <note>The DD Boost storage plugin is available only in the commercial release of Pivotal
@@ -14,15 +14,15 @@
         >gpbackup</xref></codeph> and <codeph><xref
           href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref></codeph>
       utilities to perform faster backups to the Dell EMC Data Domain storage appliance.</p>
-    <p>To use the DD Boost storage plugin application, you specify the location of the plugin and
-      the DD Boost login and backup location in a configuration file. When you run
+    <p>To use the DD Boost storage plugin application, you specify the location of the plugin on the
+      hosts and the DD Boost login and backup location in a configuration file. When you run
         <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, you specify the configuration file
       with the option <codeph>--plugin-config</codeph>. For information about the configuration
-      file, see <xref href="#topic_ddb-plugin/s3-plugin-config" format="dita"/>.</p>
+      file, see <xref href="#topic_ddb-plugin/ddb-plugin-config" format="dita"/>.</p>
     <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
         <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
       option when you restore the backup with <codeph>gprestore</codeph>. </p>
-    <section id="s3-plugin-config">
+    <section id="ddb-plugin-config">
       <title>DD Boost Storage Plugin Configuration File Format</title>
       <p>The configuration file specifies the absolute path to the Greenplum Database DD Boost
         storage plugin executable, DD Boost connection credentials, and Data Domain location. </p>
@@ -42,7 +42,7 @@
   <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: &lt;<varname>ddboost-pwd</varname>>
   <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: &lt;<varname>data-domain-id</varname>>
   <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: &lt;<varname>data-domain-dir</varname>></codeblock>
-      <parml id="s3-exe-path">
+      <parml id="ddb-exe-path">
         <plentry id="plugin-exe">
           <pt>executablepath</pt>
           <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
@@ -75,11 +75,12 @@
                     </plentry>
                     <plentry id="ddb-dir">
                       <pt>directory</pt>
-                      <pd>Required. the location for the backup files, configuration files, and
+                      <pd>Required. The location for the backup files, configuration files, and
                         global objects on the Data Domain system. The location on the system is
-                          <codeph>GPDB/</codeph><varname>backup_directory</varname>.</pd>
+                          <codeph>/</codeph><varname>backup_directory</varname>.</pd>
                       <pd>During a backup operation, the plugin creates the directory location if it
-                        does not exist in the storage unit. </pd>
+                        does not exist in the storage unit and stores the backup in this directory
+                            <codeph><varname>backup_directory</varname>backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeph>. </pd>
                     </plentry>
                   </parml></pd>
               </plentry>
@@ -126,9 +127,9 @@ options:
       <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
         files in this location in the Data Domain storage unit. </p>
       <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
-      <p>Where <varname>directory</varname> is the location you specified in the S3 configuration
-        file, and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date
-        and time stamps. </p>
+      <p>Where <varname>directory</varname> is the location you specified in the DD Boost
+        configuration file, and <varname>datestamp</varname> and <varname>timestamp</varname> are
+        the backup date and time stamps. </p>
     </section>
   </body>
 </topic>

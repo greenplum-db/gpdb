@@ -4,7 +4,7 @@
   <title>Using the S3 Storage Plugin with gpbackup and gprestore</title>
   <body>
     <note type="warning">The S3 storage plugin for <codeph>gpbackup</codeph> and
-        <codeph>gprestore</codeph> is an experimental feature is not intended for use in a
+        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
       production environment. Experimental features are subject to change without notice in future
       releases.</note>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)

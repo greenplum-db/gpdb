@@ -20,7 +20,7 @@
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
    [<b>--no-compression</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>
+   [<b>--plugin-config</b> <varname>config_file_location</varname>]
    [<b>--quiet</b>]
    [<b>--single-data-file]</b>
    [<b>--verbose</b>]
@@ -212,8 +212,9 @@
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
-          <pd>For information about using the S3 storage plugin application, see <xref
-              href="../../admin_guide/managing/backup-s3-plugin.xml"/>.</pd>
+          <pd>For information about using storage plugin applications, see <xref
+              href="../../admin_guide/managing/backup-plugins.xml">Using and Creating gpbackup
+              Storage Plugins</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--quiet</b></pt>
