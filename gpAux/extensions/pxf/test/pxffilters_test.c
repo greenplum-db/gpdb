@@ -23,17 +23,12 @@
 
 #include "cmockery.h"
 #include "c.h"
-#include "postgres.h"
-#include "utils/array.h"
 
 /* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
 #define UNIT_TESTING
 
 /* include unit under test */
 #include "../src/pxffilters.c"
-
-/* include mock files */
-#include "mock/pxffilters_utils_mock.c"
 
 
 void run__scalar_const_to_str(Const* input, StringInfo result, char* expected);
@@ -259,7 +254,6 @@ verify__scalar_const_to_str(bool is_null, char* const_value, Oid const_type, cha
 	else
 	{
 		run__scalar_const_to_str__negative(input, result, value);
-		pfree(value); /* value was not freed by scalar_const_to_str b/c of failure */
 	}
 
 	pfree(result->data);
@@ -702,7 +696,7 @@ test__opexpr_to_pxffilter__attributeIsNull(void **state)
 	Var *arg_var = build_var(INT2OID, 1);
 	NullTest *expr = build_null_expr(arg_var, IS_NULL);
 
-	free(expr->arg);
+	pfree(expr->arg);
 	pfree(expr);
 }
 
@@ -783,77 +777,6 @@ test__opexpr_to_pxffilter__unsupportedOpNot(void **state)
 
 	list_free_deep(expr->args); /* free all args */
 	pfree(expr);
-}
-
-void test__pxf_serialize_filter_list__oneFilter(void **state)
-{
-	List* expressionItems = NIL;
-
-	ExpressionItem* filterExpressionItem = build_expression_item(1, TEXTOID, "1984", TEXTOID, TextEqualOperator);
-
-	expressionItems = lappend(expressionItems, filterExpressionItem);
-
-	char* result = serializePxfFilterQuals(expressionItems);
-	assert_string_equal(result, "a0c25s4d1984o5");
-
-	pxf_free_expression_items_list(expressionItems, true);
-	expressionItems = NIL;
-	pfree(result);
-
-}
-
-void test__pxf_serialize_fillter_list__nullFilter(void **state)
-{
-
-	List* expressionItems = NIL;
-
-	ExpressionItem* filterExpressionItem = build_null_expression_item(1, TEXTOID, IS_NULL);
-
-	expressionItems = lappend(expressionItems, filterExpressionItem);
-
-	char* result = serializePxfFilterQuals(expressionItems);
-	assert_string_equal(result, "a0o8");
-
-	pxf_free_expression_items_list(expressionItems, true);
-	expressionItems = NIL;
-	pfree(result);
-
-}
-
-void
-test__pxf_serialize_filter_list__manyFilters(void **state)
-{
-	char* result = NULL;
-	List* expressionItems = NIL;
-
-	ExpressionItem* expressionItem1 = build_expression_item(1, TEXTOID, "1984", TEXTOID, TextEqualOperator);
-	ExpressionItem* expressionItem2 = build_expression_item(2, TEXTOID, "George Orwell", TEXTOID, TextEqualOperator);
-	ExpressionItem* expressionItem3 = build_expression_item(3, TEXTOID, "Winston", TEXTOID, TextEqualOperator);
-	ExpressionItem* expressionItem4 = build_expression_item(4, TEXTOID, "Eric-%", TEXTOID, 1209);
-	ExpressionItem* expressionItem5 = build_expression_item(5, TEXTOID, "\"Ugly\" string with quotes", TEXTOID, TextEqualOperator);
-	ExpressionItem* expressionItem6 = build_expression_item(6, TEXTOID, "", TEXTOID, TextEqualOperator);
-	ExpressionItem* expressionItem7 = build_null_expression_item(7, TEXTOID, IS_NOT_NULL);
-
-	expressionItems = lappend(expressionItems, expressionItem1);
-	expressionItems = lappend(expressionItems, expressionItem2);
-	expressionItems = lappend(expressionItems, expressionItem3);
-	expressionItems = lappend(expressionItems, expressionItem4);
-	expressionItems = lappend(expressionItems, expressionItem5);
-
-	expressionItems = lappend(expressionItems, expressionItem6);
-	expressionItems = lappend(expressionItems, expressionItem7);
-
-	result = serializePxfFilterQuals(expressionItems);
-	assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5a6o9");
-	pfree(result);
-
-	int trivialExpressionItems = expressionItems->length;
-	enrich_trivial_expression(expressionItems);
-
-	assert_int_equal(expressionItems->length, 2*trivialExpressionItems - 1);
-
-	pxf_free_expression_items_list(expressionItems, true);
-	expressionItems = NIL;
 }
 
 void
@@ -937,9 +860,6 @@ main(int argc, char* argv[])
 			unit_test(test__opexpr_to_pxffilter__twoVars),
 			unit_test(test__opexpr_to_pxffilter__unsupportedOpNot),
 			unit_test(test__opexpr_to_pxffilter__attributeIsNull),
-			unit_test(test__pxf_serialize_filter_list__oneFilter),
-			unit_test(test__pxf_serialize_fillter_list__nullFilter),
-			unit_test(test__pxf_serialize_filter_list__manyFilters),
 			unit_test(test__extractPxfAttributes_empty_quals),
 			unit_test(test__extractPxfAttributes_supported_function_one_arg)
 	};

@@ -1131,8 +1131,6 @@ scalar_const_to_str(Const *constval, StringInfo buf)
 				 constval->consttype, extval);
 
 	}
-
-	pfree(extval);
 }
 
 
