@@ -8005,10 +8005,11 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 		values_for_partition = getAttrContext->values;
 	}
 
-	/* values_get_partition() calls palloc() */
-	MemoryContext save_cxt = MemoryContextSwitchTo(ctxt);
 	GpDistributionData *distData = palloc(sizeof(GpDistributionData));
 	distData->p_attr_types = p_attr_types;
+
+	/* values_get_partition() calls palloc() */
+	MemoryContext save_cxt = MemoryContextSwitchTo(ctxt);
 	resultRelInfo = values_get_partition(values_for_partition,
 	                                     getAttrContext->nulls,
 	                                     getAttrContext->tupDesc, estate);
@@ -8033,8 +8034,8 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 		}
 		else
 		{
-			Relation rel = heap_open(relid, NoLock);
 			MemoryContextSwitchTo(ctxt);
+			Relation rel = heap_open(relid, NoLock);
 
 			/*
 			 * Make sure this all persists the current
