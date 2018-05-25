@@ -50,6 +50,7 @@ test__supported_filter_type(void **state)
 		FLOAT4OID,
 		FLOAT8OID,
 		NUMERICOID,
+		BOOLOID,
 		TEXTOID,
 		VARCHAROID,
 		BPCHAROID,
@@ -75,7 +76,7 @@ test__supported_filter_type(void **state)
 
 	/* go over pxf_supported_types array */
 	int nargs = sizeof(pxf_supported_types) / sizeof(Oid);
-	assert_int_equal(nargs, 16);
+	assert_int_equal(nargs, 17);
 	for (i = 0; i < nargs; ++i)
 	{
 		assert_true(supported_filter_type(pxf_supported_types[i]));
@@ -122,7 +123,7 @@ test__supported_operator_type_op_expr(void **state)
 
 	/* go over pxf_supported_opr_op_expr array */
 	int nargs = sizeof(pxf_supported_opr_op_expr) / sizeof(dbop_pxfop_map);
-	assert_int_equal(nargs, 91);
+	assert_int_equal(nargs, 97);
 	for (i = 0; i < nargs; ++i)
 	{
 		assert_true(supported_operator_type_op_expr(pxf_supported_opr_op_expr[i].dbop, filter));
@@ -299,17 +300,6 @@ test__list_const_to_str__int(void **state) {
 
 	Datum dats32[2] = {Int32GetDatum(11), Int32GetDatum(22)};
 	verify__list_const_to_str(INT4ARRAYOID, "s2d11s2d22", 2, dats32);
-}
-
-void
-test__list_const_to_str__text(void **state)
-{
-
-	Datum dats1[2] = {CStringGetDatum("row1"), CStringGetDatum("row2")};
-	verify__list_const_to_str(TEXTARRAYOID, "s4drow1s4drow2", 2, dats1);
-
-	Datum dats2[3] = {CStringGetDatum("r,o,w,1"), CStringGetDatum("r'o'w2"), CStringGetDatum("r\"o\"w3")};
-	verify__list_const_to_str(TEXTARRAYOID, "s7dr,o,w,1s6dr'o'w2s6dr\"o\"w3", 3, dats2);
 }
 
 void run__scalar_const_to_str(Const* input, StringInfo result, char* expected)
@@ -849,7 +839,6 @@ main(int argc, char* argv[])
 			unit_test(test__scalar_const_to_str__text),
 			unit_test(test__scalar_const_to_str__NegativeCircle),
 			unit_test(test__list_const_to_str__int),
-			unit_test(test__list_const_to_str__text),
 			unit_test(test__opexpr_to_pxffilter__null),
 			unit_test(test__opexpr_to_pxffilter__unary_expr),
 			unit_test(test__opexpr_to_pxffilter__intGT),
