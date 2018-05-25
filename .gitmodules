@@ -1,7 +1,7 @@
 [submodule "gpAux/extensions/pgbouncer/source"]
 	path = gpAux/extensions/pgbouncer/source
 	url = https://github.com/greenplum-db/pgbouncer.git
-	branch = master
+	branch = pgbouncer_1_8_1
 [submodule "gpAux/extensions/postgis-2.0.3/source"]
 	path = gpAux/extensions/postgis-2.0.3/source
 	url = https://github.com/greenplum-db/postgis.git
