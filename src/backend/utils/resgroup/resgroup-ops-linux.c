@@ -51,7 +51,6 @@
 
 #define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
-#define CPUSET_BUFFER_SIZE 1024
 #define MAX_RETRY 10
 
 /*
@@ -59,6 +58,11 @@
  * on 5.x we need to make it optional to provide backward compatibilities.
  */
 #define CGROUP_MEMORY_IS_OPTIONAL (GP_VERSION_NUM < 60000)
+/*
+ * cpuset permission is only mandatory on 6.x and master;
+ * on 5.x we need to make it optional to provide backward compatibilities.
+ */
+#define CGROUP_CPUSET_IS_OPTIONAL (GP_VERSION_NUM < 60000)
 
 typedef struct PermItem PermItem;
 typedef struct PermList PermList;
@@ -158,7 +162,9 @@ static const PermItem perm_items_swap[] =
  * just for cpuset check, same as the cpuset Permlist in permlists
  */
 static const PermList cpusetPermList = {
-	perm_items_cpuset, false, NULL,
+	perm_items_cpuset,
+	CGROUP_CPUSET_IS_OPTIONAL,
+	&gp_resource_group_enable_cgroup_cpuset,
 };
 
 /*
@@ -192,8 +198,15 @@ static const PermList permlists[] =
 	{ perm_items_cpu, false, NULL },
 	{ perm_items_cpu_acct, false, NULL },
 
-	/* cpuset permissions are mandatory */
-	{ perm_items_cpuset, false, NULL },
+	/*
+	 * cpuset permissions can be mandatory or optional depends on the switch.
+	 *
+	 * resgroup cpuset is introduced in 6.0 devel and backported
+	 * to 5.x branch since 5.6.1.  To provide backward compatibilities cpuset
+	 * permissions are optional on 5.x branch.
+	 */
+	{ perm_items_cpuset, CGROUP_CPUSET_IS_OPTIONAL,
+		&gp_resource_group_enable_cgroup_cpuset},
 
 	{ NULL, false, NULL }
 };
@@ -217,7 +230,7 @@ buildPath(Oid group,
 	if (!base)
 		base = "gpdb";
 
-	if (group == RESGROUP_OSROOT_ID)
+	if (group == RESGROUP_COMPROOT_ID)
 	{
 		snprintf(path, pathsize, "%s/%s/%s", cgdir, comp, prop);
 	}
@@ -748,6 +761,9 @@ checkPermission(Oid group, bool report)
 static bool
 checkCpuSetPermission(Oid group, bool report)
 {
+	if (!gp_resource_group_enable_cgroup_cpuset)
+		return true;
+
 	if (!permListCheck(&cpusetPermList, group, report) &&
 		!cpusetPermList.optional)
 		return false;
@@ -932,19 +948,24 @@ ResGroupOps_Init(void)
 	writeInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.shares",
 			   1024LL * gp_resource_group_cpu_priority);
 
-	/*
-	 * Get cpuset.mems and cpuset.cpus values from cgroup cpuset root path,
-	 * and set them to cpuset/gpdb/cpuset.mems and cpuset/gpdb/cpuset.cpus
-	 * to make sure that gpdb directory configuration is same as its
-	 * parent directory
-	 */
-	char buffer[CPUSET_BUFFER_SIZE];
-	readStr(RESGROUP_OSROOT_ID, NULL, "cpuset", "cpuset.mems", buffer, sizeof(buffer));
-	writeStr(RESGROUP_ROOT_ID, NULL, "cpuset", "cpuset.mems", buffer);
-	readStr(RESGROUP_OSROOT_ID, NULL, "cpuset", "cpuset.cpus", buffer, sizeof(buffer));
-	writeStr(RESGROUP_ROOT_ID, NULL, "cpuset", "cpuset.cpus", buffer);
+	if (gp_resource_group_enable_cgroup_cpuset)
+	{
+		/*
+		 * Get cpuset.mems and cpuset.cpus values from cgroup cpuset root path,
+		 * and set them to cpuset/gpdb/cpuset.mems and cpuset/gpdb/cpuset.cpus
+		 * to make sure that gpdb directory configuration is same as its
+		 * parent directory
+		 */
+		char buffer[MaxCpuSetLength];
+		readStr(RESGROUP_COMPROOT_ID, NULL, "cpuset", "cpuset.mems",
+				buffer, sizeof(buffer));
+		writeStr(RESGROUP_ROOT_ID, NULL, "cpuset", "cpuset.mems", buffer);
+		readStr(RESGROUP_COMPROOT_ID, NULL, "cpuset", "cpuset.cpus",
+				buffer, sizeof(buffer));
+		writeStr(RESGROUP_ROOT_ID, NULL, "cpuset", "cpuset.cpus", buffer);
 
-	createDefaultCpuSetGroup();
+		createDefaultCpuSetGroup();
+	}
 
 	/*
 	 * Put postmaster and all the children processes into the gpdb cgroup,
@@ -978,7 +999,8 @@ ResGroupOps_CreateGroup(Oid group)
 
 	if (!createDir(group, "cpu")
 		|| !createDir(group, "cpuacct")
-		|| !createDir(group, "cpuset")
+		|| (gp_resource_group_enable_cgroup_cpuset &&
+			!createDir(group, "cpuset"))
 		|| (gp_resource_group_enable_cgroup_memory &&
 			!createDir(group, "memory")))
 	{
@@ -1002,33 +1024,36 @@ ResGroupOps_CreateGroup(Oid group)
 		checkPermission(group, true);
 	}
 
-	/*
-	 * Initialize cpuset.mems and cpuset.cpus values as its parent directory
-	 */
-	char buffer[CPUSET_BUFFER_SIZE];
+	if (gp_resource_group_enable_cgroup_cpuset)
+	{
+		/*
+		 * Initialize cpuset.mems and cpuset.cpus values as its parent directory
+		 */
+		char buffer[MaxCpuSetLength];
 
-	readStr(RESGROUP_ROOT_ID,
-			NULL,
-			"cpuset",
-			"cpuset.mems",
-			buffer,
-			sizeof(buffer));
-	writeStr(group, NULL, "cpuset", "cpuset.mems", buffer);
+		readStr(RESGROUP_ROOT_ID,
+				NULL,
+				"cpuset",
+				"cpuset.mems",
+				buffer,
+				sizeof(buffer));
+		writeStr(group, NULL, "cpuset", "cpuset.mems", buffer);
 
-	readStr(RESGROUP_ROOT_ID,
-			NULL,
-			"cpuset",
-			"cpuset.cpus",
-			buffer,
-			sizeof(buffer));
-	writeStr(group, NULL, "cpuset", "cpuset.cpus", buffer);
+		readStr(RESGROUP_ROOT_ID,
+				NULL,
+				"cpuset",
+				"cpuset.cpus",
+				buffer,
+				sizeof(buffer));
+		writeStr(group, NULL, "cpuset", "cpuset.cpus", buffer);
+	}
 }
 
 /*
  * Create the OS group for default cpuset group.
  * default cpuset group is a special group, only take effect in cpuset
  */
-void
+static void
 createDefaultCpuSetGroup(void)
 {
 	int retry = 0;
@@ -1060,7 +1085,7 @@ createDefaultCpuSetGroup(void)
 	 * Initialize cpuset.mems and cpuset.cpus in default group as its
 	 * parent directory
 	 */
-	char buffer[1024];
+	char buffer[MaxCpuSetLength];
 
 	readStr(RESGROUP_ROOT_ID,
 			NULL,
@@ -1090,7 +1115,8 @@ ResGroupOps_DestroyGroup(Oid group, bool migrate)
 {
 	if (!removeDir(group, "cpu", "cpu.shares", migrate)
 		|| !removeDir(group, "cpuacct", NULL, migrate)
-		|| !removeDir(group, "cpuset", NULL, migrate)
+		|| (gp_resource_group_enable_cgroup_cpuset &&
+			!removeDir(group, "cpuset", NULL, migrate))
 		|| (gp_resource_group_enable_cgroup_memory &&
 			!removeDir(group, "memory", "memory.limit_in_bytes", migrate)))
 	{
@@ -1109,39 +1135,35 @@ ResGroupOps_DestroyGroup(Oid group, bool migrate)
 void
 ResGroupOps_AssignGroup(Oid group, ResGroupCaps *caps, int pid)
 {
+	bool oldViaCpuset = oldCaps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED;
+	bool curViaCpuset = caps ? caps->cpuRateLimit == CPU_RATE_LIMIT_DISABLED : false;
+
 	/* needn't write to file if the pid has already been written in.
 	 * Unless it has not been writtien or the group has changed or
 	 * cpu control mechanism has changed */
 	if (IsUnderPostmaster &&
 		group == currentGroupIdInCGroup &&
 		caps != NULL &&
-		((oldCaps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED &&
-		  caps->cpuRateLimit == CPU_RATE_LIMIT_DISABLED) ||
-		 (oldCaps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED &&
-		  caps->cpuRateLimit != CPU_RATE_LIMIT_DISABLED))
+		oldViaCpuset == curViaCpuset
 		)
 		return;
 
-	if (caps == NULL)
+	if (caps == NULL || !curViaCpuset)
 	{
 		writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
 		writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
-		/* add pid to default group */
-		writeInt64(DEFAULT_CPUSET_GROUP_ID, NULL, "cpuset", "cgroup.procs", pid);
-	}
-	else
-	{
-		if (caps->cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
+		if (gp_resource_group_enable_cgroup_cpuset)
 		{
-			writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
-			writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
 			/* add pid to default group */
 			writeInt64(DEFAULT_CPUSET_GROUP_ID, NULL, "cpuset", "cgroup.procs", pid);
 		}
-		else
+	}
+	else
+	{
+		writeInt64(RESGROUP_ROOT_ID, NULL, "cpu", "cgroup.procs", pid);
+		writeInt64(RESGROUP_ROOT_ID, NULL, "cpuacct", "cgroup.procs", pid);
+		if (gp_resource_group_enable_cgroup_cpuset)
 		{
-			writeInt64(RESGROUP_ROOT_ID, NULL, "cpu", "cgroup.procs", pid);
-			writeInt64(RESGROUP_ROOT_ID, NULL, "cpuacct", "cgroup.procs", pid);
 			writeInt64(group, NULL, "cpuset", "cgroup.procs", pid);
 		}
 	}
@@ -1399,6 +1421,8 @@ ResGroupOps_GetTotalMemory(void)
 void
 ResGroupOps_SetCpuSet(Oid group, const char *cpuset)
 {
+	if (!gp_resource_group_enable_cgroup_cpuset)
+		return ;
 	const char *comp = "cpuset";
 	writeStr(group, NULL, comp, "cpuset.cpus", cpuset);
 }
@@ -1412,6 +1436,8 @@ ResGroupOps_SetCpuSet(Oid group, const char *cpuset)
 void
 ResGroupOps_GetCpuSet(Oid group, char *cpuset, int len)
 {
+	if (!gp_resource_group_enable_cgroup_cpuset)
+		return ;
 	const char *comp = "cpuset";
 	readStr(group, NULL, comp, "cpuset.cpus", cpuset, len);
 }

@@ -31,7 +31,7 @@ CREATE
 
 -- check whether the cpuset value in cgroup is valid according to the rule
 CREATE FUNCTION check_rules() RETURNS BOOL AS $$ import pygresql.pg as pg 
-def get_all_group_which_cpuset_is_set(): sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != ''" result = conn.query(sql).getresult() return result 
+def get_all_group_which_cpuset_is_set(): sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != '-1'" result = conn.query(sql).getresult() return result 
 def parse_cpuset(line): line = line.strip('\n') if len(line) == 0: return set([]) tokens = line.split(",") cpuset = [] for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): cpuset.append(str(num)) else: cpuset.append(token) return set(cpuset) 
 def get_cgroup_cpuset(group): group = str(group) if group == '0': file = "@cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus" else: file = "@cgroup_mnt_point@/cpuset/gpdb/" + group + "/cpuset.cpus" fd = open(file) line = fd.readline() fd.close() return parse_cpuset(line) 
 conn = pg.connect(dbname="isolation2resgrouptest") config_groups = get_all_group_which_cpuset_is_set() groups_cpuset = set([]) # check whether cpuset in config and cgroup are same, and have no overlap for config_group in config_groups: groupid = config_group[0] cpuset_value = config_group[1] config_cpuset = parse_cpuset(cpuset_value) cgroup_cpuset = get_cgroup_cpuset(groupid) if len(groups_cpuset & cgroup_cpuset) > 0: return False groups_cpuset |= cgroup_cpuset if not(config_cpuset.issubset(cgroup_cpuset) and cgroup_cpuset.issubset(config_cpuset)): return False # check whether cpuset in resource group union default group is universal set default_cpuset = get_cgroup_cpuset(1) all_cpuset = get_cgroup_cpuset(0) if not (default_cpuset | groups_cpuset).issubset(all_cpuset): return False if not all_cpuset.issubset(default_cpuset | groups_cpuset): return False # if all the cores are allocated to resource group, default group must has a core left if len(default_cpuset & groups_cpuset) > 0 and \ (len(default_cpuset) != 1 or \ (not default_cpuset.issubset(all_cpuset))): return False 
@@ -240,7 +240,7 @@ t
 (1 row)
 CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
 ERROR:  fault triggered, fault name:'create_resource_group_fail' fault type:'error'
-SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE cpuset != '';
+SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE cpuset != '-1';
 groupid|groupname|cpuset
 -------+---------+------
 (0 rows)

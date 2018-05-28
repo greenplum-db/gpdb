@@ -82,8 +82,8 @@ ERROR:  resource group "rg_test_group" does not exist
 SELECT * FROM gp_toolkit.gp_resgroup_config;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |      
-6438   |admin_group  |2          |2                   |10            |10          |10                   |50                 |50                          |20                |20                         |vmtracker     |      
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+6438   |admin_group  |2          |2                   |10            |10          |10                   |50                 |50                          |20                |20                         |vmtracker     |-1    
 (2 rows)
 
 -- negative
@@ -122,7 +122,7 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpuset='0', memory_limit=5
 ERROR:  Find duplicate resource group resource type: cpuset
 -- can't specify both cpu_rate_limit and cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, cpuset='0', memory_limit=5);
-ERROR:  cann't specify both cpu_rate_limit and cpuset
+ERROR:  can't specify both cpu_rate_limit and cpuset
 -- can't specify invalid cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='', memory_limit=5);
 ERROR:  cpuset invalid
@@ -472,7 +472,7 @@ ALTER
 SELECT groupname,cpu_rate_limit,memory_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 groupname    |cpu_rate_limit|memory_limit|cpuset
 -------------+--------------+------------+------
-rg_test_group|10            |10          |      
+rg_test_group|10            |10          |-1    
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP

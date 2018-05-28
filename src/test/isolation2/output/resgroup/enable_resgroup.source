@@ -10,11 +10,6 @@
 ! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
 
 ! mkdir @cgroup_mnt_point@/cpuset/gpdb;
-
-! cat @cgroup_mnt_point@/cpuset/cpuset.cpus > @cgroup_mnt_point@/cpuset/gpdb/cpuset.cpus;
-
-! cat @cgroup_mnt_point@/cpuset/cpuset.mems > @cgroup_mnt_point@/cpuset/gpdb/cpuset.mems;
-
 -- end_ignore
 
 -- enable resource group and restart cluster.

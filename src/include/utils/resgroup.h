@@ -30,6 +30,11 @@
 #define MaxCpuSetLength 1024
 
 /*
+ * Default value of cpuset
+ */
+#define DefaultCpuset "-1"
+
+/*
  * Resource group capability.
  */
 typedef int32 ResGroupCap;
@@ -80,6 +85,7 @@ extern double gp_resource_group_memory_limit;
  */
 extern bool gp_resource_group_enable_cgroup_memory;
 extern bool gp_resource_group_enable_cgroup_swap;
+extern bool gp_resource_group_enable_cgroup_cpuset;
 
 /*
  * Resource Group assignment hook.
@@ -176,6 +182,7 @@ extern int GetMinCore(const char *bitset, size_t size);
 extern void CpusetUnion(char *cpuset1, const char *cpuset2, int len);
 extern void CpusetDifference(char *cpuset1, const char *cpuset2, int len);
 extern bool CpusetIsEmpty(const char *cpuset);
+extern void SetCpusetEmpty(char *cpuset, int cpusetSize);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

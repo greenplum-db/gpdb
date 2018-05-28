@@ -97,7 +97,7 @@ CREATE FUNCTION check_rules() RETURNS BOOL AS $$
 import pygresql.pg as pg
 
 def get_all_group_which_cpuset_is_set():
-	sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != ''"
+	sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != '-1'"
 	result = conn.query(sql).getresult()
 	return result
 
@@ -268,7 +268,7 @@ SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
 CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
 SELECT groupid, groupname, cpuset
 	FROM gp_toolkit.gp_resgroup_config
-	WHERE cpuset != '';
+	WHERE cpuset != '-1';
 SELECT check_rules();
 SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 -- start_ignore

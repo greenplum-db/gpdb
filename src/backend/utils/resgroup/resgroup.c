@@ -232,6 +232,7 @@ struct ResGroupControl
 
 bool gp_resource_group_enable_cgroup_memory = false;
 bool gp_resource_group_enable_cgroup_swap = false;
+bool gp_resource_group_enable_cgroup_cpuset = false;
 
 /* hooks */
 resgroup_assign_hook_type resgroup_assign_hook = NULL;
@@ -505,6 +506,7 @@ InitResGroups(void)
 	Relation			relResGroupCapability;
 	char		cpuset[MaxCpuSetLength] = {0};
 	int			defaultCore = -1;
+	Bitmapset	*bmsUnused = NULL;
 
 	on_shmem_exit(AtProcExit_ResGroup, 0);
 
@@ -553,12 +555,15 @@ InitResGroups(void)
 
 	ResGroupOps_Init();
 
-	/* Get cpuset from cpuset/gpdb, and transform it into bitset */
-	ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
-	Bitmapset *bmsDefault = CpusetToBitset(cpuset, MaxCpuSetLength);
-	/* get the minimum core number, in case of the zero core is not exist */
-	defaultCore = bms_first_from(bmsDefault, 0);
-	Assert(defaultCore >= 0);
+	if (gp_resource_group_enable_cgroup_cpuset)
+	{
+		/* Get cpuset from cpuset/gpdb, and transform it into bitset */
+		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID, cpuset, MaxCpuSetLength);
+		bmsUnused = CpusetToBitset(cpuset, MaxCpuSetLength);
+		/* get the minimum core number, in case of the zero core is not exist */
+		defaultCore = bms_first_from(bmsUnused, 0);
+		Assert(defaultCore >= 0);
+	}
 
 	numGroups = 0;
 	sscan = systable_beginscan(relResGroup, InvalidOid, false, SnapshotNow, 0, NULL);
@@ -579,41 +584,51 @@ InitResGroups(void)
 		
 		if (caps.cpuRateLimit != CPU_RATE_LIMIT_DISABLED)
 		{
-			Assert(strcmp(caps.cpuset, "") == 0);
 			ResGroupOps_SetCpuRateLimit(groupId, caps.cpuRateLimit);
 		}
 		else
 		{
-			Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
-			Assert(strcmp(caps.cpuset, "") != 0);
-
-			bool allCoreAvailable = true;
-			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset, MaxCpuSetLength);
-			allCoreAvailable = bms_is_subset(bmsCurrent, bmsDefault);
-			if (allCoreAvailable)
+			if (gp_resource_group_enable_cgroup_cpuset)
 			{
-				/*
-				 * write cpus to corresponding file
-				 * if all the cores are available
-				 */
-				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
-				bmsDefault = bms_del_members(bmsDefault, bmsCurrent);
+				bool allCoreAvailable = true;
+				Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
+													   MaxCpuSetLength);
+
+				Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+
+				allCoreAvailable = bms_is_subset(bmsCurrent, bmsUnused);
+				if (allCoreAvailable)
+				{
+					/*
+					 * write cpus to corresponding file
+					 * if all the cores are available
+					 */
+					ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+					bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
+				}
+				else
+				{
+					/*
+					 * if some of the cores are unavailable, just set defaultCore
+					 * to this group and send a warning message, so the system
+					 * can startup, then DBA can fix it
+					 */
+					snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+					ResGroupOps_SetCpuSet(groupId, cpuset);
+					ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("some of the cpu cores are unavailable "
+									"in group(%d), using core(%d) instead",
+									groupId,
+									defaultCore)));
+				}
 			}
 			else
 			{
-				/*
-				 * if some of the cores are unavailable, just set defaultCore to
-				 * this group and send a warning message, so the system can
-				 * startup, then DBA can fix it
-				 */
-				snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
-				ResGroupOps_SetCpuSet(groupId, cpuset);
 				ereport(WARNING,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("some of the cpu cores are unavailable in group(%d), \
-								using core(%d) instead",
-								groupId,
-								defaultCore)));
+						 errmsg("cpuset is disabled for cpuset/gpdb "
+								"does not exist")));
 			}
 		}
 
@@ -621,15 +636,19 @@ InitResGroups(void)
 		Assert(numGroups <= MaxResourceGroups);
 	}
 	systable_endscan(sscan);
-	/* 
-	 * set default cpuset
-	 */
-	BitsetToCpuset(bmsDefault, cpuset, MaxCpuSetLength);
-	if (CpusetIsEmpty(cpuset))
+
+	if (gp_resource_group_enable_cgroup_cpuset)
 	{
-		snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+		/*
+		 * set default cpuset
+		 */
+		BitsetToCpuset(bmsUnused, cpuset, MaxCpuSetLength);
+		if (CpusetIsEmpty(cpuset))
+		{
+			snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+		}
+		ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
 	}
-	ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
 	
 	pResGroupControl->loaded = true;
 	LOG_RESGROUP_DEBUG(LOG, "initialized %d resource groups", numGroups);
@@ -723,11 +742,22 @@ ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 			removeGroup(callbackCtx->groupid);
 			if (!CpusetIsEmpty(group->caps.cpuset))
 			{
-				/* reset default group, add cpu cores to it */
-				char cpuset[MaxCpuSetLength];
-				ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset, MaxCpuSetLength);
-				CpusetUnion(cpuset, group->caps.cpuset, MaxCpuSetLength);
-				ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+				if (gp_resource_group_enable_cgroup_cpuset)
+				{
+					/* reset default group, add cpu cores to it */
+					char cpuset[MaxCpuSetLength];
+					ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+										  cpuset, MaxCpuSetLength);
+					CpusetUnion(cpuset, group->caps.cpuset, MaxCpuSetLength);
+					ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
+				}
+				else
+				{
+					ereport(WARNING,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("cpuset is disabled for cpuset/gpdb "
+									"does not exist")));
+				}
 			}
 
 			ResGroupOps_DestroyGroup(callbackCtx->groupid, migrate);
@@ -770,7 +800,8 @@ ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx)
 		/* remove the os dependent part for this resource group */
 		ResGroupOps_DestroyGroup(callbackCtx->groupid, true);
 
-		if (!CpusetIsEmpty(callbackCtx->caps.cpuset))
+		if (!CpusetIsEmpty(callbackCtx->caps.cpuset) &&
+			gp_resource_group_enable_cgroup_cpuset)
 		{
 			/* return cpu cores to default group */
 			char defaultGroupCpuset[MaxCpuSetLength];
@@ -825,8 +856,9 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
-			ResGroupOps_SetCpuSet(callbackCtx->groupid,
-								  callbackCtx->caps.cpuset);
+			if (gp_resource_group_enable_cgroup_cpuset)
+				ResGroupOps_SetCpuSet(callbackCtx->groupid,
+									  callbackCtx->caps.cpuset);
 		}
 		else if (callbackCtx->limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 		{
@@ -841,7 +873,8 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 				group->groupMemOps->group_mem_on_alter(callbackCtx->groupid, group);
 		}
 		/* reset default group if cpuset has changed */
-		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset))
+		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset) &&
+			gp_resource_group_enable_cgroup_cpuset)
 		{
 			char defaultCpusetGroup[MaxCpuSetLength];
 			/* get current default group value */
@@ -3768,7 +3801,15 @@ error_logic:
  */
 bool CpusetIsEmpty(const char *cpuset)
 {
-	return strcmp(cpuset, "") == 0;
+	return strcmp(cpuset, DefaultCpuset) == 0;
+}
+
+/*
+ * Set cpuset value to default value -1.
+ */
+void SetCpusetEmpty(char *cpuset, int cpusetSize)
+{
+	strncpy(cpuset, DefaultCpuset, cpusetSize);
 }
 
 /*
