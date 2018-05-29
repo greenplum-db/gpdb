@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_isj_khw_sbs">
-  <title>Using and Creating gpbackup Storage Plugins</title>
+  <title>Using gpbackup Storage Plugins</title>
   <body>
     <note type="warning">The storage plugin functionality for <codeph>gpbackup</codeph> and
         <codeph>gprestore</codeph> is an experimental feature is not intended for use in a
@@ -15,6 +15,6 @@
       the backup files to a remote location. During a restore operation, the plugin retrieves the
       files from the remote location. </p>
     <p>You can also develop a custom storage plugin with the Greenplum Database Backup/Restore
-      Storage Plugin API.</p>
+      Storage Plugin API. See <xref href="backup-plugin-api.xml"/>.</p>
   </body>
 </topic>

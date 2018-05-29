@@ -46,40 +46,36 @@
         <plentry>
           <pt>executablepath</pt>
           <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
-            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>.</pd>
-          <pd>
-            <parml>
-              <plentry id="s3-options">
-                <pt>options</pt>
-                <pd>Required. Begins the S3 storage plugin options section.<parml>
-                    <plentry id="s3-region">
-                      <pt>region</pt>
-                      <pd>Required. The AWS region. </pd>
-                    </plentry>
-                    <plentry id="s3-id">
-                      <pt>aws_access_key_id</pt>
-                      <pd>Required. The AWS S3 ID to access the S3 bucket location that stores
-                        backup files.</pd>
-                    </plentry>
-                    <plentry id="s3-key">
-                      <pt>aws_secret_access_key</pt>
-                      <pd>Required. AWS S3 passcode for the S3 ID to access the S3 bucket
-                        location.</pd>
-                    </plentry>
-                    <plentry id="s3-bucket">
-                      <pt>bucket</pt>
-                      <pd>Required. The name of the S3 bucket in the AWS region. The bucket must
-                        exist. </pd>
-                    </plentry>
-                    <plentry id="s3-location">
-                      <pt>folder</pt>
-                      <pd>Required. The S3 location for backups. During a backup operation, the
-                        plugin creates the S3 location if it does not exist in the S3 bucket. </pd>
-                    </plentry>
-                  </parml></pd>
+            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The
+            plugin must be in the same location on every Greenplum Database host.</pd>
+        </plentry>
+        <plentry id="s3-options">
+          <pt>options</pt>
+          <pd>Required. Begins the S3 storage plugin options section.<parml>
+              <plentry id="s3-region">
+                <pt>region</pt>
+                <pd>Required. The AWS region. </pd>
               </plentry>
-            </parml>
-          </pd>
+              <plentry id="s3-id">
+                <pt>aws_access_key_id</pt>
+                <pd>Required. The AWS S3 ID to access the S3 bucket location that stores backup
+                  files.</pd>
+              </plentry>
+              <plentry id="s3-key">
+                <pt>aws_secret_access_key</pt>
+                <pd>Required. AWS S3 passcode for the S3 ID to access the S3 bucket location.</pd>
+              </plentry>
+              <plentry id="s3-bucket">
+                <pt>bucket</pt>
+                <pd>Required. The name of the S3 bucket in the AWS region. The bucket must exist.
+                </pd>
+              </plentry>
+              <plentry id="s3-location">
+                <pt>folder</pt>
+                <pd>Required. The S3 location for backups. During a backup operation, the plugin
+                  creates the S3 location if it does not exist in the S3 bucket. </pd>
+              </plentry>
+            </parml></pd>
         </plentry>
       </parml>
     </section>
