@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_ddb-plugin">
+<topic id="topic_ddb-plugin" otherprops="pivotal">
   <title>Using the DD Boost Storage Plugin with gpbackup and gprestore</title>
   <body>
     <note type="warning">The DD Boost storage plugin for <codeph>gpbackup</codeph> and
