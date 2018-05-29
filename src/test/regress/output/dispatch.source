@@ -458,12 +458,6 @@ NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11284)
 -- Test createGang timeout.
 -- gp_segment_connect_timeout = 0 : wait forever
 -- gp_segment_connect_timeout = 1 : wait 1 second
-select cleanupAllGangs();
- cleanupallgangs 
------------------
- t
-(1 row)
-
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 5, 2::smallint);
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
  gp_inject_fault 
@@ -472,12 +466,25 @@ NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
 (1 row)
 
 set gp_segment_connect_timeout to 1;
+select cleanupAllGangs();
+ cleanupallgangs 
+-----------------
+ t
+(1 row)
+
 -- expect timeout failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  timeout expired
  (seg0 127.0.0.1:40000)
+-- Wait process_startup_packet to finish sleep
+select pg_sleep(5);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 set gp_segment_connect_timeout to 0;
 select gp_inject_fault('process_startup_packet', 'reset', 2);
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)

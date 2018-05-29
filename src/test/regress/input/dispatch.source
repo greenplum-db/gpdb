@@ -241,14 +241,18 @@ select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- Test createGang timeout.
 -- gp_segment_connect_timeout = 0 : wait forever
 -- gp_segment_connect_timeout = 1 : wait 1 second
-select cleanupAllGangs();
 
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 5, 2::smallint);
 set gp_segment_connect_timeout to 1;
 
+select cleanupAllGangs();
+
 -- expect timeout failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
+
+-- Wait process_startup_packet to finish sleep
+select pg_sleep(5);
 
 set gp_segment_connect_timeout to 0;
 select gp_inject_fault('process_startup_packet', 'reset', 2);
