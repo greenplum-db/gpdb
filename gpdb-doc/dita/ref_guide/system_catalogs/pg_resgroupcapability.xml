@@ -47,7 +47,7 @@
             <entry colname="col3">
               <codeph></codeph>
             </entry>
-            <entry colname="col4">The resource group limit type:<p>0 - Unknown</p><p>1 - Concurrency</p><p>2 - CPU</p><p>3 - Memory</p><p>4 - Memory shared quota</p><p>5 - Memory spill ratio</p><p>6 - Memory auditor</p>
+            <entry colname="col4">The resource group limit type:<p>0 - Unknown</p><p>1 - Concurrency</p><p>2 - CPU</p><p>3 - Memory</p><p>4 - Memory shared quota</p><p>5 - Memory spill ratio</p><p>6 - Memory auditor</p><p>7 - CPU set</p>
             </entry>
           </row>
           <row>
