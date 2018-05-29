@@ -19,6 +19,7 @@
    [<b>--include-schema</b> <varname>schema_name</varname>]
    [<b>--include-table</b> <varname>schema.table</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--data-only</b> | <b>--metadata-only</b>]
    [<b>--jobs</b> <varname>int</varname>]
    [<b>--plugin-config</b> <varname>config_file_location</varname>]
    [<b>--quiet</b>]
@@ -101,6 +102,20 @@
           <pd>Optional. Creates the database before restoring the database object metadata.</pd>
           <pd>The database is created by cloning the empty standard system database
               <codeph>template0</codeph>.</pd>
+        </plentry>
+        <plentry id="data_only">
+          <pt><b>--data-only</b></pt>
+          <pd>Optional. Restores table data without creating the tables. Assumes the tables exist in
+            the target database. To restore data for a specific set of tables from a backup set, you
+            can specify an option to include tables or schemas or include tables or schemas. Specify
+            the <codeph>--with-stats</codeph> option to restore table statistics from the
+            backup.</pd>
+          <pd>The backup set must contain the table data be restored. For example, a backup created
+            with the <codeph>gpbackup</codeph> option <codeph>--metadata-only</codeph> does not
+            contain table data.</pd>
+          <pd>To restore tables only, see the option <codeph><xref
+                href="#topic_phj_g5j_tbb/metadata_only" format="dita"
+              >--metadata-only</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--debug</b></pt>
@@ -194,6 +209,19 @@
               single file per segment, you cannot set <codeph>--jobs</codeph> to a value higher than
               1 to perform a parallel restore operation.</note></pd>
         </plentry>
+        <plentry id="metadata_only">
+          <pt><b>--metadata-only</b></pt>
+          <pd>Optional. Creates database objects from a backup created with the
+              <codeph>gpbackup</codeph>, but does not restore table data. To create a specific set
+            of tables from a backup set, you can specify an option to include tables or schemas or
+            include tables or schemas. Specify the option <codeph>--with-globals</codeph> to restore
+            the Greenplum Database system objects.</pd>
+          <pd>The backup set must contain the DDL for objects to be restored. For example, a backup
+            created with the <codeph>gpbackup</codeph> option <codeph>--data-only</codeph> does not
+            contain database metadata information. </pd>
+          <pd>To restore table data only, see the option <codeph><xref
+                href="#topic_phj_g5j_tbb/data_only" format="dita">--data-only</xref></codeph>.</pd>
+        </plentry>
         <plentry>
           <pt><b>--plugin-config</b>
             <varname>config-file_location</varname></pt>
@@ -204,8 +232,8 @@
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
           <pd>For information about using storage plugin applications, see <xref
-              href="../../admin_guide/managing/backup-plugins.xml">Using and Creating gpbackup
-              Storage Plugins</xref>.</pd>
+              href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
+              Plugins</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--quiet</b></pt>
