@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_isj_khw_sbs">
+  <title>Migrating Data with gpcopy</title>
+  <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
+    between databases.</shortdesc>
+  <body>
+    <p>The <codeph>gpcopy</codeph> utility can copy Greenplum Database metadata and data from one
+      Greenplum database to another Greenplum database, allowing you to migrate the entire contents
+      of a database, or just selected tables, to another database. The source and destination
+      databases can be in the same or a different cluster. </p>
+    <p><codeph>gpcopy</codeph> handles the setup and execution of the data transfer. The source and
+      destination Greenplum Database systems must already exist, have network access between all
+      hosts, master host and primary segment hosts, in both systems, and have
+      certificate-authenticated SSH access between all hosts in both systems. </p>
+    <p>The interface includes options to transfer one or more full databases, or one or more
+      database tables. A full database transfer includes the database schema, table data, indexes,
+      views, roles, user-defined functions, and resource queues. Configuration files, including
+        <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph>, must be transferred
+      manually by an administrator. Extensions installed in the database with
+      <codeph>gppkg</codeph>, such as MADlib and programming language extensions, must be installed
+      in the destination database by an administrator. </p>
+    <p>This <codeph>gpcopy</codeph> command specifies the <codeph>--full</codeph> option to perform
+      a migration of a Greenplum Database source system to a destination system. A migration copies
+      all database objects including, tables, indexes, views, roles, functions, user defined types
+      (UDT), and resource queues for all user defined databases. </p>
+    <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
+    --dest-host demohost --dest-port 1234 --dest-user gpuser \
+    --full --drop --validate count</codeblock>
+    <p>When performing the copy, the utility drops tables in the existing database
+        (<codeph>--drop</codeph> option) and performs a row count between the source and destination
+      tables to validate the data transfer (<codeph>--validate count</codeph> option). The other
+        <codeph>gpcopy</codeph> options specify the source and destination source and destination
+      Greenplum Database system masters, ports, and User ID that is used to connect to the Greenplum
+      Database systems.</p>
+    <p>See the <codeph>gpcopy</codeph> utility <ph otherprops="op-print">in the <cite>Greenplum
+          Database Utility Guide</cite>
+      </ph>for complete syntax and usage information. </p>
+    <section>
+      <title>Prerequisites</title>
+      <p>The source and destination Greenplum Database segment hosts need to be able to communicate
+        with each other. To ensure that the segment hosts can communicate, you can use a tool such
+        as the Linux <codeph>netperf</codeph> utility. </p>
+      <p>SSH keys must be exchanged between the two systems before using <codeph>gpcopy</codeph>.
+        The utility uses You can use the Greenplum Database <codeph>gpssh-exkeys</codeph> utility
+        with a list of all the source and destination primary hosts to exchange keys between
+        Greenplum Database hosts.</p>
+    </section>
+    <section>
+      <title>Limitations for the Source and Destination Systems</title>
+      <p dir="ltr" id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
+          <codeph>gpcopy</codeph> utility supports copying only between source and destination
+        Greenplum Database systems with the same number of segment instances. </p>
+      <p dir="ltr">The version of <codeph>pg_dump</codeph> must be the same on both the source and
+        destination Greenplum Database systems. </p>
+      <p><codeph>gpcopy</codeph> transfers data from user databases only; the
+          <codeph>postgres</codeph>, <codeph>template0</codeph>, and <codeph>template1</codeph>
+        databases cannot be transferred. Administrators must transfer configuration files manually
+        and install extensions into the destination database with <codeph>gppkg</codeph>.</p>
+      <p>When transferring data between databases, you can run only one instance of
+          <codeph>gpcopy</codeph> at a time.<ph otherprops="op-pivotal"> Running multiple,
+          concurrent instances of <codeph>gpcopy</codeph> is not supported.</ph></p>
+    </section>
+    <section>
+      <title>Batch Size</title>
+      <p>The degree of parallelism when running <codeph>gpcopy</codeph> is determined the option
+          <codeph>--batch-size</codeph>. The option controls the number processes that
+          <codeph>gpcopy</codeph> runs in parallel. The default is 4. The range is from 1 to 64. The
+        option produces <codeph>2*<varname>n</varname>+1</codeph> database connections. The default
+        value 4, creates 9 connections.</p>
+      <p>If you increase this option, ensure that the Greenplum Database systems are configured with
+        a sufficient maximum concurrent connection value to accommodate the <codeph>gpcopy</codeph>
+        connections and other concurrent connections such as user connections. See the Greenplum
+        Database server configuration parameter <codeph>max_connections</codeph>.</p>
+    </section>
+    <section>
+      <title>Preparing Hosts for gpcopy</title>
+      <p>When you install a Greenplum Database cluster, you set up all the master and segment hosts
+        so that the Greenplum Database administrative user (<codeph>gpadmin</codeph>) can connect
+        with SSH from every host in the cluster to any other host in the cluster without providing a
+        password. The <codeph>gpcopy</codeph> utility requires this capability between every host in
+        the source and destination clusters. First, ensure that the clusters have network
+        connectivity with each other. Then, prepare a hosts file containing a list of all the hosts
+        in both clusters, and use the <codeph>gpssh-exkeys</codeph> utility to exchange keys. See
+        the reference for <codeph>gpssh-exkeys</codeph><ph> in the <i otherprops="op-print"
+            >Greenplum Database Utility Guide</i></ph>.</p>
+    </section>
+    <section>
+      <title>Table Locking</title>
+      <p>The source table data can change while the data is being copied. A lock is not acquired on
+        the source table when data is copied. </p>
+    </section>
+    <section>
+      <title>Validation</title>
+      <p>By default, <codeph>gpcopy</codeph> does not validate the data transferred. You can request
+        validation using the <codeph>--validate=<i>type</i></codeph> option. The validation
+          <i>type</i> can be one of the following:<ul id="ul_hf1_k21_xdb">
+          <li><codeph>count</codeph> - compares row counts between source and destination table
+            data.</li>
+          <li><codeph>md5xor</codeph> - calculates the MD5 value of all rows, then performs an XOR
+            over the MD5 values</li>
+        </ul></p>
+    </section>
+    <section>
+      <title>Failed Transfers</title>
+      <p>When <codeph>gpcopy</codeph> encounters errors and quits or is cancelled by the user,
+        current copy operations on tables in the destination database are rolled back. Copy
+        operations that have completed are not rolled back. </p>
+      <p>If an error occurs when during the process of copying a table, or table validation fails,
+          <codeph>gpcopy</codeph> continues copying the other specified tables. After
+          <codeph>gpcopy</codeph> finishes, it displays a list of tables where error occurred or
+        validation fails and displays a <codeph>gpcopy</codeph> command. You can use the provided
+        command to retry copying the failed tables. </p>
+      <p>The <codeph>gpcopy</codeph> utility logs messages in log file
+            <codeph>gpcopy_<varname>date</varname>.log</codeph> the <codeph>~/gpAdminLogs</codeph>
+        directory on the master host. If you run multiple <codeph>gpcopy</codeph> commands on the
+        same day, the utility appends messages to that day's log file. </p>
+      <p>After <codeph>gpcopy</codeph> completes, it displays a summary of the operations performed.
+        If the utility fails to copy tables, they are highlighted in summary, and there is a
+          <codeph>gpcopy</codeph> command provided in summary for user to just copy the failed
+        tables. The information is displayed in at the command prompt and in the
+          <codeph>gpcopy</codeph> log file. </p>
+      <p>After resolving the issues that caused the copy operations to fail, you can run the
+        provided command to copy the tables that failed in the previous <codeph>gpcopy</codeph>
+        command. </p>
+    </section>
+    <section>
+      <title>Best Practices</title>
+      <p>TBD</p>
+    </section>
+  </body>
+</topic>
