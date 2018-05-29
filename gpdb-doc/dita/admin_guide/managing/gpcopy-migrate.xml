@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_isj_khw_sbs">
+<topic id="topic_isj_khw_sbs" otherprops="pivotal">
   <title>Migrating Data with gpcopy</title>
   <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
     between databases.</shortdesc>

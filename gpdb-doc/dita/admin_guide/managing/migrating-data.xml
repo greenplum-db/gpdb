@@ -5,8 +5,8 @@
   <body>
     <p>Greenplum Database provides utilities that you can use to migrate data between Greenplum
       Database systems.</p>
-    <p>The <codeph>gpcopy</codeph> utility can require less disk space to migrate between Greenplum
-      Database systems that co-exist on the same hosts. </p>
+    <p otherprops="pivotal">The <codeph>gpcopy</codeph> utility can require less disk space to
+      migrate between Greenplum Database systems that co-exist on the same hosts. </p>
     <p>The <codeph>gpransfer</codeph> utility can migrate data between system with a different
       number of segment instances.</p>
   </body>

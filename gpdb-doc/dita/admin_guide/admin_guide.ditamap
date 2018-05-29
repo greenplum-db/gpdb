@@ -24,7 +24,7 @@
             <topicref href="managing/backup.ditamap" format="ditamap"/>
             <topicref href="expand/expand.ditamap" format="ditamap"/>
             <topicref href="managing/migrating-data.xml">
-                <topicref href="managing/gpcopy-migrate.xml"/>
+                <topicref href="managing/gpcopy-migrate.xml" otherprops="pivotal"/>
                 <topicref href="managing/gptransfer.xml"/>
             </topicref>
             <topicref href="managing/monitor.xml" navtitle="Monitoring a Greenplum System"/>
