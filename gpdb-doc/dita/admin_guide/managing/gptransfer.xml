@@ -5,7 +5,7 @@
   <shortdesc>This topic describes how to use the <codeph>gptransfer</codeph> utility to transfer
     data between databases.</shortdesc>
   <body>
-    <note id="note1">Greenplum Database provides two utilities for migrating data
+    <note id="note1" otherprops="pivotal">Greenplum Database provides two utilities for migrating data
       between Greenplum Database installations, <codeph>gpcopy</codeph> and
       <codeph>gptransfer</codeph>. Use <codeph>gpcopy</codeph> to migrate data
       to a Greenplum Database cluster version 5.9.0 and later when the destination
