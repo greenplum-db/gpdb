@@ -290,10 +290,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         Greenplum Database allocates available resource group shared memory to the query. The
         maximum amount of resource group memory available to a specific transaction slot is the sum
         of the transaction's fixed memory and the full resource group shared memory allotment.</p>
-      <note>Greenplum Database tracks, but does not actively monitor, transaction memory usage
-        in resource groups. A transaction submitted in a resource group will fail and exit
-        when memory usage exceeds its fixed memory allotment, no available resource group
-        shared memory exists, and the transaction requests more memory.</note>
       </body>
       
       <topic id="topic833glob" xml:lang="en">
@@ -310,6 +306,15 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           to a transaction after first allocating slot and resource group shared
           memory. Greenplum Database allocates resource group global shared memory to
           transactions on a first-come first-served basis.</p>
+         <note>Greenplum Database tracks, but does not actively monitor, transaction
+           memory usage in resource groups. A transaction submitted in a resource
+           group will fail and exit when memory usage exceeds its fixed memory
+           allotment, no available resource group shared memory exists, no available
+           global shared memory exists, and the transaction requests more memory.</note>
+          <p>Greenplum Database uses resource group memory more efficiently when
+            you leave some memory (for example, 10-20%) unallocated for the global
+            shared memory pool. The availability of global shared memory also helps
+            to mitigate the failure of memory-consuming or unpredicted queries.</p>
         </body>
       </topic>
 
