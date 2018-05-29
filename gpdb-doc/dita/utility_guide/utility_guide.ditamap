@@ -13,6 +13,7 @@
             <topicref href="admin_utilities/gpcheckcat.xml"/>
             <topicref href="admin_utilities/gpcheckperf.xml"/>
             <topicref href="admin_utilities/gpconfig.xml"/>
+            <topicref href="admin_utilities/gpcopy.xml" otherprops="pivotal"/>
             <topicref href="admin_utilities/gpdeletesystem.xml"/>
             <topicref href="admin_utilities/gpexpand.xml"/>
             <topicref href="admin_utilities/gpfdist.xml"/>

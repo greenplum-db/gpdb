@@ -12,8 +12,8 @@
         referencing IPv6 addresses in <codeph>gpfdist</codeph> URLs or when using numeric IP
         addresses instead of hostnames in any management utility, always enclose the IP address in
         brackets. For command prompt use, the best practice is to escape any brackets or put them
-        inside quotation marks. For example, use either:<codeph>\[2620:0:170:610::11\]</codeph>
-        or <codeph>'[2620:0:170:610::11]'</codeph>.</note></p>
+        inside quotation marks. For example, use either:<codeph>\[2620:0:170:610::11\]</codeph> or
+          <codeph>'[2620:0:170:610::11]'</codeph>.</note></p>
     <p>The following are the Greenplum Database management utilities.</p>
     <simpletable id="km162860">
       <strow>
@@ -41,6 +41,9 @@
           </p>
           <p>
             <xref href="gpconfig.xml#topic1" type="topic" format="dita"/>
+          </p>
+          <p otherprops="pivotal">
+            <xref href="gpcopy.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
             <xref href="gpdeletesystem.xml#topic1" type="topic" format="dita"/>
