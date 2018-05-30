@@ -908,7 +908,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		if (mask & (1 << type))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("Find duplicate resoure group resource type: %s",
+					errmsg("Find duplicate resource group resource type: %s",
 						   defel->defname)));
 		else
 			mask |= 1 << type;
@@ -1151,7 +1151,7 @@ validateCapabilities(Relation rel,
 
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
-					errmsg("Find duplicate resoure group id:%d", groupid)));
+					errmsg("Find duplicate resource group id:%d", groupid)));
 		}
 
 		typeDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_reslimittype,

@@ -109,13 +109,13 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10);
 ERROR:  must specify both memory_limit and cpu_rate_limit
 -- can't specify the resource limit type multiple times
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=5, memory_limit=5, concurrency=1);
-ERROR:  Find duplicate resoure group resource type: concurrency
+ERROR:  Find duplicate resource group resource type: concurrency
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, cpu_rate_limit=5);
-ERROR:  Find duplicate resoure group resource type: cpu_rate_limit
+ERROR:  Find duplicate resource group resource type: cpu_rate_limit
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_limit=5);
-ERROR:  Find duplicate resoure group resource type: memory_limit
+ERROR:  Find duplicate resource group resource type: memory_limit
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_shared_quota=70, memory_shared_quota=80);
-ERROR:  Find duplicate resoure group resource type: memory_shared_quota
+ERROR:  Find duplicate resource group resource type: memory_shared_quota
 -- can't drop non-exist resource group
 DROP RESOURCE GROUP non_exist_group;
 ERROR:  resource group "non_exist_group" does not exist
