@@ -7,9 +7,6 @@
     <body>
         <p>The <codeph>gpcopy</codeph> utility copies objects from databases in a source Greenplum
             Database system to databases in a destination Greenplum Database system. </p>
-        <note type="warning">The <codeph>gpcopy</codeph> utility is an experimental feature is not
-            intended for use in a production environment. Experimental features are subject to
-            change without notice in future releases.</note>
         <note> The <codeph>gpcopy</codeph> utility is available only in the commercial release of
             Pivotal Greenplum Database.</note>
         <section id="section2">
@@ -69,10 +66,11 @@
                     id="ul_ehn_fvx_vdb">
                     <li>You must use one of these options to specify the data to be copied from the
                         source database: -<codeph>-full</codeph>, <codeph>--database</codeph>,
-                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>. </li>
+                            <codeph>--include-table</codeph>, or
+                            <codeph>--include-table-file</codeph>. </li>
                     <li>You must use one of these options to specify how manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
-                            <codeph>--truncate</codeph>, <codeph>--drop</codeph> or
+                            <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
                             <codeph>--append</codeph>.<p>If you specify both the
                                 <codeph>--append</codeph> and <codeph>--validation</codeph> options,
                             validation of source table data fails if a destination table contains
@@ -89,23 +87,21 @@
             <p>If an invalid set of <codeph>gpcopy</codeph> options are specified, or if a specified
                 source table or database does not exist, <codeph>gpcopy</codeph> returns an error
                 and quits. No data is copied. </p>
-            <p dir="ltr">The version of <codeph>pg_dump</codeph> must be the same on both the source
-                and destination Greenplum Database systems. </p>
         </section>
-        <section><title>Prerequisites</title><p>The source and destination Greenplum Database
-                segment hosts need to be able to communicate with each other. To ensure that the
-                segment hosts can communicate, you can use a tool such as the Linux
-                    <codeph>netperf</codeph> utility. </p><p>SSH keys must be exchanged between the
-                two systems before using <codeph>gpcopy</codeph>. The utility uses You can use the
-                Greenplum Database <codeph>gpssh-exkeys</codeph> utility with a list of all the
-                source and destination primary hosts to exchange keys between Greenplum Database
-                hosts.</p>The <codeph>gpcopy</codeph> utility uses the Greenplum Database
-                <codeph>pg_dump</codeph> utility copy objects between Greenplum Database systems.
-            When copying data, <codeph>gpcopy</codeph> requires the source system version of
-                <codeph>pg_dump</codeph>.<p>When the <codeph>--full</codeph> option is specified,
-                resource groups and table spaces are copied, however, the utility does not configure
-                destination system. The system must be configured to use resource groups and
-                filespaces must be created for the tablespaces. </p></section>
+        <section>
+            <title>Prerequisites</title>
+            <p>The source and destination Greenplum Database segment hosts need to be able to
+                communicate with each other. To ensure that the segment hosts can communicate, you
+                can use a tool such as the Linux <codeph>netperf</codeph> utility. </p>
+            <p>SSH keys must be exchanged between the two systems before using
+                    <codeph>gpcopy</codeph>. The utility uses You can use the Greenplum Database
+                    <codeph>gpssh-exkeys</codeph> utility with a list of all the source and
+                destination primary hosts to exchange keys between Greenplum Database hosts.</p>
+            <p>When the <codeph>--full</codeph> option is specified, resource groups and table
+                spaces are copied, however, the utility does not configure destination system. The
+                system must be configured to use resource groups and filespaces must be created for
+                the tablespaces. </p>
+        </section>
         <section id="section4">
             <title>Notes</title>
             <p>The source table data can change while the data is being copied. A lock is not
@@ -116,10 +112,6 @@
                     <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>
                 option, and the destination table or database does not exist,
                     <codeph>gpcopy</codeph> creates it. </p>
-            <p>If you do not specify and one of the options <codeph>--skip-existing</codeph>,
-                    <codeph>--truncate</codeph>, or <codeph>--drop</codeph> and a table that is
-                being copied exists on the destination system, <codeph>gpcopy</codeph> returns an
-                error and quits.</p>
             <p>The <codeph>gpcopy</codeph> utility does not copy dependent database objects unless
                 you specify the <codeph>--full</codeph> option. For example, if a table has a
                 default value on a column that is a user-defined function, that function must exist
