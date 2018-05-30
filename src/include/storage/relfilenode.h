@@ -124,4 +124,16 @@ inline static bool RelFileNode_IsEmpty(
 		    relFileNode->relNode == 0);
 }
 
+/*
+ * Augmenting a relfilenode with a storeage type provides a way to make optimal
+ * decisions in smgr and md layer. This is purposefully kept out of RelFileNode
+ * for performance concerns where RelFileNode used in a hotpath for BufferTag
+ * hashing.
+ */
+typedef struct RelFileNodeWithStorageType
+{
+	RelFileNode node;
+	char relstorage;
+} RelFileNodeWithStorageType;
+
 #endif   /* RELFILENODE_H */

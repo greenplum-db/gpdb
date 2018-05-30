@@ -2833,7 +2833,8 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid)
 	newrnode.node = relation->rd_node;
 	newrnode.node.relNode = newrelfilenode;
 	newrnode.backend = relation->rd_backend;
-	RelationCreateStorage(newrnode.node, relation->rd_rel->relpersistence);
+	RelationCreateStorage(newrnode.node, relation->rd_rel->relpersistence,
+						  relation->rd_rel->relstorage);
 	smgrclosenode(newrnode);
 
 	/*

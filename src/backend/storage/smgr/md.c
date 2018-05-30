@@ -394,7 +394,7 @@ mdcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
  * we are usually not in a transaction anymore when this is called.
  */
 void
-mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
+mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char relstorage)
 {
 	char	   *path;
 	int			ret;
@@ -404,7 +404,8 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
 	 * relation, else the next mdsync() will fail.  There can't be any such
 	 * requests for a temp relation, though.
 	 */
-	if (!RelFileNodeBackendIsTemp(rnode))
+	if (!RelFileNodeBackendIsTemp(rnode) &&
+		!relstorage_is_ao(relstorage))
 		ForgetRelationFsyncRequests(rnode.node, forkNum);
 
 	path = relpath(rnode, forkNum);

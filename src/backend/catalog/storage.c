@@ -51,7 +51,7 @@
 
 typedef struct PendingRelDelete
 {
-	RelFileNode relnode;		/* relation that may need to be deleted */
+	RelFileNodeWithStorageType relnode;		/* relation that may need to be deleted */
 	BackendId	backend;		/* InvalidBackendId if not a temp rel */
 	bool		atCommit;		/* T=delete at commit; F=delete at abort */
 	int			nestLevel;		/* xact nesting level of request */
@@ -96,7 +96,7 @@ typedef struct xl_smgr_truncate
  * transaction aborts later on, the storage will be destroyed.
  */
 void
-RelationCreateStorage(RelFileNode rnode, char relpersistence)
+RelationCreateStorage(RelFileNode rnode, char relpersistence, char relstorage)
 {
 	PendingRelDelete *pending;
 	SMgrRelation srel;
@@ -131,7 +131,8 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence)
 	/* Add the relation to the list of stuff to delete at abort */
 	pending = (PendingRelDelete *)
 		MemoryContextAlloc(TopMemoryContext, sizeof(PendingRelDelete));
-	pending->relnode = rnode;
+	pending->relnode.node = rnode;
+	pending->relnode.relstorage = relstorage;
 	pending->backend = backend;
 	pending->atCommit = false;	/* delete if abort */
 	pending->nestLevel = GetCurrentTransactionNestLevel();
@@ -174,7 +175,8 @@ RelationDropStorage(Relation rel)
 	/* Add the relation to the list of stuff to delete at commit */
 	pending = (PendingRelDelete *)
 		MemoryContextAlloc(TopMemoryContext, sizeof(PendingRelDelete));
-	pending->relnode = rel->rd_node;
+	pending->relnode.node = rel->rd_node;
+	pending->relnode.relstorage = rel->rd_rel->relstorage;
 	pending->backend = rel->rd_backend;
 	pending->atCommit = true;	/* delete if commit */
 	pending->nestLevel = GetCurrentTransactionNestLevel();
@@ -219,7 +221,7 @@ RelationPreserveStorage(RelFileNode rnode)
 	for (pending = pendingDeletes; pending != NULL; pending = next)
 	{
 		next = pending->next;
-		if (RelFileNodeEquals(rnode, pending->relnode))
+		if (RelFileNodeEquals(rnode, pending->relnode.node))
 		{
 			/* we should only find delete-on-abort entries, else trouble */
 			if (pending->atCommit)
@@ -357,10 +359,10 @@ smgrDoPendingDeletes(bool isCommit)
 				SMgrRelation srel;
 				int			i;
 
-				srel = smgropen(pending->relnode, pending->backend);
+				srel = smgropen(pending->relnode.node, pending->backend);
 				for (i = 0; i <= MAX_FORKNUM; i++)
 				{
-					smgrdounlink(srel, i, false);
+					smgrdounlink(srel, i, false, pending->relnode.relstorage);
 				}
 				smgrclose(srel);
 			}
@@ -396,11 +398,11 @@ smgrDoPendingDeletes(bool isCommit)
  * dropped at the end of COMMIT phase.
  */
 int
-smgrGetPendingDeletes(bool forCommit, RelFileNode **ptr)
+smgrGetPendingDeletes(bool forCommit, RelFileNodeWithStorageType **ptr)
 {
 	int			nestLevel = GetCurrentTransactionNestLevel();
 	int			nrels;
-	RelFileNode *rptr;
+	RelFileNodeWithStorageType *rptr;
 	PendingRelDelete *pending;
 
 	nrels = 0;
@@ -420,7 +422,7 @@ smgrGetPendingDeletes(bool forCommit, RelFileNode **ptr)
 		*ptr = NULL;
 		return 0;
 	}
-	rptr = (RelFileNode *) palloc(nrels * sizeof(RelFileNode));
+	rptr = (RelFileNodeWithStorageType *) palloc(nrels * sizeof(RelFileNodeWithStorageType));
 	*ptr = rptr;
 	for (pending = pendingDeletes; pending != NULL; pending = pending->next)
 	{

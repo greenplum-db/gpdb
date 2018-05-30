@@ -728,7 +728,6 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 	TransactionIdAdvance(nextXid);
 	if (TransactionIdFollows(nextXid, ShmemVariableCache->nextXid))
 		ShmemVariableCache->nextXid = nextXid;
-
 	Assert(TransactionIdIsNormal(ShmemVariableCache->latestCompletedXid));
 	Assert(TransactionIdIsValid(ShmemVariableCache->nextXid));
 
