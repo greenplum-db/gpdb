@@ -312,6 +312,10 @@ smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isRedo, char relstorage
 	/*
 	 * Get rid of any remaining buffers for the relation.  bufmgr will just
 	 * drop them without bothering to write the contents.
+	 *
+	 * Apart from relstorage == RELSTORAGE_HEAP do any other RELSTOARGE type
+	 * expected to have buffers in shared memory ? Can check only for
+	 * RELSTORAGE_HEAP below.
 	 */
 	if ((relstorage != RELSTORAGE_AOROWS) &&
 		(relstorage != RELSTORAGE_AOCOLS))
