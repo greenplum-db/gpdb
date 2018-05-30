@@ -21,6 +21,7 @@ class GpAddMirrorsTest(GpTestCase):
         self.gparrayMock = self._createGpArrayWith2Primary2Mirrors()
         self.gparray_get_segments_by_hostname = dict(sdw1=[self.primary0])
         self.apply_patches([
+            patch('__builtin__.raw_input'),
             patch('gppylib.programs.clsAddMirrors.base.WorkerPool'),
             patch('gppylib.programs.clsAddMirrors.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
             patch('gppylib.programs.clsAddMirrors.log_to_file_only', return_value=Mock()),
@@ -31,6 +32,7 @@ class GpAddMirrorsTest(GpTestCase):
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value=self.gparray_get_segments_by_hostname),
 
         ])
+        self.raw_input_mock = self.get_mock_from_apply_patch("raw_input")
         self.mock_logger = self.get_mock_from_apply_patch('logger')
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
@@ -97,8 +99,8 @@ class GpAddMirrorsTest(GpTestCase):
         sys.argv = ['gpaddmirrors', '-o', mirror_config_output_file, '-m', datadir_config]
         self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
         options, _ = self.parser.parse_args()
-        subject = GpAddMirrorsProgram(options)
-        subject.run()
+        self.subject = GpAddMirrorsProgram(options)
+        self.subject.run()
 
         with open(mirror_config_output_file, 'r') as fp:
             result = fp.readlines()
@@ -113,8 +115,8 @@ class GpAddMirrorsTest(GpTestCase):
         sys.argv = ['gpaddmirrors', '-p', '5000', '-o', mirror_config_output_file, '-m', datadir_config]
         options, _ = self.parser.parse_args()
         self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
-        subject = GpAddMirrorsProgram(options)
-        subject.run()
+        self.subject = GpAddMirrorsProgram(options)
+        self.subject.run()
 
         with open(mirror_config_output_file, 'r') as fp:
             result = fp.readlines()
@@ -122,6 +124,15 @@ class GpAddMirrorsTest(GpTestCase):
         self.assertIn("45000", result[1])
         self.assertIn("50000", result[1])
         self.assertIn("55000", result[1])
+
+    def test_datadir_interview(self):
+        self.raw_input_mock.side_effect = ["/tmp/datadirs/mirror1", "/tmp/datadirs/mirror2", "/tmp/datadirs/mirror3"]
+        sys.argv = ['gpaddmirrors', '-p', '5000']
+        options, _ = self.parser.parse_args()
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
+        self.subject = GpAddMirrorsProgram(options)
+        directories, filespaceOidToPathMaps = self.subject._GpAddMirrorsProgram__getDataDirectoriesForMirrors(3, GpArray([self.master, self.primary0, self.primary1]))
+        self.assertEqual(len(directories), 3)
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(
