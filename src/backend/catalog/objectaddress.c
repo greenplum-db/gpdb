@@ -42,6 +42,7 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_rewrite.h"
+#include "catalog/pg_resgroup.h"
 #include "catalog/pg_resqueue.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
@@ -55,6 +56,7 @@
 #include "commands/extension.h"
 #include "commands/proclang.h"
 #include "commands/queue.h"
+#include "commands/resgroupcmds.h"
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
 #include "foreign/foreign.h"
@@ -238,6 +240,11 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 		case OBJECT_RESQUEUE:
 			address.classId = ResQueueRelationId;
 			address.objectId = get_resqueue_oid(NameListToString(objname), false);
+			address.objectSubId = 0;
+			break;
+		case OBJECT_RESGROUP:
+			address.classId = ResGroupRelationId;
+			address.objectId = GetResGroupIdForName(NameListToString(objname));
 			address.objectSubId = 0;
 			break;
 		default:
@@ -718,6 +725,9 @@ object_exists(ObjectAddress address)
 		case ResQueueRelationId:
 			indexoid = ResQueueOidIndexId;
 			break;
+		case ResGroupRelationId:
+			cache = RESGROUPOID;
+			break;
 		default:
 			elog(ERROR, "unrecognized classid: %u", address.classId);
 	}
@@ -895,6 +905,7 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 		case OBJECT_TSPARSER:
 		case OBJECT_TSTEMPLATE:
 		case OBJECT_RESQUEUE:
+		case OBJECT_RESGROUP:
 			/* We treat these object types as being owned by superusers */
 			if (!superuser_arg(roleid))
 				ereport(ERROR,
