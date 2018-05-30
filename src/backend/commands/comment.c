@@ -115,16 +115,25 @@ CommentObject(CommentStmt *stmt)
 	}
 
 	/*
-	 * Databases, tablespaces, and roles are cluster-wide objects, so any
-	 * comments on those objects are recorded in the shared pg_shdescription
-	 * catalog.  Comments on all other objects are recorded in pg_description.
+	 * Databases, tablespaces, roles, resource queues/groups are cluster-wide
+	 * objects, so any comments on those objects are recorded in the shared
+	 * pg_shdescription catalog.  Comments on all other objects are recorded in
+	 * pg_description.
 	 */
-	if (stmt->objtype == OBJECT_DATABASE || stmt->objtype == OBJECT_TABLESPACE
-		|| stmt->objtype == OBJECT_ROLE)
-		CreateSharedComments(address.objectId, address.classId, stmt->comment);
-	else
-		CreateComments(address.objectId, address.classId, address.objectSubId,
-					   stmt->comment);
+	switch (stmt->objtype)
+	{
+		case OBJECT_DATABASE:
+		case OBJECT_TABLESPACE:
+		case OBJECT_ROLE:
+		case OBJECT_RESQUEUE:
+		case OBJECT_RESGROUP:
+			CreateSharedComments(address.objectId, address.classId, stmt->comment);
+			break;
+		default:
+			CreateComments(address.objectId, address.classId, address.objectSubId,
+						   stmt->comment);
+			break;
+	}
 
 	/*
 	 * If get_object_address() opened the relation for us, we close it to keep
