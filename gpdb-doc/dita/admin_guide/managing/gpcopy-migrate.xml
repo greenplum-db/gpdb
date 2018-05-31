@@ -41,20 +41,9 @@
     <body>
       <p><codeph>gpcopy</codeph> handles the setup and execution of the data transfer. The source
         and destination Greenplum Database systems must already exist, have network access between
-        all hosts, have master host and primary segment hosts in both systems, and have
-        certificate-authenticated SSH access between all hosts in both systems. </p>
+        all hosts, and have master host and primary segment hosts in both systems. </p>
       <p>To ensure that the segment hosts can communicate, you can use a tool such as the Linux
           <codeph>netperf</codeph> utility. </p>
-      <p>SSH keys must be exchanged between the two systems before using <codeph>gpcopy</codeph>.
-        When you install a Greenplum Database cluster, you set up all the master and segment hosts
-        so that the Greenplum Database administrative user (<codeph>gpadmin</codeph>) can connect
-        with SSH from every host in the cluster to any other host in the cluster without providing a
-        password. The <codeph>gpcopy</codeph> utility requires this capability between every host in
-        the source and destination clusters. First, ensure that the clusters have network
-        connectivity with each other. Then, prepare a hosts file containing a list of all the hosts
-        in both clusters, and use the <codeph>gpssh-exkeys</codeph> utility to exchange keys. See
-        the reference for <codeph>gpssh-exkeys</codeph><ph> in the <i otherprops="op-print"
-            >Greenplum Database Utility Guide</i></ph>.</p>
     </body>
   </topic>
     <topic id="topic_qwl_2rp_zdb">
