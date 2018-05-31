@@ -164,10 +164,13 @@
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
               <codeph>--truncate-source-after</codeph>.</li>
           <li>Migrating data with <codeph>--truncate-source-after</codeph> still requires an amount
-            of free disk space equal to the largest table that you will migrate using
-              <codeph>gpcopy</codeph>. Use the following query to list the largest tables in your
-            source system, and verify that you have enough free
-            space:<codeblock>gpadmin=# SELECT n.nspname, c.relname, c.relstorage, pg_relation_size(c.oid)
+            of free disk space equal to the sum of the largest tables that you will migrate in a
+            single batch using <codeph>gpcopy</codeph>. For example, with a
+              <codeph>--batch-size</codeph> setting of 5, you must ensure that you have free space
+            equal to the sum of the 5 largest tables copied in the batch.  The following query lists
+            the largest 5 tables in your source system; modify the query as needed depending on the
+              <codeph>--batch-size</codeph> you intend to
+            use:<codeblock>gpadmin=# SELECT n.nspname, c.relname, c.relstorage, pg_relation_size(c.oid)
 FROM 
 pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
 JOIN pg_catalog.gp_distribution_policy p ON (c.oid = p.localoid)
