@@ -43,6 +43,13 @@
       <p>The source and destination Greenplum Database systems must already exist, have network
         access between all hosts, and have master host and primary segment hosts in both systems.
         Each system must be configured with the same number of segments.</p>
+      <p><codeph>gpcopy</codeph> is dependent on the <codeph>pg_dump</codeph>,
+          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> tool versions that are installed
+        with it. In most cases, you run <codeph>gpcopy</codeph> from the source cluster, so the
+        dependencies are automatically met. If you run <codeph>gpcopy</codeph> on a remote server,
+        such as an ETL system, you must ensure that the versions of <codeph>pg_dump</codeph>,
+          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> on that system match the versions
+        with which <codeph>gpcopy</codeph> was installed.</p>
     </body>
   </topic>
     <topic id="topic_qwl_2rp_zdb">
