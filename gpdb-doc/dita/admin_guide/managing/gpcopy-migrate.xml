@@ -57,7 +57,7 @@
         />.</p>
         <p>If you are copying data between Greenplum Database clusters having different versions,
         each cluster must have <codeph>gpcopy</codeph> installed locally. <codeph>gpcopy</codeph> is
-        installed with Pivotal Greenplum Database starting with versions 5.9.0 and 4.3.16.0.</p>
+        installed with Pivotal Greenplum Database starting with versions 5.9.0 and 4.3.26.0.</p>
         <p><codeph>gpcopy</codeph> transfers data from user databases only; the
             <codeph>postgres</codeph>, <codeph>template0</codeph>, and <codeph>template1</codeph>
           databases cannot be transferred. Administrators must transfer configuration files manually
