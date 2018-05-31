@@ -671,12 +671,6 @@ void new_gpdb5_0_invalidate_indexes(void);
 void new_gpdb_invalidate_bitmap_indexes(void);
 Oid *get_numeric_types(PGconn *conn);
 
-/* oid_dump.c */
-
-void dump_new_oids(void);
-void get_old_oids(void);
-void generate_old_oid_dump(void);
-
 /* check_gp.c */
 
 void check_greenplum(void);

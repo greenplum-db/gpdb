@@ -159,10 +159,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * the old server is running.
 	 */
 	if (!user_opts.check)
-	{
 		generate_old_dump();
-		generate_old_oid_dump();
-	}
 
 	if (!live_check)
 		stop_postmaster(false);

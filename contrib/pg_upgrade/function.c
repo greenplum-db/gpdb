@@ -37,69 +37,51 @@ install_support_functions_in_new_db(const char *db_name)
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE SCHEMA binary_upgrade;"));
 
-/*
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.set_next_pg_type_oid(OID) "
+							  "binary_upgrade.set_next_pg_type_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							"binary_upgrade.set_next_array_pg_type_oid(OID) "
+							"binary_upgrade.set_next_array_pg_type_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							"binary_upgrade.set_next_toast_pg_type_oid(OID) "
+							"binary_upgrade.set_next_toast_pg_type_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							"binary_upgrade.set_next_heap_pg_class_oid(OID) "
+							"binary_upgrade.set_next_heap_pg_class_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-						   "binary_upgrade.set_next_index_pg_class_oid(OID) "
+						   "binary_upgrade.set_next_index_pg_class_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-						   "binary_upgrade.set_next_toast_pg_class_oid(OID) "
+						   "binary_upgrade.set_next_toast_pg_class_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.set_next_pg_enum_oid(OID) "
+							  "binary_upgrade.set_next_pg_enum_oid(OID, OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.set_next_pg_authid_oid(OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-*/
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.create_empty_extension(text, text, bool, text, oid[], text[], text[]) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C;"));
-
-	/*
-	 * Greenplum specific support functions below
-	 */
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-						  "binary_upgrade.add_pg_enum_label(OID, OID, NAME) "
+							  "binary_upgrade.set_next_pg_authid_oid(OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
@@ -109,171 +91,12 @@ install_support_functions_in_new_db(const char *db_name)
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C;"));
-
-	/* Additional GPDB functions. */
 	PQclear(executeQueryOrDie(conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_type_oid(OID, TEXT, OID) "
+							  "binary_upgrade.set_next_pg_namespace_oid(OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_arraytype_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_extprotocol_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_tablespace_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_opclass_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_opfam_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_conversion_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_resqueue_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_resqueuecb_oid(OID, OID, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_cast_oid(OID, OID, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_authid_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_database_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_language_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_relation_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_procedure_oid(OID, TEXT, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_namespace_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_attrdef_oid(OID, OID, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_constraint_oid(OID, OID, TEXT, OID, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_rule_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_operator_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_tsparser_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_tsdict_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_tstemplate_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_tsconfig_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_extension_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_enum_oid(OID, OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(conn,
-							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_amop_oid(OID, OID) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-
 
 	PQfinish(conn);
 }

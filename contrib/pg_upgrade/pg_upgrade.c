@@ -485,12 +485,6 @@ prepare_new_databases(void)
 	 * support functions in template1 but pg_dumpall creates database using
 	 * the template0 template.
 	 */
-	if (!user_opts.dispatcher_mode)
-		exec_prog(UTILITY_LOG_FILE, NULL, true,
-				  "PGOPTIONS='-c gp_session_role=utility' "
-				  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
-				  new_cluster.bindir, cluster_conn_opts(&new_cluster),
-				  GLOBALS_OIDS_DUMP_FILE);
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
 			  "PGOPTIONS='-c gp_session_role=utility' "
 			  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
@@ -531,7 +525,6 @@ create_new_objects(void)
 	{
 		char		sql_file_name[MAXPGPATH],
 					log_file_name[MAXPGPATH];
-		char		oid_file_name[MAXPGPATH];
 		DbInfo	   *old_db = &old_cluster.dbarr.dbs[dbnum];
 		PQExpBufferData connstr,
 					escaped_connstr;
@@ -546,17 +539,6 @@ create_new_objects(void)
 		pg_log(PG_STATUS, "%s", old_db->db_name);
 		snprintf(sql_file_name, sizeof(sql_file_name), DB_DUMP_FILE_MASK, old_db->db_oid);
 		snprintf(log_file_name, sizeof(log_file_name), DB_DUMP_LOG_FILE_MASK, old_db->db_oid);
-
-		/*
-		 * Before restoring the schema we import the Oid preassignments that
-		 * were collected
-		 */
-		snprintf(oid_file_name, sizeof(oid_file_name), DB_OIDS_DUMP_FILE_MASK, old_db->db_oid);
-		exec_prog(log_file_name, NULL, true,
-				  "PGOPTIONS='-c gp_session_role=utility' "
-				  "\"%s/psql\" " EXEC_PSQL_ARGS " %s  --dbname %s -f \"%s\"",
-				  new_cluster.bindir,cluster_conn_opts(&new_cluster),
-				  escaped_connstr.data, oid_file_name);
 
 		/*
 		 * pg_dump only produces its output at the end, so there is little
@@ -613,10 +595,6 @@ create_new_objects(void)
 		/* TODO: Bitmap indexes are not supported, so mark them as invalid. */
 		new_gpdb_invalidate_bitmap_indexes();
 	}
-
-	/* Before shutting down the cluster, dump all OIDs, if this was the QD node */
-	if (user_opts.dispatcher_mode)
-		dump_new_oids();
 }
 
 /*

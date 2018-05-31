@@ -1209,7 +1209,7 @@ standard_ProcessUtility(Node *parsetree,
 			 * with enum OID values getting into indexes and then having their
 			 * defining pg_enum entries go away.
 			 */
-			if (Gp_role != GP_ROLE_EXECUTE)
+			if (Gp_role != GP_ROLE_EXECUTE && !IsBinaryUpgrade)
 			{
 				/*
 				 * Don't allow master to call this in a transaction block.  Segments are ok as

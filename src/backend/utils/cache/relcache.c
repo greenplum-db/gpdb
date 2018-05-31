@@ -2723,13 +2723,12 @@ RelationBuildLocalRelation(const char *relname,
 	 * manager in Greenplum breaks if this happens, see GPDB_91_MERGE_FIXME in
 	 * GetNewRelFileNode() for details.
 	 */
-	if (relid < FirstNormalObjectId /* bootstrap only */
-		|| IsBinaryUpgrade)
+	if (relid < FirstNormalObjectId) /* bootstrap only */
 		rel->rd_rel->relfilenode = relid;
 	else
 	{
 		rel->rd_rel->relfilenode = GetNewRelFileNode(reltablespace, NULL, relpersistence);
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 			AdvanceObjectId(relid);
 	}
 

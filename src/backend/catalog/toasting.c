@@ -22,6 +22,7 @@
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/oid_dispatch.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
@@ -156,8 +157,44 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 	/*
 	 * Check to see whether the table actually needs a TOAST table.
 	 */
-	if (!needs_toast_table(rel))
-		return false;
+	if (!IsBinaryUpgrade)
+	{
+		if (!needs_toast_table(rel))
+			return false;
+	}
+	else
+	{
+		/*
+		 * In binary-upgrade mode, create a TOAST table if and only if
+		 * pg_upgrade told us to (ie, a TOAST table OID has been provided).
+		 *
+		 * This indicates that the old cluster had a TOAST table for the
+		 * current table.  We must create a TOAST table to receive the old
+		 * TOAST file, even if the table seems not to need one.
+		 *
+		 * Contrariwise, if the old cluster did not have a TOAST table, we
+		 * should be able to get along without one even if the new version's
+		 * needs_toast_table rules suggest we should have one.  There is a lot
+		 * of daylight between where we will create a TOAST table and where
+		 * one is really necessary to avoid failures, so small cross-version
+		 * differences in the when-to-create heuristic shouldn't be a problem.
+		 * If we tried to create a TOAST table anyway, we would have the
+		 * problem that it might take up an OID that will conflict with some
+		 * old-cluster table we haven't seen yet.
+		 */
+		/*
+		 * In Greenplum, partitioned tables are created in a single CREATE
+		 * TABLE statement instead of each member table individually. The
+		 * Oid preassignments are all done before the CREATE TABLE, so we
+		 * can't use and reset a single oid variable, but instead we use them
+		 * as a reference counter. Await the actuall preassign all before we
+		 * decide whether to require a toast table or not.
+		 *
+		 * if (!OidIsValid(binary_upgrade_next_toast_pg_class_oid))
+		 *	!OidIsValid(binary_upgrade_next_toast_pg_type_oid))
+		 *	return false;
+		 */
+	}
 
 	/*
 	 * Toast table is shared if and only if its parent is.
@@ -186,9 +223,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 	 * If an update-in-place toast relfilenode is specified, force toast file
 	 * creation even if it seems not to need one.
 	 */
-	if (!needs_toast_table(rel) &&
-		(!IsBinaryUpgrade ||
-		 !OidIsValid(binary_upgrade_next_toast_pg_class_oid)))
+	if (!needs_toast_table(rel) && !IsBinaryUpgrade)
 		return false;
 
 	/*
@@ -232,11 +267,13 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 	else
 		namespaceid = PG_TOAST_NAMESPACE;
 
-	/* Use binary-upgrade override for pg_type.oid, if supplied. */
-	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_toast_pg_type_oid))
+	/* Use binary-upgrade override for pg_type.oid */
+	if (IsBinaryUpgrade)
 	{
-		toast_typid = binary_upgrade_next_toast_pg_type_oid;
-		binary_upgrade_next_toast_pg_type_oid = InvalidOid;
+		toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
+		if (!OidIsValid(toastOid))
+			return false;
+		toast_typid = GetPreassignedOidForType(namespaceid, toast_relname, true);
 	}
 
 	toast_relid = heap_create_with_catalog(toast_relname,
@@ -308,6 +345,9 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 
 	coloptions[0] = 0;
 	coloptions[1] = 0;
+
+	if (IsBinaryUpgrade)
+		toastIndexOid = GetPreassignedOidForRelation(namespaceid, toast_idxname);
 
 	toast_idxid = index_create(toast_rel, toast_idxname, toastIndexOid,
 				 indexInfo,

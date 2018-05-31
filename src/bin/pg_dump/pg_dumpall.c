@@ -1151,17 +1151,15 @@ dumpRoles(PGconn *conn)
 
 		resetPQExpBuffer(buf);
 
-#if 0 /* GPDB: OIDs for pg_authid are preassigned during upgrade. */
 		if (binary_upgrade)
 		{
 			Oid			auth_oid = atooid(PQgetvalue(res, i, i_oid));
 
 			appendPQExpBuffer(buf, "\n-- For binary upgrade, must preserve pg_authid.oid\n");
 			appendPQExpBuffer(buf,
-							  "SELECT binary_upgrade.set_next_pg_authid_oid('%u'::pg_catalog.oid);\n\n",
-							  auth_oid);
+							  "SELECT binary_upgrade.set_next_pg_authid_oid('%u'::pg_catalog.oid, '%s'::text);\n\n",
+							  auth_oid, rolename);
 		}
-#endif
 
 		/*
 		 * We dump CREATE ROLE followed by ALTER ROLE to ensure that the role
