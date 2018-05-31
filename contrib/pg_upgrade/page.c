@@ -3,9 +3,11 @@
  *
  *	per-page conversion operations
  *
- *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/page.c
  */
+
+#include "postgres_fe.h"
 
 #include "pg_upgrade.h"
 
@@ -15,7 +17,7 @@
 #ifdef PAGE_CONVERSION
 
 
-static const char *getPageVersion(
+static void getPageVersion(
 			   uint16 *version, const char *pathName);
 static pageCnvCtx *loadConverterPlugin(
 					uint16 newPageVersion, uint16 oldPageVersion);
@@ -31,13 +33,9 @@ static pageCnvCtx *loadConverterPlugin(
  *	to the new format.  If the versions are identical, this function just
  *	returns a NULL pageCnvCtx pointer to indicate that page-by-page conversion
  *	is not required.
- *
- *	If successful this function sets *result and returns NULL.  If an error
- *	occurs, this function returns an error message in the form of an null-terminated
- *	string.
  */
-const char *
-setupPageConverter(pageCnvCtx **result)
+pageCnvCtx *
+setupPageConverter(void)
 {
 	uint16		oldPageVersion;
 	uint16		newPageVersion;
@@ -51,35 +49,28 @@ setupPageConverter(pageCnvCtx **result)
 	snprintf(srcName, sizeof(srcName), "%s/global/%u", old_cluster.pgdata,
 			 old_cluster.pg_database_oid);
 
-	if ((msg = getPageVersion(&oldPageVersion, srcName)) != NULL)
-		return msg;
-
-	if ((msg = getPageVersion(&newPageVersion, dstName)) != NULL)
-		return msg;
+	getPageVersion(&oldPageVersion, srcName);
+	getPageVersion(&newPageVersion, dstName);
 
 	/*
 	 * If the old cluster and new cluster use the same page layouts, then we
 	 * don't need a page converter.
 	 */
-	if (newPageVersion == oldPageVersion)
+	if (newPageVersion != oldPageVersion)
 	{
-		*result = NULL;
-		return NULL;
+		/*
+		 * The clusters use differing page layouts, see if we can find a
+		 * plugin that knows how to convert from the old page layout to the
+		 * new page layout.
+		 */
+
+		if ((converter = loadConverterPlugin(newPageVersion, oldPageVersion)) == NULL)
+			pg_log(PG_FATAL, "could not find plugin to convert from old page layout to new page layout\n");
+
+		return converter;
 	}
-
-	/*
-	 * The clusters use differing page layouts, see if we can find a plugin
-	 * that knows how to convert from the old page layout to the new page
-	 * layout.
-	 */
-
-	if ((converter = loadConverterPlugin(newPageVersion, oldPageVersion)) == NULL)
-		return "can't find plugin to convert from old page layout to new page layout";
 	else
-	{
-		*result = converter;
 		return NULL;
-	}
 }
 
 
@@ -92,7 +83,7 @@ setupPageConverter(pageCnvCtx **result)
  *	if an error occurs, this function returns an error message (in the form
  *	of a null-terminated string).
  */
-static const char *
+static void
 getPageVersion(uint16 *version, const char *pathName)
 {
 	int			relfd;
@@ -100,19 +91,16 @@ getPageVersion(uint16 *version, const char *pathName)
 	ssize_t		bytesRead;
 
 	if ((relfd = open(pathName, O_RDONLY, 0)) < 0)
-		return "can't open relation";
+		pg_log(PG_FATAL, "could not open relation %s\n", pathName);
 
 	if ((bytesRead = read(relfd, &page, sizeof(page))) != sizeof(page))
-	{
-		close(relfd);
-		return "can't read page header";
-	}
+		pg_log(PG_FATAL, "could not read page header of %s\n", pathName);
 
 	*version = PageGetPageLayoutVersion(&page);
 
 	close(relfd);
 
-	return NULL;
+	return;
 }
 
 
@@ -172,7 +160,5 @@ loadConverterPlugin(uint16 newPageVersion, uint16 oldPageVersion)
 		return result;
 	}
 }
-
-
 
 #endif

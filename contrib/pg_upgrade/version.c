@@ -3,13 +3,14 @@
  *
  *	Postgres-version-specific routines
  *
- *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/version.c
  */
 
+#include "postgres_fe.h"
+
 #include "pg_upgrade.h"
 
-#include "access/transam.h"
 
 
 /*
@@ -27,8 +28,7 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 
 	prep_status("Checking for large objects");
 
-	snprintf(output_path, sizeof(output_path), "%s/pg_largeobject.sql",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "pg_largeobject.sql");
 
 	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
@@ -48,10 +48,16 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 			found = true;
 			if (!check_mode)
 			{
-				if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-					pg_log(PG_FATAL, "could not create necessary file:  %s\n", output_path);
-				fprintf(script, "\\connect %s\n",
-						quote_identifier(active_db->db_name));
+				PQExpBufferData connectbuf;
+
+				if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+					pg_log(PG_FATAL, "could not open file \"%s\": %s\n", output_path, getErrorText(errno));
+
+				initPQExpBuffer(&connectbuf);
+				appendPsqlMetaConnect(&connectbuf, active_db->db_name);
+				fputs(connectbuf.data, script);
+				termPQExpBuffer(&connectbuf);
+
 				fprintf(script,
 						"SELECT pg_catalog.lo_create(t.loid)\n"
 						"FROM (SELECT DISTINCT loid FROM pg_catalog.pg_largeobject) AS t;\n");
@@ -70,20 +76,18 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 		report_status(PG_WARNING, "warning");
 		if (check_mode)
 			pg_log(PG_WARNING, "\n"
-				   "| Your installation contains large objects.\n"
-				   "| The new database has an additional large object\n"
-				   "| permission table.  After upgrading, you will be\n"
-				   "| given a command to populate the pg_largeobject\n"
-				   "| permission table with default permissions.\n\n");
+				   "Your installation contains large objects.  The new database has an\n"
+				   "additional large object permission table.  After upgrading, you will be\n"
+				   "given a command to populate the pg_largeobject permission table with\n"
+				   "default permissions.\n\n");
 		else
 			pg_log(PG_WARNING, "\n"
-				   "| Your installation contains large objects.\n"
-				   "| The new database has an additional large object\n"
-				   "| permission table so default permissions must be\n"
-				   "| defined for all large objects.  The file:\n"
-				   "| \t%s\n"
-				   "| when executed by psql by the database super-user\n"
-				   "| will define the default permissions.\n\n",
+				   "Your installation contains large objects.  The new database has an\n"
+				   "additional large object permission table, so default permissions must be\n"
+				   "defined for all large objects.  The file\n"
+				   "    %s\n"
+				   "when executed by psql by the database superuser will set the default\n"
+				   "permissions.\n\n",
 				   output_path);
 	}
 	else

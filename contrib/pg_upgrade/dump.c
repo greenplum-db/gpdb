@@ -3,126 +3,69 @@
  *
  *	dump functions
  *
- *	Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/dump.c
  */
 
+#include "postgres_fe.h"
+
 #include "pg_upgrade.h"
+
+#include <sys/types.h>
 
 
 void
 generate_old_dump(void)
 {
-	/* run new pg_dumpall binary */
-	prep_status("Creating catalog dump");
+	int			dbnum;
 
-	/*
-	 * --binary-upgrade records the width of dropped columns in pg_class, and
-	 * restores the frozenid's for databases and relations.
-	 */
-	exec_prog(true,
-			  SYSTEMQUOTE "\"%s/pg_dumpall\" --port %d --username \"%s\" "
-			  "--schema-only --binary-upgrade -f \"%s/" ALL_DUMP_FILE "\""
-			  SYSTEMQUOTE, new_cluster.bindir, old_cluster.port, os_info.user, os_info.cwd);
+	prep_status("Creating dump of global objects");
+
+	/* run new pg_dumpall binary for globals */
+	exec_prog(UTILITY_LOG_FILE, NULL, true,
+			  "\"%s/pg_dumpall\" %s --schema-only --globals-only "
+			  "--quote-all-identifiers --binary-upgrade %s -f %s",
+			  new_cluster.bindir, cluster_conn_opts(&old_cluster),
+			  log_opts.verbose ? "--verbose" : "",
+			  GLOBALS_DUMP_FILE);
 	check_ok();
-}
 
+	prep_status("Creating dump of database schemas\n");
 
-/*
- *	split_old_dump
- *
- *	This function splits pg_dumpall output into global values and
- *	database creation, and per-db schemas.	This allows us to create
- *	the support functions between restoring these two parts of the
- *	dump.  We split on the first "\connect " after a CREATE ROLE
- *	username match;  this is where the per-db restore starts.
- *
- *	We suppress recreation of our own username so we don't generate
- *	an error during restore
- */
-void
-split_old_dump(void)
-{
-	FILE	   *all_dump,
-			   *globals_dump,
-			   *db_dump;
-	FILE	   *current_output;
-	char		line[LINE_ALLOC];
-	bool		start_of_line = true;
-	char		create_role_str[MAX_STRING];
-	char		create_role_str_quote[MAX_STRING];
-	char		filename[MAXPGPATH];
-	bool		suppressed_username = false;
-
-	/* If this is a QE node, read the pre-assigned OIDs into memory. */
-	if (!user_opts.dispatcher_mode)
-		slurp_oid_files();
-
-	/* 
-	 * Open all files in binary mode to avoid line end translation on Windows,
-	 * both for input and output.
-	 */
-
-	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, ALL_DUMP_FILE);
-	if ((all_dump = fopen(filename, PG_BINARY_R)) == NULL)
-		pg_log(PG_FATAL, "Cannot open dump file %s\n", filename);
-	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, GLOBALS_DUMP_FILE);
-	if ((globals_dump = fopen(filename, PG_BINARY_W)) == NULL)
-		pg_log(PG_FATAL, "Cannot write to dump file %s\n", filename);
-	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, DB_DUMP_FILE);
-	if ((db_dump = fopen(filename, PG_BINARY_W)) == NULL)
-		pg_log(PG_FATAL, "Cannot write to dump file %s\n", filename);
-	current_output = globals_dump;
-
-	/* patterns used to prevent our own username from being recreated */
-	snprintf(create_role_str, sizeof(create_role_str),
-			 "CREATE ROLE %s;", os_info.user);
-	snprintf(create_role_str_quote, sizeof(create_role_str_quote),
-			 "CREATE ROLE %s;", quote_identifier(os_info.user));
-
-	while (fgets(line, sizeof(line), all_dump) != NULL)
+	/* create per-db dump files */
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
-		/* switch to db_dump file output? */
-		if (current_output == globals_dump && start_of_line &&
-			suppressed_username &&
-			strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
-			current_output = db_dump;
+		char		sql_file_name[MAXPGPATH],
+					log_file_name[MAXPGPATH];
+		DbInfo	   *old_db = &old_cluster.dbarr.dbs[dbnum];
+		PQExpBufferData connstr,
+					escaped_connstr;
 
-		/* output unless we are recreating our own username */
-		if (current_output != globals_dump || !start_of_line ||
-			(strncmp(line, create_role_str, strlen(create_role_str)) != 0 &&
-			 strncmp(line, create_role_str_quote, strlen(create_role_str_quote)) != 0))
-			fputs(line, current_output);
-		else
-			suppressed_username = true;
+		initPQExpBuffer(&connstr);
+		appendPQExpBuffer(&connstr, "dbname=");
+		appendConnStrVal(&connstr, old_db->db_name);
+		initPQExpBuffer(&escaped_connstr);
+		appendShellString(&escaped_connstr, connstr.data);
+		termPQExpBuffer(&connstr);
 
-		if (strlen(line) > 0 && line[strlen(line) - 1] == '\n')
-			start_of_line = true;
-		else
-			start_of_line = false;
+		pg_log(PG_STATUS, "%s", old_db->db_name);
+		snprintf(sql_file_name, sizeof(sql_file_name), DB_DUMP_FILE_MASK, old_db->db_oid);
+		snprintf(log_file_name, sizeof(log_file_name), DB_DUMP_LOG_FILE_MASK, old_db->db_oid);
 
-		/*
-		 * Inject binary_upgrade.preassign_* calls to the correct locations.
-		 *
-		 * The global OIDs go just after the first \connect. The per-DB OIDs
-		 * go just after each \connect (including the first one).
-		 *
-		 * If we just switched database, dump the preassignments.
-		 */
-		if (start_of_line && strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
-		{
-			char	   *preassigned_oids;
+		parallel_exec_prog(log_file_name, NULL,
+				   "\"%s/pg_dump\" %s --schema-only --quote-all-identifiers "
+					  "--binary-upgrade --format=custom %s --file=\"%s\" %s",
+						 new_cluster.bindir, cluster_conn_opts(&old_cluster),
+						   log_opts.verbose ? "--verbose" : "",
+						   sql_file_name, escaped_connstr.data);
 
-			if (current_output == globals_dump && old_cluster.global_reserved_oids)
-				fputs(old_cluster.global_reserved_oids, current_output);
-
-			preassigned_oids = get_preassigned_oids_for_db(line);
-			if (preassigned_oids)
-				fputs(preassigned_oids, current_output);
-		}
+		termPQExpBuffer(&escaped_connstr);
 	}
 
-	fclose(all_dump);
-	fclose(globals_dump);
-	fclose(db_dump);
+	/* reap all children */
+	while (reap_child(true) == true)
+		;
+
+	end_progress_output();
+	check_ok();
 }
