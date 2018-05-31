@@ -1737,6 +1737,34 @@ SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e
  1 | 1 | 1 | 1
 (1 row)
 
+-- Test planner to check if it optimizes the join and marks it as a dummy join
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT b FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(4 rows)
+
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(4 rows)
+
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.53..0.54 rows=1 width=0)
+   One-Time Filter: false
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(4 rows)
+
 -- start_ignore
 DROP TABLE IF EXISTS dedup_test1;
 DROP TABLE IF EXISTS dedup_test2;

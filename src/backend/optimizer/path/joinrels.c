@@ -532,6 +532,78 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 		return joinrel;
 	}
 
+	/*
+	 * Depending on the join type, a provably empty outer or inner rel might mean
+	 * the join is provably empty too; in which case throw away any
+	 * previously computed paths and mark the join as dummy.  (We do it
+	 * this way since it's conceivable that dummy-ness of a multi-element
+	 * join might only be noticeable for certain construction paths.)
+	 *
+	 * CDB: This check should happen before generating any join paths,
+	 * including any post join deduplication paths, such that the join will
+	 * be appropriately marked as dummy in de-duplication scenarios as
+	 * well.
+	 */
+	bool is_dummy_join = false;
+	switch (jointype)
+	{
+		case JOIN_LEFT:
+		case JOIN_LASJ:
+		case JOIN_LASJ_NOTIN:
+			/*
+			 * For antijoins, the outer and inner rel are fixed.
+			 * If left rel is empty, the result set will be empty
+			 */
+			if (is_dummy_rel(rel1))
+			{
+				mark_dummy_join(root, joinrel);
+				is_dummy_join = true;
+			}
+			break;
+		case JOIN_RIGHT:
+			if (is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				is_dummy_join = true;
+			}
+			break;
+		case JOIN_INNER:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				is_dummy_join = true;
+			}
+			break;
+		case JOIN_FULL:
+			if (is_dummy_rel(rel1) && is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				is_dummy_join = true;
+			}
+			break;
+		case JOIN_IN:
+		case JOIN_REVERSE_IN:
+		case JOIN_UNIQUE_INNER:
+		case JOIN_UNIQUE_OUTER:
+			/*
+			 * Planner does not use these jointypes.
+			 * JOIN_IN is set later in cdb_jointype_to_join_in()
+			 * Rest are obsolete. Refer JoinType for more information.
+			 */
+			elog(ERROR, "unexpected join type. Should never reach here for %d");
+			break;
+		default:
+			elog(ERROR, "unrecognized join type: %d",
+				 (int) jointype);
+			break;
+	}
+
+	if (is_dummy_join)
+	{
+		bms_free(joinrelids);
+		return joinrel;
+	}
+
     /*
      * CDB: Consider plans in which an upstream subquery's duplicate
      * suppression is either postponed yet further downstream, or subsumed
@@ -557,121 +629,36 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	}
 
 	/*
-	 * Consider paths using each rel as both outer and inner.  Depending
-	 * on the join type, a provably empty outer or inner rel might mean
-	 * the join is provably empty too; in which case throw away any
-	 * previously computed paths and mark the join as dummy.  (We do it
-	 * this way since it's conceivable that dummy-ness of a multi-element
-	 * join might only be noticeable for certain construction paths.)
+	 * Consider paths using each rel as both outer and inner.
 	 */
 	switch (jointype)
 	{
 		case JOIN_LASJ:
 		case JOIN_LASJ_NOTIN:
-			/*
-			 * For antijoins, the outer and inner rel are fixed.
-			 * If left rel is empty, the result set will be empty
-			 */
-			if (is_dummy_rel(rel1))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, restrictlist);
 			break;
-
 		case JOIN_INNER:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_INNER,
 								 restrictlist);
 			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_INNER,
 								 restrictlist);
 			break;
 		case JOIN_LEFT:
-			if (is_dummy_rel(rel1))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_LEFT,
 								 restrictlist);
 			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_RIGHT,
 								 restrictlist);
 			break;
 		case JOIN_FULL:
-			if (is_dummy_rel(rel1) && is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_FULL,
 								 restrictlist);
 			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_FULL,
 								 restrictlist);
 			break;
 		case JOIN_RIGHT:
-			if (is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
 			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_RIGHT,
 								 restrictlist);
 			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_LEFT,
-								 restrictlist);
-			break;
-		case JOIN_IN:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_IN,
-								 restrictlist);
-			/* REVERSE_IN isn't supported by joinpath.c */
-			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_INNER,
-								 restrictlist);
-			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_OUTER,
-								 restrictlist);
-			break;
-		case JOIN_REVERSE_IN:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			/* REVERSE_IN isn't supported by joinpath.c */
-			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_IN,
-								 restrictlist);
-			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_OUTER,
-								 restrictlist);
-			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_INNER,
-								 restrictlist);
-			break;
-		case JOIN_UNIQUE_OUTER:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_OUTER,
-								 restrictlist);
-			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_INNER,
-								 restrictlist);
-			break;
-		case JOIN_UNIQUE_INNER:
-			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
-			{
-				mark_dummy_join(root, joinrel);
-				break;
-			}
-			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_INNER,
-								 restrictlist);
-			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_OUTER,
 								 restrictlist);
 			break;
 		default:
@@ -1050,11 +1037,16 @@ mark_dummy_join(PlannerInfo *root, RelOptInfo *rel)
 	/* Evict any previously chosen paths */
 	rel->pathlist = NIL;
 
+	/*
+	 * add_path() sets rel->pathlist or rel->dedup_info->later_dedup_pathlist
+	 * depending on dedup information available. In this scenario, we should
+	 * always set the rel->pathlist as the dummy pathlist. Thus, NULL out the
+	 * dedup_info as we have already decided to discard the earlier pathlist.
+	 */
+	rel->dedup_info = NULL;
+
 	/* Set up the dummy path */
 	add_path(root, rel, (Path *) create_append_path(root, rel, NIL));
-
-	/* The dummy path doesn't need deduplication */
-	rel->dedup_info = NULL;
 
 	/*
 	 * Although set_cheapest will be done again later, we do it immediately
