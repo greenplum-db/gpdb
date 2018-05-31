@@ -11598,10 +11598,6 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 		ATExecSetTableSpace(reltoastidxid, newTableSpace, lockmode);
 
 	/* Move associated ao subobjects */
-	if (OidIsValid(reltoastrelid))
-		ATExecSetTableSpace(reltoastrelid, newTableSpace, lockmode);
-	if (OidIsValid(reltoastidxid))
-		ATExecSetTableSpace(reltoastidxid, newTableSpace, lockmode);
 	if (OidIsValid(relaosegrelid))
 		ATExecSetTableSpace(relaosegrelid, newTableSpace, lockmode);
 	if (OidIsValid(relaoblkdirrelid))
