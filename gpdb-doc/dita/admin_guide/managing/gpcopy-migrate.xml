@@ -3,14 +3,14 @@
 <topic id="topic_isj_khw_sbs" otherprops="pivotal">
   <title>Migrating Data with gpcopy</title>
   <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
-    between databases.</shortdesc>
+    between databases in different Greenplum Database clusters.</shortdesc>
   <body>
     <p><codeph>gpcopy</codeph> is a high-performance utility that can copy metadata and data from
       one Greenplum database to another Greenplum database. You can migrate the entire contents of a
-      database, or just selected tables. The source and destination databases can be in the same
-      Greenplum cluster or a different cluster, and the clusters can have different Greenplum
-      Database versions. For example, you can use <codeph>gpcopy</codeph> to migrate data from a
-      version 4.x Greenplum Database to version 5.x.</p>
+      database, or just selected tables. The source and destination databases must be in different
+      clusters, and the clusters can have different Greenplum Database versions. For example, you
+      can use <codeph>gpcopy</codeph> to migrate data from a version 4.x Greenplum Database to
+      version 5.x.</p>
     <p>The <codeph>gpcopy</codeph> interface includes options to transfer one or more full
       databases, or one or more database tables. A full database transfer includes the database
       schema, table data, indexes, views, roles, user-defined functions, and resource queues. If a
@@ -39,16 +39,16 @@
     <topic id="topic_psq_dsp_zdb">
     <title>Prerequisites</title>
     <body>
-      <p><codeph>gpcopy</codeph> handles the setup and execution of the data transfer. The source
-        and destination Greenplum Database systems must already exist, have network access between
-        all hosts, and have master host and primary segment hosts in both systems. </p>
-      <p>To ensure that the segment hosts can communicate, you can use a tool such as the Linux
-          <codeph>netperf</codeph> utility. </p>
+      <p>The source and destination Greenplum Database systems must already exist, have network
+        access between all hosts, and have master host and primary segment hosts in both systems.
+        Each system must be configured with the same number of segments.</p>
     </body>
   </topic>
     <topic id="topic_qwl_2rp_zdb">
       <title>Limitations for the Source and Destination Systems</title>
       <body>
+      <p><codeph>gpcopy</codeph> cannot copy data from one database to another in the same Greenplum
+        Database system. The destination system must be a separate Greenplum Database cluster.</p>
         <p dir="ltr" id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
           <codeph>gpcopy</codeph> utility supports copying only between source and destination
         Greenplum Database systems with the same number of segments. If you need to transfer data to
