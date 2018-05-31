@@ -9,7 +9,15 @@
 
 #include "postgres_fe.h"
 
+/*
+ * GPDB_93_MERGE_FIXME: include introduced in 3db38b0ceffd95be81573c884f4b,
+ * remove the local define and include at that point instead
+ */
+#define ALWAYS_SECURE_SEARCH_PATH_SQL \
+    "SELECT pg_catalog.set_config('search_path', '', false)"
+#if 0
 #include "fe_utils/connect.h"
+#endif
 #include "pg_upgrade.h"
 
 
@@ -69,6 +77,9 @@ get_db_conn(ClusterInfo *cluster, const char *db_name)
 		appendPQExpBufferStr(&conn_opts, " host=");
 		appendConnStrVal(&conn_opts, cluster->sockdir);
 	}
+
+	appendPQExpBuffer(&conn_opts, " options=");
+	appendConnStrVal(&conn_opts, "-c gp_session_role=utility");
 
 	conn = PQconnectdb(conn_opts.data);
 	termPQExpBuffer(&conn_opts);
@@ -197,6 +208,7 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 	if (!exit_hook_registered)
 	{
 		atexit(stop_postmaster_atexit);
+		atexit(close_progress);
 		exit_hook_registered = true;
 	}
 
@@ -232,8 +244,9 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 	 * win on ext4.
 	 */
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d%s%s %s%s\" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=%d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
+			 (user_opts.dispatcher_mode ? -1 : 0),
 			 (cluster->controldata.cat_ver >=
 			  BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? " -b" :
 			 " -c autovacuum=off -c autovacuum_freeze_max_age=2000000000",

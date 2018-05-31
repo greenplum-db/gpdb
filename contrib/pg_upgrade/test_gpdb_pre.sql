@@ -11,6 +11,11 @@ DROP TABLE IF EXISTS constraint_pt2 CASCADE;
 DROP TABLE IF EXISTS constraint_pt3 CASCADE;
 DROP TABLE IF EXISTS contest_inherit CASCADE;
 
+DROP TABLE IF EXISTS insert_tbl CASCADE;
+DROP TABLE IF EXISTS test_tsvector CASCADE;
+
+DROP DATABASE dsp3;
+
 -- Greenplum pg_upgrade doesn't support indexes on partitions since they can't
 -- be reliably dump/restored in all situations. Drop all such indexes before
 -- attempting the upgrade.

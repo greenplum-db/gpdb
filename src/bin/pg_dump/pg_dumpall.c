@@ -563,7 +563,7 @@ main(int argc, char *argv[])
 		}
 
 		/* Dump CREATE DATABASE commands */
-		if (!globals_only && !roles_only && !tablespaces_only)
+		if (binary_upgrade || (!globals_only && !roles_only && !tablespaces_only))
 			dumpCreateDB(conn);
 
 		/* Dump role/database settings */
@@ -1170,7 +1170,8 @@ dumpRoles(PGconn *conn)
 		 * for the role we are connected as, since even with --clean we will
 		 * have failed to drop it.
 		 */
-		appendPQExpBuffer(buf, "CREATE ROLE %s;\n", fmtId(rolename));
+		if (!binary_upgrade)
+			appendPQExpBuffer(buf, "CREATE ROLE %s;\n", fmtId(rolename));
 		appendPQExpBuffer(buf, "ALTER ROLE %s WITH", fmtId(rolename));
 
 		if (strcmp(PQgetvalue(res, i, i_rolsuper), "t") == 0)

@@ -1,4 +1,4 @@
-The Greenplum pg_upgrade code is based on pg_upgrade from 9.0.23 and has
+The Greenplum pg_upgrade code is based on pg_upgrade from 9.3 and has
 been extended to work with Greenplum. This README is intended to document the
 changes that have been done.
 

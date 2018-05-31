@@ -54,6 +54,13 @@ parseCommandLine(int argc, char *argv[])
 		{"retain", no_argument, NULL, 'r'},
 		{"jobs", required_argument, NULL, 'j'},
 		{"verbose", no_argument, NULL, 'v'},
+
+		/* Greenplum specific parameters */
+		{"dispatcher-mode", no_argument, NULL, 1},
+		{"progress", no_argument, NULL, '2'},
+		{"add-checksum", no_argument, NULL, '3'},
+		{"remove-checksum", no_argument, NULL, '4'},
+
 		{NULL, 0, NULL, 0}
 	};
 	int			option;			/* Command line option */
@@ -186,6 +193,37 @@ parseCommandLine(int argc, char *argv[])
 				log_opts.verbose = true;
 				break;
 
+			/*
+			 * Greenplum specific parameters
+			 */
+
+			case 1:		/* --dispatcher-mode */
+				/*
+				 * XXX: Ideally, we could tell just by looking at the data
+				 * directory, whether it's a QD node, or a QE node. You might
+				 * think that we could look at Gp_role or gp_contentid, but
+				 * alas, we pass those options on the pg_ctl command line,
+				 * they are not stored permanently in the data directory
+				 * itself, and we don't want to dig into the auxiliary
+				 * config files created by gpinitsystem. So for now, the
+				 * caller of pg_upgrade must use the --dispatcher-mode
+				 * option, when upgrading the QD node.
+				 */
+				user_opts.dispatcher_mode = true;
+				break;
+
+			case 2:		/* --progress */
+				user_opts.progress = true;
+				break;
+
+			case 3:		/* --add-checksum */
+				user_opts.checksum_mode = CHECKSUM_ADD;
+				break;
+
+			case 4:		/* --remove-checksum */
+				user_opts.checksum_mode = CHECKSUM_REMOVE;
+				break;
+
 			default:
 				pg_log(PG_FATAL,
 					   "Try \"%s --help\" for more information.\n",
@@ -218,13 +256,18 @@ parseCommandLine(int argc, char *argv[])
 							 "PGDATAOLD", "-d", "old cluster data resides");
 	check_required_directory(&new_cluster.pgdata, &new_cluster.pgconfig,
 							 "PGDATANEW", "-D", "new cluster data resides");
+
+	/* Ensure we are only adding checksums in copy mode */
+	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
+		user_opts.checksum_mode != CHECKSUM_NONE)
+		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
 }
 
 
 static void
 usage(void)
 {
-	printf(_("pg_upgrade upgrades a PostgreSQL cluster to a different major version.\n\
+	printf(_("pg_upgrade upgrades a Greenplum cluster to a different major version.\n\
 \nUsage:\n\
   pg_upgrade [OPTION]...\n\
 \n\
@@ -244,6 +287,10 @@ Options:\n\
   -u, --user=NAME               cluster superuser (default \"%s\")\n\
   -v, --verbose                 enable verbose internal logging\n\
   -V, --version                 display version information, then exit\n\
+      --dispatcher-mode         upgrade a QD node (default is QE node)\n\
+      --progress                enable progress reporting\n\
+      --remove-checksum         remove data checksums when creating new cluster\n\
+      --add-checksum            add data checksumming to the new cluster\n\
   -?, -h, --help                show this help, then exit\n\
 \n\
 Before running pg_upgrade you must:\n\
@@ -275,7 +322,7 @@ or\n"), old_cluster.port, new_cluster.port, os_info.user);
   C:\\> set PGBINNEW=newCluster/bin\n\
   C:\\> pg_upgrade\n"));
 #endif
-	printf(_("\nReport bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
 
 

@@ -30,18 +30,6 @@ static void check_partition_indexes(void);
 void
 check_greenplum(void)
 {
-	/*
-	 * Upgrading within a major version is a handy feature of pg_upgrade, but
-	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
-	 * version to be upgraded from.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 802 &&
-		GET_MAJOR_VERSION(new_cluster.major_version) <= 802)
-	{
-		pg_log(PG_FATAL,
-			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
-	}
-
 	check_external_partition();
 	check_covering_aoindex();
 	check_partition_indexes();
@@ -64,7 +52,6 @@ check_greenplum(void)
 static void
 check_external_partition(void)
 {
-	char		query[QUERY_ALLOC];
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
 	bool		found = false;
@@ -72,18 +59,11 @@ check_external_partition(void)
 
 	prep_status("Checking for external tables used in partitioning");
 
-	snprintf(output_path, sizeof(output_path), "%s/external_partitions.txt",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "external_partitions.txt");
 	/*
 	 * We need to query the inheritance catalog rather than the partitioning
 	 * catalogs since they are not available on the segments.
 	 */
-	snprintf(query, sizeof(query),
-			 "SELECT cc.relname, c.relname AS partname, c.relnamespace "
-			 "FROM   pg_inherits i "
-			 "       JOIN pg_class c ON (i.inhrelid = c.oid AND c.relstorage = '%c') "
-			 "       JOIN pg_class cc ON (i.inhparent = cc.oid);",
-			 RELSTORAGE_EXTERNAL);
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -94,7 +74,12 @@ check_external_partition(void)
 		PGconn	   *conn;
 
 		conn = connectToServer(&old_cluster, active_db->db_name);
-		res = executeQueryOrDie(conn, query);
+		res = executeQueryOrDie(conn,
+			 "SELECT cc.relname, c.relname AS partname, c.relnamespace "
+			 "FROM   pg_inherits i "
+			 "       JOIN pg_class c ON (i.inhrelid = c.oid AND c.relstorage = '%c') "
+			 "       JOIN pg_class cc ON (i.inhparent = cc.oid);",
+			 RELSTORAGE_EXTERNAL);
 
 		ntups = PQntuples(res);
 
@@ -129,9 +114,7 @@ check_external_partition(void)
 			   "| \t%s\n\n", output_path);
 	}
 	else
-	{
 		check_ok();
-	}
 }
 
 /*
@@ -176,7 +159,6 @@ check_external_partition(void)
 static void
 check_covering_aoindex(void)
 {
-	char			query[QUERY_ALLOC];
 	char			output_path[MAXPGPATH];
 	FILE		   *script = NULL;
 	bool			found = false;
@@ -184,19 +166,7 @@ check_covering_aoindex(void)
 
 	prep_status("Checking for non-covering indexes on partitioned AO tables");
 
-	snprintf(output_path, sizeof(output_path), "%s/mismatched_aopartition_indexes.txt",
-			 os_info.cwd);
-
-	snprintf(query, sizeof(query),
-			 "SELECT DISTINCT ao.relid, inh.inhrelid "
-			 "FROM   pg_catalog.pg_appendonly ao "
-			 "       JOIN pg_catalog.pg_inherits inh "
-			 "         ON (inh.inhparent = ao.relid) "
-			 "       JOIN pg_catalog.pg_appendonly aop "
-			 "         ON (inh.inhrelid = aop.relid AND aop.blkdirrelid = 0) "
-			 "       JOIN pg_catalog.pg_index i "
-			 "         ON (i.indrelid = ao.relid) "
-			 "WHERE  ao.blkdirrelid <> 0;");
+	snprintf(output_path, sizeof(output_path), "mismatched_aopartition_indexes.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -207,7 +177,16 @@ check_covering_aoindex(void)
 		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
 
 		conn = connectToServer(&old_cluster, active_db->db_name);
-		res = executeQueryOrDie(conn, query);
+		res = executeQueryOrDie(conn,
+			 "SELECT DISTINCT ao.relid, inh.inhrelid "
+			 "FROM   pg_catalog.pg_appendonly ao "
+			 "       JOIN pg_catalog.pg_inherits inh "
+			 "         ON (inh.inhparent = ao.relid) "
+			 "       JOIN pg_catalog.pg_appendonly aop "
+			 "         ON (inh.inhrelid = aop.relid AND aop.blkdirrelid = 0) "
+			 "       JOIN pg_catalog.pg_index i "
+			 "         ON (i.indrelid = ao.relid) "
+			 "WHERE  ao.blkdirrelid <> 0;");
 
 		ntups = PQntuples(res);
 
@@ -245,9 +224,7 @@ check_covering_aoindex(void)
 
 	}
 	else
-	{
 		check_ok();
-	}
 }
 
 /*
@@ -269,8 +246,7 @@ check_partition_indexes(void)
 
 	prep_status("Checking for indexes on partitioned tables");
 
-	snprintf(output_path, sizeof(output_path), "%s/partitioned_tables_indexes.txt",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "partitioned_tables_indexes.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{

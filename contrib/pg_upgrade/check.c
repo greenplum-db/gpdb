@@ -95,11 +95,31 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/*
 	 * Check for various failure cases
 	 */
+	report_progress(&old_cluster, CHECK, "Failure checks");
 	check_is_super_user(&old_cluster);
 	check_proper_datallowconn(&old_cluster);
 	check_for_prepared_transactions(&old_cluster);
 	check_for_reg_data_type_usage(&old_cluster);
 	check_for_isn_and_int8_passing_mismatch(&old_cluster);
+
+	/*
+	 * Check for various Greenplum failure cases
+	 */
+	check_greenplum();
+
+	/*
+	 * Upgrading from Greenplum 4.3.x which is based on PostgreSQL 8.2.
+	 * Upgrading from one version of 4.3.x to another 4.3.x version is not
+	 * supported.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
+	{
+		old_8_3_check_for_name_data_type_usage(&old_cluster);
+	
+		old_GPDB4_check_for_money_data_type_usage();
+		old_GPDB4_check_no_free_aoseg();
+		check_hash_partition_usage();
+	}
 
 	/* old = PG 8.3 checks? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
@@ -107,6 +127,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_8_3_check_for_name_data_type_usage(&old_cluster);
 		old_8_3_check_for_tsquery_usage(&old_cluster);
 		old_8_3_check_ltree_usage(&old_cluster);
+		check_hash_partition_usage();
 		if (user_opts.check)
 		{
 			old_8_3_rebuild_tsvector_tables(&old_cluster, true);
@@ -124,6 +145,11 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 				old_8_3_create_sequence_script(&old_cluster);
 	}
 
+	/*
+	 * GPDB_90_MERGE_FIXME: does enabling this work, we don't really support
+	 * large objects but if this works it would be nice to minimize the diff
+	 * to upstream.
+	 */
 	/* Pre-PG 9.0 had no large object permissions */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 		new_9_0_populate_pg_largeobject_metadata(&old_cluster, true);
@@ -133,7 +159,10 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * the old server is running.
 	 */
 	if (!user_opts.check)
+	{
 		generate_old_dump();
+		generate_old_oid_dump();
+	}
 
 	if (!live_check)
 		stop_postmaster(false);
@@ -206,6 +235,10 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 	 */
 	start_postmaster(&new_cluster, true);
 
+	/* old = PG 8.2/GPDB 4.3 warnings */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
+		new_gpdb5_0_invalidate_indexes();
+
 	/* old = PG 8.3 warnings? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
 	{
@@ -214,6 +247,7 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		{
 			prep_status("Adjusting sequences");
 			exec_prog(UTILITY_LOG_FILE, NULL, true,
+					  "PGOPTIONS='-c gp_session_role=utility' "
 					  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
 					  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 					  sequence_script_file_name);
@@ -226,6 +260,7 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		old_8_3_invalidate_bpchar_pattern_ops_indexes(&new_cluster, false);
 	}
 
+	/* GPDB_90_MERGE_FIXME: See earlier comment on large objects */
 	/* Create dummy large object permissions for old < PG 9.0? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
 		new_9_0_populate_pg_largeobject_metadata(&new_cluster, false);
@@ -275,16 +310,34 @@ check_cluster_versions(void)
 	new_cluster.major_version = get_major_server_version(&new_cluster);
 
 	/*
+	 * Upgrading within a major version is a handy feature of pg_upgrade, but
+	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
+	 * version to be upgraded from.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
+		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
+	{
+		pg_log(PG_FATAL,
+			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
+	}
+
+	/*
 	 * We allow upgrades from/to the same major version for alpha/beta
 	 * upgrades
 	 */
 
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 803)
-		pg_log(PG_FATAL, "This utility can only upgrade from PostgreSQL version 8.3 and later.\n");
+	/*
+	 * Upgrading from anything older than an 8.2 based Greenplum is not
+	 * supported. TODO: This needs to be amended to check for the actual
+	 * 4.3.x version we target and not a blanket 8.2 check, but for now
+	 * this will cover most cases.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
+		pg_log(PG_FATAL, "This utility can only upgrade from Greenplum version 4.3.x and later.\n");
 
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
-		pg_log(PG_FATAL, "This utility can only upgrade to PostgreSQL version %s.\n",
+		pg_log(PG_FATAL, "This utility can only upgrade to Greenplum version %s.\n",
 			   PG_MAJORVERSION);
 
 	/*
@@ -293,7 +346,7 @@ check_cluster_versions(void)
 	 * versions.
 	 */
 	if (old_cluster.major_version > new_cluster.major_version)
-		pg_log(PG_FATAL, "This utility cannot be used to downgrade to older major PostgreSQL versions.\n");
+		pg_log(PG_FATAL, "This utility cannot be used to downgrade to older major Greenplum versions.\n");
 
 	/* get old and new binary versions */
 	get_bin_version(&old_cluster);
@@ -635,11 +688,6 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 }
 
 
-/*
- *	check_is_super_user()
- *
- *	Make sure we are the super-user.
- */
 static void
 check_proper_datallowconn(ClusterInfo *cluster)
 {
@@ -1032,11 +1080,15 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 								"			'pg_catalog.regoperator'::pg_catalog.regtype, "
 		/* regclass.oid is preserved, so 'regclass' is OK */
 		/* regtype.oid is preserved, so 'regtype' is OK */
-		"			'pg_catalog.regconfig'::pg_catalog.regtype, "
-								"			'pg_catalog.regdictionary'::pg_catalog.regtype) AND "
+								" %s "
+								" ) AND "
 								"		c.relnamespace = n.oid AND "
 							  "		n.nspname != 'pg_catalog' AND "
-						 "		n.nspname != 'information_schema'");
+						 "		n.nspname != 'information_schema'",
+						GET_MAJOR_VERSION(old_cluster.major_version == 802) ?
+							"0" :
+							"'pg_catalog.regconfig'::pg_catalog.regtype, "
+							"'pg_catalog.regdictionary'::pg_catalog.regtype ");
 
 		ntups = PQntuples(res);
 		i_nspname = PQfnumber(res, "nspname");
@@ -1105,7 +1157,7 @@ get_bin_version(ClusterInfo *cluster)
 	if (strchr(cmd_output, '\n') != NULL)
 		*strchr(cmd_output, '\n') = '\0';
 
-	if (sscanf(cmd_output, "%*s %*s %d.%d", &pre_dot, &post_dot) != 2)
+	if (sscanf(cmd_output, "%*s %*s %*s %d.%d", &pre_dot, &post_dot) != 2)
 		pg_log(PG_FATAL, "could not get version from %s\n", cmd);
 
 	cluster->bin_version = (pre_dot * 100 + post_dot) * 100;
@@ -1129,7 +1181,7 @@ get_canonical_locale_name(int category, const char *locale)
 		pg_log(PG_FATAL, "failed to get the current locale\n");
 
 	/* 'save' may be pointing at a modifiable scratch variable, so copy it. */
-	save = pg_strdup(save);
+	save = (char *) pg_strdup(save);
 
 	/* set the locale with setlocale, to see if it accepts it. */
 	res = setlocale(category, locale);

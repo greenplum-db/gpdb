@@ -2,12 +2,16 @@
 
 # contrib/pg_upgrade/test_gpdb.sh
 #
-# Test driver for upgrading a Greenplum cluster with pg_upgrade. For test data,
-# this script assumes the gpdemo cluster in gpAux/gpdemo/datadirs contains the
-# end-state of an ICW test run. Performs a pg_dumpall, initializes a parallel
-# gpdemo cluster and upgrades it against the ICW cluster and then performs
-# another pg_dumpall. If the two dumps match then the upgrade created a new
-# identical copy of the cluster.
+# Test driver for upgrading a Greenplum cluster with pg_upgrade within the same
+# major version. Upgrading within the same major version is obviously not
+# testing the full functionality of pg_upgrade, but it's a good compromise for
+# being able to test pg_upgrade in a normal CI pipeline. Testing an actual
+# major version upgrade need another setup. For test data, this script assumes
+# the gpdemo cluster in gpAux/gpdemo/datadirs contains the end-state of an ICW
+# test run. The test first performs a pg_dumpall, then initializes a parallel
+# gpdemo cluster and upgrades it against the ICW cluster. After the upgrade it
+# performs another pg_dumpall, if the two dumps match then the upgrade created
+# a new identical copy of the cluster.
 
 OLD_BINDIR=
 OLD_DATADIR=
@@ -208,18 +212,19 @@ while getopts ":o:b:sCkKmr" opt; do
 			;;
 		k )
 			add_checksums=1
-			PGUPGRADE_OPTS=' -J '
+			PGUPGRADE_OPTS+=' --add-checksum '
 			;;
 		K )
 			remove_checksums=1
 			DEMOCLUSTER_OPTS=' -K '
-			PGUPGRADE_OPTS=' -j '
+			PGUPGRADE_OPTS+=' --remove-checksum '
 			;;
 		m )
 			mirrors=1
 			;;
 		r )
 			retain_tempdir=1
+			PGUPGRADE_OPTS+=' --retain '
 			;;
 		* )
 			usage
@@ -231,6 +236,9 @@ if [ -z "${OLD_DATADIR}" ] || [ -z "${NEW_BINDIR}" ]; then
 	usage
 fi
 
+# This should be rejected by pg_upgrade as well, but this test is not concerned
+# with testing handling incorrect option handling in pg_upgrade so we'll error
+# out early instead.
 if [ ! -z "${add_checksums}"] && [ ! -z "${remove_checksums}" ]; then
 	echo "ERROR: adding and removing checksums are mutually exclusive"
 	exit 1

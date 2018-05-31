@@ -133,6 +133,7 @@ pg_log(eLogType type, char *fmt,...)
 		case PG_FATAL:
 			printf("\n%s", _(message));
 			printf("Failure, exiting\n");
+			close_progress();
 			exit(1);
 			break;
 

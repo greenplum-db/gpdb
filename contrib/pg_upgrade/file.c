@@ -32,6 +32,8 @@ const char *
 copyAndUpdateFile(pageCnvCtx *pageConverter,
 				  const char *src, const char *dst, bool force)
 {
+	report_progress(NULL, FILE_COPY, "Copy \"%s\" to \"%s\"", src, dst);
+
 	if (pageConverter == NULL)
 	{
 #ifndef WIN32
@@ -117,6 +119,8 @@ const char *
 linkAndUpdateFile(pageCnvCtx *pageConverter,
 				  const char *src, const char *dst)
 {
+	report_progress(NULL, FILE_COPY, "Link \"%s\" to \"%s\"", src, dst);
+
 	if (pageConverter != NULL)
 		return "Cannot in-place update this cluster, page-by-page conversion is required";
 

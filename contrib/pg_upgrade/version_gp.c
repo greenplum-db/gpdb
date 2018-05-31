@@ -12,11 +12,12 @@
 /*
  * old_8_3_check_for_money_data_type_usage()
  *	8.2 -> 8.3
- *	Money data type was widened from 32 to 64 bits. It's incompatible, and we have no
- *  support for converting it.
+ *	Money data type was widened from 32 to 64 bits. It's incompatible, and we
+ *	have no support for converting it. This function is hardcoded to work on
+ *	the old_cluster since it's never relevant to run on the new_cluster.
  */
 void
-old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster)
+old_GPDB4_check_for_money_data_type_usage(void)
 {
 	int			dbnum;
 	FILE	   *script = NULL;
@@ -25,10 +26,9 @@ old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster)
 
 	prep_status("Checking for invalid 'money' user columns");
 
-	snprintf(output_path, sizeof(output_path), "%s/tables_using_money.txt",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "tables_using_money.txt");
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -37,12 +37,9 @@ old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster)
 		int			i_nspname,
 					i_relname,
 					i_attname;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
 
-		/*
-		 * 
-		 */
 		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname, a.attname "
 								"FROM	pg_catalog.pg_class c, "
@@ -109,7 +106,7 @@ old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster)
  *	all 127 segfiles.
  */
 void
-old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster)
+old_GPDB4_check_no_free_aoseg(void)
 {
 	int			dbnum;
 	char		output_path[MAXPGPATH];
@@ -118,10 +115,9 @@ old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster)
 
 	prep_status("Checking for AO tables with no free segfiles");
 
-	snprintf(output_path, sizeof(output_path), "%s/tables_no_free_aosegs.txt",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "tables_no_free_aosegs.txt");
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -130,8 +126,8 @@ old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster)
 		int			i_nspname,
 					i_relname,
 					i_attname;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
 
 		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname, a.attname "
@@ -221,8 +217,7 @@ check_hash_partition_usage(void)
 
 	prep_status("Checking for hash partitioned tables");
 
-	snprintf(output_path, sizeof(output_path), "%s/hash_partitioned_tables.txt",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "hash_partitioned_tables.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -290,7 +285,7 @@ check_hash_partition_usage(void)
  * mark all indexes as invalid.
  */
 void
-new_gpdb5_0_invalidate_indexes(bool check_mode)
+new_gpdb5_0_invalidate_indexes(void)
 {
 	int			dbnum;
 	FILE	   *script = NULL;
@@ -298,10 +293,9 @@ new_gpdb5_0_invalidate_indexes(bool check_mode)
 
 	prep_status("Invalidating indexes in new cluster");
 
-	snprintf(output_path, sizeof(output_path), "%s/reindex_all.sql",
-			 os_info.cwd);
+	snprintf(output_path, sizeof(output_path), "reindex_all.sql");
 
-	if (!check_mode)
+	if (!user_opts.check)
 	{
 		if ((script = fopen(output_path, "w")) == NULL)
 			pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
@@ -312,7 +306,6 @@ new_gpdb5_0_invalidate_indexes(bool check_mode)
 	{
 		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
 		PGconn	   *conn = connectToServer(&new_cluster, olddb->db_name);
-		char		query[QUERY_ALLOC];
 
 		/*
 		 * GPDB doesn't allow hacking the catalogs without setting
@@ -325,12 +318,12 @@ new_gpdb5_0_invalidate_indexes(bool check_mode)
 		 * we'll know we are allowed to change allow_system_table_mods
 		 * which is required
 		 */
-		if (!check_mode)
+		if (!user_opts.check)
 		{
-			snprintf(query, sizeof(query),
-					 "UPDATE pg_index SET indisvalid = false WHERE indexrelid >= %u",
-					 FirstNormalObjectId);
-			PQclear(executeQueryOrDie(conn, query));
+			PQclear(executeQueryOrDie(conn,
+									  "UPDATE pg_index SET indisvalid = false "
+									  "WHERE indexrelid >= %u",
+									  FirstNormalObjectId));
 
 			fprintf(script, "\\connect %s\n",
 					quote_identifier(olddb->db_name));
@@ -340,10 +333,10 @@ new_gpdb5_0_invalidate_indexes(bool check_mode)
 		PQfinish(conn);
 	}
 
-	if (!check_mode)
+	if (!user_opts.check)
 		fclose(script);
 	report_status(PG_WARNING, "warning");
-	if (check_mode)
+	if (user_opts.check)
 		pg_log(PG_WARNING, "\n"
 			   "| All indexes have different internal formats\n"
 			   "| between your old and new clusters so they must\n"
@@ -368,15 +361,15 @@ new_gpdb5_0_invalidate_indexes(bool check_mode)
  * Hence, mark all bitmap indexes as invalid.
  */
 void
-new_gpdb_invalidate_bitmap_indexes(bool check_mode)
+new_gpdb_invalidate_bitmap_indexes(void)
 {
 	int			dbnum;
 
-	prep_status("Invalidating indexes in new cluster");
+	prep_status("Invalidating bitmap indexes in new cluster");
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)
 	{
-		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *olddb = &new_cluster.dbarr.dbs[dbnum];
 		PGconn	   *conn = connectToServer(&new_cluster, olddb->db_name);
 
 		/*
@@ -386,14 +379,18 @@ new_gpdb_invalidate_bitmap_indexes(bool check_mode)
 		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
 
 		/*
-		 * check_mode doesn't do much interesting for this but at least
+		 * check mode doesn't do much interesting for this but at least
 		 * we'll know we are allowed to change allow_system_table_mods
 		 * which is required
 		 */
-		if (!check_mode)
+		if (!user_opts.check)
 		{
 			PQclear(executeQueryOrDie(conn,
-									  "UPDATE pg_index SET indisvalid = false FROM pg_class c WHERE c.oid = indexrelid AND indexrelid >= %u AND relam = 3013;",
+									  "UPDATE pg_index SET indisvalid = false "
+									  "  FROM pg_class c "
+									  " WHERE c.oid = indexrelid AND "
+									  "       indexrelid >= %u AND "
+									  "       relam = 3013;",
 									  FirstNormalObjectId));
 		}
 		PQfinish(conn);
@@ -412,7 +409,6 @@ new_gpdb_invalidate_bitmap_indexes(bool check_mode)
 Oid *
 get_numeric_types(PGconn *conn)
 {
-	char		query[QUERY_ALLOC];
 	PGresult   *res;
 	Oid		   *result;
 	int			result_count = 0;
@@ -441,14 +437,12 @@ get_numeric_types(PGconn *conn)
 	 */
 	while (iterator < result_count && result[iterator] != InvalidOid)
 	{
-		snprintf(query, sizeof(query),
+		res = executeQueryOrDie(conn,
 				 "SELECT typ.oid AS typoid, base.oid AS baseoid "
 				 "FROM pg_type base "
-				 "  JOIN pg_type typ ON base.oid = typ.typbasetype "
+				 "     JOIN pg_type typ ON base.oid = typ.typbasetype "
 				 "WHERE base.typbasetype = '%u'::pg_catalog.oid;",
 				 result[iterator++]);
-
-		res = executeQueryOrDie(conn, query);
 
 		if (PQntuples(res) > 0)
 		{

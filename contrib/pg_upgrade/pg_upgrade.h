@@ -2,6 +2,7 @@
  *	pg_upgrade.h
  *
  *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
  *	contrib/pg_upgrade/pg_upgrade.h
  */
 
@@ -10,6 +11,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
+#include "postgres.h"
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
@@ -23,6 +25,8 @@
 #define LINE_ALLOC			4096
 #define QUERY_ALLOC			8192
 
+#define NUMERIC_ALLOC 100
+
 #define MIGRATOR_API_VERSION	1
 
 #define MESSAGE_WIDTH		60
@@ -32,6 +36,14 @@
 /* contains both global db information and CREATE DATABASE commands */
 #define GLOBALS_DUMP_FILE	"pg_upgrade_dump_globals.sql"
 #define DB_DUMP_FILE_MASK	"pg_upgrade_dump_%u.custom"
+
+#define GLOBALS_OIDS_DUMP_FILE	"pg_upgrade_dump_globals_oids.sql"
+#define DB_OIDS_DUMP_FILE_MASK	"pg_upgrade_dump_%u_oids.sql"
+
+/* needs to be kept in sync with pg_class.h */
+#define RELSTORAGE_EXTERNAL	'x'
+#define RELSTORAGE_AOROWS	'a'
+#define RELSTORAGE_AOCOLS	'c'
 
 #define DB_DUMP_LOG_FILE_MASK	"pg_upgrade_dump_%u.log"
 #define SERVER_LOG_FILE		"pg_upgrade_server.log"
@@ -100,7 +112,8 @@ extern char *output_files[];
 /* OID system catalog preservation added during PG 9.0 development */
 #define TABLE_SPACE_SUBDIRS_CAT_VER 201001111
 /* postmaster/postgres -b (binary_upgrade) flag added during PG 9.1 development */
-#define BINARY_UPGRADE_SERVER_FLAG_CAT_VER 201104251
+/* In GPDB, it was introduced during GPDB 5.0 development. */
+#define BINARY_UPGRADE_SERVER_FLAG_CAT_VER 301607301
 /*
  *	Visibility map changed with this 9.2 commit,
  *	8f9fe6edce358f7904e0db119416b4d1080a83aa; pick later catalog version.
@@ -112,8 +125,73 @@ extern char *output_files[];
  * ("Improve concurrency of foreign key locking") which also updated catalog
  * version to this value.  pg_upgrade behavior depends on whether old and new
  * server versions are both newer than this, or only the new one is.
- */
+ *
+ * GPDB_93_MERGE_FIXME
 #define MULTIXACT_FORMATCHANGE_CAT_VER 201301231
+ */
+
+/*
+ * Extra information stored for each Append-only table.
+ * This is used to transfer the information from the auxiliary
+ * AO table to the new cluster.
+ */
+
+/* To hold contents of pg_visimap_<oid> */
+typedef struct
+{
+	int			segno;
+	int64		first_row_no;
+	char	   *visimap;		/* text representation of the "bit varying" field */
+} AOVisiMapInfo;
+
+typedef struct
+{
+	int			segno;
+	int			columngroup_no;
+	int64		first_row_no;
+	char	   *minipage;		/* text representation of the "bit varying" field */
+} AOBlkDir;
+
+/* To hold contents of pg_aoseg_<oid> */
+typedef struct
+{
+	int			segno;
+	int64		eof;
+	int64		tupcount;
+	int64		varblockcount;
+	int64		eofuncompressed;
+	int64		modcount;
+	int16		version;
+	int16		state;
+} AOSegInfo;
+
+/* To hold contents of pf_aocsseg_<oid> */
+typedef struct
+{
+	int         segno;
+	int64		tupcount;
+	int64		varblockcount;
+	char       *vpinfo;
+	int64		modcount;
+	int16		state;
+	int16		version;
+} AOCSSegInfo;
+
+typedef struct
+{
+	int16		attlen;
+	char		attalign;
+	bool		is_numeric;
+} AttInfo;
+ 
+typedef enum
+{
+	HEAP,
+	AO,
+	AOCS,
+	FSM
+} RelType;
+
 
 /*
  * Each relation is represented by a relinfo structure.
@@ -124,9 +202,27 @@ typedef struct
 	char	   *nspname;		/* namespace name */
 	char	   *relname;		/* relation name */
 	Oid			reloid;			/* relation oid */
+	char		relstorage;
 	Oid			relfilenode;	/* relation relfile node */
 	/* relation tablespace path, or "" for the cluster default */
 	char		tablespace[MAXPGPATH];
+
+	RelType		reltype;
+
+	/* Extra information for append-only tables */
+	AOSegInfo  *aosegments;
+	AOCSSegInfo *aocssegments;
+	int			naosegments;
+	AOVisiMapInfo *aovisimaps;
+	int			naovisimaps;
+	AOBlkDir   *aoblkdirs;
+	int			naoblkdirs;
+
+	/* Extra information for heap tables */
+	bool		gpdb4_heap_conversion_needed;
+	bool		has_numerics;
+	AttInfo	   *atts;
+	int			natts;
 } RelInfo;
 
 typedef struct
@@ -156,6 +252,16 @@ typedef struct
 	/* the rest are used only for logging and error reporting */
 	char	   *nspname;		/* namespaces */
 	char	   *relname;
+
+	bool		missing_seg0_ok;
+
+	RelType		type;			/* Type of relation */
+
+	/* Extra information for heap tables */
+	bool		gpdb4_heap_conversion_needed;
+	bool		has_numerics;
+	AttInfo	   *atts;
+	int			natts;
 } FileNameMap;
 
 /*
@@ -167,6 +273,8 @@ typedef struct
 	char	   *db_name;		/* database name */
 	char		db_tblspace[MAXPGPATH]; /* database default tablespace path */
 	RelInfoArr	rel_arr;		/* array of all user relinfos */
+
+	char	   *reserved_oids;	/* as a string */
 } DbInfo;
 
 typedef struct
@@ -205,6 +313,12 @@ typedef struct
 	char	   *lc_collate;
 	char	   *lc_ctype;
 	char	   *encoding;
+	/*
+	 * GPDB_93_MERGE_FIXME: the below two variables are replaced by
+	 * nextxlogfile in 9.3.
+	 */
+	uint32		nxtlogseg;
+	uint32		logid;
 } ControlData;
 
 /*
@@ -215,6 +329,16 @@ typedef enum
 	TRANSFER_MODE_COPY,
 	TRANSFER_MODE_LINK
 } transferMode;
+
+/*
+ * Enumeration to denote checksum modes
+ */
+typedef enum
+{
+	CHECKSUM_NONE = 0,
+	CHECKSUM_ADD,
+	CHECKSUM_REMOVE
+} checksumMode;
 
 /*
  * Enumeration to denote pg_log modes
@@ -228,6 +352,20 @@ typedef enum
 	PG_FATAL
 } eLogType;
 
+/*
+ * Enumeration for operations in the progress report
+ */
+typedef enum
+{
+	CHECK,
+	SCHEMA_DUMP,
+	SCHEMA_RESTORE,
+	FILE_MAP,
+	FILE_COPY,
+	FIXUP,
+	ABORT,
+	DONE
+} progress_type;
 
 typedef long pgpid_t;
 
@@ -256,6 +394,8 @@ typedef struct
 	Oid			install_role_oid;		/* OID of connected role */
 	Oid			role_count;		/* number of roles defined in the cluster */
 	char	   *tablespace_suffix;		/* directory specification */
+
+	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
 } ClusterInfo;
 
 
@@ -279,6 +419,10 @@ typedef struct
 								 * changes */
 	transferMode transfer_mode; /* copy files or link them? */
 	int			jobs;
+
+	bool		progress;
+	bool		dispatcher_mode;
+	checksumMode checksum_mode;
 } UserOpts;
 
 
@@ -489,3 +633,68 @@ void parallel_transfer_all_new_dbs(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 							  char *old_pgdata, char *new_pgdata,
 							  char *old_tablespace);
 bool		reap_child(bool wait_for_child);
+
+/*
+ * Hack to make backend macros that check for assertions to work.
+ */
+#ifdef AssertMacro
+#undef AssertMacro
+#endif
+#define AssertMacro(condition) ((void) true)
+#ifdef Assert
+#undef Assert
+#endif
+#define Assert(condition) ((void) (true || (condition)))
+
+/* aotable.c */
+
+void		restore_aosegment_tables(void);
+
+/* gpdb4_heap_convert.c */
+
+const char *convert_gpdb4_heap_file(const char *src, const char *dst,
+									bool has_numerics, AttInfo *atts, int natts);
+void		finish_gpdb4_page_converter(void);
+
+/* file_gp.c */
+
+void copy_distributedlog(void);
+const char * rewriteHeapPageChecksum( const char *fromfile, const char *tofile,
+					 const char *schemaName, const char *relName);
+
+/* version_old_gpdb4.c */
+
+void old_GPDB4_check_for_money_data_type_usage(void);
+void old_GPDB4_check_no_free_aoseg(void);
+void check_hash_partition_usage(void);
+void new_gpdb5_0_invalidate_indexes(void);
+void new_gpdb_invalidate_bitmap_indexes(void);
+Oid *get_numeric_types(PGconn *conn);
+
+/* oid_dump.c */
+
+void dump_new_oids(void);
+void get_old_oids(void);
+void generate_old_oid_dump(void);
+
+/* check_gp.c */
+
+void check_greenplum(void);
+
+/* reporting.c */
+
+void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...);
+void close_progress(void);
+
+/*
+ * GPDB_93_MERGE_FIXME: Remove these local definitions when 8396447cdbdff0b62
+ * is merged.
+ */
+
+/* fe_memutils.c (which is src/common/fe_memutils.c in 9.3) */
+void *pg_malloc(size_t size);
+void *pg_malloc0(size_t size);
+void *pg_realloc(void *ptr, size_t size);
+char *pg_strdup(const char *in);
+void pg_free(void *ptr);
+

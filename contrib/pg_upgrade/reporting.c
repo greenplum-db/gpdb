@@ -75,7 +75,7 @@ report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 	char			filename[MAXPGPATH];
 	unsigned long	ts;
 
-	if (!log_opts.progress)
+	if (!user_opts.progress)
 		return;
 
 	ts = epoch_us();
@@ -86,10 +86,10 @@ report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 
 	if (!progress_file)
 	{
-		snprintf(filename, sizeof(filename), "%s/%d.inprogress",
-				 os_info.cwd, ++progress_id);
+		snprintf(filename, sizeof(filename), "%d.inprogress", ++progress_id);
 		if ((progress_file = fopen(filename, "w")) == NULL)
-			pg_log(PG_FATAL, "Could not create progress file:  %s\n", filename);
+			pg_log(PG_FATAL, "Could not create progress file:  %s\n",
+				   filename);
 	}
 
 	fprintf(progress_file, "%lu;%s;%s;%s;\n",
@@ -112,11 +112,11 @@ close_progress(void)
 	char	old[MAXPGPATH];
 	char	new[MAXPGPATH];
 
-	if (!log_opts.progress || !progress_file)
+	if (!user_opts.progress || !progress_file)
 		return;
 
-	snprintf(old, sizeof(old), "%s/%d.inprogress", os_info.cwd, progress_id);
-	snprintf(new, sizeof(new), "%s/%d.done", os_info.cwd, progress_id);
+	snprintf(old, sizeof(old), "%d.inprogress", progress_id);
+	snprintf(new, sizeof(new), "%d.done", progress_id);
 
 	fclose(progress_file);
 	progress_file = NULL;

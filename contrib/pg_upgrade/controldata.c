@@ -40,9 +40,11 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	bool		got_xid = false;
 	bool		got_oid = false;
 	bool		got_nextxlogfile = false;
+	/* GPDB_93_MERGE_FIXME
 	bool		got_multi = false;
 	bool		got_mxoff = false;
 	bool		got_oldestmulti = false;
+	*/
 	bool		got_log_id = false;
 	bool		got_log_seg = false;
 	bool		got_tli = false;
@@ -132,8 +134,13 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		got_float8_pass_by_value = true;
 	}
 
-	/* Only in <= 9.2 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 902)
+	/*
+	 * In PostgreSQL, checksums were introduced in 9.3 so the test for checksum
+	 * version in upstream applies to <= 9.2. Greenplum backported checksums
+	 * into 5.x which is based on PostgreSQL 8.3 so this test need to go
+	 * against 8.2 instead.
+	 */
+	if (GET_MAJOR_VERSION(cluster->major_version) == 802)
 	{
 		cluster->controldata.data_checksum_version = 0;
 		got_data_checksum_version = true;
@@ -208,6 +215,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 
 			p++;				/* removing ':' char */
 			logid = str2uint(p);
+			cluster->controldata.logid = logid;
 			got_log_id = true;
 		}
 		else if ((p = strstr(bufin, "First log file segment after reset:")) != NULL)
@@ -219,8 +227,35 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 
 			p++;				/* removing ':' char */
 			segno = str2uint(p);
+			cluster->controldata.nxtlogseg = segno;
 			got_log_seg = true;
 		}
+		/* GPDB 4.3 (and PostgreSQL 8.2) wording of the above two. */
+		else if ((p = strstr(bufin, "Current log file ID:")) != NULL)
+		{
+			p = strchr(p, ':');
+
+			if (p == NULL || strlen(p) <= 1)
+				pg_log(PG_FATAL, "%d: controldata retrieval problem\n", __LINE__);
+
+			p++;				/* removing ':' char */
+			logid = str2uint(p);
+			cluster->controldata.logid = logid;
+			got_log_id = true;
+		}
+		else if ((p = strstr(bufin, "Next log file segment:")) != NULL)
+		{
+			p = strchr(p, ':');
+
+			if (p == NULL || strlen(p) <= 1)
+				pg_log(PG_FATAL, "%d: controldata retrieval problem\n", __LINE__);
+
+			p++;				/* removing ':' char */
+			segno = str2uint(p);
+			cluster->controldata.nxtlogseg = segno;
+			got_log_seg = true;
+		}
+		/*---*/
 		else if ((p = strstr(bufin, "Latest checkpoint's TimeLineID:")) != NULL)
 		{
 			p = strchr(p, ':');
@@ -261,6 +296,8 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			cluster->controldata.chkpnt_nxtoid = str2uint(p);
 			got_oid = true;
 		}
+		/* GPDB_93_MERGE_FIXME */
+#if 0
 		else if ((p = strstr(bufin, "Latest checkpoint's NextMultiXactId:")) != NULL)
 		{
 			p = strchr(p, ':');
@@ -294,6 +331,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			cluster->controldata.chkpnt_nxtmxoff = str2uint(p);
 			got_mxoff = true;
 		}
+#endif
 		else if ((p = strstr(bufin, "Maximum data alignment:")) != NULL)
 		{
 			p = strchr(p, ':');
@@ -493,12 +531,12 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 
 	/* verify that we got all the mandatory pg_control data */
 	if (!got_xid || !got_oid ||
-		!got_multi || !got_mxoff ||
+		/*!got_multi || GPDB_93_MERGE_FIXME !got_mxoff ||
 		(!got_oldestmulti &&
-		 cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER) ||
+		 cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER) || */
 		(!live_check && !got_nextxlogfile) ||
 		!got_align || !got_blocksz || !got_largesz || !got_walsz ||
-		!got_walseg || !got_ident || !got_index || !got_toast ||
+		!got_walseg || !got_ident || !got_index || /* !got_toast || */
 		!got_date_is_int || !got_float8_pass_by_value || !got_data_checksum_version)
 	{
 		pg_log(PG_REPORT,
@@ -511,6 +549,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		if (!got_oid)
 			pg_log(PG_REPORT, "  latest checkpoint next OID\n");
 
+		/* GPDB_93_MERGE_FIXME
 		if (!got_multi)
 			pg_log(PG_REPORT, "  latest checkpoint next MultiXactId\n");
 
@@ -520,6 +559,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		if (!got_oldestmulti &&
 			cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER)
 			pg_log(PG_REPORT, "  latest checkpoint oldest MultiXactId\n");
+		*/
 
 		if (!live_check && !got_nextxlogfile)
 			pg_log(PG_REPORT, "  first WAL segment after reset\n");
@@ -545,8 +585,10 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		if (!got_index)
 			pg_log(PG_REPORT, "  maximum number of indexed columns\n");
 
+#if 0	/* not mandatory in GPDB, see comment in check_control_data() */
 		if (!got_toast)
 			pg_log(PG_REPORT, "  maximum TOAST chunk size\n");
+#endif
 
 		if (!got_date_is_int)
 			pg_log(PG_REPORT, "  dates/times are integers?\n");
@@ -603,8 +645,18 @@ check_control_data(ControlData *oldctrl,
 		pg_log(PG_FATAL,
 			   "old and new pg_controldata maximum indexed columns are invalid or do not match\n");
 
+	/*
+	 * PostgreSQL's pg_upgrade checks for the maximum TOAST chunk size, because
+	 * the tuptoaster code assumes all chunks to have the same size. GPDB's
+	 * tuptoaster code has been modified to work with any chunk size, to
+	 * support upgrading from GPDB 4.3 to 5.0, because the chunk size was
+	 * changed between those releases (that is, between PostgreSQL 8.2 and
+	 * 8.3). Hence, 'got_toast' is not mandatory in GPDB.
+	 * TODO: Should we only consider got_toast not mandatory for upgrades to
+	 * 5.x?
+	 */
 	if (oldctrl->toast == 0 || oldctrl->toast != newctrl->toast)
-		pg_log(PG_FATAL,
+		pg_log(PG_WARNING,
 			   "old and new pg_controldata maximum TOAST chunk sizes are invalid or do not match\n");
 
 	if (oldctrl->date_is_int != newctrl->date_is_int)
@@ -622,14 +674,27 @@ check_control_data(ControlData *oldctrl,
 	}
 
 	/*
-	 * We might eventually allow upgrades from checksum to no-checksum
-	 * clusters.
+	 * Check for allowed combinations of data checksums. PostgreSQL only allow
+	 * upgrades where the checksum settings match, in Greenplum we can however
+	 * set or remove checksums during the upgrade.
 	 */
-	if (oldctrl->data_checksum_version != newctrl->data_checksum_version)
-	{
-		pg_log(PG_FATAL,
-			   "old and new pg_controldata checksum versions are invalid or do not match\n");
-	}
+	if (oldctrl->data_checksum_version == 0 &&
+		newctrl->data_checksum_version != 0 &&
+		user_opts.checksum_mode != CHECKSUM_ADD)
+		pg_log(PG_FATAL, "old cluster does not use data checksums but the new one does\n");
+	else if (oldctrl->data_checksum_version != 0 &&
+			 newctrl->data_checksum_version == 0 &&
+			 user_opts.checksum_mode != CHECKSUM_REMOVE)
+		pg_log(PG_FATAL, "old cluster uses data checksums but the new one does not\n");
+	else if (oldctrl->data_checksum_version == newctrl->data_checksum_version &&
+			 user_opts.checksum_mode != CHECKSUM_NONE)
+		pg_log(PG_FATAL, "old and new cluster data checksum configuration match, cannot %s data checksums\n",
+				 (user_opts.checksum_mode == CHECKSUM_ADD ? "add" : "remove"));
+	else if (oldctrl->data_checksum_version != 0 && user_opts.checksum_mode == CHECKSUM_ADD)
+		pg_log(PG_FATAL, "--add-checksum option not supported for old cluster which uses data checksums\n");
+	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version
+			 && user_opts.checksum_mode == CHECKSUM_NONE)
+		pg_log(PG_FATAL, "old and new cluster pg_controldata checksum versions do not match\n");
 }
 
 

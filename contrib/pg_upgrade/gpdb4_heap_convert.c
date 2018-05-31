@@ -273,7 +273,7 @@ flush_overflow_page(void)
 
 		if (write(curr_dstfd, overflow_buf, BLCKSZ) != BLCKSZ)
 			pg_log(PG_FATAL, "can't write overflow page to destination\n");
-		pg_log(PG_DEBUG, "flushed overflow block\n");
+		pg_log(PG_VERBOSE, "flushed overflow block\n");
 
 		overflow_blkno++;
 	}
