@@ -301,7 +301,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
            sum is less than 100, Greenplum Database allocates any unreserved memory to a
            resource group global shared memory pool.</p>
          <p>Resource group global shared memory
-           is available only to role-based groups.</p>
+           is available only to resource groups that you configure with the <codeph>vmtracker</codeph> memory auditor.</p>
          <p>When available, Greenplum Database allocates global shared memory
           to a transaction after first allocating slot and resource group shared
           memory. Greenplum Database allocates resource group global shared memory to
