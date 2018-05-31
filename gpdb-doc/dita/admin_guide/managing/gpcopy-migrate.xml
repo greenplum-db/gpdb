@@ -27,8 +27,9 @@
         <li><codeph>gpcopy</codeph> performs significantly faster than <codeph>gptransfer</codeph>
           when copying large amounts of data.</li>
         <li>The <codeph>gpcopy</codeph>
-          <codeph>--truncate</codeph> option provides the ability to migrate from Pivotal Greenplum
-          Database 4.x to 5.x on the hardware, requiring minimal free space available.</li>
+          <codeph>--truncate-source-after</codeph> option provides the ability to migrate from
+          Pivotal Greenplum Database 4.x to 5.x on the hardware, requiring minimal free space
+          available.</li>
         <li><codeph>gpcopy</codeph> provides more detailed reporting and summary information about
           all aspects of the copy operation.</li>
         <li>
@@ -146,28 +147,31 @@
         between two clusters on the same hardware, you would need enough free disk space to
         accommodate over 5 times the original data set (2 full copies of the primary and mirror data
         sets, plus the original backup data in ASCII format). The <codeph>gpcopy</codeph>
-        <codeph>--truncate</codeph> option enables you to migrate data from one cluster to another
-        on the same hardware, requiring only a minimum of free disk space. The
-          <codeph>--truncate</codeph> option instructs the utility to truncate the source tables
-        after successfully copying their data to the destination cluster. </p>
-      <p>If you choose to use <codeph>--truncate</codeph>, consider the following:<ul
+        <codeph>--truncate-source-after</codeph> option enables you to migrate data from one cluster
+        to another on the same hardware, requiring only a minimum of free disk space. The
+          <codeph>--truncate-source-after</codeph> option instructs the utility to truncate the
+        source tables after successfully copying their data and validating it in the destination
+        cluster. </p>
+      <p>If you choose to use <codeph>--truncate-source-after</codeph>, consider the following:<ul
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
-              <codeph>--truncate</codeph>.</li>
-          <li>Use the <codeph>--validate</codeph> option with <codeph>--truncate</codeph> to ensure
-            that data is successfully copied before source tables are truncated.</li>
-          <li>If you use <codeph>--truncate</codeph> to migrate data on shared hardware, also
-            include the <codeph>--no-compression</codeph> option to avoid the overhead cost of
-            compressing and uncompressing data that does not move across the network.</li>
+              <codeph>--truncate-source-after</codeph>.</li>
+          <li>Use the <codeph>--validate</codeph> option with
+              <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
+            before source tables are truncated.</li>
+          <li>If you use <codeph>--truncate-source-after</codeph> to migrate data on shared
+            hardware, also include the <codeph>--no-compression</codeph> option to avoid the
+            overhead cost of compressing and uncompressing data that does not move across the
+            network.</li>
           <li>Consider migrating only portions of the your data at a time, so that you can fully
             address table errors or validation failures that may occur during the copy
             operation.</li>
-          <li>In general, keep in mind that using the <codeph>--truncate</codeph> option does not
-            allow for an easy rollback to the source system to its original condition if errors
-            occur or validation checks fail during the <codeph>gpcopy</codeph> operation. Table
-            errors or validation failures during the <codeph>gpcopy</codeph> operation can leave
-            some tables remaining in the source cluster, while other tables may be empty (having
-            been truncated after being copied to the new cluster).</li>
+          <li>In general, keep in mind that using the <codeph>--truncate-source-after</codeph>
+            option does not allow for an easy rollback to the source system to its original
+            condition if errors occur or validation checks fail during the <codeph>gpcopy</codeph>
+            operation. Table errors or validation failures during the <codeph>gpcopy</codeph>
+            operation can leave some tables remaining in the source cluster, while other tables may
+            be empty (having been truncated after being copied to the new cluster).</li>
         </ul></p>
       <p>For example:</p>
       <codeblock>gpcopy --source-host my_host --source-port 1234 --source-user gpuser \
