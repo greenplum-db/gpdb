@@ -182,8 +182,7 @@ add_IN_vars_to_tlists(PlannerInfo *root)
 		if (in_vars != NIL)
 		{
 			add_vars_to_targetlist(root, in_vars,
-								   bms_union(ininfo->lefthand,
-											 ininfo->righthand));
+								   ininfo->righthand);
 			list_free(in_vars);
 		}
 	}

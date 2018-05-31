@@ -714,3 +714,30 @@ EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
 
+--
+-- Test planner to catch dedup information for semi join queries is calculated
+-- appropriately, and deduplication is applied after the join relation is made
+--
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+DROP TABLE IF EXISTS dedup_test2;
+DROP TABLE IF EXISTS dedup_test3;
+-- end_ignore
+CREATE TABLE dedup_test1 ( a int, b int ) DISTRIBUTED BY (a);
+CREATE TABLE dedup_test2 ( e int, f int ) DISTRIBUTED BY (e);
+CREATE TABLE dedup_test3 ( a int, b int, c int) DISTRIBUTED BY (a) PARTITION BY RANGE(c) (START(1) END(2) EVERY(1)); 
+
+INSERT INTO dedup_test1 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test2 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test3 select 1, 1, 1 from generate_series(1,10);
+ANALYZE dedup_test1;
+ANALYZE dedup_test2;
+ANALYZE dedup_test3;
+
+EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+DROP TABLE IF EXISTS dedup_test2;
+DROP TABLE IF EXISTS dedup_test3;
+-- end_ignore

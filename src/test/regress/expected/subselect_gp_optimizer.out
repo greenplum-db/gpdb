@@ -1715,4 +1715,67 @@ EXPLAIN select count(distinct ss.ten) from
  Settings:  optimizer=on
  Optimizer status: PQO version 2.34.1
 (27 rows)
+--
+-- Test planner to catch dedup information for semi join queries is calculated
+-- appropriately, and deduplication is applied after the join relation is made
+--
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+NOTICE:  table "dedup_test1" does not exist, skipping
+DROP TABLE IF EXISTS dedup_test2;
+NOTICE:  table "dedup_test2" does not exist, skipping
+DROP TABLE IF EXISTS dedup_test3;
+NOTICE:  table "dedup_test3" does not exist, skipping
+-- end_ignore
+CREATE TABLE dedup_test1 ( a int, b int ) DISTRIBUTED BY (a);
+CREATE TABLE dedup_test2 ( e int, f int ) DISTRIBUTED BY (e);
+CREATE TABLE dedup_test3 ( a int, b int, c int) DISTRIBUTED BY (a) PARTITION BY RANGE(c) (START(1) END(2) EVERY(1)); 
+NOTICE:  CREATE TABLE will create partition "dedup_test3_1_prt_1" for table "dedup_test3"
+INSERT INTO dedup_test1 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test2 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test3 select 1, 1, 1 from generate_series(1,10);
+ANALYZE dedup_test1;
+ANALYZE dedup_test2;
+ANALYZE dedup_test3;
+EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.00 rows=2 width=16)
+   ->  Hash Join  (cost=0.00..1293.00 rows=1 width=16)
+         Hash Cond: dedup_test2.e = dedup_test1.a
+         ->  Table Scan on dedup_test2  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=862.00..862.00 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                     Hash Cond: dedup_test1.a = dedup_test3.a
+                     ->  Table Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 Group By: dedup_test3.a
+                                 ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                       Sort Key: dedup_test3.a
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             Hash Key: dedup_test3.a
+                                             ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                                                   Group By: dedup_test3.a
+                                                   ->  Sort  (cost=0.00..431.00 rows=4 width=4)
+                                                         Sort Key: dedup_test3.a
+                                                         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
+                                                               ->  Sequence  (cost=0.00..431.00 rows=4 width=4)
+                                                                     ->  Partition Selector for dedup_test3 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                                                           Partitions selected: 1 (out of 1)
+                                                                     ->  Dynamic Table Scan on dedup_test3 (dynamic scan id: 1)  (cost=0.00..431.00 rows=4 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.56.2
+(26 rows)
 
+SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+ a | b | e | f 
+---+---+---+---
+ 1 | 1 | 1 | 1
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+DROP TABLE IF EXISTS dedup_test2;
+DROP TABLE IF EXISTS dedup_test3;
+-- end_ignore

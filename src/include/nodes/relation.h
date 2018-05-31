@@ -1517,7 +1517,6 @@ typedef struct OuterJoinInfo
 typedef struct InClauseInfo
 {
 	NodeTag		type;
-	Relids		lefthand;		/* base relids in lefthand expressions */
 	Relids		righthand;		/* base relids coming from the subselect */
 	List	   *sub_targetlist; /* RHS expressions of the IN's comparisons */
 	List	   *in_operators;	/* OIDs of the IN's equality operators */

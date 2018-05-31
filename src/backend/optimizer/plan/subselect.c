@@ -1050,9 +1050,7 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;
 	List	   *in_operators;
-	List	   *left_exprs = NIL;
 	List	   *right_exprs = NIL;
-	Relids		left_varnos;
 	int			rtindex;
 	RangeTblEntry *rte;
 	RangeTblRef *rtr;
@@ -1188,7 +1186,6 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 				return (Node *) sublink;
 			else
 			{
-				left_exprs = list_make1(linitial(op->args));
 				right_exprs = list_make1(lsecond(op->args));
 			}
 			in_operators = list_make1_oid(opno);
@@ -1198,7 +1195,7 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 			ListCell   *lc;
 
 			/* OK, but we need to extract the per-column operator OIDs */
-			in_operators = left_exprs = right_exprs = NIL;
+			in_operators = right_exprs = NIL;
 			foreach(lc, ((BoolExpr *) sublink->testexpr)->args)
 			{
 				OpExpr *op = (OpExpr *) lfirst(lc);
@@ -1209,7 +1206,6 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 					return (Node *) sublink;
 				else
 				{
-					left_exprs = lappend(left_exprs, linitial(op->args));
 					right_exprs = lappend(right_exprs, lsecond(op->args));
 				}
 				in_operators = lappend_oid(in_operators, op->opno);
@@ -1220,13 +1216,6 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
     }
 
 	ininfo->in_operators = in_operators;
-
-	/*
-	 * The left-hand expressions must contain some Vars of the current query,
-	 * else it's not gonna be a join.
-	 */
-	left_varnos = pull_varnos((Node *) left_exprs);
-	ininfo->lefthand = left_varnos;
 
 	/*
 	 * ininfo->sub_targetlist must be filled with a list of expressions that
