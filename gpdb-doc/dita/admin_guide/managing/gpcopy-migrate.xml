@@ -163,9 +163,25 @@
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
               <codeph>--truncate-source-after</codeph>.</li>
+          <li>Migrating data with <codeph>--truncate-source-after</codeph> still requires an amount
+            of free disk space equal to the largest table that you will migrate using
+              <codeph>gpcopy</codeph>. Use the following query to list the largest tables in your
+            source system, and verify that you have enough free
+            space:<codeblock>gpadmin=# SELECT n.nspname, c.relname, c.relstorage, pg_relation_size(c.oid)
+FROM 
+pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
+JOIN pg_catalog.gp_distribution_policy p ON (c.oid = p.localoid)
+WHERE
+n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit')
+AND n.nspname NOT LIKE 'pg_temp_%%' AND c.relstorage &lt;> 'v'
+ORDER BY 4 DESC LIMIT 5;
+</codeblock></li>
           <li>Start both the source and destination clusters in restricted mode (<codeph>gpstart
               -R</codeph>) to ensure that no updates occur while executing
             <codeph>gpcopy</codeph>.</li>
+          <li>Execute <codeph>gpcopy</codeph> using the utility version installed on the source
+            Greenplum Database system (source the <codeph>greenplum_path.sh</codeph> file for the
+            source installation).</li>
           <li>You must use the <codeph>--validate</codeph> option with
               <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
             before source tables are truncated.<note>If you are migrating data from Greenplum 4.x to
