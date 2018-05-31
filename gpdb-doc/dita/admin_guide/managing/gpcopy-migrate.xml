@@ -156,6 +156,9 @@
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
               <codeph>--truncate-source-after</codeph>.</li>
+          <li>Start both the source and destination clusters in restricted mode (<codeph>gpstart
+              -R</codeph>) to ensure that no updates occur while executing
+            <codeph>gpcopy</codeph>.</li>
           <li>Use the <codeph>--validate</codeph> option with
               <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
             before source tables are truncated.</li>
