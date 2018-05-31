@@ -271,7 +271,7 @@ get_loadable_libraries(void)
 										"SELECT DISTINCT probin "
 										"FROM	pg_catalog.pg_proc "
 										"WHERE	prolang = 13 /* C */ AND "
-										"		probin IS NOT NULL AND "
+									 "		probin IS NOT NULL AND "
 										"		%s "
 										"		oid >= %u;",
 										pg83_str,

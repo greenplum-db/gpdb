@@ -470,8 +470,6 @@ const char *linkAndUpdateFile(pageCnvCtx *pageConverter, const char *src,
 				  const char *dst);
 
 void		check_hard_link(void);
-void rewriteHeapPageChecksum(const char *fromfile, const char *tofile,
-							 const char *schemaName, const char *relName);
 
 /* function.c */
 
@@ -499,13 +497,6 @@ void		parseCommandLine(int argc, char *argv[]);
 void		get_pg_database_relfilenode(ClusterInfo *cluster);
 const char *transfer_all_new_dbs(DbInfoArr *olddb_arr,
 				   DbInfoArr *newdb_arr, char *old_pgdata, char *new_pgdata);
-
-/* aotable.c */
-void		restore_aosegment_tables(void);
-
-/* gpdb4_heap_convert.c */
-const char *convert_gpdb4_heap_file(const char *src, const char *dst,
-									bool has_numerics, AttInfo *atts, int natts);
 
 /* tablespace.c */
 
@@ -538,16 +529,12 @@ void		pg_free(void *ptr);
 const char *getErrorText(int errNum);
 unsigned int str2uint(const char *str);
 void		pg_putenv(const char *var, const char *val);
-void 		report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...);
-void		close_progress(void);
 
 
 /* version.c */
 
 void new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster,
 										 bool check_mode);
-void new_gpdb5_0_invalidate_indexes(bool check_mode);
-void new_gpdb_invalidate_bitmap_indexes(bool check_mode);
 
 /* version_old_8_3.c */
 
@@ -560,15 +547,6 @@ void old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 											  bool check_mode);
 char	   *old_8_3_create_sequence_script(ClusterInfo *cluster);
 
-/* version_old_gpdb4.c */
-void old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster);
-void old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster);
-
-/* oid_dump.c */
-void dump_new_oids(void);
-void get_old_oids(void);
-void slurp_oid_files(void);
-
 /*
  * Hack to make backend macros that check for assertions to work.
  */
@@ -580,3 +558,43 @@ void slurp_oid_files(void);
 #undef Assert
 #endif
 #define Assert(condition) ((void) (true || (condition)))
+
+/* aotable.c */
+
+void		restore_aosegment_tables(void);
+
+/* gpdb4_heap_convert.c */
+
+const char *convert_gpdb4_heap_file(const char *src, const char *dst,
+									bool has_numerics, AttInfo *atts, int natts);
+
+/* file_gp.c */
+
+void copy_distributedlog(void);
+void rewriteHeapPageChecksum(const char *fromfile, const char *tofile,
+							 const char *schemaName, const char *relName);
+
+/* version_old_gpdb4.c */
+
+void old_GPDB4_check_for_money_data_type_usage(ClusterInfo *cluster);
+void old_GPDB4_check_no_free_aoseg(ClusterInfo *cluster);
+void check_hash_partition_usage(void);
+void new_gpdb5_0_invalidate_indexes(bool check_mode);
+void new_gpdb_invalidate_bitmap_indexes(bool check_mode);
+Oid *get_numeric_types(PGconn *conn);
+
+/* oid_dump.c */
+
+void dump_new_oids(void);
+void get_old_oids(void);
+void slurp_oid_files(void);
+char *get_preassigned_oids_for_db(char *line);
+
+/* check_gp.c */
+
+void check_greenplum(void);
+
+/* reporting.c */
+
+void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...);
+void close_progress(void);

@@ -49,7 +49,6 @@ static void prepare_new_cluster(void);
 static void prepare_new_databases(void);
 static void create_new_objects(void);
 static void copy_clog_xlog_xid(void);
-static void copy_distributedlog(void);
 static void set_frozenxids(void);
 static void setup(char *argv0, bool live_check);
 static void cleanup(void);
@@ -506,38 +505,6 @@ create_new_objects(void)
 	/* Before shutting down the cluster, dump all OIDs, if this was the QD node */
 	if (user_opts.dispatcher_mode)
 		dump_new_oids();
-}
-
-/*
- * In upgrading from GPDB4, copy the pg_distributedlog over in
- * vanilla. The assumption that this works needs to be verified
- */
-static void
-copy_distributedlog(void)
-{
-	char		old_dlog_path[MAXPGPATH];
-	char		new_dlog_path[MAXPGPATH];
-
-	prep_status("Deleting new distributedlog");
-
-	snprintf(old_dlog_path, sizeof(old_dlog_path), "%s/pg_distributedlog", old_cluster.pgdata);
-	snprintf(new_dlog_path, sizeof(new_dlog_path), "%s/pg_distributedlog", new_cluster.pgdata);
-	if (rmtree(new_dlog_path, true) != true)
-		pg_log(PG_FATAL, "Unable to delete directory %s\n", new_dlog_path);
-	check_ok();
-
-	prep_status("Copying old distributedlog to new server");
-	/* libpgport's copydir() doesn't work in FRONTEND code */
-#ifndef WIN32
-	exec_prog(true, SYSTEMQUOTE "%s \"%s\" \"%s\"" SYSTEMQUOTE,
-			  "cp -Rf",
-#else
-	/* flags: everything, no confirm, quiet, overwrite read-only */
-	exec_prog(true, SYSTEMQUOTE "%s \"%s\" \"%s\\\"" SYSTEMQUOTE,
-			  "xcopy /e /y /q /r",
-#endif
-			  old_dlog_path, new_dlog_path);
-	check_ok();
 }
 
 static void

@@ -326,69 +326,6 @@ get_db_infos(ClusterInfo *cluster)
 }
 
 /*
- * get_numeric_types()
- *
- * queries the cluster for all types based on NUMERIC, as well as NUMERIC
- * itself, and return an InvalidOid terminated array of pg_type Oids for
- * these types.
- */
-static Oid *
-get_numeric_types(PGconn *conn)
-{
-	char		query[QUERY_ALLOC];
-	PGresult   *res;
-	Oid		   *result;
-	int			result_count = 0;
-	int			iterator = 0;
-
-	/*
-	 * We don't know beforehands how many types based on NUMERIC that we will
-	 * find so allocate space that "should be enough". Once processed we can
-	 * shrink the allocation or we could've put these on the stack and moved
-	 * to a heap based allocation at that point - but even at a too large
-	 * array we still waste very little memory in the grand scheme of things
-	 * so keep it simple and leave it be with an overflow check instead.
-	 */
-	result = pg_malloc(sizeof(Oid) * NUMERIC_ALLOC);
-	memset(result, InvalidOid, NUMERIC_ALLOC);
-
-	result[result_count++] = 1700;		/* 1700 == NUMERICOID */
-
-	/*
-	 * iterator is a trailing pointer into the array which traverses the
-	 * array one by one while result_count fills it - and can do so by
-	 * adding n items per loop iteration. Once iterator has caught up with
-	 * result_count we know that no more pg_type tuples are of interest.
-	 * This is a handcoded version of WITH RECURSIVE and can be replaced
-	 * by an actual recursive CTE once GPDB supports these.
-	 */
-	while (iterator < result_count && result[iterator] != InvalidOid)
-	{
-		snprintf(query, sizeof(query),
-				 "SELECT typ.oid AS typoid, base.oid AS baseoid "
-				 "FROM pg_type base "
-				 "  JOIN pg_type typ ON base.oid = typ.typbasetype "
-				 "WHERE base.typbasetype = '%u'::pg_catalog.oid;",
-				 result[iterator++]);
-
-		res = executeQueryOrDie(conn, query);
-
-		if (PQntuples(res) > 0)
-		{
-			result[result_count++] = atooid(PQgetvalue(res, 0, PQfnumber(res, "typoid")));
-			result[result_count++] = atooid(PQgetvalue(res, 0, PQfnumber(res, "baseoid")));
-		}
-
-		PQclear(res);
-
-		if (result_count == NUMERIC_ALLOC - 1)
-			pg_log(PG_FATAL, "Too many NUMERIC types found");
-	}
-
-	return result;
-}
-
-/*
  * get_rel_infos()
  *
  * gets the relinfos for all the user tables of the database refered
@@ -961,6 +898,63 @@ free_db_and_rel_infos(DbInfoArr *db_arr)
 	db_arr->dbs = NULL;
 	db_arr->ndbs = 0;
 }
+
+
+#if 0 /* Not used in GPDB */
+/*
+ * relarr_lookup_rel()
+ *
+ * Searches "relname" in rel_arr. Returns the *real* pointer to the
+ * RelInfo structure.
+ */
+static RelInfo *
+relarr_lookup_rel(migratorContext *ctx, RelInfoArr *rel_arr,
+				  const char *nspname, const char *relname,
+				  Cluster whichCluster)
+{
+	int			relnum;
+
+	if (!rel_arr || !relname)
+		return NULL;
+
+	for (relnum = 0; relnum < rel_arr->nrels; relnum++)
+	{
+		if (strcmp(rel_arr->rels[relnum].nspname, nspname) == 0 &&
+			strcmp(rel_arr->rels[relnum].relname, relname) == 0)
+			return &rel_arr->rels[relnum];
+	}
+	pg_log(ctx, PG_FATAL, "Could not find %s.%s in %s cluster\n",
+		   nspname, relname, CLUSTERNAME(whichCluster));
+	return NULL;
+}
+
+
+/*
+ * relarr_lookup_reloid()
+ *
+ *	Returns a pointer to the RelInfo structure for the
+ *	given oid or NULL if the desired entry cannot be
+ *	found.
+ */
+static RelInfo *
+relarr_lookup_reloid(migratorContext *ctx, RelInfoArr *rel_arr, Oid oid,
+					 Cluster whichCluster)
+{
+	int			relnum;
+
+	if (!rel_arr || !oid)
+		return NULL;
+
+	for (relnum = 0; relnum < rel_arr->nrels; relnum++)
+	{
+		if (rel_arr->rels[relnum].reloid == oid)
+			return &rel_arr->rels[relnum];
+	}
+	pg_log(ctx, PG_FATAL, "Could not find %d in %s cluster\n",
+		   oid, CLUSTERNAME(whichCluster));
+	return NULL;
+}
+#endif
 
 
 static void

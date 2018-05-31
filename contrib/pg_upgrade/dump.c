@@ -27,37 +27,6 @@ generate_old_dump(void)
 	check_ok();
 }
 
-static char *
-get_preassigned_oids_for_db(char *line)
-{
-	char	   *dbname;
-	int			dbnum;
-
-	// FIXME: parsing the dump like this is madness.
-	// We should use a dump file for each database to
-	// begin with. (like more recent version of PostgreSQL).
-	if (strncmp(line, "\\connect ", strlen("\\connect ")) != 0)
-		return NULL;
-
-	dbname = line + strlen("\\connect ");
-
-	/* strip newline */
-	if (strlen(dbname) <= 1)
-		return NULL;
-	dbname[strlen(dbname) - 1] = '\0';
-
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
-	{
-		DbInfo	   *olddb = &old_cluster.dbarr.dbs[dbnum];
-
-		if (strcmp(olddb->db_name, dbname) == 0)
-		{
-			/* Found it! */
-			return olddb->reserved_oids;
-		}
-	}
-	return NULL;
-}
 
 /*
  *	split_old_dump
@@ -93,6 +62,7 @@ split_old_dump(void)
 	 * Open all files in binary mode to avoid line end translation on Windows,
 	 * both for input and output.
 	 */
+
 	snprintf(filename, sizeof(filename), "%s/%s", os_info.cwd, ALL_DUMP_FILE);
 	if ((all_dump = fopen(filename, PG_BINARY_R)) == NULL)
 		pg_log(PG_FATAL, "Cannot open dump file %s\n", filename);
@@ -116,9 +86,7 @@ split_old_dump(void)
 		if (current_output == globals_dump && start_of_line &&
 			suppressed_username &&
 			strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
-		{
 			current_output = db_dump;
-		}
 
 		/* output unless we are recreating our own username */
 		if (current_output != globals_dump || !start_of_line ||
