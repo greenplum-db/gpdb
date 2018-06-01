@@ -23,7 +23,7 @@ PostgreSQL documentation
 
 CREATE RESOURCE GROUP name WITH (group_attribute=value [, ... ]) 
 where group_attribute is:
-   CPU_RATE_LIMIT=integer
+   CPU_RATE_LIMIT=integer | CPUSET=tuple
    MEMORY_LIMIT=integer
    [ CONCURRENCY=integer ]
    [ MEMORY_SHARED_QUOTA=integer ]

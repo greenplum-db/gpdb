@@ -25,6 +25,7 @@ ALTER RESOURCE GROUP name SET group_attribute value
 where group_attribute is one of:
    CONCURRENCY integer
    CPU_RATE_LIMIT integer
+   CPUSET tuple
    MEMORY_LIMIT integer
    MEMORY_SHARED_QUOTA integer
    MEMORY_SPILL_RATIO integer
