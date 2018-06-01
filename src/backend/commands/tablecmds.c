@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/aocs_compaction.h"
+#include "access/aomd.h"
 #include "access/appendonlywriter.h"
 #include "access/bitmap.h"
 #include "access/genam.h"
@@ -396,8 +397,6 @@ static void copy_relation_data(SMgrRelation rel, SMgrRelation dst,
 				   ForkNumber forkNum, char relpersistence);
 static const char *storage_name(char c);
 
-
-static void copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence);
 static void ATExecSetDistributedBy(Relation rel, Node *node,
 								   AlterTableCmd *cmd);
 static void ATPrepExchange(Relation rel, AlterPartitionCmd *pc);
@@ -11700,128 +11699,6 @@ copy_relation_data(SMgrRelation src, SMgrRelation dst,
 	 */
 	if (relpersistence == RELPERSISTENCE_PERMANENT)
 		smgrimmedsync(dst, forkNum);
-}
-
-/*
- * Like copy_relation_data(), but for AO tables.
- *
- * Currently, AO tables don't have any extra forks.
- */
-static void
-copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence)
-{
-	DIR		   *dir;
-	struct dirent *de;
-	char	   *srcdir;
-	char	   *srcfilename;
-	char	   *srcfiledot;
-	char	   *dstpath;
-	char	   *buffer = palloc(BLCKSZ);
-
-	/*
-	 * Get the directory and base filename of the data file.
-	 */
-	reldir_and_filename(src, backendid, MAIN_FORKNUM, &srcdir, &srcfilename);
-	srcfiledot = psprintf("%s.", srcfilename);
-	dstpath = relpathbackend(dst, backendid, MAIN_FORKNUM);
-
-	/*
-	 * Scan the directory, looking for files belonging to this relation.
-	 * This is the same logic as in mdunlink(), see comments there.
-	 */
-	dir = AllocateDir(srcdir);
-	while ((de = ReadDir(dir, srcdir)) != NULL)
-	{
-		char	   *suffix;
-		char		srcsegpath[MAXPGPATH + 12];
-		char		dstsegpath[MAXPGPATH + 12];
-		File		srcFile;
-		File		dstFile;
-		int64		left;
-		off_t		offset;
-		int			segfilenum;
-
-		if (strcmp(de->d_name, ".") == 0 ||
-			strcmp(de->d_name, "..") == 0)
-			continue;
-
-		/* Does it begin with the relfilenode? */
-		if (strlen(de->d_name) <= strlen(srcfiledot) ||
-			strncmp(de->d_name, srcfiledot, strlen(srcfiledot)) != 0)
-			continue;
-
-		/*
-		 * Does it have a digits-only suffix? (This is not really
-		 * necessary to check, but better be conservative.)
-		 */
-		suffix = de->d_name + strlen(srcfiledot);
-		if (strspn(suffix, "0123456789") != strlen(suffix) ||
-			strlen(suffix) > 10)
-			continue;
-
-		/* Looks like a match. Go ahead and copy it. */
-		segfilenum = pg_atoi(suffix, 4, 0);
-
-		snprintf(srcsegpath, sizeof(srcsegpath), "%s/%s.%d", srcdir, srcfilename, segfilenum);
-		snprintf(dstsegpath, sizeof(dstsegpath), "%s.%d", dstpath, segfilenum);
-
-		srcFile = PathNameOpenFile(srcsegpath, O_RDONLY | PG_BINARY, 0600);
-		if (srcFile < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not open file %s: %m", srcsegpath))));
-		dstFile = PathNameOpenFile(dstsegpath, O_WRONLY | O_CREAT | O_EXCL | PG_BINARY, 0600);
-		if (dstFile < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not create destination file %s: %m", dstsegpath))));
-
-		left = FileSeek(srcFile, 0, SEEK_END);
-		if (left < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not seek to end of file %s: %m", srcsegpath))));
-
-		if (FileSeek(srcFile, 0, SEEK_SET) < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not seek to beginning of file %s: %m", srcsegpath))));
-
-		offset = 0;
-		while(left > 0)
-		{
-			int			len;
-
-			CHECK_FOR_INTERRUPTS();
-
-			len = Min(left, BLCKSZ);
-			if (FileRead(srcFile, buffer, len) != len)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not read %d bytes from file \"%s\": %m",
-								len, srcsegpath)));
-
-			if (FileWrite(dstFile, buffer, len) != len)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not write %d bytes to file \"%s\": %m",
-								len, dstsegpath)));
-
-			xlog_ao_insert(dst, segfilenum, offset, buffer, len);
-
-			offset += len;
-			left -= len;
-		}
-
-		if (FileSync(dstFile) != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not fsync file \"%s\": %m",
-							dstsegpath)));
-		FileClose(srcFile);
-		FileClose(dstFile);
-	}
-	FreeDir(dir);
 }
 
 /*
