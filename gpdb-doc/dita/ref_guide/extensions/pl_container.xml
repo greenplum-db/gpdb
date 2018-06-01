@@ -921,7 +921,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                           Management</xref>.</li>
                       <li><codeph>roles</codeph> - Specify the Greenplum Database roles that are
                         allowed to run a container for the runtime configuration. You can specify a
-                        single role name or comma separated lists of roles. The default is no
+                        single role name or comma separated lists of role names. The default is no
                         restriction.</li>
                       <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging
                         for the container. The value is either <codeph>yes</codeph> (enable logging)
@@ -1267,11 +1267,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         <pd>Optional. The value is a Greenplum Database role name or a
                           comma-separated list of roles. PL/Container runs a container that uses the
                           PL/Container runtime configuration only for the listed roles. If the
-                          attribute is not specified, PL/Container runs a container that uses the
-                          runtime configuration for any role. For example, you can create a UDF that
-                          runs a container that uses a runtime configuration with this attribute.
-                          When a role (user) runs the UDF, PL/Container checks the list of roles and
-                          runs the container only if the role on the list.</pd>
+                          attribute is not specified, any Greenplum Database role can run an
+                          instance of this container runtime configuration. For example, you create
+                          a UDF that specifies the <codeph>plcontainer</codeph> language and
+                          identifies a <codeph># container:</codeph> runtime configuration that has
+                          the <codeph>roles</codeph> attribute set. When a role (user) runs the UDF,
+                          PL/Container checks the list of roles and runs the container only if the
+                          role is on the list.</pd>
                       </plentry>
                       <plentry>
                         <pt> use_container_logging="{yes | no}"</pt>
