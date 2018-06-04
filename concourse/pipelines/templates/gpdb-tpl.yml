@@ -837,7 +837,7 @@ ccp_destroy_clusters_anchor: &ccp_destroy_two_clusters
 
 dpm_ccp_destroy_anchor: &dpm_ccp_destroy
   put: terraform_for_dpm
-  tags: ["ccp"]
+  tags: ["ddboost"]
   params:
     action: destroy
     env_name_file: terraform_for_dpm/name
