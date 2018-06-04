@@ -705,6 +705,7 @@ drop table mpp4582;
 
 -- Use a particular username in the tests below, so that the output of \di
 -- commands don't vary depending on current user.
+DROP USER IF EXISTS mpp3641_user;
 CREATE USER mpp3641_user;
 GRANT ALL ON SCHEMA bfv_partition TO mpp3641_user;
 SET ROLE mpp3641_user;
@@ -1693,7 +1694,9 @@ select 'pg_partition_templates', count(*) from pg_partition_templates where tabl
 --
 -- Check that dependencies to users are recorded correctly when operating on partitions.
 --
+DROP ROLE IF EXISTS part_acl_owner;
 CREATE ROLE part_acl_owner;
+DROP ROLE IF EXISTS part_acl_u1;
 CREATE ROLE part_acl_u1;
 GRANT ALL ON SCHEMA bfv_partition to part_acl_owner;
 
