@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" otherprops="pivotal">
-    <!--install_guide/refs/gptransfer.xml has a conref to this topic. -->
+    <!--install_guide has a link to this topic. -->
     <title id="pk138417">gpcopy</title>
     <body>
         <p>The <codeph>gpcopy</codeph> utility copies objects from databases in a source Greenplum
@@ -13,7 +13,7 @@
             <title>Synopsis</title>
             <codeblock><b>gpcopy</b>
    { <b>--full </b>|
-     <b>--database</b> <varname>database1</varname>[, <varname>database2</varname> ... ] |
+     <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] |
      <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] }
@@ -24,13 +24,13 @@
    [<b>--analyze</b>]
    [<b>--validate</b> <varname>type</varname>]
    [<b>--truncate-source-after</b> [<b>--yes</b>]]
-   [<b>--schema-only</b>]
+   [<b>--metadata-only</b>]
    { <b>--dest-host</b> <varname>dest_host</varname> [<b>--dest-port</b>=<varname>dest_port</varname>]
       [<b> --dest-user</b> <varname>dest_user</varname>] }
    [<b>--source-host</b> <varname>source_host</varname> [<b>--source-port</b> <varname>source_port</varname>]
    [<b>--source-user</b> <varname>source_user</varname>]]
    [<b>--no-compression</b>]
-   [<b>--batch-size</b> <varname>batch_size</varname>]
+   [<b>--jobs</b> <varname>int</varname>]
    [<b>--quiet</b> | <b>--debug</b>]
 
 <b>gpcopy --version</b>
@@ -48,7 +48,7 @@
                     defined databases to a different destination system. </li>
                 <li id="pk138461">Copy a set of user defined database tables to a destination
                     system. <ul id="ul_ly3_v5c_vdb">
-                        <li>The <codeph>--database</codeph> option copies all user defined tables,
+                        <li>The <codeph>--dbname</codeph> option copies all user defined tables,
                             table data, and re-creates the table indexes from specified
                             databases.</li>
                         <li>The <codeph>--include-table</codeph> or
@@ -58,7 +58,7 @@
                                 <codeph>--exclude-table-file</codeph> options exclude a specified
                             set of user defined tables and table data to be copied. </li>
                     </ul></li>
-                <li>Copy only the database schemas with the <codeph>--schema-only</codeph>
+                <li>Copy only the database schemas with the <codeph>--metadata-only</codeph>
                     option.</li>
             </ul>
             <p>When running <codeph>gpcopy</codeph>, you must specify the data to copy from the
@@ -66,7 +66,7 @@
                     id="ul_ehn_fvx_vdb">
                     <li>You must use one and only one of these options to specify the data to be
                         copied from the source database: -<codeph>-full</codeph>,
-                            <codeph>--database</codeph>, <codeph>--include-table</codeph>, or
+                            <codeph>--dbname</codeph>, <codeph>--include-table</codeph>, or
                             <codeph>--include-table-file</codeph>. </li>
                     <li>You must use one of these options to specify how manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
@@ -117,11 +117,11 @@
                             <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--batch-size <varname>n</varname></pt>
+                    <pt>--jobs <varname>int</varname></pt>
                     <pd>Specify the number processes that <codeph>gpcopy</codeph> runs in parallel.
                         The default is 4. The range is from 1 to 64.</pd>
-                    <pd>The option <codeph>--batch-size</codeph> produces
-                                <codeph>2*<varname>n</varname>+1</codeph> database connections. The
+                    <pd>The option <codeph>--jobs</codeph> produces
+                            <codeph>2*<varname>n</varname>+1</codeph> database connections. The
                         default value 4, creates 9 connections.</pd>
                     <pd>If you increase this option, ensure that Greenplum Database systems are
                         configured with a sufficient maximum concurrent connection value to
@@ -130,7 +130,7 @@
                         configuration parameter <codeph>max_connections</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--database <varname>database</varname></pt>
+                    <pt>--dbname <varname>database</varname></pt>
                     <pd>A source database to copy. To copy multiple databases to the destination
                         system specify a comma separated list of databases. All the user defined
                         tables and table data are copied to the destination system. </pd>
@@ -188,7 +188,7 @@
                     <pd>Only the specified tables are excluded, not dependent objects. You cannot
                         specify views, or system catalog tables. </pd>
                     <pd>This option must be specified with one of these options:
-                            <codeph>--full</codeph>, <codeph>--database</codeph>,
+                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
                             <codeph>--include-table</codeph>, or
                             <codeph>--include-table-file</codeph>. If the option
                             <codeph>--exclude-table</codeph> results in no table to copy, the
@@ -211,7 +211,7 @@
                     <pd>Only the specified tables are excluded. You cannot specify views, or system
                         catalog tables.</pd>
                     <pd>This option must be specified with one of these options:
-                            <codeph>--full</codeph>, <codeph>--database</codeph>,
+                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
                             <codeph>--include-table</codeph>, or
                             <codeph>--include-table-file</codeph>. If the option
                             <codeph>--exclude-table</codeph> results in no tables to copy, the
@@ -245,7 +245,7 @@
                         re-created only if the <codeph>--drop</codeph> option is specified.
                         Dependent objects are not copied. </pd>
                     <pd>This option is not allowed with the options: <codeph>--full</codeph>,
-                            <codeph>--database</codeph>, or <codeph>--include-table-file</codeph>.
+                            <codeph>--dbname</codeph>, or <codeph>--include-table-file</codeph>.
                     </pd>
                 </plentry>
                 <plentry>
@@ -262,7 +262,7 @@
                                 >--include-table</xref></codeph> option for information about using
                         regular expressions.</pd>
                     <pd>This option cannot be specified with the <codeph>--full</codeph>,
-                            <codeph>--database</codeph>, or <codeph>--include-table</codeph>
+                            <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
                         options.</pd>
                 </plentry>
                 <plentry>
@@ -274,7 +274,7 @@
                         groups for all user defined databases. The default databases,
                             <codeph>postgres</codeph>, <codeph>template0</codeph>, and
                             <codeph>template1</codeph>, are not copied.</pd>
-                    <pd>This option cannot be specified with the <codeph>--database</codeph>,
+                    <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
                             <codeph>--include-table</codeph>, or
                             <codeph>--include-table-file</codeph> options.</pd>
                 </plentry>
@@ -294,15 +294,15 @@
                         option.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--schema-only</pt>
+                    <pt>--metadata-only</pt>
                     <pd>Create only the schemas specified by the command. Data is not
                         transferred.</pd>
                     <pd>If specified with the <codeph>--full</codeph> option,
                             <codeph>gpcopy</codeph> replicates the complete database schema,
                         including all tables, indexes, views, user defined types (UDT), and user
                         defined functions (UDF) for the source databases. No data is transferred. </pd>
-                    <pd>If you specify databases with the <codeph>--database</codeph> option or
-                        tables with the <codeph>--include-table</codeph> or
+                    <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
+                        with the <codeph>--include-table</codeph> or
                             <codeph>--include-table-file</codeph> options, <codeph>gpcopy</codeph>
                         creates only the tables and indexes. No data is transferred.</pd>
                     <pd>This option cannot be used with <codeph>--truncate</codeph> option.</pd>
@@ -389,7 +389,7 @@
                 acquired on the source table when data is copied. </p>
             <p>The utility cannot copy a row with a with a width greater than 1GB (a PostgreSQL
                 limitation). </p>
-            <p>If you copy a set of database tables with the <codeph>--database</codeph>,
+            <p>If you copy a set of database tables with the <codeph>--dbname</codeph>,
                     <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>
                 option, and the destination database does not exist, the utility creates the
                 database before copying the tables. If the destination database exists, the utility
@@ -397,7 +397,7 @@
             <p>The <codeph>gpcopy</codeph> utility does not copy dependent database objects unless
                 you specify the <codeph>--full</codeph> option. For example, if a table has a
                 default value on a column that is a user-defined function, that function must exist
-                in the destination system database when using the <codeph>--database</codeph>,
+                in the destination system database when using the <codeph>--dbname</codeph>,
                     <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>
                 options. </p>
             <p>When copying tables, sequences defined for tables are considered table data and are
@@ -468,7 +468,7 @@
             </sectiondiv>
             <sectiondiv>
                 <p><b>Database Connections Created by gpcopy</b></p>
-                <p>The option <codeph>--batch-size</codeph> produces
+                <p>The option <codeph>--jobs</codeph> produces
                         <codeph>2*<varname>n</varname>+1</codeph> database connections. The default
                     value 4, creates 9 connections.</p>
                 <p>If you increase this option, ensure that both source and destination Greenplum
@@ -491,12 +491,12 @@
     --dest-host demohost --dest-port 1234 --dest-user gpuser \
     --full --drop</codeblock>
             <p dir="ltr">This command copies the specified databases in a source system to a
-                destination system with <codeph>--database</codeph> option. The
+                destination system with <codeph>--dbname</codeph> option. The
                     <codeph>--truncate</codeph> option truncates the table data before copying table
                 data from the source table.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --database database1, database2 --truncate</codeblock>
+   --dbname database1, database2 --truncate</codeblock>
             <p dir="ltr">This command copies the specified tables in a source system to a
                 destination system with <codeph>--include-table</codeph> option. The
                     <codeph>--skip-existing</codeph> option skips the table if it already exists in
@@ -514,10 +514,10 @@
                 table data by comparing row counts between source and destination tables.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --database database1 --exclude-table-file /home/gpuser/mytables \
+   --dbname database1 --exclude-table-file /home/gpuser/mytables \
    --truncate --analyze --validate count</codeblock>
             <p dir="ltr">This command copies specifies the <codeph>--full</codeph> and
-                    <codeph>--schema-only</codeph> options to copy the complete database schema,
+                    <codeph>--metadata-only</codeph> options to copy the complete database schema,
                 including all tables, indexes, views, user defined types (UDT), and user defined
                 functions (UDF) from all the source databases. No data is copied, The
                     <codeph>--drop</codeph> option specifies that the table is dropped in the
@@ -525,25 +525,25 @@
                 source and destination database</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --full --schema-only --drop</codeblock>
+   --full --metadata-only --drop</codeblock>
             <p dir="ltr">This command copies the specified databases in a source system to a
-                destination system with <codeph>--database</codeph> option and specifies 8 parallel
-                processes with the <codeph>--batch-size</codeph> option. The command specifies the
+                destination system with <codeph>--dbname</codeph> option and specifies 8 parallel
+                processes with the <codeph>--jobs</codeph> option. The command specifies the
                     <codeph>--truncate</codeph> option to truncate the table and create it again if
                 it already exists in destination.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --database database1, database2 --truncate --batch-size 8</codeblock>
+   --dbname database1, database2 --truncate --jobs 8</codeblock>
             <p dir="ltr" id="docs-internal-guid-cbf0fcbb-893d-f28a-6bc9-3caae975b2e3">This command
                 copies the specified database in a source system to a destination system with
-                    <codeph>--database</codeph> option and specifies 16 parallel processes with the
-                    <codeph>--batch-size</codeph> option. The <codeph>--truncate</codeph> option
-                truncates the table and creates it again if it already exists in destination. The
+                    <codeph>--dbname</codeph> option and specifies 16 parallel processes with the
+                    <codeph>--jobs</codeph> option. The <codeph>--truncate</codeph> option truncates
+                the table and creates it again if it already exists in destination. The
                     <codeph>--truncate-source-after</codeph> option truncates the tables in source
                 database after that table data has been validated in the destination database.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --database database1 --truncate --batch-size 16 --truncate-source-after --validate count</codeblock>
+   --dbname database1 --truncate --jobs 16 --truncate-source-after --validate count</codeblock>
             <p>In the previous example, if <codeph>--truncate</codeph> was not specified and the
                 destination table contained data, validation would fail.</p>
             <p>This is an example table file that uses regular expressions.</p>
