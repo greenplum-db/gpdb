@@ -98,14 +98,14 @@
     </body>
   </topic>
     <topic id="topic_ay1_frp_zdb">
-      <title>Configuring the Batch Size</title>
+      <title>Configuring Parallel Jobs</title>
       <body>
         <p>The degree of parallelism when running <codeph>gpcopy</codeph> is determined the option
-          <codeph>--batch-size</codeph>. The option controls the number processes that
+          <codeph>--jobs</codeph>. The option controls the number processes that
           <codeph>gpcopy</codeph> runs in parallel. The default is 4. The range is from 1 to 64. </p>
-      <p>The batch size value, <varname>n</varname>, produces
-          <codeph>2*<varname>n</varname>+1</codeph> database connections. For example, the default
-        batch size value of 4 creates 9 connections.</p>
+      <p>The <codeph>--jobs</codeph> value, <varname>n</varname>, produces
+            <codeph>2*<varname>n</varname>+1</codeph> database connections. For example, the default
+          <codeph>--jobs</codeph> value of 4 creates 9 connections.</p>
         <p>If you increase this option, ensure that the Greenplum Database systems are configured
         with a sufficient maximum concurrent connection value to accommodate the
           <codeph>gpcopy</codeph> connections and any other concurrent connections (such as user
@@ -165,11 +165,11 @@
               <codeph>--truncate-source-after</codeph>.</li>
           <li>Migrating data with <codeph>--truncate-source-after</codeph> still requires an amount
             of free disk space equal to the sum of the largest tables that you will migrate in a
-            single batch using <codeph>gpcopy</codeph>. For example, with a
-              <codeph>--batch-size</codeph> setting of 5, you must ensure that you have free space
-            equal to the sum of the 5 largest tables copied in the batch.  The following query lists
-            the largest 5 tables in your source system; modify the query as needed depending on the
-              <codeph>--batch-size</codeph> you intend to
+            single batch using <codeph>gpcopy</codeph>. For example, with a <codeph>--jobs</codeph>
+            setting of 5, you must ensure that you have free space equal to the sum of the 5 largest
+            tables copied in the batch. The following query lists the largest 5 tables in your
+            source system; modify the query as needed depending on the <codeph>--jobs</codeph>
+            setting you intend to
             use:<codeblock>gpadmin=# SELECT n.nspname, c.relname, c.relstorage, pg_relation_size(c.oid)
 FROM 
 pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
@@ -207,7 +207,7 @@ ORDER BY 4 DESC LIMIT 5;
         </ul></p>
       <p>For example:</p>
       <codeblock>gpcopy --source-host my_host --source-port 1234 --source-user gpuser \
---dest-host my_host --dest-port 1235 --dest-user gpuser --database database1 \
+--dest-host my_host --dest-port 1235 --dest-user gpuser --dbname database1 \
 -truncate --analyze --validate count --no-compression</codeblock>
     </body>
   </topic>
