@@ -151,6 +151,7 @@ groups:
 
 - name: Release
   jobs:
+  - gate_release_candidate_start
   - Release_Candidate
 
 {% endif %}
@@ -501,6 +502,33 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: bin_gpdb_sles11/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
+
+- name: bin_gpdb_centos6_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_centos6/gpdb5/bin_gpdb.tar.gz
+
+- name: bin_gpdb_centos7_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_centos7/gpdb5/bin_gpdb.tar.gz
+
+- name: bin_gpdb_sles11_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_sles11/gpdb5/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -2075,6 +2103,13 @@ jobs:
         - mpp_resource_group_centos6
         - mpp_resource_group_centos7
       trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+        - mpp_interconnect
+        - mpp_resource_group_centos6
+    - get: bin_gpdb_centos7
+      passed:
+        - mpp_resource_group_centos7
 
 {% endif %}
 {% if "MM" in test_sections %}
@@ -3090,6 +3125,18 @@ jobs:
       - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
+    - get: bin_gpdb_centos6
+      passed:
+      - DPM_backup-restore
+      - DPM_backup-restore_ddboost_part1
+      - DPM_backup-restore_ddboost_part2
+      - DPM_backup-restore_ddboost_part3
+      - DPM_backup-restore_netbackup_part1
+      - DPM_backup-restore_netbackup_part2
+      - DPM_backup-restore_netbackup_part3
+      - DPM_backup_43_restore_5
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -3281,6 +3328,24 @@ jobs:
       - MADlib_Test_[[ test_name ]]
       - Postgis_Test_[[ test_name ]]
 {% endfor %}
+    - get: bin_gpdb_centos6
+      passed:
+{% for test_name in aa_Test_suites %}
+{% if "centos6" in test_name  %}
+{% set orca_state = 'off' if "Planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]
+      - Postgis_Test_[[ test_name ]]
+{% endif %}
+{% endfor %}
+    - get: bin_gpdb_centos7
+      passed:
+{% for test_name in aa_Test_suites %}
+{% if "centos7" in test_name  %}
+{% set orca_state = 'off' if "Planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]
+      - Postgis_Test_[[ test_name ]]
+{% endif %}
+{% endfor %}
 
 {% endif %}
 {% if "FileRep" in test_sections %}
@@ -3382,67 +3447,119 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
-- name: Release_Candidate
+- name: gate_release_candidate_start
   plan:
-  - get: gpdb_src
-    trigger: true
-    passed:
-    - compile_gpdb_centos6
-    - compile_gpdb_open_source_centos6
-    - compile_gpdb_centos7
-    - compile_gpdb_sles11
-    - compile_gpdb_ubuntu16
-    - compile_gpdb_windows_cl
-    - compile_gpdb_aix7_remote
-    - icw_planner_centos6
-    - icw_gporca_centos6
-    - icw_gporca_centos7
-    - icw_planner_centos7
-    - icw_gporca_sles11
-    - icw_planner_ubuntu16
-    - icw_gporca_conan_ubuntu16
-    - test_gpdb_debian_package
-    - icw_planner_ictcp_centos6
-    - icw_extensions_gpcloud
-    - client_loader_remote_test_aix
-    - mpp_resource_group_centos6
-    - mpp_resource_group_centos7
-    - MU_check_centos
-    - MM_gpcheck
-    - DPM_backup-restore
-    - MM_gppkg
-    - MM_pt-rebuild
-    - fts
-    - storage
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed:
+      - compile_gpdb_centos6
+      - compile_gpdb_open_source_centos6
+      - compile_gpdb_centos7
+      - compile_gpdb_sles11
+      - compile_gpdb_ubuntu16
+      - compile_gpdb_windows_cl
+      - compile_gpdb_aix7_remote
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_gporca_centos7
+      - icw_planner_centos7
+      - icw_gporca_sles11
+      - icw_planner_ubuntu16
+      - icw_gporca_conan_ubuntu16
+      - test_gpdb_debian_package
+      - icw_planner_ictcp_centos6
+      - icw_extensions_gpcloud
+      - client_loader_remote_test_aix
+      - mpp_resource_group_centos6
+      - mpp_resource_group_centos7
+      - MU_check_centos
+      - MM_gpcheck
+      - DPM_backup-restore
+      - MM_gppkg
+      - MM_pt-rebuild
+      - fts
+      - storage
 {% for test_name in cs_walrep_suites +
                     cs_pg_twophase_suites +
                     cs_crash_recovery_suite +
                     cs_filerep_end_to_end_suites %}
-    - cs_[[ test_name ]]
+      - cs_[[ test_name ]]
 {% endfor %}
-    - QP_memory-accounting
-    - regression_tests_gphdfs_centos
-    - regression_tests_pxf
-    - DPM_backup-restore_ddboost_part1
-    - DPM_backup-restore_ddboost_part2
-    - DPM_backup-restore_ddboost_part3
-    - DPM_backup-restore_netbackup_part1
-    - DPM_backup-restore_netbackup_part2
-    - DPM_backup-restore_netbackup_part3
-    - DPM_backup_43_restore_5
+      - QP_memory-accounting
+      - regression_tests_gphdfs_centos
+      - regression_tests_pxf
+      - DPM_backup-restore_ddboost_part1
+      - DPM_backup-restore_ddboost_part2
+      - DPM_backup-restore_ddboost_part3
+      - DPM_backup-restore_netbackup_part1
+      - DPM_backup-restore_netbackup_part2
+      - DPM_backup-restore_netbackup_part3
+      - DPM_backup_43_restore_5
 {% for test_name in MM_1_suites +
                     MM_2_suites +
                     MM_gpexpand_suites %}
-    - MM_[[ test_name ]]
+      - MM_[[ test_name ]]
 {% endfor %}
-    - gptransfer-43x-to-5x
-    - gptransfer-5x-to-5x
-    - mpp_interconnect
-    - QP_optimizer-functional
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
+      - mpp_interconnect
+      - QP_optimizer-functional
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
 {% set orca_state = 'off' if "Planner" in test_name else 'on' %}
-    - MADlib_Test_[[ test_name ]]
-    - Postgis_Test_[[ test_name ]]
+      - MADlib_Test_[[ test_name ]]
+      - Postgis_Test_[[ test_name ]]
 {% endfor %}
+    - get: bin_gpdb_centos6
+      trigger: true
+      passed:
+      - compile_gpdb_centos6
+      - gate_icw_end
+      - gate_mpp_end
+      - gate_advanced_analytics_end
+      - gate_cs_end
+      - gate_mm_end
+      - gate_ud_end
+      - gate_dpm_end
+      - gate_filerep_end
+    - get: bin_gpdb_centos7
+      trigger: true
+      passed:
+      - compile_gpdb_centos7
+      - gate_icw_end
+      - gate_mpp_end
+      - gate_advanced_analytics_end
+    - get: bin_gpdb_sles11
+      trigger: true
+      passed:
+      - compile_gpdb_sles11
+
+
+- name: Release_Candidate
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_centos6
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_centos7
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_sles11
+      trigger: true
+      passed: [gate_release_candidate_start]
+  - task: verify_gpdb_versions
+    file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
+  - put: bin_gpdb_centos6_rc
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+  - put: bin_gpdb_centos7_rc
+    params:
+      file: bin_gpdb_centos7/bin_gpdb.tar.gz
+  - put: bin_gpdb_sles11_rc
+    params:
+      file: bin_gpdb_sles11/bin_gpdb.tar.gz
 {% endif %}

@@ -51,7 +51,8 @@ JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end', 'gate_icw_start
                     'gate_icw_end', 'gate_cs_start', 'gate_cs_end', 'gate_mpp_start',
                     'gate_mpp_end', 'gate_mm_start', 'gate_mm_end', 'gate_dpm_start',
                     'gate_dpm_end', 'gate_ud_start', 'gate_ud_end', 'gate_advanced_analytics_start',
-                    'gate_advanced_analytics_end', 'gate_filerep_start', 'gate_filerep_end']
+                    'gate_advanced_analytics_end', 'gate_filerep_start', 'gate_filerep_end', 
+                    'gate_release_candidate_start']
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 
 
@@ -70,8 +71,8 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
 
-    release_candidate_job = [ job for job in jobs_raw if job['name'] == 'Release_Candidate' ][0]
-    release_qualifying_job_names = release_candidate_job['plan'][0]['passed']
+    release_candidate_job = [ job for job in jobs_raw if job['name'] == 'gate_release_candidate_start' ][0]
+    release_qualifying_job_names = release_candidate_job['plan'][0]['aggregate'][0]['passed']
 
     jobs_that_are_not_blocking_release = [job for job in all_job_names if job not in release_qualifying_job_names]
 

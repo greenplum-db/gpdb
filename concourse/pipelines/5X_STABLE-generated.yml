@@ -137,6 +137,7 @@ groups:
 
 - name: Release
   jobs:
+  - gate_release_candidate_start
   - Release_Candidate
 
 ## ======================================================================
@@ -473,6 +474,33 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: bin_gpdb_sles11/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
+
+- name: bin_gpdb_centos6_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_centos6/gpdb5/bin_gpdb.tar.gz
+
+- name: bin_gpdb_centos7_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_centos7/gpdb5/bin_gpdb.tar.gz
+
+- name: bin_gpdb_sles11_rc
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{gpdb-stable-builds-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: release_candidates/bin_gpdb_sles11/gpdb5/bin_gpdb.tar.gz
 
 - name: pxf_tarball
   type: s3
@@ -2307,6 +2335,13 @@ jobs:
         - mpp_resource_group_centos6
         - mpp_resource_group_centos7
       trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+        - mpp_interconnect
+        - mpp_resource_group_centos6
+    - get: bin_gpdb_centos7
+      passed:
+        - mpp_resource_group_centos7
 
 ## ======================================================================
 ##  __  __ __  __ 
@@ -3432,6 +3467,18 @@ jobs:
       - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
+    - get: bin_gpdb_centos6
+      passed:
+      - DPM_backup-restore
+      - DPM_backup-restore_ddboost_part1
+      - DPM_backup-restore_ddboost_part2
+      - DPM_backup-restore_ddboost_part3
+      - DPM_backup-restore_netbackup_part1
+      - DPM_backup-restore_netbackup_part2
+      - DPM_backup-restore_netbackup_part3
+      - DPM_backup_43_restore_5
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
 
 ## ======================================================================
 ##  _   _ ____  
@@ -3763,6 +3810,18 @@ jobs:
       - Postgis_Test_Planner_centos7
       - MADlib_Test_Orca_centos7
       - Postgis_Test_Orca_centos7
+    - get: bin_gpdb_centos6
+      passed:
+      - MADlib_Test_Planner_centos6
+      - Postgis_Test_Planner_centos6
+      - MADlib_Test_Orca_centos6
+      - Postgis_Test_Orca_centos6
+    - get: bin_gpdb_centos7
+      passed:
+      - MADlib_Test_Planner_centos7
+      - Postgis_Test_Planner_centos7
+      - MADlib_Test_Orca_centos7
+      - Postgis_Test_Orca_centos7
 
 ## ======================================================================
 ##  _____ _ _      ____            
@@ -3963,82 +4022,134 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
+- name: gate_release_candidate_start
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed:
+      - compile_gpdb_centos6
+      - compile_gpdb_open_source_centos6
+      - compile_gpdb_centos7
+      - compile_gpdb_sles11
+      - compile_gpdb_ubuntu16
+      - compile_gpdb_windows_cl
+      - compile_gpdb_aix7_remote
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_gporca_centos7
+      - icw_planner_centos7
+      - icw_gporca_sles11
+      - icw_planner_ubuntu16
+      - icw_gporca_conan_ubuntu16
+      - test_gpdb_debian_package
+      - icw_planner_ictcp_centos6
+      - icw_extensions_gpcloud
+      - client_loader_remote_test_aix
+      - mpp_resource_group_centos6
+      - mpp_resource_group_centos7
+      - MU_check_centos
+      - MM_gpcheck
+      - DPM_backup-restore
+      - MM_gppkg
+      - MM_pt-rebuild
+      - fts
+      - storage
+      - cs_walrep_1
+      - cs_walrep_2
+      - cs_pg_twophase_01_10
+      - cs_pg_twophase_11_20
+      - cs_pg_twophase_21_30
+      - cs_pg_twophase_31_40
+      - cs_pg_twophase_41_49
+      - cs_switch_01_12
+      - cs_crash_recovery_schema_topology
+      - cs_crash_recovery_04_10
+      - cs_crash_recovery_11_20
+      - cs_crash_recovery_21_30
+      - cs_crash_recovery_31_42
+      - cs_filerep_end_to_end_full_mirror
+      - cs_filerep_end_to_end_incr_mirror
+      - cs_filerep_end_to_end_full_primary
+      - cs_filerep_end_to_end_incr_primary
+      - QP_memory-accounting
+      - regression_tests_gphdfs_centos
+      - regression_tests_pxf
+      - DPM_backup-restore_ddboost_part1
+      - DPM_backup-restore_ddboost_part2
+      - DPM_backup-restore_ddboost_part3
+      - DPM_backup-restore_netbackup_part1
+      - DPM_backup-restore_netbackup_part2
+      - DPM_backup-restore_netbackup_part3
+      - DPM_backup_43_restore_5
+      - MM_gprecoverseg
+      - MM_gpcheckcat
+      - MM_analyzedb
+      - MM_gpperfmon
+      - MM_gpinitsystem
+      - MM_gpinitstandby
+      - MM_gpexpand_1
+      - MM_gpexpand_2
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
+      - mpp_interconnect
+      - QP_optimizer-functional
+      - MADlib_Test_Planner_centos6
+      - Postgis_Test_Planner_centos6
+      - MADlib_Test_Orca_centos6
+      - Postgis_Test_Orca_centos6
+      - MADlib_Test_Planner_centos7
+      - Postgis_Test_Planner_centos7
+      - MADlib_Test_Orca_centos7
+      - Postgis_Test_Orca_centos7
+    - get: bin_gpdb_centos6
+      trigger: true
+      passed:
+      - compile_gpdb_centos6
+      - gate_icw_end
+      - gate_mpp_end
+      - gate_advanced_analytics_end
+      - gate_cs_end
+      - gate_mm_end
+      - gate_ud_end
+      - gate_dpm_end
+      - gate_filerep_end
+    - get: bin_gpdb_centos7
+      trigger: true
+      passed:
+      - compile_gpdb_centos7
+      - gate_icw_end
+      - gate_mpp_end
+      - gate_advanced_analytics_end
+    - get: bin_gpdb_sles11
+      trigger: true
+      passed:
+      - compile_gpdb_sles11
+
+
 - name: Release_Candidate
   plan:
-  - get: gpdb_src
-    trigger: true
-    passed:
-    - compile_gpdb_centos6
-    - compile_gpdb_open_source_centos6
-    - compile_gpdb_centos7
-    - compile_gpdb_sles11
-    - compile_gpdb_ubuntu16
-    - compile_gpdb_windows_cl
-    - compile_gpdb_aix7_remote
-    - icw_planner_centos6
-    - icw_gporca_centos6
-    - icw_gporca_centos7
-    - icw_planner_centos7
-    - icw_gporca_sles11
-    - icw_planner_ubuntu16
-    - icw_gporca_conan_ubuntu16
-    - test_gpdb_debian_package
-    - icw_planner_ictcp_centos6
-    - icw_extensions_gpcloud
-    - client_loader_remote_test_aix
-    - mpp_resource_group_centos6
-    - mpp_resource_group_centos7
-    - MU_check_centos
-    - MM_gpcheck
-    - DPM_backup-restore
-    - MM_gppkg
-    - MM_pt-rebuild
-    - fts
-    - storage
-    - cs_walrep_1
-    - cs_walrep_2
-    - cs_pg_twophase_01_10
-    - cs_pg_twophase_11_20
-    - cs_pg_twophase_21_30
-    - cs_pg_twophase_31_40
-    - cs_pg_twophase_41_49
-    - cs_switch_01_12
-    - cs_crash_recovery_schema_topology
-    - cs_crash_recovery_04_10
-    - cs_crash_recovery_11_20
-    - cs_crash_recovery_21_30
-    - cs_crash_recovery_31_42
-    - cs_filerep_end_to_end_full_mirror
-    - cs_filerep_end_to_end_incr_mirror
-    - cs_filerep_end_to_end_full_primary
-    - cs_filerep_end_to_end_incr_primary
-    - QP_memory-accounting
-    - regression_tests_gphdfs_centos
-    - regression_tests_pxf
-    - DPM_backup-restore_ddboost_part1
-    - DPM_backup-restore_ddboost_part2
-    - DPM_backup-restore_ddboost_part3
-    - DPM_backup-restore_netbackup_part1
-    - DPM_backup-restore_netbackup_part2
-    - DPM_backup-restore_netbackup_part3
-    - DPM_backup_43_restore_5
-    - MM_gprecoverseg
-    - MM_gpcheckcat
-    - MM_analyzedb
-    - MM_gpperfmon
-    - MM_gpinitsystem
-    - MM_gpinitstandby
-    - MM_gpexpand_1
-    - MM_gpexpand_2
-    - gptransfer-43x-to-5x
-    - gptransfer-5x-to-5x
-    - mpp_interconnect
-    - QP_optimizer-functional
-    - MADlib_Test_Planner_centos6
-    - Postgis_Test_Planner_centos6
-    - MADlib_Test_Orca_centos6
-    - Postgis_Test_Orca_centos6
-    - MADlib_Test_Planner_centos7
-    - Postgis_Test_Planner_centos7
-    - MADlib_Test_Orca_centos7
-    - Postgis_Test_Orca_centos7
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_centos6
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_centos7
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_sles11
+      trigger: true
+      passed: [gate_release_candidate_start]
+  - task: verify_gpdb_versions
+    file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
+  - put: bin_gpdb_centos6_rc
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+  - put: bin_gpdb_centos7_rc
+    params:
+      file: bin_gpdb_centos7/bin_gpdb.tar.gz
+  - put: bin_gpdb_sles11_rc
+    params:
+      file: bin_gpdb_sles11/bin_gpdb.tar.gz
