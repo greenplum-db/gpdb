@@ -17,6 +17,7 @@
   OPERATOR <varname>op</varname> (<varname>leftoperand_type</varname>, <varname>rightoperand_type</varname>) |
   OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
   [PROCEDURAL] LANGUAGE <varname>object_name</varname> |
+  RESOURCE GROUP <varname>object_name</varname> |
   RESOURCE QUEUE <varname>object_name</varname> |
   ROLE <varname>object_name</varname> |
   RULE <varname>rule_name</varname> ON <varname>table_name</varname> |

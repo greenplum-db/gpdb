@@ -27,6 +27,7 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  regressq |             2 |         4000 | f             |                  0
 (1 row)
 
+COMMENT ON RESOURCE QUEUE regressq IS 'regressq comment';
 DROP RESOURCE QUEUE regressq;
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
