@@ -4265,7 +4265,6 @@ CopyFromDispatch(CopyState cstate)
 	pfree(cdbcopy_err.data);
 	pfree(line_buf_with_lineno.data);
 	pfree(cdbCopy);
-	pfree(part_distData);
 	pfree(getAttrContext);
 	FreePartitionData(partitionData);
 	FreeDistributionData(distData);
