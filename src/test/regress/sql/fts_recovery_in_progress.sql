@@ -2,7 +2,9 @@
 -- 'fts_conn_startup_packet' is used to simulate the primary responding
 -- in-recovery to FTS, primary is not actually going through crash-recovery in
 -- test.
-create extension if not exists gp_inject_fault;
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 select role, preferred_role, mode from gp_segment_configuration where content = 0;
 select gp_inject_fault_infinite('fts_conn_startup_packet', 'skip', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
