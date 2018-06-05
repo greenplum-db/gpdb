@@ -667,7 +667,7 @@ readStr(Oid group, const char *base, const char *comp, const char *prop, char *s
 
 	readData(path, data, datasize);
 
-	strncpy(str, data, len);
+	StrNCpy(str, data, len);
 }
 
 /*
@@ -1176,7 +1176,7 @@ ResGroupOps_AssignGroup(Oid group, ResGroupCaps *caps, int pid)
 	if (caps != NULL)
 	{
 		oldCaps.cpuRateLimit = caps->cpuRateLimit;
-		strncpy(oldCaps.cpuset, caps->cpuset, sizeof(oldCaps.cpuset));
+		StrNCpy(oldCaps.cpuset, caps->cpuset, sizeof(oldCaps.cpuset));
 	}
 }
 

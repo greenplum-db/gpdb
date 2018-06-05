@@ -2450,7 +2450,7 @@ void
 SwitchResGroupOnSegment(const char *buf, int len)
 {
 	Oid		newGroupId;
-	ResGroupCaps		caps;
+	ResGroupCaps		caps = {0};
 	ResGroupData		*group;
 	ResGroupSlotData	*slot;
 
@@ -3809,7 +3809,7 @@ bool CpusetIsEmpty(const char *cpuset)
  */
 void SetCpusetEmpty(char *cpuset, int cpusetSize)
 {
-	strncpy(cpuset, DefaultCpuset, cpusetSize);
+	StrNCpy(cpuset, DefaultCpuset, cpusetSize);
 }
 
 /*
