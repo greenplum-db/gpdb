@@ -227,7 +227,8 @@ static void FreeDistributionData(GpDistributionData *distData);
 static PartitionData *InitPartitionData(EState *estate, Form_pg_attribute *attr,
                   AttrNumber num_phys_attrs);
 static GpDistributionData *
-GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
+GetDistributionPolicyForPartition(GpDistributionData* distData,
+                                  CopyState cstate, EState *estate,
                                   PartitionData *partitionData, HTAB *hashmap,
                                   Oid *p_attr_types, TupleDesc tupDesc,
                                   Datum *values, bool *nulls);
@@ -3145,7 +3146,7 @@ CopyFrom(CopyState cstate)
 	Datum	   *baseValues;
 	bool	   *baseNulls;
 	PartitionData *partitionData = NULL;
-	GpDistributionData *part_distData = NULL;
+	GpDistributionData *part_distData = palloc0(sizeof(GpDistributionData)); /* distribution policy for part table */
 
 	Assert(cstate->rel);
 
@@ -3536,17 +3537,29 @@ CopyFrom(CopyState cstate)
 				/* lock partition */
 				if (estate->es_result_partitions)
 				{
-					part_distData = GetDistributionPolicyForPartition(
+					GetDistributionPolicyForPartition(part_distData,
 						cstate, estate, partitionData,
 						distData->hashmap,
 						distData->p_attr_types, tupDesc,
 						slot_get_values(slot), slot_get_isnull(slot));
 
 					if (!part_distData->cdbHash)
-						part_distData = distData;
+					{
+						part_distData->policy = distData->policy;
+                        part_distData->cdbHash = distData->cdbHash;
+                        part_distData->p_attr_types = distData->p_attr_types;
+                        part_distData->hashmap = distData->hashmap;
+                        part_distData->p_nattrs =distData->p_nattrs;
+					}
 				}
 				else
-					part_distData = distData;
+				{
+						part_distData->policy = distData->policy;
+                        part_distData->cdbHash = distData->cdbHash;
+                        part_distData->p_attr_types = distData->p_attr_types;
+                        part_distData->hashmap = distData->hashmap;
+                        part_distData->p_nattrs =distData->p_nattrs;
+				}
 
 				target_seg = GetTargetSeg(part_distData, slot_get_values(slot), slot_get_isnull(slot));
 
@@ -6788,7 +6801,8 @@ InitPartitionData(EState *estate, Form_pg_attribute *attr,
 
 /* Get distribution policy for specific part */
 static GpDistributionData *
-GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
+GetDistributionPolicyForPartition(GpDistributionData* distData,
+                                  CopyState cstate, EState *estate,
                                   PartitionData *partitionData, HTAB *hashmap,
                                   Oid *p_attr_types, TupleDesc tupDesc,
                                   Datum *values, bool *nulls)
@@ -6801,7 +6815,7 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 
 	values_for_partition = values;
 
-	GpDistributionData *distData = palloc(sizeof(GpDistributionData));
+	MemSet(distData, 0, sizeof(GpDistributionData));
 	distData->p_attr_types = p_attr_types;
 	resultRelInfo = values_get_partition(values_for_partition,
 	                                     nulls,
