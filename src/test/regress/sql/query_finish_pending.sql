@@ -1,3 +1,4 @@
+
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 drop table if exists _tmp_table;
@@ -76,11 +77,9 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- make one QE sleep before reading command
-select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, -1, 50, 2::smallint);
+select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 1, 50, 2::smallint);
 
-begin;
 select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
-end;
 
 select gp_inject_fault('before_read_command', 'reset', 2);
 -- Resume FTS probes starting from the next probe interval.

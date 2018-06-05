@@ -169,17 +169,15 @@ NOTICE:  Success:
 (1 row)
 
 -- make one QE sleep before reading command
-select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, -1, 50, 2::smallint);
+select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 1, 50, 2::smallint);
 NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-begin;
 select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
 ERROR:  division by zero  (seg0 slice1 127.0.1.1:25432 pid=15478)
-end;
 select gp_inject_fault('before_read_command', 'reset', 2);
 NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
