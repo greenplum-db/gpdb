@@ -14,6 +14,7 @@
 
 #include "postgres.h"
 
+#include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 
 /*
