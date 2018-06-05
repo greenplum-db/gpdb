@@ -6,6 +6,30 @@
     Database cluster hosts.</shortdesc>
   <body>
     <p>Configuration of the Greenplum Database cluster is usually performed as root.</p>
+    <section id="topic_fvc_zh1_b2b">
+      <title>Configuring the Timezone</title>
+        <p>If you do not configure a timezone, Greenplum Database selects a timezone from a set of
+          internally stored PostgreSQL timezones. Greenplum selects the timezone by matching a
+          PostgreSQL timezone with the user specified time zone, or the host system time zone. For
+          example, when selecting a default timezone, Greenplum uses an algorithm to select a
+          PostgreSQL timezones based on the host system timezone files.</p>
+        <p>If the system timezone includes leap second information, Greenplum Database cannot match
+          the system timezone with a PostgreSQL timezone. Greenplum Database calculates a best match
+          with a PostgreSQL timezone based on information from the host system.</p>
+        <p>As a best practice, configure the Greenplum Database and the host system timezones to a
+          timezone that is supported by both Greenplum Database and the host system. This prevents
+          Greenplum Database from recalculating the timezone each time the cluster is restarted,
+          using the current system timezone and Greenplum timezone files (which may have changed
+          since the last restart). Use the <codeph>gpconfig</codeph> utility to show and set the
+          Greenplum Database timezone. For example, these commands show the Greenplum Database
+          timezone and set the timezone to
+          <codeph>US/Pacific</codeph>.<codeblock># gpconfig -s TimeZone
+# gpconfig -c TimeZone 'US/Pacific'</codeblock>You
+          must restart Greenplum Database after changing the timezone. The command <codeph>gpstop
+            -ra</codeph> restarts Greenplum Database. The catalog view
+            <codeph>pg_timezone_names</codeph> provides Greenplum Database timezone information.</p>
+    </section>
+
     <section id="file_system">
       <title>File System</title>
       <p>XFS is the file system used for Greenplum Database data directories. XFS should be mounted
