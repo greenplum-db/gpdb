@@ -4640,7 +4640,7 @@
       </table>
     </body>
   </topic>
-  
+
   <topic id="gp_motion_cost_per_row">
     <title>gp_motion_cost_per_row</title>
     <body>
@@ -7334,13 +7334,14 @@
     <body>
       <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only
         when resource group-based resource management is active.</note>
-      <p>Sets the memory usage threshold percentage for memory-intensive operators in a transaction. When 
-        a transaction reaches this threshold, it spills to disk.</p>
-      <p>The default <codeph>memory_spill_ratio</codeph> percentage is the value defined for the resource group
-        assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at
-        the session level to selectively set this limit on a per-query basis. For example, if you
-        have a specific query that spills to disk and requires more memory, you may choose to set a
-        larger <codeph>memory_spill_ratio</codeph> to increase the initial memory allocation.</p>
+      <p>Sets the memory usage threshold percentage for memory-intensive operators in a transaction.
+        When a transaction reaches this threshold, it spills to disk.</p>
+      <p>The default <codeph>memory_spill_ratio</codeph> percentage is the value defined for the
+        resource group assigned to the currently active role. You can set
+          <codeph>memory_spill_ratio</codeph> at the session level to selectively set this limit on
+        a per-query basis. For example, if you have a specific query that spills to disk and
+        requires more memory, you may choose to set a larger <codeph>memory_spill_ratio</codeph> to
+        increase the initial memory allocation.</p>
       <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, Greenplum Database
         does not perform semantic validation on the new value until you next perform a query.</p>
       <table id="memory_spill_ratio_table">
@@ -7409,10 +7410,10 @@
       <p>For a partitioned table, collects statistics for the root partition when the
           <cmdname>ANALYZE</cmdname> command is run on the table. GPORCA uses the root partition
         statistics when generating a query plan. The legacy query optimizer does not use these
-        statistics. If you set the value of the server configuration parameter <codeph><xref
-            href="#optimizer" format="dita"/></codeph> to on, set the value of this parameter to on
-        and run the command <cmdname>ANALYZE</cmdname> or <cmdname>ANALYZE ROOTPARTITION</cmdname>
-        on partitioned tables to ensure the proper statistics have been collected. </p>
+        statistics. When value of the server configuration parameter <codeph><xref href="#optimizer"
+            format="dita"/></codeph> is on (the default), the value of this parameter should also be
+        on (the default). For information about collecting table statistics on partitioned tables,
+        see <codeph><xref href="../sql_commands/ANALYZE.xml"/></codeph>.</p>
       <p>For information about the legacy query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -7432,7 +7433,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
+              <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
