@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 NOTICE:  extension "gp_inject_fault" already exists, skipping
 drop table if exists _tmp_table;
 NOTICE:  table "_tmp_table" does not exist, skipping

@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 DROP TABLE IF EXISTS test_zlib_hashjoin;
 CREATE TABLE test_zlib_hashjoin (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) WITH (APPENDONLY=true) DISTRIBUTED BY (i1) ; 

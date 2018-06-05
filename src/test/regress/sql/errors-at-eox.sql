@@ -3,6 +3,9 @@
 -- or ABORT processing. This test uses the fault injection mechanism
 -- built in to the server, to induce an ERROR at strategic places.
 --
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 -- Create a plain table that we can insert to, to verify after the
 -- transaction whether the transaction's effects are visible.

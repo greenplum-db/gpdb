@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 DROP TABLE if exists lu_customer;
 CREATE TABLE lu_customer (

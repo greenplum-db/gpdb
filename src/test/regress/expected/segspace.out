@@ -1,7 +1,9 @@
 --
 -- Tests the spill files disk space accounting mechanism
 --
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 -- check segspace before test
 reset statement_mem;
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;

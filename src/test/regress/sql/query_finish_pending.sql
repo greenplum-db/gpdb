@@ -1,5 +1,6 @@
-
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 drop table if exists _tmp_table;
 create table _tmp_table (i1 int, i2 int, i3 int, i4 int);

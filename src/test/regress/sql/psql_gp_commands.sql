@@ -3,7 +3,9 @@
 --
 -- We just use gp_inject_fault as an example of an extension here. We don't
 -- inject any faults.
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 \dx gp_inject*
 \dx+ gp_inject*
