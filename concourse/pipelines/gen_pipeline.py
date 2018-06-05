@@ -52,7 +52,8 @@ JOBS_THAT_ARE_GATES = ['gate_icw_start',
                        'gate_replication_start',
                        'gate_resource_groups_start',
                        'gate_cli_start',
-                       'gate_ud_start']
+                       'gate_ud_start',
+                       'gate_release_candidate_start']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'icw_gporca_centos6_gpos_memory'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 
@@ -97,8 +98,8 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
 
-    release_candidate_job = [ job for job in jobs_raw if job['name'] == 'Release_Candidate' ][0]
-    release_qualifying_job_names = release_candidate_job['plan'][0]['passed']
+    release_candidate_job = [ job for job in jobs_raw if job['name'] == 'gate_release_candidate_start' ][0]
+    release_qualifying_job_names = release_candidate_job['plan'][0]['aggregate'][0]['passed']
 
     jobs_that_are_not_blocking_release = [job for job in all_job_names if job not in release_qualifying_job_names]
 
