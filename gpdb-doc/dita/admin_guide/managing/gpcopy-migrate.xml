@@ -26,16 +26,16 @@
       as compared to <codeph>gptransfer</codeph>:<ul id="ul_ibs_vsp_zdb">
         <li><codeph>gpcopy</codeph> performs significantly faster than <codeph>gptransfer</codeph>
           when copying large amounts of data.</li>
-        <li>The <codeph>gpcopy</codeph>
-          <codeph>--truncate-source-after</codeph> option provides the ability to migrate from
-          Pivotal Greenplum Database 4.x to 5.x on the hardware, requiring minimal free space
-          available.</li>
         <li><codeph>gpcopy</codeph> provides more detailed reporting and summary information about
           all aspects of the copy operation.</li>
         <li>
           <p><codeph>gpcopy</codeph> allows the source table data to change while the data is being
             copied. A lock is not acquired on the source table when data is copied. </p>
         </li>
+        <li>The <codeph>gpcopy</codeph> utility includes the
+            <codeph>--truncate-source-after</codeph> option to help migrate data from one Pivotal
+          Greenplum Database system to another on the same hardware, requiring minimal free space
+          available.</li>
       </ul></p></body>
     <topic id="topic_psq_dsp_zdb">
     <title>Prerequisites</title>
@@ -44,12 +44,18 @@
         access between all hosts, and have master host and primary segment hosts in both systems.
         Each system must be configured with the same number of segments.</p>
       <p><codeph>gpcopy</codeph> is dependent on the <codeph>pg_dump</codeph>,
-          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> tool versions that are installed
-        with it. In most cases, you run <codeph>gpcopy</codeph> from the source cluster, so the
-        dependencies are automatically met. If you run <codeph>gpcopy</codeph> on a remote server,
-        such as an ETL system, you must ensure that the versions of <codeph>pg_dump</codeph>,
-          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> on that system match the versions
-        with which <codeph>gpcopy</codeph> was installed.</p>
+          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> utilities installed with Greenplum
+        Database. In most cases, you run <codeph>gpcopy</codeph> from a Greenplum Database cluster,
+        so the dependencies are automatically met. If you run <codeph>gpcopy</codeph> on a remote
+        server, such as an ETL system, you manually copy the <codeph>gpcopy</codeph> utility as well
+        as <codeph>pg_dump</codeph>, <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> to that
+        system.</p>
+      <p><codeph>gpcopy</codeph> supports migrating data from a Greenplum Database 4.3.26 or later
+        cluster to a Greenplum Database 5.9 or later cluster. However Greenplum Database 4.3.26 and
+        later do not include the actual <codeph>gpcopy</codeph> utility. You must manually copy the
+          <codeph>gpcopy</codeph> utility from your version 5.9 or later cluster into the older
+        version cluster to migrate data.. For
+        example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></p>
     </body>
   </topic>
     <topic id="topic_qwl_2rp_zdb">
@@ -150,15 +156,16 @@
   <topic id="topic_pyc_hpp_zdb">
     <title>Migrating Data Between Clusters that Share Hardware</title>
     <body>
-      <p>In order to use a backup/ restore operation or <codeph>gptransfer</codeph> to migrate data
-        between two clusters on the same hardware, you would need enough free disk space to
-        accommodate over 5 times the original data set (2 full copies of the primary and mirror data
-        sets, plus the original backup data in ASCII format). The <codeph>gpcopy</codeph>
-        <codeph>--truncate-source-after</codeph> option enables you to migrate data from one cluster
-        to another on the same hardware, requiring only a minimum of free disk space. The
-          <codeph>--truncate-source-after</codeph> option instructs the utility to truncate the
-        source tables after successfully copying their data and validating it in the destination
-        cluster. </p>
+      <p>In order to migrate data between two clusters on the same hardware, you should have enough
+        free disk space to accommodate over 5 times the original data set. This enables you to
+        maintain 2 full copies of the primary and mirror data sets (on the source and destination
+        systems), plus the original backup data in ASCII format. </p>
+      <p>If you attempt to migrate and find that you do not have enough free space, the
+          <codeph>gpcopy</codeph> utility provides the <codeph>--truncate-source-after</codeph>
+        option to help you migrate data from one cluster to another on the same hardware with only a
+        minimum of free disk space. The <codeph>--truncate-source-after</codeph> option instructs
+        the utility to truncate each source table after successfully copying the table data  to the
+        destination cluster and validating the the copy succeeded.</p>
       <p>If you choose to use <codeph>--truncate-source-after</codeph>, consider the following:<ul
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
@@ -182,6 +189,11 @@ ORDER BY 4 DESC LIMIT 5;
           <li>Start both the source and destination clusters in restricted mode (<codeph>gpstart
               -R</codeph>) to ensure that no updates occur while executing
             <codeph>gpcopy</codeph>.</li>
+          <li>While Greenplum Database 4.3.26 and later support migration with
+              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+              <codeph>gpcopy</codeph> utility. You must manually copy the utility to your Greenplum
+            Database 4.3.x
+            installation:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
           <li>Execute <codeph>gpcopy</codeph> using the utility version installed on the source
             Greenplum Database system (source the <codeph>greenplum_path.sh</codeph> file for the
             source installation).</li>
