@@ -185,6 +185,12 @@ See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
 
 gpperfmon is dependent on several libraries like apr, apu, and libsigar
 
+### Building GPDB with Python3 enabled
+
+GPDB supports Python3 with plpython3u UDF
+
+See [how to enable Python3](src/pl/plpython/README.md) for details.
+
 ## Development with Docker
 
 See [README.docker.md](README.docker.md).

@@ -494,6 +494,10 @@ static bool	data_checksums;
 static bool integer_datetimes;
 static int	effective_io_concurrency;
 
+/* set the PYTHONPATH and PYTHONHOME for python3 */
+char *python3_path;
+char *python3_home;
+
 /* should be static, but commands/variable.c needs to get at this */
 char	   *role_string;
 
@@ -2860,6 +2864,30 @@ static struct config_string ConfigureNamesString[] =
 		&namespace_search_path,
 		"\"$user\",public",
 		check_search_path, assign_search_path, NULL
+	},
+
+
+	{
+		{"python3_path", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets the PYTHONPATH of the python3 environment."),
+			NULL,
+			GUC_GPDB_ADDOPT
+		},
+		&python3_path,
+		"",
+		NULL, NULL, NULL
+	},
+
+
+	{
+		{"python3_home", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets the PYTHONHOME of the python3 environment."),
+			NULL,
+			GUC_GPDB_ADDOPT
+		},
+		&python3_home,
+		"",
+		NULL, NULL, NULL
 	},
 
 	{
