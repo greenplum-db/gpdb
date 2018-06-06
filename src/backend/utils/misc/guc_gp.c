@@ -480,7 +480,7 @@ char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
 
-bool		enable_filter_pushdown = false;
+bool		gp_external_enable_filter_pushdown = false;
 
 /* Executor */
 bool		gp_enable_mk_sort = true;
@@ -2857,12 +2857,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"enable_filter_pushdown", PGC_USERSET, EXTERNAL_TABLES,
+		{"gp_external_enable_filter_pushdown", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Enable passing of query constraints to external table providers"),
 			NULL,
 			GUC_GPDB_ADDOPT
 		},
-		&enable_filter_pushdown,
+		&gp_external_enable_filter_pushdown,
 		false, NULL, NULL
 	},
 

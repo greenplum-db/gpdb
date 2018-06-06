@@ -126,7 +126,7 @@ ExternalNext(ExternalScanState *node)
 	direction = estate->es_direction;
 	slot = node->ss.ss_ScanTupleSlot;
 
-	if (enable_filter_pushdown) {
+	if (gp_external_enable_filter_pushdown) {
 		filter_quals = node->ss.ps.plan->qual;
 	}
 

@@ -546,7 +546,7 @@ extern bool gp_enable_segment_copy_checking;
 extern int writable_external_table_bufsize;
 
 /* Enable passing of query constraints to external table providers */
-extern bool enable_filter_pushdown;
+extern bool gp_external_enable_filter_pushdown;
 
 typedef enum
 {

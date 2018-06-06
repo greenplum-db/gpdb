@@ -279,7 +279,7 @@
               <xref href="#gp_external_max_segs"/>
             </li>
             <li>
-              <xref href="#enable_filter_pushdown"/>
+              <xref href="#gp_external_enable_filter_pushdown"/>
             </li>
             <li>
               <xref href="#gp_filerep_tcp_keepalives_count"/>
@@ -3675,8 +3675,8 @@
       </table>
     </body>
   </topic>
-  <topic id="enable_filter_pushdown">
-    <title>enable_filter_pushdown</title>
+  <topic id="gp_external_enable_filter_pushdown">
+    <title>gp_external_enable_filter_pushdown</title>
     <body>
       <p>Enable filter pushdown when reading data from external tables. If
       pushdown fails, a query will be executed without it, and GPDB will apply
