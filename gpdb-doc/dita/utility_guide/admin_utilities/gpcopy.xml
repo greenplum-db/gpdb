@@ -25,7 +25,7 @@
    [<b>--validate</b> <varname>type</varname>]
    [<b>--truncate-source-after</b> [<b>--yes</b>]]
    [<b>--metadata-only</b>]
-   { <b>--dest-host</b> <varname>dest_host</varname> [<b>--dest-port</b>=<varname>dest_port</varname>]
+   { <b>--dest-host</b> <varname>dest_host</varname> [<b>--dest-port</b> <varname>dest_port</varname>]
       [<b> --dest-user</b> <varname>dest_user</varname>] }
    [<b>--source-host</b> <varname>source_host</varname> [<b>--source-port</b> <varname>source_port</varname>]
    [<b>--source-user</b> <varname>source_user</varname>]]
@@ -186,7 +186,7 @@
                                 format="dita">--include-table</xref></codeph> option for information
                         about using regular expressions.</pd>
                     <pd>Only the specified tables are excluded, not dependent objects. You cannot
-                        specify views, or system catalog tables. </pd>
+                        specify views or system catalog tables. </pd>
                     <pd>This option must be specified with one of these options:
                             <codeph>--full</codeph>, <codeph>--dbname</codeph>,
                             <codeph>--include-table</codeph>, or
@@ -196,9 +196,9 @@
                 </plentry>
                 <plentry>
                     <pt>--exclude-table-file <varname>table-file</varname></pt>
-                    <pd>The location and name of file containing list of fully qualified table names
-                        to exclude from copying to the destination system. In the text file, specify
-                        a single fully qualified table per line
+                    <pd>The location and name of file containing a list of fully qualified table
+                        names to exclude from copying to the destination system. In the text file,
+                        specify a single fully qualified table per line
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         To specify multiple files, specify this option for each
                         file.<codeblock>--exclude-table-file &lt;<varname>path_to_file1</varname>> --exclude-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
@@ -208,7 +208,7 @@
                         about using regular expressions.</pd>
                     <pd>If a source table does not exist, <codeph>gpcopy</codeph> displays a
                         warning. </pd>
-                    <pd>Only the specified tables are excluded. You cannot specify views, or system
+                    <pd>Only the specified tables are excluded. You cannot specify views or system
                         catalog tables.</pd>
                     <pd>This option must be specified with one of these options:
                             <codeph>--full</codeph>, <codeph>--dbname</codeph>,
@@ -223,7 +223,7 @@
                     <pd>A table from the source database system to copy. The fully qualified table
                         name must be specified
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
-                        You cannot specify views, or system catalog tables. To copy multiple tables,
+                        You cannot specify views or system catalog tables. To copy multiple tables,
                         specify a comma separated list of table names.</pd>
                     <pd>A set of tables can be specified using the Go language regular expression
                         syntax. You can use regular expressions in table names and schema names.
@@ -234,7 +234,7 @@
                         tables that begin with <codeph>demo</codeph> in the database
                             <codeph>mytest</codeph> in the <codeph>public</codeph> schema.</pd>
                     <pd>The following two examples for the <codeph>--include-table</codeph> option
-                        are equivalent. They both specify a set of tables that begin with demo and
+                        are equivalent. They both specify a set of tables that begins with demo and
                         ends with zero or more
                         digits.<codeblock>--include-table testdb.schema1.demo/[0-9]*/
 --include-table testdb.schema1./demo[0-9]*/</codeblock></pd>
@@ -250,13 +250,13 @@
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
-                    <pd>The location and name of file containing list of fully qualified table names
-                        to copy from the Greenplum Database source system. To specify multiple
+                    <pd>The location and name of file containing a list of fully qualified table
+                        names to copy from the Greenplum Database source system. To specify multiple
                         files, specify this option for each
                         file.<codeblock>--include-table-file &lt;<varname>path_to_file1</varname>> --include-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
                     <pd>In the text file, specify a single fully qualified table per line
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
-                        You cannot specify views, or system catalog tables. In the file, a set of
+                        You cannot specify views or system catalog tables. In the file, a set of
                         tables can be specified with regular expression syntax. See the
                                 <codeph><xref href="#topic1/include-file-gpcopy" format="dita"
                                 >--include-table</xref></codeph> option for information about using
@@ -485,20 +485,20 @@
             <title>Examples</title>
             <p dir="ltr" id="docs-internal-guid-12cd43d8-6521-a9e1-6f15-4eeab6c1f3df">This command
                 copies all user created databases in a source system to a destination system with
-                    <codeph>--full</codeph> option. And drops the table and creates it again if it
-                already exists in destination.</p>
+                the <codeph>--full</codeph> option. And drops the table and creates it again if it
+                already exists in the destination.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
     --dest-host demohost --dest-port 1234 --dest-user gpuser \
     --full --drop</codeblock>
             <p dir="ltr">This command copies the specified databases in a source system to a
-                destination system with <codeph>--dbname</codeph> option. The
+                destination system with the <codeph>--dbname</codeph> option. The
                     <codeph>--truncate</codeph> option truncates the table data before copying table
                 data from the source table.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
    --dbname database1, database2 --truncate</codeblock>
             <p dir="ltr">This command copies the specified tables in a source system to a
-                destination system with <codeph>--include-table</codeph> option. The
+                destination system with the <codeph>--include-table</codeph> option. The
                     <codeph>--skip-existing</codeph> option skips the table if it already exists in
                 the destination database.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
@@ -516,29 +516,29 @@
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
    --dbname database1 --exclude-table-file /home/gpuser/mytables \
    --truncate --analyze --validate count</codeblock>
-            <p dir="ltr">This command copies specifies the <codeph>--full</codeph> and
+            <p dir="ltr">This command specifies the <codeph>--full</codeph> and
                     <codeph>--metadata-only</codeph> options to copy the complete database schema,
                 including all tables, indexes, views, user defined types (UDT), and user defined
                 functions (UDF) from all the source databases. No data is copied, The
                     <codeph>--drop</codeph> option specifies that the table is dropped in the
                 destination database before it is created again if the table exists in both the
-                source and destination database</p>
+                source and destination database.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
    --full --metadata-only --drop</codeblock>
             <p dir="ltr">This command copies the specified databases in a source system to a
-                destination system with <codeph>--dbname</codeph> option and specifies 8 parallel
-                processes with the <codeph>--jobs</codeph> option. The command specifies the
-                    <codeph>--truncate</codeph> option to truncate the table and create it again if
-                it already exists in destination.</p>
+                destination system with the <codeph>--dbname</codeph> option and specifies 8
+                parallel processes with the <codeph>--jobs</codeph> option. The command specifies
+                the <codeph>--truncate</codeph> option to truncate the table and create it again if
+                it already exists in the destination database.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
    --dbname database1, database2 --truncate --jobs 8</codeblock>
             <p dir="ltr" id="docs-internal-guid-cbf0fcbb-893d-f28a-6bc9-3caae975b2e3">This command
-                copies the specified database in a source system to a destination system with
+                copies the specified database in a source system to a destination system with the
                     <codeph>--dbname</codeph> option and specifies 16 parallel processes with the
                     <codeph>--jobs</codeph> option. The <codeph>--truncate</codeph> option truncates
-                the table and creates it again if it already exists in destination. The
+                the table and creates it again if it already exists in the destination database. The
                     <codeph>--truncate-source-after</codeph> option truncates the tables in source
                 database after that table data has been validated in the destination database.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
