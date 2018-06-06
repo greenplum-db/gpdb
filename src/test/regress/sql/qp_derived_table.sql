@@ -1,6 +1,11 @@
 -- start_ignore
 create schema qp_derived_table;
 set search_path to qp_derived_table;
+-- This test file contains join intensive queries and when run with ORCA; the
+-- optimization time is higher. Hence disable exhaustive join order search for
+-- faster run. Also catch any fallbacks to planner.
+set optimizer_join_order=query;
+set optimizer_trace_fallback=on;
 -- end_ignore
 
 create table T0(
