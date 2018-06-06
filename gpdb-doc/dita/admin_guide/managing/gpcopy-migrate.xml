@@ -81,28 +81,6 @@
           <codeph>gpcopy</codeph> is not supported.</p>
       </body>
     </topic>
-  <topic id="topic_ekp_rmp_zdb">
-    <title>Performing a Basic Copy Operation</title>
-    <body>
-      <p>This example <codeph>gpcopy</codeph> command specifies the <codeph>--full</codeph> option
-        to perform a migration of a Greenplum Database source system to a destination system. A full
-        migration automatically copies all database objects including tables, indexes, views, roles,
-        functions, user defined types (UDT), resource queues, and resource groups for all user
-        defined databases. </p>
-      <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
-    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-    --full --drop --validate count</codeblock>
-      <p>With the above command, the utility drops tables in the destination database
-          (<codeph>--drop</codeph> option) and uses the row count of the source and destination
-        tables to validate the data transfer (<codeph>--validate count</codeph> option). The other
-          <codeph>gpcopy</codeph> options specify the source and destination Greenplum Database
-        system master hosts, ports, and the User ID to use to connect to the Greenplum Database
-        systems.</p>
-      <p>See the <codeph>gpcopy</codeph> utility <ph otherprops="op-print">in the <cite>Greenplum
-            Database Utility Guide</cite>
-        </ph>for complete syntax and usage information. </p>
-    </body>
-  </topic>
     <topic id="topic_ay1_frp_zdb">
       <title>Configuring Parallel Jobs</title>
       <body>
@@ -141,15 +119,12 @@
     <topic id="topic_ytw_2sp_zdb">
     <title>Addressing Failed Data Transfers</title>
     <body>
-      <p>When <codeph>gpcopy</codeph> encounters errors and quits or is cancelled by the user, the
-        currently-running copy operations on tables in the destination database are rolled back.
-        Copy operations that have completed are not rolled back. </p>
-      <p>If a non-fatal error occurs during the process of copying a table, or a table validation
-        fails, <codeph>gpcopy</codeph> continues copying the other specified tables. </p>
-      <p>After <codeph>gpcopy</codeph> completes, it displays a summary of the copy operations that
-        were performed, and lists any tables that encountered errors or failed validation checks. If
-        any errors occurred, the summary displays a modified <codeph>gpcopy</codeph> command that
-        you can use to retry copying the failed tables. </p>
+      <p>If an error occurs during the process of copying a table, or a table validation fails,
+          <codeph>gpcopy</codeph> continues copying the other specified tables. After
+          <codeph>gpcopy</codeph> completes, it displays a summary of the copy operations that were
+        performed, and lists any tables that encountered errors or failed validation checks. If any
+        errors occurred, the summary displays a modified <codeph>gpcopy</codeph> command that you
+        can use to retry copying the failed tables. </p>
       <p>After resolving the issues that caused the copy operations to fail, you can run the
         provided command to copy the tables that failed in the previous <codeph>gpcopy</codeph>
         command. </p>
@@ -157,6 +132,28 @@
             <codeph>gpcopy_<varname>date</varname>.log</codeph> the <codeph>~/gpAdminLogs</codeph>
         directory on the master host. If you run multiple <codeph>gpcopy</codeph> commands on the
         same day, the utility appends messages to that day's log file. </p>
+    </body>
+  </topic>
+  <topic id="topic_ekp_rmp_zdb">
+    <title>Performing a Basic Data Migration</title>
+    <body>
+      <p>This example <codeph>gpcopy</codeph> command specifies the <codeph>--full</codeph> option
+        to perform a migration of a Greenplum Database source system to a destination system. A full
+        migration automatically copies all database objects including tables, indexes, views, roles,
+        functions, user defined types (UDT), resource queues, and resource groups for all user
+        defined databases. </p>
+      <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
+    --dest-host demohost --dest-port 1234 --dest-user gpuser \
+    --full --drop --validate count</codeblock>
+      <p>With the above command, the utility drops tables in the destination database
+          (<codeph>--drop</codeph> option) and uses the row count of the source and destination
+        tables to validate the data transfer (<codeph>--validate count</codeph> option). The other
+          <codeph>gpcopy</codeph> options specify the source and destination Greenplum Database
+        system master hosts, ports, and the User ID to use to connect to the Greenplum Database
+        systems.</p>
+      <p>See the <codeph>gpcopy</codeph> utility <ph otherprops="op-print">in the <cite>Greenplum
+            Database Utility Guide</cite>
+        </ph>for complete syntax and usage information. </p>
     </body>
   </topic>
   <topic id="topic_pyc_hpp_zdb">
@@ -176,6 +173,20 @@
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
               <codeph>--truncate-source-after</codeph>.</li>
+          <li>While Greenplum Database 4.3.26 and later support migration with
+              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+              <codeph>gpcopy</codeph> utility. You must manually copy the utility to your Greenplum
+            Database 4.3.x
+            installation:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
+          <li>Start both the source and destination clusters in restricted mode (<codeph>gpstart
+              -R</codeph>) to ensure that no updates occur while executing
+            <codeph>gpcopy</codeph>.</li>
+          <li>Execute <codeph>gpcopy</codeph> using the utility version installed on the source
+            Greenplum Database system (source the <codeph>greenplum_path.sh</codeph> file in the
+            source installation).</li>
+          <li>Consider migrating only portions of the your data at a time, so that you can reduce
+            downtime while addressing table errors or validation failures that may occur during the
+            copy operation.</li>
           <li>Migrating data with <codeph>--truncate-source-after</codeph> still requires an amount
             of free disk space equal to the sum of the largest tables that you will migrate in a
             single batch using <codeph>gpcopy</codeph>. For example, with a <codeph>--jobs</codeph>
@@ -192,27 +203,9 @@ n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolki
 AND n.nspname NOT LIKE 'pg_temp_%%' AND c.relstorage &lt;> 'v'
 ORDER BY 4 DESC LIMIT 5;
 </codeblock></li>
-          <li>Start both the source and destination clusters in restricted mode (<codeph>gpstart
-              -R</codeph>) to ensure that no updates occur while executing
-            <codeph>gpcopy</codeph>.</li>
-          <li>While Greenplum Database 4.3.26 and later support migration with
-              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
-              <codeph>gpcopy</codeph> utility. You must manually copy the utility to your Greenplum
-            Database 4.3.x
-            installation:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
-          <li>Execute <codeph>gpcopy</codeph> using the utility version installed on the source
-            Greenplum Database system (source the <codeph>greenplum_path.sh</codeph> file for the
-            source installation).</li>
           <li>You must use the <codeph>--validate</codeph> option with
               <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
             before source tables are truncated.</li>
-          <li>If you use <codeph>--truncate-source-after</codeph> to migrate data on shared
-            hardware, also include the <codeph>--no-compression</codeph> option to avoid the
-            overhead cost of compressing and uncompressing data that does not move across the
-            network.</li>
-          <li>Consider migrating only portions of the your data at a time, so that you can fully
-            address table errors or validation failures that may occur during the copy
-            operation.</li>
           <li>In general, keep in mind that using the <codeph>--truncate-source-after</codeph>
             option does not allow for an easy rollback to the source system to its original
             condition if errors occur or validation checks fail during the <codeph>gpcopy</codeph>
@@ -223,7 +216,7 @@ ORDER BY 4 DESC LIMIT 5;
       <p>For example:</p>
       <codeblock>gpcopy --source-host my_host --source-port 1234 --source-user gpuser \
 --dest-host my_host --dest-port 1235 --dest-user gpuser --dbname database1 \
--truncate --analyze --validate count --no-compression</codeblock>
+-truncate --analyze --validate count</codeblock>
     </body>
   </topic>
 </topic>
