@@ -119,19 +119,27 @@
     <topic id="topic_ytw_2sp_zdb">
     <title>Addressing Failed Data Transfers</title>
     <body>
-      <p>If an error occurs during the process of copying a table, or a table validation fails,
+      <p>When <codeph>gpcopy</codeph> encounters errors and quits or is cancelled by the user,
+        current copy operations on tables in the destination database are rolled back. Copy
+        operations that have completed are not rolled back. </p>
+      <p>If an error occurs during the process of copying a table, or table validation fails,
           <codeph>gpcopy</codeph> continues copying the other specified tables. After
-          <codeph>gpcopy</codeph> completes, it displays a summary of the copy operations that were
-        performed, and lists any tables that encountered errors or failed validation checks. If any
-        errors occurred, the summary displays a modified <codeph>gpcopy</codeph> command that you
-        can use to retry copying the failed tables. </p>
+          <codeph>gpcopy</codeph> finishes, it displays a list of tables where errors occurred or
+        validation failed and displays a <codeph>gpcopy</codeph> command. You can use the provided
+        command to retry copying the failed tables. </p>
+      <p>The <codeph>gpcopy</codeph> utility logs messages in log file
+            <codeph>gpcopy_<varname>date</varname>.log</codeph> in the
+          <codeph>~/gpAdminLogs</codeph> directory on the master host. If you run multiple
+          <codeph>gpcopy</codeph> commands on the same day, the utility appends messages to that
+        day's log file. </p>
+      <p>After <codeph>gpcopy</codeph> completes, it displays a summary of the operations performed.
+        If the utility fails to copy tables, they are highlighted in summary, and there is a
+          <codeph>gpcopy</codeph> command provided in summary for user to just copy the failed
+        tables. The information is displayed at the command prompt and in the
+          <codeph>gpcopy</codeph> log file. </p>
       <p>After resolving the issues that caused the copy operations to fail, you can run the
         provided command to copy the tables that failed in the previous <codeph>gpcopy</codeph>
         command. </p>
-      <p>The <codeph>gpcopy</codeph> utility logs messages in log file
-            <codeph>gpcopy_<varname>date</varname>.log</codeph> the <codeph>~/gpAdminLogs</codeph>
-        directory on the master host. If you run multiple <codeph>gpcopy</codeph> commands on the
-        same day, the utility appends messages to that day's log file. </p>
     </body>
   </topic>
   <topic id="topic_ekp_rmp_zdb">
