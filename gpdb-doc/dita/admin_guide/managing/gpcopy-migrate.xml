@@ -13,10 +13,9 @@
       version 5.x.</p>
     <p>The <codeph>gpcopy</codeph> interface includes options to transfer one or more full
       databases, or one or more database tables. A full database transfer includes the database
-      schema, table data, indexes, views, roles, user-defined functions, and resource queues. If a
-      copied table or database does not exist in the destination cluster, <codeph>gpcopy</codeph>
-      creates it automatically. The utility re-creates indexes on tables as necessary before copying
-      data.</p>
+      schema, table data, indexes, views, roles, user-defined functions, resource queues, and
+      resource groups. If a copied table or database does not exist in the destination cluster,
+        <codeph>gpcopy</codeph> creates it automatically.</p>
     <p>Configuration files, including <codeph>postgres.conf</codeph> and
         <codeph>pg_hba.conf</codeph>, must be transferred manually by an administrator. Extensions
       installed in the database with <codeph>gppkg</codeph>, such as MADlib and programming language
@@ -88,7 +87,8 @@
       <p>This example <codeph>gpcopy</codeph> command specifies the <codeph>--full</codeph> option
         to perform a migration of a Greenplum Database source system to a destination system. A
         migration copies all database objects including tables, indexes, views, roles, functions,
-        user defined types (UDT), and resource queues for all user defined databases. </p>
+        user defined types (UDT), resource queues, and resource groups for all user defined
+        databases. </p>
       <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
     --dest-host demohost --dest-port 1234 --dest-user gpuser \
     --full --drop --validate count</codeblock>
