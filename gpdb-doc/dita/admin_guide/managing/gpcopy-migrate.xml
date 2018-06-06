@@ -85,14 +85,14 @@
     <title>Performing a Basic Copy Operation</title>
     <body>
       <p>This example <codeph>gpcopy</codeph> command specifies the <codeph>--full</codeph> option
-        to perform a migration of a Greenplum Database source system to a destination system. A
-        migration copies all database objects including tables, indexes, views, roles, functions,
-        user defined types (UDT), resource queues, and resource groups for all user defined
-        databases. </p>
+        to perform a migration of a Greenplum Database source system to a destination system. A full
+        migration automatically copies all database objects including tables, indexes, views, roles,
+        functions, user defined types (UDT), resource queues, and resource groups for all user
+        defined databases. </p>
       <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
     --dest-host demohost --dest-port 1234 --dest-user gpuser \
     --full --drop --validate count</codeblock>
-      <p>When performing the copy, the utility drops tables in the destination database
+      <p>With the above command, the utility drops tables in the destination database
           (<codeph>--drop</codeph> option) and uses the row count of the source and destination
         tables to validate the data transfer (<codeph>--validate count</codeph> option). The other
           <codeph>gpcopy</codeph> options specify the source and destination Greenplum Database
@@ -199,10 +199,7 @@ ORDER BY 4 DESC LIMIT 5;
             source installation).</li>
           <li>You must use the <codeph>--validate</codeph> option with
               <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
-            before source tables are truncated.<note>If you are migrating data from Greenplum 4.x to
-              5.x, MD5 validation (<codeph>--validate md5xor</codeph>) will always fail. Use
-                <codeph>--validate count</codeph> when migrating between major versions to validate
-              by table row count.</note></li>
+            before source tables are truncated.</li>
           <li>If you use <codeph>--truncate-source-after</codeph> to migrate data on shared
             hardware, also include the <codeph>--no-compression</codeph> option to avoid the
             overhead cost of compressing and uncompressing data that does not move across the
