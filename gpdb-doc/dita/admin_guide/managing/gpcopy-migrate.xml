@@ -45,10 +45,10 @@
       <p><codeph>gpcopy</codeph> is dependent on the <codeph>pg_dump</codeph>,
           <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> utilities installed with Greenplum
         Database. In most cases, you run <codeph>gpcopy</codeph> from a Greenplum Database cluster,
-        so the dependencies are automatically met. If you run <codeph>gpcopy</codeph> on a remote
-        server, such as an ETL system, you manually copy the <codeph>gpcopy</codeph> utility as well
-        as <codeph>pg_dump</codeph>, <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> to that
-        system.</p>
+        so the dependencies are automatically met. If you need to run <codeph>gpcopy</codeph> on a
+        remote server, such as an ETL system, copy  the <codeph>gpcopy</codeph> binary and install a
+        compatible <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+          >Greenplum Clients</xref> package to meet the <codeph>gpcopy</codeph> dependencies.</p>
       <p><codeph>gpcopy</codeph> supports migrating data from a Greenplum Database 4.3.26 or later
         cluster to a Greenplum Database 5.9 or later cluster. However Greenplum Database 4.3.26 and
         later do not include the actual <codeph>gpcopy</codeph> utility. You must manually copy the
