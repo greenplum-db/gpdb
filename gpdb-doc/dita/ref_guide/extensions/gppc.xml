@@ -423,6 +423,36 @@ for( int i=0; i&lt;attnum; i++ ) {
         <p>When you allocate memory for a GPPC function, you allocate it in
           the current context. The GPPC API includes functions to return, 
           create, switch, and reset memory contexts.</p>
+        <table id="in201681">
+        <tgroup cols="4">
+          <colspec colname="col1" colnum="1" colwidth="100*"/>
+          <colspec colname="col2" colnum="2" colwidth="63*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Function Name</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">GppcMemoryContext GppcGetCurrentMemoryContext(void)</entry>
+              <entry colname="col2">Return the current memory context.</entry>
+            </row>
+            <row>
+              <entry colname="col1">GppcMemoryContext GppcMemoryContextCreate(GppcMemoryContext <varname>parent</varname>)</entry>
+              <entry colname="col2">Create a new memory context under <varname>parent</varname>.</entry>
+            </row>
+            <row>
+              <entry colname="col1">GppcMemoryContext GppcMemoryContextSwitchTo(GppcMemoryContext <varname>context</varname>)</entry>
+              <entry colname="col2">Switch to the memory context <varname>context</varname>.</entry>
+            </row>
+            <row>
+              <entry colname="col1">void GppcMemoryContextReset(GppcMemoryContext <varname>context</varname>)</entry>
+              <entry colname="col2">Reset (free) the memory in  memory context <varname>context</varname>.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+        </table>
         <p>Greenplum Database typically calls a SQL-invoked function in a
           per-tuple context that it creates and deletes every time the server
           backend processes a table row. Do not assume that memory allocated
