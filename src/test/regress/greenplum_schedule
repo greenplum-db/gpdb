@@ -115,7 +115,7 @@ test: gporca_faults
  
 test: aggregate_with_groupingsets 
 
-test: nested_case_null sort bb_mpph
+test: nested_case_null sort bb_mpph createdb_large_table
 test: bb_memory_quota memconsumption
 
 test: tuple_serialization

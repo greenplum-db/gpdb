@@ -2020,19 +2020,6 @@ drop table qp_misc_jiras.foo_6325;
 drop table qp_misc_jiras.bar_6325;
 -- end_ignore
 
--- Test for an old bug in extending a heap relation beyond RELSEG_SIZE (1 GB).
--- The insert failed with an error:
---   could not open segment 1 of relation ...: No such file or directory
-create table qp_misc_jiras.heap_tbl8621 (a int) with (fillfactor=10) distributed by (a);
-insert into qp_misc_jiras.heap_tbl8621 select 1 from generate_series(1, 3100000);
-
--- Verify that the table really was larger than 1 GB. Otherwise we wouldn't
--- test the segment boundary.
-select pg_relation_size('qp_misc_jiras.heap_tbl8621') > 1100000000 as over_1gb;
-
-DROP TABLE qp_misc_jiras.heap_tbl8621;
-
-
 CREATE TABLE qp_misc_jiras.tbl8860_1 (
      id INTEGER NOT NULL,
      key TEXT NOT NULL

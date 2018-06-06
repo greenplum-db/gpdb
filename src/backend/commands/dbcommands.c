@@ -327,7 +327,7 @@ static void copy_buffer_pool_files(
 		// -------- MirroredLock ----------
 		LWLockAcquire(MirroredLock, LW_SHARED);
 
-		smgrwrite(dstrel, blkno, buffer, false);
+		smgrextend(dstrel, blkno, buffer, false);
 
 		LWLockRelease(MirroredLock);
 		// -------- MirroredLock ----------
