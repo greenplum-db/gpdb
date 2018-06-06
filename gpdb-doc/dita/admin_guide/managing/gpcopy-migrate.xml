@@ -123,13 +123,19 @@
     <title>Validating Copied Data</title>
     <body>
       <p>By default, <codeph>gpcopy</codeph> does not validate the data transferred. You can request
-        validation using the <codeph>--validate=<i>type</i></codeph> option. The validation
-          <i>type</i> can be one of the following:<ul id="ul_hf1_k21_xdb">
+        validation using the <codeph>--validate=<i>type</i></codeph> option. You must include
+            <codeph>--validate=<i>type</i></codeph> if you specify the
+          <codeph>--truncate-source-after</codeph> option. The validation <i>type</i> can be one of
+        the following:<ul id="ul_hf1_k21_xdb">
           <li><codeph>count</codeph> - compares the row counts between the source and destination
             tables.</li>
           <li><codeph>md5xor</codeph> - calculates the MD5 value of all rows, then performs an XOR
             over the MD5 values.</li>
         </ul></p>
+      <note>Avoid using <codeph>--append</codeph> with either validation option. If you choose to
+          <codeph>--append</codeph> data and the source table already includes rows, then either
+        validation method will fail due to the different number of rows in the source and
+        destination tables. </note>
     </body>
   </topic>
     <topic id="topic_ytw_2sp_zdb">
@@ -160,12 +166,12 @@
         free disk space to accommodate over 5 times the original data set. This enables you to
         maintain 2 full copies of the primary and mirror data sets (on the source and destination
         systems), plus the original backup data in ASCII format. </p>
-      <p>If you attempt to migrate and find that you do not have enough free space, the
+      <p>If you attempt to migrate on the same system but you run out of disk space, the
           <codeph>gpcopy</codeph> utility provides the <codeph>--truncate-source-after</codeph>
-        option to help you migrate data from one cluster to another on the same hardware with only a
-        minimum of free disk space. The <codeph>--truncate-source-after</codeph> option instructs
-        the utility to truncate each source table after successfully copying the table data  to the
-        destination cluster and validating the the copy succeeded.</p>
+        option to help you complete the operation with only a minimum of free disk space. The
+          <codeph>--truncate-source-after</codeph> option instructs the utility to truncate each
+        source table after successfully copying the table data to the destination cluster and
+        validating that the copy succeeded.</p>
       <p>If you choose to use <codeph>--truncate-source-after</codeph>, consider the following:<ul
           id="ul_g5k_22q_zdb">
           <li>Back up all source data before using <codeph>gpcopy</codeph> with
