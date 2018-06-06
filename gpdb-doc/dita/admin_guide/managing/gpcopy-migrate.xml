@@ -178,6 +178,13 @@
                 copy, consider migrating only portions of the your data at a time, so that you can
                 reduce downtime while addressing table errors or validation failures that may occur
                 during the copy operation.</note></p></li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
+            as <systemoutput>postgresql.conf</systemoutput> and
+              <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
+            configuration as necessary to match the source system.</li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
+            Greenplum Database extensions, third party jar files, and shared object files. You must
+            recreate these external objects as necessary to match the source system. </li>
         </ol></p>
       <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
           page</xref>
@@ -217,9 +224,9 @@
               <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
             before source tables are truncated.</li>
         </ul></p>
-      <p>If you follow the instructions under <xref href="#topic_ekp_rmp_zdb" format="dita"/> to
-        migrate systems that use the same hardware, but you do not have the required free space:<ol
-          id="ul_zdm_bm4_b2b">
+      <p>If you attempt to use the instructions in <xref href="#topic_ekp_rmp_zdb" format="dita"/>
+        to migrate systems that use the same hardware, but you do not have the required free
+          space:<ol id="ul_zdm_bm4_b2b">
           <li>Determine if you have enough free space to migrate your data using
               <codeph>--truncate-source-after</codeph>. Migrating data "in-place" requires an amount
             of free disk space equal to the sum of the largest tables that you will migrate in a
@@ -274,6 +281,13 @@ ORDER BY 4 DESC LIMIT 5;
                 copy, consider migrating only portions of the your data at a time, so that you can
                 reduce downtime while addressing table errors or validation failures that may occur
                 during the copy operation.</note></p></li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
+            as <systemoutput>postgresql.conf</systemoutput> and
+              <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
+            configuration as necessary to match the source system.</li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
+            Greenplum Database extensions, third party jar files, and shared object files. You must
+            recreate these external objects as necessary to match the source system. </li>
         </ol></p>
       <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
           page</xref>
