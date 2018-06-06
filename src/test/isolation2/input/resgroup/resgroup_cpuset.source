@@ -238,6 +238,24 @@ select * from cancel_all;
 11q:
 -- end_ignore
 
+-- test cpu_usage
+10: SET ROLE TO role1_cpuset_test;
+10: BEGIN;
+10&: SELECT * FROM busy;
+
+select pg_sleep(2);
+
+11: BEGIN;
+11: select (cpu_usage::json->>'0')::float > 50 from gp_toolkit.gp_resgroup_status where rsgname='rg1_cpuset_test';
+-- cancel the transaction
+-- start_ignore
+select * from cancel_all;
+
+10<:
+10q:
+11q:
+-- end_ignore
+
 -- positive: cgroup cpuset must correspond to config cpuset
 -- default group value must be valid
 -- suppose the cores numbered 0 & 1 are available

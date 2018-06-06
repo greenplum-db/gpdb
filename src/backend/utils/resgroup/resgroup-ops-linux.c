@@ -1148,21 +1148,17 @@ ResGroupOps_AssignGroup(Oid group, ResGroupCaps *caps, int pid)
 		)
 		return;
 
-	if (caps == NULL || !curViaCpuset)
+	writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
+	writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
+
+	if (gp_resource_group_enable_cgroup_cpuset)
 	{
-		writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
-		writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
-		if (gp_resource_group_enable_cgroup_cpuset)
+		if (caps == NULL || !curViaCpuset)
 		{
 			/* add pid to default group */
 			writeInt64(DEFAULT_CPUSET_GROUP_ID, NULL, "cpuset", "cgroup.procs", pid);
 		}
-	}
-	else
-	{
-		writeInt64(RESGROUP_ROOT_ID, NULL, "cpu", "cgroup.procs", pid);
-		writeInt64(RESGROUP_ROOT_ID, NULL, "cpuacct", "cgroup.procs", pid);
-		if (gp_resource_group_enable_cgroup_cpuset)
+		else
 		{
 			writeInt64(group, NULL, "cpuset", "cgroup.procs", pid);
 		}
