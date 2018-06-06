@@ -1712,3 +1712,77 @@ SELECT 1 AS col1 WHERE NOT (SELECT 1 = 1);
 ------
 (0 rows)
 
+--
+-- Test sane behavior in case of semi join semantics
+--
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+NOTICE:  table "dedup_test1" does not exist, skipping
+DROP TABLE IF EXISTS dedup_test2;
+NOTICE:  table "dedup_test2" does not exist, skipping
+DROP TABLE IF EXISTS dedup_test3;
+NOTICE:  table "dedup_test3" does not exist, skipping
+-- end_ignore
+CREATE TABLE dedup_test1 ( a int, b int ) DISTRIBUTED BY (a);
+CREATE TABLE dedup_test2 ( e int, f int ) DISTRIBUTED BY (e);
+CREATE TABLE dedup_test3 ( a int, b int, c int) DISTRIBUTED BY (a) PARTITION BY RANGE(c) (START(1) END(2) EVERY(1)); 
+NOTICE:  CREATE TABLE will create partition "dedup_test3_1_prt_1" for table "dedup_test3"
+INSERT INTO dedup_test1 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test2 select i, i from generate_series(1,4)i;
+INSERT INTO dedup_test3 select 1, 1, 1 from generate_series(1,10);
+ANALYZE dedup_test1;
+ANALYZE dedup_test2;
+ANALYZE dedup_test3;
+EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.31..5.46 rows=4 width=16)
+   ->  Hash Semi Join  (cost=3.31..5.46 rows=2 width=16)
+         Hash Cond: dedup_test1.a = subselect_gp.dedup_test3.a
+         ->  Hash Join  (cost=2.09..4.18 rows=2 width=16)
+               Hash Cond: dedup_test1.a = dedup_test2.e
+               ->  Seq Scan on dedup_test1  (cost=0.00..2.04 rows=2 width=8)
+               ->  Hash  (cost=2.04..2.04 rows=2 width=8)
+                     ->  Seq Scan on dedup_test2  (cost=0.00..2.04 rows=2 width=8)
+         ->  Hash  (cost=1.10..1.10 rows=4 width=4)
+               ->  Append  (cost=0.00..1.10 rows=4 width=4)
+                     ->  Seq Scan on dedup_test3_1_prt_1 dedup_test3  (cost=0.00..1.10 rows=4 width=4)
+ Optimizer: legacy query optimizer
+(12 rows)
+
+SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
+ a | b | e | f 
+---+---+---+---
+ 1 | 1 | 1 | 1
+(1 row)
+
+-- Test planner to check if it optimizes the join and marks it as a dummy join
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT b FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Optimizer: legacy query optimizer
+(3 rows)
+
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Optimizer: legacy query optimizer
+(3 rows)
+
+EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.53..0.54 rows=1 width=0)
+   One-Time Filter: false
+ Optimizer: legacy query optimizer
+(3 rows)
+
+-- start_ignore
+DROP TABLE IF EXISTS dedup_test1;
+DROP TABLE IF EXISTS dedup_test2;
+DROP TABLE IF EXISTS dedup_test3;
+-- end_ignore
