@@ -64,8 +64,6 @@
           <p>
             <xref href="gplogfilter.xml#topic1" type="topic" format="dita"/>
           </p>
-        </stentry>
-        <stentry>
           <p>
             <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -73,6 +71,8 @@
             <p>
             <xref href="gpmovemirrors.xml#topic1"/>
           </p>-->
+        </stentry>
+        <stentry>
           <p>
             <xref href="gpperfmon_install.xml#topic1"/>
           </p>
@@ -118,7 +118,13 @@
             <xref href="gptransfer.xml#topic1"/>
           </p>
           <p>
-            <xref href="pgbouncer-ref.xml#topic1"/>
+            <xref href="pgbouncer.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="pgbouncer-ini.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="pgbouncer-admin.xml#topic1"/>
           </p>
         </stentry>
       </strow>
