@@ -503,7 +503,7 @@ drop table tab_sour cascade;
 drop table fun_tree;
 drop table logtable;
 drop table db;
-create table stress_source as select a from generate_series(1,12000) a;
+create table stress_source as select a from generate_series(1,100) a;
 create table stress_table (a int primary key, b int);
 create or replace function stress_test() returns text as
                                         $body$
