@@ -7410,10 +7410,10 @@
       <p>For a partitioned table, collects statistics for the root partition when the
           <cmdname>ANALYZE</cmdname> command is run on the table. GPORCA uses the root partition
         statistics when generating a query plan. The legacy query optimizer does not use these
-        statistics. When value of the server configuration parameter <codeph><xref href="#optimizer"
-            format="dita"/></codeph> is on (the default), the value of this parameter should also be
-        on (the default). For information about collecting table statistics on partitioned tables,
-        see <codeph><xref href="../sql_commands/ANALYZE.xml"/></codeph>.</p>
+        statistics. When the value of the server configuration parameter <codeph><xref
+            href="#optimizer" format="dita"/></codeph> is on (the default), the value of this
+        parameter should also be on (the default). For information about collecting table statistics
+        on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"/></codeph>.</p>
       <p>For information about the legacy query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
