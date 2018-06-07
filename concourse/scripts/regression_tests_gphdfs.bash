@@ -79,7 +79,7 @@ function gen_env(){
 	GP_HADOOP_TARGET_VERSION=$HADOOP_TARGET_VERSION HADOOP_HOST=localhost HADOOP_PORT=9000 ./run_gphdfs_regression.sh
 
 	exit 0
-	EOF
+EOF
 
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
