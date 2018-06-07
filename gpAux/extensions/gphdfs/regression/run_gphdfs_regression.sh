@@ -55,7 +55,7 @@ create_runcmd() {
 _main() {
 	allow_hadoop_user_to_connect
 
-	if [ "$GP_HADOOP_TARGET_VERSION" != "mpr"]; then
+	if [ "$GP_HADOOP_TARGET_VERSION" != "mpr" ]; then
 		override_core_site
 	fi
 
