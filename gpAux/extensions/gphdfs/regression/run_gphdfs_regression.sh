@@ -54,7 +54,10 @@ create_runcmd() {
 
 _main() {
 	allow_hadoop_user_to_connect
-	override_core_site
+
+	if [ "$GP_HADOOP_TARGET_VERSION" != "mpr"]; then
+		override_core_site
+	fi
 
 	local CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	local PGREGRESS=$GPHOME/lib/postgresql/pgxs/src/test/regress/pg_regress
