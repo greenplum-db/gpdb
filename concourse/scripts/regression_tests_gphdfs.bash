@@ -41,7 +41,7 @@ function gen_env(){
 	cd "\${1}/gpdb_src/gpAux"
 	source gpdemo/gpdemo-env.sh
 
-    if [ "$HADOOP_TARGET_VERSION" != "mpr" ]; then
+	if [ "$HADOOP_TARGET_VERSION" != "mpr" ]; then
 		wget -P /tmp http://archive.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz
 		tar zxf /tmp/hadoop-2.7.3.tar.gz -C /tmp
 		export HADOOP_HOME=/tmp/hadoop-2.7.3
@@ -60,6 +60,7 @@ function gen_env(){
 		\${HADOOP_HOME}/sbin/start-dfs.sh
 	else		
 		export HADOOP_HOME=/opt/mapr/hadoop/hadoop-2.7.0
+		wget -O \${HADOOP_HOME}/share/hadoop/common/lib/parquet-hadoop-bundle-1.8.1.jar http://central.maven.org/maven2/org/apache/parquet/parquet-hadoop-bundle/1.8.1/parquet-hadoop-bundle-1.8.1.jar
 	fi
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gphdfs/regression/integrate"
