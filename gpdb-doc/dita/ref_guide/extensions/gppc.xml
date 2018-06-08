@@ -1106,8 +1106,8 @@ LANGUAGE C STRICT [WITH (DESCRIBE=<varname>describe_function</varname>)];</codeb
            when you specify <codeph><varname>shared_library_path</varname></codeph>.</p>
         <p>The following command registers the example <codeph>add_int4s()</codeph>
           function referenced earlier in this topic to a SQL UDF named
-          <codeph>add_two_int4s()</codeph> if the GPPC function was compiled
-          and linked in a shared library named gppc_try.so:
+          <codeph>add_two_int4s_gppc()</codeph> if the GPPC function was compiled
+          and linked in a shared library named <codeph>gppc_try.so</codeph>:
           <codeblock>CREATE FUNCTION add_two_int4s_gppc(int4, int4) RETURNS int8
   AS 'gppc_try.so', 'add_int4s'
 LANGUAGE C STRICT;</codeblock></p>
