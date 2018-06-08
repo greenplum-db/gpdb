@@ -55,9 +55,6 @@ create_runcmd() {
 _main() {
 	allow_hadoop_user_to_connect
 
-	if [ "$GP_HADOOP_TARGET_VERSION" != "mpr" ]; then
-		override_core_site
-	fi
 
 	local CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	local PGREGRESS=$GPHOME/lib/postgresql/pgxs/src/test/regress/pg_regress
@@ -72,16 +69,31 @@ _main() {
 	cp $CURDIR/input/*.source $CURDIR/source_replaced/input/
 	cp $CURDIR/output/*.source $CURDIR/source_replaced/output/
 
-	for f in $(ls $CURDIR/source_replaced/input);do
-		echo -e  "--start_ignore\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapreduce/*\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapred/*\n--end_ignore" >> "$CURDIR/source_replaced/input/$f"
-		sed -i "s|gpfdist://%localhost%:%gpfdistPort%|gphdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%cmdstr%|${CURDIR}/runcmd|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HADOOP_HOST%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HDFSaddr%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HADOOP_HOME%|${HADOOP_HOME}|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%MYD%|${CURDIR}/source_replaced/input|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HADOOP_FS%|${HADOOPCMD}|g" "$CURDIR/source_replaced/input/$f"
-	done
+	if [ "$GP_HADOOP_TARGET_VERSION" == "mpr" ]; then
+    for f in $(ls $CURDIR/source_replaced/input);do
+		  echo -e  "--start_ignore\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapreduce/*\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapred/*\n--end_ignore" >> "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|gpfdist://%localhost%:%gpfdistPort%|gphdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%cmdstr%|${CURDIR}/runcmd|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_HOST%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HDFSaddr%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_HOME%|${HADOOP_HOME}|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%MYD%|${CURDIR}/source_replaced/input|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_FS%|${HADOOPCMD}|g" "$CURDIR/source_replaced/input/$f"
+	  done
+  else
+		override_core_site
+    for f in $(ls $CURDIR/source_replaced/input);do
+		  echo -e  "--start_ignore\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapreduce/*\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapred/*\n--end_ignore" >> "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|gpfdist://%localhost%:%gpfdistPort%|gphdfs:///mapr/mapr/plaintext|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%cmdstr%|${CURDIR}/runcmd|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_HOST%|/mapr/mapr/|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HDFSaddr%|/mapr/mapr|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_HOME%|${HADOOP_HOME}|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%MYD%|${CURDIR}/source_replaced/input|g" "$CURDIR/source_replaced/input/$f"
+		  sed -i "s|%HADOOP_FS%|${HADOOPCMD}|g" "$CURDIR/source_replaced/input/$f"
+    done
+	fi
+	
 
 	cp $CURDIR/input/parsefile.py  $CURDIR/source_replaced/input/
 
