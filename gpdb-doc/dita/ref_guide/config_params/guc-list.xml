@@ -9596,7 +9596,11 @@
     <title>unix_socket_directory</title>
     <body>
       <p>Specifies the directory of the UNIX-domain socket on which the server is to listen for
-        connections from client applications.</p>
+        connections from client applications. The default is an empty string which is the directory
+          <codeph>/tmp/</codeph>.</p>
+      <note type="important">Do not change the value of this parameter. The default location is
+        required for Greenplum Database utilities.</note>
+      <note>This parameter is deprecated and will removed in a future release.</note>
       <table id="unix_socket_directory_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
