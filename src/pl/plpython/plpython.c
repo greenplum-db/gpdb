@@ -4612,10 +4612,6 @@ _PG_init(void)
 	 */
 	unsetenv("PYTHONPATH");
 	unsetenv("PYTHONHOME");
-	if (python3_path && strlen(python3_path) > 0) 
-		setenv("PYTHONPATH", python3_path, 1);
-	if (python3_home && strlen(python3_home) > 0)
-		setenv("PYTHONHOME", python3_home, 1);
 #endif
 	Py_Initialize();
 #if PY_MAJOR_VERSION >= 3

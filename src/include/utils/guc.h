@@ -555,10 +555,6 @@ extern char  *gp_auth_time_override_str;
 
 extern char  *gp_default_storage_options;
 
-/* Set Python3 PYTHONPATH and PYTHONHOME*/
-extern char  *python3_path;
-extern char  *python3_home;
-
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
 
