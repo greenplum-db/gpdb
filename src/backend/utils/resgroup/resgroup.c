@@ -588,47 +588,55 @@ InitResGroups(void)
 		}
 		else
 		{
-			if (gp_resource_group_enable_cgroup_cpuset)
-			{
-				bool allCoreAvailable = true;
-				Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
-													   MaxCpuSetLength);
+			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
+												   MaxCpuSetLength);
+			Bitmapset *bmsCommon = bms_intersect(bmsCurrent, bmsUnused);
+			Bitmapset *bmsMissing = bms_difference(bmsCurrent, bmsCommon);
 
-				Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
-
-				allCoreAvailable = bms_is_subset(bmsCurrent, bmsUnused);
-				if (allCoreAvailable)
-				{
-					/*
-					 * write cpus to corresponding file
-					 * if all the cores are available
-					 */
-					ResGroupOps_SetCpuSet(groupId, caps.cpuset);
-					bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
-				}
-				else
-				{
-					/*
-					 * if some of the cores are unavailable, just set defaultCore
-					 * to this group and send a warning message, so the system
-					 * can startup, then DBA can fix it
-					 */
-					snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
-					ResGroupOps_SetCpuSet(groupId, cpuset);
-					ereport(WARNING,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("some of the cpu cores are unavailable "
-									"in group(%d), using core(%d) instead",
-									groupId,
-									defaultCore)));
-				}
-			}
-			else
+			/*
+			 * Do not call EnsureCpusetIsAvailable() here as resource group is
+			 * not activated yet
+			 */
+			if (!gp_resource_group_enable_cgroup_cpuset)
 			{
 				ereport(WARNING,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("cpuset is disabled for cpuset/gpdb "
-								"does not exist")));
+						 errmsg("cgroup is not properly configured to use the cpuset feature"),
+						 errhint("Extra cgroup configurations are required to enable this feature, "
+								 "please refer to the Greenplum Documentations for details")));
+			}
+
+			Assert(caps.cpuRateLimit == CPU_RATE_LIMIT_DISABLED);
+
+			if (bms_is_empty(bmsMissing))
+			{
+				/*
+				 * write cpus to corresponding file
+				 * if all the cores are available
+				 */
+				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+				bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
+			}
+			else
+			{
+				char		cpusetMissing[MaxCpuSetLength] = {0};
+
+				/*
+				 * if some of the cores are unavailable, just set defaultCore
+				 * to this group and send a warning message, so the system
+				 * can startup, then DBA can fix it
+				 */
+				snprintf(cpuset, MaxCpuSetLength, "%d", defaultCore);
+				ResGroupOps_SetCpuSet(groupId, cpuset);
+				BitsetToCpuset(bmsMissing, cpusetMissing, MaxCpuSetLength);
+				ereport(WARNING,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("cpu cores %s are unavailable on the system "
+								"in resource group %s",
+								cpusetMissing, GetResGroupNameForId(groupId)),
+						 errhint("using core %d for this resource group, "
+								 "please adjust the settings and restart",
+								 defaultCore)));
 			}
 		}
 
@@ -750,13 +758,6 @@ ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 										  cpuset, MaxCpuSetLength);
 					CpusetUnion(cpuset, group->caps.cpuset, MaxCpuSetLength);
 					ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
-				}
-				else
-				{
-					ereport(WARNING,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("cpuset is disabled for cpuset/gpdb "
-									"does not exist")));
 				}
 			}
 
@@ -3958,4 +3959,33 @@ void
 CpusetDifference(char *cpuset1, const char *cpuset2, int len)
 {
 	cpusetOperation(cpuset1, cpuset2, len, true);
+}
+
+/*
+ * ensure that cpuset is available.
+ */
+bool
+EnsureCpusetIsAvailable(int elevel)
+{
+	if (!IsResGroupActivated())
+	{
+		ereport(elevel,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("resource group must be enabled to use cpuset feature")));
+
+		return false;
+	}
+
+	if (!gp_resource_group_enable_cgroup_cpuset)
+	{
+		ereport(elevel,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("cgroup is not properly configured to use the cpuset feature"),
+				 errhint("Extra cgroup configurations are required to enable this feature, "
+						 "please refer to the Greenplum Documentations for details")));
+
+		return false;
+	}
+
+	return true;
 }

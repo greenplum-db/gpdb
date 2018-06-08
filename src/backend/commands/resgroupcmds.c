@@ -239,24 +239,16 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		}
 		else if (!CpusetIsEmpty(caps.cpuset))
 		{
-			if (gp_resource_group_enable_cgroup_cpuset)
-			{
-				ResGroupOps_SetCpuSet(groupid, caps.cpuset);
-				/* reset default group, subtract new group cpu cores */
-				char defaultGroupCpuset[MaxCpuSetLength];
-				ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
-									  defaultGroupCpuset,
-									  MaxCpuSetLength);
-				CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
-				ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
-			}
-			else
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("cpuset is disabled for cpuset/gpdb "
-								"does not exist")));
-			}
+			EnsureCpusetIsAvailable(ERROR);
+
+			ResGroupOps_SetCpuSet(groupid, caps.cpuset);
+			/* reset default group, subtract new group cpu cores */
+			char defaultGroupCpuset[MaxCpuSetLength];
+			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
+								  defaultGroupCpuset,
+								  MaxCpuSetLength);
+			CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
+			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 		SIMPLE_FAULT_INJECTOR(CreateResourceGroupFail);
 	}
@@ -273,7 +265,6 @@ void
 DropResourceGroup(DropResourceGroupStmt *stmt)
 {
 	Relation	 pg_resgroup_rel;
-	Relation	 pg_resgroupcapability_rel;
 	HeapTuple	 tuple;
 	ScanKeyData	 scankey;
 	SysScanDesc	 sscan;
@@ -402,19 +393,8 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	}
 	else if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
-		if (!IsResGroupActivated())
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("must specify cpuset when resource group is activated")));
-		}
-		else if (!gp_resource_group_enable_cgroup_cpuset)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("cpuset is disabled for cpuset/gpdb "
-							"does not exist")));
-		}
+		EnsureCpusetIsAvailable(ERROR);
+
 		cpuset = defGetString(defel);
 		checkCpusetSyntax(cpuset);
 	}
@@ -777,7 +757,7 @@ GetResGroupNameForId(Oid oid)
 		name = pstrdup(NameStr(*resGroupName));
 	}
 	else
-		return "unknow";
+		return "unknown";
 
 	ReleaseSysCache(tuple);
 
@@ -1072,11 +1052,8 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		}
 	}
 
-	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)) &&
-		!IsResGroupActivated())
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("must specify cpuset when resource group is activated")));
+	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
+		EnsureCpusetIsAvailable(ERROR);
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
 		ereport(ERROR,
@@ -1301,15 +1278,13 @@ validateCapabilities(Relation rel,
 	int totalCpu = caps->cpuRateLimit;
 	int totalMem = caps->memLimit;
 	char cpusetAll[MaxCpuSetLength] = {0};
-	Bitmapset *bmsUnused = NULL;
+	char cpusetMissing[MaxCpuSetLength] = {0};
 	Bitmapset *bmsCurrent = NULL;
+	Bitmapset *bmsCommon = NULL;
 
-	if (!gp_resource_group_enable_cgroup_cpuset &&
-		!CpusetIsEmpty(caps->cpuset))
+	if (!CpusetIsEmpty(caps->cpuset))
 	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("cpuset is disabled for cpuset/gpdb does not exist")));
+		EnsureCpusetIsAvailable(ERROR);
 	}
 
 	/*
@@ -1318,22 +1293,31 @@ validateCapabilities(Relation rel,
 	if (IsResGroupActivated() &&
 		gp_resource_group_enable_cgroup_cpuset)
 	{
+		Bitmapset *bmsAll = NULL;
+
 		/* Get all available cores */
 		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID,
 							  cpusetAll,
 							  MaxCpuSetLength);
-		bmsUnused = CpusetToBitset(cpusetAll, MaxCpuSetLength);
+		bmsAll = CpusetToBitset(cpusetAll, MaxCpuSetLength);
 		/* Check whether the cores in this group are available */
 		if (!CpusetIsEmpty(caps->cpuset))
 		{
+			Bitmapset *bmsMissing = NULL;
+
 			bmsCurrent = CpusetToBitset(caps->cpuset, MaxCpuSetLength);
-			if (!bms_is_subset(bmsCurrent, bmsUnused))
+			bmsCommon = bms_intersect(bmsCurrent, bmsAll);
+			bmsMissing = bms_difference(bmsCurrent, bmsCommon);
+
+			if (!bms_is_empty(bmsMissing))
 			{
+				BitsetToCpuset(bmsMissing, cpusetMissing, MaxCpuSetLength);
+
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						errmsg("some cores of cpuset are unavailable")));
+						 errmsg("cpu cores %s are unavailable on the system",
+								cpusetMissing)));
 			}
-			bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
 		}
 	}
 
@@ -1402,28 +1386,29 @@ validateCapabilities(Relation rel,
 			/*
 			 * do the check when resource group is activated
 			 */
-			if (IsResGroupActivated())
+			if (IsResGroupActivated() && !CpusetIsEmpty(caps->cpuset))
 			{
 				proposedStr = TextDatumGetCString(proposedDatum);
 				if (!CpusetIsEmpty(proposedStr))
 				{
-					if (gp_resource_group_enable_cgroup_cpuset)
+					Bitmapset *bmsOther = NULL;
+
+					EnsureCpusetIsAvailable(ERROR);
+
+					Assert(!bms_is_empty(bmsCurrent));
+
+					bmsOther = CpusetToBitset(proposedStr, MaxCpuSetLength);
+					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
+
+					if (!bms_is_empty(bmsCommon))
 					{
-						bmsCurrent = CpusetToBitset(proposedStr, MaxCpuSetLength);
-						if (!bms_is_subset(bmsCurrent, bmsUnused))
-						{
-							ereport(ERROR,
-									(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									errmsg("some cores of cpuset are unavailable")));
-						}
-						bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
-					}
-					else
-					{
+						BitsetToCpuset(bmsCommon, cpusetMissing, MaxCpuSetLength);
+
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("cpuset is disabled for cpuset/gpdb "
-										"does not exist")));
+								 errmsg("cpu cores %s are used by resource group %s",
+										cpusetMissing,
+										GetResGroupNameForId(resgroupid))));
 					}
 				}
 			}
