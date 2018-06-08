@@ -110,13 +110,13 @@ function _main() {
 		exit 1
 	fi
 
+	time install_mapr_client
 	time configure
 	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
 	time install_gpdb
 	time setup_gpadmin_user
 	time make_cluster
 	time gen_env
-	time install_mapr_client
 	time run_regression_test
 }
 
