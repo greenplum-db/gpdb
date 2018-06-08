@@ -1044,7 +1044,7 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 	{
 		rec->u.queryseg.sum_cpu_elapsed += pidrec->cpu_elapsed;
 		rec->u.queryseg.sum_measures_rows_in += p->rowsin;
-		if (p->key.hash_key.segid == -1 && p->key.hash_key.nid == 1)
+		if (p->key.hash_key.segid == -1 && p->key.hash_key.nid == 1 && (int64)(p->rowsout) > rec->u.queryseg.final_rowsout)
 		{
 			rec->u.queryseg.final_rowsout = p->rowsout;
 		}
