@@ -88,6 +88,7 @@ function install_mapr_client() {
 		EOFMAPR
 		yum install -y mapr-client.x86_64
 		/opt/mapr/server/configure.sh -N mapr -c -C $MAPR_HOST:7222
+		chown -R gpadmin /opt/mapr
 	fi
 }
 
