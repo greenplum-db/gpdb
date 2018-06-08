@@ -4606,9 +4606,7 @@ _PG_init(void)
 #if PY_MAJOR_VERSION >= 3
 	PyImport_AppendInittab("plpy", PyInit_plpy);
 	/* PYTHONPATH and PYTHONHOME has been set to GPDB's python2.7 in Postmaster when
-	 * gpstart. So for plpython3u, we need to unset PYTHONPATH and PYTHONHOME. Reset 
-	 * them by GUC is not needed, except you install your Python packages in a
-	 * separate folder.
+	 * gpstart. So for plpython3u, we need to unset PYTHONPATH and PYTHONHOME.
 	 */
 	unsetenv("PYTHONPATH");
 	unsetenv("PYTHONHOME");
