@@ -1885,7 +1885,7 @@ BeginCopy(bool is_from,
 		  pg_database_encoding_max_length() > 1));
 	/* See Multibyte encoding comment above */
 	cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
-	setEncodingConversionProc(cstate, pg_get_client_encoding(), !is_from);
+	setEncodingConversionProc(cstate, cstate->file_encoding, !is_from);
   }
   else
   {
@@ -6543,20 +6543,18 @@ static void CopyInitDataParser(CopyState cstate)
  *
  * The code here mimics a part of SetClientEncoding() in mbutils.c
  */
-void setEncodingConversionProc(CopyState cstate, int client_encoding, bool iswritable)
+void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
 {
 	Oid		conversion_proc;
 	
 	/*
-	 * COPY FROM and RET: convert from client to server
-	 * COPY TO   and WET: convert from server to client
+	 * COPY FROM and RET: convert from file to server
+	 * COPY TO   and WET: convert from server to file
 	 */
 	if (iswritable)
-		conversion_proc = FindDefaultConversionProc(GetDatabaseEncoding(),
-													client_encoding);
+		conversion_proc = FindDefaultConversionProc(GetDatabaseEncoding(), encoding);
 	else		
-		conversion_proc = FindDefaultConversionProc(client_encoding,
-												    GetDatabaseEncoding());
+		conversion_proc = FindDefaultConversionProc(encoding, GetDatabaseEncoding());
 	
 	if (OidIsValid(conversion_proc))
 	{
