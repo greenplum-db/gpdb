@@ -58,17 +58,7 @@ function gen_env(){
 
 		\${HADOOP_HOME}/bin/hdfs namenode -format -force
 		\${HADOOP_HOME}/sbin/start-dfs.sh
-	else
-		cat > "/etc/yum.repos.d/maprtech.repo" <<-EOFMAPR
-			[maprtech]
-			name=MapR Technologies
-			baseurl=http://package.mapr.com/releases/v5.2.0/redhat
-			enabled=1
-			gpgcheck=0
-			protect=1
-		EOFMAPR
-		yum install -y mapr-client.x86_64
-		/opt/mapr/server/configure.sh -N mapr -c -C $MAPR_HOST:7222
+	else		
 		export HADOOP_HOME=/opt/mapr/hadoop/hadoop-2.7.0
 	fi
 
@@ -83,6 +73,21 @@ EOF
 
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
+}
+
+function install_mapr_client() {
+	if [ "$HADOOP_TARGET_VERSION" == "mpr" ]; then
+		cat > "/etc/yum.repos.d/maprtech.repo" <<-EOFMAPR
+			[maprtech]
+			name=MapR Technologies
+			baseurl=http://package.mapr.com/releases/v5.2.0/redhat
+			enabled=1
+			gpgcheck=0
+			protect=1
+		EOFMAPR
+		yum install -y mapr-client.x86_64
+		/opt/mapr/server/configure.sh -N mapr -c -C $MAPR_HOST:7222
+	fi
 }
 
 function run_regression_test() {
@@ -111,7 +116,7 @@ function _main() {
 	time setup_gpadmin_user
 	time make_cluster
 	time gen_env
-
+	time install_mapr_client
 	time run_regression_test
 }
 
