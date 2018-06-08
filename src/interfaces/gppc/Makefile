@@ -22,7 +22,7 @@ NAME = gppc
 SO_MAJOR_VERSION = 1
 SO_MINOR_VERSION = 2
 
-override CPPFLAGS := -I$(includedir_server) -I$(includedir_internal) $(CPPFLAGS)
+override CPPFLAGS := $(CPPFLAGS) -I$(includedir_server) -I$(includedir_internal)
 OBJS = gppc.o
 
 all: all-lib
