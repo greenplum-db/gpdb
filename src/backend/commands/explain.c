@@ -52,7 +52,7 @@
 #include "miscadmin.h"
 
 #ifdef USE_ORCA
-extern char *SzDXLPlan(Query *parse);
+extern char *SerializeDXLPlan(Query *parse);
 extern const char *OptVersion();
 #endif
 
@@ -226,7 +226,7 @@ ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
 		optimizer_enumerate_plans = true;
 
 		// optimize query using optimizer and get generated plan in DXL format
-		char *dxl = SzDXLPlan(query);
+		char *dxl = SerializeDXLPlan(query);
 
 		// restore old value of enumerate plans GUC
 		optimizer_enumerate_plans = save_enumerate;
@@ -1137,7 +1137,7 @@ explain_outNode(StringInfo str,
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = nSenders;
-				
+
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_HASH:
@@ -1279,8 +1279,8 @@ explain_outNode(StringInfo str,
 				/* Get the range table, it should be a TableFunction */
 				rte = rt_fetch(((Scan *) plan)->scanrelid, es->rtable);
 				Assert(rte->rtekind == RTE_TABLEFUNCTION);
-				
-				/* 
+
+				/*
 				 * Lookup the function name.
 				 *
 				 * Unlike RTE_FUNCTION there should be no cases where the
@@ -1295,9 +1295,9 @@ explain_outNode(StringInfo str,
 				if (strcmp(rte->eref->aliasname, proname) != 0)
 					appendStringInfo(str, " %s",
 									 quote_identifier(rte->eref->aliasname));
-				
+
 				/* might be nice to add order by and scatter by info */
-				
+
 			}
 			break;
 		case T_FunctionScan:
@@ -1615,7 +1615,7 @@ explain_outNode(StringInfo str,
 						   str, indent, es);
 
 			/* Partitioning and ordering information */
-			
+
 		}
 		break;
 
@@ -1830,7 +1830,7 @@ explain_outNode(StringInfo str,
 
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
-			
+
 			appendStringInfo(str, "  ->  ");
 
 			explain_outNode(str, subnode,

@@ -29,15 +29,15 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable
 	(
-	IMemoryPool *pmp
+	IMemoryPool *mp
 	)
 	:
-	m_pmp(pmp),
+	m_mp(mp),
 	m_oid(InvalidOid),
-	m_iRel(0)
+	m_rel_index(0)
 {
 	// initialize hash table
-	m_phmuli = GPOS_NEW(m_pmp) HMUlI(m_pmp);
+	m_colid_to_attno_map = GPOS_NEW(m_mp) UlongToIntMap(m_mp);
 }
 
 //---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable
 //---------------------------------------------------------------------------
 CDXLTranslateContextBaseTable::~CDXLTranslateContextBaseTable()
 {
-	CRefCount::SafeRelease(m_phmuli);
+	CRefCount::SafeRelease(m_colid_to_attno_map);
 }
 
 
@@ -81,61 +81,61 @@ CDXLTranslateContextBaseTable::SetOID
 //
 //---------------------------------------------------------------------------
 void
-CDXLTranslateContextBaseTable::SetIdx
+CDXLTranslateContextBaseTable::SetRelIndex
 	(
-	Index iRel
+	Index rel_index
 	)
 {
-	GPOS_ASSERT(0 < iRel);
-	m_iRel = iRel;
+	GPOS_ASSERT(0 < rel_index);
+	m_rel_index = rel_index;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContextBaseTable::OidRel
+//		CDXLTranslateContextBaseTable::GetOid
 //
 //	@doc:
 //		Returns the oid of the table
 //
 //---------------------------------------------------------------------------
 OID
-CDXLTranslateContextBaseTable::OidRel() const
+CDXLTranslateContextBaseTable::GetOid() const
 {
 	return m_oid;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContextBaseTable::IRel
+//		CDXLTranslateContextBaseTable::GetRelIndex
 //
 //	@doc:
 //		Returns the index of the relation in the rable table
 //
 //---------------------------------------------------------------------------
 Index
-CDXLTranslateContextBaseTable::IRel() const
+CDXLTranslateContextBaseTable::GetRelIndex() const
 {
-	GPOS_ASSERT(0 < m_iRel);
-	return m_iRel;
+	GPOS_ASSERT(0 < m_rel_index);
+	return m_rel_index;
 }
 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContextBaseTable::IAttnoForColId
+//		CDXLTranslateContextBaseTable::GetAttnoForColId
 //
 //	@doc:
 //		Lookup the index of the attribute with the DXL col id in the underlying table schema
 //
 //---------------------------------------------------------------------------
 INT
-CDXLTranslateContextBaseTable::IAttnoForColId
+CDXLTranslateContextBaseTable::GetAttnoForColId
 	(
-	ULONG ulColId
+	ULONG colid
 	)
 	const
 {
-	const INT *pi = m_phmuli->PtLookup(&ulColId);
+	const INT *pi = m_colid_to_attno_map->Find(&colid);
 	if (NULL != pi)
 	{
 		return *pi;
@@ -147,7 +147,7 @@ CDXLTranslateContextBaseTable::IAttnoForColId
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContextBaseTable::FInsertMapping
+//		CDXLTranslateContextBaseTable::InsertMapping
 //
 //	@doc:
 //		Insert a mapping ColId->Idx, where ulDXLColId is a DXL introduced column id,
@@ -155,23 +155,23 @@ CDXLTranslateContextBaseTable::IAttnoForColId
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLTranslateContextBaseTable::FInsertMapping
+CDXLTranslateContextBaseTable::InsertMapping
 	(
-	ULONG ulDXLColId,
-	INT iAttno
+	ULONG dxl_colid,
+	INT att_no
 	)
 {
 	// copy key and value
-	ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulDXLColId);
-	INT *piValue = GPOS_NEW(m_pmp) INT(iAttno);
+	ULONG *key = GPOS_NEW(m_mp) ULONG(dxl_colid);
+	INT *value = GPOS_NEW(m_mp) INT(att_no);
 
 	// insert colid-idx mapping in the hash map
 
-	BOOL fRes = m_phmuli->FInsert(pulKey, piValue);
+	BOOL res = m_colid_to_attno_map->Insert(key, value);
 
-	GPOS_ASSERT(fRes);
+	GPOS_ASSERT(res);
 
-	return fRes;
+	return res;
 }
 
 // EOF

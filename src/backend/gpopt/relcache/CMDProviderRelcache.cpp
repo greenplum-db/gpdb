@@ -37,41 +37,41 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDProviderRelcache::CMDProviderRelcache
 	(
-	IMemoryPool *pmp
+	IMemoryPool *mp
 	)
 	:
-	m_pmp(pmp)
+	m_mp(mp)
 {
-	GPOS_ASSERT(NULL != m_pmp);
+	GPOS_ASSERT(NULL != m_mp);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMDProviderRelcache::PstrObject
+//		CMDProviderRelcache::GetMDObjDXLStr
 //
 //	@doc:
 //		Returns the DXL of the requested object in the provided memory pool
 //
 //---------------------------------------------------------------------------
 CWStringBase *
-CMDProviderRelcache::PstrObject
+CMDProviderRelcache::GetMDObjDXLStr
 	(
-	IMemoryPool *pmp,
-	CMDAccessor *pmda,
-	IMDId *pmdid
+	IMemoryPool *mp,
+	CMDAccessor *md_accessor,
+	IMDId *md_id
 	)
 	const
 {
-	IMDCacheObject *pimdobj = CTranslatorRelcacheToDXL::Pimdobj(pmp, pmda, pmdid);
+	IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::RetrieveObject(mp, md_accessor, md_id);
 
-	GPOS_ASSERT(NULL != pimdobj);
+	GPOS_ASSERT(NULL != md_obj);
 
-	CWStringDynamic *pstr = CDXLUtils::PstrSerializeMDObj(m_pmp, pimdobj, true /*fSerializeHeaders*/, false /*findent*/);
+	CWStringDynamic *str = CDXLUtils::SerializeMDObj(m_mp, md_obj, true /*fSerializeHeaders*/, false /*findent*/);
 
 	// cleanup DXL object
-	pimdobj->Release();
+	md_obj->Release();
 
-	return pstr;
+	return str;
 }
 
 // EOF

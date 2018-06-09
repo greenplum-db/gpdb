@@ -43,12 +43,12 @@ Datum
 DisableXform(PG_FUNCTION_ARGS)
 {
 	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
-	bool fResult = COptTasks::FSetXform(szXform, true /*fDisable*/);
+	bool is_result = COptTasks::SetXform(szXform, true /*fDisable*/);
 
 	StringInfoData str;
 	initStringInfo(&str);
 
-	if (fResult)
+	if (is_result)
 	{
 		appendStringInfo(&str, "%s is disabled", szXform);
 	}
@@ -76,12 +76,12 @@ Datum
 EnableXform(PG_FUNCTION_ARGS)
 {
 	char *szXform = text_to_cstring(PG_GETARG_TEXT_P(0));
-	bool fResult = COptTasks::FSetXform(szXform, false /*fDisable*/);
+	bool is_result = COptTasks::SetXform(szXform, false /*fDisable*/);
 
 	StringInfoData str;
 	initStringInfo(&str);
 
-	if (fResult)
+	if (is_result)
 	{
 		appendStringInfo(&str, "%s is enabled", szXform);
 	}

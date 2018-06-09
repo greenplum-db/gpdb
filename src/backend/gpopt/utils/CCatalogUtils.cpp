@@ -17,57 +17,57 @@
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CCatalogUtils::PlRelationOids
+//		CCatalogUtils::GetRelationOids
 //
 //	@doc:
 //		Return list of relation oids from the catalog
 //
 //---------------------------------------------------------------------------
 List *
-CCatalogUtils::PlRelationOids()
+CCatalogUtils::GetRelationOids()
 {
 	return relation_oids();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CCatalogUtils::PlOperatorOids
+//		CCatalogUtils::GetOperatorOids
 //
 //	@doc:
 //		Return list of operator oids from the catalog
 //
 //---------------------------------------------------------------------------
 List *
-CCatalogUtils::PlOperatorOids()
+CCatalogUtils::GetOperatorOids()
 {
 	return operator_oids();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CCatalogUtils::PlFunctionOids
+//		CCatalogUtils::GetFunctionOids
 //
 //	@doc:
-//		Return list of function plOids from the catalog
+//		Return list of function oids_list from the catalog
 //
 //---------------------------------------------------------------------------
 List *
-CCatalogUtils::PlFunctionOids()
+CCatalogUtils::GetFunctionOids()
 {
 	return function_oids();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CCatalogUtils::PlAllOids
+//		CCatalogUtils::GetAllOids
 //
 //	@doc:
-//		Return list of all plOids from the catalog
+//		Return list of all oids_list from the catalog
 //
 //---------------------------------------------------------------------------
-List *CCatalogUtils::PlAllOids()
+List *CCatalogUtils::GetAllOids()
 {
-	return list_concat(list_concat(PlRelationOids(), PlOperatorOids()), PlFunctionOids());
+	return list_concat(list_concat(GetRelationOids(), GetOperatorOids()), GetFunctionOids());
 }
 
 // EOF

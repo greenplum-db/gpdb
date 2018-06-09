@@ -68,7 +68,7 @@ extern "C" {
 #include "funcapi.h"
 
 extern
-Query *preprocess_query_optimizer(Query *pquery, ParamListInfo boundParams);
+Query *preprocess_query_optimizer(Query *query, ParamListInfo boundParams);
 
 extern
 List *pg_parse_and_rewrite(const char *query_string, Oid *paramTypes, int iNumParams);

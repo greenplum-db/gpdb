@@ -44,13 +44,13 @@ namespace gpdxl
 		private:
 
 			// the column identifier that is used as the key
-			ULONG m_ulColId;
+			ULONG m_colid;
 
 			// the query level
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// the target entry
-			TargetEntry *m_pte;
+			TargetEntry *m_target_entry;
 
 		public:
 
@@ -58,21 +58,21 @@ namespace gpdxl
 			CMappingElementColIdTE(ULONG, ULONG, TargetEntry *);
 
 			// return the ColId
-			ULONG UlColId() const
+			ULONG GetColId() const
 			{
-				return m_ulColId;
+				return m_colid;
 			}
 
 			// return the query level
-			ULONG UlQueryLevel() const
+			ULONG GetQueryLevel() const
 			{
-				return m_ulQueryLevel;
+				return m_query_level;
 			}
 
 			// return the column name for the given attribute no
-			const TargetEntry *Pte() const
+			const TargetEntry *GetTargetEntry() const
 			{
-				return m_pte;
+				return m_target_entry;
 			}
 	};
 }

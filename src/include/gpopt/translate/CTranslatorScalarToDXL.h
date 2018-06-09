@@ -61,304 +61,304 @@ namespace gpdxl
 	class CTranslatorScalarToDXL
 	{
 		// shorthand for functions for translating GPDB expressions into DXL nodes
-		typedef CDXLNode * (CTranslatorScalarToDXL::*PfPdxln)(const Expr *pexpr, const CMappingVarColId* pmapvarcolid);
+		typedef CDXLNode * (CTranslatorScalarToDXL::*ExprToDXLFn)(const Expr *expr, const CMappingVarColId* var_colid_mapping);
 
 		// shorthand for functions for translating DXL nodes to GPDB expressions
-		typedef CDXLDatum * (PfPdxldatumFromDatum)(IMemoryPool *pmp, const IMDType *pmdtype, BOOL fNull, ULONG ulLen, Datum datum);
+		typedef CDXLDatum * (DxlDatumFromDatum)(IMemoryPool *mp, const IMDType *md_type, BOOL is_null, ULONG len, Datum datum);
 
 		private:
 
 			// pair of node tag and translator function
 			struct STranslatorElem
 			{
-				NodeTag ent;
-				PfPdxln pf;
+				NodeTag tag;
+				ExprToDXLFn func_ptr;
 			};
 
 			// memory pool
-			IMemoryPool *m_pmp;
+			IMemoryPool *m_mp;
 
 			// meta data accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// counter for generating unique column ids
-			CIdGenerator *m_pidgtorCol;
+			CIdGenerator *m_colid_generator;
 
 			// counter for generating unique CTE ids
-			CIdGenerator *m_pidgtorCTE;
+			CIdGenerator *m_cte_id_generator;
 
 			// absolute level of query whose vars will be translated
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// does the currently translated scalar have distributed tables
-			BOOL m_fHasDistributedTables;
+			BOOL m_has_distributed_tables;
 
 			// is scalar being translated in query mode
-			BOOL m_fQuery;
+			BOOL m_is_query_mode;
 
 			// physical operator that created this translator
-			EPlStmtPhysicalOpType m_eplsphoptype;
+			EPlStmtPhysicalOpType m_op_type;
 
 			// hash map that maintains the list of CTEs defined at a particular query level
-			HMUlCTEListEntry *m_phmulCTEEntries;
+			HMUlCTEListEntry *m_cte_entries;
 
 			// list of CTE producers shared among the logical and scalar translators
-			DrgPdxln *m_pdrgpdxlnCTE;
+			CDXLNodeArray *m_cte_producers;
 
 			EdxlBoolExprType EdxlbooltypeFromGPDBBoolType(BoolExprType) const;
 
 			// translate list elements and add them as children of the DXL node
 			void TranslateScalarChildren
 				(
-				CDXLNode *pdxln,
-				List *plist,
-				const CMappingVarColId* pmapvarcolid,
-				BOOL *pfHasDistributedTables = NULL
+				CDXLNode *dxlnode,
+				List *list,
+				const CMappingVarColId* var_colid_mapping,
+				BOOL *has_distributed_tables = NULL
 				);
 
 			// create a DXL scalar distinct comparison node from a GPDB DistinctExpr
-			CDXLNode *PdxlnScDistCmpFromDistExpr
+			CDXLNode *TranslateDistinctExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar boolean expression node from a GPDB qual list
-			CDXLNode *PdxlnScCondFromQual
+			CDXLNode *CreateScalarCondFromQual
 				(
-				List *plQual,
-				const CMappingVarColId* pmapvarcolid,
-				BOOL *pfHasDistributedTables
+				List *quals,
+				const CMappingVarColId* var_colid_mapping,
+				BOOL *has_distributed_tables
 				);
 
 			// create a DXL scalar comparison node from a GPDB op expression
-			CDXLNode *PdxlnScCmpFromOpExpr
+			CDXLNode *CreateScalarCmpFromOpExpr
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar opexpr node from a GPDB expression
-			CDXLNode *PdxlnScOpExprFromExpr
+			CDXLNode *TranslateOpExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// translate an array expression
-			CDXLNode *PdxlnArrayOpExpr
+			CDXLNode *TranslateScalarArrayOpExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar array comparison node from a GPDB expression
-			CDXLNode *PdxlnScArrayCompFromExpr
+			CDXLNode *CreateScalarArrayCompFromExpr
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar Const node from a GPDB expression
-			CDXLNode *PdxlnScConstFromExpr
+			CDXLNode *TranslateConstToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL node for a scalar nullif from a GPDB Expr
-			CDXLNode *PdxlnScNullIfFromExpr
+			CDXLNode *TranslateNullIfExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar boolexpr node from a GPDB expression
-			CDXLNode *PdxlnScBoolExprFromExpr
+			CDXLNode *TranslateBoolExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar boolean test node from a GPDB expression
-			CDXLNode *PdxlnScBooleanTestFromExpr
+			CDXLNode *TranslateBooleanTestToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar nulltest node from a GPDB expression
-			CDXLNode *PdxlnScNullTestFromNullTest
+			CDXLNode *TranslateNullTestToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar case statement node from a GPDB expression
-			CDXLNode *PdxlnScCaseStmtFromExpr
+			CDXLNode *TranslateCaseExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar if statement node from a GPDB case expression
-			CDXLNode *PdxlnScIfStmtFromCaseExpr
+			CDXLNode *CreateScalarIfStmtFromCaseExpr
 				(
-				const CaseExpr *pcaseexpr,
-				const CMappingVarColId* pmapvarcolid
+				const CaseExpr *case_expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar switch node from a GPDB case expression
-			CDXLNode *PdxlnScSwitchFromCaseExpr
+			CDXLNode *CreateScalarSwitchFromCaseExpr
 				(
-				const CaseExpr *pcaseexpr,
-				const CMappingVarColId* pmapvarcolid
+				const CaseExpr *case_expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL node for a case test from a GPDB Expr.
-			CDXLNode *PdxlnScCaseTestFromExpr
+			CDXLNode *TranslateCaseTestExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar coalesce node from a GPDB expression
-			CDXLNode *PdxlnScCoalesceFromExpr
+			CDXLNode *TranslateCoalesceExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar minmax node from a GPDB expression
-			CDXLNode *PdxlnScMinMaxFromExpr
+			CDXLNode *TranslateMinMaxExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar relabeltype node from a GPDB expression
-			CDXLNode *PdxlnScCastFromRelabelType
+			CDXLNode *TranslateRelabelTypeToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar coerce node from a GPDB expression
-			CDXLNode *PdxlnScCoerceFromCoerce
+			CDXLNode *TranslateCoerceToDomainToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar coerceviaio node from a GPDB expression
-			CDXLNode *PdxlnScCoerceFromCoerceViaIO
+			CDXLNode *TranslateCoerceViaIOToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 		
 			// create a DXL scalar array coerce expression node from a GPDB expression
-			CDXLNode *PdxlnScArrayCoerceExprFromExpr
+			CDXLNode *TranslateArrayCoerceExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar funcexpr node from a GPDB expression
-			CDXLNode *PdxlnScFuncExprFromFuncExpr
+			CDXLNode *TranslateFuncExprToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// return the window frame boundary
 			EdxlFrameBoundary Edxlfb(WindowBoundingKind kind, Node *pnode) const;
 
 			// create a DXL scalar Windowref node from a GPDB expression
-			CDXLNode *PdxlnScWindowref
+			CDXLNode *TranslateWindowRefToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// create a DXL scalar Aggref node from a GPDB expression
-			CDXLNode *PdxlnScAggrefFromAggref
+			CDXLNode *TranslateAggrefToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnScIdFromVar
+			CDXLNode *TranslateVarToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnInitPlanFromParam(const Param *pparam) const;
+			CDXLNode *CreateInitPlanFromParam(const Param *param) const;
 
 			// create a DXL SubPlan node for a from a GPDB SubPlan
-			CDXLNode *PdxlnSubPlanFromSubPlan
+			CDXLNode *TranslateSubplanToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnPlanFromParam
+			CDXLNode *CreatePlanFromParam
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnFromSublink
+			CDXLNode *TranslateSubLinkToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnScSubqueryFromSublink
+			CDXLNode *CreateScalarSubqueryFromSublink
 				(
-				const SubLink *psublink,
-				const CMappingVarColId* pmapvarcolid
+				const SubLink *sublink,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnExistSubqueryFromSublink
+			CDXLNode *CreateExistSubqueryFromSublink
 				(
-				const SubLink *psublink,
-				const CMappingVarColId* pmapvarcolid
+				const SubLink *sublink,
+				const CMappingVarColId* var_colid_mapping
 				);
 
-			CDXLNode *PdxlnQuantifiedSubqueryFromSublink
+			CDXLNode *CreateQuantifiedSubqueryFromSublink
 				(
-				const SubLink *psublink,
-				const CMappingVarColId* pmapvarcolid
+				const SubLink *sublink,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// translate an array expression
-			CDXLNode *PdxlnArray(const Expr *pexpr, const CMappingVarColId* pmapvarcolid);
+			CDXLNode *TranslateArrayExprToDXL(const Expr *expr, const CMappingVarColId* var_colid_mapping);
 
 			// translate an arrayref expression
-			CDXLNode *PdxlnArrayRef(const Expr *pexpr, const CMappingVarColId* pmapvarcolid);
+			CDXLNode *TranslateArrayRefToDXL(const Expr *expr, const CMappingVarColId* var_colid_mapping);
 
 			// add an indexlist to the given DXL arrayref node
 			void AddArrayIndexList
 				(
-				CDXLNode *pdxln,
-				List *plist,
-				CDXLScalarArrayRefIndexList::EIndexListBound eilb,
-				const CMappingVarColId* pmapvarcolid
+				CDXLNode *dxlnode,
+				List *list,
+				CDXLScalarArrayRefIndexList::EIndexListBound index_list_bound,
+				const CMappingVarColId* var_colid_mapping
 				);
 
 			// get the operator name
-			const CWStringConst *PstrOpName(IMDId *pmdid) const;
+			const CWStringConst *GetDXLArrayCmpType(IMDId *mdid) const;
 
 			// translate the window frame edge, if the column used in the edge is a
 			// computed column then add it to the project list
-			CDXLNode *PdxlnWindowFrameEdgeVal
+			CDXLNode *TranslateWindowFrameEdgeToDXL
 				(
-				const Node *pnode,
-				const CMappingVarColId* pmapvarcolid,
-				CDXLNode *pdxlnNewChildScPrL,
-				BOOL *pfHasDistributedTables
+				const Node *node,
+				const CMappingVarColId* var_colid_mapping,
+				CDXLNode *new_scalar_proj_list,
+				BOOL *has_distributed_tables
 				);
 
 		public:
@@ -366,192 +366,192 @@ namespace gpdxl
 			// ctor
 			CTranslatorScalarToDXL
 				(
-				IMemoryPool *pmp,
-				CMDAccessor *pmda,
-				CIdGenerator *pulidgtorCol,
-				CIdGenerator *pulidgtorCTE,
-				ULONG ulQueryLevel,
-				BOOL fQuery,
-				HMUlCTEListEntry *phmulCTEEntries,
-				DrgPdxln *pdrgpdxlnCTE
+				IMemoryPool *mp,
+				CMDAccessor *md_accessor,
+				CIdGenerator *colid_generator,
+				CIdGenerator *cte_id_generator,
+				ULONG query_level,
+				BOOL is_query_mode,
+				HMUlCTEListEntry *cte_entries,
+				CDXLNodeArray *cte_dxlnode_array
 				);
 
 			// set the caller type
 			void SetCallingPhysicalOpType
 					(
-					EPlStmtPhysicalOpType eplsphoptype
+					EPlStmtPhysicalOpType plstmt_physical_op_type
 					)
 			{
-				m_eplsphoptype = eplsphoptype;
+				m_op_type = plstmt_physical_op_type;
 			}
 
 			// create a DXL datum from a GPDB const
-			CDXLDatum *Pdxldatum(const Const *pconst) const;
+			CDXLDatum *TranslateConstToDXL(const Const *constant) const;
 
 			// return the current caller type
-			EPlStmtPhysicalOpType Eplsphoptype() const
+			EPlStmtPhysicalOpType GetPhysicalOpType() const
 			{
-				return m_eplsphoptype;
+				return m_op_type;
 			}
 			// create a DXL scalar operator node from a GPDB expression
 			// and a table descriptor for looking up column descriptors
-			CDXLNode *PdxlnScOpFromExpr
+			CDXLNode *TranslateScalarToDXL
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid,
-				BOOL *pfHasDistributedTables = NULL
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping,
+				BOOL *has_distributed_tables = NULL
 				);
 
 			// create a DXL scalar filter node from a GPDB qual list
-			CDXLNode *PdxlnFilterFromQual
+			CDXLNode *CreateFilterFromQual
 				(
-				List *plQual,
-				const CMappingVarColId* pmapvarcolid,
-				Edxlopid edxlopFilterType,
-				BOOL *pfHasDistributedTables = NULL
+				List *quals,
+				const CMappingVarColId* var_colid_mapping,
+				Edxlopid filter_type,
+				BOOL *has_distributed_tables = NULL
 				);
 
 			// create a DXL WindowFrame node from a GPDB expression
-			CDXLWindowFrame *Pdxlwf
+			CDXLWindowFrame *GetWindowFrame
 				(
-				const Expr *pexpr,
-				const CMappingVarColId* pmapvarcolid,
-				CDXLNode *pdxlnNewChildScPrL,
-				BOOL *pfHasDistributedTables = NULL
+				const Expr *expr,
+				const CMappingVarColId* var_colid_mapping,
+				CDXLNode *new_scalar_proj_list,
+				BOOL *has_distributed_tables = NULL
 				);
 
 			// translate GPDB Const to CDXLDatum
 			static
-			CDXLDatum *Pdxldatum
+			CDXLDatum *TranslateConstToDXL
 				(
-				IMemoryPool *pmp,
+				IMemoryPool *mp,
 				CMDAccessor *mda,
-				const Const *pconst
+				const Const *constant
 				);
 
 			// translate GPDB datum to CDXLDatum
 			static
-			CDXLDatum *Pdxldatum
+			CDXLDatum *TranslateDatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				INT iTypeModifier,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				INT type_modifier,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// translate GPDB datum to IDatum
 			static
-			IDatum *Pdatum
+			IDatum *CreateIDatumFromGpdbDatum
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
 				Datum datum
 				);
 
 			// extract the byte array value of the datum
 			static
-			BYTE *Pba
+			BYTE *ExtractByteArrayFromDatum
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			static
-			CDouble DValue
+			CDouble ExtractDoubleValueFromDatum
 				(
-				IMDId *pmdid,
-				BOOL fNull,
-				BYTE *pba,
+				IMDId *mdid,
+				BOOL is_null,
+				BYTE *bytes,
 				Datum datum
 				);
 
 			// extract the long int value of a datum
 			static
-			LINT LValue
+			LINT ExtractLintValueFromDatum
 				(
-				IMDId *pmdid,
-				BOOL fNull,
-				BYTE *pba,
-				ULONG ulLen
+				IMDId *mdid,
+				BOOL is_null,
+				BYTE *bytes,
+				ULONG len
 				);
 
 			// pair of DXL datum type and translator function
 			struct SDXLDatumTranslatorElem
 			{
-				IMDType::ETypeInfo eti;
-				PfPdxldatumFromDatum *pf;
+				IMDType::ETypeInfo type_info;
+				DxlDatumFromDatum *func_ptr;
 			};
 
 			// datum to oid CDXLDatum
 			static
-			CDXLDatum *PdxldatumOid
+			CDXLDatum *TranslateOidDatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// datum to int2 CDXLDatum
 			static
-			CDXLDatum *PdxldatumInt2
+			CDXLDatum *TranslateInt2DatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// datum to int4 CDXLDatum
 			static
-			CDXLDatum *PdxldatumInt4
+			CDXLDatum *TranslateInt4DatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// datum to int8 CDXLDatum
 			static
-			CDXLDatum *PdxldatumInt8
+			CDXLDatum *TranslateInt8DatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// datum to bool CDXLDatum
 			static
-			CDXLDatum *PdxldatumBool
+			CDXLDatum *TranslateBoolDatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 
 			// datum to generic CDXLDatum
 			static
-			CDXLDatum *PdxldatumGeneric
+			CDXLDatum *TranslateGenericDatumToDXL
 				(
-				IMemoryPool *pmp,
-				const IMDType *pmdtype,
-				INT iTypeModifier,
-				BOOL fNull,
-				ULONG ulLen,
+				IMemoryPool *mp,
+				const IMDType *md_type,
+				INT type_modifier,
+				BOOL is_null,
+				ULONG len,
 				Datum datum
 				);
 	};

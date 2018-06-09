@@ -28,16 +28,16 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CDXLTranslateContext::CDXLTranslateContext
 	(
-	IMemoryPool *pmp,
-	BOOL fChildAggNode
+	IMemoryPool *mp,
+	BOOL is_child_agg_node
 	)
 	:
-	m_pmp(pmp),
-	m_fChildAggNode(fChildAggNode)
+	m_mp(mp),
+	m_is_child_agg_node(is_child_agg_node)
 {
 	// initialize hash table
-	m_phmulte = GPOS_NEW(m_pmp) HMUlTe(m_pmp);
-	m_phmcolparam = GPOS_NEW(m_pmp) HMColParam(m_pmp);
+	m_colid_to_target_entry_map = GPOS_NEW(m_mp) ULongToTargetEntryMap(m_mp);
+	m_colid_to_paramid_map = GPOS_NEW(m_mp) ULongToColParamMap(m_mp);
 }
 
 //---------------------------------------------------------------------------
@@ -50,17 +50,17 @@ CDXLTranslateContext::CDXLTranslateContext
 //---------------------------------------------------------------------------
 CDXLTranslateContext::CDXLTranslateContext
 	(
-	IMemoryPool *pmp,
-	BOOL fChildAggNode,
-	HMColParam *phmOriginal
+	IMemoryPool *mp,
+	BOOL is_child_agg_node,
+	ULongToColParamMap *original
 	)
 	:
-	m_pmp(pmp),
-	m_fChildAggNode(fChildAggNode)
+	m_mp(mp),
+	m_is_child_agg_node(is_child_agg_node)
 {
-	m_phmulte = GPOS_NEW(m_pmp) HMUlTe(m_pmp);
-	m_phmcolparam = GPOS_NEW(m_pmp) HMColParam(m_pmp);
-	CopyParamHashmap(phmOriginal);
+	m_colid_to_target_entry_map = GPOS_NEW(m_mp) ULongToTargetEntryMap(m_mp);
+	m_colid_to_paramid_map = GPOS_NEW(m_mp) ULongToColParamMap(m_mp);
+	CopyParamHashmap(original);
 }
 
 //---------------------------------------------------------------------------
@@ -73,22 +73,22 @@ CDXLTranslateContext::CDXLTranslateContext
 //---------------------------------------------------------------------------
 CDXLTranslateContext::~CDXLTranslateContext()
 {
-	m_phmulte->Release();
-	m_phmcolparam->Release();
+	m_colid_to_target_entry_map->Release();
+	m_colid_to_paramid_map->Release();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContext::FParentAggNode
+//		CDXLTranslateContext::IsParentAggNode
 //
 //	@doc:
 //		Is this translation context created by a parent Agg node
 //
 //---------------------------------------------------------------------------
 BOOL
-CDXLTranslateContext::FParentAggNode() const
+CDXLTranslateContext::IsParentAggNode() const
 {
-	return m_fChildAggNode;
+	return m_is_child_agg_node;
 }
 
 //---------------------------------------------------------------------------
@@ -102,56 +102,56 @@ CDXLTranslateContext::FParentAggNode() const
 void
 CDXLTranslateContext::CopyParamHashmap
 	(
-	HMColParam *phmOriginal
+	ULongToColParamMap *original
 	)
 {
 	// iterate over full map
-	HMColParamIter hashmapiter(phmOriginal);
-	while (hashmapiter.FAdvance())
+	ULongToColParamMapIter hashmapiter(original);
+	while (hashmapiter.Advance())
 	{
-		CMappingElementColIdParamId *pmecolidparamid = const_cast<CMappingElementColIdParamId *>(hashmapiter.Pt());
+		CMappingElementColIdParamId *colidparamid = const_cast<CMappingElementColIdParamId *>(hashmapiter.Value());
 
-		const ULONG ulColId = pmecolidparamid->UlColId();
-		ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulColId);
-		pmecolidparamid->AddRef();
-		m_phmcolparam->FInsert(pulKey, pmecolidparamid);
+		const ULONG colid = colidparamid->GetColId();
+		ULONG *key = GPOS_NEW(m_mp) ULONG(colid);
+		colidparamid->AddRef();
+		m_colid_to_paramid_map->Insert(key, colidparamid);
 	}
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContext::Pte
+//		CDXLTranslateContext::GetTargetEntry
 //
 //	@doc:
 //		Lookup target entry associated with a given col id
 //
 //---------------------------------------------------------------------------
 const TargetEntry *
-CDXLTranslateContext::Pte
+CDXLTranslateContext::GetTargetEntry
 	(
-	ULONG ulColId
+	ULONG colid
 	)
 	const
 {
-	return m_phmulte->PtLookup(&ulColId);
+	return m_colid_to_target_entry_map->Find(&colid);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLTranslateContext::Pmecolidparamid
+//		CDXLTranslateContext::GetParamIdMappingElement
 //
 //	@doc:
 //		Lookup col->param mapping associated with a given col id
 //
 //---------------------------------------------------------------------------
 const CMappingElementColIdParamId *
-CDXLTranslateContext::Pmecolidparamid
+CDXLTranslateContext::GetParamIdMappingElement
 	(
-	ULONG ulColId
+	ULONG colid
 	)
 	const
 {
-	return m_phmcolparam->PtLookup(&ulColId);
+	return m_colid_to_paramid_map->Find(&colid);
 }
 
 //---------------------------------------------------------------------------
@@ -165,19 +165,19 @@ CDXLTranslateContext::Pmecolidparamid
 void
 CDXLTranslateContext::InsertMapping
 	(
-	ULONG ulColId,
-	TargetEntry *pte
+	ULONG colid,
+	TargetEntry *target_entry
 	)
 {
 	// copy key
-	ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulColId);
+	ULONG *key = GPOS_NEW(m_mp) ULONG(colid);
 
 	// insert colid->target entry mapping in the hash map
-	BOOL fResult = m_phmulte->FInsert(pulKey, pte);
+	BOOL result = m_colid_to_target_entry_map->Insert(key, target_entry);
 
-	if (!fResult)
+	if (!result)
 	{
-		GPOS_DELETE(pulKey);
+		GPOS_DELETE(key);
 	}
 }
 
@@ -192,15 +192,15 @@ CDXLTranslateContext::InsertMapping
 BOOL
 CDXLTranslateContext::FInsertParamMapping
 	(
-	ULONG ulColId,
-	CMappingElementColIdParamId *pmecolidparamid
+	ULONG colid,
+	CMappingElementColIdParamId *colidparamid
 	)
 {
 	// copy key
-	ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulColId);
+	ULONG *key = GPOS_NEW(m_mp) ULONG(colid);
 
 	// insert colid->target entry mapping in the hash map
-	return m_phmcolparam->FInsert(pulKey, pmecolidparamid);
+	return m_colid_to_paramid_map->Insert(key, colidparamid);
 }
 
 // EOF
