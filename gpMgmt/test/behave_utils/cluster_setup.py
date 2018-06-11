@@ -64,7 +64,7 @@ class GpDeleteSystem(Command):
 
 
 class TestCluster:
-    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem'):
+    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', standby_enabled = False):
         """
         hosts: lists of cluster hosts. master host will be assumed to be the first element.
         base_dir: cluster directory
@@ -102,7 +102,7 @@ class TestCluster:
         self.mirror_enabled = False
         self.number_of_segments = 2
         self.number_of_hosts = len(self.hosts)-1
-        self.standby_enabled = False
+        self.standby_enabled = standby_enabled
 
         self.number_of_expansion_hosts = 0
         self.number_of_expansion_segments = 0
@@ -151,7 +151,9 @@ class TestCluster:
 
         # run gpinitsystem
         clean_env = 'unset MASTER_DATA_DIRECTORY; unset PGPORT;'
-        gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s' % (self.init_file)
+        gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s ' % (self.init_file)
+        if self.standby_enabled:
+            gpinitsystem_cmd += ' -s {} -P {} '.format(self.hosts[0], int(self.master_port)+1)
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
         # initsystem returns 1 for warnings and 2 for errors
         if res['rc'] > 1:
@@ -241,4 +243,3 @@ if __name__ == '__main__':
     testcluster = TestCluster([])
     testcluster.reset_cluster()
     testcluster.create_cluster()
-
