@@ -7483,8 +7483,8 @@
     <body>
       <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only
         when resource group-based resource management is active.</note>
-      <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When 
-        a transaction reaches this threshold, it spills to disk.</p>
+      <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a
+        transaction reaches this threshold, it spills to disk.</p>
       <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group
         assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at
         the session level to selectively set this limit on a per-query basis. For example, if you
@@ -9600,7 +9600,7 @@
           <codeph>/tmp/</codeph>.</p>
       <note type="important">Do not change the value of this parameter. The default location is
         required for Greenplum Database utilities.</note>
-      <note>This parameter is deprecated and will removed in a future release.</note>
+      <note>This parameter is deprecated and will be removed in a future release.</note>
       <table id="unix_socket_directory_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
