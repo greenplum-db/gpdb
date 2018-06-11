@@ -601,7 +601,7 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if 'CLI' in test_sections + os_types or 'aix7' in test_sections + os_types %}
+{% if "aix7" in os_types %}
 - name: nightly-trigger
   type: time
   source:
