@@ -30,8 +30,8 @@
       Boost storage plugin replicates the backup set on the remote Data Domain system with DD Boost
       managed file replication. </p>
     <p>To restore data from a replicated backup, you can use <codeph>gprestore</codeph> with the DD
-      Boost storage plugin and specify the location of the backup on backup in the DD Boost
-      configuration file. </p>
+      Boost storage plugin and specify the location of the backup in the DD Boost configuration
+      file. </p>
     <section id="ddb-plugin-config">
       <title>DD Boost Storage Plugin Configuration File Format</title>
       <p>The configuration file specifies the absolute path to the Greenplum Database DD Boost
@@ -100,12 +100,12 @@
               </plentry>
               <plentry id="ddb-replication">
                 <pt>replication</pt>
-                <pd>Optional. Enables or disables backup replication when <codeph>gpbackup</codeph>
-                  performs a backup operation. Value is either <systemoutput>on</systemoutput> or
-                    <systemoutput>off</systemoutput>. Default value is <codeph>off</codeph>, backup
-                  replication is disabled. When the value is <codeph>on</codeph>, the DD Boost
-                  plugin replicates the backup on the Data Domain system that you specify with the
-                    <codeph>remote_*</codeph> options. </pd>
+                <pd>Optional. Enables or disables backup replication with DD Boost managed file
+                  replication when <codeph>gpbackup</codeph> performs a backup operation. Value is
+                  either <codeph>on</codeph> or <codeph>off</codeph>. Default value is
+                    <codeph>off</codeph>, backup replication is disabled. When the value is
+                    <codeph>on</codeph>, the DD Boost plugin replicates the backup on the Data
+                  Domain system that you specify with the <codeph>remote_*</codeph> options. </pd>
                 <pd>The <codeph>replication</codeph> option and <codeph>remote_*</codeph> options
                   are ignored when performing a restore operation with <codeph>gprestore</codeph>.
                   The <codeph>remote_*</codeph> options are ignored if <codeph>replication</codeph>
@@ -120,8 +120,8 @@
               <plentry id="ddb-remote-user">
                 <pt>remote_username</pt>
                 <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. The Data Domain
-                  Boost user name that access the remote Data Domain system. There is a 30-character
-                  limit.</pd>
+                  Boost user name that accesses the remote Data Domain system. There is a
+                  30-character limit.</pd>
               </plentry>
               <plentry id="ddb-remote-pwd">
                 <pt>remote_password</pt>
@@ -172,7 +172,7 @@ options:
       <p>
         <codeblock>/test/backup/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
       </p>
-      <p>This is an example DD Boost storage plugin configuration file enables
+      <p>This is an example DD Boost storage plugin configuration file that enables
         replication.<codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
 options:
   hostname: "192.0.2.230"
