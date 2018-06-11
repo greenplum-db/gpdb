@@ -69,6 +69,32 @@ def impl(context):
     cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
     cmd.run(validateAfter=True)
 
+@then('save the gparray to context')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    context.gparray = gparray
+
+@then('mirror hostlist matches the one saved in context')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    old_contentId_to_host = {}
+    curr_contentId_to_host = {}
+
+    # Map content IDs to hostnames for every mirror, for both the saved GpArray
+    # and the current one.
+    for (array, hostMap) in [(context.gparray, old_contentId_to_host), (gparray, curr_contentId_to_host)]:
+        for host in array.get_hostlist(includeMaster=False):
+            for mirror in array.get_list_of_mirror_segments_on_host(host):
+                hostMap[mirror.getSegmentContentId()] = host
+
+    if len(curr_contentId_to_host) != len(old_contentId_to_host):
+        raise Exception("Number of mirrors doesn't match between old and new clusters")
+
+    for key in old_contentId_to_host.keys():
+        if curr_contentId_to_host[key] != old_contentId_to_host[key]:
+            raise Exception("Mirror host doesn't match for contentId %s (old host=%s) (new host=%s)"
+            % (key, old_contentId_to_host[key], curr_contentId_to_host[key]))
+
 @then('verify the database has mirrors in spread configuration')
 def impl(context):
     hostname_to_primary_contentId_list = {}
