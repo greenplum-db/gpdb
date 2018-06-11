@@ -4124,12 +4124,12 @@
       <p>The default value is <codeph>false</codeph>, Greenplum Database returns an error if the
           <codeph>INTO ERROR TABLE</codeph> clause is specified in a command. </p>
       <p>If the value is <codeph>true</codeph>, Greenplum Database ignores the clause, issues a
-        warning, and executes the command and logs information about data rows with formatting
-        errors. In Greenplum Database 5.x, you access the error log information with built-in SQL
-        functions. See the <codeph><xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE
-            EXTERNAL TABLE</xref></codeph> or <codeph><xref href="../sql_commands/COPY.xml"
-            >COPY</xref></codeph> command.</p>
-      <p>You can set this value to <codeph>true</codeph> to avoid the Greenplum Database 5 error
+        warning, and executes the command without the <codeph>INTO ERROR TABLE</codeph> clause. In
+        Greenplum Database 6.x, you access the error log information with built-in SQL functions.
+        See the <codeph><xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE EXTERNAL
+            TABLE</xref></codeph> or <codeph><xref href="../sql_commands/COPY.xml"
+          >COPY</xref></codeph> command.</p>
+      <p>You can set this value to <codeph>true</codeph> to avoid the Greenplum Database 6 error
         when you run applications that execute <codeph>CREATE EXTERNAL TABLE</codeph> or
           <codeph>COPY</codeph> commands that include the Greenplum Database 4.3.x <codeph>INTO
           ERROR TABLE</codeph> clause.</p>
@@ -4149,7 +4149,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">false</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -4640,7 +4640,7 @@
       </table>
     </body>
   </topic>
-  
+
   <topic id="gp_motion_cost_per_row">
     <title>gp_motion_cost_per_row</title>
     <body>
