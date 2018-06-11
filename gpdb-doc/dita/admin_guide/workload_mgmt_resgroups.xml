@@ -212,6 +212,23 @@
     <body>
       <p>You configure the share of CPU resources to reserve for a resource group on a segment host by assigning specific CPU core(s) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the <codeph>CPUSET</codeph> and <codeph>CPU_RATE_LIMIT</codeph> resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.</p>
       <p>You may employ both modes of CPU resource allocation simultaneously in your Greenplum Database cluster. You may also change the CPU resource allocation mode for a resource group at runtime.</p>
+      <p>The <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit"
+            type="section"/></codeph> server configuration parameter identifies the maximum
+        percentage of system CPU resources to allocate to resource groups on each Greenplum Database
+        segment host. This limit governs the maximum CPU usage of all resource groups on
+        a segment host regardless of the CPU allocation mode configured for the group.
+        The remaining unreserved CPU resources are used for the OS kernel and the Greenplum
+        Database auxiliary daemon processes. The default
+        <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
+      <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
+        CPU resources if you are running other workloads on your Greenplum Database cluster nodes,
+        so be sure to adjust this server configuration parameter accordingly.</note>
+      <note type="warning">Avoid setting <codeph>gp_resource_group_cpu_limit</codeph> to a value
+         higher than .9. Doing so may result in high workload
+         queries taking near all CPU resources, potentially starving Greenplum
+         Database auxiliary processes.</note>
+
     </body>
     <topic id="cpuset" xml:lang="en">
       <title>Assigning CPU Resources by Core</title>
@@ -226,22 +243,7 @@
     <topic id="cpu_rate_limit" xml:lang="en">
       <title>Assigning CPU Resources by Percentage</title>
       <body>
-      <p>The <codeph><xref
-            href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit"
-            type="section"/></codeph> server configuration parameter identifies the maximum
-        percentage of system CPU resources to allocate to resource groups on each Greenplum Database
-        segment host. The remaining unreserved CPU resources are used for the OS kernel and the Greenplum
-        Database auxiliary daemon processes. The default
-        <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
-      <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
-        CPU resources if you are running other workloads on your Greenplum Database cluster nodes,
-        so be sure to adjust this server configuration parameter accordingly.</note>
-      <note type="warning">Avoid setting <codeph>gp_resource_group_cpu_limit</codeph> to a value
-         higher than .9. Doing so may result in high workload
-         queries taking near all CPU resources, potentially starving Greenplum
-         Database auxiliary processes.</note>
-      <p>(While <codeph>gp_resource_group_cpu_limit</codeph> applies to the CPU resources of all CPU cores on the host, this configuration parameter setting has no effect on resource groups that you configure with <codeph>CPUSET</codeph>.)</p>
-      <p>The Greenplum Database node CPU percentage is further divided equally among each segment on
+      <p>The Greenplum Database node CPU percentage is divided equally among each segment on
         the Greenplum node. Each resource group that you configure with a <codeph>CPU_RATE_LIMIT</codeph> reserves the specified percentage of the segment CPU for
         resource management.</p>
       <p>The minimum <codeph>CPU_RATE_LIMIT</codeph> percentage you can specify for a resource group
