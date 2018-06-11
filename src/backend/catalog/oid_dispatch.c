@@ -679,7 +679,7 @@ GetPreassignedOidForRelation(Oid namespaceOid, const char *relname)
 		 * Special handling for binary upgrading the QD node. See
 		 * GetPreassignedOidForTuple().
 		 */
-		if (IsBinaryUpgrade && !IsBinaryUpgradeQE())
+		if (IsBinaryUpgrade)
 			return InvalidOid;
 
 		elog(ERROR, "no pre-assigned OID for relation \"%s\"", relname);

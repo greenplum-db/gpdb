@@ -146,13 +146,16 @@ main(int argc, char **argv)
 	/* New now using xids of the old system */
 
 	/* -- NEW -- */
-	start_postmaster(&new_cluster, true);
+	if (user_opts.segment_mode == DISPATCHER)
+	{
+		start_postmaster(&new_cluster, true);
 
-	prepare_new_databases();
+		prepare_new_databases();
 
-	create_new_objects();
+		create_new_objects();
 
-	stop_postmaster(false);
+		stop_postmaster(false);
+	}
 
 	/*
 	 * Most failures happen in create_new_objects(), which has completed at

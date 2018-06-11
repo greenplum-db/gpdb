@@ -21,8 +21,6 @@ NEW_DATADIR=
 DEMOCLUSTER_OPTS=
 PGUPGRADE_OPTS=
 
-qddir=
-
 # The normal ICW run has a gpcheckcat call, so allow this testrunner to skip
 # running it in case it was just executed to save time.
 gpcheckcat=1
@@ -138,7 +136,7 @@ upgrade_qd()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 --dispatcher-mode ${PGUPGRADE_OPTS}
+	time ${NEW_BINDIR}/pg_upgrade --mode=dispatcher --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading qd node"
 		exit 1
@@ -159,12 +157,9 @@ upgrade_segment()
 {
 	mkdir -p $1
 
-	# Copy the OID files from the QD to segments.
-	cp $qddir/pg_upgrade_dump_*_oids.sql $1
-
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
+	time ${NEW_BINDIR}/pg_upgrade --mode=segment --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading node"
 		exit 1
@@ -311,9 +306,8 @@ PGOPTIONS=""; unset PGOPTIONS
 # Start by upgrading the master
 upgrade_qd "${temp_root}/upgrade/qd" "${OLD_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/qddir/demoDataDir-1/"
 
-# If this is a minimal smoketest to ensure that we are pulling the Oids across
-# from the old cluster to the new, then exit here as we have now successfully
-# upgraded a node (the QD).
+# If this is a minimal smoketest to ensure that we are handling all objects
+# properly, then exit here as we have now successfully upgraded the QD.
 if (( $smoketest )) ; then
 	restore_cluster
 	exit
@@ -322,11 +316,28 @@ fi
 # Upgrade all the segments and mirrors. In a production setup the segments
 # would be upgraded first and then the mirrors once the segments are verified.
 # In this scenario we can cut corners since we don't have any important data
-# in the test cluster and we only consern ourselves with 100% success rate.
+# in the test cluster and we only concern ourselves with 100% success rate.
 for i in 1 2 3
 do
 	j=$(($i-1))
+	k=$(($i+1))
+
+	# Replace the QE datadir with a copy of the QD datadir, in order to
+	# bootstrap the QE upgrade so that we don't need to dump/restore
+	mv "${NEW_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/"
+	cp -rp "${NEW_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
+	# Retain the segment configuration
+	cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/postgresql.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/postgresql.conf"
+	cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/pg_hba.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/pg_hba.conf"
+	cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/postmaster.opts" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/postmaster.opts"
+	cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/gp_replication.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gp_replication.conf"
+	# Remove QD only files
+	rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gp_dbid"
+	rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpssh.conf"
+	rm -rf "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpperfmon"
+	# Upgrade the segment data files without dump/restore of the schema
 	upgrade_segment "${temp_root}/upgrade/dbfast$i" "${OLD_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
+
 	if (( $mirrors )) ; then
 		upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/"
 	fi

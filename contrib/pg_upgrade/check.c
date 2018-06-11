@@ -158,7 +158,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.
 	 */
-	if (!user_opts.check)
+	if (!user_opts.check && user_opts.segment_mode == DISPATCHER)
 		generate_old_dump();
 
 	if (!live_check)
@@ -539,6 +539,14 @@ static void
 check_new_cluster_is_empty(void)
 {
 	int			dbnum;
+
+	/*
+	 * If we are upgrading a segment we expect to have a complete datadir in
+	 * place from the QD at this point, so the cluster cannot be tested for
+	 * being empty.
+	 */
+	if (user_opts.segment_mode == SEGMENT)
+		return;
 
 	for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)
 	{

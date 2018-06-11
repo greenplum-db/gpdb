@@ -340,6 +340,12 @@ typedef enum
 	CHECKSUM_REMOVE
 } checksumMode;
 
+typedef enum
+{
+	DISPATCHER = 0,
+	SEGMENT
+} segmentMode;
+
 /*
  * Enumeration to denote pg_log modes
  */
@@ -421,8 +427,9 @@ typedef struct
 	int			jobs;
 
 	bool		progress;
-	bool		dispatcher_mode;
+	segmentMode	segment_mode;
 	checksumMode checksum_mode;
+
 } UserOpts;
 
 

@@ -824,9 +824,10 @@ index_create(Relation heapRelation,
 	 */
 	if (!OidIsValid(indexRelationId))
 	{
-		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgradeQE())
+		if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 			indexRelationId = GetPreassignedOidForRelation(namespaceId, indexRelationName);
-		else
+
+		if (!OidIsValid(indexRelationId))
 			indexRelationId = GetNewOid(pg_class);
 	}
 

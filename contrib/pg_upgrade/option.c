@@ -56,7 +56,7 @@ parseCommandLine(int argc, char *argv[])
 		{"verbose", no_argument, NULL, 'v'},
 
 		/* Greenplum specific parameters */
-		{"dispatcher-mode", no_argument, NULL, 1},
+		{"mode", required_argument, NULL, 1},
 		{"progress", no_argument, NULL, '2'},
 		{"add-checksum", no_argument, NULL, '3'},
 		{"remove-checksum", no_argument, NULL, '4'},
@@ -79,6 +79,9 @@ parseCommandLine(int argc, char *argv[])
 	new_cluster.port = getenv("PGPORTNEW") ? atoi(getenv("PGPORTNEW")) : DEF_PGUPORT;
 
 	os_user_effective_id = get_user_info(&os_info.user);
+
+	user_opts.segment_mode = SEGMENT;
+
 	/* we override just the database user name;  we got the OS id above */
 	if (getenv("PGUSER"))
 	{
@@ -197,19 +200,17 @@ parseCommandLine(int argc, char *argv[])
 			 * Greenplum specific parameters
 			 */
 
-			case 1:		/* --dispatcher-mode */
-				/*
-				 * XXX: Ideally, we could tell just by looking at the data
-				 * directory, whether it's a QD node, or a QE node. You might
-				 * think that we could look at Gp_role or gp_contentid, but
-				 * alas, we pass those options on the pg_ctl command line,
-				 * they are not stored permanently in the data directory
-				 * itself, and we don't want to dig into the auxiliary
-				 * config files created by gpinitsystem. So for now, the
-				 * caller of pg_upgrade must use the --dispatcher-mode
-				 * option, when upgrading the QD node.
-				 */
-				user_opts.dispatcher_mode = true;
+			case 1:		/* --mode={dispatcher|segment} */
+				if (pg_strcasecmp("dispatcher", optarg) == 0)
+					user_opts.segment_mode = DISPATCHER;
+				else if (pg_strcasecmp("segment", optarg) == 0)
+					user_opts.segment_mode = SEGMENT;
+				else
+				{
+					pg_log(PG_FATAL, "invalid segment configuration\n");
+					exit(1);
+				}
+
 				break;
 
 			case 2:		/* --progress */
@@ -287,7 +288,7 @@ Options:\n\
   -u, --user=NAME               cluster superuser (default \"%s\")\n\
   -v, --verbose                 enable verbose internal logging\n\
   -V, --version                 display version information, then exit\n\
-      --dispatcher-mode         upgrade a QD node (default is QE node)\n\
+      --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
       --progress                enable progress reporting\n\
       --remove-checksum         remove data checksums when creating new cluster\n\
       --add-checksum            add data checksumming to the new cluster\n\
