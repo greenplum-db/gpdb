@@ -84,10 +84,7 @@
                     <pd>Specifies the name of a file that contains a list of hosts that will
                         participate in this SSH session. The host name is required, and you can
                         optionally specify an alternate user name and/or SSH port number per host.
-                        The syntax of the host file is one host per line as follows:</pd>
-                    <pd>
-                        <codeblock>[<varname>username</varname>@]<varname>hostname</varname>[:<varname>ssh_port</varname>]</codeblock>
-                    </pd>
+                        The syntax of the host file is one host per line.</pd>
                 </plentry>
                 <plentry>
                     <pt>-h <varname>hostname</varname></pt>
