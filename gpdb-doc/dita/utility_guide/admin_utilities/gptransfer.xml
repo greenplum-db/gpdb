@@ -8,7 +8,7 @@
         <p>The <codeph>gptransfer</codeph> utility copies objects from databases in a source
             Greenplum Database system to databases in a destination Greenplum Database system. </p>
         <!-- conref'ing to content from admin_guide. -->
-        <note conref="../../admin_guide/managing/gptransfer.xml#note1"/>
+        <note conref="../../admin_guide/managing/gptransfer.xml#topic_gptransfer/note1"/>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gptransfer</b>
@@ -121,6 +121,8 @@
                 might be more efficient to copy the schema and smaller tables to the destination
                 database using other methods, such as the SQL <cmdname>COPY</cmdname> command, and
                 then use <codeph>gptransfer</codeph> to transfer large tables in batches.</p>
+            <p>The maximum length of a data row that the <codeph>gptransfer</codeph> utility can
+                copy is 256 MB.</p>
             <p>When transferring data between databases, you can run only one instance of
                     <codeph>gptransfer</codeph> at a time.<ph otherprops="op-pivotal"> Running
                     multiple, concurrent instances of <codeph>gptransfer</codeph> is not
