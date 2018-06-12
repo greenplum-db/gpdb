@@ -80,6 +80,8 @@ _main() {
 			sed -i "s|%MYD%|${CURDIR}/source_replaced/input|g" "$CURDIR/source_replaced/input/$f"
 			sed -i "s|%HADOOP_FS%|${HADOOPCMD}|g" "$CURDIR/source_replaced/input/$f"
     	done
+		# set Hadoop port to none that is expected by test harness for MAPR distro
+		export HADOOP_PORT="none"
   	else
 		override_core_site
     	for f in $(ls $CURDIR/source_replaced/input); do
