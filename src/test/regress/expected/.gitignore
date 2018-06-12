@@ -38,3 +38,5 @@ trigger_sets_oid.out
 query_info_hook_test.out
 gp_tablespace.out
 partition_ddl.out
+autovacuum-template0.out
+rpt_tpch.out
