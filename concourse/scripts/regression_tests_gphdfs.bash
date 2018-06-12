@@ -6,7 +6,8 @@ CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
 
 HADOOP_TARGET_VERSION=${HADOOP_TARGET_VERSION:-mpr}
-MAPR_HOST=${MAPR_HOST:-"35.232.9.248"}
+#MAPR_HOST=${MAPR_HOST:-"35.232.9.248"}
+MAPR_HOST=${MAPR_HOST:-"35.225.60.92"}
 
 function gen_env(){
 	cat > /home/gpadmin/run_regression_test.sh <<-EOF
@@ -89,6 +90,7 @@ function install_mapr_client() {
 		yum install -y mapr-client.x86_64
 		/opt/mapr/server/configure.sh -N mapr -c -C $MAPR_HOST:7222
 		chown -R gpadmin /opt/mapr
+		chown -R root /opt/mapr/conf/proxy
 	fi
 }
 
