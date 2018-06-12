@@ -60,7 +60,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
         <plentry>
           <pt>CPUSET <varname>tuple</varname></pt>
           <pd>The CPU cores to reserve for this resource group. The CPU cores that you specify in <varname>tuple</varname> must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.</pd>
-          <pd><varname>tuple</varname> is a comma-separated list of single core numbers or core intervals. You must enclose <varname>tuple</varname> in single quotes, for example, '0,2-3'.</pd>
+          <pd><varname>tuple</varname> is a comma-separated list of single core numbers or core intervals. You must enclose <varname>tuple</varname> in single quotes, for example, '1,3-4'.</pd>
           <pd>If you alter the <codeph>CPUSET</codeph> value of a resource group for which
             you previously configured a <codeph>CPU_RATE_LIMIT</codeph>, <codeph>CPU_RATE_LIMIT</codeph> is disabled, the reserved CPU resources are returned to Greenplum Database, and <codeph>CPU_RATE_LIMIT</codeph> is set to -1.</pd>
           <pd>You can alter <codeph>CPUSET</codeph> for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.</pd>
@@ -107,7 +107,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
       <p>Increase the memory spill ratio for a resource group from the default: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup4 SET MEMORY_SPILL_RATIO 25;</codeblock>
       <p>Reserve CPU core 0 for a resource group: </p>
-      <codeblock>ALTER RESOURCE GROUP rgroup5 SET CPUSET '0';</codeblock>
+      <codeblock>ALTER RESOURCE GROUP rgroup5 SET CPUSET '1';</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>
