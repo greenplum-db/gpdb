@@ -5,7 +5,7 @@ set -exo pipefail
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
 
-HADOOP_TARGET_VERSION=${HADOOP_TARGET_VERSION:-mpr}
+HADOOP_TARGET_VERSION=${HADOOP_TARGET_VERSION:-hadoop}
 #MAPR_HOST=${MAPR_HOST:-"35.232.9.248"}
 MAPR_HOST=${MAPR_HOST:-"35.225.60.92"}
 
