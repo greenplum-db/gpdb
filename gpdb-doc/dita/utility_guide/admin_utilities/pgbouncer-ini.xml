@@ -26,6 +26,9 @@ db = ...
         format. Lines beginning with a semicolon (<codeph>;</codeph>) or pound sign
         (<codeph>#</codeph>) are considered comment lines
         and are ignored.</p>
+      <p>The PgBouncer configuration file can contain <codeph>%include</codeph> directives,
+        which specify another file to read and process. This enables you to split the configuration
+        file into separate parts. For example:<codeblock>%include filename</codeblock></p><p>If the filename provided is not an absolute path, the file system location is taken as relative to the current working directory.</p>
       <p>The PgBouncer configuration file includes the following sections, described in detail below:<ul id="ul_kwg_vll_gs">
         <li><xref href="#topic_fmd_ckd_gs" format="dita"/></li>
         <li><xref href="#topic_orc_gkd_gs" format="dita"/></li>
@@ -732,7 +735,7 @@ forcedb = host=127.0.0.1 port=300 user=baz password=foo client_encoding=UNICODE 
     <title>See Also</title>
     <body>
       <p><codeph><xref href="pgbouncer.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph><xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/></codeph></p>
+          <codeph><xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/></codeph>, <xref href="https://pgbouncer.github.io/config.html" format="html" scope="external">PgBouncer Configuration Page</xref></p>
       </body>
   </topic>
 
