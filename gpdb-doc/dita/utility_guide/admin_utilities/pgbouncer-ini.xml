@@ -199,6 +199,11 @@ db = ...
               file.<p>Default: not set</p></pd>
           </plentry>
           <plentry>
+            <pt>auth_hba_file</pt>
+            <pd>HBA configuration file to use when <codeph>auth_type</codeph> is <codeph>hba</codeph>. Refer to the <xref href="https://pgbouncer.github.io/config.html#hba-file-format" format="html" scope="external">HBA file format
+          </xref> discussion in the PgBouncer documentation for information about PgBouncer support of the HBA authentication file format.<p>Default: not set</p></pd>
+          </plentry>
+          <plentry>
             <pt>auth_type</pt>
             <pd>How to authenticate users.<parml>
                 <plentry>
