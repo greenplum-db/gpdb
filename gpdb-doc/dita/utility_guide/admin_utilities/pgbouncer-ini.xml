@@ -3,7 +3,7 @@
 <topic id="topic1">
   <title>pgbouncer.ini</title>
   <body>
-    <p>PgBouncer configuration file</p>
+    <p>PgBouncer configuration file.</p>
     <section>
       <title>Synopsys</title>
       <codeblock>[databases]
@@ -17,14 +17,14 @@ db = ...
     </section>
     <section>
       <title>Description</title>
-      <p>You specify Greenplum Database and PgBouncer configuration parameters and identify user-specific configuration parameters in the PgBouncer <codeph>pgbouncer.ini</codeph> configuration file.</p>
+      <p>You specify PgBouncer configuration parameters and identify user-specific configuration parameters in the <codeph>pgbouncer.ini</codeph> configuration file.</p>
       <p>The PgBouncer configuration file (typically named <codeph>pgbouncer.ini</codeph>)
         is specified in <codeph>.ini</codeph> format. Files in <codeph>.ini</codeph> format are composed of
         sections, parameters, and values. Section names are enclosed in square brackets,
         for example, <codeph>[<varname>section_name</varname>]</codeph>. Parameters and values are
         specified in <codeph><varname>key</varname>=<varname>value</varname></codeph>
         format. Lines beginning with a semicolon (<codeph>;</codeph>) or pound sign
-        (<codeph>#</codeph>) are considered comment lines in <codeph>.ini</codeph>-format files
+        (<codeph>#</codeph>) are considered comment lines
         and are ignored.</p>
       <p>The PgBouncer configuration file includes the following sections, described in detail below:<ul id="ul_kwg_vll_gs">
         <li><xref href="#topic_fmd_ckd_gs" format="dita"/></li>
@@ -51,7 +51,7 @@ db = ...
         such as these are cleaned up if they remain idle longer than the time specified in
           <codeph>autodb_idle_timeout</codeph> parameter.</p>
       <section>
-        <title>Location Parameters</title>
+        <title>Database Connection Parameters</title>
         <p>The following parameters may be included in the <codeph><varname>value</varname></codeph> to specify the location of the
           database. </p>
         <parml>
@@ -93,6 +93,18 @@ db = ...
                 <codeph>auth_user</codeph> Greenplum Database user. <codeph>auth_user</codeph>'s password must be set
               in the <codeph>auth_file</codeph>.</pd>
           </plentry>
+          <plentry>
+            <pt>client_encoding</pt>
+            <pd>Ask for specific <codeph>client_encoding</codeph> from server.</pd>
+          </plentry>
+          <plentry>
+            <pt>datestyle</pt>
+            <pd>Ask for specific <codeph>datestyle</codeph> from server.</pd>
+          </plentry>
+          <plentry>
+            <pt>timezone</pt>
+            <pd>Ask for specific <codeph>timezone</codeph> from server.</pd>
+          </plentry>
         </parml>
       </section>
       <section>
@@ -121,26 +133,6 @@ db = ...
               database. The total number of connections for all pools for this database
               will not exceed this value.
             </pd>
-          </plentry>
-        </parml>
-      </section>
-      <section>
-        <title>Extra Parameters</title>
-        <p>The following parameters allow setting default parameters on server connections.</p>
-        <p>Note that since version 1.1 PgBouncer tracks client changes for their values, so
-          their use in <codeph>pgbouncer.ini</codeph> is deprecated now.</p>
-        <parml>
-          <plentry>
-            <pt>client_encoding</pt>
-            <pd>Ask for specific <codeph>client_encoding</codeph> from server.</pd>
-          </plentry>
-          <plentry>
-            <pt>datestyle</pt>
-            <pd>Ask for specific <codeph>datestyle</codeph> from server.</pd>
-          </plentry>
-          <plentry>
-            <pt>timezone</pt>
-            <pd>Ask for specific <codeph>timezone</codeph> from server.</pd>
           </plentry>
         </parml>
       </section>

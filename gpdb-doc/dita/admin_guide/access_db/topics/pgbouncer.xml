@@ -78,7 +78,7 @@ SHUTDOWN;</codeblock>
           file descriptors to the new process. If the transition fails for any reason, kill the new
           process and the old process will resume.</p>
         <p><b>If you are migrating to a Greenplum Database version 5.9.0 or later</b>, you must shut down the PgBouncer instance in your old installation and reconfigure and restart PgBouncer in your new installation.</p>
-        <p>If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1.</p>
+        <p>If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1 and later.</p>
       </body>
     </topic>
     <topic id="pgb_config">
@@ -100,10 +100,10 @@ logfile = pgbouncer.log
 pidfile = pgbouncer.pid
 admin_users = gpadmin</codeblock></p>
         <p>Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-ini.xml" format="dita"
-              scope="peer">pgbouncer-ini</xref> reference page for the
+              scope="peer">pgbouncer.ini</xref> reference page for the
           PgBouncer configuration file format and the list of configuration properties it supports.</p>
          <p>When a client connects to PgBouncer, the connection pooler looks up the
-           requested database (which may be an alias for the actual database) in the
+           the configuration for the requested database (which may be an alias for the actual database) that was specified in the
            <codeph>pgbouncer.ini</codeph> configuration file to find the host name, port, and
           database name for the database connection. The configuration file also identifies
           the authentication mode in effect for the database. </p>
@@ -119,14 +119,14 @@ admin_users = gpadmin</codeblock></p>
         <codeblock>"username1" "password" ...
 "username2" "md5abcdef012342345" ...</codeblock>
         <p><codeph>auth_file</codeph> contains one line per user. Each line must have at least two fields,
-          both of which are encloed in double quotes (<codeph>" "</codeph>). The first
+          both of which are enclosed in double quotes (<codeph>" "</codeph>). The first
           field identifies the Greenplum Database user name. The second field is
           either a plain-text or an MD5-encoded password. PgBouncer ignores the remainder of the line.</p>
         <p>(The format of <codeph>auth_file</codeph> is similar to that of the <codeph>pg_auth</codeph>
           text file that Greenplum Database uses for authentication information. PgBouncer
           can work directly with this Greenplum Database authentication file.)</p>
         <p>Use an MD5 encoded password. The format of an MD5 encoded password is: 
-        <codeblock>"md5" + md5(password + username)</codeblock></p>
+        <codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
         <p>You can also obtain the MD5-encoded passwords of all Greenplum Database users from the <codeph>pg_shadow</codeph> view.</p>
       </section>
       <section id="pgb_hba">
@@ -160,7 +160,7 @@ auth_hba_file = hba_bouncer.conf
         <p>Follow these steps to set up PgBouncer.</p>
         <ol id="ol_xyn_qwg_cs">
           <li>Create a PgBouncer configuration file. For example, add the following text
-           to a file named <codeph>pgbouncer.ini</codeph>::<codeblock>[databases]
+           to a file named <codeph>pgbouncer.ini</codeph>:<codeblock>[databases]
 postgres = host=127.0.0.1 port=5432 dbname=postgres
 pgb_mydb = host=127.0.0.1 port=5432 dbname=mydb
 
@@ -183,7 +183,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
             example: <codeblock>"gpadmin" "gpadmin1234"</codeblock><p>If the <codeph>auth_type</codeph>
               in the following example is <codeph>md5</codeph>, the authentication field must be
               MD5-encoded. The format for an MD5-encoded password
-              is:<codeblock>"md5" + MD5(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
+              is:<codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
             <p>To authenticate users against an LDAP or Active Directory server, the password
               field contains an LDAP lookup string. For
               example:</p><codeblock>"gpdbuser1" "ldap://10.0.0.11:10389/uid=gpdbuser1,ou=users,ou=system"</codeblock><p>For

@@ -27,8 +27,8 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
           returns the connection to the pool for re-use. </p>
         <p>PgBouncer supports the standard connection interface shared by PostgreSQL
           and Greenplum Database. The Greenplum Database client application (for example,
-          <codeph>psql</codeph>) connects to the host and port on which PgBouncer
-          is running rather than the Greenplum Database master host and port.</p>
+          <codeph>psql</codeph>) should connect to the host and port on which PgBouncer
+          is running rather than directly to the Greenplum Database master host and port.</p>
          <p>You configure PgBouncer and its access to Greenplum Database via a
            configuration file. You provide the configuration file name, usually <codeph>pgbouncer.ini</codeph>,
            when you run the <codeph>pgbouncer</codeph> command. This file provides location information
@@ -37,7 +37,7 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
            for PgBouncer, among other configuration options.</p>
         <p>By default, the <codeph>pgbouncer</codeph> process runs as a foreground
           process. You can optionally start <codeph>pgbouncer</codeph> as a
-          background (daemon) process.</p>
+          background (daemon) process with the <codeph>-d</codeph> option.</p>
  
         <p>The <codeph>pgbouncer</codeph> process is owned by the operating system
           user that starts the process. You can optionally specify a different
@@ -45,7 +45,7 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
         <p>PgBouncer includes a <codeph>psql</codeph>-like administration console.
           Authorized users can connect to a virtual database to monitor and
           manage PgBouncer. You can manage a PgBouncer daemon process via the admin
-          console. You can also use the console to update and reload PgBouncer 
+          console. You can also use the console to update and reload the PgBouncer 
           configuration at runtime without stopping and restarting the process.</p>
         <p>For additional information about PgBouncer, refer to the
           <xref href="https://pgbouncer.github.io/faq.html" format="html" scope="external"
