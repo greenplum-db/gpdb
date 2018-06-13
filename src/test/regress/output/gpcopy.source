@@ -1337,6 +1337,12 @@ NOTICE:  CREATE TABLE will create partition "sales_1_prt_sep17" for table "sales
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_oct17" for table "sales"
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_nov17" for table "sales"
 NOTICE:  CREATE TABLE will create partition "sales_1_prt_dec17" for table "sales"
+COPY sales (id, date, amt) FROM stdin;
+-- execute external psql here to get the message of COPY
+\! psql -c "COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+COPY 26
+\! psql -c "COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+COPY 26
 CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t20.00\n"' ON MASTER FORMAT 'text';
 ALTER TABLE sales ALTER PARTITION dec17 EXCHANGE PARTITION dec17 WITH TABLE ext_dec17 WITHOUT VALIDATION;
 NOTICE:  exchanged partition "dec17" of partition "dec17" of relation "sales" with relation "ext_dec17"

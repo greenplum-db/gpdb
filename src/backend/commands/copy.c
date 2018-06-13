@@ -2698,7 +2698,6 @@ CopyTo(CopyState cstate)
 
 				scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 
-				processed = 0;
 				while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2722,7 +2721,6 @@ CopyTo(CopyState cstate)
 				aoscandesc = appendonly_beginscan(rel, GetActiveSnapshot(),
 												  GetActiveSnapshot(), 0, NULL);
 
-				processed = 0;
 				while ((tuple = appendonly_getnext(aoscandesc, ForwardScanDirection, slot)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2763,7 +2761,6 @@ CopyTo(CopyState cstate)
 									  GetActiveSnapshot(),
 									  NULL /* relationTupleDesc */, proj);
 
-				processed = 0;
 				for(;;)
 				{
 				    CHECK_FOR_INTERRUPTS();
@@ -2792,13 +2789,11 @@ CopyTo(CopyState cstate)
 				{
 				    elog(ERROR, "internal error");
 				}
-				processed = 0;
 			}
 			else
 			{
 				/* should never get here */
 				Assert(false);
-				processed = 0;
 			}
 
 			/* partition table, so close */
