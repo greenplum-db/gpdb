@@ -133,7 +133,7 @@ static PyObject *pg_default_passwd;	/* default password */
 #ifdef HANDLE_NOTICES
 #define MAX_BUFFERED_NOTICES 100              /* max notices to keep for each connection */
 static void notice_processor(void *arg, const char *message);
-#endif /* HANDLE_NOTICES */
+#endif /* HANDLE_NOTICES */ 
 
 DL_EXPORT(void) init_pg(void);
 int *get_type_array(PGresult *result, int nfields);
