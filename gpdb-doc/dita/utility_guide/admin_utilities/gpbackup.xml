@@ -17,6 +17,7 @@
    [<b>--include-schema</b> <varname>schema_name</varname>]
    [<b>--include-table</b> <varname>schema.table</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--jobs</b> <varname>int</varname>]
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
    [<b>--no-compression</b>]
@@ -34,10 +35,11 @@
         to restore the database at a later time using <codeph>gprestore</codeph>. When you back up a
         database, you can specify table level and schema level filter options to back up specific
         tables. For example, you can combine schema level and table level options to back up all the
-        tables in a schema except for a single table. </p><p>By default, <codeph>gpbackup</codeph>
-        backs up objects in the specified database as well as global Greenplum Database system
-        objects. You can optionally supply the <codeph>--with-globals</codeph> option with
-          <codeph>gprestore</codeph> to restore global objects. See <xref
+        tables in a schema except for a single table. </p><p>With the default
+          <codeph>--jobs</codeph> option (1 job), <codeph>gpbackup</codeph> backs up objects in the
+        specified database as well as global Greenplum Database system objects. You can optionally
+        supply the <codeph>--with-globals</codeph> option with <codeph>gprestore</codeph> to restore
+        global objects. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
         information.</p><p><codeph>gpbackup</codeph> stores the object metadata files and DDL files
         for a backup in the Greenplum Database master data directory by default. Greenplum Database
@@ -182,6 +184,23 @@
             leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--jobs</b>
+            <varname>int</varname></pt>
+          <pd>Optional. Specifies the number of jobs to run in parallel when backing up tables. By
+            default, <codeph>gpbackup</codeph> uses 1 connection. Increasing this number can improve
+            the speed of backing up data. When running multiple jobs, each job backs up tables in a
+            separate transaction. For example, if you specify <codeph>--jobs 2</codeph>, the utility
+            creates two processes, each process starts a single transaction, and the utility backs
+            up the tables in parallel using the two processes.<note type="important">If you specify
+              a value higher than 1, the database must be in a quiescent state when performing the
+              backup. If database operations are being performed on tables that are being backed up,
+              consistency between tables that are backed up in different transactions cannot be
+              guaranteed.</note></pd>
+          <pd>You cannot use this option in combination with the options
+              <codeph>--metadata-only</codeph>, <codeph>--singledata- file</codeph>, or
+              <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--leaf-partition-data</b></pt>

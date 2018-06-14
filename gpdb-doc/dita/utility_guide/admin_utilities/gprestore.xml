@@ -179,6 +179,7 @@
             character other than a lowercase letter, number, or an underscore character, then you
             must include that name in double quotes. You can specify this option multiple times. You
             cannot specify a leaf partition of a partitioned table.</pd>
+          <pd>You can also specify the qualified name of a view or sequence.</pd>
           <pd>You cannot combine this option with a schema filtering option such as
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
@@ -193,6 +194,7 @@
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the restore operation. You cannot
             specify a leaf partition of a partitioned table.</pd>
+          <pd>You can also specify the qualified name of a view or sequence.</pd>
           <pd>If you use the <codeph>--include-table-file</codeph> option,
               <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
             utility restores table indexes and rules. Triggers are also restored but are not
