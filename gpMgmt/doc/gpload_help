@@ -608,7 +608,7 @@ GPLOAD:
            - name: text
            - amount: float4
            - category: text
-           - desc: text
+           - desc1: text
            - date: date
     - FORMAT: text
     - DELIMITER: '|'
