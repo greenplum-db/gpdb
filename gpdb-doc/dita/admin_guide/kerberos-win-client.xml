@@ -14,13 +14,15 @@
         href="kerberos.xml#topic1"/>.</p>
   </body>
   <topic id="topic_vjg_d5m_sv">
-    <title>Configure Kerberos on Windows for Greenplum Database Clients</title>
+    <title>Configuring Kerberos on Windows for Greenplum Database
+      Clients</title>
     <body>
-      <p>When a Greenplum Database system is configured to authenticate with Kerberos, you can
-        configure Kerberos authentication for the Greenplum Database client utilities
-          <codeph>gpload</codeph> and <codeph>psql</codeph> on a Microsoft Windows system. The
-        Greenplum Database clients authenticate with Kerberos directly, not with Microsoft Active
-        Directory (AD). </p>
+      <p>When a Greenplum Database system is configured to authenticate with
+        Kerberos, you can configure Kerberos authentication for the Greenplum
+        Database client utilities <codeph>gpload</codeph> and
+          <codeph>psql</codeph> on a Microsoft Windows system. The Greenplum
+        Database clients authenticate with Kerberos directly, not with Microsoft
+        Active Directory (AD).</p>
       <p>This section contains the following information.</p>
       <p>
         <ul id="ul_ask_2r1_cw">
@@ -215,7 +217,7 @@ kinit</codeblock></li>
     </body>
   </topic>
   <topic id="topic_uzb_t5m_sv">
-    <title>Configure Client Authentication with Active Directory </title>
+    <title>Configuring Client Authentication with Active Directory </title>
     <body>
       <p>You can configure a Microsoft Windows user with a Microsoft Active Directory (AD) account
         for single sign-on to a Greenplum Database system. </p>
@@ -263,7 +265,7 @@ kinit</codeblock></li>
         </ul>
       </section>
       <section id="ad_setup">
-        <title>Active Directory Setup</title>
+        <title>Setting Up Active Directory</title>
         <p>The AD naming convention should support multiple Greenplum Database systems. In this
           example, we create a new AD Managed Service Account <codeph>svcPostresProd1</codeph> for
           our <codeph>prod1</codeph> Greenplum Database system master host. </p>
@@ -332,7 +334,7 @@ Service key for svcPostgresprod1 is saved in svcPostgresProd1.keytab</codeblock>
               Files for JDK/JRE</cite> from Oracle. </note></p>
       </section>
       <section id="gpdb_ad_setup">
-        <title>Greenplum Database Setup for Active Directory</title>
+        <title>Setting Up Greenplum Database for Active Directory</title>
         <p>These instructions assume that the Kerberos workstation utilities
             <codeph>krb5-workstation</codeph> are installed on the Greenplum Database master
           host.</p>
