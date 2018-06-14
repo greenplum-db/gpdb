@@ -398,9 +398,8 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
             local Kerberos server. To add the user <codeph>gpadmin</codeph> as
             an administrative user to the KDC database, run the following
             command:</p>
-          <li>
             <codeblock>kadmin.local -q "addprinc gpadmin/admin"</codeblock>
-          </li>
+          
           <p>Most users do not need administrative access to the Kerberos
             server. They can use <codeph>kadmin</codeph> to manage their own
             principals (for example, to change their own password). For
