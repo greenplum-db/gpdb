@@ -106,7 +106,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
       <codeblock>ALTER RESOURCE GROUP rgroup3 SET MEMORY_LIMIT 30;</codeblock>
       <p>Increase the memory spill ratio for a resource group from the default: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup4 SET MEMORY_SPILL_RATIO 25;</codeblock>
-      <p>Reserve CPU core 0 for a resource group: </p>
+      <p>Reserve CPU core 1 for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup5 SET CPUSET '1';</codeblock>
     </section>
     <section id="section7">
