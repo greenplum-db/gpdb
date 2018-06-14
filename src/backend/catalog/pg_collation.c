@@ -34,12 +34,19 @@
  * CollationCreate
  *
  * Add a new tuple to pg_collation.
+ *
+ * if_not_exists: if true, don't fail on duplicate name, just print a notice
+ * and return InvalidOid.
+ * quiet: if true, don't fail on duplicate name, just silently return
+ * InvalidOid (overrides if_not_exists).
  */
 Oid
 CollationCreate(const char *collname, Oid collnamespace,
 				Oid collowner,
 				int32 collencoding,
-				const char *collcollate, const char *collctype)
+				const char *collcollate, const char *collctype,
+				bool if_not_exists,
+				bool quiet)
 {
 	Relation	rel;
 	TupleDesc	tupDesc;
@@ -70,27 +77,72 @@ CollationCreate(const char *collname, Oid collnamespace,
 							  PointerGetDatum(collname),
 							  Int32GetDatum(collencoding),
 							  ObjectIdGetDatum(collnamespace)))
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("collation \"%s\" for encoding \"%s\" already exists",
-						collname, pg_encoding_to_char(collencoding))));
+	{
+		if (quiet)
+			return InvalidOid;
+		else if (if_not_exists)
+		{
+			ereport(NOTICE,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+					 collencoding == -1
+					 ? errmsg("collation \"%s\" already exists, skipping",
+							  collname)
+					 : errmsg("collation \"%s\" for encoding \"%s\" already exists, skipping",
+							  collname, pg_encoding_to_char(collencoding))));
+			return InvalidOid;
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+					 collencoding == -1
+					 ? errmsg("collation \"%s\" already exists",
+							  collname)
+					 : errmsg("collation \"%s\" for encoding \"%s\" already exists",
+							  collname, pg_encoding_to_char(collencoding))));
+	}
+
+	/* open pg_collation; see below about the lock level */
+	rel = heap_open(CollationRelationId, ShareRowExclusiveLock);
 
 	/*
-	 * Also forbid matching an any-encoding entry.	This test of course is not
-	 * backed up by the unique index, but it's not a problem since we don't
-	 * support adding any-encoding entries after initdb.
+	 * Also forbid a specific-encoding collation shadowing an any-encoding
+	 * collation, or an any-encoding collation being shadowed (see
+	 * get_collation_name()).  This test is not backed up by the unique index,
+	 * so we take a ShareRowExclusiveLock earlier, to protect against
+	 * concurrent changes fooling this check.
 	 */
-	if (SearchSysCacheExists3(COLLNAMEENCNSP,
-							  PointerGetDatum(collname),
-							  Int32GetDatum(-1),
-							  ObjectIdGetDatum(collnamespace)))
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("collation \"%s\" already exists",
-						collname)));
+	if ((collencoding == -1 &&
+		 SearchSysCacheExists3(COLLNAMEENCNSP,
+							   PointerGetDatum(collname),
+							   Int32GetDatum(GetDatabaseEncoding()),
+							   ObjectIdGetDatum(collnamespace))) ||
+		(collencoding != -1 &&
+		 SearchSysCacheExists3(COLLNAMEENCNSP,
+							   PointerGetDatum(collname),
+							   Int32GetDatum(-1),
+							   ObjectIdGetDatum(collnamespace))))
+	{
+		if (quiet)
+		{
+			heap_close(rel, NoLock);
+			return InvalidOid;
+		}
+		else if (if_not_exists)
+		{
+			heap_close(rel, NoLock);
+			ereport(NOTICE,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+					 errmsg("collation \"%s\" already exists, skipping",
+							collname)));
+			return InvalidOid;
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+					 errmsg("collation \"%s\" already exists",
+							collname)));
+	}
 
-	/* open pg_collation */
-	rel = heap_open(CollationRelationId, RowExclusiveLock);
 	tupDesc = RelationGetDescr(rel);
 
 	/* form a tuple */
@@ -138,7 +190,7 @@ CollationCreate(const char *collname, Oid collnamespace,
 						   CollationRelationId, oid, 0);
 
 	heap_freetuple(tup);
-	heap_close(rel, RowExclusiveLock);
+	heap_close(rel, NoLock);
 
 	return oid;
 }

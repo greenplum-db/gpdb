@@ -13,7 +13,7 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "spi64bittest_pke
 -- Use type 'skip', because we don't want to throw an ERROR or worse. There
 -- is special handling at the code that checks for this fault, to bump up
 -- the row counter regardless of the fault type.
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
@@ -29,15 +29,15 @@ NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
 (4 rows)
 
 -- insert enough rows to trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
 NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
 NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -58,7 +58,7 @@ begin
 end;
 $$;
 NOTICE:  Inserted 4294987269 rows
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
@@ -81,15 +81,15 @@ SELECT COUNT(*) AS count
 (1 row)
 
 -- update all rows, and trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
 NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
 NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -109,7 +109,7 @@ begin
 end;
 $$;
 NOTICE:  Updated 4294987269 rows
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
@@ -132,15 +132,15 @@ SELECT COUNT(*) AS count
 (1 row)
 
 -- delete all rows, and trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
 NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
 NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -159,7 +159,7 @@ begin
 end;
 $$;
 NOTICE:  Deleted 4294987269 rows
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
@@ -217,15 +217,15 @@ SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT generate_ser
 (1 row)
 
 -- activate fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
 NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
 NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -257,7 +257,7 @@ SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM publ
    12884901855
 (1 row)
 
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:

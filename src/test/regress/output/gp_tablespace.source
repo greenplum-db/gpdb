@@ -19,7 +19,28 @@ CREATE TABLE ao_ts_table (id int4, t text) with (appendonly=true, orientation=ro
 CREATE TABLE aoco_ts_table (id int4, t text) with (appendonly=true, orientation=column) distributed by (id);
 insert into ao_ts_table select g, 'foo' || g from generate_series(1, 10000) g;
 insert into aoco_ts_table select g, 'bar' || g from generate_series(1, 10000) g;
+-- alter table to create scenario where .0 file also has data
+ALTER TABLE ao_ts_table ALTER COLUMN id TYPE bigint;
+-- to satisfy orca
+ANALYZE ao_ts_table;
+ALTER TABLE aoco_ts_table ALTER COLUMN id TYPE bigint;
+-- to satisfy orca
+ANALYZE aoco_ts_table;
+insert into ao_ts_table select g, 'foofoo' || g from generate_series(10000, 10100) g;
+insert into aoco_ts_table select g, 'barbar' || g from generate_series(10000, 10100) g;
 CREATE INDEX ao_ts_index ON ao_ts_table(id);
+SELECT COUNT(*) FROM ao_ts_table;
+ count 
+-------
+ 10101
+(1 row)
+
+SELECT COUNT(*) FROM aoco_ts_table;
+ count 
+-------
+ 10101
+(1 row)
+
 ALTER TABLE ao_ts_table SET TABLESPACE testspace;
 ALTER TABLE aoco_ts_table SET TABLESPACE testspace;
 ALTER INDEX ao_ts_index SET TABLESPACE testspace;
@@ -28,14 +49,31 @@ INSERT INTO aoco_ts_table VALUES(-1);
 SELECT COUNT(*) FROM ao_ts_table;
  count 
 -------
- 10001
+ 10102
 (1 row)
 
 SELECT COUNT(*) FROM aoco_ts_table;
  count 
 -------
- 10001
+ 10102
 (1 row)
+
+-- Since count(*) for CO doesn't actually read all the columns, this query will
+-- read all the columns and all the newly written files.
+SELECT * FROM aoco_ts_table where id > 9995 and id < 10005;
+  id   |      t      
+-------+-------------
+  9997 | bar9997
+  9998 | bar9998
+ 10000 | bar10000
+ 10000 | barbar10000
+ 10001 | barbar10001
+ 10002 | barbar10002
+ 10003 | barbar10003
+ 10004 | barbar10004
+  9996 | bar9996
+  9999 | bar9999
+(10 rows)
 
 -- Clean up. (It would be good to leave some extra tablespaces behind, so that
 -- they would go through the gpcheckcat, pg_upgrade, etc. passes that run

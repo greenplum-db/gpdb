@@ -112,7 +112,9 @@ $$ LANGUAGE plpgsql;
 SHOW data_checksums;
 
 -- skip FTS probes always
-SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+SELECT gp_request_fts_probe_scan();
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 --  Corrupt a heap table
 create table corrupt_table(a int);
@@ -160,7 +162,7 @@ set gp_disable_tuple_hints=off;
 -- flush the data to disk
 checkpoint;
 -- skip all further checkpoint
-select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault_infinite('checkpoint', 'skip', dbid) from gp_segment_configuration where role = 'p';
 -- set the hint bit on (the buffer will be marked dirty)
 select count(*) from mark_buffer_dirty_hint;
 -- using a DML to trigger the XLogFlush() to have the backup block written
@@ -171,7 +173,7 @@ select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50)) from 
 select invalidate_buffers_for_rel('mark_buffer_dirty_hint') from gp_dist_random('gp_id');
 select count(*) from mark_buffer_dirty_hint;
 -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
-select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'panic', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) from gp_segment_configuration where role = 'p';
 set client_min_messages='ERROR';
 set dtx_phase2_retry_count=10;
 create table trigger_recovery_on_primaries(c int);
@@ -181,11 +183,11 @@ reset client_min_messages;
 -- EXPECT: Full Page Image (FPI) in XLOG should overwrite the corrupted page during recovery
 select count(*) from corrupt_heap_checksum.mark_buffer_dirty_hint;
 -- reset the fault injector
-select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
-select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault('checkpoint', 'reset', dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', dbid) from gp_segment_configuration where role = 'p';
 
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
 DROP SCHEMA corrupt_heap_checksum CASCADE;
 -- resume fts
-SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);
+SELECT gp_inject_fault('fts_probe', 'reset', 1);

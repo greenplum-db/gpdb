@@ -4,5 +4,5 @@
 
 rm -f ./TAGS
 
-find `pwd`/ -type f -name '*.[chyl]' -print |
+find `pwd`/ -type f -name '*.[chyl]' -not -name "*_mock.c" -print |
 	xargs etags --append -o TAGS

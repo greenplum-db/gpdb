@@ -14,6 +14,7 @@ test: instr_in_shmem_terminate
 test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
 test: invalidated_toast_index
 test: distributed_snapshot
+test: gp_collation
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
@@ -140,3 +141,6 @@ test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reind
 test: reindex/repeatable_read_reindex_with_insert_heap
 test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast
+
+# Cancel test
+test: cancel_plpython

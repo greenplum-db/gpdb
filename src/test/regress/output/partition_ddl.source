@@ -23,7 +23,6 @@ LINE 4: SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (in...
 HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 drop table rank;
 set enable_partition_rules = off;
-drop table if exists ggg cascade;
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
 partition by LIST (b)
@@ -136,8 +135,6 @@ select * from mpp3285_lineitem;
 (1 row)
 
 drop table mpp3285_lineitem;
-drop table mpp3282_partsupp;
-ERROR:  table "mpp3282_partsupp" does not exist
 CREATE TABLE mpp3282_PARTSUPP (
 PS_PARTKEY INTEGER,
 PS_SUPPKEY INTEGER,
@@ -160,9 +157,6 @@ select * from mpp3282_partsupp;
           1 |          2 |        3325 |        771.64 | , even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful
 (1 row)
 
-drop table mpp3282_partsupp;
-drop table mpp3238_supplier;
-ERROR:  table "mpp3238_supplier" does not exist
 CREATE TABLE mpp3238_supplier(
                 S_SUPPKEY INTEGER,
                 S_NAME CHAR(25),
@@ -187,8 +181,6 @@ select * from mpp3238_supplier;
          1 | Supplier#000000001        |  N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ |          17 | 27-918-335-1736 |   5755.94 | each slyly above the careful
 (1 row)
 
-drop table mpp3238_supplier;
-drop table if exists mpp3219_customer;
 CREATE TABLE mpp3219_CUSTOMER (
 C_CUSTKEY INTEGER,
 C_NAME VARCHAR(25),
@@ -241,8 +233,6 @@ subpartition template (start('0') end('25') every(5))
 partition p1 start('1') end('150001') every(50000)
 );
 Alter table mpp3304_customer alter partition for (rank(2)) rename partition for (rank(1)) to newname;
-drop table mpp3304_customer;
-drop table if exists mpp3045_hhh;
 create table mpp3045_hhh (a char(1), b date, d char(3)) with (appendonly=true)
 distributed by (a) 
 partition by range (b) 
@@ -250,7 +240,6 @@ partition by range (b)
  partition bb start (date '2008-01-01') end (date '2009-01-01'));
 alter table mpp3045_hhh add partition aa;
 ERROR:  partition "aa" of relation "mpp3045_hhh" already exists
-drop table mpp3045_hhh;
 drop table if exists mpp3287_nation;
 CREATE TABLE mpp3287_NATION (
             N_NATIONKEY INTEGER,
@@ -2036,7 +2025,6 @@ Check constraints:
 Inherits: mpp2564_transactions_1_prt_9
 Distributed randomly
 
-DROP TABLE mpp2564_transactions;
 -- Check that DEFAULT can be used as partition's name with ALTER TABLE ADD PARTITION. (MPP-3363)
 CREATE TABLE mpp3363(a int, b int, c int)
 partition by range (a)
@@ -2212,13 +2200,6 @@ select tablename, partitionlevel, partitiontablename, partitionname, partitionra
  mpp3059d  |              1 | mpp3059d_1_prt_pacific_2_prt_female | female        |               | SUBPARTITION female VALUES('Female', 'F')
 (6 rows)
 
-drop table mpp3059;
-drop table mpp3059a_rename;
-drop table mpp3059b;
-drop table mpp3059c;
-drop table mpp3059d;
-drop table mpp3216a;
-drop table mpp3216_rename;
 create table test_khush (a integer, b date, c varchar(30))
 partition by range(b)
 ( start ('2008-01-01') end ('2008-04-01') );
@@ -2251,8 +2232,6 @@ select count(*) from mpp3244a;
      1
 (1 row)
 
-drop table mpp3244;
-drop table mpp3244a;
 CREATE TABLE mpp3256 (
         unique1         int4,
         unique2         int4,
@@ -2283,7 +2262,6 @@ alter table mpp3256 add default partition default_part;
 alter table mpp3256 drop partition default_part;
 alter table mpp3256 add default partition default_part;
 alter table mpp3256 drop partition default_part;
-drop table mpp3256;
 -- Examples from Documentation
 CREATE TABLE mpp3377_sales (trans_id int, date date, amount decimal(9,2), region text)
 DISTRIBUTED BY (trans_id)
@@ -2316,7 +2294,6 @@ ERROR:  subpartition configuration conflicts with subpartition template
 ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
 ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
 ERROR:  new partition overlaps existing partition
-DROP TABLE mpp3377_sales;
 CREATE TABLE mpp3250 (
         unique1         int4,
         unique2         int4,
@@ -2339,7 +2316,6 @@ subpartition by range (unique2) subpartition template ( start (0) end (1000) eve
 ( start (0) end (1000) every (100));
 alter table mpp3250 add default partition default_part;
 copy mpp3250 from '@abs_srcdir@/data/onek.data';
-drop table mpp3250;
 CREATE TABLE mpp3375 (
         unique1         int4,
         unique2         int4,
@@ -2383,8 +2359,6 @@ insert into mpp3375a select * from mpp3375;
 alter table mpp3375a add default partition default_part;
 alter table mpp3375a drop partition;
 alter table mpp3375a drop partition default_part;
-drop table mpp3375a;
-drop table mpp3375;
 -- Check that a negative number can be used in START, without quotes.
 CREATE TABLE mpp3241(a int, b int, c int)
 partition by range (a)
@@ -2955,13 +2929,6 @@ select tablename, partitionlevel, partitiontablename, partitionname, partitionra
  mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_1  |               |             1 | START (1.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
 (28 rows)
 
-drop table mpp3080_int8;
-drop table mpp3080_float4;
-drop table mpp3080_float8;
-drop table mpp3080_floatreal;
-drop table mpp3080_floatdouble;
-drop table mpp3080_numeric;
-drop table mpp3080_numericbig;
 create temp TABLE temp_hour_range (f1 time(2))
 partition by range (f1)
 (

@@ -23,7 +23,7 @@ CREATE TABLE distributed_snapshot_test1 (a int);
 -- Hold after walking over ProcArray in GetSnpashotData(), right at start of
 -- DistributedLog_AdvanceOldestXmin()
 1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'suspend',
-   '', 'postgres', '', 1, 5, dbid) from gp_segment_configuration
+   '', 'postgres', '', 1, -1, 5, dbid) from gp_segment_configuration
    where content = 0 and role = 'p';
 3&:@db_name postgres: SELECT count(*) > 0 from gp_dist_random('gp_id');
 1: SELECT gp_wait_until_triggered_fault('distributedlog_advance_oldest_xmin', 1, dbid)

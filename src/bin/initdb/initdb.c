@@ -186,7 +186,9 @@ static void get_set_pwd(void);
 static void setup_depend(void);
 static void setup_sysviews(void);
 static void setup_description(void);
+#if 0
 static void setup_collation(void);
+#endif
 static void setup_conversion(void);
 static void setup_dictionary(void);
 static void setup_privileges(void);
@@ -1367,7 +1369,7 @@ bootstrap_template1(void)
 
 	snprintf(cmd, sizeof(cmd),
 			 "\"%s\" --boot -x1 %s %s %s",
-			 backend_exec, 
+			 backend_exec,
 			 data_checksums ? "-k" : "",
 			 boot_options, talkargs);
 
@@ -1699,186 +1701,41 @@ setup_description(void)
 	check_ok();
 }
 
-#ifdef HAVE_LOCALE_T
-/*
- * "Normalize" a locale name, stripping off encoding tags such as
- * ".utf8" (e.g., "en_US.utf8" -> "en_US", but "br_FR.iso885915@euro"
- * -> "br_FR@euro").  Return true if a new, different name was
- * generated.
- */
-static bool
-normalize_locale_name(char *new, const char *old)
-{
-	char	   *n = new;
-	const char *o = old;
-	bool		changed = false;
-
-	while (*o)
-	{
-		if (*o == '.')
-		{
-			/* skip over encoding tag such as ".utf8" or ".UTF-8" */
-			o++;
-			while ((*o >= 'A' && *o <= 'Z')
-				   || (*o >= 'a' && *o <= 'z')
-				   || (*o >= '0' && *o <= '9')
-				   || (*o == '-'))
-				o++;
-			changed = true;
-		}
-		else
-			*n++ = *o++;
-	}
-	*n = '\0';
-
-	return changed;
-}
-#endif   /* HAVE_LOCALE_T */
-
+#if 0
 /*
  * populate pg_collation
+ *
+ * GPDB: Do not create collations at database initialization time. Instead,
+ * the system administrator is expected to run pg_import_system_collations() on
+ * every database that needs them. This ensures that collations are synchronized
+ * on all segments.
  */
 static void
 setup_collation(void)
 {
-#if defined(HAVE_LOCALE_T) && !defined(WIN32)
-	int			i;
-	FILE	   *locale_a_handle;
-	char		localebuf[NAMEDATALEN];
-	int			count = 0;
-
 	PG_CMD_DECL;
-#endif
 
 	fputs(_("creating collations ... "), stdout);
 	fflush(stdout);
 
-#if defined(HAVE_LOCALE_T) && !defined(WIN32)
-	snprintf(cmd, sizeof(cmd),
-			 "\"%s\" %s template1 >%s",
-			 backend_exec, backend_options,
-			 DEVNULL);
-
-	locale_a_handle = popen_check("locale -a", "r");
-	if (!locale_a_handle)
-		return;					/* complaint already printed */
-
 	PG_CMD_OPEN;
 
-	PG_CMD_PUTS("CREATE TEMP TABLE tmp_pg_collation ( "
-				"	collname name, "
-				"	locale name, "
-				"	encoding int) WITHOUT OIDS;\n");
-
-	while (fgets(localebuf, sizeof(localebuf), locale_a_handle))
-	{
-		size_t		len;
-		int			enc;
-		bool		skip;
-		char	   *quoted_locale;
-		char		alias[NAMEDATALEN];
-
-		len = strlen(localebuf);
-
-		if (len == 0 || localebuf[len - 1] != '\n')
-		{
-			if (debug)
-				fprintf(stderr, _("%s: locale name too long, skipped: %s\n"),
-						progname, localebuf);
-			continue;
-		}
-		localebuf[len - 1] = '\0';
-
-		/*
-		 * Some systems have locale names that don't consist entirely of ASCII
-		 * letters (such as "bokm&aring;l" or "fran&ccedil;ais").  This is
-		 * pretty silly, since we need the locale itself to interpret the
-		 * non-ASCII characters. We can't do much with those, so we filter
-		 * them out.
-		 */
-		skip = false;
-		for (i = 0; i < len; i++)
-		{
-			if (IS_HIGHBIT_SET(localebuf[i]))
-			{
-				skip = true;
-				break;
-			}
-		}
-		if (skip)
-		{
-			if (debug)
-				fprintf(stderr, _("%s: locale name has non-ASCII characters, skipped: %s\n"),
-						progname, localebuf);
-			continue;
-		}
-
-		enc = pg_get_encoding_from_locale(localebuf, debug);
-		if (enc < 0)
-		{
-			/* error message printed by pg_get_encoding_from_locale() */
-			continue;
-		}
-		if (!PG_VALID_BE_ENCODING(enc))
-			continue;			/* ignore locales for client-only encodings */
-		if (enc == PG_SQL_ASCII)
-			continue;			/* C/POSIX are already in the catalog */
-
-		count++;
-
-		quoted_locale = escape_quotes(localebuf);
-
-		PG_CMD_PRINTF3("INSERT INTO tmp_pg_collation VALUES (E'%s', E'%s', %d);\n",
-					   quoted_locale, quoted_locale, enc);
-
-		/*
-		 * Generate aliases such as "en_US" in addition to "en_US.utf8" for
-		 * ease of use.  Note that collation names are unique per encoding
-		 * only, so this doesn't clash with "en_US" for LATIN1, say.
-		 */
-		if (normalize_locale_name(alias, localebuf))
-			PG_CMD_PRINTF3("INSERT INTO tmp_pg_collation VALUES (E'%s', E'%s', %d);\n",
-						   escape_quotes(alias), quoted_locale, enc);
-	}
+	//PG_CMD_PUTS("SELECT pg_import_system_collations( (SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog') ) ;\n\n");
 
 	/* Add an SQL-standard name */
-	PG_CMD_PRINTF1("INSERT INTO tmp_pg_collation VALUES ('ucs_basic', 'C', %d);\n", PG_UTF8);
+	PG_CMD_PRINTF2("INSERT INTO pg_collation "
+					"(collname, collnamespace, collowner, collencoding, collcollate, collctype)"
+					"VALUES ('ucs_basic' "
+					",  (SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog')"
+					",  (SELECT oid from pg_roles where rolname='%s')"
+					", %d"
+					", 'C'"
+					", 'C');\n\n", escape_quotes(username), PG_UTF8);
 
-	/*
-	 * When copying collations to the final location, eliminate aliases that
-	 * conflict with an existing locale name for the same encoding.  For
-	 * example, "br_FR.iso88591" is normalized to "br_FR", both for encoding
-	 * LATIN1.	But the unnormalized locale "br_FR" already exists for LATIN1.
-	 * Prefer the alias that matches the OS locale name, else the first locale
-	 * name by sort order (arbitrary choice to be deterministic).
-	 *
-	 * Also, eliminate any aliases that conflict with pg_collation's
-	 * hard-wired entries for "C" etc.
-	 */
-	PG_CMD_PUTS("INSERT INTO pg_collation (collname, collnamespace, collowner, collencoding, collcollate, collctype) "
-				" SELECT DISTINCT ON (collname, encoding)"
-				"   collname, "
-				"   (SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog') AS collnamespace, "
-				"   (SELECT relowner FROM pg_class WHERE relname = 'pg_collation') AS collowner, "
-				"   encoding, locale, locale "
-				"  FROM tmp_pg_collation"
-				"  WHERE NOT EXISTS (SELECT 1 FROM pg_collation WHERE collname = tmp_pg_collation.collname)"
-	   "  ORDER BY collname, encoding, (collname = locale) DESC, locale;\n");
-
-	pclose(locale_a_handle);
 	PG_CMD_CLOSE;
-
 	check_ok();
-	if (count == 0 && !debug)
-	{
-		printf(_("No usable system locales were found.\n"));
-		printf(_("Use the option \"--debug\" to see details.\n"));
-	}
-#else							/* not HAVE_LOCALE_T && not WIN32 */
-	printf(_("not supported on this platform\n"));
-	fflush(stdout);
-#endif   /* not HAVE_LOCALE_T  && not WIN32 */
 }
+#endif
 
 /*
  * load conversion functions
@@ -3712,7 +3569,9 @@ main(int argc, char *argv[])
 
 		setup_description();
 
+#if 0
 		setup_collation();
+#endif
 
 		setup_conversion();
 

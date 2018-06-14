@@ -1,0 +1,84 @@
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
+--start_ignore
+CREATE LANGUAGE plpythonu;
+--end_ignore
+DROP FUNCTION IF EXISTS public.test_bigint_python();
+NOTICE:  function public.test_bigint_python() does not exist, skipping
+DROP TABLE IF EXISTS public.spi64bittestpython;
+NOTICE:  table "spi64bittestpython" does not exist, skipping
+CREATE TABLE public.spi64bittestpython (id BIGSERIAL PRIMARY KEY, data BIGINT);
+NOTICE:  CREATE TABLE will create implicit sequence "spi64bittestpython_id_seq" for serial column "spi64bittestpython.id"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "spi64bittestpython_pkey" for table "spi64bittestpython"
+CREATE FUNCTION public.test_bigint_python()
+RETURNS BIGINT
+AS $$
+
+res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM generate_series(1, 30000) g")
+
+return res.nrows()
+
+$$ LANGUAGE plpythonu;
+-- insert 30k rows without fault injection framework
+SELECT public.test_bigint_python();
+ test_bigint_python 
+--------------------
+              30000
+(1 row)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittestpython;
+ count 
+-------
+ 30000
+(1 row)
+
+-- activate fault injection framework
+SELECT gp_inject_fault('executor_run_high_processed', 'skip', dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
+NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
+NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+-- and insert another 30k rows, this time overflowing the 2^32 counter
+SELECT public.test_bigint_python();
+ test_bigint_python 
+--------------------
+         4294987275
+(1 row)
+
+-- reset fault injection framework
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
+NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
+NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittestpython;
+ count 
+-------
+ 60000
+(1 row)
+
+-- drop test table
+DROP TABLE public.spi64bittestpython;

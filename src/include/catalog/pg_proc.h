@@ -4557,6 +4557,11 @@ DESCR("aggregate final function");
  */
 #include "catalog/pg_proc_gp.h"
 
+
+/* collation management functions */
+DATA(insert OID = 3445 ( pg_import_system_collations  PGNSP PGUID 12 1 0 0 f f f t f v 1 0 23 "26" _null_ _null_ _null_ _null_ pg_import_system_collations _null_ _null_ _null_ n a ));
+DESCR("import collations from operating system");
+
 /*
  * Symbolic values for provolatile column: these indicate whether the result
  * of a function is dependent *only* on the values of its explicit arguments,

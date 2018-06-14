@@ -23,6 +23,7 @@ $$
   END; /* in func */
 $$ LANGUAGE plpgsql;
 
+1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- Scenario 1: Test to fail broadcasting of COMMIT PREPARED to one
 -- segment and hence trigger PANIC in master while after completing
 -- phase 2 of 2PC. Master's recovery cycle should correctly broadcast
@@ -36,7 +37,7 @@ $$ LANGUAGE plpgsql;
 -- after querying in-doubt prepared transactions from segments.
 1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- Inject fault to fail the COMMIT PREPARED always on one segment, till fault is not reset
-1: SELECT gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', -1, 0, 2);
+1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', 2);
 -- create utility session to segment which will be used to reset the fault
 0U: SELECT 1;
 -- Start looping in background, till master panics and closes the session
@@ -100,8 +101,10 @@ $$ LANGUAGE plpgsql;
 -- Set to maximum number of 2PC retries to avoid any failures.
 11: SET dtx_phase2_retry_count=9;
 -- skip FTS probes always
-11: SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+11: SELECT gp_request_fts_probe_scan();
+11: select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 11: SET debug_abort_after_segment_prepared = true;
 11: DELETE FROM QE_panic_test_table;
 11: SELECT count(*) from QE_panic_test_table;
-11: SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);
+11: SELECT gp_inject_fault('fts_probe', 'reset', 1);

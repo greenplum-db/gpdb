@@ -2,9 +2,11 @@
 -- 'fts_conn_startup_packet' is used to simulate the primary responding
 -- in-recovery to FTS, primary is not actually going through crash-recovery in
 -- test.
-create extension if not exists gp_inject_fault;
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 select role, preferred_role, mode from gp_segment_configuration where content = 0;
-select gp_inject_fault('fts_conn_startup_packet', 'skip', '', '', '', -1, 0, dbid)
+select gp_inject_fault_infinite('fts_conn_startup_packet', 'skip', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
 -- to make test deterministic and fast
 -- start_ignore
@@ -29,8 +31,7 @@ select role, preferred_role, mode from gp_segment_configuration where content = 
 -- test other scenario where recovery on primary is hung and hence FTS marks
 -- primary down and promotes mirror. When 'fts_recovery_in_progress' is set to
 -- skip it mimics the behavior of hung recovery on primary.
-
-select gp_inject_fault('fts_recovery_in_progress', 'skip', '', '', '', -1, 0, dbid)
+select gp_inject_fault_infinite('fts_recovery_in_progress', 'skip', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
 -- We call gp_request_fts_probe_scan twice to guarantee that the scan happens
 -- after the fts_recovery_in_progress fault has been injected. If periodic fts
@@ -83,7 +84,7 @@ select role, preferred_role, mode from gp_segment_configuration where content = 
 -- end_ignore
 
 -- cleanup steps
-select gp_inject_fault('fts_recovery_in_progress', 'reset', '', '', '', -1, 0, dbid)
+select gp_inject_fault('fts_recovery_in_progress', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-select gp_inject_fault('fts_conn_startup_packet', 'reset', '', '', '', -1, 0, dbid)
+select gp_inject_fault('fts_conn_startup_packet', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';

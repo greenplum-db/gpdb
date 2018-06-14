@@ -18,7 +18,7 @@ gp_inject_fault
 ---------------
 t              
 (1 row)
-SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, 10, 1);
+SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, -1, 10, 1);
 gp_inject_fault
 ---------------
 t              
@@ -38,3 +38,9 @@ func1
 (1 row)
 3q: ... <quitting>
 4q: ... <quitting>
+
+SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="topic_isj_khw_sbs">
+<topic id="topic_ur2_fsn_ndb">
   <title>Using the S3 Storage Plugin with gpbackup and gprestore</title>
   <body>
-    <note type="warning">The S3 storage plugin for <systemoutput>gpbackup</systemoutput> and
-        <systemoutput>gprestore</systemoutput> is an experimental feature and is not intended for
-      use in a production environment. Experimental features are subject to change without notice in
-      future releases.</note>
+    <note type="warning">The S3 storage plugin for <codeph>gpbackup</codeph> and
+        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
+      production environment. Experimental features are subject to change without notice in future
+      releases.</note>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)
       location to store and retrieve backups when you run <codeph><xref
           href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref></codeph> and
@@ -17,7 +17,7 @@
       Amazon Web Services (AWS) login and backup location in a configuration file. When you run
         <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, you specify the configuration file
       with the option <codeph>--plugin-config</codeph>. For information about the configuration
-      file, see <xref href="#topic_isj_khw_sbs/s3-plugin-config" format="dita"/>.</p>
+      file, see <xref href="#topic_ur2_fsn_ndb/s3-plugin-config" format="dita"/>.</p>
     <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
         <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
       option when you restore the backup with <codeph>gprestore</codeph>. </p>
@@ -41,45 +41,41 @@
   <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">backupdir</xref>: &lt;<varname>s3-location</varname>></codeblock>
+  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>></codeblock>
       <parml id="s3-exe-path">
         <plentry>
           <pt>executablepath</pt>
           <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
-            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>.</pd>
-          <pd>
-            <parml>
-              <plentry id="s3-options">
-                <pt>options</pt>
-                <pd>Required. Begins the S3 storage plugin options section.<parml>
-                    <plentry id="s3-region">
-                      <pt>region</pt>
-                      <pd>Required. The AWS region. </pd>
-                    </plentry>
-                    <plentry id="s3-id">
-                      <pt>aws_access_key_id</pt>
-                      <pd>Required. The AWS S3 ID to access the S3 bucket location that stores
-                        backup files.</pd>
-                    </plentry>
-                    <plentry id="s3-key">
-                      <pt>aws_secret_access_key</pt>
-                      <pd>Required. AWS S3 passcode for the S3 ID to access the S3 bucket
-                        location.</pd>
-                    </plentry>
-                    <plentry id="s3-bucket">
-                      <pt>bucket</pt>
-                      <pd>Required. The name of the S3 bucket in the AWS region. The bucket must
-                        exist. </pd>
-                    </plentry>
-                    <plentry id="s3-location">
-                      <pt>backupdir</pt>
-                      <pd>Required. The S3 location for backups. During a backup operation, the
-                        plugin creates the S3 location if it does not exist in the S3 bucket. </pd>
-                    </plentry>
-                  </parml></pd>
+            Database installation location is <codeph>$GPHOME/bin/gpbackup_s3_plugin</codeph>. The
+            plugin must be in the same location on every Greenplum Database host.</pd>
+        </plentry>
+        <plentry id="s3-options">
+          <pt>options</pt>
+          <pd>Required. Begins the S3 storage plugin options section.<parml>
+              <plentry id="s3-region">
+                <pt>region</pt>
+                <pd>Required. The AWS region. </pd>
               </plentry>
-            </parml>
-          </pd>
+              <plentry id="s3-id">
+                <pt>aws_access_key_id</pt>
+                <pd>Required. The AWS S3 ID to access the S3 bucket location that stores backup
+                  files.</pd>
+              </plentry>
+              <plentry id="s3-key">
+                <pt>aws_secret_access_key</pt>
+                <pd>Required. AWS S3 passcode for the S3 ID to access the S3 bucket location.</pd>
+              </plentry>
+              <plentry id="s3-bucket">
+                <pt>bucket</pt>
+                <pd>Required. The name of the S3 bucket in the AWS region. The bucket must exist.
+                </pd>
+              </plentry>
+              <plentry id="s3-location">
+                <pt>folder</pt>
+                <pd>Required. The S3 location for backups. During a backup operation, the plugin
+                  creates the S3 location if it does not exist in the S3 bucket. </pd>
+              </plentry>
+            </parml></pd>
         </plentry>
       </parml>
     </section>
@@ -94,7 +90,7 @@ options:
   aws_access_key_id: test-s3-user
   aws_secret_access_key: asdf1234asdf
   bucket: gpdb-backup
-  backupdir: test/backup3</codeblock>
+  folder: test/backup3</codeblock>
       <p>This <codeph>gpbackup</codeph> example backs up the database demo using the S3 storage
         plugin. The absolute path to the S3 storage plugin configuration file is
           <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --single-data-file --plugin-config /home/gpadmin/s3-test-config.yaml</codeblock></p>
@@ -113,10 +109,10 @@ options:
         <codeph>--metadata-only</codeph>.</p>
       <p>When you perform a backup with the S3 storage plugin, the plugin stores the backup files in
         this location in the S3 bucket. </p>
-      <codeblock>&lt;<varname>backupdir</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
-      <p>Where <varname>backupdir</varname> is the location you specified in the S3 configuration
-        file, and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date
-        and time stamps. </p>
+      <codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <p>Where <varname>folder</varname> is the location you specified in the S3 configuration file,
+        and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date and
+        time stamps. </p>
       <p>Using Amazon S3 to back up and restore data requires an Amazon AWS account with access to
         the Amazon S3 bucket. These are the Amazon S3 bucket permissions required for backing up and
         restoring data.<ul id="ul_qsv_yh5_ndb">

@@ -60,27 +60,28 @@
         or nested loop join.</p>
       <p>Following is an explain plan for a simple query. This query finds the number of rows in the
         contributions table stored at each segment. </p>
-      <codeblock outputclass="language-sql">gpacmin=# EXPLAIN SELECT gp_segment_id, count(*) 
+      <codeblock outputclass="language-sql">gpadmin=# EXPLAIN SELECT gp_segment_id, count(*)
                   FROM contributions 
                   GROUP BY gp_segment_id;
-                                 QUERY PLAN 
--------------------------------------------------------------------------------- 
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..4.44 rows=4 width=16)
-   ->  HashAggregate  (cost=0.00..3.38 rows=4 width=16)
-         Group By: contributions.gp_segment_id
-         ->  Redistribute Motion 2:2  (slice1; segments: 2)  
-                 (cost=0.00..2.12 rows=4 width=8)
-               Hash Key: contributions.gp_segment_id
-               ->  Sequence  (cost=0.00..1.09 rows=4 width=8)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Function Scan on gp_partition_expansion  
-                                   (cost=10.00..100.00 rows=50 width=4)
-                     ->  Dynamic Table Scan on contributions (partIndex: 0)
-                             (cost=0.00..0.03 rows=4 width=8)
- Settings:  optimizer=on
-(10 rows)</codeblock>
-      <p>This plan has seven nodes &#x2013; Dynamic Table Scan, Function Scan, Result, Sequence,
-        Redistribute Motion, HashAggregate, and finally Gather Motion. Each node contains three cost
+                                 QUERY PLAN                        
+--------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.00 rows=2 width=12)
+   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+         Group By: gp_segment_id
+         ->  Sort  (cost=0.00..431.00 rows=1 width=12)
+               Sort Key: gp_segment_id
+               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=12)
+                     Hash Key: gp_segment_id
+                     ->  Result  (cost=0.00..431.00 rows=1 width=12)
+                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                                 Group By: gp_segment_id
+                                 ->  Sort  (cost=0.00..431.00 rows=7 width=4)
+                                       Sort Key: gp_segment_id
+                                       ->  Table Scan on table1  (cost=0.00..431.00 rows=7 width=4)
+ Optimizer status: PQO version 2.56.0
+(14 rows)</codeblock>
+      <p>This plan has eight nodes &#x2013; Table Scan, Sort, GroupAggregate, Result,
+        Redistribute Motion, Sort, GroupAggregate, and finally Gather Motion. Each node contains three cost
         estimates: cost (in sequential page reads), the number of rows, and the width of the
         rows.</p>
       <p>The cost is a two-part estimate. A cost of 1.0 is equal to one sequential disk page read.
@@ -107,16 +108,7 @@
         <li>Bitmap Append-only Row-oriented Scan &#8212; gathers pointers to rows in an append-only
           table from an index and sorts by location on disk. </li>
         <li>Dynamic Table Scan &#8212; chooses partitions to scan using a partition selection
-          function. The Function Scan node contains the name of the partition selection function,
-          which can be one of the following:<ul id="ul_jzb_ntr_bp">
-            <li><codeph>gp_partition_expansion</codeph> &#8212; selects all partitions in the table.
-              No partitions are eliminated.</li>
-            <li><codeph>gp_partition_selection</codeph> &#8212; chooses a partition based on an
-              equality expression.</li>
-            <li><codeph>gp_partition_inversion</codeph> &#8212; chooses partitions based on a range
-              expression.</li>
-          </ul> The Function Scan node passes the dynamically selected list of partitions to the
-          Result node which is passed to the Sequence node.</li>
+          function.</li>
       </ul>
       <p>Join operators include the following:</p>
       <ul>

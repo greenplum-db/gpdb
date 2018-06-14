@@ -13,10 +13,10 @@
    [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
    [<b>-v</b>]
 
-<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-s</b>] [<b>-a</b>] [<b>-d</b> <varname>master_data_directory</varname>]
+<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>master_data_directory</varname>]
    [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
 
-<b>gpaddmirrors</b> <b>-o</b> <varname>output_sample_mirror_config </varname>[<b>-m</b> <varname>datadir_config_file</varname>]
+<b>gpaddmirrors</b> <b>-o</b> <varname>output_sample_mirror_config</varname> [<b>-s</b>] [<b>-m</b> <varname>datadir_config_file</varname>]
 
 <b>gpaddmirrors</b> <b>-?</b> 
 
@@ -57,9 +57,9 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
             <p>For example:</p>
             <codeblock>mirror0=0:sdw1-1:60000:/gpdata/mir1/gp0
 mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
-            <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine
-                your current primary segment configuration so that you can plan your mirror segment
-                configuration. For example, run the following query:</p>
+            <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you
+                determine your current primary segment configuration so that you can plan your
+                mirror segment configuration. For example, run the following query:</p>
             <codeblock>=# SELECT dbid, content, address as host_address, port, datadir 
    FROM gp_segment_configuration
    ORDER BY dbid;</codeblock>
@@ -71,13 +71,13 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
                 locations specified. You may want to create these directories on the segment hosts
                 and <codeph>chown</codeph> them to the appropriate user before running
                     <codeph>gpaddmirrors</codeph>.</p>
-              <note>This utility uses secure shell (SSH) connections between systems to
-                perform its tasks. In large Greenplum Database deployments, cloud deployments,
-                or deployments with a large number of segments per host, this utility may
-                exceed the host's maximum threshold for unauthenticated connections.
-                Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter
-                to increase this threshold. For more information about SSH configuration
-                options, refer to the SSH documentation for your Linux distribution.</note>
+            <note>This utility uses secure shell (SSH) connections between systems to perform its
+                tasks. In large Greenplum Database deployments, cloud deployments, or deployments
+                with a large number of segments per host, this utility may exceed the host's maximum
+                threshold for unauthenticated connections. Consider updating the SSH
+                    <codeph>MaxStartups</codeph> configuration parameter to increase this threshold.
+                For more information about SSH configuration options, refer to the SSH documentation
+                for your Linux distribution.</note>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -106,7 +106,7 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
                         the system. The format of this file is as follows (as per attributes in the
                             <codeph>gp_segment_configuration</codeph> catalog table):</pd>
                     <pd>
-                        <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname></varname></codeblock>
+                        <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname/></codeblock>
                     </pd>
                 </plentry>
                 <plentry>
@@ -139,9 +139,9 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
                 </plentry>
                 <plentry>
                     <pt>-p <varname>port_offset</varname></pt>
-                    <pd>Optional. This number is used to calculate the database ports
-                        used for mirror segments. The default offset is 1000.
-                        Mirror port assignments are calculated as follows: </pd>
+                    <pd>Optional. This number is used to calculate the database ports used for
+                        mirror segments. The default offset is 1000. Mirror port assignments are
+                        calculated as follows: </pd>
                     <pd>primary port + offset = mirror database port</pd>
                     <pd>For example, if a primary segment has port 50001, then its mirror will use a
                         database port of 51001, by default.</pd>
@@ -172,8 +172,8 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
         <section id="section5">
             <title>Examples</title>
             <p>Add mirroring to an existing Greenplum Database system using the same set of hosts as
-                your primary data. Calculate the mirror database ports by adding 100
-                to the current primary segment port numbers:</p>
+                your primary data. Calculate the mirror database ports by adding 100 to the current
+                primary segment port numbers:</p>
             <codeblock>$ gpaddmirrors -p 100</codeblock>
             <p>Add mirroring to an existing Greenplum Database system using a different set of hosts
                 from your primary data:</p>

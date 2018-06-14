@@ -72,7 +72,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cmd.propagate_env_map['foo'] = 1
         cmd.propagate_env_map['bar'] = 1
         self.subject.execute(cmd)
-        self.assertEquals("bar=1 && foo=1 && ssh -o \'StrictHostKeyChecking no\' localhost "
+        self.assertEquals("bar=1 && foo=1 && ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 localhost "
                           "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)
 
     def test_no_workders_in_WorkerPool(self):

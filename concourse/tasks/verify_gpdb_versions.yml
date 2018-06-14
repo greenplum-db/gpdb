@@ -1,0 +1,18 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: centos
+    tag: 7
+
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb_centos6
+  - name: bin_gpdb_centos7
+  - name: bin_gpdb_sles11
+
+run:
+  path: gpdb_src/concourse/scripts/verify_gpdb_versions.sh
+

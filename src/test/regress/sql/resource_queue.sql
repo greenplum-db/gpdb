@@ -8,8 +8,10 @@ ALTER RESOURCE QUEUE regressq COST THRESHOLD 3000.00 OVERCOMMIT;
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq COST THRESHOLD 4e+3 NOOVERCOMMIT;
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+COMMENT ON RESOURCE QUEUE regressq IS 'regressq comment';
 DROP RESOURCE QUEUE regressq;
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+
 
 -- more coverage
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000);

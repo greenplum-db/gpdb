@@ -66,7 +66,7 @@ static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
 static void breakDeadLock(GddCtx *ctx);
 static void dumpCancelResult(StringInfo str, List *xids);
-static char *findSuperuser(bool try_bootstrap);
+static void findSuperuser(char *superuser, bool try_bootstrap);
 
 static MemoryContext	gddContext;
 static MemoryContext    oldContext;
@@ -158,8 +158,9 @@ NON_EXEC_STATIC void
 GlobalDeadLockDetectorMain(int argc, char *argv[])
 {
 	sigjmp_buf	local_sigjmp_buf;
+	Port		portbuf;
+	char		superuser[NAMEDATALEN];
 	char	   *fullpath;
-	char	   *ddtUser;
 	char	   *knownDatabase = "postgres";
 
 	IsUnderPostmaster = true;
@@ -170,8 +171,22 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	/* reset MyProcPid */
 	MyProcPid = getpid();
 
+	/* record Start Time for logging */
+	MyStartTime = time(NULL);
+
 	/* Lose the postmaster's on-exit routines */
 	on_exit_reset();
+
+	/*
+	 * If possible, make this process a group leader, so that the postmaster
+	 * can signal any child processes too.	(gdd probably never has any
+	 * child processes, but for consistency we make all postmaster child
+	 * processes do this.)
+	 */
+#ifdef HAVE_SETSID
+	if (setsid() < 0)
+		elog(FATAL, "setsid() failed: %m");
+#endif
 
 	/* Identify myself via ps */
 	init_ps_display("global deadlock detector process", "", "", "");
@@ -191,15 +206,36 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	pqsignal(SIGFPE, FloatExceptionHandler);
 	pqsignal(SIGCHLD, SIG_DFL);
 
+	/*
+	 * Create a resource owner to keep track of our resources (currently only
+	 * buffer pins).
+	 */
+	CurrentResourceOwner = ResourceOwnerCreate(NULL, "GlobalDeadLockDetector");
+
 	/* Early initialization */
 	BaseInit();
 
 	/* See InitPostgres()... */
+	/*
+	 * Create a per-backend PGPROC struct in shared memory, except in the
+	 * EXEC_BACKEND case where this was done in SubPostmasterMain. We must do
+	 * this before we can use LWLocks (and in the EXEC_BACKEND case we already
+	 * had to do some stuff with LWLocks).
+	 */
+#ifndef EXEC_BACKEND
 	InitProcess();
+#endif
 	InitBufferPoolBackend();
 	InitXLOGAccess();
 
 	SetProcessingMode(NormalProcessing);
+
+	/* Allocate MemoryContext */
+	gddContext = AllocSetContextCreate(TopMemoryContext,
+									   "GddContext",
+									   ALLOCSET_DEFAULT_MINSIZE,
+									   ALLOCSET_DEFAULT_INITSIZE,
+									   ALLOCSET_DEFAULT_MAXSIZE);
 
 	/*
 	 * If an exception is encountered, processing resumes here.
@@ -232,12 +268,6 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	/*
 	 * The following additional initialization allows us to call the persistent meta-data modules.
 	 */
-
-	/*
-	 * Create a resource owner to keep track of our resources (currently only
-	 * buffer pins).
-	 */
-	CurrentResourceOwner = ResourceOwnerCreate(NULL, "GlobalDeadLockDetector");
 
 	/*
 	 * Add my PGPROC struct to the ProcArray.
@@ -304,22 +334,15 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 
 	RelationCacheInitializePhase3();
 
-	ddtUser = findSuperuser(true);
-	MyProcPort = (Port *) calloc(1, sizeof(Port));
-	if (MyProcPort == NULL)
-		elog(FATAL, "Lack of memory for MyProcPort allocation in global deadlock detector backend.");
-	MyProcPort->user_name = MemoryContextStrdup(TopMemoryContext, ddtUser);
+	memset(&portbuf, 0, sizeof(portbuf));
+	findSuperuser(superuser, true);
+
+	MyProcPort = &portbuf;
+	MyProcPort->user_name = superuser;
 	MyProcPort->database_name = knownDatabase;
 
 	/* close the transaction we started above */
 	CommitTransactionCommand();
-
-	/* Allocate MemoryContext */
-	gddContext = AllocSetContextCreate(TopMemoryContext,
-									   "GddContext",
-									   ALLOCSET_DEFAULT_MINSIZE,
-									   ALLOCSET_DEFAULT_INITSIZE,
-									   ALLOCSET_DEFAULT_MAXSIZE);
 
 	/* disable orca here */
 	extern bool optimizer;
@@ -338,8 +361,6 @@ GlobalDeadLockDetectorLoop(void)
 
 	for (;;)
 	{
-		pg_usleep(gp_global_deadlock_detector_period * 1000000L);
-
 		CHECK_FOR_INTERRUPTS();
 
 		if (shutdown_requested)
@@ -366,21 +387,33 @@ GlobalDeadLockDetectorLoop(void)
 			CommitTransactionCommand();
 		else
 			AbortCurrentTransaction();
+
+		/* GUC gp_global_deadlock_detector_period may be changed, skip sleep */
+		if (!got_SIGHUP)
+			pg_usleep(gp_global_deadlock_detector_period * 1000000L);
 	}
 
 	return;
 }
 
-static char *
-findSuperuser(bool try_bootstrap)
+/*
+ * Find a super user.
+ *
+ * superuser is used to store the username, its size should be >= NAMEDATALEN.
+ *
+ * This functions is derived from getSuperuser() @cdbtm.c
+ */
+static void
+findSuperuser(char *superuser, bool try_bootstrap)
 {
-	char *suser = NULL;
 	Relation auth_rel;
 	HeapTuple	auth_tup;
 	ScanKeyData	scankey[3];
 	SysScanDesc	sscan;
 	int			nkeys;
 	bool	isNull;
+
+	*superuser = '\0';
 
 	auth_rel = heap_open(AuthIdRelationId, AccessShareLock);
 
@@ -418,7 +451,8 @@ findSuperuser(bool try_bootstrap)
 		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname,
 								RelationGetDescr(auth_rel), &isNull);
 		Assert(!isNull);
-		suser = pstrdup(DatumGetCString(attrName));
+		strncpy(superuser, DatumGetCString(attrName), NAMEDATALEN);
+		superuser[NAMEDATALEN - 1] = '\0';
 
 		userOid = HeapTupleGetOid(auth_tup);
 		SetSessionUserId(userOid, true);
@@ -428,7 +462,11 @@ findSuperuser(bool try_bootstrap)
 
 	systable_endscan(sscan);
 	heap_close(auth_rel, AccessShareLock);
-	return suser;
+
+	if (!*superuser)
+		ereport(FATAL,
+				(errcode(ERRCODE_INVALID_NAME),
+				 errmsg("no super user is found")));
 }
 
 static int

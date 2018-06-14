@@ -5288,7 +5288,7 @@ check_verify_gpfdists_cert(bool *newval, void **extra, GucSource source)
 {
 	if (!*newval && Gp_role == GP_ROLE_DISPATCH)
 		elog(WARNING, "verify_gpfdists_cert=off. Greenplum Database will stop validating "
-				"the gpfidsts SSL certificate for connections between segments and gpfdists");
+				"the gpfdists SSL certificate for connections between segments and gpfdists");
 	return true;
 }
 

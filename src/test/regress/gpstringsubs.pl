@@ -244,6 +244,21 @@ if (1)
         
     }
 
+	# Get the locale that the database was initialized with- it should be safe to
+	# use this locale for any tests that need to import a locale installed on the
+	# system.
+	$psql_str = "psql ";
+
+	$psql_str .= $glob_connect
+		if (defined($glob_connect));
+
+	$psql_str .= " -t -A -c 'show LC_CTYPE'";
+
+	my $syslocale = `$psql_str`;
+	my $syslocaleexp = '\\@syslocale\\@';
+
+	chomp $syslocale;
+
     my $username = getpwuid($>);
 
     my $hostexp = '\\@hostname\\@';
@@ -255,7 +270,7 @@ if (1)
 	chomp $curdir;
 
 #    print "$filnam\n";
-    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$gpglobconn/$glob_connect/gm; \' $filnam\n";
+    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$gpglobconn/$glob_connect/gm; s/$syslocaleexp/$syslocale/gm; \' $filnam\n";
 
     # replace all "which" expressions with binary
     if (defined($gpwhich_all) && length($gpwhich_all))

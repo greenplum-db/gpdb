@@ -48,16 +48,27 @@ m   |m             |2
 (8 rows)
 
 -- Scenario 1: Not prepared
-1:SELECT gp_inject_fault('start_prepare', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
-gp_inject_fault
----------------
-t              
+1:SELECT gp_inject_fault_infinite('start_prepare', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 1&:CREATE TABLE tolerance_test_table(an_int int);  <waiting ...>
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
-gp_inject_fault
----------------
-t              
+2:SELECT gp_wait_until_triggered_fault('start_prepare', 1, dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+2:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+-- do fts probe request twice to guarantee the fault is triggered
+2:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
 (1 row)
 2:SELECT gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
@@ -91,23 +102,35 @@ LINE 1: INSERT INTO tolerance_test_table VALUES(42);
 
 
 -- Scenario 2: Prepared but not committed
-1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
-gp_inject_fault
----------------
-t              
+-- NOTICE: Don't use session 2 again because it's cached gang is invalid
+1:SELECT gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'suspend', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 1&:CREATE TABLE tolerance_test_table(an_int int);  <waiting ...>
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
-gp_inject_fault
----------------
-t              
+3:SELECT gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
-2:SELECT gp_request_fts_probe_scan();
+3:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+-- do fts probe request twice to guarantee the fault is triggered
+3:SELECT gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
 -------------------------
 t                        
 (1 row)
-2:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'resume', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+3:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+3:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'resume', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
 gp_inject_fault
 ---------------
 t              
@@ -135,18 +158,30 @@ p   |m
 INSERT 1
 
 -- Scenario 3: Commit-Prepare received on primary but not acknowledged to master
-1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-gp_inject_fault
----------------
-t              
+-- NOTICE: Don't use session 2 again because it's cached gang is invalid
+1:SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 1&:DROP TABLE tolerance_test_table;  <waiting ...>
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-gp_inject_fault
----------------
-t              
+4:SELECT gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
-2:SELECT gp_request_fts_probe_scan();
+4:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+-- do fts probe request twice to guarantee the fault is triggered
+4:SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+4:SELECT gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
 -------------------------
 t                        

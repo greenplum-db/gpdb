@@ -15,6 +15,18 @@ t
 create or replace function wait_for_replication(iterations int) returns bool as $$ begin /* in func */ for i in 1 .. iterations loop /* in func */ if exists (select waiting_reason from pg_stat_activity where sess_id in (select sess_id from store_session_id) and waiting_reason = 'replication') then /* in func */ return true; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ end loop; /* in func */ return false; /* in func */ end; /* in func */ $$ language plpgsql VOLATILE;
 CREATE
 
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 create table store_session_id(a int, sess_id int);
 CREATE
 -- adding `0` as first column as the distribution column and add this tuple to segment 0
@@ -22,10 +34,10 @@ CREATE
 INSERT 1
 -- suspend to hit commit-prepared point on segment (as we are
 -- interested in testing Commit here and not really Prepare)
-select gp_inject_fault('finish_prepared_start_of_function', 'suspend', 2);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 -- Expect: `create table` should be blocked until reset
 -- `wal_sender_loop`. We also verify the `sync_rep_query_cancel` is
@@ -37,10 +49,10 @@ gp_wait_until_triggered_fault
 t                            
 (1 row)
 -- now pause the wal sender on primary for content 0
-select gp_inject_fault('wal_sender_loop', 'suspend', 2);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('wal_sender_loop', 'suspend', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 -- let the transaction move forward with the commit
 select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
@@ -55,10 +67,10 @@ wait_for_replication
 t                   
 (1 row)
 -- hitting this fault, is checked for test validation
-select gp_inject_fault('sync_rep_query_cancel', 'skip', 2);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 0U: select pg_cancel_backend(procpid) from pg_stat_activity where waiting_reason='replication' and sess_id in (select sess_id from store_session_id);
 pg_cancel_backend

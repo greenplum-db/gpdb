@@ -2078,6 +2078,8 @@ _readColumnDef(void)
 	READ_CHAR_FIELD(storage);
 	READ_NODE_FIELD(raw_default);
 	READ_NODE_FIELD(cooked_default);
+	READ_NODE_FIELD(collClause);
+	READ_OID_FIELD(collOid);
 	READ_NODE_FIELD(constraints);
 	READ_NODE_FIELD(encoding);
 

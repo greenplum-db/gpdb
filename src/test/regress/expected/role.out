@@ -7,14 +7,12 @@
 -- This also covers an old bug with dispatching GUCs with units in ALTER ROLE
 -- statement (MPP-15479).
 --
-set client_min_messages to warning; -- suppress 'role does not exist' notices
 DROP ROLE IF EXISTS role_setting_test_1;
 DROP ROLE IF EXISTS role_setting_test_2;
 DROP ROLE IF EXISTS role_setting_test_3;
 DROP ROLE IF EXISTS role_setting_test_4;
 DROP ROLE IF EXISTS role_setting_test_5;
 DROP ROLE IF EXISTS role_setting_test_6;
-reset client_min_messages;
 CREATE ROLE role_setting_test_1 NOLOGIN;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE role_setting_test_2 NOLOGIN;

@@ -99,7 +99,7 @@ pg_load_tz(const char *name)
 	 */
 	if (strcmp(name, "GMT") == 0)
 	{
-		if (tzparse(name, &tz.state, TRUE) != 0)
+		if (!tzparse(name, &tz.state, TRUE))
 		{
 			/* This really, really should not happen ... */
 			return NULL;
@@ -107,7 +107,7 @@ pg_load_tz(const char *name)
 	}
 	else if (tzload(name, NULL, &tz.state, TRUE) != 0)
 	{
-		if (name[0] == ':' || tzparse(name, &tz.state, FALSE) != 0)
+		if (name[0] == ':' || !tzparse(name, &tz.state, FALSE))
 		{
 			return NULL;		/* unknown timezone */
 		}

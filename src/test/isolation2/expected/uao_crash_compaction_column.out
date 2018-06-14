@@ -7,6 +7,18 @@
 -- end_matchsubs
 3:CREATE extension if NOT EXISTS gp_inject_fault;
 CREATE
+3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 --
 -- Test to validate crash at different points in AO/CO vacuum.
 --
@@ -53,7 +65,7 @@ INSERT 10
 UPDATE 10
 
 -- suspend at intended points.
-3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 0, 0, 2);
+3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 1, -1, 0, 2);
 gp_inject_fault
 ---------------
 t              
@@ -64,7 +76,7 @@ gp_wait_until_triggered_fault
 -----------------------------
 t                            
 (1 row)
-3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 0, 0, 2);
+3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 1, -1, 0, 2);
 gp_inject_fault
 ---------------
 t              
@@ -75,7 +87,7 @@ t
 -- previous VACUUM on crash_before_segmentfile_drop is suspended in drop
 -- phase. This results in segment file 1 remaining in drop pending state which
 -- results in segment file 1 not being scheduled for any new inserts.
-3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 0, 0, 2);
+3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 1, -1, 0, 2);
 gp_inject_fault
 ---------------
 t              
@@ -114,17 +126,17 @@ ERROR:  could not connect to segment: initialization of segworker group failed
 (1 row)
 
 -- reset faults as protection incase tests failed and panic didn't happen
-1:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', '', '', '', 0, 0, 2);
+1:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 2);
 gp_inject_fault
 ---------------
 t              
 (1 row)
-1:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', '', '', '', 0, 0, 2);
+1:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 2);
 gp_inject_fault
 ---------------
 t              
 (1 row)
-1:SELECT gp_inject_fault('appendonly_insert', 'reset', '', '', '', 0, 0, 2);
+1:SELECT gp_inject_fault('appendonly_insert', 'reset', 2);
 gp_inject_fault
 ---------------
 t              
@@ -352,7 +364,7 @@ INSERT 10
 DELETE 3
 
 -- suspend at intended points
-2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_master_before_cleanup_phase', 0, 0, 1);
+2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_master_before_cleanup_phase', 1, -1, 0, 1);
 gp_inject_fault
 ---------------
 t              
@@ -367,7 +379,7 @@ t
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
 -- crash_recovery
-2:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'panic', '', '', 'crash_master_before_segmentfile_drop', 0, 0, 1);
+2:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'panic', '', '', 'crash_master_before_segmentfile_drop', 1, -1, 0, 1);
 gp_inject_fault
 ---------------
 t              
@@ -383,12 +395,12 @@ server closed the connection unexpectedly
 	before or while processing the request.
 
 -- reset faults as protection incase tests failed and panic didn't happen
-4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', '', '', '', 0, 0, 1);
+4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 1);
 gp_inject_fault
 ---------------
 t              
 (1 row)
-4:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', '', '', '', 0, 0, 1);
+4:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 1);
 gp_inject_fault
 ---------------
 t              

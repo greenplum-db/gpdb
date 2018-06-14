@@ -80,6 +80,10 @@ typedef enum
 
 static bool do_wait = false;
 static bool wait_set = false;
+#define USEC_PER_SEC	1000000
+
+#define WAITS_PER_SEC	10		/* should divide USEC_PER_SEC evenly */
+
 static int	wait_seconds = DEFAULT_WAIT;
 static bool silent_mode = false;
 static ShutdownMode shutdown_mode = SMART_MODE;
@@ -521,7 +525,7 @@ test_postmaster_connection(bool do_checkpoint)
 
 	connstr[0] = '\0';
 
-	for (i = 0; i < wait_seconds; i++)
+	for (i = 0; i < wait_seconds * WAITS_PER_SEC; i++)
 	{
 		/* Do we need a connection string? */
 		if (connstr[0] == '\0')
@@ -668,7 +672,7 @@ test_postmaster_connection(bool do_checkpoint)
 		 * file there but it appears stale, issue a suitable warning and give
 		 * up waiting.
 		 */
-		if (i >= 5)
+		if (i >= 5 * WAITS_PER_SEC)
 		{
 			struct stat statbuf;
 
@@ -693,24 +697,28 @@ test_postmaster_connection(bool do_checkpoint)
 			return PQPING_NO_RESPONSE;
 
 		/* No response, or startup still in process; wait */
-#if defined(WIN32)
-		if (do_checkpoint)
+		if (i % WAITS_PER_SEC == 0)
 		{
-			/*
-			 * Increment the wait hint by 6 secs (connection timeout + sleep)
-			 * We must do this to indicate to the SCM that our startup time is
-			 * changing, otherwise it'll usually send a stop signal after 20
-			 * seconds, despite incrementing the checkpoint counter.
-			 */
-			status.dwWaitHint += 6000;
-			status.dwCheckPoint++;
-			SetServiceStatus(hStatus, (LPSERVICE_STATUS) &status);
-		}
-		else
+#ifdef WIN32
+			if (do_checkpoint)
+			{
+				/*
+				 * Increment the wait hint by 6 secs (connection timeout +
+				 * sleep).  We must do this to indicate to the SCM that our
+				 * startup time is changing, otherwise it'll usually send a
+				 * stop signal after 20 seconds, despite incrementing the
+				 * checkpoint counter.
+				 */
+				status.dwWaitHint += 6000;
+				status.dwCheckPoint++;
+				SetServiceStatus(hStatus, (LPSERVICE_STATUS) &status);
+			}
+			else
 #endif
-			print_msg(".");
+				print_msg(".");
+		}
 
-		pg_usleep(1000000);		/* 1 sec */
+		pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
 	}
 
 	/* return result of last call to PQping */
@@ -995,12 +1003,13 @@ do_stop(void)
 
 		print_msg(_("waiting for server to shut down..."));
 
-		for (cnt = 0; cnt < wait_seconds; cnt++)
+		for (cnt = 0; cnt < wait_seconds * WAITS_PER_SEC; cnt++)
 		{
 			if ((pid = get_pgpid()) != 0)
 			{
-				print_msg(".");
-				pg_usleep(1000000);		/* 1 sec */
+				if (cnt % WAITS_PER_SEC == 0)
+					print_msg(".");
+				pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
 			}
 			else
 				break;
@@ -1085,12 +1094,13 @@ do_restart(void)
 
 		/* always wait for restart */
 
-		for (cnt = 0; cnt < wait_seconds; cnt++)
+		for (cnt = 0; cnt < wait_seconds * WAITS_PER_SEC; cnt++)
 		{
 			if ((pid = get_pgpid()) != 0)
 			{
-				print_msg(".");
-				pg_usleep(1000000);		/* 1 sec */
+				if (cnt % WAITS_PER_SEC == 0)
+					print_msg(".");
+				pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
 			}
 			else
 				break;

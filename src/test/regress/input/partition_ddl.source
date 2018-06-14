@@ -25,8 +25,6 @@ SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (interval '1'))
 drop table rank;
 set enable_partition_rules = off;
 
-drop table if exists ggg cascade;
-
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
 partition by LIST (b)
@@ -114,7 +112,6 @@ partition p1 start('1992-01-31') end('1998-11-01') every(interval '20 months')
 insert into mpp3285_lineitem values (18182,5794,3295,4,9,15298.11,0.04,0.01,'N','O','1995-07-04'::date,'1995-05-30'::date,'1995-08-03'::date,'DELIVER IN PERSON','RAIL','y special platelets.');
 select * from mpp3285_lineitem;
 drop table mpp3285_lineitem;
-drop table mpp3282_partsupp;
 CREATE TABLE mpp3282_PARTSUPP (
 PS_PARTKEY INTEGER,
 PS_SUPPKEY INTEGER,
@@ -134,8 +131,6 @@ copy mpp3282_partsupp from stdin delimiter '|';
 1|2|3325|771.64|, even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful
 \.
 select * from mpp3282_partsupp;
-drop table mpp3282_partsupp;
-drop table mpp3238_supplier;
 CREATE TABLE mpp3238_supplier(
                 S_SUPPKEY INTEGER,
                 S_NAME CHAR(25),
@@ -155,8 +150,6 @@ partition p5 start(22) end(25)
 );
 insert into mpp3238_supplier values(1,'Supplier#000000001',' N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ',17,'27-918-335-1736',5755.94,'each slyly above the careful');
 select * from mpp3238_supplier;
-drop table mpp3238_supplier;
-drop table if exists mpp3219_customer;
 CREATE TABLE mpp3219_CUSTOMER (
 C_CUSTKEY INTEGER,
 C_NAME VARCHAR(25),
@@ -205,15 +198,12 @@ subpartition template (start('0') end('25') every(5))
 partition p1 start('1') end('150001') every(50000)
 );
 Alter table mpp3304_customer alter partition for (rank(2)) rename partition for (rank(1)) to newname;
-drop table mpp3304_customer;
-drop table if exists mpp3045_hhh;
 create table mpp3045_hhh (a char(1), b date, d char(3)) with (appendonly=true)
 distributed by (a) 
 partition by range (b) 
  (partition aa start (date '2007-01-01') end (date '2008-01-01'),
  partition bb start (date '2008-01-01') end (date '2009-01-01'));
 alter table mpp3045_hhh add partition aa;
-drop table mpp3045_hhh;
 drop table if exists mpp3287_nation;
 CREATE TABLE mpp3287_NATION (
             N_NATIONKEY INTEGER,
@@ -442,8 +432,6 @@ SUBPARTITION BY LIST (company_no) subpartition template
 
 \d mpp2564_transactions*
 
-DROP TABLE mpp2564_transactions;
-
 -- Check that DEFAULT can be used as partition's name with ALTER TABLE ADD PARTITION. (MPP-3363)
 CREATE TABLE mpp3363(a int, b int, c int)
 partition by range (a)
@@ -533,14 +521,6 @@ subpartition template (
 alter table mpp3059d rename partition pst to pacific;
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059d';
 
-drop table mpp3059;
-drop table mpp3059a_rename;
-drop table mpp3059b;
-drop table mpp3059c;
-drop table mpp3059d;
-drop table mpp3216a;
-drop table mpp3216_rename;
-
 create table test_khush (a integer, b date, c varchar(30))
 partition by range(b)
 ( start ('2008-01-01') end ('2008-04-01') );
@@ -570,9 +550,6 @@ insert into mpp3244 (a,b) values (10,1);
 
 select count(*) from mpp3244;
 select count(*) from mpp3244a;
-
-drop table mpp3244;
-drop table mpp3244a;
 
 CREATE TABLE mpp3256 (
         unique1         int4,
@@ -605,7 +582,6 @@ alter table mpp3256 drop partition default_part;
 alter table mpp3256 add default partition default_part;
 alter table mpp3256 drop partition default_part;
 
-drop table mpp3256;
 -- Examples from Documentation
 CREATE TABLE mpp3377_sales (trans_id int, date date, amount decimal(9,2), region text)
 DISTRIBUTED BY (trans_id)
@@ -640,7 +616,6 @@ ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END 
 
 ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
 
-DROP TABLE mpp3377_sales;
 CREATE TABLE mpp3250 (
         unique1         int4,
         unique2         int4,
@@ -665,7 +640,6 @@ alter table mpp3250 add default partition default_part;
 
 copy mpp3250 from '@abs_srcdir@/data/onek.data';
 
-drop table mpp3250;
 CREATE TABLE mpp3375 (
         unique1         int4,
         unique2         int4,
@@ -713,9 +687,6 @@ insert into mpp3375a select * from mpp3375;
 alter table mpp3375a add default partition default_part;
 alter table mpp3375a drop partition;
 alter table mpp3375a drop partition default_part;
-
-drop table mpp3375a;
-drop table mpp3375;
 
 -- Check that a negative number can be used in START, without quotes.
 CREATE TABLE mpp3241(a int, b int, c int)
@@ -976,13 +947,6 @@ partition by range (val)
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary 
   from pg_partitions where tablename like 'mpp3080%' order by tablename;
 
-drop table mpp3080_int8;
-drop table mpp3080_float4;
-drop table mpp3080_float8;
-drop table mpp3080_floatreal;
-drop table mpp3080_floatdouble;
-drop table mpp3080_numeric;
-drop table mpp3080_numericbig;
 create temp TABLE temp_hour_range (f1 time(2))
 partition by range (f1)
 (

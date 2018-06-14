@@ -80,6 +80,7 @@
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
@@ -188,6 +189,14 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 
 				key.keyOid1 = castForm->castsource;
 				key.keyOid2 = castForm->casttarget;
+				break;
+			}
+		case CollationRelationId:
+			{
+				Form_pg_collation collationForm = (Form_pg_collation) GETSTRUCT(tuple);
+
+				key.namespaceOid = collationForm->collnamespace;
+				key.objname = NameStr(collationForm->collname);
 				break;
 			}
 		case ConstraintRelationId:

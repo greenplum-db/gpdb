@@ -20,8 +20,8 @@
 #include "cdb/cdbvars.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"
-#include "utils/resgroup-ops.h"
 #include "utils/resgroup.h"
+#include "utils/resgroup-ops.h"
 #include "utils/resource_manager.h"
 
 typedef struct ResGroupStat

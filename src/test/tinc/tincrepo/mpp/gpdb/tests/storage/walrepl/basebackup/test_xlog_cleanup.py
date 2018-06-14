@@ -37,15 +37,15 @@ class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTe
         super(basebackup_cases, self).tearDown()
         self.reset_fault('base_backup_post_create_checkpoint')
 
-    def run_gp_inject_fault(self, fault_type, fault_name):
+    def run_gp_inject_fault(self, fault_type, fault_name, s_occurrence=1, e_occurrence=1):
         fault_injector = Filerepe2e_Util()
-        fault_injector.inject_fault(f=fault_name, y=fault_type, seg_id=1)
+        fault_injector.inject_fault(f=fault_name, y=fault_type, seg_id=1, s_o=s_occurrence, e_o=e_occurrence)
 
     def resume(self, fault_name):
         self.run_gp_inject_fault('resume', fault_name)
 
     def suspend_at(self, fault_name):
-        self.run_gp_inject_fault('suspend', fault_name)
+        self.run_gp_inject_fault('suspend', fault_name, 1, -1)
 
     def reset_fault(self, fault_name):
         self.run_gp_inject_fault('reset', fault_name)

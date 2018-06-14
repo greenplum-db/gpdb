@@ -2,4 +2,5 @@
 /fmgroids.h
 /probes.h
 /errcodes.h
+/pg_proc_combined.h
 *.tmp

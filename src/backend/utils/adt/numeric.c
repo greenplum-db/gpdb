@@ -596,6 +596,28 @@ numeric_is_nan(Numeric num)
 }
 
 /*
+ * numeric_digits() -
+ *
+ *	Output function for numeric's digits
+ */
+NumericDigit *
+numeric_digits(Numeric num)
+{
+	return NUMERIC_DIGITS(num);
+}
+
+/*
+ * numeric_len() -
+ *
+ *	Output size of digits in bytes
+ */
+int
+numeric_len(Numeric num)
+{
+	return NUMERIC_NDIGITS(num) * sizeof(NumericDigit);
+}
+
+/*
  * numeric_maximum_size() -
  *
  *	Maximum size of a numeric with given typmod, or -1 if unlimited/unknown.

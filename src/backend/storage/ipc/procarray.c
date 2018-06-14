@@ -728,7 +728,6 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 	TransactionIdAdvance(nextXid);
 	if (TransactionIdFollows(nextXid, ShmemVariableCache->nextXid))
 		ShmemVariableCache->nextXid = nextXid;
-
 	Assert(TransactionIdIsNormal(ShmemVariableCache->latestCompletedXid));
 	Assert(TransactionIdIsValid(ShmemVariableCache->nextXid));
 
@@ -1212,8 +1211,12 @@ GetOldestXmin(bool allDbs, bool ignoreVacuum)
 	/*
 	 * In QD node, all distributed transactions have an entry in the proc array,
 	 * so we're done.
+	 *
+	 * During binary upgrade, we don't have distributed transactions, so we're
+	 * done there too. This ensures correct operation of VACUUM FREEZE during
+	 * pg_upgrade.
 	 */
-	if (!IS_QUERY_DISPATCHER())
+	if (!IS_QUERY_DISPATCHER() && !IsBinaryUpgrade)
 	{
 		TransactionId distribOldestXmin;
 

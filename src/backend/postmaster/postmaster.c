@@ -2313,7 +2313,7 @@ retry1:
 			break;
 	}
 
-	if (!am_ftshandler)
+	if (!am_ftshandler && !am_walsender)
 	{
 		SIMPLE_FAULT_INJECTOR(ProcessStartupPacketFault);
 	}

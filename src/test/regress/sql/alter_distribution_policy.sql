@@ -475,3 +475,11 @@ subpartition template
 ALTER TABLE mpp6489_1_prt_1_2_prt_5 set distributed randomly;
 ALTER TABLE "mpp6489" ALTER PARTITION FOR('M'::bpchar) alter PARTITION
 FOR(RANK(5)) set distributed by (id, gender, year);
+
+-- Altering distribution policy for temp tables
+create temp table atsdb (c1 int, c2 int) distributed randomly;
+select * from atsdb;
+alter table atsdb set distributed by (c1);
+select * from atsdb;
+alter table atsdb set distributed by (c2);
+select * from atsdb;

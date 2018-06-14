@@ -2717,40 +2717,37 @@ RelationBuildLocalRelation(const char *relname,
 
 	rel->rd_rel->reltablespace = reltablespace;
 
+
 	/*
-	 * GPDB_91_MERGE_FIXME: there is a potential collision here between
-	 * temporary and permanent relations, if the relid selected for use is also
-	 * an ID that can be returned by GetNewRelFileNode. If two backends select
-	 * the same ID concurrently, there will be nothing preventing them from
-	 * creating their own relfiles on disk, since one will have the temporary
-	 * 't_' prefix and the other will not. The BufferTags for the two separate
-	 * relations will be identical, and writes to one will effectively corrupt
-	 * the other.
-	 *
-	 * Our current front-runner for a fix is to get rid of the TempRelBackendId,
-	 * revert to the upstream method for identifying temporary relations that
-	 * belong to a "session", and add that same session identifier to the
-	 * BufferTag so that it can distinguish between temp and permanent relations
-	 * that share a relnode number.
+	 * Further deviation in Greenplum: A new relfilenode must be generated even
+	 * for a mapped relation (with the exception of sequence relations).  OIDs
+	 * and relfilenodes are generated using two separate counters.  If OID is
+	 * reused as relfilenode, like in upstream, without bumping the relfilenode
+	 * counter, it may lead to a reuse of this value as relfilenode in future.
+	 * E.g. if this is a non-temp relation and the future relation happens to
+	 * be a temp relation.  Shared buffer manager in Greenplum breaks if this
+	 * happens, see GPDB_91_MERGE_FIXME in GetNewRelFileNode() for details.
+	 * Sequence relations must use OID also as relfilenode.  Sequence OIDs are
+	 * allocated by GetNewSequenceRelationObjectId(), where we try to increment
+	 * OID and relfilenode counters so as to avoid reuse of the same value as
+	 * relfilenode in future.
 	 */
-	if (mapped_relation)
-	{
-		rel->rd_rel->relfilenode = InvalidOid;
-		/* Add it to the active mapping information */
-		RelationMapUpdateMap(relid, relid, shared_relation, true);
-	}
+	if (relid < FirstNormalObjectId /* bootstrap only */
+		|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
+		|| IsBinaryUpgrade)
+		rel->rd_rel->relfilenode = relid;
 	else
 	{
-		if (relid < FirstNormalObjectId /* bootstrap only */
-			|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
-			|| IsBinaryUpgrade)
-			rel->rd_rel->relfilenode = relid;
-		else
-		{
-			rel->rd_rel->relfilenode = GetNewRelFileNode(reltablespace, NULL, relpersistence);
-			if (Gp_role == GP_ROLE_EXECUTE)
-				AdvanceObjectId(relid);
-		}
+		rel->rd_rel->relfilenode = GetNewRelFileNode(reltablespace, NULL, relpersistence);
+		if (Gp_role == GP_ROLE_EXECUTE)
+			AdvanceObjectId(relid);
+	}
+
+	if (mapped_relation)
+	{
+		/* Add it to the active mapping information */
+		RelationMapUpdateMap(relid, rel->rd_rel->relfilenode, shared_relation, true);
+		rel->rd_rel->relfilenode = InvalidOid;
 	}
 
 	RelationInitLockInfo(rel);	/* see lmgr.c */
@@ -2836,7 +2833,8 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid)
 	newrnode.node = relation->rd_node;
 	newrnode.node.relNode = newrelfilenode;
 	newrnode.backend = relation->rd_backend;
-	RelationCreateStorage(newrnode.node, relation->rd_rel->relpersistence);
+	RelationCreateStorage(newrnode.node, relation->rd_rel->relpersistence,
+						  relation->rd_rel->relstorage);
 	smgrclosenode(newrnode);
 
 	/*

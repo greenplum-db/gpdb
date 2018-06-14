@@ -1264,7 +1264,8 @@ typedef enum ObjectType
 	OBJECT_TSTEMPLATE,
 	OBJECT_TYPE,
 	OBJECT_VIEW,
-	OBJECT_RESQUEUE
+	OBJECT_RESQUEUE,
+	OBJECT_RESGROUP
 } ObjectType;
 
 /* ----------------------

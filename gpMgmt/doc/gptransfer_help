@@ -101,7 +101,7 @@ When copying data into the destination system, it is redistributed on
 the Greenplum Database segments of the destination system. This is the 
 flow of data when gptransfer copies database data: 
 
-writable external table > gpfidst > named pipe > gpfdist > readable external table 
+writable external table > gpfdist > named pipe > gpfdist > readable external table
  
 For information about transferring data with gptransfer, see "Migrating 
 Data with Gptransfer" in the "Greenplum Database Administrator Guide". 
@@ -553,7 +553,7 @@ OPTIONS
 
 --max-line-length=<length> 
 
- Sets the maximum allowed data row length in bytes for the gpfidst 
+ Sets the maximum allowed data row length in bytes for the gpfdist
  utility. If not specified, the default is 10485760. Valid range is 32768 
  (32K) to 268435456 (256MB). 
 

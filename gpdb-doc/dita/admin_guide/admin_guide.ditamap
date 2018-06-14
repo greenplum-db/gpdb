@@ -15,14 +15,18 @@
             <topicref href="intro/about_statistics.xml"/>
         </topicref>
         <topicref href="managing/partII.xml" id="partII">
-            <topicref href="managing/versioning.xml" navtitle="About the Greenplum Database Release Version Number"/>
+            <topicref href="managing/versioning.xml"
+                navtitle="About the Greenplum Database Release Version Number"/>
             <topicref href="managing/startstop.xml" navtitle="Starting and Stopping Greenplum"/>
             <topicref href="access_db/access_db.ditamap" format="ditamap"/>
             <topicref href="configure.ditamap" format="ditamap"/>
             <topicref href="highavail/highavail.ditamap" format="ditamap"/>
             <topicref href="managing/backup.ditamap" format="ditamap"/>
             <topicref href="expand/expand.ditamap" format="ditamap"/>
-            <topicref href="managing/gptransfer.xml"/>
+            <topicref href="managing/migrating-data.xml">
+                <topicref href="managing/gpcopy-migrate.xml" otherprops="pivotal"/>
+                <topicref href="managing/gptransfer.xml"/>
+            </topicref>
             <topicref href="managing/monitor.xml" navtitle="Monitoring a Greenplum System"/>
             <topicref href="managing/maintain.xml" navtitle="Routine System Maintenance Tasks"/>
             <topicref href="monitoring/monitoring.dita"/>
@@ -34,8 +38,8 @@
                 <topicref href="kerberos.xml" navtitle="Setting up Kerberos Authentication"
                     id="kerberos"/>
                 <topicref href="kerberos-lin-client.xml"/>
-                <topicref href="kerberos-win-client.xml" navtitle="Configuring Kerberos For Windows Clients"
-                    id="kerberos-win"/>
+                <topicref href="kerberos-win-client.xml"
+                    navtitle="Configuring Kerberos For Windows Clients" id="kerberos-win"/>
             </topicref>
             <topicref href="roles_privs.xml" navtitle="Managing Roles and Privileges"
                 id="roles_privs"/>
@@ -44,7 +48,8 @@
         <topicref href="distribution.xml"/>
         <topicref href="dml.xml" navtitle="Managing Data" id="dml"/>
         <topicref href="query/query.ditamap" navtitle="Querying Data" format="ditamap"/>
-        <topicref href="external/external-tables.ditamap" navtitle="Working with External Data" format="ditamap"/>
+        <topicref href="external/external-tables.ditamap" navtitle="Working with External Data"
+            format="ditamap"/>
         <topicref href="load/load.ditamap" navtitle="Loading and Unloading Data" format="ditamap"/>
         <topicref href="partV.xml">
             <topicref href="perf_intro.xml" navtitle="Defining Database Performance" id="perf_intro"/>
@@ -53,10 +58,11 @@
             <topicref href="wlmgmt_intro.xml" navtitle="Workload Management Resource Overview"
                 id="wlmgmt_intro"/>
             <topicref href="wlmgmt.xml" navtitle="Managing Workload and Resources" id="wlmgmt">
-                <topicref href="workload_mgmt.xml" navtitle="Managing Workloads with Resource Queues"
-                id="workload_mgmt"/>
-                <topicref href="workload_mgmt_resgroups.xml" navtitle="Managing Workloads with Resource Groups"
-                id="workload_mgmt_resgroups"/>
+                <topicref href="workload_mgmt.xml"
+                    navtitle="Managing Workloads with Resource Queues" id="workload_mgmt"/>
+                <topicref href="workload_mgmt_resgroups.xml"
+                    navtitle="Managing Workloads with Resource Groups" id="workload_mgmt_resgroups"
+                />
             </topicref>
             <topicref href="perf_troubleshoot.xml" navtitle="Investigating a Performance Problem"
                 id="perf_troubleshoot"/>

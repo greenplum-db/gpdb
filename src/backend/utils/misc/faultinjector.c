@@ -74,7 +74,7 @@ static FaultInjectorEntry_s* FaultInjector_InsertHashEntry(
 static int FaultInjector_NewHashEntry(
 								FaultInjectorEntry_s	*entry);
 
-static int FaultInjector_UpdateHashEntry(
+static int FaultInjector_MarkEntryAsResume(
 								FaultInjectorEntry_s	*entry);
 
 static bool FaultInjector_RemoveHashEntry(
@@ -284,7 +284,8 @@ FaultInjector_InjectFaultNameIfSet(
 	 * using fault injector framework, this restriction needs to be lifted and
 	 * some other mechanism needs to be placed to avoid flaky failures.
 	 */
-	if (IsAutoVacuumLauncherProcess() || IsAutoVacuumWorkerProcess())
+	if (IsAutoVacuumLauncherProcess() ||
+		(IsAutoVacuumWorkerProcess() && 0 != strcmp("vacuum_update_dat_frozen_xid", faultName)))
 		return FaultInjectorTypeNotSpecified;
 
 	/*
@@ -333,18 +334,21 @@ FaultInjector_InjectFaultNameIfSet(
 			break;
 		}
 
-		/* Update the injection fault entry in hash table */
-		if (entryShared->occurrence != OCCURRENCE_UNDEFINED)
+		entryShared->numTimesTriggered++;
+
+		if (entryShared->numTimesTriggered < entryShared->startOccurrence)
 		{
-			if (entryShared->occurrence > 1)
-			{
-				entryShared->occurrence--;
-				break;
-			}
+			break;
 		}
 
+		/* Update the injection fault entry in hash table */
 		entryShared->faultInjectorState = FaultInjectorStateTriggered;
-		entryShared->numTimesTriggered++;
+
+		/* Mark fault injector to completed */
+		if (entryShared->endOccurrence != INFINITE_END_OCCURRENCE &&
+			entryShared->numTimesTriggered >= entryShared->endOccurrence)
+			entryShared->faultInjectorState = FaultInjectorStateCompleted;
+
 		memcpy(entryLocal, entryShared, sizeof(FaultInjectorEntry_s));
 		retvalue = entryLocal->faultInjectorType;
 	} while (0);
@@ -355,7 +359,6 @@ FaultInjector_InjectFaultNameIfSet(
 		return FaultInjectorTypeNotSpecified;
 
 	/* Inject fault */
-	
 	switch (entryLocal->faultInjectorType) {
 		case FaultInjectorTypeNotSpecified:
 			
@@ -367,7 +370,7 @@ FaultInjector_InjectFaultNameIfSet(
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
-			pg_usleep(entryLocal->sleepTime * 1000000L);
+			pg_usleep(entryLocal->extraArg * 1000000L);
 			break;
 		case FaultInjectorTypeFault:
 			ereport(ERROR,
@@ -378,18 +381,6 @@ FaultInjector_InjectFaultNameIfSet(
 			
 			break;
 		case FaultInjectorTypeFatal:
-			/*
-			 * If it's one time occurrence then disable the fault before it's
-			 * actually triggered because this fault errors out the transaction
-			 * and hence we wont get a chance to disable it or put it in completed
-			 * state.
-			 */
-			if (entryLocal->occurrence != OCCURRENCE_UNDEFINED)
-			{
-				entryLocal->faultInjectorState = FaultInjectorStateCompleted;
-				FaultInjector_UpdateHashEntry(entryLocal);
-			}
-			
 			ereport(FATAL, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -399,23 +390,11 @@ FaultInjector_InjectFaultNameIfSet(
 			break;
 		case FaultInjectorTypePanic:
 			/*
-			 * If it's one time occurrence then disable the fault before it's
-			 * actually triggered because this fault errors out the transaction
-			 * and hence we wont get a chance to disable it or put it in completed
-			 * state. For PANIC it may be unnecessary though.
-			 */
-			if (entryLocal->occurrence != OCCURRENCE_UNDEFINED)
-			{
-				entryLocal->faultInjectorState = FaultInjectorStateCompleted;
-				FaultInjector_UpdateHashEntry(entryLocal);
-			}
-
-			/*
 			 * Avoid core file generation for this PANIC. It helps to avoid
 			 * filling up disks during tests and also saves time.
 			 */
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
-			struct rlimit lim;
+			;struct rlimit lim;
 			getrlimit(RLIMIT_CORE, &lim);
 			lim.rlim_cur = 0;
 			if (setrlimit(RLIMIT_CORE, &lim) != 0)
@@ -431,18 +410,6 @@ FaultInjector_InjectFaultNameIfSet(
 
 			break;
 		case FaultInjectorTypeError:
-			/*
-			 * If it's one time occurrence then disable the fault before it's
-			 * actually triggered because this fault errors out the transaction
-			 * and hence we wont get a chance to disable it or put it in completed
-			 * state.
-			 */
-			if (entryLocal->occurrence != OCCURRENCE_UNDEFINED)
-			{
-				entryLocal->faultInjectorState = FaultInjectorStateCompleted;
-				FaultInjector_UpdateHashEntry(entryLocal);
-			}
-
 			ereport(ERROR, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
@@ -589,12 +556,6 @@ FaultInjector_InjectFaultNameIfSet(
 
 		case FaultInjectorTypeCheckpointAndPanic:
 		{
-			if (entryLocal->occurrence != OCCURRENCE_UNDEFINED)
-			{
-				entryLocal->faultInjectorState = FaultInjectorStateCompleted;
-				FaultInjector_UpdateHashEntry(entryLocal);
-			}
-
 			RequestCheckpoint(CHECKPOINT_WAIT | CHECKPOINT_IMMEDIATE);
 			ereport(PANIC,
 					(errcode(ERRCODE_FAULT_INJECT),
@@ -616,13 +577,6 @@ FaultInjector_InjectFaultNameIfSet(
 			break;
 	}
 		
-	if (entryLocal->occurrence != OCCURRENCE_UNDEFINED)
-	{
-		entryLocal->faultInjectorState = FaultInjectorStateCompleted;
-	}
-
-	FaultInjector_UpdateHashEntry(entryLocal);	
-	
 	return (entryLocal->faultInjectorType);
 }
 
@@ -782,17 +736,11 @@ FaultInjector_NewHashEntry(
 	entryLocal->faultInjectorIdentifier = entry->faultInjectorIdentifier;
 	strlcpy(entryLocal->faultName, entry->faultName, sizeof(entryLocal->faultName));
 
-	entryLocal->sleepTime = entry->sleepTime;
+	entryLocal->extraArg = entry->extraArg;
 	entryLocal->ddlStatement = entry->ddlStatement;
 	
-	if (entry->occurrence != 0)
-	{
-		entryLocal->occurrence = entry->occurrence;
-	}
-	else 
-	{
-		entryLocal->occurrence = OCCURRENCE_UNDEFINED;
-	}
+	entryLocal->startOccurrence = entry->startOccurrence;
+	entryLocal->endOccurrence = entry->endOccurrence;
 
 	entryLocal->numTimesTriggered = 0;
 	strcpy(entryLocal->databaseName, entry->databaseName);
@@ -816,12 +764,14 @@ exit:
  * update hash entry with state 
  */		
 static int 
-FaultInjector_UpdateHashEntry(
+FaultInjector_MarkEntryAsResume(
 							FaultInjectorEntry_s	*entry)
 {
 	
 	FaultInjectorEntry_s	*entryLocal;
 	int						status = STATUS_OK;
+
+	Assert(entry->faultInjectorType == FaultInjectorTypeResume);
 
 	FiLockAcquire();
 
@@ -839,25 +789,21 @@ FaultInjector_UpdateHashEntry(
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		goto exit;
 	}
-	
-	if (entry->faultInjectorType == FaultInjectorTypeResume)
-	{
-		entryLocal->faultInjectorType = FaultInjectorTypeResume;
-	}
-	else
-	{	
-		entryLocal->faultInjectorState = entry->faultInjectorState;
-		entryLocal->occurrence = entry->occurrence;
-	}
+
+	if (entryLocal->faultInjectorType != FaultInjectorTypeSuspend)
+		ereport(ERROR, 
+				(errcode(ERRCODE_FAULT_INJECT),
+				 errmsg("only suspend fault can be resumed")));	
+
+	entryLocal->faultInjectorType = FaultInjectorTypeResume;
 	
 	FiLockRelease();
 	
 	ereport(DEBUG1,
 			(errmsg("LOG(fault injector): update fault injection hash entry "
-					"identifier:'%s' state:'%s' occurrence:'%d' ",
+					"identifier:'%s' state:'%s'",
 					entry->faultName,
-					FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
-					entry->occurrence)));
+					FaultInjectorStateEnumToString[entryLocal->faultInjectorState])));
 	
 exit:	
 	
@@ -921,7 +867,8 @@ FaultInjector_SetFaultInjection(
 			int retry_count = 600; /* 10 minutes */
 
 			while ((entryLocal = FaultInjector_LookupHashEntry(entry->faultName)) != NULL &&
-				   entry->occurrence > entryLocal->numTimesTriggered)
+				   entryLocal->faultInjectorState != FaultInjectorStateCompleted &&
+				   entryLocal->numTimesTriggered - entryLocal->startOccurrence < entry->extraArg - 1)
 			{
 				pg_usleep(1000000L);  // 1 sec
 				retry_count--;
@@ -941,7 +888,7 @@ FaultInjector_SetFaultInjection(
 				ereport(LOG,
 						(errcode(ERRCODE_FAULT_INJECT),
 						 errmsg("fault triggered %d times, fault name:'%s' fault type:'%s' ",
-							entry->occurrence,
+							entryLocal->numTimesTriggered,
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				status = STATUS_OK;
@@ -979,8 +926,9 @@ FaultInjector_SetFaultInjection(
 							"ddl statement:'%s' "
 							"database name:'%s' "
 							"table name:'%s' "
-							"occurrence:'%d' "
-							"sleep time:'%d' "
+							"start occurrence:'%d' "
+							"end occurrence:'%d' "
+							"extra argument:'%d' "
 							"fault injection state:'%s' "
 							"num times hit:'%d' ",
 							entryLocal->faultName,
@@ -988,8 +936,9 @@ FaultInjector_SetFaultInjection(
 							FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
 							entryLocal->databaseName,
 							entryLocal->tableName,
-							entryLocal->occurrence,
-							entryLocal->sleepTime,
+							entryLocal->startOccurrence,
+							entryLocal->endOccurrence,
+							entryLocal->extraArg,
 							FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
 						entryLocal->numTimesTriggered)));
 				
@@ -1002,8 +951,9 @@ FaultInjector_SetFaultInjection(
 									  "ddl statement:'%s' "
 									  "database name:'%s' "
 									  "table name:'%s' "
-									  "occurrence:'%d' "
-									  "sleep time:'%d' "
+									  "start occurrence:'%d' "
+									  "end occurrence:'%d' "
+									  "extra arg:'%d' "
 									  "fault injection state:'%s'  "
 									  "num times hit:'%d' \n",
 									  entryLocal->faultName,
@@ -1011,8 +961,9 @@ FaultInjector_SetFaultInjection(
 									  FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
 									  entryLocal->databaseName,
 									  entryLocal->tableName,
-									  entryLocal->occurrence,
-									  entryLocal->sleepTime,
+									  entryLocal->startOccurrence,
+									  entryLocal->endOccurrence,
+									  entryLocal->extraArg,
 									  FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
 									  entryLocal->numTimesTriggered);
 						found = TRUE;
@@ -1026,15 +977,17 @@ FaultInjector_SetFaultInjection(
 			break;
 		}
 		case FaultInjectorTypeResume:
+		{
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							entry->faultName,
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			
-			FaultInjector_UpdateHashEntry(entry);	
+			FaultInjector_MarkEntryAsResume(entry);
 			
 			break;
+		}
 		default: 
 			
 			status = FaultInjector_NewHashEntry(entry);

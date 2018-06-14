@@ -32,7 +32,7 @@ INSERT 1
 
 -- Hold after walking over ProcArray in GetSnpashotData(), right at start of
 -- DistributedLog_AdvanceOldestXmin()
-1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'suspend', '', 'postgres', '', 1, 5, dbid) from gp_segment_configuration where content = 0 and role = 'p';
+1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'suspend', '', 'postgres', '', 1, -1, 5, dbid) from gp_segment_configuration where content = 0 and role = 'p';
 gp_inject_fault
 ---------------
 t              

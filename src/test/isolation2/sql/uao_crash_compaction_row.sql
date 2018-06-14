@@ -6,6 +6,7 @@
 -- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
 -- end_matchsubs
 3:CREATE extension if NOT EXISTS gp_inject_fault;
+3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --
 -- Test to validate crash at different points in AO/CO vacuum.
 --
@@ -34,18 +35,18 @@
 -- suspend at intended points. Only one AO table can be in drop phase in a
 -- system at a time hence we must wait for this table's VACUUM to reach cleanup
 -- phase before triggering another VACUUM.
-3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 0, 0, 2);
+3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 1, -1, 0, 2);
 1&:VACUUM crash_before_cleanup_phase;
 3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
 
-3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 0, 0, 2);
+3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 1, -1, 0, 2);
 2&:VACUUM crash_before_segmentfile_drop;
 3:SELECT gp_wait_until_triggered_fault('compaction_before_segmentfile_drop', 1, 2);
 
 -- we already waited for suspend faults to trigger and hence we can proceed to
 -- run next command which would trigger panic fault and help test
 -- crash_recovery
-3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 0, 0, 2);
+3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 1, -1, 0, 2);
 3:VACUUM crash_vacuum_in_appendonly_insert;
 1<:
 2<:
@@ -54,9 +55,9 @@
 0U: SELECT 1;
 
 -- reset faults as protection incase tests failed and panic didn't happen
-1:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', '', '', '', 0, 0, 2);
-1:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', '', '', '', 0, 0, 2);
-1:SELECT gp_inject_fault('appendonly_insert', 'reset', '', '', '', 0, 0, 2);
+1:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 2);
+1:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 2);
+1:SELECT gp_inject_fault('appendonly_insert', 'reset', 2);
 
 -- perform post crash validation checks
 -- for crash_before_cleanup_phase
@@ -108,9 +109,9 @@
 2:DELETE FROM crash_master_before_segmentfile_drop WHERE a < 4;
 
 -- suspend at intended points
-2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_master_before_cleanup_phase', 0, 0, 1);
+2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_master_before_cleanup_phase', 1, -1, 0, 1);
 1&:VACUUM crash_master_before_cleanup_phase;
-2:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'panic', '', '', 'crash_master_before_segmentfile_drop', 0, 0, 1);
+2:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'panic', '', '', 'crash_master_before_segmentfile_drop', 1, -1, 0, 1);
 
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
@@ -120,8 +121,8 @@ SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 1<:
 
 -- reset faults as protection incase tests failed and panic didn't happen
-4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', '', '', '', 0, 0, 1);
-4:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', '', '', '', 0, 0, 1);
+4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 1);
+4:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 1);
 
 -- perform post crash validation checks
 -- for crash_master_before_cleanup_phase

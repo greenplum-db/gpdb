@@ -2893,3 +2893,27 @@ PL/pgSQL function "exttab_error_context_callback_func" line 5 at FOR over SELECT
 SET gp_log_gang TO DEFAULT;
 DROP FUNCTION exttab_error_context_callback_func();
 DROP EXTERNAL TABLE exttab_error_context_callback;
+-- --------------------------------------
+-- Encoding
+-- --------------------------------------
+CREATE EXTERNAL TABLE encoding_issue (num int, word text)
+LOCATION ('file://@hostname@@abs_srcdir@/data/latin1_encoding.csv')
+FORMAT 'CSV' ENCODING 'LATIN1';
+SELECT * FROM encoding_issue WHERE num = 4;
+ num |           word            
+-----+---------------------------
+   4 | tá sé seo le tástáil dea-
+(1 row)
+
+COPY (SELECT * FROM encoding_issue) TO '/tmp/latin1_encoding.csv' WITH (FORMAT 'csv', ENCODING 'LATIN1');
+CREATE EXTERNAL TABLE encoding_issue2 (num int, word text)
+LOCATION ('file://@hostname@/tmp/latin1_encoding.csv')
+FORMAT 'CSV' ENCODING 'LATIN1';
+SELECT * FROM encoding_issue2 WHERE num = 5;
+ num |                word                
+-----+------------------------------------
+   5 | minden amire szüksége van a szeret
+(1 row)
+
+DROP EXTERNAL TABLE encoding_issue;
+DROP EXTERNAL TABLE encoding_issue2;

@@ -1,0 +1,234 @@
+-- Setup fault injectors
+CREATE extension if NOT EXISTS gp_inject_fault;
+CREATE
+
+
+--
+-- Try and fail to import all system collations
+--
+-- Simulate a locale missing on one segment at collation creation. If this
+-- happens, we expect that 2PC will prevent this collation from being created.
+--
+SELECT gp_inject_fault('collate_locale_os_lookup', 'error', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- The fault injector should prevent all collations from being created by
+-- pg_import_system_collations().
+create schema import_collation_schema;
+CREATE
+select pg_import_system_collations( (select oid from pg_namespace where nspname = 'import_collation_schema') );
+ERROR:  fault triggered, fault name:'collate_locale_os_lookup' fault type:'error'  (seg0 127.0.1.1:25432 pid=19176)
+
+-- Count the number of collations in import_collation_schema. It should be
+-- zero because one of the segments failed to create a collation.
+select count(*) from pg_collation where collnamespace = (select oid from pg_namespace where nspname = 'import_collation_schema');
+count
+-----
+0    
+(1 row)
+
+SELECT gp_inject_fault('collate_locale_os_lookup', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+--
+-- Import all system collations.
+--
+select pg_import_system_collations( (select oid from pg_namespace where nspname = 'import_collation_schema') ) > 0 as collations_imported;
+collations_imported
+-------------------
+t                  
+(1 row)
+
+--
+-- Create a collation from an on-disk locale
+--
+select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+create collation "collation_from_disk" (locale="@syslocale@");
+CREATE
+select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
+gp_segment_id|collname           
+-------------+-------------------
+-1           |collation_from_disk
+(1 row)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_disk');
+gp_segment_id|collname           
+-------------+-------------------
+2            |collation_from_disk
+0            |collation_from_disk
+1            |collation_from_disk
+(3 rows)
+select count(distinct oid) from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_disk');
+count
+-----
+1    
+(1 row)
+
+--
+-- Drop the collation, and confirm it is actually gone
+--
+drop collation "collation_from_disk";
+DROP
+select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_disk');
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+
+
+--
+-- Create a collation from an existing collation
+--
+select gp_segment_id, collname from pg_collation where collname='collation_from_db';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+create collation "collation_from_db" from "POSIX";
+CREATE
+select gp_segment_id, collname from pg_collation where collname='collation_from_db';
+gp_segment_id|collname         
+-------------+-----------------
+-1           |collation_from_db
+(1 row)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_db');
+gp_segment_id|collname         
+-------------+-----------------
+2            |collation_from_db
+1            |collation_from_db
+0            |collation_from_db
+(3 rows)
+select count(distinct oid) from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_db');
+count
+-----
+1    
+(1 row)
+
+--
+-- Confirm that collation creation is protected from errors by 2PC.
+-- In other words if one segment throws an error, the collation
+-- should not be created on any segment.
+--
+create collation "missing_on_one_segment" from "C";
+CREATE
+-- Drop collation from one segment
+2U: drop collation "missing_on_one_segment";
+DROP
+select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='missing_on_one_segment');
+gp_segment_id|collname              
+-------------+----------------------
+1            |missing_on_one_segment
+0            |missing_on_one_segment
+(2 rows)
+-- Because we dropped missing_on_one_segment from content 2, it
+-- will fail to create the collation.
+create collation "collation_create_fails" from "missing_on_one_segment";
+ERROR:  collation "missing_on_one_segment" for encoding "UTF8" does not exist  (seg2 127.0.1.1:25434 pid=1227)
+-- Confirm 'collation_create_fails' is missing from all segments.
+select gp_segment_id, collname from pg_collation where collname='collation_create_fails';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where collname='collation_create_fails';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+
+-- Clean up table missing_on_one_segement
+-1U:  drop collation "missing_on_one_segment";
+DROP
+0U: drop collation "missing_on_one_segment";
+DROP
+1U: drop collation "missing_on_one_segment";
+DROP
+
+--
+-- Simulate a locale missing on one segment at collation creation. If this
+-- happens, we expect that 2PC will prevent this collation from being created.
+--
+SELECT gp_inject_fault('collate_locale_os_lookup', 'error', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='locale_missing_on_one_segment');
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+--  The fault injector should simulate a collation being missing on this segment
+create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+ERROR:  fault triggered, fault name:'collate_locale_os_lookup' fault type:'error'  (seg0 127.0.1.1:25432 pid=23851)
+-- Confirm 'collation_create_fails' is missing from all segments.
+select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where collname='locale_missing_on_one_segment';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+
+SELECT gp_inject_fault('collate_locale_os_lookup', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+
+--
+-- If, for whatever reason a collation was created for a locale that is no
+-- longer available on a segment, we expect that a query using that collation
+-- will throw an error.
+--
+select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
+gp_segment_id|collname
+-------------+--------
+(0 rows)
+create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+CREATE
+-- Confirm is on all segments.
+select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
+gp_segment_id|collname                     
+-------------+-----------------------------
+-1           |locale_missing_on_one_segment
+(1 row)
+select gp_segment_id, collname from gp_dist_random('pg_collation') where collname='locale_missing_on_one_segment';
+gp_segment_id|collname                     
+-------------+-----------------------------
+0            |locale_missing_on_one_segment
+1            |locale_missing_on_one_segment
+2            |locale_missing_on_one_segment
+(3 rows)
+
+create table uses_collation (a text collate locale_missing_on_one_segment);
+CREATE
+insert into uses_collation values ('abc'), ('123');
+INSERT 2
+
+SELECT gp_inject_fault('collate_locale_os_lookup', 'error', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- This should error out
+SELECT a FROM uses_collation ORDER BY a;
+ERROR:  fault triggered, fault name:'collate_locale_os_lookup' fault type:'error'  (seg0 slice1 127.0.1.1:25432 pid=16196)
+
+SELECT gp_inject_fault('collate_locale_os_lookup', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault
+---------------
+t              
+(1 row)
+

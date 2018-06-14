@@ -1,8 +1,9 @@
 1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 1:CREATE TABLE crash_test_table(c1 int);
 
+1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- transaction of session 2 and session 3 inserted 'COMMIT' record before checkpoint
-1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', 1);
+1:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', 1);
 2&:insert into crash_test_table values (1);
 3&:create table crash_test_ddl(c1 int);
 
@@ -17,7 +18,7 @@
 1:select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 3, 1);
 
 -- transaction of session 5 didn't insert 'COMMIT' record
-1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', 1);
+1:select gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'suspend', 1);
 5&:INSERT INTO crash_test_table VALUES (3);
 
 -- wait session 5 hit inject point

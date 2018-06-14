@@ -92,7 +92,7 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
 
         fault_injector = Filerepe2e_Util()
         # 2. Inject fault at commit prepared state
-        fault_injector.inject_fault(f='dtm_broadcast_commit_prepared', y='suspend', seg_id=1)
+        fault_injector.inject_fault(f='dtm_broadcast_commit_prepared', y='suspend', seg_id=1, s_o=1, e_o=-1)
 
         # 3. Now execute a transaction and commit it. The backend is expected
         #    to be blocked.
@@ -111,7 +111,7 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         self.assertTrue(triggered, 'Fault was not triggered')
 
         # 4. Inject fault at prepared state
-        fault_injector.inject_fault(f='transaction_abort_after_distributed_prepared', y='suspend', seg_id=1)
+        fault_injector.inject_fault(f='transaction_abort_after_distributed_prepared', y='suspend', seg_id=1, s_o=1, e_o=-1)
 
         # 5. Now execute a transaction and commit it. The backend is expected
         #    to be blocked.

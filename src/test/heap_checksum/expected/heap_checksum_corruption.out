@@ -104,10 +104,23 @@ SHOW data_checksums;
 (1 row)
 
 -- skip FTS probes always
-SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
+ t
+(1 row)
+
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t
+(1 row)
+
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
+NOTICE:  Success:
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
 
@@ -233,10 +246,10 @@ set gp_disable_tuple_hints=off;
 -- flush the data to disk
 checkpoint;
 -- skip all further checkpoint
-select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault_infinite('checkpoint', 'skip', dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -278,10 +291,10 @@ WARNING:  page verification failed, calculated checksum 38937 but expected 15001
 WARNING:  page verification failed, calculated checksum 18239 but expected 58815  (seg2 slice1 127.0.0.1:25434 pid=27289)
 ERROR:  invalid page in block 0 of relation base/81967/81939  (seg0 slice1 127.0.0.1:25432 pid=27287)
 -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
-select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'panic', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_infinite 
+--------------------------
  t
  t
  t
@@ -302,7 +315,7 @@ select count(*) from corrupt_heap_checksum.mark_buffer_dirty_hint;
 (1 row)
 
 -- reset the fault injector
-select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault('checkpoint', 'reset', dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -312,7 +325,7 @@ NOTICE:  Success:
  t
 (4 rows)
 
-select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -327,7 +340,7 @@ reset search_path;
 DROP SCHEMA corrupt_heap_checksum CASCADE;
 NOTICE:  drop cascades to 13 other objects
 -- resume fts
-SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);
+SELECT gp_inject_fault('fts_probe', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

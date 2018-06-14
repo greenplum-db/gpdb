@@ -44,7 +44,18 @@ CREATE
 
 CREATE OR REPLACE FUNCTION test_protocol_allseg(mid int, mshop int, mgender character) RETURNS VOID AS $$ DECLARE tfactor int default 0; /* in func */ BEGIN /* in func */ BEGIN /* in func */ CREATE TABLE employees(id int, shop_id int, gender character) DISTRIBUTED BY (id); /* in func */  INSERT INTO employees VALUES (0, 1, 'm'); /* in func */ END; /* in func */ BEGIN /* in func */ BEGIN /* in func */ IF EXISTS (select 1 from employees where id = mid) THEN /* in func */ RAISE EXCEPTION 'Duplicate employee id'; /* in func */ ELSE /* in func */ IF NOT (mshop between 1 AND 2) THEN /* in func */ RAISE EXCEPTION 'Invalid shop id' ; /* in func */ END IF; /* in func */ END IF; /* in func */ SELECT * INTO tfactor FROM test_excep(0); /* in func */ BEGIN /* in func */ INSERT INTO employees VALUES (mid, mshop, mgender); /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ BEGIN /* in func */ RAISE NOTICE 'catching the exception ...3'; /* in func */ END; /* in func */ END; /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ RAISE NOTICE 'catching the exception ...2'; /* in func */ END; /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ RAISE NOTICE 'catching the exception ...1'; /* in func */ END; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
 CREATE
-
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 SET debug_dtm_action_segment=1;
 SET
 SET debug_dtm_action_target=protocol;

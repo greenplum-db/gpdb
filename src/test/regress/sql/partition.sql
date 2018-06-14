@@ -1031,7 +1031,7 @@ drop table granttest;
 drop role part_role;
 
 -- deep inline + optional subpartition comma:
-CREATE TABLE partsupp (
+CREATE TABLE partsupp_1 (
     ps_partkey integer,
     ps_suppkey integer,
     ps_availqty integer,
@@ -1094,7 +1094,6 @@ CREATE TABLE partsupp (
                           )
                   )
           );
-drop table partsupp;
 
 -- Accept negative values trivially:
 create table partition_g (i int) partition by range(i) (start((-1)) end(10));
@@ -1203,7 +1202,6 @@ WITH (appendonly=true, checksum=true, blocksize=368640, compresslevel=9) PARTITI
                           )
                   )
           );
-drop table orders;
 
 -- grammar bug: MPP-3361
 create table i2 (i int) partition by range(i) (start(-2::int) end(20));
@@ -1778,8 +1776,6 @@ values (('e','f'),('g','h'))
 select tablename, partitionlistvalues from pg_partitions where tablename like 'mpp5878%';
 select tablename, partitionboundary from pg_partitions where tablename like 'mpp5878%';
 
-drop table mpp5878, mpp5878a;
-
 -- MPP-5941: work with many levels of templates
 
 CREATE TABLE mpp5941 (a int, b date, c char, 
@@ -2311,8 +2307,6 @@ INTO( PARTITION p20090309, PARTITION p20090312_tmp);
 
 select pg_get_partition_def('mpp6589a'::regclass,true);
 
-drop table mpp6589a;
-
 CREATE TABLE mpp6589i(a int, b int) 
 partition by range (b) (start (1) end (3));
 select pg_get_partition_def('mpp6589i'::regclass,true);
@@ -2325,8 +2319,6 @@ ALTER TABLE mpp6589i ADD PARTITION start (3) exclusive;
 -- should work - make sure can add an open-ended final partition
 ALTER TABLE mpp6589i ADD PARTITION start (3);
 select pg_get_partition_def('mpp6589i'::regclass,true);
-
-DROP TABLE mpp6589i;
 
 -- test open-ended SPLIT
 CREATE TABLE mpp6589b
@@ -2348,8 +2340,6 @@ SPLIT PARTITION p20090312 AT( '20090310' )
 INTO( PARTITION p20090309, PARTITION p20090312_tmp);
 
 select pg_get_partition_def('mpp6589b'::regclass,true);
-
-drop table mpp6589b;
 
 -- MPP-7191, MPP-7193: partitioned tables - fully-qualify storage type
 -- if not specified (and not a template)
@@ -2418,8 +2408,6 @@ start (date '2013-01-01') end (date '2014-01-01') WITH (appendonly=true);
 
 select pg_get_partition_def('mpp5992'::regclass,true, true);
 
-drop table mpp5992;
-
 -- MPP-10223: split subpartitions
 CREATE TABLE MPP10223pk
 (
@@ -2480,9 +2468,7 @@ ALTER TABLE MPP10223pk
  ALTER PARTITION min15part 
 SPLIT PARTITION  P_FUTURE AT ('2010-06-25') 
 INTO (PARTITION P20010101, PARTITION P_FUTURE);
-
 drop table mpp10223pk;
-
 -- rebuild the table without a primary key
 CREATE TABLE MPP10223
 (
@@ -2542,8 +2528,6 @@ INTO (PARTITION P20010101, PARTITION P_FUTURE2);
 
 select pg_get_partition_def('mpp10223'::regclass,true);
 
-drop table mpp10223;
-
 -- simpler version
 create table mpp10223b (a int, b int , d int)
 partition by range (b)
@@ -2562,8 +2546,6 @@ select partitiontablename,partitionposition,partitionrangestart,
 
 select pg_get_partition_def('mpp10223b'::regclass,true);
 
-drop table mpp10223b;
-
 -- MPP-10480: dump templates (but don't use "foo")
 create table MPP10480 (a int, b int, d int)
 partition by range (b)
@@ -2572,8 +2554,6 @@ subpartition template (start (1) end (10) every (1))
 (start (20) end (30) every (1));
 
 select pg_get_partition_template_def('MPP10480'::regclass, true, true);
-
-drop table MPP10480;
 
 -- MPP-10421: fix SPLIT of partitions with PRIMARY KEY constraint/indexes
 CREATE TABLE mpp10321a
@@ -3490,7 +3470,6 @@ reset optimizer_nestloop_factor;
 
 -- Sub-partition insertion with checking if the user provided correct leaf part
 set dml_ignore_target_partition_check=false;
-drop table if exists part_tab;
 create table part_tab ( i int, j int) distributed by (i) partition by range(j) (start(0) end(10) every(2));
 -- Wrong part
 insert into part_tab_1_prt_1 values(5,5);
@@ -3540,7 +3519,6 @@ insert into part_tab select i1.x, i2.y from input1 as i1 join input2 as i2 on i1
 select * from part_tab;
 
 -- Multi-level partitioning
-drop table if exists deep_part;
 create table deep_part ( i int, j int, k int, s char(5)) 
 distributed by (i) 
 partition by list(s)
@@ -3681,8 +3659,6 @@ select * from deep_part;
 
 drop table input2;
 drop table input1;
-drop table part_tab;
-drop table deep_part;
 
 -- Avoid TupleDesc leak when COPY partition table from files
 -- This also covers the bug reported in MPP-9548 where insertion

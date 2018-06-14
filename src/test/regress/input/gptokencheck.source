@@ -5,6 +5,7 @@
 -- testtablespace #is_transformed_to# @testtablespace@
 -- DLSUFFIX       #is_transformed_to# @DLSUFFIX@
 -- hostname       #is_transformed_to# @hostname@
+-- syslocale      #is_transformed_to# @syslocale@
 -- gpwhich_gpfdist #is_transformed_to# @gpwhich_gpfdist@
 -- gpwhich_curl    #is_transformed_to# @gpwhich_curl@
 -- gpwhich_gunzip  #is_transformed_to# @gpwhich_gunzip@

@@ -573,7 +573,7 @@ create extension if not exists gp_inject_fault;
 -- Inject fault on one primary segment that will cause compression to
 -- be considered not useful.
 select gp_inject_fault('appendonly_skip_compression', 'skip', '', '',
-'aocs_small_and_dense_content', -1, 0, dbid)
+'aocs_small_and_dense_content', 1, -1, 0, dbid)
 from gp_segment_configuration where role = 'p' and content = 0;
 
 insert into aocs_small_and_dense_content select i,i from

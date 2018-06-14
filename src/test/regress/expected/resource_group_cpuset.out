@@ -1,0 +1,11 @@
+--
+-- Test: cpuset cannot be specified when group is disabled.
+--
+CREATE RESOURCE GROUP resource_group1 WITH (memory_limit=5, cpuset='0');
+ERROR:  resource group must be enabled to use cpuset feature
+CREATE RESOURCE GROUP resource_group1 WITH (memory_limit=5, cpu_rate_limit=5);
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
+ALTER RESOURCE GROUP resource_group1 SET cpuset '0';
+ERROR:  resource group must be enabled to use cpuset feature
+DROP RESOURCE GROUP resource_group1;

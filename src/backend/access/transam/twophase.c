@@ -173,7 +173,7 @@ static void RecordTransactionCommitPrepared(TransactionId xid,
 								int nchildren,
 								TransactionId *children,
 								int nrels,
-								RelFileNode *rels,
+								RelFileNodeWithStorageType *rels,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
 								bool initfileinval);
@@ -181,7 +181,7 @@ static void RecordTransactionAbortPrepared(TransactionId xid,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
-							   RelFileNode *rels);
+							   RelFileNodeWithStorageType *rels);
 static void ProcessRecords(char *bufptr, TransactionId xid,
                            const TwoPhaseCallback callbacks[]);
 static void RemoveGXact(GlobalTransaction gxact);
@@ -952,8 +952,8 @@ TwoPhaseGetDummyProc(TransactionId xid)
  *
  *	1. TwoPhaseFileHeader
  *	2. TransactionId[] (subtransactions)
- *	3. RelFileNode[] (files to be deleted at commit)
- *	4. RelFileNode[] (files to be deleted at abort)
+ *	3. RelFileNodeWithStorageType[] (files to be deleted at commit)
+ *	4. RelFileNodeWithStorageType[] (files to be deleted at abort)
  *	5. SharedInvalidationMessage[] (inval messages to be sent at commit)
  *	6. TwoPhaseRecordOnDisk
  *	7. ...
@@ -1054,8 +1054,8 @@ StartPrepare(GlobalTransaction gxact)
 	TransactionId xid = gxact->proc.xid;
 	TwoPhaseFileHeader hdr;
 	TransactionId *children;
-	RelFileNode *commitrels;
-	RelFileNode *abortrels;
+	RelFileNodeWithStorageType *commitrels;
+	RelFileNodeWithStorageType *abortrels;
 	SharedInvalidationMessage *invalmsgs;
 
 	/* Initialize linked list */
@@ -1099,12 +1099,12 @@ StartPrepare(GlobalTransaction gxact)
 	}
 	if (hdr.ncommitrels > 0)
 	{
-		save_state_data(commitrels, hdr.ncommitrels * sizeof(RelFileNode));
+		save_state_data(commitrels, hdr.ncommitrels * sizeof(RelFileNodeWithStorageType));
 		pfree(commitrels);
 	}
 	if (hdr.nabortrels > 0)
 	{
-		save_state_data(abortrels, hdr.nabortrels * sizeof(RelFileNode));
+		save_state_data(abortrels, hdr.nabortrels * sizeof(RelFileNodeWithStorageType));
 		pfree(abortrels);
 	}
 	if (hdr.ninvalmsgs > 0)
@@ -1312,9 +1312,9 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	TwoPhaseFileHeader *hdr;
 	TransactionId latestXid;
 	TransactionId *children;
-	RelFileNode *commitrels;
-	RelFileNode *abortrels;
-	RelFileNode *delrels;
+	RelFileNodeWithStorageType *commitrels;
+	RelFileNodeWithStorageType *abortrels;
+	RelFileNodeWithStorageType *delrels;
 	int			ndelrels;
 	SharedInvalidationMessage *invalmsgs;
 	int			i;
@@ -1388,10 +1388,10 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	bufptr = buf + MAXALIGN(sizeof(TwoPhaseFileHeader));
 	children = (TransactionId *) bufptr;
 	bufptr += MAXALIGN(hdr->nsubxacts * sizeof(TransactionId));
-	commitrels = (RelFileNode *) bufptr;
-	bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNode));
-	abortrels = (RelFileNode *) bufptr;
-	bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNode));
+	commitrels = (RelFileNodeWithStorageType *) bufptr;
+	bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodeWithStorageType));
+	abortrels = (RelFileNodeWithStorageType *) bufptr;
+	bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodeWithStorageType));
 	invalmsgs = (SharedInvalidationMessage *) bufptr;
 	bufptr += MAXALIGN(hdr->ninvalmsgs * sizeof(SharedInvalidationMessage));
 
@@ -1448,12 +1448,12 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	}
 	for (i = 0; i < ndelrels; i++)
 	{
-		SMgrRelation srel = smgropen(delrels[i], InvalidBackendId);
+		SMgrRelation srel = smgropen(delrels[i].node, InvalidBackendId);
 		ForkNumber	fork;
 
 		for (fork = 0; fork <= MAX_FORKNUM; fork++)
 		{
-			smgrdounlink(srel, fork, false);
+			smgrdounlink(srel, fork, false, delrels[i].relstorage);
 		}
 		smgrclose(srel);
 	}
@@ -1793,8 +1793,8 @@ RecoverPreparedTransactions(void)
 		bufptr = buf + MAXALIGN(sizeof(TwoPhaseFileHeader));
 		subxids = (TransactionId *) bufptr;
 		bufptr += MAXALIGN(hdr->nsubxacts * sizeof(TransactionId));
-		bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNode));
-		bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNode));
+		bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodeWithStorageType));
+		bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodeWithStorageType));
 		bufptr += MAXALIGN(hdr->ninvalmsgs * sizeof(SharedInvalidationMessage));
 
 		/*
@@ -1875,7 +1875,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 								int nchildren,
 								TransactionId *children,
 								int nrels,
-								RelFileNode *rels,
+							    RelFileNodeWithStorageType *rels,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
 								bool initfileinval)
@@ -1916,7 +1916,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	{
 		rdata[0].next = &(rdata[1]);
 		rdata[1].data = (char *) rels;
-		rdata[1].len = nrels * sizeof(RelFileNode);
+		rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
 		rdata[1].buffer = InvalidBuffer;
 		lastrdata = 1;
 	}
@@ -1999,7 +1999,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
-							   RelFileNode *rels)
+							   RelFileNodeWithStorageType *rels)
 {
 	XLogRecData rdata[3];
 	int                     lastrdata = 0;
@@ -2029,7 +2029,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 	{
 		rdata[0].next = &(rdata[1]);
 		rdata[1].data = (char *) rels;
-		rdata[1].len = nrels * sizeof(RelFileNode);
+		rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
 		rdata[1].buffer = InvalidBuffer;
 		lastrdata = 1;
 	}

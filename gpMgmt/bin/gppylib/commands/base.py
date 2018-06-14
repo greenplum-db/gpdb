@@ -648,7 +648,7 @@ class RemoteExecutionContext(LocalExecutionContext):
 
         # Escape " for remote execution otherwise it interferes with ssh
         cmd.cmdStr = cmd.cmdStr.replace('"', '\\"')
-        cmd.cmdStr = "ssh -o 'StrictHostKeyChecking no' " \
+        cmd.cmdStr = "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 " \
                      "{targethost} \"{gphome} {cmdstr}\"".format(targethost=self.targetHost,
                                                                  gphome=". %s/greenplum_path.sh;" % self.gphome,
                                                                  cmdstr=cmd.cmdStr)

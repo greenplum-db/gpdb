@@ -14,6 +14,7 @@ test: resgroup/resgroup_memory_limit
 test: resgroup/resgroup_alter_memory
 test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_alter_memory_spill_ratio
+test: resgroup/resgroup_cpuset
 test: resgroup/resgroup_set_memory_spill_ratio
 test: resgroup/resgroup_unlimit_memory_spill_ratio
 test: resgroup/resgroup_cancel_terminate_concurrency

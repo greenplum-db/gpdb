@@ -10,10 +10,10 @@ INSERT 100
 create extension if not exists gp_inject_fault;
 CREATE
 
-select gp_inject_fault('reindex_relation', 'suspend', 2);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('reindex_relation', 'suspend', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 -- The reindex_relation fault should be hit

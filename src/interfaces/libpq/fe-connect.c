@@ -87,6 +87,10 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
 #include "libpq/ip.h"
 #include "mb/pg_wchar.h"
 
+#if defined(_AIX)
+int     getpeereid(int, uid_t *__restrict__, gid_t *__restrict__);
+#endif
+
 #ifndef FD_CLOEXEC
 #define FD_CLOEXEC 1
 #endif

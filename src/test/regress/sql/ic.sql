@@ -4,7 +4,9 @@
  * Parameter combination tests
  * Improve code coverage tests
  */
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 CREATE SCHEMA ic_udp_test;
 SET search_path = ic_udp_test;
@@ -212,3 +214,24 @@ SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 1);
 SELECT * FROM a;
 DROP TABLE a;
 SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 1);
+
+-- Use WITH RECURSIVE to construct a one-time filter result node that executed
+-- on QD, meanwhile, let the result node has a outer node which contain motion.
+-- It's used to test that result node on QD can send a stop message to sender in
+-- one-time filter case.
+RESET gp_interconnect_snd_queue_depth;
+RESET gp_interconnect_queue_depth;
+CREATE TABLE recursive_table_ic (a INT) DISTRIBUTED BY (a);
+-- Insert enough data so interconnect sender don't quit earlier.
+INSERT INTO recursive_table_ic SELECT * FROM generate_series(20, 30000);
+WITH RECURSIVE
+r(i) AS (
+	SELECT 1
+),
+y(i) AS (
+	SELECT 1
+	UNION ALL
+	SELECT i + 1 FROM y, recursive_table_ic WHERE NOT EXISTS (SELECT * FROM r LIMIT 10)
+)
+SELECT * FROM y LIMIT 10;
+DROP TABLE recursive_table_ic;

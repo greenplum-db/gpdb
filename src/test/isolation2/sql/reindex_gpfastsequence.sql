@@ -6,7 +6,7 @@ insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
 
 create extension if not exists gp_inject_fault;
 
-select gp_inject_fault('reindex_relation', 'suspend', 2);
+select gp_inject_fault_infinite('reindex_relation', 'suspend', 2);
 
 -- The reindex_relation fault should be hit
 1&: reindex table gp_fastsequence;

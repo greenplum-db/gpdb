@@ -1,12 +1,14 @@
-create extension if not exists gp_inject_fault;
+-- start_ignore
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
 -- Once this fault is hit, FTS process should abort current
 -- transaction and exit.
-select gp_inject_fault('fts_update_config', 'error', '', '', '', -1, 0, 1);
+select gp_inject_fault_infinite('fts_update_config', 'error', 1);
 -- FTS probe connection should encounter an error due to this fault,
 -- injected on content 0 primary.
-select gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid)
+select gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
 -- Upon failure to probe content 0 primary, FTS will try to update the
 -- configuration.  The update to configuration will hit error due to

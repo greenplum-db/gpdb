@@ -114,6 +114,23 @@ create unique index bar_idx on foo (y);
 drop table if exists foo;
 drop table if exists bar;
 --
+-- CREATE TABLE with both PRIMARY KEY and UNIQUE constraints
+--
+create table foo (id int primary key, name text unique) distributed replicated;
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "foo_pkey" for table "foo"
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_name_key" for table "foo"
+-- success
+insert into foo values (1,'aaa');
+insert into foo values (2,'bbb');
+-- fail
+insert into foo values (1,'ccc');
+ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 192.168.99.102:25432 pid=22681)
+DETAIL:  Key (id)=(1) already exists.
+insert into foo values (3,'aaa');
+ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg2 192.168.99.102:25434 pid=22683)
+DETAIL:  Key (name)=(aaa) already exists.
+drop table if exists foo;
+--
 -- CREATE TABLE
 --
 --
@@ -271,16 +288,223 @@ alter table foo drop column x;
 alter table bar drop column x;
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 drop table if exists foo;
+drop table if exists foo1;
+NOTICE:  table "foo1" does not exist, skipping
 drop table if exists bar;
+drop table if exists bar1;
+NOTICE:  table "bar1" does not exist, skipping
 -- Alter gp_distribution_policy
 create table foo(x int, y int) distributed replicated;
+create table foo1(x int, y int) distributed replicated;
 create table bar(x int, y int) distributed by (x);
+create table bar1(x int, y int) distributed randomly;
+insert into foo select i,i from generate_series(1,10) i;
+insert into foo1 select i,i from generate_series(1,10) i;
+insert into bar select i,i from generate_series(1,10) i;
+insert into bar1 select i,i from generate_series(1,10) i;
 -- alter distribution policy of replicated table
 alter table foo set distributed by (x);
+alter table foo1 set distributed randomly;
 -- alter a partitioned table to replicated table
 alter table bar set distributed replicated;
+alter table bar1 set distributed replicated;
+-- verify the new policies
+\d foo
+       Table "rpt.foo"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed by: (x)
+
+\d foo1
+       Table "rpt.foo1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed randomly
+
+\d bar
+       Table "rpt.bar"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d bar1
+       Table "rpt.bar1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+-- verify the reorganized data
+select * from foo;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from foo1;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from bar;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from bar1;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+-- alter back
+alter table foo set distributed replicated;
+alter table foo1 set distributed replicated;
+alter table bar set distributed by (x);
+alter table bar1 set distributed randomly;
+-- verify the policies again
+\d foo
+       Table "rpt.foo"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d foo1
+       Table "rpt.foo1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d bar
+       Table "rpt.bar"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed by: (x)
+
+\d bar1
+       Table "rpt.bar1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed randomly
+
+-- verify the reorganized data again
+select * from foo;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from foo1;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from bar;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from bar1;
+ x  | y  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+(10 rows)
+
 drop table if exists foo;
+drop table if exists foo1;
 drop table if exists bar;
+drop table if exists bar1;
 ---------
 -- UPDATE / DELETE
 ---------

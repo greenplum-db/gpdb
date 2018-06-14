@@ -524,6 +524,25 @@ WHERE l.id % r.id = 0
 GROUP BY l.id
 ORDER BY l.id;
 
+-- Array types are GPDB hashable
+CREATE TEMP TABLE text_array_table (t text[]) DISTRIBUTED BY ( t );
+INSERT INTO text_array_table VALUES ('{foo}');
+
+CREATE TEMP TABLE int2_array_table (f1 int2[]) DISTRIBUTED BY (f1);
+INSERT INTO int2_array_table VALUES ('{1,2,3}');
+
+CREATE TEMP TABLE int4_array_table (f1 int4[]) DISTRIBUTED BY (f1);
+INSERT INTO int4_array_table VALUES ('{1,2,3}');
+
+CREATE TEMP TABLE int8_array_table (f1 int8[]) DISTRIBUTED BY (f1);
+INSERT INTO int8_array_table VALUES ('{1,2,3}');
+
+CREATE TEMP TABLE float4_array_table (f1 float4[]) DISTRIBUTED BY (f1);
+INSERT INTO float4_array_table VALUES ('{1.1,2.1,3.1}');
+
+CREATE TEMP TABLE float8_array_table (f1 float8[]) DISTRIBUTED BY (f1);
+INSERT INTO float8_array_table VALUES ('{1.1,2.1,3.1}');
+
 -- clean up
 -- start_ignore
 -- Drop above three functions

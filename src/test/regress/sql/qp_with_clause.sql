@@ -9838,7 +9838,7 @@ CREATE TABLE foo (key INTEGER, value INTEGER);
 INSERT INTO foo SELECT i, i % 10 from generate_series(1, 100) i;
 
 CREATE TABLE bar(bar_key INTEGER, bar_value INTEGER);
-INSERT INTO bar SELECT i, i % 5 FROM generate_series(1, 100000) i;
+INSERT INTO bar SELECT i, i % 5 FROM generate_series(1, 1000) i;
 
 SET enable_hashjoin = OFF;
 SET enable_mergejoin = OFF;
@@ -10080,7 +10080,7 @@ SET gp_cte_sharing = ON;
 -------------------------------------------------------------------------------------------------------------------------------
 
 CREATE TABLE emp (ename CHARACTER VARYING(50), empno INTEGER, mgr INTEGER, deptno INTEGER);
-INSERT INTO emp SELECT i || 'NAME', i, i%6, i%16 FROM generate_series(1, 10000) i;
+INSERT INTO emp SELECT i || 'NAME', i, i%6, i%16 FROM generate_series(1, 100) i;
 
 CREATE TABLE manager (dept_mgr_no INTEGER);
 INSERT INTO manager SELECT i FROM generate_series(1, 100) i;

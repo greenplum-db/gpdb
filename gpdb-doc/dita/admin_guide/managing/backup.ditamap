@@ -15,7 +15,10 @@
         <topicref href="backup-boostfs.xml#topic_zp4_mvv_bdb"/>
         <topicref href="backup-boostfs.xml#topic_t4z_tvv_bdb"/>
       </topicref>
-      <topicref href="backup-s3-plugin.xml"/>
+      <topicref href="backup-plugins.xml">
+        <topicref href="backup-s3-plugin.xml"/>
+        <topicref href="backup-ddboost-plugin.xml" otherprops="pivotal"/>
+      </topicref>
       <topicref href="backup-plugin-api.xml">
         <topicref href="plugin_api/backup_data.xml" linking="none"/>
         <topicref href="plugin_api/backup_file.xml" linking="none"/>

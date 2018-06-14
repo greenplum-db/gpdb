@@ -376,7 +376,7 @@ heap_create(const char *relname,
 		isAppendOnly = (relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS);
 
 		RelationOpenSmgr(rel);
-		RelationCreateStorage(rel->rd_node, relpersistence);
+		RelationCreateStorage(rel->rd_node, relpersistence, relstorage);
 
 		/*
 		 * AO tables don't use the buffer manager, better to not keep the

@@ -9,21 +9,31 @@ CREATE FUNCTION gp_inject_fault(
   ddl text,
   database text,
   tablename text,
-  numoccurrences int4,
-  sleeptime int4,
+  start_occurrence int4,
+  end_occurrence int4,
+  extra_arg int4,
   db_id int4)
 RETURNS boolean
 AS 'MODULE_PATHNAME'
 LANGUAGE C VOLATILE STRICT NO SQL;
 
--- Simpler version, for convenience in the common case of 1 occurrence,
--- no sleep, and no ddl/database/tablename.
+-- Simpler version, trigger only one time, occurrence start at 1 and
+-- end at 1, no sleep and no ddl/database/tablename.
 CREATE FUNCTION gp_inject_fault(
   faultname text,
   type text,
   db_id int4)
 RETURNS boolean
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 0, $3) $$
+AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3) $$
+LANGUAGE SQL;
+
+-- Simpler version, always trigger until fault is reset.
+CREATE FUNCTION gp_inject_fault_infinite(
+  faultname text,
+  type text,
+  db_id int4)
+RETURNS boolean
+AS $$ select gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3) $$
 LANGUAGE SQL;
 
 -- Simpler version to avoid confusion for wait_until_triggered fault.
@@ -34,5 +44,5 @@ CREATE FUNCTION gp_wait_until_triggered_fault(
   numtimestriggered int4,
   db_id int4)
 RETURNS boolean
-AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', $2, 0, $3) $$
+AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3) $$
 LANGUAGE SQL;

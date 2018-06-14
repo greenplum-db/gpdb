@@ -293,8 +293,17 @@ smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
 
 
 void
-smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isRedo)
+smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isRedo, char relstorage)
 {
+	/*
+	 * AO/CO tables have only MAIN_FORKNUM we should exit early to prevent
+	 * extra work.
+	 */
+	if (relstorage_is_ao(relstorage) &&
+		forknum != MAIN_FORKNUM)
+		return;
+
+
 	RelFileNodeBackend rnode = reln->smgr_rnode;
 
 	/* Close the fork */
@@ -303,8 +312,14 @@ smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 	/*
 	 * Get rid of any remaining buffers for the relation.  bufmgr will just
 	 * drop them without bothering to write the contents.
+	 *
+	 * Apart from relstorage == RELSTORAGE_HEAP do any other RELSTOARGE type
+	 * expected to have buffers in shared memory ? Can check only for
+	 * RELSTORAGE_HEAP below.
 	 */
-	DropRelFileNodeBuffers(rnode, forknum, 0);
+	if ((relstorage != RELSTORAGE_AOROWS) &&
+		(relstorage != RELSTORAGE_AOCOLS))
+		DropRelFileNodeBuffers(rnode, forknum, 0);
 
 	/*
 	 * It'd be nice to tell the stats collector to forget it immediately, too.
@@ -330,7 +345,7 @@ smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 	 * ERROR, because we've already decided to commit or abort the current
 	 * xact.
 	 */
-	mdunlink(rnode, forknum, isRedo);
+	mdunlink(rnode, forknum, isRedo, relstorage);
 }
 
 /*

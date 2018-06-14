@@ -3,14 +3,13 @@
 
 ! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
 
+! rmdir @cgroup_mnt_point@/cpuset/gpdb;
+
 ! mkdir @cgroup_mnt_point@/cpu/gpdb;
 
 ! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
 
-! chmod 755 @cgroup_mnt_point@/cpu/gpdb;
-
-! chmod 755 @cgroup_mnt_point@/cpuacct/gpdb;
-
+! mkdir @cgroup_mnt_point@/cpuset/gpdb;
 -- end_ignore
 
 -- enable resource group and restart cluster.
@@ -73,4 +72,8 @@ rqpsession|rqpcommand|rqppriority|rqpweight
 -- by default admin_group has concurrency set to -1 which leads to
 -- very small memory quota for each resgroup slot, correct it.
 ALTER RESOURCE GROUP admin_group SET concurrency 2;
+ALTER
+-- in later cases we will SHOW memory_spill_ratio as first command
+-- to verify that it can be correctly loaded even for bypassed commands
+ALTER RESOURCE GROUP admin_group SET memory_spill_ratio 10;
 ALTER

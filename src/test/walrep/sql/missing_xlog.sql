@@ -121,7 +121,7 @@ create extension if not exists gp_inject_fault;
 -- temporarily in the test.  Request a scan so that the skip fault is
 -- triggered immediately, rather that waiting until the next probe
 -- interval.
-select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 

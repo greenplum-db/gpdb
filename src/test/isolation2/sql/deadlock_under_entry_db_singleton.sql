@@ -40,7 +40,7 @@ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 
 -- inject fault on QD
 select gp_inject_fault('transaction_start_under_entry_db_singleton', 'reset', 1);
-select gp_inject_fault('transaction_start_under_entry_db_singleton', 'suspend', 1);
+select gp_inject_fault_infinite('transaction_start_under_entry_db_singleton', 'suspend', 1);
 
 -- The QD should already hold RowExclusiveLock and ExclusiveLock on
 -- deadlock_entry_db_singleton_table and the QE ENTRY_DB_SINGLETON

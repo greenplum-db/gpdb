@@ -290,10 +290,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         Greenplum Database allocates available resource group shared memory to the query. The
         maximum amount of resource group memory available to a specific transaction slot is the sum
         of the transaction's fixed memory and the full resource group shared memory allotment.</p>
-      <note>Greenplum Database tracks, but does not actively monitor, transaction memory usage
-        in resource groups. A transaction submitted in a resource group will fail and exit
-        when memory usage exceeds its fixed memory allotment, no available resource group
-        shared memory exists, and the transaction requests more memory.</note>
       </body>
       
       <topic id="topic833glob" xml:lang="en">
@@ -305,11 +301,22 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
            sum is less than 100, Greenplum Database allocates any unreserved memory to a
            resource group global shared memory pool.</p>
          <p>Resource group global shared memory
-           is available only to role-based groups.</p>
+           is available only to resource groups that you configure with the <codeph>vmtracker</codeph> memory auditor.</p>
          <p>When available, Greenplum Database allocates global shared memory
           to a transaction after first allocating slot and resource group shared
           memory. Greenplum Database allocates resource group global shared memory to
           transactions on a first-come first-served basis.</p>
+         <note>Greenplum Database tracks, but does not actively monitor, transaction
+           memory usage in resource groups. If the memory usage for a resource
+           group exceeds its fixed memory allotment, a transaction in the resource
+           group fails when <i>all</i> of these conditions are met:<ul>
+             <li>No available resource group shared memory exists.</li>
+             <li>No available global shared memory exists.</li>
+             <li>The transaction requests additional memory.</li></ul></note>
+          <p>Greenplum Database uses resource group memory more efficiently when
+            you leave some memory (for example, 10-20%) unallocated for the global
+            shared memory pool. The availability of global shared memory also helps
+            to mitigate the failure of memory-consuming or unpredicted queries.</p>
         </body>
       </topic>
 

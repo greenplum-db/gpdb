@@ -86,7 +86,7 @@ extern void smgrclosenode(RelFileNodeBackend rnode);
 extern void smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
 extern void smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
 extern void smgrdounlink(SMgrRelation reln, ForkNumber forknum,
-			 bool isRedo);
+						 bool isRedo, char relstorage);
 extern void smgrextend(SMgrRelation reln, ForkNumber forknum,
 		   BlockNumber blocknum, char *buffer, bool skipFsync);
 extern void smgrprefetch(SMgrRelation reln, ForkNumber forknum,
@@ -112,7 +112,7 @@ extern void mdclose(SMgrRelation reln, ForkNumber forknum);
 extern void mdcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
 extern void mdcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
 extern bool mdexists(SMgrRelation reln, ForkNumber forknum);
-extern void mdunlink(RelFileNodeBackend rnode, ForkNumber forknum, bool isRedo);
+extern void mdunlink(RelFileNodeBackend rnode, ForkNumber forknum, bool isRedo, char relstorage);
 extern void mdextend(SMgrRelation reln, ForkNumber forknum,
 		 BlockNumber blocknum, char *buffer, bool skipFsync);
 extern void mdprefetch(SMgrRelation reln, ForkNumber forknum,

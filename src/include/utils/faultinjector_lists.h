@@ -235,6 +235,12 @@ FI_IDENT(FTSRecoveryInProgress, "fts_recovery_in_progress")
 FI_IDENT(UpgradeRowLock, "upgrade_row_lock")
 /* inject fault in Gdd loop */
 FI_IDENT(GddProbe, "gdd_probe")
+/* inject fault after updating pg_database.datfrozenxid (but before committing) */
+FI_IDENT(VacuumUpdateDatFrozenXid, "vacuum_update_dat_frozen_xid")
+/* inject fault in initial OS collation locale lookup */
+FI_IDENT(CollateLocaleOsLookup, "collate_locale_os_lookup")
+/* inject fault before create resource group committing */
+FI_IDENT(CreateResourceGroupFail, "create_resource_group_fail")
 #endif
 
 /*

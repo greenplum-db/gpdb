@@ -30,10 +30,10 @@ UPDATE 100
 UPDATE 100
 
 
-1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 2);
-gp_inject_fault
----------------
-t              
+1: select gp_inject_fault_infinite('vacuum_relation_open_relation_during_drop_phase', 'suspend', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 2&: vacuum ao_@orientation@_vacuum_cleanup1;  <waiting ...>
@@ -93,10 +93,10 @@ DELETE 100
 t       |pg_<seg>_<oid>    
 t       |pg_aovisimap_<oid>
 (2 rows)
-1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+1: select gp_inject_fault_infinite('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 1&: vacuum ao_@orientation@_vacuum_cleanup3;  <waiting ...>
 

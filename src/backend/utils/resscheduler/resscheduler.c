@@ -1075,8 +1075,8 @@ AtAbort_ResScheduler(void)
 		portalId = 0;
 }
 
-/* This routine checks whether speficied utility stmt should be involved into
- * resourece queue mgmt; if yes, take the slot from the resource queue; if we
+/* This routine checks whether specified utility stmt should be involved into
+ * resource queue mgmt; if yes, take the slot from the resource queue; if we
  * want to track additional utility stmts, add it into the condition check */
 void
 ResHandleUtilityStmt(Portal portal, Node *stmt)

@@ -3,17 +3,29 @@ CREATE
 1:CREATE TABLE crash_test_redundant(c1 int);
 CREATE
 
+1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 -- transaction of session 2 suspend after inserted 'COMMIT' record
-1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+1:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 -- checkpoint suspend before scanning proc array
-1:select gp_inject_fault('checkpoint_dtx_info', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+1:select gp_inject_fault_infinite('checkpoint_dtx_info', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 1&:CHECKPOINT;  <waiting ...>
 

@@ -9382,7 +9382,7 @@ INSERT INTO foo SELECT i, i % 10 from generate_series(1, 100) i;
 CREATE TABLE bar(bar_key INTEGER, bar_value INTEGER);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'bar_key' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO bar SELECT i, i % 5 FROM generate_series(1, 100000) i;
+INSERT INTO bar SELECT i, i % 5 FROM generate_series(1, 1000) i;
 SET enable_hashjoin = OFF;
 SET enable_mergejoin = OFF;
 SET enable_nestloop = ON;
@@ -10287,7 +10287,7 @@ SET gp_cte_sharing = ON;
 CREATE TABLE emp (ename CHARACTER VARYING(50), empno INTEGER, mgr INTEGER, deptno INTEGER);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ename' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO emp SELECT i || 'NAME', i, i%6, i%16 FROM generate_series(1, 10000) i;
+INSERT INTO emp SELECT i || 'NAME', i, i%6, i%16 FROM generate_series(1, 100) i;
 CREATE TABLE manager (dept_mgr_no INTEGER);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dept_mgr_no' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -10317,26 +10317,26 @@ WHERE  e.deptno = dc.deptno
 ORDER BY 1, 2 DESC LIMIT 20;
  employee_name | emp_dept_count 
 ---------------+----------------
- 10000NAME     |            625
- 1000NAME      |            625
- 1001NAME      |            625
- 1002NAME      |            625
- 1003NAME      |            625
- 1004NAME      |            625
- 1005NAME      |            625
- 1006NAME      |            625
- 1007NAME      |            625
- 1008NAME      |            625
- 1009NAME      |            625
- 100NAME       |            625
- 1010NAME      |            625
- 1011NAME      |            625
- 1012NAME      |            625
- 1013NAME      |            625
- 1014NAME      |            625
- 1015NAME      |            625
- 1016NAME      |            625
- 1017NAME      |            625
+ 100NAME       |              7
+ 10NAME        |              6
+ 11NAME        |              6
+ 12NAME        |              6
+ 13NAME        |              6
+ 14NAME        |              6
+ 15NAME        |              6
+ 16NAME        |              6
+ 17NAME        |              7
+ 18NAME        |              7
+ 19NAME        |              7
+ 1NAME         |              7
+ 20NAME        |              7
+ 21NAME        |              6
+ 22NAME        |              6
+ 23NAME        |              6
+ 24NAME        |              6
+ 25NAME        |              6
+ 26NAME        |              6
+ 27NAME        |              6
 (20 rows)
 
 -- The sharing of CTE is enabled
@@ -10358,26 +10358,26 @@ WHERE  e.deptno = dc.deptno
 ORDER BY 1, 2 DESC LIMIT 20;
  employee_name | emp_dept_count 
 ---------------+----------------
- 10000NAME     |            625
- 1000NAME      |            625
- 1001NAME      |            625
- 1002NAME      |            625
- 1003NAME      |            625
- 1004NAME      |            625
- 1005NAME      |            625
- 1006NAME      |            625
- 1007NAME      |            625
- 1008NAME      |            625
- 1009NAME      |            625
- 100NAME       |            625
- 1010NAME      |            625
- 1011NAME      |            625
- 1012NAME      |            625
- 1013NAME      |            625
- 1014NAME      |            625
- 1015NAME      |            625
- 1016NAME      |            625
- 1017NAME      |            625
+ 100NAME       |              7
+ 10NAME        |              6
+ 11NAME        |              6
+ 12NAME        |              6
+ 13NAME        |              6
+ 14NAME        |              6
+ 15NAME        |              6
+ 16NAME        |              6
+ 17NAME        |              7
+ 18NAME        |              7
+ 19NAME        |              7
+ 1NAME         |              7
+ 20NAME        |              7
+ 21NAME        |              6
+ 22NAME        |              6
+ 23NAME        |              6
+ 24NAME        |              6
+ 25NAME        |              6
+ 26NAME        |              6
+ 27NAME        |              6
 (20 rows)
 
 -------------------
@@ -10418,31 +10418,31 @@ WHERE e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3, 4 DESC LIMIT 25;
  employee_name | emp_dept_count | manager_name | mgr_dept_count 
 ---------------+----------------+--------------+----------------
- 10000NAME     |            625 | 4NAME        |            625
- 1000NAME      |            625 | 4NAME        |            625
- 1001NAME      |            625 | 5NAME        |            625
- 1003NAME      |            625 | 1NAME        |            625
- 1004NAME      |            625 | 2NAME        |            625
- 1005NAME      |            625 | 3NAME        |            625
- 1006NAME      |            625 | 4NAME        |            625
- 1007NAME      |            625 | 5NAME        |            625
- 1009NAME      |            625 | 1NAME        |            625
- 100NAME       |            625 | 4NAME        |            625
- 1010NAME      |            625 | 2NAME        |            625
- 1011NAME      |            625 | 3NAME        |            625
- 1012NAME      |            625 | 4NAME        |            625
- 1013NAME      |            625 | 5NAME        |            625
- 1015NAME      |            625 | 1NAME        |            625
- 1016NAME      |            625 | 2NAME        |            625
- 1017NAME      |            625 | 3NAME        |            625
- 1018NAME      |            625 | 4NAME        |            625
- 1019NAME      |            625 | 5NAME        |            625
- 101NAME       |            625 | 5NAME        |            625
- 1021NAME      |            625 | 1NAME        |            625
- 1022NAME      |            625 | 2NAME        |            625
- 1023NAME      |            625 | 3NAME        |            625
- 1024NAME      |            625 | 4NAME        |            625
- 1025NAME      |            625 | 5NAME        |            625
+ 100NAME       |              7 | 4NAME        |              7
+ 10NAME        |              6 | 4NAME        |              7
+ 11NAME        |              6 | 5NAME        |              6
+ 13NAME        |              6 | 1NAME        |              7
+ 14NAME        |              6 | 2NAME        |              7
+ 15NAME        |              6 | 3NAME        |              7
+ 16NAME        |              6 | 4NAME        |              7
+ 17NAME        |              7 | 5NAME        |              6
+ 19NAME        |              7 | 1NAME        |              7
+ 1NAME         |              7 | 1NAME        |              7
+ 20NAME        |              7 | 2NAME        |              7
+ 21NAME        |              6 | 3NAME        |              7
+ 22NAME        |              6 | 4NAME        |              7
+ 23NAME        |              6 | 5NAME        |              6
+ 25NAME        |              6 | 1NAME        |              7
+ 26NAME        |              6 | 2NAME        |              7
+ 27NAME        |              6 | 3NAME        |              7
+ 28NAME        |              6 | 4NAME        |              7
+ 29NAME        |              6 | 5NAME        |              6
+ 2NAME         |              7 | 2NAME        |              7
+ 31NAME        |              6 | 1NAME        |              7
+ 32NAME        |              6 | 2NAME        |              7
+ 33NAME        |              7 | 3NAME        |              7
+ 34NAME        |              7 | 4NAME        |              7
+ 35NAME        |              7 | 5NAME        |              6
 (25 rows)
 
 -- The sharing of CTE is enabled
@@ -10480,31 +10480,31 @@ WHERE e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3, 4 DESC LIMIT 25;
  employee_name | emp_dept_count | manager_name | mgr_dept_count 
 ---------------+----------------+--------------+----------------
- 10000NAME     |            625 | 4NAME        |            625
- 1000NAME      |            625 | 4NAME        |            625
- 1001NAME      |            625 | 5NAME        |            625
- 1003NAME      |            625 | 1NAME        |            625
- 1004NAME      |            625 | 2NAME        |            625
- 1005NAME      |            625 | 3NAME        |            625
- 1006NAME      |            625 | 4NAME        |            625
- 1007NAME      |            625 | 5NAME        |            625
- 1009NAME      |            625 | 1NAME        |            625
- 100NAME       |            625 | 4NAME        |            625
- 1010NAME      |            625 | 2NAME        |            625
- 1011NAME      |            625 | 3NAME        |            625
- 1012NAME      |            625 | 4NAME        |            625
- 1013NAME      |            625 | 5NAME        |            625
- 1015NAME      |            625 | 1NAME        |            625
- 1016NAME      |            625 | 2NAME        |            625
- 1017NAME      |            625 | 3NAME        |            625
- 1018NAME      |            625 | 4NAME        |            625
- 1019NAME      |            625 | 5NAME        |            625
- 101NAME       |            625 | 5NAME        |            625
- 1021NAME      |            625 | 1NAME        |            625
- 1022NAME      |            625 | 2NAME        |            625
- 1023NAME      |            625 | 3NAME        |            625
- 1024NAME      |            625 | 4NAME        |            625
- 1025NAME      |            625 | 5NAME        |            625
+ 100NAME       |              7 | 4NAME        |              7
+ 10NAME        |              6 | 4NAME        |              7
+ 11NAME        |              6 | 5NAME        |              6
+ 13NAME        |              6 | 1NAME        |              7
+ 14NAME        |              6 | 2NAME        |              7
+ 15NAME        |              6 | 3NAME        |              7
+ 16NAME        |              6 | 4NAME        |              7
+ 17NAME        |              7 | 5NAME        |              6
+ 19NAME        |              7 | 1NAME        |              7
+ 1NAME         |              7 | 1NAME        |              7
+ 20NAME        |              7 | 2NAME        |              7
+ 21NAME        |              6 | 3NAME        |              7
+ 22NAME        |              6 | 4NAME        |              7
+ 23NAME        |              6 | 5NAME        |              6
+ 25NAME        |              6 | 1NAME        |              7
+ 26NAME        |              6 | 2NAME        |              7
+ 27NAME        |              6 | 3NAME        |              7
+ 28NAME        |              6 | 4NAME        |              7
+ 29NAME        |              6 | 5NAME        |              6
+ 2NAME         |              7 | 2NAME        |              7
+ 31NAME        |              6 | 1NAME        |              7
+ 32NAME        |              6 | 2NAME        |              7
+ 33NAME        |              7 | 3NAME        |              7
+ 34NAME        |              7 | 4NAME        |              7
+ 35NAME        |              7 | 5NAME        |              6
 (25 rows)
 
 -------------------
@@ -10537,26 +10537,26 @@ WHERE  e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3 ASC LIMIT 20;
  employee_name | emp_dept_count | manager_name 
 ---------------+----------------+--------------
- 10000NAME     |            625 | 4NAME
- 1000NAME      |            625 | 4NAME
- 1001NAME      |            625 | 5NAME
- 1003NAME      |            625 | 1NAME
- 1004NAME      |            625 | 2NAME
- 1005NAME      |            625 | 3NAME
- 1006NAME      |            625 | 4NAME
- 1007NAME      |            625 | 5NAME
- 1009NAME      |            625 | 1NAME
- 100NAME       |            625 | 4NAME
- 1010NAME      |            625 | 2NAME
- 1011NAME      |            625 | 3NAME
- 1012NAME      |            625 | 4NAME
- 1013NAME      |            625 | 5NAME
- 1015NAME      |            625 | 1NAME
- 1016NAME      |            625 | 2NAME
- 1017NAME      |            625 | 3NAME
- 1018NAME      |            625 | 4NAME
- 1019NAME      |            625 | 5NAME
- 101NAME       |            625 | 5NAME
+ 100NAME       |              7 | 4NAME
+ 10NAME        |              6 | 4NAME
+ 11NAME        |              6 | 5NAME
+ 13NAME        |              6 | 1NAME
+ 14NAME        |              6 | 2NAME
+ 15NAME        |              6 | 3NAME
+ 16NAME        |              6 | 4NAME
+ 17NAME        |              7 | 5NAME
+ 19NAME        |              7 | 1NAME
+ 1NAME         |              7 | 1NAME
+ 20NAME        |              7 | 2NAME
+ 21NAME        |              6 | 3NAME
+ 22NAME        |              6 | 4NAME
+ 23NAME        |              6 | 5NAME
+ 25NAME        |              6 | 1NAME
+ 26NAME        |              6 | 2NAME
+ 27NAME        |              6 | 3NAME
+ 28NAME        |              6 | 4NAME
+ 29NAME        |              6 | 5NAME
+ 2NAME         |              7 | 2NAME
 (20 rows)
 
 -- The sharing of CTE is enabled
@@ -10586,26 +10586,26 @@ WHERE  e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3 ASC LIMIT 20;
  employee_name | emp_dept_count | manager_name 
 ---------------+----------------+--------------
- 10000NAME     |            625 | 4NAME
- 1000NAME      |            625 | 4NAME
- 1001NAME      |            625 | 5NAME
- 1003NAME      |            625 | 1NAME
- 1004NAME      |            625 | 2NAME
- 1005NAME      |            625 | 3NAME
- 1006NAME      |            625 | 4NAME
- 1007NAME      |            625 | 5NAME
- 1009NAME      |            625 | 1NAME
- 100NAME       |            625 | 4NAME
- 1010NAME      |            625 | 2NAME
- 1011NAME      |            625 | 3NAME
- 1012NAME      |            625 | 4NAME
- 1013NAME      |            625 | 5NAME
- 1015NAME      |            625 | 1NAME
- 1016NAME      |            625 | 2NAME
- 1017NAME      |            625 | 3NAME
- 1018NAME      |            625 | 4NAME
- 1019NAME      |            625 | 5NAME
- 101NAME       |            625 | 5NAME
+ 100NAME       |              7 | 4NAME
+ 10NAME        |              6 | 4NAME
+ 11NAME        |              6 | 5NAME
+ 13NAME        |              6 | 1NAME
+ 14NAME        |              6 | 2NAME
+ 15NAME        |              6 | 3NAME
+ 16NAME        |              6 | 4NAME
+ 17NAME        |              7 | 5NAME
+ 19NAME        |              7 | 1NAME
+ 1NAME         |              7 | 1NAME
+ 20NAME        |              7 | 2NAME
+ 21NAME        |              6 | 3NAME
+ 22NAME        |              6 | 4NAME
+ 23NAME        |              6 | 5NAME
+ 25NAME        |              6 | 1NAME
+ 26NAME        |              6 | 2NAME
+ 27NAME        |              6 | 3NAME
+ 28NAME        |              6 | 4NAME
+ 29NAME        |              6 | 5NAME
+ 2NAME         |              7 | 2NAME
 (20 rows)
 
 -------------------
@@ -10650,31 +10650,31 @@ WHERE  e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3, 4 DESC LIMIT 25;
  employee_name | emp_dept_count | manager_name | mgr_dept_count 
 ---------------+----------------+--------------+----------------
- 10000NAME     |            625 | 4NAME        |              1
- 1000NAME      |            625 | 4NAME        |              1
- 1001NAME      |            625 | 5NAME        |              1
- 1003NAME      |            625 | 1NAME        |              1
- 1004NAME      |            625 | 2NAME        |              1
- 1005NAME      |            625 | 3NAME        |              1
- 1006NAME      |            625 | 4NAME        |              1
- 1007NAME      |            625 | 5NAME        |              1
- 1009NAME      |            625 | 1NAME        |              1
- 100NAME       |            625 | 4NAME        |              1
- 1010NAME      |            625 | 2NAME        |              1
- 1011NAME      |            625 | 3NAME        |              1
- 1012NAME      |            625 | 4NAME        |              1
- 1013NAME      |            625 | 5NAME        |              1
- 1015NAME      |            625 | 1NAME        |              1
- 1016NAME      |            625 | 2NAME        |              1
- 1017NAME      |            625 | 3NAME        |              1
- 1018NAME      |            625 | 4NAME        |              1
- 1019NAME      |            625 | 5NAME        |              1
- 101NAME       |            625 | 5NAME        |              1
- 1021NAME      |            625 | 1NAME        |              1
- 1022NAME      |            625 | 2NAME        |              1
- 1023NAME      |            625 | 3NAME        |              1
- 1024NAME      |            625 | 4NAME        |              1
- 1025NAME      |            625 | 5NAME        |              1
+ 100NAME       |              7 | 4NAME        |              1
+ 10NAME        |              6 | 4NAME        |              1
+ 11NAME        |              6 | 5NAME        |              1
+ 13NAME        |              6 | 1NAME        |              1
+ 14NAME        |              6 | 2NAME        |              1
+ 15NAME        |              6 | 3NAME        |              1
+ 16NAME        |              6 | 4NAME        |              1
+ 17NAME        |              7 | 5NAME        |              1
+ 19NAME        |              7 | 1NAME        |              1
+ 1NAME         |              7 | 1NAME        |              1
+ 20NAME        |              7 | 2NAME        |              1
+ 21NAME        |              6 | 3NAME        |              1
+ 22NAME        |              6 | 4NAME        |              1
+ 23NAME        |              6 | 5NAME        |              1
+ 25NAME        |              6 | 1NAME        |              1
+ 26NAME        |              6 | 2NAME        |              1
+ 27NAME        |              6 | 3NAME        |              1
+ 28NAME        |              6 | 4NAME        |              1
+ 29NAME        |              6 | 5NAME        |              1
+ 2NAME         |              7 | 2NAME        |              1
+ 31NAME        |              6 | 1NAME        |              1
+ 32NAME        |              6 | 2NAME        |              1
+ 33NAME        |              7 | 3NAME        |              1
+ 34NAME        |              7 | 4NAME        |              1
+ 35NAME        |              7 | 5NAME        |              1
 (25 rows)
 
 -- The sharing of CTE is enabled
@@ -10716,31 +10716,31 @@ WHERE  e.deptno = dc1.deptno AND
 ORDER BY 1, 2, 3, 4 DESC LIMIT 25;
  employee_name | emp_dept_count | manager_name | mgr_dept_count 
 ---------------+----------------+--------------+----------------
- 10000NAME     |            625 | 4NAME        |              1
- 1000NAME      |            625 | 4NAME        |              1
- 1001NAME      |            625 | 5NAME        |              1
- 1003NAME      |            625 | 1NAME        |              1
- 1004NAME      |            625 | 2NAME        |              1
- 1005NAME      |            625 | 3NAME        |              1
- 1006NAME      |            625 | 4NAME        |              1
- 1007NAME      |            625 | 5NAME        |              1
- 1009NAME      |            625 | 1NAME        |              1
- 100NAME       |            625 | 4NAME        |              1
- 1010NAME      |            625 | 2NAME        |              1
- 1011NAME      |            625 | 3NAME        |              1
- 1012NAME      |            625 | 4NAME        |              1
- 1013NAME      |            625 | 5NAME        |              1
- 1015NAME      |            625 | 1NAME        |              1
- 1016NAME      |            625 | 2NAME        |              1
- 1017NAME      |            625 | 3NAME        |              1
- 1018NAME      |            625 | 4NAME        |              1
- 1019NAME      |            625 | 5NAME        |              1
- 101NAME       |            625 | 5NAME        |              1
- 1021NAME      |            625 | 1NAME        |              1
- 1022NAME      |            625 | 2NAME        |              1
- 1023NAME      |            625 | 3NAME        |              1
- 1024NAME      |            625 | 4NAME        |              1
- 1025NAME      |            625 | 5NAME        |              1
+ 100NAME       |              7 | 4NAME        |              1
+ 10NAME        |              6 | 4NAME        |              1
+ 11NAME        |              6 | 5NAME        |              1
+ 13NAME        |              6 | 1NAME        |              1
+ 14NAME        |              6 | 2NAME        |              1
+ 15NAME        |              6 | 3NAME        |              1
+ 16NAME        |              6 | 4NAME        |              1
+ 17NAME        |              7 | 5NAME        |              1
+ 19NAME        |              7 | 1NAME        |              1
+ 1NAME         |              7 | 1NAME        |              1
+ 20NAME        |              7 | 2NAME        |              1
+ 21NAME        |              6 | 3NAME        |              1
+ 22NAME        |              6 | 4NAME        |              1
+ 23NAME        |              6 | 5NAME        |              1
+ 25NAME        |              6 | 1NAME        |              1
+ 26NAME        |              6 | 2NAME        |              1
+ 27NAME        |              6 | 3NAME        |              1
+ 28NAME        |              6 | 4NAME        |              1
+ 29NAME        |              6 | 5NAME        |              1
+ 2NAME         |              7 | 2NAME        |              1
+ 31NAME        |              6 | 1NAME        |              1
+ 32NAME        |              6 | 2NAME        |              1
+ 33NAME        |              7 | 3NAME        |              1
+ 34NAME        |              7 | 4NAME        |              1
+ 35NAME        |              7 | 5NAME        |              1
 (25 rows)
 
 -- Test that SharedInputScan within the same slice is always executed 

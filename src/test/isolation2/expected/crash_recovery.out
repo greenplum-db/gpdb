@@ -3,11 +3,23 @@ CREATE
 1:CREATE TABLE crash_test_table(c1 int);
 CREATE
 
+1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 -- transaction of session 2 and session 3 inserted 'COMMIT' record before checkpoint
-1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+1:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 2&:insert into crash_test_table values (1);  <waiting ...>
 3&:create table crash_test_ddl(c1 int);  <waiting ...>
@@ -32,10 +44,10 @@ t
 (1 row)
 
 -- transaction of session 5 didn't insert 'COMMIT' record
-1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+1:select gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 5&:INSERT INTO crash_test_table VALUES (3);  <waiting ...>
 

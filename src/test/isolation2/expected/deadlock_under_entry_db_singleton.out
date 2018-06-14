@@ -43,10 +43,10 @@ gp_inject_fault
 ---------------
 t              
 (1 row)
-select gp_inject_fault('transaction_start_under_entry_db_singleton', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('transaction_start_under_entry_db_singleton', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 -- The QD should already hold RowExclusiveLock and ExclusiveLock on

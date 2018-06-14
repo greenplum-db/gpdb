@@ -23,6 +23,18 @@ cmd = 'pg_ctl -D %s ' % datadir if command in ('stop'): cmd = cmd + '-w -m immed
 return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
 CREATE
 
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
 pg_ctl                                              
@@ -97,10 +109,10 @@ dbid
 (1 row)
 -- end_ignore
 
-select gp_inject_fault('fts_handle_message', 'infinite_loop', '', '', '', -1, 0, dbid) from gp_segment_configuration where content = 0 and role = 'p';
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('fts_handle_message', 'infinite_loop', dbid) from gp_segment_configuration where content = 0 and role = 'p';
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 -- trigger failover

@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "access/aomd.h"
 #include "catalog/catalog.h"
 #include "miscadmin.h"
 #include "portability/instr_time.h"
@@ -348,7 +349,6 @@ mdcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
 		pfree(path);
 }
 
-
 /*
  *	mdunlink() -- Unlink a relation.
  *
@@ -394,7 +394,7 @@ mdcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
  * we are usually not in a transaction anymore when this is called.
  */
 void
-mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
+mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char relstorage)
 {
 	char	   *path;
 	int			ret;
@@ -404,7 +404,8 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
 	 * relation, else the next mdsync() will fail.  There can't be any such
 	 * requests for a temp relation, though.
 	 */
-	if (!RelFileNodeBackendIsTemp(rnode))
+	if (!RelFileNodeBackendIsTemp(rnode) &&
+		!relstorage_is_ao(relstorage))
 		ForgetRelationFsyncRequests(rnode.node, forkNum);
 
 	path = relpath(rnode, forkNum);
@@ -451,6 +452,14 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
 	 */
 	if (ret >= 0)
 	{
+		if (relstorage_is_ao(relstorage))
+		{
+			Assert(forkNum == MAIN_FORKNUM);
+			mdunlink_ao(path);
+			pfree(path);
+			return;
+		}
+
 		char	   *segpath = (char *) palloc(strlen(path) + 12);
 		BlockNumber segno;
 
@@ -467,97 +476,10 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo)
 				if (errno != ENOENT)
 					ereport(WARNING,
 							(errcode_for_file_access(),
-					   errmsg("could not remove file \"%s\": %m", segpath)));
+							 errmsg("could not remove file \"%s\": %m", segpath)));
 				break;
 			}
 		}
-
-		/*
-		 * Delete All segment file extensions, in case it was an AO or AOCS
-		 * table.
-		 *
-		 * WALREP_FIXME: This currently works by scanning the directory, looking
-		 * for the pattern "<relfilenode>.<segno>". That is slow. We used to do
-		 * do this before, and had to switch over to the information from the
-		 * persistent tables for performance reasons somewhere around GPDB 3.X
-		 * or 4.X. Persistent tables are no more, so we had to go back to
-		 * scanning the directory, but we know that's going to be unacceptably
-		 * slow if there are a lot of files in the directory.
-		 *
-		 * There are different rules for the naming of the files, depending on
-		 * the type of table:
-		 *
-		 *   Heap Tables: contiguous extensions, no upper bound
-		 *   AO Tables: non contiguous extensions [.1 - .127]
-		 *   CO Tables: non contiguous extensions
-		 *          [  .1 - .127] for first column
-		 *          [.128 - .255] for second column
-		 *          [.256 - .283] for third column
-		 *          etc
-		 *
-		 * However, we don't try to be smart here, we just always scan the
-		 * directory. We don't know what kind of a table it was down here.
-		 *
-		 * NOTE: If you find a smarter way to do this than by scanning the dir,
-		 * consider changing copy_append_only_data(), in tablecmds.c, to also
-		 * use the smarter way.
-		 */
-		if (forkNum == MAIN_FORKNUM)
-		{
-			DIR		   *dir;
-			struct dirent *de;
-			char	   *dirpart;
-			char	   *filepart;
-			char	   *filedot;
-
-			/*
-			 * The base path is like "<path>/<rnode>". Split it into
-			 * path and filename parts.
-			 */
-			reldir_and_filename(rnode.node, InvalidBackendId, forkNum, &dirpart, &filepart);
-			filedot = psprintf("%s.", filepart);
-
-			/* Scan the directory */
-			dir = AllocateDir(dirpart);
-			while ((de = ReadDir(dir, dirpart)) != NULL)
-			{
-				char	   *suffix;
-
-				if (strcmp(de->d_name, ".") == 0 ||
-					strcmp(de->d_name, "..") == 0)
-					continue;
-
-				/* Does it begin with the relfilenode? */
-				if (strlen(de->d_name) <= strlen(filedot) ||
-					strncmp(de->d_name, filedot, strlen(filedot)) != 0)
-					continue;
-
-				/*
-				 * Does it have a digits-only suffix? (This is not really
-				 * necessary to check, but better be conservative when deleting
-				 * files.)
-				 */
-				suffix = de->d_name + strlen(filedot);
-				if (strspn(suffix, "0123456789") != strlen(suffix) ||
-					strlen(suffix) > 10)
-					continue;
-
-				/* Looks like a match. Go ahead and delete it. */
-				sprintf(segpath, "%s.%s", path, suffix);
-				if (unlink(segpath) < 0)
-				{
-					ereport(WARNING,
-							(errcode_for_file_access(),
-							 errmsg("could not remove segment %s of relation %s: %m",
-									suffix, path)));
-				}
-			}
-			FreeDir(dir);
-			pfree(filedot);
-			pfree(filepart);
-			pfree(dirpart);
-		}
-
 		pfree(segpath);
 	}
 

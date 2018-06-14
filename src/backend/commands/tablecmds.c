@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/aocs_compaction.h"
+#include "access/aomd.h"
 #include "access/appendonlywriter.h"
 #include "access/bitmap.h"
 #include "access/genam.h"
@@ -396,8 +397,6 @@ static void copy_relation_data(SMgrRelation rel, SMgrRelation dst,
 				   ForkNumber forkNum, char relpersistence);
 static const char *storage_name(char c);
 
-
-static void copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence);
 static void ATExecSetDistributedBy(Relation rel, Node *node,
 								   AlterTableCmd *cmd);
 static void ATPrepExchange(Relation rel, AlterPartitionCmd *pc);
@@ -11532,7 +11531,8 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	 * NOTE: any conflict in relfilenode value will be caught in
 	 * RelationCreateStorage().
 	 */
-	RelationCreateStorage(newrnode, rel->rd_rel->relpersistence);
+	RelationCreateStorage(newrnode, rel->rd_rel->relpersistence,
+						  rel->rd_rel->relstorage);
 
 	if (RelationIsAppendOptimized(rel))
 	{
@@ -11598,10 +11598,6 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 		ATExecSetTableSpace(reltoastidxid, newTableSpace, lockmode);
 
 	/* Move associated ao subobjects */
-	if (OidIsValid(reltoastrelid))
-		ATExecSetTableSpace(reltoastrelid, newTableSpace, lockmode);
-	if (OidIsValid(reltoastidxid))
-		ATExecSetTableSpace(reltoastidxid, newTableSpace, lockmode);
 	if (OidIsValid(relaosegrelid))
 		ATExecSetTableSpace(relaosegrelid, newTableSpace, lockmode);
 	if (OidIsValid(relaoblkdirrelid))
@@ -11700,128 +11696,6 @@ copy_relation_data(SMgrRelation src, SMgrRelation dst,
 	 */
 	if (relpersistence == RELPERSISTENCE_PERMANENT)
 		smgrimmedsync(dst, forkNum);
-}
-
-/*
- * Like copy_relation_data(), but for AO tables.
- *
- * Currently, AO tables don't have any extra forks.
- */
-static void
-copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence)
-{
-	DIR		   *dir;
-	struct dirent *de;
-	char	   *srcdir;
-	char	   *srcfilename;
-	char	   *srcfiledot;
-	char	   *dstpath;
-	char	   *buffer = palloc(BLCKSZ);
-
-	/*
-	 * Get the directory and base filename of the data file.
-	 */
-	reldir_and_filename(src, backendid, MAIN_FORKNUM, &srcdir, &srcfilename);
-	srcfiledot = psprintf("%s.", srcfilename);
-	dstpath = relpathbackend(dst, backendid, MAIN_FORKNUM);
-
-	/*
-	 * Scan the directory, looking for files belonging to this relation.
-	 * This is the same logic as in mdunlink(), see comments there.
-	 */
-	dir = AllocateDir(srcdir);
-	while ((de = ReadDir(dir, srcdir)) != NULL)
-	{
-		char	   *suffix;
-		char		srcsegpath[MAXPGPATH + 12];
-		char		dstsegpath[MAXPGPATH + 12];
-		File		srcFile;
-		File		dstFile;
-		int64		left;
-		off_t		offset;
-		int			segfilenum;
-
-		if (strcmp(de->d_name, ".") == 0 ||
-			strcmp(de->d_name, "..") == 0)
-			continue;
-
-		/* Does it begin with the relfilenode? */
-		if (strlen(de->d_name) <= strlen(srcfiledot) ||
-			strncmp(de->d_name, srcfiledot, strlen(srcfiledot)) != 0)
-			continue;
-
-		/*
-		 * Does it have a digits-only suffix? (This is not really
-		 * necessary to check, but better be conservative.)
-		 */
-		suffix = de->d_name + strlen(srcfiledot);
-		if (strspn(suffix, "0123456789") != strlen(suffix) ||
-			strlen(suffix) > 10)
-			continue;
-
-		/* Looks like a match. Go ahead and copy it. */
-		segfilenum = pg_atoi(suffix, 4, 0);
-
-		snprintf(srcsegpath, sizeof(srcsegpath), "%s/%s.%d", srcdir, srcfilename, segfilenum);
-		snprintf(dstsegpath, sizeof(dstsegpath), "%s.%d", dstpath, segfilenum);
-
-		srcFile = PathNameOpenFile(srcsegpath, O_RDONLY | PG_BINARY, 0600);
-		if (srcFile < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not open file %s: %m", srcsegpath))));
-		dstFile = PathNameOpenFile(dstsegpath, O_WRONLY | O_CREAT | O_EXCL | PG_BINARY, 0600);
-		if (dstFile < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not create destination file %s: %m", dstsegpath))));
-
-		left = FileSeek(srcFile, 0, SEEK_END);
-		if (left < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not seek to end of file %s: %m", srcsegpath))));
-
-		if (FileSeek(srcFile, 0, SEEK_SET) < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 (errmsg("could not seek to beginning of file %s: %m", srcsegpath))));
-
-		offset = 0;
-		while(left > 0)
-		{
-			int			len;
-
-			CHECK_FOR_INTERRUPTS();
-
-			len = Min(left, BLCKSZ);
-			if (FileRead(srcFile, buffer, len) != len)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not read %d bytes from file \"%s\": %m",
-								len, srcsegpath)));
-
-			if (FileWrite(dstFile, buffer, len) != len)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not write %d bytes to file \"%s\": %m",
-								len, dstsegpath)));
-
-			xlog_ao_insert(dst, segfilenum, offset, buffer, len);
-
-			offset += len;
-			left -= len;
-		}
-
-		if (FileSync(dstFile) != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not fsync file \"%s\": %m",
-							dstsegpath)));
-		FileClose(srcFile);
-		FileClose(dstFile);
-	}
-	FreeDir(dir);
 }
 
 /*
@@ -12907,12 +12781,21 @@ make_temp_table_name(Relation rel, BackendId id)
 {
 	char	   *nspname;
 	char		tmpname[NAMEDATALEN];
+	RangeVar   *tmprel;
 
 	/* temporary enough */
 	snprintf(tmpname, NAMEDATALEN, "pg_temp_%u_%i", RelationGetRelid(rel), id);
 	nspname = get_namespace_name(RelationGetNamespace(rel));
 
-	return makeRangeVar(nspname, pstrdup(tmpname), -1);
+	tmprel = makeRangeVar(nspname, pstrdup(tmpname), -1);
+
+	/*
+	 * Ensure the temp relation has the same persistence setting with the
+	 * original relation.
+	 */
+	tmprel->relpersistence = rel->rd_rel->relpersistence;
+
+	return tmprel;
 }
 
 /*
@@ -13236,7 +13119,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("SET DISTRIBUTED BY not supported in utility mode")));
 
-	/* we only support partitioned tables */
+	/* we only support partitioned/replicated tables */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		if (GpPolicyIsEntry(rel->rd_cdbpolicy))
@@ -13385,20 +13268,25 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			}
 
 			policy = createRandomPartitionedPolicy(NULL);
-			rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
-			GpPolicyReplace(RelationGetRelid(rel), policy);
 
-			/* only need to rebuild if have new storage options */
-			if (!(DatumGetPointer(newOptions) || force_reorg))
+			/* always need to rebuild if changed from replicated policy */
+			if (!GpPolicyIsReplicated(rel->rd_cdbpolicy))
 			{
-				/*
-				 * caller expects ATExecSetDistributedBy() to close rel
-				 * (see the non-random distribution case below for why.
-				 */
-				heap_close(rel, NoLock);
-				lsecond(lprime) = makeNode(SetDistributionCmd);
-				lprime = lappend(lprime, policy);
-				goto l_distro_fini;
+				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
+				GpPolicyReplace(RelationGetRelid(rel), policy);
+
+				/* only need to rebuild if have new storage options */
+				if (!(DatumGetPointer(newOptions) || force_reorg))
+				{
+					/*
+					 * caller expects ATExecSetDistributedBy() to close rel
+					 * (see the non-random distribution case below for why.
+					 */
+					heap_close(rel, NoLock);
+					lsecond(lprime) = makeNode(SetDistributionCmd);
+					lprime = lappend(lprime, policy);
+					goto l_distro_fini;
+				}
 			}
 		}
 
@@ -13406,21 +13294,19 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		{
 			rep_pol = true;
 
-			if (!force_reorg)
-			{
-				if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
-					ereport(WARNING,
-							(errcode(ERRCODE_DUPLICATE_OBJECT),
-							 errmsg("distribution policy of relation \"%s\" already set to DISTRIBUTED REPLICATED",
-									RelationGetRelationName(rel)),
-							 errhint("Use ALTER TABLE \"%s\" SET WITH (REORGANIZE=TRUE) DISTRIBUTED REPLICATED to force a replicated redistribution.",
-									 RelationGetRelationName(rel))));
-			}
+			if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
+				ereport(WARNING,
+						(errcode(ERRCODE_DUPLICATE_OBJECT),
+						 errmsg("distribution policy of relation \"%s\" already set to DISTRIBUTED REPLICATED",
+								RelationGetRelationName(rel)),
+						 errhint("Use ALTER TABLE \"%s\" SET WITH (REORGANIZE=TRUE) DISTRIBUTED REPLICATED to force a replicated redistribution.",
+								 RelationGetRelationName(rel))));
 
 			policy = createReplicatedGpPolicy(NULL);
 
-			/* only need to rebuild if have new storage options */
-			if (!(DatumGetPointer(newOptions) || force_reorg))
+			/* rebuild if have new storage options or policy changed */
+			if (!DatumGetPointer(newOptions) &&
+				GpPolicyIsReplicated(rel->rd_cdbpolicy))
 			{
 				/*
 				 * caller expects ATExecSetDistributedBy() to close rel

@@ -93,6 +93,10 @@ extern void BackoffBackendTick(void);
 extern bool gp_enable_resqueue_priority;
 extern void gp_set_thread_sigmasks(void);
 
+/* Hook get notified when QueryCancelPending or ProcDiePending is raised */
+typedef void (*cancel_pending_hook_type) (void);
+extern PGDLLIMPORT cancel_pending_hook_type cancel_pending_hook;
+
 /* in utils/resource_manager.h */
 extern bool IsResQueueEnabled(void);
 

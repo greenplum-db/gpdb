@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_isj_khw_sbs" otherprops="pivotal">
+  <title>Migrating Data with gpcopy</title>
+  <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
+    between databases in different Greenplum Database clusters.</shortdesc>
+  <body>
+    <p><codeph>gpcopy</codeph> is a high-performance utility that can copy metadata and data from
+      one Greenplum database to another Greenplum database. You can migrate the entire contents of a
+      database, or just selected tables. The source and destination databases must be in different
+      clusters, and the clusters can have different Greenplum Database versions. For example, you
+      can use <codeph>gpcopy</codeph> to migrate data from a version 4.x Greenplum Database to
+      version 5.x.</p>
+    <p>The <codeph>gpcopy</codeph> interface includes options to transfer one or more full
+      databases, or one or more database tables. A full database transfer includes the database
+      schema, table data, indexes, views, roles, user-defined functions, resource queues, and
+      resource groups. If a copied table or database does not exist in the destination cluster,
+        <codeph>gpcopy</codeph> creates it automatically, along with indexes as necessary.</p>
+    <p>Configuration files, including <codeph>postgresql.conf</codeph> and
+        <codeph>pg_hba.conf</codeph>, must be transferred manually by an administrator. Extensions
+      installed in the database with <codeph>gppkg</codeph>, such as MADlib and programming language
+      extensions, must be installed in the destination database by an administrator. </p>
+    <p><codeph>gpcopy</codeph> uses many of the same command-line options as the earlier
+        <codeph>gptransfer</codeph> utility. <codeph>gpcopy</codeph> provides several improvements
+      as compared to <codeph>gptransfer</codeph>:<ul id="ul_ibs_vsp_zdb">
+        <li><codeph>gpcopy</codeph> performs significantly faster than <codeph>gptransfer</codeph>
+          when copying large amounts of data.</li>
+        <li><codeph>gpcopy</codeph> provides more detailed reporting and summary information about
+          all aspects of the copy operation.</li>
+        <li>
+          <p><codeph>gpcopy</codeph> allows the source table data to change while the data is being
+            copied. A lock is not acquired on the source table when data is copied. </p>
+        </li>
+        <li>The <codeph>gpcopy</codeph> utility includes the
+            <codeph>--truncate-source-after</codeph> option to help migrate data from one Pivotal
+          Greenplum Database system to another on the same hardware, requiring minimal free space
+          available.</li>
+      </ul></p></body>
+    <topic id="topic_psq_dsp_zdb">
+    <title>Prerequisites</title>
+    <body>
+      <p>The source and destination Greenplum Database systems must already exist, have network
+        access between all hosts, and have master host and primary segment hosts in both systems.
+        Each system must be configured with the same number of segments.</p>
+      <p><codeph>gpcopy</codeph> is dependent on the <codeph>pg_dump</codeph>,
+          <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> utilities installed with Greenplum
+        Database. In most cases, you run <codeph>gpcopy</codeph> from a Greenplum Database cluster,
+        so the dependencies are automatically met. If you need to run <codeph>gpcopy</codeph> on a
+        remote server, such as an ETL system, copy  the <codeph>gpcopy</codeph> binary and install a
+        compatible <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+          >Greenplum Clients</xref> package to meet the <codeph>gpcopy</codeph> dependencies.</p>
+      <p><codeph>gpcopy</codeph> supports migrating data from a Greenplum Database 4.3.26 or later
+        cluster to a Greenplum Database 5.9 or later cluster. However Greenplum Database 4.3.26 and
+        later do not include the actual <codeph>gpcopy</codeph> utility. You must manually copy the
+          <codeph>gpcopy</codeph> utility from your version 5.9 or later cluster into the older
+        version cluster to migrate data.. For
+        example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></p>
+    </body>
+  </topic>
+    <topic id="topic_qwl_2rp_zdb">
+      <title>Limitations for the Source and Destination Systems</title>
+      <body>
+      <p><codeph>gpcopy</codeph> cannot copy data from one database to another in the same Greenplum
+        Database system. The destination system must be a separate Greenplum Database cluster.</p>
+        <p dir="ltr" id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
+          <codeph>gpcopy</codeph> utility supports copying only between source and destination
+        Greenplum Database systems with the same number of segments. If you need to transfer data to
+        a Greenplum Database system having a different number of segments, you must use
+          <codeph>gptransfer</codeph> instead. See <xref href="gptransfer.xml#topic_gptransfer"
+        />.</p>
+        <p>If you are copying data between Greenplum Database clusters having different versions,
+        each cluster must have <codeph>gpcopy</codeph> installed locally. <codeph>gpcopy</codeph> is
+        installed with Pivotal Greenplum Database starting with versions 5.9.0 and 4.3.26.0.</p>
+        <p><codeph>gpcopy</codeph> transfers data from user databases only; the
+            <codeph>postgres</codeph>, <codeph>template0</codeph>, and <codeph>template1</codeph>
+          databases cannot be transferred. Administrators must transfer configuration files manually
+          and install extensions into the destination database with <codeph>gppkg</codeph>.</p>
+        <p><codeph>gpcopy</codeph> cannot copy a row that is larger than 1GB in size.</p>
+        <p>When transferring data between databases, you can run only one instance of
+          <codeph>gpcopy</codeph> at a time.  Running multiple, concurrent instances of
+          <codeph>gpcopy</codeph> is not supported.</p>
+      </body>
+    </topic>
+    <topic id="topic_ay1_frp_zdb">
+      <title>Configuring Parallel Jobs</title>
+      <body>
+        <p>The degree of parallelism when running <codeph>gpcopy</codeph> is determined the option
+          <codeph>--jobs</codeph>. The option controls the number processes that
+          <codeph>gpcopy</codeph> runs in parallel. The default is 4. The range is from 1 to 64. </p>
+      <p>The <codeph>--jobs</codeph> value, <varname>n</varname>, produces
+            <codeph>2*<varname>n</varname>+1</codeph> database connections. For example, the default
+          <codeph>--jobs</codeph> value of 4 creates 9 connections.</p>
+        <p>If you increase this option, ensure that the Greenplum Database systems are configured
+        with a sufficient maximum concurrent connection value to accommodate the
+          <codeph>gpcopy</codeph> connections and any other concurrent connections (such as user
+        connections) that you require. See the Greenplum Database server configuration parameter
+          <codeph>max_connections</codeph>.</p>
+      </body>
+    </topic>
+    <topic id="topic_nd3_2sp_zdb">
+    <title>Validating Copied Data</title>
+    <body>
+      <p>By default, <codeph>gpcopy</codeph> does not validate the data transferred. You can request
+        validation using the <codeph>--validate=<i>type</i></codeph> option. You must include
+            <codeph>--validate=<i>type</i></codeph> if you specify the
+          <codeph>--truncate-source-after</codeph> option. The validation <i>type</i> can be one of
+        the following:<ul id="ul_hf1_k21_xdb">
+          <li><codeph>count</codeph> - compares the row counts between the source and destination
+            tables.</li>
+          <li><codeph>md5xor</codeph> - validates by selecting all rows of the source and
+            destination tables, converting all columns in a row to text, and then calculating the
+            md5 value of each row.  <codeph>gpcopy</codeph> then performs an XOR over the MD5 values
+            to ensure that all rows were successfully copied for the table.</li>
+        </ul></p>
+      <note>Avoid using <codeph>--append</codeph> with either validation option. If you use
+          <codeph>--append</codeph> and the source table already includes rows, then either
+        validation method will fail due to the different number of rows in the source and
+        destination tables. </note>
+    </body>
+  </topic>
+    <topic id="topic_ytw_2sp_zdb">
+    <title>Addressing Failed Data Transfers</title>
+    <body>
+      <p>When <codeph>gpcopy</codeph> encounters errors and quits or is cancelled by the user,
+        current copy operations on tables in the destination database are rolled back. Copy
+        operations that have completed are not rolled back. </p>
+      <p>If an error occurs during the process of copying a table, or table validation fails,
+          <codeph>gpcopy</codeph> continues copying the other specified tables. After
+          <codeph>gpcopy</codeph> finishes, it displays a list of tables where errors occurred or
+        validation failed and displays a <codeph>gpcopy</codeph> command. You can use the provided
+        command to retry copying the failed tables. </p>
+      <p>The <codeph>gpcopy</codeph> utility logs messages in log file
+            <codeph>gpcopy_<varname>date</varname>.log</codeph> in the
+          <codeph>~/gpAdminLogs</codeph> directory on the master host. If you run multiple
+          <codeph>gpcopy</codeph> commands on the same day, the utility appends messages to that
+        day's log file. </p>
+      <p>After <codeph>gpcopy</codeph> completes, it displays a summary of the operations performed.
+        If the utility fails to copy tables, they are highlighted in summary, and there is a
+          <codeph>gpcopy</codeph> command provided in summary for user to just copy the failed
+        tables. The information is displayed at the command prompt and in the
+          <codeph>gpcopy</codeph> log file. </p>
+      <p>After resolving the issues that caused the copy operations to fail, you can run the
+        provided command to copy the tables that failed in the previous <codeph>gpcopy</codeph>
+        command. </p>
+    </body>
+  </topic>
+  <topic id="topic_ekp_rmp_zdb">
+    <title>Performing a Basic Data Migration</title>
+    <body>
+      <p>Follow this procedure to migrate data from one Greenplum Database system to another with
+          <codeph>gpcopy</codeph>:<ol id="ol_zc4_b34_b2b">
+          <li>Start both the source and destination clusters.</li>
+          <li>Perform a full database backup in the source Greenplum Database system. See <xref
+              href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/>.</li>
+          <li>While Greenplum Database 4.3.26 and later support migration with
+              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+              <codeph>gpcopy</codeph> utility. If you are migrating from a version 4.3.x system,
+            Pivotal recommends that you copy the utility from your Greenplum Database 5.x
+            installation to the 4.3.x installation. For
+            example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
+          <li>As a best practice, source the <codeph>greenplum_path.sh</codeph> file in the source
+            Greenplum Database 4.3.x installation, so that you execute <codeph>gpcopy</codeph> from
+            the source system. For
+            example:<codeblock>$ source /usr/local/greenplum-db-4.3.26.0/greenplum_path.sh</codeblock></li>
+          <li>Use <codeph>gpcopy</codeph> with the <codeph>--full</codeph> option to migrate your
+            data to the destination system. A full migration automatically copies all database
+            objects including tables, es, views, roles, functions, user defined types (UDT),
+            resource queues, and resource groups for all user defined databases. Include the
+              <codeph>--drop</codeph> to drop any destination tables that may already exist
+            (recreating es as necessary). For example:
+              <codeblock>gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
+    --dest-host demohost --dest-port 1234 --dest-user gpuser \
+    --full --drop --validate count</codeblock><p>With
+              the above command, the utility drops tables in the destination database
+                (<codeph>--drop</codeph> option) and uses the row count of the source and
+              destination tables to validate the data transfer (<codeph>--validate count</codeph>
+              option). The other <codeph>gpcopy</codeph> options specify the source and destination
+              Greenplum Database system master hosts, ports, and the User ID to use to connect to
+              the Greenplum Database systems.<note>While the example command performs a full system
+                copy, consider migrating only portions of the your data at a time, so that you can
+                reduce downtime while addressing table errors or validation failures that may occur
+                during the copy operation.</note></p></li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
+            as <systemoutput>postgresql.conf</systemoutput> and
+              <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
+            configuration as necessary to match the source system.</li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
+            Greenplum Database extensions, third party jar files, and shared object files. You must
+            recreate these external objects as necessary to match the source system. </li>
+          <li>Greenplum Database 5.x removes automatic implicit casts between the text type and other
+            data types. After you migrate from Greenplum Database version 4.3.x to version 5.x, this
+            change in behavior may impact existing applications and queries. Refer to <xref
+              href="../../install_guide/43x_to_5x.xml" format="dita" scope="peer">About Implicit
+              Text Casting in Greenplum Database</xref> in the <cite>Greenplum Database Installation
+              Guide</cite> for information, including a discussion about supported and unsupported
+            workarounds.</li>
+          <li>After migrating data you may need to modify SQL scripts, administration scripts, and
+            user-defined functions as necessary to account for changes in Greenplum Database version
+            5.x. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
+              format="html" href="https://gpdb.docs.pivotal.io/latest/relnotes/">Pivotal Greenplum
+              5.x Release Notes</xref> for features that may necessitate post-migration tasks.</li>
+        </ol></p>
+      <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
+          page</xref>
+        <ph otherprops="op-print">in the <cite>Greenplum Database Utility Guide</cite>
+        </ph>for complete syntax and usage information. </p>
+    </body>
+  </topic>
+  <topic id="topic_pyc_hpp_zdb">
+    <title>Migrating Data Between Clusters that Share Hardware</title>
+    <body>
+      <p>In order to migrate data between two clusters on the same hardware, you should have enough
+        free disk space to accommodate over 5 times the original data set. This enables you to
+        maintain 2 full copies of the primary and mirror data sets (on the source and destination
+        systems), plus the original backup data in ASCII format. </p>
+      <p>If you attempt to migrate on the same system but you run out of disk space, the
+          <codeph>gpcopy</codeph> utility provides the <codeph>--truncate-source-after</codeph>
+        option to help you complete the operation with only a minimum of free disk space. The
+          <codeph>--truncate-source-after</codeph> option instructs the utility to truncate each
+        source table after successfully copying the table data to the destination cluster and
+        validating that the copy succeeded.</p>
+      <p>If you choose to use <codeph>--truncate-source-after</codeph>, consider the following:<ul
+          id="ul_g5k_22q_zdb">
+          <li>Using the <codeph>--truncate-source-after</codeph> option does not allow for an easy
+            rollback to the source system to its original condition if errors occur or validation
+            checks fail during the <codeph>gpcopy</codeph> operation. Table errors or validation
+            failures during the <codeph>gpcopy</codeph> operation can leave some tables remaining in
+            the source cluster, while other tables may be empty (having been truncated after being
+            copied to the new cluster). Back up all source data before using <codeph>gpcopy</codeph>
+            with <codeph>--truncate-source-after</codeph>.</li>
+          <li>Migrating data with <codeph>--truncate-source-after</codeph> still requires an amount
+            of free disk space equal to the sum of the largest tables that you will migrate in a
+            single batch using <codeph>gpcopy</codeph>. For example, with a <codeph>--jobs</codeph>
+            setting of 5, you must ensure that you have free space equal to the sum of the 5 largest
+            tables copied in the batch. The procedure below provides sample commands to determine
+            the largest table sizes.</li>
+          <li>You must use the <codeph>--validate</codeph> option with
+              <codeph>--truncate-source-after</codeph> to ensure that data is successfully copied
+            before source tables are truncated.</li>
+        </ul></p>
+      <p>If you attempt to use the instructions in <xref href="#topic_ekp_rmp_zdb" format="dita"/>
+        to migrate systems that use the same hardware, but you do not have the required free
+          space:<ol id="ul_zdm_bm4_b2b">
+          <li>Start both the source and destination clusters. </li>
+          <li>Perform a full database backup in the source Greenplum Database system. See <xref
+              href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/>.</li>
+          <li>Determine if you have enough free space to migrate your data using
+              <codeph>--truncate-source-after</codeph>. Migrating data "in-place" requires an amount
+            of free disk space equal to the sum of the largest tables that you will migrate in a
+            single batch using <codeph>gpcopy</codeph>. For example, if you want to use a
+              <codeph>--jobs</codeph> setting of 5, ensure that you have free space equal to the sum
+            of the 5 largest tables copied in the batch. <p>The following query lists the largest 5
+              tables in your source system; modify the query as needed depending on the
+                <codeph>--jobs</codeph> setting you intend to
+              use:<codeblock>gpadmin=# SELECT n.nspname, c.relname, c.relstorage, pg_relation_size(c.oid)
+FROM 
+pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
+JOIN pg_catalog.gp_distribution_policy p ON (c.oid = p.localoid)
+WHERE
+n.nspname NOT IN ('gpexpand', 'pg_bitmap', 'information_schema', 'gp_toolkit')
+AND n.nspname NOT LIKE 'pg_temp_%%' AND c.relstorage &lt;> 'v'
+ORDER BY 4 DESC LIMIT 5;
+</codeblock></p><p>Either
+              free enough disk space to cover the sum of the table sizes shown in the above query,
+              or consider using a smaller <codeph>--jobs</codeph> value to reduce the free space
+              requirements.</p></li>
+          <li>While Greenplum Database 4.3.26 and later support migration with
+              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+              <codeph>gpcopy</codeph> utility. If you are migrating from a version 4.3.x system,
+            Pivotal recommends that you copy the utility from your Greenplum Database 5.x
+            installation to the 4.3.x installation. For
+            example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
+          <li>As a best practice, source the <codeph>greenplum_path.sh</codeph> file in the source
+            Greenplum Database 4.3.x installation, so that you execute <codeph>gpcopy</codeph> from
+            the source system. For
+            example:<codeblock>$ source /usr/local/greenplum-db-4.3.26.0/greenplum_path.sh</codeblock></li>
+          <li>Use a <codeph>gpcopy</codeph> with the <codeph>--truncate-source-after</codeph> and
+              <codeph>--validate</codeph> options to migrate your data to the destination system. A
+            full migration automatically copies all database objects including tables, es, views,
+            roles, functions, user defined types (UDT), resource queues, and resource groups for all
+            user defined databases. Include the <codeph>--drop</codeph> to drop any destination
+            tables that may already exist (recreating es as necessary). The
+              <codeph>--truncate-source-after</codeph> truncates each source table, only after
+            copying and validating the table data in the destination system. For example:
+              <codeblock>gpcopy --source-host my_host --source-port 1234 --source-user gpuser \
+--dest-host my_host --dest-port 1235 --dest-user gpuser --full --drop \
+-truncate-source-after --analyze --validate count</codeblock><p>The
+              above command performs a full database copy, first dropping tables in the destination
+              database (<codeph>--drop</codeph> option) if they already exist.
+                <codeph>gpcopy</codeph> truncates each table in the source system only after
+              successfully copying and validating the table data in the destination system. The
+              other <codeph>gpcopy</codeph> options specify the source and destination Greenplum
+              Database system master hosts, ports, and the User ID to use to connect to the
+              Greenplum Database systems.<note>While the example command performs a full system
+                copy, consider migrating only portions of the your data at a time, so that you can
+                reduce downtime while addressing table errors or validation failures that may occur
+                during the copy operation.</note></p></li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
+            as <systemoutput>postgresql.conf</systemoutput> and
+              <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
+            configuration as necessary to match the source system.</li>
+          <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
+            Greenplum Database extensions, third party jar files, and shared object files. You must
+            recreate these external objects as necessary to match the source system. </li>
+          <li>Greenplum Database 5.x removes automatic implicit casts between the text type and other
+            data types. After you migrate from Greenplum Database version 4.3.x to version 5.x, this
+            change in behavior may impact existing applications and queries. Refer to <xref
+              href="../../install_guide/43x_to_5x.xml" format="dita" scope="peer">About Implicit
+              Text Casting in Greenplum Database</xref> in the <cite>Greenplum Database Installation
+              Guide</cite> for information, including a discussion about supported and unsupported
+            workarounds.</li>
+          <li>After migrating data you may need to modify SQL scripts, administration scripts, and
+            user-defined functions as necessary to account for changes in Greenplum Database version
+            5.x. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
+              format="html" href="https://gpdb.docs.pivotal.io/latest/relnotes/">Pivotal Greenplum
+              5.x Release Notes</xref> for features that may necessitate post-migration tasks.</li>
+        </ol></p>
+      <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
+          page</xref>
+        <ph otherprops="op-print">in the <cite>Greenplum Database Utility Guide</cite>
+        </ph>for complete syntax and usage information. </p>
+    </body>
+  </topic>
+</topic>

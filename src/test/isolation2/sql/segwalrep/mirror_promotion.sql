@@ -29,6 +29,7 @@ returns text as $$
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
 
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select datadir from gp_segment_configuration c
 where c.role='p' and c.content=0), 'stop');
@@ -76,7 +77,7 @@ where content = 0;
 select dbid from gp_segment_configuration where content = 0 and role = 'p';
 -- end_ignore
 
-select gp_inject_fault('fts_handle_message', 'infinite_loop', '', '', '', -1, 0, dbid)
+select gp_inject_fault_infinite('fts_handle_message', 'infinite_loop', dbid)
 from gp_segment_configuration
 where content = 0 and role = 'p';
 

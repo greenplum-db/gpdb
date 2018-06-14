@@ -9,12 +9,18 @@ create or replace function pg_ctl(datadir text, command text, port int, contenti
 CREATE
 
 -- make sure we are in-sync for the primary we will be testing with
-select content, role, preferred_role, mode, status from gp_segment_configuration where content=0;
+select content, role, preferred_role, mode, status from gp_segment_configuration;
 content|role|preferred_role|mode|status
 -------+----+--------------+----+------
+-1     |p   |p             |n   |u     
+-1     |m   |m             |s   |u     
+2      |p   |p             |s   |u     
+2      |m   |m             |s   |u     
+1      |p   |p             |s   |u     
+1      |m   |m             |s   |u     
 0      |p   |p             |s   |u     
 0      |m   |m             |s   |u     
-(2 rows)
+(8 rows)
 
 -- print synchronous_standby_names should be set to '*' at start of test
 0U: show synchronous_standby_names;
@@ -37,10 +43,10 @@ gp_inject_fault
 ---------------
 t              
 (1 row)
-select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('fts_probe', 'skip', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 -- force scan to trigger the fault
 select gp_request_fts_probe_scan();
@@ -49,10 +55,10 @@ gp_request_fts_probe_scan
 t                        
 (1 row)
 -- verify the failure should be triggered once
-select gp_inject_fault('fts_probe', 'status', 1);
-gp_inject_fault
----------------
-t              
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 
 -- stop a mirror and show commit on dbid 2 will block

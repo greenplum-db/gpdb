@@ -242,6 +242,8 @@
 			id="pl_perl"/>
 		<topicref href="extensions/madlib.xml" navtitle="Greenplum MADlib Extension for Analytics"
 			id="madlib"/>
+		<topicref href="extensions/gppc.xml" navtitle="Greenplum Partner Connector API"
+			id="gppc"/>
 		<topicref href="extensions/fuzzystrmatch.xml"
 			navtitle="Greenplum Fuzzy String Match Extension" id="fuzzystrmatch"/>
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"

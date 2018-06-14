@@ -92,15 +92,13 @@
                   tables. For read-only S3 tables, the URL defines the location and prefix used to
                   select existing data files that comprise the S3 table. For example:
                      <codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
-      config=/home/gpadmin/aws_s3/s3.conf')
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock><p>For
                      writable S3 tables, the protocol URL defines the S3 location in which Greenplum
                      database stores data files for the table, as well as a prefix to use when
                      creating files for table <codeph>INSERT</codeph> operations. For
                      example:<codeblock>CREATE WRITABLE EXTERNAL TABLE S3WRIT (LIKE S3TBL)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
-      config=/home/gpadmin/aws_s3/s3.conf')
+   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock></p><p>See
                         <xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/> for more
                      information.</p></li>
@@ -500,18 +498,15 @@ chunksize = 67108864</codeblock></p>
                   <pd>If <codeph>version</codeph> is 1 or is not specified, this is an example of
                      the <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL
                         TABLE</codeph> command that specifies an Amazon S3
-                     endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
-      config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
+                     endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
                   <pd> If <codeph>version</codeph> is 2, this is an example
                         <codeph>LOCATION</codeph> clause with the <codeph>region</codeph> parameter
                      for an AWS S3 compatible
-                     service.<codeblock>LOCATION ('s3://test.company.com/s3test.company/test1/normal/ region=local-test
-      config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
+                     service.<codeblock>LOCATION ('s3://test.company.com/s3test.company/test1/normal/ region=local-test config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
                   <pd>If <codeph>version</codeph> is 2, the <codeph>LOCATION</codeph> clause can
                      also specify an Amazon S3 endpoint. This example specifies an Amazon S3
                      endpoint that uses the <codeph>region</codeph>
-                     parameter.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2
-      config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
+                     parameter.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2 config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
                </plentry>
             </parml>
             <note><ph id="memory-phrase">Greenplum Database can require up to <codeph>threadnum *

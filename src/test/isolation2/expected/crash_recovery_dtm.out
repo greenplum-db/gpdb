@@ -16,6 +16,18 @@
 CREATE OR REPLACE FUNCTION wait_till_master_shutsdown() RETURNS void AS $$ BEGIN loop PERFORM pg_sleep(.5); /* in func */ end loop; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
 CREATE
 
+1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+role|preferred_role|content|mode|status
+----+--------------+-------+----+------
+m   |m             |-1     |s   |u     
+m   |m             |0      |s   |u     
+m   |m             |1      |s   |u     
+m   |m             |2      |s   |u     
+p   |p             |-1     |n   |u     
+p   |p             |0      |s   |u     
+p   |p             |1      |s   |u     
+p   |p             |2      |s   |u     
+(8 rows)
 -- Scenario 1: Test to fail broadcasting of COMMIT PREPARED to one
 -- segment and hence trigger PANIC in master while after completing
 -- phase 2 of 2PC. Master's recovery cycle should correctly broadcast
@@ -30,10 +42,10 @@ CREATE
 1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE
 -- Inject fault to fail the COMMIT PREPARED always on one segment, till fault is not reset
-1: SELECT gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', -1, 0, 2);
-gp_inject_fault
----------------
-t              
+1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', 2);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 -- create utility session to segment which will be used to reset the fault
 0U: SELECT 1;
@@ -177,10 +189,20 @@ CHECKPOINT
 11: SET dtx_phase2_retry_count=9;
 SET
 -- skip FTS probes always
-11: SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
-gp_inject_fault
----------------
-t              
+11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+11: SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+11: select gp_wait_until_triggered_fault('fts_probe', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 11: SET debug_abort_after_segment_prepared = true;
 SET
@@ -191,7 +213,7 @@ count
 -----
 10   
 (1 row)
-11: SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);
+11: SELECT gp_inject_fault('fts_probe', 'reset', 1);
 gp_inject_fault
 ---------------
 t              

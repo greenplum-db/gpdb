@@ -381,7 +381,7 @@ class GpAddMirrorsProgram:
             #
             while len(dirs) < maxPrimariesPerHost:
                 print 'Enter mirror segment data directory location %d of %d >' % (len(dirs) + 1, maxPrimariesPerHost)
-                line = sys.stdin.readline().strip()
+                line = raw_input().strip()
                 if len(line) > 0:
                     try:
                         dirs.append(normalizeAndValidateInputPath(line))

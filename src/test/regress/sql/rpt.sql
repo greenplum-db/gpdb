@@ -65,6 +65,21 @@ drop table if exists foo;
 drop table if exists bar;
 
 --
+-- CREATE TABLE with both PRIMARY KEY and UNIQUE constraints
+--
+create table foo (id int primary key, name text unique) distributed replicated;
+
+-- success
+insert into foo values (1,'aaa');
+insert into foo values (2,'bbb');
+
+-- fail
+insert into foo values (1,'ccc');
+insert into foo values (3,'aaa');
+
+drop table if exists foo;
+
+--
 -- CREATE TABLE
 --
 --
@@ -181,19 +196,62 @@ alter table foo drop column x;
 alter table bar drop column x;
 
 drop table if exists foo;
+drop table if exists foo1;
 drop table if exists bar;
+drop table if exists bar1;
 
 -- Alter gp_distribution_policy
 create table foo(x int, y int) distributed replicated;
+create table foo1(x int, y int) distributed replicated;
 create table bar(x int, y int) distributed by (x);
+create table bar1(x int, y int) distributed randomly;
+
+insert into foo select i,i from generate_series(1,10) i;
+insert into foo1 select i,i from generate_series(1,10) i;
+insert into bar select i,i from generate_series(1,10) i;
+insert into bar1 select i,i from generate_series(1,10) i;
 
 -- alter distribution policy of replicated table
 alter table foo set distributed by (x);
+alter table foo1 set distributed randomly;
 -- alter a partitioned table to replicated table
 alter table bar set distributed replicated;
+alter table bar1 set distributed replicated;
+
+-- verify the new policies
+\d foo
+\d foo1
+\d bar
+\d bar1
+
+-- verify the reorganized data
+select * from foo;
+select * from foo1;
+select * from bar;
+select * from bar1;
+
+-- alter back
+alter table foo set distributed replicated;
+alter table foo1 set distributed replicated;
+alter table bar set distributed by (x);
+alter table bar1 set distributed randomly;
+
+-- verify the policies again
+\d foo
+\d foo1
+\d bar
+\d bar1
+
+-- verify the reorganized data again
+select * from foo;
+select * from foo1;
+select * from bar;
+select * from bar1;
 
 drop table if exists foo;
+drop table if exists foo1;
 drop table if exists bar;
+drop table if exists bar1;
 
 ---------
 -- UPDATE / DELETE

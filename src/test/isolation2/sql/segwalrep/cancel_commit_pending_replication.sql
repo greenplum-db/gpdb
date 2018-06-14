@@ -17,25 +17,26 @@ begin /* in func */
 end; /* in func */
 $$ language plpgsql VOLATILE;
 
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 create table store_session_id(a int, sess_id int);
 -- adding `0` as first column as the distribution column and add this tuple to segment 0
 1: insert into store_session_id select 0, sess_id from pg_stat_activity where procpid = pg_backend_pid();
 -- suspend to hit commit-prepared point on segment (as we are
 -- interested in testing Commit here and not really Prepare)
-select gp_inject_fault('finish_prepared_start_of_function', 'suspend', 2);
+select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', 2);
 -- Expect: `create table` should be blocked until reset
 -- `wal_sender_loop`. We also verify the `sync_rep_query_cancel` is
 -- triggered by query cancel request.
 1&: create table cancel_commit_pending_replication(a int, b int);
 select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, 2);
 -- now pause the wal sender on primary for content 0
-select gp_inject_fault('wal_sender_loop', 'suspend', 2);
+select gp_inject_fault_infinite('wal_sender_loop', 'suspend', 2);
 -- let the transaction move forward with the commit
 select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
 -- loop to reach waiting_reason=replication
 0U: select wait_for_replication(200);
 -- hitting this fault, is checked for test validation
-select gp_inject_fault('sync_rep_query_cancel', 'skip', 2);
+select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
 0U: select pg_cancel_backend(procpid) from pg_stat_activity where waiting_reason='replication' and sess_id in (select sess_id from store_session_id);
 -- EXPECT: hit this fault for QueryCancelPending
 select gp_wait_until_triggered_fault('sync_rep_query_cancel', 1, 2);

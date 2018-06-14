@@ -14,6 +14,7 @@
 
 #include "postgres.h"
 
+#include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 
 /*
@@ -98,7 +99,7 @@ ResGroupOps_DestroyGroup(Oid group, bool migrate)
  * pid is the process id.
  */
 void
-ResGroupOps_AssignGroup(Oid group, int pid)
+ResGroupOps_AssignGroup(Oid group, ResGroupCaps *caps, int pid)
 {
 	unsupported_system();
 }
@@ -218,4 +219,30 @@ ResGroupOps_GetTotalMemory(void)
 {
 	unsupported_system();
 	return 0;
+}
+
+/*
+ * Set the cpuset for the OS group.
+ * @param group: the destination group
+ * @param cpuset: the value to be set
+ * The syntax of CPUSET is a combination of the tuples, each tuple represents
+ * one core number or the core numbers interval, separated by comma.
+ * E.g. 0,1,2-3.
+ */
+void
+ResGroupOps_SetCpuSet(Oid group, const char *cpuset)
+{
+	unsupported_system();
+}
+
+/*
+ * Get the cpuset of the OS group.
+ * @param group: the destination group
+ * @param cpuset: the str to be set
+ * @param len: the upper limit of the str
+ */
+void
+ResGroupOps_GetCpuSet(Oid group, char *cpuset, int len)
+{
+	unsupported_system();
 }

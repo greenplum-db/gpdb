@@ -1113,8 +1113,6 @@ PG_FUNCTION_INFO_V1(hasBackendsExist);
 Datum
 hasBackendsExist(PG_FUNCTION_ARGS)
 {
-	const char *walreceiver = "walreceiver";
-
 	int beid;
 	int32 result;
 	int timeout = PG_GETARG_INT32(0);
@@ -1132,9 +1130,8 @@ hasBackendsExist(PG_FUNCTION_ARGS)
 		for (beid = 1; beid <= tot_backends; beid++)
 		{
 			PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
-			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid
-					&& strncmp(walreceiver, beentry->st_appname, strlen(walreceiver)) /* exclude the WALREP process*/
-				)
+			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid &&
+				beentry->st_session_id == gp_session_id)
 				result++;
 		}
 		if (result == 0 || timeout == 0)

@@ -185,7 +185,7 @@ SELECT * FROM tbl;
 ERROR:  connection with gpfdist failed for gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl. effective url: https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl.  (seg0 slice1 172.17.0.2:25432 pid=59537)
 DETAIL:  SSL certificate problem: self signed certificate
 SET verify_gpfdists_cert=off; 
-WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfidsts SSL certificate for connections between segments and gpfdists
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
 SELECT * FROM tbl;
  s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
 -----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------

@@ -4,10 +4,10 @@ CREATE
 -- TEST 1: block checkpoint on segments
 
 -- pause the 2PC after setting inCommit flag
-select gp_inject_fault('twophase_transaction_commit_prepared', 'suspend', 3);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('twophase_transaction_commit_prepared', 'suspend', 3);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 -- trigger a 2PC, and it will block at commit;
@@ -44,10 +44,10 @@ CHECKPOINT
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
-select gp_inject_fault('onephase_transaction_commit', 'suspend', 1);
-gp_inject_fault
----------------
-t              
+select gp_inject_fault_infinite('onephase_transaction_commit', 'suspend', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
 (1 row)
 
 -- trigger a 2PC, and it will block at commit;

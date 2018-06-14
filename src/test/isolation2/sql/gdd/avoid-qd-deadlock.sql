@@ -15,7 +15,7 @@ LANGUAGE plpgsql;
 INSERT INTO tsudf select i, i+1 from generate_series(1,10) i;
 
 SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
-SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, 10, 1);
+SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, -1, 10, 1);
 
 3&: SELECT * FROM func1(1);
 4: SELECT * FROM func1(2);
@@ -23,3 +23,5 @@ SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, 10, 1);
 3<:
 3q:
 4q:
+
+SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);

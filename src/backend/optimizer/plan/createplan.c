@@ -6200,7 +6200,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 	 */
 	ListCell   *lcr,
 			   *lcp;
-	bool		all_subplans_entry = true;
+	bool		all_subplans_entry = true,
+				all_subplans_replicated = true;
 
 	if (node->operation == CMD_INSERT)
 	{
@@ -6221,6 +6222,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			if (targetPolicyType == POLICYTYPE_PARTITIONED)
 			{
 				all_subplans_entry = false;
+				all_subplans_replicated = false;
 
 				if (gp_enable_fast_sri && IsA(subplan, Result))
 					sri_optimize_for_result(root, subplan, rte, &targetPolicy, &hashExpr);
@@ -6239,6 +6241,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			{
 				/* Master-only table */
 
+				all_subplans_replicated = false;
+
 				/* All's well if query result is already on the QD. */
 				if (!(subplan->flow->flotype == FLOW_SINGLETON &&
 					  subplan->flow->segindex < 0))
@@ -6256,6 +6260,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
 			{
 				Assert(subplan->flow->flotype != FLOW_REPLICATED);
+
+				all_subplans_entry = false;
 
 				/*
 				 * CdbLocusType_SegmentGeneral is only used by replicated table
@@ -6312,6 +6318,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			if (targetPolicyType == POLICYTYPE_PARTITIONED)
 			{
 				all_subplans_entry = false;
+				all_subplans_replicated = false;
 
 				/*
 				 * The planner does not support updating any of the
@@ -6330,6 +6337,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			}
 			else if (targetPolicyType == POLICYTYPE_ENTRY)
 			{
+				all_subplans_replicated = false;
+
 				/* Master-only table */
 				if (subplan->flow->flotype == FLOW_PARTITIONED ||
 					subplan->flow->flotype == FLOW_REPLICATED ||
@@ -6365,6 +6374,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
 			{
 				/* Do nothing here, see main work in cdbpath_motion_for_join() */
+				all_subplans_entry = false;
 			}
 			else
 				elog(ERROR, "unrecognized policy type %u", targetPolicyType);
@@ -6385,6 +6395,10 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 	if (all_subplans_entry)
 	{
 		mark_plan_entry((Plan *) node);
+	}
+	else if (all_subplans_replicated)
+	{
+		mark_plan_replicated((Plan *) node);
 	}
 	else
 	{

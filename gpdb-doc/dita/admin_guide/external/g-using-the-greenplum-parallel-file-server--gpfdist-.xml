@@ -191,11 +191,11 @@ $ gpfdist -d /var/load_files2 -p 8082 -l /home/<codeph>gpadmin</codeph>/log2 &am
             you can generate a core dump the next time a hang occurs to help debug the issue. Set
             the environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of
             seconds of no activity to wait before <codeph>gpfdist</codeph> is forced to exit. When
-            the environment variable is set and <codeph>gpfidst</codeph> hangs, the utility aborts
+            the environment variable is set and <codeph>gpfdist</codeph> hangs, the utility aborts
             after the specified number of seconds, creates a core dump, and sends abort information
             to the log file.</p>
          <p>This example sets the environment variable on a Linux system so that
-               <codeph>gpfidst</codeph> exits after 300 seconds (5 minutes) of no
+               <codeph>gpfdist</codeph> exits after 300 seconds (5 minutes) of no
             activity.<codeblock>export GPFDIST_WATCHDOG_TIMER=300</codeblock></p>
       </body>
    </topic>

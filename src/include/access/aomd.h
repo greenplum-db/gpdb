@@ -47,4 +47,8 @@ TruncateAOSegmentFile(File fd,
 					  int32 segmentFileNum,
 					  int64 offset);
 
+extern void
+mdunlink_ao(const char *path);
+extern void
+copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence);
 #endif							/* AOMD_H */

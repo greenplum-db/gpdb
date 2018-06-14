@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_ddb-plugin" otherprops="pivotal">
+  <title>Using the DD Boost Storage Plugin with gpbackup and gprestore</title>
+  <body>
+    <note type="warning">The DD Boost storage plugin for <codeph>gpbackup</codeph> and
+        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
+      production environment. Experimental features are subject to change without notice in future
+      releases.</note>
+    <note>The DD Boost storage plugin is available only in the commercial release of Pivotal
+      Greenplum Database.</note>
+    <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
+          <codeph><xref href="../../utility_guide/admin_utilities/gpbackup.xml"
+        >gpbackup</xref></codeph> and <codeph><xref
+          href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref></codeph>
+      utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can
+      also replicate a backup on a separate, remote Data Domain system for disaster recovery.</p>
+    <p>To use the DD Boost storage plugin application, you first create a configuration file to
+      specify the location of the plugin, the DD Boost login, and the backup location. When you run
+        <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, you specify the configuration file
+      with the option <codeph>--plugin-config</codeph>. For information about the configuration
+      file, see <xref href="#topic_ddb-plugin/ddb-plugin-config" format="dita"/>.</p>
+    <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
+        <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
+      option when you restore the backup with <codeph>gprestore</codeph>. </p>
+    <p>To replicate a backup set on a separate Data Domain system for disaster recovery, add the
+      backup replication options to the configuration file. Set the <codeph>replication</codeph>
+      option to <codeph>on</codeph> and add the options that the plugin uses to access the remote
+      Data Domain system that stores the replicated backup. During the backup operation, the DD
+      Boost storage plugin replicates the backup set on the remote Data Domain system with DD Boost
+      managed file replication. </p>
+    <p>To restore data from a replicated backup, you can use <codeph>gprestore</codeph> with the DD
+      Boost storage plugin and specify the location of the backup in the DD Boost configuration
+      file. </p>
+    <section id="ddb-plugin-config">
+      <title>DD Boost Storage Plugin Configuration File Format</title>
+      <p>The configuration file specifies the absolute path to the Greenplum Database DD Boost
+        storage plugin executable, DD Boost connection credentials, and Data Domain location. </p>
+      <p>The DD Boost storage plugin configuration file uses the <xref
+          href="http://yaml.org/spec/1.1/" scope="external" format="html">YAML 1.1</xref> document
+        format and implements its own schema for specifying the DD Boost information. </p>
+      <p>The configuration file must be a valid YAML document. The <codeph>gpbackup</codeph> and
+          <codeph>gprestore</codeph> utilities process the configuration file document in order and
+        use indentation (spaces) to determine the document hierarchy and the relationships of the
+        sections to one another. The use of white space is significant. White space should not be
+        used simply for formatting purposes, and tabs should not be used at all.</p>
+      <p>This is the structure of a DD Boost storage plugin configuration file.</p>
+      <codeblock><xref href="#topic_ddb-plugin/plugin-exe" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_ddboost_plugin</varname>>
+<xref href="#topic_ddb-plugin/ddb-options" format="dita">options</xref>: 
+  <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: "&lt;<varname>data-domain-host</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: "&lt;<varname>ddboost-ID</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: "&lt;<varname>ddboost-pwd</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: "&lt;<varname>data-domain-id</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: "&lt;<varname>data-domain-dir</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-replication" format="dita">replication</xref>: "on" | "off"
+  <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;<varname>remote-dd-host</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;<varname>remote-ddboost-ID</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-pwd" format="dita">remote_password</xref>: "&lt;<varname>remote-dd-pwd</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-s-unit" format="dita">remote_storage_unit</xref>: "&lt;<varname>remote-dd-ID</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-dir" format="dita">remote_directory</xref>: "&lt;<varname>remote-dd-dir</varname>>"</codeblock>
+      <parml id="ddb-exe-path">
+        <plentry id="plugin-exe">
+          <pt>executablepath</pt>
+          <pd>Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum
+            Database installation location is <codeph>$GPHOME/bin/gpbackup_ddboost_plugin</codeph>.
+            The plugin must be in the same location on every Greenplum Database host.</pd>
+        </plentry>
+        <plentry id="ddb-options">
+          <pt>options</pt>
+          <pd>Required. Begins the DD Boost storage plugin options section.<parml>
+              <plentry id="ddb-host">
+                <pt>hostname</pt>
+                <pd>Required. The IP address or hostname of the host. There is a 30-character limit.
+                </pd>
+              </plentry>
+              <plentry id="ddb-user">
+                <pt>username</pt>
+                <pd>Required. The Data Domain Boost user name. There is a 30-character limit.</pd>
+              </plentry>
+              <plentry id="ddb-pwd">
+                <pt>password</pt>
+                <pd>Required. The passcode for the DD Boost user to access the Data Domain storage
+                  unit.</pd>
+              </plentry>
+              <plentry id="ddb-s-unit">
+                <pt>storage-unit</pt>
+                <pd>Required. A valid storage unit name for the Data Domain system that is used for
+                  backup and restore operations.</pd>
+              </plentry>
+              <plentry id="ddb-dir">
+                <pt>directory</pt>
+                <pd>Required. The location for the backup files, configuration files, and global
+                  objects on the Data Domain system. The location on the system is
+                    <codeph>/&lt;</codeph><varname>data-domain-dir</varname>> in the storage unit of
+                  the system.</pd>
+                <pd>During a backup operation, the plugin creates the directory location if it does
+                  not exist in the storage unit and stores the backup in this directory
+                      <codeph>/&lt;<varname>data-domain-dir</varname>>/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeph>.
+                </pd>
+              </plentry>
+              <plentry id="ddb-replication">
+                <pt>replication</pt>
+                <pd>Optional. Enables or disables backup replication with DD Boost managed file
+                  replication when <codeph>gpbackup</codeph> performs a backup operation. Value is
+                  either <codeph>on</codeph> or <codeph>off</codeph>. Default value is
+                    <codeph>off</codeph>, backup replication is disabled. When the value is
+                    <codeph>on</codeph>, the DD Boost plugin replicates the backup on the Data
+                  Domain system that you specify with the <codeph>remote_*</codeph> options. </pd>
+                <pd>The <codeph>replication</codeph> option and <codeph>remote_*</codeph> options
+                  are ignored when performing a restore operation with <codeph>gprestore</codeph>.
+                  The <codeph>remote_*</codeph> options are ignored if <codeph>replication</codeph>
+                  is <codeph>off</codeph>.</pd>
+              </plentry>
+              <plentry id="ddb-remote-host">
+                <pt>remote_hostname</pt>
+                <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. The IP address
+                  or hostname of the Data Domain system that is used for remote backup storage.
+                  There is a 30-character limit. </pd>
+              </plentry>
+              <plentry id="ddb-remote-user">
+                <pt>remote_username</pt>
+                <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. The Data Domain
+                  Boost user name that accesses the remote Data Domain system. There is a
+                  30-character limit.</pd>
+              </plentry>
+              <plentry id="ddb-remote-pwd">
+                <pt>remote_password</pt>
+                <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. The passcode
+                  for the DD Boost user to access the Data Domain storage unit on the remote
+                  system.</pd>
+              </plentry>
+              <plentry id="ddb-remote-s-unit">
+                <pt>remote_storage-unit</pt>
+                <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. A valid storage
+                  unit name for the remote Data Domain system that is used for backup
+                  replication.</pd>
+              </plentry>
+              <plentry id="ddb-remote-dir">
+                <pt>remote_directory</pt>
+                <pd>Required if <codeph>replication</codeph> is <codeph>on</codeph>. The location
+                  for the replicated backup files, configuration files, and global objects on the
+                  remote Data Domain system. The location on the system is
+                    <codeph>/&lt;</codeph><varname>remote-dd-dir</varname>> in the storage unit of
+                  the remote system.</pd>
+                <pd>During a backup operation, the plugin creates the directory location if it does
+                  not exist in the storage unit of the remote Data Domain system and stores the
+                  replicated backup in this directory
+                      <codeph>/&lt;<varname>remote-dd-dir</varname>>/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeph>.
+                </pd>
+              </plentry>
+            </parml></pd>
+        </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Example</title>
+      <p>This is an example DD Boost storage plugin configuration file that is used in the next
+          <codeph>gpbackup</codeph> example command. The name of the file is
+          <codeph>ddboost-test-config.yaml</codeph>.</p>
+      <codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
+options: 
+  hostname: "192.0.2.230"
+  username: "test-ddb-user"
+  password: "asdf1234asdf"
+  storage_unit: "gpdb-backup"
+  directory: "test/backup"</codeblock>
+      <p>This <codeph>gpbackup</codeph> example backs up the database demo using the DD Boost
+        storage plugin. The absolute path to the DD Boost storage plugin configuration file is
+          <codeph>/home/gpadmin/ddboost-test-config.yml</codeph>.<codeblock>gpbackup --dbname demo --single-data-file --plugin-config /home/gpadmin/ddboost-test-config.yaml</codeblock></p>
+      <p>The DD Boost storage plugin writes the backup files to this directory of the Data Domain
+        storage unit <codeph>gpdb-backup</codeph>. </p>
+      <p>
+        <codeblock>/test/backup/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+      </p>
+      <p>This is an example DD Boost storage plugin configuration file that enables
+        replication.<codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
+options:
+  hostname: "192.0.2.230"
+  username: "test-ddb-user"
+  password: "asdf1234asdf"
+  storage_unit: "gpdb-backup"
+  directory: "test/backup"
+  replication: "on"
+  remote_hostname: "192.0.3.20"
+  remote_username: "test-dd-remote"
+  remote_password: "qwer2345erty"
+  remote_storage_unit: "gpdb-remote"
+  remote_directory: "test/replication"</codeblock></p>
+      <p>To restore from the replicated backup in the previous example, you can run
+          <codeph>gprestore</codeph> with the DD Boost storage plugin and specify a configuration
+        file with this
+        information.<codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
+options:
+  hostname: "192.0.3.20"
+  remote_username: "test-dd-remote"
+  remote_password: "qwer2345erty"
+  storage_unit: "gpdb-remote"
+  directory: "test/replication"</codeblock></p>
+    </section>
+    <section>
+      <title>Notes</title>
+      <p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database and requires a DD Boost
+        license. Open source Greenplum Database cannot use the DD Boost software, but can back up to
+        a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment
+        hosts.</p>
+      <p>The DD Boost storage plugin application must be in the same location on every Greenplum
+        Database host. The configuration file is required only on the master host.</p>
+      <p>When running <codeph>gpbackup</codeph>, the <codeph>--plugin-config</codeph> option is
+        supported only with <codeph>--single-data-file</codeph> or
+        <codeph>--metadata-only</codeph>.</p>
+      <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
+        files in this location in the Data Domain storage unit. </p>
+      <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <p>Where &lt;<varname>directory</varname>> is the location you specified in the DD Boost
+        configuration file, and &lt;<varname>datestamp</varname>> and
+          &lt;<varname>timestamp</varname>> are the backup date and time stamps. </p>
+      <p>When performing a backup operation with replication, the Data Domain system where the
+        backup is stored must have access to the remote Data Domain system where the replicated
+        backup is stored. </p>
+      <p>Performing a backup operation with replication increases the time required to perform a
+        backup. The backup set is copied to the local Data Domain system, and then replicated on the
+        remote Data Domain system using DD Boost managed file replication. The backup operation
+        completes after the backup set is replicated on the remote system.</p>
+    </section>
+  </body>
+</topic>

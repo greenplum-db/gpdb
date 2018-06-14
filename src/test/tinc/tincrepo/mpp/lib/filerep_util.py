@@ -59,8 +59,8 @@ class Filerepe2e_Util():
                raise Exception("Timed out: cluster not in change tracking")
         return (True,num_cl)
 
-    def inject_fault(self, y = None, f = None, r ='mirror', seg_id = None, H='ALL', m ='async', sleeptime=0,
-                     o=0, table = '', database = ''):
+    def inject_fault(self, y = None, f = None, r ='mirror', seg_id = None, H='ALL', m ='async', extra_arg=0,
+                     s_o=1, e_o=1, table = '', database = ''):
         '''
         PURPOSE : 
             Inject the fault using gpfaultinjector
@@ -76,20 +76,23 @@ class Filerepe2e_Util():
              raise Exception('MASTER_DATA_DIRECTORY environment variable is not set.')
         
         fault_cmd = ("select gp_inject_fault('{fault}', '{type}', '{ddl}', '{database}',"
-                     " '{table}', {occurrences}, {sleeptime}, {dbid})")
+                     " '{table}', {s_occurrences}, {e_occurrence}, {extra_arg}, {dbid})")
         if seg_id is None:
             fault_cmd = fault_cmd + " from gp_segment_configuration where role = '{role}'"
             if r == 'mirror':
                 fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
-                                             occurrences=o, sleeptime=sleeptime, dbid='dbid', role='m')
+                                             s_occurrences=s_o, e_occurrence=e_o, extra_arg=extra_arg,
+                                             dbid='dbid', role='m')
             elif r == 'primary':
                 fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
-                                             occurrences=o, sleeptime=sleeptime, dbid='dbid', role='p')
+                                             s_occurrences=s_o, e_occurrence=e_o, extra_arg=extra_arg,
+                                             dbid='dbid', role='p')
             else:
                 assert False
         else:
             fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
-                                         occurrences=o, sleeptime=sleeptime, dbid=seg_id)
+                                         s_occurrences=s_o, e_occurrence=e_o, extra_arg=extra_arg,
+                                         dbid=seg_id)
 
         results = {'rc':-1, 'stdout':'', 'stderr':''}
         PSQL.run_sql_command(fault_sql, results=results)

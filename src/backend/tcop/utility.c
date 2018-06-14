@@ -1182,7 +1182,7 @@ standard_ProcessUtility(Node *parsetree,
 						break;
 					case OBJECT_COLLATION:
 						Assert(stmt->args == NIL);
-						DefineCollation(stmt->defnames, stmt->definition);
+						DefineCollation(stmt->defnames, stmt->definition, false);
 						break;
 					default:
 						elog(ERROR, "unrecognized define stmt type: %d",

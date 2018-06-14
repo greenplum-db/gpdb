@@ -1007,6 +1007,21 @@ _readJoinExpr(void)
 
 static Bitmapset *bitmapsetRead(void);
 
+
+/*
+ * _readCollateClause
+ */
+static CollateClause *
+_readCollateClause(void)
+{
+	READ_LOCALS(CollateClause);
+
+	READ_NODE_FIELD(arg);
+	READ_NODE_FIELD(collname);
+	READ_INT_FIELD(location);
+
+	READ_DONE();
+}
 /*
  * _readRangeTblEntry
  */
@@ -3666,6 +3681,9 @@ readNodeBinary(void)
 				break;
 			case T_TypeCast:
 				return_value = _readTypeCast();
+				break;
+			case T_CollateClause:
+				return_value = _readCollateClause();
 				break;
 			case T_IndexElem:
 				return_value = _readIndexElem();

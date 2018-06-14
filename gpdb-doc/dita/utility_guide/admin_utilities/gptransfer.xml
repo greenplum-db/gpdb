@@ -7,6 +7,8 @@
     <body>
         <p>The <codeph>gptransfer</codeph> utility copies objects from databases in a source
             Greenplum Database system to databases in a destination Greenplum Database system. </p>
+        <!-- conref'ing to content from admin_guide. -->
+        <note conref="../../admin_guide/managing/gptransfer.xml#note1"/>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gptransfer</b>
@@ -157,7 +159,7 @@
                     <codeph>gptransfer</codeph> command line increases the <codeph>gpfdist</codeph>
                 logging level.</p>
             <p>The <codeph>gptransfer</codeph> utility does not move configuration files such as
-                    <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set up
+                    <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set up
                 the destination system configuration separately. </p>
             <p>The <codeph>gptransfer</codeph> utility does not move external objects such as
                 Greenplum Database extensions, third party jar files, and shared object files. You

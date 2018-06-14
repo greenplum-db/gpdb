@@ -306,6 +306,14 @@ execMotionSender(MotionState * node)
 			doSendEndOfStream(motion, node);
 			done = true;
 		}
+		else if (node->isExplictGatherMotion &&
+				 GpIdentity.segindex != gp_singleton_segindex)
+		{
+			/*
+			 * For explicit gather motion, receiver
+			 * get data from the singleton segment explictly.
+			 */
+		}
 		else
 		{
 			doSendTuple(motion, node, outerTupleSlot);
@@ -869,6 +877,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	motionstate->stopRequested = false;
 	motionstate->hashExpr = NULL;
 	motionstate->cdbhash = NULL;
+	motionstate->isExplictGatherMotion = false;
 
     /* Look up the sending gang's slice table entry. */
     sendSlice = (Slice *)list_nth(sliceTable->slices, node->motionID);
@@ -927,6 +936,21 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 			motionstate->mstype = MOTIONSTATE_SEND;
         }
 		/* TODO: If neither sending nor receiving, don't bother to initialize. */
+	}
+
+	/*
+	 * If it's gather motion and subplan's locus is
+	 * CdbLocusType_Replicated, mark isExplictGatherMotion
+	 * to true
+	 */
+	if (motionstate->mstype == MOTIONSTATE_SEND &&
+		node->motionType == MOTIONTYPE_FIXED &&
+		node->numOutputSegs == 1 &&
+		outerPlan(node) &&
+		outerPlan(node)->flow &&
+		outerPlan(node)->flow->locustype == CdbLocusType_Replicated)
+	{
+		motionstate->isExplictGatherMotion = true;
 	}
 
     motionstate->tupleheapReady = false;

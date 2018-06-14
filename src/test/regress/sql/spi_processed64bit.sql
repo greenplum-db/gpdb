@@ -15,13 +15,13 @@ CREATE TABLE public.spi64bittest (id BIGSERIAL PRIMARY KEY, data BIGINT);
 -- is special handling at the code that checks for this fault, to bump up
 -- the row counter regardless of the fault type.
 
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 
 
 -- insert enough rows to trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 DO $$
@@ -37,7 +37,7 @@ begin
   RAISE NOTICE 'Inserted % rows', num_rows;
 end;
 $$;
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 SELECT COUNT(*) AS count
@@ -45,7 +45,7 @@ SELECT COUNT(*) AS count
 
 
 -- update all rows, and trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 DO $$
@@ -60,7 +60,7 @@ begin
   RAISE NOTICE 'Updated % rows', num_rows;
 end;
 $$;
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 SELECT COUNT(*) AS count
@@ -68,7 +68,7 @@ SELECT COUNT(*) AS count
 
 
 -- delete all rows, and trigger the fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 DO $$
@@ -82,7 +82,7 @@ begin
   RAISE NOTICE 'Deleted % rows', num_rows;
 end;
 $$;
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 SELECT COUNT(*) AS count
@@ -120,7 +120,7 @@ CREATE TABLE public.spi64bittest_2 (id BIGINT);
 SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT generate_series(1,5000)');
 
 -- activate fault injector
-SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 
@@ -130,7 +130,7 @@ SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM publ
 SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
 SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
 
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 SELECT COUNT(*) AS count

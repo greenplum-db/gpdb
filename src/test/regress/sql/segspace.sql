@@ -2,7 +2,9 @@
 -- Tests the spill files disk space accounting mechanism
 --
 
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 -- check segspace before test
 reset statement_mem;

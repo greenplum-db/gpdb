@@ -241,7 +241,6 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	state.initPlans = NIL;
 
 	Assert(is_plan_node((Node *) plan) && IsA(query, Query));
-	Assert(plan->flow && plan->flow->flotype != FLOW_REPLICATED);
 
 	/* Does query have a target relation?  (INSERT/DELETE/UPDATE) */
 

@@ -314,7 +314,7 @@ extern void CopySendEndOfRow(CopyState cstate);
 extern char *limit_printout_length(const char *str);
 extern void truncateEol(StringInfo buf, EolType	eol_type);
 extern void truncateEolStr(char *str, EolType eol_type);
-extern void setEncodingConversionProc(CopyState cstate, int client_encoding, bool iswritable);
+extern void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
 extern void CopyEolStrToType(CopyState cstate);
 
 typedef struct GpDistributionData

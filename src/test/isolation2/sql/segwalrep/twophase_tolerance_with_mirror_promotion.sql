@@ -29,11 +29,15 @@ CREATE extension IF NOT EXISTS gp_inject_fault;
 1:SELECT role, preferred_role, content FROM gp_segment_configuration;
 
 -- Scenario 1: Not prepared
-1:SELECT gp_inject_fault('start_prepare', 'infinite_loop', dbid)
+1:SELECT gp_inject_fault_infinite('start_prepare', 'infinite_loop', dbid)
   FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
 1&:CREATE TABLE tolerance_test_table(an_int int);
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid)
+2:SELECT gp_wait_until_triggered_fault('start_prepare', 1, dbid)
   FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+2:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+-- do fts probe request twice to guarantee the fault is triggered
+2:SELECT gp_request_fts_probe_scan();
 2:SELECT gp_request_fts_probe_scan();
 1<:
 
@@ -47,13 +51,18 @@ CREATE extension IF NOT EXISTS gp_inject_fault;
 
 
 -- Scenario 2: Prepared but not committed
-1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', dbid)
+-- NOTICE: Don't use session 2 again because it's cached gang is invalid
+1:SELECT gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'suspend', dbid)
   FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
 1&:CREATE TABLE tolerance_test_table(an_int int);
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid)
+3:SELECT gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, dbid)
+  FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
+3:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
-2:SELECT gp_request_fts_probe_scan();
-2:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'resume', dbid)
+-- do fts probe request twice to guarantee the fault is triggered
+3:SELECT gp_request_fts_probe_scan();
+3:SELECT gp_request_fts_probe_scan();
+3:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'resume', dbid)
   FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
 1<:
 
@@ -65,12 +74,17 @@ CREATE extension IF NOT EXISTS gp_inject_fault;
 1:INSERT INTO tolerance_test_table VALUES(42);
 
 -- Scenario 3: Commit-Prepare received on primary but not acknowledged to master
-1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'infinite_loop', dbid)
+-- NOTICE: Don't use session 2 again because it's cached gang is invalid
+1:SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'infinite_loop', dbid)
   FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
 1&:DROP TABLE tolerance_test_table;
-2:SELECT gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid)
+4:SELECT gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid)
   FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-2:SELECT gp_request_fts_probe_scan();
+4:SELECT gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
+  FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
+-- do fts probe request twice to guarantee the fault is triggered
+4:SELECT gp_request_fts_probe_scan();
+4:SELECT gp_request_fts_probe_scan();
 1<:
 
 1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid)

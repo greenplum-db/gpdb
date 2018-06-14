@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 
 drop table if exists _tmp_table;
 create table _tmp_table (i1 int, i2 int, i3 int, i4 int);
@@ -71,16 +73,14 @@ create table _tmp_table2 as select i as c1, 0 as c2 from generate_series(0, 10) 
 -- with FTS probes.  Request a scan so that the skip fault is
 -- triggered immediately, rather that waiting until the next probe
 -- interval.
-select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- make one QE sleep before reading command
-select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 50, 2::smallint);
+select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 1, 50, 2::smallint);
 
-begin;
 select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
-end;
 
 select gp_inject_fault('before_read_command', 'reset', 2);
 -- Resume FTS probes starting from the next probe interval.

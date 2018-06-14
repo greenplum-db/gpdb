@@ -16,9 +16,7 @@
            [, ...])
        | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>/<varname>file</varname>')
        | ('pxf://<varname>path-to-data</varname>?<varname>PROFILE</varname>[&amp;<varname>custom-option</varname>=<varname>value</varname>[...]]'))
-       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
-             [region=<varname>S3-region</varname>]
-            [config=<varname>config_file</varname>]')
+       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
      [ON MASTER]
      FORMAT 'TEXT' 
            [( [HEADER]
@@ -98,9 +96,7 @@ CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
 
 CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
-            [region=<varname>S3-region</varname>]
-            [config=<varname>config_file</varname>]')
+     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
       [ON MASTER]
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] '<varname>delimiter</varname>']

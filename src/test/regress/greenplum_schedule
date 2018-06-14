@@ -22,6 +22,7 @@ test: instr_in_shmem
 
 test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan update_gp
 test: spi_processed64bit
+test: python_processed64bit
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain
@@ -91,6 +92,7 @@ test: resource_queue
 test: resource_queue_function
 test: resource_queue_stat
 test: resource_group
+test: resource_group_cpuset
 test: resource_group_gucs
 test: wrkloadadmin
 
@@ -123,7 +125,7 @@ test: bb_memory_quota memconsumption
 
 test: tuple_serialization
 # Tests for replicated table
-test: rpt rpt_joins rpt_tpch
+test: rpt rpt_joins rpt_tpch rpt_returning
 
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create

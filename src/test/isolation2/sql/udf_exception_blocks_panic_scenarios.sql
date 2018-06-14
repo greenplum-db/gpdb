@@ -90,7 +90,7 @@ BEGIN /* in func */
 END; /* in func */
 $$
 LANGUAGE plpgsql;
-
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 SET debug_dtm_action_segment=1;
 SET debug_dtm_action_target=protocol;
 SET debug_dtm_action_protocol=subtransaction_begin;

@@ -36,15 +36,15 @@ class BaseClass(MPPTestCase):
         super(BaseClass,self).__init__(methodName)
         
 
-    def inject_fault(self, fault_name, type, role='mirror', occurence=0, sleeptime=0, seg_id=None):
+    def inject_fault(self, fault_name, type, role='mirror', s_occurence=1, e_occurrence=1, extra_arg=0, seg_id=None):
         ''' Reset the fault and then issue the fault with the given type'''
-        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, o=occurence, sleeptime=sleeptime, seg_id=seg_id)
-        self.filereputil.inject_fault(f=fault_name, y=type, r=role, o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, s_o=s_occurence, e_o=e_occurrence, extra_arg=extra_arg, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y=type, r=role, s_o=s_occurence, e_o=e_occurrence, extra_arg=extra_arg, seg_id=seg_id)
         tinctest.logger.info('Successfully injected fault_name : %s fault_type : %s  occurence : %s ' % (fault_name, type, occurence))
    
-    def reset_fault(self, fault_name, role='mirror', port=None, occurence=0, sleeptime=0, seg_id=None):
+    def reset_fault(self, fault_name, role='mirror', port=None, s_occurence=1, e_occurrence=1, extra_arg=0, seg_id=None):
         ''' Reset the fault '''
-        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, s_o=s_occurence, e_o=e_occurrence, extra_arg=extra_arg, seg_id=seg_id)
         tinctest.logger.info('Successfully reset fault_name : %s fault_type : %s  occurence : %s ' % (fault_name, type, occurence))
 
     def check_fault_status(self, fault_name, seg_id=None, role=None):

@@ -277,7 +277,7 @@
         <li>Ensure any roles, functions, and resource queues are created in the destination
           database. These objects are not transferred when you use the <codeph>gptransfer
             -t</codeph> option. </li>
-        <li>Copy the <codeph>postgres.conf</codeph> and <codeph>pg_hba.conf</codeph> configuration
+        <li>Copy the <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph> configuration
           files from the source to the destination cluster. </li>
         <li>Install needed extensions in the destination database with <codeph>gppkg</codeph>.</li>
       </ul>
