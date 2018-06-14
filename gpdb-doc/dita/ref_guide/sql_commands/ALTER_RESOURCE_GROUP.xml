@@ -11,6 +11,7 @@
 <p>where <varname>group_attribute</varname> is one of:</p>
       <codeblock>CONCURRENCY <varname>integer</varname>
 CPU_RATE_LIMIT <varname>integer</varname>
+CPUSET <varname>tuple</varname>
 MEMORY_LIMIT <varname>integer</varname>
 MEMORY_SHARED_QUOTA <varname>integer</varname>
 MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
@@ -21,9 +22,9 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
         Only a superuser can alter a resource group.</p>
         <p>You can set or reset the concurrency limit of a resource group that you create for roles to control the maximum
         number of active concurrent statements in that group. You can also reset the memory or CPU
-        rate limit of a resource group to control the amount of memory or CPU resources that all
+        resources of a resource group to control the amount of memory or CPU resources that all
         queries submitted through the group can consume on each segment host.</p>
-        <p>When you alter the CPU limit of a resource group, the new limit is immediately applied.</p>
+        <p>When you alter the CPU resource management mode or limit of a resource group, the new mode or limit is immediately applied.</p>
         <p>When you alter a memory limit of a resource group that you create for roles, the new resource limit is immediately applied if current resource usage is less than or equal to the new value and there are no running transactions in the resource group. If the current resource usage exceeds the new memory limit value, or if there are running transactions in other resource groups that hold some of the resource, then Greenplum Database defers assigning the new limit until resource usage falls within the range of the new value.</p>
         <p>When you increase the memory limit of a resource group that you create for external components, the new resource limit is phased in as system memory resources become available. If you decrease the memory limit of a resource group that you create for external components, the behavior is component-specific. For example, if you decrease the memory limit of a resource group that you create for a PL/Container runtime, queries in a running container may fail with an out of memory error.</p>
         <p>You can alter one limit type in a single <codeph>ALTER RESOURCE GROUP</codeph> call.</p>
@@ -53,6 +54,16 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
             The maximum is 100. The sum of the
             <codeph>CPU_RATE_LIMIT</codeph>s of all resource groups defined in the
             Greenplum Database cluster must not exceed 100.</pd>
+          <pd>If you alter the <codeph>CPU_RATE_LIMIT</codeph> of a resource group in which
+            you previously configured a <codeph>CPUSET</codeph>, <codeph>CPUSET</codeph> is disabled, the reserved CPU cores are returned to Greenplum Database, and <codeph>CPUSET</codeph> is set to -1.</pd>
+        </plentry>
+        <plentry>
+          <pt>CPUSET <varname>tuple</varname></pt>
+          <pd>The CPU cores to reserve for this resource group. The CPU cores that you specify in <varname>tuple</varname> must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.</pd>
+          <pd><varname>tuple</varname> is a comma-separated list of single core numbers or core intervals. You must enclose <varname>tuple</varname> in single quotes, for example, '1,3-4'.</pd>
+          <pd>If you alter the <codeph>CPUSET</codeph> value of a resource group for which
+            you previously configured a <codeph>CPU_RATE_LIMIT</codeph>, <codeph>CPU_RATE_LIMIT</codeph> is disabled, the reserved CPU resources are returned to Greenplum Database, and <codeph>CPU_RATE_LIMIT</codeph> is set to -1.</pd>
+          <pd>You can alter <codeph>CPUSET</codeph> for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_LIMIT <varname>integer</varname></pt>
@@ -95,6 +106,8 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
       <codeblock>ALTER RESOURCE GROUP rgroup3 SET MEMORY_LIMIT 30;</codeblock>
       <p>Increase the memory spill ratio for a resource group from the default: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup4 SET MEMORY_SPILL_RATIO 25;</codeblock>
+      <p>Reserve CPU core 1 for a resource group: </p>
+      <codeblock>ALTER RESOURCE GROUP rgroup5 SET CPUSET '1';</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>

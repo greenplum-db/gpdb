@@ -5,7 +5,7 @@
   <title id="iz173472">Using Resource Groups</title>
   <body>
     <p>You use resource groups to set and enforce CPU, memory, and concurrent transaction limits in Greenplum Database. After you define a resource group, you can then assign the group to one or more Greenplum Database roles, or to an external component such as PL/Container, in order to control the resources used by those roles or components.</p>
-    <p>When you assign a resource group to a role (a role-based resource group), the resource limits that you define for the group apply to all of the roles to which you assign the group. For example, the CPU limit for a resource group identifies the maximum CPU usage for all running transactions submitted by Greenplum Database users in all roles to which you assign the group.</p>
+    <p>When you assign a resource group to a role (a role-based resource group), the resource limits that you define for the group apply to all of the roles to which you assign the group. For example, the memory limit for a resource group identifies the maximum memory usage for all running transactions submitted by Greenplum Database users in all roles to which you assign the group.</p>
     <p>Similarly, when you assign a resource group to an external component, the group limits apply to all running instances of the component. For example, if you create a resource group for a PL/Container external component, the memory limit that you define for the group specifies the maximum memory usage for all running instances of each PL/Container runtime to which you assign the group.</p>
 
     <p>This topic includes the following subtopics:</p>
@@ -110,6 +110,11 @@
               group.</entry>
           </row>
           <row>
+            <entry colname="col1">CPUSET</entry>
+            <entry colname="col2">The CPU cores to reserve for this resource
+              group.</entry>
+          </row>
+          <row>
             <entry colname="col1">MEMORY_LIMIT</entry>
             <entry colname="col2">The percentage of memory resources available to this resource
               group.</entry>
@@ -165,6 +170,11 @@
             <entry colname="col3">Yes</entry>
           </row>
           <row>
+            <entry colname="col1">CPUSET</entry>
+            <entry colname="col2">Yes</entry>
+            <entry colname="col3">Yes</entry>
+          </row>
+          <row>
             <entry colname="col1">MEMORY_LIMIT</entry>
             <entry colname="col2">Yes</entry>
             <entry colname="col3">Yes</entry>
@@ -203,13 +213,17 @@
   </topic>
 
   <topic id="topic833971717" xml:lang="en">
-    <title>CPU Limit</title>
+    <title>CPU Limits</title>
     <body>
+      <p>You configure the share of CPU resources to reserve for a resource group on a segment host by assigning specific CPU core(s) to the group, or by identifying the percentage of segment CPU resources to allocate to the group. Greenplum Database uses the <codeph>CPUSET</codeph> and <codeph>CPU_RATE_LIMIT</codeph> resource group limits to identify the CPU resource allocation mode. You must specify only one of these limits when you configure a resource group.</p>
+      <p>You may employ both modes of CPU resource allocation simultaneously in your Greenplum Database cluster. You may also change the CPU resource allocation mode for a resource group at runtime.</p>
       <p>The <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit"
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system CPU resources to allocate to resource groups on each Greenplum Database
-        segment host. The remaining CPU resources are used for the OS kernel and the Greenplum
+        segment host. This limit governs the maximum CPU usage of all resource groups on
+        a segment host regardless of the CPU allocation mode configured for the group.
+        The remaining unreserved CPU resources are used for the OS kernel and the Greenplum
         Database auxiliary daemon processes. The default
         <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
       <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
@@ -219,15 +233,38 @@
          higher than .9. Doing so may result in high workload
          queries taking near all CPU resources, potentially starving Greenplum
          Database auxiliary processes.</note>
-      <p>The Greenplum Database node CPU percentage is further divided equally among each segment on
-        the Greenplum node. Each resource group reserves a percentage of the segment CPU for
-        resource management. You identify this percentage via the <codeph>CPU_RATE_LIMIT</codeph>
-        value that you provide when you create the resource group.</p>
+
+    </body>
+    <topic id="cpuset" xml:lang="en">
+      <title>Assigning CPU Resources by Core</title>
+      <body>
+        <p>You identify the CPU cores that you want to reserve for a resource group with the <codeph>CPUSET</codeph> property. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you reserved for other resource groups. (Although Greenplum Database uses the cores that you assign to a resource group exclusively for that group, note that those CPU cores may also be used by non-Greenplum processes in the system.)</p>
+        <p>Specify a comma-separated list of single core numbers or number intervals when you configure <codeph>CPUSET</codeph>. You must enclose the core numbers/intervals in single quotes, for example, '1,3-4'.</p>
+        <p>When you assign CPU cores to <codeph>CPUSET</codeph> groups, consider the following:<ul>
+          <li>A resource group that you create with <codeph>CPUSET</codeph> uses the specified cores exclusively. If there are no running queries in the group, the reserved cores are idle and cannot be used by queries in other resource groups. Consider minimizing the number of <codeph>CPUSET</codeph> groups to avoid wasting system CPU resources.</li>
+          <li>Consider keeping CPU core 0 unassigned. CPU core 0 is used as a fallback mechanism in the following cases:<ul>
+            <li><codeph>admin_group</codeph> and <codeph>default_group</codeph> require at least one CPU core. When all CPU cores are reserved, Greenplum Database assigns CPU core 0 to these default groups. In this situation, the resource group to which you assigned CPU core 0 shares the core with <codeph>admin_group</codeph> and <codeph>default_group</codeph>.</li>
+            <li>If you restart your Greenplum Database cluster with one node replacement and the node does not have enough cores to service all <codeph>CPUSET</codeph> resource groups, the groups are automatically assigned CPU core 0 to avoid system start failure.</li></ul></li>
+          <li>Use the lowest possible core numbers when you assign cores to resource groups. If you replace a Greenplum Database node and the new node has fewer CPU cores than the original, or if you back up the database and want to restore it on a cluster with nodes with fewer CPU cores, the operation may fail. For example, if your Greenplum Database cluster has 16 cores, assigning cores 1-7 is optimal. If you create a resource group and assign CPU core 9 to this group, database restore to an 8 core node will fail.</li></ul></p>
+        <p>Resource groups that you configure with <codeph>CPUSET</codeph> have a higher priority on CPU resources. The maximum CPU resource usage percentage for all resource groups configured with <codeph>CPUSET</codeph> on a segment host is the number of CPU cores reserved divided by the number of all CPU cores, multiplied by 100.</p>
+        <p>When you configure <codeph>CPUSET</codeph> for a resource group, Greenplum Database disables <codeph>CPU_RATE_LIMIT</codeph> for the group and sets the value to -1.</p>
+        <note>You must configure <codeph>CPUSET</codeph> for a resource group <i>after</i> you have enabled resource group-based resource management for your Greenplum Database cluster.</note>
+      </body>
+    </topic>
+    <topic id="cpu_rate_limit" xml:lang="en">
+      <title>Assigning CPU Resources by Percentage</title>
+      <body>
+      <p>The Greenplum Database node CPU percentage is divided equally among each segment on
+        the Greenplum node. Each resource group that you configure with a <codeph>CPU_RATE_LIMIT</codeph> reserves the specified percentage of the segment CPU for
+        resource management.</p>
       <p>The minimum <codeph>CPU_RATE_LIMIT</codeph> percentage you can specify for a resource group
         is 1, the maximum is 100.</p>
       <p>The sum of <codeph>CPU_RATE_LIMIT</codeph>s specified for all resource groups that you define in
         your Greenplum Database cluster must not exceed 100.</p>
-      <p>CPU resource assignment is elastic in that Greenplum Database may allocate the CPU
+      <p>The maximum CPU resource usage for all resource groups configured with a <codeph>CPU_RATE_LIMIT</codeph> on a segment host is the minimum of:<ul>
+        <li>The number of non-reserved CPU cores divided by the number of all CPU cores, multiplied by 100, and</li>
+        <li>The <codeph>gp_resource_group_cpu_limit</codeph> value.</li></ul></p>
+      <p>CPU resource assignment for resource groups configured with a <codeph>CPU_RATE_LIMIT</codeph> is elastic in that Greenplum Database may allocate the CPU
         resources of an idle resource group to a busier one(s). In such situations, CPU resources
         are re-allocated to the previously idle resource group when that resource group next becomes
         active. If multiple resource groups are busy, they are allocated the CPU resources of any
@@ -235,7 +272,9 @@
         example, a resource group created with a <codeph>CPU_RATE_LIMIT</codeph> of 40 will be
         allocated twice as much extra CPU resource as a resource group that you create with a
           <codeph>CPU_RATE_LIMIT</codeph> of 20.</p>
-    </body>
+      <p>When you configure <codeph>CPU_RATE_LIMIT</codeph> for a resource group, Greenplum Database disables <codeph>CPUSET</codeph> for the group and sets the value to -1.</p>
+      </body>
+    </topic>
   </topic>
   <topic id="topic8339717" xml:lang="en">
     <title>Memory Limits</title>
@@ -290,7 +329,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         Greenplum Database allocates available resource group shared memory to the query. The
         maximum amount of resource group memory available to a specific transaction slot is the sum
         of the transaction's fixed memory and the full resource group shared memory allotment.</p>
-      </body>
+       </body>
 
       <topic id="topic833glob" xml:lang="en">
         <title>Global Shared Memory</title>
@@ -338,8 +377,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           among operators more optimally by re-allocating memory released by operators that have 
           completed their processing to operators in a later query stage.</p>
         <p><codeph>MEMORY_SPILL_RATIO</codeph> identifies the memory usage threshold for
-          memory-intensive operators in a transaction. When the transaction reaches this memory
-          threshold, it spills to disk. Greenplum Database uses the
+          memory-intensive operators in a transaction. When this threshold is reached,
+          a transaction spills to disk. Greenplum Database uses the
             <codeph>MEMORY_SPILL_RATIO</codeph> to determine the initial memory to allocate to a
           transaction.</p>
         <p> The minimum <codeph>MEMORY_SPILL_RATIO</codeph> percentage that you can specify for a
@@ -353,7 +392,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         <section id="topic833low" xml:lang="en">
           <title>memory_spill_ratio and Low Memory Queries </title>
             <p>A low <codeph>memory_spill_ratio</codeph> setting (for example,
-              in the 0-2 range) has been shown
+              in the 0-2% range) has been shown
               to increase the performance of queries with low memory requirements. Use
               the <codeph>memory_spill_ratio</codeph> server configuration parameter
               to override the setting on a per-query basis. For example:
@@ -436,6 +475,12 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
      }</b>
  }</codeblock>
           </li>
+          <li>If you plan to assign specific CPU cores to resource groups, you must add a cpuset block to the <codeph>gpdb.conf</codeph> file. Be sure to add the block before the closing curly-brace (<codeph>}</codeph>):<codeblock>     cpuacct {
+     }
+     <b>cpuset {
+     }</b>
+ }</codeblock>
+          </li>
           <li>If not already installed and running, install the Control Groups operating system
             package and start the cgroups service on each Greenplum Database node. The commands that you
             run to perform these tasks will differ based on the operating system installed on the
@@ -463,6 +508,7 @@ sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
             running the following commands. Replace &lt;cgroup_mount_point&gt; with the
             mount point that you identified in the previous step: <codeblock>ls -l &lt;cgroup_mount_point&gt;/cpu/gpdb
 ls -l &lt;cgroup_mount_point&gt;/cpuacct/gpdb
+ls -l &lt;cgroup_mount_point&gt;/cpuset/gpdb
 ls -l &lt;cgroup_mount_point&gt;/memory/gpdb</codeblock>
             <p>If these directories exist and are owned by <codeph>gpadmin:gpadmin</codeph>, you
               have successfully configured cgroups for Greenplum Database CPU resource
@@ -553,6 +599,11 @@ gpstart
               <entry colname="col3">30</entry>
             </row>
             <row>
+              <entry colname="col1">CPUSET</entry>
+              <entry colname="col2">-1</entry>
+              <entry colname="col3">-1</entry>
+            </row>
+            <row>
               <entry colname="col1">MEMORY_LIMIT</entry>
               <entry colname="col2">10</entry>
               <entry colname="col3">30</entry>
@@ -566,6 +617,11 @@ gpstart
               <entry colname="col1">MEMORY_SPILL_RATIO</entry>
               <entry colname="col2">20</entry>
               <entry colname="col3">20</entry>
+            </row>
+            <row>
+              <entry colname="col1">MEMORY_AUDITOR</entry>
+              <entry colname="col2">vmtracker</entry>
+              <entry colname="col3">vmtracker</entry>
             </row>
           </tbody>
         </tgroup>
@@ -582,12 +638,12 @@ gpstart
   <topic id="topic10" xml:lang="en">
     <title id="iz139857">Creating Resource Groups</title>
     <body>
-      <p><i>When you create a resource group for a role</i>, you provide a name, CPU limit, and memory limit. You can
+      <p><i>When you create a resource group for a role</i>, you provide a name, a CPU resource allocation mode, and a memory limit. You can
         optionally provide a concurrent transaction limit and memory shared quota and spill ratio.
         Use the <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml#topic1"
             type="topic" format="dita"/></codeph> command to create a new resource group. </p>
       <p id="iz152723">When you create a resource group for a role, you must provide
-          <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph> limit values. These
+          <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> and <codeph>MEMORY_LIMIT</codeph> limit values. These
         limits identify the percentage of Greenplum Database resources to allocate to this resource
         group. For example, to create a resource group named <i>rgroup1</i> with a CPU limit of 20
         and a memory limit of 25:</p>
@@ -600,12 +656,12 @@ gpstart
         is assigned. <codeph>rgroup1</codeph> utilizes the default <codeph>MEMORY_AUDITOR</codeph> <codeph>vmtracker</codeph> and the default <codeph>CONCURRENCY</codeph>
         setting of 20.</p>
       <p id="iz1527231"><i>When you create a resource group for an external component</i>, you must provide
-          <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph> limit values. You
-        must also provide the <codeph>MEMORY_AUDITOR</codeph> and explicitly set <codeph>CONCURRENCY</codeph> to zero (0). For example, to create a resource group named <i>rgroup_extcomp</i> with a CPU limit of 10
-        and a memory limit of 15:</p>
+          <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> and <codeph>MEMORY_LIMIT</codeph> limit values. You
+        must also provide the <codeph>MEMORY_AUDITOR</codeph> and explicitly set <codeph>CONCURRENCY</codeph> to zero (0). For example, to create a resource group named <i>rgroup_extcomp</i> for which you reserve CPU core 1
+        and assign a memory limit of 15:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup_extcomp</i> WITH (MEMORY_AUDITOR=cgroup, CONNCURENCY=0,
-     CPU_RATE_LIMIT=10, MEMORY_LIMIT=15);
+        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup_extcomp</i> WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+     CPUSET='1', MEMORY_LIMIT=15);
 </codeblock>
       </p>
       <p>The <codeph><xref href="../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.xml#topic1"
@@ -615,6 +671,7 @@ gpstart
       <p>
         <codeblock>=# ALTER RESOURCE GROUP <i>rg_role_light</i> SET CONCURRENCY 7;
 =# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_LIMIT 25;
+=# ALTER RESOURCE GROUP <i>rgroup1</i> SET CPUSET '2,4';
 </codeblock>
       </p>
       <note>You cannot set or alter the <codeph>CONCURRENCY</codeph> value for the
@@ -704,8 +761,8 @@ gpstart
         </p>
         <p>
           The <codeph>gp_toolkit.gp_resgroup_config</codeph> view does not
-          display the resource group memory auditor attribute. To view the
-          memory auditor along with the resource group limits, run the
+          display the resource group memory auditor or CPU core assignment attributes. To view the
+          these attributes along with the other resource group limits, run the
           following query:<codeblock>=# SELECT g.oid AS groupid, g.rsgname AS groupname,
      t1.value AS concurrency, t1.proposed AS proposed_concurrency,
      t2.value AS cpu_rate_limit, t3.value AS memory_limit,
@@ -719,14 +776,16 @@ gpstart
        WHEN t6.value = '0'::text THEN 'vmtracker'::text
        WHEN t6.value = '1'::text THEN 'cgroup'::text
        ELSE 'unknown'::text
-     END AS memory_auditor
+     END AS memory_auditor,
+     t7.value AS cpuset
    FROM pg_resgroup g
      JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1
      JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2
      JOIN pg_resgroupcapability t3 ON g.oid = t3.resgroupid AND t3.reslimittype = 3
      JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4
      JOIN pg_resgroupcapability t5 ON g.oid = t5.resgroupid AND t5.reslimittype = 5
-     LEFT JOIN pg_resgroupcapability t6 ON g.oid = t6.resgroupid AND t6.reslimittype = 6;</codeblock>
+     LEFT JOIN pg_resgroupcapability t6 ON g.oid = t6.resgroupid AND t6.reslimittype = 6
+     LEFT JOIN pg_resgroupcapability t7 ON g.oid = t7.resgroupid AND t7.reslimittype = 7;</codeblock>
         </p>
       </body>
     </topic>
