@@ -322,15 +322,11 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
           <codeph>GPDB.KRB</codeph> realm. The host name of the KDC server in
         this example is gpdb-kdc.</p>
       <ol id="steps_r5w_rtc_2p">
-        <li>
-          <p>Install the Kerberos server and client packages:</p>
-            <codeblock>sudo yum install krb5-libs krb5-server krb5-workstation</codeblock>         
-        </li>
-        <li>
-          <p>Edit the <filepath>/etc/krb5.conf</filepath> configuration file.
-            The following example shows a Kerberos server configured with a
-            default <codeph>GPDB.KRB</codeph> realm. </p>
-
+        <li>Install the Kerberos server and client
+          packages:<codeblock>$ sudo yum install krb5-libs krb5-server krb5-workstation</codeblock></li>
+        <li>Edit the <filepath>/etc/krb5.conf</filepath> configuration file. The
+          following example shows a Kerberos server configured with a default
+            <codeph>GPDB.KRB</codeph> realm.
             <codeblock>[logging]
  default = FILE:/var/log/krb5libs.log
  kdc = FILE:/var/log/krb5kdc.log
@@ -351,12 +347,12 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
  GPDB.KRB = {
   kdc = gpdb-kdc:88
   admin_server = gpdb-kdc:749
-  default_domain = gpdb-kdc
+  default_domain = gpdb.krb
  }
 
 [domain_realm]
- .gpdb-kdc = GPDB.KRB
- gpdb-kdc = GPDB.KRB
+ .gpdb.krb = GPDB.KRB
+ gpdb.krb = GPDB.KRB
 
 [appdefaults]
  pam = {
@@ -366,62 +362,48 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
     forwardable = true
     krb4_convert = false
  }
-</codeblock>       
-            <p>The <codeph>kdc</codeph> and <codeph>admin_server</codeph> keys
-              in the <codeph>[realms]</codeph> section specify the host
-                (<codeph>gpdb-kdc</codeph>) and port where the Kerberos server
-              is running. IP numbers can be used in place of host names. </p>
-            <p>If your Kerberos server manages authentication for other realms,
-              you would instead add the <codeph>GPDB.KRB</codeph> realm in the
-                <codeph>[realms]</codeph> and <codeph>[domain_realm]</codeph>
-              section of the <codeph>kdc.conf</codeph> file. See the <xref
-                href="http://web.mit.edu/kerberos/krb5-latest/doc/"
-                format="html" scope="external">Kerberos documentation</xref> for
-              information about the <codeph>kdc.conf</codeph> file.</p>         
-        </li>
-        <li>
-          <p>To create the Kerberos database, run the
-              <codeph>kdb5_util</codeph>. </p>
-            <codeblock>kdb5_util create -s</codeblock>         
-          <p>The <codeph>kdb5_util</codeph>
+</codeblock><p>The
+              <codeph>kdc</codeph> and <codeph>admin_server</codeph> keys in the
+              <codeph>[realms]</codeph> section specify the host
+              (<codeph>gpdb-kdc</codeph>) and port where the Kerberos server is
+            running. IP numbers can be used in place of host names. </p><p>If
+            your Kerberos server manages authentication for other realms, you
+            would instead add the <codeph>GPDB.KRB</codeph> realm in the
+              <codeph>[realms]</codeph> and <codeph>[domain_realm]</codeph>
+            section of the <codeph>kdc.conf</codeph> file. See the <xref
+              href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html"
+              scope="external">Kerberos documentation</xref> for information
+            about the <codeph>kdc.conf</codeph> file.</p></li>
+        <li>To create the Kerberos database, run the <codeph>kdb5_util</codeph>.
+            <codeblock>kdb5_util create -s</codeblock><p>The
+              <codeph>kdb5_util</codeph>
             <option>create</option> command creates the database to store keys
             for the Kerberos realms that are managed by this KDC server. The
               <option>-s</option> option creates a stash file. Without the stash
             file, every time the KDC server starts it requests a
-            password.</p>
-        </li>
-        <li>
-          <p>Add an administrative user to the KDC database with the
-              <codeph>kadmin.local</codeph> utility. Because it does not itself
-            depend on Kerberos authentication, the <codeph>kadmin.local</codeph>
-            utility allows you to add an initial administrative user to the
-            local Kerberos server. To add the user <codeph>gpadmin</codeph> as
-            an administrative user to the KDC database, run the following
-            command:</p>
-            <codeblock>kadmin.local -q "addprinc gpadmin/admin"</codeblock>
-          
-          <p>Most users do not need administrative access to the Kerberos
-            server. They can use <codeph>kadmin</codeph> to manage their own
-            principals (for example, to change their own password). For
-            information about <codeph>kadmin</codeph>, see the <xref
+          password.</p></li>
+        <li>Add an administrative user to the KDC database with the
+            <codeph>kadmin.local</codeph> utility. Because it does not itself
+          depend on Kerberos authentication, the <codeph>kadmin.local</codeph>
+          utility allows you to add an initial administrative user to the local
+          Kerberos server. To add the user <codeph>gpadmin</codeph> as an
+          administrative user to the KDC database, run the following
+            command:<codeblock>kadmin.local -q "addprinc gpadmin/admin"</codeblock><p>Most
+            users do not need administrative access to the Kerberos server. They
+            can use <codeph>kadmin</codeph> to manage their own principals (for
+            example, to change their own password). For information about
+              <codeph>kadmin</codeph>, see the <xref
               href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html"
-              scope="external">Kerberos documentation</xref>. </p>
-        </li>
-        <li>
-          <p>If needed, edit the
-              <filepath>/var/kerberos/krb5kdc/kadm5.acl</filepath> file to grant
-            the appropriate permissions to <codeph>gpadmin</codeph>.</p>
-        </li>
-        <li>
-          <p>Start the Kerberos daemons:</p>
-            <codeblock>/sbin/service krb5kdc start
-/sbin/service kadmin start</codeblock>          
-        </li>
-        <li>
-          <p>To start Kerberos automatically upon restart:</p>
-            <codeblock>/sbin/chkconfig krb5kdc on
-/sbin/chkconfig kadmin on</codeblock>       
-        </li>
+              scope="external">Kerberos documentation</xref>. </p></li>
+        <li>If needed, edit the
+            <filepath>/var/kerberos/krb5kdc/kadm5.acl</filepath> file to grant
+          the appropriate permissions to <codeph>gpadmin</codeph>.</li>
+        <li>Start the Kerberos
+          daemons:<codeblock>/sbin/service krb5kdc start
+/sbin/service kadmin start</codeblock></li>
+        <li>To start Kerberos automatically upon
+          restart:<codeblock>/sbin/chkconfig krb5kdc on
+/sbin/chkconfig kadmin on</codeblock></li>
       </ol>
     </body>
   </topic>
