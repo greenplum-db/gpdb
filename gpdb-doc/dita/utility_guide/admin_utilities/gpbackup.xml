@@ -52,11 +52,12 @@
         each <codeph>gpbackup</codeph> operation uses a single transaction on the Greenplum Database
         master host. The <codeph>COPY ... ON SEGMENT</codeph> command performs the backup task in
         parallel on each segment host. The backup process acquires an <codeph>ACCESS SHARE</codeph>
-        lock on each table that is backed up.</p>When a back up operation completes,
-        <codeph>gpbackup</codeph> returns a status code. See <xref href="#topic1/return_codes"
-        format="dita"/>. <p><codeph>gpbackup</codeph> can send status email notifications after a
-        back up operation completes. You specify when the utility sends the mail and the email
-        recipients in a configuration file. See <xref
+        lock on each table that is backed up. During the table locking process, the database should
+        be in a quiescent state.</p>When a back up operation completes, <codeph>gpbackup</codeph>
+      returns a status code. See <xref href="#topic1/return_codes" format="dita"/>.
+          <p><codeph>gpbackup</codeph> can send status email notifications after a back up operation
+        completes. You specify when the utility sends the mail and the email recipients in a
+        configuration file. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p></section>
     <section>
@@ -161,7 +162,7 @@
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>If you specify this option, the utility does not automatically backup dependent
+          <pd>If you specify this option, the utility does not automatically back up dependent
             objects. You must also explicitly specify dependent objects that are required. For
             example if you back up a view, you must also back up the tables that the view uses. If
             you back up a table that uses a sequence, you must also back up the sequence.</pd>
@@ -184,7 +185,7 @@
             this option with a schema filtering option such as <codeph>--include-schema</codeph>, or
             another table filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>If you specify this option, the utility does not automatically backup dependent
+          <pd>If you specify this option, the utility does not automatically back up dependent
             objects. You must also explicitly specify dependent objects that are required. For
             example if you back up a view, you must also specify the tables that the view uses. If
             you specify a table that uses a sequence, you must also specify the sequence.</pd>
@@ -204,8 +205,9 @@
             separate transaction. For example, if you specify <codeph>--jobs 2</codeph>, the utility
             creates two processes, each process starts a single transaction, and the utility backs
             up the tables in parallel using the two processes.<note type="important">If you specify
-              a value higher than 1, the database must be in a quiescent state when performing the
-              backup. If database operations are being performed on tables that are being backed up,
+              a value higher than 1, the database must be in a quiescent state while the utility
+              acquires a lock on the tables that are being backed up. If database operations are
+              being performed on tables that are being backed up during the table locking process,
               consistency between tables that are backed up in different transactions cannot be
               guaranteed.</note></pd>
           <pd>You cannot use this option in combination with the options
