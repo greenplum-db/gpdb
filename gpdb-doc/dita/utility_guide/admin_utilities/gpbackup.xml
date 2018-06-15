@@ -50,7 +50,7 @@
         for later use. Additional options are provided to filter the backup set in order to include
         or exclude specific tables.</p><p>With the default <codeph>--jobs</codeph> option (1 job),
         each <codeph>gpbackup</codeph> operation uses a single transaction on the Greenplum Database
-        master host. The <codeph>COPY ... ON SEGMENT</codeph>command performs the backup task in
+        master host. The <codeph>COPY ... ON SEGMENT</codeph> command performs the backup task in
         parallel on each segment host. The backup process acquires an <codeph>ACCESS SHARE</codeph>
         lock on each table that is backed up.</p>When a back up operation completes,
         <codeph>gpbackup</codeph> returns a status code. See <xref href="#topic1/return_codes"
@@ -161,10 +161,10 @@
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>The utility does not backup dependent objects. You must explicitly specify dependent
-            objects that are required. For example, if you back up a view, must also back up the
-            tables that the view uses. If you back up a table that uses a sequence, you must also
-            back up the sequence.</pd>
+          <pd>If you specify this option, the utility does not automatically backup dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view, you must also back up the tables that the view uses. If
+            you back up a table that uses a sequence, you must also back up the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
@@ -184,10 +184,10 @@
             this option with a schema filtering option such as <codeph>--include-schema</codeph>, or
             another table filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>The utility does not backup dependent objects. You must explicitly specify dependent
-            objects that are required. For example, if you back up a view, must also specify the
-            tables that the view uses. If you specify a table that uses a sequence, you must also
-            specify the sequence.</pd>
+          <pd>If you specify this option, the utility does not automatically backup dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view, you must also specify the tables that the view uses. If
+            you specify a table that uses a sequence, you must also specify the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
@@ -209,7 +209,7 @@
               consistency between tables that are backed up in different transactions cannot be
               guaranteed.</note></pd>
           <pd>You cannot use this option in combination with the options
-              <codeph>--metadata-only</codeph>, <codeph>--single-data- file</codeph>, or
+              <codeph>--metadata-only</codeph>, <codeph>--single-data-file</codeph>, or
               <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>

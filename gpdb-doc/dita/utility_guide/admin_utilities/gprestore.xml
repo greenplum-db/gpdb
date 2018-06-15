@@ -180,10 +180,11 @@
             must include that name in double quotes. You can specify this option multiple times. You
             cannot specify a leaf partition of a partitioned table.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>The utility does not restore dependent objects. You must explicitly specify the
-            dependent objects that are required. For example, if you restore a view, must also
-            restore the tables that the view uses. If you restore a table that uses a sequence, you
-            must also restore the sequence. The dependent objects must exist in the backup set.</pd>
+          <pd>If you specify this option, the utility does not automatically restore dependent
+            objects. You must also explicitly specify the dependent objects that are required. For
+            example if you restore a view, you must also restore the tables that the view uses. If
+            you restore a table that uses a sequence, you must also restore the sequence. The
+            dependent objects must exist in the backup set.</pd>
           <pd>You cannot combine this option with a schema filtering option such as
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
@@ -199,10 +200,11 @@
             Any tables not listed in this file are omitted from the restore operation. You cannot
             specify a leaf partition of a partitioned table.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
-          <pd>The utility does not restore dependent objects. You must explicitly specify dependent
-            objects that are required. For example, if you restore a view, must also specify the
-            tables that the view uses. If you specify a table that uses a sequence, you must also
-            specify the sequence. The dependent objects must exist in the backup set.</pd>
+          <pd>If you specify this option, the utility does not automatically restore dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you restore a view, you must also specify the tables that the view uses. If
+            you specify a table that uses a sequence, you must also specify the sequence. The
+            dependent objects must exist in the backup set.</pd>
           <pd>If you use the <codeph>--include-table-file</codeph> option,
               <codeph>gprestore</codeph> does not create roles or set the owner of the tables. The
             utility restores table indexes and rules. Triggers are also restored but are not
