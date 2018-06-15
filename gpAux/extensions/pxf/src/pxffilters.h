@@ -98,7 +98,8 @@ typedef struct PxfFilterDesc
 }	PxfFilterDesc;
 
 /*
- * HAWQ operator OID to PXF operator code mapping used for OpExpr
+ * A mapping of GPDB operator OID to PXF operator code.
+ * Used for Node of type 'T_OpExpr'
  */
 typedef struct dbop_pxfop_map
 {
@@ -108,7 +109,8 @@ typedef struct dbop_pxfop_map
 }	dbop_pxfop_map;
 
 /*
- * HAWQ operator OID to PXF operator code mapping used for ScalarArrayOpExpr
+ * A mapping of GPDB operator OID to PXF operator code ('PXFOP_IN').
+ * Used for Node of type 'T_ScalarArrayOpExpr'
  */
 typedef struct dbop_pxfop_array_map
 {

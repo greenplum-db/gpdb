@@ -47,10 +47,10 @@ static void add_extra_and_expression_items(List *expressionItems, int extraAndOp
 static List *get_attrs_from_expr(Expr *expr, bool *expressionIsSupported);
 
 /*
- * All supported HAWQ operators, and their respective HDFS operator code.
+ * All supported operators and their PXF operator codes.
  * Note that it is OK to use hardcoded OIDs, since these are all pinned
  * down system catalog operators.
- * see pg_operator.h
+ * See pg_operator.h
  */
 dbop_pxfop_map pxf_supported_opr_op_expr[] =
 {
@@ -232,6 +232,7 @@ dbop_pxfop_array_map pxf_supported_opr_scalar_array_op_expr[] =
 	/* bpchar */
 	{BPCharEqualOperator /* bpchareq */ , PXFOP_IN, true},
 };
+
 
 Oid			pxf_supported_types[] =
 {
@@ -683,7 +684,6 @@ pxf_serialize_filter_list(List *expressionItems)
 	return resbuf->data;
 }
 
-
 /*
  * opexpr_to_pxffilter
  *
@@ -714,7 +714,7 @@ opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc * filter)
 		return false;
 	}
 
-	elog(DEBUG1, "opexpr_to_gphdfilter: leftop (expr type: %d, arg type: %d), "
+	elog(DEBUG1, "opexpr_to_pxffilter: leftop (expr type: %d, arg type: %d), "
 		 "rightop_type (expr type: %d, arg type %d), op: %d",
 		 leftop_type, nodeTag(leftop),
 		 rightop_type, nodeTag(rightop),
@@ -1040,7 +1040,6 @@ supported_filter_type(Oid type)
 	return false;
 }
 
-
 static bool
 supported_operator_type_op_expr(Oid type, PxfFilterDesc * filter)
 {
@@ -1088,8 +1087,6 @@ supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc * filter, b
 
 	return false;
 }
-
-
 
 /*
  * const_to_str
@@ -1142,7 +1139,6 @@ scalar_const_to_str(Const *constval, StringInfo buf)
 
 	}
 }
-
 
 /*
  * list_const_to_str
@@ -1267,7 +1263,6 @@ list_const_to_str(Const *constval, StringInfo buf)
 
 	pfree(interm_buf->data);
 }
-
 
 /*
  * serializePxfFilterQuals
