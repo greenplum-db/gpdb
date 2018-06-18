@@ -237,10 +237,15 @@ postgres=# select current_user;
           <codeph>gss</codeph> entry in the Greenplum Database
           <codeph>pg_hba.conf</codeph> file:</p>
       <ul id="ul_hzh_rjw_22b">
+        <li>If the <codeph>krb_realm=&lt;realm></codeph> option is present,
+          Greenplum Database only accepts Kerberos principals who are members pf
+          the specified realm. </li>
         <li>If the <codeph>include_realm=0</codeph> option is specified, the
           Greenplum Database role name is the Kerberos principal name without
-          the Kerberos realm. The role must have been created with the Greenplum
-          Database <codeph>CREATE ROLE</codeph> command.</li>
+          the Kerberos realm. If the <codeph>include_realm=1</codeph> option is
+          instead specified, the Kerberos realm is not stripped from the
+          Greenplum Database rolename. The role must have been created with the
+          Greenplum Database <codeph>CREATE ROLE</codeph> command.</li>
         <li>If the <codeph>map=&lt;map-name></codeph> option is specified, the
           Kerberos principal name is compared to entries labeled with the
           specified <codeph>&lt;map-name></codeph> in the
