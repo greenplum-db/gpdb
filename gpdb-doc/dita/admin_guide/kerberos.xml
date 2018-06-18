@@ -92,7 +92,7 @@
             </p><p>The <codeph>GPDB.KRB</codeph> part of the principal name is
             the Kerberos realm name.</p></li>
         <li>Create a principal for the gpadmin/admin role.
-            <codeblock>kadmin.local -q "addprinc gpadmin/admin@GPDB.KRB"</codeblock><p>This
+            <codeblock># kadmin.local -q "addprinc gpadmin/admin@GPDB.KRB"</codeblock><p>This
             principal allows you to manage the KDC database when you are logged
             in as gpadmin. Make sure that the Kerberos <codeph>kadm.acl</codeph>
             configuration file contains an ACL to grant permissions to this
@@ -200,7 +200,7 @@ Valid starting       Expires              Service principal
               Kerberos utilities, as shown in the example.</note>         
         </li>
         <li id="nr166158">As a test, log in to the postgres database with the
-            <codeph>gpadmin/admin</codeph> role: <codeblock>psql -U "gpadmin/admin" -h mdw postgres
+            <codeph>gpadmin/admin</codeph> role: <codeblock>$ psql -U "gpadmin/admin" -h mdw postgres
 psql (8.3.23)
 Type "help" for help.
 
@@ -227,41 +227,51 @@ postgres=# select current_user;
   <topic id="topic_kmr_gws_d2b">
     <title>Mapping Kerberos Principals to Greenplum Database Roles</title>
     <body>
-      <p>You can define a username map in the
-          <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> file and add it
-        to the Kerberos options in a <codeph>pg_hba.conf</codeph> entry to
-        translate the Kerberos-authenticated principal name to a Greenplum
-        Database role name. For example, this <codeph>psql</codeph> command logs
-        in to the gpadmin database on the master host as the Kerberos principal
-          <codeph>admin@GPDB.KRB</codeph>:
-        <codeblock>$ psql -U "admin@GPDB.KRB" -h mdw gpadmin</codeblock></p>
-      <p>By creating a map in the <filepath>pg_hba.conf</filepath> file, the
-        user can authenticate the <codeph>admin@GPDB.KRB</codeph> principal and
-        log in to the gpadmin database with the gpadmin database role. </p>
-      <p>The username map is defined in the
+      <p>To connect to a Greenplum Database system with Kerberos authentication
+        enabled, a user first requests a ticket-granting ticket from the KDC
+        server using the <codeph>kinit</codeph> utility with a password or a
+        keytab file provided by the Kerberos admin. When the user then connects
+        to the Kerberos-enabled Greenplum Database system, the user's Kerberos
+        principle name will be the Greenplum Database role name, subject to
+        transformations specified in the options field of the
+          <codeph>gss</codeph> entry in the Greenplum Database
+          <codeph>pg_hba.conf</codeph> file:</p>
+      <ul id="ul_hzh_rjw_22b">
+        <li>If the <codeph>include_realm=0</codeph> option is specified, the
+          Greenplum Database role name is the Kerberos principal name without
+          the Kerberos realm. The role must have been created with the Greenplum
+          Database <codeph>CREATE ROLE</codeph> command.</li>
+        <li>If the <codeph>map=&lt;map-name></codeph> option is specified, the
+          Kerberos principal name is compared to entries labeled with the
+          specified <codeph>&lt;map-name></codeph> in the
+            <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> file and
+          replaced with the Greenplum Database role name specified in the first
+          matching entry.</li>
+      </ul>
+      <p>A user name map is defined in the
           <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> configuration
-        file.  This example defines a map named <codeph>mymap</codeph> with two
-        entries. </p>
+        file. This example defines a map named <codeph>mymap</codeph> with two
+        entries.</p>
       <p>
         <codeblock>
 # MAPNAME   SYSTEM-USERNAME        GP-USERNAME
 mymap       /^admin@GPDB.KRB$      gpadmin
-mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
+mymap       /^(.*)_gp)@GPDB.KRB$   \1</codeblock>
       </p>
-      <p>The first entry matches the Kerberos principal
-          <codeph>admin@GPDB.KRB</codeph> and replaces it with the Greenplum
-        Database gpadmin role name. The second entry  uses a wildcard to match
-        any Kerberos principal in the GPDB.KRB realm and removes the realm
-        portion of the name to yield the Greenplum Database role name.
-        Greenplum Database applies the  first matching map entry in the
-          <codeph>pg_ident.conf</codeph> file, so the order of entries is
-        significant.  </p>
-      <p>The map name is specified in the <codeph>pg_hba.conf</codeph>
-        Kerberberos entry  in the options field:</p>
+      <p>The map name is specified in the <codeph>pg_hba.conf</codeph> Kerberos
+        entry in the options field:</p>
       <p>
         <codeblock>host all all 0.0.0.0/0 gss include_realm=0 krb_realm=GPDB.KRB map=mymap</codeblock>
       </p>
-      <p>For more information about specifying username maps see <xref
+      <p>The first map entry matches the Kerberos principal admin@GPDB.KRB and
+        replaces it with the Greenplum Database gpadmin role name. The second
+        entry uses a wildcard to match any Kerberos principal in the GPDB-KRB
+        realm with a name ending with the characters <codeph>_gp</codeph> and
+        replaces it with the initial portion of the principal name. Greenplum
+        Database applies the first matching map entry in the
+          <codeph>pg_ident.conf</codeph> file, so the order of entries is
+        significant.</p>
+      <p>For more information about using username maps see <xref
           href="https://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
           scope="external" format="html">Username maps</xref> in the PostgreSQL
         documentation.</p>
@@ -375,7 +385,7 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
               scope="external">Kerberos documentation</xref> for information
             about the <codeph>kdc.conf</codeph> file.</p></li>
         <li>To create the Kerberos database, run the <codeph>kdb5_util</codeph>.
-            <codeblock>kdb5_util create -s</codeblock><p>The
+            <codeblock># kdb5_util create -s</codeblock><p>The
               <codeph>kdb5_util</codeph>
             <option>create</option> command creates the database to store keys
             for the Kerberos realms that are managed by this KDC server. The
@@ -388,7 +398,7 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
           utility allows you to add an initial administrative user to the local
           Kerberos server. To add the user <codeph>gpadmin</codeph> as an
           administrative user to the KDC database, run the following
-            command:<codeblock>kadmin.local -q "addprinc gpadmin/admin"</codeblock><p>Most
+            command:<codeblock># kadmin.local -q "addprinc gpadmin/admin"</codeblock><p>Most
             users do not need administrative access to the Kerberos server. They
             can use <codeph>kadmin</codeph> to manage their own principals (for
             example, to change their own password). For information about
@@ -399,11 +409,11 @@ mymap       /^(.*)@GPDB.KRB$       \1</codeblock>
             <filepath>/var/kerberos/krb5kdc/kadm5.acl</filepath> file to grant
           the appropriate permissions to <codeph>gpadmin</codeph>.</li>
         <li>Start the Kerberos
-          daemons:<codeblock>/sbin/service krb5kdc start
+          daemons:<codeblock># /sbin/service krb5kdc start#
 /sbin/service kadmin start</codeblock></li>
         <li>To start Kerberos automatically upon
-          restart:<codeblock>/sbin/chkconfig krb5kdc on
-/sbin/chkconfig kadmin on</codeblock></li>
+          restart:<codeblock># /sbin/chkconfig krb5kdc on
+# /sbin/chkconfig kadmin on</codeblock></li>
       </ol>
     </body>
   </topic>
