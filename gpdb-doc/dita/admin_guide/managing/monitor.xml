@@ -260,31 +260,19 @@ gp_email_to='gpdb_dba_group@example.com'
         <title id="kj168981">Testing Email Notifications</title>
         <body>
           <p>The Greenplum Database master host must be able to connect to the SMTP email server you
-            specify for the gp_email_smtp_server<ph> parameter</ph>. To test connectivity, use the
-              <codeph>ping</codeph> command:</p>
+            specify for the <codeph>gp_email_smtp_server</codeph> parameter. To test connectivity,
+            use the <codeph>ping</codeph> command:</p>
           <p>
-            <codeblock>$ ping my_email_server
-</codeblock>
+            <codeblock>$ ping &lt;<varname>my_email_server</varname>></codeblock>
           </p>
-          <p>If the master host can contact the SMTP server, log in to <codeph>psql</codeph> and
-            test email notifications with the following command:</p>
+          <p>If the master host can contact the SMTP server, run this <codeph>psql</codeph> command
+            to log into a database and test email notification with the <codeph>gp_elog</codeph>
+            function:</p>
           <p>
-            <codeblock>$ psql postgres
-=# SELECT gp_elog('Test GPDB Email',true); gp_elog
-</codeblock>
+            <codeblock>$ psql -d &lt;<varname>testdb</varname>> -U gpadmin -c "SELECT gp_elog('Test GPDB Email',true);"</codeblock>
           </p>
-          <p>The address you specified for the gp_email_to parameter should receive an email with
-            Test GPDB Email in the subject line.</p>
-          <p>You can also test email notifications by using a public SMTP server, such as Google's
-            Gmail SMTP server, and an external email address. For example:</p>
-          <p>
-            <codeblock>gp_email_smtp_server='smtp.gmail.com:25'
-#gp_email_smtp_userid=''
-#gp_email_smtp_password=''
-gp_email_from='gpadmin@example.com'
-gp_email_to='test_account@example.com'
-</codeblock>
-          </p>
+          <p>The address you specified for the <codeph>gp_email_to</codeph> parameter should receive
+            an email with <codeph>Test GPDB Email</codeph> in the subject line.</p>
           <note type="note">If you have difficulty sending and receiving email notifications, verify
             the security settings for you organization's email server and firewall. </note>
         </body>
