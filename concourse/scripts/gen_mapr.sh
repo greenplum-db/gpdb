@@ -41,6 +41,14 @@ install_java() {
     \""
 }
 
+enable_root_ssh_login() {
+    local node_hostname=$1
+    ssh -ttn "${node_hostname}" "sudo bash -c \"\
+        sed -ri 's/PermitRootLogin no/PermitRootLogin yes/g' /etc/ssh/sshd_config; \
+        service sshd restart; \
+    \""
+}
+
 download_and_run_mapr_setup() {
     local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
@@ -124,7 +132,7 @@ EOF
 run_quick_installer() {
     local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
-        /opt/mapr-installer/bin/install --user centos --sudo-user centos --private-key /tmp/private_key.pem --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
+        /opt/mapr-installer/bin/install --user root --private-key /tmp/private_key.pem --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
         echo -e "\n" \
     \""
 }
@@ -144,6 +152,7 @@ setup_node() {
     modify_groupid_userid "${nodename}"
     # Java is installed by mapr automatically
 #    install_java "${nodename}"
+    enable_root_ssh_login "${nodename}"
     download_and_run_mapr_setup "${nodename}"
     create_config_file "${nodename}" "${devicename}"
     run_quick_installer "${nodename}"
