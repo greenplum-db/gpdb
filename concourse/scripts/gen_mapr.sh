@@ -61,9 +61,7 @@ create_config_file() {
 # Hostname: disk1, disk2, disk3
 # Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defaults section
 [Control_Nodes]
-#control-node1.mydomain: /dev/disk1, /dev/disk2, /dev/disk3
-#control-node2.mydomain: /dev/disk3, /dev/disk9
-#control-node3.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
+$node_hostname: $device_name
 [Data_Nodes]
 #data-node1.mydomain
 #data-node2.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
@@ -82,18 +80,18 @@ ControlNodesAsDataNodes = true
 WirelevelSecurity = false
 LocalRepo = false
 [Defaults]
-ClusterName = my.cluster.com
+ClusterName = mapr
 User = mapr
 Group = mapr
-Password = default_password
+Password = mapr
 UID = 2000
 GID = 2000
 Disks = $device_name
 StripeWidth = 3
 ForceFormat = false
 CoreRepoURL = http://package.mapr.com/releases
-EcoRepoURL = http://package.mapr.com/releases/ecosystem-4.x
-Version = 4.0.2
+EcoRepoURL = http://package.mapr.com/releases/ecosystem-5.x
+Version = 5.2.0
 MetricsDBHost =
 MetricsDBUser =
 MetricsDBPassword =
@@ -125,16 +123,18 @@ EOF
 run_quick_installer() {
     local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
-        /opt/mapr-installer/bin/install --cfg /opt/mapr-installer/bin/singlenode_config new; \
+        /opt/mapr-installer/bin/install --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
     \""
 }
 
-_setup_node() {
+setup_node() {
     set -x
     local nodename
     local devicename
 
-    nodename=$1
+    CCP_CLUSTER_NAME=$(cat ./terraform*/name)
+
+    nodename="ccp-${CCP_CLUSTER_NAME}-0"
     devicename=$(get_device_name "${nodename}")
 
     echo "Device name: $devicename"
@@ -147,17 +147,18 @@ _setup_node() {
     run_quick_installer "${nodename}"
 }
 
-NUMBER_OF_NODES=$1
+#NUMBER_OF_NODES=$1
 
-if [ -z "${NUMBER_OF_NODES}" ]; then
-    echo "Number of nodes must be supplied to this script"
-    exit 1
-fi
+#if [ -z "${NUMBER_OF_NODES}" ]; then
+#    echo "Number of nodes must be supplied to this script"
+#    exit 1
+#fi
 
-CLUSTER_NAME=$(cat ./terraform*/name)
 
-for ((i=0; i < NUMBER_OF_NODES; ++i)); do
-    _setup_node ccp-"${CLUSTER_NAME}-${i}" &
-done
+setup_node
 
-wait
+#for ((i=0; i < NUMBER_OF_NODES; ++i)); do
+#    _setup_node ccp-"${CLUSTER_NAME}-${i}" &
+#done
+
+#wait
