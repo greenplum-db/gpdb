@@ -19,7 +19,7 @@ get_device_name() {
     elif [ "$google_disk_exit_code" = "0" ]; then
         device_name="/dev/disk/by-id/google-disk-for-gpdata"
     fi
-    echo $(readlink -f "$device_name")
+    echo $(ssh -tt "${node_hostname}" "sudo bash -c \"readlink -f ${device_name}\"")
 }
 
 # modify gpadmin userid and group to match
