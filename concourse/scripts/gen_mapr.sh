@@ -19,7 +19,7 @@ get_device_name() {
     elif [ "$google_disk_exit_code" = "0" ]; then
         device_name="/dev/disk/by-id/google-disk-for-gpdata"
     fi
-    echo $(ssh -tt "${node_hostname}" "sudo bash -c \"readlink -f ${device_name}\"")
+    echo $(ssh -tt "${node_hostname}" "sudo bash -c \"readlink -f ${device_name}\"") | sed 's/\\r//g'
 }
 
 # modify gpadmin userid and group to match
@@ -44,6 +44,7 @@ install_java() {
 enable_root_ssh_login() {
     local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
+        mkdir -p /root/.ssh/
         cp /home/centos/.ssh/authorized_keys /root/.ssh/; \
         sed -ri 's/PermitRootLogin no/PermitRootLogin yes/g' /etc/ssh/sshd_config; \
         service sshd restart; \
