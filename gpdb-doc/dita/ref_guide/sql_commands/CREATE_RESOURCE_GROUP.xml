@@ -9,7 +9,7 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">CREATE RESOURCE GROUP <varname>name</varname> WITH (<varname>group_attribute</varname>=<varname>value</varname> [, ... ])</codeblock>
       <p>where <varname>group_attribute</varname> is:</p>
-      <codeblock>CPU_RATE_LIMIT=<varname>integer</varname>
+      <codeblock>CPU_RATE_LIMIT=<varname>integer</varname> | CPUSET=<varname>tuple</varname>
 MEMORY_LIMIT=<varname>integer</varname>
 [ CONCURRENCY=<varname>integer</varname> ]
 [ MEMORY_SHARED_QUOTA=<varname>integer</varname> ]
@@ -23,7 +23,7 @@ MEMORY_LIMIT=<varname>integer</varname>
        <p>A resource
          group that you create to manage a user role identifies concurrent transaction, memory,
          and CPU limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.</p>
-      <p>A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups to manage both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for external components to a role, nor can you assign a resource group that you create for roles to an external component.</p>
+      <p>A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups for both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for external components to a role, nor can you assign a resource group that you create for roles to an external component.</p>
       <p>You must have <codeph>SUPERUSER</codeph> privileges to create a resource group. The maximum number of resource groups allowed in your Greenplum Database cluster is 100.</p>
       <p>Greenplum Database pre-defines two default resource groups: <codeph>admin_group</codeph>
          and <codeph>default_group</codeph>. These group names, as well as the group name <codeph>none</codeph>, are reserved.</p>
@@ -54,7 +54,11 @@ MEMORY_LIMIT=<varname>integer</varname>
         </plentry>
         <plentry>
           <pt>CPU_RATE_LIMIT <varname>integer</varname></pt>
-          <pd>Required. The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <codeph>CPU_RATE_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+          <pt>CPUSET <varname>tuple</varname></pt>
+          <pd>Required. You must specify only one of <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> when you create a resource group.</pd>
+          <pd><codeph>CPU_RATE_LIMIT</codeph> is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <codeph>CPU_RATE_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+          </pd>
+          <pd><codeph>CPUSET</codeph> identifies the CPU cores to reserve for this resource group. The CPU cores that you specify in <varname>tuple</varname> must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.</pd><pd><varname>tuple</varname> is a comma-separated list of single core numbers or core number intervals. You must enclose <varname>tuple</varname> in single quotes, for example, '1,3-4'.</pd><pd><note>You can configure <codeph>CPUSET</codeph> for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.</note>
           </pd>
         </plentry>
         <plentry>
@@ -92,6 +96,8 @@ MEMORY_LIMIT=<varname>integer</varname>
       <p>Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:</p>
       <codeblock>CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
   CONCURRENCY=0, MEMORY_AUDITOR=cgroup);</codeblock>
+      <p>Create a resource group with a memory limit percentage of 11 to which you assign CPU cores 1 to 3:</p>
+      <codeblock>CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1-3', MEMORY_LIMIT=11);</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>

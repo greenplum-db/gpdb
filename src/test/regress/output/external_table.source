@@ -559,6 +559,16 @@ SELECT * FROM gp_read_error_log('exttab_basic_1');
 ---------+---------+----------+---------+---------+--------+---------+----------
 (0 rows)
 
+-- test ON MASTER without LOG ERRORS, return empty results for all rows error out
+CREATE EXTERNAL WEB TABLE exttab_basic_error_1( i int )
+EXECUTE E'cat @abs_srcdir@/data/exttab.data' ON MASTER
+FORMAT 'TEXT' (DELIMITER '|')
+SEGMENT REJECT LIMIT 20;
+SELECT * FROM exttab_basic_error_1;
+ i 
+---
+(0 rows)
+
 -- Some errors without exceeding reject limit
 CREATE EXTERNAL TABLE exttab_basic_2( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')

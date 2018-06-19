@@ -17,6 +17,7 @@
    [<b>--include-schema</b> <varname>schema_name</varname>]
    [<b>--include-table</b> <varname>schema.table</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--jobs</b> <varname>int</varname>]
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
    [<b>--no-compression</b>]
@@ -29,34 +30,43 @@
 
 <b>gpbackup --help</b> </codeblock>
     </section>
-    <section><title>Description</title><p>The <codeph>gpbackup</codeph> utility backs up the
-        contents of a database into a collection of metadata files and data files that can be used
-        to restore the database at a later time using <codeph>gprestore</codeph>. When you back up a
-        database, you can specify table level and schema level filter options to back up specific
-        tables. For example, you can combine schema level and table level options to back up all the
-        tables in a schema except for a single table. </p><p>By default, <codeph>gpbackup</codeph>
-        backs up objects in the specified database as well as global Greenplum Database system
-        objects. You can optionally supply the <codeph>--with-globals</codeph> option with
-          <codeph>gprestore</codeph> to restore global objects. See <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
-        information.</p><p><codeph>gpbackup</codeph> stores the object metadata files and DDL files
-        for a backup in the Greenplum Database master data directory by default. Greenplum Database
-        segments use the <codeph>COPY ... ON SEGMENT</codeph> command to store their data for
-        backed-up tables in compressed CSV data files, located in each segment's data directory. See
-          <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_xnj_b4c_tbb"/> for
-        additional information.</p><p>You can add the <codeph>--backup-dir</codeph> option to copy
-        all backup files from the Greenplum Database master and segment hosts to an absolute path
-        for later use. Additional options are provided to filter the backup set in order to include
-        or exclude specific tables.</p><p>Each <codeph>gpbackup</codeph> task uses a single
-        transaction on the Greenplum Database master host. The <codeph>COPY ... ON
-        SEGMENT</codeph>command performs the backup task in parallel on each segment host. The
-        backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is backed
-        up.</p>When a back up operation completes, <codeph>gpbackup</codeph> returns a status code.
-      See <xref href="#topic1/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph> can send
-        status email notifications after a back up operation completes. You specify when the utility
-        sends the mail and the email recipients in a configuration file. See <xref
+    <section>
+      <title>Description</title>
+      <p>The <codeph>gpbackup</codeph> utility backs up the contents of a database into a collection
+        of metadata files and data files that can be used to restore the database at a later time
+        using <codeph>gprestore</codeph>. When you back up a database, you can specify table level
+        and schema level filter options to back up specific tables. For example, you can combine
+        schema level and table level options to back up all the tables in a schema except for a
+        single table. </p>
+      <p>By default, <codeph>gpbackup</codeph> backs up objects in the specified database as well as
+        global Greenplum Database system objects. You can optionally supply the
+          <codeph>--with-globals</codeph> option with <codeph>gprestore</codeph> to restore global
+        objects. See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>
+        for additional information.</p>
+      <p><codeph>gpbackup</codeph> stores the object metadata files and DDL files for a backup in
+        the Greenplum Database master data directory by default. Greenplum Database segments use the
+          <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
+        compressed CSV data files, located in each segment's data directory. See <xref
+          href="../../admin_guide/managing/backup-gpbackup.xml#topic_xnj_b4c_tbb"/> for additional
+        information.</p>
+      <p>You can add the <codeph>--backup-dir</codeph> option to copy all backup files from the
+        Greenplum Database master and segment hosts to an absolute path for later use. Additional
+        options are provided to filter the backup set in order to include or exclude specific
+        tables.</p>
+      <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
+        operation uses a single transaction on the Greenplum Database master host. The <codeph>COPY
+          ... ON SEGMENT</codeph> command performs the backup task in parallel on each segment host.
+        The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is
+        backed up. During the table locking process, the database should be in a quiescent
+        state.</p>
+      <p>When a back up operation completes, <codeph>gpbackup</codeph> returns a status code. See
+          <xref href="#topic1/return_codes" format="dita"/>. </p>
+      <p><codeph>gpbackup</codeph> can send status email notifications after a back up operation
+        completes. You specify when the utility sends the mail and the email recipients in a
+        configuration file. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
-        />.</p></section>
+        />.</p>
+    </section>
     <section>
       <title>Options</title>
       <parml>
@@ -158,6 +168,11 @@
             cannot combine this option with a schema filtering option such as
               <codeph>--include-schema</codeph>, or another table filtering option such as
               <codeph>--exclude-table-file</codeph>.</pd>
+          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>If you specify this option, the utility does not automatically back up dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view, you must also back up the tables that the view uses. If
+            you back up a table that uses a sequence, you must also back up the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
@@ -176,12 +191,35 @@
             Any tables not listed in this file are omitted from the backup set. You cannot combine
             this option with a schema filtering option such as <codeph>--include-schema</codeph>, or
             another table filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
+          <pd>You can also specify the qualified name of a sequence or a view. </pd>
+          <pd>If you specify this option, the utility does not automatically back up dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view, you must also specify the tables that the view uses. If
+            you specify a table that uses a sequence, you must also specify the sequence.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
             leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--jobs</b>
+            <varname>int</varname></pt>
+          <pd>Optional. Specifies the number of jobs to run in parallel when backing up tables. By
+            default, <codeph>gpbackup</codeph> uses 1 job (database connection). Increasing this
+            number can improve the speed of backing up data. When running multiple jobs, each job
+            backs up tables in a separate transaction. For example, if you specify <codeph>--jobs
+              2</codeph>, the utility creates two processes, each process starts a single
+            transaction, and the utility backs up the tables in parallel using the two processes.
+              <note type="important">If you specify a value higher than 1, the database must be in a
+              quiescent state while the utility acquires a lock on the tables that are being backed
+              up. If database operations are being performed on tables that are being backed up
+              during the table locking process, consistency between tables that are backed up in
+              different transactions cannot be guaranteed.</note></pd>
+          <pd>You cannot use this option in combination with the options
+              <codeph>--metadata-only</codeph>, <codeph>--single-data-file</codeph>, or
+              <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--leaf-partition-data</b></pt>

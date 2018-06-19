@@ -1597,7 +1597,7 @@
 
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">cpu_rate_limit</entry>
-                <entry colname="col2" class="- topic/entry ">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group.</entry>
+                <entry colname="col2" class="- topic/entry ">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group, or -1.</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">memory_limit</entry>
@@ -1626,6 +1626,10 @@
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">memory_auditor</entry>
                 <entry colname="col2" class="- topic/entry ">The memory auditor for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">cpuset</entry>
+                <entry colname="col2" class="- topic/entry ">The CPU cores reserved for the resource group, or -1.</entry>
               </row>
             </tbody>
           </tgroup>

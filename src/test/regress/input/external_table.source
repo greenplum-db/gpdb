@@ -64,6 +64,7 @@ DROP EXTERNAL TABLE IF EXISTS tableless_ext;
 DROP EXTERNAL TABLE IF EXISTS ret_too_many_uris;
 DROP EXTERNAL TABLE IF EXISTS wet_too_many_uris;
 DROP EXTERNAL TABLE IF EXISTS exttab_basic_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_error_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_basic_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_basic_3;
 DROP EXTERNAL TABLE IF EXISTS exttab_basic_4;
@@ -362,6 +363,13 @@ SELECT * FROM gp_read_error_log('exttab_basic_1');
 SELECT COUNT(*) FROM exttab_basic_1;
 -- Error log should still be empty
 SELECT * FROM gp_read_error_log('exttab_basic_1');
+
+-- test ON MASTER without LOG ERRORS, return empty results for all rows error out
+CREATE EXTERNAL WEB TABLE exttab_basic_error_1( i int )
+EXECUTE E'cat @abs_srcdir@/data/exttab.data' ON MASTER
+FORMAT 'TEXT' (DELIMITER '|')
+SEGMENT REJECT LIMIT 20;
+SELECT * FROM exttab_basic_error_1;
 
 -- Some errors without exceeding reject limit
 CREATE EXTERNAL TABLE exttab_basic_2( i int, j text )

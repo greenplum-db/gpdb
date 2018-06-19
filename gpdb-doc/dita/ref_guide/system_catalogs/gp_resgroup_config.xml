@@ -63,7 +63,7 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 2</entry>
-            <entry colname="col4">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group.</entry>
+            <entry colname="col4">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group, or -1.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -120,6 +120,14 @@
             <entry colname="col2">text</entry>
             <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 6</entry>
             <entry colname="col4">The memory auditor in use for the resource group.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>cpuset</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 7</entry>
+            <entry colname="col4">The CPU cores reserved for the resource group, or -1.</entry>
           </row>
         </tbody>
       </tgroup>

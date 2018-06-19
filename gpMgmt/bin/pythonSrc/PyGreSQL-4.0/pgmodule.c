@@ -99,7 +99,7 @@ const char *__movename[5] =
 #endif
 
 #ifndef NO_NOTICES
-#define HANDLE_NOTICES        1               /* enables notices handling */
+#define HANDLE_NOTICES 1		/* enables notices handling */
 #endif   /* NO_NOTICES */
 
 #ifndef PG_VERSION_NUM
@@ -131,8 +131,8 @@ static PyObject *pg_default_passwd;	/* default password */
 #endif	/* DEFAULT_VARS */
 
 #ifdef HANDLE_NOTICES
-#define MAX_BUFFERED_NOTICES 101              /* max notices (+1) to keep for each connection */
-static void notice_processor(void * arg, const char * message);
+#define MAX_BUFFERED_NOTICES 100              /* max notices to keep for each connection */
+static void notice_processor(void *arg, const char *message);
 #endif /* HANDLE_NOTICES */ 
 
 DL_EXPORT(void) init_pg(void);
@@ -152,9 +152,7 @@ typedef struct
 	PGconn		*cnx;			/* PostGres connection handle */
 	PGresult	*last_result;	/* last result content */
 #ifdef HANDLE_NOTICES
-        char           **notices;            /* dynamically allocated circular buffer for notices */
-        int              notices_first;  /* index of first filled index in notices */
-        int              notices_next;   /* index of first free index in notices */
+	PyObject	*notices;		/* list of notices */
 #endif /* HANDLE_NOTICES */
 }	pgobject;
 
@@ -173,9 +171,9 @@ pgobject_New(void)
 	pgobj->valid = 1;
 	pgobj->last_result = NULL;
 	pgobj->cnx = NULL;
-        pgobj->notices = malloc(sizeof(char*) * MAX_BUFFERED_NOTICES);
-        pgobj->notices_first = 0;
-        pgobj->notices_next = 0;
+#ifdef HANDLE_NOTICES
+	pgobj->notices = NULL;
+#endif /* HANDLE_NOTICES */
 	return (PyObject *) pgobj;
 }
 
@@ -1672,9 +1670,6 @@ pgconnect(pgobject * self, PyObject * args, PyObject * dict)
 static void
 pg_dealloc(pgobject * self)
 {
-#ifdef HANDLE_NOTICES
-        free(self->notices);
-#endif /* HANDLE_NOTICES */
 	if (self->cnx)
 	{
 		Py_BEGIN_ALLOW_THREADS
@@ -2906,66 +2901,44 @@ static char pg_notices__doc__[] =
   "notices() -- returns and clears the list of currently accumulated backend notices for the connection.";
  
 static void 
-notice_processor(void * arg, const char * message)
+notice_processor(void *arg, const char *message)
 {
-       
-       pgobject *pgobj = (pgobject *)arg;
- 
-        /* skip if memory allocation failed */
-        if (pgobj->notices == NULL) 
-         {
-                   return;
-           }
- 
-         pgobj->notices[pgobj->notices_next] = strdup(message);
-        pgobj->notices_next = (pgobj->notices_next + 1) % MAX_BUFFERED_NOTICES;
-        if (pgobj->notices_next == pgobj->notices_first)
-          {
-                    free(pgobj->notices[pgobj->notices_first]);
-                    pgobj->notices_first = (pgobj->notices_first + 1) % MAX_BUFFERED_NOTICES;
-            }
- 
-   }
+	pgobject *self = (pgobject *) arg;
+	PyObject *pymsg;
+
+	if (!self->notices || !PyList_Check(self->notices))
+	{
+		self->notices = PyList_New(0);
+		if (!self->notices)
+			return;
+	}
+
+	pymsg = PyString_FromString(message);
+	PyList_Append(self->notices, pymsg);
+	Py_DECREF(pymsg);
+
+	/* If we are at capacity, remove the head element */
+	if (PyList_Size(self->notices) > MAX_BUFFERED_NOTICES)
+		PySequence_DelItem(self->notices, 0);
+}
  
 static PyObject *
-  pg_notices(pgobject * self, PyObject * args)
- {
- 
-         PyObject *reslist,
-                      *str;
- 
-         /* allocate list for result */
-         if ((reslist = PyList_New(0)) == NULL)
-                 return NULL;
- 
-         /* skip if memory allocation failed */
-         if (self->notices == NULL) 
-         {
-                   return reslist;
-           }
- 
-         /* builds result */
-         while (self->notices_first != self->notices_next)
-         {
-               
-                 if (self->notices[self->notices_first] != NULL) /* skip if memory allocation failed */
-                 {
-                       
-                         str = PyString_FromString(self->notices[self->notices_first]);
-                        PyList_Append(reslist, str);
-                        Py_DECREF(str);
- 
-                         free(self->notices[self->notices_first]);
- 
-                 }
- 
-                 self->notices_first = (self->notices_first + 1) % MAX_BUFFERED_NOTICES;
- 
-         }
- 
-         return reslist;
- 
-  }
+pg_notices(pgobject *self, PyObject *args)
+{
+	PyObject *retval;
+
+	if (self->notices)
+	{
+		int len = PyList_Size(self->notices);
+
+		retval = PyList_GetSlice(self->notices, 0, len);
+	}
+	else
+		retval = PyList_New(0);
+
+	Py_CLEAR(self->notices);
+	return retval;
+}
  
 #endif /* HANDLE_NOTICES */
 

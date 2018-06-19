@@ -946,17 +946,6 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 			if (err < 0)
 			{
 				Assert(!null[i]);
-
-				/*
-				 * rle_type is running on a block stream, if an object spans
-				 * multiple blocks then data will not be compressed (if
-				 * rle_type is set).
-				 */
-				if ((idesc->compType != NULL) && (pg_strcasecmp(idesc->compType, "rle_type") == 0))
-				{
-					idesc->ds[i]->ao_write.storageAttributes.compress = FALSE;
-				}
-
 				err = datumstreamwrite_lob(idesc->ds[i],
 										   datum,
 										   &idesc->blockDirectory,
@@ -1998,16 +1987,6 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			if (err < 0)
 			{
 				Assert(!isnull[i]);
-
-				/*
-				 * rle_type is running on a block stream, if an object spans
-				 * multiple blocks then data will not be compressed (if
-				 * rle_type is set).
-				 */
-				if (desc->dsw[i]->rle_want_compression)
-				{
-					desc->dsw[i]->ao_write.storageAttributes.compress = FALSE;
-				}
 				err = datumstreamwrite_lob(desc->dsw[i],
 										   datum,
 										   &desc->blockDirectory,

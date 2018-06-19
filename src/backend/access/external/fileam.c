@@ -1249,7 +1249,7 @@ InitParseState(CopyState pstate, Relation relation,
 									  islimitinrows,
 									  uri,
 									  (char *) pstate->cur_relname,
-									  true);
+									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
 

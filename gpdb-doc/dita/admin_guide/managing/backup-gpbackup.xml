@@ -339,6 +339,11 @@ water.tonic</codeblock></p>
         or <codeph>--include-table-file</codeph>, and you cannot combine
           <codeph>--exclude-schema</codeph> with any table filtering option such as
           <codeph>--exclude-table</codeph> or <codeph>--include-table</codeph>.</p>
+      <p>When you use <codeph>--include-table</codeph> or <codeph>--include-table-file</codeph>
+        dependent objects are not automatically backed up or restored, you must explicitly specify
+        the dependent objects that are required. For example, if you back up or restore a view, you
+        must also specify the tables that the view uses. If you backup or restore a table that uses
+        a sequence, you must also specify the sequence.</p>
       <section id="section_ddf_gyn_5bb"><title>Filtering by Leaf Partition</title><p>By default,
             <codeph>gpbackup</codeph> creates one file for each table on a segment. You can specify
           the <codeph>--leaf-partition-data</codeph> option to create one data file per leaf
