@@ -30,7 +30,7 @@ from time import sleep
 
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
-from gppylib.commands.unix import findCmdInPath
+from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
@@ -2434,7 +2434,7 @@ def step_impl(context, abbreviated_timezone):
 def impl(context, working_directory):
     context.working_directory = working_directory
 
-def _create_cluster(context, master_host, segment_host_list, standby_enabled):
+def _create_cluster(context, master_host, segment_host_list):
     segment_host_list = segment_host_list.split(",")
     del os.environ['MASTER_DATA_DIRECTORY']
     os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
@@ -2449,18 +2449,14 @@ def _create_cluster(context, master_host, segment_host_list, standby_enabled):
     except:
         pass
 
-    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory, standby_enabled = standby_enabled)
+    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory)
     testcluster.reset_cluster()
     testcluster.create_cluster(with_mirrors=False)
     context.gpexpand_mirrors_enabled = False
 
-@given('a cluster is created with no mirrors and a standby on "{master_host}" and "{segment_host_list}"')
-def impl(context, master_host, segment_host_list):
-    _create_cluster(context, master_host, segment_host_list, standby_enabled=True)
-
 @given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
-    _create_cluster(context, master_host, segment_host_list, standby_enabled=False)
+    _create_cluster(context, master_host, segment_host_list)
 
 @given('a cluster is created with mirrors on "{master_host}" and "{segment_host}"')
 def impl(context, master_host, segment_host):

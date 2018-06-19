@@ -25,7 +25,9 @@ Feature: Tests for gpaddmirrors
         And save the gparray to context
         Given the user runs command "rm -rf /tmp/gpaddmirrors/*"
         And the database is killed on hosts "mdw,sdw1,sdw2,sdw3"
-        And a cluster is created with no mirrors and a standby on "mdw" and "sdw1, sdw2, sdw3"
+        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
+        And the user runs gpinitstandby with options " "
+        Then gpinitstandby should return a return code of 0
         And gpaddmirrors adds mirrors
         Then mirror hostlist matches the one saved in context
 
