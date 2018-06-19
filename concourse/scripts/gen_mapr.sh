@@ -53,7 +53,7 @@ download_and_run_mapr_setup() {
 create_config_file() {
     local node_hostname=$1
     local device_name=$2
-    cat > /opt/mapr-installer/bin/singlenode_config <<-EOF
+    cat > /tmp/singlenode_config <<-EOF
 # Each Node section can specify nodes in the following format
 # Hostname: disk1, disk2, disk3
 # Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defau
@@ -111,6 +111,8 @@ MetricsDBSchema =
 #HiveMetaStore = control-node2.mydomain
 #HiveClients = client-node1.mydomain, data-node3.mydomain
 EOF
+
+    scp /tmp/singlenode_config "${node_hostname}":/opt/mapr-installer/bin/singlenode_config
 }
 
 # run quick installer
@@ -122,6 +124,7 @@ run_quick_installer() {
 }
 
 _setup_node() {
+    set -x
     local nodename
     local devicename
 
