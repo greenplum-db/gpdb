@@ -14,10 +14,6 @@
       other roles to connect, or if you want to allow connections from remote hosts, you have to
       configure Greenplum Database to allow such connections. This section explains how to configure
       client connections and authentication to Greenplum Database.</p>
-    <note>The PgBouncer connection pooler is bundled with Greenplum Database. PgBouncer can be
-      configured to support LDAP or Active Directory authentication for users connecting to
-      Greenplum Database through the connection pooler client connections to Greenplum Database. See
-        <xref href="access_db/topics/pgbouncer.xml#topic_fstrm"/>. </note>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="ip142171">Allowing Connections to Greenplum Database</title>
