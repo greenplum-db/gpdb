@@ -4,20 +4,6 @@ import socket
 import inspect
 from gppylib.commands.base import Command
 
-class GpInitStandby(Command):
-    """This is a wrapper for gpinitstandby."""
-    def __init__(self, standby_host, mdd=None):
-        if not mdd:
-            mdd = os.getenv('MASTER_DATA_DIRECTORY')
-        cmd_str = 'export MASTER_DATA_DIRECTORY=%s; gpinitstandby -a -s  %s' % (mdd, standby_host)
-        Command.__init__(self, 'run gpinitstandby', cmd_str)
-
-    def run(self, validate=True):
-        print "Running gpinitstandby: %s" % self
-        Command.run(self, validateAfter=validate)
-        result = self.get_results()
-        return result
-
 class GpSegInstall(Command):
     """
     This is a wrapper for gpseginstall
@@ -64,7 +50,7 @@ class GpDeleteSystem(Command):
 
 
 class TestCluster:
-    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', standby_enabled = False):
+    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem'):
         """
         hosts: lists of cluster hosts. master host will be assumed to be the first element.
         base_dir: cluster directory
@@ -102,7 +88,6 @@ class TestCluster:
         self.mirror_enabled = False
         self.number_of_segments = 2
         self.number_of_hosts = len(self.hosts)-1
-        self.standby_enabled = standby_enabled
 
         self.number_of_expansion_hosts = 0
         self.number_of_expansion_segments = 0
@@ -152,8 +137,6 @@ class TestCluster:
         # run gpinitsystem
         clean_env = 'unset MASTER_DATA_DIRECTORY; unset PGPORT;'
         gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s ' % (self.init_file)
-        if self.standby_enabled:
-            gpinitsystem_cmd += ' -s {} -P {} '.format(self.hosts[0], int(self.master_port)+1)
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
         # initsystem returns 1 for warnings and 2 for errors
         if res['rc'] > 1:
