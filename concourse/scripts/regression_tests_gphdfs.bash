@@ -6,8 +6,6 @@ CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
 
 HADOOP_TARGET_VERSION=${HADOOP_TARGET_VERSION:-hadoop}
-#MAPR_HOST=${MAPR_HOST:-"35.232.9.248"}
-MAPR_HOST=${MAPR_HOST:-"35.225.60.92"}
 
 function gen_env(){
 	cat > /home/gpadmin/run_regression_test.sh <<-EOF
