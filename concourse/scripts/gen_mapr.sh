@@ -112,6 +112,7 @@ MetricsDBSchema =
 #HiveClients = client-node1.mydomain, data-node3.mydomain
 EOF
 
+    scp ${MAPR_SSH_OPTS} cluster_env_files/private_key.pem centos@"${node_hostname}":/tmp
     scp ${MAPR_SSH_OPTS} /tmp/singlenode_config centos@"${node_hostname}":/tmp
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         mv /tmp/singlenode_config /opt/mapr-installer/bin/singlenode_config; \
@@ -123,7 +124,8 @@ EOF
 run_quick_installer() {
     local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
-        /opt/mapr-installer/bin/install --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
+        /opt/mapr-installer/bin/install --user centos --sudo-user centos --private-key /tmp/private_key.pem --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
+        echo -e "\n" \
     \""
 }
 
