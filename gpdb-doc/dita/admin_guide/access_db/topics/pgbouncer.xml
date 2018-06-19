@@ -65,8 +65,8 @@
       <body>
         <p>When you migrate to a new Greenplum Database version, you must migrate your PgBouncer
           instance to that in the new Greenplum Database installation.</p>
-        <p><b>If you are migrating to a Greenplum Database version 5.8.x or earlier</b>, you can migrate PgBouncer without dropping connections. Launch the new PgBouncer
-          process with the <codeph>-R</codeph> option and the configuration file that you started the process with:</p>
+        <ul><li><b>If you are migrating to a Greenplum Database version 5.8.x or earlier</b>, you can migrate PgBouncer without dropping connections. Launch the new PgBouncer
+          process with the <codeph>-R</codeph> option and the configuration file that you started the process with:
         <codeblock>$ pgbouncer -R -d pgbouncer.ini</codeblock>
         <p>The <codeph>-R</codeph> (reboot) option causes the new process to connect to the console
           of the old process through a Unix socket and issue the following commands:</p>
@@ -76,9 +76,10 @@ SHUTDOWN;</codeblock>
         <p>When the new process detects that the old process is gone, it resumes the work with the old
           connections. This is possible because the <codeph>SHOW FDS</codeph> command sends actual
           file descriptors to the new process. If the transition fails for any reason, kill the new
-          process and the old process will resume.</p>
-        <p><b>If you are migrating to a Greenplum Database version 5.9.0 or later</b>, you must shut down the PgBouncer instance in your old installation and reconfigure and restart PgBouncer in your new installation.</p>
-        <p>If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1 and later.</p>
+          process and the old process will resume.</p></li>
+        <li><b>If you are migrating to a Greenplum Database version 5.9.0 or later</b>, you must shut down the PgBouncer instance in your old installation and reconfigure and restart PgBouncer in your new installation.</li>
+        <li>If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1 and later.</li>
+        <li>If you used LDAP authentication in your old installation, you must configure LDAP in your new installation using the built-in PAM integration capabilities of PgBouncer 1.8.1 and later. You must also remove or replace any <codeph>ldap://</codeph>-prefixed password strings in the <codeph>auth_file</codeph>.</li></ul>
       </body>
     </topic>
     <topic id="pgb_config">
@@ -108,7 +109,7 @@ admin_users = gpadmin</codeblock></p>
           database name for the database connection. The configuration file also identifies
           the authentication mode in effect for the database. </p>
         <p>PgBouncer requires an authentication file, a text file that contains a list of
-          Greenplum Database users and passwords. The contents of the file are dependent on the <codeph>auth_type</codeph> you configure in the <codeph>pgbouncer.ini</codeph> file. Passwords may be either clear text, MD5-encoded, or an LDAP/AD lookup string.
+          Greenplum Database users and passwords. The contents of the file are dependent on the <codeph>auth_type</codeph> you configure in the <codeph>pgbouncer.ini</codeph> file. Passwords may be either clear text or MD5-encoded strings.
           You can also configure PgBouncer to query the destination database to obtain
           password information for users that are not in the authentication file. </p>
       <section id="pgb_auth">
@@ -183,13 +184,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
             example: <codeblock>"gpadmin" "gpadmin1234"</codeblock><p>If the <codeph>auth_type</codeph>
               in the following example is <codeph>md5</codeph>, the authentication field must be
               MD5-encoded. The format for an MD5-encoded password
-              is:<codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
-            <p>To authenticate users against an LDAP or Active Directory server, the password
-              field contains an LDAP lookup string. For
-              example:</p><codeblock>"gpdbuser1" "ldap://10.0.0.11:10389/uid=gpdbuser1,ou=users,ou=system"</codeblock><p>For
-              Active Directory, a user entry looks like this
-              example:<codeblock>"gpdbuser2" "ldap://10.0.0.12:389/gpdbuser2"</codeblock>
-              </p></li>
+              is:<codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p></li>
           <li>Launch
               <codeph>pgbouncer</codeph>:<codeblock>$ $GPHOME/bin/pgbouncer -d pgbouncer.ini</codeblock><p>The
                 <codeph>-d</codeph> option runs PgBouncer as a
