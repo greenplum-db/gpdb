@@ -131,6 +131,8 @@ _setup_node() {
     nodename=$1
     devicename=$(get_device_name "${nodename}")
 
+    echo "Device name: $devicename"
+
     modify_groupid_userid "${nodename}"
     install_java "${nodename}"
     download_and_run_mapr_setup "${nodename}"
