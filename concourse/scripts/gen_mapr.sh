@@ -112,7 +112,7 @@ MetricsDBSchema =
 #HiveClients = client-node1.mydomain, data-node3.mydomain
 EOF
 
-    scp /tmp/singlenode_config "${node_hostname}":/opt/mapr-installer/bin/singlenode_config
+    cat /tmp/singlenode_config | ssh -ttn "${node_hostname}" "sudo bash -c cat > /opt/mapr-installer/bin/singlenode_config;"
 }
 
 # run quick installer
