@@ -5990,8 +5990,6 @@ fi
 # Enable assert checks
 #
 
-pgac_args="$pgac_args enable_cassert"
-
 # Check whether --enable-cassert was given.
 if test "${enable_cassert+set}" = set; then :
   enableval=$enable_cassert;
