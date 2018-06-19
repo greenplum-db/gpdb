@@ -152,3 +152,5 @@ CLUSTER_NAME=$(cat ./terraform*/name)
 for ((i=0; i < NUMBER_OF_NODES; ++i)); do
     _setup_node ccp-"${CLUSTER_NAME}-${i}" &
 done
+
+wait
