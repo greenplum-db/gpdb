@@ -18,6 +18,7 @@ run:
     ccp_src/scripts/generate_env_files.sh $NUMBER_OF_NODES false
     ccp_src/scripts/generate_ssh_files.sh $NUMBER_OF_NODES false
     gpdb_src/concourse/scripts/gen_mapr.sh $NUMBER_OF_NODES
+    exit 1
 
 params:
   AWS_ACCESS_KEY_ID:
