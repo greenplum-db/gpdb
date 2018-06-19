@@ -1,5 +1,7 @@
 #!/bin/bash
 
+MAPR_SSH_OPTS="-i cluster_env_files/private_key.pem"
+
 get_device_name() {
     local node_hostname=$1
     local device_name="/dev/xvdb"
@@ -54,64 +56,68 @@ create_config_file() {
     local node_hostname=$1
     local device_name=$2
 
+    cat > /tmp/singlenode_config <<-EOF
+# Each Node section can specify nodes in the following format
+# Hostname: disk1, disk2, disk3
+# Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defaults section
+[Control_Nodes]
+#control-node1.mydomain: /dev/disk1, /dev/disk2, /dev/disk3
+#control-node2.mydomain: /dev/disk3, /dev/disk9
+#control-node3.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
+[Data_Nodes]
+#data-node1.mydomain
+#data-node2.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
+#data-node3.mydomain: /dev/sdd
+#data-node4.mydomain: /dev/sdb, /dev/sdd
+[Client_Nodes]
+#client1.mydomain
+#client2.mydomain
+#client3.mydomain
+[Options]
+MapReduce1 = false
+YARN = true
+HBase = false
+MapR-DB = true
+ControlNodesAsDataNodes = true
+WirelevelSecurity = false
+LocalRepo = false
+[Defaults]
+ClusterName = my.cluster.com
+User = mapr
+Group = mapr
+Password = default_password
+UID = 2000
+GID = 2000
+Disks = $device_name
+StripeWidth = 3
+ForceFormat = false
+CoreRepoURL = http://package.mapr.com/releases
+EcoRepoURL = http://package.mapr.com/releases/ecosystem-4.x
+Version = 4.0.2
+MetricsDBHost =
+MetricsDBUser =
+MetricsDBPassword =
+MetricsDBSchema =
+
+#[Spark]
+#SparkVersion = 0.9.1
+#SparkMasters = control-node1.mydomain, control-node2.mydomain
+#SparkSlaves = data-node1.mydomain, data-node2.mydomain, data-node3.mydomain
+#SparkMem = 2
+#SparkWorkerMem = 1
+#SparkDaemonMem = 16
+
+#[Hive]
+#HiveVersion = 0.12
+#HiveServers = control-node1.mydomain
+#HiveMetaStore = control-node2.mydomain
+#HiveClients = client-node1.mydomain, data-node3.mydomain
+EOF
+
+    scp ${MAPR_SSH_OPTS} /tmp/singlenode_config centos@"${node_hostname}":/tmp
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
-    cat > /opt/mapr-installer/bin/singlenode_config <<-EOF \
-# Each Node section can specify nodes in the following format \
-# Hostname: disk1, disk2, disk3 \
-# Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defaults section \
-[Control_Nodes] \
-#control-node1.mydomain: /dev/disk1, /dev/disk2, /dev/disk3 \
-#control-node2.mydomain: /dev/disk3, /dev/disk9 \
-#control-node3.mydomain: /dev/sdb, /dev/sdc, /dev/sdd \
-[Data_Nodes] \
-#data-node1.mydomain \
-#data-node2.mydomain: /dev/sdb, /dev/sdc, /dev/sdd \
-#data-node3.mydomain: /dev/sdd \
-#data-node4.mydomain: /dev/sdb, /dev/sdd \
-[Client_Nodes] \
-#client1.mydomain \
-#client2.mydomain \
-#client3.mydomain \
-[Options] \
-MapReduce1 = false \
-YARN = true \
-HBase = false \
-MapR-DB = true \
-ControlNodesAsDataNodes = true \
-WirelevelSecurity = false \
-LocalRepo = false \
-[Defaults] \
-ClusterName = my.cluster.com \
-User = mapr \
-Group = mapr \
-Password = default_password \
-UID = 2000 \
-GID = 2000 \
-Disks = $device_name \
-StripeWidth = 3 \
-ForceFormat = false \
-CoreRepoURL = http://package.mapr.com/releases \
-EcoRepoURL = http://package.mapr.com/releases/ecosystem-4.x \
-Version = 4.0.2 \
-MetricsDBHost = \
-MetricsDBUser = \
-MetricsDBPassword = \
-MetricsDBSchema = \
- \
-#[Spark] \
-#SparkVersion = 0.9.1 \
-#SparkMasters = control-node1.mydomain, control-node2.mydomain \
-#SparkSlaves = data-node1.mydomain, data-node2.mydomain, data-node3.mydomain \
-#SparkMem = 2 \
-#SparkWorkerMem = 1 \
-#SparkDaemonMem = 16 \
- \
-#[Hive] \
-#HiveVersion = 0.12 \
-#HiveServers = control-node1.mydomain \
-#HiveMetaStore = control-node2.mydomain \
-#HiveClients = client-node1.mydomain, data-node3.mydomain \
-EOF; \
+        mv /tmp/singlenode_config /opt/mapr-installer/bin/singlenode_config; \
+        chown root:root /opt/mapr-installer/bin/singlenode_config; \
     \""
 }
 
