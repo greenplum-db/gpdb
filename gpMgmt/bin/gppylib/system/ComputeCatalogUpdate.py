@@ -174,7 +174,8 @@ class ComputeCatalogUpdate:
 
         # Validate that if we have any mirrors, that all primaries have mirrors
         #
-        if len(final[ ROLE_MIRROR ]) > 0:
+        only_contains_standby_mirror = (len(final[ ROLE_MIRROR ]) == 1 and final[ ROLE_MIRROR ].get(-1) != None)
+        if len(final[ ROLE_MIRROR ]) > 0 and not only_contains_standby_mirror:
             for contentId in final[ ROLE_PRIMARY ]:
                 if contentId != MASTER_CONTENT_ID and final[ ROLE_MIRROR ].get( contentId ) is None:
                     seg = final[ ROLE_PRIMARY ][ contentId ]
