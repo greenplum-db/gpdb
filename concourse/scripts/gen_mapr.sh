@@ -1,9 +1,11 @@
 #!/bin/bash
 
+set -euo pipefail
+
 MAPR_SSH_OPTS="-i cluster_env_files/private_key.pem"
+node_hostname="ccp-$(cat ./terraform*/name)-0"
 
 get_device_name() {
-    local node_hostname=$1
     local device_name="/dev/xvdb"
 
     # We check fdisk to see if there is an nvme disk because we cannot
@@ -25,7 +27,6 @@ get_device_name() {
 # modify gpadmin userid and group to match
 # that one of concourse test container
 modify_groupid_userid() {
-    local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         usermod -u 500 gpadmin; \
         groupmod -g 501 gpadmin; \
@@ -35,14 +36,12 @@ modify_groupid_userid() {
 }
 
 install_java() {
-    local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         yum install -y java-1.7.0-openjdk; \
     \""
 }
 
 enable_root_ssh_login() {
-    local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         mkdir -p /root/.ssh/
         cp /home/centos/.ssh/authorized_keys /root/.ssh/; \
@@ -52,7 +51,6 @@ enable_root_ssh_login() {
 }
 
 download_and_run_mapr_setup() {
-    local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         cd /root; \
         wget http://package.mapr.com/releases/v5.2.0/redhat/mapr-setup; \
@@ -63,8 +61,7 @@ download_and_run_mapr_setup() {
 
 # create cluster configuration file
 create_config_file() {
-    local node_hostname=$1
-    local device_name=$2
+    local device_name=$1
 
     cat > /tmp/singlenode_config <<-EOF
 # Each Node section can specify nodes in the following format
@@ -130,48 +127,31 @@ EOF
     \""
 }
 
-# run quick installer
 run_quick_installer() {
-    local node_hostname=$1
     ssh -ttn "${node_hostname}" "sudo bash -c \"\
         /opt/mapr-installer/bin/install --user root --private-key /tmp/private_key.pem --quiet --cfg /opt/mapr-installer/bin/singlenode_config new; \
-        echo -e "\n" \
     \""
 }
 
+grant_top_level_write_permission() {
+    ssh -ttn "${node_hostname}" "sudo bash -c \"\
+        hadoop fs -chmod 777 /;\
+    \""
+
+}
 setup_node() {
     set -x
-    local nodename
     local devicename
-
-    CCP_CLUSTER_NAME=$(cat ./terraform*/name)
-
-    nodename="ccp-${CCP_CLUSTER_NAME}-0"
-    devicename=$(get_device_name "${nodename}")
+    devicename=$(get_device_name)
 
     echo "Device name: $devicename"
 
-    modify_groupid_userid "${nodename}"
-    # Java is installed by mapr automatically
-#    install_java "${nodename}"
-    enable_root_ssh_login "${nodename}"
-    download_and_run_mapr_setup "${nodename}"
-    create_config_file "${nodename}" "${devicename}"
-    run_quick_installer "${nodename}"
+    modify_groupid_userid
+    enable_root_ssh_login
+    download_and_run_mapr_setup
+    create_config_file "${devicename}"
+    run_quick_installer
+    grant_top_level_write_permission
 }
 
-#NUMBER_OF_NODES=$1
-
-#if [ -z "${NUMBER_OF_NODES}" ]; then
-#    echo "Number of nodes must be supplied to this script"
-#    exit 1
-#fi
-
-
 setup_node
-
-#for ((i=0; i < NUMBER_OF_NODES; ++i)); do
-#    _setup_node ccp-"${CLUSTER_NAME}-${i}" &
-#done
-
-#wait
