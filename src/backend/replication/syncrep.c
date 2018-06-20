@@ -294,7 +294,11 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		 */
 		if (ProcDiePending)
 		{
-			ereport(WARNING,
+			/*
+			 * FATAL only for QE's which use 2PC and hence can handle the
+			 * FATAL and retry.
+			 */
+			ereport(IS_QUERY_DISPATCHER() ? WARNING:FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
 					 errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command"),
 					 errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
