@@ -102,8 +102,8 @@ function setup_gpadmin_user() {
 
 function copy_jar_to_mapr_host() {
     if [ "$HADOOP_TARGET_VERSION" == "mpr" ]; then
-        scp -i cluster_env_files/private_key.pem ${GPHOME}/lib/hadoop/mpr-gnet-1.2.0.0.jar centos@$MAPR_HOST:/tmp
-        ssh -i cluster_env_files/private_key.pem -ttn centos@$MAPR_HOST "sudo bash -c \"\
+        scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem ${GPHOME}/lib/hadoop/mpr-gnet-1.2.0.0.jar centos@$MAPR_HOST:/tmp
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem -ttn centos@$MAPR_HOST "sudo bash -c \"\
             mv /tmp/mpr-gnet-1.2.0.0.jar /opt/mapr/hadoop/hadoop-2.7.0/share/hadoop/common/lib/; \
         \""
     fi
