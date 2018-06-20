@@ -37,6 +37,8 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpq.h"
 #include "miscadmin.h"
+#include "commands/sequence.h"
+#include "access/xact.h"
 
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 
@@ -827,6 +829,23 @@ checkSegmentAlive(CdbDispatchCmdAsync *pParms)
 	}
 }
 
+static inline void
+send_sequence_response(PGconn *conn, Oid oid, int64 last, int64 cached, int64 increment, bool overflow, bool error)
+{
+	pqPutMsgStart(SEQ_NEXTVAL_QUERY_RESPONSE, false, conn);
+	pqPutInt(oid, 4, conn);
+	pqPutInt(last >> 32, 4, conn);
+	pqPutInt(last, 4, conn);
+	pqPutInt(cached >> 32, 4, conn);
+	pqPutInt(cached, 4, conn);
+	pqPutInt(increment >> 32, 4, conn);
+	pqPutInt(increment, 4, conn);
+	pqPutc(overflow ? SEQ_NEXTVAL_TRUE : SEQ_NEXTVAL_FALSE, conn);
+	pqPutc(error ? SEQ_NEXTVAL_TRUE : SEQ_NEXTVAL_FALSE, conn);
+	pqPutMsgEnd(conn);
+	pqFlush(conn);
+}
+
 /*
  * Receive and process input from one QE.
  *
@@ -976,6 +995,50 @@ processResults(CdbDispatchResult *dispatchResult)
 			cdbdisp_seterrcode(errcode, resultIndex, dispatchResult);
 		}
 	}
+
+	/*
+	 * If there was nextval request then respond back on this libpq connection
+	 * with the next value. Check and process nextval message only if QD has not
+	 * already hit the error. Since QD could have hit the error while processing
+	 * the previous nextval_qd() request itself and since full error handling is
+	 * not complete yet like releasing all the locks, etc.., shouldn't attempt
+	 * to call nextval_qd() again.
+	 */
+	PGnotify *nextval = PQnotifies(segdbDesc->conn);
+	if ((elog_geterrcode() == 0) && nextval &&
+		strcmp(nextval->relname, "nextval") == 0)
+	{
+		int64 last;
+		int64 cached;
+		int64 increment;
+		bool overflow;
+		int dbid;
+		int seq_oid;
+
+		if (sscanf(nextval->extra, "%d:%d", &dbid, &seq_oid) != 2)
+			elog(ERROR, "invalid nextval message");
+
+		if (dbid != MyDatabaseId)
+			elog(ERROR, "nextval message database id:%d doesn't match my database id:%d",
+				 dbid, MyDatabaseId);
+
+		PG_TRY();
+		{
+			nextval_qd(seq_oid, &last, &cached, &increment, &overflow);
+		}
+		PG_CATCH();
+		{
+			send_sequence_response(segdbDesc->conn, seq_oid, last, cached, increment, overflow, true /* error */);
+			PG_RE_THROW();
+		}
+		PG_END_TRY();
+		/*
+		 * respond back on this libpq connection with the next value
+		 */
+		send_sequence_response(segdbDesc->conn, seq_oid, last, cached, increment, overflow, false /* error */);
+	}
+	if (nextval)
+		PQfreemem(nextval);
 
 	return false;				/* we must keep on monitoring this socket */
 }

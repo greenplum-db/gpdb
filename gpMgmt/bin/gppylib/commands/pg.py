@@ -191,15 +191,6 @@ def getPostmasterPID(db):
 def killPostmaster(db,signal):
     killPgProc(db,"postmaster",signal)
 
-def getSeqServerPID(db):
-    postmaster_pid=getPostmasterPID(db)    
-    hostname=db.getSegmentHostName()
-    return getProcWithParent(hostname,postmaster_pid,"seqserver")
-    
-def killSeqServer(db,signal):
-    return killPgProc(db,"seqserver",signal)
-
-
 def getBgWriterPID(db):
     postmaster_pid=getPostmasterPID(db)    
     hostname=db.getSegmentHostName()

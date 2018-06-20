@@ -147,9 +147,9 @@ class PgCtlBackendOptions(CmdArgs):
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(True))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment(1))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=1'
@@ -184,12 +184,12 @@ class PgCtlBackendOptions(CmdArgs):
     # master/segment-specific options
     #
 
-    def set_master(self, seqserver):
+    def set_master(self, is_utility_mode):
         """
-        @param seqserver: start with seqserver?
+        @param is_utility_mode: start with is_utility_mode?
         """
         self.append("--gp_contentid=-1")
-        if seqserver: self.append("-E")
+        if not is_utility_mode: self.append("-E")
         return self
 
     def set_segment(self, content):
@@ -309,7 +309,7 @@ class MasterStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
-        b.set_master(seqserver=not utilityMode)
+        b.set_master(is_utility_mode=utilityMode)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
         b.set_restricted(restrictedMode, max_connections)

@@ -68,19 +68,12 @@ typedef struct interconnect_handle_t
 int			TCP_listenerFd;
 int			UDP_listenerFd;
 
-/* Socket file descriptor for the sequence server. */
-static int	savedSeqServerFd = -1;
-static char *savedSeqServerHost = NULL;
-static uint16 savedSeqServerPort = 0;
-
 static interconnect_handle_t *open_interconnect_handles;
 static bool interconnect_resowner_callback_registered;
 
 /*=========================================================================
  * FUNCTIONS PROTOTYPES
  */
-
-static void setupSeqServerConnection(char *hostname, uint16 port);
 
 static void interconnect_abort_callback(ResourceReleasePhase phase,
 								   bool isCommit,
@@ -254,7 +247,6 @@ InitMotionLayerIPC(void)
 	uint16		udp_listener = 0;
 
 	/* activated = false; */
-	savedSeqServerFd = -1;
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
 		InitMotionTCP(&TCP_listenerFd, &tcp_listener);
@@ -527,154 +519,6 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
 		MPP_FD_CLR(conn->sockfd, &pEntry->readSet);
 	}
 	return;
-}
-
-/*
- * Returns the fd of the socket that connects to the seqserver.  This value
- * is -1 if it has not been setup.
- */
-int
-GetSeqServerFD(void)
-{
-	/*
-	 * setup connection to seq server if needed. The interconnect is
-	 * responsible for maintaining the connection although it actually doesn't
-	 * use the socket directly.  sequence.c does to obtain sequence values
-	 * from the seqserver.	TeardownInterconnect() is responsible for closing
-	 * the socket.
-	 *
-	 */
-	if (savedSeqServerHost == NULL)
-		elog(ERROR, "Invalid Sequence Access. Sequence server info is invalid.");
-
-	if (savedSeqServerFd == -1)
-		setupSeqServerConnection(savedSeqServerHost, savedSeqServerPort);
-
-	return savedSeqServerFd;
-}
-
-void
-SetupSequenceServer(const char *host, int port)
-{
-	if (host != NULL)
-	{
-		if (savedSeqServerHost != host)
-		{
-			/*
-			 * See MPP-10162: certain PL/PGSQL functions may call us multiple
-			 * times without an intervening Teardown.
-			 */
-			if (savedSeqServerHost != NULL)
-			{
-				free(savedSeqServerHost);
-				savedSeqServerHost = NULL;
-				savedSeqServerPort = 0;
-			}
-
-			/*
-			 * Don't use MemoryContexts -- they make error handling difficult
-			 * here.
-			 */
-			savedSeqServerHost = strdup(host);
-
-			if (savedSeqServerHost == NULL)
-			{
-				elog(ERROR, "SetupSequenceServer: memory allocation failed.");
-			}
-		}
-
-		Assert(port != 0);
-		savedSeqServerPort = port;
-	}
-}
-
-void
-TeardownSequenceServer(void)
-{
-	/*
-	 * If we setup a connection to the seqserver then we need to disconnect
-	 */
-	if (savedSeqServerFd != -1)
-	{
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG3, "tearing down seqserver connection");
-
-		shutdown(savedSeqServerFd, SHUT_RDWR);
-		closesocket(savedSeqServerFd);
-		savedSeqServerFd = -1;
-	}
-
-	/*
-	 * Note, we are not releasing the savedSeqServerHost here (MPP-25193).
-	 * This may result in a small memory leak. However, we still free this
-	 * during SetupSequenceServer call. Therefore, in the worse case there
-	 * would be only one savedSeqServerHost instance leaking, irrespective of
-	 * how many portals we have, which is rather unnoticeable.
-	 */
-}
-
-static void
-setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
-{
-	int			n;
-	int			ret;
-	char		portNumberStr[32];
-	char	   *service;
-	struct addrinfo *addrs = NULL;
-	struct addrinfo hint;
-
-	/*
-	 * We get the IP address (IPv4 or IPv6) of the sequence server, not it's
-	 * name, so we can tell getaddrinfo to skip any attempt at name
-	 * resolution.
-	 */
-
-	/* Initialize hint structure */
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
-#ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;	/* Never do name
-														 * resolution */
-#else
-	hint.ai_flags = AI_NUMERICHOST; /* Never do name resolution */
-#endif
-
-
-	snprintf(portNumberStr, sizeof(portNumberStr), "%d", seqServerPort);
-	service = portNumberStr;
-
-	ret = pg_getaddrinfo_all(seqServerHost, service, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		if (addrs)
-			pg_freeaddrinfo_all(hint.ai_family, addrs);
-
-		ereport(ERROR,
-				(errmsg("could not translate host addr \"%s\", port \"%d\" to address: %s",
-						seqServerHost, seqServerPort, gai_strerror(ret))));
-		return;
-	}
-
-	if ((savedSeqServerFd = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol)) < 0)
-		elog(ERROR, "socket() call failed: %m");
-
-	if ((n = connect(savedSeqServerFd, addrs->ai_addr, addrs->ai_addrlen)) < 0)
-	{
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: Could not connect to seqserver (connection: %d, host: %s, port: %d).", savedSeqServerFd, seqServerHost, seqServerPort),
-						errdetail("%s: %m", "connect"), errprintstack(true)));
-	}
-
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
-
-	/* make socket non-blocking BEFORE we connect. */
-	if (!pg_set_noblock(savedSeqServerFd))
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: Could not set seqserver socket"
-							   "to non-blocking mode."),
-						errdetail("%s sockfd=%d: %m", "fcntl", savedSeqServerFd)));
 }
 
 void

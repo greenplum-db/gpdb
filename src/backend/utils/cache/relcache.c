@@ -2715,20 +2715,15 @@ RelationBuildLocalRelation(const char *relname,
 
 	/*
 	 * Further deviation in Greenplum: A new relfilenode must be generated even
-	 * for a mapped relation (with the exception of sequence relations).  OIDs
-	 * and relfilenodes are generated using two separate counters.  If OID is
-	 * reused as relfilenode, like in upstream, without bumping the relfilenode
-	 * counter, it may lead to a reuse of this value as relfilenode in future.
-	 * E.g. if this is a non-temp relation and the future relation happens to
-	 * be a temp relation.  Shared buffer manager in Greenplum breaks if this
-	 * happens, see GPDB_91_MERGE_FIXME in GetNewRelFileNode() for details.
-	 * Sequence relations must use OID also as relfilenode.  Sequence OIDs are
-	 * allocated by GetNewSequenceRelationObjectId(), where we try to increment
-	 * OID and relfilenode counters so as to avoid reuse of the same value as
-	 * relfilenode in future.
+	 * for a mapped relation.  OIDs and relfilenodes are generated using two
+	 * separate counters.  If OID is reused as relfilenode, like in upstream,
+	 * without bumping the relfilenode counter, it may lead to a reuse of this
+	 * value as relfilenode in future.  E.g. if this is a non-temp relation and
+	 * the future relation happens to be a temp relation.  Shared buffer
+	 * manager in Greenplum breaks if this happens, see GPDB_91_MERGE_FIXME in
+	 * GetNewRelFileNode() for details.
 	 */
 	if (relid < FirstNormalObjectId /* bootstrap only */
-		|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
 		|| IsBinaryUpgrade)
 		rel->rd_rel->relfilenode = relid;
 	else

@@ -1021,7 +1021,6 @@ exec_mpp_query(const char *query_string,
 			   const char * serializedPlantree, int serializedPlantreelen,
 			   const char * serializedParams, int serializedParamslen,
 			   const char * serializedQueryDispatchDesc, int serializedQueryDispatchDesclen,
-			   const char * seqServerHost, int seqServerPort,
 			   int localSlice)
 {
 	CommandDest dest = whereToSendOutput;
@@ -1312,9 +1311,6 @@ exec_mpp_query(const char *query_string,
 						  list_make1(plan ? (Node*)plan : (Node*)utilityStmt),
 						  NULL);
 
-		/* Set up the sequence server */
-		SetupSequenceServer(seqServerHost, seqServerPort);
-
 		/*
 		 * Start the portal.
 		 */
@@ -1524,7 +1520,7 @@ CheckDebugDtmActionSqlCommandTag(const char *sqlCommandTag)
  * Execute a "simple Query" protocol message.
  */
 static void
-exec_simple_query(const char *query_string, const char *seqServerHost, int seqServerPort)
+exec_simple_query(const char *query_string)
 {
 	CommandDest dest = whereToSendOutput;
 	MemoryContext oldcontext;
@@ -1735,9 +1731,6 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 						  commandTag,
 						  plantree_list,
 						  NULL);
-
-		/* Set up the sequence server */
-		SetupSequenceServer(seqServerHost, seqServerPort);
 
 		/*
 		 * Start the portal.  No parameters here.
@@ -5253,7 +5246,7 @@ PostgresMain(int argc, char *argv[],
 					else if (am_ftshandler)
 						HandleFtsMessage(query_string);
 					else
-						exec_simple_query(query_string, NULL, -1);
+						exec_simple_query(query_string);
 
 					send_ready_for_query = true;
 				}
@@ -5274,7 +5267,6 @@ PostgresMain(int argc, char *argv[],
 					const char *serializedPlantree = NULL;
 					const char *serializedParams = NULL;
 					const char *serializedQueryDispatchDesc = NULL;
-					const char *seqServerHost = NULL;
 					const char *resgroupInfoBuf = NULL;
 
 					int query_string_len = 0;
@@ -5283,8 +5275,6 @@ PostgresMain(int argc, char *argv[],
 					int serializedPlantreelen = 0;
 					int serializedParamslen = 0;
 					int serializedQueryDispatchDesclen = 0;
-					int seqServerHostlen = 0;
-					int seqServerPort = -1;
 					int resgroupInfoLen = 0;
 
 					int localSlice = -1, i;
@@ -5336,9 +5326,6 @@ PostgresMain(int argc, char *argv[],
 					/* get the transaction options */
 					unusedFlags = pq_getmsgint(&input_message, 4);
 
-					seqServerHostlen = pq_getmsgint(&input_message, 4);
-					seqServerPort = pq_getmsgint(&input_message, 4);
-
 					/* get the query string and kick off processing. */
 					if (query_string_len > 0)
 						query_string = pq_getmsgbytes(&input_message,query_string_len);
@@ -5354,9 +5341,6 @@ PostgresMain(int argc, char *argv[],
 
 					if (serializedQueryDispatchDesclen > 0)
 						serializedQueryDispatchDesc = pq_getmsgbytes(&input_message,serializedQueryDispatchDesclen);
-
-					if (seqServerHostlen > 0)
-						seqServerHost = pq_getmsgbytes(&input_message, seqServerHostlen);
 
 					numSlices = pq_getmsgint(&input_message, 4);
 
@@ -5428,7 +5412,7 @@ PostgresMain(int argc, char *argv[],
 						}
 						else
 						{
-							exec_simple_query(query_string, seqServerHost, seqServerPort);
+							exec_simple_query(query_string);
 						}
 					}
 					else
@@ -5437,7 +5421,7 @@ PostgresMain(int argc, char *argv[],
 									   serializedPlantree, serializedPlantreelen,
 									   serializedParams, serializedParamslen,
 									   serializedQueryDispatchDesc, serializedQueryDispatchDesclen,
-									   seqServerHost, seqServerPort, localSlice);
+									   localSlice);
 
 					SetUserIdAndContext(GetOuterUserId(), false);
 

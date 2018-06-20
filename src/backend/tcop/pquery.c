@@ -1039,8 +1039,6 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 			CurrentResourceOwner = saveResourceOwner;
 		PortalContext = savePortalContext;
 
-		TeardownSequenceServer();
-
 		PG_RE_THROW();
 	}
 	PG_END_TRY();

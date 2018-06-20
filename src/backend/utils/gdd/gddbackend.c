@@ -77,7 +77,7 @@ static volatile bool shutdown_requested = false;
 int gp_global_deadlock_detector_period;
 
 /*
- * Main entry point for seqserver controller process.
+ * Main entry point for global deadlock detector process.
  *
  * This code is heavily based on pgarch.c, q.v.
  */

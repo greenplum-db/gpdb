@@ -1434,18 +1434,11 @@ heap_create_with_catalog(const char *relname,
 	/*
 	 * GP_ROLE_DISPATCH and GP_ROLE_UTILITY do not have preassigned OIDs.
 	 * Allocate new OIDs here.
-	 *
-	 * For sequence relations, the relfilenode has to be the same as OID.
-	 * To accomplish this, we have a special function GetSequenceRelationOid
-	 * which locks both the Oid and relfilenode counter, syncs them, and
-	 * allocates the synced value to here.
 	 */
 	if (!OidIsValid(relid) && Gp_role != GP_ROLE_EXECUTE)
 	{
 		if (IsBootstrapProcessingMode())
 			relid = GetNewOid(pg_class_desc);
-		else if (relkind == RELKIND_SEQUENCE)
-			relid = GetNewSequenceRelationOid(pg_class_desc);
 		else
 			relid = GetNewOid(pg_class_desc);
 	}

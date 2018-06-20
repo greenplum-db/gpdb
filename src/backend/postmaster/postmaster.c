@@ -116,7 +116,6 @@
 #include "postmaster/fork_process.h"
 #include "postmaster/pgarch.h"
 #include "postmaster/postmaster.h"
-#include "postmaster/seqserver.h"
 #include "postmaster/fts.h"
 #include "postmaster/perfmon.h"
 #include "postmaster/syslogger.h"
@@ -143,7 +142,6 @@
 
 #ifdef EXEC_BACKEND
 #include "storage/spin.h"
-void SeqServerMain(int argc, char *argv[]);
 
 void FtsProbeMain(int argc, char *argv[]);
 #endif
@@ -184,8 +182,7 @@ static Dllist *BackendList;
 /* CDB */
 typedef enum pmsub_type
 {
-	SeqServerProc = 0,
-	FtsProbeProc,
+	FtsProbeProc = 0,
 	PerfmonProc,
 	BackoffProc,
 	PerfmonSegmentInfoProc,
@@ -327,8 +324,7 @@ typedef enum
 	PM_RUN,						/* normal "database is alive" state */
 	PM_WAIT_BACKUP,				/* waiting for online backup mode to end */
 	PM_WAIT_READONLY,			/* waiting for read only backends to exit */
-	PM_WAIT_REGULAR_BACKENDS,	/* waiting for live backends to exit, but not seqserver (GPDB-specific) */
-	PM_WAIT_BACKENDS,			/* waiting for live backends to exit (including seqserver) */
+	PM_WAIT_BACKENDS,			/* waiting for live backends to exit */
 	PM_SHUTDOWN,				/* waiting for bgwriter to do shutdown ckpt */
 	PM_SHUTDOWN_2,				/* waiting for archiver and walsenders to
 								 * finish */
@@ -367,9 +363,6 @@ typedef struct pmsubproc
 
 static PMSubProc PMSubProcList[MaxPMSubType] =
 {
-	{0, SeqServerProc,
-	 (PMSubStartCallback*)&seqserver_start,
-	 "seqserver process", PMSUBPROC_FLAG_QD, true},
 	{0, FtsProbeProc,
 	 (PMSubStartCallback*)&ftsprobe_start,
 	 "ftsprobe process", PMSUBPROC_FLAG_QD, true},
@@ -695,7 +688,8 @@ PostmasterMain(int argc, char *argv[])
 			 * but we co-opted this letter for this... I'm afraid to change it,
 			 * because I don't know where this is used.
              * ... it's used only here in postmaster.c; it causes the postmaster to
-             * fork a seqserver process.
+			 * fork a QD specific process. For example, FTS, perfmon, global
+			 * deadlock detector.
 			 */
 			case 'E':
 				Gp_entry_postmaster = true;
@@ -2707,11 +2701,6 @@ pmdie(SIGNAL_ARGS)
 				/* and the walwriter too */
 				if (WalWriterPID != 0)
 					signal_child(WalWriterPID, SIGTERM);
-				/*
-				 * Note: We don't kill the seqserver yet. It might be needed
-				 * by running backends. We will kill that after all the live
-				 * backends have exited.
-				 */
 
 				/*
 				 * If we're in recovery, we can't kill the startup process
@@ -2771,7 +2760,6 @@ pmdie(SIGNAL_ARGS)
 			else if (pmState == PM_RUN ||
 					 pmState == PM_WAIT_BACKUP ||
 					 pmState == PM_WAIT_READONLY ||
-					 pmState == PM_WAIT_REGULAR_BACKENDS ||
 					 pmState == PM_WAIT_BACKENDS ||
 					 pmState == PM_HOT_STANDBY)
 			{
@@ -3478,26 +3466,6 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		signal_child(PgArchPID, SIGQUIT);
 	}
 
-	/* Force a power-cycle of the seqserver process too */
-	/* (Shouldn't be necessary, but just for luck) */
-	{
-		int ii;
-
-		for (ii=0; ii < MaxPMSubType; ii++)
-		{
-			PMSubProc *subProc = &PMSubProcList[ii];
-
-			if (subProc->pid != 0 && !FatalError)
-			{
-				ereport(DEBUG2,
-						(errmsg_internal("sending %s to process %d",
-										 "SIGQUIT",
-										 (int) subProc->pid)));
-				signal_child(subProc->pid, SIGQUIT);
-			}
-		}
-	}
-
 	/*
 	 * Force a power-cycle of the pgstat process too.  (This isn't absolutely
 	 * necessary, but it seems like a good idea for robustness, and it
@@ -3523,7 +3491,6 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		pmState == PM_RUN ||
 		pmState == PM_WAIT_BACKUP ||
 		pmState == PM_WAIT_READONLY ||
-		pmState == PM_WAIT_REGULAR_BACKENDS ||
 		pmState == PM_SHUTDOWN)
 		pmState = PM_WAIT_BACKENDS;
 }
@@ -3613,11 +3580,11 @@ PostmasterStateMachine(void)
 		 */
 		if (!BackupInProgress())
 		{
-			pmState = PM_WAIT_REGULAR_BACKENDS;
+			pmState = PM_WAIT_BACKENDS;
 		}
 	}
 
-	if (pmState == PM_WAIT_REGULAR_BACKENDS)
+	if (pmState == PM_WAIT_BACKENDS)
 	{
 		/*
 		 */
@@ -4745,7 +4712,6 @@ SubPostmasterMain(int argc, char *argv[])
 		strcmp(argv[1], "--forkavlauncher") == 0 ||
 		strcmp(argv[1], "--forkavworker") == 0 ||
 		strcmp(argv[1], "--forkautovac") == 0   ||
-		strcmp(argv[1], "--forkseqserver") == 0 ||
 		strcmp(argv[1], "--forkglobaldeadlockdetector") == 0 ||
 		strcmp(argv[1], "--forkboot") == 0)
 		PGSharedMemoryReAttach();
@@ -4913,23 +4879,6 @@ SubPostmasterMain(int argc, char *argv[])
 		/* Do not want to attach to shared memory */
 
 		SysLoggerMain(argc, argv);
-		proc_exit(0);
-	}
-	if (strcmp(argv[1], "--forkseqserver") == 0)
-	{
-		/* Close the postmaster's sockets */
-		ClosePostmasterPorts(false);
-
-		/* Restore basic shared memory pointers */
-		InitShmemAccess(UsedShmemSegAddr);
-
-		/* Need a PGPROC to run CreateSharedMemoryAndSemaphores */
-		InitAuxiliaryProcess();
-
-		/* Attach process to shared data structures */
-		CreateSharedMemoryAndSemaphores(false, 0);
-
-		SeqServerMain(argc - 2, argv + 2);
 		proc_exit(0);
 	}
 	if (strcmp(argv[1], "--forkglobaldeadlockdetector") == 0)

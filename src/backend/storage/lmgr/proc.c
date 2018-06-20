@@ -362,7 +362,7 @@ InitProcess(void)
 	 * this; it probably should.)
 	 *
 	 * Ideally, we should create functions similar to IsAutoVacuumLauncherProcess()
-	 * for ftsProber, SeqServer etc who call InitProcess().
+	 * for ftsProber, etc who call InitProcess().
 	 * But MyPMChildSlot helps to get away with it.
 	 */
 	if (IsUnderPostmaster && !IsAutoVacuumLauncherProcess()

@@ -422,7 +422,6 @@ SELECT * FROM truncate_a;
 ROLLBACK;
 INSERT INTO truncate_a DEFAULT VALUES;
 INSERT INTO truncate_a DEFAULT VALUES;
---start_ignore
 SELECT * FROM truncate_a;
  id | id1 
 ----+-----
@@ -431,7 +430,7 @@ SELECT * FROM truncate_a;
   3 |  35
   4 |  36
 (4 rows)
---end_ignore
+
 DROP TABLE truncate_a;
 SELECT nextval('truncate_a_id1'); -- fail, seq should have been dropped
 ERROR:  relation "truncate_a_id1" does not exist

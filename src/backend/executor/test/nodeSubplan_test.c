@@ -115,8 +115,6 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	expect_any(cdbexplain_recvExecStats,showstatctx);
 	will_be_called(cdbexplain_recvExecStats);
 
-	will_be_called(TeardownSequenceServer);
-
 	/* Catch PG_RE_THROW(); after cleaning with CdbCheckDispatchResult */
 	PG_TRY();
 		ExecSetParamPlan(plan,econtext,queryDesc);

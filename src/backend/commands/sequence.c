@@ -29,6 +29,8 @@
 #include "commands/sequence.h"
 #include "commands/tablecmds.h"
 #include "funcapi.h"
+#include "libpq/libpq.h"
+#include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "storage/smgr.h"               /* RelationCloseSmgr -> smgrclose */
 #include "nodes/makefuncs.h"
@@ -50,8 +52,6 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/ml_ipc.h"
-
-#include "postmaster/seqserver.h"
 
 
 /*
@@ -106,7 +106,7 @@ static SeqTable seqtab = NULL;	/* Head of list of SeqTable items */
 static SeqTableData *last_used_seq = NULL;
 
 static void fill_seq_with_data(Relation rel, HeapTuple tuple);
-static int64 nextval_internal(Oid relid);
+static int64 nextval_internal(Oid relid, bool is_direct_request);
 static Relation open_share_lock(SeqTable seq);
 static void init_sequence(Oid relid, SeqTable *p_elm, Relation *p_rel);
 static Form_pg_sequence read_seq_tuple(SeqTable elm, Relation rel,
@@ -125,11 +125,11 @@ cdb_sequence_nextval(SeqTable elm,
                      int64     *pincrement,
                      bool      *seq_overflow);
 static void
-cdb_sequence_nextval_proxy(Relation seqrel,
-                           int64   *plast,
-                           int64   *pcached,
-                           int64   *pincrement,
-                           bool    *poverflow);
+cdb_sequence_nextval_qe(Relation seqrel,
+						int64   *plast,
+						int64   *pcached,
+						int64   *pincrement,
+						bool    *poverflow);
 
 /*
  * DefineSequence
@@ -310,18 +310,6 @@ ResetSequence(Oid seq_relid)
 	Buffer		buf;
 	HeapTupleData seqtuple;
 	HeapTuple	tuple;
-
-	/*
-	 * GPDB_91_MERGE_FIXME: GPDB does not support transactional restart of
-	 * sequence relations.  This is a consequence of the assumption in sequence
-	 * server that relfilenode of a sequence relation is identical to its OID.
-	 * The RelationSetNewRelfilenode() call below violates that assumption and
-	 * breaks sequence server implementation.  Until sequences in GPDB are
-	 * redesigned, we have to resort to non-transactional sequence restarts.
-	 */
-	gp_alter_sequence_internal(
-		seq_relid, list_make1(makeDefElem("restart", NULL)));
-	return;
 
 	/*
 	 * Read the old sequence.  This does a bit more work than really
@@ -601,7 +589,7 @@ nextval(PG_FUNCTION_ARGS)
 	sequence = makeRangeVarFromNameList(textToQualifiedNameList(seqin));
 	relid = RangeVarGetRelid(sequence, false);
 
-	PG_RETURN_INT64(nextval_internal(relid));
+	PG_RETURN_INT64(nextval_internal(relid, false));
 }
 
 Datum
@@ -609,11 +597,22 @@ nextval_oid(PG_FUNCTION_ARGS)
 {
 	Oid			relid = PG_GETARG_OID(0);
 
-	PG_RETURN_INT64(nextval_internal(relid));
+	PG_RETURN_INT64(nextval_internal(relid, false));
+}
+
+void
+nextval_qd(Oid relid, int64 *plast, int64 *pcached, int64  *pincrement, bool *poverflow)
+{
+	Assert(IS_QUERY_DISPATCHER());
+
+	*plast = nextval_internal(relid, true);
+	*pcached = last_used_seq->cached;
+	*pincrement = last_used_seq->increment;
+	*poverflow = !last_used_seq->last_valid;
 }
 
 static int64
-nextval_internal(Oid relid)
+nextval_internal(Oid relid, bool called_from_dispatcher)
 {
 	SeqTable	elm;
 	Relation	seqrel;
@@ -623,14 +622,11 @@ nextval_internal(Oid relid)
 	init_sequence(relid, &elm, &seqrel);
 
 	/* read-only transactions may only modify temp sequences */
-	/*
-	 * GPDB_91_MERGE_FIXME: if it's possible to get another session's relation
-	 * here, this code will not function as expected.
-	 */
 	if (seqrel->rd_backend != TempRelBackendId)
 		PreventCommandIfReadOnly("nextval()");
 
-	if (elm->last != elm->cached)		/* some numbers were cached */
+	if (elm->last != elm->cached 		/* some numbers were cached */
+		&& !called_from_dispatcher)
 	{
 		Assert(elm->last_valid);
 		Assert(elm->increment != 0);
@@ -648,7 +644,7 @@ nextval_internal(Oid relid)
 
 	/* Update the sequence object. */
 	if (Gp_role == GP_ROLE_EXECUTE)
-		cdb_sequence_nextval_proxy(seqrel,
+		cdb_sequence_nextval_qe(seqrel,
 								   &elm->last,
 								   &elm->cached,
 								   &elm->increment,
@@ -666,13 +662,14 @@ nextval_internal(Oid relid)
 	{
 		char	   *relname = pstrdup(RelationGetRelationName(seqrel));
 
-		relation_close(seqrel, NoLock);
 
+		elm->last_valid = false;
+		relation_close(seqrel, NoLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("nextval: reached %s value of sequence \"%s\" (" INT64_FORMAT ")",
-                        elm->increment>0 ? "maximum":"minimum",
-                        relname, elm->last)));
+				 elm->increment>0 ? "maximum":"minimum",
+				 relname, elm->last)));
 	}
 	else
 		elm->last_valid = true;
@@ -865,19 +862,6 @@ cdb_sequence_nextval(SeqTable elm,
 		recptr = XLogInsert(RM_SEQ_ID, XLOG_SEQ_LOG, rdata);
 
 		PageSetLSN(page, recptr);
-
-		/* need to update where we've inserted to into shmem so that the QD can flush it
-		 * when necessary
-		 */
-		LWLockAcquire(SeqServerControlLock, LW_EXCLUSIVE);
-
-		if (XLByteLT(seqServerCtl->lastXlogEntry, recptr))
-		{
-			seqServerCtl->lastXlogEntry.xlogid = recptr.xlogid;
-			seqServerCtl->lastXlogEntry.xrecoff = recptr.xrecoff;
-		}
-
-		LWLockRelease(SeqServerControlLock);
 	}
 
 	/* Now update sequence tuple to the intended final state */
@@ -1012,10 +996,6 @@ do_setval(Oid relid, int64 next, bool iscalled)
 						RelationGetRelationName(seqrel))));
 
 	/* read-only transactions may only modify temp sequences */
-	/*
-	 * GPDB_91_MERGE_FIXME: if it's possible to get another session's relation
-	 * here, this code will not function as expected.
-	 */
 	if (seqrel->rd_backend != TempRelBackendId)
 		PreventCommandIfReadOnly("setval()");
 
@@ -1778,124 +1758,121 @@ seq_desc(StringInfo buf, XLogRecord *record)
 
 
 /*
- * Initialize a pseudo relcache entry with just enough info to call bufmgr.
- */
-static void
-cdb_sequence_relation_init(Relation seqrel,
-                           Oid      tablespaceid,
-                           Oid      dbid,
-                           Oid      relid,
-						   char     relpersistence)
-{
-    /* See RelationBuildDesc in relcache.c */
-    memset(seqrel, 0, sizeof(*seqrel));
-
-    seqrel->rd_smgr = NULL;
-    seqrel->rd_refcnt = 99;
-
-    seqrel->rd_id = relid;
-
-	seqrel->rd_rel = (Form_pg_class)palloc0(CLASS_TUPLE_SIZE);
-    sprintf(seqrel->rd_rel->relname.data, "pg_class.oid=%d", relid);
-	seqrel->rd_rel->relpersistence = relpersistence;
-	seqrel->rd_rel->relkind = RELKIND_SEQUENCE;
-
-    /* as in RelationInitPhysicalAddr... */
-    seqrel->rd_node.spcNode = tablespaceid;
-    seqrel->rd_node.dbNode = dbid;
-    seqrel->rd_node.relNode = relid;
-	/* GPDB_91_MERGE_FIXME: Do we ever use the seqserver for temp sequences? I think not.. */
-	seqrel->rd_backend = InvalidBackendId;
-
-}                               /* cdb_sequence_relation_init */
-
-/*
- * Clean up pseudo relcache entry.
- */
-static void
-cdb_sequence_relation_term(Relation seqrel)
-{
-    /* Close the file. */
-    RelationCloseSmgr(seqrel);
-
-    if (seqrel->rd_rel)
-        pfree(seqrel->rd_rel);
-}                               /* cdb_sequence_relation_term */
-
-
-
-/*
- * CDB: forward a nextval request from qExec to the sequence server
+ * CDB: forward a nextval request from qExec to the QD
  */
 void
-cdb_sequence_nextval_proxy(Relation	seqrel,
-                           int64   *plast,
-                           int64   *pcached,
-                           int64   *pincrement,
-                           bool    *poverflow)
+cdb_sequence_nextval_qe(Relation	seqrel,
+						int64   *plast,
+						int64   *pcached,
+						int64   *pincrement,
+						bool    *poverflow)
 {
-
-	sendSequenceRequest(GetSeqServerFD(),
-						seqrel,
-    					gp_session_id,
-    					plast,
-    					pcached,
-    					pincrement,
-    					poverflow);
-
-}                               /* cdb_sequence_server_nextval */
-
-
-/*
- * CDB: nextval entry point called by sequence server
- */
-void
-cdb_sequence_nextval_server(Oid    tablespaceid,
-                            Oid    dbid,
-                            Oid    relid,
-                            char relpersistence,
-                            int64 *plast,
-                            int64 *pcached,
-                            int64 *pincrement,
-                            bool  *poverflow)
-{
-    RelationData    fakerel;
-	SeqTable	elm;
-	Relation	    seqrel = &fakerel;
-
-    *plast = 0;
-    *pcached = 0;
-    *pincrement = 0;
+	Oid oid;
+	int64 last;
+	int64 cached;
+	int64 increment;
+	char overflow;
+	char error;
+	unsigned char	qtype;
+	int retval;
+	char *current;
+	int *pint32;
+	StringInfoData buf;
+	Oid dbid = seqrel->rd_node.dbNode;
+	Oid seq_oid = seqrel->rd_id;
 
 	/*
-	 * In Postgres, this method is to find the SeqTable entry for the sequence.
-	 * This is not required by sequence server. We only need to initialize
-	 * the `elm` which is used later in `cdb_sequence_nextval()`, which
-	 * is calling `read_seq_tuple()` method, and require `elm` parameter.
-	 *
-	 * In GPDB, a sequence server is used to generate unique values for all the sequence.
-	 * It doesn't have to lock on the sequence relation, because there will be
-	 * only a single instance of sequence server to handle all the requests from
-	 * segments to generate the sequence values.
-	 * To prevent collision of generating sequence values between 'master'
-	 * (e.g.`select nextval(seq)`) and 'segments' (e.g. `insert into table with
-	 * serial column`), an BUFFER_LOCK_EXCLUSIVE lock is held on the shared buffer
-	 * of the sequence relation.
+	 * Construct a nextval NOTIFY message to send to the QD using "nextval"
+	 * channel. Sends pq_beginmessage(..., 'A') to signal that this is a NOTIFY
+	 * message. Payload includes all info required to update the sequence
+	 * value.
 	 */
-	init_sequence(relid, &elm, NULL);
+	char payload[128];
+	snprintf(payload, sizeof(payload), "%d:%d", dbid, seq_oid);
+	pq_beginmessage(&buf, 'A');
+	pq_sendint(&buf, gp_session_id, sizeof(int32));
+	pq_sendstring(&buf, "nextval"); /* channel */
+	pq_sendstring(&buf, payload);
+	pq_endmessage(&buf);
+	pq_flush();
 
-    /* Build a pseudo relcache entry with just enough info to call bufmgr. */
-    seqrel = &fakerel;
-    cdb_sequence_relation_init(seqrel, tablespaceid, dbid, relid, relpersistence);
+	/*
+	 * Read nextval response from QD.
+	 */
+	do
+	{
+		retval = pq_getbyte_if_available(&qtype);
+		if (retval == 0)
+			CHECK_FOR_INTERRUPTS();
 
-    /* CDB TODO: Catch errors. */
+		if (retval == EOF)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("nextval: QD closed the connection")));
+	} while (retval != 1);
+	Assert(qtype == SEQ_NEXTVAL_QUERY_RESPONSE);
 
-    /* Update the sequence object. */
-    cdb_sequence_nextval(elm, seqrel, plast, pcached, pincrement, poverflow);
+	initStringInfo(&buf);
+	if (pq_getmessage(&buf, 0) != 0)
+		elog(ERROR, "unable to parse nextval response from QD");
 
-    /* Cleanup. */
-    cdb_sequence_relation_term(seqrel);
-}                               /* cdb_sequence_server_nextval */
+	current = buf.data;
+
+	oid = ntohl(*((int32 *) current));
+	current += sizeof(int32);
+
+	pint32 = (int32 *) &last;
+	*pint32 = ntohl(*((int32 *) current + 1));
+	pint32++;
+	*pint32 = ntohl(*((int32 *) current));
+	current += sizeof(int64);
+
+	pint32 = (int32 *) &cached;
+	*pint32 = ntohl(*((int32 *) current + 1));
+	pint32++;
+	*pint32 = ntohl(*((int32 *) current));
+	current += sizeof(int64);
+
+	pint32 = (int32 *) &increment;
+	*pint32 = ntohl(*((int32 *) current + 1));
+	pint32++;
+	*pint32 = ntohl(*((int32 *) current));
+	current += sizeof(int64);
+
+	overflow = *current;
+	current += sizeof(char);
+	error = *current;
+
+	if (overflow == SEQ_NEXTVAL_TRUE)
+	{
+		char       *relname = pstrdup(RelationGetRelationName(seqrel));
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("nextval: reached %s value of sequence \"%s\" (" INT64_FORMAT ")",
+				 increment>0 ? "maximum":"minimum",
+				 relname, last)));
+	}
+
+	if (error == SEQ_NEXTVAL_TRUE)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("nextval: QD encountered error")));
+
+	Assert(overflow == SEQ_NEXTVAL_FALSE);
+	Assert(error == SEQ_NEXTVAL_FALSE);
+
+	if (oid != seq_oid)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("nextval: request oid:%d of QE doesn't match the response oid:%d from QD",
+						seq_oid, oid)));
+
+	*poverflow = false;
+	*plast = last;
+	*pcached = cached;
+	*pincrement = increment;
+}
+
 
 /*
  * Mask last_value and log_cnt for consistency checking

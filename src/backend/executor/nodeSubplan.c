@@ -1179,9 +1179,6 @@ PG_TRY();
 		cdbdisp_finishCommand(queryDesc->estate->dispatcherState, NULL, NULL, true);
 	}
 
-	/* teardown the sequence server */
-	TeardownSequenceServer();
-
 	/* Clean up the interconnect. */
 	if (queryDesc && queryDesc->estate && queryDesc->estate->es_interconnect_is_setup)
 	{
@@ -1224,10 +1221,7 @@ PG_CATCH();
 	{
 		CdbDispatchHandleError(queryDesc->estate->dispatcherState);
 	}
-		
-	/* teardown the sequence server */
-	TeardownSequenceServer();
-		
+
 	/*
 	 * Clean up the interconnect.
 	 * CDB TODO: Is this needed following failure on QD?

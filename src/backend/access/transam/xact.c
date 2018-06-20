@@ -1347,24 +1347,6 @@ RecordTransactionCommit(void)
 		{
 			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT, rdata);
 		}
-
-		/* MPP: If we are the QD and we've used sequences (from the sequence server) then we need
-		 * to make sure that we flush the XLOG entries made by the sequence server.  We do this
-		 * by moving our recptr ahead to where the sequence server is if its later than our own.
-		 *
-		 */
-		if (Gp_role == GP_ROLE_DISPATCH && seqXlogWrite)
-		{
-			LWLockAcquire(SeqServerControlLock, LW_EXCLUSIVE);
-
-			if (XLByteLT(recptr, seqServerCtl->lastXlogEntry))
-			{
-				recptr.xlogid = seqServerCtl->lastXlogEntry.xlogid;
-				recptr.xrecoff = seqServerCtl->lastXlogEntry.xrecoff;
-			}
-
-			LWLockRelease(SeqServerControlLock);
-		}
 	}
 
 #ifdef IMPLEMENT_ASYNC_COMMIT

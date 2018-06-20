@@ -350,7 +350,6 @@ int			gp_debug_linger = 30;
 int			currentSliceId = UNSET_SLICE_ID;	/* used by elog to show the
 												 * current slice the process
 												 * is executing. */
-SeqServerControlBlock *seqServerCtl;
 
 /* Segment id where singleton gangs are to be dispatched. */
 int			gp_singleton_segindex;

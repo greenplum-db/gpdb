@@ -89,7 +89,6 @@ typedef enum LWLockId
 	SyncRepLock,
 	SharedSnapshotLock,
 	DistributedLogControlLock,
-	SeqServerControlLock,
 	AOSegFileLock,
 	ResQueueLock,
 	ResGroupLock,

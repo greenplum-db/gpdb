@@ -210,13 +210,7 @@ SELECT * FROM truncate_a;
 ROLLBACK;
 INSERT INTO truncate_a DEFAULT VALUES;
 INSERT INTO truncate_a DEFAULT VALUES;
---start_ignore
--- GPDB_91_MERGE_FIXME: transactional restart identity is not
--- supported in GPDB because the sequence server depends on
--- relfilenode and OID of sequence relations to be identical.  Ignore
--- the diff in the output until this fixme is addressed.
 SELECT * FROM truncate_a;
---end_ignore
 DROP TABLE truncate_a;
 
 SELECT nextval('truncate_a_id1'); -- fail, seq should have been dropped
