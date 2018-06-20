@@ -1331,6 +1331,25 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	gxact = LockGXact(gid, GetUserId(), raiseErrorIfNotFound);
 	if (!raiseErrorIfNotFound && gxact == NULL)
 	{
+		/*
+		 * We can be here for commit-prepared and abort-prepared. Incase of
+		 * commit-prepared not able to find the gxact clearly means we already
+		 * processed the same and committed it. For abort-prepared either
+		 * prepare was never performed on this segment hence gxact doesn't
+		 * exists or it was performed but failed to respond back to QD. So,
+		 * only for commit-prepared validate if it made to mirror before
+		 * returning success to master. For abort can't detect between those 2
+		 * cases, hence may unnecessarily wait for mirror sync for
+		 * abort-prepared if prepare had failed. Missing to send
+		 * abort-prepared to mirror doesn't result in inconsistent
+		 * result. Though yes can potentially have dangling prepared
+		 * transaction on mirror for extremely thin window, as any transaction
+		 * performed on primary will make sure to sync the abort prepared
+		 * record anyways.
+		 */
+		if (isCommit)
+			wait_for_mirror();
+
 		return false;
 	}
 

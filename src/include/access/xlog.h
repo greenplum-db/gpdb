@@ -402,4 +402,5 @@ extern bool IsBkpBlockApplied(XLogRecord *record, uint8 block_id);
 extern XLogRecPtr
 last_xlog_replay_location(void);
 
+extern void wait_for_mirror(void);
 #endif   /* XLOG_H */

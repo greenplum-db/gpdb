@@ -12527,3 +12527,17 @@ last_xlog_replay_location()
 
 	return recptr;
 }
+
+void
+wait_for_mirror()
+{
+	XLogwrtResult tmpLogwrtResult;
+	/* use volatile pointer to prevent code rearrangement */
+	volatile XLogCtlData *xlogctl = XLogCtl;
+
+	SpinLockAcquire(&xlogctl->info_lck);
+	tmpLogwrtResult = xlogctl->LogwrtResult;
+	SpinLockRelease(&xlogctl->info_lck);
+
+	SyncRepWaitForLSN(tmpLogwrtResult.Flush);
+}
