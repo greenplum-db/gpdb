@@ -9,6 +9,9 @@
                       'gpinitsystem'] %}
 {% set CLI_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
+{% set aa_Test_suites = ['planner',
+                         'orca'
+                        ] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -114,6 +117,19 @@ groups:
   - regression_tests_gphdfs_hadoop_centos
   - regression_tests_gphdfs_mapr_centos
 {% endif %}
+{% if "AA" in test_sections %}
+  ## --------------------------------------------------------------------
+  - gate_advanced_analytics_start
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+  - MADlib_Test_[[ test_name ]]_centos6
+{% if "centos7" in os_types %}
+  - MADlib_Test_[[ test_name ]]_centos7
+{% endif %}
+{% endfor %}
+  - gate_advanced_analytics_end
+{% endif %}
+
 
 {% if pipeline_type == "prod" %}
 ## ======================================================================
@@ -269,6 +285,21 @@ groups:
   - compile_gpdb_centos6
 
 {% endif %}
+
+{% if "AA" in test_sections %}
+- name: Advanced Analytics
+  jobs:
+  - gate_advanced_analytics_start
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+  - MADlib_Test_[[ test_name ]]_centos6
+{% if "centos7" in os_types %}
+  - MADlib_Test_[[ test_name ]]_centos7
+{% endif %}
+{% endfor %}
+  - gate_advanced_analytics_end
+{% endif %}
+
 ## ======================================================================
 ##                                           _
 ##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___
@@ -612,6 +643,25 @@ resources:
     stop: 7:00 AM
 
 {% endif %}
+{% if "AA" in test_sections %}
+- name: madlib_ci
+  type: git
+  source:
+    branch: {{madlib-ci-git-branch}}
+    uri: {{madlib-ci-git-remote}}
+    private_key: {{madlib-ci-git-key}}
+
+- name: madlib_gppkg
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: madlib-concourse
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: {{madlib-gpdb6-centos6-gppkg}}
+
+{% endif %}
+
 - name: reduced-frequency-trigger
   type: time
   source:
@@ -619,7 +669,6 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
     start: {{reduced-frequency-trigger-start}}
     stop: {{reduced-frequency-trigger-stop}}
-
 ## ======================================================================
 ##                   _
 ##   __ _ _ __   ___| |__   ___  _ __ ___
@@ -2198,6 +2247,110 @@ jobs:
       TARGET_OS_VERSION: 6
 
 {% endif %}
+
+{% if "AA" in test_sections %}
+## ======================================================================
+##     _        _
+##    / \      / \
+##   / _ \    / _ \
+##  / ___ \  / ___ \
+## /_/   \_\/_/   \_\
+## ======================================================================
+- name: gate_advanced_analytics_start
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - compile_gpdb_centos6
+{% if "centos7" in os_types %}
+      - compile_gpdb_centos7
+{% endif %}
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - compile_gpdb_centos6
+{% if "centos7" in os_types %}
+    - get: bin_gpdb_centos7
+      passed:
+      - compile_gpdb_centos7
+{% endif %}
+
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+- name: MADlib_Test_[[ test_name ]]_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "[[ orca_state ]]"
+      DBVER: gpdb6-assert
+
+{% if "centos7" in os_types %}
+- name: MADlib_Test_[[ test_name ]]_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-test-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-test-7
+    params:
+      TEST_OS: centos
+      ORCA: "[[ orca_state ]]"
+      DBVER: gpdb6-assert
+{% endif %}
+
+{% endfor %}
+
+
+- name: gate_advanced_analytics_end
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed:
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]_centos6
+{% if "centos7" in os_types %}
+      - MADlib_Test_[[ test_name ]]_centos7
+{% endif %}
+{% endfor %}
+    - get: bin_gpdb_centos6
+      passed:
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]_centos6
+{% endfor %}
+{% if "centos7" in os_types %}
+    - get: bin_gpdb_centos7
+      passed:
+{% for test_name in aa_Test_suites %}
+{% set orca_state = 'off' if "planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]_centos7
+{% endfor %}
+{% endif %}
+{% endif %}
+
 {% if pipeline_type == "prod" %}
 ## ======================================================================
 ##  ____      _
@@ -2246,6 +2399,10 @@ jobs:
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
+{% endfor %}
+{% for test_name in aa_Test_suites %}
+      - MADlib_Test_[[ test_name ]]_centos6
+      - MADlib_Test_[[ test_name ]]_centos7
 {% endfor %}
       - gpaddmirrors
       - gpexpand
