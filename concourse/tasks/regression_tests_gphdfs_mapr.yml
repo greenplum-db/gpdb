@@ -10,6 +10,7 @@ inputs:
   - name: gpdb_src
   - name: bin_gpdb
   - name: terraform
+  - name: cluster_env_files
 
 run:
   path: sh

@@ -100,6 +100,15 @@ function setup_gpadmin_user() {
 	./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TARGET_OS"
 }
 
+function copy_jar_to_mapr_host() {
+    if [ "$HADOOP_TARGET_VERSION" == "mpr" ]; then
+        scp -i cluster_env_files/private_key.pem ${GPHOME}/lib/hadoop/mpr-gnet-1.2.0.0.jar centos@$MAPR_HOST:/tmp
+        ssh -i cluster_env_files/private_key.pem -ttn centos@$MAPR_HOST "sudo bash -c \"\
+            mv /tmp/mpr-gnet-1.2.0.0.jar /opt/mapr/hadoop/hadoop-2.7.0/share/hadoop/common/lib/; \
+        \""
+    fi
+}
+
 function _main() {
 	if [ -z "$TARGET_OS" ]; then
 		echo "FATAL: TARGET_OS is not set"
@@ -118,6 +127,7 @@ function _main() {
 	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
 	time install_gpdb
 	time make_cluster
+	time copy_jar_to_mapr_host
 	time gen_env
 	time run_regression_test
 }
