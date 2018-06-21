@@ -363,7 +363,7 @@ out_gistxlogPageSplit(StringInfo buf, gistxlogPageSplit *xlrec)
 }
 
 void
-gist_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+gist_desc(StringInfo buf, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	char		*rec = XLogRecGetData(record);

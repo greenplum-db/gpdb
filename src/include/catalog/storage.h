@@ -38,6 +38,6 @@ extern void PostPrepare_smgr(void);
 extern void log_smgrcreate(RelFileNode *rnode, ForkNumber forkNum);
 
 extern void smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void smgr_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void smgr_desc(StringInfo buf, XLogRecord *record);
 
 #endif   /* STORAGE_H */

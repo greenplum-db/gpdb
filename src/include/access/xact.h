@@ -274,7 +274,7 @@ extern void RecordDistributedForgetCommitted(struct TMGXACT_LOG *gxact_log);
 extern int	xactGetCommittedChildren(TransactionId **ptr);
 
 extern void xact_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void xact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void xact_desc(StringInfo buf, XLogRecord *record);
 extern const char *IsoLevelAsUpperString(int IsoLevel);
 
 #endif   /* XACT_H */

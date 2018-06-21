@@ -1271,7 +1271,7 @@ begin:;
 
 		contiguousCopy = XLogContiguousCopy(record, rdata);
 		appendStringInfo(&buf, " - ");
-		RmgrTable[record->xl_rmid].rm_desc(&buf, RecPtr, (XLogRecord*)contiguousCopy);
+		RmgrTable[record->xl_rmid].rm_desc(&buf, (XLogRecord*)contiguousCopy);
 		pfree(contiguousCopy);
 
 		elog(LOG, "%s", buf.data);
@@ -7308,7 +7308,6 @@ StartupXLOG(void)
 					xlog_outrec(&buf, record);
 					appendStringInfo(&buf, " - ");
 					RmgrTable[record->xl_rmid].rm_desc(&buf,
-													   record->xl_info,
 													 XLogRecGetData(record));
 					elog(LOG, "%s", buf.data);
 					pfree(buf.data);
@@ -10108,7 +10107,7 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 }
 
 void
-xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+xlog_desc(StringInfo buf, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	char		*rec = XLogRecGetData(record);
@@ -11460,7 +11459,6 @@ rm_redo_error_callback(void *arg)
 	initStringInfo(&buf);
 	RmgrTable[redoErrorCallBack->record->xl_rmid].rm_desc(
 												   &buf,
-												   redoErrorCallBack->location,
 												   redoErrorCallBack->record);
 
 	/* don't bother emitting empty description */

@@ -314,7 +314,7 @@ extern XLogRecPtr XLogSaveBufferForHint(Buffer buffer);
 extern void RestoreBkpBlocks(XLogRecPtr lsn, XLogRecord *record, bool cleanup);
 
 extern void xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
-extern void xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void xlog_desc(StringInfo buf, XLogRecord *record);
 
 extern void issue_xlog_fsync(int fd, uint32 log, uint32 seg);
 
