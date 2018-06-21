@@ -247,43 +247,6 @@ add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, X
 }  /* end add_recover_post_checkpoint_prepared_transactions_map_entry */
 
 /*
- * Find a mapping in the recover post checkpoint prepared transactions hash table.
- */
-bool
-TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid, XLogRecPtr *m, char *caller)
-{
-  prpt_map *entry = NULL;
-  bool      found = false;
-
-  MemSet(m, 0, sizeof(XLogRecPtr));
-
-  /*
-   * The table is lazily initialised.
-   */
-  if (crashRecoverPostCheckpointPreparedTransactions_map_ht == NULL)
-  {
-    crashRecoverPostCheckpointPreparedTransactions_map_ht
-                     = init_hash("two phase post checkpoint prepared transactions map",
-                                 sizeof(TransactionId), /* keysize */
-                                 sizeof(prpt_map),
-                                 10 /* initialize for 10 entries */);
-  }
-
-  entry = hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
-                      &xid,
-                      HASH_FIND,
-                      &found);
-  if (entry == NULL)
-  {
-          return false;
-  }
-
-  memcpy(m, &entry->xlogrecptr, sizeof(XLogRecPtr));
-
-  return true;
-}
-
-/*
  * Remove a mapping from the recover post checkpoint prepared transactions hash table.
  */
 static void
