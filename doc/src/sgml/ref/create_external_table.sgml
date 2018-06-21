@@ -21,7 +21,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis> 
 
-CREATE [READABLE] EXTERNAL TABLE table_name 
+CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE table_name 
      ( column_name data_type [, ...] | LIKE other_table )
       LOCATION ('file://seghost[:port]/path/file' [, ...])
         | ('gpfdist://filehost[:port]/file_pattern[#transform]'
@@ -48,7 +48,7 @@ CREATE [READABLE] EXTERNAL TABLE table_name
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
-CREATE [READABLE] EXTERNAL WEB TABLE table_name 
+CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name 
      ( column_name data_type [, ...] | LIKE other_table )
       LOCATION ('http://webhost[:port]/path/file' [, ...])
     | EXECUTE 'command' [ON ALL 
@@ -76,7 +76,7 @@ CREATE [READABLE] EXTERNAL WEB TABLE table_name
      [ ENCODING 'encoding' ]
      [ [LOG ERRORS] SEGMENT REJECT LIMIT count
        [ROWS | PERCENT] ]
-CREATE WRITABLE EXTERNAL TABLE table_name
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE table_name
     ( column_name data_type [, ...] | LIKE other_table )
      LOCATION('gpfdist://outputhost[:port]/filename[#transform]'
       | ('gpfdists://outputhost[:port]/file_pattern[#transform]'
@@ -95,7 +95,7 @@ CREATE WRITABLE EXTERNAL TABLE table_name
            | 'CUSTOM' (Formatter=<formatter specifications>)
     [ ENCODING 'write_encoding' ]
     [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY ]
-CREATE WRITABLE EXTERNAL WEB TABLE table_name
+CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     ( column_name data_type [, ...] | LIKE other_table )
     EXECUTE 'command' [ON ALL]
     FORMAT 'TEXT' 
