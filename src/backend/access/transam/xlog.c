@@ -6969,19 +6969,10 @@ StartupXLOG(void)
 
 	LastRec = RecPtr = checkPointLoc;
 
-	/*
-	 * Currently, standby mode (WAL based replication support) is not provided
-	 * to segments.
-	 * Hence it's okay to do the following only once on the segments as there
-	 * will be only one checkpoint to be analyzed.
-	 */
-	if (!IS_QUERY_DISPATCHER())
-	{
-		CheckpointExtendedRecord ckptExtended;
-		UnpackCheckPointRecord(record, &ckptExtended);
-		if (ckptExtended.ptas)
-			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
-	}
+	CheckpointExtendedRecord ckptExtended;
+	UnpackCheckPointRecord(record, &ckptExtended);
+	if (ckptExtended.ptas)
+		SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
 
 	/*
 	 * Find Xacts that are distributed committed from the checkpoint record and
