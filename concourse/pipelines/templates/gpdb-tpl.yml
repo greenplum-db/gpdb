@@ -2147,6 +2147,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         number_of_nodes: 1
+        PLATFORM: centos7
   - task: gen_and_initialize_mapr
     file: gpdb_src/concourse/tasks/gen_mapr.yml
     params:
