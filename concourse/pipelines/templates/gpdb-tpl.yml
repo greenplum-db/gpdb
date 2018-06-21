@@ -111,7 +111,8 @@ groups:
   ## --------------------------------------------------------------------
   - gate_ud_start
   - regression_tests_pxf
-  - regression_tests_gphdfs_centos
+  - regression_tests_gphdfs_hadoop_centos
+  - regression_tests_gphdfs_mapr_centos
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -263,7 +264,8 @@ groups:
   jobs:
   - gate_ud_start
   - regression_tests_pxf
-  - regression_tests_gphdfs_centos
+  - regression_tests_gphdfs_hadoop_centos
+  - regression_tests_gphdfs_mapr_centos
   - compile_gpdb_centos6
 
 {% endif %}
@@ -294,7 +296,8 @@ resources:
       "Replication"      in test_sections or
       "ResourceGroups"     in test_sections or
       "Interconnect"     in test_sections or
-      "CLI"      in test_sections %}
+      "CLI"      in test_sections or
+      "UD"      in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -2106,7 +2109,7 @@ jobs:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
-- name: regression_tests_gphdfs_centos
+- name: regression_tests_gphdfs_hadoop_centos
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2118,6 +2121,38 @@ jobs:
     - get: centos-gpdb-dev-6
   - task: regression_tests_gphdfs
     file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
+    image: centos-gpdb-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
+- name: regression_tests_gphdfs_mapr_centos
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_ud_start]
+    - get: bin_gpdb
+      passed: [gate_ud_start]
+      trigger: [[ test_trigger ]]
+      resource: bin_gpdb_centos6
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 1
+  - task: gen_and_initialize_mapr
+    file: gpdb_src/concourse/tasks/gen_mapr.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: regression_tests_gphdfs_mapr
+    file: gpdb_src/concourse/tasks/regression_tests_gphdfs_mapr.yml
     image: centos-gpdb-dev-6
     params:
       TARGET_OS: centos
@@ -2165,7 +2200,8 @@ jobs:
       - resource_group_sles12
       - segwalrep_mirrorless_centos6
       - walrep_2
-      - regression_tests_gphdfs_centos
+      - regression_tests_gphdfs_hadoop_centos
+      - regression_tests_gphdfs_mapr_centos      
       - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +

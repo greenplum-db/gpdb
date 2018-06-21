@@ -18,3 +18,6 @@ run:
   - -exc
   - |
     MAPR_HOST="ccp-$(cat ./terraform*/name)-0" gpdb_src/concourse/scripts/regression_tests_gphdfs.bash
+
+params:
+  HADOOP_TARGET_VERSION: mpr
