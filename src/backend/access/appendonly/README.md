@@ -51,14 +51,18 @@ such as `modcount`, which is a bearing on the number of DML operations
 that the AO table has been subject to.
 
 The aosegments table is initially named: "`pg_aoseg.pg_aoseg_<oid>`",
-where `<oid>` is the oid of the AO table. However, after certain DDL statements 
-such as ALTER on the AO table, this aosegments table is replaced by a new
-aosegments table with a changed `<oid>` suffix. In order to find 
-the aosegments table of an AO table, the "`pg_catalog.pg_appendonly`" catalog 
-table must be queried. The `segrelid` column in this table yields the oid of the 
-current aosegments table. If we now query pg_class with this oid, we will get
-the name of the current aosegments table. Please note that the `segrelid`
-is not equal to the `<oid>` suffix of the current aosegments table.
+where `<oid>` is the oid of the AO table. However, if certain DDL statements 
+such as ALTER, that involve a rewrite of the AO table on disk, are applied, 
+this aosegments table is replaced by a new table with a changed `<oid>` suffix.
+The complete process involves creation of a temporary table followed by an
+update of the `relfilenode` and aosegments table oid associated with the AO table. 
+
+In order to find the current aosegments table of an AO table, the 
+"`pg_catalog.pg_appendonly`" catalog table must be queried. The `segrelid` column in 
+this table yields the oid of the current aosegments table. If we now query
+pg_class with this oid, we will get the name of the current aosegments table. 
+Please note that the `segrelid` is not equal to the `<oid>` suffix of the current 
+aosegments table.
 
 Aosegment tables are similar to the TOAST tables, for heaps. An
 append-only table can have a TOAST table, too, in addition to the
