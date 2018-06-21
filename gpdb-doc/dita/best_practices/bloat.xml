@@ -40,7 +40,6 @@
       run <codeph>VACUUM FULL</codeph> on large tables in a Greenplum Database.</note>
     <section>
       <title>Sizing the Free Space Map</title>
-
       <p>Expired rows in heap tables are added to a shared free space map when you run
           <codeph>VACUUM</codeph>. The free space map must be adequately sized to accommodate these
         rows. If the free space map is not large enough, any space occupied by rows that overflow
@@ -51,7 +50,6 @@
         statement regularly. The more bloated a table becomes, the more rows that must be tracked in
         the free space map. For very large databases with many objects, you may need to increase the
         size of the free space map to prevent overflow. </p>
-
       <p>The <codeph>max_fsm_pages</codeph> configuration parameter sets the maximum number of disk
         pages for which free space will be tracked in the shared free-space map. Each page slot
         consumes six bytes of shared memory. The default value for <codeph>max_fsm_pages</codeph> is
@@ -154,8 +152,8 @@ DISTRIBUTED BY (<i>&lt;original distribution columns&gt;</i>);</codeblock><p>Thi
       <p>To rebuild all indexes on a table run <codeph>REINDEX <i>table_name</i>;</codeph>. To
         rebuild a particular index, run <codeph>REINDEX <i>index_name</i>;</codeph>.
           <codeph>REINDEX</codeph> does not update the <codeph>reltuples</codeph> and
-          <codeph>relpages</codeph> statistics for the index, so it is important to
-          <codeph>ANALYZE</codeph> the table to update these statistics after reindexing. </p>
+          <codeph>relpages</codeph> statistics for the index, To update those statistics, run
+          <codeph>ANALYZE</codeph> on the table after reindexing. </p>
     </section>
     <section>
       <title>Removing Bloat from System Catalogs</title>
@@ -170,17 +168,29 @@ DISTRIBUTED BY (<i>&lt;original distribution columns&gt;</i>);</codeblock><p>Thi
       <p>It is recommended to run <codeph>VACUUM</codeph> on the system catalog nightly and at least
         weekly. At the same time, running <codeph>REINDEX SYSTEM</codeph> removes bloat from the
         indexes. Alternatively, you can reindex system tables using the <codeph>reindexdb</codeph>
-        utility with the <codeph>-s</codeph> (<codeph>--system</codeph>) option. After reindexing,
-        it is also important to run <codeph>ANALYZE</codeph>, because the <codeph>REINDEX</codeph>
-        command rebuilds indexes with empty statistics. </p>
-      <p>The following script runs <codeph>VACUUM</codeph>, <codeph>REINDEX</codeph>, and
+        utility with the <codeph>-s</codeph> (<codeph>--system</codeph>) option. After removing
+        catalog bloat, run <codeph>ANALYZE</codeph> to update catalog table statistics. </p>
+      <p>These are Greenplum Database system catalog maintenance steps.<ol id="ol_un5_p1l_f2b">
+          <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the system
+            catalog indexes. This removes bloat in the indexes and improves <codeph>VACUUM</codeph>
+            performance.</li>
+          <li>Perform a <codeph>VACUUM</codeph> on system catalog tables. </li>
+          <li>Perform an <codeph>ANALYZE</codeph> on the system catalog tables to update the table
+            statistics. </li>
+        </ol></p>
+      <p>If you are performing catalog maintenance during a maintenance period and you need to stop
+        a process due to time constraints, run Greenplum Database function
+            <codeph>pg_cancel_backend(&lt;<varname>PID</varname>>)</codeph> to safely stop a
+        Greenplum Database process.</p>
+      <p>The following script runs <codeph>REINDEX</codeph>, <codeph>VACUUM</codeph>, and
           <codeph>ANALYZE</codeph> on the system
         catalogs.<pre>#!/bin/bash
 DBNAME="&lt;database_name>"
 SYSTABLES="' pg_catalog.' || relname || ';' from pg_class a, pg_namespace b \
 where a.relnamespace=b.oid and b.nspname='pg_catalog' and a.relkind='r'"
-psql -tc "SELECT 'VACUUM' || $SYSTABLES" $DBNAME | psql -a $DBNAME
+
 reindexdb -s -d $DBNAME
+psql -tc "SELECT 'VACUUM' || $SYSTABLES" $DBNAME | psql -a $DBNAME
 analyzedb -s pg_catalog -d $DBNAME</pre></p>
       <p>If the system catalogs become significantly bloated, you must perform an intensive system
         catalog maintenance procedure. The <codeph>CREATE TABLE AS SELECT</codeph> and
@@ -189,6 +199,24 @@ analyzedb -s pg_catalog -d $DBNAME</pre></p>
         period, stop all catalog activity on the system; <codeph>VACUUM FULL</codeph> takes
         exclusive locks against the system catalog. Running <codeph>VACUUM</codeph> regularly can
         prevent the need for this more costly procedure.</p>
+      <p>These are steps for intensive system catalog maintenance.<ol id="ol_trp_xqs_f2b">
+          <li>Stop all catalog activity on the Greenplum Database system.</li>
+          <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the system
+            catalog indexes. This removes bloat in the indexes and improves <codeph>VACUUM</codeph>
+            performance.</li>
+          <li>Perform a <codeph>VACUUM FULL</codeph> on the system catalog tables. See the following
+            Note.</li>
+          <li>Perform an <codeph>ANALYZE</codeph> on the system catalog tables to update the catalog
+            table statistics. </li>
+        </ol></p>
+      <note>The system catalog table <codeph>pg_attribute</codeph> is usually the largest catalog
+        table. If the <codeph>pg_attribute</codeph> table is significantly bloated, a <codeph>VACUUM
+          FULL</codeph> operation on the table might require a significant amount of time and might
+        need to be performed separately. One indication of a significantly bloated
+          <codeph>pg_attribute</codeph> table that might require a long time is when
+          <codeph>pg_attribute</codeph> contains a large number of records, and in the
+          <codeph>gp_toolkit.gp_bloat_diag</codeph> view, the diagnostic message for
+          <codeph>pg_attribute</codeph> is <codeph>significant amount of bloat</codeph>.</note>
     </section>
     <section>
       <title>Removing Bloat from Append-Optimized Tables</title>
