@@ -769,13 +769,6 @@ static void SetCurrentChunkStartTime(TimestampTz xtime);
 static int XLogFileReadAnyTLI(uint32 log, uint32 seg, int emode, int sources);
 static void XLogProcessCheckpointRecord(XLogRecord *rec, XLogRecPtr loc);
 
-typedef struct RedoErrorCallBack
-{
-	XLogRecPtr	location;
-
-	XLogRecord 	*record;
-} RedoErrorCallBack;
-
 void HandleStartupProcInterrupts(void);
 
 static void GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg);
@@ -1257,7 +1250,8 @@ begin:;
 	Insert->currpos += SizeOfXLogRecord;
 	freespace -= SizeOfXLogRecord;
 
-	if (Debug_xlog_insert_print)
+#ifdef WAL_DEBUG
+	if (XLOG_DEBUG)
 	{
 		StringInfoData buf;
 		char *contiguousCopy;
@@ -1277,6 +1271,7 @@ begin:;
 		elog(LOG, "%s", buf.data);
 		pfree(buf.data);
 	}
+#endif
 
 	/*
 	 * Append the data, including backup blocks if any
@@ -6398,16 +6393,12 @@ ApplyStartupRedo(
 {
 	/* use volatile pointer to prevent code rearrangement */
 	volatile XLogCtlData *xlogctl = XLogCtl;
-	RedoErrorCallBack redoErrorCallBack;
 
 	ErrorContextCallback errcontext;
 
 	/* Setup error traceback support for ereport() */
-	redoErrorCallBack.location = *beginLoc;
-	redoErrorCallBack.record = record;
-
 	errcontext.callback = rm_redo_error_callback;
-	errcontext.arg = (void *) &redoErrorCallBack;
+	errcontext.arg = (void *) record;
 	errcontext.previous = error_context_stack;
 	error_context_stack = &errcontext;
 
@@ -7292,8 +7283,6 @@ StartupXLOG(void)
 			 */
 			do
 			{
-				// GPDB_91_MERGE_FIXME
-#if 0
 #ifdef WAL_DEBUG
 				if (XLOG_DEBUG ||
 				 (rmid == RM_XACT_ID && trace_recovery_messages <= DEBUG2) ||
@@ -7307,12 +7296,10 @@ StartupXLOG(void)
 									 EndRecPtr.xlogid, EndRecPtr.xrecoff);
 					xlog_outrec(&buf, record);
 					appendStringInfo(&buf, " - ");
-					RmgrTable[record->xl_rmid].rm_desc(&buf,
-													 XLogRecGetData(record));
+					RmgrTable[record->xl_rmid].rm_desc(&buf, record);
 					elog(LOG, "%s", buf.data);
 					pfree(buf.data);
 				}
-#endif
 #endif
 				/* Handle interrupt signals of startup process */
 				HandleStartupProcInterrupts();
@@ -11453,13 +11440,11 @@ read_backup_label(XLogRecPtr *checkPointLoc, bool *backupEndRequired)
 static void
 rm_redo_error_callback(void *arg)
 {
-	RedoErrorCallBack *redoErrorCallBack = (RedoErrorCallBack*) arg;
+	XLogRecord *record = (XLogRecord *) arg;
 	StringInfoData buf;
 
 	initStringInfo(&buf);
-	RmgrTable[redoErrorCallBack->record->xl_rmid].rm_desc(
-												   &buf,
-												   redoErrorCallBack->record);
+	RmgrTable[record->xl_rmid].rm_desc(&buf, record);
 
 	/* don't bother emitting empty description */
 	if (buf.len > 0)

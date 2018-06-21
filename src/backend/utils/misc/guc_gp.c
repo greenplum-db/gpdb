@@ -147,7 +147,6 @@ bool		Debug_appendonly_rezero_quicklz_compress_scratch = false;
 bool		Debug_appendonly_rezero_quicklz_decompress_scratch = false;
 bool		Debug_appendonly_guard_end_quicklz_scratch = false;
 bool		gp_local_distributed_cache_stats = false;
-bool		Debug_xlog_insert_print = false;
 bool		debug_xlog_record_read = false;
 bool		Debug_cancel_print = false;
 bool		Debug_datumstream_write_print_small_varlena_info = false;
@@ -1604,17 +1603,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_appendonly_print_datumstream,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_xlog_insert_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print XLOG Insert record debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_xlog_insert_print,
 		false,
 		NULL, NULL, NULL
 	},
