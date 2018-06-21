@@ -217,8 +217,6 @@
             <topicref href="guc-list.xml#max_appendonly_tables"/>
             <topicref href="guc-list.xml#max_connections"/>
             <topicref href="guc-list.xml#max_files_per_process"/>
-            <topicref href="guc-list.xml#max_fsm_pages"/>
-            <topicref href="guc-list.xml#max_fsm_relations"/>
             <topicref href="guc-list.xml#max_function_args"/>
             <topicref href="guc-list.xml#max_identifier_length"/>
             <topicref href="guc-list.xml#max_index_keys"/>

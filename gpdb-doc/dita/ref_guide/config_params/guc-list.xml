@@ -595,12 +595,6 @@
               <xref href="#max_files_per_process"/>
             </li>
             <li>
-              <xref href="#max_fsm_pages"/>
-            </li>
-            <li>
-              <xref href="#max_fsm_relations"/>
-            </li>
-            <li>
               <xref href="#max_function_args"/>
             </li>
             <li>
@@ -6970,65 +6964,6 @@
         setting. Some platforms such as BSD, the kernel will allow individual processes to open many
         more files than the system can really support.</p>
       <table id="max_files_per_process_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer</entry>
-              <entry colname="col2">1000</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="max_fsm_pages">
-    <title>max_fsm_pages</title>
-    <body>
-      <p>Sets the maximum number of disk pages for which free space will be tracked in the shared
-        free-space map. Six bytes of shared memory are consumed for each page slot. </p>
-      <table id="max_fsm_pages_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer &gt; 16 * <i>max_fsm_relations</i></entry>
-              <entry colname="col2">200000</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="max_fsm_relations">
-    <title>max_fsm_relations</title>
-    <body>
-      <p>Sets the maximum number of relations for which free space will be tracked in the shared
-        memory free-space map. Should be set to a value larger than the total number of:</p>
-      <p>tables + indexes + system tables.</p>
-      <p>It costs about 60 bytes of memory for each relation per segment instance. It is better to
-        allow some room for overhead and set too high rather than too low.</p>
-      <table id="max_fsm_relations_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>
