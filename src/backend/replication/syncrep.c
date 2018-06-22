@@ -117,23 +117,10 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	{
 		return;
 	}
-
+	Assert(!am_walsender);
 	elogif(debug_walrepl_syncrep, LOG,
 			"syncrep wait -- This backend's commit LSN for syncrep is %X/%X.",
 			XactCommitLSN.xlogid,XactCommitLSN.xrecoff);
-
-	/* GPDB_91_MERGE_FIXME: is this still relevant after PT and filerep removal? */
-	/*
-	 * Walsenders are not supposed to call this function, but currently
-	 * basebackup needs to access catalog, hence open/close transaction.
-	 * It doesn't make sense to wait for myself anyway.
-	 */
-	if (am_walsender)
-	{
-		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep as this process is a walsender.");
-		return;
-	}
 
 	/* Fast exit if user has not requested sync replication. */
 	if (!SyncRepRequested())
