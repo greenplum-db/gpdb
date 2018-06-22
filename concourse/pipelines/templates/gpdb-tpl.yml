@@ -2229,7 +2229,8 @@ jobs:
       - resource_group_centos6
       - segwalrep_mirrorless_centos6
       - walrep_2
-      - regression_tests_gphdfs_centos
+      - regression_tests_gphdfs_hadoop_centos
+      - regression_tests_gphdfs_mapr_centos
       - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
