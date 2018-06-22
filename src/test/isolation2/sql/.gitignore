@@ -8,3 +8,4 @@ resgroup_alter_memory.sql
 pt_io_in_progress_deadlock.sql
 resgroup_cpuset.sql
 resgroup_dumpinfo.sql
+gp_collation.sql
