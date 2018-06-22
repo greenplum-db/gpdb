@@ -324,6 +324,7 @@ resources:
       "DPM"     in test_sections or
       "FileRep" in test_sections or
       "MPP"     in test_sections or
+      "UD"      in test_sections or
       "MM"      in test_sections %}
 - name: ccp_src
   type: git
