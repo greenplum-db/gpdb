@@ -29,8 +29,8 @@ public class UseMapred{
         {
             //datanodestr = "maprfs:///" +hdfshostname;
             //jobtrackerstr = "maprfs:///" +hdfshostname;
-            datanodestr = "maprfs:///my.cluster.com";
-            jobtrackerstr = "maprfs:///my.cluster.com";
+            datanodestr = "maprfs:///mapr/mapr";
+            jobtrackerstr = "maprfs:///mapr/mapr";
         }
         else
         {
