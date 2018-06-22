@@ -5133,19 +5133,6 @@ sigusr1_handler(SIGNAL_ARGS)
 		PostmasterStateMachine();
 	}
 
-	// GPDB_91_MERGE_FIXME: We got this second copy of this block from upstream
-	// I'm not sure what to here..
-#if 0
-	
-	if (CheckPromoteSignal() && StartupPID != 0 &&
-		(pmState == PM_STARTUP || pmState == PM_RECOVERY ||
-		 pmState == PM_HOT_STANDBY || pmState == PM_WAIT_READONLY))
-	{
-		/* Tell startup process to finish recovery */
-		signal_child(StartupPID, SIGUSR2);
-	}
-#endif
-
 	PG_SETMASK(&UnBlockSig);
 
 	errno = save_errno;
