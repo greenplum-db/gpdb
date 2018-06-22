@@ -450,8 +450,6 @@ standard_ProcessUtility(Node *parsetree,
 												  list_make1(item->arg),
 												  true,
 												  /* gp_dispatch */ false);
-								// GPDB_91_MERGE_FIXME: I just copied gp_dispatch = false to
-								// the new transaction_deferrable case above. Was that right?
 							}
 
 							sendDtxExplicitBegin();

@@ -678,7 +678,11 @@ assign_XactIsoLevel(const char *newval, void *extra)
 	 * supported as of PostgreSQL 9.1.  However, Greenplum lacks the support to
 	 * detect serialization conflicts using predicate locks at cluster level.
 	 * Until that support is implemented, let's keep old behavior by falling
-	 * back to repeatable read.
+	 * back to repeatable read. Also, for similar reasons guc
+	 * transaction_deferrable is not dispatched to QE's as no use
+	 * currently. When serializable is fixed make sure to fix dispatching of the
+	 * transaction_deferrable guc via DtxContextInfo similar to
+	 * transaction_isolation.
 	 */
 	if (XactIsoLevel == XACT_SERIALIZABLE)
 	{
