@@ -1,0 +1,23 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/centos-gpdb-dev
+    username:
+    password:
+
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+  - name: terraform
+  - name: cluster_env_files
+
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    MAPR_HOST="ccp-$(cat ./terraform*/name)-0" gpdb_src/concourse/scripts/regression_tests_gphdfs.bash
+
+params:
+  HADOOP_TARGET_VERSION: mpr
