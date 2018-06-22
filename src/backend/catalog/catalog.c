@@ -799,6 +799,7 @@ GetNewSequenceRelationOid(Relation relation)
 		CHECK_FOR_INTERRUPTS();
 
 		newOid = GetNewSequenceRelationObjectId();
+		rnode.relNode = newOid;
 
 		ScanKeyInit(&key,
 					(AttrNumber) 1,
