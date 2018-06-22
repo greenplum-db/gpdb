@@ -10,6 +10,8 @@
   CONVERSION <varname>object_name</varname> |
   DATABASE <varname>object_name</varname> |
   DOMAIN <varname>object_name</varname> |
+  FOREIGN DATA WRAPPER <varname>object_name</varname> |
+  FOREIGN TABLE <varname>object_name</varname> |
   FILESPACE <varname>object_name</varname> |
   FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
   INDEX <varname>object_name</varname> |
@@ -23,6 +25,7 @@
   RULE <varname>rule_name</varname> ON <varname>table_name</varname> |
   SCHEMA <varname>object_name</varname> |
   SEQUENCE <varname>object_name</varname> |
+  SERVER <varname>object_name</varname> |
   TABLESPACE <varname>object_name</varname> |
   TRIGGER <varname>trigger_name</varname> ON <varname>table_name</varname> |
   TYPE <varname>object_name</varname> |
@@ -36,7 +39,7 @@ are automatically dropped when the object is dropped.</p><p>Comments can be easi
 to retrieve comments can be built atop the same built-in functions that
 psql uses, namely <codeph>obj_description</codeph>, <codeph>col_description</codeph>,
 and <codeph>shobj_description</codeph>.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>object_name</varname></pt><pt><varname>table_name.column_name</varname></pt><pt><varname>agg_name</varname></pt><pt><varname>constraint_name</varname></pt><pt><varname>func_name</varname></pt><pt><varname>op</varname></pt><pt><varname>rule_name</varname></pt><pt><varname>trigger_name</varname></pt><pd>The name of the object to be commented. Names of tables, aggregates,
-domains, functions, indexes, operators, operator classes, sequences,
+domains, foreign tables, functions, indexes, operators, operator classes, sequences,
 types, and views may be schema-qualified. <note>Greenplum Database does not support triggers.</note></pd></plentry><plentry><pt><varname>agg_type</varname></pt><pd>An input data type on which the aggregate function operates. To reference
 a zero-argument aggregate function, write <codeph>*</codeph> in place
 of the list of input data types. </pd></plentry><plentry><pt><varname>sourcetype</varname></pt><pd>The name of the source data type of the cast. </pd></plentry><plentry><pt><varname>targettype</varname></pt><pd>The name of the target data type of the cast. </pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of a function argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,

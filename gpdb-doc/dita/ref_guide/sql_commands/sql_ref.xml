@@ -27,8 +27,12 @@
       <li id="ad142882">
         <xref href="./ALTER_FILESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142539"><codeph>ALTER FOREIGN DATA WRAPPER</codeph>*</li>
-      <li id="ad142541"><codeph>ALTER FOREIGN TABLE</codeph>*</li>
+      <li id="ad142539">
+        <xref href="./ALTER_FOREIGN_DATA_WRAPPER.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad142541">
+        <xref href="./ALTER_FOREIGN_TABLE.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad139892">
         <xref href="./ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -66,7 +70,9 @@
       <li id="ad140300">
         <xref href="./ALTER_SEQUENCE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142566"><codeph>ALTER SERVER</codeph>*</li>
+      <li id="ad142566">
+        <xref href="./ALTER_SERVER.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140304">
         <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -79,7 +85,9 @@
       <li id="ad140323">
         <xref href="./ALTER_USER.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142578"><codeph>ALTER USER MAPPING</codeph>*</li>
+      <li id="ad142578">
+        <xref href="./ALTER_USER_MAPPING.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li>
         <xref href="./ALTER_VIEW.xml#topic1/am137232">ALTER VIEW</xref>
       </li>
@@ -125,8 +133,12 @@
       <li id="ad140583">
         <xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142696"><codeph>CREATE FOREIGN DATA WRAPPER</codeph>*</li>
-      <li id="ad142698"><codeph>CREATE FOREIGN TABLE</codeph>*</li>
+      <li id="ad142696">
+        <xref href="./CREATE_FOREIGN_DATA_WRAPPER.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad142698">
+        <xref href="./CREATE_FOREIGN_TABLE.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad139921">
         <xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -169,7 +181,9 @@
       <li id="ad140492">
         <xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142728"><codeph>CREATE SERVER</codeph>*</li>
+      <li id="ad142728">
+        <xref href="./CREATE_SERVER.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140496">
         <xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -185,7 +199,9 @@
       <li id="ad142756">
         <xref href="./CREATE_USER.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142757"><codeph>CREATE USER MAPPING</codeph>*</li>
+      <li id="ad142757">
+        <xref href="./CREATE_USER_MAPPING.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad142761">
         <xref href="./CREATE_VIEW.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -224,8 +240,12 @@
       <li id="ad142899">
         <xref href="./DROP_FILESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142785"><codeph>DROP FOREIGN DATA WRAPPER</codeph>*</li>
-      <li id="ad142787"><codeph>DROP FOREIGN TABLE</codeph>*</li>
+      <li id="ad142785">
+        <xref href="./DROP_FOREIGN_DATA_WRAPPER.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad142787">
+        <xref href="./DROP_FOREIGN_TABLE.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140624">
         <xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -271,7 +291,9 @@
       <li id="ad140677">
         <xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142804"><codeph>DROP SERVER</codeph>*</li>
+      <li id="ad142804">
+        <xref href="./DROP_SERVER.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad139957">
         <xref href="./DROP_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -284,7 +306,9 @@
       <li id="ad142843">
         <xref href="./DROP_USER.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142844"><codeph>DROP USER MAPPING</codeph>*</li>
+      <li id="ad142844">
+        <xref href="./DROP_USER_MAPPING.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad142848">
         <xref href="./DROP_VIEW.xml#topic1" type="topic" format="dita"/>
       </li>

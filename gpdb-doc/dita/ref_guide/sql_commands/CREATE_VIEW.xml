@@ -12,7 +12,7 @@ column names and data types). </p><p>If a schema name is given then the view is 
 schema. Otherwise it is created in the current schema. Temporary views
 exist in a special schema, so a schema name may not be given when creating
 a temporary view. The name of the view must be distinct from the name
-of any other view, table, sequence, or index in the same schema.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>TEMPORARY | TEMP</pt><pd>If specified, the view is created as a temporary view. Temporary
+of any other view, table, sequence, index, or foreign table in the same schema.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>TEMPORARY | TEMP</pt><pd>If specified, the view is created as a temporary view. Temporary
 views are automatically dropped at the end of the current session. Existing
 permanent relations with the same name are not visible to the current
 session while the temporary view exists, unless they are referenced with
