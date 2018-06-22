@@ -10,13 +10,13 @@
     <section id="section3"><title>Description</title><p><codeph>REINDEX</codeph> rebuilds an index
         using the data stored in the index's table, replacing the old copy of the index. There are
         several scenarios in which to use <codeph>REINDEX</codeph>: </p><ul>
-        <li id="dz154728">An index has become bloated, that it is contains many empty or
+        <li id="dz154728">An index has become bloated, that is, it contains many empty or
           nearly-empty pages. This can occur with B-tree indexes in Greenplum Database under certain
           uncommon access patterns. <codeph>REINDEX</codeph> provides a way to reduce the space
           consumption of the index by writing a new version of the index without the dead
           pages.</li>
-        <li id="dz154739">You have altered the fillfactor storage parameter for an index, and wish
-          to ensure that the change has taken full effect. </li>
+        <li id="dz154739">You have altered the <codeph>FILLFACTOR</codeph> storage parameter for an
+          index, and wish to ensure that the change has taken full effect. </li>
       </ul></section>
     <section id="section4"><title>Parameters</title><parml>
         <plentry>
