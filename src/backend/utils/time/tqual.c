@@ -91,9 +91,11 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		/* GPDB_91_MERGE_FIXME: what is the rationale of not dirtying local buffers? */
-		if (relation->rd_rel->relpersistence != RELPERSISTENCE_TEMP)
-			MarkBufferDirtyHint(buffer);
+		/*
+		 * Based on BM_PERMANENT it decides if should xlog for temp tables or
+		 * not. So, can safely call it for any buffer.
+		 */
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
