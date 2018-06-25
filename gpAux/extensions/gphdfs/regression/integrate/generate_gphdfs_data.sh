@@ -1,9 +1,8 @@
 #!/bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 _main() {
-    set -x
 	local HADOOP=$HADOOP_HOME/bin/hadoop
 	local CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	local DATADIR=$CURDIR/data

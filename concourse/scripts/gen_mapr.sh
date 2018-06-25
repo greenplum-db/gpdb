@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 MAPR_SSH_OPTS="-i cluster_env_files/private_key.pem"
 node_hostname="ccp-$(cat ./terraform*/name)-0"
@@ -64,15 +64,10 @@ create_config_file() {
     local device_name=$1
 
     cat > /tmp/singlenode_config <<-EOF
-# Each Node section can specify nodes in the following format
-# Hostname: disk1, disk2, disk3
-# Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defaults section
 [Control_Nodes]
 $node_hostname: $device_name
 [Data_Nodes]
-
 [Client_Nodes]
-
 [Options]
 MapReduce1 = false
 YARN = true
@@ -121,7 +116,6 @@ grant_top_level_write_permission() {
 
 }
 setup_node() {
-    set -x
     local devicename
     devicename=$(get_device_name)
 
