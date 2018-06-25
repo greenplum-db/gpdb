@@ -63,7 +63,7 @@ namespace gpmd
 
 			// returns the DXL string of the requested metadata object
 			virtual
-			CWStringBase *GetMDObjDXLStr(IMemoryPool *memory_pool, CMDAccessor *md_accessor, IMDId *pmdid) const;
+			CWStringBase *GetMDObjDXLStr(IMemoryPool *memory_pool, CMDAccessor *md_accessor, IMDId *md_id) const;
 
 			// return the mdid for the requested type
 			virtual

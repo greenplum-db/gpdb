@@ -58,18 +58,18 @@ CMDProviderRelcache::GetMDObjDXLStr
 	(
 	IMemoryPool *memory_pool,
 	CMDAccessor *md_accessor,
-	IMDId *pmdid
+	IMDId *md_id
 	)
 	const
 {
-	IMDCacheObject *pimdobj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor, pmdid);
+	IMDCacheObject *imdobj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor, md_id);
 
-	GPOS_ASSERT(NULL != pimdobj);
+	GPOS_ASSERT(NULL != imdobj);
 
-	CWStringDynamic *str = CDXLUtils::SerializeMDObj(m_memory_pool, pimdobj, true /*fSerializeHeaders*/, false /*findent*/);
+	CWStringDynamic *str = CDXLUtils::SerializeMDObj(m_memory_pool, imdobj, true /*fSerializeHeaders*/, false /*findent*/);
 
 	// cleanup DXL object
-	pimdobj->Release();
+	imdobj->Release();
 
 	return str;
 }

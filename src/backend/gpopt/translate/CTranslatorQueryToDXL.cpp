@@ -3400,8 +3400,8 @@ CTranslatorQueryToDXL::PdxlnFromCTE
 			);
 	}
 
-	const CDXLNode *pdxlnCTEProducer = pctelistentry->PdxlnCTEProducer(prte->ctename);
-	const List *plCTEProducerTargetList = pctelistentry->PlCTEProducerTL(prte->ctename);
+	const CDXLNode *pdxlnCTEProducer = pctelistentry->GetCTEProducer(prte->ctename);
+	const List *plCTEProducerTargetList = pctelistentry->GetCTEProducerTargetList(prte->ctename);
 	
 	GPOS_ASSERT(NULL != pdxlnCTEProducer && NULL != plCTEProducerTargetList);
 
