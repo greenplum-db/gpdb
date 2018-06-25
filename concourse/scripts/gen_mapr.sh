@@ -66,6 +66,8 @@ create_config_file() {
     cat > /tmp/singlenode_config <<-EOF
 [Control_Nodes]
 $node_hostname: $device_name
+[Data_Nodes]
+[Client_Nodes]
 [Options]
 MapReduce1 = false
 YARN = true
