@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 MAPR_SSH_OPTS="-i cluster_env_files/private_key.pem"
 node_hostname="ccp-$(cat ./terraform*/name)-0"
@@ -64,20 +64,10 @@ create_config_file() {
     local device_name=$1
 
     cat > /tmp/singlenode_config <<-EOF
-# Each Node section can specify nodes in the following format
-# Hostname: disk1, disk2, disk3
-# Specifying disks is optional. If not provided, the installer will use the values of 'disks' from the Defaults section
 [Control_Nodes]
 $node_hostname: $device_name
 [Data_Nodes]
-#data-node1.mydomain
-#data-node2.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
-#data-node3.mydomain: /dev/sdd
-#data-node4.mydomain: /dev/sdb, /dev/sdd
 [Client_Nodes]
-#client1.mydomain
-#client2.mydomain
-#client3.mydomain
 [Options]
 MapReduce1 = false
 YARN = true
@@ -103,20 +93,6 @@ MetricsDBHost =
 MetricsDBUser =
 MetricsDBPassword =
 MetricsDBSchema =
-
-#[Spark]
-#SparkVersion = 0.9.1
-#SparkMasters = control-node1.mydomain, control-node2.mydomain
-#SparkSlaves = data-node1.mydomain, data-node2.mydomain, data-node3.mydomain
-#SparkMem = 2
-#SparkWorkerMem = 1
-#SparkDaemonMem = 16
-
-#[Hive]
-#HiveVersion = 0.12
-#HiveServers = control-node1.mydomain
-#HiveMetaStore = control-node2.mydomain
-#HiveClients = client-node1.mydomain, data-node3.mydomain
 EOF
 
     scp ${MAPR_SSH_OPTS} cluster_env_files/private_key.pem centos@"${node_hostname}":/tmp
@@ -140,7 +116,6 @@ grant_top_level_write_permission() {
 
 }
 setup_node() {
-    set -x
     local devicename
     devicename=$(get_device_name)
 
