@@ -121,6 +121,7 @@ static const char *assign_gp_default_storage_options(
 							const char *newval, bool doit, GucSource source);
 
 static bool assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source);
+static bool assign_gp_resource_group_bypass(bool newval, bool doit, GucSource source);
 
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
@@ -369,6 +370,7 @@ bool		gp_debug_resqueue_priority = false;
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
+bool		gp_resource_group_bypass;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
@@ -3310,6 +3312,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
+			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
+			NULL
+		},
+		&gp_resource_group_bypass,
+		false,
+		assign_gp_resource_group_bypass, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -5868,6 +5880,16 @@ assign_gp_idf_deduplicate(const char *newval, bool doit, GucSource source)
 		return newval;
 	}
 	return NULL;
+}
+
+static bool
+assign_gp_resource_group_bypass(bool newval, bool doit, GucSource source)
+{
+	if (!ResGroupIsAssigned())
+		return true;
+
+	elog(ERROR, "SET gp_resource_group_bypass cannot run inside a transaction block");
+	return false;
 }
 
 static const char *

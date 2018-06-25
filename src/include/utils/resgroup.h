@@ -80,6 +80,7 @@ extern int						memory_spill_ratio;
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
+extern bool gp_resource_group_bypass;
 
 /*
  * Non-GUC global variables.
@@ -144,6 +145,8 @@ extern bool ShouldUnassignResGroup(void);
 extern void AssignResGroupOnMaster(void);
 extern void UnassignResGroup(void);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
+
+extern bool ResGroupIsAssigned(void);
 
 /* Retrieve statistic information of type from resource group */
 extern Datum ResGroupGetStat(Oid groupId, ResGroupStatType type);

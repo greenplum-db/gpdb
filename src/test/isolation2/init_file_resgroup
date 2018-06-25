@@ -17,4 +17,7 @@ s/(seg\d+ slice\d+ \d+.\d+.\d+.\d+:\d+ pid=\d+)/(SEG SLICE ADDR:PORT pid=PID)/
 
 m/^ERROR:  Role with Oid \d+ was dropped$/
 s/Oid \d+ was/Oid OID was/
+
+m/^ERROR:  SET gp_resource_group_bypass cannot run inside a transaction block.*$/
+s/(?<=guc_gp\.c:)\d+/0/
 -- end_matchsubs

@@ -249,6 +249,9 @@ static ResGroupProcData *self = &__self;
 /* If we are waiting on a group, this points to the associated group */
 static ResGroupData *groupAwaited = NULL;
 
+/* Is the transaction in bypass mode? */
+static bool bypassed = false;
+
 /* static functions */
 
 static bool groupApplyMemCaps(ResGroupData *group);
@@ -910,6 +913,12 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 	LWLockRelease(ResGroupLock);
 }
 
+bool
+ResGroupIsAssigned(void)
+{
+	return selfIsAssigned();
+}
+
 int32
 ResGroupGetVmemLimitChunks(void)
 {
@@ -1087,7 +1096,13 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 	 */
 	self->memUsage += memoryChunks;
 	if (!selfIsAssigned())
+	{
+		if (bypassed && self->memUsage > 10)
+			LOG_RESGROUP_DEBUG(LOG,
+							   "too many memory allocated in resource group bypass mode: %d",
+							   self->memUsage);
 		return true;
+	}
 
 	Assert(slotIsInUse(slot));
 	Assert(group->memUsage >= 0);
@@ -1152,6 +1167,10 @@ ResourceGroupGetQueryMemoryLimit(void)
 {
 	ResGroupSlotData	*slot = self->slot;
 	int64				memSpill;
+
+	/* In bypass mode we assume memory usage should be low */
+	if (bypassed)
+		return 0;
 
 	Assert(selfIsAssigned());
 
@@ -2346,7 +2365,8 @@ AssignResGroupOnMaster(void)
 	 * if query should be bypassed, do not assign a
 	 * resource group, leave self unassigned
 	 */
-	if (shouldBypassQuery(debug_query_string))
+	bypassed = shouldBypassQuery(debug_query_string);
+	if (bypassed)
 	{
 		ResGroupCaps	caps;
 
@@ -2482,6 +2502,12 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	if (newGroupId == InvalidOid)
 	{
+		/*
+		 * if query should be bypassed, do not assign a
+		 * resource group, leave self unassigned
+		 */
+		bypassed = gp_resource_group_bypass;
+
 		UnassignResGroup();
 		return;
 	}
@@ -3253,6 +3279,9 @@ shouldBypassQuery(const char *query_string)
 	List *parsetree_list; 
 	ListCell *parsetree_item;
 	Node *parsetree;
+
+	if (gp_resource_group_bypass)
+		return true;
 
 	if (!query_string)
 		return false;
