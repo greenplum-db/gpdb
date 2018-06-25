@@ -65,6 +65,7 @@
 #include "storage/procarray.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_namespace.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 
@@ -100,12 +101,13 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	}
 
 	/*
-	 * The GUC gp_disable_tuple_hints is on.  Do further evaluation whether we want to write out the
-	 * buffer or not.
+	 * The GUC gp_disable_tuple_hints is on. Do further evaluation whether we
+	 * want to write out the buffer or not.
 	 */
 	Assert(relation != NULL);
 
-	if (relation->rd_issyscat)
+	if (RelationGetRelid(relation) < FirstNormalObjectId ||
+		RelationGetNamespace(relation) == PG_AOSEGMENT_NAMESPACE)
 	{
 		/* Assume we want to always mark the buffer dirty */
 		MarkBufferDirtyHint(buffer);
