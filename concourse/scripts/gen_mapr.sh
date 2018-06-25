@@ -70,14 +70,9 @@ create_config_file() {
 [Control_Nodes]
 $node_hostname: $device_name
 [Data_Nodes]
-#data-node1.mydomain
-#data-node2.mydomain: /dev/sdb, /dev/sdc, /dev/sdd
-#data-node3.mydomain: /dev/sdd
-#data-node4.mydomain: /dev/sdb, /dev/sdd
+
 [Client_Nodes]
-#client1.mydomain
-#client2.mydomain
-#client3.mydomain
+
 [Options]
 MapReduce1 = false
 YARN = true
@@ -103,20 +98,6 @@ MetricsDBHost =
 MetricsDBUser =
 MetricsDBPassword =
 MetricsDBSchema =
-
-#[Spark]
-#SparkVersion = 0.9.1
-#SparkMasters = control-node1.mydomain, control-node2.mydomain
-#SparkSlaves = data-node1.mydomain, data-node2.mydomain, data-node3.mydomain
-#SparkMem = 2
-#SparkWorkerMem = 1
-#SparkDaemonMem = 16
-
-#[Hive]
-#HiveVersion = 0.12
-#HiveServers = control-node1.mydomain
-#HiveMetaStore = control-node2.mydomain
-#HiveClients = client-node1.mydomain, data-node3.mydomain
 EOF
 
     scp ${MAPR_SSH_OPTS} cluster_env_files/private_key.pem centos@"${node_hostname}":/tmp
