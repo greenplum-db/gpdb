@@ -839,7 +839,7 @@ CTranslatorRelcacheToDXL::PdxlnDefaultColumnValue
 {
 	GPOS_ASSERT(attno > 0);
 
-	Node *pnode = NULL;
+	Node *node = NULL;
 
 	// Scan to see if relation has a default for this column
 	if (NULL != rd_att->constr && 0 < rd_att->constr->num_defval)
@@ -853,21 +853,21 @@ CTranslatorRelcacheToDXL::PdxlnDefaultColumnValue
 			if (attno == defval[ulCounter].adnum)
 			{
 				// found it, convert string representation to node tree.
-				pnode = gpdb::Pnode(defval[ulCounter].adbin);
+				node = gpdb::Pnode(defval[ulCounter].adbin);
 				break;
 			}
 		}
 	}
 
-	if (NULL == pnode)
+	if (NULL == node)
 	{
 		// get the default value for the type
 		Form_pg_attribute att_tup = rd_att->attrs[attno - 1];
 		Oid	oidAtttype = att_tup->atttypid;
-		pnode = gpdb::PnodeTypeDefault(oidAtttype);
+		node = gpdb::PnodeTypeDefault(oidAtttype);
 	}
 
-	if (NULL == pnode)
+	if (NULL == node)
 	{
 		return NULL;
 	}
@@ -887,7 +887,7 @@ CTranslatorRelcacheToDXL::PdxlnDefaultColumnValue
 
 	return sctranslator.PdxlnScOpFromExpr
 							(
-							(Expr *) pnode,
+							(Expr *) node,
 							NULL /* var_col_id_mapping --- subquery or external variable are not supported in default expression */
 							);
 }
@@ -2055,8 +2055,8 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 	CMDIdGPDB *pmdidRel = GPOS_NEW(memory_pool) CMDIdGPDB(oidRel);
 
 	// translate the check constraint expression
-	Node *pnode = gpdb::PnodeCheckConstraint(oidCheckConstraint);
-	GPOS_ASSERT(NULL != pnode);
+	Node *node = gpdb::PnodeCheckConstraint(oidCheckConstraint);
+	GPOS_ASSERT(NULL != node);
 
 	CTranslatorScalarToDXL sctranslator
 							(
@@ -2098,7 +2098,7 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 	var_col_id_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */, pdrgpdxlcd);
 
 	// translate the check constraint expression
-	CDXLNode *pdxlnScalar = sctranslator.PdxlnScOpFromExpr((Expr *) pnode, var_col_id_mapping);
+	CDXLNode *pdxlnScalar = sctranslator.PdxlnScOpFromExpr((Expr *) node, var_col_id_mapping);
 
 	// cleanup
 	pdrgpdxlcd->Release();
@@ -3485,7 +3485,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 {
 	// get the part constraints
 	List *plDefaultLevelsRel = NIL;
-	Node *pnode = gpdb::PnodePartConstraintRel(oidRel, &plDefaultLevelsRel);
+	Node *node = gpdb::PnodePartConstraintRel(oidRel, &plDefaultLevelsRel);
 
 	// don't retrieve part constraints if there are no indices
 	// and no default partitions at any level
@@ -3547,7 +3547,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 			pdrgpdxlcd->Append(dxl_col_descr);
 		}
 
-		mdpart_constraint = PmdpartcnstrFromNode(memory_pool, md_accessor, pdrgpdxlcd, pnode, pdrgpulDefaultLevels, is_unbounded);
+		mdpart_constraint = PmdpartcnstrFromNode(memory_pool, md_accessor, pdrgpdxlcd, node, pdrgpulDefaultLevels, is_unbounded);
 		pdrgpdxlcd->Release();
 	}
 

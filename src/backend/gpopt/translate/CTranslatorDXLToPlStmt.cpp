@@ -76,7 +76,7 @@ CTranslatorDXLToPlStmt::CTranslatorDXLToPlStmt
 	)
 	:
 	m_memory_pool(memory_pool),
-	m_pmda(md_accessor),
+	m_md_accessor(md_accessor),
 	m_dxl_to_plstmt_context(dxl_to_plstmt_context),
 	m_cmdtype(CMD_SELECT),
 	m_fTargetTableDistributed(false),
@@ -85,7 +85,7 @@ CTranslatorDXLToPlStmt::CTranslatorDXLToPlStmt
 	m_num_of_segments(ulSegments),
 	m_ulPartitionSelectorCounter(0)
 {
-	m_pdxlsctranslator = GPOS_NEW(m_memory_pool) CTranslatorDXLToScalar(m_memory_pool, m_pmda, m_num_of_segments);
+	m_pdxlsctranslator = GPOS_NEW(m_memory_pool) CTranslatorDXLToScalar(m_memory_pool, m_md_accessor, m_num_of_segments);
 	InitTranslators();
 }
 
@@ -438,7 +438,7 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 	Index iRel = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
 	const CDXLTableDescr *table_descr = pdxlopTS->GetDXLTableDescr();
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(table_descr->MDId());
 	RangeTblEntry *prte = PrteFromTblDescr(table_descr, NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
@@ -530,18 +530,18 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 BOOL
 CTranslatorDXLToPlStmt::FSetIndexVarAttno
 	(
-	Node *pnode,
+	Node *node,
 	SContextIndexVarAttno *pctxtidxvarattno
 	)
 {
-	if (NULL == pnode)
+	if (NULL == node)
 	{
 		return false;
 	}
 
-	if (IsA(pnode, Var) && ((Var *)pnode)->varno != OUTER)
+	if (IsA(node, Var) && ((Var *)node)->varno != OUTER)
 	{
-		INT iAttno = ((Var *)pnode)->varattno;
+		INT iAttno = ((Var *)node)->varattno;
 		const IMDRelation *pmdrel = pctxtidxvarattno->m_pmdrel;
 		const IMDIndex *index = pctxtidxvarattno->m_pmdindex;
 
@@ -559,7 +559,7 @@ CTranslatorDXLToPlStmt::FSetIndexVarAttno
 
 		if (gpos::ulong_max > ulIndexColPos)
 		{
-			((Var *)pnode)->varattno =  1 + index->GetKeyPos(ulIndexColPos);
+			((Var *)node)->varattno =  1 + index->GetKeyPos(ulIndexColPos);
 		}
 
 		return false;
@@ -567,7 +567,7 @@ CTranslatorDXLToPlStmt::FSetIndexVarAttno
 
 	return gpdb::FWalkExpressionTree
 			(
-			pnode,
+			node,
 			(BOOL (*)()) CTranslatorDXLToPlStmt::FSetIndexVarAttno,
 			pctxtidxvarattno
 			);
@@ -625,7 +625,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 		index_descr_dxl = pdxlopIndexScan->GetDXLIndexDescr();
 	}
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlopIndexScan->GetDXLTableDescr()->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(pdxlopIndexScan->GetDXLTableDescr()->MDId());
 
 	RangeTblEntry *prte = PrteFromTblDescr(pdxlopIndexScan->GetDXLTableDescr(), index_descr_dxl, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
@@ -638,7 +638,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 	pis->scan.scanrelid = iRel;
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(pdxlopIndexScan->GetDXLIndexDescr()->MDId());
-	const IMDIndex *index = m_pmda->Pmdindex(pmdidIndex);
+	const IMDIndex *index = m_md_accessor->Pmdindex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
@@ -2833,7 +2833,7 @@ CTranslatorDXLToPlStmt::PplanPartitionSelector
 
 	//translate residual filter
 	CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt(m_memory_pool, NULL /*base_table_context*/, child_contexts, output_context, m_dxl_to_plstmt_context);
-	if (!m_pdxlsctranslator->FConstTrue(pdxlnResidualFilter, m_pmda))
+	if (!m_pdxlsctranslator->FConstTrue(pdxlnResidualFilter, m_md_accessor))
 	{
 		ppartsel->residualPredicate = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar(pdxlnResidualFilter, &mapcidvarplstmt);
 	}
@@ -2902,7 +2902,7 @@ CTranslatorDXLToPlStmt::PlFilterList
 	{
 		CDXLNode *pdxlnChildFilter = (*pdxlnFilterList)[ul];
 
-		if (m_pdxlsctranslator->FConstTrue(pdxlnChildFilter, m_pmda))
+		if (m_pdxlsctranslator->FConstTrue(pdxlnChildFilter, m_md_accessor))
 		{
 			plFilters = gpdb::PlAppendElement(plFilters, NULL /*datum*/);
 			continue;
@@ -3584,7 +3584,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 
 	Index iRel = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(dxlop->GetDXLTableDescr()->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(dxlop->GetDXLTableDescr()->MDId());
 	RangeTblEntry *prte = PrteFromTblDescr(dxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
@@ -3597,7 +3597,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 	pdis->indexscan.scan.partIndexPrintable = dxlop->GetPartIndexIdPrintable();
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(dxlop->GetDXLIndexDescr()->MDId());
-	const IMDIndex *index = m_pmda->Pmdindex(pmdidIndex);
+	const IMDIndex *index = m_md_accessor->Pmdindex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
@@ -3728,7 +3728,7 @@ CTranslatorDXLToPlStmt::PplanDML
 	}
 	
 	IMDId *pmdidTargetTable = dxlop->GetDXLTableDescr()->MDId();
-	if (IMDRelation::EreldistrMasterOnly != m_pmda->Pmdrel(pmdidTargetTable)->GetRelDistribution())
+	if (IMDRelation::EreldistrMasterOnly != m_md_accessor->Pmdrel(pmdidTargetTable)->GetRelDistribution())
 	{
 		m_fTargetTableDistributed = true;
 	}
@@ -3742,7 +3742,7 @@ CTranslatorDXLToPlStmt::PplanDML
 	
 	m_plResultRelations = gpdb::PlAppendInt(m_plResultRelations, iRel);
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(dxlop->GetDXLTableDescr()->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(dxlop->GetDXLTableDescr()->MDId());
 
 	CDXLTableDescr *table_descr = dxlop->GetDXLTableDescr();
 	RangeTblEntry *prte = PrteFromTblDescr(table_descr, NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
@@ -4200,7 +4200,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 {
 	GPOS_ASSERT(NULL != table_descr);
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(table_descr->MDId());
 	const ULONG ulRelColumns = CTranslatorUtils::GetNumNonSystemColumns(pmdrel);
 
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
@@ -4210,7 +4210,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 	const IMDIndex *index = NULL;
 	if (NULL != index_descr_dxl)
 	{
-		index = m_pmda->Pmdindex(index_descr_dxl->MDId());
+		index = m_md_accessor->Pmdindex(index_descr_dxl->MDId());
 	}
 
 	// get oid for table
@@ -4435,7 +4435,7 @@ CTranslatorDXLToPlStmt::PlTargetListWithDroppedCols
 		if (pmdcol->IsDropped())
 		{
 			// add a NULL element
-			OID oidType = CMDIdGPDB::CastMdid(m_pmda->PtMDType<IMDTypeInt4>()->MDId())->OidObjectId();
+			OID oidType = CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())->OidObjectId();
 
 			pexpr = (Expr *) gpdb::PnodeMakeNULLConst(oidType);
 		}
@@ -4565,7 +4565,7 @@ CTranslatorDXLToPlStmt::PlQualFromFilter
 	GPOS_ASSERT(1 == arity);
 
 	CDXLNode *pdxlnFilterCond = (*filter_dxlnode)[0];
-	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(pdxlnFilterCond, m_pmda));
+	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(pdxlnFilterCond, m_md_accessor));
 
 	return PlQualFromScalarCondNode(pdxlnFilterCond, base_table_context, child_contexts, output_context);
 }
@@ -4589,7 +4589,7 @@ CTranslatorDXLToPlStmt::PlQualFromScalarCondNode
 {
 	List *plQuals = NIL;
 
-	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(const_cast<CDXLNode*>(pdxlnCond), m_pmda));
+	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(const_cast<CDXLNode*>(pdxlnCond), m_md_accessor));
 
 	CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
 															(
@@ -4712,8 +4712,8 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 
 		// the type of the hash expression in GPDB is computed as the left operand 
 		// of the equality operator of the actual hash expression type
-		const IMDType *pmdtype = m_pmda->Pmdtype(pdxlopHashExpr->MDIdType());
-		const IMDScalarOp *md_scalar_op = m_pmda->Pmdscop(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
+		const IMDType *pmdtype = m_md_accessor->Pmdtype(pdxlopHashExpr->MDIdType());
+		const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
 		
 		const IMDId *pmdidHashType = md_scalar_op->GetLeftMdid();
 		
@@ -4831,7 +4831,7 @@ CTranslatorDXLToPlStmt::FTargetTableDistributed
 	CDXLPhysicalDML *pdxlopDML = CDXLPhysicalDML::Cast(dxlop);
 	IMDId *pmdid = pdxlopDML->GetDXLTableDescr()->MDId();
 
-	return IMDRelation::EreldistrMasterOnly != m_pmda->Pmdrel(pmdid)->GetRelDistribution();
+	return IMDRelation::EreldistrMasterOnly != m_md_accessor->Pmdrel(pmdid)->GetRelDistribution();
 }
 
 //---------------------------------------------------------------------------
@@ -5243,7 +5243,7 @@ CTranslatorDXLToPlStmt::PplanBitmapTableScan
 	// add the new range table entry as the last element of the range table
 	Index iRel = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
+	const IMDRelation *pmdrel = m_md_accessor->Pmdrel(table_descr->MDId());
 
 	RangeTblEntry *prte = PrteFromTblDescr(table_descr, NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
@@ -5478,7 +5478,7 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	pbis->scan.partIndex = pdbts->scan.partIndex;
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(pdxlopScalar->GetDXLIndexDescr()->MDId());
-	const IMDIndex *index = m_pmda->Pmdindex(pmdidIndex);
+	const IMDIndex *index = m_md_accessor->Pmdindex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);

@@ -81,7 +81,7 @@ CTranslatorScalarToDXL::CTranslatorScalarToDXL
 	)
 	:
 	m_memory_pool(memory_pool),
-	m_pmda(md_accessor),
+	m_md_accessor(md_accessor),
 	m_pidgtorCol(pulidgtorCol),
 	m_pidgtorCTE(pulidgtorCTE),
 	m_query_level(query_level),
@@ -417,7 +417,7 @@ CTranslatorScalarToDXL::PdxlnScOpExprFromExpr
 
 	// check if this is a scalar comparison
 	CMDIdGPDB *return_type_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(((OpExpr *) pexpr)->opresulttype);
-	const IMDType *pmdtype= m_pmda->Pmdtype(return_type_mdid);
+	const IMDType *pmdtype= m_md_accessor->Pmdtype(return_type_mdid);
 
 	const ULONG ulArgs = gpdb::ListLength(popexpr->args);
 
@@ -527,7 +527,7 @@ CTranslatorScalarToDXL::PdxlnScArrayCompFromExpr
 
 	// get operator name
 	CMDIdGPDB *mdid_op = GPOS_NEW(m_memory_pool) CMDIdGPDB(pscarrayopexpr->opno);
-	const IMDScalarOp *md_scalar_op = m_pmda->Pmdscop(mdid_op);
+	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(mdid_op);
 	mdid_op->Release();
 
 	const CWStringConst *str = md_scalar_op->Mdname().GetMDName();
@@ -624,7 +624,7 @@ CTranslatorScalarToDXL::GetDatumVal
 	)
 	const
 {
-	return GetDatumVal(m_memory_pool, m_pmda, pconst);
+	return GetDatumVal(m_memory_pool, m_md_accessor, pconst);
 }
 
 
@@ -1280,7 +1280,7 @@ CTranslatorScalarToDXL::PdxlnScFuncExprFromFuncExpr
 												)
 									);
 
-	const IMDFunction *pmdfunc = m_pmda->Pmdfunc(mdid_func);
+	const IMDFunction *pmdfunc = m_md_accessor->Pmdfunc(mdid_func);
 	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
 		ListCell *lc = NULL;
@@ -1355,7 +1355,7 @@ CTranslatorScalarToDXL::PdxlnScAggrefFromAggref
 	GPOS_ASSERT(EdxlaggstageSentinel != edxlaggstage && "Invalid agg stage");
 
 	CMDIdGPDB *pmdidAgg = GPOS_NEW(m_memory_pool) CMDIdGPDB(paggref->aggfnoid);
-	const IMDAggregate *pmdagg = m_pmda->Pmdagg(pmdidAgg);
+	const IMDAggregate *pmdagg = m_md_accessor->Pmdagg(pmdidAgg);
 
 	GPOS_ASSERT(!pmdagg->IsOrdered());
 
@@ -1371,9 +1371,9 @@ CTranslatorScalarToDXL::PdxlnScAggrefFromAggref
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with FILTER"));
 	}
 
-	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(pmdidAgg, (EdxlaggstageNormal == edxlaggstage), m_pmda);
+	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(pmdidAgg, (EdxlaggstageNormal == edxlaggstage), m_md_accessor);
 	IMDId *pmdidResolvedRetType = NULL;
-	if (m_pmda->Pmdtype(mdid_return_type)->IsAmbiguous())
+	if (m_md_accessor->Pmdtype(mdid_return_type)->IsAmbiguous())
 	{
 		// if return type given by MD cache is ambiguous, use type provided by aggref node
 		pmdidResolvedRetType = GPOS_NEW(m_memory_pool) CMDIdGPDB(paggref->aggtype);
@@ -1486,15 +1486,15 @@ CTranslatorScalarToDXL::GetWindowFrame
 CDXLNode *
 CTranslatorScalarToDXL::PdxlnWindowFrameEdgeVal
 	(
-	const Node *pnode,
+	const Node *node,
 	const CMappingVarColId* var_col_id_mapping,
 	CDXLNode *pdxlnNewChildScPrL,
 	BOOL *pfHasDistributedTables
 	)
 {
-	CDXLNode *pdxlnVal = PdxlnScOpFromExpr((Expr *) pnode, var_col_id_mapping, pfHasDistributedTables);
+	CDXLNode *pdxlnVal = PdxlnScOpFromExpr((Expr *) node, var_col_id_mapping, pfHasDistributedTables);
 
-	if (m_fQuery && !IsA(pnode, Var) && !IsA(pnode, Const))
+	if (m_fQuery && !IsA(node, Var) && !IsA(node, Const))
 	{
 		GPOS_ASSERT(NULL != pdxlnNewChildScPrL);
 		CWStringConst strUnnamedCol(GPOS_WSZ_LIT("?column?"));
@@ -1517,8 +1517,8 @@ CTranslatorScalarToDXL::PdxlnWindowFrameEdgeVal
 																m_memory_pool,
 																GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, &strUnnamedCol),
 																ulPrElId,
-																GPOS_NEW(m_memory_pool) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(pnode))),
-																gpdb::IExprTypeMod(const_cast<Node*>(pnode))
+																GPOS_NEW(m_memory_pool) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(node))),
+																gpdb::IExprTypeMod(const_cast<Node*>(node))
 																)
 													);
 
@@ -1753,7 +1753,7 @@ CTranslatorScalarToDXL::PdxlnQuantifiedSubqueryFromSublink
 	ptrquerytodxl = CTranslatorQueryToDXL::PtrquerytodxlInstance
 							(
 							m_memory_pool,
-							m_pmda,
+							m_md_accessor,
 							m_pidgtorCol,
 							m_pidgtorCTE,
 							pmapvarcolidCopy,
@@ -1859,7 +1859,7 @@ CTranslatorScalarToDXL::PdxlnScSubqueryFromSublink
 	ptrquerytodxl = CTranslatorQueryToDXL::PtrquerytodxlInstance
 							(
 							m_memory_pool,
-							m_pmda,
+							m_md_accessor,
 							m_pidgtorCol,
 							m_pidgtorCTE,
 							pmapvarcolidCopy,
@@ -2030,7 +2030,7 @@ CTranslatorScalarToDXL::GetDXLArrayCmpType
 	const
 {
 	// get operator name
-	const IMDScalarOp *md_scalar_op = m_pmda->Pmdscop(pmdid);
+	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(pmdid);
 
 	const CWStringConst *str = md_scalar_op->Mdname().GetMDName();
 
@@ -2059,7 +2059,7 @@ CTranslatorScalarToDXL::PdxlnExistSubqueryFromSublink
 	ptrquerytodxl = CTranslatorQueryToDXL::PtrquerytodxlInstance
 							(
 							m_memory_pool,
-							m_pmda,
+							m_md_accessor,
 							m_pidgtorCol,
 							m_pidgtorCTE,
 							pmapvarcolidCopy,

@@ -290,7 +290,7 @@ namespace gpdxl
 
 			// check if the expression has a matching target entry that is a window spec
 			static
-			BOOL IsWindowSpec(Node *pnode, List *window_clause_list, List *target_list);
+			BOOL IsWindowSpec(Node *node, List *window_clause_list, List *target_list);
 
 			// create a scalar const value expression for the given int8 value
 			static

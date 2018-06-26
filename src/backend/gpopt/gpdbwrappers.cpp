@@ -486,14 +486,14 @@ gpdb::DeconstructArray
 Node *
 gpdb::PnodeMutateExpressionTree
 	(
-	Node *pnode,
+	Node *node,
 	Node *(*mutator) (),
 	void *context
 	)
 {
 	GP_WRAP_START;
 	{
-		return expression_tree_mutator(pnode, mutator, context);
+		return expression_tree_mutator(node, mutator, context);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -502,14 +502,14 @@ gpdb::PnodeMutateExpressionTree
 bool
 gpdb::FWalkExpressionTree
 	(
-	Node *pnode,
+	Node *node,
 	bool (*walker) (),
 	void *context
 	)
 {
 	GP_WRAP_START;
 	{
-		return expression_tree_walker(pnode, walker, context);
+		return expression_tree_walker(node, walker, context);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2221,7 +2221,7 @@ gpdb::PvlenDetoastDatum
 bool
 gpdb::FWalkQueryOrExpressionTree
 	(
-	Node *pnode,
+	Node *node,
 	bool (*walker) (),
 	void *context,
 	int flags
@@ -2229,7 +2229,7 @@ gpdb::FWalkQueryOrExpressionTree
 {
 	GP_WRAP_START;
 	{
-		return query_or_expression_tree_walker(pnode, walker, context, flags);
+		return query_or_expression_tree_walker(node, walker, context, flags);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2238,7 +2238,7 @@ gpdb::FWalkQueryOrExpressionTree
 Node *
 gpdb::PnodeMutateQueryOrExpressionTree
 	(
-	Node *pnode,
+	Node *node,
 	Node *(*mutator) (),
 	void *context,
 	int flags
@@ -2246,7 +2246,7 @@ gpdb::PnodeMutateQueryOrExpressionTree
 {
 	GP_WRAP_START;
 	{
-		return query_or_expression_tree_mutator(pnode, mutator, context, flags);
+		return query_or_expression_tree_mutator(node, mutator, context, flags);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -2572,13 +2572,13 @@ gpdb::PlExternalScanUriList
 TargetEntry *
 gpdb::PteMember
 	(
-	Node *pnode,
+	Node *node,
 	List *targetlist
 	)
 {
 	GP_WRAP_START;
 	{
-		return tlist_member(pnode, targetlist);
+		return tlist_member(node, targetlist);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -2587,13 +2587,13 @@ gpdb::PteMember
 List *
 gpdb::PteMembers
 	(
-	Node *pnode,
+	Node *node,
 	List *targetlist
 	)
 {
 	GP_WRAP_START;
 	{
-		return tlist_members(pnode, targetlist);
+		return tlist_members(node, targetlist);
 	}
 	GP_WRAP_END;
 
@@ -2648,12 +2648,12 @@ gpdb::FCompositeType
 int
 gpdb::IValue
 	(
-	Node *pnode
+	Node *node
 	)
 {
 	GP_WRAP_START;
 	{
-		return intVal(pnode);
+		return intVal(node);
 	}
 	GP_WRAP_END;
 	return 0;
@@ -2775,7 +2775,7 @@ Node *
 gpdb::PnodeCoerceToCommonType
 	(
 	ParseState *pstate,
-	Node *pnode,
+	Node *node,
 	Oid oidTargetType,
 	const char *context
 	)
@@ -2786,7 +2786,7 @@ gpdb::PnodeCoerceToCommonType
 		return coerce_to_common_type
 					(
 					pstate,
-					pnode,
+					node,
 					oidTargetType,
 					context
 					);

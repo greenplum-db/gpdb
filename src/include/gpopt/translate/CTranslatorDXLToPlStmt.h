@@ -128,7 +128,7 @@ namespace gpdxl
 			IMemoryPool *m_memory_pool;
 
 			// meta data accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// DXL operator translators indexed by the operator id
 			PfPplan m_rgpfTranslators[EdxlopSentinel];
@@ -161,7 +161,7 @@ namespace gpdxl
 
 			// walker to set index var attno's
 			static
-			BOOL FSetIndexVarAttno(Node *pnode, SContextIndexVarAttno *pctxtidxvarattno);
+			BOOL FSetIndexVarAttno(Node *node, SContextIndexVarAttno *pctxtidxvarattno);
 
 		public:
 			// ctor

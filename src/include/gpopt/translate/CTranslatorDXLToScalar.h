@@ -98,7 +98,7 @@ namespace gpdxl
 			IMemoryPool *m_memory_pool;
 
 			// meta data accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// The parent plan needed when translating an initplan
 			Plan *m_pplan;

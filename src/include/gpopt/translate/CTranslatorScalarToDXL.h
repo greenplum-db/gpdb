@@ -79,7 +79,7 @@ namespace gpdxl
 			IMemoryPool *m_memory_pool;
 
 			// meta data accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// counter for generating unique column ids
 			CIdGenerator *m_pidgtorCol;
@@ -352,7 +352,7 @@ namespace gpdxl
 			// computed column then add it to the project list
 			CDXLNode *PdxlnWindowFrameEdgeVal
 				(
-				const Node *pnode,
+				const Node *node,
 				const CMappingVarColId* var_col_id_mapping,
 				CDXLNode *pdxlnNewChildScPrL,
 				BOOL *pfHasDistributedTables

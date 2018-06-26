@@ -597,7 +597,7 @@ namespace gpdb {
 	// look for nodes with non-default collation; returns 1 if any exist, -1 otherwise
 	int ICheckCollation(Node *node);
 
-	Node *PnodeCoerceToCommonType(ParseState *pstate, Node *pnode, Oid oidTargetType, const char *context);
+	Node *PnodeCoerceToCommonType(ParseState *pstate, Node *node, Oid oidTargetType, const char *context);
 
 	// replace any polymorphic type with correct data type deduced from input arguments
 	bool FResolvePolymorphicType(int numargs, Oid *argtypes, char *argmodes, FuncExpr *call_expr);

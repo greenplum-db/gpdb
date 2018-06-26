@@ -101,7 +101,7 @@ namespace gpdxl
 			CSystemId m_sysid;
 
 			// meta data accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// counter for generating unique column ids
 			CIdGenerator *m_pidgtorCol;
@@ -169,7 +169,7 @@ namespace gpdxl
 			void CheckSirvFuncsWithoutFromClause(Query *query);
 
 			// check for SIRV functions in the tree rooted at the given node
-			BOOL FHasSirvFunctions (Node *pnode) const;
+			BOOL FHasSirvFunctions (Node *node) const;
 
 			// translate FromExpr (in the GPDB query) into a CDXLLogicalJoin or CDXLLogicalGet
 			CDXLNode *PdxlnFromGPDBFromExpr(FromExpr *pfromexpr);
@@ -312,7 +312,7 @@ namespace gpdxl
 			void UnsupportedRTEKind(RTEKind rtekind) const;
 
 			// translate an entry of the from clause (this can either be FromExpr or JoinExpr)
-			CDXLNode *PdxlnFromGPDBFromClauseEntry(Node *pnode);
+			CDXLNode *PdxlnFromGPDBFromClauseEntry(Node *node);
 
 			// translate the target list entries of the query into a logical project
 			CDXLNode *PdxlnLgProjectFromGPDBTL

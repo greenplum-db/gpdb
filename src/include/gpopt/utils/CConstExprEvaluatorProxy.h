@@ -81,7 +81,7 @@ namespace gpdxl
 			CEmptyMappingColIdVar m_emptymapcidvar;
 
 			// pointer to metadata cache accessor
-			CMDAccessor *m_mda;
+			CMDAccessor *m_md_accessor;
 
 			// translator for the DXL input -> GPDB Expr
 			CTranslatorDXLToScalar m_dxl2scalar_translator;
@@ -96,8 +96,8 @@ namespace gpdxl
 				:
 				m_memory_pool(memory_pool),
 				m_emptymapcidvar(m_memory_pool),
-				m_mda(md_accessor),
-				m_dxl2scalar_translator(m_memory_pool, m_mda, 0)
+				m_md_accessor(md_accessor),
+				m_dxl2scalar_translator(m_memory_pool, m_md_accessor, 0)
 			{
 			}
 
