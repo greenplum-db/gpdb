@@ -2388,14 +2388,18 @@ DATA(insert OID = 1832 (  float8_stddev_samp	PGNSP PGUID 12 1 0 0 f f f t f i 1 
 DESCR("aggregate final function");
 DATA(insert OID = 1833 (  numeric_accum    PGNSP PGUID 12 1 0 0 f f f t f i 2 0 1231 "1231 1700" _null_ _null_ _null_ _null_ numeric_accum _null_ _null_ _null_ ));
 DESCR("aggregate transition function");
-/* GPDB: numeric_avg_accum is moved to pg_proc.sql */
+/* GPDB: numeric_avg_accum first arg and rettype changed from _numeric (1231) to bytea (17) */
+DATA(insert OID = 2858 (  numeric_avg_accum    PGNSP PGUID 12 1 0 0 f f f t f i 2 0 17 "17 1700" _null_ _null_ _null_ _null_ numeric_avg_accum _null_ _null_ _null_ ));
+DESCR("aggregate transition function");
 DATA(insert OID = 1834 (  int2_accum	   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 1231 "1231 21" _null_ _null_ _null_ _null_ int2_accum _null_ _null_ _null_ ));
 DESCR("aggregate transition function");
 DATA(insert OID = 1835 (  int4_accum	   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 1231 "1231 23" _null_ _null_ _null_ _null_ int4_accum _null_ _null_ _null_ ));
 DESCR("aggregate transition function");
 DATA(insert OID = 1836 (  int8_accum	   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 1231 "1231 20" _null_ _null_ _null_ _null_ int8_accum _null_ _null_ _null_ ));
 DESCR("aggregate transition function");
-/* GPDB: int8_avg_accum is moved to pg_proc.sql */ // GPDB_91_MERGE_FIXME: Why?
+/* GPDB: int8_avg_accum first arg and rettype changed from _numeric (1231) to bytea (17) */
+DATA(insert OID = 2746 (  int8_avg_accum     PGNSP PGUID 12 1 0 0 f f f t f i 2 0 17 "17 20" _null_ _null_ _null_ _null_ int8_avg_accum _null_ _null_ _null_ ));
+DESCR("aggregate transition function");
 /* GPDB: numeric_avg arg changed from _numeric (1231) to bytea (17) */
 DATA(insert OID = 1837 (  numeric_avg	   PGNSP PGUID 12 1 0 0 f f f t f i 1 0 1700 "17" _null_ _null_ _null_ _null_	numeric_avg _null_ _null_ _null_ ));
 DESCR("aggregate final function");
