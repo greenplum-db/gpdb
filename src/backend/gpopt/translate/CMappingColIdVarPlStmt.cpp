@@ -105,7 +105,7 @@ CMappingColIdVarPlStmt::PparamFromDXLNodeScId
 	Param *pparam = NULL;
 
 	const ULONG col_id = pdxlop->MakeDXLColRef()->Id();
-	const CMappingElementColIdParamId *pmecolidparamid = m_pdxltrctxOut->Pmecolidparamid(col_id);
+	const CMappingElementColIdParamId *pmecolidparamid = m_pdxltrctxOut->GetParamIdMappingElement(col_id);
 
 	if (NULL != pmecolidparamid)
 	{
@@ -163,7 +163,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		GPOS_ASSERT(NULL != pdxltrctxLeft);
 
 		// lookup column in the left child translation context
-		const TargetEntry *target_entry = pdxltrctxLeft->Pte(col_id);
+		const TargetEntry *target_entry = pdxltrctxLeft->GetTargetEntry(col_id);
 
 		if (NULL != target_entry)
 		{
@@ -185,7 +185,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 			// identifier must come from right child
 			GPOS_ASSERT(NULL != pdxltrctxRight);
 
-			target_entry = pdxltrctxRight->Pte(col_id);
+			target_entry = pdxltrctxRight->GetTargetEntry(col_id);
 
 			idxVarno = INNER;
 
@@ -195,7 +195,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 				const CDXLTranslateContext *pdxltrctx = (*m_pdrgpdxltrctx)[ul];
 				GPOS_ASSERT(NULL != pdxltrctx);
 
-				target_entry = pdxltrctx->Pte(col_id);
+				target_entry = pdxltrctx->GetTargetEntry(col_id);
 				if (NULL == target_entry)
 				{
 					continue;

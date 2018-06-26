@@ -63,43 +63,43 @@ namespace gpdxl
 			CDXLTranslateContext(const CDXLTranslateContext&);
 
 			// mappings ColId->TargetEntry used for intermediate DXL nodes
-			HMUlTe *m_phmulte;
+			HMUlTe *m_colid_to_target_entry_map;
 
 			// mappings ColId->ParamId used for outer refs in subplans
-			HMColParam *m_phmcolparam;
+			HMColParam *m_colid_to_paramid_map;
 
 			// is the node for which this context is built a child of an aggregate node
 			// This is used to assign 0 instead of OUTER for the varno value of columns
 			// in an Agg node, as expected in GPDB
 			// TODO: antovl - Jan 26, 2011; remove this when Agg node in GPDB is fixed
 			// to use OUTER instead of 0 for Var::varno in Agg target lists (MPP-12034)
-			BOOL m_fChildAggNode;
+			BOOL m_is_child_agg_node;
 
 			// copy the params hashmap
-			void CopyParamHashmap(HMColParam *phmOriginal);
+			void CopyParamHashmap(HMColParam *original);
 
 		public:
 			// ctor/dtor
-			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL fChildAggNode);
+			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL is_child_agg_node);
 
-			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL fChildAggNode, HMColParam *phmOriginal);
+			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL is_child_agg_node, HMColParam *original);
 
 			~CDXLTranslateContext();
 
 			// is parent an aggregate node
-			BOOL FParentAggNode() const;
+			BOOL IsParentAggNode() const;
 
 			// return the params hashmap
-			HMColParam *PhmColParam()
+			HMColParam *GetColIdToParamIdMap()
 			{
-				return m_phmcolparam;
+				return m_colid_to_paramid_map;
 			}
 
 			// return the target entry corresponding to the given ColId
-			const TargetEntry *Pte(ULONG col_id) const;
+			const TargetEntry *GetTargetEntry(ULONG col_id) const;
 
 			// return the param id corresponding to the given ColId
-			const CMappingElementColIdParamId *Pmecolidparamid(ULONG col_id) const;
+			const CMappingElementColIdParamId *GetParamIdMappingElement(ULONG col_id) const;
 
 			// store the mapping of the given column id and target entry
 			void InsertMapping(ULONG col_id, TargetEntry *target_entry);

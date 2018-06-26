@@ -2109,7 +2109,7 @@ CTranslatorUtils::PlAttnosFromColids
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		ULONG col_id = *((*pdrgpul)[ul]);
-		const TargetEntry *target_entry = pdxltrctx->Pte(col_id);
+		const TargetEntry *target_entry = pdxltrctx->GetTargetEntry(col_id);
 		GPOS_ASSERT(NULL != target_entry);
 		plResult = gpdb::PlAppendInt(plResult, target_entry->resno);
 	}

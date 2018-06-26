@@ -195,7 +195,7 @@ CTranslatorDXLToPlStmt::PplstmtFromDXL
 	List *plOids = NIL;
 
 	ListCell *plcRTE = NULL;
-	ForEach (plcRTE, m_pctxdxltoplstmt->PlPrte())
+	ForEach (plcRTE, m_pctxdxltoplstmt->GetRTableEntriesList())
 	{
 		RangeTblEntry *pRTE = (RangeTblEntry *) lfirst(plcRTE);
 
@@ -209,18 +209,18 @@ CTranslatorDXLToPlStmt::PplstmtFromDXL
 	PlannedStmt *pplstmt = MakeNode(PlannedStmt);
 	pplstmt->planGen = PLANGEN_OPTIMIZER;
 	
-	pplstmt->rtable = m_pctxdxltoplstmt->PlPrte();
-	pplstmt->subplans = m_pctxdxltoplstmt->PlPplanSubplan();
+	pplstmt->rtable = m_pctxdxltoplstmt->GetRTableEntriesList();
+	pplstmt->subplans = m_pctxdxltoplstmt->GetSubplanEntriesList();
 	pplstmt->planTree = pplan;
 
 	// store partitioned table indexes in planned stmt
-	pplstmt->queryPartOids = m_pctxdxltoplstmt->PlPartitionedTables();
+	pplstmt->queryPartOids = m_pctxdxltoplstmt->GetPartitionedTablesList();
 	pplstmt->canSetTag = canSetTag;
 	pplstmt->relationOids = plOids;
-	pplstmt->numSelectorsPerScanId = m_pctxdxltoplstmt->PlNumPartitionSelectors();
+	pplstmt->numSelectorsPerScanId = m_pctxdxltoplstmt->GetNumPartitionSelectorsList();
 
-	pplan->nMotionNodes  = m_pctxdxltoplstmt->UlCurrentMotionId()-1;
-	pplstmt->nMotionNodes =  m_pctxdxltoplstmt->UlCurrentMotionId()-1;
+	pplan->nMotionNodes  = m_pctxdxltoplstmt->GetCurrentMotionId()-1;
+	pplstmt->nMotionNodes =  m_pctxdxltoplstmt->GetCurrentMotionId()-1;
 
 	pplstmt->commandType = m_cmdtype;
 	
@@ -236,8 +236,8 @@ CTranslatorDXLToPlStmt::PplstmtFromDXL
 	}
 	
 	pplstmt->resultRelations = m_plResultRelations;
-	pplstmt->intoClause = m_pctxdxltoplstmt->Pintocl();
-	pplstmt->intoPolicy = m_pctxdxltoplstmt->Pdistrpolicy();
+	pplstmt->intoClause = m_pctxdxltoplstmt->GetIntoClause();
+	pplstmt->intoPolicy = m_pctxdxltoplstmt->GetDistributionPolicy();
 	
 	SetInitPlanVariables(pplstmt);
 	
@@ -309,13 +309,13 @@ CTranslatorDXLToPlStmt::PplFromDXL
 void
 CTranslatorDXLToPlStmt::SetInitPlanVariables(PlannedStmt* pplstmt)
 {
-	if(1 != m_pctxdxltoplstmt->UlCurrentMotionId()) // For Distributed Tables m_ulMotionId > 1
+	if(1 != m_pctxdxltoplstmt->GetCurrentMotionId()) // For Distributed Tables m_ulMotionId > 1
 	{
-		pplstmt->nInitPlans = m_pctxdxltoplstmt->UlCurrentParamId();
-		pplstmt->planTree->nInitPlans = m_pctxdxltoplstmt->UlCurrentParamId();
+		pplstmt->nInitPlans = m_pctxdxltoplstmt->GetCurrentParamId();
+		pplstmt->planTree->nInitPlans = m_pctxdxltoplstmt->GetCurrentParamId();
 	}
 
-	pplstmt->nParamExec = m_pctxdxltoplstmt->UlCurrentParamId();
+	pplstmt->nParamExec = m_pctxdxltoplstmt->GetCurrentParamId();
 
 	// Extract all subplans defined in the planTree
 	List *plSubPlans = gpdb::PlExtractNodesPlan(pplstmt->planTree, T_SubPlan, true);
@@ -371,11 +371,11 @@ CTranslatorDXLToPlStmt::SetInitPlanSliceInformation(SubPlan * psubplan)
 
 	if (psubplan->is_initplan)
 	{
-		GPOS_ASSERT(0 < m_pctxdxltoplstmt->UlCurrentMotionId());
+		GPOS_ASSERT(0 < m_pctxdxltoplstmt->GetCurrentMotionId());
 
-		if(1 < m_pctxdxltoplstmt->UlCurrentMotionId())
+		if(1 < m_pctxdxltoplstmt->GetCurrentMotionId())
 		{
-			psubplan->qDispSliceId =  m_pctxdxltoplstmt->UlCurrentMotionId() + psubplan->plan_id-1;
+			psubplan->qDispSliceId =  m_pctxdxltoplstmt->GetCurrentMotionId() + psubplan->plan_id-1;
 		}
 		else
 		{
@@ -435,7 +435,7 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
 	// we will add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	const CDXLTableDescr *table_descr = pdxlopTS->GetDXLTableDescr();
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
@@ -480,7 +480,7 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 		pplanReturn = (Plan *) pts;
 	}
 
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -617,7 +617,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	const CDXLIndexDescr *index_descr_dxl = NULL;
 	if (fIndexOnlyScan)
@@ -645,7 +645,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 	pis->indexid = oidIndex;
 
 	Plan *pplan = &(pis->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -939,7 +939,7 @@ CTranslatorDXLToPlStmt::PlimitFromDXLLimit
 	Limit *plimit = MakeNode(Limit);
 
 	Plan *pplan = &(plimit->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -953,7 +953,7 @@ CTranslatorDXLToPlStmt::PlimitFromDXLLimit
 
 	GPOS_ASSERT(4 == pdxlnLimit->Arity());
 
-	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	// translate proj list
 	CDXLNode *project_list_dxl = (*pdxlnLimit)[EdxllimitIndexProjList];
@@ -1024,7 +1024,7 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 
 	Join *pj = &(phj->join);
 	Plan *pplan = &(pj->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalHashJoin *pdxlopHashJoin = CDXLPhysicalHashJoin::Cast(pdxlnHJ->GetOperator());
 
@@ -1050,8 +1050,8 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	CDXLNode *pdxlnJoinFilter = (*pdxlnHJ)[EdxlhjIndexJoinFilter];
 	CDXLNode *pdxlnHashCondList = (*pdxlnHJ)[EdxlhjIndexHashCondList];
 
-	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->PhmColParam());
-	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
+	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanLeft = PplFromDXL(pdxlnLeft, &dxltrctxLeft, pdrgpdxltrctxPrevSiblings);
 
@@ -1211,13 +1211,13 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 	pfuncscan->funccolnames = prte->eref->colnames;
 
 	// we will add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 	dxltrctxbt.SetIdx(iRel);
 	pfuncscan->scan.scanrelid = iRel;
 
 	m_pctxdxltoplstmt->AddRTE(prte);
 
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -1462,7 +1462,7 @@ CTranslatorDXLToPlStmt::PnljFromDXLNLJ
 
 	Join *pj = &(pnlj->join);
 	Plan *pplan = &(pj->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalNLJoin *pdxlnlj = CDXLPhysicalNLJoin::PdxlConvert(pdxlnNLJ->GetOperator());
 
@@ -1487,8 +1487,8 @@ CTranslatorDXLToPlStmt::PnljFromDXLNLJ
 	CDXLNode *filter_dxlnode = (*pdxlnNLJ)[EdxlnljIndexFilter];
 	CDXLNode *pdxlnJoinFilter = (*pdxlnNLJ)[EdxlnljIndexJoinFilter];
 
-	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->PhmColParam());
-	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
+	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	// setting of prefetch_inner to true except for the case of index NLJ where we cannot prefetch inner
 	// because inner child depends on variables coming from outer child
@@ -1582,7 +1582,7 @@ CTranslatorDXLToPlStmt::PmjFromDXLMJ
 
 	Join *pj = &(pmj->join);
 	Plan *pplan = &(pj->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalMergeJoin *pdxlopMergeJoin = CDXLPhysicalMergeJoin::Cast(pdxlnMJ->GetOperator());
 
@@ -1608,8 +1608,8 @@ CTranslatorDXLToPlStmt::PmjFromDXLMJ
 	CDXLNode *pdxlnJoinFilter = (*pdxlnMJ)[EdxlmjIndexJoinFilter];
 	CDXLNode *pdxlnMergeCondList = (*pdxlnMJ)[EdxlmjIndexMergeCondList];
 
-	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->PhmColParam());
-	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxLeft(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
+	CDXLTranslateContext dxltrctxRight(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanLeft = PplFromDXL(pdxlnLeft, &dxltrctxLeft, pdrgpdxltrctxPrevSiblings);
 
@@ -1702,10 +1702,10 @@ CTranslatorDXLToPlStmt::PhhashFromDXL
 	Hash *ph = MakeNode(Hash);
 
 	Plan *pplan = &(ph->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate dxl node
-	CDXLTranslateContext dxltrctx(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctx(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanLeft = PplFromDXL(dxlnode, &dxltrctx, pdrgpdxltrctxPrevSiblings);
 
@@ -1782,7 +1782,7 @@ CTranslatorDXLToPlStmt::PplanMotionFromDXLMotion
 	Motion *pmotion = MakeNode(Motion);
 
 	Plan *pplan = &(pmotion->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -1806,7 +1806,7 @@ CTranslatorDXLToPlStmt::PplanMotionFromDXLMotion
 
 	CDXLNode *pdxlnChild = (*pdxlnMotion)[ulChildIndex];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -1914,7 +1914,7 @@ CTranslatorDXLToPlStmt::PplanMotionFromDXLMotion
 
 	pplanChild->flow = pflow;
 
-	pmotion->motionID = m_pctxdxltoplstmt->UlNextMotionId();
+	pmotion->motionID = m_pctxdxltoplstmt->GetNextMotionId();
 	pplan->lefttree = pplanChild;
 	pplan->nMotionNodes = pplanChild->nMotionNodes + 1;
 
@@ -1965,7 +1965,7 @@ CTranslatorDXLToPlStmt::PplanMotionFromDXLMotion
 			pmotion->numOutputSegs = 0;
 			pmotion->outputSegIdx = NULL;
 			ULONG ulSegIdCol = CDXLPhysicalRoutedDistributeMotion::Cast(pdxlopMotion)->SegmentIdCol();
-			const TargetEntry *pteSortCol = dxltrctxChild.Pte(ulSegIdCol);
+			const TargetEntry *pteSortCol = dxltrctxChild.GetTargetEntry(ulSegIdCol);
 			pmotion->segidColIdx = pteSortCol->resno;
 
 			break;
@@ -2002,7 +2002,7 @@ CTranslatorDXLToPlStmt::PplanResultHashFilters
 	Result *presult = MakeNode(Result);
 
 	Plan *pplan = &(presult->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalMotion *pdxlopMotion = CDXLPhysicalMotion::Cast(pdxlnMotion->GetOperator());
 
@@ -2020,7 +2020,7 @@ CTranslatorDXLToPlStmt::PplanResultHashFilters
 	CDXLNode *filter_dxlnode = (*pdxlnMotion)[EdxlrmIndexFilter];
 	CDXLNode *pdxlnChild = (*pdxlnMotion)[pdxlopMotion->GetRelationChildIdx()];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -2057,7 +2057,7 @@ CTranslatorDXLToPlStmt::PplanResultHashFilters
 			if (EdxlopScalarIdent == pdxlnExpr->GetOperator()->GetDXLOperator())
 			{
 				ULONG col_id = CDXLScalarIdent::Cast(pdxlnExpr->GetOperator())->MakeDXLColRef()->Id();
-				iResno = pdxltrctxOut->Pte(col_id)->resno;
+				iResno = pdxltrctxOut->GetTargetEntry(col_id)->resno;
 			}
 			else
 			{
@@ -2127,7 +2127,7 @@ CTranslatorDXLToPlStmt::PaggFromDXLAgg
 	Agg *pagg = MakeNode(Agg);
 
 	Plan *pplan = &(pagg->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalAgg *pdxlopAgg = CDXLPhysicalAgg::Cast(pdxlnAgg->GetOperator());
 
@@ -2147,7 +2147,7 @@ CTranslatorDXLToPlStmt::PaggFromDXLAgg
 	CDXLNode *project_list_dxl = (*pdxlnAgg)[EdxlaggIndexProjList];
 	CDXLNode *filter_dxlnode = (*pdxlnAgg)[EdxlaggIndexFilter];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, true, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, true, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -2205,7 +2205,7 @@ CTranslatorDXLToPlStmt::PaggFromDXLAgg
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
 		ULONG ulGroupingColId = *((*pdrpulGroupingCols)[ul]);
-		const TargetEntry *pteGroupingCol = dxltrctxChild.Pte(ulGroupingColId);
+		const TargetEntry *pteGroupingCol = dxltrctxChild.GetTargetEntry(ulGroupingColId);
 		if (NULL  == pteGroupingCol)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulGroupingColId);
@@ -2246,7 +2246,7 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	WindowAgg *pwindow = MakeNode(WindowAgg);
 
 	Plan *pplan = &(pwindow->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalWindow *pdxlopWindow = CDXLPhysicalWindow::Cast(pdxlnWindow->GetOperator());
 
@@ -2265,7 +2265,7 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	CDXLNode *project_list_dxl = (*pdxlnWindow)[EdxlwindowIndexProjList];
 	CDXLNode *filter_dxlnode = (*pdxlnWindow)[EdxlwindowIndexFilter];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, true, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, true, pdxltrctxOut->GetColIdToParamIdMap());
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
 	DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
@@ -2315,7 +2315,7 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	for (ULONG ul = 0; ul < ulPartCols; ul++)
 	{
 		ULONG ulPartColId = *((*pdrpulPartCols)[ul]);
-		const TargetEntry *ptePartCol = dxltrctxChild.Pte(ulPartColId);
+		const TargetEntry *ptePartCol = dxltrctxChild.GetTargetEntry(ulPartColId);
 		if (NULL  == ptePartCol)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulPartColId);
@@ -2490,7 +2490,7 @@ CTranslatorDXLToPlStmt::PsortFromDXLSort
 	Sort *psort = MakeNode(Sort);
 
 	Plan *pplan = &(psort->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalSort *pdxlopSort = CDXLPhysicalSort::Cast(pdxlnSort->GetOperator());
 
@@ -2509,7 +2509,7 @@ CTranslatorDXLToPlStmt::PsortFromDXLSort
 	CDXLNode *project_list_dxl = (*pdxlnSort)[EdxlsortIndexProjList];
 	CDXLNode *filter_dxlnode = (*pdxlnSort)[EdxlsortIndexFilter];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -2575,7 +2575,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 	SubqueryScan *psubqscan = MakeNode(SubqueryScan);
 
 	Plan *pplan = &(psubqscan->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalSubqueryScan *pdxlopSubqscan = CDXLPhysicalSubqueryScan::Cast(pdxlnSubqScan->GetOperator());
 
@@ -2594,7 +2594,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 	CDXLNode *project_list_dxl = (*pdxlnSubqScan)[EdxlsubqscanIndexProjList];
 	CDXLNode *filter_dxlnode = (*pdxlnSubqScan)[EdxlsubqscanIndexFilter];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -2611,7 +2611,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 	// get column names from child project list
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 	(psubqscan->scan).scanrelid = iRel;
 	dxltrctxbt.SetIdx(iRel);
 
@@ -2682,7 +2682,7 @@ CTranslatorDXLToPlStmt::PresultFromDXLResult
 	Result *presult = MakeNode(Result);
 
 	Plan *pplan = &(presult->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -2697,7 +2697,7 @@ CTranslatorDXLToPlStmt::PresultFromDXLResult
 	pplan->nMotionNodes = 0;
 
 	CDXLNode *pdxlnChild = NULL;
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	if (pdxlnResult->Arity() - 1 == EdxlresultIndexChild)
 	{
@@ -2774,7 +2774,7 @@ CTranslatorDXLToPlStmt::PplanPartitionSelector
 	PartitionSelector *ppartsel = MakeNode(PartitionSelector);
 
 	Plan *pplan = &(ppartsel->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalPartitionSelector *pdxlopPartSel = CDXLPhysicalPartitionSelector::Cast(pdxlnPartitionSelector->GetOperator());
 	const ULONG ulLevels = pdxlopPartSel->GetPartitioningLevel();
@@ -2798,7 +2798,7 @@ CTranslatorDXLToPlStmt::PplanPartitionSelector
 	CDXLNode *pdxlnChild = NULL;
 	DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	BOOL fHasChild = (EdxlpsIndexChild == pdxlnPartitionSelector->Arity() - 1);
 	if (fHasChild)
@@ -2935,7 +2935,7 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 	Append *pappend = MakeNode(Append);
 
 	Plan *pplan = &(pappend->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -2953,7 +2953,7 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 	pappend->appendplans = NIL;
 	
 	// translate children
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 	for (ULONG ul = EdxlappendIndexFirstChild; ul < arity; ul++)
 	{
 		CDXLNode *pdxlnChild = (*pdxlnAppend)[ul];
@@ -3046,7 +3046,7 @@ CTranslatorDXLToPlStmt::PmatFromDXLMaterialize
 	Material *pmat = MakeNode(Material);
 
 	Plan *pplan = &(pmat->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalMaterialize *pdxlopMat = CDXLPhysicalMaterialize::Cast(pdxlnMaterialize->GetOperator());
 
@@ -3068,7 +3068,7 @@ CTranslatorDXLToPlStmt::PmatFromDXLMaterialize
 	CDXLNode *project_list_dxl = (*pdxlnMaterialize)[EdxlmatIndexProjList];
 	CDXLNode *filter_dxlnode = (*pdxlnMaterialize)[EdxlmatIndexFilter];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -3135,7 +3135,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEProducer
 	ShareInputScan *pshscanCTEProducer = MakeNode(ShareInputScan);
 	pshscanCTEProducer->share_id = ulCTEId;
 	Plan *pplan = &(pshscanCTEProducer->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// store share scan node for the translation of CTE Consumers
 	m_pctxdxltoplstmt->AddCTEConsumerInfo(ulCTEId, pshscanCTEProducer);
@@ -3154,7 +3154,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEProducer
 	CDXLNode *project_list_dxl = (*pdxlnCTEProducer)[0];
 	CDXLNode *pdxlnChild = (*pdxlnCTEProducer)[1];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 	GPOS_ASSERT(NULL != pplanChild && "child plan cannot be NULL");
 
@@ -3176,7 +3176,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEProducer
 		pmat->cdb_strict = false; // eager-free
 
 		Plan *pplanMat = &(pmat->plan);
-		pplanMat->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+		pplanMat->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 		TranslatePlanCosts
 			(
@@ -3240,7 +3240,7 @@ CTranslatorDXLToPlStmt::InitializeSpoolingInfo
 	ULONG ulShareId
 	)
 {
-	List *plshscanCTEConsumer = m_pctxdxltoplstmt->PshscanCTEConsumer(ulShareId);
+	List *plshscanCTEConsumer = m_pctxdxltoplstmt->GetCTEConsumerList(ulShareId);
 	GPOS_ASSERT(NULL != plshscanCTEConsumer);
 
 	Flow *pflow = PflowCTEConsumer(plshscanCTEConsumer);
@@ -3356,7 +3356,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEConsumer
 	pshscanCTEConsumer->share_id = ulCTEId;
 
 	Plan *pplan = &(pshscanCTEConsumer->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -3427,7 +3427,7 @@ CTranslatorDXLToPlStmt::PplanSequence
 	Sequence *psequence = MakeNode(Sequence);
 
 	Plan *pplan = &(psequence->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -3447,7 +3447,7 @@ CTranslatorDXLToPlStmt::PplanSequence
 
 	CDXLNode *pdxlnLastChild = (*pdxlnSequence)[arity - 1];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanLastChild = PplFromDXL(pdxlnLastChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 	pplan->nMotionNodes = pplanLastChild->nMotionNodes;
@@ -3510,7 +3510,7 @@ CTranslatorDXLToPlStmt::PplanDTS
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
 	// add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
@@ -3526,7 +3526,7 @@ CTranslatorDXLToPlStmt::PplanDTS
 	pdts->partIndexPrintable = pdxlop->GetPartIndexIdPrintable();
 
 	Plan *pplan = &(pdts->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -3582,7 +3582,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlop->GetDXLTableDescr()->MDId());
 	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->GetDXLTableDescr(), NULL /*index_descr_dxl*/, iRel, &dxltrctxbt);
@@ -3605,7 +3605,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 	pdis->logicalIndexInfo = gpdb::Plgidxinfo(prte->relid, oidIndex);
 
 	Plan *pplan = &(pdis->indexscan.scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -3737,7 +3737,7 @@ CTranslatorDXLToPlStmt::PplanDML
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
 	// add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 	pdml->scanrelid = iRel;
 	
 	m_plResultRelations = gpdb::PlAppendInt(m_plResultRelations, iRel);
@@ -3753,7 +3753,7 @@ CTranslatorDXLToPlStmt::PplanDML
 	CDXLNode *project_list_dxl = (*pdxlnDML)[0];
 	CDXLNode *pdxlnChild = (*pdxlnDML)[1];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -3798,7 +3798,7 @@ CTranslatorDXLToPlStmt::PplanDML
 	
 	pplan->lefttree = pplanChild;
 	pplan->nMotionNodes = pplanChild->nMotionNodes;
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	if (CMD_INSERT == m_cmdtype && 0 == pplan->nMotionNodes)
 	{
@@ -3932,7 +3932,7 @@ CTranslatorDXLToPlStmt::PplanSplit
 	CDXLNode *project_list_dxl = (*pdxlnSplit)[0];
 	CDXLNode *pdxlnChild = (*pdxlnSplit)[1];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -3957,9 +3957,9 @@ CTranslatorDXLToPlStmt::PplanSplit
 	psplit->deleteColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulDeleteCols, &dxltrctxChild);
 	psplit->insertColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulInsertCols, &dxltrctxChild);
 	
-	const TargetEntry *pteActionCol = pdxltrctxOut->Pte(pdxlop->ActionColId());
-	const TargetEntry *pteCtidCol = pdxltrctxOut->Pte(pdxlop->GetCtIdColId());
-	const TargetEntry *pteTupleOidCol = pdxltrctxOut->Pte(pdxlop->GetTupleOid());
+	const TargetEntry *pteActionCol = pdxltrctxOut->GetTargetEntry(pdxlop->ActionColId());
+	const TargetEntry *pteCtidCol = pdxltrctxOut->GetTargetEntry(pdxlop->GetCtIdColId());
+	const TargetEntry *pteTupleOidCol = pdxltrctxOut->GetTargetEntry(pdxlop->GetTupleOid());
 
 	if (NULL  == pteActionCol)
 	{
@@ -3981,7 +3981,7 @@ CTranslatorDXLToPlStmt::PplanSplit
 
 	pplan->lefttree = pplanChild;
 	pplan->nMotionNodes = pplanChild->nMotionNodes;
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	SetParamIds(pplan);
 
@@ -4021,7 +4021,7 @@ CTranslatorDXLToPlStmt::PplanAssert
 	AssertOp *passert = MakeNode(AssertOp);
 
 	Plan *pplan = &(passert->plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	CDXLPhysicalAssert *pdxlopAssert = CDXLPhysicalAssert::Cast(pdxlnAssert->GetOperator());
 
@@ -4044,7 +4044,7 @@ CTranslatorDXLToPlStmt::PplanAssert
 		&(pplan->plan_width)
 		);
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	// translate child plan
 	CDXLNode *pdxlnChild = (*pdxlnAssert)[CDXLPhysicalAssert::EdxlassertIndexChild];
@@ -4111,7 +4111,7 @@ CTranslatorDXLToPlStmt::PplanRowTrigger
 	CDXLNode *project_list_dxl = (*pdxlnRowTrigger)[0];
 	CDXLNode *pdxlnChild = (*pdxlnRowTrigger)[1];
 
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 
@@ -4159,7 +4159,7 @@ CTranslatorDXLToPlStmt::PplanRowTrigger
 
 	pplan->lefttree = pplanChild;
 	pplan->nMotionNodes = pplanChild->nMotionNodes;
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 
 	SetParamIds(pplan);
 
@@ -4367,7 +4367,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 
 				const CDXLTranslateContext *pdxltrctxLeft = (*pdrgpdxltrctx)[0];
 				GPOS_ASSERT(NULL != pdxltrctxLeft);
-				const TargetEntry *pteOriginal = pdxltrctxLeft->Pte(col_id);
+				const TargetEntry *pteOriginal = pdxltrctxLeft->GetTargetEntry(col_id);
 
 				if (NULL == pteOriginal)
 				{
@@ -4376,7 +4376,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 					const CDXLTranslateContext *pdxltrctxRight = (*pdrgpdxltrctx)[1];
 
 					GPOS_ASSERT(NULL != pdxltrctxRight);
-					pteOriginal = pdxltrctxRight->Pte(col_id);
+					pteOriginal = pdxltrctxRight->GetTargetEntry(col_id);
 				}
 
 				if (NULL  == pteOriginal)
@@ -4479,7 +4479,7 @@ CTranslatorDXLToPlStmt::PlTargetListForHashNode
 		CDXLNode *pdxlnPrEl = (*project_list_dxl)[ul];
 		CDXLScalarProjElem *pdxlopPrel = CDXLScalarProjElem::Cast(pdxlnPrEl->GetOperator());
 
-		const TargetEntry *pteChild = pdxltrctxChild->Pte(pdxlopPrel->Id());
+		const TargetEntry *pteChild = pdxltrctxChild->GetTargetEntry(pdxlopPrel->Id());
 		if (NULL  == pteChild)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, pdxlopPrel->Id());
@@ -4774,7 +4774,7 @@ CTranslatorDXLToPlStmt::TranslateSortCols
 		CDXLScalarSortCol *pdxlopSortCol = CDXLScalarSortCol::Cast(pdxlnSortCol->GetOperator());
 
 		ULONG ulSortColId = pdxlopSortCol->GetColId();
-		const TargetEntry *pteSortCol = pdxltrctxChild->Pte(ulSortColId);
+		const TargetEntry *pteSortCol = pdxltrctxChild->GetTargetEntry(ulSortColId);
 		if (NULL  == pteSortCol)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulSortColId);
@@ -4854,7 +4854,7 @@ CTranslatorDXLToPlStmt::UlAddTargetEntryForColId
 {
 	GPOS_ASSERT(NULL != pplTargetList);
 	
-	const TargetEntry *target_entry = pdxltrctx->Pte(col_id);
+	const TargetEntry *target_entry = pdxltrctx->GetTargetEntry(col_id);
 	
 	if (NULL == target_entry)
 	{
@@ -4988,7 +4988,7 @@ CTranslatorDXLToPlStmt::PplanCTAS
 
 	GPOS_ASSERT(NULL == pdxlop->GetDxlCtasStorageOption()->GetDXLCtasOptionArray());
 	
-	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxChild(m_memory_pool, false, pdxltrctxOut->GetColIdToParamIdMap());
 
 	Plan *pplan = PplFromDXL(pdxlnChild, &dxltrctxChild, pdrgpdxltrctxPrevSiblings);
 	
@@ -5032,7 +5032,7 @@ CTranslatorDXLToPlStmt::PplanCTAS
 	// Add a result node on top with the correct projection list
 	Result *presult = MakeNode(Result);
 	Plan *pplanResult = &(presult->plan);
-	pplanResult->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplanResult->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplanResult->nMotionNodes = pplan->nMotionNodes;
 	pplanResult->lefttree = pplan;
 
@@ -5241,7 +5241,7 @@ CTranslatorDXLToPlStmt::PplanBitmapTableScan
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
 	// add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
 
@@ -5257,7 +5257,7 @@ CTranslatorDXLToPlStmt::PplanBitmapTableScan
 	pdbts->scan.partIndexPrintable = ulPartIndexPrintable;
 
 	Plan *pplan = &(pdbts->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs
@@ -5485,7 +5485,7 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	pbis->indexid = oidIndex;
 	OID oidRel = CMDIdGPDB::CastMdid(table_descr->MDId())->OidObjectId();
 	Plan *pplan = &(pbis->scan.plan);
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	GPOS_ASSERT(1 == pdxlnBitmapIndexProbe->Arity());
@@ -5544,7 +5544,7 @@ CTranslatorDXLToPlStmt::PplanValueScan
 	CDXLTranslateContextBaseTable dxltrctxbt(m_memory_pool);
 
 	// we will add the new range table entry as the last element of the range table
-	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
 	dxltrctxbt.SetIdx(iRel);
 
@@ -5560,7 +5560,7 @@ CTranslatorDXLToPlStmt::PplanValueScan
 
 	m_pctxdxltoplstmt->AddRTE(prte);
 
-	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_node_id = m_pctxdxltoplstmt->GetNextPlanId();
 	pplan->nMotionNodes = 0;
 
 	// translate operator costs

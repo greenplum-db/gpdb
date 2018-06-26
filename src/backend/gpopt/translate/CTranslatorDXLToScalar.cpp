@@ -667,7 +667,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	const ULONG ulLen = pdrgdxlcrOuterRefs->Size();
 
 	// create a copy of the translate context: the param mappings from the outer scope get copied in the constructor
-	CDXLTranslateContext dxltrctxSubplan(m_memory_pool, pdxltrctxOut->FParentAggNode(), pdxltrctxOut->PhmColParam());
+	CDXLTranslateContext dxltrctxSubplan(m_memory_pool, pdxltrctxOut->IsParentAggNode(), pdxltrctxOut->GetColIdToParamIdMap());
 
 	// insert new outer ref mappings in the subplan translate context
 	for (ULONG ul = 0; ul < ulLen; ul++)
@@ -677,10 +677,10 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 		ULONG ulColid = dxl_colref->Id();
 		INT type_modifier = dxl_colref->TypeModifier();
 
-		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
+		if (NULL == dxltrctxSubplan.GetParamIdMappingElement(ulColid))
 		{
 			// keep outer reference mapping to the original column for subsequent subplans
-			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_memory_pool) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid, type_modifier);
+			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_memory_pool) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->GetNextParamId(), pmdid, type_modifier);
 
 #ifdef GPOS_DEBUG
 			BOOL fInserted =
@@ -818,7 +818,7 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 	Param *pparam = MakeNode(Param);
 	pparam->paramkind = PARAM_EXEC;
 	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt *>(pmapcidvar))->Pctxdxltoplstmt();
-	pparam->paramid = pctxdxltoplstmt->UlNextParamId();
+	pparam->paramid = pctxdxltoplstmt->GetNextParamId();
 	CTranslatorDXLToScalar::STypeOidAndTypeModifier oidAndTypeModifier = OidParamOidFromDXLIdentOrDXLCastIdent(pdxlnInnerChild);
 	pparam->paramtype = oidAndTypeModifier.OidType;
 	pparam->paramtypmod = oidAndTypeModifier.TypeModifier;
@@ -873,7 +873,7 @@ CTranslatorDXLToScalar::TranslateSubplanParams
 	{
 		CDXLColRef *dxl_colref = (*pdrgdxlcrOuterRefs)[ul];
 		dxl_colref->AddRef();
-		const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->Pmecolidparamid(dxl_colref->Id());
+		const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->GetParamIdMappingElement(dxl_colref->Id());
 
 		// TODO: eliminate pparam, it's not *really* used, and it's (short-term) leaked
 		Param *pparam = PparamFromMapping(pmecolidparamid);
@@ -916,7 +916,7 @@ CTranslatorDXLToScalar::PsubplanFromChildPlan
 	pctxdxltoplstmt->AddSubplan(pplan);
 
 	SubPlan *psubplan = MakeNode(SubPlan);
-	psubplan->plan_id = gpdb::ListLength(pctxdxltoplstmt->PlPplanSubplan());
+	psubplan->plan_id = gpdb::ListLength(pctxdxltoplstmt->GetSubplanEntriesList());
 	psubplan->plan_name = SzSubplanAlias(psubplan->plan_id);
 	psubplan->is_initplan = false;
 	psubplan->firstColType = gpdb::OidExprType( (Node*) ((TargetEntry*) gpdb::PvListNth(pplan->targetlist, 0))->expr);
@@ -1895,7 +1895,7 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScId
 	// scalar identifier
 	CDXLScalarIdent *pdxlop = CDXLScalarIdent::Cast(dxl_sc_ident->GetOperator());
 	Expr *pexprResult = NULL;
-	if (NULL == pmapcidvarplstmt || NULL == pmapcidvarplstmt->PpdxltrctxOut()->Pmecolidparamid(pdxlop->MakeDXLColRef()->Id()))
+	if (NULL == pmapcidvarplstmt || NULL == pmapcidvarplstmt->PpdxltrctxOut()->GetParamIdMappingElement(pdxlop->MakeDXLColRef()->Id()))
 	{
 		// not an outer ref -> create var node
 		pexprResult = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlop);
