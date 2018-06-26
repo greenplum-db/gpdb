@@ -773,7 +773,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 	)
 {
 	// array of index qual info
-	DrgPindexqualinfo *pdrgpindexqualinfo = GPOS_NEW(m_memory_pool) DrgPindexqualinfo(m_memory_pool);
+	IndexQualInfoArray *pdrgpindexqualinfo = GPOS_NEW(m_memory_pool) IndexQualInfoArray(m_memory_pool);
 
 	// build colid->var mapping
 	CMappingColIdVarPlStmt mapcidvarplstmt(m_memory_pool, pdxltrctxbt, pdrgpdxltrctxPrevSiblings, pdxltrctxOut, m_pctxdxltoplstmt);
@@ -871,16 +871,16 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 	}
 
 	// the index quals much be ordered by attribute number
-	pdrgpindexqualinfo->Sort(CIndexQualInfo::IIndexQualInfoCmp);
+	pdrgpindexqualinfo->Sort(CIndexQualInfo::IndexQualInfoCmp);
 
 	ULONG ulLen = pdrgpindexqualinfo->Size();
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
 		CIndexQualInfo *pindexqualinfo = (*pdrgpindexqualinfo)[ul];
-		*pplIndexConditions = gpdb::PlAppendElement(*pplIndexConditions, pindexqualinfo->m_pexpr);
-		*pplIndexOrigConditions = gpdb::PlAppendElement(*pplIndexOrigConditions, pindexqualinfo->m_pexprOriginal);
-		*pplIndexStratgey = gpdb::PlAppendInt(*pplIndexStratgey, pindexqualinfo->m_sn);
-		*pplIndexSubtype = gpdb::PlAppendOid(*pplIndexSubtype, pindexqualinfo->m_oidIndexSubtype);
+		*pplIndexConditions = gpdb::PlAppendElement(*pplIndexConditions, pindexqualinfo->m_expr);
+		*pplIndexOrigConditions = gpdb::PlAppendElement(*pplIndexOrigConditions, pindexqualinfo->m_original_expr);
+		*pplIndexStratgey = gpdb::PlAppendInt(*pplIndexStratgey, pindexqualinfo->m_index_subtype_oid);
+		*pplIndexSubtype = gpdb::PlAppendOid(*pplIndexSubtype, pindexqualinfo->m_index_subtype_oid);
 	}
 
 	// clean up
