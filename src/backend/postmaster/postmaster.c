@@ -967,12 +967,6 @@ PostmasterMain(int argc, char *argv[])
              )));
 	}
 
-	/*
-	 * This value of max_wal_senders will be inherited by all the child processes
-	 * through fork(). This value is used by XLogIsNeeded().
-	 */
-	max_wal_senders = 1;
-
 	if ( GpIdentity.numsegments < 0 )
 	{
 	    ereport(FATAL,
