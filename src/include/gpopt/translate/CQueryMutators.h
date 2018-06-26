@@ -305,7 +305,7 @@ namespace gpdxl
 
 			// for a given an TE in the derived table, create a new TE to be added to the top level query
 			static
-			TargetEntry *Pte(TargetEntry *target_entry, ULONG ulVarAttno);
+			TargetEntry *GetTargetEntry(TargetEntry *target_entry, ULONG ulVarAttno);
 
 			// return the column name of the target entry
 			static

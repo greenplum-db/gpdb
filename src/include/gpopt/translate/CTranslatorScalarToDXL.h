@@ -88,7 +88,7 @@ namespace gpdxl
 			CIdGenerator *m_pidgtorCTE;
 
 			// absolute level of query whose vars will be translated
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// does the currently translated scalar have distributed tables
 			BOOL m_fHasDistributedTables;

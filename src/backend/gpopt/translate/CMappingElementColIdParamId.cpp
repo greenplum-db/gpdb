@@ -33,14 +33,14 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CMappingElementColIdParamId::CMappingElementColIdParamId
 	(
-	ULONG col_id,
-	ULONG ulParamId,
+	ULONG colid,
+	ULONG paramid,
 	IMDId *pmdid,
 	INT type_modifier
 	)
 	:
-	m_colid(col_id),
-	m_ulParamId(ulParamId),
+	m_colid(colid),
+	m_paramid(paramid),
 	m_mdid(pmdid),
 	m_type_modifier(type_modifier)
 {

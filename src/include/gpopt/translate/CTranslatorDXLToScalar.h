@@ -224,7 +224,7 @@ namespace gpdxl
 				(
 				Plan *pplanChild,
 				SubLinkType slink,
-				CContextDXLToPlStmt *pctxdxltoplstmt
+				CContextDXLToPlStmt *dxl_to_plstmt_context
 				);
 
 			// translate subplan test expression

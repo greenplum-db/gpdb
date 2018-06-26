@@ -84,7 +84,7 @@ CTranslatorScalarToDXL::CTranslatorScalarToDXL
 	m_pmda(md_accessor),
 	m_pidgtorCol(pulidgtorCol),
 	m_pidgtorCTE(pulidgtorCTE),
-	m_ulQueryLevel(query_level),
+	m_query_level(query_level),
 	m_fHasDistributedTables(false),
 	m_fQuery(fQuery),
 	m_eplsphoptype(EpspotNone),
@@ -159,14 +159,14 @@ CTranslatorScalarToDXL::PdxlnScIdFromVar
 	}
 
 	// column name
-	const CWStringBase *str = var_col_id_mapping->GetOptColName(m_ulQueryLevel, var, m_eplsphoptype);
+	const CWStringBase *str = var_col_id_mapping->GetOptColName(m_query_level, var, m_eplsphoptype);
 
 	// column id
 	ULONG id;
 
 	if(var->varattno != 0 || EpspotIndexScan == m_eplsphoptype || EpspotIndexOnlyScan == m_eplsphoptype)
 	{
-		id = var_col_id_mapping->GetColId(m_ulQueryLevel, var, m_eplsphoptype);
+		id = var_col_id_mapping->GetColId(m_query_level, var, m_eplsphoptype);
 	}
 	else
 	{
@@ -327,14 +327,14 @@ CTranslatorScalarToDXL::PdxlnScDistCmpFromDistExpr
 	GPOS_ASSERT(NULL != pdxlnLeft);
 	GPOS_ASSERT(NULL != pdxlnRight);
 
-	CDXLScalarDistinctComp *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarDistinctComp
+	CDXLScalarDistinctComp *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarDistinctComp
 														(
 														m_memory_pool,
 														GPOS_NEW(m_memory_pool) CMDIdGPDB(pdistexpr->opno)
 														);
 
 	// create the DXL node holding the scalar distinct comparison operator
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// add children in the right order
 	dxlnode->AddChild(pdxlnLeft);
@@ -381,10 +381,10 @@ CTranslatorScalarToDXL::PdxlnScCmpFromOpExpr
 	// get operator name
 	const CWStringConst *str = GetDXLArrayCmpType(pmdid);
 
-	CDXLScalarComp *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarComp(m_memory_pool, pmdid, GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()));
+	CDXLScalarComp *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarComp(m_memory_pool, pmdid, GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()));
 
 	// create the DXL node holding the scalar comparison operator
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// add children in the right order
 	dxlnode->AddChild(pdxlnLeft);
@@ -431,10 +431,10 @@ CTranslatorScalarToDXL::PdxlnScOpExprFromExpr
 	IMDId *pmdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(popexpr->opno);
 	const CWStringConst *str = GetDXLArrayCmpType(pmdid);
 
-	CDXLScalarOpExpr *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarOpExpr(m_memory_pool, pmdid, return_type_mdid, GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()));
+	CDXLScalarOpExpr *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarOpExpr(m_memory_pool, pmdid, return_type_mdid, GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()));
 
 	// create the DXL node holding the scalar opexpr
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// process arguments
 	TranslateScalarChildren(dxlnode, popexpr->args, var_col_id_mapping);
@@ -461,9 +461,9 @@ CTranslatorScalarToDXL::PdxlnScNullIfFromExpr
 
 	GPOS_ASSERT(2 == gpdb::ListLength(pnullifexpr->args));
 
-	CDXLScalarNullIf *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarNullIf(m_memory_pool, GPOS_NEW(m_memory_pool) CMDIdGPDB(pnullifexpr->opno), GPOS_NEW(m_memory_pool) CMDIdGPDB(pnullifexpr->opresulttype));
+	CDXLScalarNullIf *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarNullIf(m_memory_pool, GPOS_NEW(m_memory_pool) CMDIdGPDB(pnullifexpr->opno), GPOS_NEW(m_memory_pool) CMDIdGPDB(pnullifexpr->opresulttype));
 
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// process arguments
 	TranslateScalarChildren(dxlnode, pnullifexpr->args, var_col_id_mapping);
@@ -540,10 +540,10 @@ CTranslatorScalarToDXL::PdxlnScArrayCompFromExpr
 		edxlarraycomptype = Edxlarraycomptypeall;
 	}
 
-	CDXLScalarArrayComp *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarArrayComp(m_memory_pool, GPOS_NEW(m_memory_pool) CMDIdGPDB(pscarrayopexpr->opno), GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()), edxlarraycomptype);
+	CDXLScalarArrayComp *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarArrayComp(m_memory_pool, GPOS_NEW(m_memory_pool) CMDIdGPDB(pscarrayopexpr->opno), GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()), edxlarraycomptype);
 
 	// create the DXL node holding the scalar opexpr
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// add children in the right order
 	dxlnode->AddChild(pdxlnLeft);
@@ -799,13 +799,13 @@ CTranslatorScalarToDXL::PdxlnScCoalesceFromExpr
 	CoalesceExpr *pcoalesceexpr = (CoalesceExpr *) pexpr;
 	GPOS_ASSERT(NULL != pcoalesceexpr->args);
 
-	CDXLScalarCoalesce *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarCoalesce
+	CDXLScalarCoalesce *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarCoalesce
 											(
 											m_memory_pool,
 											GPOS_NEW(m_memory_pool) CMDIdGPDB(pcoalesceexpr->coalescetype)
 											);
 
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	TranslateScalarChildren(dxlnode, pcoalesceexpr->args, var_col_id_mapping);
 
@@ -842,14 +842,14 @@ CTranslatorScalarToDXL::PdxlnScMinMaxFromExpr
 		min_max_type = CDXLScalarMinMax::EmmtMin;
 	}
 
-	CDXLScalarMinMax *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarMinMax
+	CDXLScalarMinMax *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarMinMax
 											(
 											m_memory_pool,
 											GPOS_NEW(m_memory_pool) CMDIdGPDB(pminmaxexpr->minmaxtype),
 											min_max_type
 											);
 
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	TranslateScalarChildren(dxlnode, pminmaxexpr->args, var_col_id_mapping);
 
@@ -940,12 +940,12 @@ CTranslatorScalarToDXL::PdxlnScSwitchFromCaseExpr
 {
 	GPOS_ASSERT (NULL != pcaseexpr->arg);
 
-	CDXLScalarSwitch *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarSwitch
+	CDXLScalarSwitch *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarSwitch
 												(
 												m_memory_pool,
 												GPOS_NEW(m_memory_pool) CMDIdGPDB(pcaseexpr->casetype)
 												);
-	CDXLNode *pdxlnSwitch = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *pdxlnSwitch = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// translate the switch expression
 	CDXLNode *dxlnode_arg = PdxlnScOpFromExpr(pcaseexpr->arg, var_col_id_mapping);
@@ -1002,13 +1002,13 @@ CTranslatorScalarToDXL::PdxlnScCaseTestFromExpr
 {
 	GPOS_ASSERT(IsA(pexpr, CaseTestExpr));
 	const CaseTestExpr *pcasetestexpr = (CaseTestExpr *) pexpr;
-	CDXLScalarCaseTest *pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarCaseTest
+	CDXLScalarCaseTest *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarCaseTest
 												(
 												m_memory_pool,
 												GPOS_NEW(m_memory_pool) CMDIdGPDB(pcasetestexpr->typeId)
 												);
 
-	return GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	return GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 }
 
 //---------------------------------------------------------------------------
@@ -1664,25 +1664,25 @@ CTranslatorScalarToDXL::PdxlnFilterFromQual
 	BOOL *pfHasDistributedTables // output
 	)
 {
-	CDXLScalarFilter *pdxlop = NULL;
+	CDXLScalarFilter *dxlop = NULL;
 
 	switch (edxlopFilterType)
 	{
 		case EdxlopScalarFilter:
-			pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarFilter(m_memory_pool);
+			dxlop = GPOS_NEW(m_memory_pool) CDXLScalarFilter(m_memory_pool);
 			break;
 		case EdxlopScalarJoinFilter:
-			pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarJoinFilter(m_memory_pool);
+			dxlop = GPOS_NEW(m_memory_pool) CDXLScalarJoinFilter(m_memory_pool);
 			break;
 		case EdxlopScalarOneTimeFilter:
-			pdxlop = GPOS_NEW(m_memory_pool) CDXLScalarOneTimeFilter(m_memory_pool);
+			dxlop = GPOS_NEW(m_memory_pool) CDXLScalarOneTimeFilter(m_memory_pool);
 			break;
 		default:
 			GPOS_ASSERT(!"Unrecognized filter type");
 	}
 
 
-	CDXLNode *filter_dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *filter_dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	CDXLNode *pdxlnCond = PdxlnScCondFromQual(plQual, var_col_id_mapping, pfHasDistributedTables);
 
@@ -1758,7 +1758,7 @@ CTranslatorScalarToDXL::PdxlnQuantifiedSubqueryFromSublink
 							m_pidgtorCTE,
 							pmapvarcolidCopy,
 							(Query *) psublink->subselect,
-							m_ulQueryLevel + 1,
+							m_query_level + 1,
 							m_phmulCTEEntries
 							);
 
@@ -1864,7 +1864,7 @@ CTranslatorScalarToDXL::PdxlnScSubqueryFromSublink
 							m_pidgtorCTE,
 							pmapvarcolidCopy,
 							pquerySublink,
-							m_ulQueryLevel + 1,
+							m_query_level + 1,
 							m_phmulCTEEntries
 							);
 	CDXLNode *pdxlnSubQuery = ptrquerytodxl->PdxlnFromQueryInternal();
@@ -1913,7 +1913,7 @@ CTranslatorScalarToDXL::PdxlnArray
 
 	const ArrayExpr *parrayexpr = (ArrayExpr *) pexpr;
 
-	CDXLScalarArray *pdxlop =
+	CDXLScalarArray *dxlop =
 			GPOS_NEW(m_memory_pool) CDXLScalarArray
 						(
 						m_memory_pool,
@@ -1922,7 +1922,7 @@ CTranslatorScalarToDXL::PdxlnArray
 						parrayexpr->multidims
 						);
 
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	TranslateScalarChildren(dxlnode, parrayexpr->elements, var_col_id_mapping);
 
@@ -1956,7 +1956,7 @@ CTranslatorScalarToDXL::PdxlnArrayRef
 	else
 		restype = parrayref->refelemtype;
 
-	CDXLScalarArrayRef *pdxlop =
+	CDXLScalarArrayRef *dxlop =
 			GPOS_NEW(m_memory_pool) CDXLScalarArrayRef
 						(
 						m_memory_pool,
@@ -1966,7 +1966,7 @@ CTranslatorScalarToDXL::PdxlnArrayRef
 						GPOS_NEW(m_memory_pool) CMDIdGPDB(restype)
 						);
 
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlop);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 
 	// add children
 	AddArrayIndexList(dxlnode, parrayref->reflowerindexpr, CDXLScalarArrayRefIndexList::EilbLower, var_col_id_mapping);
@@ -2064,7 +2064,7 @@ CTranslatorScalarToDXL::PdxlnExistSubqueryFromSublink
 							m_pidgtorCTE,
 							pmapvarcolidCopy,
 							(Query *) psublink->subselect,
-							m_ulQueryLevel + 1,
+							m_query_level + 1,
 							m_phmulCTEEntries
 							);
 	CDXLNode *root_dxl_node = ptrquerytodxl->PdxlnFromQueryInternal();

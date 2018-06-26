@@ -33,14 +33,14 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CMappingElementColIdTE::CMappingElementColIdTE
 	(
-	ULONG col_id,
+	ULONG colid,
 	ULONG query_level,
 	TargetEntry *target_entry
 	)
 	:
-	m_colid(col_id),
-	m_ulQueryLevel(query_level),
-	m_pte(target_entry)
+	m_colid(colid),
+	m_query_level(query_level),
+	m_target_entry(target_entry)
 {
 }
 

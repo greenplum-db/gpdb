@@ -119,7 +119,7 @@ namespace gpdxl
 			Query *m_pquery;
 
 			// absolute level of query being translated
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// does the query have distributed tables
 			BOOL m_fHasDistributedTables;
@@ -407,7 +407,7 @@ namespace gpdxl
 
 			// check if given operator is lag() window function
 			static
-			BOOL FLagWindowFunc(CDXLOperator *pdxlop);
+			BOOL FLagWindowFunc(CDXLOperator *dxlop);
 
 		    // translate an insert query
 			CDXLNode *PdxlnInsert();

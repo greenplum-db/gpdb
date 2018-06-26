@@ -60,7 +60,7 @@ namespace gpdxl
 
 			// translate DXL ScalarIdent node into GPDB Var node
 			virtual
-			Var *PvarFromDXLNodeScId(const CDXLScalarIdent *) = 0;
+			Var *VarFromDXLNodeScId(const CDXLScalarIdent *) = 0;
 	};
 }
 

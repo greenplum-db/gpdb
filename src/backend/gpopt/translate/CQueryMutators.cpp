@@ -1224,7 +1224,7 @@ CQueryMutators::PqueryNormalizeHaving
 		if (CTranslatorUtils::IsGroupingColumn(target_entry, pqueryDrdTbl->groupClause) ||
 			CTranslatorUtils::IsSortingColumn(target_entry, pqueryDrdTbl->sortClause) || !target_entry->resjunk)
 		{
-			TargetEntry *pteNew = Pte(target_entry, ulTECount);
+			TargetEntry *pteNew = GetTargetEntry(target_entry, ulTECount);
 			pqueryNew->targetList = gpdb::PlAppendElement(pqueryNew->targetList, pteNew);
 			// Ensure that such target entries is not suppressed in the target list of the RTE
 			// and has a name
@@ -1335,7 +1335,7 @@ CQueryMutators::PqueryNormalize
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CQueryMutators::Pte
+//		CQueryMutators::GetTargetEntry
 //
 //	@doc:
 //		Given an Target list entry in the derived table, create a new
@@ -1343,7 +1343,7 @@ CQueryMutators::PqueryNormalize
 //		memory
 //---------------------------------------------------------------------------
 TargetEntry *
-CQueryMutators::Pte
+CQueryMutators::GetTargetEntry
 	(
 	TargetEntry *pteOld,
 	ULONG ulVarAttno

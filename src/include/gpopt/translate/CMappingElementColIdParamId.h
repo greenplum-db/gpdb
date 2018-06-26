@@ -41,7 +41,7 @@ namespace gpdxl
 			ULONG m_colid;
 
 			// param identifier
-			ULONG m_ulParamId;
+			ULONG m_paramid;
 
 			// param type
 			IMDId *m_mdid;
@@ -51,7 +51,7 @@ namespace gpdxl
 		public:
 
 			// ctors and dtor
-			CMappingElementColIdParamId(ULONG col_id, ULONG ulParamId, IMDId *pmdid, INT type_modifier);
+			CMappingElementColIdParamId(ULONG col_id, ULONG paramid, IMDId *pmdid, INT type_modifier);
 
 			virtual
 			~CMappingElementColIdParamId()
@@ -64,9 +64,9 @@ namespace gpdxl
 			}
 
 			// return the ParamId
-			ULONG UlParamId() const
+			ULONG ParamId() const
 			{
-				return m_ulParamId;
+				return m_paramid;
 			}
 
 			// return the type

@@ -47,10 +47,10 @@ namespace gpdxl
 			ULONG m_colid;
 
 			// the query level
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// the target entry
-			TargetEntry *m_pte;
+			TargetEntry *m_target_entry;
 
 		public:
 
@@ -64,15 +64,15 @@ namespace gpdxl
 			}
 
 			// return the query level
-			ULONG QueryLevel() const
+			ULONG GetQueryLevel() const
 			{
-				return m_ulQueryLevel;
+				return m_query_level;
 			}
 
 			// return the column name for the given attribute no
-			const TargetEntry *Pte() const
+			const TargetEntry *GetTargetEntry() const
 			{
-				return m_pte;
+				return m_target_entry;
 			}
 	};
 }

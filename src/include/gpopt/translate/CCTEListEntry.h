@@ -106,7 +106,7 @@ namespace gpdxl
 			};
 
 			// the query level
-			ULONG QueryLevel() const
+			ULONG GetQueryLevel() const
 			{
 				return m_query_level;
 			}

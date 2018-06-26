@@ -70,7 +70,7 @@ namespace gpdxl
 					}
 
 					virtual
-					Var *PvarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
+					Var *VarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
 
 			};
 

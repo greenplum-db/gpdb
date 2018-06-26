@@ -44,76 +44,76 @@ using namespace gpmd;
 CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
 	(
 	IMemoryPool *memory_pool,
-	const CDXLTranslateContextBaseTable *pdxltrctxbt,
-	DrgPdxltrctx *pdrgpdxltrctx,
-	CDXLTranslateContext *pdxltrctxOut,
-	CContextDXLToPlStmt *pctxdxltoplstmt
+	const CDXLTranslateContextBaseTable *base_table_context,
+	DrgPdxltrctx *child_contexts,
+	CDXLTranslateContext *output_context,
+	CContextDXLToPlStmt *dxl_to_plstmt_context
 	)
 	:
 	CMappingColIdVar(memory_pool),
-	m_pdxltrctxbt(pdxltrctxbt),
-	m_pdrgpdxltrctx(pdrgpdxltrctx),
-	m_pdxltrctxOut(pdxltrctxOut),
-	m_pctxdxltoplstmt(pctxdxltoplstmt)
+	m_base_table_context(base_table_context),
+	m_child_contexts(child_contexts),
+	m_output_context(output_context),
+	m_dxl_to_plstmt_context(dxl_to_plstmt_context)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMappingColIdVarPlStmt::Pctxdxltoplstmt
+//		CMappingColIdVarPlStmt::GetDXLToPlStmtContext
 //
 //	@doc:
 //		Returns the DXL->PlStmt translation context
 //
 //---------------------------------------------------------------------------
 CContextDXLToPlStmt *
-CMappingColIdVarPlStmt::Pctxdxltoplstmt()
+CMappingColIdVarPlStmt::GetDXLToPlStmtContext()
 {
-	return m_pctxdxltoplstmt;
+	return m_dxl_to_plstmt_context;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMappingColIdVarPlStmt::PpdxltrctxOut
+//		CMappingColIdVarPlStmt::GetOutputContext
 //
 //	@doc:
 //		Returns the output translation context
 //
 //---------------------------------------------------------------------------
 CDXLTranslateContext *
-CMappingColIdVarPlStmt::PpdxltrctxOut()
+CMappingColIdVarPlStmt::GetOutputContext()
 {
-	return m_pdxltrctxOut;
+	return m_output_context;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMappingColIdVarPlStmt::PparamFromDXLNodeScId
+//		CMappingColIdVarPlStmt::ParamFromDXLNodeScId
 //
 //	@doc:
 //		Translates a DXL scalar identifier operator into a GPDB Param node
 //
 //---------------------------------------------------------------------------
 Param *
-CMappingColIdVarPlStmt::PparamFromDXLNodeScId
+CMappingColIdVarPlStmt::ParamFromDXLNodeScId
 	(
-	const CDXLScalarIdent *pdxlop
+	const CDXLScalarIdent *dxlop
 	)
 {
-	GPOS_ASSERT(NULL != m_pdxltrctxOut);
+	GPOS_ASSERT(NULL != m_output_context);
 
 	Param *pparam = NULL;
 
-	const ULONG col_id = pdxlop->MakeDXLColRef()->Id();
-	const CMappingElementColIdParamId *pmecolidparamid = m_pdxltrctxOut->GetParamIdMappingElement(col_id);
+	const ULONG col_id = dxlop->MakeDXLColRef()->Id();
+	const CMappingElementColIdParamId *elem = m_output_context->GetParamIdMappingElement(col_id);
 
-	if (NULL != pmecolidparamid)
+	if (NULL != elem)
 	{
 		pparam = MakeNode(Param);
 		pparam->paramkind = PARAM_EXEC;
-		pparam->paramid = pmecolidparamid->UlParamId();
-		pparam->paramtype = CMDIdGPDB::CastMdid(pmecolidparamid->MDIdType())->OidObjectId();
-		pparam->paramtypmod = pmecolidparamid->TypeModifier();
+		pparam->paramid = elem->ParamId();
+		pparam->paramtype = CMDIdGPDB::CastMdid(elem->MDIdType())->OidObjectId();
+		pparam->paramtypmod = elem->TypeModifier();
 	}
 
 	return pparam;
@@ -128,87 +128,85 @@ CMappingColIdVarPlStmt::PparamFromDXLNodeScId
 //
 //---------------------------------------------------------------------------
 Var *
-CMappingColIdVarPlStmt::PvarFromDXLNodeScId
+CMappingColIdVarPlStmt::VarFromDXLNodeScId
 	(
-	const CDXLScalarIdent *pdxlop
+	const CDXLScalarIdent *dxlop
 	)
 {
-	Index idxVarno = 0;
+	Index varno = 0;
 	AttrNumber attno = 0;
 
-	Index idxVarnoold = 0;
-	AttrNumber attnoOld = 0;
+	Index varno_old = 0;
+	AttrNumber attno_old = 0;
 
-	const ULONG col_id = pdxlop->MakeDXLColRef()->Id();
-	if (NULL != m_pdxltrctxbt)
+	const ULONG colid = dxlop->MakeDXLColRef()->Id();
+	if (NULL != m_base_table_context)
 	{
 		// scalar id is used in a base table operator node
-		idxVarno = m_pdxltrctxbt->GetRelIndex();
-		attno = (AttrNumber) m_pdxltrctxbt->GetAttnoForColId(col_id);
+		varno = m_base_table_context->GetRelIndex();
+		attno = (AttrNumber) m_base_table_context->GetAttnoForColId(colid);
 
-		idxVarnoold = idxVarno;
-		attnoOld = attno;
+		varno_old = varno;
+		attno_old = attno;
 	}
 
 	// if lookup has failed in the first step, attempt lookup again using outer and inner contexts
-	if (0 == attno && NULL != m_pdrgpdxltrctx)
+	if (0 == attno && NULL != m_child_contexts)
 	{
-		GPOS_ASSERT(0 != m_pdrgpdxltrctx->Size());
+		GPOS_ASSERT(0 != m_child_contexts->Size());
 
-		const CDXLTranslateContext *pdxltrctxLeft = (*m_pdrgpdxltrctx)[0];
-
-		//	const CDXLTranslateContext *pdxltrctxRight
+		const CDXLTranslateContext *left_context = (*m_child_contexts)[0];
 
 		// not a base table
-		GPOS_ASSERT(NULL != pdxltrctxLeft);
+		GPOS_ASSERT(NULL != left_context);
 
 		// lookup column in the left child translation context
-		const TargetEntry *target_entry = pdxltrctxLeft->GetTargetEntry(col_id);
+		const TargetEntry *target_entry = left_context->GetTargetEntry(colid);
 
 		if (NULL != target_entry)
 		{
 			// identifier comes from left child
-			idxVarno = OUTER;
+			varno = OUTER;
 		}
 		else
 		{
-			const ULONG ulContexts = m_pdrgpdxltrctx->Size();
-			if (2 > ulContexts)
+			const ULONG num_contexts = m_child_contexts->Size();
+			if (2 > num_contexts)
 			{
 				// there are no more children. col id not found in this tree
 				// and must be an outer ref
 				return NULL;
 			}
 
-			const CDXLTranslateContext *pdxltrctxRight = (*m_pdrgpdxltrctx)[1];
+			const CDXLTranslateContext *right_context = (*m_child_contexts)[1];
 
 			// identifier must come from right child
-			GPOS_ASSERT(NULL != pdxltrctxRight);
+			GPOS_ASSERT(NULL != right_context);
 
-			target_entry = pdxltrctxRight->GetTargetEntry(col_id);
+			target_entry = right_context->GetTargetEntry(colid);
 
-			idxVarno = INNER;
+			varno = INNER;
 
 			// check any additional contexts if col is still not found yet
-			for (ULONG ul = 2; NULL == target_entry && ul < ulContexts; ul++)
+			for (ULONG ul = 2; NULL == target_entry && ul < num_contexts; ul++)
 			{
-				const CDXLTranslateContext *pdxltrctx = (*m_pdrgpdxltrctx)[ul];
-				GPOS_ASSERT(NULL != pdxltrctx);
+				const CDXLTranslateContext *context = (*m_child_contexts)[ul];
+				GPOS_ASSERT(NULL != context);
 
-				target_entry = pdxltrctx->GetTargetEntry(col_id);
+				target_entry = context->GetTargetEntry(colid);
 				if (NULL == target_entry)
 				{
 					continue;
 				}
 
-				Var *pv = (Var*) target_entry->expr;
-				idxVarno = pv->varno;
+				Var *var = (Var*) target_entry->expr;
+				varno = var->varno;
 			}
 		}
 
 		if (NULL  == target_entry)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, col_id);
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, colid);
 		}
 
 		attno = target_entry->resno;
@@ -216,29 +214,29 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		// find the original varno and attno for this column
 		if (IsA(target_entry->expr, Var))
 		{
-			Var *pv = (Var*) target_entry->expr;
-			idxVarnoold = pv->varnoold;
-			attnoOld = pv->varoattno;
+			Var *var = (Var*) target_entry->expr;
+			varno_old = var->varnoold;
+			attno_old = var->varoattno;
 		}
 		else
 		{
-			idxVarnoold = idxVarno;
-			attnoOld = attno;
+			varno_old = varno;
+			attno_old = attno;
 		}
 	}
 
 	Var *var = gpdb::PvarMakeVar
 						(
-						idxVarno,
+						varno,
 						attno,
-						CMDIdGPDB::CastMdid(pdxlop->MDIdType())->OidObjectId(),
-						pdxlop->TypeModifier(),
+						CMDIdGPDB::CastMdid(dxlop->MDIdType())->OidObjectId(),
+						dxlop->TypeModifier(),
 						0	// varlevelsup
 						);
 
 	// set varnoold and varoattno since makeVar does not set them properly
-	var->varnoold = idxVarnoold;
-	var->varoattno = attnoOld;
+	var->varnoold = varno_old;
+	var->varoattno = attno_old;
 
 	return var;
 }

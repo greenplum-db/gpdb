@@ -40,7 +40,7 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 Var *
-CConstExprEvaluatorProxy::CEmptyMappingColIdVar::PvarFromDXLNodeScId
+CConstExprEvaluatorProxy::CEmptyMappingColIdVar::VarFromDXLNodeScId
 	(
 	const CDXLScalarIdent */*scalar_ident*/
 	)
