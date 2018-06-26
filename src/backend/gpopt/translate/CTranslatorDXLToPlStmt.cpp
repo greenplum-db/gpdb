@@ -1212,7 +1212,7 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 
 	// we will add the new range table entry as the last element of the range table
 	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
-	dxltrctxbt.SetIdx(iRel);
+	dxltrctxbt.SetRelIndex(iRel);
 	pfuncscan->scan.scanrelid = iRel;
 
 	m_pctxdxltoplstmt->AddRTE(prte);
@@ -1319,7 +1319,7 @@ CTranslatorDXLToPlStmt::PrteFromDXLTVF
 		palias->colnames = gpdb::PlAppendElement(palias->colnames, pvalColName);
 
 		// save mapping col id -> index in translate context
-		(void) pdxltrctxbt->FInsertMapping(dxl_proj_elem->Id(), ul+1 /*iAttno*/);
+		(void) pdxltrctxbt->InsertMapping(dxl_proj_elem->Id(), ul+1 /*iAttno*/);
 	}
 
 	// function arguments
@@ -1398,7 +1398,7 @@ CTranslatorDXLToPlStmt::PrteFromDXLValueScan
 		palias->colnames = gpdb::PlAppendElement(palias->colnames, pvalColName);
 
 		// save mapping col id -> index in translate context
-		(void) pdxltrctxbt->FInsertMapping(dxl_proj_elem->Id(), ul+1 /*iAttno*/);
+		(void) pdxltrctxbt->InsertMapping(dxl_proj_elem->Id(), ul+1 /*iAttno*/);
 	}
 
 	CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt(m_memory_pool, pdxltrctxbt, NULL, pdxltrctxOut, m_pctxdxltoplstmt);
@@ -2613,7 +2613,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 
 	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 	(psubqscan->scan).scanrelid = iRel;
-	dxltrctxbt.SetIdx(iRel);
+	dxltrctxbt.SetRelIndex(iRel);
 
 	ListCell *plcTE = NULL;
 
@@ -2634,7 +2634,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 		CDXLScalarProjElem *pdxlopPrel = CDXLScalarProjElem::Cast((*pdxlnChildProjList)[ul]->GetOperator());
 
 		// save mapping col id -> index in translate context
-		(void) dxltrctxbt.FInsertMapping(pdxlopPrel->Id(), target_entry->resno);
+		(void) dxltrctxbt.InsertMapping(pdxlopPrel->Id(), target_entry->resno);
 		ul++;
 	}
 
@@ -4223,7 +4223,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 
 	// save oid and range index in translation context
 	pdxltrctxbtOut->SetOID(oid);
-	pdxltrctxbtOut->SetIdx(iRel);
+	pdxltrctxbtOut->SetRelIndex(iRel);
 
 	Alias *palias = MakeNode(Alias);
 	palias->colnames = NIL;
@@ -4270,7 +4270,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 		}
 
 		// save mapping col id -> index in translate context
-		(void) pdxltrctxbtOut->FInsertMapping(dxl_col_descr->Id(), iAttno);
+		(void) pdxltrctxbtOut->InsertMapping(dxl_col_descr->Id(), iAttno);
 	}
 
 	// if there are any dropped columns at the end, add those too to the RangeTblEntry
@@ -4353,7 +4353,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 			if (NULL != pdxltrctxbt)
 			{
 				// translating project list of a base table
-				target_entry->resorigtbl = pdxltrctxbt->OidRel();
+				target_entry->resorigtbl = pdxltrctxbt->GetOid();
 				target_entry->resorigcol = ((Var *) pexpr)->varattno;
 			}
 			else
@@ -5546,7 +5546,7 @@ CTranslatorDXLToPlStmt::PplanValueScan
 	// we will add the new range table entry as the last element of the range table
 	Index iRel = gpdb::ListLength(m_pctxdxltoplstmt->GetRTableEntriesList()) + 1;
 
-	dxltrctxbt.SetIdx(iRel);
+	dxltrctxbt.SetRelIndex(iRel);
 
 	// create value scan node
 	ValuesScan *pvaluescan = MakeNode(ValuesScan);

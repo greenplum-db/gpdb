@@ -38,13 +38,13 @@ namespace gpdxl
 		private:
 
 			// query level number
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// varno in the rtable
-			ULONG m_ulVarNo;
+			ULONG m_varno;
 
 			// attno
-			INT	m_iAttNo;
+			INT	m_attno;
 
 			// copy c'tor
 			CGPDBAttInfo(const CGPDBAttInfo&);
@@ -52,7 +52,7 @@ namespace gpdxl
 		public:
 			// ctor
 			CGPDBAttInfo(ULONG query_level, ULONG var_no, INT attrnum)
-				: m_ulQueryLevel(query_level), m_ulVarNo(var_no), m_iAttNo(attrnum)
+				: m_query_level(query_level), m_varno(var_no), m_attno(attrnum)
 			{}
 
 			// d'tor
@@ -60,43 +60,43 @@ namespace gpdxl
 			~CGPDBAttInfo() {}
 
 			// accessor
-			ULONG QueryLevel() const
+			ULONG GetQueryLevel() const
 			{
-				return m_ulQueryLevel;
+				return m_query_level;
 			}
 
 			// accessor
-			ULONG UlVarNo() const
+			ULONG GetVarNo() const
 			{
-				return m_ulVarNo;
+				return m_varno;
 			}
 
 			// accessor
-			INT IAttNo() const
+			INT GetAttNo() const
 			{
-				return m_iAttNo;
+				return m_attno;
 			}
 
 			// equality check
-			BOOL Equals(const CGPDBAttInfo& gpdbattinfo) const
+			BOOL Equals(const CGPDBAttInfo& gpdb_att_info) const
 			{
-				return m_ulQueryLevel == gpdbattinfo.m_ulQueryLevel
-						&& m_ulVarNo == gpdbattinfo.m_ulVarNo
-						&& m_iAttNo == gpdbattinfo.m_iAttNo;
+				return m_query_level == gpdb_att_info.m_query_level
+						&& m_varno == gpdb_att_info.m_varno
+						&& m_attno == gpdb_att_info.m_attno;
 			}
 
 			// hash value
 			ULONG HashValue() const
 			{
 				return gpos::CombineHashes(
-						gpos::HashValue(&m_ulQueryLevel),
-						gpos::CombineHashes(gpos::HashValue(&m_ulVarNo),
-								gpos::HashValue(&m_iAttNo)));
+						gpos::HashValue(&m_query_level),
+						gpos::CombineHashes(gpos::HashValue(&m_varno),
+								gpos::HashValue(&m_attno)));
 			}
 	};
 
 	// hash function
-	inline ULONG UlHashGPDBAttInfo
+	inline ULONG HashGPDBAttInfo
 		(
 		const CGPDBAttInfo *gpdb_att_info
 		)
@@ -106,14 +106,14 @@ namespace gpdxl
 	}
 
 	// equality function
-	inline BOOL FEqualGPDBAttInfo
+	inline BOOL EqualGPDBAttInfo
 		(
-		const CGPDBAttInfo *pgpdbattinfoA,
-		const CGPDBAttInfo *pgpdbattinfoB
+		const CGPDBAttInfo *gpdb_att_info_a,
+		const CGPDBAttInfo *gpdb_att_info_b
 		)
 	{
-		GPOS_ASSERT(NULL != pgpdbattinfoA && NULL != pgpdbattinfoB);
-		return pgpdbattinfoA->Equals(*pgpdbattinfoB);
+		GPOS_ASSERT(NULL != gpdb_att_info_a && NULL != gpdb_att_info_b);
+		return gpdb_att_info_a->Equals(*gpdb_att_info_b);
 	}
 
 }

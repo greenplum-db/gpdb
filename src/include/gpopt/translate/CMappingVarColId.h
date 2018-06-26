@@ -79,11 +79,11 @@ namespace gpdxl
 			IMemoryPool *m_memory_pool;
 
 			// hash map structure to store gpdb att -> opt col information
-			typedef CHashMap<CGPDBAttInfo, CGPDBAttOptCol, UlHashGPDBAttInfo, FEqualGPDBAttInfo,
+			typedef CHashMap<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo, EqualGPDBAttInfo,
 							CleanupRelease, CleanupRelease > GPDBAttOptColHashMap;
 
 			// iterator
-			typedef CHashMapIter<CGPDBAttInfo, CGPDBAttOptCol, UlHashGPDBAttInfo, FEqualGPDBAttInfo,
+			typedef CHashMapIter<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo, EqualGPDBAttInfo,
 							CleanupRelease, CleanupRelease > GPDBAttOptColHashMapIter;
 
 			// map from gpdb att to optimizer col

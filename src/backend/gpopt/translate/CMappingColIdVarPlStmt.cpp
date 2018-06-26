@@ -143,8 +143,8 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 	if (NULL != m_pdxltrctxbt)
 	{
 		// scalar id is used in a base table operator node
-		idxVarno = m_pdxltrctxbt->IRel();
-		attno = (AttrNumber) m_pdxltrctxbt->IAttnoForColId(col_id);
+		idxVarno = m_pdxltrctxbt->GetRelIndex();
+		attno = (AttrNumber) m_pdxltrctxbt->GetAttnoForColId(col_id);
 
 		idxVarnoold = idxVarno;
 		attnoOld = attno;

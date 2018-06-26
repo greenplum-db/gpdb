@@ -55,10 +55,10 @@ namespace gpdxl
 			OID m_oid;
 
 			// index of the relation in the rtable
-			Index m_iRel;
+			Index m_rel_index;
 
 			// maps a colid of a column to the attribute number of that column in the schema of the underlying relation
-			HMUlI *m_phmuli;
+			HMUlI *m_colid_to_attno_map;
 
 			// private copy ctor
 			CDXLTranslateContextBaseTable(const CDXLTranslateContextBaseTable&);
@@ -71,20 +71,20 @@ namespace gpdxl
 			~CDXLTranslateContextBaseTable();
 
 			// accessors
-			OID OidRel() const;
+			OID GetOid() const;
 
-			Index IRel() const;
+			Index GetRelIndex() const;
 
 			// return the index of the column in the base relation for the given DXL ColId
-			INT IAttnoForColId(ULONG ulDXLColId) const;
+			INT GetAttnoForColId(ULONG dxl_col_id) const;
 
 			// setters
 			void SetOID(OID oid);
 
-			void SetIdx(Index iRel);
+			void SetRelIndex(Index rel_index);
 
 			// store the mapping of the given DXL column id and index in the base relation schema
-			BOOL FInsertMapping(ULONG ulDXLColId, INT iAttno);
+			BOOL InsertMapping(ULONG dxl_col_id, INT att_no);
 
 	};
 }

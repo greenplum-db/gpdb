@@ -470,13 +470,13 @@ CMappingVarColId::CopyMapColId
 	while (col_map_iterator.Advance())
 	{
 		const CGPDBAttOptCol *gpdb_att_opt_col_info = col_map_iterator.Value();
-		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->Pgpdbattinfo();
+		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->GetGPDBAttInfo();
 		const COptColInfo *opt_col_info = gpdb_att_opt_col_info->GetOptColInfo();
 
-		if (gpdb_att_info->QueryLevel() <= query_level)
+		if (gpdb_att_info->GetQueryLevel() <= query_level)
 		{
 			// include all variables defined at same query level or before
-			CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(m_memory_pool) CGPDBAttInfo(gpdb_att_info->QueryLevel(), gpdb_att_info->UlVarNo(), gpdb_att_info->IAttNo());
+			CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(m_memory_pool) CGPDBAttInfo(gpdb_att_info->GetQueryLevel(), gpdb_att_info->GetVarNo(), gpdb_att_info->GetAttNo());
 			COptColInfo *opt_col_info_new = GPOS_NEW(m_memory_pool) COptColInfo(opt_col_info->GetColId(), GPOS_NEW(m_memory_pool) CWStringConst(m_memory_pool, opt_col_info->GetOptColName()->GetBuffer()));
 			gpdb_att_info_new->AddRef();
 			CGPDBAttOptCol *gpdb_att_opt_col_new = GPOS_NEW(m_memory_pool) CGPDBAttOptCol(gpdb_att_info_new, opt_col_info_new);
@@ -515,10 +515,10 @@ CMappingVarColId::CopyMapColId
 	while (col_map_iterator.Advance())
 	{
 		const CGPDBAttOptCol *gpdb_att_opt_col_info = col_map_iterator.Value();
-		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->Pgpdbattinfo();
+		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->GetGPDBAttInfo();
 		const COptColInfo *opt_col_info = gpdb_att_opt_col_info->GetOptColInfo();
 
-		CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(memory_pool) CGPDBAttInfo(gpdb_att_info->QueryLevel(), gpdb_att_info->UlVarNo(), gpdb_att_info->IAttNo());
+		CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(memory_pool) CGPDBAttInfo(gpdb_att_info->GetQueryLevel(), gpdb_att_info->GetVarNo(), gpdb_att_info->GetAttNo());
 		COptColInfo *opt_col_info_new = GPOS_NEW(memory_pool) COptColInfo(opt_col_info->GetColId(), GPOS_NEW(memory_pool) CWStringConst(memory_pool, opt_col_info->GetOptColName()->GetBuffer()));
 		gpdb_att_info_new->AddRef();
 		CGPDBAttOptCol *gpdb_att_opt_col_new = GPOS_NEW(memory_pool) CGPDBAttOptCol(gpdb_att_info_new, opt_col_info_new);
@@ -564,10 +564,10 @@ CMappingVarColId::CopyRemapColId
 	while (col_map_iterator.Advance())
 	{
 		const CGPDBAttOptCol *gpdb_att_opt_col_info = col_map_iterator.Value();
-		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->Pgpdbattinfo();
+		const CGPDBAttInfo *gpdb_att_info = gpdb_att_opt_col_info->GetGPDBAttInfo();
 		const COptColInfo *opt_col_info = gpdb_att_opt_col_info->GetOptColInfo();
 
-		CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(memory_pool) CGPDBAttInfo(gpdb_att_info->QueryLevel(), gpdb_att_info->UlVarNo(), gpdb_att_info->IAttNo());
+		CGPDBAttInfo *gpdb_att_info_new = GPOS_NEW(memory_pool) CGPDBAttInfo(gpdb_att_info->GetQueryLevel(), gpdb_att_info->GetVarNo(), gpdb_att_info->GetAttNo());
 		ULONG col_id = opt_col_info->GetColId();
 		ULONG *new_col_id = old_new_col_mapping->Find(&col_id);
 		if (NULL != new_col_id)
