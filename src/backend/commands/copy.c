@@ -1932,7 +1932,7 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 	all_relids = list_make1_oid(RelationGetRelid(cstate->rel));
 
 	/* add in AO segno map for dispatch */
-	if (rel_is_partitioned(RelationGetRelid(cstate->rel)))
+	if (dispatchStmt->is_from && rel_is_partitioned(RelationGetRelid(cstate->rel)))
 	{
 		if (gp_enable_segment_copy_checking &&
 			!partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
@@ -1945,8 +1945,10 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 		PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
 
 		all_relids = list_concat(all_relids, all_partition_relids(pn));
+
+		dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
 	}
-	dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
+
 	dispatchStmt->skip_ext_partition = cstate->skip_ext_partition;
 
 	if (policy)

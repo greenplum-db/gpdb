@@ -1166,7 +1166,5 @@ CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\
 ALTER TABLE sales ALTER PARTITION dec17 EXCHANGE PARTITION dec17 WITH TABLE ext_dec17 WITHOUT VALIDATION;
 DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
-SET gp_enable_segment_copy_checking=off;
 COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
-SET gp_enable_segment_copy_checking=on;
 DROP TABLE sales;

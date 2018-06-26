@@ -1349,8 +1349,6 @@ NOTICE:  exchanged partition "dec17" of partition "dec17" of relation "sales" wi
 DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
-SET gp_enable_segment_copy_checking=off;
 COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)
-SET gp_enable_segment_copy_checking=on;
 DROP TABLE sales;
