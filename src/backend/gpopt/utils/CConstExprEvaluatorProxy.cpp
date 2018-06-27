@@ -42,7 +42,7 @@ using namespace gpos;
 Var *
 CConstExprEvaluatorProxy::CEmptyMappingColIdVar::PvarFromDXLNodeScId
 	(
-	const CDXLScalarIdent */*pdxlop*/
+	const CDXLScalarIdent */*scalar_ident*/
 	)
 {
 	elog(LOG, "Expression passed to CConstExprEvaluatorProxy contains variables. "
@@ -53,43 +53,43 @@ CConstExprEvaluatorProxy::CEmptyMappingColIdVar::PvarFromDXLNodeScId
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CConstExprEvaluatorProxy::EvaluateExpr
+//		CConstExprEvaluatorProxy::PdxlnEvaluateExpr
 //
 //	@doc:
-//		Evaluate 'pdxlnExpr', assumed to be a constant expression, and return the DXL representation
-// 		of the result. Caller keeps ownership of 'pdxlnExpr' and takes ownership of the returned pointer.
+//		Evaluate 'expr', assumed to be a constant expression, and return the DXL representation
+// 		of the result. Caller keeps ownership of 'expr' and takes ownership of the returned pointer.
 //
 //---------------------------------------------------------------------------
 CDXLNode *
 CConstExprEvaluatorProxy::PdxlnEvaluateExpr
 	(
-	const CDXLNode *pdxlnExpr
+	const CDXLNode *dxl_expr
 	)
 {
 	// Translate DXL -> GPDB Expr
-	Expr *pexpr = m_trdxl2scalar.PexprFromDXLNodeScalar(pdxlnExpr, &m_emptymapcidvar);
-	GPOS_ASSERT(NULL != pexpr);
+	Expr *expr = m_dxl2scalar_translator.PexprFromDXLNodeScalar(dxl_expr, &m_emptymapcidvar);
+	GPOS_ASSERT(NULL != expr);
 
 	// Evaluate the expression
-	Expr *pexprResult = gpdb::PexprEvaluate(pexpr,
-						gpdb::OidExprType((Node *)pexpr),
-						gpdb::IExprTypeMod((Node *)pexpr));
+	Expr *result = gpdb::PexprEvaluate(expr,
+						gpdb::OidExprType((Node *)expr),
+						gpdb::IExprTypeMod((Node *)expr));
 
-	if (!IsA(pexprResult, Const))
+	if (!IsA(result, Const))
 	{
 		#ifdef GPOS_DEBUG
-		elog(NOTICE, "Expression did not evaluate to Const, but to an expression of type %d", pexprResult->type);
+		elog(NOTICE, "Expression did not evaluate to Const, but to an expression of type %d", result->type);
 		#endif
 		GPOS_RAISE(gpdxl::ExmaConstExprEval, gpdxl::ExmiConstExprEvalNonConst);
 	}
 
-	Const *pconstResult = (Const *)pexprResult;
-	CDXLDatum *datum_dxl = CTranslatorScalarToDXL::GetDatumVal(m_memory_pool, m_pmda, pconstResult);
-	CDXLNode *pdxlnResult = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarConstValue(m_memory_pool, datum_dxl));
-	gpdb::GPDBFree(pexprResult);
-	gpdb::GPDBFree(pexpr);
+	Const *const_result = (Const *)result;
+	CDXLDatum *datum_dxl = CTranslatorScalarToDXL::GetDatumVal(m_memory_pool, m_mda, const_result);
+	CDXLNode *dxl_result = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarConstValue(m_memory_pool, datum_dxl));
+	gpdb::GPDBFree(result);
+	gpdb::GPDBFree(expr);
 
-	return pdxlnResult;
+	return dxl_result;
 }
 
 // EOF

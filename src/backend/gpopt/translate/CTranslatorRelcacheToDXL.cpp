@@ -1007,7 +1007,7 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 		}
 
 		// get system name for that attribute
-		const CWStringConst *pstrSysColName = CTranslatorUtils::PstrSystemColName(attno);
+		const CWStringConst *pstrSysColName = CTranslatorUtils::GetSystemColName(attno);
 		GPOS_ASSERT(NULL != pstrSysColName);
 
 		// copy string into column name
@@ -1017,12 +1017,12 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 										(
 										pmdnameCol, 
 										attno, 
-										CTranslatorUtils::PmdidSystemColType(memory_pool, attno),
+										CTranslatorUtils::GetSystemColType(memory_pool, attno),
 										default_type_modifier,
 										false,	// is_nullable
 										false,	// is_dropped
 										NULL,	// default value
-										CTranslatorUtils::UlSystemColLength(attno)
+										CTranslatorUtils::GetSystemColLength(attno)
 										);
 
 		mdcol_array->Append(pmdcol);
@@ -2521,7 +2521,7 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	// We only want to create statistics buckets if the column is NOT a text, varchar, char or bpchar type
 	// For the above column types we will use NDVRemain and NullFreq to do cardinality estimation.
-	if (CTranslatorUtils::FCreateStatsBucket(oidAttType))
+	if (CTranslatorUtils::ShouldCreateStatsBucket(oidAttType))
 	{
 		// transform all the bits and pieces from pg_statistic
 		// to a single bucket structure

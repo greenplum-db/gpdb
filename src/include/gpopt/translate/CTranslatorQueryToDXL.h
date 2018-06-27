@@ -260,7 +260,7 @@ namespace gpdxl
 				List *target_list,
 				List *plGroupClause,
 				BOOL fHasAggs,
-				DrgPbs *pdrgpbsGroupingSets,
+				BitSetArray *pdrgpbsGroupingSets,
 				IntUlongHashMap *phmiulSortGrpColsColId,
 				IntUlongHashMap *phmiulOutputCols,
 				UlongUlongHashMap *phmululGrpColPos		// mapping pos->unique grouping columns for grouping func arguments
@@ -448,7 +448,7 @@ namespace gpdxl
 			void ConstructCTEAnchors(DXLNodeArray *pdrgpdxln, CDXLNode **ppdxlnCTEAnchorTop, CDXLNode **ppdxlnCTEAnchorBottom);
 			
 			// generate an array of new column ids of the given size
-			ULongPtrArray *PdrgpulGenerateColIds(IMemoryPool *memory_pool, ULONG size) const;
+			ULongPtrArray *GenerateColIds(IMemoryPool *memory_pool, ULONG size) const;
 
 			// extract an array of colids from the given column mapping
 			ULongPtrArray *PdrgpulExtractColIds(IMemoryPool *memory_pool, IntUlongHashMap *phmiul) const;

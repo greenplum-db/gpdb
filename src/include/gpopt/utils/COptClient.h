@@ -129,7 +129,7 @@ namespace gpoptudfs
 			PlannedStmt *PplstmtConstruct(CMDAccessor *md_accessor, const CHAR *szPlan);
 
 			// elog wrapper
-			void Elog(ULONG ulSev, const WCHAR *wszMsg);
+			void Elog(ULONG severity, const WCHAR *wszMsg);
 
 		public:
 

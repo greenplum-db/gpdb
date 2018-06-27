@@ -264,12 +264,12 @@ COptTasks::SContextRelcacheToDXL::SContextRelcacheToDXL
 	(
 	List *plistOids,
 	ULONG ulCmpt,
-	const char *szFilename
+	const char *filename
 	)
 	:
 	m_plistOids(plistOids),
 	m_ulCmpt(ulCmpt),
-	m_szFilename(szFilename)
+	m_szFilename(filename)
 {
 	GPOS_ASSERT(NULL != plistOids);
 }
@@ -788,11 +788,11 @@ COptTasks::FExceptionFound
 {
 	GPOS_ASSERT(NULL != pulExceptions);
 
-	ULONG ulMinor = exc.Minor();
+	ULONG minor = exc.Minor();
 	BOOL fFound = false;
 	for (ULONG ul = 0; !fFound && ul < size; ul++)
 	{
-		fFound = (pulExceptions[ul] == ulMinor);
+		fFound = (pulExceptions[ul] == minor);
 	}
 
 	return fFound;
@@ -814,14 +814,14 @@ COptTasks::FUnexpectedFailure
 	gpos::CException &exc
 	)
 {
-	ULONG ulMajor = exc.Major();
+	ULONG major = exc.Major();
 
 	BOOL fExpectedOptFailure =
-		gpopt::ExmaGPOPT == ulMajor &&
+		gpopt::ExmaGPOPT == major &&
 		FExceptionFound(exc, rgulExpectedOptFallback, GPOS_ARRAY_SIZE(rgulExpectedOptFallback));
 
 	BOOL fExpectedDXLFailure =
-		(gpdxl::ExmaDXL == ulMajor || gpdxl::ExmaMD == ulMajor) &&
+		(gpdxl::ExmaDXL == major || gpdxl::ExmaMD == major) &&
 		FExceptionFound(exc, rgulExpectedDXLFallback, GPOS_ARRAY_SIZE(rgulExpectedDXLFallback));
 
 	return (!fExpectedOptFailure && !fExpectedDXLFailure);
@@ -1741,10 +1741,10 @@ void
 COptTasks::DumpMDObjs
 	(
 	List *plistOids,
-	const char *szFilename
+	const char *filename
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, szFilename);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, filename);
 	Execute(&PvDXLFromMDObjsTask, &ctxrelcache);
 }
 
@@ -1763,7 +1763,7 @@ COptTasks::SzMDObjs
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*filename*/);
 	Execute(&PvDXLFromMDObjsTask, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;
@@ -1783,7 +1783,7 @@ COptTasks::SzMDCast
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*filename*/);
 	Execute(&PvMDCast, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;
@@ -1804,7 +1804,7 @@ COptTasks::SzMDScCmp
 	char *szCmpType
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, UlCmpt(szCmpType), NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, UlCmpt(szCmpType), NULL /*filename*/);
 	Execute(&PvMDScCmp, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;
@@ -1825,7 +1825,7 @@ COptTasks::SzRelStats
 	List *plistOids
 	)
 {
-	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*szFilename*/);
+	SContextRelcacheToDXL ctxrelcache(plistOids, gpos::ulong_max /*ulCmpt*/, NULL /*filename*/);
 	Execute(&PvDXLFromRelStatsTask, &ctxrelcache);
 
 	return ctxrelcache.m_szDXL;

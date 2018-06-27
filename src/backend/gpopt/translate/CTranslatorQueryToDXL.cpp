@@ -381,7 +381,7 @@ CTranslatorQueryToDXL::FHasSirvFunctions
 	ForEach (lc, plFunctions)
 	{
 		FuncExpr *pfuncexpr = (FuncExpr *) lfirst(lc);
-		if (CTranslatorUtils::FSirvFunc(m_memory_pool, m_pmda, pfuncexpr->funcid))
+		if (CTranslatorUtils::IsSirvFunc(m_memory_pool, m_pmda, pfuncexpr->funcid))
 		{
 			fHasSirv = true;
 			break;
@@ -678,18 +678,18 @@ CTranslatorQueryToDXL::PdxlnInsert()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_pmda, m_pidgtorCol, prte, &m_fHasDistributedTables);
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::FRelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmlinsert))
+	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmlinsert))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("INSERT with triggers"));
 	}
 
-	BOOL fRelHasConstraints = CTranslatorUtils::FRelHasConstraints(pmdrel);
+	BOOL fRelHasConstraints = CTranslatorUtils::RelHasConstraints(pmdrel);
 	if (!optimizer_enable_dml_constraints && fRelHasConstraints)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("INSERT with constraints"));
 	}
 	
-	const ULONG ulLenTblCols = CTranslatorUtils::UlNonSystemColumns(pmdrel);
+	const ULONG ulLenTblCols = CTranslatorUtils::GetNumNonSystemColumns(pmdrel);
 	const ULONG ulLenTL = gpdb::ListLength(m_pquery->targetList);
 	GPOS_ASSERT(ulLenTblCols >= ulLenTL);
 	GPOS_ASSERT(ulLenTL == m_pdrgpdxlnQueryOutput->Size());
@@ -736,7 +736,7 @@ CTranslatorQueryToDXL::PdxlnInsert()
 
 		// target entry corresponding to the tables column not found, therefore
 		// add a project element with null value scalar child
-		CDXLNode *pdxlnPrE = CTranslatorUtils::PdxlnPrElNull(m_memory_pool, m_pmda, m_pidgtorCol, pmdcol);
+		CDXLNode *pdxlnPrE = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_pmda, m_pidgtorCol, pmdcol);
 		ULONG col_id = CDXLScalarProjElem::Cast(pdxlnPrE->GetOperator())->Id();
  	 	project_list_dxl->AddChild(pdxlnPrE);
 	 	pdrgpulSource->Append(GPOS_NEW(m_memory_pool) ULONG(col_id));
@@ -1035,12 +1035,12 @@ CTranslatorQueryToDXL::GetCtidAndSegmentId
 	)
 {
 	// ctid column id
-	IMDId *pmdid = CTranslatorUtils::PmdidSystemColType(m_memory_pool, SelfItemPointerAttributeNumber);
+	IMDId *pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, SelfItemPointerAttributeNumber);
 	*pulCtid = CTranslatorUtils::GetColId(m_ulQueryLevel, m_pquery->resultRelation, SelfItemPointerAttributeNumber, pmdid, m_pmapvarcolid);
 	pmdid->Release();
 
 	// segmentid column id
-	pmdid = CTranslatorUtils::PmdidSystemColType(m_memory_pool, GpSegmentIdAttributeNumber);
+	pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, GpSegmentIdAttributeNumber);
 	*pulSegmentId = CTranslatorUtils::GetColId(m_ulQueryLevel, m_pquery->resultRelation, GpSegmentIdAttributeNumber, pmdid, m_pmapvarcolid);
 	pmdid->Release();
 }
@@ -1058,7 +1058,7 @@ CTranslatorQueryToDXL::GetCtidAndSegmentId
 ULONG
 CTranslatorQueryToDXL::UlTupleOidColId()
 {
-	IMDId *pmdid = CTranslatorUtils::PmdidSystemColType(m_memory_pool, ObjectIdAttributeNumber);
+	IMDId *pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, ObjectIdAttributeNumber);
 	ULONG ulTupleOidColId = CTranslatorUtils::GetColId(m_ulQueryLevel, m_pquery->resultRelation, ObjectIdAttributeNumber, pmdid, m_pmapvarcolid);
 	pmdid->Release();
 	return ulTupleOidColId;
@@ -1083,7 +1083,7 @@ CTranslatorQueryToDXL::PdxlnDelete()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_pmda, m_pidgtorCol, prte, &m_fHasDistributedTables);
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::FRelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmldelete))
+	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmldelete))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DELETE with triggers"));
 	}
@@ -1132,12 +1132,12 @@ CTranslatorQueryToDXL::PdxlnUpdate()
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_pmda, m_pidgtorCol, prte, &m_fHasDistributedTables);
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
-	if (!optimizer_enable_dml_triggers && CTranslatorUtils::FRelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmlupdate))
+	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_pmda, pmdrel, Edxldmlupdate))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("UPDATE with triggers"));
 	}
 	
-	if (!optimizer_enable_dml_constraints && CTranslatorUtils::FRelHasConstraints(pmdrel))
+	if (!optimizer_enable_dml_constraints && CTranslatorUtils::RelHasConstraints(pmdrel))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("UPDATE with constraints"));
 	}
@@ -1353,8 +1353,8 @@ CTranslatorQueryToDXL::PdxlwfLeadLag
 		pdxlnLeadEdge = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarWindowFrameEdge(m_memory_pool, true /* fLeading */, edxlfbLead));
 		pdxlnTrailEdge = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarWindowFrameEdge(m_memory_pool, false /* fLeading */, edxlfbTrail));
 
-		pdxlnLeadEdge->AddChild(CTranslatorUtils::PdxlnInt8Const(m_memory_pool, m_pmda, 1 /*iVal*/));
-		pdxlnTrailEdge->AddChild(CTranslatorUtils::PdxlnInt8Const(m_memory_pool, m_pmda, 1 /*iVal*/));
+		pdxlnLeadEdge->AddChild(CTranslatorUtils::CreateDXLProjElemFromInt8Const(m_memory_pool, m_pmda, 1 /*iVal*/));
+		pdxlnTrailEdge->AddChild(CTranslatorUtils::CreateDXLProjElemFromInt8Const(m_memory_pool, m_pmda, 1 /*iVal*/));
 	}
 	else
 	{
@@ -1595,7 +1595,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 
 				StoreAttnoColIdMapping(phmiulOutputCols, ulResno, col_id);
 			}
-			else if (CTranslatorUtils::FWindowSpec(target_entry, plWindowClause))
+			else if (CTranslatorUtils::IsWindowSpec(target_entry, plWindowClause))
 			{
 				// add computed column used in window specification needed in the output columns
 				// to the child's project list
@@ -1650,7 +1650,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 		}
 		else if (!IsA(target_entry->expr, Var))
 		{
-			GPOS_ASSERT(CTranslatorUtils::FWindowSpec(target_entry, plWindowClause));
+			GPOS_ASSERT(CTranslatorUtils::IsWindowSpec(target_entry, plWindowClause));
 			// computed columns used in the window specification
 			pdxlnNewChildScPrL->AddChild(pdxlnPrEl);
 		}
@@ -1677,7 +1677,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
 		INT iResno = (INT) lfirst_int(plcResno);
 
-		TargetEntry *pteWindowSpec = CTranslatorUtils::PteWindowSpec( (Node*) target_entry->expr, plWindowClause, target_list);
+		TargetEntry *pteWindowSpec = CTranslatorUtils::GetWindowSpecTargetEntry( (Node*) target_entry->expr, plWindowClause, target_list);
 		if (NULL != pteWindowSpec)
 		{
 			const ULONG col_id = CTranslatorUtils::GetColId( (INT) pteWindowSpec->ressortgroupref, phmiulSortColsColId);
@@ -1709,7 +1709,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 		pdxlnNewChildScPrL->Release();
 	}
 
-	if (!CTranslatorUtils::FHasProjElem(project_list_dxl, EdxlopScalarWindowRef))
+	if (!CTranslatorUtils::HasProjElem(project_list_dxl, EdxlopScalarWindowRef))
 	{
 		project_list_dxl->Release();
 		window_spec_array->Release();
@@ -1990,7 +1990,7 @@ CTranslatorQueryToDXL::PdxlnSimpleGroupBy
 		GPOS_ASSERT(0 < target_entry->resno);
 		ULONG ulResNo = target_entry->resno;
 
-		TargetEntry *pteEquivalent = CTranslatorUtils::PteGroupingColumn( (Node *) target_entry->expr, plGroupClause, target_list);
+		TargetEntry *pteEquivalent = CTranslatorUtils::GetGroupingColumnTargetEntry( (Node *) target_entry->expr, plGroupClause, target_list);
 
 		BOOL fGroupingCol = pbsGroupByCols->Get(target_entry->ressortgroupref) || (NULL != pteEquivalent && pbsGroupByCols->Get(pteEquivalent->ressortgroupref));
 		ULONG col_id = 0;
@@ -2077,7 +2077,7 @@ CTranslatorQueryToDXL::FDuplicateDqaArg
 		Node *pnode = (Node *) lfirst(lc);
 		GPOS_ASSERT(IsA(pnode, Aggref));
 
-		if (gpdb::FEqual(paggref->args, ((Aggref *) pnode)->args))
+		if (gpdb::Equals(paggref->args, ((Aggref *) pnode)->args))
 		{
 			return true;
 		}
@@ -2143,7 +2143,7 @@ CTranslatorQueryToDXL::PdxlnGroupingSets
 	// while processing the grouping clause
 	UlongUlongHashMap *phmululGrpColPos = GPOS_NEW(m_memory_pool) UlongUlongHashMap(m_memory_pool);
 	CBitSet *pbsUniqueueGrpCols = GPOS_NEW(m_memory_pool) CBitSet(m_memory_pool, ulCols);
-	DrgPbs *pdrgpbs = CTranslatorUtils::PdrgpbsGroupBy(m_memory_pool, plGroupClause, ulCols, phmululGrpColPos, pbsUniqueueGrpCols);
+	DrgPbs *pdrgpbs = CTranslatorUtils::GetColumnAttnosForGroupBy(m_memory_pool, plGroupClause, ulCols, phmululGrpColPos, pbsUniqueueGrpCols);
 
 	const ULONG ulGroupingSets = pdrgpbs->Size();
 
@@ -2257,7 +2257,7 @@ CTranslatorQueryToDXL::PdxlnUnionAllForGroupingSets
 		CBitSet *pbsGroupingSet = (*pdrgpbs)[ul];
 
 		// remap columns
-		ULongPtrArray *pdrgpulCTEConsumer = PdrgpulGenerateColIds(m_memory_pool, pdrgpulCTEProducer->Size());
+		ULongPtrArray *pdrgpulCTEConsumer = GenerateColIds(m_memory_pool, pdrgpulCTEProducer->Size());
 		
 		// reset col mapping with new consumer columns
 		GPOS_DELETE(m_pmapvarcolid);
@@ -2469,7 +2469,7 @@ CTranslatorQueryToDXL::PdxlnFromSetOp
 	pdrgpdrgulInputColIds->Append(pdrgpulLeft);
 	pdrgpdrgulInputColIds->Append(pdrgpulRight);
 	
-	ULongPtrArray *pdrgpulOutput =  CTranslatorUtils::PdrgpulGenerateColIds
+	ULongPtrArray *pdrgpulOutput =  CTranslatorUtils::GenerateColIds
 												(
 												m_memory_pool,
 												target_list,
@@ -2557,7 +2557,7 @@ CTranslatorQueryToDXL::PdxlnSetOp
 	GPOS_ASSERT(1 < pdrgpdxlnChildren->Size());
 
 	// positions of output columns in the target list
-	ULongPtrArray *pdrgpulTLPos = CTranslatorUtils::PdrgpulPosInTargetList(m_memory_pool, plTargetListOutput, fKeepResjunked);
+	ULongPtrArray *pdrgpulTLPos = CTranslatorUtils::GetPosInTargetList(m_memory_pool, plTargetListOutput, fKeepResjunked);
 
 	const ULONG ulCols = pdrgpulOutput->Size();
 	ULongPtrArray *pdrgpulInputFirstChild = (*pdrgpdrgulInputColIds)[0];
@@ -2605,7 +2605,7 @@ CTranslatorQueryToDXL::PdxlnSetOp
 			}
 
 			pdxlcdOutput = CTranslatorUtils::GetColumnDescrAt(m_memory_pool, target_entry, ulColIdUnionOutput, ul + 1);
-			CDXLNode *pdxlnPrEl = CTranslatorUtils::PdxlnDummyPrElem(m_memory_pool, ulColIdInput, ulColIdNew, pdxlcdOutput);
+			CDXLNode *pdxlnPrEl = CTranslatorUtils::CreateDummyProjectElem(m_memory_pool, ulColIdInput, ulColIdNew, pdxlcdOutput);
 
 			pdxlnNewChildScPrL->AddChild(pdxlnPrEl);
 		}
@@ -2715,7 +2715,7 @@ CTranslatorQueryToDXL::PdxlnSetOpChild
 
 		if (RTE_SUBQUERY == prte->rtekind)
 		{
-			Query *pqueryDerTbl = CTranslatorUtils::PqueryFixUnknownTypeConstant(prte->subquery, target_list);
+			Query *pqueryDerTbl = CTranslatorUtils::FixUnknownTypeConstant(prte->subquery, target_list);
 			GPOS_ASSERT(NULL != pqueryDerTbl);
 
 			CMappingVarColId *var_col_id_mapping = m_pmapvarcolid->CopyMapColId(m_memory_pool);
@@ -3334,7 +3334,7 @@ CTranslatorQueryToDXL::PdxlnFromTVF
 		return pdxlnProject;
 	}
 
-	CDXLLogicalTVF *pdxlopTVF = CTranslatorUtils::Pdxltvf(m_memory_pool, m_pmda, m_pidgtorCol, prte);
+	CDXLLogicalTVF *pdxlopTVF = CTranslatorUtils::ConvertToCDXLLogicalTVF(m_memory_pool, m_pmda, m_pidgtorCol, prte);
 	CDXLNode *pdxlnTVF = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlopTVF);
 
 	// make note of new columns from function
@@ -3353,7 +3353,7 @@ CTranslatorQueryToDXL::PdxlnFromTVF
 	ForEach (lc, pfuncexpr->args)
 	{
 		Node *pnodeArg = (Node *) lfirst(lc);
-		fSubqueryInArgs = fSubqueryInArgs || CTranslatorUtils::FHasSubquery(pnodeArg);
+		fSubqueryInArgs = fSubqueryInArgs || CTranslatorUtils::HasSubquery(pnodeArg);
 		CDXLNode *pdxlnFuncExprArg =
 				m_psctranslator->PdxlnScOpFromExpr((Expr *) pnodeArg, m_pmapvarcolid, &m_fHasDistributedTables);
 		GPOS_ASSERT(NULL != pdxlnFuncExprArg);
@@ -3410,7 +3410,7 @@ CTranslatorQueryToDXL::PdxlnFromCTE
 	ULongPtrArray *pdrgpulCTEProducer = pdxlopProducer->GetOutputColIdsArray();
 	
 	// construct output column array
-	ULongPtrArray *pdrgpulCTEConsumer = PdrgpulGenerateColIds(m_memory_pool, pdrgpulCTEProducer->Size());
+	ULongPtrArray *pdrgpulCTEConsumer = GenerateColIds(m_memory_pool, pdrgpulCTEProducer->Size());
 			
 	// load the new columns from the CTE
 	m_pmapvarcolid->LoadCTEColumns(ulCurrQueryLevel, ulRTIndex, pdrgpulCTEConsumer, const_cast<List *>(plCTEProducerTargetList));
@@ -3511,7 +3511,7 @@ CTranslatorQueryToDXL::PdxlnLgJoinFromGPDBJoinExpr
 
 	CDXLNode *pdxlnLeftChild = PdxlnFromGPDBFromClauseEntry(pjoinexpr->larg);
 	CDXLNode *pdxlnRightChild = PdxlnFromGPDBFromClauseEntry(pjoinexpr->rarg);
-	EdxlJoinType join_type = CTranslatorUtils::EdxljtFromJoinType(pjoinexpr->jointype);
+	EdxlJoinType join_type = CTranslatorUtils::ConvertToDXLJoinType(pjoinexpr->jointype);
 	CDXLNode *pdxlnJoin = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLLogicalJoin(m_memory_pool, join_type));
 
 	GPOS_ASSERT(NULL != pdxlnLeftChild && NULL != pdxlnRightChild);
@@ -3627,7 +3627,7 @@ CTranslatorQueryToDXL::PdxlnLgProjectFromGPDBTL
 		GPOS_ASSERT(0 < target_entry->resno);
 		ulResno = target_entry->resno;
 
-		BOOL fGroupingCol = CTranslatorUtils::FGroupingColumn(target_entry, plgrpcl);
+		BOOL fGroupingCol = CTranslatorUtils::IsGroupingColumn(target_entry, plgrpcl);
 		if (!fGroupBy || (fGroupBy && fGroupingCol))
 		{
 			CDXLNode *pdxlnPrEl =  PdxlnPrEFromGPDBExpr(target_entry->expr, target_entry->resname);
@@ -3665,7 +3665,7 @@ CTranslatorQueryToDXL::PdxlnLgProjectFromGPDBTL
 		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
 		INT iSortGroupRef = (INT) target_entry->ressortgroupref;
 
-		TargetEntry *pteGroupingColumn = CTranslatorUtils::PteGroupingColumn( (Node*) target_entry->expr, plgrpcl, target_list);
+		TargetEntry *pteGroupingColumn = CTranslatorUtils::GetGroupingColumnTargetEntry( (Node*) target_entry->expr, plgrpcl, target_list);
 		if (NULL != pteGroupingColumn)
 		{
 			const ULONG col_id = CTranslatorUtils::GetColId((INT) pteGroupingColumn->ressortgroupref, phmiulSortgrouprefColId);
@@ -3780,7 +3780,7 @@ CTranslatorQueryToDXL::PdxlnProjectNullsForGroupingSets
 			col_id = m_pidgtorCol->next_id();
 
 			CMDIdGPDB *pmdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(oidType);
-			CDXLNode *pdxlnPrEl = CTranslatorUtils::PdxlnPrElNull(m_memory_pool, m_pmda, pmdid, col_id, target_entry->resname);
+			CDXLNode *pdxlnPrEl = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_pmda, pmdid, col_id, target_entry->resname);
 			pmdid->Release();
 			
 			project_list_dxl->AddChild(pdxlnPrEl);
@@ -4260,14 +4260,14 @@ CTranslatorQueryToDXL::ConstructCTEAnchors
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorQueryToDXL::PdrgpulGenerateColIds
+//		CTranslatorQueryToDXL::GenerateColIds
 //
 //	@doc:
 //		Generate an array of new column ids of the given size
 //
 //---------------------------------------------------------------------------
 ULongPtrArray *
-CTranslatorQueryToDXL::PdrgpulGenerateColIds
+CTranslatorQueryToDXL::GenerateColIds
 	(
 	IMemoryPool *memory_pool,
 	ULONG size

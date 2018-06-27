@@ -69,7 +69,7 @@ CQueryMutators::FNeedsPrLNormalization
 
 		// Normalize when there is an expression that is neither used for grouping
 		// nor is an aggregate function
-		if (!IsA(target_entry->expr, Aggref) && !IsA(target_entry->expr, GroupingFunc) && !CTranslatorUtils::FGroupingColumn( (Node*) target_entry->expr, query->groupClause, query->targetList))
+		if (!IsA(target_entry->expr, Aggref) && !IsA(target_entry->expr, GroupingFunc) && !CTranslatorUtils::IsGroupingColumn( (Node*) target_entry->expr, query->groupClause, query->targetList))
 		{
 			return true;
 		}
@@ -107,7 +107,7 @@ CQueryMutators::FNeedsToFallback
 	SContextTLWalker *pctx = (SContextTLWalker *) pvCtx;
 
 	TargetEntry *pteFound = gpdb::PteMember(pnode, pctx->m_plTE);
-	if (NULL != pteFound && CTranslatorUtils::FGroupingColumn( (Node *) pteFound->expr, pctx->m_groupClause, pctx->m_plTE))
+	if (NULL != pteFound && CTranslatorUtils::IsGroupingColumn( (Node *) pteFound->expr, pctx->m_groupClause, pctx->m_plTE))
 	{
 		return false;
 	}
@@ -184,7 +184,7 @@ CQueryMutators::PqueryNormalizeGrpByPrL
 		TargetEntry *target_entry  = (TargetEntry*) lfirst(lc);
 		GPOS_ASSERT(NULL != target_entry);
 
-		if (CTranslatorUtils::FGroupingColumn(target_entry, pqueryDrdTbl->groupClause))
+		if (CTranslatorUtils::IsGroupingColumn(target_entry, pqueryDrdTbl->groupClause))
 		{
 			target_entry->expr = (Expr*) PnodeFixGrpCol( (Node*) target_entry->expr, target_entry, &ctxGbPrLMutator);
 		}
@@ -197,7 +197,7 @@ CQueryMutators::PqueryNormalizeGrpByPrL
 		TargetEntry *target_entry  = (TargetEntry*) lfirst(lc);
 		GPOS_ASSERT(NULL != target_entry);
 
-		BOOL fGroupingCol = CTranslatorUtils::FGroupingColumn(target_entry, pqueryDrdTbl->groupClause);
+		BOOL fGroupingCol = CTranslatorUtils::IsGroupingColumn(target_entry, pqueryDrdTbl->groupClause);
 		if (!fGroupingCol)
 		{
 			target_entry->expr = (Expr*) PnodeGrpbyPrLMutator( (Node*) target_entry->expr, &ctxGbPrLMutator);
@@ -1221,8 +1221,8 @@ CQueryMutators::PqueryNormalizeHaving
 		// Add to the target lists:
 		// 	(1) All grouping / sorting columns even if they do not appear in the subquery output (resjunked)
 		//	(2) All non-resjunked target list entries
-		if (CTranslatorUtils::FGroupingColumn(target_entry, pqueryDrdTbl->groupClause) ||
-			CTranslatorUtils::FSortingColumn(target_entry, pqueryDrdTbl->sortClause) || !target_entry->resjunk)
+		if (CTranslatorUtils::IsGroupingColumn(target_entry, pqueryDrdTbl->groupClause) ||
+			CTranslatorUtils::IsSortingColumn(target_entry, pqueryDrdTbl->sortClause) || !target_entry->resjunk)
 		{
 			TargetEntry *pteNew = Pte(target_entry, ulTECount);
 			pqueryNew->targetList = gpdb::PlAppendElement(pqueryNew->targetList, pteNew);
@@ -1529,8 +1529,8 @@ CQueryMutators::PqueryEliminateDistinctClause
 		}
 
 		if (0 < target_entry->ressortgroupref &&
-			!CTranslatorUtils::FGroupingColumn(target_entry, pqueryDrdTbl->groupClause) &&
-			!CTranslatorUtils::FWindowSpec(target_entry, pqueryDrdTbl->windowClause))
+			!CTranslatorUtils::IsGroupingColumn(target_entry, pqueryDrdTbl->groupClause) &&
+			!CTranslatorUtils::IsWindowSpec(target_entry, pqueryDrdTbl->windowClause))
 		{
 			// initialize the ressortgroupref of target entries not used in the grouping clause
 			 target_entry->ressortgroupref = 0;
@@ -1585,7 +1585,7 @@ CQueryMutators::FNeedsWindowPrLNormalization
 	{
 		TargetEntry *target_entry  = (TargetEntry*) lfirst(lc);
 
-		if (!CTranslatorUtils::FWindowSpec( (Node *) target_entry->expr, query->windowClause, query->targetList) && !IsA(target_entry->expr, WindowFunc) && !IsA(target_entry->expr, Var))
+		if (!CTranslatorUtils::IsWindowSpec( (Node *) target_entry->expr, query->windowClause, query->targetList) && !IsA(target_entry->expr, WindowFunc) && !IsA(target_entry->expr, Var))
 		{
 			// computed columns in the target list that is not
 			// used in the order by or partition by of the window specification(s)
@@ -1641,14 +1641,14 @@ CQueryMutators::PqueryNormalizeWindowPrL
 		TargetEntry *target_entry  = (TargetEntry*) lfirst(lc);
 		const ULONG ulResNoNew = gpdb::ListLength(pqueryNew->targetList) + 1;
 
-		if (CTranslatorUtils::FWindowSpec(target_entry, query->windowClause))
+		if (CTranslatorUtils::IsWindowSpec(target_entry, query->windowClause))
 		{
 			// insert the target list entry used in the window specification as is
 			TargetEntry *pteNew = (TargetEntry *) gpdb::PvCopyObject(target_entry);
 			pteNew->resno = gpdb::ListLength(ctxWindowPrLMutator.m_plTENewGroupByQuery) + 1;
 			ctxWindowPrLMutator.m_plTENewGroupByQuery = gpdb::PlAppendElement(ctxWindowPrLMutator.m_plTENewGroupByQuery, pteNew);
 
-			if (!target_entry->resjunk || CTranslatorUtils::FSortingColumn(target_entry, query->sortClause))
+			if (!target_entry->resjunk || CTranslatorUtils::IsSortingColumn(target_entry, query->sortClause))
 			{
 				// if the target list entry used in the window specification is present
 				// in the query output then add it to the target list of the new top level query

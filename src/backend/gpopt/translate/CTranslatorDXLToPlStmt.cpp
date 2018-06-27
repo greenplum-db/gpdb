@@ -678,7 +678,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 					pdrgpdxltrctxPrevSiblings
 					);
 
-	pis->indexorderdir = CTranslatorUtils::Scandirection(pdxlopIndexScan->GetIndexScanDir());
+	pis->indexorderdir = CTranslatorUtils::GetScanDirection(pdxlopIndexScan->GetIndexScanDir());
 
 	// translate index condition list
 	List *plIndexConditions = NIL;
@@ -862,7 +862,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 		
 		OID oidCmpOperator = CTranslatorUtils::OidCmpOperator(pexprIndexCond);
 		GPOS_ASSERT(InvalidOid != oidCmpOperator);
-		OID oidOpFamily = CTranslatorUtils::OidIndexQualOpFamily(iAttno, CMDIdGPDB::CastMdid(index->MDId())->OidObjectId());
+		OID oidOpFamily = CTranslatorUtils::GetOpFamilyForIndexQual(iAttno, CMDIdGPDB::CastMdid(index->MDId())->OidObjectId());
 		GPOS_ASSERT(InvalidOid != oidOpFamily);
 		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype);
 		
@@ -1752,7 +1752,7 @@ CTranslatorDXLToPlStmt::PplanTranslateDXLMotion
 	)
 {
 	CDXLPhysicalMotion *pdxlopMotion = CDXLPhysicalMotion::Cast(pdxlnMotion->GetOperator());
-	if (CTranslatorUtils::FDuplicateSensitiveMotion(pdxlopMotion))
+	if (CTranslatorUtils::IsDuplicateSensitiveMotion(pdxlopMotion))
 	{
 		return PplanResultHashFilters(pdxlnMotion, pdxltrctxOut, pdrgpdxltrctxPrevSiblings);
 	}
@@ -3638,7 +3638,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 					pdrgpdxltrctxPrevSiblings
 					);
 
-	pdis->indexscan.indexorderdir = CTranslatorUtils::Scandirection(pdxlop->GetIndexScanDir());
+	pdis->indexscan.indexorderdir = CTranslatorUtils::GetScanDirection(pdxlop->GetIndexScanDir());
 
 	// translate index condition list
 	List *plIndexConditions = NIL;
@@ -3954,8 +3954,8 @@ CTranslatorDXLToPlStmt::PplanSplit
 		
 	GPOS_ASSERT(pdrgpulInsertCols->Size() == pdrgpulDeleteCols->Size());
 	
-	psplit->deleteColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulDeleteCols, &dxltrctxChild);
-	psplit->insertColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulInsertCols, &dxltrctxChild);
+	psplit->deleteColIdx = CTranslatorUtils::ConvertColidToAttnos(pdrgpulDeleteCols, &dxltrctxChild);
+	psplit->insertColIdx = CTranslatorUtils::ConvertColidToAttnos(pdrgpulInsertCols, &dxltrctxChild);
 	
 	const TargetEntry *pteActionCol = pdxltrctxOut->GetTargetEntry(pdxlop->ActionColId());
 	const TargetEntry *pteCtidCol = pdxltrctxOut->GetTargetEntry(pdxlop->GetCtIdColId());
@@ -4032,7 +4032,7 @@ CTranslatorDXLToPlStmt::PplanAssert
 	passert->errcode = MAKE_SQLSTATE(error_code[0], error_code[1], error_code[2], error_code[3], error_code[4]);
 	CDXLNode *filter_dxlnode = (*pdxlnAssert)[CDXLPhysicalAssert::EdxlassertIndexFilter];
 
-	passert->errmessage = CTranslatorUtils::PlAssertErrorMsgs(filter_dxlnode);
+	passert->errmessage = CTranslatorUtils::GetAssertErrorMsgs(filter_dxlnode);
 
 	// translate operator costs
 	TranslatePlanCosts
@@ -4145,7 +4145,7 @@ CTranslatorDXLToPlStmt::PplanRowTrigger
 	}
 	else
 	{
-		prowtrigger->oldValuesColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulOldCols, &dxltrctxChild);
+		prowtrigger->oldValuesColIdx = CTranslatorUtils::ConvertColidToAttnos(pdrgpulOldCols, &dxltrctxChild);
 	}
 
 	if (NULL == pdrgpulNewCols)
@@ -4154,7 +4154,7 @@ CTranslatorDXLToPlStmt::PplanRowTrigger
 	}
 	else
 	{
-		prowtrigger->newValuesColIdx = CTranslatorUtils::PlAttnosFromColids(pdrgpulNewCols, &dxltrctxChild);
+		prowtrigger->newValuesColIdx = CTranslatorUtils::ConvertColidToAttnos(pdrgpulNewCols, &dxltrctxChild);
 	}
 
 	pplan->lefttree = pplanChild;
@@ -4201,7 +4201,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 	GPOS_ASSERT(NULL != table_descr);
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(table_descr->MDId());
-	const ULONG ulRelColumns = CTranslatorUtils::UlNonSystemColumns(pmdrel);
+	const ULONG ulRelColumns = CTranslatorUtils::GetNumNonSystemColumns(pmdrel);
 
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
 	prte->rtekind = RTE_RELATION;
@@ -4632,7 +4632,7 @@ CTranslatorDXLToPlStmt::TranslatePlanCosts
 	*pcostStartupOut = CostFromStr(pdxlopcost->GetStartUpCostStr());
 	*pcostTotalOut = CostFromStr(pdxlopcost->GetTotalCostStr());
 	*pcostRowsOut = CostFromStr(pdxlopcost->GetRowsOutStr());
-	*piWidthOut = CTranslatorUtils::IFromStr(pdxlopcost->GetWidthStr());
+	*piWidthOut = CTranslatorUtils::GetIntFromStr(pdxlopcost->GetWidthStr());
 }
 
 //---------------------------------------------------------------------------
@@ -5184,7 +5184,7 @@ CTranslatorDXLToPlStmt::PlCtasOptions
 			GPOS_ASSERT(T_Integer == argType || T_String == argType);
 			if (T_Integer == argType)
 			{
-				pdefelem->arg = (Node *) gpdb::PvalMakeInteger(CTranslatorUtils::LFromStr(pstrValue));
+				pdefelem->arg = (Node *) gpdb::PvalMakeInteger(CTranslatorUtils::GetLongFromStr(pstrValue));
 			}
 			else
 			{

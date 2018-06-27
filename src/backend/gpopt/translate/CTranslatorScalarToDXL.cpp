@@ -1287,7 +1287,7 @@ CTranslatorScalarToDXL::PdxlnScFuncExprFromFuncExpr
 		ForEach (lc, pfuncexpr->args)
 		{
 			Node *pnodeArg = (Node *) lfirst(lc);
-			if (CTranslatorUtils::FHasSubquery(pnodeArg))
+			if (CTranslatorUtils::HasSubquery(pnodeArg))
 			{
 				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 						GPOS_WSZ_LIT("Volatile functions with subqueries in arguments"));

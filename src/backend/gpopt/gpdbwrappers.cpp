@@ -2601,7 +2601,7 @@ gpdb::PteMembers
 }
 
 bool
-gpdb::FEqual
+gpdb::Equals
 	(
 	void *p1,
 	void *p2

@@ -130,7 +130,7 @@ class COptTasks
 			char *m_szDXL;
 
 			// ctor
-			SContextRelcacheToDXL(List *plistOids, ULONG ulCmpt, const char *szFilename);
+			SContextRelcacheToDXL(List *plistOids, ULONG ulCmpt, const char *filename);
 
 			// casting function
 			static
@@ -274,7 +274,7 @@ class COptTasks
 
 		// dump metadata objects from relcache to file in DXL format
 		static
-		void DumpMDObjs(List *oids, const char *szFilename);
+		void DumpMDObjs(List *oids, const char *filename);
 
 		// dump metadata objects from relcache to a string in DXL format
 		static

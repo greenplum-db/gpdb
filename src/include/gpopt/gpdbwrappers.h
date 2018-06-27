@@ -560,7 +560,7 @@ namespace gpdb {
 	List *PteMembers(Node *node, List *targetlist);
 
 	// check if two gpdb objects are equal
-	bool FEqual(void *p1, void *p2);
+	bool Equals(void *p1, void *p2);
 
 	// does a type exist with the given oid
 	bool FTypeExists(Oid oid);

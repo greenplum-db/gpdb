@@ -70,7 +70,7 @@ namespace gpdxl
 					}
 
 					virtual
-					Var *PvarFromDXLNodeScId(const CDXLScalarIdent *pdxlop);
+					Var *PvarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
 
 			};
 
@@ -81,10 +81,10 @@ namespace gpdxl
 			CEmptyMappingColIdVar m_emptymapcidvar;
 
 			// pointer to metadata cache accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_mda;
 
 			// translator for the DXL input -> GPDB Expr
-			CTranslatorDXLToScalar m_trdxl2scalar;
+			CTranslatorDXLToScalar m_dxl2scalar_translator;
 
 		public:
 			// ctor
@@ -96,8 +96,8 @@ namespace gpdxl
 				:
 				m_memory_pool(memory_pool),
 				m_emptymapcidvar(m_memory_pool),
-				m_pmda(md_accessor),
-				m_trdxl2scalar(m_memory_pool, m_pmda, 0)
+				m_mda(md_accessor),
+				m_dxl2scalar_translator(m_memory_pool, m_mda, 0)
 			{
 			}
 
@@ -111,7 +111,7 @@ namespace gpdxl
 			// if the expression has variables, an error is thrown.
 			// caller keeps ownership of 'pdxlnExpr' and takes ownership of the returned pointer
 			virtual
-			CDXLNode *PdxlnEvaluateExpr(const CDXLNode *pdxlnExpr);
+			CDXLNode *PdxlnEvaluateExpr(const CDXLNode *expr);
 
 			// returns true iff the evaluator can evaluate constant expressions without subqueries
 			virtual

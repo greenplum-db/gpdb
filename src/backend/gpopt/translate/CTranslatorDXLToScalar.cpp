@@ -659,7 +659,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	// translate subplan test expression
 	List *plparamIds = NIL;
 
-	SubLinkType slink = CTranslatorUtils::Slink(pdxlop->GetDxlSubplanType());
+	SubLinkType slink = CTranslatorUtils::MapDXLSubplanToSublinkType(pdxlop->GetDxlSubplanType());
 	Expr *pexprTestExpr = PexprSubplanTestExpr(pdxlop->GetDxlTestExpr(), slink, pmapcidvar, &plparamIds);
 
 	const DrgPdxlcr *pdrgdxlcrOuterRefs = pdxlop->GetDxlOuterColRefsArray();
