@@ -63,47 +63,47 @@ namespace gpoptudfs
 			struct SOptParams
 			{
 				// path where socket is initialized
-				const char *m_szPath;
+				const char *m_path;
 
 				// input query
-				Query *m_pquery;
+				Query *m_query;
 			};
 
 			// input query
-			Query *m_pquery;
+			Query *m_query;
 
 			// path where socket is initialized
-			const char *m_szPath;
+			const char *m_path;
 
 			// memory pool
 			IMemoryPool *m_memory_pool;
 
 			// communicator
-			CCommunicator *m_pcomm;
+			CCommunicator *m_communicator;
 
 			// default id for the source system
 			static
-			const CSystemId m_sysidDefault;
+			const CSystemId m_default_sysid;
 
 			// error severity levels
 
 			// array mapping GPOS to elog() error severity
 			static
-			ULONG m_rgrgulSev[CException::ExsevSentinel][2];
+			ULONG elog_to_severity_map[CException::ExsevSentinel][2];
 
 			// ctor
 			COptClient
 				(
-				SOptParams *pop
+				SOptParams *op
 				)
 				:
-				m_pquery(pop->m_pquery),
-				m_szPath(pop->m_szPath),
+				m_query(op->m_query),
+				m_path(op->m_path),
 				m_memory_pool(NULL),
-				m_pcomm(NULL)
+				m_communicator(NULL)
 			{
-				GPOS_ASSERT(NULL != m_pquery);
-				GPOS_ASSERT(NULL != m_szPath);
+				GPOS_ASSERT(NULL != m_query);
+				GPOS_ASSERT(NULL != m_path);
 			}
 
 			// dtor
@@ -120,22 +120,22 @@ namespace gpoptudfs
 			void SendRequest(CMDAccessor *md_accessor);
 
 			// retrieve DXL plan
-			const CHAR *SzPlanDXL(IMDProvider *pmdp);
+			const CHAR *SzPlanDXL(IMDProvider *md_provider);
 
 			// send MD response
-			void SendMDResponse(CMDProviderCommProxy *pmdpcp, const WCHAR *wszReq);
+			void SendMDResponse(CMDProviderCommProxy *md_provider_proxy, const WCHAR *req);
 
 			// build planned statement from serialized plan
-			PlannedStmt *PplstmtConstruct(CMDAccessor *md_accessor, const CHAR *szPlan);
+			PlannedStmt *ConstructPlanStmt(CMDAccessor *md_accessor, const CHAR *serialized_plan);
 
 			// elog wrapper
-			void Elog(ULONG severity, const WCHAR *wszMsg);
+			void Elog(ULONG severity, const WCHAR *msg);
 
 		public:
 
 			// invoke optimizer instance
 			static
-			void *PvRun(void *pv);
+			void *Run(void *pv);
 
 	}; // class COptClient
 }
