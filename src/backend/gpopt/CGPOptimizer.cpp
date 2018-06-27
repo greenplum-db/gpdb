@@ -115,7 +115,7 @@ CGPOptimizer::SerializeDXLPlan
 {
 	GPOS_TRY;
 	{
-		return COptTasks::SzOptimize(query);
+		return COptTasks::Optimize(query);
 	}
 	GPOS_CATCH_EX(ex);
 	{
