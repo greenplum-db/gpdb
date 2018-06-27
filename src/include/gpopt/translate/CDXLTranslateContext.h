@@ -34,14 +34,14 @@ namespace gpdxl
 
 	// hash maps mapping ULONG -> TargetEntry
 	typedef CHashMap<ULONG, TargetEntry, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-		CleanupDelete<ULONG>, CleanupNULL > HMUlTe;
+		CleanupDelete<ULONG>, CleanupNULL > ULongToTargetEntryMap;
 
 	// hash maps mapping ULONG -> CMappingElementColIdParamId
 	typedef CHashMap<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-		CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > HMColParam;
+		CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > ULongToColParamMap;
 
 	typedef CHashMapIter<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-					CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > HMColParamIter;
+					CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > ULongToColParamMapIter;
 
 
 	//---------------------------------------------------------------------------
@@ -63,10 +63,10 @@ namespace gpdxl
 			CDXLTranslateContext(const CDXLTranslateContext&);
 
 			// mappings ColId->TargetEntry used for intermediate DXL nodes
-			HMUlTe *m_colid_to_target_entry_map;
+			ULongToTargetEntryMap *m_colid_to_target_entry_map;
 
 			// mappings ColId->ParamId used for outer refs in subplans
-			HMColParam *m_colid_to_paramid_map;
+			ULongToColParamMap *m_colid_to_paramid_map;
 
 			// is the node for which this context is built a child of an aggregate node
 			// This is used to assign 0 instead of OUTER for the varno value of columns
@@ -76,13 +76,13 @@ namespace gpdxl
 			BOOL m_is_child_agg_node;
 
 			// copy the params hashmap
-			void CopyParamHashmap(HMColParam *original);
+			void CopyParamHashmap(ULongToColParamMap *original);
 
 		public:
 			// ctor/dtor
 			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL is_child_agg_node);
 
-			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL is_child_agg_node, HMColParam *original);
+			CDXLTranslateContext(IMemoryPool *memory_pool, BOOL is_child_agg_node, ULongToColParamMap *original);
 
 			~CDXLTranslateContext();
 
@@ -90,7 +90,7 @@ namespace gpdxl
 			BOOL IsParentAggNode() const;
 
 			// return the params hashmap
-			HMColParam *GetColIdToParamIdMap()
+			ULongToColParamMap *GetColIdToParamIdMap()
 			{
 				return m_colid_to_paramid_map;
 			}
@@ -110,7 +110,7 @@ namespace gpdxl
 
 
 	// array of dxl translation context
-	typedef CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL> DrgPdxltrctx;
+	typedef CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL> DXLTranslationContextArr;
 }
 
 #endif // !GPDXL_CDXLTranslateContext_H

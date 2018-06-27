@@ -221,7 +221,7 @@ namespace gpdxl
 				CDXLPhysicalIndexScan *pdxlopIndexScan,
 				CDXLTranslateContext *output_context,
 				BOOL fIndexOnlyScan,
-				DrgPdxltrctx *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
+				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
 			// translate DXL hash join into a HashJoin node

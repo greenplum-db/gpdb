@@ -36,8 +36,8 @@ CDXLTranslateContext::CDXLTranslateContext
 	m_is_child_agg_node(is_child_agg_node)
 {
 	// initialize hash table
-	m_colid_to_target_entry_map = GPOS_NEW(m_memory_pool) HMUlTe(m_memory_pool);
-	m_colid_to_paramid_map = GPOS_NEW(m_memory_pool) HMColParam(m_memory_pool);
+	m_colid_to_target_entry_map = GPOS_NEW(m_memory_pool) ULongToTargetEntryMap(m_memory_pool);
+	m_colid_to_paramid_map = GPOS_NEW(m_memory_pool) ULongToColParamMap(m_memory_pool);
 }
 
 //---------------------------------------------------------------------------
@@ -52,14 +52,14 @@ CDXLTranslateContext::CDXLTranslateContext
 	(
 	IMemoryPool *memory_pool,
 	BOOL is_child_agg_node,
-	HMColParam *original
+	ULongToColParamMap *original
 	)
 	:
 	m_memory_pool(memory_pool),
 	m_is_child_agg_node(is_child_agg_node)
 {
-	m_colid_to_target_entry_map = GPOS_NEW(m_memory_pool) HMUlTe(m_memory_pool);
-	m_colid_to_paramid_map = GPOS_NEW(m_memory_pool) HMColParam(m_memory_pool);
+	m_colid_to_target_entry_map = GPOS_NEW(m_memory_pool) ULongToTargetEntryMap(m_memory_pool);
+	m_colid_to_paramid_map = GPOS_NEW(m_memory_pool) ULongToColParamMap(m_memory_pool);
 	CopyParamHashmap(original);
 }
 
@@ -102,11 +102,11 @@ CDXLTranslateContext::IsParentAggNode() const
 void
 CDXLTranslateContext::CopyParamHashmap
 	(
-	HMColParam *original
+	ULongToColParamMap *original
 	)
 {
 	// iterate over full map
-	HMColParamIter hashmapiter(original);
+	ULongToColParamMapIter hashmapiter(original);
 	while (hashmapiter.Advance())
 	{
 		CMappingElementColIdParamId *colidparamid = const_cast<CMappingElementColIdParamId *>(hashmapiter.Value());

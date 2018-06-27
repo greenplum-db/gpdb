@@ -185,7 +185,7 @@ CTranslatorDXLToPlStmt::PplstmtFromDXL
 
 	CDXLTranslateContext dxltrctx(m_memory_pool, false);
 
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
+	DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
 	Plan *pplan = PplFromDXL(dxlnode, &dxltrctx, pdrgpdxltrctxPrevSiblings);
 	pdrgpdxltrctxPrevSiblings->Release();
 
@@ -611,7 +611,7 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 	CDXLPhysicalIndexScan *pdxlopIndexScan,
 	CDXLTranslateContext *output_context,
 	BOOL fIndexOnlyScan,
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings
+	DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings
 	)
 {
 	// translation context for column mappings in the base relation
@@ -1056,7 +1056,7 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	Plan *pplanLeft = PplFromDXL(pdxlnLeft, &dxltrctxLeft, pdrgpdxltrctxPrevSiblings);
 
 	// the right side of the join is the one where the hash phase is done
-	DrgPdxltrctx *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
+	DXLTranslationContextArr *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
 	pdrgpdxltrctxWithSiblings->Append(&dxltrctxLeft);
 	pdrgpdxltrctxWithSiblings->AppendArray(pdrgpdxltrctxPrevSiblings);
 	Plan *pplanRight = (Plan*) PhhashFromDXL(pdxlnRight, &dxltrctxRight, pdrgpdxltrctxWithSiblings);
@@ -1494,7 +1494,7 @@ CTranslatorDXLToPlStmt::PnljFromDXLNLJ
 	// because inner child depends on variables coming from outer child
 	pj->prefetch_inner = !pdxlnlj->IsIndexNLJ();
 
-	DrgPdxltrctx *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
+	DXLTranslationContextArr *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
 	Plan *pplanLeft = NULL;
 	Plan *pplanRight = NULL;
 	if (pdxlnlj->IsIndexNLJ())
@@ -1613,7 +1613,7 @@ CTranslatorDXLToPlStmt::PmjFromDXLMJ
 
 	Plan *pplanLeft = PplFromDXL(pdxlnLeft, &dxltrctxLeft, pdrgpdxltrctxPrevSiblings);
 
-	DrgPdxltrctx *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
+	DXLTranslationContextArr *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
 	pdrgpdxltrctxWithSiblings->Append(&dxltrctxLeft);
 	pdrgpdxltrctxWithSiblings->AppendArray(pdrgpdxltrctxPrevSiblings);
 

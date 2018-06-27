@@ -706,7 +706,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 							(dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->GetDXLToPlStmtContext(),
 							m_num_of_segments
 							);
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_memory_pool) DrgPdxltrctx(m_memory_pool);
+	DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
 	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, &dxltrctxSubplan, pdrgpdxltrctxPrevSiblings);
 	pdrgpdxltrctxPrevSiblings->Release();
 
