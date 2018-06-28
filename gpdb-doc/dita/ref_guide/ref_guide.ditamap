@@ -138,6 +138,12 @@
 			<topicref href="system_catalogs/catalog_ref-tables.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-views.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-html.xml#topic1">
+				<topicref href="system_catalogs/foreign_data_wrapper_options.xml"/>
+				<topicref href="system_catalogs/foreign_data_wrappers.xml"/>
+				<topicref href="system_catalogs/foreign_server_options.xml"/>
+				<topicref href="system_catalogs/foreign_servers.xml"/>
+				<topicref href="system_catalogs/foreign_table_options.xml"/>
+				<topicref href="system_catalogs/foreign_tables.xml"/>
 				<topicref href="system_catalogs/gp_configuration_history.xml"/>
 				<topicref href="system_catalogs/gp_distributed_log.xml"/>
 				<topicref href="system_catalogs/gp_distributed_xacts.xml"/>
@@ -177,6 +183,9 @@
 				<topicref href="system_catalogs/pg_enum.xml"/>
 				<topicref href="system_catalogs/pg_extension.xml"/>
 				<topicref href="system_catalogs/pg_exttable.xml"/>
+				<topicref href="system_catalogs/pg_foreign_data_wrapper.xml"/>
+				<topicref href="system_catalogs/pg_foreign_server.xml"/>
+				<topicref href="system_catalogs/pg_foreign_table.xml"/>
 				<topicref href="system_catalogs/pg_index.xml"/>
 				<topicref href="system_catalogs/pg_inherits.xml"/>
 				<topicref href="system_catalogs/pg_language.xml"/>
@@ -218,6 +227,9 @@
 				<topicref href="system_catalogs/pg_type.xml"/>
 				<topicref href="system_catalogs/pg_type_encoding.xml"/>
 				<topicref href="system_catalogs/pg_user_mapping.xml"/>
+				<topicref href="system_catalogs/pg_user_mappings.xml"/>
+				<topicref href="system_catalogs/user_mapping_options.xml"/>
+				<topicref href="system_catalogs/user_mappings.xml"/>
 			</topicref>
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>

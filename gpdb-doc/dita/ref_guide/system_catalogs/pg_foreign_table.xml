@@ -2,11 +2,11 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic xml:lang="en" id="topic1">
-  <title>pg_user_mapping</title>
+  <title>pg_foreign_table</title>
   <body>
-    <p>The system catalog table <codeph>pg_user_mapping</codeph> stores the mappings from local user to remote user. You must have administrator privileges to view this catalog. Access to this catalog is restricted from normal users, use the <codeph>pg_user_mappings</codeph> view instead.</p>
+    <p>The system catalog table <codeph>pg_foreign_table</codeph> contains auxiliary information about foreign tables. A foreign table is primarily represented by a <codeph>pg_class</codeph> entry, just like a regular table. Its <codeph>pg_foreign_table</codeph> entry contains the information that is pertinent only to foreign tables and not any other kind of relation.</p>
     <table id="table_zgy_xfx_tz">
-      <title>pg_catalog.pg_user_mapping</title>
+      <title>pg_catalog.pg_foreign_table</title>
       <tgroup cols="4">
         <colspec colnum="1" colname="col1" colwidth="131pt"/>
         <colspec colnum="2" colname="col2" colwidth="86pt"/>
@@ -22,22 +22,22 @@
         </thead>
         <tbody>
           <row>
-            <entry colname="col1"><codeph>umuser</codeph></entry>
+            <entry colname="col1"><codeph>ftrelid</codeph></entry>
             <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_authid.oid</entry>
-            <entry colname="col4">OID of the local role being mapped, 0 if the user mapping is public.</entry>
+            <entry colname="col3">pg_class.oid</entry>
+            <entry colname="col4">OID of the <codeph>pg_class</codeph> entry for this foreign table.</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>umserver</codeph></entry>
+            <entry colname="col1"><codeph>ftserver</codeph></entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_foreign_server.oid</entry>
-            <entry colname="col4">OID of the foreign server that contains this mapping.</entry>
+            <entry colname="col4">OID of the foreign server for this foreign table.</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>umoptions</codeph></entry>
+            <entry colname="col1"><codeph>ftoptions</codeph></entry>
             <entry colname="col2">text[]</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">User mapping-specific options, as "keyword=value" strings.</entry>
+            <entry colname="col4">Foreign table options, as "keyword=value" strings.</entry>
           </row>
         </tbody>
       </tgroup>
