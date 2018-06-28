@@ -654,7 +654,7 @@ resources:
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
-    bucket: madlib-concourse
+    bucket: {{madlib-gppkg-bucket}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: {{madlib-gpdb6-centos6-gppkg}}
