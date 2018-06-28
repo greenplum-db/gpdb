@@ -1717,7 +1717,7 @@ acquire_hll_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats)
 	for (i = 0; i < nattrs; i++)
 	{
 		const char *attname = quote_identifier(NameStr(attrstats[i]->attr->attname));
-		appendStringInfo(&columnStr, "hyperloglog_accum(%s)", attname);
+		appendStringInfo(&columnStr, "gp_hyperloglog.hyperloglog_accum(%s)", attname);
 		if(i != nattrs-1)
 			appendStringInfo(&columnStr, ", ");
 	}
