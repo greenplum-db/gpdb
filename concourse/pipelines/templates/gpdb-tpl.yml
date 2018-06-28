@@ -121,13 +121,11 @@ groups:
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
 {% for test_name in aa_Test_suites %}
-{% set orca_state = 'off' if "planner" in test_name else 'on' %}
   - MADlib_Test_[[ test_name ]]_centos6
 {% if "centos7" in os_types %}
   - MADlib_Test_[[ test_name ]]_centos7
 {% endif %}
 {% endfor %}
-  - gate_advanced_analytics_end
 {% endif %}
 
 
@@ -287,7 +285,7 @@ groups:
 {% endif %}
 
 {% if "AA" in test_sections %}
-- name: Advanced Analytics
+- name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
 {% for test_name in aa_Test_suites %}
@@ -296,7 +294,6 @@ groups:
   - MADlib_Test_[[ test_name ]]_centos7
 {% endif %}
 {% endfor %}
-  - gate_advanced_analytics_end
 {% endif %}
 
 ## ======================================================================
@@ -2317,34 +2314,7 @@ jobs:
       ORCA: "[[ orca_state ]]"
       DBVER: gpdb6-assert
 {% endif %}
-
 {% endfor %}
-
-
-- name: gate_advanced_analytics_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      trigger: true
-      passed:
-{% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos6
-{% if "centos7" in os_types %}
-      - MADlib_Test_[[ test_name ]]_centos7
-{% endif %}
-{% endfor %}
-    - get: bin_gpdb_centos6
-      passed:
-{% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos6
-{% endfor %}
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-{% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos7
-{% endfor %}
-{% endif %}
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -2429,7 +2399,6 @@ jobs:
 {% endfor %}
 {% for test_name in aa_Test_suites %}
       - MADlib_Test_[[ test_name ]]_centos6
-      - MADlib_Test_[[ test_name ]]_centos7
 {% endfor %}
       - gpexpand
       - gpcheck
@@ -2445,7 +2414,6 @@ jobs:
       - icw_planner_centos7
       - resource_group_centos7
       {% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos6
       - MADlib_Test_[[ test_name ]]_centos7
       {% endfor %}
     - get: bin_gpdb_sles11
