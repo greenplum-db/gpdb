@@ -8,11 +8,11 @@
             <codeph>filename.txt</codeph> on port 8081.</p>
       <p>
          <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( 
-        name text, 
-        date date, 
-        amount float4, 
-        category text, 
-        desc1 text ) 
+        name text,
+        date date,
+        amount float4,
+        category text,
+        desc1 text )
    LOCATION ('gphdfs://hdfshost-1:8081/data/filename.txt') 
    FORMAT 'TEXT' (DELIMITER ',');
 </codeblock>
@@ -20,7 +20,12 @@
       <p>The following code defines a set of readable external tables that have a custom format
          located in the same HDFS directory on port 8081.</p>
       <p>
-         <codeblock>=# CREATE EXTERNAL TABLE ext_expenses 
+         <codeblock>=# CREATE EXTERNAL TABLE ext_expenses (
+        name text,
+        date date,
+        amount float4,
+        category text,
+        desc1 text )
    LOCATION ('gphdfs://hdfshost-1:8081/data/custdat*.dat') 
    FORMAT 'custom' (formatter='gphdfs_import');
 </codeblock>
@@ -28,7 +33,12 @@
       <p>The following code defines an HDFS directory for a writable external table on port 8081
          with all compression options specified.</p>
       <p>
-         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses 
+         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses (
+        name text,
+        date date,
+        amount float4,
+        category text,
+        desc1 text )
    LOCATION ('gphdfs://hdfshost-1:8081/data/?compress=true&amp;compression_type=RECORD
    &amp;codec=org.apache.hadoop.io.compress.DefaultCodec') 
    FORMAT 'custom' (formatter='gphdfs_export');
@@ -38,7 +48,12 @@
             <codeph>compression_type</codeph> and <codeph>codec</codeph>, the following command is
          equivalent.</p>
       <p>
-         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses 
+         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses (
+        name text,
+        date date,
+        amount float4,
+        category text,
+        desc1 text )
    LOCATION    ('gphdfs://hdfshost-1:8081/data?compress=true')
    FORMAT 'custom' (formatter='gphdfs_export');
 </codeblock>
