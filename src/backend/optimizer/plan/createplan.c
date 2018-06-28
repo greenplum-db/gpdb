@@ -1546,7 +1546,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	/*
 	 * initialize a file-to-segdb mapping. segdb_file_map string array indexes
 	 * segindex and the entries are the external file path is assigned to this
-	 * segment datbase. For example if segdb_file_map[2] has "/tmp/emp.1" then
+	 * segment database. For example if segdb_file_map[2] has "/tmp/emp.1" then
 	 * this file is assigned to primary segdb 2. if an entry has NULL then
 	 * that segdb isn't assigned any file.
 	 */

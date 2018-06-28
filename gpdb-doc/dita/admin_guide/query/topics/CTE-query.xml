@@ -156,7 +156,7 @@ SELECT * FROM search_graph;
     SELECT n+1 FROM t
 )
 SELECT n FROM t LIMIT 100;</codeblock>
-    <p>The technique works because the recursvie <codeph>WITH</codeph> implementation evaluates only
+    <p>The technique works because the recursive <codeph>WITH</codeph> implementation evaluates only
       as many rows of a <codeph>WITH</codeph> query as are actually fetched by the parent query.
       Using this technique in production is not recommended, because other systems might work
       differently. Also, the technique might not work if the outer query sorts the recursive

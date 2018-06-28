@@ -47,7 +47,7 @@
         produce the answer to a query. Each <i>node</i> or step in the plan represents a database
         operation such as a table scan, join, aggregation, or sort. Plans are read and executed from
         bottom to top.</p>
-      <p id="iy146386">In addition to common database operations such as tables scans, joins, and so
+      <p id="iy146386">In addition to common database operations such as table scans, joins, and so
         on, Greenplum Database has an additional operation type called <i>motion</i>.
         A motion operation involves moving tuples between the segments during query processing. Note
         that not every query requires a motion. For example, a targeted query plan does not require
