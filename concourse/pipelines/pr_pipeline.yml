@@ -55,6 +55,21 @@ jobs:
         path: gpdb_pr
         status: pending
 
+    - task: sync_tools_centos6
+      file: gpdb_pr/concourse/tasks/sync_tools.yml
+      image: centos-gpdb-dev-6
+      input_mapping:
+        gpdb_src: gpdb_pr
+      params:
+        IVYREPO_HOST: {{ivyrepo_host}}
+        IVYREPO_REALM: {{ivyrepo_realm}}
+        IVYREPO_USER: {{ivyrepo_user}}
+        IVYREPO_PASSWD: {{ivyrepo_passwd}}
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+        TASK_OS: centos
+        TASK_OS_VERSION: 6
+
     - aggregate:
       - task: compile_gpdb_open_source_centos6
         file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_centos.yml
@@ -77,10 +92,6 @@ jobs:
           gpdb_src: gpdb_pr
         on_failure: *pr_failure
         params:
-          IVYREPO_HOST: {{ivyrepo_host}}
-          IVYREPO_REALM: {{ivyrepo_realm}}
-          IVYREPO_USER: {{ivyrepo_user}}
-          IVYREPO_PASSWD: {{ivyrepo_passwd}}
           CONFIGURE_FLAGS: {{configure_flags}}
           TARGET_OS: centos
           TARGET_OS_VERSION: 6
