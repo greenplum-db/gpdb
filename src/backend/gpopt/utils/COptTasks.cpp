@@ -1067,8 +1067,8 @@ COptTasks::OptimizeTask
 			// translate DXL->PlStmt only when needed
 			if (opt_ctxt->m_should_generate_plan_stmt)
 			{
-				// always use opt_ctxt->m_query->canSetTag as the query_to_dxl_translator->Pquery() is a mutated Query object
-				// that may not have the correct canSetTag
+				// always use opt_ctxt->m_query->can_set_tag as the query_to_dxl_translator->Pquery() is a mutated Query object
+				// that may not have the correct can_set_tag
 				opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::PvCopyObject(ConvertToPlanStmtFromDXL(memory_pool, &mda, plan_dxl, opt_ctxt->m_query->canSetTag));
 			}
 

@@ -67,7 +67,7 @@ CConstExprEvaluatorProxy::PdxlnEvaluateExpr
 	)
 {
 	// Translate DXL -> GPDB Expr
-	Expr *expr = m_dxl2scalar_translator.PexprFromDXLNodeScalar(dxl_expr, &m_emptymapcidvar);
+	Expr *expr = m_dxl2scalar_translator.CreateScalarExprFromDXL(dxl_expr, &m_emptymapcidvar);
 	GPOS_ASSERT(NULL != expr);
 
 	// Evaluate the expression

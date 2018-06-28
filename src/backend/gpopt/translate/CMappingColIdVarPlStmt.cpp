@@ -45,7 +45,7 @@ CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
 	(
 	IMemoryPool *memory_pool,
 	const CDXLTranslateContextBaseTable *base_table_context,
-	DrgPdxltrctx *child_contexts,
+	DXLTranslationContextArr *child_contexts,
 	CDXLTranslateContext *output_context,
 	CContextDXLToPlStmt *dxl_to_plstmt_context
 	)
