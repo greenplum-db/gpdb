@@ -3678,10 +3678,6 @@ AlterTableGetLockLevel(List *cmds)
 			case AT_PartSplit:
 			case AT_PartTruncate:
 			case AT_PartAddInternal:
-				/*
-				 * GPDB_91_MERGE_FIXME: Is AccessExclusiveLock unnecessarily strict for
-				 * some of these?
-				 */
 				cmd_lockmode = AccessExclusiveLock;
 				break;
 
@@ -14204,7 +14200,6 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 	}
 
 	/* execute the command */
-	/* GPDB_91_MERGE_FIXME: is this lock mode right? */
 	ATExecCmd(wqueue, tab, (rel2 ? &rel2 : rel), atc, AccessExclusiveLock);
 
 	if (!bPartitionCmd)
@@ -14500,7 +14495,7 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 	ATExecDropInherit(oldrel,
 			makeRangeVar(get_namespace_name(parent->rd_rel->relnamespace),
 					     RelationGetRelationName(parent), -1),
-					  AccessExclusiveLock, /* GPDB_91_MERGE_FIXME: lock mode? */
+					  AccessExclusiveLock, /* Not used for anything in ATExecDropInherit() */
 					  true);
 
 	inherit_parent(parent, newrel, true /* it's a partition */, NIL);
