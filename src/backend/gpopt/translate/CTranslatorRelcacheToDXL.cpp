@@ -885,7 +885,7 @@ CTranslatorRelcacheToDXL::PdxlnDefaultColumnValue
 							NULL /* cte_dxlnode_array */
 							);
 
-	return sctranslator.PdxlnScOpFromExpr
+	return sctranslator.CreateScalarOpFromExpr
 							(
 							(Expr *) node,
 							NULL /* var_col_id_mapping --- subquery or external variable are not supported in default expression */
@@ -2098,7 +2098,7 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 	var_col_id_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */, pdrgpdxlcd);
 
 	// translate the check constraint expression
-	CDXLNode *pdxlnScalar = sctranslator.PdxlnScOpFromExpr((Expr *) node, var_col_id_mapping);
+	CDXLNode *pdxlnScalar = sctranslator.CreateScalarOpFromExpr((Expr *) node, var_col_id_mapping);
 
 	// cleanup
 	pdrgpdxlcd->Release();
@@ -2972,7 +2972,7 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBMCV
 	for (ULONG ul = 0; ul < ulNumMCVValues; ul++)
 	{
 		Datum datumMCV = pdrgdatumMCVValues[ul];
-		IDatum *pdatum = CTranslatorScalarToDXL::Pdatum(memory_pool, pmdtype, false /* is_null */, datumMCV);
+		IDatum *pdatum = CTranslatorScalarToDXL::GetDatum(memory_pool, pmdtype, false /* is_null */, datumMCV);
 		pdrgpdatum->Append(pdatum);
 		pdrgpdFreq->Append(GPOS_NEW(memory_pool) CDouble(pdrgfMCVFrequencies[ul]));
 
@@ -3032,10 +3032,10 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 	for (ULONG ul = 0; ul < ulBuckets; ul++)
 	{
 		Datum datumMin = pdrgdatumHistValues[ul];
-		IDatum *pdatumMin = CTranslatorScalarToDXL::Pdatum(memory_pool, pmdtype, false /* is_null */, datumMin);
+		IDatum *pdatumMin = CTranslatorScalarToDXL::GetDatum(memory_pool, pmdtype, false /* is_null */, datumMin);
 
 		Datum datumMax = pdrgdatumHistValues[ul + 1];
-		IDatum *pdatumMax = CTranslatorScalarToDXL::Pdatum(memory_pool, pmdtype, false /* is_null */, datumMax);
+		IDatum *pdatumMax = CTranslatorScalarToDXL::GetDatum(memory_pool, pmdtype, false /* is_null */, datumMax);
 		BOOL is_lower_closed, is_upper_closed;
 
 		if (pdatumMin->StatsAreEqual(pdatumMax))
@@ -3599,7 +3599,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrFromNode
 	var_col_id_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */, pdrgpdxlcd);
 
 	// translate the check constraint expression
-	CDXLNode *pdxlnScalar = sctranslator.PdxlnScOpFromExpr((Expr *) pnodeCnstr, var_col_id_mapping);
+	CDXLNode *pdxlnScalar = sctranslator.CreateScalarOpFromExpr((Expr *) pnodeCnstr, var_col_id_mapping);
 
 	// cleanup
 	GPOS_DELETE(var_col_id_mapping);

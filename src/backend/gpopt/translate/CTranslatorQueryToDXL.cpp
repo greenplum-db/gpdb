@@ -3354,7 +3354,7 @@ CTranslatorQueryToDXL::PdxlnFromTVF
 		Node *pnodeArg = (Node *) lfirst(lc);
 		fSubqueryInArgs = fSubqueryInArgs || CTranslatorUtils::HasSubquery(pnodeArg);
 		CDXLNode *pdxlnFuncExprArg =
-				m_psctranslator->PdxlnScOpFromExpr((Expr *) pnodeArg, m_pmapvarcolid, &m_fHasDistributedTables);
+				m_psctranslator->CreateScalarOpFromExpr((Expr *) pnodeArg, m_pmapvarcolid, &m_fHasDistributedTables);
 		GPOS_ASSERT(NULL != pdxlnFuncExprArg);
 		pdxlnTVF->AddChild(pdxlnFuncExprArg);
 	}
@@ -3486,7 +3486,7 @@ CTranslatorQueryToDXL::PdxlnScFromGPDBExpr
 	Expr *pexpr
 	)
 {
-	CDXLNode *pdxlnScalar = m_psctranslator->PdxlnScOpFromExpr(pexpr, m_pmapvarcolid, &m_fHasDistributedTables);
+	CDXLNode *pdxlnScalar = m_psctranslator->CreateScalarOpFromExpr(pexpr, m_pmapvarcolid, &m_fHasDistributedTables);
 	GPOS_ASSERT(NULL != pdxlnScalar);
 
 	return pdxlnScalar;
