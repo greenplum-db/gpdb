@@ -118,8 +118,7 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 	rel = make_rel_from_joinlist(root, joinlist);
 
 	/* CDB: No path might be found if user set enable_xxx = off */
-	if (!rel ||
-		!rel->cheapest_total_path)
+	if (!rel || !rel->cheapest_total_path)
 		cdb_no_path_for_query();	/* raise error - no return */
 
 	/*
@@ -1335,8 +1334,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 		}
 
 		/* CDB: Fail if no path could be built due to set enable_xxx = off. */
-		if (!thisrel ||
-			!thisrel->cheapest_total_path)
+		if (!thisrel || !thisrel->cheapest_total_path)
 			return NULL;
 
 		initial_rels = lappend(initial_rels, thisrel);
@@ -1456,9 +1454,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 		 * Do cleanup work on each just-processed rel.
 		 */
 		prev = NULL;
-		for (lc = list_head(root->join_rel_level[lev]);
-			 lc != NULL;
-			 lc = next)
+		for (lc = list_head(root->join_rel_level[lev]); lc != NULL; lc = next)
 		{
 			next = lnext(lc);
 			rel = (RelOptInfo *) lfirst(lc);

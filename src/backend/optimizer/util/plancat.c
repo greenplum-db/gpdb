@@ -442,69 +442,71 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
         return;
     }
 
-
 	/* coerce values in pg_class to more desirable types */
 	relpages = (BlockNumber) rel->rd_rel->relpages;
 	reltuples = (double) rel->rd_rel->reltuples;
 
 	/*
-	 * Asking the QE for the size of the relation is a bit expensive.
-	 * Do we want to do it all the time?  Or only for tables that have never had analyze run?
+	 * Asking the QE for the size of the relation is a bit expensive.  Do we
+	 * want to do it all the time?  Or only for tables that have never had
+	 * analyze run?
 	 */
-
 	if (relpages > 0)
 	{
-
 		/*
-		 * Let's trust the values we had from analyze, even though they might be out of date.
+		 * Let's trust the values we had from analyze, even though they might
+		 * be out of date.
 		 *
-		 * NOTE: external tables are created with estimated larger than zero values. therefore
-		 * we will get here too even though we can never analyze them.
+		 * NOTE: external tables are created with estimated larger than zero
+		 * values, therefore we will get here too even though we can never
+		 * analyze them.
 		 */
-
 		curpages = relpages;
 	}
 	else if (RelationIsExternal(rel))
 	{
-		/*
-		 * If the relation is an external table use default curpages
-		 */
 		curpages = DEFAULT_EXTERNAL_TABLE_PAGES;
 	}
 	else
 	{
 		/*
-		 * If GUC gp_enable_relsize_collection is on, get the size of the table to derive curpages
-		 * else use the default value
+		 * If GUC gp_enable_relsize_collection is on, get the size of the table
+		 * to derive curpages, else use the default value.
 		 */
-		curpages = gp_enable_relsize_collection ? cdbRelMaxSegSize(rel) / BLCKSZ : DEFAULT_INTERNAL_TABLE_PAGES;
+		if (gp_enable_relsize_collection)
+			curpages = cdbRelMaxSegSize(rel) / BLCKSZ;
+		else
+			curpages = DEFAULT_INTERNAL_TABLE_PAGES;
 	}
 
 	/* report estimated # pages */
 	*pages = curpages;
 
 	/*
-	 * If it's an index, discount the metapage.  This is a kluge
-	 * because it assumes more than it ought to about index contents;
-	 * it's reasonably OK for btrees but a bit suspect otherwise.
+	 * If it's an index, discount the metapage.  This is a kluge because it
+	 * assumes more than it ought to about index contents; it's reasonably OK
+	 * for btrees but a bit suspect otherwise.
 	 */
-	if (rel->rd_rel->relkind == RELKIND_INDEX &&
-		relpages > 0)
+	if (rel->rd_rel->relkind == RELKIND_INDEX && relpages > 0)
 	{
 		curpages--;
 		relpages--;
 	}
-	/* estimate number of tuples from previous tuple density (as of last analyze) */
+
+	/*
+	 * Estimate number of tuples from previous tuple density (as of last
+	 * analyze)
+	 */
 	if (relpages > 0)
 		density = reltuples / (double) relpages;
 	else
 	{
-        /*
-         * When we have no data because the relation was truncated,
-         * estimate tuples per page from attribute datatypes.
+		/*
+		 * When we have no data because the relation was truncated, estimate
+		 * tuples per page from attribute datatypes.
 		 *
 		 * (This is the same computation as in get_relation_info()
-         */
+		 */
 		int32		tuple_width;
 
 		tuple_width = get_rel_data_width(rel, attr_widths);
@@ -515,9 +517,9 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	}
 	*tuples = ceil(density * curpages);
 
-	elog(DEBUG2,"cdb_estimate_rel_size  estimated %g tuples and %d pages",*tuples,(int)*pages);
-
-}                               /* cdb_estimate_rel_size */
+	elog(DEBUG2, "cdb_estimate_rel_size estimated %g tuples and %d pages",
+		 *tuples, (int) *pages);
+}
 
 
 /*
