@@ -126,7 +126,7 @@ CTranslatorUtils::GetTableDescr
 	// generate an MDId for the table desc.
 	OID rel_oid = rte->relid;
 
-	if (gpdb::FHasExternalPartition(rel_oid))
+	if (gpdb::HasExternalPartition(rel_oid))
 	{
 		// fall back to the planner for queries with partition tables that has an external table in one of its leaf
 		// partitions.
@@ -247,7 +247,7 @@ CTranslatorUtils::HasSubquery
 	)
 {
 	List *unsupported_list = ListMake1Int(T_SubLink);
-	INT unsupported = gpdb::IFindNodes(node, unsupported_list);
+	INT unsupported = gpdb::FindNodes(node, unsupported_list);
 	gpdb::GPDBFree(unsupported_list);
 
 	return (0 <= unsupported);
@@ -310,7 +310,7 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 		{
 			// resolve polymorphic types (anyelement/anyarray) using the
 			// argument types from the query
-			List *arg_types = gpdb::PlFuncArgTypes(funcexpr->funcid);
+			List *arg_types = gpdb::GetFuncArgTypes(funcexpr->funcid);
 			MdidPtrArray *resolved_types = ResolvePolymorphicTypes
 												(
 												memory_pool,
@@ -385,7 +385,7 @@ CTranslatorUtils::ResolvePolymorphicTypes
 		arg_modes[arg_index++] = PROARGMODE_TABLE;
 	}
 
-	if(!gpdb::FResolvePolymorphicType(total_args, arg_types, arg_modes, funcexpr))
+	if(!gpdb::ResolvePolymorphicArgType(total_args, arg_types, arg_modes, funcexpr))
 	{
 		GPOS_RAISE
 				(
@@ -1020,7 +1020,7 @@ CTranslatorUtils::GetOpFamilyForIndexQual
 	OID index_oid
 	)
 {
-	Relation rel = gpdb::RelGetRelation(index_oid);
+	Relation rel = gpdb::GetRelation(index_oid);
 	GPOS_ASSERT(NULL != rel);
 	GPOS_ASSERT(attno <= rel->rd_index->indnatts);
 	
@@ -1373,7 +1373,7 @@ CTranslatorUtils::GenerateColIds
 		TargetEntry *target_entry = (TargetEntry *) lfirst(target_entry_cell);
 		GPOS_ASSERT(NULL != target_entry->expr);
 
-		OID expr_type_oid = gpdb::OidExprType((Node*) target_entry->expr);
+		OID expr_type_oid = gpdb::ExprType((Node*) target_entry->expr);
 		if (!target_entry->resjunk)
 		{
 			ULONG col_id = gpos::ulong_max;
@@ -1433,20 +1433,20 @@ CTranslatorUtils::FixUnknownTypeConstant
 
 		if (!old_target_entry->resjunk)
 		{
-			if (IsA(old_target_entry->expr, Const) && (GPDB_UNKNOWN == gpdb::OidExprType((Node*) old_target_entry->expr) ))
+			if (IsA(old_target_entry->expr, Const) && (GPDB_UNKNOWN == gpdb::ExprType((Node*) old_target_entry->expr) ))
 			{
 				if (NULL == new_query)
 				{
-					new_query = (Query*) gpdb::PvCopyObject(const_cast<Query*>(old_query));
+					new_query = (Query*) gpdb::CopyObject(const_cast<Query*>(old_query));
 				}
 
-				TargetEntry *new_target_entry = (TargetEntry *) gpdb::PvListNth(new_query->targetList, pos);
+				TargetEntry *new_target_entry = (TargetEntry *) gpdb::ListNth(new_query->targetList, pos);
 				GPOS_ASSERT(old_target_entry->resno == new_target_entry->resno);
 				// implicitly cast the unknown constants to the target data type
 				OID target_type_oid = GetTargetListReturnTypeOid(output_target_list, col_pos);
 				GPOS_ASSERT(InvalidOid != target_type_oid);
 				Node *old_node = (Node *) new_target_entry->expr;
-				new_target_entry->expr = (Expr*) gpdb::PnodeCoerceToCommonType
+				new_target_entry->expr = (Expr*) gpdb::CoerceToCommonType
 											(
 											NULL,	/* pstate */
 											(Node *) old_node,
@@ -1499,7 +1499,7 @@ CTranslatorUtils::GetTargetListReturnTypeOid
 		{
 			if (col_idx == col_pos)
 			{
-				return gpdb::OidExprType((Node*) target_entry->expr);
+				return gpdb::ExprType((Node*) target_entry->expr);
 			}
 
 			col_idx++;
@@ -1625,8 +1625,8 @@ CTranslatorUtils::GetColumnDescrAt
 	}
 
 	// create a column descriptor
-	OID type_oid = gpdb::OidExprType((Node *) target_entry->expr);
-	INT type_modifier = gpdb::IExprTypeMod((Node *) target_entry->expr);
+	OID type_oid = gpdb::ExprType((Node *) target_entry->expr);
+	INT type_modifier = gpdb::ExprTypeMod((Node *) target_entry->expr);
 	CMDIdGPDB *col_type = GPOS_NEW(memory_pool) CMDIdGPDB(type_oid);
 	CDXLColDescr *dxl_col_descr = GPOS_NEW(memory_pool) CDXLColDescr
 									(
@@ -1767,7 +1767,7 @@ CTranslatorUtils::GetColId
 	)
 {
 	OID oid = CMDIdGPDB::CastMdid(mdid)->OidObjectId();
-	Var *var = gpdb::PvarMakeVar(varno, var_attno, oid, -1, 0);
+	Var *var = gpdb::MakeVar(varno, var_attno, oid, -1, 0);
 	ULONG col_id = var_col_id_mapping->GetColId(query_level, var, EpspotNone);
 	gpdb::GPDBFree(var);
 
@@ -1792,7 +1792,7 @@ CTranslatorUtils::GetWindowSpecTargetEntry
 	)
 {
 	GPOS_ASSERT(NULL != node);
-	List *target_list_subset = gpdb::PteMembers(node, target_list);
+	List *target_list_subset = gpdb::FindMatchingMembersInTargetList(node, target_list);
 
 	ListCell *target_entry_cell = NULL;
 	ForEach (target_entry_cell, target_list_subset)
@@ -1936,7 +1936,7 @@ CTranslatorUtils::GetGroupingColumnTargetEntry
 	)
 {
 	GPOS_ASSERT(NULL != node);
-	List *target_list_subset = gpdb::PteMembers(node, target_list);
+	List *target_list_subset = gpdb::FindMatchingMembersInTargetList(node, target_list);
 
 	ListCell *target_entry_cell = NULL;
 	ForEach (target_entry_cell, target_list_subset)
@@ -2111,7 +2111,7 @@ CTranslatorUtils::ConvertColidToAttnos
 		ULONG col_id = *((*col_ids)[ul]);
 		const TargetEntry *target_entry = translate_ctxt->GetTargetEntry(col_id);
 		GPOS_ASSERT(NULL != target_entry);
-		result = gpdb::PlAppendInt(result, target_entry->resno);
+		result = gpdb::LAppendInt(result, target_entry->resno);
 	}
 	
 	return result;
@@ -2458,7 +2458,7 @@ CTranslatorUtils::CheckAggregateWindowFn
 
 	WindowFunc *winfunc = (WindowFunc *) node;
 
-	if (gpdb::FAggregateExists(winfunc->winfnoid) && !gpdb::FAggHasPrelimOrInvPrelimFunc(winfunc->winfnoid))
+	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasPrelimOrInvPrelimFunc(winfunc->winfnoid))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT("Aggregate window function without prelim or inverse prelim function"));
@@ -2665,7 +2665,7 @@ CTranslatorUtils::RelHasTriggers
 	}
 
 	OID rel_oid = CMDIdGPDB::CastMdid(rel->MDId())->OidObjectId();
-	return gpdb::FChildTriggers(rel_oid, type);
+	return gpdb::ChildPartHasTriggers(rel_oid, type);
 }
 
 //---------------------------------------------------------------------------
@@ -2753,7 +2753,7 @@ CTranslatorUtils::GetAssertErrorMsgs
 		CDXLNode *dxl_constraint_node = (*assert_constraint_list)[ul];
 		CDXLScalarAssertConstraint *dxl_constraint_op = CDXLScalarAssertConstraint::Cast(dxl_constraint_node->GetOperator());
 		CWStringBase *error_msg = dxl_constraint_op->GetErrorMsgStr();
-		error_msgs_list = gpdb::PlAppendElement(error_msgs_list, gpdb::PvalMakeString(CreateMultiByteCharStringFromWCString(error_msg->GetBuffer())));
+		error_msgs_list = gpdb::LAppend(error_msgs_list, gpdb::MakeStringValue(CreateMultiByteCharStringFromWCString(error_msg->GetBuffer())));
 	}
 	
 	return error_msgs_list;

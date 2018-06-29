@@ -225,7 +225,7 @@ CMappingColIdVarPlStmt::VarFromDXLNodeScId
 		}
 	}
 
-	Var *var = gpdb::PvarMakeVar
+	Var *var = gpdb::MakeVar
 						(
 						varno,
 						attno,

@@ -83,7 +83,7 @@ CCTEListEntry::CCTEListEntry
 	for (ULONG ul = 0; ul < num_cte; ul++)
 	{
 		CDXLNode *cte_producer = (*cte_dxl_arr)[ul];
-		CommonTableExpr *cte = (CommonTableExpr*) gpdb::PvListNth(cte_list, ul);
+		CommonTableExpr *cte = (CommonTableExpr*) gpdb::ListNth(cte_list, ul);
 
 		Query *cte_query = (Query*) cte->ctequery;
 		

@@ -269,7 +269,7 @@ CTranslatorScalarToDXL::CreateScalarOpFromExpr
 
 	if (NULL == func_ptr)
 	{
-		CHAR *str = (CHAR*) gpdb::SzNodeToString(const_cast<Expr*>(expr));
+		CHAR *str = (CHAR*) gpdb::NodeToString(const_cast<Expr*>(expr));
 		CWStringDynamic *wcstr = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, str);
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, wcstr->GetBuffer());
 	}
@@ -314,13 +314,13 @@ CTranslatorScalarToDXL::CreateScalarDistCmpFromDistExpr
 
 	CDXLNode *left_node = CreateScalarOpFromExpr
 							(
-							(Expr *) gpdb::PvListNth(distinct_expr->args, 0),
+							(Expr *) gpdb::ListNth(distinct_expr->args, 0),
 							var_col_id_mapping
 							);
 
 	CDXLNode *right_node = CreateScalarOpFromExpr
 							(
-							(Expr *) gpdb::PvListNth(distinct_expr->args, 1),
+							(Expr *) gpdb::ListNth(distinct_expr->args, 1),
 							var_col_id_mapping
 							);
 
@@ -367,8 +367,8 @@ CTranslatorScalarToDXL::CreateScalarCmpFromOpExpr
 	// process arguments of op expr
 	GPOS_ASSERT(2 == gpdb::ListLength(op_expr->args));
 
-	Expr *left_expr = (Expr *) gpdb::PvListNth(op_expr->args, 0);
-	Expr *right_expr = (Expr *) gpdb::PvListNth(op_expr->args, 1);
+	Expr *left_expr = (Expr *) gpdb::ListNth(op_expr->args, 0);
+	Expr *right_expr = (Expr *) gpdb::ListNth(op_expr->args, 1);
 
 	CDXLNode *left_node = CreateScalarOpFromExpr(left_expr, var_col_id_mapping);
 	CDXLNode *right_node = CreateScalarOpFromExpr(right_expr, var_col_id_mapping);
@@ -508,17 +508,17 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr
 	// process arguments of op expr
 	GPOS_ASSERT(2 == gpdb::ListLength(scalar_array_op_expr->args));
 
-	Expr *left_expr = (Expr*) gpdb::PvListNth(scalar_array_op_expr->args, 0);
+	Expr *left_expr = (Expr*) gpdb::ListNth(scalar_array_op_expr->args, 0);
 	CDXLNode *left_node = CreateScalarOpFromExpr(left_expr, var_col_id_mapping);
 
-	Expr *right_expr = (Expr*) gpdb::PvListNth(scalar_array_op_expr->args, 1);
+	Expr *right_expr = (Expr*) gpdb::ListNth(scalar_array_op_expr->args, 1);
 
 	// If the argument array is an array Const, try to transform it to an
 	// ArrayExpr, to allow ORCA to optimize it better. (ORCA knows how to
 	// extract elements of an ArrayExpr, but doesn't currently know how
 	// to do it from an array-typed Const.)
 	if (IsA(right_expr, Const))
-		right_expr = gpdb::PexprTransformArrayConstToArrayExpr((Const *) right_expr);
+		right_expr = gpdb::TransformArrayConstToArrayExpr((Const *) right_expr);
 
 	CDXLNode *right_node = CreateScalarOpFromExpr(right_expr, var_col_id_mapping);
 
@@ -1041,7 +1041,7 @@ CTranslatorScalarToDXL::CreateScalarIfStmtFromCaseExpr
 
 		CDXLNode *if_stmt_new_node = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, if_stmt_new_dxl);
 
-		CaseWhen *expr = (CaseWhen *) gpdb::PvListNth(case_expr->args, ul);
+		CaseWhen *expr = (CaseWhen *) gpdb::ListNth(case_expr->args, ul);
 		GPOS_ASSERT(IsA(expr, CaseWhen));
 
 		CDXLNode *cond_node = CreateScalarOpFromExpr(expr->expr, var_col_id_mapping);
@@ -1262,7 +1262,7 @@ CTranslatorScalarToDXL::CreateScalarFuncExprFromFuncExpr
 {
 	GPOS_ASSERT(IsA(expr, FuncExpr));
 	const FuncExpr *func_expr = (FuncExpr *) expr;
-	int32 type_modifier = gpdb::IExprTypeMod((Node *) expr);
+	int32 type_modifier = gpdb::ExprTypeMod((Node *) expr);
 
 	CMDIdGPDB *mdid_func = GPOS_NEW(m_memory_pool) CMDIdGPDB(func_expr->funcid);
 
@@ -1517,8 +1517,8 @@ CTranslatorScalarToDXL::CreateDXLNodeFromWindowFrameEdgeVal
 																m_memory_pool,
 																GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, &unnamed_col),
 																project_element_id,
-																GPOS_NEW(m_memory_pool) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(node))),
-																gpdb::IExprTypeMod(const_cast<Node*>(node))
+																GPOS_NEW(m_memory_pool) CMDIdGPDB(gpdb::ExprType(const_cast<Node*>(node))),
+																gpdb::ExprTypeMod(const_cast<Node*>(node))
 																)
 													);
 
@@ -1631,7 +1631,7 @@ CTranslatorScalarToDXL::CreateScalarCondFromQual
 
 	if (1 == gpdb::ListLength(quals))
 	{
-		Expr *expr = (Expr *) gpdb::PvListNth(quals, 0);
+		Expr *expr = (Expr *) gpdb::ListNth(quals, 0);
 		return CreateScalarOpFromExpr(expr, var_col_id_mapping, has_distributed_tables);
 	}
 	else
@@ -1796,7 +1796,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink
 
 	// translate left hand side of the expression
 	GPOS_ASSERT(NULL != op_expr->args);
-	Expr* pexprLHS = (Expr*) gpdb::PvListNth(op_expr->args, 0);
+	Expr* pexprLHS = (Expr*) gpdb::ListNth(op_expr->args, 0);
 
 	CDXLNode *pdxlnOuter = CreateScalarOpFromExpr(pexprLHS, var_col_id_mapping);
 
@@ -2156,7 +2156,7 @@ CTranslatorScalarToDXL::CreateGenericCDXLDatum
 	ULONG length = 0;
 	if (!is_null)
 	{
-		length = (ULONG) gpdb::SDatumSize(datum, md_type->IsPassedByValue(), len);
+		length = (ULONG) gpdb::DatumSize(datum, md_type->IsPassedByValue(), len);
 	}
 
 	CDouble double_value(0);
@@ -2196,7 +2196,7 @@ CTranslatorScalarToDXL::CreateBoolCDXLDatum
 	CMDIdGPDB *mdid_old = CMDIdGPDB::CastMdid(md_type->MDId());
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(*mdid_old);
 
-	return GPOS_NEW(memory_pool) CDXLDatumBool(memory_pool, mdid, is_null, gpdb::FBoolFromDatum(datum));
+	return GPOS_NEW(memory_pool) CDXLDatumBool(memory_pool, mdid, is_null, gpdb::BoolFromDatum(datum));
 }
 
 
@@ -2246,7 +2246,7 @@ CTranslatorScalarToDXL::PdxldatumInt2
 	CMDIdGPDB *mdid_old = CMDIdGPDB::CastMdid(md_type->MDId());
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(*mdid_old);
 
-	return GPOS_NEW(memory_pool) CDXLDatumInt2(memory_pool, mdid, is_null, gpdb::SInt16FromDatum(datum));
+	return GPOS_NEW(memory_pool) CDXLDatumInt2(memory_pool, mdid, is_null, gpdb::Int16FromDatum(datum));
 }
 
 
@@ -2271,7 +2271,7 @@ CTranslatorScalarToDXL::PdxldatumInt4
 	CMDIdGPDB *mdid_old = CMDIdGPDB::CastMdid(md_type->MDId());
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(*mdid_old);
 
-	return GPOS_NEW(memory_pool) CDXLDatumInt4(memory_pool, mdid, is_null, gpdb::IInt32FromDatum(datum));
+	return GPOS_NEW(memory_pool) CDXLDatumInt4(memory_pool, mdid, is_null, gpdb::Int32FromDatum(datum));
 }
 
 
@@ -2296,7 +2296,7 @@ CTranslatorScalarToDXL::PdxldatumInt8
 	CMDIdGPDB *mdid_old = CMDIdGPDB::CastMdid(md_type->MDId());
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(*mdid_old);
 
-	return GPOS_NEW(memory_pool) CDXLDatumInt8(memory_pool, mdid, is_null, gpdb::LlInt64FromDatum(datum));
+	return GPOS_NEW(memory_pool) CDXLDatumInt8(memory_pool, mdid, is_null, gpdb::Int64FromDatum(datum));
 }
 
 
@@ -2336,11 +2336,11 @@ CTranslatorScalarToDXL::GetDoubleValue
 			return CDouble(GPOS_FP_ABS_MAX);
 		}
 
-		d = gpdb::DNumericToDoubleNoOverflow(num);
+		d = gpdb::NumericToDoubleNoOverflow(num);
 	}
 	else if (mdid->Equals(&CMDIdGPDB::m_mdid_float4))
 	{
-		float4 f = gpdb::FpFloat4FromDatum(datum);
+		float4 f = gpdb::Float4FromDatum(datum);
 
 		if (isnan(f))
 		{
@@ -2353,7 +2353,7 @@ CTranslatorScalarToDXL::GetDoubleValue
 	}
 	else if (mdid->Equals(&CMDIdGPDB::m_mdid_float8))
 	{
-		d = gpdb::DFloat8FromDatum(datum);
+		d = gpdb::Float8FromDatum(datum);
 
 		if (isnan(d))
 		{
@@ -2362,11 +2362,11 @@ CTranslatorScalarToDXL::GetDoubleValue
 	}
 	else if (CMDTypeGenericGPDB::IsTimeRelatedType(mdid))
 	{
-		d = gpdb::DConvertTimeValueToScalar(datum, CMDIdGPDB::CastMdid(mdid)->OidObjectId());
+		d = gpdb::ConvertTimeValueToScalar(datum, CMDIdGPDB::CastMdid(mdid)->OidObjectId());
 	}
 	else if (CMDTypeGenericGPDB::IsNetworkRelatedType(mdid))
 	{
-		d = gpdb::DConvertNetworkToScalar(datum, CMDIdGPDB::CastMdid(mdid)->OidObjectId());
+		d = gpdb::ConvertNetworkToScalar(datum, CMDIdGPDB::CastMdid(mdid)->OidObjectId());
 	}
 
 	return CDouble(d);
@@ -2398,7 +2398,7 @@ CTranslatorScalarToDXL::GetByteArray
 		return bytes;
 	}
 
-	length = (ULONG) gpdb::SDatumSize(datum, md_type->IsPassedByValue(), len);
+	length = (ULONG) gpdb::DatumSize(datum, md_type->IsPassedByValue(), len);
 	GPOS_ASSERT(length > 0);
 
 	bytes = GPOS_NEW_ARRAY(memory_pool, BYTE, length);
@@ -2410,7 +2410,7 @@ CTranslatorScalarToDXL::GetByteArray
 	}
 	else
 	{
-		clib::Memcpy(bytes, gpdb::PvPointerFromDatum(datum), length);
+		clib::Memcpy(bytes, gpdb::PointerFromDatum(datum), length);
 	}
 
 	return bytes;
@@ -2447,7 +2447,7 @@ CTranslatorScalarToDXL::GetLintValue
 		Datum datumConstVal = (Datum) 0;
 		clib::Memcpy(&datumConstVal, bytes, length);
 		// Date is internally represented as an int32
-		lint_value = (LINT) (gpdb::IInt32FromDatum(datumConstVal));
+		lint_value = (LINT) (gpdb::Int32FromDatum(datumConstVal));
 
 	}
 	else
@@ -2494,7 +2494,7 @@ CTranslatorScalarToDXL::GetDatum
 	if (!md_type->IsPassedByValue() && !is_null)
 	{
 		INT len = dynamic_cast<const CMDTypeGenericGPDB *>(md_type)->GetGPDBLength();
-		length = (ULONG) gpdb::SDatumSize(gpdb_datum, md_type->IsPassedByValue(), len);
+		length = (ULONG) gpdb::DatumSize(gpdb_datum, md_type->IsPassedByValue(), len);
 	}
 	GPOS_ASSERT(is_null || length > 0);
 

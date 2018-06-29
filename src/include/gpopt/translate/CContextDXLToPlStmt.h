@@ -80,12 +80,12 @@ namespace gpdxl
 					)
 				{
 					GPOS_ASSERT(NULL != share_input_scan);
-					m_cte_consumer_list = gpdb::PlAppendElement(m_cte_consumer_list, share_input_scan);
+					m_cte_consumer_list = gpdb::LAppend(m_cte_consumer_list, share_input_scan);
 				}
 
 				~SCTEConsumerInfo()
 				{
-					gpdb::FreeList(m_cte_consumer_list);
+					gpdb::ListFree(m_cte_consumer_list);
 				}
 
 			};

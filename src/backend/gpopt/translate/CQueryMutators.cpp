@@ -104,7 +104,7 @@ CQueryMutators::ShouldFallback
 		return false;
 	}
 
-	TargetEntry *entry = gpdb::PteMember(node, context->m_target_entries);
+	TargetEntry *entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_target_entries);
 	if (NULL != entry && CTranslatorUtils::IsGroupingColumn( (Node *) entry->expr, context->m_group_clause, context->m_target_entries))
 	{
 		return false;
@@ -134,7 +134,7 @@ CQueryMutators::ShouldFallback
 		return false;
 	}
 
-	return gpdb::FWalkExpressionTree(node, (FallbackWalkerFn) CQueryMutators::ShouldFallback, context);
+	return gpdb::WalkExpressionTree(node, (FallbackWalkerFn) CQueryMutators::ShouldFallback, context);
 }
 
 
@@ -160,7 +160,7 @@ CQueryMutators::NormalizeGroupByProjList
 	const Query *query
 	)
 {
-	Query *query_copy = (Query *) gpdb::PvCopyObject(const_cast<Query*>(query));
+	Query *query_copy = (Query *) gpdb::CopyObject(const_cast<Query*>(query));
 
 	if (!NeedsProjListNormalization(query_copy))
 	{
@@ -171,9 +171,9 @@ CQueryMutators::NormalizeGroupByProjList
 	gpdb::GPDBFree(query_copy);
 
 	GPOS_ASSERT(1 == gpdb::ListLength(new_query->rtable));
-	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::PvListNth(new_query->rtable, 0))->subquery;
+	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::ListNth(new_query->rtable, 0))->subquery;
 	SContextGrpbyPlMutator context(memory_pool, md_accessor, derived_table_query, NULL);
-	List *target_list_copy = (List*) gpdb::PvCopyObject(derived_table_query->targetList);
+	List *target_list_copy = (List*) gpdb::CopyObject(derived_table_query->targetList);
 	ListCell *lc = NULL;
 
 	// first normalize grouping columns
@@ -236,7 +236,7 @@ CQueryMutators::RunIncrLevelsUpMutator
 
 	if (IsA(node, Var))
 	{
-		Var *var = (Var *) gpdb::PvCopyObject(node);
+		Var *var = (Var *) gpdb::CopyObject(node);
 
 		// Consider the following use case:
 		//	ORGINAL QUERY:
@@ -260,7 +260,7 @@ CQueryMutators::RunIncrLevelsUpMutator
 
 	if (IsA(node, CommonTableExpr))
 	{
-		CommonTableExpr *cte = (CommonTableExpr *) gpdb::PvCopyObject(node);
+		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
 		GPOS_ASSERT(IsA(cte->ctequery, Query));
 
 		Query *cte_query = (Query *) cte->ctequery;
@@ -276,7 +276,7 @@ CQueryMutators::RunIncrLevelsUpMutator
 
 	if (IsA(node, SubLink))
 	{
-		SubLink *sublink = (SubLink *) gpdb::PvCopyObject(node);
+		SubLink *sublink = (SubLink *) gpdb::CopyObject(node);
 		GPOS_ASSERT(IsA(sublink->subselect, Query));
 
 		Query *sublink_query = (Query *) sublink->subselect;
@@ -291,13 +291,13 @@ CQueryMutators::RunIncrLevelsUpMutator
 
 	if (IsA(node, TargetEntry) && 0 == context->m_current_query_level && !context->m_should_fix_top_level_target_list)
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 	// recurse into query structure
 	if (IsA(node, Query))
 	{
-		Query *query = gpdb::PqueryMutateQueryTree
+		Query *query = gpdb::MutateQueryTree
 								(
 								(Query *) node,
 								(MutatorWalkerFn) CQueryMutators::RunIncrLevelsUpMutator,
@@ -326,7 +326,7 @@ CQueryMutators::RunIncrLevelsUpMutator
 		return (Node *) query;
 	}
 
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunIncrLevelsUpMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunIncrLevelsUpMutator, context);
 }
 
 
@@ -352,7 +352,7 @@ CQueryMutators::RunFixCTELevelsUpMutator
 	// recurse into query structure
 	if (IsA(node, Query))
 	{
-		Query *query = gpdb::PqueryMutateQueryTree
+		Query *query = gpdb::MutateQueryTree
 								(
 								(Query *) node,
 								(MutatorWalkerFn) CQueryMutators::RunFixCTELevelsUpMutator,
@@ -388,7 +388,7 @@ CQueryMutators::RunFixCTELevelsUpMutator
 
 	if (IsA(node, CommonTableExpr))
 	{
-		CommonTableExpr *cte = (CommonTableExpr *) gpdb::PvCopyObject(node);
+		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
 		GPOS_ASSERT(IsA(cte->ctequery, Query));
 
 		Query *cte_query = (Query *) cte->ctequery;
@@ -406,7 +406,7 @@ CQueryMutators::RunFixCTELevelsUpMutator
 	// recurse into a query attached to sublink
 	if (IsA(node, SubLink))
 	{
-		SubLink *sublink = (SubLink *) gpdb::PvCopyObject(node);
+		SubLink *sublink = (SubLink *) gpdb::CopyObject(node);
 		GPOS_ASSERT(IsA(sublink->subselect, Query));
 
 		Query *sublink_query = (Query *) sublink->subselect;
@@ -421,7 +421,7 @@ CQueryMutators::RunFixCTELevelsUpMutator
 		return (Node *) sublink;
 	}
 
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunFixCTELevelsUpMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunFixCTELevelsUpMutator, context);
 }
 
 //---------------------------------------------------------------------------
@@ -465,7 +465,7 @@ CQueryMutators::RunGroupByProjListMutator
 
 	if (IsA(node, Const))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 
@@ -493,13 +493,13 @@ CQueryMutators::RunGroupByProjListMutator
 
 		ForEach (lc, old_aggref->args)
 		{
-			Node *arg = (Node *) gpdb::PvCopyObject((Node*) lfirst(lc));
+			Node *arg = (Node *) gpdb::CopyObject((Node*) lfirst(lc));
 			GPOS_ASSERT(NULL != arg);
 			// traverse each argument and fix levels up when needed
-			new_args = gpdb::PlAppendElement
+			new_args = gpdb::LAppend
 						(
 						new_args,
-						gpdb::PnodeMutateQueryOrExpressionTree
+						gpdb::MutateQueryOrExpressionTree
 							(
 							arg,
 							(MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator,
@@ -515,14 +515,14 @@ CQueryMutators::RunGroupByProjListMutator
 		TargetEntry *target_entry = GetTargetEntryForAggExpr(context->m_memory_pool, context->m_md_accessor, (Node *) aggref, attno);
 
 		// Add a new target entry to the query
-		context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, target_entry);
+		context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
 
-		Var *new_var = gpdb::PvarMakeVar
+		Var *new_var = gpdb::MakeVar
 						(
 						1, // varno
 						(AttrNumber) attno,
-						gpdb::OidExprType(node),
-						gpdb::IExprTypeMod(node),
+						gpdb::ExprType(node),
+						gpdb::ExprTypeMod(node),
 						0 // query levelsup
 						);
 
@@ -531,20 +531,20 @@ CQueryMutators::RunGroupByProjListMutator
 
 	if (IsA(node, GroupingFunc))
 	{
-		Node *pnodeCopy = (Node *) gpdb::PvCopyObject(node);
+		Node *pnodeCopy = (Node *) gpdb::CopyObject(node);
 
 		const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
 		TargetEntry *target_entry = GetTargetEntryForAggExpr(context->m_memory_pool, context->m_md_accessor, pnodeCopy, attno);
 
 		// Add a new target entry to the query
-		context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, target_entry);
+		context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
 
-		Var *new_var = gpdb::PvarMakeVar
+		Var *new_var = gpdb::MakeVar
 								(
 								1, // varno
 								(AttrNumber) attno,
-								gpdb::OidExprType(node),
-								gpdb::IExprTypeMod(node),
+								gpdb::ExprType(node),
+								gpdb::ExprTypeMod(node),
 								0 // query levelsup
 								);
 
@@ -556,17 +556,17 @@ CQueryMutators::RunGroupByProjListMutator
 		// if we find a target entry in the new derived table then return the appropriate var
 		// else investigate it to see if it needs to be added to the new derived table
 
-		TargetEntry *found_target_entry = gpdb::PteMember(node, context->m_groupby_target_list);
+		TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
 
 		if (NULL != found_target_entry)
 		{
 			found_target_entry->resjunk = false;
-			Var *new_var = gpdb::PvarMakeVar
+			Var *new_var = gpdb::MakeVar
 					(
 							1, // varno
 							found_target_entry->resno,
-							gpdb::OidExprType((Node*) found_target_entry->expr),
-							gpdb::IExprTypeMod( (Node*) found_target_entry->expr),
+							gpdb::ExprType((Node*) found_target_entry->expr),
+							gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
 							0 // query levelsup
 					);
 
@@ -575,15 +575,15 @@ CQueryMutators::RunGroupByProjListMutator
 
 		// if it is grouping column then we have already added it to the derived table
 		// so merely refer to it in the top-level query
-		TargetEntry *new_target_entry = gpdb::PteMember(node, context->m_groupby_target_list);
+		TargetEntry *new_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
 		if (NULL != new_target_entry)
 		{
-			return (Node *) gpdb::PvarMakeVar
+			return (Node *) gpdb::MakeVar
 							(
 							1, // varno
 							(AttrNumber) new_target_entry->resno,
-							gpdb::OidExprType( (Node*) new_target_entry->expr),
-							gpdb::IExprTypeMod( (Node*) new_target_entry->expr),
+							gpdb::ExprType( (Node*) new_target_entry->expr),
+							gpdb::ExprTypeMod( (Node*) new_target_entry->expr),
 							0 // query levelsup
 							);
 		}
@@ -592,10 +592,10 @@ CQueryMutators::RunGroupByProjListMutator
 	// do not traverse into sub queries as they will be inserted into top-level query as is
 	if (IsA(node, SubLink))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupByProjListMutator, context);
 }
 
 
@@ -621,12 +621,12 @@ CQueryMutators::RunGroupingColMutator
 
 	if (IsA(node, Const))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 	if (IsA(node, Var))
 	{
-		Var *var_copy = (Var *) gpdb::PvCopyObject(node);
+		Var *var_copy = (Var *) gpdb::CopyObject(node);
 
 		if (var_copy->varlevelsup > context->m_current_query_level)
 		{
@@ -651,13 +651,13 @@ CQueryMutators::RunGroupingColMutator
 
 		ForEach (lc, old_aggref->args)
 		{
-			Node *arg = (Node *) gpdb::PvCopyObject((Node*) lfirst(lc));
+			Node *arg = (Node *) gpdb::CopyObject((Node*) lfirst(lc));
 			GPOS_ASSERT(NULL != arg);
 			// traverse each argument and fix levels up when needed
-			new_args = gpdb::PlAppendElement
+			new_args = gpdb::LAppend
 						(
 						new_args,
-						gpdb::PnodeMutateQueryOrExpressionTree
+						gpdb::MutateQueryOrExpressionTree
 							(
 							arg,
 							(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator,
@@ -674,7 +674,7 @@ CQueryMutators::RunGroupingColMutator
 
 	if (IsA(node, GroupingFunc))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 	if (IsA(node, SubLink))
@@ -684,9 +684,9 @@ CQueryMutators::RunGroupingColMutator
 		SubLink *new_sublink = MakeNode(SubLink);
 		new_sublink->subLinkType = old_sublink->subLinkType;
 		new_sublink->location = old_sublink->location;
-		new_sublink->operName = (List *) gpdb::PvCopyObject(old_sublink->operName);
+		new_sublink->operName = (List *) gpdb::CopyObject(old_sublink->operName);
 
-		new_sublink->testexpr =	gpdb::PnodeMutateQueryOrExpressionTree
+		new_sublink->testexpr =	gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->testexpr,
 										(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator,
@@ -697,7 +697,7 @@ CQueryMutators::RunGroupingColMutator
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::PnodeMutateQueryOrExpressionTree
+		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->subselect,
 										(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator,
@@ -712,12 +712,12 @@ CQueryMutators::RunGroupingColMutator
 
 	if (IsA(node, CommonTableExpr))
 	{
-		CommonTableExpr *cte = (CommonTableExpr *) gpdb::PvCopyObject(node);
+		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
 		context->m_current_query_level++;
 
 		GPOS_ASSERT(IsA(cte->ctequery, Query));
 
-		cte->ctequery = gpdb::PnodeMutateQueryOrExpressionTree
+		cte->ctequery = gpdb::MutateQueryOrExpressionTree
 									(
 									cte->ctequery,
 									(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator,
@@ -732,7 +732,7 @@ CQueryMutators::RunGroupingColMutator
 	// recurse into query structure
 	if (IsA(node, Query))
 	{
-		Query *query = gpdb::PqueryMutateQueryTree
+		Query *query = gpdb::MutateQueryTree
 								(
 								(Query *) node,
 								(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator,
@@ -761,7 +761,7 @@ CQueryMutators::RunGroupingColMutator
 		return (Node *) query;
 	}
 
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupingColMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunGroupingColMutator, context);
 }
 
 
@@ -788,19 +788,19 @@ CQueryMutators::FixGroupingCols
 	Node *expr = (Node *) RunGroupingColMutator(node, context);
 
 	CHAR* name = CQueryMutators::GetTargetEntryColName(orginal_target_entry,context->m_pquery);
-	TargetEntry *new_target_entry = gpdb::PteMakeTargetEntry((Expr*) expr, (AttrNumber) arity, name, false /*resjunk */);
+	TargetEntry *new_target_entry = gpdb::MakeTargetEntry((Expr*) expr, (AttrNumber) arity, name, false /*resjunk */);
 
 	new_target_entry->ressortgroupref = orginal_target_entry->ressortgroupref;
 	new_target_entry->resjunk = false;
 
-	context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, new_target_entry);
+	context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, new_target_entry);
 
-	Var *new_var = gpdb::PvarMakeVar
+	Var *new_var = gpdb::MakeVar
 			(
 					1, // varno
 					(AttrNumber) arity,
-					gpdb::OidExprType( (Node*) orginal_target_entry->expr),
-					gpdb::IExprTypeMod( (Node*) orginal_target_entry->expr),
+					gpdb::ExprType( (Node*) orginal_target_entry->expr),
+					gpdb::ExprTypeMod( (Node*) orginal_target_entry->expr),
 					0 // query levelsup
 			);
 
@@ -845,7 +845,7 @@ CQueryMutators::GetTargetEntryForAggExpr
 	}
 	GPOS_ASSERT(NULL != name);
 
-	return gpdb::PteMakeTargetEntry((Expr*) node, (AttrNumber) attno, name, false);
+	return gpdb::MakeTargetEntry((Expr*) node, (AttrNumber) attno, name, false);
 }
 
 //---------------------------------------------------------------------------
@@ -874,7 +874,7 @@ CQueryMutators::RunHavingQualMutator
 
 	if (IsA(node, Const))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 	// check to see if the node is in the target list of the derived table.
@@ -897,7 +897,7 @@ CQueryMutators::RunHavingQualMutator
 		if (IsA(node, GroupingFunc))
 		{
 			// create a new entry in the derived table and return its corresponding var
-			Node *node_copy = (Node*) gpdb::PvCopyObject(node);
+			Node *node_copy = (Node*) gpdb::CopyObject(node);
 			return (Node *) MakeVarInDerivedTable(node_copy, context);
 		}
 	}
@@ -923,10 +923,10 @@ CQueryMutators::RunHavingQualMutator
 				Node *arg = (Node*) lfirst(lc);
 				GPOS_ASSERT(NULL != arg);
 				// traverse each argument and fix levels up when needed
-				new_args = gpdb::PlAppendElement
+				new_args = gpdb::LAppend
 									(
 									new_args,
-									gpdb::PnodeMutateQueryOrExpressionTree
+									gpdb::MutateQueryOrExpressionTree
 											(
 											arg,
 											(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
@@ -953,7 +953,7 @@ CQueryMutators::RunHavingQualMutator
 
 	if (IsA(node, Var))
 	{
-		Var *var = (Var *) gpdb::PvCopyObject(node);
+		Var *var = (Var *) gpdb::CopyObject(node);
 		if (var->varlevelsup == context->m_current_query_level)
 		{
 			// process outer references
@@ -966,7 +966,7 @@ CQueryMutators::RunHavingQualMutator
 			}
 
 			var->varlevelsup = 0;
-			TargetEntry *found_target_entry = gpdb::PteMember( (Node*) var, context->m_groupby_target_list);
+			TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList( (Node*) var, context->m_groupby_target_list);
 
 			if (NULL == found_target_entry)
 			{
@@ -993,12 +993,12 @@ CQueryMutators::RunHavingQualMutator
 
 	if (IsA(node, CommonTableExpr))
 	{
-		CommonTableExpr *cte = (CommonTableExpr *) gpdb::PvCopyObject(node);
+		CommonTableExpr *cte = (CommonTableExpr *) gpdb::CopyObject(node);
 		context->m_current_query_level++;
 
 		GPOS_ASSERT(IsA(cte->ctequery, Query));
 
-		cte->ctequery = gpdb::PnodeMutateQueryOrExpressionTree
+		cte->ctequery = gpdb::MutateQueryOrExpressionTree
 									(
 									cte->ctequery,
 									(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
@@ -1017,9 +1017,9 @@ CQueryMutators::RunHavingQualMutator
 		SubLink *new_sublink = MakeNode(SubLink);
 		new_sublink->subLinkType = old_sublink->subLinkType;
 		new_sublink->location = old_sublink->location;
-		new_sublink->operName = (List *) gpdb::PvCopyObject(old_sublink->operName);
+		new_sublink->operName = (List *) gpdb::CopyObject(old_sublink->operName);
 
-		new_sublink->testexpr =	gpdb::PnodeMutateQueryOrExpressionTree
+		new_sublink->testexpr =	gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->testexpr,
 										(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
@@ -1030,7 +1030,7 @@ CQueryMutators::RunHavingQualMutator
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::PnodeMutateQueryOrExpressionTree
+		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree
 										(
 										old_sublink->subselect,
 										(MutatorWalkerFn) CQueryMutators::RunHavingQualMutator,
@@ -1043,7 +1043,7 @@ CQueryMutators::RunHavingQualMutator
 		return (Node *) new_sublink;
 	}
 	
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunHavingQualMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunHavingQualMutator, context);
 }
 
 //---------------------------------------------------------------------------
@@ -1066,14 +1066,14 @@ CQueryMutators::MakeVarInDerivedTable
 
 	const ULONG attno = gpdb::ListLength(context->m_groupby_target_list) + 1;
 	TargetEntry *target_entry = GetTargetEntryForAggExpr(context->m_memory_pool, context->m_md_accessor, (Node *) node, attno);
-	context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, target_entry);
+	context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
 
-	Var *new_var = gpdb::PvarMakeVar
+	Var *new_var = gpdb::MakeVar
 					(
 					1, // varno
 					attno,
-					gpdb::OidExprType((Node*) node),
-					gpdb::IExprTypeMod((Node*) node),
+					gpdb::ExprType((Node*) node),
+					gpdb::ExprTypeMod((Node*) node),
 					context->m_current_query_level
 					);
 
@@ -1098,16 +1098,16 @@ CQueryMutators::FindNodeInTargetEntries
 	GPOS_ASSERT(NULL != node);
 	GPOS_ASSERT(NULL != context);
 	
-	TargetEntry *found_target_entry = gpdb::PteMember(node, context->m_groupby_target_list);
+	TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
 	if (NULL != found_target_entry)
 	{
 		gpdb::GPDBFree(node);
-		Var *new_var = gpdb::PvarMakeVar
+		Var *new_var = gpdb::MakeVar
 						(
 						1, // varno
 						found_target_entry->resno,
-						gpdb::OidExprType( (Node*) found_target_entry->expr),
-						gpdb::IExprTypeMod( (Node*) found_target_entry->expr),
+						gpdb::ExprType( (Node*) found_target_entry->expr),
+						gpdb::ExprTypeMod( (Node*) found_target_entry->expr),
 						context->m_current_query_level
 						);
 
@@ -1160,7 +1160,7 @@ CQueryMutators::IncrLevelsUpInVar
 {
 	GPOS_ASSERT(NULL != var);
 
-	Var *var_copy = (Var *) gpdb::PvCopyObject(var);
+	Var *var_copy = (Var *) gpdb::CopyObject(var);
 	if (0 != var_copy->varlevelsup)
 	{
 		var_copy->varlevelsup++;
@@ -1185,7 +1185,7 @@ CQueryMutators::NormalizeHaving
 	const Query *query
 	)
 {
-	Query *query_copy = (Query *) gpdb::PvCopyObject(const_cast<Query*>(query));
+	Query *query_copy = (Query *) gpdb::CopyObject(const_cast<Query*>(query));
 
 	if (NULL == query->havingQual)
 	{
@@ -1195,7 +1195,7 @@ CQueryMutators::NormalizeHaving
 	Query *new_query = ConvertToDerivedTable(query_copy, true /*should_fix_target_list*/, false /*should_fix_having_qual*/);
 	gpdb::GPDBFree(query_copy);
 
-	RangeTblEntry *rte = ((RangeTblEntry *) gpdb::PvListNth(new_query->rtable, 0));
+	RangeTblEntry *rte = ((RangeTblEntry *) gpdb::ListNth(new_query->rtable, 0));
 	Query *derived_table_query = (Query *) rte->subquery;
 
 	// Add all necessary target list entries of subquery
@@ -1214,7 +1214,7 @@ CQueryMutators::NormalizeHaving
 			CTranslatorUtils::IsSortingColumn(target_entry, derived_table_query->sortClause) || !target_entry->resjunk)
 		{
 			TargetEntry *new_target_entry = MakeTopLevelTargetEntry(target_entry, num_target_entries);
-			new_query->targetList = gpdb::PlAppendElement(new_query->targetList, new_target_entry);
+			new_query->targetList = gpdb::LAppend(new_query->targetList, new_target_entry);
 			// Ensure that such target entries is not suppressed in the target list of the RTE
 			// and has a name
 			target_entry->resname = GetTargetEntryColName(target_entry, derived_table_query);
@@ -1263,10 +1263,10 @@ CQueryMutators::NormalizeHaving
 
 			GPOS_ASSERT(!target_entry->resjunk);
 			
-			new_subquery->targetList =  gpdb::PlAppendElement
+			new_subquery->targetList =  gpdb::LAppend
 													(
 													new_subquery->targetList,
-													(TargetEntry *) gpdb::PvCopyObject(const_cast<TargetEntry*>(target_entry))
+													(TargetEntry *) gpdb::CopyObject(const_cast<TargetEntry*>(target_entry))
 													);
 		}
 
@@ -1299,7 +1299,7 @@ CQueryMutators::NormalizeQuery
 	)
 {
 	// flatten join alias vars defined at the current level of the query
-	Query *pqueryResolveJoinVarReferences = gpdb::PqueryFlattenJoinAliasVar(const_cast<Query*>(query), query_level);
+	Query *pqueryResolveJoinVarReferences = gpdb::FlattenJoinAliasVar(const_cast<Query*>(query), query_level);
 
 	// eliminate distinct clause
 	Query *pqueryEliminateDistinct = CQueryMutators::EliminateDistinctClause(pqueryResolveJoinVarReferences);
@@ -1338,16 +1338,16 @@ CQueryMutators::MakeTopLevelTargetEntry
 	ULONG attno
 	)
 {
-	Var *new_var = gpdb::PvarMakeVar
+	Var *new_var = gpdb::MakeVar
 							(
 							1,
 							(AttrNumber) attno,
-							gpdb::OidExprType( (Node*) old_target_entry->expr),
-							gpdb::IExprTypeMod( (Node*) old_target_entry->expr),
+							gpdb::ExprType( (Node*) old_target_entry->expr),
+							gpdb::ExprTypeMod( (Node*) old_target_entry->expr),
 							0 // query levelsup
 							);
 
-	TargetEntry *new_target_entry = gpdb::PteMakeTargetEntry((Expr*) new_var, (AttrNumber) attno, old_target_entry->resname, old_target_entry->resjunk);
+	TargetEntry *new_target_entry = gpdb::MakeTargetEntry((Expr*) new_var, (AttrNumber) attno, old_target_entry->resname, old_target_entry->resjunk);
 
 	return new_target_entry;
 }
@@ -1392,7 +1392,7 @@ CQueryMutators::ConvertToDerivedTable
 	BOOL should_fix_having_qual
 	)
 {
-	Query *query_copy = (Query *) gpdb::PvCopyObject(const_cast<Query*>(query));
+	Query *query_copy = (Query *) gpdb::CopyObject(const_cast<Query*>(query));
 
 	Node *having_qual = NULL;
 	if (!should_fix_having_qual)
@@ -1451,13 +1451,13 @@ CQueryMutators::ConvertToDerivedTable
 	Query *new_query = MakeNode(Query);
 	new_query->cteList = original_cte_list;
 	new_query->hasAggs = false;
-	new_query->rtable = gpdb::PlAppendElement(new_query->rtable, rte);
+	new_query->rtable = gpdb::LAppend(new_query->rtable, rte);
 	new_query->intoClause = into_clause;
 	new_query->intoPolicy = into_policy;
 
 	FromExpr *fromexpr = MakeNode(FromExpr);
 	fromexpr->quals = NULL;
-	fromexpr->fromlist = gpdb::PlAppendElement(fromexpr->fromlist, rtref);
+	fromexpr->fromlist = gpdb::LAppend(fromexpr->fromlist, rtref);
 
 	new_query->jointree = fromexpr;
 	new_query->commandType = CMD_SELECT;
@@ -1481,14 +1481,14 @@ CQueryMutators::EliminateDistinctClause
 {
 	if (0 == gpdb::ListLength(query->distinctClause))
 	{
-		return (Query*) gpdb::PvCopyObject(const_cast<Query*>(query));
+		return (Query*) gpdb::CopyObject(const_cast<Query*>(query));
 	}
 
 	// create a derived table out of the previous query
 	Query *new_query = ConvertToDerivedTable(query, true /*should_fix_target_list*/, true /*should_fix_having_qual*/);
 
 	GPOS_ASSERT(1 == gpdb::ListLength(new_query->rtable));
-	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::PvListNth(new_query->rtable, 0))->subquery;
+	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::ListNth(new_query->rtable, 0))->subquery;
 
 	ReassignSortClause(new_query, derived_table_query);
 
@@ -1506,18 +1506,18 @@ CQueryMutators::EliminateDistinctClause
 		if (!target_entry->resjunk)
 		{
 			// create a new target entry that points to the corresponding entry in the derived table
-			Var *new_var = gpdb::PvarMakeVar
+			Var *new_var = gpdb::MakeVar
 									(
 									1,
 									target_entry->resno,
-									gpdb::OidExprType((Node*) target_entry->expr),
-									gpdb::IExprTypeMod((Node*) target_entry->expr),
+									gpdb::ExprType((Node*) target_entry->expr),
+									gpdb::ExprTypeMod((Node*) target_entry->expr),
 									0 // query levels up
 									);
-			TargetEntry *new_target_entry= gpdb::PteMakeTargetEntry((Expr*) new_var, (AttrNumber) resno, target_entry->resname, false);
+			TargetEntry *new_target_entry= gpdb::MakeTargetEntry((Expr*) new_var, (AttrNumber) resno, target_entry->resname, false);
 
 			new_target_entry->ressortgroupref =  target_entry->ressortgroupref;
-			new_query->targetList = gpdb::PlAppendElement(new_query->targetList, new_target_entry);
+			new_query->targetList = gpdb::LAppend(new_query->targetList, new_target_entry);
 		}
 
 		if (0 < target_entry->ressortgroupref &&
@@ -1545,7 +1545,7 @@ CQueryMutators::EliminateDistinctClause
 		new_sort_group_clause->eqop = sort_group_clause->eqop;
 		new_sort_group_clause->sortop = sort_group_clause->sortop;
 		new_sort_group_clause->nulls_first = sort_group_clause->nulls_first;
-		new_query->groupClause = gpdb::PlAppendElement(new_query->groupClause, new_sort_group_clause);
+		new_query->groupClause = gpdb::LAppend(new_query->groupClause, new_sort_group_clause);
 	}
 	new_query->distinctClause = NIL;
 	derived_table_query->distinctClause = NIL;
@@ -1610,7 +1610,7 @@ CQueryMutators::NormalizeWindowProjList
 	const Query *query
 	)
 {
-	Query *query_copy = (Query *) gpdb::PvCopyObject(const_cast<Query*>(query));
+	Query *query_copy = (Query *) gpdb::CopyObject(const_cast<Query*>(query));
 
 	if (!NeedsProjListWindowNormalization(query))
 	{
@@ -1623,7 +1623,7 @@ CQueryMutators::NormalizeWindowProjList
 	gpdb::GPDBFree(query_copy);
 
 	GPOS_ASSERT(1 == gpdb::ListLength(new_query->rtable));
-	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::PvListNth(new_query->rtable, 0))->subquery;
+	Query *derived_table_query = (Query *) ((RangeTblEntry *) gpdb::ListNth(new_query->rtable, 0))->subquery;
 
 	SContextGrpbyPlMutator context(memory_pool, md_accessor, derived_table_query, NULL);
 	ListCell *lc = NULL;
@@ -1636,23 +1636,23 @@ CQueryMutators::NormalizeWindowProjList
 		if (CTranslatorUtils::IsWindowSpec(target_entry, query->windowClause))
 		{
 			// insert the target list entry used in the window specification as is
-			TargetEntry *new_target_entry = (TargetEntry *) gpdb::PvCopyObject(target_entry);
+			TargetEntry *new_target_entry = (TargetEntry *) gpdb::CopyObject(target_entry);
 			new_target_entry->resno = gpdb::ListLength(context.m_groupby_target_list) + 1;
-			context.m_groupby_target_list = gpdb::PlAppendElement(context.m_groupby_target_list, new_target_entry);
+			context.m_groupby_target_list = gpdb::LAppend(context.m_groupby_target_list, new_target_entry);
 
 			if (!target_entry->resjunk || CTranslatorUtils::IsSortingColumn(target_entry, query->sortClause))
 			{
 				// if the target list entry used in the window specification is present
 				// in the query output then add it to the target list of the new top level query
-				Var *new_var = gpdb::PvarMakeVar
+				Var *new_var = gpdb::MakeVar
 										(
 										1,
 										new_target_entry->resno,
-										gpdb::OidExprType((Node*) target_entry->expr),
-										gpdb::IExprTypeMod((Node*) target_entry->expr),
+										gpdb::ExprType((Node*) target_entry->expr),
+										gpdb::ExprTypeMod((Node*) target_entry->expr),
 										0 // query levels up
 										);
-				TargetEntry *new_target_entry_copy = gpdb::PteMakeTargetEntry((Expr*) new_var, ulResNoNew, target_entry->resname, target_entry->resjunk);
+				TargetEntry *new_target_entry_copy = gpdb::MakeTargetEntry((Expr*) new_var, ulResNoNew, target_entry->resname, target_entry->resjunk);
 
 				// Copy the resortgroupref and resjunk information for the top-level target list entry
 				// Set target list entry of the derived table to be non-resjunked
@@ -1660,7 +1660,7 @@ CQueryMutators::NormalizeWindowProjList
 				new_target_entry_copy->ressortgroupref = new_target_entry->ressortgroupref;
 				new_target_entry->resjunk = false;
 
-				new_query->targetList = gpdb::PlAppendElement(new_query->targetList, new_target_entry_copy);
+				new_query->targetList = gpdb::LAppend(new_query->targetList, new_target_entry_copy);
 			}
 		}
 		else
@@ -1668,9 +1668,9 @@ CQueryMutators::NormalizeWindowProjList
 			// normalize target list entry
 			context.m_sort_group_ref = target_entry->ressortgroupref;
 			Expr *pexprNew = (Expr*) RunWindowProjListMutator( (Node*) target_entry->expr, &context);
-			TargetEntry *new_target_entry = gpdb::PteMakeTargetEntry(pexprNew, ulResNoNew, target_entry->resname, target_entry->resjunk);
+			TargetEntry *new_target_entry = gpdb::MakeTargetEntry(pexprNew, ulResNoNew, target_entry->resname, target_entry->resjunk);
 			new_target_entry->ressortgroupref = target_entry->ressortgroupref;
-			new_query->targetList = gpdb::PlAppendElement(new_query->targetList, new_target_entry);
+			new_query->targetList = gpdb::LAppend(new_query->targetList, new_target_entry);
 		}
 	}
 	derived_table_query->targetList = context.m_groupby_target_list;
@@ -1707,7 +1707,7 @@ CQueryMutators::RunWindowProjListMutator
 	// top-level query as is
 	if (IsA(node, SubLink))
 	{
-		return (Node *) gpdb::PvCopyObject(node);
+		return (Node *) gpdb::CopyObject(node);
 	}
 
 	const ULONG resno = gpdb::ListLength(context->m_groupby_target_list) + 1;
@@ -1716,29 +1716,29 @@ CQueryMutators::RunWindowProjListMutator
 	{
 		// insert window operator into the derived table
         // and refer to it in the top-level query's target list
-		WindowFunc *window_func = (WindowFunc *) gpdb::PvCopyObject(node);
+		WindowFunc *window_func = (WindowFunc *) gpdb::CopyObject(node);
 
 		// get the function name and add it to the target list
 		CMDIdGPDB *mdid_func = GPOS_NEW(context->m_memory_pool) CMDIdGPDB(window_func->winfnoid);
 		const CWStringConst *str = CMDAccessorUtils::PstrWindowFuncName(context->m_md_accessor, mdid_func);
 		mdid_func->Release();
 
-		TargetEntry *target_entry = gpdb::PteMakeTargetEntry
+		TargetEntry *target_entry = gpdb::MakeTargetEntry
 								(
-								(Expr*) gpdb::PvCopyObject(node),
+								(Expr*) gpdb::CopyObject(node),
 								(AttrNumber) resno,
 								CTranslatorUtils::CreateMultiByteCharStringFromWCString(str->GetBuffer()),
 								false /* resjunk */
 								);
-		context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, target_entry);
+		context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
 
 		// return a variable referring to the new derived table's corresponding target list entry
-		Var *new_var = gpdb::PvarMakeVar
+		Var *new_var = gpdb::MakeVar
 								(
 								1,
 								(AttrNumber) resno,
-								gpdb::OidExprType(node),
-								gpdb::IExprTypeMod(node),
+								gpdb::ExprType(node),
+								gpdb::ExprTypeMod(node),
 								0 // query levelsup
 								);
 
@@ -1749,38 +1749,38 @@ CQueryMutators::RunWindowProjListMutator
 	{
 		Var *new_var = NULL;
 
-		TargetEntry *found_target_entry = gpdb::PteMember(node, context->m_groupby_target_list);
+		TargetEntry *found_target_entry = gpdb::FindFirstMatchingMemberInTargetList(node, context->m_groupby_target_list);
 		if (NULL == found_target_entry)
 		{
 			// insert target entry into the target list of the derived table
 			CWStringConst strUnnamedCol(GPOS_WSZ_LIT("?column?"));
-			TargetEntry *target_entry = gpdb::PteMakeTargetEntry
+			TargetEntry *target_entry = gpdb::MakeTargetEntry
 									(
-									(Expr*) gpdb::PvCopyObject(node),
+									(Expr*) gpdb::CopyObject(node),
 									(AttrNumber) resno,
 									CTranslatorUtils::CreateMultiByteCharStringFromWCString(strUnnamedCol.GetBuffer()),
 									false /* resjunk */
 									);
-			context->m_groupby_target_list = gpdb::PlAppendElement(context->m_groupby_target_list, target_entry);
+			context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);
 
-			new_var = gpdb::PvarMakeVar
+			new_var = gpdb::MakeVar
 								(
 								1,
 								(AttrNumber) resno,
-								gpdb::OidExprType(node),
-								gpdb::IExprTypeMod(node),
+								gpdb::ExprType(node),
+								gpdb::ExprTypeMod(node),
 								0 // query levelsup
 								);
 		}
 		else
 		{
 			found_target_entry->resjunk = false; // ensure that the derived target list is not resjunked
-			new_var = gpdb::PvarMakeVar
+			new_var = gpdb::MakeVar
 								(
 								1,
 								found_target_entry->resno,
-								gpdb::OidExprType(node),
-								gpdb::IExprTypeMod(node),
+								gpdb::ExprType(node),
+								gpdb::ExprTypeMod(node),
 								0 // query levelsup
 								);
 		}
@@ -1788,7 +1788,7 @@ CQueryMutators::RunWindowProjListMutator
 		return (Node*) new_var;
 	}
 
-	return gpdb::PnodeMutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunWindowProjListMutator, context);
+	return gpdb::MutateExpressionTree(node, (MutatorWalkerFn) CQueryMutators::RunWindowProjListMutator, context);
 }
 
 //---------------------------------------------------------------------------

@@ -379,7 +379,7 @@ namespace gpdxl
 			
 			// translate Optimizer comparison types to GPDB
 			static
-			ULONG UlCmpt(IMDType::ECmpType ecmpt);
+			ULONG GetComparisonType(IMDType::ECmpType ecmpt);
 			
 			// retrieve the opfamilies mdids for the given scalar op
 			static

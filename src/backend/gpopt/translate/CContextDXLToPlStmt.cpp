@@ -245,7 +245,7 @@ CContextDXLToPlStmt::AddRTE
 	BOOL is_result_relation
 	)
 {
-	(* (m_rtable_entries_list)) = gpdb::PlAppendElement((*(m_rtable_entries_list)), rte);
+	(* (m_rtable_entries_list)) = gpdb::LAppend((*(m_rtable_entries_list)), rte);
 
 	rte->inFromCl = true;
 
@@ -271,9 +271,9 @@ CContextDXLToPlStmt::AddPartitionedTable
 	OID oid
 	)
 {
-	if (!gpdb::FMemberOid(m_partitioned_tables_list, oid))
+	if (!gpdb::ListMemberOid(m_partitioned_tables_list, oid))
 	{
-		m_partitioned_tables_list = gpdb::PlAppendOid(m_partitioned_tables_list, oid);
+		m_partitioned_tables_list = gpdb::LAppendOid(m_partitioned_tables_list, oid);
 	}
 }
 
@@ -319,7 +319,7 @@ CContextDXLToPlStmt::GetNumPartitionSelectorsList() const
 	for (ULONG ul = 0; ul < len; ul++)
 	{
 		ULONG *num_partition_selectors = (*m_num_partition_selectors_array)[ul];
-		partition_selectors_list = gpdb::PlAppendInt(partition_selectors_list, *num_partition_selectors);
+		partition_selectors_list = gpdb::LAppendInt(partition_selectors_list, *num_partition_selectors);
 	}
 
 	return partition_selectors_list;
@@ -336,7 +336,7 @@ CContextDXLToPlStmt::GetNumPartitionSelectorsList() const
 void
 CContextDXLToPlStmt::AddSubplan(Plan *plan)
 {
-	(* (m_subplan_entries_list)) = gpdb::PlAppendElement((*(m_subplan_entries_list)), plan);
+	(* (m_subplan_entries_list)) = gpdb::LAppend((*(m_subplan_entries_list)), plan);
 }
 
 //---------------------------------------------------------------------------

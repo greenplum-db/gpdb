@@ -228,7 +228,7 @@ SOptContext::CloneErrorMsg
 	{
 		return NULL;
 	}
-	return gpdb::SzMemoryContextStrdup(context, m_error_msg);
+	return gpdb::MemCtxtStrdup(context, m_error_msg);
 }
 
 
@@ -381,8 +381,8 @@ COptTasks::ConvertToDXLFromMDCast
 	GPOS_ASSERT(NULL != relcache_ctxt);
 
 	GPOS_ASSERT(2 == gpdb::ListLength(relcache_ctxt->m_oid_list));
-	Oid src_oid = gpdb::OidListNth(relcache_ctxt->m_oid_list, 0);
-	Oid dest_oid = gpdb::OidListNth(relcache_ctxt->m_oid_list, 1);
+	Oid src_oid = gpdb::ListNthOid(relcache_ctxt->m_oid_list, 0);
+	Oid dest_oid = gpdb::ListNthOid(relcache_ctxt->m_oid_list, 1);
 
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
 	IMemoryPool *memory_pool = amp.Pmp();
@@ -440,8 +440,8 @@ COptTasks::ConvertToDXLFromMDScalarCmp
 	GPOS_ASSERT(CmptOther > relcache_ctxt->m_cmp_type && "Incorrect comparison type specified");
 
 	GPOS_ASSERT(2 == gpdb::ListLength(relcache_ctxt->m_oid_list));
-	Oid left_oid = gpdb::OidListNth(relcache_ctxt->m_oid_list, 0);
-	Oid right_oid = gpdb::OidListNth(relcache_ctxt->m_oid_list, 1);
+	Oid left_oid = gpdb::ListNthOid(relcache_ctxt->m_oid_list, 0);
+	Oid right_oid = gpdb::ListNthOid(relcache_ctxt->m_oid_list, 1);
 	CmpType cmpt = (CmpType) relcache_ctxt->m_cmp_type;
 	
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
@@ -667,7 +667,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 							);
 	
 	// translate DXL -> PlannedStmt
-	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::UlSegmentCountGP());
+	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
 	return dxl_to_plan_stmt_translator.PplstmtFromDXL(dxlnode, can_set_tag);
 }
 
@@ -953,10 +953,10 @@ COptTasks::OptimizeTask
 	// Does the metadatacache need to be reset?
 	//
 	// On the first call, before the cache has been initialized, we
-	// don't care about the return value of FMDCacheNeedsReset(). But
+	// don't care about the return value of MDCacheNeedsReset(). But
 	// we need to call it anyway, to give it a chance to initialize
 	// the invalidation mechanism.
-	bool reset_mdcache = gpdb::FMDCacheNeedsReset();
+	bool reset_mdcache = gpdb::MDCacheNeedsReset();
 
 	// initialize metadata cache, or purge if needed, or change size if requested
 	if (!CMDCache::FInitialized())
@@ -1006,7 +1006,7 @@ COptTasks::OptimizeTask
 			// map that stores gpdb att to optimizer col mapping
 			CMappingVarColId *var_col_id_mapping = GPOS_NEW(memory_pool) CMappingVarColId(memory_pool);
 
-			ULONG num_segments = gpdb::UlSegmentCountGP();
+			ULONG num_segments = gpdb::GetGPSegmentCount();
 			ULONG num_segments_for_costing = optimizer_segments;
 			if (0 == num_segments_for_costing)
 			{
@@ -1069,7 +1069,7 @@ COptTasks::OptimizeTask
 			{
 				// always use opt_ctxt->m_query->can_set_tag as the query_to_dxl_translator->Pquery() is a mutated Query object
 				// that may not have the correct can_set_tag
-				opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::PvCopyObject(ConvertToPlanStmtFromDXL(memory_pool, &mda, plan_dxl, opt_ctxt->m_query->canSetTag));
+				opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(memory_pool, &mda, plan_dxl, opt_ctxt->m_query->canSetTag));
 			}
 
 			CStatisticsConfig *stats_conf = optimizer_config->GetStatsConf();
@@ -1228,7 +1228,7 @@ COptTasks::OptimizeMinidumpTask
 	AUTO_MEM_POOL(amp);
 	IMemoryPool *memory_pool = amp.Pmp();
 
-	ULONG num_segments = gpdb::UlSegmentCountGP();
+	ULONG num_segments = gpdb::GetGPSegmentCount();
 	ULONG num_segments_for_costing = optimizer_segments;
 	if (0 == num_segments_for_costing)
 	{
@@ -1326,17 +1326,17 @@ COptTasks::ConvertToPlanStmtFromDXLTask
 		CAutoMDAccessor md_accessor(memory_pool, relcache_provider, default_sysid);
 
 		// translate DXL -> PlannedStmt
-		CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor.Pmda(), &dxl_to_plan_stmt_ctxt, gpdb::UlSegmentCountGP());
+		CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor.Pmda(), &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
 		PlannedStmt *plan_stmt = dxl_to_plan_stmt_translator.PplstmtFromDXL(original_plan_dxl, opt_ctxt->m_query->canSetTag);
 		if (optimizer_print_plan)
 		{
-			elog(NOTICE, "Plstmt: %s", gpdb::SzNodeToString(plan_stmt));
+			elog(NOTICE, "Plstmt: %s", gpdb::NodeToString(plan_stmt));
 		}
 
 		GPOS_ASSERT(NULL != plan_stmt);
 		GPOS_ASSERT(NULL != CurrentMemoryContext);
 
-		opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::PvCopyObject(plan_stmt);
+		opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::CopyObject(plan_stmt);
 	}
 
 	// cleanup
@@ -1439,7 +1439,7 @@ COptTasks::ConvertToDXLFromRelStatsTask
 	// relcache MD provider
 	CMDProviderRelcache *relcache_provider = GPOS_NEW(memory_pool) CMDProviderRelcache(memory_pool);
 	CAutoMDAccessor md_accessor(memory_pool, relcache_provider, default_sysid);
-	ICostModel *cost_model = GetCostModel(memory_pool, gpdb::UlSegmentCountGP());
+	ICostModel *cost_model = GetCostModel(memory_pool, gpdb::GetGPSegmentCount());
 	CAutoOptCtxt aoc(memory_pool, md_accessor.Pmda(), NULL /*expr_evaluator*/, cost_model);
 
 	IMDCachePtrArray *mdcache_obj_array = GPOS_NEW(memory_pool) IMDCachePtrArray(memory_pool);
@@ -1458,7 +1458,7 @@ COptTasks::ConvertToDXLFromRelStatsTask
 		mdcache_obj_array->Append(dynamic_cast<IMDCacheObject *>(mdobj_rel_stats));
 
 		// extract out column stats for this relation
-		Relation rel = gpdb::RelGetRelation(relation_oid);
+		Relation rel = gpdb::GetRelation(relation_oid);
 		ULONG pos_counter = 0;
 		for (ULONG ul = 0; ul < ULONG(rel->rd_att->natts); ul++)
 		{
@@ -1536,10 +1536,10 @@ COptTasks::EvalExprFromDXLTask
 	// Does the metadatacache need to be reset?
 	//
 	// On the first call, before the cache has been initialized, we
-	// don't care about the return value of FMDCacheNeedsReset(). But
+	// don't care about the return value of MDCacheNeedsReset(). But
 	// we need to call it anyway, to give it a chance to initialize
 	// the invalidation mechanism.
-	bool reset_mdcache = gpdb::FMDCacheNeedsReset();
+	bool reset_mdcache = gpdb::MDCacheNeedsReset();
 
 	// initialize metadata cache, or purge if needed, or change size if requested
 	if (!CMDCache::FInitialized())
