@@ -113,11 +113,11 @@ namespace gpdxl
 				SContextIndexVarAttno
 					(
 					const IMDRelation *pmdrel,
-					const IMDIndex *index
+					const IMDIndex *md_index
 					)
 					:
 					m_pmdrel(pmdrel),
-					m_pmdindex(index)
+					m_pmdindex(md_index)
 				{
 					GPOS_ASSERT(NULL != pmdrel);
 					GPOS_ASSERT(NULL != index);
@@ -161,7 +161,7 @@ namespace gpdxl
 
 			// walker to set index var attno's
 			static
-			BOOL FSetIndexVarAttno(Node *node, SContextIndexVarAttno *pctxtidxvarattno);
+			BOOL SetIndexVarAttnoWalker(Node *node, SContextIndexVarAttno *pctxtidxvarattno);
 
 		public:
 			// ctor
@@ -179,10 +179,10 @@ namespace gpdxl
 				);
 
 			// main translation routine for DXL tree -> PlannedStmt
-			PlannedStmt *PplstmtFromDXL(const CDXLNode *dxlnode, bool canSetTag);
+			PlannedStmt *GetPlannedStmtFromDXL(const CDXLNode *dxlnode, bool canSetTag);
 
 			// translate the join types from its DXL representation to the GPDB one
-			static JoinType JtFromEdxljt(EdxlJoinType join_type);
+			static JoinType GetGPDBJoinTypeFromDXLJoinType(EdxlJoinType join_type);
 
 		private:
 
@@ -199,7 +199,7 @@ namespace gpdxl
 			void SetInitPlanVariables(PlannedStmt *);
 
 			// translate DXL table scan node into a SeqScan node
-			Plan *PtsFromDXLTblScan
+			Plan *TranslateDXLTblScan
 				(
 				const CDXLNode *pdxlnTblScan,
 				CDXLTranslateContext *output_context,
@@ -207,7 +207,7 @@ namespace gpdxl
 				);
 
 			// translate DXL index scan node into a IndexScan node
-			Plan *PisFromDXLIndexScan
+			Plan *TranslateDXLIndexScan
 				(
 				const CDXLNode *pdxlnIndexScan,
 				CDXLTranslateContext *output_context,
@@ -215,7 +215,7 @@ namespace gpdxl
 				);
 
 			// translates a DXL index scan node into a IndexScan node
-			Plan *PisFromDXLIndexScan
+			Plan *TranslateDXLIndexScan
 				(
 				const CDXLNode *pdxlnIndexScan,
 				CDXLPhysicalIndexScan *pdxlopIndexScan,
@@ -227,13 +227,13 @@ namespace gpdxl
 			// translate DXL hash join into a HashJoin node
 			Plan *PhjFromDXLHJ
 				(
-				const CDXLNode *pdxlnHJ,
+				const CDXLNode *TranslateDXLHashJoin,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
 			// translate DXL nested loop join into a NestLoop node
-			Plan *PnljFromDXLNLJ
+			Plan *TranslateDXLNLJoin
 				(
 				const CDXLNode *pdxlnNLJ,
 				CDXLTranslateContext *output_context,
@@ -241,7 +241,7 @@ namespace gpdxl
 				);
 
 			// translate DXL merge join into a MergeJoin node
-			Plan *PmjFromDXLMJ
+			Plan *TranslateDXLMergeJoin
 				(
 				const CDXLNode *pdxlnMJ,
 				CDXLTranslateContext *output_context,
@@ -249,7 +249,7 @@ namespace gpdxl
 				);
 
 			// translate DXL motion node into GPDB Motion plan node
-			Plan *PplanMotionFromDXLMotion
+			Plan *TranslateDXLMotion
 				(
 				const CDXLNode *pdxlnMotion,
 				CDXLTranslateContext *output_context,
@@ -266,7 +266,7 @@ namespace gpdxl
 
 			// translate DXL duplicate sensitive redistribute motion node into 
 			// GPDB result node with hash filters
-			Plan *PplanResultHashFilters
+			Plan *TranslateDXLRedistributeMotionToResultHashFilters
 				(
 				const CDXLNode *pdxlnMotion,
 				CDXLTranslateContext *output_context,
@@ -274,7 +274,7 @@ namespace gpdxl
 				);
 
 			// translate DXL aggregate node into GPDB Agg plan node
-			Plan *PaggFromDXLAgg
+			Plan *TranslateDXLAgg
 				(
 				const CDXLNode *pdxlnMotion,
 				CDXLTranslateContext *output_context,
@@ -282,7 +282,7 @@ namespace gpdxl
 				);
 
 			// translate DXL window node into GPDB window node
-			Plan *PwindowFromDXLWindow
+			Plan *TranslateDXLWindow
 				(
 				const CDXLNode *pdxlnMotion,
 				CDXLTranslateContext *output_context,
@@ -290,7 +290,7 @@ namespace gpdxl
 				);
 
 			// translate DXL sort node into GPDB Sort plan node
-			Plan *PsortFromDXLSort
+			Plan *TranslateDXLSort
 				(
 				const CDXLNode *pdxlnSort,
 				CDXLTranslateContext *output_context,
@@ -298,7 +298,7 @@ namespace gpdxl
 				);
 
 			// translate a DXL node into a Hash node
-			Plan *PhhashFromDXL
+			Plan *TranslateDXLHash
 				(
 				const CDXLNode *dxlnode,
 				CDXLTranslateContext *output_context,
@@ -306,7 +306,7 @@ namespace gpdxl
 				);
 
 			// translate DXL Limit node into a Limit node
-			Plan *PlimitFromDXLLimit
+			Plan *TranslateDXLLimit
 				(
 				const CDXLNode *pdxlnLimit,
 				CDXLTranslateContext *output_context,
@@ -314,42 +314,42 @@ namespace gpdxl
 				);
 
 			// translate DXL TVF into a GPDB Function Scan node
-			Plan *PplanFunctionScanFromDXLTVF
+			Plan *TranslateDXLTvf
 				(
 				const CDXLNode *pdxlnTVF,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			Plan *PsubqscanFromDXLSubqScan
+			Plan *TranslateDXLSubQueryScan
 				(
 				const CDXLNode *pdxlnSubqScan,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			Plan *PresultFromDXLResult
+			Plan *TranslateDXLResult
 				(
 				const CDXLNode *pdxlnResult,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			Plan *PappendFromDXLAppend
+			Plan *TranslateDXLAppend
 				(
 				const CDXLNode *pdxlnAppend,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			Plan *PmatFromDXLMaterialize
+			Plan *TranslateDXLMaterialize
 				(
 				const CDXLNode *pdxlnMaterialize,
 				CDXLTranslateContext *output_context,
 				DXLTranslationContextArr *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			Plan *PshscanFromDXLSharedScan
+			Plan *TranslateDXLSharedScan
 				(
 				const CDXLNode *pdxlnSharedScan,
 				CDXLTranslateContext *output_context,
@@ -357,7 +357,7 @@ namespace gpdxl
 				);
 
 			// translate a sequence operator
-			Plan *PplanSequence
+			Plan *TranslateDXLSequence
 				(
 				const CDXLNode *pdxlnSequence,
 				CDXLTranslateContext *output_context,
@@ -365,7 +365,7 @@ namespace gpdxl
 				);
 
 			// translate a dynamic table scan operator
-			Plan *PplanDTS
+			Plan *TranslateDXLDynTblScan
 				(
 				const CDXLNode *pdxlnDTS,
 				CDXLTranslateContext *output_context,
@@ -373,7 +373,7 @@ namespace gpdxl
 				);	
 			
 			// translate a dynamic index scan operator
-			Plan *PplanDIS
+			Plan *TranslateDXLDynIdxScan
 				(
 				const CDXLNode *pdxlnDIS,
 				CDXLTranslateContext *output_context,
@@ -381,7 +381,7 @@ namespace gpdxl
 				);
 			
 			// translate a DML operator
-			Plan *PplanDML
+			Plan *TranslateDXLDml
 				(
 				const CDXLNode *pdxlnDML,
 				CDXLTranslateContext *output_context,
@@ -389,7 +389,7 @@ namespace gpdxl
 				);
 
 			// translate a Split operator
-			Plan *PplanSplit
+			Plan *TranslateDXLSplit
 				(
 				const CDXLNode *pdxlnSplit,
 				CDXLTranslateContext *output_context,
@@ -397,7 +397,7 @@ namespace gpdxl
 				);
 			
 			// translate a row trigger operator
-			Plan *PplanRowTrigger
+			Plan *TranslateDXLRowTrigger
 				(
 				const CDXLNode *pdxlnRowTrigger,
 				CDXLTranslateContext *output_context,
@@ -405,7 +405,7 @@ namespace gpdxl
 				);
 
 			// translate an Assert operator
-			Plan *PplanAssert
+			Plan *TranslateDXLAssert
 				(
 				const CDXLNode *pdxlnAssert,
 				CDXLTranslateContext *output_context,
@@ -420,10 +420,10 @@ namespace gpdxl
 				);
 
 			// retrieve the flow of the shared input scan of the cte consumers
-			Flow *PflowCTEConsumer(List *plshscanCTEConsumer);
+			Flow *GetFlowCTEConsumer(List *plshscanCTEConsumer);
 
 			// translate a CTE producer into a GPDB share input scan
-			Plan *PshscanFromDXLCTEProducer
+			Plan *TranslateDXLCTEProducerToSharedScan
 				(
 				const CDXLNode *pdxlnCTEProducer,
 				CDXLTranslateContext *output_context,
@@ -431,7 +431,7 @@ namespace gpdxl
 				);
 
 			// translate a CTE consumer into a GPDB share input scan
-			Plan *PshscanFromDXLCTEConsumer
+			Plan *TranslateDXLCTEConsumerToSharedScan
 				(
 				const CDXLNode *pdxlnCTEConsumer,
 				CDXLTranslateContext *output_context,
@@ -439,7 +439,7 @@ namespace gpdxl
 				);
 
 			// translate a (dynamic) bitmap table scan operator
-			Plan *PplanBitmapTableScan
+			Plan *TranslateDXLBitmapTblScan
 				(
 				const CDXLNode *pdxlnBitmapScan,
 				CDXLTranslateContext *output_context,
@@ -447,7 +447,7 @@ namespace gpdxl
 				);
 
 			// translate a DXL PartitionSelector into a GPDB PartitionSelector
-			Plan *PplanPartitionSelector
+			Plan *TranslateDXLPartSelector
 				(
 				const CDXLNode *pdxlnPartitionSelector,
 				CDXLTranslateContext *output_context,
@@ -455,7 +455,7 @@ namespace gpdxl
 				);
 
 			// translate a DXL Value Scan into GPDB Value Scan
-			Plan *PplanValueScan
+			Plan *TranslateDXLValueScan
 				(
 				const CDXLNode *pdxlnValueScan,
 				CDXLTranslateContext *output_context,
@@ -463,7 +463,7 @@ namespace gpdxl
 				);
 
 			// translate DXL filter list into GPDB filter list
-			List *PlFilterList
+			List *TranslateDXLFilterList
 				(
 				const CDXLNode *pdxlnFilterList,
 				const CDXLTranslateContextBaseTable *base_table_context,
@@ -472,7 +472,7 @@ namespace gpdxl
 				);
 
 			// create range table entry from a CDXLPhysicalTVF node
-			RangeTblEntry *PrteFromDXLTVF
+			RangeTblEntry *TranslateDXLTvfToRangeTblEntry
 				(
 				const CDXLNode *pdxlnTVF,
 				CDXLTranslateContext *output_context,
@@ -480,7 +480,7 @@ namespace gpdxl
 				);
 
 			// create range table entry from a CDXLPhysicalValueScan node
-			RangeTblEntry *PrteFromDXLValueScan
+			RangeTblEntry *TranslateDXLValueScanToRangeTblEntry
 				(
 				const CDXLNode *pdxlnValueScan,
 				CDXLTranslateContext *output_context,
@@ -488,7 +488,7 @@ namespace gpdxl
 				);
 
 			// create range table entry from a table descriptor
-			RangeTblEntry *PrteFromTblDescr
+			RangeTblEntry *TranslateDXLTblDescrToRangeTblEntry
 				(
 				const CDXLTableDescr *table_descr,
 				const CDXLIndexDescr *index_descr_dxl,
@@ -497,7 +497,7 @@ namespace gpdxl
 				);
 
 			// translate DXL projection list into a target list
-			List *PlTargetListFromProjList
+			List *TranslateDXLProjList
 				(
 				const CDXLNode *project_list_dxl,
 				const CDXLTranslateContextBaseTable *base_table_context,
@@ -506,18 +506,18 @@ namespace gpdxl
 				);
 			
 			// insert NULL values for dropped attributes to construct the target list for a DML statement
-			List *PlTargetListWithDroppedCols(List *target_list, const IMDRelation *pmdrel);
+			List *CreateTargetListWithNullsForDroppedCols(List *target_list, const IMDRelation *pmdrel);
 
 			// create a target list containing column references for a hash node from the
 			// project list of its child node
-			List *PlTargetListForHashNode
+			List *TranslateDXLProjectListToHashTargetList
 				(
 				const CDXLNode *project_list_dxl,
 				CDXLTranslateContext *pdxltrctxChild,
 				CDXLTranslateContext *output_context
 				);
 			
-			List *PlQualFromFilter
+			List *TranslateDXLFilterToQual
 				(
 				const CDXLNode *filter_dxlnode,
 				const CDXLTranslateContextBaseTable *base_table_context,
@@ -560,7 +560,7 @@ namespace gpdxl
 				);
 
 			// translate the tree of bitmap index operators that are under a (dynamic) bitmap table scan
-			Plan *PplanBitmapAccessPath
+			Plan *TranslateDXLBitmapAccessPath
 				(
 				const CDXLNode *pdxlnBitmapAccessPath,
 				CDXLTranslateContext *output_context,
@@ -572,7 +572,7 @@ namespace gpdxl
 				);
 
 			// translate a bitmap bool op expression
-			Plan *PplanBitmapBoolOp
+			Plan *TranslateDXLBitmapBoolOp
 				(
 				const CDXLNode *pdxlnBitmapBoolOp,
 				CDXLTranslateContext *output_context,
@@ -584,7 +584,7 @@ namespace gpdxl
 				);
 			
 			// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan or DynamicBitmapIndexScan
-			Plan *PplanBitmapIndexProbe
+			Plan *TranslateDXLBitmapIndexProbe
 				(
 				const CDXLNode *pdxlnBitmapIndexProbe,
 				CDXLTranslateContext *output_context,
@@ -605,7 +605,7 @@ namespace gpdxl
 				bool *pboolNullsFirst
 				);
 
-			List *PlQualFromScalarCondNode
+			List *TranslateDXLScCondToQual
 				(
 				const CDXLNode *filter_dxlnode,
 				const CDXLTranslateContextBaseTable *base_table_context,
@@ -618,10 +618,10 @@ namespace gpdxl
 			Cost CostFromStr(const CWStringBase *str);
 
 			// check if the given operator is a DML operator on a distributed table
-			BOOL FTargetTableDistributed(CDXLOperator *dxlop);
+			BOOL IsTgtTblDistributed(CDXLOperator *dxlop);
 
 			// add a target entry for the given colid to the given target list
-			ULONG UlAddTargetEntryForColId
+			ULONG AddTargetEntryForColId
 				(
 				List **pplTargetList, 
 				CDXLTranslateContext *pdxltrctx, 
@@ -647,7 +647,7 @@ namespace gpdxl
 				);
 			
 			// translate the index filters
-			List *PlTranslateIndexFilter
+			List *TranslateDXLIndexFilter
 				(
 				CDXLNode *filter_dxlnode,
 				CDXLTranslateContext *output_context,
@@ -656,7 +656,7 @@ namespace gpdxl
 				);
 			
 			// translate the assert constraints
-			List *PlTranslateAssertConstraints
+			List *TranslateDXLAssertConstraints
 				(
 				CDXLNode *filter_dxlnode,
 				CDXLTranslateContext *output_context,
@@ -664,7 +664,7 @@ namespace gpdxl
 				);
 
 			// translate a CTAS operator
-			Plan *PplanCTAS
+			Plan *TranslateDXLCtas
 				(
 				const CDXLNode *pdxlnDML,
 				CDXLTranslateContext *output_context,
@@ -676,19 +676,19 @@ namespace gpdxl
 			void SetVarTypMod(const CDXLPhysicalCTAS *dxlop, List *target_list);
 
 			// translate the into clause for a DXL physical CTAS operator
-			IntoClause *PintoclFromCtas(const CDXLPhysicalCTAS *dxlop);
+			IntoClause *TranslateDXLPhyCtasToIntoClause(const CDXLPhysicalCTAS *dxlop);
 			
 			// translate the distribution policy for a DXL physical CTAS operator
-			GpPolicy *PdistrpolicyFromCtas(const CDXLPhysicalCTAS *dxlop);
+			GpPolicy *TranslateDXLPhyCtasToDistrPolicy(const CDXLPhysicalCTAS *dxlop);
 
 			// translate CTAS storage options
-			List *PlCtasOptions(CDXLCtasStorageOptions::DXLCtasOptionArray *pdrgpctasopt);
+			List *TranslateDXLCtasStorageOptions(CDXLCtasStorageOptions::DXLCtasOptionArray *pdrgpctasopt);
 			
 			// compute directed dispatch segment ids
-			List *PlDirectDispatchSegIds(CDXLDirectDispatchInfo *pdxlddinfo);
+			List *TranslateDXLDirectDispatchInfo(CDXLDirectDispatchInfo *pdxlddinfo);
 			
 			// hash a DXL datum with GPDB's hash function
-			ULONG UlCdbHash(DXLDatumArray *pdrgpdxldatum);
+			ULONG GetDXLDatumGPDBHash(DXLDatumArray *pdrgpdxldatum);
 
 	};
 }
