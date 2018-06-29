@@ -113,27 +113,6 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 	set_base_rel_pathlists(root);
 
 	/*
-	 * CDB: If join, warn of any tables that need ANALYZE.
-	 */
-	if (has_multiple_baserels(root))
-	{
-		Index		rti;
-		RelOptInfo *brel;
-		RangeTblEntry *brte;
-
-		for (rti = 1; rti < root->simple_rel_array_size; rti++)
-		{
-			brel = root->simple_rel_array[rti];
-			if (brel &&
-				brel->cdb_default_stats_used)
-			{
-				brte = rt_fetch(rti, root->parse->rtable);
-				cdb_default_stats_warning_for_table(brte->relid);
-			}
-		}
-	}
-
-	/*
 	 * Generate access paths for the entire join tree.
 	 */
 	rel = make_rel_from_joinlist(root, joinlist);

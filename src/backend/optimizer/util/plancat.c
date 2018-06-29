@@ -65,11 +65,7 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
                       Relation      rel,
                       int32        *attr_widths,
 				      BlockNumber  *pages,
-                      double       *tuples,
-                      bool         *default_stats_used);
-
-static void
-cdb_default_stats_warning_for_index(Oid reloid, Oid indexoid);
+                      double       *tuples);
 
 static void get_external_relation_info(Relation relation, RelOptInfo *rel);
 
@@ -155,9 +151,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			relation,
 			rel->attr_widths - rel->min_attr,
 			&rel->pages,
-			&rel->tuples,
-			&rel->cdb_default_stats_used
-			);
+			&rel->tuples);
 	}
 
 	/*
@@ -175,10 +169,6 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		List	   *indexoidlist;
 		ListCell   *l;
 		LOCKMODE	lmode;
-
-        /* Warn if indexed table needs ANALYZE. */
-        if (rel->cdb_default_stats_used)
-            cdb_default_stats_warning_for_table(relation->rd_id);
 
 		indexoidlist = RelationGetIndexList(relation);
 
@@ -379,16 +369,11 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
                                   indexRelation,
                                   NULL,
                                   &info->pages,
-                                  &info->tuples,
-                                  &info->cdb_default_stats_used);
+                                  &info->tuples);
 
 			if (!info->indpred ||
 				info->tuples > rel->tuples)
 				info->tuples = rel->tuples;
-
-            if (info->cdb_default_stats_used &&
-                !rel->cdb_default_stats_used)
-                cdb_default_stats_warning_for_index(relation->rd_id, indexoid);
 
 			index_close(indexRelation, needs_longlock ? NoLock : lmode);
 
@@ -442,15 +427,12 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
                       Relation      rel,
                       int32        *attr_widths,
 				      BlockNumber  *pages,
-                      double       *tuples,
-                      bool         *default_stats_used)
+                      double       *tuples)
 {
 	BlockNumber relpages;
 	double		reltuples;
 	double		density;
     BlockNumber curpages = 0;
-
-    *default_stats_used = false;
 
     /* Rel not distributed?  RelationGetNumberOfBlocks can get actual #pages. */
     if (!relOptInfo->cdbpolicy ||
@@ -1222,94 +1204,3 @@ has_unique_index(RelOptInfo *rel, AttrNumber attno)
 	}
 	return false;
 }
-
-
-/*
- * cdb_default_stats_warning_needed
- */
-static bool
-cdb_default_stats_warning_needed(Oid reloid)
-{
-    Relation    relation;
-    bool        warn = true;
-
-    /* Find relcache entry. */
-    relation = relation_open(reloid, NoLock);
-
-    /* Keep quiet if temporary or system table. */
-    if (relation->rd_rel->relpersistence == RELPERSISTENCE_TEMP ||
-        IsSystemClass(relation->rd_rel))
-        warn = false;
-
-    /* Warn at most once during lifetime of relcache entry. */
-    else if (relation->rd_cdbDefaultStatsWarningIssued)
-        warn = false;
-
-    /* Caller will issue warning.  Set flag so warning won't be repeated. */
-    else
-        relation->rd_cdbDefaultStatsWarningIssued = true;
-
-    /* Close rel.  Don't disturb the lock. */
-    relation_close(relation, NoLock);
-
-    return warn;
-}                               /* cdb_default_stats_warning_needed */
-
-
-/*
- * cdb_default_stats_warning_for_index
- */
-void
-cdb_default_stats_warning_for_index(Oid reloid, Oid indexoid)
-{
-    char           *relname;
-    char           *indexname;
-
-    /* Warn at most once during lifetime of relcache entry.  Skip if temp. */
-    if (!cdb_default_stats_warning_needed(indexoid))
-        return;
-
-    /* Get name from catalog, not from relcache, in case it has been renamed. */
-    relname = get_rel_name(reloid);
-    indexname = get_rel_name(indexoid);
-
-    ereport(NOTICE,
-            (errmsg("Query planner will use default statistics for index \"%s\" "
-                    "on table \"%s\"",
-                    indexname ? indexname : "??",
-                    relname ? relname : "??"),
-             errhint("To cache a sample of the table's actual statistics for "
-                     "optimization, use the ANALYZE or VACUUM ANALYZE command.")
-             ));
-
-    if (relname)
-        pfree(relname);
-    if (indexname)
-        pfree(indexname);
-}                               /* cdb_default_stats_warning_for_index */
-
-/*
- * cdb_default_stats_warning_for_table
- */
-void
-cdb_default_stats_warning_for_table(Oid reloid)
-{
-    char   *relname;
-
-    /* Warn at most once during lifetime of relcache entry.  Skip if temp. */
-    if (!cdb_default_stats_warning_needed(reloid))
-        return;
-
-    /* Get name from catalog, not from relcache, in case name has changed. */
-    relname = get_rel_name(reloid);
-
-    ereport(NOTICE,
-            (errmsg("Query planner will use default statistics for table \"%s\"",
-                    relname ? relname : "??"),
-             errhint("To cache a sample of the table's actual statistics for "
-                     "optimization, use the ANALYZE or VACUUM ANALYZE command.")
-             ));
-
-    if (relname)
-        pfree(relname);
-}                               /* cdb_default_stats_warning_for_table */
