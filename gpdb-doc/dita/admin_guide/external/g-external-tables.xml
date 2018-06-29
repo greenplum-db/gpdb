@@ -58,29 +58,28 @@
       <p>Greenplum Database provides readable and writable external tables:</p>
       <ul>
          <li id="du210036">Readable external tables for data loading. Readable external tables
-            support:
-            <ul>
-               <li id="du210101">Basic extraction, transformation, and loading (ETL) tasks 
-               common in data warehousing;</li>
-               <li id="du210102">Reading external table data in parallel 
-               from multiple Greenplum database segment instances to optimize large load operations;</li>
-               <li id="du210103">Filter pushdown (if a query contains WHERE clause, 
-               it may be passed to the external data source). See <xref href="../../ref_guide/config_params/guc-list.xml#gp_external_enable_filter_pushdown"></xref>.
-               Note that this feature is currently supported only by the <codeph>pxf</codeph> protocol (see <xref href="g-pxf-protocol.xml"></xref>).</li>
-            </ul>
-            <p>Readable external tables allow only <codeph>SELECT</codeph> operations.</p>
+            support: <ul>
+               <li id="du210101">Basic extraction, transformation, and loading (ETL) tasks common in
+                  data warehousing</li>
+               <li id="du210102">Reading external table data in parallel from multiple Greenplum
+                  database segment instances, to optimize large load operations</li>
+               <li id="du210103">Filter pushdown. If a query contains <codeph>WHERE</codeph> clause,
+                  it may be passed to the external data source. See <xref
+                     href="../../ref_guide/config_params/guc-list.xml#gp_external_enable_filter_pushdown"
+                  />. Note that this feature is currently supported only with the
+                     <codeph>pxf</codeph> protocol (see <xref href="g-pxf-protocol.xml"/>).</li>
+            </ul><p>Readable external tables allow only <codeph>SELECT</codeph> operations.</p>
          </li>
-         <li id="du220433">Writable external tables for data unloading. Writable external tables support:
-            <ul>
+         <li id="du220433">Writable external tables for data unloading. Writable external tables
+            support: <ul>
                <li id="du220434">Selecting data from database tables to insert into the writable
-                  external table;</li>
+                  external table</li>
                <li id="du220435">Sending data to an application as a stream of data. For example,
                   unload data from Greenplum Database and send it to an application that connects to
-                  another database or ETL tool to load the data elsewhere;</li>
+                  another database or ETL tool to load the data elsewhere</li>
                <li id="du210321">Receiving output from Greenplum parallel MapReduce
                   calculations.</li>
-            </ul>
-            <p>Writable external tables allow only <codeph>INSERT</codeph> operations.</p>
+            </ul><p>Writable external tables allow only <codeph>INSERT</codeph> operations.</p>
          </li>
       </ul>
       <p>External tables can be file-based or web-based. External tables using the
