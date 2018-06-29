@@ -177,7 +177,7 @@ PXF supports filter pushdown. When executing a `SELECT` query, the constraints f
 
 To enable this feature (not only for PXF, but for all external data accessors in Greenplum database), set the GUC parameter `gp_external_enable_filter_pushdown` to `on` (default value is `off`).
 
-Not all external data sources support this feature. If such source is accessed, the query will be executed without pushdown. Also, not all data types and operators are supported.
+Not all external data sources support this feature. If such a source is accessed, the query will be executed without pushdown. Also, not all data types and operators are supported.
 
 Supported data types:
 * `INT`, array of `INT`;
