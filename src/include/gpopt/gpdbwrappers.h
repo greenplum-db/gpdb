@@ -390,10 +390,6 @@ namespace gpdb {
 	// deep free of a list
 	void FreeListDeep(List *plist);
 
-	// if pplist is non-NULL, and *pplist is non-NULL then free the list and set
-	// *pplist to NULL
-	void FreeListAndNull(List **pplist);
-
 	// is this a Gather motion
 	bool FMotionGather(const Motion *pmotion);
 
