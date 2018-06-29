@@ -3672,9 +3672,9 @@
   <topic id="gp_external_enable_filter_pushdown">
     <title>gp_external_enable_filter_pushdown</title>
     <body>
-      <p>Enable filter pushdown when reading data from external tables. If
-      pushdown fails, a query will be executed without it, and GPDB will apply
-      the same constraints to the result.</p>
+      <p>Enable filter pushdown when reading data from external tables. If pushdown fails, a query
+        is executed without pushing filters to the external data source (instead, Greenplum Database
+        applies the same constraints to the result).</p>
       <table id="enable_filter_pushdown_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
