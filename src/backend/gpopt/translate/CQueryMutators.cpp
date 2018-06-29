@@ -787,7 +787,7 @@ CQueryMutators::FixGroupingCols
 	// fix any outer references in the grouping column expression
 	Node *expr = (Node *) RunGroupingColMutator(node, context);
 
-	CHAR* name = CQueryMutators::GetTargetEntryColName(orginal_target_entry,context->m_pquery);
+	CHAR* name = CQueryMutators::GetTargetEntryColName(orginal_target_entry,context->m_query);
 	TargetEntry *new_target_entry = gpdb::MakeTargetEntry((Expr*) expr, (AttrNumber) arity, name, false /*resjunk */);
 
 	new_target_entry->ressortgroupref = orginal_target_entry->ressortgroupref;

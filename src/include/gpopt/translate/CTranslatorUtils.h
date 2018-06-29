@@ -149,7 +149,7 @@ namespace gpdxl
 								IMemoryPool *memory_pool,
 								CMDAccessor *md_accessor,
 								CIdGenerator *id_generator,
-								const RangeTblEntry *prte,
+								const RangeTblEntry *rte,
 								BOOL *is_distributed_table = NULL
 								);
 

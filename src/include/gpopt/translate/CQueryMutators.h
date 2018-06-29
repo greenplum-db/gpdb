@@ -121,7 +121,7 @@ namespace gpdxl
 				CMDAccessor *m_md_accessor;
 
 				// original query
-				Query *m_pquery;
+				Query *m_query;
 
 				// the new target list of the group by query
 				List *m_groupby_target_list;
@@ -146,7 +146,7 @@ namespace gpdxl
 					:
 					m_memory_pool(memory_pool),
 					m_md_accessor(md_accessor),
-					m_pquery(query),
+					m_query(query),
 					m_groupby_target_list(groupby_target_list),
 					m_current_query_level(0),
 					m_sort_group_ref(0),

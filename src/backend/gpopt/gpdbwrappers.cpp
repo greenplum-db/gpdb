@@ -2925,12 +2925,12 @@ gpdb::GetOpFamiliesForScOp
 
 
 
-// Evaluates 'pexpr' and returns the result as an Expr.
-// Caller keeps ownership of 'pexpr' and takes ownership of the result
+// Evaluates 'expr' and returns the result as an Expr.
+// Caller keeps ownership of 'expr' and takes ownership of the result
 Expr *
 gpdb::EvaluateExpr
 	(
-	Expr *pexpr,
+	Expr *expr,
 	Oid result_type,
 	int32 typmod
 	)
@@ -2938,7 +2938,7 @@ gpdb::EvaluateExpr
 	GP_WRAP_START;
 	{
 		// GPDB_91_MERGE_FIXME: collation
-		return evaluate_expr(pexpr, result_type, typmod, InvalidOid);
+		return evaluate_expr(expr, result_type, typmod, InvalidOid);
 	}
 	GP_WRAP_END;
 	return NULL;

@@ -616,9 +616,9 @@ namespace gpdb {
 	// get oids of op classes for the index keys
 	List *GetIndexOpFamilies(Oid oidIndex);
 
-	// returns the result of evaluating 'pexpr' as an Expr. Caller keeps ownership of 'pexpr'
+	// returns the result of evaluating 'expr' as an Expr. Caller keeps ownership of 'expr'
 	// and takes ownership of the result 
-	Expr *EvaluateExpr(Expr *pexpr, Oid result_type, int32 typmod);
+	Expr *EvaluateExpr(Expr *expr, Oid result_type, int32 typmod);
 	
 	// interpret the value of "With oids" option from a list of defelems
 	bool InterpretOidsOption(List *options);

@@ -299,7 +299,7 @@ namespace gpdxl
 			 
 			// compute the array of included columns
 			static
-			ULongPtrArray *PdrgpulIndexIncludedColumns(IMemoryPool *memory_pool, const IMDRelation *pmdrel);
+			ULongPtrArray *PdrgpulIndexIncludedColumns(IMemoryPool *memory_pool, const IMDRelation *md_rel);
 			
 			// is given level included in the default partitions
 			static 
@@ -311,7 +311,7 @@ namespace gpdxl
 				(
 				IMemoryPool *memory_pool, 
 				CMDAccessor *md_accessor, 
-				const IMDRelation *pmdrel, 
+				const IMDRelation *md_rel, 
 				Node *pnodePartCnstr,
 				ULongPtrArray *level_with_default_part_array,
 				BOOL is_unbounded
@@ -351,7 +351,7 @@ namespace gpdxl
 
 			// retrieve an index over a partitioned table from the relcache
 			static
-			IMDIndex *PmdindexPartTable(IMemoryPool *memory_pool, CMDAccessor *md_accessor, IMDId *pmdidIndex, const IMDRelation *pmdrel, LogicalIndexes *plind);
+			IMDIndex *PmdindexPartTable(IMemoryPool *memory_pool, CMDAccessor *md_accessor, IMDId *pmdidIndex, const IMDRelation *md_rel, LogicalIndexes *plind);
 			
 			// lookup an index given its id from the logical indexes structure
 			static
@@ -359,7 +359,7 @@ namespace gpdxl
 			
 			// construct an MD cache index object given its logical index representation
 			static
-			IMDIndex *PmdindexPartTable(IMemoryPool *memory_pool, CMDAccessor *md_accessor, LogicalIndexInfo *pidxinfo, IMDId *pmdidIndex, const IMDRelation *pmdrel);
+			IMDIndex *PmdindexPartTable(IMemoryPool *memory_pool, CMDAccessor *md_accessor, LogicalIndexInfo *pidxinfo, IMDId *pmdidIndex, const IMDRelation *md_rel);
 
 			// return the triggers defined on the given relation
 			static
@@ -430,11 +430,11 @@ namespace gpdxl
 
 			// populate the attribute number to position mapping
 			static
-			ULONG *PulAttnoPositionMap(IMemoryPool *memory_pool, const IMDRelation *pmdrel, ULONG ulRgSize);
+			ULONG *PulAttnoPositionMap(IMemoryPool *memory_pool, const IMDRelation *md_rel, ULONG ulRgSize);
 
 			// return the position of a given attribute number
 			static
-			ULONG UlPosition(INT iAttno, ULONG *pul);
+			ULONG UlPosition(INT attno, ULONG *pul);
 
 			// retrieve a type from the relcache
 			static
