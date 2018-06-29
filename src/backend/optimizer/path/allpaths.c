@@ -1444,7 +1444,6 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 		ListCell   *lc;
 		ListCell   *prev;
 		ListCell   *next;
-		List	   *backup;
 
 		/*
 		 * Determine all possible pairs of relations to be joined at this
@@ -1456,7 +1455,6 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 		/*
 		 * Do cleanup work on each just-processed rel.
 		 */
-		backup = list_copy(root->join_rel_level[lev]);
 		prev = NULL;
 		for (lc = list_head(root->join_rel_level[lev]);
 			 lc != NULL;
