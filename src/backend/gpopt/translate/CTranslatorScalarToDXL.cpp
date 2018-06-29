@@ -1750,7 +1750,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink
 	CMappingVarColId *var_col_id_map_copy = var_col_id_mapping->CopyMapColId(m_memory_pool);
 
 	CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-	query_to_dxl_translator = CTranslatorQueryToDXL::PtrquerytodxlInstance
+	query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
 							(
 							m_memory_pool,
 							m_md_accessor,
@@ -1762,10 +1762,10 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink
 							m_cte_entries
 							);
 
-	CDXLNode *pdxlnInner = query_to_dxl_translator->PdxlnFromQueryInternal();
+	CDXLNode *pdxlnInner = query_to_dxl_translator->TranslateSelectQueryToDXL();
 
-	DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->PdrgpdxlnQueryOutput();
-	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->PdrgpdxlnCTE();
+	DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->GetQueryOutputCols();
+	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
 	CUtils::AddRefAppend(m_cte_producers, cte_dxlnode_array);
 
 	if (1 != query_output_dxlnode_array->Size())
@@ -1773,7 +1773,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Non-Scalar Subquery"));
 	}
 
-	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->FHasDistributedTables();
+	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->HasDistributedTables();
 
 	CDXLNode *dxl_sc_ident = (*query_output_dxlnode_array)[0];
 	GPOS_ASSERT(NULL != dxl_sc_ident);
@@ -1856,7 +1856,7 @@ CTranslatorScalarToDXL::CreateScalarSubqueryFromSublink
 
 	Query *pquerySublink = (Query *) sublink->subselect;
 	CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-	query_to_dxl_translator = CTranslatorQueryToDXL::PtrquerytodxlInstance
+	query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
 							(
 							m_memory_pool,
 							m_md_accessor,
@@ -1867,15 +1867,15 @@ CTranslatorScalarToDXL::CreateScalarSubqueryFromSublink
 							m_query_level + 1,
 							m_cte_entries
 							);
-	CDXLNode *pdxlnSubQuery = query_to_dxl_translator->PdxlnFromQueryInternal();
+	CDXLNode *pdxlnSubQuery = query_to_dxl_translator->TranslateSelectQueryToDXL();
 
-	DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->PdrgpdxlnQueryOutput();
+	DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->GetQueryOutputCols();
 
 	GPOS_ASSERT(1 == query_output_dxlnode_array->Size());
 
-	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->PdrgpdxlnCTE();
+	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
 	CUtils::AddRefAppend(m_cte_producers, cte_dxlnode_array);
-	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->FHasDistributedTables();
+	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->HasDistributedTables();
 
 	// get dxl scalar identifier
 	CDXLNode *dxl_sc_ident = (*query_output_dxlnode_array)[0];
@@ -2056,7 +2056,7 @@ CTranslatorScalarToDXL::CreateExistSubqueryFromSublink
 	CMappingVarColId *var_col_id_map_copy = var_col_id_mapping->CopyMapColId(m_memory_pool);
 
 	CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-	query_to_dxl_translator = CTranslatorQueryToDXL::PtrquerytodxlInstance
+	query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
 							(
 							m_memory_pool,
 							m_md_accessor,
@@ -2067,11 +2067,11 @@ CTranslatorScalarToDXL::CreateExistSubqueryFromSublink
 							m_query_level + 1,
 							m_cte_entries
 							);
-	CDXLNode *root_dxl_node = query_to_dxl_translator->PdxlnFromQueryInternal();
+	CDXLNode *root_dxl_node = query_to_dxl_translator->TranslateSelectQueryToDXL();
 	
-	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->PdrgpdxlnCTE();
+	DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
 	CUtils::AddRefAppend(m_cte_producers, cte_dxlnode_array);
-	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->FHasDistributedTables();
+	m_has_distributed_tables = m_has_distributed_tables || query_to_dxl_translator->HasDistributedTables();
 	
 	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarSubqueryExists(m_memory_pool));
 	dxlnode->AddChild(root_dxl_node);

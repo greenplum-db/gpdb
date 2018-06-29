@@ -587,7 +587,7 @@ COptTasks::ConvertToDXLFromQueryTask
 		CAutoMDAccessor md_accessor(memory_pool, relcache_provider, default_sysid);
 
 		CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-		query_to_dxl_translator = CTranslatorQueryToDXL::PtrquerytodxlInstance
+		query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
 						(
 						memory_pool,
 						md_accessor.Pmda(),
@@ -597,9 +597,9 @@ COptTasks::ConvertToDXLFromQueryTask
 						(Query*)opt_ctxt->m_query,
 						0 /* query_level */
 						);
-		CDXLNode *query_dxl = query_to_dxl_translator->PdxlnFromQuery();
-		DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->PdrgpdxlnQueryOutput();
-		DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->PdrgpdxlnCTE();
+		CDXLNode *query_dxl = query_to_dxl_translator->TranslateQueryToDXL();
+		DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->GetQueryOutputCols();
+		DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
 		GPOS_ASSERT(NULL != query_output_dxlnode_array);
 
 		GPOS_DELETE(colid_generator);
@@ -1014,7 +1014,7 @@ COptTasks::OptimizeTask
 			}
 
 			CAutoP<CTranslatorQueryToDXL> query_to_dxl_translator;
-			query_to_dxl_translator = CTranslatorQueryToDXL::PtrquerytodxlInstance
+			query_to_dxl_translator = CTranslatorQueryToDXL::QueryToDXLInstance
 							(
 							memory_pool,
 							&mda,
@@ -1031,13 +1031,13 @@ COptTasks::OptimizeTask
 			IConstExprEvaluator *expr_evaluator =
 					GPOS_NEW(memory_pool) CConstExprEvaluatorDXL(memory_pool, &mda, &expr_eval_proxy);
 
-			CDXLNode *query_dxl = query_to_dxl_translator->PdxlnFromQuery();
-			DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->PdrgpdxlnQueryOutput();
-			DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->PdrgpdxlnCTE();
+			CDXLNode *query_dxl = query_to_dxl_translator->TranslateQueryToDXL();
+			DXLNodeArray *query_output_dxlnode_array = query_to_dxl_translator->GetQueryOutputCols();
+			DXLNodeArray *cte_dxlnode_array = query_to_dxl_translator->GetCTEs();
 			GPOS_ASSERT(NULL != query_output_dxlnode_array);
 
 			BOOL is_master_only = !optimizer_enable_motions ||
-						(!optimizer_enable_motions_masteronly_queries && !query_to_dxl_translator->FHasDistributedTables());
+						(!optimizer_enable_motions_masteronly_queries && !query_to_dxl_translator->HasDistributedTables());
 			CAutoTraceFlag atf(EopttraceDisableMotions, is_master_only);
 
 			plan_dxl = COptimizer::PdxlnOptimize
