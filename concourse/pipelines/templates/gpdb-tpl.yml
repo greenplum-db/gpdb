@@ -9,9 +9,6 @@
                       'gpinitsystem'] %}
 {% set CLI_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
-{% set aa_Test_suites = ['planner',
-                         'orca'
-                        ] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -120,12 +117,14 @@ groups:
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
-{% for test_name in aa_Test_suites %}
-  - MADlib_Test_[[ test_name ]]_centos6
-{% if "centos7" in os_types %}
-  - MADlib_Test_[[ test_name ]]_centos7
+{% if "centos6" in os_types %}
+  - MADlib_Test_orca_centos6
+  - MADlib_Test_planner_centos6
 {% endif %}
-{% endfor %}
+{% if "centos7" in os_types %}
+  - MADlib_Test_orca_centos7
+  - MADlib_Test_planner_centos7
+{% endif %}
 {% endif %}
 
 
@@ -288,12 +287,14 @@ groups:
 - name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
-{% for test_name in aa_Test_suites %}
-  - MADlib_Test_[[ test_name ]]_centos6
-{% if "centos7" in os_types %}
-  - MADlib_Test_[[ test_name ]]_centos7
+{% if "centos6" in os_types %}
+  - MADlib_Test_orca_centos6
+  - MADlib_Test_planner_centos6
 {% endif %}
-{% endfor %}
+{% if "centos7" in os_types %}
+  - MADlib_Test_orca_centos7
+  - MADlib_Test_planner_centos7
+{% endif %}
 {% endif %}
 
 ## ======================================================================
@@ -2257,23 +2258,26 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
+{% if "centos6" in os_types %}
       - compile_gpdb_centos6
+{% endif %}
 {% if "centos7" in os_types %}
       - compile_gpdb_centos7
 {% endif %}
       trigger: true
+{% if "centos6" in os_types %}
     - get: bin_gpdb_centos6
       passed:
       - compile_gpdb_centos6
+{% endif %}
 {% if "centos7" in os_types %}
     - get: bin_gpdb_centos7
       passed:
       - compile_gpdb_centos7
 {% endif %}
 
-{% for test_name in aa_Test_suites %}
-{% set orca_state = 'off' if "planner" in test_name else 'on' %}
-- name: MADlib_Test_[[ test_name ]]_centos6
+{% if "centos6" in os_types %}
+- name: MADlib_Test_planner_centos6
   plan:
   - aggregate:
     - get: madlib_ci
@@ -2290,11 +2294,32 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TEST_OS: centos
-      ORCA: "[[ orca_state ]]"
+      ORCA: "off"
       DBVER: gpdb6-assert
 
+- name: MADlib_Test_orca_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "on"
+      DBVER: gpdb6-assert
+{% endif %}
+
 {% if "centos7" in os_types %}
-- name: MADlib_Test_[[ test_name ]]_centos7
+- name: MADlib_Test_planner_centos7
   plan:
   - aggregate:
     - get: madlib_ci
@@ -2311,10 +2336,29 @@ jobs:
     image: centos-gpdb-test-7
     params:
       TEST_OS: centos
-      ORCA: "[[ orca_state ]]"
+      ORCA: "off"
+      DBVER: gpdb6-assert
+
+- name: MADlib_Test_orca_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-test-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-test-7
+    params:
+      TEST_OS: centos
+      ORCA: "on"
       DBVER: gpdb6-assert
 {% endif %}
-{% endfor %}
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -2366,10 +2410,10 @@ jobs:
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
-{% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos6
-      - MADlib_Test_[[ test_name ]]_centos7
-{% endfor %}
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
       - gpaddmirrors
       - gpexpand
       - gpcheck
@@ -2397,9 +2441,8 @@ jobs:
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
-{% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos6
-{% endfor %}
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
       - gpexpand
       - gpcheck
       - gppkg
@@ -2413,9 +2456,8 @@ jobs:
       - icw_gporca_centos7
       - icw_planner_centos7
       - resource_group_centos7
-      {% for test_name in aa_Test_suites %}
-      - MADlib_Test_[[ test_name ]]_centos7
-      {% endfor %}
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
     - get: bin_gpdb_sles11
       trigger: true
       passed:
