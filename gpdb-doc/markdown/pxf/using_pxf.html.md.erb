@@ -88,6 +88,37 @@ To write data to an external data store with PXF, you create an external table w
 GRANT INSERT ON PROTOCOL pxf TO bill; 
 ```
 
+## <a id="filter-pushdown"></a>Configuring Filter Pushdown
+
+PXF supports filter pushdown. When filter pushdown is enabled, the constraints from the `WHERE` clause of a `SELECT` query can be extracted and passed to the external data source for filtering. This process can improve query performance, and can also reduce the amount of data that is transferred to Greenplum Database.
+
+You enable or disable filter pushdown for all external data accessors in Greenplum Database by setting the `gp_external_enable_filter_pushdown` configuration parameter. The default value is `off`; set it to `on` to enable filter pushdown.
+
+**Note:** Some data sources do not support filter pushdown. Also, filter pushdown may not be supported with certain data types or operators. If a query accesses a data source that does not support filter push-down for the query constraints, the query is instead executed without filter pushdown (the data is first transferred to Greenplum Database and then filtered). 
+
+PXF accesses data sources using different connectors, and filter pushdown support is determined by the specific connector implementation. The following connectors support filter pushdown:
+* HBase
+* Hive
+
+PXF filter pushdown is supported for these data types:
+* `INT`, array of `INT`
+* `FLOAT`
+* `NUMERIC`
+* `BOOL`
+* `CHAR`, `TEXT`, array of `TEXT`
+* `DATE`, `TIMESTAMP`.
+
+PXF filter pushdown is supported for these operators:
+* `<`, `<=`, `>=`, `>`
+* `<>`, `=`
+* `IN`
+* `LIKE` (only for `TEXT` fields).
+
+To summarize, all of the following criteria must be met for filter pushdown to occur:
+* The Greenplum Database protocol that is used to access external data must support filter pushdown. PXF is a protocol that supports pushdown.
+* For queries that use the PXF protocol, the underlying PXF connector must support filter pushdown. The HBase and Hive connectors support pushdown.
+* The external data source that is being accessed (for example, the external database) must support pushdown. For example, HBase and Hive support pushdown.
+
 ## <a id="built-inprofiles"></a> PXF Profiles
 
 PXF is installed with HDFS, Hive, and HBase connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
@@ -171,33 +202,3 @@ Greenplum Database passes the parameters in the `LOCATION` string as headers to 
 **Note:** When you create a PXF external table, you cannot use the `HEADER` option in your `FORMAT` specification.
 
 
-## <a id="filter-pushdown"></a>Filter pushdown
-
-PXF supports filter pushdown. When executing a `SELECT` query, the constraints from its `WHERE` clause can be extracted and passed to an external data source. This can speed up such queries and also reduce the amount of data transferred to Greenplum Database.
-
-To enable this feature (not only for PXF, but for all external data accessors in Greenplum database), set the GUC parameter `gp_external_enable_filter_pushdown` to `on` (default value is `off`).
-
-Not all external data sources support this feature. If such a source is accessed, the query will be executed without pushdown. Also, not all data types and operators are supported.
-
-The PXF accesses data sources using different connectors, and the connector may not support the pushdown feature. The following connectors do support pushdown:
-* HBase
-* Hive
-
-Supported data types:
-* `INT`, array of `INT`;
-* `FLOAT`;
-* `NUMERIC`;
-* `BOOL`;
-* `CHAR`, `TEXT`, array of `TEXT`;
-* `DATE`, `TIMESTAMP`.
-
-Supported operators:
-* `<`, `<=`, `>=`, `>`;
-* `<>`, `=`;
-* `IN`;
-* `LIKE` (only for `TEXT` fields).
-
-So, the pushdown feature works when:
-* The GPDB protocol to access external data supports pushdown (PXF does), and
-* The PXF connector supports pushdown, and
-* The external data source (database, ...) supports pushdown.
