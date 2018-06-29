@@ -668,7 +668,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 	
 	// translate DXL -> PlannedStmt
 	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
-	return dxl_to_plan_stmt_translator.PplstmtFromDXL(dxlnode, can_set_tag);
+	return dxl_to_plan_stmt_translator.GetPlannedStmtFromDXL(dxlnode, can_set_tag);
 }
 
 
@@ -1327,7 +1327,7 @@ COptTasks::ConvertToPlanStmtFromDXLTask
 
 		// translate DXL -> PlannedStmt
 		CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(memory_pool, md_accessor.Pmda(), &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
-		PlannedStmt *plan_stmt = dxl_to_plan_stmt_translator.PplstmtFromDXL(original_plan_dxl, opt_ctxt->m_query->canSetTag);
+		PlannedStmt *plan_stmt = dxl_to_plan_stmt_translator.GetPlannedStmtFromDXL(original_plan_dxl, opt_ctxt->m_query->canSetTag);
 		if (optimizer_print_plan)
 		{
 			elog(NOTICE, "Plstmt: %s", gpdb::NodeToString(plan_stmt));
