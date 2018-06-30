@@ -171,7 +171,7 @@ namespace gpdxl
 			~CTranslatorDXLToPlStmt();
 
 			// translate DXL operator node into a Plan node
-			Plan *PplFromDXL
+			Plan *TranslateDXLOperatorToPlan
 				(
 				const CDXLNode *dxlnode,
 				CDXLTranslateContext *output_context,

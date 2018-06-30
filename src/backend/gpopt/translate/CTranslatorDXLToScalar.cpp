@@ -707,7 +707,7 @@ CTranslatorDXLToScalar::CreateScalarSubplanExprFromDXL
 							m_num_of_segments
 							);
 	DXLTranslationContextArr *prev_siblings_ctxt_arr = GPOS_NEW(m_memory_pool) DXLTranslationContextArr(m_memory_pool);
-	Plan *plan_child = dxl_to_plstmt_translator.PplFromDXL(child_dxl, &sub_plan_translate_ctxt, prev_siblings_ctxt_arr);
+	Plan *plan_child = dxl_to_plstmt_translator.TranslateDXLOperatorToPlan(child_dxl, &sub_plan_translate_ctxt, prev_siblings_ctxt_arr);
 	prev_siblings_ctxt_arr->Release();
 
 	GPOS_ASSERT(NULL != plan_child->targetlist && 1 <= gpdb::ListLength(plan_child->targetlist));
