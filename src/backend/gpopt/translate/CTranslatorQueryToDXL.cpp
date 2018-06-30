@@ -316,7 +316,7 @@ CTranslatorQueryToDXL::CheckUnsupportedNodeTypes
 
 	if (0 <= iUnsupported)
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, rgUnsupported[iUnsupported].m_buffer);
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, rgUnsupported[iUnsupported].m_feature_name);
 	}
 
 	// GDPB_91_MERGE_FIXME: collation
@@ -422,18 +422,18 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 		return;
 	}
 
-	static const SCmdNameElem rgStrMap[] =
+	static const SCmdNameElem unsupported_commands[] =
 		{
 		{CMD_UTILITY, GPOS_WSZ_LIT("UTILITY command")}
 		};
 
-	const ULONG ulLen = GPOS_ARRAY_SIZE(rgStrMap);
+	const ULONG ulLen = GPOS_ARRAY_SIZE(unsupported_commands);
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		SCmdNameElem mapelem = rgStrMap[ul];
+		SCmdNameElem mapelem = unsupported_commands[ul];
 		if (mapelem.m_cmd_type == query->commandType)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, mapelem.m_buffer);
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, mapelem.m_cmd_name);
 		}
 	}
 }
@@ -509,11 +509,11 @@ CTranslatorQueryToDXL::TranslateSelectQueryToDXL()
 
 		CDXLLogicalSetOp *dxlop = CDXLLogicalSetOp::Cast(dxl_node_child->GetOperator());
 		const ColumnDescrDXLArray *pdrgpdxlcd = dxlop->GetColumnDescrDXLArray();
-		ListCell *plcTE = NULL;
+		ListCell *lc = NULL;
 		ULONG ulResNo = 1;
-		ForEach (plcTE, target_list)
+		ForEach (lc, target_list)
 		{
-			TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+			TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 			if (0 < target_entry->ressortgroupref)
 			{
 				ULONG col_id = ((*pdrgpdxlcd)[ulResNo - 1])->Id();
@@ -709,17 +709,17 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 	ULONG ulPosTL = 0;
 	for (ULONG ul = 0; ul < ulLenTblCols; ul++)
 	{
-		const IMDColumn *pmdcol = md_rel->GetMdCol(ul);
-		GPOS_ASSERT(!pmdcol->IsSystemColumn());
+		const IMDColumn *mdcol = md_rel->GetMdCol(ul);
+		GPOS_ASSERT(!mdcol->IsSystemColumn());
 		
-		if (pmdcol->IsDropped())
+		if (mdcol->IsDropped())
 		{
 			continue;
 		}
 		
 		if (ulPosTL < ulLenTL)
 		{
-			INT attno = pmdcol->AttrNum();
+			INT attno = mdcol->AttrNum();
 			
 			TargetEntry *target_entry = (TargetEntry *) gpdb::ListNth(m_query->targetList, ulPosTL);
 			AttrNumber iResno = target_entry->resno;
@@ -736,7 +736,7 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 
 		// target entry corresponding to the tables column not found, therefore
 		// add a project element with null value scalar child
-		CDXLNode *pdxlnPrE = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_md_accessor, m_colid_counter, pmdcol);
+		CDXLNode *pdxlnPrE = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_md_accessor, m_colid_counter, mdcol);
 		ULONG col_id = CDXLScalarProjElem::Cast(pdxlnPrE->GetOperator())->Id();
  	 	project_list_dxl->AddChild(pdxlnPrE);
 	 	pdrgpulSource->Append(GPOS_NEW(m_memory_pool) ULONG(col_id));
@@ -813,15 +813,15 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 		}
 		
 		GPOS_ASSERT(NULL != pmdnameCol);
-		IMDId *pmdid = pdxlopIdent->MDIdType();
-		pmdid->AddRef();
+		IMDId *mdid = pdxlopIdent->MDIdType();
+		mdid->AddRef();
 		CDXLColDescr *dxl_col_descr = GPOS_NEW(m_memory_pool) CDXLColDescr
 											(
 											m_memory_pool,
 											pmdnameCol,
 											m_colid_counter->next_id(),
 											iResno /* attno */,
-											pmdid,
+											mdid,
 											pdxlopIdent->TypeModifier(),
 											false /* is_dropped */
 											);
@@ -860,7 +860,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 
 	// TODO: Mar 5, 2014; reserve an OID
 	OID oid = 1;
-	CMDIdGPDB *pmdid = GPOS_NEW(m_memory_pool) CMDIdGPDBCtas(oid);
+	CMDIdGPDB *mdid = GPOS_NEW(m_memory_pool) CMDIdGPDBCtas(oid);
 	
 	CMDName *pmdnameTableSpace = NULL;
 	if (NULL != pintocl->tableSpaceName)
@@ -883,7 +883,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 	CDXLLogicalCTAS *pdxlopCTAS = GPOS_NEW(m_memory_pool) CDXLLogicalCTAS
 									(
 									m_memory_pool,
-									pmdid,
+									mdid,
 									pmdnameSchema,
 									pmdnameRel, 
 									pdrgpdxlcd, 
@@ -936,8 +936,8 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray
 	ForEach (lc, options)
 	{
 		DefElem *def_elem = (DefElem *) lfirst(lc);
-		CWStringDynamic *pstrName = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, def_elem->defname);
-		CWStringDynamic *pstrValue = NULL;
+		CWStringDynamic *name_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, def_elem->defname);
+		CWStringDynamic *value_str = NULL;
 		
 		BOOL fNullArg = (NULL == def_elem->arg);
 
@@ -945,24 +945,24 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray
 		if (fNullArg)
 		{
 			// we represent null options as an empty arg string and set the IsNull flag on
-			pstrValue = GPOS_NEW(m_memory_pool) CWStringDynamic(m_memory_pool);
+			value_str = GPOS_NEW(m_memory_pool) CWStringDynamic(m_memory_pool);
 		}
 		else
 		{
-			pstrValue = ExtractStorageOptionStr(def_elem);
+			value_str = ExtractStorageOptionStr(def_elem);
 
-			if (pstrName->Equals(&strAppendOnly) && pstrValue->Equals(CDXLTokens::GetDXLTokenStr(EdxltokenTrue)))
+			if (name_str->Equals(&strAppendOnly) && value_str->Equals(CDXLTokens::GetDXLTokenStr(EdxltokenTrue)))
 			{
 				fAO = true;
 			}
 			
-			if (pstrName->Equals(&strOrientation) && pstrValue->Equals(&strOrientationColumn))
+			if (name_str->Equals(&strOrientation) && value_str->Equals(&strOrientationColumn))
 			{
 				GPOS_ASSERT(!fParquet);
 				fAOCO = true;
 			}
 
-			if (pstrName->Equals(&strOrientation) && pstrValue->Equals(&strOrientationParquet))
+			if (name_str->Equals(&strOrientation) && value_str->Equals(&strOrientationParquet))
 			{
 				GPOS_ASSERT(!fAOCO);
 				fParquet = true;
@@ -976,7 +976,7 @@ CTranslatorQueryToDXL::GetDXLCtasOptionArray
 		}
 
 		CDXLCtasStorageOptions::CDXLCtasOption *pdxlctasopt =
-				GPOS_NEW(m_memory_pool) CDXLCtasStorageOptions::CDXLCtasOption(argType, pstrName, pstrValue, fNullArg);
+				GPOS_NEW(m_memory_pool) CDXLCtasStorageOptions::CDXLCtasOption(argType, name_str, value_str, fNullArg);
 		ctas_storage_option_array->Append(pdxlctasopt);
 	}
 	if (fAOCO)
@@ -1011,11 +1011,11 @@ CTranslatorQueryToDXL::ExtractStorageOptionStr
 {
 	GPOS_ASSERT(NULL != def_elem);
 
-	CHAR *szValue = gpdb::DefGetString(def_elem);
+	CHAR *value = gpdb::DefGetString(def_elem);
 
-	CWStringDynamic *pstrResult = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, szValue);
+	CWStringDynamic *result_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, value);
 	
-	return pstrResult;
+	return result_str;
 }
 
 //---------------------------------------------------------------------------
@@ -1035,14 +1035,14 @@ CTranslatorQueryToDXL::GetCtidAndSegmentId
 	)
 {
 	// ctid column id
-	IMDId *pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, SelfItemPointerAttributeNumber);
-	*ctid = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, SelfItemPointerAttributeNumber, pmdid, m_var_to_colid_map);
-	pmdid->Release();
+	IMDId *mdid = CTranslatorUtils::GetSystemColType(m_memory_pool, SelfItemPointerAttributeNumber);
+	*ctid = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, SelfItemPointerAttributeNumber, mdid, m_var_to_colid_map);
+	mdid->Release();
 
 	// segmentid column id
-	pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, GpSegmentIdAttributeNumber);
-	*segment_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, GpSegmentIdAttributeNumber, pmdid, m_var_to_colid_map);
-	pmdid->Release();
+	mdid = CTranslatorUtils::GetSystemColType(m_memory_pool, GpSegmentIdAttributeNumber);
+	*segment_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, GpSegmentIdAttributeNumber, mdid, m_var_to_colid_map);
+	mdid->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -1057,9 +1057,9 @@ CTranslatorQueryToDXL::GetCtidAndSegmentId
 ULONG
 CTranslatorQueryToDXL::GetTupleOidColId()
 {
-	IMDId *pmdid = CTranslatorUtils::GetSystemColType(m_memory_pool, ObjectIdAttributeNumber);
-	ULONG ulTupleOidColId = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, ObjectIdAttributeNumber, pmdid, m_var_to_colid_map);
-	pmdid->Release();
+	IMDId *mdid = CTranslatorUtils::GetSystemColType(m_memory_pool, ObjectIdAttributeNumber);
+	ULONG ulTupleOidColId = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, ObjectIdAttributeNumber, mdid, m_var_to_colid_map);
+	mdid->Release();
 	return ulTupleOidColId;
 }
 
@@ -1096,13 +1096,13 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 	const ULONG ulRelColumns = md_rel->ColumnCount();
 	for (ULONG ul = 0; ul < ulRelColumns; ul++)
 	{
-		const IMDColumn *pmdcol = md_rel->GetMdCol(ul);
-		if (pmdcol->IsSystemColumn() || pmdcol->IsDropped())
+		const IMDColumn *mdcol = md_rel->GetMdCol(ul);
+		if (mdcol->IsSystemColumn() || mdcol->IsDropped())
 		{
 			continue;
 		}
 
-		ULONG col_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, pmdcol->AttrNum(), pmdcol->MDIdType(), m_var_to_colid_map);
+		ULONG col_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, mdcol->AttrNum(), mdcol->MDIdType(), m_var_to_colid_map);
 		delete_colid_array->Append(GPOS_NEW(m_memory_pool) ULONG(col_id));
 	}
 
@@ -1164,22 +1164,22 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 
 	for (ULONG ul = 0; ul < ulRelColumns; ul++)
 	{
-		const IMDColumn *pmdcol = md_rel->GetMdCol(ul);
-		if (pmdcol->IsSystemColumn() || pmdcol->IsDropped())
+		const IMDColumn *mdcol = md_rel->GetMdCol(ul);
+		if (mdcol->IsSystemColumn() || mdcol->IsDropped())
 		{
 			continue;
 		}
 
-		INT attno = pmdcol->AttrNum();
-		ULONG *pulColId = phmiulUpdateCols->Find(&attno);
+		INT attno = mdcol->AttrNum();
+		ULONG *updated_colid = phmiulUpdateCols->Find(&attno);
 
-		ULONG col_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, attno, pmdcol->MDIdType(), m_var_to_colid_map);
+		ULONG col_id = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation, attno, mdcol->MDIdType(), m_var_to_colid_map);
 
 		// if the column is in the query outputs then use it
 		// otherwise get the column id created by the child query
-		if (NULL != pulColId)
+		if (NULL != updated_colid)
 		{
-			insert_colid_array->Append(GPOS_NEW(m_memory_pool) ULONG(*pulColId));
+			insert_colid_array->Append(GPOS_NEW(m_memory_pool) ULONG(*updated_colid));
 		}
 		else
 		{
@@ -1487,10 +1487,10 @@ CTranslatorQueryToDXL::TranslateWindowSpecToDXL
 	DXLWindowSpecArray *window_spec_array = GPOS_NEW(m_memory_pool) DXLWindowSpecArray(m_memory_pool);
 
 	// translate window specification
-	ListCell *plcWindowCl;
-	ForEach (plcWindowCl, window_clause)
+	ListCell *lc;
+	ForEach (lc, window_clause)
 	{
-		WindowClause *pwc = (WindowClause *) lfirst(plcWindowCl);
+		WindowClause *pwc = (WindowClause *) lfirst(lc);
 		ULongPtrArray *pdrgppulPartCol = TranslatePartColumns(pwc->partitionClause, sort_col_attno_to_colid_mapping);
 
 		CDXLNode *sort_col_list_dxl = NULL;
@@ -1499,9 +1499,9 @@ CTranslatorQueryToDXL::TranslateWindowSpecToDXL
 
 		if (NULL != pwc->name)
 		{
-			CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, pwc->name);
-			mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-			GPOS_DELETE(pstrAlias);
+			CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, pwc->name);
+			mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+			GPOS_DELETE(alias_str);
 		}
 
 		if (0 < gpdb::ListLength(pwc->orderClause))
@@ -1563,7 +1563,7 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 	CDXLNode *project_list_dxl = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjList(m_memory_pool));
 
 	CDXLNode *pdxlnNewChildScPrL = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjList(m_memory_pool));
-	ListCell *plcTE = NULL;
+	ListCell *lc = NULL;
 	ULONG ulResno = 1;
 
 	// target entries that are result of flattening join alias and 
@@ -1571,10 +1571,10 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 	List *plTEOmitted = NIL; 
 	List *plResno = NIL;
 	
-	ForEach (plcTE, target_list)
+	ForEach (lc, target_list)
 	{
 		BOOL fInsertSortInfo = true;
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 
 		// create the DXL node holding the target list entry
@@ -1666,14 +1666,14 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 		ulResno++;
 	}
 
-	plcTE = NULL;
+	lc = NULL;
 
 	// process target entries that are a result of flattening join alias
 	ListCell *plcResno = NULL;
-	ForBoth (plcTE, plTEOmitted,
+	ForBoth (lc, plTEOmitted,
 			plcResno, plResno)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		INT iResno = (INT) lfirst_int(plcResno);
 
 		TargetEntry *pteWindowSpec = CTranslatorUtils::GetWindowSpecTargetEntry( (Node*) target_entry->expr, window_clause, target_list);
@@ -1744,12 +1744,12 @@ CTranslatorQueryToDXL::TranslatePartColumns
 	)
 	const
 {
-	ULongPtrArray *pdrgpul = GPOS_NEW(m_memory_pool) ULongPtrArray(m_memory_pool);
+	ULongPtrArray *partcols = GPOS_NEW(m_memory_pool) ULongPtrArray(m_memory_pool);
 
-	ListCell *plcPartCl = NULL;
-	ForEach (plcPartCl, plPartCl)
+	ListCell *lc = NULL;
+	ForEach (lc, plPartCl)
 	{
-		Node *pnodePartCl = (Node*) lfirst(plcPartCl);
+		Node *pnodePartCl = (Node*) lfirst(lc);
 		GPOS_ASSERT(NULL != pnodePartCl);
 
 		GPOS_ASSERT(IsA(pnodePartCl, SortGroupClause));
@@ -1758,10 +1758,10 @@ CTranslatorQueryToDXL::TranslatePartColumns
 		// get the colid of the partition-by column
 		ULONG col_id = CTranslatorUtils::GetColId((INT) psortcl->tleSortGroupRef, phmiulColColId);
 
-		pdrgpul->Append(GPOS_NEW(m_memory_pool) ULONG(col_id));
+		partcols->Append(GPOS_NEW(m_memory_pool) ULONG(col_id));
 	}
 
-	return pdrgpul;
+	return partcols;
 }
 
 //---------------------------------------------------------------------------
@@ -1782,10 +1782,10 @@ CTranslatorQueryToDXL::TranslateSortColumsToDXL
 {
 	DXLNodeArray *dxl_nodes = GPOS_NEW(m_memory_pool) DXLNodeArray(m_memory_pool);
 
-	ListCell *plcSortCl = NULL;
-	ForEach (plcSortCl, plSortCl)
+	ListCell *lc = NULL;
+	ForEach (lc, plSortCl)
 	{
-		Node *pnodeSortCl = (Node*) lfirst(plcSortCl);
+		Node *pnodeSortCl = (Node*) lfirst(lc);
 		GPOS_ASSERT(NULL != pnodeSortCl);
 
 		GPOS_ASSERT(IsA(pnodeSortCl, SortGroupClause));
@@ -1798,8 +1798,8 @@ CTranslatorQueryToDXL::TranslateSortColumsToDXL
 		OID oid = psortcl->sortop;
 
 		// get operator name
-		CMDIdGPDB *pmdidScOp = GPOS_NEW(m_memory_pool) CMDIdGPDB(oid);
-		const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(pmdidScOp);
+		CMDIdGPDB *op_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(oid);
+		const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(op_mdid);
 
 		const CWStringConst *str = md_scalar_op->Mdname().GetMDName();
 		GPOS_ASSERT(NULL != str);
@@ -1808,7 +1808,7 @@ CTranslatorQueryToDXL::TranslateSortColumsToDXL
 												(
 												m_memory_pool,
 												col_id,
-												pmdidScOp,
+												op_mdid,
 												GPOS_NEW(m_memory_pool) CWStringConst(str->GetBuffer()),
 												psortcl->nulls_first
 												);
@@ -1980,11 +1980,11 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy
 	// construct the project list of the group-by operator
 	CDXLNode *pdxlnPrLGrpBy = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjList(m_memory_pool));
 
-	ListCell *plcTE = NULL;
+	ListCell *lc = NULL;
 	ULONG ulDQAs = 0;
-	ForEach (plcTE, target_list)
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 		GPOS_ASSERT(0 < target_entry->resno);
 		ULONG ulResNo = target_entry->resno;
@@ -2031,7 +2031,7 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy
 	}
 
 	// initialize the array of grouping columns
-	ULongPtrArray *pdrgpul = CTranslatorUtils::GetGroupingColidArray(m_memory_pool, pbsGroupByCols, phmiulSortgrouprefColId);
+	ULongPtrArray *grouping_cols = CTranslatorUtils::GetGroupingColidArray(m_memory_pool, pbsGroupByCols, phmiulSortgrouprefColId);
 
 	// clean up
 	if (NIL != plDQA)
@@ -2042,7 +2042,7 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy
 	return GPOS_NEW(m_memory_pool) CDXLNode
 						(
 						m_memory_pool,
-						GPOS_NEW(m_memory_pool) CDXLLogicalGroupBy(m_memory_pool, pdrgpul),
+						GPOS_NEW(m_memory_pool) CDXLLogicalGroupBy(m_memory_pool, grouping_cols),
 						pdxlnPrLGrpBy,
 						dxl_node_child
 						);
@@ -2142,9 +2142,9 @@ CTranslatorQueryToDXL::TranslateGroupingSets
 	// while processing the grouping clause
 	UlongUlongHashMap *grpcol_index_to_colid_mapping = GPOS_NEW(m_memory_pool) UlongUlongHashMap(m_memory_pool);
 	CBitSet *pbsUniqueueGrpCols = GPOS_NEW(m_memory_pool) CBitSet(m_memory_pool, ulCols);
-	DrgPbs *pdrgpbs = CTranslatorUtils::GetColumnAttnosForGroupBy(m_memory_pool, group_clause, ulCols, grpcol_index_to_colid_mapping, pbsUniqueueGrpCols);
+	DrgPbs *bitset_array = CTranslatorUtils::GetColumnAttnosForGroupBy(m_memory_pool, group_clause, ulCols, grpcol_index_to_colid_mapping, pbsUniqueueGrpCols);
 
-	const ULONG ulGroupingSets = pdrgpbs->Size();
+	const ULONG ulGroupingSets = bitset_array->Size();
 
 	if (1 == ulGroupingSets)
 	{
@@ -2153,7 +2153,7 @@ CTranslatorQueryToDXL::TranslateGroupingSets
 		CDXLNode *pdxlnSPJ = TranslateSelectProjectJoinToDXL(target_list, from_expr, phmiulSortgrouprefColId, phmiulChild, group_clause);
 
 		// translate the groupby clauses into a logical group by operator
-		CBitSet *bitset = (*pdrgpbs)[0];
+		CBitSet *bitset = (*bitset_array)[0];
 
 
 		CDXLNode *pdxlnGroupBy = CreateSimpleGroupBy
@@ -2180,7 +2180,7 @@ CTranslatorQueryToDXL::TranslateGroupingSets
 									);
 
 		phmiulChild->Release();
-		pdrgpbs->Release();
+		bitset_array->Release();
 		pbsUniqueueGrpCols->Release();
 		grpcol_index_to_colid_mapping->Release();
 		
@@ -2193,7 +2193,7 @@ CTranslatorQueryToDXL::TranslateGroupingSets
 			target_list,
 			group_clause,
 			fHasAggs,
-			pdrgpbs,
+			bitset_array,
 			phmiulSortgrouprefColId,
 			output_attno_to_colid_mapping,
 			grpcol_index_to_colid_mapping
@@ -2220,16 +2220,16 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets
 	List *target_list,
 	List *group_clause,
 	BOOL fHasAggs,
-	DrgPbs *pdrgpbs,
+	DrgPbs *bitset_array,
 	IntUlongHashMap *phmiulSortgrouprefColId,
 	IntUlongHashMap *output_attno_to_colid_mapping,
 	UlongUlongHashMap *grpcol_index_to_colid_mapping		// mapping pos->unique grouping columns for grouping func arguments
 	)
 {
-	GPOS_ASSERT(NULL != pdrgpbs);
-	GPOS_ASSERT(1 < pdrgpbs->Size());
+	GPOS_ASSERT(NULL != bitset_array);
+	GPOS_ASSERT(1 < bitset_array->Size());
 
-	const ULONG ulGroupingSets = pdrgpbs->Size();
+	const ULONG ulGroupingSets = bitset_array->Size();
 	CDXLNode *pdxlnUnionAll = NULL;
 	ULongPtrArray *pdrgpulColIdsInner = NULL;
 
@@ -2253,7 +2253,7 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets
 	
 	for (ULONG ul = 0; ul < ulGroupingSets; ul++)
 	{
-		CBitSet *pbsGroupingSet = (*pdrgpbs)[ul];
+		CBitSet *pbsGroupingSet = (*bitset_array)[ul];
 
 		// remap columns
 		ULongPtrArray *pdrgpulCTEConsumer = GenerateColIds(m_memory_pool, pdrgpulCTEProducer->Size());
@@ -2311,10 +2311,10 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets
 		{
 			// add the sortgroup columns to output map of the last column
 			ULONG ulTargetEntryPos = 0;
-			ListCell *plcTE = NULL;
-			ForEach (plcTE, target_list)
+			ListCell *lc = NULL;
+			ForEach (lc, target_list)
 			{
-				TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+				TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 
 				INT iSortGrpRef = INT (target_entry->ressortgroupref);
 				if (0 < iSortGrpRef && NULL != phmiulSortgrouprefColIdConsumer->Find(&iSortGrpRef))
@@ -2342,11 +2342,11 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets
 	// compute output columns
 	CDXLLogicalSetOp *pdxlopUnion = CDXLLogicalSetOp::Cast(pdxlnUnionAll->GetOperator());
 
-	ListCell *plcTE = NULL;
+	ListCell *lc = NULL;
 	ULONG ulOutputColIndex = 0;
-	ForEach (plcTE, target_list)
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 		GPOS_ASSERT(0 < target_entry->resno);
 		ULONG ulResNo = target_entry->resno;
@@ -2365,7 +2365,7 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets
 	}
 
 	// cleanup
-	pdrgpbs->Release();
+	bitset_array->Release();
 
 	// construct a CTE anchor operator on top of the union all
 	return GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLLogicalCTEAnchor(m_memory_pool, ulCTEId), pdxlnUnionAll);
@@ -2387,7 +2387,7 @@ CTranslatorQueryToDXL::DXLDummyConstTableGet() const
 	ColumnDescrDXLArray *pdrgpdxlcd = GPOS_NEW(m_memory_pool) ColumnDescrDXLArray(m_memory_pool);
 
 	const CMDTypeBoolGPDB *pmdtypeBool = dynamic_cast<const CMDTypeBoolGPDB *>(m_md_accessor->PtMDType<IMDTypeBool>(m_sysid));
-	const CMDIdGPDB *pmdid = CMDIdGPDB::CastMdid(pmdtypeBool->MDId());
+	const CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(pmdtypeBool->MDId());
 
 	// empty column name
 	CWStringConst strUnnamedCol(GPOS_WSZ_LIT(""));
@@ -2398,7 +2398,7 @@ CTranslatorQueryToDXL::DXLDummyConstTableGet() const
 										mdname,
 										m_colid_counter->next_id(),
 										1 /* attno */,
-										GPOS_NEW(m_memory_pool) CMDIdGPDB(pmdid->OidObjectId()),
+										GPOS_NEW(m_memory_pool) CMDIdGPDB(mdid->OidObjectId()),
 										default_type_modifier,
 										false /* is_dropped */
 										);
@@ -2503,10 +2503,10 @@ CTranslatorQueryToDXL::TranslateSetOpToDXL
 	const ColumnDescrDXLArray *pdrgpdxlcd = dxlop->GetColumnDescrDXLArray();
 
 	ULONG ulOutputColIndex = 0;
-	ListCell *plcTE = NULL;
-	ForEach (plcTE, target_list)
+	ListCell *lc = NULL;
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 		GPOS_ASSERT(0 < target_entry->resno);
 		ULONG ulResNo = target_entry->resno;
@@ -2667,15 +2667,15 @@ CTranslatorQueryToDXL::SetOpNeedsCast
 	GPOS_ASSERT(input_col_mdids->Size() <= gpdb::ListLength(target_list)); // there may be resjunked columns
 
 	ULONG ulColPos = 0;
-	ListCell *plcTE = NULL;
-	ForEach (plcTE, target_list)
+	ListCell *lc = NULL;
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		OID oidExprType = gpdb::ExprType((Node*) target_entry->expr);
 		if (!target_entry->resjunk)
 		{
-			IMDId *pmdid = (*input_col_mdids)[ulColPos];
-			if (CMDIdGPDB::CastMdid(pmdid)->OidObjectId() != oidExprType)
+			IMDId *mdid = (*input_col_mdids)[ulColPos];
+			if (CMDIdGPDB::CastMdid(mdid)->OidObjectId() != oidExprType)
 			{
 				return true;
 			}
@@ -2965,21 +2965,21 @@ CTranslatorQueryToDXL::UnsupportedRTEKind
 				|| RTE_FUNCTION == rtekind || RTE_SUBQUERY == rtekind
 				|| RTE_VALUES == rtekind));
 
-	static const SRTENameElem rgStrMap[] =
+	static const SRTENameElem rte_name_map[] =
 		{
 		{RTE_JOIN, GPOS_WSZ_LIT("RangeTableEntry of type Join")},
 		{RTE_VOID, GPOS_WSZ_LIT("RangeTableEntry of type Void")},
 		{RTE_TABLEFUNCTION, GPOS_WSZ_LIT("RangeTableEntry of type Table Function")}
 		};
 
-	const ULONG ulLen = GPOS_ARRAY_SIZE(rgStrMap);
+	const ULONG ulLen = GPOS_ARRAY_SIZE(rte_name_map);
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		SRTENameElem mapelem = rgStrMap[ul];
+		SRTENameElem mapelem = rte_name_map[ul];
 
 		if (mapelem.m_rtekind == rtekind)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, mapelem.m_buffer);
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, mapelem.m_rte_name);
 		}
 	}
 
@@ -3112,9 +3112,9 @@ CTranslatorQueryToDXL::TranslateValueScanRTEToDXL
 
 				col_id = m_colid_counter->next_id();
 
-				CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, col_name_char_array);
-				CMDName *mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-				GPOS_DELETE(pstrAlias);
+				CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, col_name_char_array);
+				CMDName *mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+				GPOS_DELETE(alias_str);
 
 				CDXLColDescr *dxl_col_descr = GPOS_NEW(m_memory_pool) CDXLColDescr
 													(
@@ -3144,9 +3144,9 @@ CTranslatorQueryToDXL::TranslateValueScanRTEToDXL
 
 				if (0 == ulTuplePos)
 				{
-					CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, col_name_char_array);
-					CMDName *mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-					GPOS_DELETE(pstrAlias);
+					CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, col_name_char_array);
+					CMDName *mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+					GPOS_DELETE(alias_str);
 
 					CDXLColDescr *dxl_col_descr = GPOS_NEW(m_memory_pool) CDXLColDescr
 														(
@@ -3610,7 +3610,7 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject
 	CDXLNode *project_list_dxl = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjList(m_memory_pool));
 
 	// construct a proj element node for each entry in the target list
-	ListCell *plcTE = NULL;
+	ListCell *lc = NULL;
 	
 	// target entries that are result of flattening join alias
 	// and are equivalent to a defined grouping column target entry
@@ -3619,9 +3619,9 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject
 	// list for all vars used in aggref expressions
 	List *plVars = NULL;
 	ULONG ulResno = 0;
-	ForEach(plcTE, target_list)
+	ForEach(lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 		GPOS_ASSERT(0 < target_entry->resno);
 		ulResno = target_entry->resno;
@@ -3658,10 +3658,10 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject
 	}
 
 	// process target entries that are a result of flattening join alias
-	plcTE = NULL;
-	ForEach(plcTE, plOmittedTE)
+	lc = NULL;
+	ForEach(lc, plOmittedTE)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		INT iSortGroupRef = (INT) target_entry->ressortgroupref;
 
 		TargetEntry *pteGroupingColumn = CTranslatorUtils::GetGroupingColumnTargetEntry( (Node*) target_entry->expr, plgrpcl, target_list);
@@ -3740,10 +3740,10 @@ CTranslatorQueryToDXL::CreateDXLProjectNullsForGroupingSets
 
 	// construct a proj element node for those non-aggregate entries in the target list which
 	// are not included in the grouping set
-	ListCell *plcTE = NULL;
-	ForEach (plcTE, target_list)
+	ListCell *lc = NULL;
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 
 		BOOL fGroupingCol = bitset->Get(target_entry->ressortgroupref);
@@ -3764,9 +3764,9 @@ CTranslatorQueryToDXL::CreateDXLProjectNullsForGroupingSets
 			}
 			else
 			{
-				CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
-				pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-				GPOS_DELETE(pstrAlias);
+				CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
+				pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+				GPOS_DELETE(alias_str);
 			}
 			CDXLNode *pdxlnPrEl = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjElem(m_memory_pool, col_id, pmdnameAlias), pdxlnGroupingFunc);
 			project_list_dxl->AddChild(pdxlnPrEl);
@@ -3778,9 +3778,9 @@ CTranslatorQueryToDXL::CreateDXLProjectNullsForGroupingSets
 
 			col_id = m_colid_counter->next_id();
 
-			CMDIdGPDB *pmdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(oidType);
-			CDXLNode *pdxlnPrEl = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_md_accessor, pmdid, col_id, target_entry->resname);
-			pmdid->Release();
+			CMDIdGPDB *mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(oidType);
+			CDXLNode *pdxlnPrEl = CTranslatorUtils::CreateDXLProjElemConstNULL(m_memory_pool, m_md_accessor, mdid, col_id, target_entry->resname);
+			mdid->Release();
 			
 			project_list_dxl->AddChild(pdxlnPrEl);
 			StoreAttnoColIdMapping(output_attno_to_colid_mapping, ulResno, col_id);
@@ -3831,10 +3831,10 @@ CTranslatorQueryToDXL::CreateDXLProjectGroupingFuncs
 
 	// construct a proj element node for those non-aggregate entries in the target list which
 	// are not included in the grouping set
-	ListCell *plcTE = NULL;
-	ForEach (plcTE, target_list)
+	ListCell *lc = NULL;
+	ForEach (lc, target_list)
 	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(plcTE);
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 		GPOS_ASSERT(IsA(target_entry, TargetEntry));
 
 		ULONG ulResno = target_entry->resno;
@@ -3852,9 +3852,9 @@ CTranslatorQueryToDXL::CreateDXLProjectGroupingFuncs
 			}
 			else
 			{
-				CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
-				pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-				GPOS_DELETE(pstrAlias);
+				CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
+				pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+				GPOS_DELETE(alias_str);
 			}
 			CDXLNode *pdxlnPrEl = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, GPOS_NEW(m_memory_pool) CDXLScalarProjElem(m_memory_pool, col_id, pmdnameAlias), pdxlnGroupingFunc);
 			project_list_dxl->AddChild(pdxlnPrEl);
@@ -3945,10 +3945,10 @@ CTranslatorQueryToDXL::CreateDXLOutputCols
 		}
 		else
 		{
-			CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
-			mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
+			CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, target_entry->resname);
+			mdname = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
 			// CName constructor copies string
-			GPOS_DELETE(pstrAlias);
+			GPOS_DELETE(alias_str);
 		}
 
 		const ULONG col_id = CTranslatorUtils::GetColId(ulResNo, attno_to_colid_mapping);
@@ -4005,9 +4005,9 @@ CTranslatorQueryToDXL::TranslateExprToDXLProject
 	}
 	else
 	{
-		CWStringDynamic *pstrAlias = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, alias_name);
-		pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, pstrAlias);
-		GPOS_DELETE(pstrAlias);
+		CWStringDynamic *alias_str = CDXLUtils::CreateDynamicStringFromCharArray(m_memory_pool, alias_name);
+		pmdnameAlias = GPOS_NEW(m_memory_pool) CMDName(m_memory_pool, alias_str);
+		GPOS_DELETE(alias_str);
 	}
 
 	if (IsA(expr, Var) && !insist_new_colids)
@@ -4092,9 +4092,9 @@ CTranslatorQueryToDXL::TranslateGroupingFuncToDXL
 
 	const IMDType *pmdtype = m_md_accessor->PtMDType<IMDTypeInt8>(m_sysid);
 	CMDIdGPDB *pmdidMDC = CMDIdGPDB::CastMdid(pmdtype->MDId());
-	CMDIdGPDB *pmdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(*pmdidMDC);
+	CMDIdGPDB *mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(*pmdidMDC);
 	
-	CDXLDatum *datum_dxl = GPOS_NEW(m_memory_pool) CDXLDatumInt8(m_memory_pool, pmdid, false /* is_null */, lValue);
+	CDXLDatum *datum_dxl = GPOS_NEW(m_memory_pool) CDXLDatumInt8(m_memory_pool, mdid, false /* is_null */, lValue);
 	CDXLScalarConstValue *dxlop = GPOS_NEW(m_memory_pool) CDXLScalarConstValue(m_memory_pool, datum_dxl);
 	return GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, dxlop);
 }

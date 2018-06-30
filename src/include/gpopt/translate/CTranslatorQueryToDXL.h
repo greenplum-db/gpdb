@@ -69,7 +69,7 @@ namespace gpdxl
 		struct SRTENameElem
 		{
 			RTEKind m_rtekind;
-			const WCHAR *m_buffer;
+			const WCHAR *m_rte_name;
 		};
 
 		// pair of RTEKind and its translators
@@ -83,14 +83,14 @@ namespace gpdxl
 		struct SCmdNameElem
 		{
 			CmdType m_cmd_type;
-			const WCHAR *m_buffer;
+			const WCHAR *m_cmd_name;
 		};
 
 		// pair of unsupported node tag and feature name
 		struct SUnsupportedFeature
 		{
 			NodeTag node_tag;
-			const WCHAR *m_buffer;
+			const WCHAR *m_feature_name;
 		};
 		
 		private:
@@ -403,7 +403,7 @@ namespace gpdxl
 
 			// check if given operator is lead() window function
 			static
-			BOOL IsLeadWindowFunc(CDXLOperator *GetOperator);
+			BOOL IsLeadWindowFunc(CDXLOperator *dxlop);
 
 			// check if given operator is lag() window function
 			static
