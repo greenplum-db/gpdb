@@ -62,14 +62,14 @@ CMDProviderRelcache::GetMDObjDXLStr
 	)
 	const
 {
-	IMDCacheObject *imdobj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor, md_id);
+	IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor, md_id);
 
-	GPOS_ASSERT(NULL != imdobj);
+	GPOS_ASSERT(NULL != md_obj);
 
-	CWStringDynamic *str = CDXLUtils::SerializeMDObj(m_memory_pool, imdobj, true /*fSerializeHeaders*/, false /*findent*/);
+	CWStringDynamic *str = CDXLUtils::SerializeMDObj(m_memory_pool, md_obj, true /*fSerializeHeaders*/, false /*findent*/);
 
 	// cleanup DXL object
-	imdobj->Release();
+	md_obj->Release();
 
 	return str;
 }
