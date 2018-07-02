@@ -222,7 +222,7 @@ namespace gpdxl
 			CDXLNode *TranslateExprToDXL(Expr *expr);
 
 			// translate the JoinExpr (inside FromExpr) into a CDXLLogicalJoin node
-			CDXLNode *TranslateJoinExprInFromToDXL(JoinExpr *pjoinexpr);
+			CDXLNode *TranslateJoinExprInFromToDXL(JoinExpr *join_expr);
 
 			// construct a group by node for a set of grouping columns
 			CDXLNode *CreateSimpleGroupBy
@@ -272,7 +272,7 @@ namespace gpdxl
 				List *target_list, 
 				CDXLNode *dxl_node_child, 
 				CBitSet *bitset, 
-				IntUlongHashMap *phmiulSortgrouprefCols, 
+				IntUlongHashMap *sort_grouping_col_mapping, 
 				IntUlongHashMap *output_attno_to_colid_mapping, 
 				UlongUlongHashMap *grpcol_index_to_colid_mapping
 				) 

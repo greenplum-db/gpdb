@@ -93,7 +93,7 @@ namespace gpdxl
 
 		public:
 			// ctor: single CTE 
-			CCTEListEntry(IMemoryPool *memory_pool, ULONG query_level, CommonTableExpr *pcte, CDXLNode *cte_producer);
+			CCTEListEntry(IMemoryPool *memory_pool, ULONG query_level, CommonTableExpr *cte, CDXLNode *cte_producer);
 			
 			// ctor: multiple CTEs
 			CCTEListEntry(IMemoryPool *memory_pool, ULONG query_level, List *cte_list, DXLNodeArray *dxl_nodes);

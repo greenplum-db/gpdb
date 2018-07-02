@@ -2410,7 +2410,7 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 										true /*fConstNull*/,
 										NULL, /*pba */
 										0 /*length*/,
-										0 /*lValue*/,
+										0 /*l_value*/,
 										0 /*dValue*/
 										);
 	}

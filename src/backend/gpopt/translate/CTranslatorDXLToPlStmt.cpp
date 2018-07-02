@@ -4581,7 +4581,7 @@ CTranslatorDXLToPlStmt::TranslateDXLFilterToQual
 List *
 CTranslatorDXLToPlStmt::TranslateDXLScCondToQual
 	(
-	const CDXLNode *pdxlnCond,
+	const CDXLNode *condition_dxlnode,
 	const CDXLTranslateContextBaseTable *base_table_context,
 	DXLTranslationContextArr *child_contexts,
 	CDXLTranslateContext *output_context
@@ -4589,7 +4589,7 @@ CTranslatorDXLToPlStmt::TranslateDXLScCondToQual
 {
 	List *quals_list = NIL;
 
-	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(const_cast<CDXLNode*>(pdxlnCond), m_md_accessor));
+	GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(const_cast<CDXLNode*>(condition_dxlnode), m_md_accessor));
 
 	CMappingColIdVarPlStmt colid_var_mapping = CMappingColIdVarPlStmt
 															(
@@ -4602,7 +4602,7 @@ CTranslatorDXLToPlStmt::TranslateDXLScCondToQual
 
 	Expr *expr = m_translator_dxl_to_scalar->CreateScalarExprFromDXL
 					(
-					pdxlnCond,
+					condition_dxlnode,
 					&colid_var_mapping
 					);
 

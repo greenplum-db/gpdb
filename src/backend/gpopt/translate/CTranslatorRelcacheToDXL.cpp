@@ -756,7 +756,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns
 		}
 
 		ULONG ulColLen = gpos::ulong_max;
-		CMDIdGPDB *pmdidCol = GPOS_NEW(memory_pool) CMDIdGPDB(att->atttypid);
+		CMDIdGPDB *mdid_col = GPOS_NEW(memory_pool) CMDIdGPDB(att->atttypid);
 		HeapTuple heaptupleStats = gpdb::GetAttStats(rel->rd_id, ul+1);
 
 		// Column width priority:
@@ -774,7 +774,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns
 			ulColLen = fpsStats->stawidth;
 			gpdb::FreeHeapTuple(heaptupleStats);
 		}
-		else if ((pmdidCol->Equals(&CMDIdGPDB::m_mdid_bpchar) || pmdidCol->Equals(&CMDIdGPDB::m_mdid_varchar)) && (VARHDRSZ < att->atttypmod))
+		else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) || mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) && (VARHDRSZ < att->atttypmod))
 		{
 			ulColLen = (ULONG) att->atttypmod - VARHDRSZ;
 		}
@@ -785,7 +785,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns
 
 			if (!att->attisdropped)
 			{
-				IMDType *md_type = CTranslatorRelcacheToDXL::RetrieveType(memory_pool, pmdidCol);
+				IMDType *md_type = CTranslatorRelcacheToDXL::RetrieveType(memory_pool, mdid_col);
 				if(md_type->IsFixedLength())
 				{
 					ulColLen = md_type->Length();
@@ -798,7 +798,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns
 										(
 										md_colname,
 										att->attnum,
-										pmdidCol,
+										mdid_col,
 										att->atttypmod,
 										!att->attnotnull,
 										att->attisdropped,
@@ -2098,7 +2098,7 @@ CTranslatorRelcacheToDXL::RetrieveCheckConstraints
 	var_col_id_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */, col_descr_dxl_array);
 
 	// translate the check constraint expression
-	CDXLNode *pdxlnScalar = sctranslator.CreateScalarOpFromExpr((Expr *) node, var_col_id_mapping);
+	CDXLNode *scalar_dxlnode = sctranslator.CreateScalarOpFromExpr((Expr *) node, var_col_id_mapping);
 
 	// cleanup
 	col_descr_dxl_array->Release();
@@ -2112,7 +2112,7 @@ CTranslatorRelcacheToDXL::RetrieveCheckConstraints
 						mdid,
 						mdname,
 						pmdidRel,
-						pdxlnScalar
+						scalar_dxlnode
 						);
 }
 
@@ -3599,13 +3599,13 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode
 	var_col_id_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */, col_descr_dxl_array);
 
 	// translate the check constraint expression
-	CDXLNode *pdxlnScalar = sctranslator.CreateScalarOpFromExpr((Expr *) pnodeCnstr, var_col_id_mapping);
+	CDXLNode *scalar_dxlnode = sctranslator.CreateScalarOpFromExpr((Expr *) pnodeCnstr, var_col_id_mapping);
 
 	// cleanup
 	GPOS_DELETE(var_col_id_mapping);
 
 	level_with_default_part_array->AddRef();
-	return GPOS_NEW(memory_pool) CMDPartConstraintGPDB(memory_pool, level_with_default_part_array, is_unbounded, pdxlnScalar);
+	return GPOS_NEW(memory_pool) CMDPartConstraintGPDB(memory_pool, level_with_default_part_array, is_unbounded, scalar_dxlnode);
 }
 
 //---------------------------------------------------------------------------
