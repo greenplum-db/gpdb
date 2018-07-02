@@ -18,7 +18,10 @@
  *
  */
 
+#include "pxfheaders.h"
+#include "pxffragment.h"
 #include "pxfbridge.h"
+
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 
@@ -214,6 +217,7 @@ static void
 set_current_fragment_headers(gphadoop_context *context)
 {
 	FragmentData *frag_data = (FragmentData *) lfirst(context->current_fragment);
+	char *fragment_count = psprintf("%d", list_length(context->gphd_uri->fragments));
 
 	elog(DEBUG2, "pxf: set_current_fragment_source_name: source_name %s, index %s, has user data: %s ",
 		 frag_data->source_name, frag_data->index, frag_data->user_data ? "TRUE" : "FALSE");
@@ -222,6 +226,7 @@ set_current_fragment_headers(gphadoop_context *context)
 	churl_headers_override(context->churl_headers, "X-GP-DATA-FRAGMENT", frag_data->index);
 	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-METADATA", frag_data->fragment_md);
 	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-INDEX", frag_data->index);
+	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-COUNT", fragment_count);
 
 	if (frag_data->user_data)
 	{

@@ -22,10 +22,7 @@
 #define GPDB_PXFFRAGMENT_H
 
 #include "libchurl.h"
-#include "pxfheaders.h"
 #include "pxfuriparser.h"
-
-#include "lib/stringinfo.h"
 
 /*
  * Context for the Fragmenter

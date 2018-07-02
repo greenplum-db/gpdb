@@ -22,10 +22,8 @@
 #define _PXFBRIDGE_H
 
 #include "libchurl.h"
-#include "pxffragment.h"
 #include "pxfuriparser.h"
 
-#include "cdb/cdbvars.h"
 #include "nodes/pg_list.h"
 
 /*
