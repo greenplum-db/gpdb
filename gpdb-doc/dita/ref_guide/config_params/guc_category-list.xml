@@ -1229,24 +1229,22 @@
         management feature. </p>
       <simpletable id="kh1571613" frame="none">
         <strow>
-          <stentry>
-            <p>
+          <stentry><p>
               <xref href="guc-list.xml#gp_resgroup_memory_policy" type="section"
                 >gp_resgroup_memory_policy</xref>
             </p>
+            <xref href="guc-list.xml#gp_resource_group_bypass" type="section"
+              >gp_resource_group_bypass</xref>
             <p>
               <xref href="guc-list.xml#gp_resource_group_cpu_limit" type="section"
                 >gp_resource_group_cpu_limit</xref>
-            </p>
-            <p>
+            </p><p>
               <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
                 >gp_resource_group_memory_limit</xref>
-            </p>
-            <p>
+            </p><p>
               <xref href="guc-list.xml#gp_resource_manager" type="section"
                 >gp_resource_manager</xref>
-            </p>
-          </stentry>
+            </p></stentry>
           <stentry>
             <p>
               <xref href="guc-list.xml#gp_vmem_idle_resource_timeout" type="section"
