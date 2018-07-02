@@ -62,7 +62,7 @@ CMDProviderRelcache::GetMDObjDXLStr
 	)
 	const
 {
-	IMDCacheObject *imdobj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor, md_id);
+	IMDCacheObject *imdobj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor, md_id);
 
 	GPOS_ASSERT(NULL != imdobj);
 

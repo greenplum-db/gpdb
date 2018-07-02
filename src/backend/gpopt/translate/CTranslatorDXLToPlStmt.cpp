@@ -438,7 +438,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
 	const CDXLTableDescr *table_descr = pdxlopTS->GetDXLTableDescr();
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &dxltrctxbt);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
@@ -446,7 +446,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan
 
 	Plan *plan = NULL;
 	Plan *pplanReturn = NULL;
-	if (IMDRelation::ErelstorageExternal == md_rel->GetRelStorageType())
+	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
 		const IMDRelationExternal *pmdrelext = dynamic_cast<const IMDRelationExternal*>(md_rel);
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->OidObjectId();
@@ -625,7 +625,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 		index_descr_dxl = pdxlopIndexScan->GetDXLIndexDescr();
 	}
 
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(pdxlopIndexScan->GetDXLTableDescr()->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(pdxlopIndexScan->GetDXLTableDescr()->MDId());
 
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(pdxlopIndexScan->GetDXLTableDescr(), index_descr_dxl, index, &dxltrctxbt);
 	GPOS_ASSERT(NULL != rte);
@@ -638,7 +638,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan
 	pis->scan.scanrelid = index;
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(pdxlopIndexScan->GetDXLIndexDescr()->MDId());
-	const IMDIndex *md_index = m_md_accessor->Pmdindex(pmdidIndex);
+	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
@@ -3584,7 +3584,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
 
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(dxl_dyn_index_scan_op->GetDXLTableDescr()->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(dxl_dyn_index_scan_op->GetDXLTableDescr()->MDId());
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(dxl_dyn_index_scan_op->GetDXLTableDescr(), NULL /*index_descr_dxl*/, index, &dxltrctxbt);
 	GPOS_ASSERT(NULL != rte);
 	rte->requiredPerms |= ACL_SELECT;
@@ -3597,7 +3597,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
 	pdis->indexscan.scan.partIndexPrintable = dxl_dyn_index_scan_op->GetPartIndexIdPrintable();
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(dxl_dyn_index_scan_op->GetDXLIndexDescr()->MDId());
-	const IMDIndex *md_index = m_md_accessor->Pmdindex(pmdidIndex);
+	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
@@ -3728,7 +3728,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 	}
 	
 	IMDId *pmdidTargetTable = dxl_phy_dml_op->GetDXLTableDescr()->MDId();
-	if (IMDRelation::EreldistrMasterOnly != m_md_accessor->Pmdrel(pmdidTargetTable)->GetRelDistribution())
+	if (IMDRelation::EreldistrMasterOnly != m_md_accessor->RetrieveRel(pmdidTargetTable)->GetRelDistribution())
 	{
 		m_is_tgt_tbl_distributed = true;
 	}
@@ -3742,7 +3742,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml
 	
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
 
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(dxl_phy_dml_op->GetDXLTableDescr()->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(dxl_phy_dml_op->GetDXLTableDescr()->MDId());
 
 	CDXLTableDescr *table_descr = dxl_phy_dml_op->GetDXLTableDescr();
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &dxltrctxbt);
@@ -4200,7 +4200,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
 {
 	GPOS_ASSERT(NULL != table_descr);
 
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	const ULONG ulRelColumns = CTranslatorUtils::GetNumNonSystemColumns(md_rel);
 
 	RangeTblEntry *rte = MakeNode(RangeTblEntry);
@@ -4210,7 +4210,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry
 	const IMDIndex *md_index = NULL;
 	if (NULL != index_descr_dxl)
 	{
-		md_index = m_md_accessor->Pmdindex(index_descr_dxl->MDId());
+		md_index = m_md_accessor->RetrieveIndex(index_descr_dxl->MDId());
 	}
 
 	// get oid for table
@@ -4712,8 +4712,8 @@ CTranslatorDXLToPlStmt::TranslateHashExprList
 
 		// the type of the hash expression in GPDB is computed as the left operand 
 		// of the equality operator of the actual hash expression type
-		const IMDType *pmdtype = m_md_accessor->Pmdtype(pdxlopHashExpr->MDIdType());
-		const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
+		const IMDType *pmdtype = m_md_accessor->RetrieveType(pdxlopHashExpr->MDIdType());
+		const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(pmdtype->GetMdidForCmpType(IMDType::EcmptEq));
 		
 		const IMDId *pmdidHashType = md_scalar_op->GetLeftMdid();
 		
@@ -4831,7 +4831,7 @@ CTranslatorDXLToPlStmt::IsTgtTblDistributed
 	CDXLPhysicalDML *pdxlopDML = CDXLPhysicalDML::Cast(dxlop);
 	IMDId *pmdid = pdxlopDML->GetDXLTableDescr()->MDId();
 
-	return IMDRelation::EreldistrMasterOnly != m_md_accessor->Pmdrel(pmdid)->GetRelDistribution();
+	return IMDRelation::EreldistrMasterOnly != m_md_accessor->RetrieveRel(pmdid)->GetRelDistribution();
 }
 
 //---------------------------------------------------------------------------
@@ -5243,7 +5243,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan
 	// add the new range table entry as the last element of the range table
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
 
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(table_descr, NULL /*index_descr_dxl*/, index, &dxltrctxbt);
 	GPOS_ASSERT(NULL != rte);
@@ -5478,7 +5478,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe
 	pbis->scan.partIndex = bitmap_tbl_scan->scan.partIndex;
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::CastMdid(dxl_sc_bitmap_idx_probe_op->GetDXLIndexDescr()->MDId());
-	const IMDIndex *index = m_md_accessor->Pmdindex(pmdidIndex);
+	const IMDIndex *index = m_md_accessor->RetrieveIndex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);

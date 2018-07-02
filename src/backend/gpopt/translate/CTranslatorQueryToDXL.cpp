@@ -677,7 +677,7 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_md_accessor, md_rel, Edxldmlinsert))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("INSERT with triggers"));
@@ -1081,7 +1081,7 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_md_accessor, md_rel, Edxldmldelete))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DELETE with triggers"));
@@ -1130,7 +1130,7 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);
 
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	if (!optimizer_enable_dml_triggers && CTranslatorUtils::RelHasTriggers(m_memory_pool, m_md_accessor, md_rel, Edxldmlupdate))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("UPDATE with triggers"));
@@ -1799,7 +1799,7 @@ CTranslatorQueryToDXL::TranslateSortColumsToDXL
 
 		// get operator name
 		CMDIdGPDB *op_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(oid);
-		const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(op_mdid);
+		const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(op_mdid);
 
 		const CWStringConst *str = md_scalar_op->Mdname().GetMDName();
 		GPOS_ASSERT(NULL != str);
@@ -3014,8 +3014,8 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet
 	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(m_memory_pool, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
 
 	CDXLLogicalGet *dxlop = NULL;
-	const IMDRelation *md_rel = m_md_accessor->Pmdrel(table_descr->MDId());
-	if (IMDRelation::ErelstorageExternal == md_rel->GetRelStorageType())
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
+	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
 		dxlop = GPOS_NEW(m_memory_pool) CDXLLogicalExternalGet(m_memory_pool, table_descr);
 	}
@@ -3360,7 +3360,7 @@ CTranslatorQueryToDXL::TranslateTVFToDXL
 	}
 
 	CMDIdGPDB *mdid_func = GPOS_NEW(m_memory_pool) CMDIdGPDB(pfuncexpr->funcid);
-	const IMDFunction *pmdfunc = m_md_accessor->Pmdfunc(mdid_func);
+	const IMDFunction *pmdfunc = m_md_accessor->RetrieveFunc(mdid_func);
 	if (fSubqueryInArgs && IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Volatile functions with subqueries in arguments"));

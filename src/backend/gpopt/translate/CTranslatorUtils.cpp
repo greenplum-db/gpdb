@@ -98,7 +98,7 @@ CTranslatorUtils::GetIndexDescr
 	IMDId *mdid
 	)
 {
-	const IMDIndex *index = md_accessor->Pmdindex(mdid);
+	const IMDIndex *index = md_accessor->RetrieveIndex(mdid);
 	const CWStringConst *index_name = index->Mdname().GetMDName();
 	CMDName *index_mdname = GPOS_NEW(memory_pool) CMDName(memory_pool, index_name);
 
@@ -135,7 +135,7 @@ CTranslatorUtils::GetTableDescr
 
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(rel_oid);
 
-	const IMDRelation *rel = md_accessor->Pmdrel(mdid);
+	const IMDRelation *rel = md_accessor->RetrieveRel(mdid);
 	
 	// look up table name
 	const CWStringConst *tablename = rel->Mdname().GetMDName();
@@ -222,7 +222,7 @@ CTranslatorUtils::IsSirvFunc
 	}
 
 	CMDIdGPDB *mdid_func = GPOS_NEW(memory_pool) CMDIdGPDB(func_oid);
-	const IMDFunction *func = md_accessor->Pmdfunc(mdid_func);
+	const IMDFunction *func = md_accessor->RetrieveFunc(mdid_func);
 
 	BOOL is_sirv = (!func->ReturnsSet() &&
 				  IMDFunction::EfsVolatile == func->GetFuncStability());
@@ -276,7 +276,7 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 	// get function id
 	CMDIdGPDB *mdid_func = GPOS_NEW(memory_pool) CMDIdGPDB(funcexpr->funcid);
 	CMDIdGPDB *mdid_return_type =  GPOS_NEW(memory_pool) CMDIdGPDB(funcexpr->funcresulttype);
-	const IMDType *type = md_accessor->Pmdtype(mdid_return_type);
+	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
 
 	// In the planner, scalar functions that are volatile (SIRV) or read or modify SQL
 	// data get patched into an InitPlan. This is not supported in the optimizer
@@ -286,7 +286,7 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 	}
 
 	// get function from MDcache
-	const IMDFunction *func = md_accessor->Pmdfunc(mdid_func);
+	const IMDFunction *func = md_accessor->RetrieveFunc(mdid_func);
 
 	MdidPtrArray *out_arg_types = func->OutputArgTypesMdidArray();
 
@@ -656,7 +656,7 @@ CTranslatorUtils::ExpandCompositeType
 	GPOS_ASSERT(type->IsComposite());
 
 	IMDId *rel_mdid = type->GetBaseRelMdid();
-	const IMDRelation *rel = md_accessor->Pmdrel(rel_mdid);
+	const IMDRelation *rel = md_accessor->RetrieveRel(rel_mdid);
 	GPOS_ASSERT(NULL != rel);
 
 	MDColumnPtrArray *pdrgPmdcol = GPOS_NEW(memory_pool) MDColumnPtrArray(memory_pool);
@@ -2360,7 +2360,7 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 	CHAR *alias_name
 	)
 {
-	BOOL is_passed_by_value = md_accessor->Pmdtype(mdid)->IsPassedByValue();
+	BOOL is_passed_by_value = md_accessor->RetrieveType(mdid)->IsPassedByValue();
 
 	// get the id and alias for the proj elem
 	CMDName *alias_mdname = NULL;
@@ -2684,7 +2684,7 @@ CTranslatorUtils::IsApplicableTrigger
 	const EdxlDmlType dml_type_dxl
 	)
 {
-	const IMDTrigger *trigger = md_accessor->Pmdtrigger(trigger_mdid);
+	const IMDTrigger *trigger = md_accessor->RetrieveTrigger(trigger_mdid);
 	if (!trigger->IsEnabled())
 	{
 		return false;

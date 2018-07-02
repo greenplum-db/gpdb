@@ -309,7 +309,7 @@ CTranslatorDXLToScalar::CreateScalarOpExprFromDXL
 	OpExpr *op_expr = MakeNode(OpExpr);
 	op_expr->opno = CMDIdGPDB::CastMdid(scalar_op_expr_dxl->MDId())->OidObjectId();
 
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(scalar_op_expr_dxl->MDId());
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(scalar_op_expr_dxl->MDId());
 	op_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
 
 	IMDId *return_type_mdid = scalar_op_expr_dxl->GetReturnTypeMdId();
@@ -322,7 +322,7 @@ CTranslatorDXLToScalar::CreateScalarOpExprFromDXL
 		op_expr->opresulttype = GetFunctionReturnTypeOid(md_scalar_op->FuncMdId());
 	}
 
-	const IMDFunction *md_func = m_md_accessor->Pmdfunc(md_scalar_op->FuncMdId());
+	const IMDFunction *md_func = m_md_accessor->RetrieveFunc(md_scalar_op->FuncMdId());
 	op_expr->opretset = md_func->ReturnsSet();
 
 	GPOS_ASSERT(1 == scalar_op_expr_node->Arity() || 2 == scalar_op_expr_node->Arity());
@@ -357,7 +357,7 @@ CTranslatorDXLToScalar::CreateScalarArrayCompFromDXLNode
 
 	ScalarArrayOpExpr *arrayop_expr = MakeNode(ScalarArrayOpExpr);
 	arrayop_expr->opno = CMDIdGPDB::CastMdid(array_comp_dxl->MDId())->OidObjectId();
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(array_comp_dxl->MDId());
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(array_comp_dxl->MDId());
 	arrayop_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
 
 	switch(array_comp_dxl->GetDXLArrayCmpType())
@@ -417,7 +417,7 @@ CTranslatorDXLToScalar::CreateScalarDistinctCmpExprFromDXL
 	DistinctExpr *dist_expr = MakeNode(DistinctExpr);
 	dist_expr->opno = CMDIdGPDB::CastMdid(dxlop->MDId())->OidObjectId();
 
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(dxlop->MDId());
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(dxlop->MDId());
 
 	dist_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
 	dist_expr->opresulttype = GetFunctionReturnTypeOid(md_scalar_op->FuncMdId());
@@ -463,7 +463,7 @@ CTranslatorDXLToScalar::CreateScalarAggrefExprFromDXL
 	aggref->location = -1;
 
 	CMDIdGPDB *agg_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(aggref->aggfnoid);
-	const IMDAggregate *pmdagg = m_md_accessor->Pmdagg(agg_mdid);
+	const IMDAggregate *pmdagg = m_md_accessor->RetrieveAgg(agg_mdid);
 	agg_mdid->Release();
 
 	EdxlAggrefStage edxlaggstage = dxlop->GetDXLAggStage();
@@ -802,7 +802,7 @@ CTranslatorDXLToScalar::CreateSubplanTestExprFromDXL
 		// create an OpExpr for subplan test expression
         OpExpr *op_expr = MakeNode(OpExpr);
         op_expr->opno = CMDIdGPDB::CastMdid(scalar_cmp_dxl->MDId())->OidObjectId();
-        const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(scalar_cmp_dxl->MDId());
+        const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(scalar_cmp_dxl->MDId());
         op_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
         op_expr->opresulttype = CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeBool>()->MDId())->OidObjectId();
         op_expr->opretset = false;
@@ -1148,7 +1148,7 @@ CTranslatorDXLToScalar::CreateScalarNULLIfExprFromDXL
 	NullIfExpr *scalar_null_if_expr = MakeNode(NullIfExpr);
 	scalar_null_if_expr->opno = CMDIdGPDB::CastMdid(dxlop->MdIdOp())->OidObjectId();
 
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(dxlop->MdIdOp());
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(dxlop->MdIdOp());
 
 	scalar_null_if_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
 	scalar_null_if_expr->opresulttype = CMDIdGPDB::CastMdid(dxlop->MDIdType())->OidObjectId();
@@ -1172,7 +1172,7 @@ CTranslatorDXLToScalar::CreateRelabelTypeOrFuncExprFromDXL(const CDXLScalarCast 
 		FuncExpr *func_expr = MakeNode(FuncExpr);
 		func_expr->funcid = CMDIdGPDB::CastMdid(scalar_cast->FuncMdId())->OidObjectId();
 
-		const IMDFunction *pmdfunc = m_md_accessor->Pmdfunc(scalar_cast->FuncMdId());
+		const IMDFunction *pmdfunc = m_md_accessor->RetrieveFunc(scalar_cast->FuncMdId());
 		func_expr->funcretset = pmdfunc->ReturnsSet();;
 
 		func_expr->funcformat = COERCE_IMPLICIT_CAST;
@@ -1934,7 +1934,7 @@ CTranslatorDXLToScalar::CreateScalarCmpExprFromDXL
 	OpExpr *op_expr = MakeNode(OpExpr);
 	op_expr->opno = CMDIdGPDB::CastMdid(dxlop->MDId())->OidObjectId();
 
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(dxlop->MDId());
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(dxlop->MDId());
 
 	op_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->OidObjectId();
 	op_expr->opresulttype = CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeBool>()->MDId())->OidObjectId();
@@ -2110,7 +2110,7 @@ CTranslatorDXLToScalar::GetFunctionReturnTypeOid
 	)
 	const
 {
-	return CMDIdGPDB::CastMdid(m_md_accessor->Pmdfunc(mdid)->GetResultTypeMdid())->OidObjectId();
+	return CMDIdGPDB::CastMdid(m_md_accessor->RetrieveFunc(mdid)->GetResultTypeMdid())->OidObjectId();
 }
 
 //---------------------------------------------------------------------------

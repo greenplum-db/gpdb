@@ -837,7 +837,7 @@ CQueryMutators::GetTargetEntryForAggExpr
 		Aggref *aggref = (Aggref*) node;
 
 		CMDIdGPDB *agg_mdid = GPOS_NEW(memory_pool) CMDIdGPDB(aggref->aggfnoid);
-		const IMDAggregate *pmdagg = md_accessor->Pmdagg(agg_mdid);
+		const IMDAggregate *pmdagg = md_accessor->RetrieveAgg(agg_mdid);
 		agg_mdid->Release();
 
 		const CWStringConst *str = pmdagg->Mdname().GetMDName();

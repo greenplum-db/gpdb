@@ -397,7 +397,7 @@ COptTasks::ConvertToDXLFromMDCast
 	{
 		CAutoMDAccessor md_accessor(memory_pool, relcache_provider, default_sysid);
 	
-		IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor.Pmda(), cast);
+		IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor.Pmda(), cast);
 		GPOS_ASSERT(NULL != md_obj);
 	
 		mdcache_obj_array->Append(md_obj);
@@ -457,7 +457,7 @@ COptTasks::ConvertToDXLFromMDScalarCmp
 	{
 		CAutoMDAccessor md_accessor(memory_pool, relcache_provider, default_sysid);
 	
-		IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor.Pmda(), scalar_cmp);
+		IMDCacheObject *md_obj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor.Pmda(), scalar_cmp);
 		GPOS_ASSERT(NULL != md_obj);
 	
 		mdcache_obj_array->Append(md_obj);
@@ -1162,9 +1162,9 @@ COptTasks::PrintMissingStatsWarning
 
 		IMDId *rel_mdid = mdid_col_stats->GetRelMdId();
 		const ULONG pos = mdid_col_stats->Position();
-		const IMDRelation *rel = md_accessor->Pmdrel(rel_mdid);
+		const IMDRelation *rel = md_accessor->RetrieveRel(rel_mdid);
 
-		if (IMDRelation::ErelstorageExternal != rel->GetRelStorageType())
+		if (IMDRelation::ErelstorageExternal != rel->RetrieveRelStorageType())
 		{
 			if (!rel_stats->Contains(rel_mdid))
 			{
@@ -1380,7 +1380,7 @@ COptTasks::ConvertToDXLFromMDObjsTask
 			// get object from relcache
 			CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(oid, 1 /* major */, 0 /* minor */);
 
-			IMDCacheObject *mdobj = CTranslatorRelcacheToDXL::Pimdobj(memory_pool, md_accessor.Pmda(), mdid);
+			IMDCacheObject *mdobj = CTranslatorRelcacheToDXL::RetrieveObject(memory_pool, md_accessor.Pmda(), mdid);
 			GPOS_ASSERT(NULL != mdobj);
 
 			mdcache_obj_array->Append(mdobj);

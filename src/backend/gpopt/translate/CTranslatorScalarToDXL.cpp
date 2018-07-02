@@ -417,7 +417,7 @@ CTranslatorScalarToDXL::CreateScalarOpExprFromExpr
 
 	// check if this is a scalar comparison
 	CMDIdGPDB *return_type_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(((OpExpr *) expr)->opresulttype);
-	const IMDType *md_type= m_md_accessor->Pmdtype(return_type_mdid);
+	const IMDType *md_type= m_md_accessor->RetrieveType(return_type_mdid);
 
 	const ULONG num_args = gpdb::ListLength(op_expr->args);
 
@@ -527,7 +527,7 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr
 
 	// get operator name
 	CMDIdGPDB *mdid_op = GPOS_NEW(m_memory_pool) CMDIdGPDB(scalar_array_op_expr->opno);
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(mdid_op);
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(mdid_op);
 	mdid_op->Release();
 
 	const CWStringConst *op_name = md_scalar_op->Mdname().GetMDName();
@@ -598,7 +598,7 @@ CTranslatorScalarToDXL::GetDatumVal
 	)
 {
 	CMDIdGPDB *mdid = GPOS_NEW(memory_pool) CMDIdGPDB(constant->consttype);
-	const IMDType *md_type= mda->Pmdtype(mdid);
+	const IMDType *md_type= mda->RetrieveType(mdid);
 	mdid->Release();
 
  	// translate gpdb datum into a DXL datum
@@ -1280,7 +1280,7 @@ CTranslatorScalarToDXL::CreateScalarFuncExprFromFuncExpr
 												)
 									);
 
-	const IMDFunction *md_func = m_md_accessor->Pmdfunc(mdid_func);
+	const IMDFunction *md_func = m_md_accessor->RetrieveFunc(mdid_func);
 	if (IMDFunction::EfsVolatile == md_func->GetFuncStability())
 	{
 		ListCell *lc = NULL;
@@ -1355,7 +1355,7 @@ CTranslatorScalarToDXL::CreateScalarAggrefFromAggref
 	GPOS_ASSERT(EdxlaggstageSentinel != agg_stage && "Invalid agg stage");
 
 	CMDIdGPDB *agg_mdid = GPOS_NEW(m_memory_pool) CMDIdGPDB(aggref->aggfnoid);
-	const IMDAggregate *md_agg = m_md_accessor->Pmdagg(agg_mdid);
+	const IMDAggregate *md_agg = m_md_accessor->RetrieveAgg(agg_mdid);
 
 	GPOS_ASSERT(!md_agg->IsOrdered());
 
@@ -1373,7 +1373,7 @@ CTranslatorScalarToDXL::CreateScalarAggrefFromAggref
 
 	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(agg_mdid, (EdxlaggstageNormal == agg_stage), m_md_accessor);
 	IMDId *resolved_ret_type = NULL;
-	if (m_md_accessor->Pmdtype(mdid_return_type)->IsAmbiguous())
+	if (m_md_accessor->RetrieveType(mdid_return_type)->IsAmbiguous())
 	{
 		// if return type given by MD cache is ambiguous, use type provided by aggref node
 		resolved_ret_type = GPOS_NEW(m_memory_pool) CMDIdGPDB(aggref->aggtype);
@@ -2030,7 +2030,7 @@ CTranslatorScalarToDXL::GetDXLArrayCmpType
 	const
 {
 	// get operator name
-	const IMDScalarOp *md_scalar_op = m_md_accessor->Pmdscop(mdid);
+	const IMDScalarOp *md_scalar_op = m_md_accessor->RetrieveScOp(mdid);
 
 	const CWStringConst *str = md_scalar_op->Mdname().GetMDName();
 
