@@ -1753,12 +1753,12 @@ CQueryMutators::RunWindowProjListMutator
 		if (NULL == found_target_entry)
 		{
 			// insert target entry into the target list of the derived table
-			CWStringConst strUnnamedCol(GPOS_WSZ_LIT("?column?"));
+			CWStringConst str_unnamed_col(GPOS_WSZ_LIT("?column?"));
 			TargetEntry *target_entry = gpdb::MakeTargetEntry
 									(
 									(Expr*) gpdb::CopyObject(node),
 									(AttrNumber) resno,
-									CTranslatorUtils::CreateMultiByteCharStringFromWCString(strUnnamedCol.GetBuffer()),
+									CTranslatorUtils::CreateMultiByteCharStringFromWCString(str_unnamed_col.GetBuffer()),
 									false /* resjunk */
 									);
 			context->m_groupby_target_list = gpdb::LAppend(context->m_groupby_target_list, target_entry);

@@ -102,21 +102,21 @@ CMappingColIdVarPlStmt::ParamFromDXLNodeScId
 {
 	GPOS_ASSERT(NULL != m_output_context);
 
-	Param *pparam = NULL;
+	Param *param = NULL;
 
 	const ULONG col_id = dxlop->MakeDXLColRef()->Id();
 	const CMappingElementColIdParamId *elem = m_output_context->GetParamIdMappingElement(col_id);
 
 	if (NULL != elem)
 	{
-		pparam = MakeNode(Param);
-		pparam->paramkind = PARAM_EXEC;
-		pparam->paramid = elem->ParamId();
-		pparam->paramtype = CMDIdGPDB::CastMdid(elem->MDIdType())->OidObjectId();
-		pparam->paramtypmod = elem->TypeModifier();
+		param = MakeNode(Param);
+		param->paramkind = PARAM_EXEC;
+		param->paramid = elem->ParamId();
+		param->paramtype = CMDIdGPDB::CastMdid(elem->MDIdType())->OidObjectId();
+		param->paramtypmod = elem->TypeModifier();
 	}
 
-	return pparam;
+	return param;
 }
 
 //---------------------------------------------------------------------------

@@ -291,7 +291,7 @@ namespace gpdxl
 				const CMappingVarColId* var_col_id_mapping
 				);
 
-			CDXLNode *CreateInitPlanFromParam(const Param *pparam) const;
+			CDXLNode *CreateInitPlanFromParam(const Param *param) const;
 
 			// create a DXL SubPlan node for a from a GPDB SubPlan
 			CDXLNode *CreateSubPlanFromSubPlan

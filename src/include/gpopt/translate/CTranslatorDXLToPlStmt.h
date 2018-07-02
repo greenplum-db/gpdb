@@ -94,7 +94,7 @@ namespace gpdxl
 			struct STranslatorMapping
 			{
 				// type
-				Edxlopid edxlopid;
+				Edxlopid dxl_op_id;
 
 				// translator function pointer
 				PfPplan dxlnode_to_logical_funct;
@@ -131,7 +131,7 @@ namespace gpdxl
 			CMDAccessor *m_md_accessor;
 
 			// DXL operator translators indexed by the operator id
-			PfPplan m_rgpfTranslators[EdxlopSentinel];
+			PfPplan m_dxlop_translator_func_mapping_array[EdxlopSentinel];
 
 			CContextDXLToPlStmt *m_dxl_to_plstmt_context;
 			
@@ -218,7 +218,7 @@ namespace gpdxl
 			Plan *TranslateDXLIndexScan
 				(
 				const CDXLNode *index_scan_dxlnode,
-				CDXLPhysicalIndexScan *pdxlopIndexScan,
+				CDXLPhysicalIndexScan *dxl_physical_idx_scan_op,
 				CDXLTranslateContext *output_context,
 				BOOL is_index_only_scan,
 				DXLTranslationContextArr *ctxt_translation_prev_siblings // translation contexts of previous siblings
@@ -624,7 +624,7 @@ namespace gpdxl
 			ULONG AddTargetEntryForColId
 				(
 				List **target_list, 
-				CDXLTranslateContext *pdxltrctx, 
+				CDXLTranslateContext *dxl_translate_ctxt, 
 				ULONG col_id, 
 				BOOL is_resjunk
 				);
@@ -682,7 +682,7 @@ namespace gpdxl
 			GpPolicy *TranslateDXLPhyCtasToDistrPolicy(const CDXLPhysicalCTAS *dxlop);
 
 			// translate CTAS storage options
-			List *TranslateDXLCtasStorageOptions(CDXLCtasStorageOptions::DXLCtasOptionArray *ctas_storage_option_array);
+			List *TranslateDXLCtasStorageOptions(CDXLCtasStorageOptions::DXLCtasOptionArray *ctas_storage_options);
 			
 			// compute directed dispatch segment ids
 			List *TranslateDXLDirectDispatchInfo(CDXLDirectDispatchInfo *dxl_direct_dispatch_info);

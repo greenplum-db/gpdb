@@ -319,7 +319,7 @@ namespace gpdxl
 			// convert a list of column ids to a list of attribute numbers using
 			// the provided context with mappings
 			static
-			List *ConvertColidToAttnos(ULongPtrArray *pdrgpul, CDXLTranslateContext *pdxltrctx);
+			List *ConvertColidToAttnos(ULongPtrArray *pdrgpul, CDXLTranslateContext *dxl_translate_ctxt);
 			
 			// parse string value into a Long Integer
 			static
@@ -332,7 +332,7 @@ namespace gpdxl
 			// check whether the given project list has a project element of the given
 			// operator type
 			static
-			BOOL HasProjElem(CDXLNode *project_list_dxl, Edxlopid edxlopid);
+			BOOL HasProjElem(CDXLNode *project_list_dxl, Edxlopid dxl_op_id);
 
 			// create a multi-byte character string from a wide character string
 			static

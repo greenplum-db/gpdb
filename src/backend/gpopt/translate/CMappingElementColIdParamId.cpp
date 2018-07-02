@@ -35,13 +35,13 @@ CMappingElementColIdParamId::CMappingElementColIdParamId
 	(
 	ULONG colid,
 	ULONG paramid,
-	IMDId *pmdid,
+	IMDId *mdid,
 	INT type_modifier
 	)
 	:
 	m_colid(colid),
 	m_paramid(paramid),
-	m_mdid(pmdid),
+	m_mdid(mdid),
 	m_type_modifier(type_modifier)
 {
 }

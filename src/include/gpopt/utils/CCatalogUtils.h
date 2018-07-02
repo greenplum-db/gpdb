@@ -22,21 +22,21 @@
 class CCatalogUtils {
 
 	private:
-		// return list of relation plOids in catalog
+		// return list of relation oids_list in catalog
 		static
 		List *GetRelationOids();
 
-		// return list of operator plOids in catalog
+		// return list of operator oids_list in catalog
 		static
 		List *GetOperatorOids();
 
-		// return list of function plOids in catalog
+		// return list of function oids_list in catalog
 		static
 		List *GetFunctionOids();
 
 	public:
 
-		// return list of all object plOids in catalog
+		// return list of all object oids_list in catalog
 		static
 		List *GetAllOids();
 };

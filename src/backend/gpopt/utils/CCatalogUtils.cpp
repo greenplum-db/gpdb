@@ -48,7 +48,7 @@ CCatalogUtils::GetOperatorOids()
 //		CCatalogUtils::GetFunctionOids
 //
 //	@doc:
-//		Return list of function plOids from the catalog
+//		Return list of function oids_list from the catalog
 //
 //---------------------------------------------------------------------------
 List *
@@ -62,7 +62,7 @@ CCatalogUtils::GetFunctionOids()
 //		CCatalogUtils::GetAllOids
 //
 //	@doc:
-//		Return list of all plOids from the catalog
+//		Return list of all oids_list from the catalog
 //
 //---------------------------------------------------------------------------
 List *CCatalogUtils::GetAllOids()

@@ -614,7 +614,7 @@ namespace gpdb {
 	List *GetOpFamiliesForScOp(Oid opno);
 	
 	// get oids of op classes for the index keys
-	List *GetIndexOpFamilies(Oid oidIndex);
+	List *GetIndexOpFamilies(Oid index_oid);
 
 	// returns the result of evaluating 'expr' as an Expr. Caller keeps ownership of 'expr'
 	// and takes ownership of the result 

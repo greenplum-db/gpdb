@@ -230,17 +230,17 @@ namespace gpdxl
 				List *target_list,
 				List *group_clause,
 				CBitSet *bitset,
-				BOOL fHasAggs,
-				BOOL fGroupingSets,				// is this GB part of a GS query
+				BOOL has_aggs,
+				BOOL has_grouping_sets,				// is this GB part of a GS query
 				CDXLNode *dxl_node_child,
 				IntUlongHashMap *phmiulSortGrpColsColId,  // mapping sortgroupref -> ColId
-				IntUlongHashMap *phmiulChild,				// mapping attno->colid in child node
+				IntUlongHashMap *child_attno_colid_mapping,				// mapping attno->colid in child node
 				IntUlongHashMap *output_attno_to_colid_mapping			// mapping attno -> ColId for output columns
 				);
 
 			// check if the argument of a DQA has already being used by another DQA
 			static
-			BOOL IsDuplicateDqaArg(List *plDQA, Aggref *paggref);
+			BOOL IsDuplicateDqaArg(List *dqa_list, Aggref *aggref);
 
 			// translate a query with grouping sets
 			CDXLNode *TranslateGroupingSets
@@ -248,7 +248,7 @@ namespace gpdxl
 				FromExpr *from_expr,
 				List *target_list,
 				List *group_clause,
-				BOOL fHasAggs,
+				BOOL has_aggs,
 				IntUlongHashMap *phmiulSortGrpColsColId,
 				IntUlongHashMap *output_attno_to_colid_mapping
 				);
@@ -259,7 +259,7 @@ namespace gpdxl
 				FromExpr *from_expr,
 				List *target_list,
 				List *group_clause,
-				BOOL fHasAggs,
+				BOOL has_aggs,
 				BitSetArray *pdrgpbsGroupingSets,
 				IntUlongHashMap *phmiulSortGrpColsColId,
 				IntUlongHashMap *output_attno_to_colid_mapping,
@@ -286,7 +286,7 @@ namespace gpdxl
 				CBitSet *bitset,
 				IntUlongHashMap *output_attno_to_colid_mapping,
 				UlongUlongHashMap *grpcol_index_to_colid_mapping,
-				IntUlongHashMap *phmiulSortgrouprefColId
+				IntUlongHashMap *sort_grpref_to_colid_mapping
 				)
 				const;
 
@@ -294,18 +294,18 @@ namespace gpdxl
 			void AddSortingGroupingColumn(TargetEntry *target_entry, IntUlongHashMap *phmiulSortGrpColsColId, ULONG col_id) const;
 
 			// translate the list of sorting columns
-			DXLNodeArray *TranslateSortColumsToDXL(List *plSortCl, IntUlongHashMap *phmiulColColId) const;
+			DXLNodeArray *TranslateSortColumsToDXL(List *sort_clause, IntUlongHashMap *col_attno_colid_mapping) const;
 
 			// translate the list of partition-by column identifiers
-			ULongPtrArray *TranslatePartColumns(List *plSortCl, IntUlongHashMap *phmiulColColId) const;
+			ULongPtrArray *TranslatePartColumns(List *sort_clause, IntUlongHashMap *col_attno_colid_mapping) const;
 
 			CDXLNode *TranslateLimitToDXLGroupBy
 				(
 				List *plsortcl, // list of sort clauses
-				Node *pnodeLimitCount, // query node representing the limit count
-				Node *pnodeLimitOffset, // query node representing the limit offset
+				Node *limit_count, // query node representing the limit count
+				Node *limit_offset_node, // query node representing the limit offset
 				CDXLNode *dxlnode, // the dxl node representing the subtree
-				IntUlongHashMap *phmiulGrpColsColId // the mapping between the position in the TargetList to the ColId
+				IntUlongHashMap *grpcols_to_colid_mapping // the mapping between the position in the TargetList to the ColId
 				);
 
 			// throws an exception when RTE kind not yet supported

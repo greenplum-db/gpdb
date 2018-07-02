@@ -51,7 +51,7 @@ namespace gpdxl
 		public:
 
 			// ctors and dtor
-			CMappingElementColIdParamId(ULONG col_id, ULONG paramid, IMDId *pmdid, INT type_modifier);
+			CMappingElementColIdParamId(ULONG col_id, ULONG paramid, IMDId *mdid, INT type_modifier);
 
 			virtual
 			~CMappingElementColIdParamId()

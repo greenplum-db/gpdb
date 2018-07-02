@@ -109,7 +109,7 @@ namespace gpdxl
 
 			// evaluate given constant expressionand return the DXL representation of the result.
 			// if the expression has variables, an error is thrown.
-			// caller keeps ownership of 'pdxlnExpr' and takes ownership of the returned pointer
+			// caller keeps ownership of 'expr_dxlnode' and takes ownership of the returned pointer
 			virtual
 			CDXLNode *PdxlnEvaluateExpr(const CDXLNode *expr);
 

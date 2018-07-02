@@ -1587,7 +1587,7 @@ CTranslatorScalarToDXL::CreateScalarWindowFunc
 	 * Fortunately, the executor currently doesn't need those fields to
 	 * be set correctly.
 	 */
-	CDXLScalarWindowRef *pdxlopWinref = GPOS_NEW(m_memory_pool) CDXLScalarWindowRef
+	CDXLScalarWindowRef *winref_dxlop = GPOS_NEW(m_memory_pool) CDXLScalarWindowRef
 													(
 													m_memory_pool,
 													GPOS_NEW(m_memory_pool) CMDIdGPDB(window_func->winfnoid),
@@ -1600,7 +1600,7 @@ CTranslatorScalarToDXL::CreateScalarWindowFunc
 													);
 
 	// create the DXL node holding the scalar aggref
-	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, pdxlopWinref);
+	CDXLNode *dxlnode = GPOS_NEW(m_memory_pool) CDXLNode(m_memory_pool, winref_dxlop);
 
 	TranslateScalarChildren(dxlnode, window_func->args, var_col_id_mapping);
 

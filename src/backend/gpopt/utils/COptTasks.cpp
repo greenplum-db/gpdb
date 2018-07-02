@@ -1275,7 +1275,7 @@ COptTasks::OptimizeMinidumpTask
 //		COptTasks::ConvertToPlanStmtFromDXLTask
 //
 //	@doc:
-//		task that does the translation from xml to dxl to pplstmt
+//		task that does the translation from xml to dxl to planned_stmt
 //
 //---------------------------------------------------------------------------
 void*

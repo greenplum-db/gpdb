@@ -173,7 +173,7 @@ class COptTasks
 		static
 		void LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level=CException::ExsevInvalid);
 
-		// task that does the translation from xml to dxl to pplstmt
+		// task that does the translation from xml to dxl to planned_stmt
 		static
 		void* ConvertToPlanStmtFromDXLTask(void *ptr);
 
