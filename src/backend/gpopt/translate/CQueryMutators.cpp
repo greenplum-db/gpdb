@@ -837,10 +837,10 @@ CQueryMutators::GetTargetEntryForAggExpr
 		Aggref *aggref = (Aggref*) node;
 
 		CMDIdGPDB *agg_mdid = GPOS_NEW(memory_pool) CMDIdGPDB(aggref->aggfnoid);
-		const IMDAggregate *pmdagg = md_accessor->RetrieveAgg(agg_mdid);
+		const IMDAggregate *md_agg = md_accessor->RetrieveAgg(agg_mdid);
 		agg_mdid->Release();
 
-		const CWStringConst *str = pmdagg->Mdname().GetMDName();
+		const CWStringConst *str = md_agg->Mdname().GetMDName();
 		name = CTranslatorUtils::CreateMultiByteCharStringFromWCString(str->GetBuffer());
 	}
 	GPOS_ASSERT(NULL != name);
