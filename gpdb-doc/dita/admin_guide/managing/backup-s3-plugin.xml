@@ -13,22 +13,25 @@
           <codeph><xref href="../../utility_guide/admin_utilities/gprestore.xml"
         >gprestore</xref></codeph>. Amazon S3 provides secure, durable, highly-scalable object
       storage.</p>
-    <p>To use the S3 storage plugin application, you specify the location of the plugin and the
-      Amazon Web Services (AWS) login and backup location in a configuration file. When you run
-        <codeph>gpbackup</codeph> or <codeph>gprestore</codeph>, you specify the configuration file
-      with the option <codeph>--plugin-config</codeph>. For information about the configuration
-      file, see <xref href="#topic_ur2_fsn_ndb/s3-plugin-config" format="dita"/>.</p>
+    <p>The S3 storage plugin also supports connecting to <xref
+        href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html" scope="external">Dell
+        EMC Elastic Cloud Storage</xref> (ECS), an Amazon S3 compatible service. </p>
+    <p>To use the S3 storage plugin application, you specify the location of the plugin and the S3
+      login and backup location in a configuration file. When you run <codeph>gpbackup</codeph> or
+        <codeph>gprestore</codeph>, you specify the configuration file with the option
+        <codeph>--plugin-config</codeph>. For information about the configuration file, see <xref
+        href="#topic_ur2_fsn_ndb/s3-plugin-config" format="dita"/>.</p>
     <p>If you perform a backup operation with the <codeph>gpbackup</codeph> option
         <codeph>--plugin-config</codeph>, you must also specify the <codeph>--plugin-config</codeph>
       option when you restore the backup with <codeph>gprestore</codeph>. </p>
     <section id="s3-plugin-config">
       <title>S3 Storage Plugin Configuration File Format</title>
       <p>The configuration file specifies the absolute path to the Greenplum Database S3 storage
-        plugin executable, AWS connection credentials, and S3 location. </p>
+        plugin executable, connection credentials, and S3 location. </p>
       <p>The S3 storage plugin configuration file uses the <xref href="http://yaml.org/spec/1.1/"
           scope="external" format="html">YAML 1.1</xref> document format and implements its own
-        schema for specifying the location of the Greenplum Database S3 storage plugin, AWS
-        connection credentials, and S3 location and login information. </p>
+        schema for specifying the location of the Greenplum Database S3 storage plugin, connection
+        credentials, and S3 location and login information. </p>
       <p>The configuration file must be a valid YAML document. The <codeph>gpbackup</codeph> and
           <codeph>gprestore</codeph> utilities process the control file document in order and use
         indentation (spaces) to determine the document hierarchy and the relationships of the
@@ -38,10 +41,12 @@
       <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
 <xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
   <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
+  <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">endpoint</xref>: &lt;<varname>S3-endpoint</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>></codeblock>
+  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>>
+  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">encryption</xref>: [on|off]</codeblock>
       <parml id="s3-exe-path">
         <plentry>
           <pt>executablepath</pt>
@@ -54,26 +59,46 @@
           <pd>Required. Begins the S3 storage plugin options section.<parml>
               <plentry id="s3-region">
                 <pt>region</pt>
-                <pd>Required. The AWS region. </pd>
+                <pd>Required for AWS S3. If connecting to an S3 compatible service, this option is
+                  not required.</pd>
+              </plentry>
+              <plentry id="s3-endpoint">
+                <pt>endpoint</pt>
+                <pd>Optional. Specify this option connect to an S3 compatible service such as ECS.
+                  The plugin connects to the specified S3 endpoint (hostname or IP address) to
+                  access the S3 compatible data store. </pd>
+                <pd>If this option is specified, the plugin ignores the <codeph>region</codeph>
+                  option and does not use AWS to resolve the endpoint. When this option is not
+                  specified, the plugin uses the <codeph>region</codeph> to determine AWS S3
+                  endpoint. </pd>
               </plentry>
               <plentry id="s3-id">
                 <pt>aws_access_key_id</pt>
-                <pd>Required. The AWS S3 ID to access the S3 bucket location that stores backup
+                <pd>Required. The S3 ID to access the S3 bucket location that stores backup
                   files.</pd>
               </plentry>
               <plentry id="s3-key">
                 <pt>aws_secret_access_key</pt>
-                <pd>Required. AWS S3 passcode for the S3 ID to access the S3 bucket location.</pd>
+                <pd>Required. S3 passcode for the S3 ID to access the S3 bucket location.</pd>
               </plentry>
               <plentry id="s3-bucket">
                 <pt>bucket</pt>
-                <pd>Required. The name of the S3 bucket in the AWS region. The bucket must exist.
-                </pd>
+                <pd>Required. The name of the S3 bucket in the AWS region or S3 compatible data
+                  store. The bucket must exist. </pd>
               </plentry>
               <plentry id="s3-location">
                 <pt>folder</pt>
                 <pd>Required. The S3 location for backups. During a backup operation, the plugin
                   creates the S3 location if it does not exist in the S3 bucket. </pd>
+              </plentry>
+              <plentry id="s3-encryption">
+                <pt>encryption</pt>
+                <pd>Optional. Enable or disable use of Secure Sockets Layer (SSL) when connecting to
+                  an S3 location. Default value is <codeph>on</codeph>, use connections that are
+                  secured with SSL. Set this option to <codeph>off</codeph> to connect to an S3
+                  compatible service that is not configured to use SSL. </pd>
+                <pd>Any value other than <codeph>off</codeph> is treated as <codeph>on</codeph>.
+                </pd>
               </plentry>
             </parml></pd>
         </plentry>
