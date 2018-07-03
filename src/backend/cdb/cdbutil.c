@@ -265,9 +265,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		if (pRow->hostaddrs[0] == NULL &&
 			pRow->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
-		if (pRow->hostaddrs[0] == NULL)
-			pRow->hostip = pstrdup("");
-		else
+		if (pRow->hostaddrs[0] != NULL)
 			pRow->hostip = pstrdup(pRow->hostaddrs[0]);
 		Assert(strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
 
@@ -662,7 +660,7 @@ getDnsCachedAddress(char *name, int port, int elevel)
 			 * but we do not know the role information here, so always treat it as a
 			 * warning, the callers should check the role and decide what to do.
 			 */
-			if (ret == EAI_NONAME && elevel == ERROR)
+			if (ret != EAI_FAIL && elevel == ERROR)
 				elevel = WARNING;
 
 			ereport(elevel,
