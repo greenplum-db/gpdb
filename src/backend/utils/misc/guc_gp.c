@@ -4002,12 +4002,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL,
 		},
 		&gp_vmem_protect_limit,
-#ifdef __darwin__
-		0,
-#else
-		8192,
-#endif
-		0, INT_MAX / 2,
+		8192, 0, INT_MAX / 2,
 		NULL, NULL, NULL
 	},
 
