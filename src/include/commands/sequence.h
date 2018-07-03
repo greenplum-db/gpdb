@@ -80,7 +80,7 @@ extern void AlterSequence(AlterSeqStmt *stmt);
 extern void ResetSequence(Oid seq_relid);
 
 extern void seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
-extern void seq_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void seq_desc(StringInfo buf, XLogRecord *record);
 
 /*
  * CDB: nextval entry point called by sequence server

@@ -2,6 +2,9 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include "cmockery.h"
+
+#include "postgres.h"
+#include "utils/memutils.h"
 #include "access/appendonlytid.h"
 
 #include "../appendonly_visimap_entry.c"

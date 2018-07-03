@@ -1144,7 +1144,7 @@ out_delete_page(StringInfo buf, uint8 info, XLogRecord *record)
 }
 
 void
-btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+btree_desc(StringInfo buf, XLogRecord *record)
 {
 	char	   *rec = XLogRecGetData(record);
 	uint8		xl_info = record->xl_info;

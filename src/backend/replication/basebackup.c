@@ -797,6 +797,19 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 			continue;			/* don't recurse into pg_xlog */
 		}
 
+		/*
+		 * We can skip pg_log because the segment logs should be unique to
+		 * each segment. However, include pg_log as an empty directory because
+		 * it is required to start the segment.
+		 */
+		if (strcmp(pathbuf, "./pg_log") == 0)
+		{
+			if (!sizeonly)
+				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
+
+			continue;
+		}
+
 		/* Skip if client does not want */
 		if (match_exclude_list(pathbuf, exclude))
 			continue;

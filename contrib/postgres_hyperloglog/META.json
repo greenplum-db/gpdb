@@ -1,0 +1,35 @@
+{
+   "name": "hyperloglog_estimator",
+   "abstract": "Estimates number of distinct elements in a data set (aggregate and a data type).",
+   "description": "Provides an alternative to COUNT(DISTINCT) aggregate, computing an estimate of number of distinct values, and a data type that may be used within a table (and updated continuously). This implementation is based on HyperLogLog algorithm, an enhancement of LogLog (see the paper 'HyperLogLog: the analysis of near-optimal cardinality estimation algorithm' by Flajolet, Fusy, Gandouet and Meunier, published in 2007).",
+   "version": "2.0.0",
+   "maintainer": "Tomas Vondra <tv@fuzzy.cz>",
+   "license": "bsd",
+   "prereqs": {
+      "runtime": {
+         "requires": {
+            "PostgreSQL": "8.2"
+         }
+      }
+   },
+   "provides": {
+     "hyperloglog_counter": {
+       "file": "sql/postgres.sql",
+       "docfile" : "README.md",
+       "version": "2.0.0"
+     }
+   },
+   "resources": {
+      "repository": {
+        "url":  "https://tvondra@github.com/tvondra/distinct_estimators.git",
+        "web":  "http://github.com/tvondra/distinct_estimators",
+        "type": "git"
+      },
+   },
+   "tags" : ["distinct", "count", "aggregate", "estimate", "hyperloglog"],
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "http://pgxn.org/meta/spec.txt"
+   },
+   "release_status" : "testing"
+}

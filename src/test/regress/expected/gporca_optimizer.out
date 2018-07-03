@@ -10163,6 +10163,8 @@ create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
+LOG:  Needs sample for foo_ctas
+LOG:  Computing Scalar Stats  column 1
 reset client_min_messages;
 reset log_min_duration_statement;
 reset log_statement;

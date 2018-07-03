@@ -1110,3 +1110,61 @@ COPY lineitem TO '/tmp/aborted.data';
 CREATE TABLE lineitem_aborted (LIKE lineitem);
 COPY lineitem_aborted FROM '/tmp/aborted.data';
 SELECT count(*) < 57190 FROM lineitem_aborted;
+
+-- Test external partition
+CREATE TABLE sales (
+    id integer,
+    date date,
+    amt numeric(10,2)
+) DISTRIBUTED BY (id) PARTITION BY RANGE(date)
+          (
+          PARTITION jan17 START ('2017-01-01'::date) END ('2017-02-01'::date) WITH (tablename='sales_1_prt_jan17', appendonly=false ),
+          PARTITION feb17 START ('2017-02-01'::date) END ('2017-03-01'::date) WITH (tablename='sales_1_prt_feb17', appendonly=false ),
+          PARTITION mar17 START ('2017-03-01'::date) END ('2017-04-01'::date) WITH (tablename='sales_1_prt_mar17', appendonly=false ),
+          PARTITION apr17 START ('2017-04-01'::date) END ('2017-05-01'::date) WITH (tablename='sales_1_prt_apr17', appendonly=false ),
+          PARTITION may17 START ('2017-05-01'::date) END ('2017-06-01'::date) WITH (tablename='sales_1_prt_may17', appendonly=false ),
+          PARTITION jun17 START ('2017-06-01'::date) END ('2017-07-01'::date) WITH (tablename='sales_1_prt_jun17', appendonly=false ),
+          PARTITION jul17 START ('2017-07-01'::date) END ('2017-08-01'::date) WITH (tablename='sales_1_prt_jul17', appendonly=false ),
+          PARTITION aug17 START ('2017-08-01'::date) END ('2017-09-01'::date) WITH (tablename='sales_1_prt_aug17', appendonly=false ),
+          PARTITION sep17 START ('2017-09-01'::date) END ('2017-10-01'::date) WITH (tablename='sales_1_prt_sep17', appendonly=false ),
+          PARTITION oct17 START ('2017-10-01'::date) END ('2017-11-01'::date) WITH (tablename='sales_1_prt_oct17', appendonly=false ),
+          PARTITION nov17 START ('2017-11-01'::date) END ('2017-12-01'::date) WITH (tablename='sales_1_prt_nov17', appendonly=false ),
+          PARTITION dec17 START ('2017-12-01'::date) END ('2018-01-01'::date) WITH (tablename='sales_1_prt_dec17', appendonly=false )
+          );
+COPY sales (id, date, amt) FROM stdin;
+1	2017-01-01	20.00
+3	2017-03-01	20.00
+25	2017-05-01	20.00
+1	2017-01-01	20.00
+3	2017-03-01	20.00
+25	2017-05-01	20.00
+2	2017-02-01	20.00
+4	2017-04-01	20.00
+8	2017-08-01	20.00
+2	2017-02-01	20.00
+4	2017-04-01	20.00
+8	2017-08-01	20.00
+15	2017-05-01	20.00
+5	2017-05-01	20.00
+9	2017-09-01	20.00
+15	2017-05-01	20.00
+5	2017-05-01	20.00
+9	2017-09-01	20.00
+7	2017-07-01	20.00
+11	2017-11-01	20.00
+7	2017-07-01	20.00
+11	2017-11-01	20.00
+18	2017-08-01	20.00
+12	2017-12-01	20.00
+18	2017-08-01	20.00
+12	2017-12-01	20.00
+\.
+-- execute external psql here to get the message of COPY
+\! psql -c "COPY sales TO '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+\! psql -c "COPY sales FROM '/tmp/test_sales_<SEGID>' ON SEGMENT" regression
+CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t20.00\n"' ON MASTER FORMAT 'text';
+ALTER TABLE sales ALTER PARTITION dec17 EXCHANGE PARTITION dec17 WITH TABLE ext_dec17 WITHOUT VALIDATION;
+DROP TABLE ext_dec17;
+COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
+COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
+DROP TABLE sales;

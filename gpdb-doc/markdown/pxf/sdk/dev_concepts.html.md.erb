@@ -32,7 +32,7 @@ Summary of terms:
 
 PXF in Greenplum Database has two components:
 
-- A C shared library that is loaded into Greenplum Database when the `CREATE EXTENSION pxf` comand is invoked on a database.
+- A C shared library that is loaded into Greenplum Database when the `CREATE EXTENSION pxf` command is invoked on a database.
 - A Java service, referred to as the PXF agent, a single JVM process located on each Greenplum Database segment host. You start the PXF agent when you run `pxf start` on the segment host.
 
 Operations on Greenplum Database external tables are first routed to the PXF C shared library extension then on to the PXF agent.

@@ -4,6 +4,8 @@
 #include <zconf.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+
 #include "c.h"
 
 /* Ignore ereport */

@@ -26,27 +26,28 @@ COPY <replaceable class="parameter">table_name</replaceable> [ ( <replaceable cl
     FROM { '<replaceable class="parameter">filename</replaceable>' | PROGRAM '<replaceable class="parameter">command</replaceable>' | STDIN }
     [ [ WITH ] ( <replaceable class="parameter">option</replaceable> [, ...] ) ]
     [ ON SEGMENT ]
+    [ FILL MISSING FIELDS ]
+    [ [LOG ERRORS] SEGMENT REJECT LIMIT <replaceable class="parameter">count</replaceable> [ [ROWS] | PERCENT ] ]
 
 COPY { <replaceable class="parameter">table_name</replaceable> [ ( <replaceable class="parameter">column</replaceable> [, ...] ) ] | ( <replaceable class="parameter">query</replaceable> ) }
     TO { '<replaceable class="parameter">filename</replaceable>' | PROGRAM '<replaceable class="parameter">command</replaceable>' | STDOUT }
     [ [ WITH ] ( <replaceable class="parameter">option</replaceable> [, ...] ) ]
     [ ON SEGMENT ]
+    [ IGNORE EXTERNAL PARTITIONS ]
 
 <phrase>where <replaceable class="parameter">option</replaceable> can be one of:</phrase>
 
-    FORMAT <replaceable class="parameter">format_name</replaceable>
+    FORMAT '<replaceable class="parameter">format_name</replaceable>'
     OIDS [ <replaceable class="parameter">boolean</replaceable> ]
     DELIMITER '<replaceable class="parameter">delimiter_character</replaceable>'
     NULL '<replaceable class="parameter">null_string</replaceable>'
     HEADER [ <replaceable class="parameter">boolean</replaceable> ]
     QUOTE '<replaceable class="parameter">quote_character</replaceable>'
     ESCAPE '<replaceable class="parameter">escape_character</replaceable>'
+    NEWLINE '<replaceable class="parameter">newline_character</replaceable>'
     FORCE_QUOTE { ( <replaceable class="parameter">column</replaceable> [, ...] ) | * }
-    FORCE_NOT_NULL ( <replaceable class="parameter">column</replaceable> [, ...] ) |
+    FORCE_NOT_NULL ( <replaceable class="parameter">column</replaceable> [, ...] )
     ENCODING '<replaceable class="parameter">encoding_name</replaceable>'
-    FILL MISSING FIELDS
-    LOG ERRORS [SEGMENT REJECT LIMIT <replaceable class="parameter">count</replaceable> [ROWS | PERCENT] ]
-    IGNORE EXTERNAL PARTITIONS
 </synopsis>
  </refsynopsisdiv>
 
@@ -279,6 +280,17 @@ COPY { <replaceable class="parameter">table_name</replaceable> [ ( <replaceable 
       the quoting character is doubled if it appears in the data).
       This must be a single one-byte character.
       This option is allowed only when using <literal>CSV</> format.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>NEWLINE</literal></term>
+    <listitem>
+     <para>
+      Specifies the newline character to be used.
+      The default is 'LF'.
+      The option could be 'LF, 'CR' or 'CRLF'.
      </para>
     </listitem>
    </varlistentry>

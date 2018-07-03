@@ -1,0 +1,1118 @@
+-- Test ANALYZE for different data types
+-- Case 1: Partitions have MCVs but after merge, none of the partition MCVs 
+-- qualify as a global MCV for the root and they are used to create the
+-- root histogram
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+SET default_statistics_target = 4;
+CREATE TABLE foo (
+    a int,
+    b int, 
+    c03_bigint bigint, 
+    c04_bigserial bigserial, 
+    c05_bit bit, 
+    c06_bit_varying_10 bit varying(10), 
+    c07_bool bool, 
+    c08_char char, 
+    c09_varchar_10 varchar(10), 
+    c10_cidr cidr, 
+    c11_date date, 
+    c12_numeric_8_2 numeric(8,2), 
+    c13_float8 float8, 
+    c14_inet inet, 
+    c15_int4 int4, 
+    c16_interval interval, 
+    c17_macaddr macaddr, 
+    c18_money money, 
+    c19_float4 float4, 
+    c20_serial4 serial4, 
+    c21_smallint smallint, 
+    c22_text text, 
+    c23_time time, 
+    c24_timetz timetz, 
+    c25_timestamp timestamp, 
+    c26_timestamptz timestamptz,
+    c27_uuid uuid,
+    c28_tsquery tsquery
+) PARTITION BY RANGE (b) (START (0) END(6) EVERY(3));
+NOTICE:  CREATE TABLE will create implicit sequence "foo_c04_bigserial_seq" for serial column "foo.c04_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "foo_c20_serial4_seq" for serial column "foo.c20_serial4"
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo
+SELECT
+i,
+i%6,
+i%6::bigint,
+i%6,
+i::bit,
+(i%6)::bit(10)::bit varying(10),
+(i%2)::bool,
+(i%6)::char,
+('a'||(i%6))::varchar(10),
+('192.168.100.'||(i%6))::cidr, 
+('2018-4-'||(i%6)+1)::date, 
+(i%6)::numeric(8,2), 
+(i%6)::float8,
+inet ('192.168.100.'||(i%6)),
+i%6::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%6)::text)::text::macaddr,
+(i%6)::text::money,
+(i%6)::float4, 
+i%6,
+i%6,
+'aa'||(i%6)::text,
+((i%6)::text||':59:59')::time,
+((i%6)::text||':59:00 EST')::timetz,
+('2018-01-01 '||(i%6)::text||':59:00')::timestamp,
+('2018-01-01 '||(i%6)::text||':59:00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%6)::text||(i%6)::text)::uuid,
+('foo'||(i%6)::text||' & rat'||(i%6)::text)::tsquery
+FROM generate_series(1,100) i;
+ANALYZE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
+  tablename  |      attname       | null_frac | n_distinct |                                                 most_common_vals                                                 | most_common_freqs |                                                                                      histogram_bounds                                                                                      
+-------------+--------------------+-----------+------------+------------------------------------------------------------------------------------------------------------------+-------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ foo         | b                  |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | b                  |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | b                  |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c03_bigint         |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c03_bigint         |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c03_bigint         |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c04_bigserial      |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c04_bigserial      |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c04_bigserial      |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c05_bit            |         0 |          2 | {0,1}                                                                                                            | {0.5,0.5}         | 
+ foo_1_prt_1 | c05_bit            |         0 |          2 | {0,1}                                                                                                            | {0.66,0.34}       | 
+ foo_1_prt_2 | c05_bit            |         0 |          2 | {1,0}                                                                                                            | {0.66,0.34}       | 
+ foo         | c06_bit_varying_10 |         0 |          6 |                                                                                                                  |                   | {0000000000,0000000001,0000000010,0000000100,0000000101}
+ foo_1_prt_1 | c06_bit_varying_10 |         0 |          3 | {0000000001,0000000010,0000000000}                                                                               | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c06_bit_varying_10 |         0 |          3 | {0000000011,0000000100,0000000101}                                                                               | {0.34,0.34,0.32}  | 
+ foo         | c07_bool           |         0 |          2 | {f,t}                                                                                                            | {0.5,0.5}         | 
+ foo_1_prt_1 | c07_bool           |         0 |          2 | {f,t}                                                                                                            | {0.66,0.34}       | 
+ foo_1_prt_2 | c07_bool           |         0 |          2 | {t,f}                                                                                                            | {0.66,0.34}       | 
+ foo         | c08_char           |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c08_char           |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c08_char           |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c09_varchar_10     |         0 |          6 |                                                                                                                  |                   | {a0,a1,a2,a4,a5}
+ foo_1_prt_1 | c09_varchar_10     |         0 |          3 | {a1,a2,a0}                                                                                                       | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c09_varchar_10     |         0 |          3 | {a3,a4,a5}                                                                                                       | {0.34,0.34,0.32}  | 
+ foo         | c10_cidr           |         0 |          6 |                                                                                                                  |                   | {192.168.100.0/32,192.168.100.1/32,192.168.100.2/32,192.168.100.4/32,192.168.100.5/32}
+ foo_1_prt_1 | c10_cidr           |         0 |          3 | {192.168.100.1/32,192.168.100.2/32,192.168.100.0/32}                                                             | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c10_cidr           |         0 |          3 | {192.168.100.3/32,192.168.100.4/32,192.168.100.5/32}                                                             | {0.34,0.34,0.32}  | 
+ foo         | c11_date           |         0 |          6 |                                                                                                                  |                   | {04-01-2018,04-02-2018,04-03-2018,04-05-2018,04-06-2018}
+ foo_1_prt_1 | c11_date           |         0 |          3 | {04-02-2018,04-03-2018,04-01-2018}                                                                               | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c11_date           |         0 |          3 | {04-04-2018,04-05-2018,04-06-2018}                                                                               | {0.34,0.34,0.32}  | 
+ foo         | c12_numeric_8_2    |         0 |          6 |                                                                                                                  |                   | {0.00,1.00,2.00,4.00,5.00}
+ foo_1_prt_1 | c12_numeric_8_2    |         0 |          3 | {1.00,2.00,0.00}                                                                                                 | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c12_numeric_8_2    |         0 |          3 | {3.00,4.00,5.00}                                                                                                 | {0.34,0.34,0.32}  | 
+ foo         | c13_float8         |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c13_float8         |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c13_float8         |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c14_inet           |         0 |          6 |                                                                                                                  |                   | {192.168.100.0,192.168.100.1,192.168.100.2,192.168.100.4,192.168.100.5}
+ foo_1_prt_1 | c14_inet           |         0 |          3 | {192.168.100.1,192.168.100.2,192.168.100.0}                                                                      | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c14_inet           |         0 |          3 | {192.168.100.3,192.168.100.4,192.168.100.5}                                                                      | {0.34,0.34,0.32}  | 
+ foo         | c15_int4           |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c15_int4           |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c15_int4           |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                   | {1}               | 
+ foo_1_prt_1 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                   | {1}               | 
+ foo_1_prt_2 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                   | {1}               | 
+ foo         | c17_macaddr        |         0 |          6 |                                                                                                                  |                   | {12:34:56:78:90:00,12:34:56:78:90:01,12:34:56:78:90:02,12:34:56:78:90:04,12:34:56:78:90:05}
+ foo_1_prt_1 | c17_macaddr        |         0 |          3 | {12:34:56:78:90:01,12:34:56:78:90:02,12:34:56:78:90:00}                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c17_macaddr        |         0 |          3 | {12:34:56:78:90:03,12:34:56:78:90:04,12:34:56:78:90:05}                                                          | {0.34,0.34,0.32}  | 
+ foo         | c18_money          |         0 |          6 |                                                                                                                  |                   | {$0.00,$1.00,$2.00,$4.00,$5.00}
+ foo_1_prt_1 | c18_money          |         0 |          3 | {$1.00,$2.00,$0.00}                                                                                              | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c18_money          |         0 |          3 | {$3.00,$4.00,$5.00}                                                                                              | {0.34,0.34,0.32}  | 
+ foo         | c19_float4         |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c19_float4         |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c19_float4         |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c20_serial4        |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c20_serial4        |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c20_serial4        |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c21_smallint       |         0 |          6 |                                                                                                                  |                   | {0,1,2,4,5}
+ foo_1_prt_1 | c21_smallint       |         0 |          3 | {1,2,0}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c21_smallint       |         0 |          3 | {3,4,5}                                                                                                          | {0.34,0.34,0.32}  | 
+ foo         | c22_text           |         0 |          6 |                                                                                                                  |                   | {aa0,aa1,aa2,aa4,aa5}
+ foo_1_prt_1 | c22_text           |         0 |          3 | {aa1,aa2,aa0}                                                                                                    | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c22_text           |         0 |          3 | {aa3,aa4,aa5}                                                                                                    | {0.34,0.34,0.32}  | 
+ foo         | c23_time           |         0 |          6 |                                                                                                                  |                   | {00:59:59,01:59:59,02:59:59,04:59:59,05:59:59}
+ foo_1_prt_1 | c23_time           |         0 |          3 | {01:59:59,02:59:59,00:59:59}                                                                                     | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c23_time           |         0 |          3 | {03:59:59,04:59:59,05:59:59}                                                                                     | {0.34,0.34,0.32}  | 
+ foo         | c24_timetz         |         0 |          6 |                                                                                                                  |                   | {00:59:00-05,01:59:00-05,02:59:00-05,04:59:00-05,05:59:00-05}
+ foo_1_prt_1 | c24_timetz         |         0 |          3 | {01:59:00-05,02:59:00-05,00:59:00-05}                                                                            | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c24_timetz         |         0 |          3 | {03:59:00-05,04:59:00-05,05:59:00-05}                                                                            | {0.34,0.34,0.32}  | 
+ foo         | c25_timestamp      |         0 |          6 |                                                                                                                  |                   | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 01:59:00 2018","Mon Jan 01 02:59:00 2018","Mon Jan 01 04:59:00 2018","Mon Jan 01 05:59:00 2018"}
+ foo_1_prt_1 | c25_timestamp      |         0 |          3 | {"Mon Jan 01 01:59:00 2018","Mon Jan 01 02:59:00 2018","Mon Jan 01 00:59:00 2018"}                               | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c25_timestamp      |         0 |          3 | {"Mon Jan 01 03:59:00 2018","Mon Jan 01 04:59:00 2018","Mon Jan 01 05:59:00 2018"}                               | {0.34,0.34,0.32}  | 
+ foo         | c26_timestamptz    |         0 |          6 |                                                                                                                  |                   | {"Sun Dec 31 21:59:00 2017 PST","Sun Dec 31 22:59:00 2017 PST","Sun Dec 31 23:59:00 2017 PST","Mon Jan 01 01:59:00 2018 PST","Mon Jan 01 02:59:00 2018 PST"}
+ foo_1_prt_1 | c26_timestamptz    |         0 |          3 | {"Sun Dec 31 22:59:00 2017 PST","Sun Dec 31 23:59:00 2017 PST","Sun Dec 31 21:59:00 2017 PST"}                   | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c26_timestamptz    |         0 |          3 | {"Mon Jan 01 00:59:00 2018 PST","Mon Jan 01 01:59:00 2018 PST","Mon Jan 01 02:59:00 2018 PST"}                   | {0.34,0.34,0.32}  | 
+ foo         | c27_uuid           |         0 |          6 |                                                                                                                  |                   | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111155}
+ foo_1_prt_1 | c27_uuid           |         0 |          3 | {11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111100} | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c27_uuid           |         0 |          3 | {11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111155} | {0.34,0.34,0.32}  | 
+ foo         | c28_tsquery        |         0 |          6 |                                                                                                                  |                   | {"'foo4' & 'rat4'","'foo0' & 'rat0'","'foo1' & 'rat1'","'foo3' & 'rat3'","'foo2' & 'rat2'"}
+ foo_1_prt_1 | c28_tsquery        |         0 |          3 | {"'foo1' & 'rat1'","'foo2' & 'rat2'","'foo0' & 'rat0'"}                                                          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c28_tsquery        |         0 |          3 | {"'foo4' & 'rat4'","'foo3' & 'rat3'","'foo5' & 'rat5'"}                                                          | {0.34,0.34,0.32}  | 
+(81 rows)
+
+-- Case 2: Partitions have no MCVs, only histograms, after merge root has to
+-- have approximately merged histograms.
+TRUNCATE foo;
+INSERT INTO foo 
+SELECT
+i,
+i%3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i%128))::cidr, 
+('2018-4-'||(i%15)+1)::date, 
+(i)::numeric(8,2), 
+(i)::float8,
+inet ('192.168.100.'||(i%128)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%50)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4, 
+i,
+i,
+'aa'||(i)::text,
+((i%12)::text||':59:59')::time,
+((i%12)::text||':59:00 EST')::timetz,
+('2018-01-01 '||(i%12)::text||':59:00')::timestamp,
+('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,100) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3,
+i+200::bigint,
+i+200,
+i::bit,
+(i+200)::bit(10)::bit varying(10),
+(i+200)::bool,
+(i+200)::char,
+('a'||(i+200))::varchar(10),
+('192.168.100.'||(i%128+128))::cidr, 
+('2018-4-'||(i%15+16))::date, 
+(i)::numeric(8,2),
+(i)::float8,
+inet ('192.168.100.'||(i%128+128)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%50+50)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4,
+i,
+i,
+'aa'||(i)::text,
+((i%12+12)::text||':59:59')::time,
+((i%12+12)::text||':59:00 EST')::timetz,
+('2018-01-01 '||(i%12+12)::text||':59:00')::timestamp,
+('2018-01-01 '||(i%12+12)::text||':59:00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%5+5)::text||(i%5+5)::text)::uuid,
+('foo'||(i+200)::text||' & rat'||(i+200)::text)::tsquery
+FROM generate_series(1,100) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i%128))::cidr, 
+('2018-4-'||(i%15)+1)::date, 
+(i)::numeric(8,2), 
+(i)::float8,
+inet ('192.168.100.'||(i%128)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%50)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4, 
+i,
+i,
+'aa'||(i)::text,
+((i%12)::text||':59:59')::time,
+((i%12)::text||':59:00 EST')::timetz,
+('2018-01-01 '||(i%12)::text||':59:00')::timestamp,
+('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,200) i;
+ANALYZE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  |      attname       | null_frac | n_distinct |                             most_common_vals                              |     most_common_freqs     |                                                                                      histogram_bounds                                                                                      
+-------------+--------------------+-----------+------------+---------------------------------------------------------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ foo         | a                  |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | a                  |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | a                  |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | b                  |         0 |          6 |                                                                           |                           | {0,1,2,4,5}
+ foo_1_prt_1 | b                  |         0 |          3 | {1,0,2}                                                                   | {0.34,0.33,0.33}          | 
+ foo_1_prt_2 | b                  |         0 |          3 | {4,5,3}                                                                   | {0.335,0.335,0.33}        | 
+ foo         | c03_bigint         |         0 |    -0.7475 |                                                                           |                           | {1,50,100,200,300}
+ foo_1_prt_1 | c03_bigint         |         0 |         -1 |                                                                           |                           | {1,50,100,250,300}
+ foo_1_prt_2 | c03_bigint         |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c04_bigserial      |         0 |    -0.7475 |                                                                           |                           | {1,50,100,200,300}
+ foo_1_prt_1 | c04_bigserial      |         0 |         -1 |                                                                           |                           | {1,50,100,250,300}
+ foo_1_prt_2 | c04_bigserial      |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c05_bit            |         0 |          2 | {0,1}                                                                     | {0.5,0.5}                 | 
+ foo_1_prt_1 | c05_bit            |         0 |          2 | {0,1}                                                                     | {0.5,0.5}                 | 
+ foo_1_prt_2 | c05_bit            |         0 |          2 | {0,1}                                                                     | {0.5,0.5}                 | 
+ foo         | c06_bit_varying_10 |         0 |    -0.7475 |                                                                           |                           | {0000000001,0000110010,0001100100,0011001000,0100101100}
+ foo_1_prt_1 | c06_bit_varying_10 |         0 |         -1 |                                                                           |                           | {0000000001,0000110010,0001100100,0011111010,0100101100}
+ foo_1_prt_2 | c06_bit_varying_10 |         0 |         -1 |                                                                           |                           | {0000000001,0000110010,0001100100,0010010110,0011001000}
+ foo         | c07_bool           |         0 |          1 | {t}                                                                       | {1}                       | 
+ foo_1_prt_1 | c07_bool           |         0 |          1 | {t}                                                                       | {1}                       | 
+ foo_1_prt_2 | c07_bool           |         0 |          1 | {t}                                                                       | {1}                       | 
+ foo         | c08_char           |         0 |          9 | {1,2}                                                                     | {0.2775,0.275}            | {1,3,5,7,9}
+ foo_1_prt_1 | c08_char           |         0 |          9 | {2}                                                                       | {0.55}                    | {1,3,5,7,9}
+ foo_1_prt_2 | c08_char           |         0 |          9 | {1}                                                                       | {0.555}                   | {2,3,5,7,9}
+ foo         | c09_varchar_10     |         0 |    -0.7475 |                                                                           |                           | {a1,a189,a279,a53,a99}
+ foo_1_prt_1 | c09_varchar_10     |         0 |         -1 |                                                                           |                           | {a1,a233,a279,a53,a99}
+ foo_1_prt_2 | c09_varchar_10     |         0 |         -1 |                                                                           |                           | {a1,a143,a189,a53,a99}
+ foo         | c10_cidr           |         0 |    -0.5675 |                                                                           |                           | {192.168.100.0/32,192.168.100.50/32,192.168.100.79/32,192.168.100.127/32,192.168.100.228/32}
+ foo_1_prt_1 | c10_cidr           |         0 |         -1 |                                                                           |                           | {192.168.100.1/32,192.168.100.50/32,192.168.100.100/32,192.168.100.178/32,192.168.100.228/32}
+ foo_1_prt_2 | c10_cidr           |         0 |      -0.64 | {192.168.100.1/32,192.168.100.2/32,192.168.100.3/32,192.168.100.4/32}     | {0.01,0.01,0.01,0.01}     | {192.168.100.0/32,192.168.100.28/32,192.168.100.52/32,192.168.100.79/32,192.168.100.127/32}
+ foo         | c11_date           |         0 |         30 |                                                                           |                           | {04-01-2018,04-08-2018,04-12-2018,04-15-2018,04-30-2018}
+ foo_1_prt_1 | c11_date           |         0 |      -0.15 |                                                                           |                           | {04-01-2018,04-08-2018,04-15-2018,04-23-2018,04-30-2018}
+ foo_1_prt_2 | c11_date           |         0 |         15 |                                                                           |                           | {04-01-2018,04-04-2018,04-08-2018,04-12-2018,04-15-2018}
+ foo         | c12_numeric_8_2    |         0 |       -0.5 |                                                                           |                           | {1.00,50.00,75.00,100.00,200.00}
+ foo_1_prt_1 | c12_numeric_8_2    |         0 |       -0.5 |                                                                           |                           | {1.00,25.00,50.00,75.00,100.00}
+ foo_1_prt_2 | c12_numeric_8_2    |         0 |         -1 |                                                                           |                           | {1.00,50.00,100.00,150.00,200.00}
+ foo         | c13_float8         |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | c13_float8         |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | c13_float8         |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c14_inet           |         0 |    -0.5675 |                                                                           |                           | {192.168.100.0,192.168.100.50,192.168.100.79,192.168.100.127,192.168.100.228}
+ foo_1_prt_1 | c14_inet           |         0 |         -1 |                                                                           |                           | {192.168.100.1,192.168.100.50,192.168.100.100,192.168.100.178,192.168.100.228}
+ foo_1_prt_2 | c14_inet           |         0 |      -0.64 | {192.168.100.1,192.168.100.2,192.168.100.3,192.168.100.4}                 | {0.01,0.01,0.01,0.01}     | {192.168.100.0,192.168.100.28,192.168.100.52,192.168.100.79,192.168.100.127}
+ foo         | c15_int4           |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | c15_int4           |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | c15_int4           |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                            | {1}                       | 
+ foo_1_prt_1 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                            | {1}                       | 
+ foo_1_prt_2 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                            | {1}                       | 
+ foo         | c17_macaddr        |         0 |      -0.25 |                                                                           |                           | {12:34:56:78:90:00,12:34:56:78:90:24,12:34:56:78:90:37,12:34:56:78:90:49,12:34:56:78:90:99}
+ foo_1_prt_1 | c17_macaddr        |         0 |       -0.5 |                                                                           |                           | {12:34:56:78:90:00,12:34:56:78:90:24,12:34:56:78:90:49,12:34:56:78:90:74,12:34:56:78:90:99}
+ foo_1_prt_2 | c17_macaddr        |         0 |      -0.25 |                                                                           |                           | {12:34:56:78:90:00,12:34:56:78:90:12,12:34:56:78:90:24,12:34:56:78:90:37,12:34:56:78:90:49}
+ foo         | c18_money          |         0 |       -0.5 |                                                                           |                           | {$1.00,$50.00,$75.00,$100.00,$200.00}
+ foo_1_prt_1 | c18_money          |         0 |       -0.5 |                                                                           |                           | {$1.00,$25.00,$50.00,$75.00,$100.00}
+ foo_1_prt_2 | c18_money          |         0 |         -1 |                                                                           |                           | {$1.00,$50.00,$100.00,$150.00,$200.00}
+ foo         | c19_float4         |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | c19_float4         |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | c19_float4         |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c20_serial4        |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | c20_serial4        |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | c20_serial4        |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c21_smallint       |         0 |       -0.5 |                                                                           |                           | {1,50,75,100,200}
+ foo_1_prt_1 | c21_smallint       |         0 |       -0.5 |                                                                           |                           | {1,25,50,75,100}
+ foo_1_prt_2 | c21_smallint       |         0 |         -1 |                                                                           |                           | {1,50,100,150,200}
+ foo         | c22_text           |         0 |       -0.5 |                                                                           |                           | {aa1,aa189,aa53,aa76,aa99}
+ foo_1_prt_1 | c22_text           |         0 |       -0.5 |                                                                           |                           | {aa1,aa30,aa53,aa76,aa99}
+ foo_1_prt_2 | c22_text           |         0 |         -1 |                                                                           |                           | {aa1,aa143,aa189,aa53,aa99}
+ foo         | c23_time           |         0 |         24 |                                                                           |                           | {00:59:59,05:59:59,08:59:59,11:59:59,23:59:59}
+ foo_1_prt_1 | c23_time           |         0 |      -0.12 |                                                                           |                           | {00:59:59,05:59:59,11:59:59,17:59:59,23:59:59}
+ foo_1_prt_2 | c23_time           |         0 |         12 |                                                                           |                           | {00:59:59,02:59:59,05:59:59,08:59:59,11:59:59}
+ foo         | c24_timetz         |         0 |         24 |                                                                           |                           | {00:59:00-05,05:59:00-05,08:59:00-05,11:59:00-05,23:59:00-05}
+ foo_1_prt_1 | c24_timetz         |         0 |      -0.12 |                                                                           |                           | {00:59:00-05,05:59:00-05,11:59:00-05,17:59:00-05,23:59:00-05}
+ foo_1_prt_2 | c24_timetz         |         0 |         12 |                                                                           |                           | {00:59:00-05,02:59:00-05,05:59:00-05,08:59:00-05,11:59:00-05}
+ foo         | c25_timestamp      |         0 |         24 |                                                                           |                           | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 05:59:00 2018","Mon Jan 01 08:59:00 2018","Mon Jan 01 11:59:00 2018","Mon Jan 01 23:59:00 2018"}
+ foo_1_prt_1 | c25_timestamp      |         0 |      -0.12 |                                                                           |                           | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 05:59:00 2018","Mon Jan 01 11:59:00 2018","Mon Jan 01 17:59:00 2018","Mon Jan 01 23:59:00 2018"}
+ foo_1_prt_2 | c25_timestamp      |         0 |         12 |                                                                           |                           | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 02:59:00 2018","Mon Jan 01 05:59:00 2018","Mon Jan 01 08:59:00 2018","Mon Jan 01 11:59:00 2018"}
+ foo         | c26_timestamptz    |         0 |         24 |                                                                           |                           | {"Sun Dec 31 21:59:00 2017 PST","Mon Jan 01 02:59:00 2018 PST","Mon Jan 01 05:59:00 2018 PST","Mon Jan 01 08:59:00 2018 PST","Mon Jan 01 20:59:00 2018 PST"}
+ foo_1_prt_1 | c26_timestamptz    |         0 |      -0.12 |                                                                           |                           | {"Sun Dec 31 21:59:00 2017 PST","Mon Jan 01 02:59:00 2018 PST","Mon Jan 01 08:59:00 2018 PST","Mon Jan 01 14:59:00 2018 PST","Mon Jan 01 20:59:00 2018 PST"}
+ foo_1_prt_2 | c26_timestamptz    |         0 |         12 |                                                                           |                           | {"Sun Dec 31 21:59:00 2017 PST","Sun Dec 31 23:59:00 2017 PST","Mon Jan 01 02:59:00 2018 PST","Mon Jan 01 05:59:00 2018 PST","Mon Jan 01 08:59:00 2018 PST"}
+ foo         | c27_uuid           |         0 |         10 |                                                                           |                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111199}
+ foo_1_prt_1 | c27_uuid           |         0 |         10 |                                                                           |                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111177,11111111-1111-1111-1111-111111111199}
+ foo_1_prt_2 | c27_uuid           |         0 |          5 |                                                                           |                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144}
+ foo         | c28_tsquery        |         0 |      -0.75 | {"'foo8' & 'rat8'","'foo4' & 'rat4'","'foo9' & 'rat9'","'foo1' & 'rat1'"} | {0.005,0.005,0.005,0.005} | {"'foo5' & 'rat5'","'foo26' & 'rat26'","'foo130' & 'rat130'","'foo243' & 'rat243'","'foo109' & 'rat109'"}
+ foo_1_prt_1 | c28_tsquery        |         0 |         -1 |                                                                           |                           | {"'foo8' & 'rat8'","'foo57' & 'rat57'","'foo273' & 'rat273'","'foo272' & 'rat272'","'foo296' & 'rat296'"}
+ foo_1_prt_2 | c28_tsquery        |         0 |         -1 |                                                                           |                           | {"'foo8' & 'rat8'","'foo57' & 'rat57'","'foo141' & 'rat141'","'foo171' & 'rat171'","'foo109' & 'rat109'"}
+(84 rows)
+
+-- Case 3: Partitions have MCVs but after merge, MCVs that do not qualify as 
+-- global MCV for the root will be used to create root histograms
+TRUNCATE foo;
+INSERT INTO foo 
+SELECT
+i,
+i%3,
+i%4::bigint,
+i%4,
+i::bit,
+(i%4)::bit(10)::bit varying(10),
+(i)::bool,
+(i%4)::char,
+('a'||(i%4))::varchar(10),
+('192.168.100.'||(i%4))::cidr, 
+('2018-4-'||(i%4)+1)::date, 
+(i%4)::numeric(8,2), 
+(i%4)::float8,
+inet ('192.168.100.'||(i%4)),
+i%4::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%4)::text)::text::macaddr,
+(i%4)::text::money,
+(i%4)::float4, 
+i%4,
+i%4,
+'aa'||(i%4)::text,
+('12:'||(i%4)::text||':00')::time,
+('12:'||(i%4)::text||':00 EST')::timetz,
+('2018-01-01 '||'12:'||(i%4)::text||':00')::timestamp,
+('2018-01-01 '||'12:'||(i%4)::text||':00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%4)::text||(i%4)::text)::uuid,
+('foo'||(i%4)::text||' & rat'||(i%4)::text)::tsquery
+FROM generate_series(1,100) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i))::cidr, 
+('2018-4-'||(i%26+1))::date, 
+(i)::numeric(8,2),
+(i)::float8,
+inet ('192.168.100.'||(i)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4,
+i,
+i,
+'aa'||(i)::text,
+('12:'||(i%60)::text||':00')::time,
+('12:'||(i%60)::text||':00 EST')::timetz,
+('2018-01-01 '||'12:'||(i%60)::text||':00')::timestamp,
+('2018-01-01 '||'12:'||(i%60)::text||':00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%6)::text||(i%6)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,60) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i%4+61::bigint,
+i%4+61,
+(i%4+61)::bit,
+(i%4+61)::bit(10)::bit varying(10),
+(i%4+61)::bool,
+(i%4+61)::char,
+('a'||(i%4+61))::varchar(10),
+('192.168.100.'||(i%4+61))::cidr, 
+('2018-4-'||(i%4)+27)::date, 
+(i%4+61)::numeric(8,2), 
+(i%4+61)::float8,
+inet ('192.168.100.'||(i%4+61)),
+i%4+61::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%4+61)::text)::text::macaddr,
+(i%4+61)::text::money,
+(i%4+61)::float4, 
+i%4+61,
+i%4+61,
+'aa'||(i%4+61)::text,
+('12:59:'||(i%4+10)::text)::time,
+('12:59:'||(i%4+10)::text||' EST')::timetz,
+('2018-01-01 '||'12:59:'||(i%4+10)::text)::timestamp,
+('2018-01-01 '||'12:59:'||(i%4+10)::text||' EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
+('foo'||(i%4)::text||' & rat'||(i%4)::text)::tsquery
+FROM generate_series(1,40) i;
+ANALYZE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  |      attname       | null_frac | n_distinct |                                                                   most_common_vals                                                                    |     most_common_freqs     |                                                                                      histogram_bounds                                                                                      
+-------------+--------------------+-----------+------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ foo         | a                  |         0 |       -0.5 |                                                                                                                                                       |                           | {1,25,38,60,100}
+ foo_1_prt_1 | a                  |         0 |         -1 |                                                                                                                                                       |                           | {1,25,50,75,100}
+ foo_1_prt_2 | a                  |         0 |       -0.6 |                                                                                                                                                       |                           | {1,13,25,38,60}
+ foo         | b                  |         0 |          6 |                                                                                                                                                       |                           | {0,1,2,4,5}
+ foo_1_prt_1 | b                  |         0 |          3 | {1,0,2}                                                                                                                                               | {0.34,0.33,0.33}          | 
+ foo_1_prt_2 | b                  |         0 |          3 | {4,3,5}                                                                                                                                               | {0.34,0.33,0.33}          | 
+ foo         | c03_bigint         |         0 |      -0.32 | {2,3,0,1}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c03_bigint         |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c03_bigint         |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c04_bigserial      |         0 |      -0.32 | {2,3,0,1}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c04_bigserial      |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c04_bigserial      |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c05_bit            |         0 |          2 | {0,1}                                                                                                                                                 | {0.5,0.5}                 | 
+ foo_1_prt_1 | c05_bit            |         0 |          2 | {0,1}                                                                                                                                                 | {0.5,0.5}                 | 
+ foo_1_prt_2 | c05_bit            |         0 |          2 | {0,1}                                                                                                                                                 | {0.5,0.5}                 | 
+ foo         | c06_bit_varying_10 |         0 |      -0.32 | {0000000000,0000000011,0000000001,0000000010}                                                                                                         | {0.125,0.125,0.125,0.125} | {0000000001,0000011110,0000111100,0000111110,0001000000}
+ foo_1_prt_1 | c06_bit_varying_10 |         0 |          4 | {0000000000,0000000001,0000000010,0000000011}                                                                                                         | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c06_bit_varying_10 |         0 |      -0.64 | {0000111101,0000111110,0000111111,0001000000}                                                                                                         | {0.1,0.1,0.1,0.1}         | {0000000001,0000001111,0000011110,0000101101,0000111100}
+ foo         | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                       | 
+ foo_1_prt_1 | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                       | 
+ foo_1_prt_2 | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                       | 
+ foo         | c08_char           |         0 |          9 | {6}                                                                                                                                                   | {0.21}                    | {0,1,2,3,9}
+ foo_1_prt_1 | c08_char           |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c08_char           |         0 |          9 | {6}                                                                                                                                                   | {0.42}                    | {1,2,3,4,9}
+ foo         | c09_varchar_10     |         0 |      -0.32 | {a3,a0,a1,a2}                                                                                                                                         | {0.125,0.125,0.125,0.125} | {a1,a36,a61,a63,a9}
+ foo_1_prt_1 | c09_varchar_10     |         0 |          4 | {a0,a1,a2,a3}                                                                                                                                         | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c09_varchar_10     |         0 |      -0.64 | {a61,a62,a63,a64}                                                                                                                                     | {0.1,0.1,0.1,0.1}         | {a1,a22,a36,a5,a9}
+ foo         | c10_cidr           |         0 |      -0.32 | {192.168.100.2/32,192.168.100.3/32,192.168.100.0/32,192.168.100.1/32}                                                                                 | {0.125,0.125,0.125,0.125} | {192.168.100.1/32,192.168.100.30/32,192.168.100.60/32,192.168.100.62/32,192.168.100.64/32}
+ foo_1_prt_1 | c10_cidr           |         0 |          4 | {192.168.100.0/32,192.168.100.1/32,192.168.100.2/32,192.168.100.3/32}                                                                                 | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c10_cidr           |         0 |      -0.64 | {192.168.100.61/32,192.168.100.62/32,192.168.100.63/32,192.168.100.64/32}                                                                             | {0.1,0.1,0.1,0.1}         | {192.168.100.1/32,192.168.100.15/32,192.168.100.30/32,192.168.100.45/32,192.168.100.60/32}
+ foo         | c11_date           |         0 |      -0.15 | {04-04-2018,04-03-2018,04-01-2018,04-02-2018}                                                                                                         | {0.125,0.125,0.125,0.125} | {04-01-2018,04-11-2018,04-26-2018,04-28-2018,04-30-2018}
+ foo_1_prt_1 | c11_date           |         0 |          4 | {04-01-2018,04-02-2018,04-03-2018,04-04-2018}                                                                                                         | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c11_date           |         0 |       -0.3 | {04-27-2018,04-28-2018,04-29-2018,04-30-2018}                                                                                                         | {0.1,0.1,0.1,0.1}         | {04-01-2018,04-06-2018,04-11-2018,04-19-2018,04-26-2018}
+ foo         | c12_numeric_8_2    |         0 |      -0.32 | {1.00,2.00,3.00,0.00}                                                                                                                                 | {0.125,0.125,0.125,0.125} | {1.00,30.00,60.00,62.00,64.00}
+ foo_1_prt_1 | c12_numeric_8_2    |         0 |          4 | {0.00,1.00,2.00,3.00}                                                                                                                                 | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c12_numeric_8_2    |         0 |      -0.64 | {61.00,62.00,63.00,64.00}                                                                                                                             | {0.1,0.1,0.1,0.1}         | {1.00,15.00,30.00,45.00,60.00}
+ foo         | c13_float8         |         0 |      -0.32 | {2,0,1,3}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c13_float8         |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c13_float8         |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c14_inet           |         0 |      -0.32 | {192.168.100.2,192.168.100.3,192.168.100.0,192.168.100.1}                                                                                             | {0.125,0.125,0.125,0.125} | {192.168.100.1,192.168.100.30,192.168.100.60,192.168.100.62,192.168.100.64}
+ foo_1_prt_1 | c14_inet           |         0 |          4 | {192.168.100.0,192.168.100.1,192.168.100.2,192.168.100.3}                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c14_inet           |         0 |      -0.64 | {192.168.100.61,192.168.100.62,192.168.100.63,192.168.100.64}                                                                                         | {0.1,0.1,0.1,0.1}         | {192.168.100.1,192.168.100.15,192.168.100.30,192.168.100.45,192.168.100.60}
+ foo         | c15_int4           |         0 |      -0.32 | {2,3,0,1}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c15_int4           |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c15_int4           |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                       | 
+ foo_1_prt_1 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                       | 
+ foo_1_prt_2 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                       | 
+ foo         | c17_macaddr        |         0 |      -0.32 | {12:34:56:78:90:01,12:34:56:78:90:03,12:34:56:78:90:00,12:34:56:78:90:02}                                                                             | {0.125,0.125,0.125,0.125} | {12:34:56:78:90:01,12:34:56:78:90:30,12:34:56:78:90:60,12:34:56:78:90:62,12:34:56:78:90:64}
+ foo_1_prt_1 | c17_macaddr        |         0 |          4 | {12:34:56:78:90:00,12:34:56:78:90:01,12:34:56:78:90:02,12:34:56:78:90:03}                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c17_macaddr        |         0 |      -0.64 | {12:34:56:78:90:61,12:34:56:78:90:62,12:34:56:78:90:63,12:34:56:78:90:64}                                                                             | {0.1,0.1,0.1,0.1}         | {12:34:56:78:90:01,12:34:56:78:90:15,12:34:56:78:90:30,12:34:56:78:90:45,12:34:56:78:90:60}
+ foo         | c18_money          |         0 |      -0.32 | {$3.00,$1.00,$0.00,$2.00}                                                                                                                             | {0.125,0.125,0.125,0.125} | {$1.00,$30.00,$60.00,$62.00,$64.00}
+ foo_1_prt_1 | c18_money          |         0 |          4 | {$0.00,$1.00,$2.00,$3.00}                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c18_money          |         0 |      -0.64 | {$61.00,$62.00,$63.00,$64.00}                                                                                                                         | {0.1,0.1,0.1,0.1}         | {$1.00,$15.00,$30.00,$45.00,$60.00}
+ foo         | c19_float4         |         0 |      -0.32 | {1,3,2,0}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c19_float4         |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c19_float4         |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c20_serial4        |         0 |      -0.32 | {2,3,0,1}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c20_serial4        |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c20_serial4        |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c21_smallint       |         0 |      -0.32 | {2,3,0,1}                                                                                                                                             | {0.125,0.125,0.125,0.125} | {1,30,60,62,64}
+ foo_1_prt_1 | c21_smallint       |         0 |          4 | {0,1,2,3}                                                                                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c21_smallint       |         0 |      -0.64 | {61,62,63,64}                                                                                                                                         | {0.1,0.1,0.1,0.1}         | {1,15,30,45,60}
+ foo         | c22_text           |         0 |      -0.32 | {aa0,aa1,aa3,aa2}                                                                                                                                     | {0.125,0.125,0.125,0.125} | {aa1,aa36,aa61,aa63,aa9}
+ foo_1_prt_1 | c22_text           |         0 |          4 | {aa0,aa1,aa2,aa3}                                                                                                                                     | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c22_text           |         0 |      -0.64 | {aa61,aa62,aa63,aa64}                                                                                                                                 | {0.1,0.1,0.1,0.1}         | {aa1,aa22,aa36,aa5,aa9}
+ foo         | c23_time           |         0 |     -0.315 | {12:01:00,12:00:00,12:02:00,12:03:00}                                                                                                                 | {0.125,0.125,0.125,0.125} | {12:00:00,12:29:00,12:59:00,12:59:11,12:59:13}
+ foo_1_prt_1 | c23_time           |         0 |          4 | {12:00:00,12:01:00,12:02:00,12:03:00}                                                                                                                 | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c23_time           |         0 |      -0.64 | {12:59:10,12:59:11,12:59:12,12:59:13}                                                                                                                 | {0.1,0.1,0.1,0.1}         | {12:00:00,12:14:00,12:29:00,12:44:00,12:59:00}
+ foo         | c24_timetz         |         0 |     -0.315 | {12:02:00-05,12:03:00-05,12:00:00-05,12:01:00-05}                                                                                                     | {0.125,0.125,0.125,0.125} | {12:00:00-05,12:29:00-05,12:59:00-05,12:59:11-05,12:59:13-05}
+ foo_1_prt_1 | c24_timetz         |         0 |          4 | {12:00:00-05,12:01:00-05,12:02:00-05,12:03:00-05}                                                                                                     | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c24_timetz         |         0 |      -0.64 | {12:59:10-05,12:59:11-05,12:59:12-05,12:59:13-05}                                                                                                     | {0.1,0.1,0.1,0.1}         | {12:00:00-05,12:14:00-05,12:29:00-05,12:44:00-05,12:59:00-05}
+ foo         | c25_timestamp      |         0 |     -0.315 | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:02:00 2018","Mon Jan 01 12:01:00 2018","Mon Jan 01 12:03:00 2018"}                                         | {0.125,0.125,0.125,0.125} | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:29:00 2018","Mon Jan 01 12:59:00 2018","Mon Jan 01 12:59:11 2018","Mon Jan 01 12:59:13 2018"}
+ foo_1_prt_1 | c25_timestamp      |         0 |          4 | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:01:00 2018","Mon Jan 01 12:02:00 2018","Mon Jan 01 12:03:00 2018"}                                         | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c25_timestamp      |         0 |      -0.64 | {"Mon Jan 01 12:59:10 2018","Mon Jan 01 12:59:11 2018","Mon Jan 01 12:59:12 2018","Mon Jan 01 12:59:13 2018"}                                         | {0.1,0.1,0.1,0.1}         | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:14:00 2018","Mon Jan 01 12:29:00 2018","Mon Jan 01 12:44:00 2018","Mon Jan 01 12:59:00 2018"}
+ foo         | c26_timestamptz    |         0 |     -0.315 | {"Mon Jan 01 09:02:00 2018 PST","Mon Jan 01 09:01:00 2018 PST","Mon Jan 01 09:03:00 2018 PST","Mon Jan 01 09:00:00 2018 PST"}                         | {0.125,0.125,0.125,0.125} | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:29:00 2018 PST","Mon Jan 01 09:59:00 2018 PST","Mon Jan 01 09:59:11 2018 PST","Mon Jan 01 09:59:13 2018 PST"}
+ foo_1_prt_1 | c26_timestamptz    |         0 |          4 | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:01:00 2018 PST","Mon Jan 01 09:02:00 2018 PST","Mon Jan 01 09:03:00 2018 PST"}                         | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c26_timestamptz    |         0 |      -0.64 | {"Mon Jan 01 09:59:10 2018 PST","Mon Jan 01 09:59:11 2018 PST","Mon Jan 01 09:59:12 2018 PST","Mon Jan 01 09:59:13 2018 PST"}                         | {0.1,0.1,0.1,0.1}         | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:14:00 2018 PST","Mon Jan 01 09:29:00 2018 PST","Mon Jan 01 09:44:00 2018 PST","Mon Jan 01 09:59:00 2018 PST"}
+ foo         | c27_uuid           |         0 |         10 | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122} | {0.125,0.125,0.125,0.125} | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111177,11111111-1111-1111-1111-111111111199}
+ foo_1_prt_1 | c27_uuid           |         0 |          4 | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133} | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c27_uuid           |         0 |         10 |                                                                                                                                                       |                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111177,11111111-1111-1111-1111-111111111199}
+ foo         | c28_tsquery        |         0 |     -0.305 | {"'foo1' & 'rat1'","'foo3' & 'rat3'","'foo2' & 'rat2'","'foo0' & 'rat0'"}                                                                             | {0.18,0.18,0.18,0.175}    | {"'foo8' & 'rat8'","'foo31' & 'rat31'","'foo60' & 'rat60'","'foo32' & 'rat32'","'foo16' & 'rat16'"}
+ foo_1_prt_1 | c28_tsquery        |         0 |          4 | {"'foo0' & 'rat0'","'foo1' & 'rat1'","'foo3' & 'rat3'","'foo2' & 'rat2'"}                                                                             | {0.25,0.25,0.25,0.25}     | 
+ foo_1_prt_2 | c28_tsquery        |         0 |      -0.61 | {"'foo1' & 'rat1'","'foo3' & 'rat3'","'foo2' & 'rat2'","'foo0' & 'rat0'"}                                                                             | {0.11,0.11,0.11,0.1}      | {"'foo8' & 'rat8'","'foo31' & 'rat31'","'foo60' & 'rat60'","'foo32' & 'rat32'","'foo16' & 'rat16'"}
+(84 rows)
+
+-- Case 4: A partition has MCVs but after merge, those MCVs do not qualify as 
+-- global MCV for the root will be used to create root histograms
+TRUNCATE foo;
+INSERT INTO foo 
+SELECT
+i,
+i%3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i%128))::cidr, 
+('2018-4-'||(i%15)+1)::date, 
+(i)::numeric(8,2), 
+(i)::float8,
+inet ('192.168.100.'||(i%128)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%50)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4, 
+i,
+i,
+'aa'||(i)::text,
+((i%12)::text||':59:59')::time,
+((i%12)::text||':59:00 EST')::timetz,
+('2018-01-01 '||(i%12)::text||':59:00')::timestamp,
+('2018-01-01 '||(i%12)::text||':59:00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,100) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i%4+61::bigint,
+i%4+61,
+(i%4+61)::bit,
+(i%4+61)::bit(10)::bit varying(10),
+(i%4+61)::bool,
+(i%4+61)::char,
+('a'||(i%4+61))::varchar(10),
+('192.168.100.'||(i%4+61))::cidr, 
+('2018-4-'||(i%4+26))::date, 
+(i%4+61)::numeric(8,2),
+(i%4+61)::float8,
+inet ('192.168.100.'||(i%4+61)),
+i%4+61::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%4+61)::text)::text::macaddr,
+(i%4+61)::text::money,
+(i%4+61)::float4,
+i%4+61,
+i%4+61,
+'aa'||(i%4+61)::text,
+('12:'||(i%4+56)::text||':00')::time,
+('12:'||(i%4+56)::text||':00 EST')::timetz,
+('2018-01-01 '||'12:'||(i%4+56)::text||':00')::timestamp,
+('2018-01-01 '||'12:'||(i%4+56)::text||':00 EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
+('foo'||(i%4+61)::text||' & rat'||(i%4+61)::text)::tsquery
+FROM generate_series(1,8) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i))::cidr, 
+('2018-4-'||(i%25+1))::date, 
+(i)::numeric(8,2),
+(i)::float8,
+inet ('192.168.100.'||(i)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4,
+i,
+i,
+'aa'||(i)::text,
+('12:00:'||(i%60)::text)::time,
+('12:00:'||(i%60)::text||' EST')::timetz,
+('2018-01-01 '||'12:00'||(i%60)::text)::timestamp,
+('2018-01-01 '||'12:00'||(i%60)::text||' EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%10)::text||(i%10)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,60) i;
+ANALYZE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
+  tablename  |      attname       | null_frac | n_distinct |                                                       most_common_vals                                                        |             most_common_freqs             |                                                                                      histogram_bounds                                                                                      
+-------------+--------------------+-----------+------------+-------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ foo         | b                  |         0 |          6 |                                                                                                                               |                                           | {0,1,2,4,5}
+ foo_1_prt_1 | b                  |         0 |          3 | {1,0,2}                                                                                                                       | {0.34,0.33,0.33}                          | 
+ foo_1_prt_2 | b                  |         0 |          3 | {4,5,3}                                                                                                                       | {0.338235,0.338235,0.323529}              | 
+ foo         | c03_bigint         |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c03_bigint         |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c03_bigint         |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c04_bigserial      |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c04_bigserial      |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c04_bigserial      |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c05_bit            |         0 |          2 | {0,1}                                                                                                                         | {0.5,0.5}                                 | 
+ foo_1_prt_1 | c05_bit            |         0 |          2 | {0,1}                                                                                                                         | {0.5,0.5}                                 | 
+ foo_1_prt_2 | c05_bit            |         0 |          2 | {0,1}                                                                                                                         | {0.5,0.5}                                 | 
+ foo         | c06_bit_varying_10 |         0 |  -0.589286 |                                                                                                                               |                                           | {0000000001,0000011110,0000110010,0001001011,0001100100}
+ foo_1_prt_1 | c06_bit_varying_10 |         0 |         -1 |                                                                                                                               |                                           | {0000000001,0000011001,0000110010,0001001011,0001100100}
+ foo_1_prt_2 | c06_bit_varying_10 |         0 |  -0.941176 | {0000111101,0000111110,0000111111,0001000000}                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {0000000001,0000001111,0000011110,0000101101,0000111100}
+ foo         | c07_bool           |         0 |          1 | {t}                                                                                                                           | {1}                                       | 
+ foo_1_prt_1 | c07_bool           |         0 |          1 | {t}                                                                                                                           | {1}                                       | 
+ foo_1_prt_2 | c07_bool           |         0 |          1 | {t}                                                                                                                           | {1}                                       | 
+ foo         | c08_char           |         0 |          9 |                                                                                                                               |                                           | {1,3,5,7,9}
+ foo_1_prt_1 | c08_char           |         0 |          9 |                                                                                                                               |                                           | {1,3,5,7,9}
+ foo_1_prt_2 | c08_char           |         0 |  -0.132353 | {1,2,3,4}                                                                                                                     | {0.161765,0.161765,0.161765,0.161765}     | {5,5,6,6,9}
+ foo         | c09_varchar_10     |         0 |  -0.589286 |                                                                                                                               |                                           | {a1,a36,a53,a76,a99}
+ foo_1_prt_1 | c09_varchar_10     |         0 |         -1 |                                                                                                                               |                                           | {a1,a30,a53,a76,a99}
+ foo_1_prt_2 | c09_varchar_10     |         0 |  -0.941176 | {a61,a62,a63,a64}                                                                                                             | {0.0294118,0.0294118,0.0294118,0.0294118} | {a1,a22,a36,a5,a9}
+ foo         | c10_cidr           |         0 |  -0.589286 |                                                                                                                               |                                           | {192.168.100.1/32,192.168.100.30/32,192.168.100.50/32,192.168.100.75/32,192.168.100.100/32}
+ foo_1_prt_1 | c10_cidr           |         0 |         -1 |                                                                                                                               |                                           | {192.168.100.1/32,192.168.100.25/32,192.168.100.50/32,192.168.100.75/32,192.168.100.100/32}
+ foo_1_prt_2 | c10_cidr           |         0 |  -0.941176 | {192.168.100.61/32,192.168.100.62/32,192.168.100.63/32,192.168.100.64/32}                                                     | {0.0294118,0.0294118,0.0294118,0.0294118} | {192.168.100.1/32,192.168.100.15/32,192.168.100.30/32,192.168.100.45/32,192.168.100.60/32}
+ foo         | c11_date           |         0 |  -0.172619 |                                                                                                                               |                                           | {04-01-2018,04-08-2018,04-11-2018,04-15-2018,04-29-2018}
+ foo_1_prt_1 | c11_date           |         0 |      -0.15 |                                                                                                                               |                                           | {04-01-2018,04-04-2018,04-08-2018,04-11-2018,04-15-2018}
+ foo_1_prt_2 | c11_date           |         0 |  -0.426471 | {04-02-2018,04-03-2018,04-04-2018,04-05-2018}                                                                                 | {0.0441176,0.0441176,0.0441176,0.0441176} | {04-01-2018,04-09-2018,04-15-2018,04-22-2018,04-29-2018}
+ foo         | c12_numeric_8_2    |         0 |  -0.589286 |                                                                                                                               |                                           | {1.00,30.00,50.00,75.00,100.00}
+ foo_1_prt_1 | c12_numeric_8_2    |         0 |         -1 |                                                                                                                               |                                           | {1.00,25.00,50.00,75.00,100.00}
+ foo_1_prt_2 | c12_numeric_8_2    |         0 |  -0.941176 | {61.00,62.00,63.00,64.00}                                                                                                     | {0.0294118,0.0294118,0.0294118,0.0294118} | {1.00,15.00,30.00,45.00,60.00}
+ foo         | c13_float8         |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c13_float8         |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c13_float8         |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c14_inet           |         0 |  -0.589286 |                                                                                                                               |                                           | {192.168.100.1,192.168.100.30,192.168.100.50,192.168.100.75,192.168.100.100}
+ foo_1_prt_1 | c14_inet           |         0 |         -1 |                                                                                                                               |                                           | {192.168.100.1,192.168.100.25,192.168.100.50,192.168.100.75,192.168.100.100}
+ foo_1_prt_2 | c14_inet           |         0 |  -0.941176 | {192.168.100.61,192.168.100.62,192.168.100.63,192.168.100.64}                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {192.168.100.1,192.168.100.15,192.168.100.30,192.168.100.45,192.168.100.60}
+ foo         | c15_int4           |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c15_int4           |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c15_int4           |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                | {1}                                       | 
+ foo_1_prt_1 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                | {1}                                       | 
+ foo_1_prt_2 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                | {1}                                       | 
+ foo         | c17_macaddr        |         0 |  -0.380952 |                                                                                                                               |                                           | {12:34:56:78:90:00,12:34:56:78:90:24,12:34:56:78:90:37,12:34:56:78:90:49,12:34:56:78:90:64}
+ foo_1_prt_1 | c17_macaddr        |         0 |       -0.5 |                                                                                                                               |                                           | {12:34:56:78:90:00,12:34:56:78:90:12,12:34:56:78:90:24,12:34:56:78:90:37,12:34:56:78:90:49}
+ foo_1_prt_2 | c17_macaddr        |         0 |  -0.941176 | {12:34:56:78:90:61,12:34:56:78:90:62,12:34:56:78:90:63,12:34:56:78:90:64}                                                     | {0.0294118,0.0294118,0.0294118,0.0294118} | {12:34:56:78:90:01,12:34:56:78:90:15,12:34:56:78:90:30,12:34:56:78:90:45,12:34:56:78:90:60}
+ foo         | c18_money          |         0 |  -0.589286 |                                                                                                                               |                                           | {$1.00,$30.00,$50.00,$75.00,$100.00}
+ foo_1_prt_1 | c18_money          |         0 |         -1 |                                                                                                                               |                                           | {$1.00,$25.00,$50.00,$75.00,$100.00}
+ foo_1_prt_2 | c18_money          |         0 |  -0.941176 | {$61.00,$62.00,$63.00,$64.00}                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {$1.00,$15.00,$30.00,$45.00,$60.00}
+ foo         | c19_float4         |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c19_float4         |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c19_float4         |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c20_serial4        |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c20_serial4        |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c20_serial4        |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c21_smallint       |         0 |  -0.589286 |                                                                                                                               |                                           | {1,30,50,75,100}
+ foo_1_prt_1 | c21_smallint       |         0 |         -1 |                                                                                                                               |                                           | {1,25,50,75,100}
+ foo_1_prt_2 | c21_smallint       |         0 |  -0.941176 | {61,62,63,64}                                                                                                                 | {0.0294118,0.0294118,0.0294118,0.0294118} | {1,15,30,45,60}
+ foo         | c22_text           |         0 |  -0.589286 |                                                                                                                               |                                           | {aa1,aa36,aa53,aa76,aa99}
+ foo_1_prt_1 | c22_text           |         0 |         -1 |                                                                                                                               |                                           | {aa1,aa30,aa53,aa76,aa99}
+ foo_1_prt_2 | c22_text           |         0 |  -0.941176 | {aa61,aa62,aa63,aa64}                                                                                                         | {0.0294118,0.0294118,0.0294118,0.0294118} | {aa1,aa22,aa36,aa5,aa9}
+ foo         | c23_time           |         0 |  -0.446429 |                                                                                                                               |                                           | {00:59:59,05:59:59,11:59:59,12:00:29,12:59:00}
+ foo_1_prt_1 | c23_time           |         0 |      -0.12 |                                                                                                                               |                                           | {00:59:59,02:59:59,05:59:59,08:59:59,11:59:59}
+ foo_1_prt_2 | c23_time           |         0 |  -0.941176 | {12:56:00,12:57:00,12:58:00,12:59:00}                                                                                         | {0.0294118,0.0294118,0.0294118,0.0294118} | {12:00:00,12:00:14,12:00:29,12:00:44,12:00:59}
+ foo         | c24_timetz         |         0 |  -0.446429 |                                                                                                                               |                                           | {00:59:00-05,05:59:00-05,11:59:00-05,12:00:29-05,12:59:00-05}
+ foo_1_prt_1 | c24_timetz         |         0 |      -0.12 |                                                                                                                               |                                           | {00:59:00-05,02:59:00-05,05:59:00-05,08:59:00-05,11:59:00-05}
+ foo_1_prt_2 | c24_timetz         |         0 |  -0.941176 | {12:56:00-05,12:57:00-05,12:58:00-05,12:59:00-05}                                                                             | {0.0294118,0.0294118,0.0294118,0.0294118} | {12:00:00-05,12:00:14-05,12:00:29-05,12:00:44-05,12:00:59-05}
+ foo         | c25_timestamp      |         0 |  -0.422619 | {"Mon Jan 01 12:56:00 2018","Mon Jan 01 12:57:00 2018","Mon Jan 01 12:58:00 2018","Mon Jan 01 12:59:00 2018"}                 | {0.0178571,0.0178571,0.0178571,0.0178571} | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 05:59:00 2018","Mon Jan 01 11:59:00 2018","Mon Jan 01 12:27:00 2018","Mon Jan 01 12:55:00 2018"}
+ foo_1_prt_1 | c25_timestamp      |         0 |      -0.12 |                                                                                                                               |                                           | {"Mon Jan 01 00:59:00 2018","Mon Jan 01 02:59:00 2018","Mon Jan 01 05:59:00 2018","Mon Jan 01 08:59:00 2018","Mon Jan 01 11:59:00 2018"}
+ foo_1_prt_2 | c25_timestamp      |         0 |  -0.882353 | {"Mon Jan 01 12:56:00 2018","Mon Jan 01 12:57:00 2018","Mon Jan 01 12:58:00 2018","Mon Jan 01 12:59:00 2018"}                 | {0.0441176,0.0441176,0.0441176,0.0441176} | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:13:00 2018","Mon Jan 01 12:27:00 2018","Mon Jan 01 12:41:00 2018","Mon Jan 01 12:55:00 2018"}
+ foo         | c26_timestamptz    |         0 |  -0.422619 | {"Mon Jan 01 09:58:00 2018 PST","Mon Jan 01 09:59:00 2018 PST","Mon Jan 01 09:57:00 2018 PST","Mon Jan 01 09:56:00 2018 PST"} | {0.0178571,0.0178571,0.0178571,0.0178571} | {"Sun Dec 31 21:59:00 2017 PST","Mon Jan 01 02:59:00 2018 PST","Mon Jan 01 08:59:00 2018 PST","Mon Jan 01 09:27:00 2018 PST","Mon Jan 01 09:55:00 2018 PST"}
+ foo_1_prt_1 | c26_timestamptz    |         0 |      -0.12 |                                                                                                                               |                                           | {"Sun Dec 31 21:59:00 2017 PST","Sun Dec 31 23:59:00 2017 PST","Mon Jan 01 02:59:00 2018 PST","Mon Jan 01 05:59:00 2018 PST","Mon Jan 01 08:59:00 2018 PST"}
+ foo_1_prt_2 | c26_timestamptz    |         0 |  -0.882353 | {"Mon Jan 01 09:56:00 2018 PST","Mon Jan 01 09:57:00 2018 PST","Mon Jan 01 09:58:00 2018 PST","Mon Jan 01 09:59:00 2018 PST"} | {0.0441176,0.0441176,0.0441176,0.0441176} | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:13:00 2018 PST","Mon Jan 01 09:27:00 2018 PST","Mon Jan 01 09:41:00 2018 PST","Mon Jan 01 09:55:00 2018 PST"}
+ foo         | c27_uuid           |         0 |         10 |                                                                                                                               |                                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111155,11111111-1111-1111-1111-111111111199}
+ foo_1_prt_1 | c27_uuid           |         0 |          5 |                                                                                                                               |                                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144}
+ foo_1_prt_2 | c27_uuid           |         0 |  -0.147059 |                                                                                                                               |                                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111155,11111111-1111-1111-1111-111111111177,11111111-1111-1111-1111-111111111199}
+ foo         | c28_tsquery        |         0 |  -0.595238 | {"'foo61' & 'rat61'","'foo64' & 'rat64'","'foo62' & 'rat62'","'foo63' & 'rat63'"}                                             | {0.0178571,0.0178571,0.0178571,0.0178571} | {"'foo8' & 'rat8'","'foo90' & 'rat90'","'foo60' & 'rat60'","'foo32' & 'rat32'","'foo100' & 'rat100'"}
+ foo_1_prt_1 | c28_tsquery        |         0 |         -1 |                                                                                                                               |                                           | {"'foo8' & 'rat8'","'foo35' & 'rat35'","'foo57' & 'rat57'","'foo36' & 'rat36'","'foo100' & 'rat100'"}
+ foo_1_prt_2 | c28_tsquery        |         0 |  -0.941176 | {"'foo61' & 'rat61'","'foo64' & 'rat64'","'foo62' & 'rat62'","'foo63' & 'rat63'"}                                             | {0.0294118,0.0294118,0.0294118,0.0294118} | {"'foo8' & 'rat8'","'foo14' & 'rat14'","'foo11' & 'rat11'","'foo47' & 'rat47'","'foo16' & 'rat16'"}
+(81 rows)
+
+-- Case 5: A partition has MCVs but after merge, those MCVs qualify as global
+-- MCVs for the root
+TRUNCATE foo;
+INSERT INTO foo 
+SELECT
+i,
+i%3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i%128))::cidr, 
+('2018-'||(i%12)+1||'-'||(i%15)+1)::date,
+(i)::numeric(8,2), 
+(i)::float8,
+inet ('192.168.100.'||(i%128)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%50)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4, 
+i,
+i,
+'aa'||(i)::text,
+('12:'||(i%60)::text||':'||(i%30)::text)::time,
+('12:'||(i%60)::text||':'||(i%30)::text||' EST')::timetz,
+('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text)::timestamp,
+('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text||' EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%5)::text||(i%5)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,60) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i%4+61::bigint,
+i%4+61,
+(i%4+61)::bit,
+(i%4+61)::bit(10)::bit varying(10),
+(i%4+61)::bool,
+(i%4+61)::char,
+('a'||(i%4+61))::varchar(10),
+('192.168.100.'||(i%4+61))::cidr, 
+('2018-5-'||(i%4)+16)::date,
+(i%4+61)::numeric(8,2),
+(i%4+61)::float8,
+inet ('192.168.100.'||(i%4+61)),
+i%4+61::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i%4+61)::text)::text::macaddr,
+(i%4+61)::text::money,
+(i%4+61)::float4,
+i%4+61,
+i%4+61,
+'aa'||(i%4+61)::text,
+('01:00:'||(i%4)::text)::time,
+('01:00:'||(i%4)::text||' EST')::timetz,
+('2018-01-01 '||'01:00:'||(i%4)::text)::timestamp,
+('2018-01-01 '||'01:00:'||(i%4)::text||' EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%4+6)::text||(i%4+6)::text)::uuid,
+('foo'||(i%4+61)::text||' & rat'||(i%4+61)::text)::tsquery
+FROM generate_series(1,8) i;
+INSERT INTO foo 
+SELECT
+i,
+i%3+3,
+i::bigint,
+i,
+i::bit,
+(i)::bit(10)::bit varying(10),
+(i)::bool,
+(i)::char,
+('a'||(i))::varchar(10),
+('192.168.100.'||(i))::cidr, 
+('2018-'||(i%12)+1||'-'||(i%15)+1)::date,
+(i)::numeric(8,2),
+(i)::float8,
+inet ('192.168.100.'||(i)),
+i::int4,
+interval '24 hours',
+macaddr ('12:34:56:78:90:'||(i)::text)::text::macaddr,
+(i)::text::money,
+(i)::float4,
+i,
+i,
+'aa'||(i)::text,
+('12:'||(i%60)::text||':'||(i%30)::text)::time,
+('12:'||(i%60)::text||':'||(i%30)::text||' EST')::timetz,
+('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text)::timestamp,
+('2018-01-01 '||'12:'||(i%60)::text||':'||(i%30)::text||' EST')::timestamptz,
+('11111111-1111-1111-1111-1111111111'||(i%10)::text||(i%10)::text)::uuid,
+('foo'||(i)::text||' & rat'||(i)::text)::tsquery
+FROM generate_series(1,10) i;
+ANALYZE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' and attname != 'a' ORDER BY attname,tablename;
+  tablename  |      attname       | null_frac | n_distinct |                                                                   most_common_vals                                                                    |             most_common_freqs             |                                                                                      histogram_bounds                                                                                      
+-------------+--------------------+-----------+------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ foo         | b                  |         0 |          6 | {1,2,0}                                                                                                                                               | {0.25641,0.25641,0.25641}                 | {3,4,5}
+ foo_1_prt_1 | b                  |         0 |          3 | {0,1,2}                                                                                                                                               | {0.333333,0.333333,0.333333}              | 
+ foo_1_prt_2 | b                  |         0 |  -0.166667 | {4,5,3}                                                                                                                                               | {0.388889,0.333333,0.277778}              | 
+ foo         | c03_bigint         |         0 |  -0.807692 | {64,62,61,63}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c03_bigint         |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c03_bigint         |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c04_bigserial      |         0 |  -0.807692 | {64,62,61,63}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c04_bigserial      |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c04_bigserial      |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c05_bit            |         0 |          2 | {0,1}                                                                                                                                                 | {0.5,0.5}                                 | 
+ foo_1_prt_1 | c05_bit            |         0 |          2 | {0,1}                                                                                                                                                 | {0.5,0.5}                                 | 
+ foo_1_prt_2 | c05_bit            |         0 |  -0.111111 | {0,1}                                                                                                                                                 | {0.5,0.5}                                 | 
+ foo         | c06_bit_varying_10 |         0 |  -0.807692 | {0000111101,0000111111,0001000000,0000111110}                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {0000000001,0000001111,0000011110,0000101101,0000111100}
+ foo_1_prt_1 | c06_bit_varying_10 |         0 |         -1 |                                                                                                                                                       |                                           | {0000000001,0000001111,0000011110,0000101101,0000111100}
+ foo_1_prt_2 | c06_bit_varying_10 |         0 |  -0.777778 | {0000111101,0000111110,0000111111,0001000000}                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {0000000001,0000000011,0000000101,0000000111,0000001010}
+ foo         | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                                       | 
+ foo_1_prt_1 | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                                       | 
+ foo_1_prt_2 | c07_bool           |         0 |          1 | {t}                                                                                                                                                   | {1}                                       | 
+ foo         | c08_char           |         0 |  -0.115385 | {3,1,2,4}                                                                                                                                             | {0.141026,0.141026,0.141026,0.141026}     | {1,5,6,9}
+ foo_1_prt_1 | c08_char           |         0 |      -0.15 | {1,2,3,4}                                                                                                                                             | {0.183333,0.183333,0.183333,0.183333}     | {5,5,5,6,9}
+ foo_1_prt_2 | c08_char           |         0 |       -0.5 | {6}                                                                                                                                                   | {0.5}                                     | {1,2,4,7,9}
+ foo         | c09_varchar_10     |         0 |  -0.807692 | {a64,a61,a63,a62}                                                                                                                                     | {0.025641,0.025641,0.025641,0.025641}     | {a1,a22,a4,a6,a9}
+ foo_1_prt_1 | c09_varchar_10     |         0 |         -1 |                                                                                                                                                       |                                           | {a1,a22,a36,a5,a9}
+ foo_1_prt_2 | c09_varchar_10     |         0 |  -0.777778 | {a61,a62,a63,a64}                                                                                                                                     | {0.111111,0.111111,0.111111,0.111111}     | {a1,a2,a4,a6,a9}
+ foo         | c10_cidr           |         0 |  -0.807692 | {192.168.100.62/32,192.168.100.64/32,192.168.100.63/32,192.168.100.61/32}                                                                             | {0.025641,0.025641,0.025641,0.025641}     | {192.168.100.1/32,192.168.100.15/32,192.168.100.30/32,192.168.100.45/32,192.168.100.60/32}
+ foo_1_prt_1 | c10_cidr           |         0 |         -1 |                                                                                                                                                       |                                           | {192.168.100.1/32,192.168.100.15/32,192.168.100.30/32,192.168.100.45/32,192.168.100.60/32}
+ foo_1_prt_2 | c10_cidr           |         0 |  -0.777778 | {192.168.100.61/32,192.168.100.62/32,192.168.100.63/32,192.168.100.64/32}                                                                             | {0.111111,0.111111,0.111111,0.111111}     | {192.168.100.1/32,192.168.100.3/32,192.168.100.5/32,192.168.100.7/32,192.168.100.10/32}
+ foo         | c11_date           |         0 |  -0.807692 | {05-18-2018,05-19-2018,05-16-2018,05-17-2018}                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {01-01-2018,04-04-2018,06-15-2018,09-15-2018,12-15-2018}
+ foo_1_prt_1 | c11_date           |         0 |         -1 |                                                                                                                                                       |                                           | {01-01-2018,03-15-2018,06-15-2018,09-15-2018,12-15-2018}
+ foo_1_prt_2 | c11_date           |         0 |  -0.777778 | {05-16-2018,05-17-2018,05-18-2018,05-19-2018}                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {02-02-2018,04-04-2018,06-06-2018,08-08-2018,11-11-2018}
+ foo         | c12_numeric_8_2    |         0 |  -0.807692 | {62.00,63.00,64.00,61.00}                                                                                                                             | {0.025641,0.025641,0.025641,0.025641}     | {1.00,15.00,30.00,45.00,60.00}
+ foo_1_prt_1 | c12_numeric_8_2    |         0 |         -1 |                                                                                                                                                       |                                           | {1.00,15.00,30.00,45.00,60.00}
+ foo_1_prt_2 | c12_numeric_8_2    |         0 |  -0.777778 | {61.00,62.00,63.00,64.00}                                                                                                                             | {0.111111,0.111111,0.111111,0.111111}     | {1.00,3.00,5.00,7.00,10.00}
+ foo         | c13_float8         |         0 |  -0.807692 | {61,62,63,64}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c13_float8         |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c13_float8         |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c14_inet           |         0 |  -0.807692 | {192.168.100.62,192.168.100.64,192.168.100.63,192.168.100.61}                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {192.168.100.1,192.168.100.15,192.168.100.30,192.168.100.45,192.168.100.60}
+ foo_1_prt_1 | c14_inet           |         0 |         -1 |                                                                                                                                                       |                                           | {192.168.100.1,192.168.100.15,192.168.100.30,192.168.100.45,192.168.100.60}
+ foo_1_prt_2 | c14_inet           |         0 |  -0.777778 | {192.168.100.61,192.168.100.62,192.168.100.63,192.168.100.64}                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {192.168.100.1,192.168.100.3,192.168.100.5,192.168.100.7,192.168.100.10}
+ foo         | c15_int4           |         0 |  -0.807692 | {64,62,61,63}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c15_int4           |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c15_int4           |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                                       | 
+ foo_1_prt_1 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                                       | 
+ foo_1_prt_2 | c16_interval       |         0 |          1 | {"@ 24 hours"}                                                                                                                                        | {1}                                       | 
+ foo         | c17_macaddr        |         0 |  -0.679487 | {12:34:56:78:90:01,12:34:56:78:90:03,12:34:56:78:90:61,12:34:56:78:90:04}                                                                             | {0.025641,0.025641,0.025641,0.025641}     | {12:34:56:78:90:00,12:34:56:78:90:10,12:34:56:78:90:23,12:34:56:78:90:49,12:34:56:78:90:64}
+ foo_1_prt_1 | c17_macaddr        |         0 |  -0.833333 | {12:34:56:78:90:01,12:34:56:78:90:02,12:34:56:78:90:03,12:34:56:78:90:04}                                                                             | {0.0333333,0.0333333,0.0333333,0.0333333} | {12:34:56:78:90:00,12:34:56:78:90:10,12:34:56:78:90:23,12:34:56:78:90:36,12:34:56:78:90:49}
+ foo_1_prt_2 | c17_macaddr        |         0 |  -0.777778 | {12:34:56:78:90:61,12:34:56:78:90:62,12:34:56:78:90:63,12:34:56:78:90:64}                                                                             | {0.111111,0.111111,0.111111,0.111111}     | {12:34:56:78:90:01,12:34:56:78:90:03,12:34:56:78:90:05,12:34:56:78:90:07,12:34:56:78:90:10}
+ foo         | c18_money          |         0 |  -0.807692 | {$62.00,$61.00,$64.00,$63.00}                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {$1.00,$15.00,$30.00,$45.00,$60.00}
+ foo_1_prt_1 | c18_money          |         0 |         -1 |                                                                                                                                                       |                                           | {$1.00,$15.00,$30.00,$45.00,$60.00}
+ foo_1_prt_2 | c18_money          |         0 |  -0.777778 | {$61.00,$62.00,$63.00,$64.00}                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {$1.00,$3.00,$5.00,$7.00,$10.00}
+ foo         | c19_float4         |         0 |  -0.807692 | {63,61,62,64}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c19_float4         |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c19_float4         |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c20_serial4        |         0 |  -0.807692 | {64,62,61,63}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c20_serial4        |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c20_serial4        |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c21_smallint       |         0 |  -0.807692 | {64,62,61,63}                                                                                                                                         | {0.025641,0.025641,0.025641,0.025641}     | {1,15,30,45,60}
+ foo_1_prt_1 | c21_smallint       |         0 |         -1 |                                                                                                                                                       |                                           | {1,15,30,45,60}
+ foo_1_prt_2 | c21_smallint       |         0 |  -0.777778 | {61,62,63,64}                                                                                                                                         | {0.111111,0.111111,0.111111,0.111111}     | {1,3,5,7,10}
+ foo         | c22_text           |         0 |  -0.807692 | {aa61,aa62,aa63,aa64}                                                                                                                                 | {0.025641,0.025641,0.025641,0.025641}     | {aa1,aa22,aa4,aa6,aa9}
+ foo_1_prt_1 | c22_text           |         0 |         -1 |                                                                                                                                                       |                                           | {aa1,aa22,aa36,aa5,aa9}
+ foo_1_prt_2 | c22_text           |         0 |  -0.777778 | {aa61,aa62,aa63,aa64}                                                                                                                                 | {0.111111,0.111111,0.111111,0.111111}     | {aa1,aa2,aa4,aa6,aa9}
+ foo         | c23_time           |         0 |  -0.807692 | {01:00:02,01:00:01,01:00:03,01:00:00}                                                                                                                 | {0.025641,0.025641,0.025641,0.025641}     | {12:00:00,12:14:14,12:29:29,12:44:14,12:59:29}
+ foo_1_prt_1 | c23_time           |         0 |         -1 |                                                                                                                                                       |                                           | {12:00:00,12:14:14,12:29:29,12:44:14,12:59:29}
+ foo_1_prt_2 | c23_time           |         0 |  -0.777778 | {01:00:00,01:00:01,01:00:02,01:00:03}                                                                                                                 | {0.111111,0.111111,0.111111,0.111111}     | {12:01:01,12:03:03,12:05:05,12:07:07,12:10:10}
+ foo         | c24_timetz         |         0 |  -0.807692 | {01:00:03-05,01:00:00-05,01:00:01-05,01:00:02-05}                                                                                                     | {0.025641,0.025641,0.025641,0.025641}     | {12:00:00-05,12:14:14-05,12:29:29-05,12:44:14-05,12:59:29-05}
+ foo_1_prt_1 | c24_timetz         |         0 |         -1 |                                                                                                                                                       |                                           | {12:00:00-05,12:14:14-05,12:29:29-05,12:44:14-05,12:59:29-05}
+ foo_1_prt_2 | c24_timetz         |         0 |  -0.777778 | {01:00:00-05,01:00:01-05,01:00:02-05,01:00:03-05}                                                                                                     | {0.111111,0.111111,0.111111,0.111111}     | {12:01:01-05,12:03:03-05,12:05:05-05,12:07:07-05,12:10:10-05}
+ foo         | c25_timestamp      |         0 |  -0.807692 | {"Mon Jan 01 01:00:00 2018","Mon Jan 01 01:00:01 2018","Mon Jan 01 01:00:03 2018","Mon Jan 01 01:00:02 2018"}                                         | {0.025641,0.025641,0.025641,0.025641}     | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:14:14 2018","Mon Jan 01 12:29:29 2018","Mon Jan 01 12:44:14 2018","Mon Jan 01 12:59:29 2018"}
+ foo_1_prt_1 | c25_timestamp      |         0 |         -1 |                                                                                                                                                       |                                           | {"Mon Jan 01 12:00:00 2018","Mon Jan 01 12:14:14 2018","Mon Jan 01 12:29:29 2018","Mon Jan 01 12:44:14 2018","Mon Jan 01 12:59:29 2018"}
+ foo_1_prt_2 | c25_timestamp      |         0 |  -0.777778 | {"Mon Jan 01 01:00:00 2018","Mon Jan 01 01:00:01 2018","Mon Jan 01 01:00:02 2018","Mon Jan 01 01:00:03 2018"}                                         | {0.111111,0.111111,0.111111,0.111111}     | {"Mon Jan 01 12:01:01 2018","Mon Jan 01 12:03:03 2018","Mon Jan 01 12:05:05 2018","Mon Jan 01 12:07:07 2018","Mon Jan 01 12:10:10 2018"}
+ foo         | c26_timestamptz    |         0 |  -0.807692 | {"Sun Dec 31 22:00:00 2017 PST","Sun Dec 31 22:00:01 2017 PST","Sun Dec 31 22:00:02 2017 PST","Sun Dec 31 22:00:03 2017 PST"}                         | {0.025641,0.025641,0.025641,0.025641}     | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:14:14 2018 PST","Mon Jan 01 09:29:29 2018 PST","Mon Jan 01 09:44:14 2018 PST","Mon Jan 01 09:59:29 2018 PST"}
+ foo_1_prt_1 | c26_timestamptz    |         0 |         -1 |                                                                                                                                                       |                                           | {"Mon Jan 01 09:00:00 2018 PST","Mon Jan 01 09:14:14 2018 PST","Mon Jan 01 09:29:29 2018 PST","Mon Jan 01 09:44:14 2018 PST","Mon Jan 01 09:59:29 2018 PST"}
+ foo_1_prt_2 | c26_timestamptz    |         0 |  -0.777778 | {"Sun Dec 31 22:00:00 2017 PST","Sun Dec 31 22:00:01 2017 PST","Sun Dec 31 22:00:02 2017 PST","Sun Dec 31 22:00:03 2017 PST"}                         | {0.111111,0.111111,0.111111,0.111111}     | {"Mon Jan 01 09:01:01 2018 PST","Mon Jan 01 09:03:03 2018 PST","Mon Jan 01 09:05:05 2018 PST","Mon Jan 01 09:07:07 2018 PST","Mon Jan 01 09:10:10 2018 PST"}
+ foo         | c27_uuid           |         0 |  -0.115385 |                                                                                                                                                       |                                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144,11111111-1111-1111-1111-111111111199}
+ foo_1_prt_1 | c27_uuid           |         0 |          5 |                                                                                                                                                       |                                           | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111144}
+ foo_1_prt_2 | c27_uuid           |         0 |  -0.555556 | {11111111-1111-1111-1111-111111111166,11111111-1111-1111-1111-111111111177,11111111-1111-1111-1111-111111111188,11111111-1111-1111-1111-111111111199} | {0.166667,0.166667,0.166667,0.166667}     | {11111111-1111-1111-1111-111111111100,11111111-1111-1111-1111-111111111111,11111111-1111-1111-1111-111111111122,11111111-1111-1111-1111-111111111133,11111111-1111-1111-1111-111111111155}
+ foo         | c28_tsquery        |         0 |  -0.820513 | {"'foo8' & 'rat8'","'foo4' & 'rat4'","'foo9' & 'rat9'","'foo1' & 'rat1'"}                                                                             | {0.025641,0.025641,0.025641,0.025641}     | {"'foo5' & 'rat5'","'foo14' & 'rat14'","'foo64' & 'rat64'","'foo55' & 'rat55'","'foo63' & 'rat63'"}
+ foo_1_prt_1 | c28_tsquery        |         0 |         -1 |                                                                                                                                                       |                                           | {"'foo8' & 'rat8'","'foo14' & 'rat14'","'foo11' & 'rat11'","'foo47' & 'rat47'","'foo16' & 'rat16'"}
+ foo_1_prt_2 | c28_tsquery        |         0 |  -0.777778 | {"'foo61' & 'rat61'","'foo64' & 'rat64'","'foo62' & 'rat62'","'foo63' & 'rat63'"}                                                                     | {0.111111,0.111111,0.111111,0.111111}     | {"'foo8' & 'rat8'","'foo9' & 'rat9'","'foo5' & 'rat5'","'foo3' & 'rat3'","'foo10' & 'rat10'"}
+(81 rows)
+
+-- Test merging leaf stats where HLL is empty
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c text) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo select i, i%6, repeat('aaaa', 100000) FROM generate_series(1, 100)i;
+ANALYZE foo;
+SELECT * FROM pg_stats WHERE tablename like 'foo%' and attname = 'c' ORDER BY attname,tablename;
+ schemaname |  tablename  | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ public     | foo         | c       | t         |         0 |      1024 |          0 |                  |                   |                  |            
+ public     | foo_1_prt_1 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |            
+ public     | foo_1_prt_2 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |            
+(3 rows)
+
+-- Test ANALYZE full scan HLL
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c text) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%3, 'text_'||i%100 FROM generate_series(1,1000)i; 
+INSERT INTO foo SELECT i, i%3+3, 'text_'||i%200 FROM generate_series(1,1000)i; 
+SET default_statistics_target to 3;
+ANALYZE FULLSCAN foo;
+SELECT tablename, n_distinct FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | n_distinct 
+-------------+------------
+ foo         |  -0.501544
+ foo_1_prt_1 |         -1
+ foo_1_prt_2 |         -1
+ foo         |          6
+ foo_1_prt_1 |          3
+ foo_1_prt_2 |          3
+ foo         |       -0.1
+ foo_1_prt_1 |       -0.1
+ foo_1_prt_2 |  -0.200001
+(9 rows)
+
+-- Test ANLYZE MERGE behavior
+-- Merge stats from only one partition
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
+ANALYZE foo_1_prt_1;
+ANALYZE MERGE foo;
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-------------+---------+-----------+------------+------------------+-------------------+------------------
+ foo_1_prt_1 | a       |         0 |         -1 |                  |                   | {1,32,66,98}
+ foo_1_prt_1 | b       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
+ foo_1_prt_1 | c       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
+(3 rows)
+
+-- Merge stats from both partitions
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+ANALYZE MERGE foo;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-------------+---------+-----------+------------+------------------+-------------------+------------------
+ foo         | a       |         0 |         -1 |                  |                   | {1,34,66,100}
+ foo_1_prt_1 | a       |         0 |         -1 |                  |                   | {1,32,66,98}
+ foo_1_prt_2 | a       |         0 |         -1 |                  |                   | {3,34,65,100}
+ foo         | b       |         0 |          6 |                  |                   | {0,2,3,5}
+ foo_1_prt_1 | b       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | b       |         0 |          3 | {3,4,5}          | {0.34,0.34,0.32}  | 
+ foo         | c       |         0 |          6 |                  |                   | {0,2,3,5}
+ foo_1_prt_1 | c       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c       |         0 |          3 | {3,4,5}          | {0.34,0.34,0.32}  | 
+(9 rows)
+
+-- No stats after MERGE
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+ANALYZE MERGE foo;
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+ tablename | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-----------+---------+-----------+------------+------------------+-------------------+------------------
+(0 rows)
+
+-- Merge stats from only one partition
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
+SET allow_system_table_mods = 'DML';
+UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass and ATTNAME in ('a','b','c');
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+ANALYZE MERGE foo;
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-------------+---------+-----------+------------+------------------+-------------------+------------------
+ foo_1_prt_2 | a       |         0 |         -1 |                  |                   | {3,34,65,100}
+ foo_1_prt_2 | b       |         0 |          3 | {3,4,5}          | {0.34,0.34,0.32}  | 
+ foo_1_prt_2 | c       |         0 |          3 | {3,4,5}          | {0.34,0.34,0.32}  | 
+(3 rows)
+
+-- Merge stats from only one partition one column
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
+ANALYZE foo_1_prt_1(c);
+ANALYZE MERGE foo(c);
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
+  tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+-------------+---------+-----------+------------+------------------+-------------------+------------------
+ foo_1_prt_1 | c       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
+(1 row)
+
+-- Merge fails as all partitions are not analyzed
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
+ANALYZE MERGE foo;
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+-- Merge fails as all partitions are empty and are not analyzed
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+ANALYZE MERGE foo;
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+-- Merge errors on partition of a table
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO foo select i, i%6, i%100 FROM generate_series(1,2000)i;
+ANALYZE MERGE foo_1_prt_1;
+WARNING:  skipping "foo_1_prt_1" --- cannot analyze a non-root partition using ANALYZE MERGE
+-- Test merging of leaf stats when one partition has
+-- FULL SCAN HLL and the other has HLL from sample
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO FOO SELECT i,i%6 FROM generate_series(1,1000)i;
+ANALYZE foo_1_prt_1;
+ANALYZE FULLSCAN foo_1_prt_2;
+ANALYZE MERGE foo;
+ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:3924)
+HINT:  Re-run ANALYZE or ANALYZE FULLSCAN
+-- Test merging of stats for a newly added partition
+-- Do not collect samples while merging stats
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+INSERT INTO FOO SELECT i,i%6 FROM generate_series(1,1000)i;
+SET default_statistics_target = 4;
+ANALYZE foo;
+ALTER TABLE foo ADD partition new_part START (6) INCLUSIVE END (9) EXCLUSIVE;
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
+INSERT INTO foo SELECT i, i%3+6 FROM generate_series(1,500)i;
+ANALYZE foo_1_prt_new_part;
+SET client_min_messages = 'log';
+ANALYZE MERGE foo;
+LOG:  statement: ANALYZE MERGE foo;
+LOG:  Merging leaf stats
+LOG:  Merging leaf stats
+-- Insert a new column that is not analyzed in the leaf partitions.
+-- Analyzing root partition will use merging statistics for the first 2 columns, 
+-- will create a sample for the root to analyze the newly added columns since 
+-- the leaf partitions does not have any stats for it, yet
+ALTER TABLE foo ADD COLUMN c int;
+LOG:  statement: ALTER TABLE foo ADD COLUMN c int;
+INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
+LOG:  statement: INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
+ANALYZE rootpartition foo;
+LOG:  statement: ANALYZE rootpartition foo;
+LOG:  Needs sample for foo
+LOG:  Merging leaf stats
+LOG:  Merging leaf stats
+LOG:  Computing Scalar Stats  column 3

@@ -1,0 +1,6 @@
+# HyperLogLog estimator control
+comment = 'Aggregation functions and data type for distinct estimation based on HyperLogLog.'
+default_version = '2.0.0'
+relocatable = true
+
+module_pathname = '$libdir/hyperloglog_counter'

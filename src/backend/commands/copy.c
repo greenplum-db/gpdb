@@ -160,7 +160,7 @@ static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
 			const char *filename, bool is_program, List *attnamelist,
-			List *options);
+			List *options, bool skip_ext_partition);
 static void EndCopyTo(CopyState cstate);
 static uint64 DoCopyTo(CopyState cstate);
 static uint64 CopyToDispatch(CopyState cstate);
@@ -1123,7 +1123,7 @@ DoCopy(const CopyStmt *stmt, const char *queryString)
 		{
 			cstate = BeginCopyTo(rel, stmt->query, queryString,
 								 stmt->filename, stmt->is_program,
-								 stmt->attlist, options);
+								 stmt->attlist, options, stmt->skip_ext_partition);
 
 			cstate->partitions = stmt->partitions;
 
@@ -1932,7 +1932,7 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 	all_relids = list_make1_oid(RelationGetRelid(cstate->rel));
 
 	/* add in AO segno map for dispatch */
-	if (rel_is_partitioned(RelationGetRelid(cstate->rel)))
+	if (dispatchStmt->is_from && rel_is_partitioned(RelationGetRelid(cstate->rel)))
 	{
 		if (gp_enable_segment_copy_checking &&
 			!partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
@@ -1945,8 +1945,10 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 		PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
 
 		all_relids = list_concat(all_relids, all_partition_relids(pn));
+
+		dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
 	}
-	dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
+
 	dispatchStmt->skip_ext_partition = cstate->skip_ext_partition;
 
 	if (policy)
@@ -2059,7 +2061,8 @@ BeginCopyTo(Relation rel,
 			const char *filename,
 			bool is_program,
 			List *attnamelist,
-			List *options)
+			List *options,
+			bool skip_ext_partition)
 {
 	CopyState	cstate;
 	MemoryContext oldcontext;
@@ -2101,6 +2104,8 @@ BeginCopyTo(Relation rel,
 
 	cstate = BeginCopy(false, rel, query, queryString, attnamelist, options);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	cstate->skip_ext_partition = skip_ext_partition;
 
 	/* Determine the mode */
 	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment &&
@@ -2695,7 +2700,6 @@ CopyTo(CopyState cstate)
 
 				scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 
-				processed = 0;
 				while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2719,7 +2723,6 @@ CopyTo(CopyState cstate)
 				aoscandesc = appendonly_beginscan(rel, GetActiveSnapshot(),
 												  GetActiveSnapshot(), 0, NULL);
 
-				processed = 0;
 				while ((tuple = appendonly_getnext(aoscandesc, ForwardScanDirection, slot)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2760,7 +2763,6 @@ CopyTo(CopyState cstate)
 									  GetActiveSnapshot(),
 									  NULL /* relationTupleDesc */, proj);
 
-				processed = 0;
 				for(;;)
 				{
 				    CHECK_FOR_INTERRUPTS();
@@ -2789,13 +2791,11 @@ CopyTo(CopyState cstate)
 				{
 				    elog(ERROR, "internal error");
 				}
-				processed = 0;
 			}
 			else
 			{
 				/* should never get here */
 				Assert(false);
-				processed = 0;
 			}
 
 			/* partition table, so close */

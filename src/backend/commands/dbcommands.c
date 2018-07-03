@@ -2173,7 +2173,7 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 }
 
 void
-dbase_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+dbase_desc(StringInfo buf, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	char		*rec = XLogRecGetData(record);

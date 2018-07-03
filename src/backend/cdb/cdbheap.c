@@ -193,3 +193,50 @@ SiftDown(CdbHeap *hp, int iHole, void *newElement)
 	/* Fill the hole with the given element. */
 	CdbHeap_CopySlot(hp, curSlot, newElement);
 }								/* SiftDown */
+
+/* Insert a copy of the given element into the heap. */
+void
+CdbHeap_Insert(CdbHeap *hp, void *newElement)
+{
+	CdbHeapCmpFn    comparator = hp->comparator;
+	void           *comparatorContext = hp->comparatorContext;
+	int             bytesPerSlot = hp->bytesPerSlot;
+	char	       *slot0 = CdbHeap_Slot(char, hp, 0);
+	char           *slotN = CdbHeap_Slot(char, hp, hp->nSlotsUsed);
+	char           *holeSlot;
+
+	Assert(newElement &&
+		   hp->nSlotsUsed < hp->nSlotsMax);
+
+	/* Grow the heap by adding a rightmost leaf (initially a hole). */
+	holeSlot = slotN;
+	hp->nSlotsUsed++;
+
+	Assert(bytesPerSlot > 0);
+
+	/* Bubble the hole up to the proper level.  Ancestors scoot down. */
+	while (slot0 < holeSlot)
+	{
+		/* Compute parent ptr.
+		 (1) index(slot_k) = (addr(slot_k)-addr(slot_0)) / bytesPerSlot
+		 (2) for Min-Heap, index(slot_dad) = floor((index(slot_child)-1)/2)
+		 Combine the above two formula, we have
+		 addr(slot_dad) = ((addr(slot_child) - addr(slot_0)) / bytesPerSlot - 1) / 2 * bytesPerSlot + addr(slot_0)
+		 = addr(slot_0) + bytesPerSlot * ((addr(slot_child) - addr(slot_0) - bytesPerSlot) / bytesPerSlot / 2)
+		 */
+		char   *dadSlot = slot0 + bytesPerSlot * (((holeSlot - slot0 - bytesPerSlot) / bytesPerSlot) >> 1);
+
+		/* Hole comes to rest where parent value <= new value. */
+		if ((*comparator)(dadSlot, newElement, comparatorContext) <= 0)
+			break;
+
+		/* Parent value sinks down; the hole bubbles up to the parent slot. */
+		CdbHeap_CopySlot(hp, holeSlot, dadSlot);
+
+		/* Ascend to parent. */
+		holeSlot = dadSlot;
+	}
+
+	/* Fill the hole with the new value. */
+	CdbHeap_CopySlot(hp, holeSlot, newElement);
+}                               /* CdbHeap_Insert */

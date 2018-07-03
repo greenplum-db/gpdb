@@ -54,11 +54,12 @@ create_runcmd() {
 
 _main() {
 	allow_hadoop_user_to_connect
-	override_core_site
+
 
 	local CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	local PGREGRESS=$GPHOME/lib/postgresql/pgxs/src/test/regress/pg_regress
 	local HADOOPCMD=$HADOOP_HOME/bin/hadoop
+	local NAMENODE_URI=${HADOOP_HOST}:${HADOOP_PORT}
 
 	build_test_jar
 
@@ -69,16 +70,25 @@ _main() {
 	cp $CURDIR/input/*.source $CURDIR/source_replaced/input/
 	cp $CURDIR/output/*.source $CURDIR/source_replaced/output/
 
-	for f in $(ls $CURDIR/source_replaced/input);do
+	if [ "$GP_HADOOP_TARGET_VERSION" == "mpr" ]; then
+		NAMENODE_URI="/mapr/mapr"
+		# set Hadoop port to none that is expected by test harness for MAPR distro
+		export HADOOP_PORT="none"
+  	else
+		override_core_site
+	fi
+
+	for f in $(ls $CURDIR/source_replaced/input); do
 		echo -e  "--start_ignore\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapreduce/*\n\!%HADOOP_HOME%/bin/hadoop fs -rm -r /mapred/*\n--end_ignore" >> "$CURDIR/source_replaced/input/$f"
-		sed -i "s|gpfdist://%localhost%:%gpfdistPort%|gphdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext|g" "$CURDIR/source_replaced/input/$f"
+		sed -i "s|gpfdist://%localhost%:%gpfdistPort%|gphdfs://${NAMENODE_URI}/plaintext|g" "$CURDIR/source_replaced/input/$f"
 		sed -i "s|%cmdstr%|${CURDIR}/runcmd|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HADOOP_HOST%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
-		sed -i "s|%HDFSaddr%|${HADOOP_HOST}:${HADOOP_PORT}|g" "$CURDIR/source_replaced/input/$f"
+		sed -i "s|%HADOOP_HOST%|${NAMENODE_URI}|g" "$CURDIR/source_replaced/input/$f"
+		sed -i "s|%HDFSaddr%|${NAMENODE_URI}|g" "$CURDIR/source_replaced/input/$f"
 		sed -i "s|%HADOOP_HOME%|${HADOOP_HOME}|g" "$CURDIR/source_replaced/input/$f"
 		sed -i "s|%MYD%|${CURDIR}/source_replaced/input|g" "$CURDIR/source_replaced/input/$f"
 		sed -i "s|%HADOOP_FS%|${HADOOPCMD}|g" "$CURDIR/source_replaced/input/$f"
 	done
+	
 
 	cp $CURDIR/input/parsefile.py  $CURDIR/source_replaced/input/
 

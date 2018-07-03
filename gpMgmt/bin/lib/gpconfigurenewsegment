@@ -40,7 +40,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly):
+                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly, forceoverwrite):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -63,6 +63,7 @@ class ConfExpSegCmd(Command):
         self.validationOnly = validationOnly
 
         self.writeGpDbidFileOnly = writeGpDbidFileOnly
+        self.forceoverwrite = forceoverwrite
         Command.__init__(self, name, cmdstr)
 
     def validatePath(self, path):
@@ -110,7 +111,8 @@ class ConfExpSegCmd(Command):
                     # make directories, extract template update postgresql.conf
                     logger.info("Validate data directories for new segment")
                     try:
-                        self.validatePath(self.datadir)
+                        if not self.forceoverwrite:
+                            self.validatePath(self.datadir)
                     except ValidationException, e:
                         msg = "for segment with port %s: %s" %  (self.port, e.getMessage())
                         self.set_results(CommandResult(1, '', msg, True, False))
@@ -127,7 +129,8 @@ class ConfExpSegCmd(Command):
                         # Create a mirror based on the primary
                         cmd = PgBaseBackup(pgdata=self.datadir,
                                            host=self.syncWithSegmentHostname,
-                                           port=str(self.syncWithSegmentPort))
+                                           port=str(self.syncWithSegmentPort),
+                                           forceoverwrite=self.forceoverwrite)
                         try:
                             cmd.run(validateAfter=True)
                             self.set_results(CommandResult(0, '', '', True, False))
@@ -158,13 +161,6 @@ class ConfExpSegCmd(Command):
 
                     logger.info("create gp_dbid file for segment")
                     writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
-
-                    # Create pg_xlog/archive_status for new segment in case it dosen't exist.
-                    try:
-                        self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_xlog/archive_status"))
-                    except Exception, e:
-                        self.set_results(CommandResult(1,'',e,True,False))
-                        raise
 
                     logger.info("Updating %s/postgresql.conf" % self.datadir)
                     modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
@@ -220,6 +216,7 @@ def parseargs():
     parser.add_option('-B', '--batch-size', type='int', default=DEFAULT_BATCH_SIZE, metavar='<batch_size>')
     parser.add_option("-V", "--validation-only", dest="validationOnly", action='store_true', default=False)
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
+    parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
 
@@ -300,6 +297,7 @@ try:
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly
                            , writeGpDbidFileOnly = options.writeGpidFileOnly
+                           , forceoverwrite = options.forceoverwrite
                            )
         pool.addCommand(cmd)
 

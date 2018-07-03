@@ -48,7 +48,7 @@ appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 }
 
 void
-appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+appendonly_desc(StringInfo buf, XLogRecord *record)
 {
 	uint8		  xl_info = record->xl_info;
 	uint8		  info = xl_info & ~XLR_INFO_MASK;

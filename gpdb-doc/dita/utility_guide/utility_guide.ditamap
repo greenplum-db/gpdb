@@ -39,7 +39,9 @@
             <topicref href="admin_utilities/gpstop.xml"/>
             <topicref href="admin_utilities/gpsys.xml"/>
             <topicref href="admin_utilities/gptransfer.xml"/>
-            <topicref href="admin_utilities/pgbouncer-ref.xml"/>
+            <topicref href="admin_utilities/pgbouncer.xml"/>
+            <topicref href="admin_utilities/pgbouncer-ini.xml"/>
+            <topicref href="admin_utilities/pgbouncer-admin.xml"/>
         </topicref>
         <topicref href="cli_ref.xml">
             <topicref href="client_utilities/ClientUtilitySummary.xml" linking="targetonly">

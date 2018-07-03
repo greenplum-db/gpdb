@@ -59,7 +59,7 @@ extern char *get_tablespace_name(Oid spc_oid);
 extern bool directory_is_empty(const char *path);
 
 extern void tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
-extern void tblspc_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void tblspc_desc(StringInfo buf, XLogRecord *record);
 extern void set_short_version(const char *path);
 
 #endif   /* TABLESPACE_H */

@@ -5,6 +5,7 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "utils/memutils.h"
 #include "utils/string_wrapper.h"
 
 #define STRXFRM_INPUT_LENGTH_LIMIT (50)

@@ -247,43 +247,6 @@ add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, X
 }  /* end add_recover_post_checkpoint_prepared_transactions_map_entry */
 
 /*
- * Find a mapping in the recover post checkpoint prepared transactions hash table.
- */
-bool
-TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid, XLogRecPtr *m, char *caller)
-{
-  prpt_map *entry = NULL;
-  bool      found = false;
-
-  MemSet(m, 0, sizeof(XLogRecPtr));
-
-  /*
-   * The table is lazily initialised.
-   */
-  if (crashRecoverPostCheckpointPreparedTransactions_map_ht == NULL)
-  {
-    crashRecoverPostCheckpointPreparedTransactions_map_ht
-                     = init_hash("two phase post checkpoint prepared transactions map",
-                                 sizeof(TransactionId), /* keysize */
-                                 sizeof(prpt_map),
-                                 10 /* initialize for 10 entries */);
-  }
-
-  entry = hash_search(crashRecoverPostCheckpointPreparedTransactions_map_ht,
-                      &xid,
-                      HASH_FIND,
-                      &found);
-  if (entry == NULL)
-  {
-          return false;
-  }
-
-  memcpy(m, &entry->xlogrecptr, sizeof(XLogRecPtr));
-
-  return true;
-}
-
-/*
  * Remove a mapping from the recover post checkpoint prepared transactions hash table.
  */
 static void
@@ -1331,6 +1294,25 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	gxact = LockGXact(gid, GetUserId(), raiseErrorIfNotFound);
 	if (!raiseErrorIfNotFound && gxact == NULL)
 	{
+		/*
+		 * We can be here for commit-prepared and abort-prepared. Incase of
+		 * commit-prepared not able to find the gxact clearly means we already
+		 * processed the same and committed it. For abort-prepared either
+		 * prepare was never performed on this segment hence gxact doesn't
+		 * exists or it was performed but failed to respond back to QD. So,
+		 * only for commit-prepared validate if it made to mirror before
+		 * returning success to master. For abort can't detect between those 2
+		 * cases, hence may unnecessarily wait for mirror sync for
+		 * abort-prepared if prepare had failed. Missing to send
+		 * abort-prepared to mirror doesn't result in inconsistent
+		 * result. Though yes can potentially have dangling prepared
+		 * transaction on mirror for extremely thin window, as any transaction
+		 * performed on primary will make sure to sync the abort prepared
+		 * record anyways.
+		 */
+		if (isCommit)
+			wait_for_mirror();
+
 		return false;
 	}
 

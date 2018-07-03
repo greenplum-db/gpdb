@@ -39,32 +39,6 @@
     <note type="caution"><b>Never</b> run <codeph>VACUUM FULL &lt;database_name></codeph> and do not
       run <codeph>VACUUM FULL</codeph> on large tables in a Greenplum Database.</note>
     <section>
-      <title>Sizing the Free Space Map</title>
-
-      <p>Expired rows in heap tables are added to a shared free space map when you run
-          <codeph>VACUUM</codeph>. The free space map must be adequately sized to accommodate these
-        rows. If the free space map is not large enough, any space occupied by rows that overflow
-        the free space map cannot be reclaimed by a regular <codeph>VACUUM</codeph> statement. You
-        will have to use <codeph>VACUUM FULL</codeph> or an alternative method to recover the
-        space.</p>
-      <p>You can avoid overflowing the free space map by running the <codeph>VACUUM</codeph>
-        statement regularly. The more bloated a table becomes, the more rows that must be tracked in
-        the free space map. For very large databases with many objects, you may need to increase the
-        size of the free space map to prevent overflow. </p>
-
-      <p>The <codeph>max_fsm_pages</codeph> configuration parameter sets the maximum number of disk
-        pages for which free space will be tracked in the shared free-space map. Each page slot
-        consumes six bytes of shared memory. The default value for <codeph>max_fsm_pages</codeph> is
-        200,000.</p>
-      <p>The <codeph>max_fsm_relations</codeph> configuration parameter sets the maximum number of
-        relations for which free space will be tracked in the shared memory free-space map. It
-        should be set to a value larger than the total number of tables, indexes, and system tables
-        in the database. It costs about 60 bytes of memory for each relation per segment instance.
-        The default value is 1000.</p>
-      <p>See the <i>Greenplum Database Reference Guide</i> for detailed information about these
-        configuration parameters.</p>
-    </section>
-    <section>
       <title>Detecting Bloat</title>
       <p>The statistics collected by the <codeph>ANALYZE</codeph> statement can be used to calculate
         the expected number of disk pages required to store a table. The difference between the
@@ -99,7 +73,7 @@
     </section>
     <section id="remove_bloat">
       <title>Removing Bloat from Database Tables</title>
-      <p>The <codeph>VACUUM</codeph> command adds expired rows to the shared free space map so that
+      <p>The <codeph>VACUUM</codeph> command adds expired rows to the free space map so that
         the space can be reused. When <codeph>VACUUM</codeph> is run regularly on a table that is
         frequently updated, the space occupied by the expired rows can be promptly reused,
         preventing the table file from growing larger. It is also important to run

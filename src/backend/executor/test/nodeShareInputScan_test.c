@@ -3,6 +3,9 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+#include "utils/memutils.h"
+
 #include "../nodeShareInputScan.c"
 
 #define FIXED_POINTER_VAL ((LargestIntegralType) 0x0000beef)

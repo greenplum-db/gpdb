@@ -1087,12 +1087,18 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 						(errmsg("skipping \"%s\" --- cannot analyze a non-root partition using ANALYZE ROOTPARTITION",
 								get_rel_name(relationOid))));
 			}
+			else if (ps != PART_STATUS_ROOT && (vacstmt->options & VACOPT_MERGE))
+			{
+				ereport(WARNING,
+						(errmsg("skipping \"%s\" --- cannot analyze a non-root partition using ANALYZE MERGE",
+								get_rel_name(relationOid))));
+			}
 			else if (ps == PART_STATUS_ROOT)
 			{
 				PartitionNode *pn = get_parts(relationOid, 0 /*level*/ ,
 											  0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
 				Assert(pn);
-				if (!(vacstmt->options & VACOPT_ROOTONLY))
+				if (!(vacstmt->options & VACOPT_ROOTONLY) && !(vacstmt->options & VACOPT_MERGE))
 				{
 					oid_list = all_leaf_partition_relids(pn); /* all leaves */
 
@@ -1109,7 +1115,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 				 * to work with the root partition only. To gather stats on mid-level partitions
 				 * (for Orca's use), the user should run ANALYZE or ANALYZE ROOTPARTITION on the
 				 * root level with optimizer_analyze_midlevel_partition GUC set to ON.
-				 * Planner uses the stats on leaf partitions, so its unnecesary to collect stats on
+				 * Planner uses the stats on leaf partitions, so it's unnecessary to collect stats on
 				 * midlevel partitions.
 				 */
 				ereport(WARNING,

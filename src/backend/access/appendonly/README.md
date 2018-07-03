@@ -1,4 +1,4 @@
-For historical reasons, append-optimized are also called
+For historical reasons, append-optimized tables are also called
 "append-only". They used to be truly append-only in previous versions
 of Greenplum, but these days they can in fact be updated and deleted
 from. The segment files that store the tuples at the storage level are
@@ -46,12 +46,24 @@ table.  You can think of it as an extension of `pg_class`.
 
 In addition to the segment files that store the user data, there are
 three auxiliary heap tables for each AO table, which store metadata.
-The aosegments table is always named as "`pg_aoseg.pg_aoseg_<oid>`",
-where `<oid>` is the initial Oid with which the table was created. This
-is not guaranteed to match the current Oid of the aosegments table,
-as some ALTER TABLE operations will rewrite the table causing the
-Oid to change. In order to find the aosegments table of an AO table,
-the "`pg_catalog.pg_appendonly`" catalog relation must be queried.
+The aosegments table is one of them, which stores helpful attributes
+such as `modcount`, which is a bearing on the number of DML operations
+that the AO table has been subject to.
+
+The aosegments table is initially named: "`pg_aoseg.pg_aoseg_<oid>`",
+where `<oid>` is the oid of the AO table. However, if certain DDL statements 
+such as ALTER, that involve a rewrite of the AO table on disk, are applied, 
+this aosegments table is replaced by a new table with a changed `<oid>` suffix.
+The complete process involves creation of a temporary table followed by an
+update of the `relfilenode` and aosegments table oid associated with the AO table. 
+
+In order to find the current aosegments table of an AO table, the 
+"`pg_catalog.pg_appendonly`" catalog table must be queried. The `segrelid` column in 
+this table yields the oid of the current aosegments table. If we now query
+pg_class with this oid, we will get the name of the current aosegments table. 
+Please note that the `segrelid` is not equal to the `<oid>` suffix of the current 
+aosegments table.
+
 Aosegment tables are similar to the TOAST tables, for heaps. An
 append-only table can have a TOAST table, too, in addition to the
 AO-specific auxiliary tables.

@@ -4,6 +4,7 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "utils/memutils.h"
 
 /* Actual function body */
 #include "../ftsmessagehandler.c"

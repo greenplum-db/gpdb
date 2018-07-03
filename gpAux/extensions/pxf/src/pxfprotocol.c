@@ -1,13 +1,13 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements.	See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *	 http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -21,9 +21,11 @@
 #include "pxfbridge.h"
 #include "pxffragment.h"
 #include "pxfutils.h"
+#include "pxffilters.h"
 
 #include "access/extprotocol.h"
 #include "nodes/pg_list.h"
+#include "utils/elog.h"
 
 /* define magic module unless run as a part of test cases */
 #ifndef UNIT_TESTING
@@ -72,7 +74,7 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 	if (!GPHDUri_opt_exists(uri, PXF_PROFILE))
 	{
 		List	   *coreOptions = list_make2(ACCESSOR, RESOLVER);
-        if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
+		if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
 			coreOptions = lcons(FRAGMENTER, coreOptions);
 
 		GPHDUri_verify_core_options_exist(uri, coreOptions);
@@ -156,9 +158,16 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	GPHDUri    *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
 	Relation	relation = EXTPROTOCOL_GET_RELATION(fcinfo);
 
+	List *filter_quals = EXTPROTOCOL_GET_FILTER_QUALS(fcinfo);
+	char* filterstr = NULL;
+	if (filter_quals != NULL) {
+		elog(DEBUG1, "create_context: filter_quals is provided");
+		filterstr = serializePxfFilterQuals(filter_quals);
+	}
+
 	if (is_import) {
 		/* fetch data fragments */
-		get_fragments(uri, relation);
+		get_fragments(uri, relation, filterstr);
 	}
 
 	/* set context */
@@ -168,6 +177,7 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	initStringInfo(&context->uri);
 	initStringInfo(&context->write_file_name);
 	context->relation = relation;
+	context->filterstr = filterstr;
 
 	return context;
 }

@@ -521,7 +521,7 @@ class SQLIsolationTestCase:
     def run_sql_file(self, sql_file, out_file = None, out_dir = None, optimizer = None):
         """
         Given a sql file and an ans file, this adds the specified gucs (self.gucs) to the sql file , runs the sql
-        against the test case databse (self.db_name) and verifies the output with the ans file.
+        against the test case database (self.db_name) and verifies the output with the ans file.
         If an 'init_file' exists in the same location as the sql_file, this will be used
         while doing gpdiff.
         """

@@ -102,5 +102,8 @@ CdbHeap_DeleteMin(CdbHeap *hp);
 void
 CdbHeap_DeleteMinAndInsert(CdbHeap *hp, void* newElement);
 
+/* Insert a copy of the given element into the heap. */
+void
+CdbHeap_Insert(CdbHeap *hp, void *newElement);
 
 #endif   /* CDBHEAP_H */

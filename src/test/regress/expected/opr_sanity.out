@@ -931,10 +931,39 @@ WHERE p1.oid < p2.oid AND p1.proname = p2.proname AND
     p1.proisagg AND p2.proisagg AND
     array_dims(p1.proargtypes) != array_dims(p2.proargtypes)
 ORDER BY 1;
-     oid      |   oid   
---------------+---------
- count("any") | count()
-(1 row)
+                               oid                               |                               oid                               
+-----------------------------------------------------------------+-----------------------------------------------------------------
+ count("any")                                                    | count()
+ hyperloglog_distinct(anyelement,real,double precision)          | hyperloglog_distinct(anyelement,real)
+ hyperloglog_distinct(anyelement,real,double precision)          | hyperloglog_distinct(anyelement)
+ hyperloglog_distinct(anyelement,real)                           | hyperloglog_distinct(anyelement)
+ hyperloglog_accum(anyelement,real,double precision)             | hyperloglog_accum(anyelement,real,double precision,text)
+ hyperloglog_accum(anyelement,real,double precision)             | hyperloglog_accum(anyelement,real)
+ hyperloglog_accum(anyelement,real,double precision)             | hyperloglog_accum(anyelement)
+ hyperloglog_accum(anyelement,real,double precision)             | hyperloglog_accum(anyelement,text)
+ hyperloglog_accum(anyelement,real,double precision,text)        | hyperloglog_accum(anyelement,text)
+ hyperloglog_accum(anyelement,real,double precision,text)        | hyperloglog_accum(anyelement)
+ hyperloglog_accum(anyelement,real,double precision,text)        | hyperloglog_accum(anyelement,real,text)
+ hyperloglog_accum(anyelement,real,double precision,text)        | hyperloglog_accum(anyelement,real)
+ hyperloglog_accum_unsafe(anyelement,real,double precision)      | hyperloglog_accum_unsafe(anyelement,real,double precision,text)
+ hyperloglog_accum_unsafe(anyelement,real,double precision)      | hyperloglog_accum_unsafe(anyelement,real)
+ hyperloglog_accum_unsafe(anyelement,real,double precision)      | hyperloglog_accum_unsafe(anyelement)
+ hyperloglog_accum_unsafe(anyelement,real,double precision)      | hyperloglog_accum_unsafe(anyelement,text)
+ hyperloglog_accum_unsafe(anyelement,real,double precision,text) | hyperloglog_accum_unsafe(anyelement)
+ hyperloglog_accum_unsafe(anyelement,real,double precision,text) | hyperloglog_accum_unsafe(anyelement,text)
+ hyperloglog_accum_unsafe(anyelement,real,double precision,text) | hyperloglog_accum_unsafe(anyelement,real,text)
+ hyperloglog_accum_unsafe(anyelement,real,double precision,text) | hyperloglog_accum_unsafe(anyelement,real)
+ hyperloglog_accum(anyelement,real)                              | hyperloglog_accum(anyelement)
+ hyperloglog_accum(anyelement,real)                              | hyperloglog_accum(anyelement,real,text)
+ hyperloglog_accum(anyelement,real,text)                         | hyperloglog_accum(anyelement)
+ hyperloglog_accum(anyelement,real,text)                         | hyperloglog_accum(anyelement,text)
+ hyperloglog_accum_unsafe(anyelement,real)                       | hyperloglog_accum_unsafe(anyelement,real,text)
+ hyperloglog_accum_unsafe(anyelement,real)                       | hyperloglog_accum_unsafe(anyelement)
+ hyperloglog_accum_unsafe(anyelement,real,text)                  | hyperloglog_accum_unsafe(anyelement)
+ hyperloglog_accum_unsafe(anyelement,real,text)                  | hyperloglog_accum_unsafe(anyelement,text)
+ hyperloglog_accum(anyelement)                                   | hyperloglog_accum(anyelement,text)
+ hyperloglog_accum_unsafe(anyelement)                            | hyperloglog_accum_unsafe(anyelement,text)
+(30 rows)
 
 -- For the same reason, aggregates with default arguments are no good.
 SELECT oid, proname

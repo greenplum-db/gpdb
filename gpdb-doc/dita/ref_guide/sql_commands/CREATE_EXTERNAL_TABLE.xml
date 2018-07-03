@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Defines a new external table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [READABLE] EXTERNAL TABLE <varname>table_name</varname>     
+      <codeblock id="sql_command_synopsis">CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>     
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
      LOCATION ('file://<varname>seghost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
        | ('gpfdist://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
@@ -41,7 +41,7 @@
       [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
       [ROWS | PERCENT] ]
 
-CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
+CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>     
    ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
       LOCATION ('http://<varname>webhost</varname>[:<varname>port</varname>]/<varname>path</varname>/<varname>file</varname>' [, ...])
     | EXECUTE '<varname>command</varname>' [ON ALL 
@@ -70,7 +70,7 @@ CREATE [READABLE] EXTERNAL WEB TABLE <varname>table_name</varname>     
      [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
        [ROWS | PERCENT] ]
 
-CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
      LOCATION('gpfdist://<varname>outputhost</varname>[:<varname>port</varname>]/<varname>filename</varname>[#transform=<varname>trans_name</varname>]'
           [, ...])
@@ -94,7 +94,7 @@ CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
     [ ENCODING '<varname>write_encoding</varname>' ]
     [ DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
-CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
      LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
       [ON MASTER]
@@ -109,7 +109,7 @@ CREATE WRITABLE EXTERNAL TABLE <varname>table_name</varname>
                [FORCE QUOTE <varname>column</varname> [, ...]] ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
 
-CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
+CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table</varname> )
     EXECUTE '<varname>command</varname>' [ON ALL]
     FORMAT 'TEXT' 
@@ -173,6 +173,16 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
           <pd>The <codeph>s3</codeph> protocol does not support external web tables. You can,
             however, create an external web table that executes a third-party tool to read data from
             or write data to S3 directly.</pd>
+        </plentry>
+        <plentry>
+          <pt>TEMPORARY | TEMP</pt>
+          <pd>If specified, creates a temporary readable or writable external table definition
+            in Greenplum Database. Temporary external tables exist in a special schema; you cannot
+            specify a schema name when you create the table. Temporary external tables are
+            automatically dropped at the end of a session.</pd>
+          <pd>An existing permanent table with the same name is not visible to the current session
+            while the temporary table exists, unless you reference the permanent table with its
+            schema-qualified name.</pd>
         </plentry>
         <plentry>
           <pt>

@@ -967,12 +967,6 @@ PostmasterMain(int argc, char *argv[])
              )));
 	}
 
-	/*
-	 * This value of max_wal_senders will be inherited by all the child processes
-	 * through fork(). This value is used by XLogIsNeeded().
-	 */
-	max_wal_senders = 1;
-
 	if ( GpIdentity.numsegments < 0 )
 	{
 	    ereport(FATAL,
@@ -5132,19 +5126,6 @@ sigusr1_handler(SIGNAL_ARGS)
 		/* Advance postmaster's state machine */
 		PostmasterStateMachine();
 	}
-
-	// GPDB_91_MERGE_FIXME: We got this second copy of this block from upstream
-	// I'm not sure what to here..
-#if 0
-	
-	if (CheckPromoteSignal() && StartupPID != 0 &&
-		(pmState == PM_STARTUP || pmState == PM_RECOVERY ||
-		 pmState == PM_HOT_STANDBY || pmState == PM_WAIT_READONLY))
-	{
-		/* Tell startup process to finish recovery */
-		signal_child(StartupPID, SIGUSR2);
-	}
-#endif
 
 	PG_SETMASK(&UnBlockSig);
 

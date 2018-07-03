@@ -6,6 +6,8 @@
 
 #include "c.h"
 
+#include "postgres.h"
+
 /* Ignore ereport */
 #include "utils/elog.h"
 #undef ereport

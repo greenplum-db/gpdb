@@ -49,6 +49,7 @@ bool		includewal = false;
 bool		streamwal = false;
 bool		fastcheckpoint = false;
 bool		writerecoveryconf = false;
+bool		forceoverwrite = false;
 int			standby_message_timeout = 10 * 1000;		/* 10 sec = default */
 #define MAX_EXCLUDE 255
 int			num_exclude = 0;
@@ -380,7 +381,15 @@ verify_dir_is_empty_or_create(char *dirname)
 
 			/*
 			 * Exists, not empty
+			 *
+			 * In GPDB, we may force pg_basebackup to continue even if the
+			 * directory already exists. This is needed to preserve important
+			 * things that should not be deleted such as pg_log files if we
+			 * are doing segment recovery.
 			 */
+			if (forceoverwrite)
+				return;
+
 			fprintf(stderr,
 					_("%s: directory \"%s\" exists but is not empty\n"),
 					progname, dirname);
@@ -964,6 +973,25 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 					 * Directory
 					 */
 					filename[strlen(filename) - 1] = '\0';		/* Remove trailing slash */
+
+					/*
+					 * Since the forceoverwrite flag is being used, the
+					 * directories still exist. Remove them so that
+					 * pg_basebackup can create them. Skip when we detect
+					 * pg_log because we want to retain its contents.
+					 */
+					if (forceoverwrite && pg_check_dir(filename) != 0)
+					{
+						int filename_offset = strlen(filename) - 7;
+
+						/* replace with pg_str_endswith() after merging Postgres 9.5 */
+						if (filename_offset >= 0 &&
+							strcmp(filename + filename_offset, "/pg_log") == 0)
+							continue;
+
+						rmtree(filename, true);
+					}
+
 					if (mkdir(filename, S_IRWXU) != 0)
 					{
 						/*
@@ -1012,7 +1040,15 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 
 			/*
 			 * regular file
+			 *
+			 * In GPDB, we may need to remove the file first if we are forcing
+			 * an overwrite instead of starting with a blank directory. Some
+			 * files may have had their permissions changed to read only.
+			 * Remove the file instead of literally overwriting them.
 			 */
+			if (forceoverwrite)
+				remove(filename);
+
 			file = fopen(filename, "wb");
 			if (!file)
 			{
@@ -1654,6 +1690,7 @@ main(int argc, char **argv)
 		{"verbose", no_argument, NULL, 'v'},
 		{"progress", no_argument, NULL, 'P'},
 		{"exclude", required_argument, NULL, 'E'},
+		{"force-overwrite", no_argument, NULL, 128},
 		{NULL, 0, NULL, 0}
 	};
 	int			c;
@@ -1812,6 +1849,9 @@ main(int argc, char **argv)
 				}
 
 				excludes[num_exclude++] = xstrdup(optarg);
+				break;
+			case 128:
+				forceoverwrite = true;
 				break;
 			default:
 

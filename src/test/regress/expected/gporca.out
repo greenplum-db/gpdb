@@ -10114,6 +10114,8 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
+LOG:  Needs sample for foo_ctas
+LOG:  Computing Scalar Stats  column 1
 reset client_min_messages;
 reset log_min_duration_statement;
 reset log_statement;

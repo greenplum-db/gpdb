@@ -114,6 +114,7 @@
             <topicref href="guc-list.xml#gp_enable_sort_limit"/>
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
             <topicref href="guc-list.xml#gp_external_max_segs"/>
+            <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
             <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_count"/>
             <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_idle"/>
             <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_interval"/>
@@ -217,8 +218,6 @@
             <topicref href="guc-list.xml#max_appendonly_tables"/>
             <topicref href="guc-list.xml#max_connections"/>
             <topicref href="guc-list.xml#max_files_per_process"/>
-            <topicref href="guc-list.xml#max_fsm_pages"/>
-            <topicref href="guc-list.xml#max_fsm_relations"/>
             <topicref href="guc-list.xml#max_function_args"/>
             <topicref href="guc-list.xml#max_identifier_length"/>
             <topicref href="guc-list.xml#max_index_keys"/>

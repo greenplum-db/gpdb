@@ -3,6 +3,9 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+#include "utils/memutils.h"
+
 #include "../execAmi.c"
 
 /* ==================== ExecEagerFree ==================== */

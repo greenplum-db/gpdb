@@ -27,7 +27,7 @@ test: python_processed64bit
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain
 
-test: bitmap_index gp_dump_query_oids analyze gp_owner_permission
+test: bitmap_index gp_dump_query_oids analyze gp_owner_permission incremental_analyze
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
 test: dispatch

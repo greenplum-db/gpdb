@@ -192,9 +192,6 @@ class GpStart:
         self._check_version()
         self._check_master_running()
 
-        if not os.path.exists(self.master_datadir + '/pg_log'):
-            os.mkdir(self.master_datadir + '/pg_log')
-
     ######
     def _basic_setup(self):
         self.gphome = gp.get_gphome()

@@ -209,10 +209,6 @@ class GpSegStart:
                 #
                 # segment datadir exists
                 #
-                pg_log = os.path.join(datadir, 'pg_log')
-                if not os.path.exists(pg_log):
-                    os.mkdir(pg_log)
-                    
                 postmaster_pid = os.path.join(datadir, 'postmaster.pid')
                 if os.path.exists(postmaster_pid):
                     self.logger.warning("postmaster.pid file exists, checking if recovery startup required")

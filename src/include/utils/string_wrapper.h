@@ -18,6 +18,7 @@
 #include <string.h>
 #include <errno.h>
 #include <utils/elog.h>
+#include "utils/guc.h"
 
 #define NULL_TO_DUMMY_STR(s) ((s) == NULL ? "<<null>>" : (s))
 #define SAFE_STR_LENGTH(s) ((s) == NULL ? 0 : strlen(s))

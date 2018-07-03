@@ -65,6 +65,7 @@
 #include "storage/procarray.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_namespace.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 
@@ -91,19 +92,22 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		/* GPDB_91_MERGE_FIXME: what is the rationale of not dirtying local buffers? */
-		if (relation->rd_rel->relpersistence != RELPERSISTENCE_TEMP)
-			MarkBufferDirtyHint(buffer);
+		/*
+		 * Based on BM_PERMANENT it decides if should xlog for temp tables or
+		 * not. So, can safely call it for any buffer.
+		 */
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
 	/*
-	 * The GUC gp_disable_tuple_hints is on.  Do further evaluation whether we want to write out the
-	 * buffer or not.
+	 * The GUC gp_disable_tuple_hints is on. Do further evaluation whether we
+	 * want to write out the buffer or not.
 	 */
 	Assert(relation != NULL);
 
-	if (relation->rd_issyscat)
+	if (RelationGetRelid(relation) < FirstNormalObjectId ||
+		RelationGetNamespace(relation) == PG_AOSEGMENT_NAMESPACE)
 	{
 		/* Assume we want to always mark the buffer dirty */
 		MarkBufferDirtyHint(buffer);

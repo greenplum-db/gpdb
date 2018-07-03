@@ -1,0 +1,131 @@
+SET search_path = public, pg_catalog;
+SET
+BEGIN;
+BEGIN
+    SELECT hyperloglog_equal(hyperloglog_accum(i),hyperloglog_accum(i)) sparse_equality from generate_series(1,100) s(i);
+ sparse_equality 
+-----------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_equal(hyperloglog_accum(i),hyperloglog_accum(i)) sparse_equality2 from generate_series(1,1000) s(i);
+ sparse_equality2 
+------------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_equal(hyperloglog_accum(i),hyperloglog_accum(i)) dense_equality from generate_series(1,10000) s(i);
+ dense_equality 
+----------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_not_equal(hyperloglog_accum(i),hyperloglog_accum(i*-1)) sparse_inequality from generate_series(1,100) s(i);
+ sparse_inequality 
+-------------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_not_equal(hyperloglog_accum(i),hyperloglog_accum(i*-1)) sparse_inequality2 from generate_series(1,1000) s(i);
+ sparse_inequality2 
+--------------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_not_equal(hyperloglog_accum(i),hyperloglog_accum(i*-1)) dense_inequality from generate_series(1,10000) s(i);
+ dense_inequality 
+------------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_intersection(hyperloglog_accum(i),hyperloglog_accum(i*-1)) no_intersection_sparse from generate_series(1,100) s(i);
+ no_intersection_sparse 
+------------------------
+   -0.00029802712171545
+(1 row)
+
+  
+    SELECT hyperloglog_intersection(hyperloglog_accum(i),hyperloglog_accum(i*-1)) no_intersection_dense from generate_series(1,10000) s(i);
+ no_intersection_dense 
+-----------------------
+      190.209960892465
+(1 row)
+
+  
+    SELECT hyperloglog_intersection(hyperloglog_accum(i),hyperloglog_accum(i*-1)) intersection_sparse from generate_series(-10,100) s(i);
+ intersection_sparse 
+---------------------
+    20.9997651683389
+(1 row)
+
+  
+    SELECT hyperloglog_intersection(hyperloglog_accum(i),hyperloglog_accum(i*-1)) intersection_dense from generate_series(-1000,10000) s(i);
+ intersection_dense 
+--------------------
+   2223.72188397264
+(1 row)
+
+  
+    SELECT hyperloglog_intersection(hyperloglog_accum(i),hyperloglog_accum(i%100)) intersection_mixed from generate_series(1,10000) s(i);
+ intersection_mixed 
+--------------------
+   100.000149011019
+(1 row)
+
+  
+    SELECT hyperloglog_union(hyperloglog_accum(i),hyperloglog_accum(i)) union_sparse from generate_series(1,100) s(i);
+  union_sparse   
+-----------------
+ 100.00014901102
+(1 row)
+
+  
+    SELECT hyperloglog_union(hyperloglog_accum(i),hyperloglog_accum(i)) union_dense from generate_series(1,10000) s(i);
+   union_dense    
+------------------
+ 9998.40103485189
+(1 row)
+
+  
+    SELECT hyperloglog_union(hyperloglog_accum(i%5),hyperloglog_accum(i)) union_mixed1 from generate_series(1,10000) s(i);
+   union_mixed1   
+------------------
+ 9998.40103485189
+(1 row)
+
+  
+    SELECT hyperloglog_union(hyperloglog_accum(i),hyperloglog_accum(i%5)) union_mixed2 from generate_series(1,10000) s(i);
+   union_mixed2   
+------------------
+ 9998.40103485189
+(1 row)
+
+  
+    SELECT hyperloglog_compliment(hyperloglog_accum(i),hyperloglog_accum(i%100)) compliment from generate_series(1,10000) s(i);
+    compliment    
+------------------
+ 9898.40088584087
+(1 row)
+
+  
+    SELECT hyperloglog_compliment(hyperloglog_accum(i%100),hyperloglog_accum(i)) = 0 compliment from generate_series(1,10000) s(i);
+ compliment 
+------------
+ t
+(1 row)
+
+  
+    SELECT hyperloglog_symmetric_diff(hyperloglog_accum(i),hyperloglog_accum(i*-1))  symmetric_diff from generate_series(-1000,10000) s(i);
+  symmetric_diff  
+------------------
+ 17645.5802695852
+(1 row)
+
+ROLLBACK;
+ROLLBACK

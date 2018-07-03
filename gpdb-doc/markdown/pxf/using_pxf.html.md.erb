@@ -169,3 +169,35 @@ Greenplum Database passes the parameters in the `LOCATION` string as headers to 
 | \<formatting-properties\> | Formatting properties supported by the profile; for example, the `formatter` or `delimiter`.                                                                   |
 
 **Note:** When you create a PXF external table, you cannot use the `HEADER` option in your `FORMAT` specification.
+
+
+## <a id="filter-pushdown"></a>Filter pushdown
+
+PXF supports filter pushdown. When executing a `SELECT` query, the constraints from its `WHERE` clause can be extracted and passed to an external data source. This can speed up such queries and also reduce the amount of data transferred to Greenplum Database.
+
+To enable this feature (not only for PXF, but for all external data accessors in Greenplum database), set the GUC parameter `gp_external_enable_filter_pushdown` to `on` (default value is `off`).
+
+Not all external data sources support this feature. If such a source is accessed, the query will be executed without pushdown. Also, not all data types and operators are supported.
+
+The PXF accesses data sources using different connectors, and the connector may not support the pushdown feature. The following connectors do support pushdown:
+* HBase
+* Hive
+
+Supported data types:
+* `INT`, array of `INT`;
+* `FLOAT`;
+* `NUMERIC`;
+* `BOOL`;
+* `CHAR`, `TEXT`, array of `TEXT`;
+* `DATE`, `TIMESTAMP`.
+
+Supported operators:
+* `<`, `<=`, `>=`, `>`;
+* `<>`, `=`;
+* `IN`;
+* `LIKE` (only for `TEXT` fields).
+
+So, the pushdown feature works when:
+* The GPDB protocol to access external data supports pushdown (PXF does), and
+* The PXF connector supports pushdown, and
+* The external data source (database, ...) supports pushdown.

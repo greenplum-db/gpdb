@@ -3745,9 +3745,9 @@ NOTICE:  CREATE TABLE will create partition "mpp3487_1_prt_9" for table "mpp3487
 insert into mpp3487 select i from generate_series(1, 9) i;
 vacuum analyze mpp3487;
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds from pg_stats where tablename like 'mpp3487%' order by 2;
-  schemaname   |    tablename    | attname | null_frac | avg_width | n_distinct | most_common_freqs |  histogram_bounds   
----------------+-----------------+---------+-----------+-----------+------------+-------------------+---------------------
- bfv_partition | mpp3487         | i       |         0 |         4 |         -1 |                   | {1,2,3,4,5,6,7,8,9}
+  schemaname   |    tablename    | attname | null_frac | avg_width | n_distinct | most_common_freqs | histogram_bounds 
+---------------+-----------------+---------+-----------+-----------+------------+-------------------+------------------
+ bfv_partition | mpp3487         | i       |         0 |         4 |         -1 |                   | 
  bfv_partition | mpp3487_1_prt_1 | i       |         0 |         4 |         -1 |                   | 
  bfv_partition | mpp3487_1_prt_2 | i       |         0 |         4 |         -1 |                   | 
  bfv_partition | mpp3487_1_prt_3 | i       |         0 |         4 |         -1 |                   | 

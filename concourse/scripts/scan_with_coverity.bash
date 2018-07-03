@@ -6,7 +6,7 @@ export GPDB_ARTIFACTS_DIR
 GPDB_ARTIFACTS_DIR=$BASE_DIR/$OUTPUT_ARTIFACT_DIR
 
 function prep_env_for_centos() {
-  BLDARCH=rhel7_x86_64
+  BLD_ARCH=rhel7_x86_64
   echo "Detecting java7 path ..."
   java7_packages=($(rpm -qa | grep -F java-1.7))
   java7_bin="$(rpm -ql "${java7_packages[@]}" | grep /jre/bin/java$)"
@@ -15,7 +15,7 @@ function prep_env_for_centos() {
   ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
   source /opt/gcc_env.sh
 
-  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLDARCH}/python-2.7.12 /opt/python-2.7.12
+  ln -sf "$BASE_DIR"/gpdb_src/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 

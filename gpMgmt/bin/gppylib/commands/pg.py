@@ -268,7 +268,7 @@ class PgControlData(Command):
         return self.datadir
 
 class PgBaseBackup(Command):
-    def __init__(self, pgdata, host, port, excludePaths=[], ctxt=LOCAL, remoteHost=None):
+    def __init__(self, pgdata, host, port, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False):
         cmd_tokens = ['pg_basebackup',
                            '-x', '-R',
                            '-c', 'fast']
@@ -278,11 +278,13 @@ class PgBaseBackup(Command):
         cmd_tokens.append(host)
         cmd_tokens.append('-p')
         cmd_tokens.append(port)
+
+        if forceoverwrite:
+            cmd_tokens.append('--force-overwrite')
+
         # We exclude certain unnecessary directories from being copied as they will greatly
         # slow down the speed of gpinitstandby if containing a lot of data
         if excludePaths is None or len(excludePaths) == 0:
-            cmd_tokens.append('-E')
-            cmd_tokens.append('./pg_log')
             cmd_tokens.append('-E')
             cmd_tokens.append('./db_dumps')
             cmd_tokens.append('-E')
@@ -291,6 +293,8 @@ class PgBaseBackup(Command):
             cmd_tokens.append('./gpperfmon/logs')
             cmd_tokens.append('-E')
             cmd_tokens.append('./promote')
+            cmd_tokens.append('-E')
+            cmd_tokens.append('./gp_dbid')
         else:
             for path in excludePaths:
                 cmd_tokens.append('-E')

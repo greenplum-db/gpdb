@@ -22,7 +22,7 @@ select count(*), sum(t1a), sum(t2a), sum(t1a - t2a) from spilltestresult1;
 -- Test Hash Aggregation when the work mem is too small for the hash table
 create table spilltest (a integer, b integer);
 insert into spilltest select a, a%25 from generate_series(1,8000) a;
-analyze;
+analyze spilltest;
 set enable_hashagg=on;
 set enable_groupagg=off;
 set statement_mem=10000;
@@ -34,7 +34,7 @@ select b,count(*) from spilltest group by b;
 drop table if exists spilltest;
 create table spilltest (a integer, b integer);
 insert into spilltest select a, a%25 from generate_series(1,800000) a;
-analyze; -- We have to do an analyze to force a hash join
+analyze spilltest; -- We have to do an analyze to force a hash join
 set enable_mergejoin=off;
 set enable_nestloop=off;
 set enable_hashjoin=on;

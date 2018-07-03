@@ -270,7 +270,7 @@ db = ...
                 <pt>logfile</pt>
                 <pd>Specifies the location of the log file. The log file is kept open. After log
                   rotation execute <codeph>kill -HUP</codeph> or run the <codeph>RELOAD;</codeph>
-                  command in the PgBouncer Administrative Console. <p>Default: not set.</p><note> On
+                  command in the PgBouncer Administration Console. <p>Default: not set.</p><note> On
                     Windows machines, the service must be stopped and started</note>.</pd>
               </plentry>
               <plentry>

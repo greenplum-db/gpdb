@@ -103,4 +103,8 @@ s/\d+ was concurrently dropped/##### was concurrently dropped/
 # Segment number is not predictable
 m/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/
 s/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/ERROR:  There are more external files (URLs) than primary segments that can read them./
+
+# Mask out linenumber of the erroring file
+m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge \(analyze.c:\d+\)/
+s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge \(analyze.c:\d+\)/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
 -- end_matchsubs

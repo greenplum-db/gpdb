@@ -747,7 +747,7 @@ standby_desc_running_xacts(StringInfo buf, xl_running_xacts *xlrec)
 }
 
 void
-standby_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
+standby_desc(StringInfo buf, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	char		*rec = XLogRecGetData(record);

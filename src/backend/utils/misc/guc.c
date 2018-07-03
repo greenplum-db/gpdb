@@ -2078,7 +2078,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&max_wal_senders,
-		0, 0, MAX_BACKENDS,
+		1, 0, 1, /* GPDB doesn't support 1:n replication yet */
 		NULL, NULL, NULL
 	},
 

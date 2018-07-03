@@ -915,7 +915,8 @@ class ConfigureNewSegment(Command):
     """
 
     def __init__(self, name, confinfo, newSegments=False, tarFile=None,
-                 batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False):
+                 batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
+                 forceoverwrite=False):
         cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\"' % (confinfo)
         if newSegments:
             cmdStr += ' -n'
@@ -929,6 +930,8 @@ class ConfigureNewSegment(Command):
             cmdStr += " --validation-only"
         if writeGpIdFileOnly:
             cmdStr += " --write-gpid-file-only"
+        if forceoverwrite:
+            cmdStr += " --force-overwrite"
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
@@ -1198,10 +1201,6 @@ def start_standbymaster(host, datadir, port, dbid, ncontents, era=None,
 
     if res:
         logger.warning("Unable to cleanup previously started standby: '%s'" % res)
-
-    #create a pg_log directory if necessary
-    CreateDirIfNecessary.remote('create standby logdir if needed', host, datadir + "/pg_log")
-
 
     cmd = GpStandbyStart.remote('start standby master',
                                 host, datadir, port, ncontents, dbid, era=era,

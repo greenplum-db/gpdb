@@ -19,10 +19,6 @@
       clear text connection.</p>
     <p>To use LDAP authentication, the Greenplum Database master host must be configured as an LDAP
       client. See your LDAP documentation for information about configuring LDAP clients.</p>
-    <note type="note">The PgBouncer connection pooler bundled with Greenplum Database is modified to
-      support LDAP or Active Directory authentication for users connecting to Greenplum Database
-      through the connection pooler. See <xref
-        href="access_db/topics/pgbouncer.xml#topic_m2h_5dj_5s"/> for instructions. </note>
     <section>
       <title>Enabing LDAP Authentication with STARTTLS and TLS</title>
       <p>To enable STARTTLS with the TLS protocol, in the pg_hba.conf file, add an

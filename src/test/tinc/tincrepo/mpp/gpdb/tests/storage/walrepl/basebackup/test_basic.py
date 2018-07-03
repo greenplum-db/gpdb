@@ -81,13 +81,3 @@ class simple(MPPTestCase):
              subprocess.check_call(['pg_basebackup', '-x', '-D', dest_dir])
         self.assertEqual(c.exception.returncode, 1)
         self.assertTrue(self.check_dir(dest_dir,'pg_xlog'))
-
-    def test_exclude_option(self):
-        """
-        @tags sanity
-        """
-
-        subprocess.check_call(['pg_basebackup', '-E', './pg_log', '-D',
-                               simple.DESTDIR])
-        pg_log = os.path.join(simple.DESTDIR, 'pg_log')
-        self.assertFalse(os.path.exists(pg_log))

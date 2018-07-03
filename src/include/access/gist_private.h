@@ -297,7 +297,7 @@ extern GISTInsertStack *gistFindPath(Relation r, BlockNumber child);
 
 /* gistxlog.c */
 extern void gist_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void gist_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void gist_desc(StringInfo buf, XLogRecord *record);
 extern void gist_xlog_startup(void);
 extern void gist_xlog_cleanup(void);
 extern void gist_mask(char *pagedata, BlockNumber blkno);

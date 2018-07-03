@@ -3,6 +3,9 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+#include "utils/memutils.h"
+
 #include <poll.h>
 
 static int poll_expected_return_value;

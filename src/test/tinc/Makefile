@@ -58,11 +58,6 @@ runaway_query:
 		resource_management.runaway_query.runaway_query_vmem_memoryaccounting.test_runaway_query_vmem_memoryaccounting.RQTMemoryAccountingTestCase \
 		resource_management.runaway_query.runaway_query_stress.test_runaway_query_stress.RunawayQueryStressTestCase
 
-memory_accounting:
-	$(TESTER) \
-		resource_management.memory_accounting.test_oom.OOMTestCase \
-		resource_management.memory_accounting.too_many_exec_accounts.test_exec_accounts
-
 # gpexpand test
 gpexpand_1:
 	$(TESTER) $(DISCOVER) \

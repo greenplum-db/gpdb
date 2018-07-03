@@ -354,6 +354,6 @@ extern OffsetNumber _hash_binsearch_last(Page page, uint32 hash_value);
 
 /* hash.c */
 extern void hash_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void hash_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void hash_desc(StringInfo buf, XLogRecord *record);
 
 #endif   /* HASH_H */

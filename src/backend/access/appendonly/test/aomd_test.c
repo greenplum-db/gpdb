@@ -4,6 +4,7 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "utils/memutils.h"
 #include "access/appendonlywriter.h"
 #include "catalog/pg_tablespace.h"
 

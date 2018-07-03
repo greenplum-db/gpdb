@@ -149,8 +149,6 @@ select 1 where 22  in (SELECT unnest(array[1,2,22]));
 
 select 1 where 22 not in (SELECT unnest(array[1,2,22]));
 
--- Error when using subquery : no parameter found for initplan subquery
-
 -- start_ignore
 drop table if exists mpp_t1;
 drop table if exists mpp_t2;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -xeuo pipefail
 
 _main() {
 	local HADOOP=$HADOOP_HOME/bin/hadoop
@@ -31,12 +31,13 @@ _main() {
 	python ${CURDIR}/create_data.py 500000 all > ${DYNDATADIR}/all_100.txt
 	sed 's/bigint/text/g' ${DYNDATADIR}/bigint.txt > ${DYNDATADIR}/bigint_text.txt
 
-	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
-	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/extwrite/
-	$HADOOP fs -mkdir -p hdfs://${HADOOP_HOST}:${HADOOP_PORT}/parquet/
-	$UPLOADCMD $DATADIR/*.txt  hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
-	$UPLOADCMD $DATADIR/*.parquet  hdfs://${HADOOP_HOST}:${HADOOP_PORT}/parquet/
-	$UPLOADCMD $DYNDATADIR/* hdfs://${HADOOP_HOST}:${HADOOP_PORT}/plaintext/
+	$HADOOP fs -mkdir -p /plaintext/
+	$HADOOP fs -mkdir -p /extwrite/
+	$HADOOP fs -mkdir -p /parquet/
+	$UPLOADCMD $DATADIR/*.txt /plaintext/
+	$UPLOADCMD $DATADIR/*.parquet /parquet/
+	$UPLOADCMD $DYNDATADIR/* /plaintext/
+
 }
 
 _main "$@"

@@ -180,12 +180,12 @@
         the work of that query. The <i>interconnect</i> refers to the inter-process communication
         between the segments, as well as the network infrastructure on which this communication
         relies. The interconnect uses a standard 10 Gigabit Ethernet switching fabric.</p>
-      <p>By default, Greeplum Database interconnect uses UDP (User Datagram Protocol) with flow
+      <p>By default, Greenplum Database interconnect uses UDP (User Datagram Protocol) with flow
         control for interconnect traffic to send messages over the network. The Greenplum software
         does the additional packet verification and checking not performed by UDP, so the
         reliability is equivalent to TCP (Transmission Control Protocol), and the performance and
         scalability exceeds that of TCP. For information about the types of interconnect compatible
-        with Greeplum Database, see server configuration parameter
+        with Greenplum Database, see server configuration parameter
           <codeph>gp_interconnect_type</codeph> in the <cite>Greenplum Database Reference
           Guide</cite>.</p>
     </body>

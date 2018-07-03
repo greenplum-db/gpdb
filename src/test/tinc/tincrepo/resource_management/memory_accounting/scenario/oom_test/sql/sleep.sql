@@ -1,6 +1,0 @@
--- @author ramans2
--- @created 2014-02-05 12:00:00
--- @modified 2014-02-05 12:00:00
--- @description Sleep query
-
-select count(1) from lineitem, (select pg_sleep(100)) as t;

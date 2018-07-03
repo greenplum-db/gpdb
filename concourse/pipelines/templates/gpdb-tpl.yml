@@ -50,7 +50,6 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - QP_memory-accounting
   - icw_extensions_gpcloud_centos6
 {% endif %}
 {% if "centos7" in os_types %}
@@ -112,8 +111,22 @@ groups:
   ## --------------------------------------------------------------------
   - gate_ud_start
   - regression_tests_pxf
-  - regression_tests_gphdfs_centos
+  - regression_tests_gphdfs_hadoop_centos
+  - regression_tests_gphdfs_mapr_centos
 {% endif %}
+{% if "AA" in test_sections %}
+  ## --------------------------------------------------------------------
+  - gate_advanced_analytics_start
+{% if "centos6" in os_types %}
+  - MADlib_Test_orca_centos6
+  - MADlib_Test_planner_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+  - MADlib_Test_orca_centos7
+  - MADlib_Test_planner_centos7
+{% endif %}
+{% endif %}
+
 
 {% if pipeline_type == "prod" %}
 ## ======================================================================
@@ -171,7 +184,6 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - QP_memory-accounting
   - icw_extensions_gpcloud_centos6
   - compile_gpdb_centos6
 {% endif %}
@@ -265,10 +277,26 @@ groups:
   jobs:
   - gate_ud_start
   - regression_tests_pxf
-  - regression_tests_gphdfs_centos
+  - regression_tests_gphdfs_hadoop_centos
+  - regression_tests_gphdfs_mapr_centos
   - compile_gpdb_centos6
 
 {% endif %}
+
+{% if "AA" in test_sections %}
+- name: AdvancedAnalytics
+  jobs:
+  - gate_advanced_analytics_start
+{% if "centos6" in os_types %}
+  - MADlib_Test_orca_centos6
+  - MADlib_Test_planner_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+  - MADlib_Test_orca_centos7
+  - MADlib_Test_planner_centos7
+{% endif %}
+{% endif %}
+
 ## ======================================================================
 ##                                           _
 ##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___
@@ -296,7 +324,8 @@ resources:
       "Replication"      in test_sections or
       "ResourceGroups"     in test_sections or
       "Interconnect"     in test_sections or
-      "CLI"      in test_sections %}
+      "CLI"      in test_sections or
+      "UD"      in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -611,6 +640,25 @@ resources:
     stop: 7:00 AM
 
 {% endif %}
+{% if "AA" in test_sections %}
+- name: madlib_ci
+  type: git
+  source:
+    branch: {{madlib-ci-git-branch}}
+    uri: {{madlib-ci-git-remote}}
+    private_key: {{madlib-ci-git-key}}
+
+- name: madlib_gppkg
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-gppkg-bucket}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: {{madlib-gpdb6-centos6-gppkg}}
+
+{% endif %}
+
 - name: reduced-frequency-trigger
   type: time
   source:
@@ -618,7 +666,6 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
     start: {{reduced-frequency-trigger-start}}
     stop: {{reduced-frequency-trigger-stop}}
-
 ## ======================================================================
 ##                   _
 ##   __ _ _ __   ___| |__   ___  _ __ ___
@@ -767,14 +814,22 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
     - get: centos-gpdb-dev-6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      TASK_OS: centos
+      TASK_OS_VERSION: 6
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -795,14 +850,22 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
     - get: centos-gpdb-build-7
-  - task: compile_gpdb
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-build-7
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 7
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
+  - task: compile_gpdb
+    image: centos-gpdb-build-7
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
@@ -822,13 +885,22 @@ jobs:
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
+    - get: centos-gpdb-build-7
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
+    image: centos-gpdb-build-7
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: sles
+      TARGET_OS_VERSION:
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: sles
       TARGET_OS_VERSION:
@@ -930,18 +1002,30 @@ jobs:
       tags: ["wix"]
     - get: centos-mingw
       tags: ["wix"]
+    - get: centos-gpdb-build-7
+      tags: ["wix"]
+  - task: sync_tools
+    tags: ["wix"]
+    file: gpdb_src/concourse/tasks/sync_tools.yml
+    image: centos-gpdb-build-7
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: win32
+      TARGET_OS_VERSION:
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
   - task: compile_gpdb
     tags: ["wix"]
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-mingw
     params:
+      CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: win32
       TARGET_OS_VERSION:
-      BLD_TARGETS: clients loaders
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      BLD_TARGETS: "clients loaders"
   - aggregate:
     - put: bin_gpdb_windows_clients
       tags: ["wix"]
@@ -1119,25 +1203,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       TEST_OS: centos
-
-- name: QP_memory-accounting
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-      trigger: [[ test_trigger ]]
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: memory-accounting
-    timeout: 3h
-    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: memory_accounting
-      TEST_OS: "centos"
-      CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -1398,7 +1463,6 @@ jobs:
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
-      - QP_memory-accounting
       - icw_extensions_gpcloud_centos6
 {% endif %}
     - get: gpdb_src
@@ -1408,7 +1472,6 @@ jobs:
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
-      - QP_memory-accounting
       - icw_extensions_gpcloud_centos6
 {% endif %}
 {% if 'ubuntu16' in os_types %}
@@ -2129,7 +2192,7 @@ jobs:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
-- name: regression_tests_gphdfs_centos
+- name: regression_tests_gphdfs_hadoop_centos
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2146,7 +2209,158 @@ jobs:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
+- name: regression_tests_gphdfs_mapr_centos
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_ud_start]
+    - get: bin_gpdb
+      passed: [gate_ud_start]
+      trigger: [[ test_trigger ]]
+      resource: bin_gpdb_centos6
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 1
+        PLATFORM: centos7
+        instance_type: n1-standard-4
+  - task: gen_and_initialize_mapr
+    file: gpdb_src/concourse/tasks/gen_mapr.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: regression_tests_gphdfs_mapr
+    file: gpdb_src/concourse/tasks/regression_tests_gphdfs_mapr.yml
+    image: centos-gpdb-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
 {% endif %}
+
+{% if "AA" in test_sections %}
+## ======================================================================
+##     _        _
+##    / \      / \
+##   / _ \    / _ \
+##  / ___ \  / ___ \
+## /_/   \_\/_/   \_\
+## ======================================================================
+- name: gate_advanced_analytics_start
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+{% if "centos6" in os_types %}
+      - compile_gpdb_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+      - compile_gpdb_centos7
+{% endif %}
+      trigger: true
+{% if "centos6" in os_types %}
+    - get: bin_gpdb_centos6
+      passed:
+      - compile_gpdb_centos6
+{% endif %}
+{% if "centos7" in os_types %}
+    - get: bin_gpdb_centos7
+      passed:
+      - compile_gpdb_centos7
+{% endif %}
+
+{% if "centos6" in os_types %}
+- name: MADlib_Test_planner_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "off"
+      DBVER: gpdb6-assert
+
+- name: MADlib_Test_orca_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "on"
+      DBVER: gpdb6-assert
+{% endif %}
+
+{% if "centos7" in os_types %}
+- name: MADlib_Test_planner_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-test-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-test-7
+    params:
+      TEST_OS: centos
+      ORCA: "off"
+      DBVER: gpdb6-assert
+
+- name: MADlib_Test_orca_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-test-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-test-7
+    params:
+      TEST_OS: centos
+      ORCA: "on"
+      DBVER: gpdb6-assert
+{% endif %}
+{% endif %}
+
 {% if pipeline_type == "prod" %}
 ## ======================================================================
 ##  ____      _
@@ -2188,14 +2402,18 @@ jobs:
       - resource_group_sles12
       - segwalrep_mirrorless_centos6
       - walrep_2
-      - QP_memory-accounting
-      - regression_tests_gphdfs_centos
+      - regression_tests_gphdfs_hadoop_centos
+      - regression_tests_gphdfs_mapr_centos
       - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
       - gpaddmirrors
       - gpexpand
       - gpcheck
@@ -2215,14 +2433,16 @@ jobs:
       - resource_group_centos6
       - segwalrep_mirrorless_centos6
       - walrep_2
-      - QP_memory-accounting
-      - regression_tests_gphdfs_centos
+      - regression_tests_gphdfs_hadoop_centos
+      - regression_tests_gphdfs_mapr_centos
       - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
       - gpexpand
       - gpcheck
       - gppkg
@@ -2236,6 +2456,8 @@ jobs:
       - icw_gporca_centos7
       - icw_planner_centos7
       - resource_group_centos7
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
     - get: bin_gpdb_sles11
       trigger: true
       passed:

@@ -47,7 +47,7 @@ m/INFO client.RMProxy/
 -- m/gphdfs:\/\/.*:\d+/
 -- s/gphdfs:\/\/.*:\d+/gphdfs:\/\/<hostname>:<port>/
 -- m/gphdfs:\/\/.*\//
--- s/gphdfs:\/\/.*\//gphdfs:\/\/<maprhostname>/
+-- s/gphdfs:\/\/.*\//gphdfs:\/\/mapr\/mapr/
 -- m/gpfdist:\/\/.*:\d+/
 -- s/gpfdist:\/\/.*:\d+/gpfdist:\/\/<hostname>:<port>/
 -- m/\d+\/\d+\/\d+ \d+:\d+:\d+/

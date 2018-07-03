@@ -269,6 +269,19 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_MCELEM  4
 
+/*
+ * A "hyperloglog" slot stores the hyperloglog_counter created for sampled data.
+ * This hyperloglog_counter data structure is converted into a bytea and stored
+ * in "stavalues4" slot of pg_statistic catalog table
+ */
+#define STATISTIC_KIND_HLL  99
 
+/*
+ * A "full hyperloglog" slot is similar to "hyperloglog" slot, except it stores
+ * the "hyperloglog_counter" created for full table scan.
+ * This hyperloglog_counter data structure is converted into a bytea and stored
+ * in "stavalues4" slot of pg_statistic catalog table
+ */
+#define STATISTIC_KIND_FULLHLL  98
 
 #endif   /* PG_STATISTIC_H */

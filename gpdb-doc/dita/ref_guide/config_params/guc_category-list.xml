@@ -226,25 +226,6 @@
         </simpletable>
       </body>
     </topic>
-    <topic id="topic17" xml:lang="en">
-      <title>Free Space Map Parameters</title>
-      <body>
-        <p>These parameters control the sizing of the <i>free space map, which contains </i>expired
-          rows. Use <codeph>VACUUM</codeph> to reclaim the free space map disk space.</p>
-        <simpletable id="d1e409" frame="none">
-          <strow>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#max_fsm_pages" type="section">max_fsm_pages</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#max_fsm_relations" type="section">max_fsm_relations</xref>
-              </p>
-            </stentry>
-          </strow>
-        </simpletable>
-      </body>
-    </topic>
     <topic id="topic18" xml:lang="en">
       <title>OS Resource Parameters</title>
       <body>

@@ -252,7 +252,7 @@ class GpRecoverSegmentProgram:
         self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
-                                   self.__options.parallelDegree)
+                                   self.__options.parallelDegree, forceoverwrite=True)
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -387,7 +387,8 @@ class GpRecoverSegmentProgram:
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                    self.__options.parallelDegree,
-                                   interfaceHostnameWarnings)
+                                   interfaceHostnameWarnings,
+                                   forceoverwrite=True)
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:

@@ -117,23 +117,10 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	{
 		return;
 	}
-
+	Assert(!am_walsender);
 	elogif(debug_walrepl_syncrep, LOG,
 			"syncrep wait -- This backend's commit LSN for syncrep is %X/%X.",
 			XactCommitLSN.xlogid,XactCommitLSN.xrecoff);
-
-	/* GPDB_91_MERGE_FIXME: is this still relevant after PT and filerep removal? */
-	/*
-	 * Walsenders are not supposed to call this function, but currently
-	 * basebackup needs to access catalog, hence open/close transaction.
-	 * It doesn't make sense to wait for myself anyway.
-	 */
-	if (am_walsender)
-	{
-		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep as this process is a walsender.");
-		return;
-	}
 
 	/* Fast exit if user has not requested sync replication. */
 	if (!SyncRepRequested())
@@ -294,7 +281,11 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		 */
 		if (ProcDiePending)
 		{
-			ereport(WARNING,
+			/*
+			 * FATAL only for QE's which use 2PC and hence can handle the
+			 * FATAL and retry.
+			 */
+			ereport(IS_QUERY_DISPATCHER() ? WARNING:FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
 					 errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command"),
 					 errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
@@ -713,10 +704,21 @@ SyncRepQueueIsOrderedByLSN(int mode)
 	while (proc)
 	{
 		/*
-		 * Check the queue is ordered by LSN and that multiple procs don't
-		 * have matching LSNs
+		 * Check the queue is ordered by LSN.
+		 *
+		 * In upstream this check also validates that multiple procs don't
+		 * have matching LSNs. This restriction is lifted in GPDB as for
+		 * commit-prepared retry case since we don't know the exact lsn of
+		 * commit-prepared record, need to wait for latest flush point
+		 * lsn. So, its possible due to concurrency multiple backends register
+		 * in queue with same lsn value. The check here anyways seems little
+		 * restrictive as actual queue usage only needs it in sorted order and
+		 * not really relies on having unique entries. It just happens to be
+		 * that if all usage of SyncRepWaitForLSN() feed unique lsn value
+		 * upstream and in GPDB except from FinishPreparedTransaction(), but
+		 * not required for correct functioning of the code.
 		 */
-		if (XLByteLE(proc->waitLSN, lastLSN))
+		if (XLByteLT(proc->waitLSN, lastLSN))
 			return false;
 
 		lastLSN = proc->waitLSN;

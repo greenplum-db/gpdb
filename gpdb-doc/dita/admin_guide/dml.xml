@@ -340,23 +340,5 @@
         database data. See the <codeph>VACUUM</codeph> command in the <cite>Greenplum Database
           Reference Guide</cite> for information about using the command.</note>
     </body>
-    <topic id="topic10" xml:lang="en">
-      <title>Configuring the Free Space Map</title>
-      <body>
-        <p>Expired rows are held in the <i>free space map</i>. The free space map must be sized
-          large enough to hold all expired rows in your database. If not, a regular
-            <codeph>VACUUM</codeph> command cannot reclaim space occupied by expired rows that
-          overflow the free space map.</p>
-        <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, but it is an expensive
-          operation and can take an unacceptably long time to finish on large, distributed Greenplum
-          Database tables. If the free space map overflows, you can recreate the table with a
-            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM FULL</codeph> is discouraged.</p>
-        <p>Size the free space map with the following server configuration parameters:<ul
-            id="ul_cj2_xc5_h4">
-            <li><codeph>max_fsm_pages</codeph></li>
-            <li><codeph>max_fsm_relations</codeph></li>
-          </ul></p>
-      </body>
-    </topic>
   </topic>
 </topic>

@@ -433,6 +433,69 @@ DROP
 DROP RESOURCE GROUP rg_concurrency_test;
 DROP
 
+-- test10: gp_resource_group_bypass
+DROP ROLE IF EXISTS role_concurrency_test;
+DROP
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+ERROR:  resource group "rg_concurrency_test" does not exist
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+CREATE
+61: SET ROLE role_concurrency_test;
+SET
+61: SET gp_resource_group_bypass to on;
+SET
+61: SHOW gp_resource_group_bypass;
+gp_resource_group_bypass
+------------------------
+on                      
+(1 row)
+61: CREATE TABLE table_concurrency_test (c1 int);
+CREATE
+61: INSERT INTO  table_concurrency_test SELECT generate_series(1,100);
+INSERT 100
+61: SELECT count(*) FROM table_concurrency_test;
+count
+-----
+100  
+(1 row)
+61: DROP TABLE table_concurrency_test;
+DROP
+61: SET gp_resource_group_bypass to off;
+SET
+61: SHOW gp_resource_group_bypass;
+gp_resource_group_bypass
+------------------------
+off                     
+(1 row)
+61q: ... <quitting>
+DROP ROLE role_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg_concurrency_test;
+DROP
+
+-- test11: gp_resource_group_bypass is not allowed inside a transaction block
+DROP FUNCTION IF EXISTS func_resgroup_bypass_test(int);
+DROP
+
+CREATE FUNCTION func_resgroup_bypass_test(c1 int) RETURNS INT AS $$ SET gp_resource_group_bypass TO ON; -- inside a function SELECT 1 $$ LANGUAGE SQL;
+CREATE
+BEGIN;
+BEGIN
+SET gp_resource_group_bypass to on;
+ERROR:  SET gp_resource_group_bypass cannot run inside a transaction block
+ABORT;
+ABORT
+SELECT func_resgroup_bypass_test(1);
+ERROR:  SET gp_resource_group_bypass cannot run inside a transaction block
+CONTEXT:  SQL function "func_resgroup_bypass_test" statement 1
+DROP FUNCTION func_resgroup_bypass_test(int);
+DROP
+
 --
 -- Test cursors, pl/* functions only take one slot.
 --

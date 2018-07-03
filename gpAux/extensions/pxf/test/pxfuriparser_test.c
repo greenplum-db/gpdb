@@ -22,6 +22,9 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+#include "utils/memutils.h"
+
 /* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
 #define UNIT_TESTING
 
@@ -116,17 +119,6 @@ test_parseGPHDUri_NegativeTestMissingEqual(void **state)
 	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER";
 
 	test_parseGPHDUri_helper(uri, ": option 'FRAGMENTER' missing '='");
-}
-
-/*
- * Negative test: parsing of a uri with duplicate equals
- */
-void
-test_parseGPHDUri_NegativeTestDuplicateEquals(void **state)
-{
-	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter=DuplicateFragmenter";
-
-	test_parseGPHDUri_helper(uri, ": option 'FRAGMENTER=HdfsDataFragmenter=DuplicateFragmenter' contains duplicate '='");
 }
 
 /*
@@ -330,7 +322,6 @@ main(int argc, char *argv[])
 		unit_test(test_parseGPHDUri_NegativeTestNoProtocol),
 		unit_test(test_parseGPHDUri_NegativeTestNoOptions),
 		unit_test(test_parseGPHDUri_NegativeTestMissingEqual),
-		unit_test(test_parseGPHDUri_NegativeTestDuplicateEquals),
 		unit_test(test_parseGPHDUri_NegativeTestMissingKey),
 		unit_test(test_parseGPHDUri_NegativeTestMissingValue),
 		unit_test(test_GPHDUri_opt_exists),

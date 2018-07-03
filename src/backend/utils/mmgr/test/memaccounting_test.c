@@ -24,6 +24,7 @@ int elevel;
 
 static void elog_mock(int elevel, const char *fmt,...);
 static void write_stderr_mock(const char *fmt,...);
+int fwrite_mock(const char *data, Size size, Size count, FILE *file);
 
 /* We will capture write_stderr output using write_stderr_mock */
 #define write_stderr write_stderr_mock

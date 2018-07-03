@@ -39,6 +39,7 @@ build_http_headers(PxfInputData *input)
 	CHURL_HEADERS headers = input->headers;
 	GPHDUri    *gphduri = input->gphduri;
 	Relation	rel = input->rel;
+	char *filterstr = input->filterstr;
 
 	if (rel != NULL)
 	{
@@ -82,8 +83,13 @@ build_http_headers(PxfInputData *input)
 	churl_headers_append(headers, "X-GP-URI", gphduri->uri);
 
 	/* filters */
-	/* TODO port filter logic, for now assume no filters */
-	churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
+	if (filterstr == NULL) {
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
+	}
+	else {
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+		churl_headers_append(headers, "X-GP-FILTER", filterstr);
+	}
 }
 
 /* Report alignment size to remote component

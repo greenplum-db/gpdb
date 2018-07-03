@@ -109,6 +109,7 @@ install-data: $(BKIFILES) installdirs
 	$(INSTALL_DATA) $(call vpathsearch,cdb_schema.sql) '$(DESTDIR)$(datadir)/cdb_init.d/cdb_schema.sql'
 	$(INSTALL_DATA) $(srcdir)/sql_features.txt '$(DESTDIR)$(datadir)/sql_features.txt'
 	$(INSTALL_DATA) $(call vpathsearch,gp_toolkit.sql) '$(DESTDIR)$(datadir)/cdb_init.d/gp_toolkit.sql'
+	$(INSTALL_DATA) $(call vpathsearch,hyperloglog_counter.sql) '$(DESTDIR)$(datadir)/cdb_init.d/hyperloglog_counter.sql'
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(datadir)'

@@ -1,63 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<dita>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
   <topic id="topic_fstrm">
     <title>Using the PgBouncer Connection Pooler </title>
-    <shortdesc>The PgBouncer utility manages connection pools for PostgreSQL and Greenplum Database
-      connections.</shortdesc>
     <body>
-      <p>The Greenplum Database installation includes the PgBouncer connection pooling software. The
-        following topics describe how to set up and use PgBouncer with Greenplum Database. See the
-          <xref href="https://pgbouncer.github.io" format="html" scope="external">PgBouncer Web
+      <p>The PgBouncer utility manages connection pools for PostgreSQL and Greenplum Database
+      connections.</p>
+      <p>The
+        following topics describe how to set up and use PgBouncer with Greenplum Database. Refer to the
+          <xref href="https://pgbouncer.github.io" format="html" scope="external">PgBouncer web
           site</xref> for information about using PgBouncer with PostgreSQL.</p>
       <ul id="ul_off_zqj_5s">
         <li>
           <xref href="#topic_nzk_nqg_cs" format="dita"/>
         </li>
         <li>
+          <xref href="#pgb_migrate" format="dita"/>
+        </li>
+        <li>
           <xref href="#pgb_config" format="dita"/>
         </li>
         <li>
-          <xref href="#topic_otc_snn_ts" format="dita"/>
+          <xref href="#pgb_start" format="dita"/>
         </li>
         <li>
-          <xref href="#topic_m2h_5dj_5s" format="dita"/>
-        </li>
-        <li>
-          <xref href="#topic_nfn_tvd_5s" format="dita"/>
+          <xref href="#topic_manage" format="dita"/>
         </li>
       </ul>
-      <p>Also, see reference information for PgBouncer in the <i>Greenplum Database Utility
-          Guide</i>. </p>
     </body>
     <topic id="topic_nzk_nqg_cs">
       <title>Overview</title>
       <body>
         <p>A database connection pool is a cache of database connections. Once a pool of connections
-          is established, connection pooling eliminates the overhead of creating database
+          is established, connection pooling eliminates the overhead of creating new database
           connections, so clients connect much faster and the server load is reduced.</p>
-        <p>The PgBouncer connection pooler, from the PostgreSQL community, is included with
-          Greenplum Database. PgBouncer can manage connection pools for multiple databases, and
-          databases may be on different Greenplum Database clusters or PostgreSQL backends.
-          PgBouncer creates a pool for each database user and database combination. A pooled
-          connection can only be reused for another connection request for the same user and
-          database. </p>
-        <p>The client application requires no software changes, but connects to the connection
-          pool's host and port instead of the Greenplum Database master host and port. PgBouncer
-          either creates a new database connection or reuses an existing connection. When the client
-          disconnects, the connection is returned to the pool for re-use. </p>
-        <p>PgBouncer supports the standard connection interface that PostgreSQL and Greenplum
-          Database share. A client requesting a database connection provides the host name and port
-          where PgBouncer is running, as well as the database name, username, and password.
-          PgBouncer looks up the requested database (which may be an alias for the actual database)
-          in its configuration file to find the host name, port, and database name for the database
-          connection. The configuration file entry also determines how to authenticate the user and
-          what database role will be used for the connection—a "forced user" can override the
-          username provided with the client's connection request. </p>
-        <p>PgBouncer requires an authentication file, a text file that contains a list of users and
-          passwords. Passwords may be either clear text, MD5-encoded, or an LDAP/AD lookup string.
-          You can also set up PgBouncer to query the destination database for users that are not in
-          the authentication file. </p>
+        <p>The PgBouncer connection pooler, from the PostgreSQL community, is included in
+          your Greenplum Database installation. PgBouncer is a light-weight connection pool
+          manager for Greenplum and PostgreSQL.
+          PgBouncer maintains a pool for connections for each database and user combination. PgBouncer either creates a new database connection for a client or reuses an
+          existing connection for the same user and database. When the client disconnects, PgBouncer
+          returns the connection to the pool for re-use.</p>
         <p>PgBouncer shares connections in one of three pool modes:<ul id="ul_jyx_rvg_cs">
             <li><i>Session pooling</i> – When a client connects, a connection is assigned to it as
               long as it remains connected. When the client disconnects, the connection is placed
@@ -70,33 +51,45 @@
               multi-statement transactions are not allowed. This mode is intended to enforce
               autocommit mode on the client and is targeted for PL/Proxy on PostgreSQL.</li>
           </ul></p>
-        <p>A default pool mode can be set for the PgBouncer instance and the mode can be overridden
-          for individual databases and users. </p>
-        <p>By connecting to a virtual <codeph>pgbouncer</codeph> database, you can monitor and
-          manage PgBouncer using SQL-like commands. Configuration parameters can be changed without
-          having to restart PgBouncer, and the configuration file can be reloaded to pick up
-          changes.</p>
-        <p>PgBouncer does not yet support SSL connections. If you want to encrypt traffic between
-          clients and PgBouncer, you can use <xref href="https://www.stunnel.org" format="html"
-            scope="external">stunnel</xref>, a free software utility that creates TLS-encrypted
-          tunnels using the OpenSSL cryptography library. See <xref href="#topic_nfn_tvd_5s"
-            format="dita"/> for directions.</p>
+        <p>You can set a default pool mode for the PgBouncer instance. You can override this
+          mode for individual databases and users. </p>
+        <p>PgBouncer supports the standard connection interface shared by PostgreSQL and Greenplum
+          Database. The Greenplum Database client application (for example, <codeph>psql</codeph>)
+          connects to the host and port on which PgBouncer is running rather than the Greenplum Database master host and port.</p>
+        <p>PgBouncer includes a <codeph>psql</codeph>-like administration console. Authorized users can connect to a virtual database to monitor and manage PgBouncer. You can manage a PgBouncer daemon process via the admin console. You can also use the console to update and reload PgBouncer configuration at runtime without stopping and restarting the process.</p>
+        <p>PgBouncer natively supports TLS.</p>
+      </body>
+    </topic>
+    <topic id="pgb_migrate">
+      <title>Migrating PgBouncer</title>
+      <body>
+        <p>When you migrate to a new Greenplum Database version, you must migrate your PgBouncer
+          instance to that in the new Greenplum Database installation.</p>
+        <ul><li><b>If you are migrating to a Greenplum Database version 5.8.x or earlier</b>, you can migrate PgBouncer without dropping connections. Launch the new PgBouncer
+          process with the <codeph>-R</codeph> option and the configuration file that you started the process with:
+        <codeblock>$ pgbouncer -R -d pgbouncer.ini</codeblock>
+        <p>The <codeph>-R</codeph> (reboot) option causes the new process to connect to the console
+          of the old process through a Unix socket and issue the following commands:</p>
+        <codeblock>SUSPEND;
+SHOW FDS;
+SHUTDOWN;</codeblock>
+        <p>When the new process detects that the old process is gone, it resumes the work with the old
+          connections. This is possible because the <codeph>SHOW FDS</codeph> command sends actual
+          file descriptors to the new process. If the transition fails for any reason, kill the new
+          process and the old process will resume.</p></li>
+        <li><b>If you are migrating to a Greenplum Database version 5.9.0 or later</b>, you must shut down the PgBouncer instance in your old installation and reconfigure and restart PgBouncer in your new installation.</li>
+        <li>If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1 and later.</li>
+        <li>If you used LDAP authentication in your old installation, you must configure LDAP in your new installation using the built-in PAM integration capabilities of PgBouncer 1.8.1 and later. You must also remove or replace any <codeph>ldap://</codeph>-prefixed password strings in the <codeph>auth_file</codeph>.</li></ul>
       </body>
     </topic>
     <topic id="pgb_config">
-      <title>Configuring and Starting PgBouncer</title>
+      <title>Configuring PgBouncer</title>
       <body>
-        <p>PgBouncer can be run on the Greenplum Database master or on another server. If you
-          install PgBouncer on a separate server, you can easily switch clients to the standby
-          master by updating the PgBouncer configuration file and reloading the configuration using
-          the PgBouncer Administration Console. </p>
-        <p>Follow these steps to set up PgBouncer.</p>
-        <ol id="ol_xyn_qwg_cs">
-          <li>Create a PgBouncer configuration file, for example <codeph>pgbouncer.ini</codeph>.
-            Here is a simple configuration
-              file:<codeblock>[databases]
+        <p></p>
+        <p>You configure PgBouncer and its access to Greenplum Database via a configuration file. This configuration file, commonly named <codeph>pgbouncer.ini</codeph>, provides location information for Greenplum databases. The <codeph>pgbouncer.ini</codeph> file also specifies process, connection pool, authorized users, and authentication configuration for PgBouncer.</p>
+        <p>Sample <codeph>pgbouncer.ini</codeph> file contents:<codeblock>[databases]
 postgres = host=127.0.0.1 port=5432 dbname=postgres
-mydb = host=127.0.0.1 port=5432 dbname=mydb
+pgb_mydb = host=127.0.0.1 port=5432 dbname=mydb
 
 [pgbouncer]
 pool_mode = session
@@ -106,281 +99,156 @@ auth_type = md5
 auth_file = users.txt
 logfile = pgbouncer.log
 pidfile = pgbouncer.pid
-admin_users = gpadmin</codeblock><p>The
-              file is in the <codeph>.ini</codeph> file format and has three sections:
-                <i>databases</i>, <i>pgbouncer</i>, and <i>users</i>. The databases section lists
-              databases with their connection details. The pgbouncer section configures the
-              PgBouncer instance. </p></li>
-          <li>Create an authentication file. The name of the file must match the
-              <codeph>auth_file</codeph> parameter in the <codeph>pgbouncer.ini</codeph> file,
-              <codeph>users.txt</codeph> in this example. Each line contains a user name and
+admin_users = gpadmin</codeblock></p>
+        <p>Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-ini.xml" format="dita"
+              scope="peer">pgbouncer.ini</xref> reference page for the
+          PgBouncer configuration file format and the list of configuration properties it supports.</p>
+         <p>When a client connects to PgBouncer, the connection pooler looks up the
+           the configuration for the requested database (which may be an alias for the actual database) that was specified in the
+           <codeph>pgbouncer.ini</codeph> configuration file to find the host name, port, and
+          database name for the database connection. The configuration file also identifies
+          the authentication mode in effect for the database. </p>
+        <p>PgBouncer requires an authentication file, a text file that contains a list of
+          Greenplum Database users and passwords. The contents of the file are dependent on the <codeph>auth_type</codeph> you configure in the <codeph>pgbouncer.ini</codeph> file. Passwords may be either clear text or MD5-encoded strings.
+          You can also configure PgBouncer to query the destination database to obtain
+          password information for users that are not in the authentication file. </p>
+      <section id="pgb_auth">
+        <title>PgBouncer Authentication File Format</title>
+        <p>PgBouncer requires its own user authentication file. You specify the name of this file 
+          in the <codeph>auth_file</codeph> property of the <codeph>pgbouncer.ini</codeph> configuration
+           file. <codeph>auth_file</codeph> is a text file in the following format:</p>
+        <codeblock>"username1" "password" ...
+"username2" "md5abcdef012342345" ...</codeblock>
+        <p><codeph>auth_file</codeph> contains one line per user. Each line must have at least two fields,
+          both of which are enclosed in double quotes (<codeph>" "</codeph>). The first
+          field identifies the Greenplum Database user name. The second field is
+          either a plain-text or an MD5-encoded password. PgBouncer ignores the remainder of the line.</p>
+        <p>(The format of <codeph>auth_file</codeph> is similar to that of the <codeph>pg_auth</codeph>
+          text file that Greenplum Database uses for authentication information. PgBouncer
+          can work directly with this Greenplum Database authentication file.)</p>
+        <p>Use an MD5 encoded password. The format of an MD5 encoded password is: 
+        <codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
+        <p>You can also obtain the MD5-encoded passwords of all Greenplum Database users from the <codeph>pg_shadow</codeph> view.</p>
+      </section>
+      <section id="pgb_hba">
+        <title>Configuring HBA-based Authentication for PgBouncer</title>
+        <p>PgBouncer supports HBA-based authentication. To configure HBA-based authentication for PgBouncer, you set <codeph>auth_type=hba</codeph> in the <codeph>pgbouncer.ini</codeph> configuration file. You also provide the filename of the HBA-format file in the <codeph>auth_hba_file</codeph> parameter of the <codeph>pgbouncer.ini</codeph> file.</p>
+        <p>Contents of an example PgBouncer HBA file named <codeph>hba_bouncer.conf</codeph>:<codeblock>local       all     bouncer             trust
+host        all     bouncer      127.0.0.1/32       trust</codeblock></p>
+        <p>Example excerpt from the related <codeph>pgbouncer.ini</codeph> configuration file:</p><codeblock>[databases]
+p0 = port=15432 host=127.0.0.1 dbname=p0 user=bouncer pool_size=2
+p1 = port=15432 host=127.0.0.1 dbname=p1 user=bouncer
+...
+
+[pgbouncer]
+...
+auth_type = hba
+auth_file = userlist.txt
+auth_hba_file = hba_bouncer.conf
+...</codeblock>
+         <p>Refer to the <xref href="https://pgbouncer.github.io/config.html#hba-file-format" format="html" scope="external">HBA file format
+          </xref> discussion in the PgBouncer documentation for information about PgBouncer support of the HBA authentication file format.</p>
+      </section>
+      </body>
+    </topic>
+    <topic id="pgb_start">
+      <title>Starting PgBouncer</title>
+      <body>
+        <p>You can run PgBouncer on the Greenplum Database master or on another server. If you
+          install PgBouncer on a separate server, you can easily switch clients to the standby
+          master by updating the PgBouncer configuration file and reloading the configuration using
+          the PgBouncer Administration Console. </p>
+        <p>Follow these steps to set up PgBouncer.</p>
+        <ol id="ol_xyn_qwg_cs">
+          <li>Create a PgBouncer configuration file. For example, add the following text
+           to a file named <codeph>pgbouncer.ini</codeph>:<codeblock>[databases]
+postgres = host=127.0.0.1 port=5432 dbname=postgres
+pgb_mydb = host=127.0.0.1 port=5432 dbname=mydb
+
+[pgbouncer]
+pool_mode = session
+listen_port = 6543
+listen_addr = 127.0.0.1
+auth_type = md5
+auth_file = users.txt
+logfile = pgbouncer.log
+pidfile = pgbouncer.pid
+admin_users = gpadmin</codeblock><p>The file lists databases and their connection details. The file also configures the PgBouncer instance. Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-ini.xml" format="dita"
+              scope="peer">pgbouncer.ini</xref> reference page for information about the
+              format and content of a PgBouncer configuration file.</p></li>
+          <li>Create an authentication file. The filename should be the name you specified for the <codeph>auth_file</codeph> parameter of the <codeph>pgbouncer.ini</codeph> file, <codeph>users.txt</codeph>.
+            Each line contains a user name and
             password. The format of the password string matches the <codeph>auth_type</codeph>
-            parameter in the PgBouncer configuration file. If the <codeph>auth_type</codeph>
+            you configured in the PgBouncer configuration file. If the <codeph>auth_type</codeph>
             parameter is <codeph>plain</codeph>, the password string is a clear text password, for
-            example: <codeblock>"gpadmin" "gpadmin1234"</codeblock><p>The <codeph>auth_type</codeph>
-              in the following example is <codeph>md5</codeph>, so the authentication field must be
+            example: <codeblock>"gpadmin" "gpadmin1234"</codeblock><p>If the <codeph>auth_type</codeph>
+              in the following example is <codeph>md5</codeph>, the authentication field must be
               MD5-encoded. The format for an MD5-encoded password
-              is:<codeblock>"md5" + MD5(<varname>&lt;password>&lt;username></varname>)</codeblock></p><p>You
-              can use the Linux <codeph>md5sum</codeph> command to calculate the MD5 string. For
-              example, if the <codeph>gpadmin</codeph> password is <codeph>admin1234</codeph> the
-              following command prints the string for the password
-              field:<codeblock>$ user=gpadmin; passwd=admin1234; echo -n md5; echo $passwd$user | md5sum
-md53ce96652dedd8226c498e09ae2d26220</codeblock></p><p>And
-              here is the MD5-encoded entry for the <codeph>gpadmin</codeph> user in the PgBouncer
-              authentication file:</p><p>
-              <codeblock>"gpadmin" "md53ce96652dedd8226c498e09ae2d26220"</codeblock>
-            </p><p>To authenticate users against an LDAP or Active Directory server, the password
-              field contains an LDAP lookup string. For
-              example:</p><codeblock>"gpdbuser1" "ldap://10.0.0.11:10389/uid=gpdbuser1,ou=users,ou=system"</codeblock><p>For
-              Active Directory, a user entry looks like this
-              example:<codeblock>"gpdbuser2" "ldap://10.0.0.12:389/gpdbuser2"</codeblock>See <xref
-                href="#topic_m2h_5dj_5s" format="dita"/> for the steps to configure PgBouncer to
-              authenticate users with an LDAP server. </p><p>For details about the authentication
-              file, see the "Authentication File Format" section of the PgBouncer reference in the
-                <i>Greenplum Database Utility Guide</i>. </p></li>
+              is:<codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p></li>
           <li>Launch
               <codeph>pgbouncer</codeph>:<codeblock>$ $GPHOME/bin/pgbouncer -d pgbouncer.ini</codeblock><p>The
-                <codeph>-d</codeph> or <codeph>--daemon</codeph> option runs PgBouncer as a
-              background process. See the PgBouncer reference in the <i>Greenplum Database Utility
-                Guide</i> for the <codeph>pgbouncer</codeph> command syntax and its
-            options.</p></li>
-          <li>Update client applications to connect to <codeph>pgbouncer</codeph> instead of
-            directly to Greenplum Database server. To start <codeph>psql</codeph>, for
-            example:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> postgres</codeblock></li>
+                <codeph>-d</codeph> option runs PgBouncer as a
+              background (daemon) process. Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer.xml" format="dita"
+              scope="peer">pgbouncer</xref> reference page for the
+              <codeph>pgbouncer</codeph> command syntax and options.</p></li>
+          <li>Update your client applications to connect to <codeph>pgbouncer</codeph> instead of
+            directly to Greenplum Database server. For example, to connect to the Greenplum
+            database named <codeph>mydb</codeph> configured above, run <codeph>psql</codeph> as follows:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> pgb_mydb</codeblock><p>The <codeph>-p</codeph> option value is the <codeph>listen_port</codeph> that you configured for the PgBouncer instance.</p></li>
         </ol>
       </body>
     </topic>
-    <topic id="topic_lw4_rdm_g5">
-      <title>Server Reset Query</title>
-      <body>
-        <p>When a connection is returned to the pool, it must be reset to the state of a newly
-          created connection. PgBouncer accomplishes this by issuing a query before returning a
-          connection to the pool. PostgreSQL 8.3 and later have the <codeph>DISCARD ALL</codeph>
-          command for this purpose and it is the default reset query for the standard PgBouncer
-          distribution. Greenplum Database does not support <codeph>DISCARD ALL</codeph> and if it
-          is used an error is logged. </p>
-        <p>A reset query can be specified by setting the <codeph>server_reset_query</codeph>
-          parameter in the PgBouncer configuration file. For Greenplum Database with PgBouncer in
-          session pooling mode, the <codeph>server_reset_query</codeph> parameter can be set to this
-          query:<codeblock>RESET ALL; SET SESSION AUTHORIZATION DEFAULT</codeblock></p>
-        <p>This is the default server reset query in the modified version of PgBouncer included with
-          Greenplum Database 4.7.0 and later. Although the default differs from PgBouncer, it helps
-          to ensure that the connection pool is transparent to Greenplum Database users and client
-          applications do not have to be modified to use a connection pool. </p>
-        <p>For more information about the <codeph>server_reset_query</codeph> parameter and the
-          PgBouncer configuration file, see the PgBouncer reference in the <i>Greenplum Database
-            Utility Guide</i>.</p>
-      </body>
-    </topic>
-    <topic id="topic_otc_snn_ts">
+    <topic id="topic_manage">
       <title>Managing PgBouncer</title>
       <body>
-        <p>PgBouncer has an administrative console, which is accessed by logging into the
-            <codeph>pgbouncer</codeph> virtual database. The console accepts SQL-like commands that
-          allow you to monitor, reconfigure, and manage PgBouncer. </p>
-        <p>Follow these steps to get started with the PgBouncer administrative console.</p>
+        <p>PgBouncer provides a <codeph>psql</codeph>-like administration console. You
+          log in to the PgBouncer Administration Console by specifying the PgBouncer port
+           number and a virtual database named <codeph>pgbouncer</codeph>.
+          The console accepts SQL-like commands that you can use to monitor, reconfigure, and manage PgBouncer.</p>
+        <p>For complete documentation of PgBouncer Administration Console
+          commands, refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-admin.xml" format="dita"
+              scope="peer">PgBouncer Administration Console</xref> command reference.</p>
+        <p>Follow these steps to get started with the PgBouncer Administration Console.</p>
         <ol id="ol_jwt_hyn_ts">
-          <li>Log in to the <codeph>pgbouncer</codeph> virtual database with
-              <codeph>psql</codeph>:<codeblock>$ psql -p 6543 -U <varname>username</varname> pgbouncer</codeblock><p>The
-              username must be set in the <codeph>admin_users</codeph> parameter in the
-                <codeph>pgbouncer.ini</codeph> configuration file. You can also log in with the
-              current Unix username if the <codeph>pgbouncer</codeph> process is running with that
+          <li>Use <codeph>psql</codeph> to log in to the <codeph>pgbouncer</codeph>
+            virtual database:<codeblock>$ psql -p 6543 -U <varname>username</varname> pgbouncer</codeblock><p>The
+              <varname>username</varname> that you specify must be listed in the <codeph>admin_users</codeph> parameter in the
+                <codeph>pgbouncer.ini</codeph> configuration file. You can also log in 
+              to the PgBouncer Administration Console with the
+              current Unix username if the <codeph>pgbouncer</codeph> process is running under that
               user's UID.</p></li>
-          <li>To see the available commands, run the <codeph>show help</codeph>
-            command:<codeblock>pgbouncer=# show help;
+          <li>To view the available PgBouncer Administration Console commands, run the <codeph>SHOW help</codeph>
+            command:<codeblock>pgbouncer=# SHOW help;
 NOTICE:  Console usage
 DETAIL:
-       SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|VERSION
-	SHOW STATS|FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM
-	SHOW DNS_HOSTS|DNS_ZONES
-	SET key = arg
-	RELOAD
-	PAUSE [&lt;db>]
-	RESUME [&lt;db>]
-	DISABLE &lt;db>
-	ENABLE &lt;db>
-	KILL &lt;db>
-	SUSPEND
-	SHUTDOWN</codeblock></li>
-          <li>If you make changes to the <codeph>pgbouncer.ini</codeph> file, you can reload it with
-            the <codeph>RELOAD</codeph> command:<codeblock>pgbouncer=# RELOAD;</codeblock></li>
+    SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|VERSION
+    SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM
+    SHOW DNS_HOSTS|DNS_ZONES
+    SHOW STATS|STATS_TOTALS|STATS_AVERAGES
+    SET key = arg
+    RELOAD
+    PAUSE [&lt;db>]
+    RESUME [&lt;db>]
+    DISABLE &lt;db>
+    ENABLE &lt;db>
+    KILL &lt;db>
+    SUSPEND
+    SHUTDOWN</codeblock></li>
+          <li>If you update PgBouncer configuration by editing the <codeph>pgbouncer.ini</codeph> configuration file, you use the <codeph>RELOAD</codeph> command to reload the file:<codeblock>pgbouncer=# RELOAD;</codeblock></li>
         </ol>
         <section>
-          <p>To map clients to server connections, use the <codeph>SHOW CLIENTS</codeph> and
-              <codeph>SHOW SERVERS</codeph> views:</p>
+          <title>Mapping PgBouncer Clients to Greenplum Database Server Connections</title>
+          <p>To map a PgBouncer client to a Greenplum Database server connection, use the 
+            PgBouncer Administration Console <codeph>SHOW CLIENTS</codeph> and
+              <codeph>SHOW SERVERS</codeph> commands:</p>
           <ol id="ol_xgn_qfq_bt">
             <li>Use <codeph>ptr</codeph> and <codeph>link</codeph> to map the local client
               connection to the server connection.</li>
-            <li>Use <codeph>addr</codeph> and <codeph>port</codeph> of the client connection to
+            <li>Use the <codeph>addr</codeph> and the <codeph>port</codeph> of the client connection to
               identify the TCP connection from the client.</li>
             <li>Use <codeph>local_addr</codeph> and <codeph>local_port</codeph> to identify the TCP
               connection to the server.</li>
           </ol>
         </section>
-        <p>For complete documentation for all of the administration console commands, see the
-          "PgBouncer Administration Console Commands" section of the PgBouncer reference in the
-            <i>Greenplum Database Utility Guide</i>.</p>
-      </body>
-    </topic>
-    <topic id="id_mpv_d2q_bt">
-      <title>Upgrading PgBouncer</title>
-      <body>
-        <p>You can upgrade PgBouncer without dropping connections. Just launch the new PgBouncer
-          process with the <codeph>-R</codeph> option and the same configuration file:</p>
-        <codeblock>$ pgbouncer -R -d config.ini</codeblock>
-        <p>The <codeph>-R</codeph> (reboot) option causes the new process to connect to the console
-          of the old process through a Unix socket and issue the following commands:</p>
-        <codeblock>SUSPEND;
-SHOW FDS;
-SHUTDOWN;</codeblock>
-        <p>When the new process sees that the old process is gone, it resumes the work with the old
-          connections. This is possible because the <codeph>SHOW FDS</codeph> command sends actual
-          file descriptors to the new process. If the transition fails for any reason, kill the new
-          process and the old process will resume.</p>
-      </body>
-    </topic>
-    <topic id="topic_m2h_5dj_5s">
-      <title>Setting up LDAP Authentication with PgBouncer</title>
-      <body>
-        <p>You can authenticate Greenplum Database users against your LDAP or Active Directory
-          service when using the PgBouncer connection pooler. When you have LDAP authentication
-          working, you can secure client connections to PgBouncer by setting up stunnel, as
-          described in <xref href="#topic_nfn_tvd_5s" format="dita"/>. </p>
-        <p>Before you begin, you must have an LDAP or Active Directory server and a Greenplum
-          Database cluster. <ol id="ol_c3q_g3j_5s">
-            <li>Create Greenplum Database users in the LDAP/AD server, for example
-                <codeph>gpdbuser1</codeph> and <codeph>gpdbuser2</codeph>.</li>
-            <li>Create the corresponding Greenplum Database users in the
-              database:<codeblock>createuser gpdbuser1
-createuser gpdbuser2</codeblock></li>
-            <li>Add the users to the Greenplum Database <codeph>pg_hba.conf</codeph>
-              file:<codeblock>host     all         gpdbuser1              0.0.0.0/0     trust
-host     all         gpdbuser2              0.0.0.0/0     trust
-</codeblock></li>
-            <li>Create a PgBouncer <filepath>config.ini</filepath> file with the following
-              contents:<codeblock>[databases]
-* = host=<varname>GPDB_host_addr</varname> port=<varname>GPDB_port</varname>
-
-[pgbouncer]
-listen_port = 6432
-listen_addr = 0.0.0.0
-auth_type = plain
-auth_file = users.txt
-logfile = pgbouncer.log
-pidfile = pgbouncer.pid
-ignore_startup_parameters=options
-</codeblock></li>
-            <li>Create the <codeph>users.txt</codeph> PgBouncer authentication file. The first field
-              is the user name and the second is the LDAP or Active Directory lookup string for the
-              user. For OpenLDAP or ApacheDS, for example, a user entry in the
-                <filepath>users.txt</filepath> looks like
-                this:<codeblock>"gpdbuser1" "ldap://10.0.0.11:10389/uid=gpdbuser1,ou=users,ou=system"</codeblock><p>For
-                Active Directory, a user entry looks like this
-                example:<codeblock>"gpdbuser1" "ldap://10.0.0.12:389/gpdbuser1"</codeblock></p></li>
-            <li>Start PgBouncer with the <codeph>config.ini</codeph> file you
-              created:<codeblock>$ pgbouncer -d config.ini</codeblock></li>
-          </ol></p>
-      </body>
-    </topic>
-    <topic id="topic_nfn_tvd_5s">
-      <title>Securing PgBouncer Connections with stunnel</title>
-      <body>
-        <p>PgBouncer does not have SSL support, so connections between database clients and
-          PgBouncer are not encrypted. To encrypt these connections, you can use <xref
-            href="https://www.stunnel.org/index.html" format="html" scope="external">stunnel</xref>, a free
-          software utility. stunnel is a proxy that uses the OpenSSL cryptographic library to add
-          TLS encryption to network services. Newer versions of stunnel support the PostgreSQL libpq
-          protocol, so Greenplum and PostgreSQL clients can use libpq SSL support to connect
-          securely over the network to a stunnel instance set up as a proxy for PgBouncer. If you
-          use a version of stunnel without libpq support, you need to set up a stunnel instance on
-          both the client and PgBouncer host to create a secure tunnel over the network.</p>
-        <p>On most platforms, you can install stunnel using the system package manager. For Windows,
-          you can download an installer from <xref href="https://www.stunnel.org/index.html" format="html"
-            scope="external">https://www.stunnel.org/index.html</xref>. You can also download and install stunnel
-          from source if a packaged version is unavailable, if you want to upgrade to a newer
-          version, or if you want to upgrade to a newer OpenSSL version. The next section provides
-          steps to download, compile, and install OpenSSL and stunnel. </p>
-        <p>For complete stunnel documentation, visit the <xref
-            href="https://www.stunnel.org/docs.html" format="html" scope="external">stunnel
-            documentation</xref> web site.</p>
-        <section>
-          <title>Installing stunnel From Source</title>
-          <p>stunnel requires a version of the OpenSSL development package greater than 1.0. The
-            following instructions download and build OpenSSL and stunnel for Red Hat or CentOS. Be
-            sure to check <xref
-              href="https://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
-              scope="external">https://www.stunnel.org/index.html</xref> and <xref
-              href="https://www.postgresql.org/docs/9.4/static/auth-pg-hba-conf.html" format="html"
-              scope="external">http://openssl.org</xref> for the latest versions. </p>
-          <ol id="ol_flk_5y3_bt">
-            <li>Set the <codeph>PREFIX</codeph> environment variable to the directory where you want
-              to install stunnel, for example <filepath>/usr/local/stunnel</filepath> or
-                <filepath>/home/gpadmin/stunnel</filepath>. If you choose to install stunnel in a
-              system directory, you may need to run the <codeph>make install</codeph> commands as
-              root.
-              <codeblock>export PREFIX=<varname>/path/to/install_stunnel</varname></codeblock></li>
-            <li>The following commands download, build, and install OpenSSL version
-              1.0.2c:<codeblock>wget ftp://ftp.openssl.org/source/openssl-1.0.2c.tar.gz
-tar xzf openssl-1.0.2c.tar.gz
-cd openssl-1.0.2c
-./Configure linux-x86_64 --prefix=$PREFIX shared no-asm
-make
-make install_sw
-cd ..</codeblock></li>
-            <li>Download, build, and install stunnel with the following
-              commands:<codeblock>wget --no-check-certificate https://www.stunnel.org/downloads/stunnel-5.22.tar.gz
-tar xzf stunnel-5.22.tar.gz
-cd stunnel-5.22
-LDFLAGS="-Wl,-rpath,'"'$$'"ORIGIN/../lib'"
-./configure --prefix=$PREFIX --with-ssl=$PREFIX
-make
-make install</codeblock></li>
-          </ol>
-        </section>
-        <section>
-          <title>Setting up Stunnel for PgBouncer</title>
-          <p>Set up a stunnel instance as a proxy for PgBouncer. The stunnel instance accepts secure
-            connections from database clients on its own port, decrypts the packets and forwards
-            them to the PgBouncer instance on the same host (or on another host in a protected local
-            network). PgBouncer results, including database results from connections managed by
-            PgBouncer, are encrypted and returned over the network to the client. </p>
-          <ol id="ol_gls_zwd_5s">
-            <li>On the server running PgBouncer, create a directory for stunnel configuration files,
-              for example <filepath>/home/gpadmin/stunnel</filepath>.</li>
-            <li>Create a certificate and key file to use for authenticating. You can also use an
-              existing certificate and key, or create a new pair with the following
-                <codeph>openssl</codeph>
-                command:<codeblock>$ openssl req -new -x509 -days 3650 -nodes -out stunnel.pem -keyout stunnel.key</codeblock><p>Move
-                the <codeph>stunnel.key</codeph> and <codeph>stunnel.pem</codeph> files into your
-                stunnel configuration directory. </p></li>
-            <li>Create a stunnel configuration file, for example, <filepath>stunnel.conf</filepath>,
-              with the following
-                contents:<codeblock>
-debug = info
-socket = l:TCP_NODELAY=1
-socket = r:TCP_NODELAY=1
-
-debug = 7
-
-cert = <varname>/PATH/TO/</varname>stunnel.pem
-key = <varname>/PATH/TO/</varname>stunnel.key
-
-[pg-server]
-client=no
-accept = 0.0.0.0:5433             # This is the SSL listening port
-connect = <varname>PGHOST</varname>:<varname>PGPORT</varname>   # This is the PgBouncer listen port
-protocol = pgsql
-</codeblock><p>See
-                the <xref href="https://www.stunnel.org/static/stunnel.html#CONFIGURATION-FILE"
-                  format="html" scope="external">stunnel configuration file reference</xref> for
-                additional configuration options. </p></li>
-            <li>Run <codeph>stunnel</codeph> on the
-              server:<codeblock>stunnel <varname>/path/to/stunnel-srv.conf</varname></codeblock></li>
-            <li>On the client, connect to stunnel on its host and accept port. For
-              example:<codeblock>psql -h <varname>pgbouncer-host</varname> -p <varname>stunnel-accept-port</varname> <varname>database-name</varname></codeblock></li>
-          </ol>
-        </section>
       </body>
     </topic>
   </topic>
-</dita>

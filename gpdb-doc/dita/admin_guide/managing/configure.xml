@@ -346,23 +346,6 @@
           </simpletable>
         </body>
       </topic>
-      <topic id="topic17" xml:lang="en">
-        <title>Free Space Map Parameters</title>
-        <body>
-          <p>These parameters control the sizing of the free space map, which contains expired rows.
-            Use <codeph>VACUUM</codeph> to reclaim the free space map disk space. See <xref
-              href="maintain.xml#topic1" type="topic" format="dita"/> for information about
-            vacuuming a database.</p>
-          <ul>
-            <li id="kh183337">
-              <codeph>max_fsm_pages</codeph>
-            </li>
-            <li id="kh161010">
-              <codeph>max_fsm_relations</codeph>
-            </li>
-          </ul>
-        </body>
-      </topic>
       <topic id="topic18" xml:lang="en">
         <title>OS Resource Parameters</title>
         <body>

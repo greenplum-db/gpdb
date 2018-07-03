@@ -113,17 +113,26 @@ def dumpStats(cur):
     for vals in ResultIter(cur):
         rowVals = ["\t'%s.%s'::regclass" % tuple(vals[1::-1])]
 
+        i = 0
+        hll = False
         if vals[3][0] == '_':
             rowTypes = types + [vals[3]] * 4
         else:
             rowTypes = types + [vals[3] + '[]'] * 4
         for val, typ in zip(vals[5:], rowTypes):
+            i = i + 1
+            if i == 9 and (val == 5 or val == 6):
+                hll = True
+
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = val.replace("'", "''").replace('\\', '\\\\')
                 val = "E'" + val + "'"
-            rowVals.append('\t{0}::{1}'.format(val, typ))
+            if i == 21 and hll == True:
+                rowVals.append('\t{0}::{1}'.format(val, 'bytea[]'))
+            else:
+                rowVals.append('\t{0}::{1}'.format(val, typ))
         print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
 
 
