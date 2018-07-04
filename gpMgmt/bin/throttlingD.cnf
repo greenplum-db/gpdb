@@ -1,6 +1,0 @@
-[SectionMain]
-enableDirectIO: 1
-enableLog: 0
-logFile: /tmp/delay.output
-sleepTime: 0
-sleepChunk: 6291456
