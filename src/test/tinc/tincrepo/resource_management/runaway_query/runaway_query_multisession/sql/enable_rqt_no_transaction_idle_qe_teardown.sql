@@ -1,1 +1,0 @@
-drop table if exists rqt_nt_iq;

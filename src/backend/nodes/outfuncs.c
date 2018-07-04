@@ -2338,7 +2338,6 @@ _outIndexOptInfo(StringInfo str, IndexOptInfo *node)
 	WRITE_BOOL_FIELD(hypothetical);
 
 	WRITE_BOOL_FIELD(amoptionalkey);
-	WRITE_BOOL_FIELD(cdb_default_stats_used);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 

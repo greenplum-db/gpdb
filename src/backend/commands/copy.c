@@ -1932,19 +1932,22 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 	all_relids = list_make1_oid(RelationGetRelid(cstate->rel));
 
 	/* add in AO segno map for dispatch */
-	if (dispatchStmt->is_from && rel_is_partitioned(RelationGetRelid(cstate->rel)))
+	if (dispatchStmt->is_from)
 	{
-		if (gp_enable_segment_copy_checking &&
-			!partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
+		if (rel_is_partitioned(RelationGetRelid(cstate->rel)))
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table"),
-					 errhint("\"SET gp_enable_segment_copy_checking=off\" can be used to disable distribution key checking.")));
-		}
-		PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
+			if (gp_enable_segment_copy_checking &&
+				!partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table"),
+						 errhint("\"SET gp_enable_segment_copy_checking=off\" can be used to disable distribution key checking.")));
+			}
+			PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
 
-		all_relids = list_concat(all_relids, all_partition_relids(pn));
+			all_relids = list_concat(all_relids, all_partition_relids(pn));
+		}
 
 		dispatchStmt->ao_segnos = assignPerRelSegno(all_relids);
 	}

@@ -41,7 +41,6 @@ mirroring
 olap
 partitioning
 query
-resource_management
 security
 storage
 transactions
