@@ -195,12 +195,6 @@ def impl(context, query, dbname):
     dbconn.execSQL(context.long_lived_conn, 'BEGIN; %s' % query)
 
 
-@given('the user commits transaction')
-@when('the user commits transaction')
-def impl(context):
-    dbconn.execSQL(context.long_lived_conn, 'END;')
-
-
 @given('the user rollsback the transaction')
 @when('the user rollsback the transaction')
 def impl(context):
