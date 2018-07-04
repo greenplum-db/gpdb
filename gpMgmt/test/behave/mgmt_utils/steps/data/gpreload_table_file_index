@@ -1,2 +1,0 @@
-public.ao_index_table: column1, column2 asc, column3
-public.co_index_table: column1, column2, column3 desc
