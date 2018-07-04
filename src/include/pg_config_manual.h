@@ -199,12 +199,15 @@
  */
 
 /*
- * Define this to cause pfree()'d memory to be cleared immediately, to
- * facilitate catching bugs that refer to already-freed values.
- * Right now, this gets defined automatically if --enable-cassert.
+ * Define CLOBBER_FREED_MEMORY to cause pfree()'d memory to be cleared
+ * immediately, to facilitate catching bugs that refer to already-freed
+ * values. Also, with RELCACHE_FORCE_RELEASE, relcache entries will be freed as
+ * soon as their refcount goes to zero. Right now, these get defined
+ * automatically if --enable-cassert.
  */
 #ifdef USE_ASSERT_CHECKING
 #define CLOBBER_FREED_MEMORY
+#define RELCACHE_FORCE_RELEASE
 #endif
 
 /*
