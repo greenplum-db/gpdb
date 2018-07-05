@@ -82,7 +82,7 @@
       </ul>
       <p>A function in SQL will appoint a static method in a Java class. In order for the function
         to execute, the appointed class must available on the class path specified by the Greenplum
-        Database sever configuration parameter <codeph>pljava_classpath</codeph>. The PL/Java
+        Database server configuration parameter <codeph>pljava_classpath</codeph>. The PL/Java
         extension adds a set of functions that helps installing and maintaining the java classes.
         Classes are stored in normal Java archives, JAR files. A JAR file can optionally contain a
         deployment descriptor that in turn contains SQL commands to be executed when the JAR is

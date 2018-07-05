@@ -18,17 +18,17 @@ function expand_glob_ensure_exists() {
 function prep_env_for_centos() {
   case "${TARGET_OS_VERSION}" in
     5)
-      BLDARCH=rhel5_x86_64
+      BLD_ARCH=rhel5_x86_64
       export JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.39.x86_64
       ;;
 
     6)
-      BLDARCH=rhel6_x86_64
+      BLD_ARCH=rhel6_x86_64
       export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
       ;;
 
     7)
-      BLDARCH=rhel7_x86_64
+      BLD_ARCH=rhel7_x86_64
       echo "Detecting java7 path ..."
       java7_packages=$(rpm -qa | grep -F java-1.7)
       java7_bin="$(rpm -ql ${java7_packages} | grep /jre/bin/java$)"
@@ -44,7 +44,7 @@ function prep_env_for_centos() {
   esac
 
   source /opt/gcc_env.sh
-  ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLDARCH}/python-2.7.12 /opt/python-2.7.12
+  ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
   export PATH=${JAVA_HOME}/bin:${PATH}
 }
 
@@ -61,14 +61,6 @@ function generate_build_number() {
     if [ -d .git ] ; then
       echo "commit:`git rev-parse HEAD`" > BUILD_NUMBER
     fi
-  popd
-}
-
-function make_sync_tools() {
-  pushd ${GPDB_SRC_PATH}/gpAux
-    # Requires these variables in the env:
-    # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
-    make sync_tools
   popd
 }
 
@@ -152,7 +144,10 @@ function _main() {
   esac
 
   generate_build_number
-  make_sync_tools
+  
+  # Copy input ext dir; assuming ext doesnt exist
+  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
+
   case "${TARGET_OS}" in
     sles) link_tools_for_sles ;;
   esac

@@ -64,7 +64,7 @@ extern FileScanDesc external_beginscan(Relation relation,
 extern void external_rescan(FileScanDesc scan);
 extern void external_endscan(FileScanDesc scan);
 extern void external_stopscan(FileScanDesc scan);
-extern HeapTuple external_getnext(FileScanDesc scan, ScanDirection direction);
+extern HeapTuple external_getnext(FileScanDesc scan, ScanDirection direction, List* filter_quals);
 extern ExternalInsertDesc external_insert_init(Relation rel);
 extern Oid	external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);

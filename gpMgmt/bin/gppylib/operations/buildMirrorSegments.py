@@ -22,7 +22,7 @@ from gppylib.commands.unix import check_pid_on_remotehost, Scp
 logger = gplog.get_default_logger()
 
 gDatabaseDirectories = [
-    # this list and the gDatabaseSubDirectories occur combined inside initdb.c
+    # this list occur inside initdb.c
     "global",
     "pg_log",
     "pg_xlog",
@@ -37,12 +37,6 @@ gDatabaseDirectories = [
     "base",
     "pg_tblspc",
     "pg_stat_tmp"
-]
-gDatabaseSubDirectories = [
-    "pg_xlog/archive_status",
-    "pg_multixact/members",
-    "pg_multixact/offsets",
-    "base/1"
 ]
 
 #
@@ -169,11 +163,12 @@ class GpMirrorToBuild:
 
 
 class GpMirrorListToBuild:
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__parallelDegree = parallelDegree
+        self.__forceoverwrite = forceoverwrite
         self.__additionalWarnings = additionalWarnings or []
         if not logger:
             raise Exception('logger argument cannot be None')
@@ -247,7 +242,8 @@ class GpMirrorListToBuild:
         self.__ensureStopped(gpEnv, toStopDirectives)
         self.__ensureSharedMemCleaned(gpEnv, toStopDirectives)
         self.__ensureMarkedDown(gpEnv, toEnsureMarkedDown)
-        self.__cleanUpSegmentDirectories(cleanupDirectives)
+        if not self.__forceoverwrite:
+            self.__cleanUpSegmentDirectories(cleanupDirectives)
         self.__copySegmentDirectories(gpEnv, gpArray, copyDirectives)
 
         # update and save metadata in memory
@@ -398,7 +394,8 @@ class GpMirrorListToBuild:
                                           batchSize=self.__parallelDegree,
                                           ctxt=gp.REMOTE,
                                           remoteHost=hostName,
-                                          validationOnly=validationOnly)
+                                          validationOnly=validationOnly,
+                                          forceoverwrite=self.__forceoverwrite)
 
         #
         # validate directories for target segments

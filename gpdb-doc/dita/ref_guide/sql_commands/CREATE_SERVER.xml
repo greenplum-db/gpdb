@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <title id="bv20941">CREATE SERVER</title>
+    <body>
+        <p id="sql_command_desc">Defines a new foreign server.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">CREATE SERVER <varname>server_name</varname> [ TYPE '<varname>server_type</varname>' ] [ VERSION '<varname>server_version</varname>' ]
+    FOREIGN DATA WRAPPER <varname>fdw_name</varname>
+    [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>CREATE SERVER</codeph> defines a new foreign server. The who defines
+               the server becomes its owner.</p>
+            <p>A foreign server typically encapsulates connection information that a foreign-data
+              wrapper uses to access an external data source. Additional user-specific connection
+              information may be specified by means of user mappings.</p>
+            <p>Creating a server requires the <codeph>USAGE</codeph> privilege on the foreign-data
+              wrapper specified.</p>
+        </section>
+        <section id="section4">
+            <title>Parameters</title>
+            <parml>
+                <plentry>
+                    <pt><varname>server_name</varname></pt>
+                    <pd>
+                        <p>The name of the foreign server to create. The server name must be unique within the database.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>server_type</varname></pt>
+                    <pd>
+                        <p>Optional server type.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>server_version</varname></pt>
+                    <pd>
+                        <p>Optional server version.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>fdw_name</varname></pt>
+                    <pd>
+                        <p>Name of the foreign-data wrapper that manages the server.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] )</pt>
+                    <pd>
+                        <p>The options for the new foreign server. The options typically define the connection details of the server, but the actual names and values are dependent upon the server's foreign-data wrapper.</p>
+                    </pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section5">
+            <title>Notes</title>
+            <p>When using the dblink module (see <codeph><xref href="../../utility_guide/dblink.xml#topic1">dblink</xref></codeph>), you can use the foreign server name as an argument of the <codeph>dblink_connect()</codeph> function to provide the connection parameters. You must have the <codeph>USAGE</codeph> privilege on the foreign server to use it in this manner.</p>
+        </section>
+        <section id="section6">
+            <title>Examples</title>
+            <p>Create a foreign server named <codeph>myserver</codeph> that uses the foreign-data wrapper named <codeph>pgsql</codeph> and includes connection options:</p><codeblock>CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql 
+    OPTIONS (host 'foo', dbname 'foodb', port '5432');</codeblock>
+        </section>
+        <section id="section7">
+            <title>Compatibility</title>
+            <p><codeph>CREATE SERVER</codeph> conforms to ISO/IEC 9075-9 (SQL/MED).</p>
+        </section>
+        <section id="section8">
+            <title>See Also</title>
+            <p><codeph><xref href="ALTER_SERVER.xml#topic1">ALTER SERVER</xref></codeph>,
+                        <codeph><xref href="DROP_SERVER.xml#topic1">DROP
+                    SERVER</xref></codeph>,
+                        <codeph><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE
+                    FOREIGN DATA WRAPPER</xref></codeph>,
+                        <codeph><xref href="CREATE_USER_MAPPING.xml#topic1">CREATE
+                    USER MAPPING</xref></codeph></p>
+        </section>
+    </body>
+</topic>

@@ -31,6 +31,7 @@
 #include "executor/nodeExternalscan.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/guc.h"
 #include "parser/parsetree.h"
 #include "optimizer/var.h"
 #include "optimizer/clauses.h"
@@ -93,7 +94,7 @@ ExternalConstraintCheck(TupleTableSlot *slot, ExternalScanState *node)
 		if (!ExecQual(qual, econtext, true))
 			return false;
 	}
-	
+
 	return true;
 }
 /* ----------------------------------------------------------------
@@ -115,6 +116,7 @@ ExternalNext(ExternalScanState *node)
 	ScanDirection direction;
 	TupleTableSlot *slot;
 	bool		scanNext = true;
+	List* filter_quals = NULL;
 
 	/*
 	 * get information from the estate and scan state
@@ -124,12 +126,16 @@ ExternalNext(ExternalScanState *node)
 	direction = estate->es_direction;
 	slot = node->ss.ss_ScanTupleSlot;
 
+	if (gp_external_enable_filter_pushdown) {
+		filter_quals = node->ss.ps.plan->qual;
+	}
+
 	/*
 	 * get the next tuple from the file access methods
 	 */
 	while(scanNext)
 	{
-		tuple = external_getnext(scandesc, direction);
+		tuple = external_getnext(scandesc, direction, filter_quals);
 
 		/*
 		 * save the tuple and the buffer returned to us by the access methods in
@@ -167,7 +173,7 @@ ExternalNext(ExternalScanState *node)
 		}
 		scanNext = false;
 	}
-	
+
 
 	return slot;
 }

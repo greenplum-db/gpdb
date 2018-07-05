@@ -1036,8 +1036,8 @@ class GpArray:
             (dbid, content, role, preferred_role, mode, status, hostname,
              address, port, datadir) = row
 
-            # Check if mirrors exist
-            if preferred_role == ROLE_MIRROR:
+            # Check if segment mirrors exist
+            if preferred_role == ROLE_MIRROR and content != -1:
                 hasMirrors = True
 
             # If we have segments which have recovered, record them.

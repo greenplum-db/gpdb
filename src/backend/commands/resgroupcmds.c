@@ -1224,10 +1224,20 @@ updateResgroupCapabilityEntry(Relation rel,
 
 	oldTuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(oldTuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("capabilities missing for resource group %d type %d",
-						groupId, limitType)));
+	{
+		/*
+		 * It's possible for a cap to be missing, e.g. a resgroup is created
+		 * with v5.0 which does not support cap=7 (cpuset), then we binary
+		 * switch to v5.10 and alter it, then we'll find cap=7 missing here.
+		 * Instead of raising an error we should fallback to insert a new cap.
+		 */
+
+		systable_endscan(sscan);
+
+		insertResgroupCapabilityEntry(rel, groupId, limitType, strValue);
+
+		return;
+	}
 
 	if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{

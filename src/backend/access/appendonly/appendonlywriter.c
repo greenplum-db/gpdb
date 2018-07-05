@@ -854,14 +854,22 @@ SetSegnoForCompaction(Relation rel,
 	for (i = 0; i < MAX_AOREL_CONCURRENCY; i++)
 	{
 		AOSegfileStatus *segfilestat = &aoentry->relsegfiles[i];
+		bool		in_compaction_list = list_member_int(compactedSegmentFileList, i);
 
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				  (errmsg("segment file %i for append-only relation \"%s\" (%d): state %d",
 						  i, RelationGetRelationName(rel), RelationGetRelid(rel), segfilestat->state)));
 
+		/*
+		 * Find an available AO segment to use that is currently not in state
+		 * AWAITING_DROP_READY or COMPACTED_AWAITING_DROP, not being used by a
+		 * concurrent transaction, and not already marked to be compacted by
+		 * being in the in_compaction_list.
+		 */
 		if ((segfilestat->state == AWAITING_DROP_READY ||
 			 segfilestat->state == COMPACTED_AWAITING_DROP) &&
-			!usedByConcurrentTransaction(segfilestat, i))
+			!usedByConcurrentTransaction(segfilestat, i) &&
+			!in_compaction_list)
 		{
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 					  (errmsg("Found segment awaiting drop for append-only relation \"%s\" (%d)",

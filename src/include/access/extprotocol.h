@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	    src/include/access/extprotocol.h
+ *		src/include/access/extprotocol.h
  *
  *-------------------------------------------------------------------------
  */
@@ -29,14 +29,14 @@
  */
 typedef struct ExtProtocolData
 {
-	NodeTag			type;                 /* see T_ExtProtocolData */
-	Relation    	prot_relation;
+	NodeTag			type;				  /* see T_ExtProtocolData */
+	Relation		prot_relation;
 	char*			prot_url;
 	char*			prot_databuf;
 	int				prot_maxbytes;
 	void*			prot_user_ctx;
 	bool			prot_last_call;
-		
+	List*			filter_quals;
 } ExtProtocolData;
 
 typedef ExtProtocolData *ExtProtocol;
@@ -44,11 +44,12 @@ typedef ExtProtocolData *ExtProtocol;
 #define CALLED_AS_EXTPROTOCOL(fcinfo) \
 	((fcinfo->context != NULL && IsA((fcinfo)->context, ExtProtocolData)))
 
-#define EXTPROTOCOL_GET_URL(fcinfo)    	   (((ExtProtocolData*) fcinfo->context)->prot_url)
+#define EXTPROTOCOL_GET_URL(fcinfo)		   (((ExtProtocolData*) fcinfo->context)->prot_url)
 #define EXTPROTOCOL_GET_RELATION(fcinfo)   (((ExtProtocolData*) fcinfo->context)->prot_relation)
 #define EXTPROTOCOL_GET_DATABUF(fcinfo)    (((ExtProtocolData*) fcinfo->context)->prot_databuf)
 #define EXTPROTOCOL_GET_DATALEN(fcinfo)    (((ExtProtocolData*) fcinfo->context)->prot_maxbytes)
 #define EXTPROTOCOL_GET_USER_CTX(fcinfo)   (((ExtProtocolData*) fcinfo->context)->prot_user_ctx)
+#define EXTPROTOCOL_GET_FILTER_QUALS(fcinfo) (((ExtProtocolData*) fcinfo->context)->filter_quals)
 #define EXTPROTOCOL_IS_LAST_CALL(fcinfo)   (((ExtProtocolData*) fcinfo->context)->prot_last_call)
 
 #define EXTPROTOCOL_SET_LAST_CALL(fcinfo)  (((ExtProtocolData*) fcinfo->context)->prot_last_call = true)
@@ -70,11 +71,11 @@ typedef enum ValidatorDirection
  */
 typedef struct ExtProtocolValidatorData
 {
-	NodeTag				 type;            /* see T_ExtProtocolValidatorData */
-	List 		  		*url_list;
-	ValidatorDirection 	 direction;  /* validating read or write? */
+	NodeTag				 type;			  /* see T_ExtProtocolValidatorData */
+	List				*url_list;
+	ValidatorDirection	 direction;  /* validating read or write? */
 	char				*errmsg;		  /* the validation error upon return, if any */
-	
+
 } ExtProtocolValidatorData;
 
 typedef ExtProtocolValidatorData *ExtProtocolValidator;
@@ -86,7 +87,7 @@ typedef ExtProtocolValidatorData *ExtProtocolValidator;
 #define EXTPROTOCOL_VALIDATOR_GET_NUM_URLS(fcinfo)	(list_length(((ExtProtocolValidatorData*) fcinfo->context)->url_list))
 
 #define EXTPROTOCOL_VALIDATOR_GET_NTH_URL(fcinfo, n) (((Value *)(list_nth(EXTPROTOCOL_VALIDATOR_GET_URL_LIST(fcinfo),(n - 1))))->val.str)
-#define EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo)	(((ExtProtocolValidatorData*) fcinfo->context)->direction)
+#define EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) (((ExtProtocolValidatorData*) fcinfo->context)->direction)
 
 
-#endif /* EXTPROTOCOL_H */
+#endif   /* EXTPROTOCOL_H */

@@ -844,7 +844,7 @@ extern bool _bitmap_findvalue(Relation lovHeap, Relation lovIndex,
  * prototypes for functions in bitmapxlog.c
  */
 extern void bitmap_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void bitmap_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void bitmap_desc(StringInfo buf, XLogRecord *record);
 extern void bitmap_xlog_startup(void);
 extern void bitmap_xlog_cleanup(void);
 extern bool bitmap_safe_restartpoint(void);

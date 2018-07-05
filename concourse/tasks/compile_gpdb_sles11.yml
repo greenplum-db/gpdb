@@ -10,6 +10,7 @@ image_resource:
 inputs:
 - name: gpdb_src
 - name: gpaddon_src
+- name: gpAux_ext
 
 outputs:
 - name: gpdb_artifacts
@@ -22,8 +23,4 @@ params:
   TARGET_OS_VERSION:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
-  IVYREPO_HOST:
-  IVYREPO_REALM:
-  IVYREPO_USER:
-  IVYREPO_PASSWD:
   CONFIGURE_FLAGS:

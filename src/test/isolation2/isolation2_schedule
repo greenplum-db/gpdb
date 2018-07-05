@@ -61,6 +61,7 @@ test: uao/vacuum_self_serializable3_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
+test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column

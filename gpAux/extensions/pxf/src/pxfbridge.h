@@ -40,6 +40,7 @@ typedef struct
 	ListCell   *current_fragment;
 	StringInfoData write_file_name;
 	Relation	relation;
+	char *filterstr;
 } gphadoop_context;
 
 /*

@@ -5,7 +5,7 @@
   <shortdesc>You can configure Linux client applications to connect to a Greenplum Database system
     that is configured to authenticate with Kerberos.</shortdesc>
   <body>
-    <p>If your JDBC application on RedHat Enterprise Linux uses Kerberos authentication when it
+    <p>If your JDBC application on Red Hat Enterprise Linux uses Kerberos authentication when it
       connects to your Greenplum Database, your client system must be configured to use Kerberos
       authentication. If you are not using Kerberos authentication to connect to a Greenplum
       Database, Kerberos is not needed on your client system.</p>

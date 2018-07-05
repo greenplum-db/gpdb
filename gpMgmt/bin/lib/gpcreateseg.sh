@@ -139,7 +139,7 @@ PROCESS_QE () {
     if [ x"" != x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
         LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${COPY_FROM_PRIMARY_HOSTADDRESS} ..." 1
         RUN_COMMAND_REMOTE ${COPY_FROM_PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${COPY_FROM_PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${COPY_FROM_PRIMARY_DIR} reload"
-        RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup -x -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${COPY_FROM_PRIMARY_HOSTADDRESS} -p ${COPY_FROM_PRIMARY_PORT}; mkdir ${GP_DIR}/pg_xlog/archive_status"
+        RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup -x -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${COPY_FROM_PRIMARY_HOSTADDRESS} -p ${COPY_FROM_PRIMARY_PORT};"
         REGISTER_MIRROR
         START_QE "-w"
         RETVAL=$?

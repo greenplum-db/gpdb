@@ -78,6 +78,6 @@ extern void multixact_twophase_postabort(TransactionId xid, uint16 info,
 
 extern void multixact_redo(XLogRecPtr beginLoc __attribute__((unused)),
 						   XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
-extern void multixact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void multixact_desc(StringInfo buf, XLogRecord *record);
 
 #endif   /* MULTIXACT_H */

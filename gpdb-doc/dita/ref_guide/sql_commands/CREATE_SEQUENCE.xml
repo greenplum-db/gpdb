@@ -14,7 +14,7 @@ The generator will be owned by the user issuing the command. </p><p>If a schema 
 schema. Otherwise it is created in the current schema. Temporary sequences
 exist in a special schema, so a schema name may not be given when creating
 a temporary sequence. The sequence name must be distinct from the name
-of any other sequence, table, index, or view in the same schema. </p><p>After a sequence is created, you use the <codeph>nextval()</codeph>
+of any other sequence, table, index, view, or foreign table in the same schema. </p><p>After a sequence is created, you use the <codeph>nextval()</codeph>
 function to operate on the sequence. For example, to insert a row into
 a table that gets the next value of a sequence:</p><codeblock>INSERT INTO distributors VALUES (nextval('myserial'), 'acme');</codeblock><p>You can also use the function <codeph>setval()</codeph> to operate on a
 sequence, but only for queries that do not operate on distributed data.

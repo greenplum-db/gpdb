@@ -30,6 +30,30 @@ Feature: expand the cluster by adding more segments
     @gpexpand_no_mirrors
     @gpexpand_ranks
     @gpexpand_timing
+    @gpexpand_standby
+    Scenario: after a duration interrupted redistribution, state file on standby matches master
+        Given a working directory of the test as '/tmp/gpexpand_behave'
+        And the database is killed on hosts "mdw,sdw1"
+        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
+        And a temporary directory to expand into
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
+        And user has created expansionranktest tables
+        And 4000000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
+        When the user runs gpexpand with the latest gpexpand_inputfile
+        And the user runs gpexpand to redistribute with the --duration flag
+        Then gpexpand should return a return code of 0
+        And gpexpand should print "End time reached.  Stopping expansion." to stdout
+
+
+    @gpexpand_no_mirrors
+    @gpexpand_ranks
+    @gpexpand_timing
     Scenario: after resuming an end time interrupted redistribution, tables were restored in the user defined order
         Given a working directory of the test as '/tmp/gpexpand_behave'
         And the database is killed on hosts "mdw,sdw1"
@@ -147,6 +171,7 @@ Feature: expand the cluster by adding more segments
 
     @gpexpand_mirrors
     @gpexpand_host_and_segment
+    @gpexpand_standby
     Scenario: expand a cluster that has mirrors with one new hosts
         Given a working directory of the test as '/tmp/gpexpand_behave'
         And the database is killed on hosts "mdw,sdw1,sdw2,sdw3"
@@ -154,6 +179,7 @@ Feature: expand the cluster by adding more segments
         And a temporary directory to expand into
         And the database is not running
         And a cluster is created with mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
@@ -163,4 +189,3 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile
         Then gpexpand should return a return code of 0
         And verify that the cluster has 14 new segments
-

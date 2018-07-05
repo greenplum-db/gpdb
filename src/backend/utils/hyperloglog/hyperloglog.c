@@ -11,52 +11,20 @@
 #include "postgres.h"
 #include "utils/pg_lzcompress.h"
 
-#include "utils/varint.h"
-#include "utils/hyperloglog.h"
-#include "utils/constants.h"
-#include "utils/hllutils.h"
+#include "utils/hyperloglog/hyperloglog.h"
 
-/* Externed Constants
- * Alpha * m * m constants, for various numbers of 'b'. See constants.h for
- * more information. */
-extern const float alpham[ALPHAM_BOUND];
-
-/* linear counting thresholds */
-extern const int threshold[THRESHOLD_BOUND];
-
-/* bit masks used in encode_hash */
-extern const uint32_t MASK[NUM_OF_PRECISIONS][NUM_OF_BINWIDTHS];
-
-/* error correction data (x-values) */
-extern const double rawEstimateData[NUM_OF_PRECISIONS][MAX_NUM_OF_INTERPOLATION_POINTS];
-
-/* error correction data (y-values) */
-extern const double biasData[NUM_OF_PRECISIONS][MAX_NUM_OF_INTERPOLATION_POINTS];
-
-/* precomputed inverse powers of 2 */
-extern const double PE[NUM_OF_PRECOMPUTED_EXPONENTS];
 
 /* ------------- function declarations for local functions --------------- */
 static double hll_estimate_dense(HLLCounter hloglog);
-static double hll_estimate_sparse(HLLCounter hloglog);
 static double error_estimate(double E,int b);
 
 static HLLCounter hll_add_hash_dense(HLLCounter hloglog, uint64_t hash);
-static HLLCounter hll_add_hash_sparse(HLLCounter hloglog, uint64_t hash);
-static uint32_t encode_hash(uint64_t hash, HLLCounter hloglog);
-static HLLCounter sparse_to_dense(HLLCounter hloglog);
-static HLLCounter sparse_to_dense_unpacked(HLLCounter hloglog);
 
 static HLLCounter hll_compress_dense(HLLCounter hloglog);
-static HLLCounter hll_compress_sparse(HLLCounter hloglog);
 static HLLCounter hll_compress_dense_unpacked(HLLCounter hloglog);
 static HLLCounter hll_decompress_unpacked(HLLCounter hloglog);
 static HLLCounter hll_decompress_dense(HLLCounter hloglog);
 static HLLCounter hll_decompress_dense_unpacked(HLLCounter hloglog);
-static HLLCounter hll_decompress_sparse(HLLCounter hloglog);
-
-static int hll_get_size_sparse(double ndistinct, float error);
-
 
 /* ---------------------- function definitions --------------------------- */
 
@@ -74,11 +42,6 @@ hll_unpack(HLLCounter hloglog){
     /* use decompress to handle compressed unpacking */
     if (hloglog->b < 0){
 	return hll_decompress_unpacked(hloglog);
-    }
-
-     /* sparse estimators are unpacked */
-    if (hloglog->idx != -1){
-        return hloglog;
     }
 
     /* set format to unpacked*/
@@ -121,17 +84,13 @@ hll_decompress_unpacked(HLLCounter hloglog)
 		return hloglog;
 	}
 
-	if (hloglog->idx == -1){
-		hloglog = hll_decompress_dense_unpacked(hloglog);
-	} else {
-		hloglog = hll_decompress_sparse(hloglog);
-	}
+	hloglog = hll_decompress_dense_unpacked(hloglog);
 
 	return hloglog;
 }
 
 
-/* Decompresses sparse counters */
+/* Decompresses dense counters */
 static HLLCounter
 hll_decompress_dense_unpacked(HLLCounter hloglog)
 {
@@ -191,7 +150,7 @@ hll_create(double ndistinct, float error, uint8_t format)
     } 
 
     /* the counter is allocated as part of this memory block  */
-    length = hll_get_size_sparse(ndistinct, error);
+    length = hll_get_size(ndistinct, error);
     p = (HLLCounter)palloc0(length);
 
     /* set the counter struct version */
@@ -211,9 +170,7 @@ hll_create(double ndistinct, float error, uint8_t format)
     /* set the number of bits per bin */
     p->binbits = (uint8_t)ceil(log2(log2(ndistinct)));
 
-    /* set the starting sparse index to 0 since all counters start sparse and
-     *  empty */
-    p->idx = 0;
+    p->idx = -1;
 
     if (p->b < MIN_INDEX_BITS)   /* we want at least 2^4 (=16) bins */
         p->b = MIN_INDEX_BITS;
@@ -255,8 +212,6 @@ hll_merge(HLLCounter counter1, HLLCounter counter2)
 
 	int i;
 	HLLCounter result = counter1;
-	uint8_t rho;
-	uint32_t * sparse_data, *sparse_data_result, idx;
 	int upper_bound = POW2(result->b);
 
 	/* check compatibility first */
@@ -267,74 +222,11 @@ hll_merge(HLLCounter counter1, HLLCounter counter2)
 
 
 	/* Keep the maximum register value for each bin */
-	if (result->idx == -1 && counter2->idx == -1){
-		for (i = 0; i < upper_bound; i += 1){
-
-			result->data[i] = ((counter2->data[i] > result->data[i]) ? counter2->data[i] : result->data[i]);
-
-		}
-	}
-	else if (result->idx == -1) {
-		sparse_data = (uint32_t *)counter2->data;
-
-		/* First the encoded hash must be converted to idx and rho before it
-		* can be added to the densely encoded result counter */
-		for (i = 0; i < counter2->idx; i++){
-			idx = sparse_data[i];
-
-			/* if last bit is 1 then rho is the preceding ~6 bits
-			* otherwise rho can be calculated from the leading bits*/
-			if (sparse_data[i] & 1) {
-				/* grab the binbits before the indicator bit and add that to
-				* the number of zero bits in p-p' */
-				idx = idx >> (32 - result->b);
-				rho = ((sparse_data[i] & (int)(POW2(result->binbits + 1) - 2)) >> 1) + (32 - 1 - result->b - result->binbits);
-			}
-			else {
-				idx = (idx << result->binbits) >> result->binbits;
-				idx = idx >> (32 - (result->binbits + result->b));
-				rho = __builtin_clz(sparse_data[i] << (result->binbits + result->b)) + 1;
-			}
-
-			/* keep the highest value */
-			if (rho > result->data[idx]) {
-				result->data[idx] = rho;
-			}
-
-		}
-	}
-	else if (counter2->idx == -1) {
-
-		result = sparse_to_dense_unpacked(result);
-		for (i = 0; i < upper_bound; i += 1){
-
-			result->data[i] = ((counter2->data[i] > result->data[i]) ? counter2->data[i] : result->data[i]);
-
-		}
-	}
-	else {
-		sparse_data = (uint32_t *)counter2->data;
-		sparse_data_result = (uint32_t *)result->data;
-
-		/* Add encoded hashes just like in add_hash_sparse with the same
-		* dedupe before promotion logic. */
-		for (i = 0; i < counter2->idx; i++){
-			sparse_data_result[result->idx++] = sparse_data[i];
-
-			if (result->idx > size_sparse_array(result->b)) {
-				result->idx = dedupe((uint32_t *)result->data, result->idx);
-				if (result->idx > size_sparse_array(result->b) * (7.0 / 8)) {
-					result = sparse_to_dense_unpacked(result);
-					result = hll_merge(result, counter2);
-					return result;
-				}
-			}
-		}
-
+	for (i = 0; i < upper_bound; i += 1){
+		result->data[i] = ((counter2->data[i] > result->data[i]) ? counter2->data[i] : result->data[i]);
 	}
 
 	return result;
-
 }
 
 
@@ -369,45 +261,15 @@ hll_get_size(double ndistinct, float error)
 
 }
 
-/* Returns the number of bytes to allocate for the initial sparse encoded 
- * counter. Since palloc allocates blocks that are 2^x bytes big if we were
- * to naively chose our sparse size to be a power of 2 and then add in the 
- * appropriate struct overhead we would have a significant amount of wasted
- * space. So its best to allocate a power of 2 and take the struct overhead 
- * out of the maximum number of sparse encoded hashes. */
-static int 
-hll_get_size_sparse(double ndistinct, float error)
-{
-
-    int b;
-    float m;
-    if (error <= 0 || error >= 1)
-        elog(ERROR, "invalid error rate requested");
-    
-    m = ERROR_CONST / (error * error);
-    b = (int)ceil(log2(m));
-    
-    if (b < MIN_INDEX_BITS)
-        b = MIN_INDEX_BITS;
-    else if (b > MAX_INDEX_BITS)
-        elog(ERROR, "number of index bits exceeds MAX_INDEX_BITS (requested %d)",b);
-    
-    return POW2(b-2);
-}
-
 /* Hyperloglog estimate header function */
 double 
 hll_estimate(HLLCounter hloglog)
 {
     double E = 0;
     
-	if (hloglog->idx == -1 && hloglog->format != PACKED ){
-		E = hll_estimate_dense(hloglog);
-	} else {
-		E = hll_estimate_sparse(hloglog);
-	}
+	E = hll_estimate_dense(hloglog);
 
-    return E;
+	return E;
 }
 /*
  * Computes the HLL estimate, as described in the paper.
@@ -537,35 +399,6 @@ error_estimate(double E,int b)
     return avg;
 }
 
-/* Evaluates the stored encoded hashes using linear counting */
-static double 
-hll_estimate_sparse(HLLCounter hloglog)
-{
-    int i,V,m = POW2(32 - 1 - hloglog->binbits);
-    uint32_t * sparse_data;
-
-    /* sort the values so we can ignore duplicates */
-    hloglog->idx = dedupe((uint32_t *)hloglog->data,hloglog->idx);
-    sparse_data = (uint32_t *) hloglog->data;
-    
-    /* count number of unique values */
-    V = 0;
-    for (i=0; i < hloglog->idx ; i++){
-        if (i == 0){
-            V++;
-        } else if (sparse_data[i] != sparse_data[i-1]){
-            V++;
-        }
-    }
-
-    /* Instead of counting empty counters like we do in dense estimation with 
-     * linear counting we need to count the number of unique values and 
-     * subtract that from the total possible unique counters since we are
-     * using a sparse representation of this space. */
-    return  m * log(m / (double)(m-V));
-
-}
-
 /* Add element header function */
 HLLCounter
 hll_add_element(HLLCounter hloglog, const char * element, int elen)
@@ -577,11 +410,7 @@ hll_add_element(HLLCounter hloglog, const char * element, int elen)
     hash = MurmurHash64A(element, elen, HASH_SEED);    
 
     /* add the hash to the estimator */
-    if (hloglog->idx == -1 ){
-        hloglog = hll_add_hash_dense(hloglog, hash);
-    } else {
-        hloglog = hll_add_hash_sparse(hloglog, hash);
-    }
+    hloglog = hll_add_hash_dense(hloglog, hash);
 
     return hloglog;
 }
@@ -630,222 +459,6 @@ hll_add_hash_dense(HLLCounter hloglog, uint64_t hash)
 
 }
 
-/* Add the encoded hash to the array of sparse values and promote to dense 
- * encoding if size threshold is exceeded */
-static HLLCounter
-hll_add_hash_sparse(HLLCounter hloglog, uint64_t hash)
-{
-    uint32_t encoded_hash;
-    uint32_t * bigdata;
-
-    bigdata = (uint32_t *) hloglog->data;
-    encoded_hash = encode_hash(hash,hloglog);
-
-    bigdata[hloglog->idx++] = encoded_hash;
-
-    /* If the size threshold is exceeded first we dedupe the array to guard 
-     * against situations where many duplicate elements are input into the 
-     * counter which would needlessly promote it to dense encoding sacrificing
-     * accuracy at a lower cardinality than desired. However if the dedupe 
-     * doesn't provide a reasonable reduction its should still be promoted. */
-    if (hloglog->idx > size_sparse_array(hloglog->b)){
-        hloglog->idx = dedupe((uint32_t *)hloglog->data,hloglog->idx);
-        if (hloglog->idx > size_sparse_array(hloglog->b)*7/8){
-            hloglog = sparse_to_dense(hloglog);
-        }
-    }
-    
-    return hloglog;
-}
-
-/* Encode the 64 bit hash to a 32 bit summary for sparse encoding and later
- *  conversion to dense encoding. The encoding scheme is as follows:
- * 
- * We take an index of 25 bits (as opposed to the default 14) to allow for
- * greater accuracy when sparsely encoded. If the bits 14 - 25 contain a 1 
- * (so rho is less than 11) then we add a 0 to the of the encode as a flag 
- * for this. However if these bits are all 0's then we need to add rho to the
- * end of this so we can sucesfully switch to dense encoding when the time 
- * comes. We indicate this scenario with a trailing 1 bit. It is worth noting
- * we actually add rho - 11 since we can infer that extra 11 from the fact
- * that bits 14-25 are 0.
- *
- * Scenario 1 (where rho is in bits 14-25):
- * six 0 bits | first 25 bits of hash | 0 = 32 bit encoded number
- *
- * Scenario 2 (where rho is outside of bits 14-25):
- * first 25 bits of hash | rho - 11 (6 bits total) | 1 = 32 bit encoded number
-*/
-static uint32_t 
-encode_hash(uint64_t hash, HLLCounter hloglog)
-{
-    uint32_t encode = 0;
-    uint64_t idx;
-    uint8_t rho,addn;
-
-    /* which stream is this (keep only the first p' bits) */
-    idx  = hash >> (HASH_LENGTH - (32 - 1 - hloglog->binbits));
-
-    /* check p-p' bits for significant digit */
-    if (idx & MASK[hloglog->b - 4][hloglog->binbits - 4]){
-        encode = idx << 1;
-    } else {
-        encode = idx << hloglog->binbits;
-        rho = __builtin_clzll(hash<<(32- 1 - hloglog->binbits)) + 1;
-        if (rho == HASH_LENGTH){
-            addn = HASH_LENGTH;
-            rho = (HASH_LENGTH - (32- 1 - hloglog->binbits));
-            while (addn == HASH_LENGTH && rho < POW2(hloglog->binbits)){
-                hash = MurmurHash64A((const char * )&hash, HASH_LENGTH/8, HASH_SEED);
-                /*zero length runs should be 1 so counter gets set */
-                addn = __builtin_clzll(hash) + 1;
-                rho += addn;
-            }
-        }
-        encode = encode + rho;
-        encode = (encode << 1);
-        encode = encode + 1;
-    }
-
-    return encode;
-}
-
-/* Promote a counter from sparse encoding to dense encoding */
-static HLLCounter
-sparse_to_dense(HLLCounter hloglog)
-{
-    HLLCounter htemp;
-    uint32_t * sparse_data;
-    uint32_t idx;
-    uint8_t rho,entry;
-    int i, m = POW2(hloglog->b);
-
-    if (hloglog->idx == -1){
-        return hloglog;
-    }
-
-    /* Sparse encoded counters are smaller than dense so new space needs to be
-     *  alloced */
-    sparse_data = malloc(hloglog->idx*sizeof(uint32_t));
-    if (sparse_data == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_OUT_OF_MEMORY),
-                 errmsg("out of memory"),
-                 errdetail("Failed on request of size %zu.", hloglog->idx*sizeof(uint32_t))));
-
-    memmove(sparse_data,&hloglog->data,hloglog->idx*sizeof(uint32_t));
-    htemp = palloc0(sizeof(HLLData) + (int)ceil((m * hloglog->binbits / 8.0)));
-    memcpy(htemp,hloglog,sizeof(HLLData));
-    hloglog = htemp;
-    memset(hloglog->data,0,(int)ceil((m * hloglog->binbits / 8.0)));
-
-    for (i=0; i < hloglog->idx; i++){
-        idx = sparse_data[i];
-
-        /* if last bit is 1 then rho is the preceding ~6 bits
-         * otherwise rho can be calculated from the leading bits*/
-        if (sparse_data[i] & 1) {
-            /* grab the binbits before the indicator bit and add that to the 
-             * number of zero bits in p-p' */
-            idx = idx >> (32 - hloglog->b);
-            rho = ((sparse_data[i] & (int)(POW2(hloglog->binbits+1) - 2)) >> 1) + (32 - 1 - hloglog->b - hloglog->binbits);
-        } else {
-            idx = (idx << hloglog->binbits) >> hloglog->binbits;
-            idx  = idx >> (32 - (hloglog->binbits+ hloglog->b));
-            rho = __builtin_clz(sparse_data[i] << (hloglog->binbits+ hloglog->b)) + 1;
-        }
-        
-        /* keep the highest value */
-        HLL_DENSE_GET_REGISTER(entry,hloglog->data,idx,hloglog->binbits);
-        if (rho > entry) {
-            HLL_DENSE_SET_REGISTER(hloglog->data,idx,rho,hloglog->binbits);
-        }
-
-    }
-    
-    if (sparse_data){
-        free(sparse_data);
-    }
-    
-    SET_VARSIZE(hloglog,sizeof(HLLData) + (int)ceil((m * hloglog->binbits / 8.0)) );
-
-    hloglog->idx = -1;
-
-    return hloglog;
-}
-
-static HLLCounter
-sparse_to_dense_unpacked(HLLCounter hloglog)
-{
-	HLLCounter htemp;
-	uint32_t * sparse_data;
-	uint32_t idx;
-	uint8_t rho;
-	int i, m = POW2(hloglog->b);
-
-	if (hloglog->idx == -1){
-		return hloglog;
-	}
-
-        if (hloglog->format == PACKED){
-	    hloglog->format = UNPACKED;
-        } else if (hloglog->format == PACKED_UNPACKED) {
-            hloglog->format = UNPACKED_UNPACKED;
-        } else {
-           elog(ERROR,"Sparse counter should either be PACKED or PACKED_UNPACKED it is:%d",hloglog->format);
-        }
-
-	/* Sparse encoded counters are smaller than dense so new space needs to be
-	*  alloced */
-	sparse_data = malloc(hloglog->idx*sizeof(uint32_t));
-	if (sparse_data == NULL)
-		ereport(ERROR,
-		(errcode(ERRCODE_OUT_OF_MEMORY),
-		errmsg("out of memory"),
-		errdetail("Failed on request of size %zu.", hloglog->idx*sizeof(uint32_t))));
-
-	memmove(sparse_data, &hloglog->data, hloglog->idx*sizeof(uint32_t));
-	htemp = palloc0(sizeof(HLLData) + m);
-	memcpy(htemp, hloglog, sizeof(HLLData));
-	hloglog = htemp;
-	memset(hloglog->data, 0, m);
-	int maxidx = hloglog->idx;
-
-	for (i = 0; i < maxidx; i++){
-		idx = sparse_data[i];
-
-		/* if last bit is 1 then rho is the preceding ~6 bits
-		* otherwise rho can be calculated from the leading bits*/
-		if (sparse_data[i] & 1) {
-			/* grab the binbits before the indicator bit and add that to the
-			* number of zero bits in p-p' */
-			idx = idx >> (32 - hloglog->b);
-			rho = ((sparse_data[i] & (int)(POW2(hloglog->binbits + 1) - 2)) >> 1) + (32 - 1 - hloglog->b - hloglog->binbits);
-		}
-		else {
-			idx = (idx << hloglog->binbits) >> hloglog->binbits;
-			idx = idx >> (32 - (hloglog->binbits + hloglog->b));
-			rho = __builtin_clz(sparse_data[i] << (hloglog->binbits + hloglog->b)) + 1;
-		}
-
-		/* keep the highest value */
-    	if (rho > hloglog->data[idx]) {
-			hloglog->data[idx] = rho;
-		}
-
-	}
-
-	if (sparse_data){
-		free(sparse_data);
-	}
-
-	SET_VARSIZE(hloglog, sizeof(HLLData) + m);
-
-	hloglog->idx = -1;
-
-	return hloglog;
-}
-
 /* Just reset the counter (set all the counters to 0). We do this by
  * zeroing the data array */
 void 
@@ -856,68 +469,6 @@ hll_reset_internal(HLLCounter hloglog)
 
 }
 
-/* check the equality by comparing the register values not the cardinalities */
-int
-hll_is_equal(HLLCounter counter1, HLLCounter counter2)
-{
-
-    HLLCounter counter1copy,counter2copy;
-    uint32_t * sparse_data1, *sparse_data2;
-    int i, m = POW2(counter1->b);
-
-    /* check compatibility first */
-    if (counter1->b != counter2->b)
-        elog(ERROR, "index size (bit length) of estimators differs (%d != %d)", counter1->b, counter2->b);
-    else if (counter1->binbits != counter2->binbits)
-        elog(ERROR, "bin size of estimators differs (%d != %d)", counter1->binbits, counter2->binbits);
-    else if (((counter1->format == PACKED || counter1->format == PACKED_UNPACKED) && counter1->idx == -1) || ((counter2->format == PACKED || counter2->format == PACKED_UNPACKED) && counter2->idx == -1))
-	elog(ERROR, "Estimator(s) are not unpacked! (%d,%d)", counter1->format, counter2->format);
-
-    /* compare registers returning false on any difference */
-    if (counter1->idx == -1 && counter2->idx == -1){
-        for (i = 0; i < m; i++){
-            if (counter1->data[i] != counter2->data[i]){
-                return 0;
-            }
-        }
-    } else if (counter1->idx == -1) {
-        counter2copy = sparse_to_dense_unpacked(counter2);
-        for (i = 0; i < m; i++){
-            if (counter1->data[i] != counter2copy->data[i]){
-                return 0;
-            }
-        }
-    } else if (counter2->idx == -1) {
-        counter1copy = sparse_to_dense_unpacked(counter1);
-        for (i = 0; i < m; i++){
-            if (counter1copy->data[i] != counter2->data[i]){
-                return 0;
-            }
-        }
-    } else {
-        counter1copy = hll_copy(counter1);
-        counter2copy = hll_copy(counter2);
-        sparse_data1 = (uint32_t *) counter1copy->data;
-        sparse_data2 = (uint32_t *) counter2copy->data;
-
-        counter1copy->idx = dedupe((uint32_t *)counter1copy->data,counter1copy->idx);
-        counter2copy->idx = dedupe((uint32_t *)counter2copy->data,counter2copy->idx);
-
-        if (counter1copy->idx != counter2copy->idx){
-            return 0;
-        }
-
-        for (i=0; i < counter1copy->idx ; i++){
-            if (sparse_data1[i] != sparse_data2[i]){
-                return 0;
-            }
-        }
-
-    }
-
-    return 1;
-
-}
 /* Compress header function */
 HLLCounter
 hll_compress(HLLCounter hloglog)
@@ -936,8 +487,6 @@ hll_compress(HLLCounter hloglog)
 	hloglog->format = UNPACKED;
     } else if (hloglog->format == PACKED_UNPACKED){
 	hloglog = hll_unpack(hloglog);
-    } else if (hloglog->idx != -1) {
-        hloglog = hll_compress_sparse(hloglog);
     }
     
     return hloglog;
@@ -1066,54 +615,6 @@ hll_compress_dense_unpacked(HLLCounter hloglog)
 	return hloglog;
 }
 
-/* Sparse compression uses group-varint encoding on a list of deltas made from
- * a sorted and deduped list of the encoded hashes. Group-varint encoding can
- * be seen in further detail in varint.h but essentially it operates on groups
- * of 4 uint32_t's to compress the chunks. Any remainders is encoded using
- * continuation bit variable length encoding.
- *
- * However if this fails to produce any reduction in size the original deduped
- * and sorted list is stored and this is indicated by
- * hloglog->b = -1*(hloglog->b + MAX_INDEX_BITS)
- *
- * Using MAX_INDEX_BITS ensures no overlap in negative b values which are
- * varint encoded and those that aren't since b <= MAX_INDEX_BITS */
-static HLLCounter
-hll_compress_sparse(HLLCounter hloglog)
-{
-    uint32_t out;
-    uint8_t * encodes;
-
-    /* Add 80 (320 bytes) to allow for cases where group-varint doesn't reduce
-     * size. This allows enough space for worst case scenario compression */
-    uint32_t sparse_size = size_sparse_array(hloglog->b) + 80;
-
-    encodes = malloc(sparse_size*sizeof(uint32_t));
-    if (encodes == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_OUT_OF_MEMORY),
-                 errmsg("out of memory"),
-                 errdetail("Failed on request of size %zu.", sparse_size*sizeof(uint32_t))));
-
-    hloglog->idx = dedupe((uint32_t *)hloglog->data,hloglog->idx);
-
-    out = group_encode_sorted((uint32_t *)hloglog->data,hloglog->idx,encodes);
-
-    if (out < hloglog->idx*4){
-        memcpy(hloglog->data,encodes,out);
-        SET_VARSIZE(hloglog,sizeof(HLLData) + out);
-        hloglog->b = -1 * (hloglog->b);
-    } else {
-        SET_VARSIZE(hloglog,sizeof(HLLData) + hloglog->idx*4);
-        hloglog->b = ( -1 * (hloglog->b + MAX_INDEX_BITS));
-    }
-
-    if (encodes){
-        free(encodes);
-    }
-
-    return hloglog;
-}
 
 /* Decompress header function */
 HLLCounter
@@ -1124,12 +625,8 @@ hll_decompress(HLLCounter hloglog)
         return hloglog;
     }
     
-    if (hloglog->idx == -1){
-        hloglog = hll_decompress_dense(hloglog);
-    } else {
-        hloglog = hll_decompress_sparse(hloglog);
-    }
-    
+    hloglog = hll_decompress_dense(hloglog);
+
     return hloglog;
 }
 
@@ -1184,42 +681,315 @@ hll_decompress_dense(HLLCounter hloglog)
     return hloglog;
 }
 
-/* Decompresses sparse counters. To do this first the compression flag is
- * checked to see if group-varint encoding was used. If -b > MAX_BIN_BITS then
- * no compression was used the counter was simply resized so all that needs to
- * be done is to copy the data into a fully allocated chunk of memory.
- * However, if -b < MAX_INDEX_BITS then group-varint encoding was used and the
- * bytes in hloglog->data must be decoded before being copied into a fully
- * allocated chunk of memory as well. */
-static HLLCounter
-hll_decompress_sparse(HLLCounter hloglog)
+/* ---------------------- function definitions --------------------------- */
+
+HLLCounter
+hyperloglog_add_item(HLLCounter hllcounter, Datum element, int16 typlen, bool typbyval, char typalign)
 {
-	HLLCounter htemp;
-    size_t length;
+	HLLCounter hyperloglog;
+	
+	/* requires the estimator to be already created */
+	if (hllcounter == NULL)
+		elog(ERROR, "hyperloglog counter must not be NULL");
+	
+	/* estimator (we know it's not a NULL value) */
+	hyperloglog = (HLLCounter) hllcounter;
+	
+	/* TODO The requests for type info shouldn't be a problem (thanks to
+	 * lsyscache), but if it turns out to have a noticeable impact it's
+	 * possible to cache that between the calls (in the estimator).
+	 *
+	 * I have noticed no measurable effect from either option. */
+	
+	/* decompress if needed */
+	if(hyperloglog->b < 0)
+	{
+		hyperloglog = hll_decompress(hyperloglog);
+	}
+	
+	/* it this a varlena type, passed by reference or by value ? */
+	if (typlen == -1)
+	{
+		/* varlena */
+		hyperloglog = hll_add_element(hyperloglog, VARDATA_ANY(element), VARSIZE_ANY_EXHDR(element));
+	}
+	else if (typbyval)
+	{
+		/* fixed-length, passed by value */
+		hyperloglog = hll_add_element(hyperloglog, (char*)&element, typlen);
+	}
+	else
+	{
+		/* fixed-length, passed by reference */
+		hyperloglog = hll_add_element(hyperloglog, (char*)element, typlen);
+	}
+	
+	return hyperloglog;
+}
 
-    /* reset b to positive value for calcs and to indicate data is
-     * decompressed */
-    hloglog->b = -1 * (hloglog->b);
 
-    if (hloglog->b > MAX_INDEX_BITS){
-        hloglog->b = hloglog->b - MAX_INDEX_BITS;
-        
-        length = POW2(hloglog->b-2);
-        htemp = palloc0(length);
-        memcpy(htemp,hloglog,VARSIZE_ANY(hloglog));
-        hloglog = htemp;
+double
+hyperloglog_estimate(HLLCounter hyperloglog)
+{
+	double estimate;
+	
+	/* unpack if needed */
+	hyperloglog = hll_unpack(hyperloglog);
+	
+	estimate = hll_estimate(hyperloglog);
+	
+	/* return the updated bytea */
+	return estimate;
+}
 
-        SET_VARSIZE(hloglog,length);
-    } else {
-        length = POW2(hloglog->b-2);
-        htemp = palloc0(length);
-        memcpy(htemp,hloglog,sizeof(HLLData));
-        group_decode_sorted((uint8_t *)hloglog->data,hloglog->idx,(uint32_t *) htemp->data);
-        hloglog = htemp;
+HLLCounter
+hyperloglog_merge_counters(HLLCounter counter1, HLLCounter counter2)
+{
+	if (counter1 == NULL && counter2 == NULL)
+	{
+		/* if both counters are null return null */
+		return NULL;
+	}
+	else if (counter1 == NULL)
+	{
+		/* if first counter is null just copy the second estimator into the
+		 * first one */
+		counter1 = hll_copy(counter2);
+	}
+	else if (counter2 == NULL) {
+		/* if second counter is null just return the the first estimator */
+		counter1 = hll_copy(counter1);
+	}
+	else
+	{
+		/* ok, we already have the estimator - merge the second one into it */
+		/* unpack if needed */
+		counter1 = hll_unpack(counter1);
+		counter2 = hll_unpack(counter2);
+		
+		/* perform the merge */
+		counter1 = hll_merge(counter1, counter2);
+	}
+	
+	/* return the updated HLLCounter */
+	return counter1;
+}
 
-        SET_VARSIZE(hloglog,length);
+
+HLLCounter
+hyperloglog_init_def()
+{
+	HLLCounter hyperloglog;
+	
+	hyperloglog = hll_create(DEFAULT_NDISTINCT, DEFAULT_ERROR, PACKED);
+	
+	return hyperloglog;
+}
+
+int
+hyperloglog_len(HLLCounter hyperloglog)
+{
+	return VARSIZE_ANY(hyperloglog);
+}
+
+/* MurmurHash64A produces the fastest 64 bit hash of the MurmurHash 
+ * implementations and is ~ 20x faster than md5. This version produces the
+ * same hash for the same key and seed in both big and little endian systems
+ * */
+uint64_t 
+MurmurHash64A (const void * key, int len, unsigned int seed) 
+{
+    const uint64_t m = 0xc6a4a7935bd1e995;
+    const int r = 47;
+    uint64_t h = seed ^ (len * m);
+    const uint8_t *data = (const uint8_t *)key;
+    const uint8_t *end = data + (len-(len&7));
+
+    while(data != end) {
+        uint64_t k;
+
+#if (BYTE_ORDER == LITTLE_ENDIAN)
+        k = *((uint64_t*)data);
+#else
+        k = (uint64_t) data[0];
+        k |= (uint64_t) data[1] << 8;
+        k |= (uint64_t) data[2] << 16;
+        k |= (uint64_t) data[3] << 24;
+        k |= (uint64_t) data[4] << 32;
+        k |= (uint64_t) data[5] << 40;
+        k |= (uint64_t) data[6] << 48;
+        k |= (uint64_t) data[7] << 56;
+#endif
+
+        k *= m;
+        k ^= k >> r;
+        k *= m;
+        h ^= k;
+        h *= m;
+        data += 8;
     }
-    
-    return hloglog;
+
+    switch(len & 7) {
+        case 7: h ^= (uint64_t)data[6] << 48;
+        case 6: h ^= (uint64_t)data[5] << 40;
+        case 5: h ^= (uint64_t)data[4] << 32;
+        case 4: h ^= (uint64_t)data[3] << 24;
+        case 3: h ^= (uint64_t)data[2] << 16;
+        case 2: h ^= (uint64_t)data[1] << 8;
+        case 1: h ^= (uint64_t)data[0];
+        h *= m;
+    };
+
+    h ^= h >> r;
+    h *= m;
+    h ^= h >> r;
+
+    return h;
+}
+
+static const char _base64[] =
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static const int8 b64lookup[128] = {
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
+	52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
+	-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
+	-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
+};
+
+
+int
+hll_b64_encode(const char *src, unsigned len, char *dst)
+{
+	char	   *p,
+		*lend = dst + 76;
+	const char *s,
+		*end = src + len;
+	int			pos = 2;
+	uint32		buf = 0;
+
+	s = src;
+	p = dst;
+
+
+	while (s < end)
+	{
+		buf |= (unsigned char)*s << (pos << 3);
+		pos--;
+		s++;
+
+		/* write it out */
+		if (pos < 0)
+		{
+			*p++ = _base64[(buf >> 18) & 0x3f];
+			*p++ = _base64[(buf >> 12) & 0x3f];
+			*p++ = _base64[(buf >> 6) & 0x3f];
+			*p++ = _base64[buf & 0x3f];
+
+			pos = 2;
+			buf = 0;
+		}
+		if (p >= lend)
+		{
+			*p++ = '\n';
+			lend = p + 76;
+		}
+	}
+	if (pos != 2)
+	{
+		*p++ = _base64[(buf >> 18) & 0x3f];
+		*p++ = _base64[(buf >> 12) & 0x3f];
+		*p++ = (pos == 0) ? _base64[(buf >> 6) & 0x3f] : '=';
+		*p++ = '=';
+	}
+
+	return p - dst;
+}
+
+int
+hll_b64_decode(const char *src, unsigned len, char *dst)
+{
+	const char *srcend = src + len,
+		*s = src;
+	char	   *p = dst;
+	char		c;
+	int			b = 0;
+	uint32		buf = 0;
+	int			pos = 0,
+		end = 0;
+
+
+	while (s < srcend)
+	{
+		c = *s++;
+
+		if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+			continue;
+
+		if (c == '=')
+		{
+			/* end sequence */
+			if (!end)
+			{
+				if (pos == 2)
+					end = 1;
+				else if (pos == 3)
+					end = 2;
+				else
+					ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					errmsg("unexpected \"=\"")));
+			}
+			b = 0;
+		}
+		else
+		{
+			b = -1;
+			if (c > 0 && c < 127)
+				b = b64lookup[(unsigned char)c];
+			if (b < 0)
+				ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("invalid symbol")));
+		}
+		/* add it to buffer */
+		buf = (buf << 6) + b;
+		pos++;
+		if (pos == 4)
+		{
+			*p++ = (buf >> 16) & 255;
+			if (end == 0 || end > 1)
+				*p++ = (buf >> 8) & 255;
+			if (end == 0 || end > 2)
+				*p++ = buf & 255;
+			buf = 0;
+			pos = 0;
+		}
+	}
+
+	if (pos != 0)
+		ereport(ERROR,
+		(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+		errmsg("invalid end sequence")));
+
+	return p - dst;
+}
+
+
+int
+b64_enc_len(const char *src, unsigned srclen)
+{
+	/* 3 bytes will be converted to 4, linefeed after 76 chars */
+	return (srclen + 2) * 4 / 3 + srclen / (76 * 3 / 4);
+}
+
+int
+b64_dec_len(const char *src, unsigned srclen)
+{
+	return (srclen * 3) >> 2;
 }
 

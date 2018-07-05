@@ -1770,6 +1770,21 @@ ExecuteTruncate(TruncateStmt *stmt)
 	{
 		Relation	rel = (Relation) lfirst(cell);
 
+		if (RelationIsAppendOptimized(rel) && IS_QUERY_DISPATCHER())
+		{
+			/*
+			 * Drop the shared memory hash table entry for this table if it
+			 * exists. We must do so since before the rewrite we probably have few
+			 * non-zero segfile entries for this table while after the rewrite
+			 * only segno zero will be full and the others will be empty. By
+			 * dropping the hash entry we force refreshing the entry from the
+			 * catalog the next time a write into this AO table comes along.
+			 */
+			LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+			AORelRemoveHashEntry(RelationGetRelid(rel));
+			LWLockRelease(AOSegFileLock);
+		}
+
 		heap_close(rel, NoLock);
 	}
 }
@@ -3678,10 +3693,6 @@ AlterTableGetLockLevel(List *cmds)
 			case AT_PartSplit:
 			case AT_PartTruncate:
 			case AT_PartAddInternal:
-				/*
-				 * GPDB_91_MERGE_FIXME: Is AccessExclusiveLock unnecessarily strict for
-				 * some of these?
-				 */
 				cmd_lockmode = AccessExclusiveLock;
 				break;
 
@@ -6893,76 +6904,6 @@ ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 			elog(ERROR, "unexpected ALTER TABLE subtype %d in ADD COLUMN command",
 				 cmd->subtype);
 	}
-
-	/* GPDB_91_MERGE_FIXME: I don't know if this is still needed or not.
-	 * Perhaps not, because of the new way OIDs are dispatched. We'll see when
-	 * we get to test this, I suppose.
-	 */
-#if 0
-	if (recurse)
-	{
-		/*
-		 * We are the master and the table has child(ren):
-		 * 		internally create and execute new AlterTableStmt(s) on child(ren)
-		 * 		before dispatching the original AlterTableStmt
-		 * This is to ensure that pg_constraint oid is consistent across segments for
-		 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
-		 */
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			List		*children;
-			ListCell	*lchild;
-
-			children = find_inheritance_children(RelationGetRelid(rel), NoLock);
-			DestReceiver *dest = None_Receiver;
-			foreach(lchild, children)
-			{
-				Oid 			childrelid = lfirst_oid(lchild);
-				Relation 		childrel;
-
-				RangeVar 		*rv;
-				AlterTableCmd 	*atc;
-				AlterTableStmt 	*ats;
-
-				if (childrelid == RelationGetRelid(rel))
-					continue;
-
-				childrel = heap_open(childrelid, AccessShareLock);
-				CheckTableNotInUse(childrel, "ALTER TABLE");
-
-				/* Recurse to child */
-				atc = copyObject(cmd);
-				if (cmd->subtype == AT_AddColumn || cmd->subtype == AT_AddColumnRecurse)
-					atc->subtype = AT_AddColumnRecurse;
-				else if (cmd->subtype == AT_AddOids)
-					atc->subtype = AT_AddOidsRecurse;
-				else
-					elog(ERROR, "unexpected ALTER TABLE subtype %d in ADD COLUMN command",
-						 cmd->subtype);
-
-				/* Child should see column as singly inherited */
-				((ColumnDef *) atc->def)->inhcount = 1;
-				((ColumnDef *) atc->def)->is_local = false;
-
-				rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
-								  get_rel_name(childrelid), -1);
-
-				ats = makeNode(AlterTableStmt);
-				ats->relation = rv;
-				ats->cmds = list_make1(atc);
-				ats->relkind = OBJECT_TABLE;
-
-				heap_close(childrel, NoLock);
-
-				ProcessUtility((Node *)ats,
-							   synthetic_sql,
-							   NULL,
-							   false, /* not top level */
-							   dest,
-							   NULL);
-			}
-		}
-#endif
 }
 
 static void
@@ -9937,8 +9878,19 @@ ATPrepAlterColumnType(List **wqueue,
 		 * we waste effort, and because we need the expression to be parsed
 		 * against the original table rowtype.
 		 */
-		/* GPDB: we always need the RTE */
-		/* GPDB_91_MERGE_FIXME: Why do we always need the RTE? */
+		/*
+		 * GPDB: we always need the RTE. The main reason being to support
+		 * unknown to text implicit conversion for queries like
+		 * CREATE TABLE t AS SELECT j AS a, 'abc' AS i FROM
+		 * generate_series(1, 10) j;
+		 *
+		 * Executes autostats internally which runs query to collect the same
+		 * which fails without RTE. More supported examples of unknown to text
+		 * can be found in src/test/regress/sql/strings.sql.
+		 *
+		 * GPDB_10_MERGE_FIXME: Upstream fixes this problem in PG10 hence need
+		 * to live with this code till then.
+		 */
 		{
 			RangeTblEntry *rte;
 
@@ -13076,6 +13028,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	RangeVar   *tmprv;
 	Oid			tmprelid;
 	Oid			tarrelid = RelationGetRelid(rel);
+	char		tarrelstorage = rel->rd_rel->relstorage;
 	List	   *oid_map = NIL;
 	bool        rand_pol = false;
 	bool        rep_pol = false;
@@ -13735,6 +13688,25 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		performDeletion(&object, DROP_RESTRICT);
 	}
 
+	if (relstorage_is_ao(tarrelstorage) && IS_QUERY_DISPATCHER())
+	{
+		/*
+		 * Drop the shared memory hash table entry for this table if it
+		 * exists. We must do so since before the rewrite we probably have few
+		 * non-zero segfile entries for this table while after the rewrite
+		 * only segno zero will be full and the others will be empty. By
+		 * dropping the hash entry we force refreshing the entry from the
+		 * catalog the next time a write into this AO table comes along.
+		 *
+		 * Note that ALTER already took an exclusive lock on the old relation
+		 * so we are guaranteed to not drop the hash entry from under any
+		 * concurrent operation.
+		 */
+		LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+		AORelRemoveHashEntry(tarrelid);
+		LWLockRelease(AOSegFileLock);
+	}
+
 l_distro_fini:
 
 	/* MPP-6929: metadata tracking */
@@ -14274,7 +14246,6 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 	}
 
 	/* execute the command */
-	/* GPDB_91_MERGE_FIXME: is this lock mode right? */
 	ATExecCmd(wqueue, tab, (rel2 ? &rel2 : rel), atc, AccessExclusiveLock);
 
 	if (!bPartitionCmd)
@@ -14570,7 +14541,7 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 	ATExecDropInherit(oldrel,
 			makeRangeVar(get_namespace_name(parent->rd_rel->relnamespace),
 					     RelationGetRelationName(parent), -1),
-					  AccessExclusiveLock, /* GPDB_91_MERGE_FIXME: lock mode? */
+					  AccessExclusiveLock, /* Not used for anything in ATExecDropInherit() */
 					  true);
 
 	inherit_parent(parent, newrel, true /* it's a partition */, NIL);

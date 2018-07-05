@@ -663,7 +663,9 @@ VERSION:=$(shell [ -f ../VERSION ] && perl -pe 's, ,-,g' ../VERSION)
 VERSION_SHORT:=$(shell [ -f ../VERSION ] && perl -pe 's, .*,,g' ../VERSION)
 
 ifeq "$(findstring win,$(BLD_ARCH))" "win"
+ifeq "$(findstring $(MAKECMDGOALS),sync_tools)" ""
 BLD_PACKAGING_PID:=$(shell ssh $(WIX_PACKAGER) 'echo $$$$')
+endif
 endif
 
 clients :

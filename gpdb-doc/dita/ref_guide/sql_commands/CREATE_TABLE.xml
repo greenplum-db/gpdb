@@ -138,8 +138,8 @@
       <p>If you specify a schema name, Greenplum creates the table in the specified schema.
         Otherwise Greenplum creates the table in the current schema. Temporary tables exist in a
         special schema, so you cannot specify a schema name when creating a temporary table. Table
-        names must be distinct from the name of any other table, external table, sequence, index, or
-        view in the same schema.</p>
+        names must be distinct from the name of any other table, external table, sequence, index,
+        view, or foreign table in the same schema.</p>
       <p>The optional constraint clauses specify conditions that new or updated rows must satisfy
         for an insert or update operation to succeed. A constraint is an SQL object that helps
         define the set of valid values in the table in various ways. Constraints apply to tables,

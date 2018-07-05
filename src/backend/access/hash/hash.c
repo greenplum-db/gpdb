@@ -719,6 +719,6 @@ hash_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 }
 
 void
-hash_desc(StringInfo buf __attribute__((unused)), XLogRecPtr beginLoc, XLogRecord *record __attribute__((unused)))
+hash_desc(StringInfo buf __attribute__((unused)), XLogRecord *record __attribute__((unused)))
 {
 }

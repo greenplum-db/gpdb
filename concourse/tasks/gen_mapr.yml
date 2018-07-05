@@ -1,0 +1,36 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: "7"
+
+inputs:
+  - name: terraform
+  - name: ccp_src
+  - name: gpdb_src
+
+outputs:
+  - name: cluster_env_files
+
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    ccp_src/scripts/download_tf_state.sh
+    NUMBER_OF_NODES=$(jq -r .cluster_host_list[] ./terraform*/metadata | wc -l)
+    ccp_src/scripts/generate_env_files.sh $NUMBER_OF_NODES false
+    ccp_src/scripts/generate_ssh_files.sh $NUMBER_OF_NODES false
+    gpdb_src/concourse/scripts/gen_mapr.sh $NUMBER_OF_NODES
+
+params:
+  AWS_ACCESS_KEY_ID:
+  AWS_SECRET_ACCESS_KEY:
+  AWS_DEFAULT_REGION:
+  BUCKET_PATH:
+  BUCKET_NAME:
+  PLATFORM: centos7
+  CLOUD_PROVIDER: google

@@ -63,7 +63,7 @@ extern void ginUpdateStats(Relation index, const GinStatsData *stats);
 
 /* ginxlog.c */
 extern void gin_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void gin_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void gin_desc(StringInfo buf, XLogRecord *record);
 extern void gin_xlog_startup(void);
 extern void gin_xlog_cleanup(void);
 extern bool gin_safe_restartpoint(void);

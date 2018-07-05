@@ -217,9 +217,9 @@ COMMIT;
         rows. Performance suffers due to the increased disk I/O required to execute queries. This
         condition is called <i>bloat</i> and it should be managed by regularly vacuuming tables. </p>
       <p>The <codeph>VACUUM</codeph> command (without <codeph>FULL</codeph>) can run concurrently
-        with other queries. It marks the space previously used by the expired rows as free. If the
-        amount of remaining free space is significant, it adds the page to the table's free space
-        map. When Greenplum Database later needs space for new rows, it first consults the table's
+        with other queries. It marks the space previously used by the expired rows as free,
+        and updates the free space map. 
+        When Greenplum Database later needs space for new rows, it first consults the table's
         free space map to find pages with available space. If none are found, new pages will be
         appended to the file. </p>
       <p><codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) does not consolidate pages or
@@ -239,35 +239,6 @@ COMMIT;
         vacuuming regularly. It is best to run <codeph>VACUUM FULL</codeph> during a maintenance
         period. An alternative to <codeph>VACUUM FULL</codeph> is to recreate the table with a
           <codeph>CREATE TABLE AS</codeph> statement and then drop the old table. </p>
-      <p>The free space map resides in shared memory and keeps track of free space for all tables
-        and indexes. Each table or index uses about 60 bytes of memory and each page with free space
-        consumes six bytes. Two system configuration parameters configure the size of the free space
-        map:</p>
-      <parml>
-        <plentry>
-          <pt>
-            <b>max_fsm_pages</b>
-          </pt>
-          <pd>Sets the maximum number of disk pages that can be added to the shared free space map.
-            Six bytes of shared memory are consumed for each page slot. The default is 200000. This
-            parameter must be set to at least 16 times the value of <i>max_fsm_relations</i>.</pd>
-        </plentry>
-        <plentry>
-          <pt>
-            <b>max_fsm_relations</b>
-          </pt>
-          <pd>
-            <p>Sets the maximum number of relations that will be tracked in the shared memory free
-              space map. This parameter should be set to a value larger than the total number of
-                <i>tables + indexes + system tables</i>. The default is 1000. About 60 bytes of
-              memory are consumed for each relation per segment instance. It is better to set the
-              parameter too high than too low.</p>
-          </pd>
-        </plentry>
-      </parml>
-      <p>If the free space map is undersized, some disk pages with available space will not be added
-        to the map, and that space cannot be reused until at least the next <codeph>VACUUM</codeph>
-        command runs. This causes files to grow. </p>
       <p>You can run <codeph>VACUUM VERBOSE <varname>tablename</varname></codeph> to get a report,
         by segment, of the number of dead rows removed, the number of pages affected, and the number
         of pages with usable free space. </p>

@@ -73,6 +73,7 @@ def impl(context):
 
 
 @given('gpaddmirrors adds mirrors')
+@then('gpaddmirrors adds mirrors')
 def impl(context):
     context.mirror_config = _generate_input_config()
 

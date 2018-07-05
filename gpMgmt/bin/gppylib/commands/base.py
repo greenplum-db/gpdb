@@ -557,7 +557,7 @@ class NakedExecutionContext(LocalExecutionContext):
             return
         except Exception, e:
             cmd.set_results(
-                CommandResult(1, "", "conection to host " + self.targetHost + " failed: " + e.__str__(), False, False))
+                CommandResult(1, "", "connection to host " + self.targetHost + " failed: " + e.__str__(), False, False))
             return
 
         if self.sftp_operation == NakedExecutionInfo.SFTP_NONE:

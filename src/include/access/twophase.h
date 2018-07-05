@@ -105,6 +105,4 @@ extern void getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **
 
 extern void SetupCheckpointPreparedTransactionList(prepared_transaction_agg_state *ptas);
 
-extern bool TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid, XLogRecPtr *m, char *caller);
-
 #endif   /* TWOPHASE_H */

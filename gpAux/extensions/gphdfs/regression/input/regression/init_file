@@ -2,5 +2,5 @@
 -- m/gphdfs:\/\/.*:\d+/
 -- s/gphdfs:\/\/.*:\d+/gphdfs:\/\/<hostname>:<port>/
 -- m/gphdfs:\/\/.*\//
--- s/gphdfs:\/\/.*\//gphdfs:\/\/<maprhostname>/
+-- s/gphdfs:\/\/.*\//gphdfs:\/\/mapr\/mapr/
 -- end_matchsubs

@@ -116,10 +116,6 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
       <p><codeph>VACUUM</codeph> causes a substantial increase in I/O traffic, which can cause poor
         performance for other active sessions. Therefore, it is advisable to vacuum the database at
         low usage times.</p>
-      <p>For heap tables, expired rows are held in what is called the <i>free space map</i>. The
-        free space map must be sized large enough to cover the dead rows of all heap tables in your
-        database. If not sized large enough, space occupied by dead rows that overflow the free
-        space map cannot be reclaimed by a regular <codeph>VACUUM</codeph> command.</p>
       <p><codeph>VACUUM</codeph> commands skip external tables.</p>
       <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, however it requires an
         exclusive lock on each table being processed, is a very expensive operation, and might take
@@ -127,11 +123,6 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
           <codeph>VACUUM FULL</codeph> operations during database maintenance periods. </p>
       <p>As an alternative to <codeph>VACUUM FULL</codeph>, you can re-create the table with a
           <codeph>CREATE TABLE AS</codeph> statement and drop the old table. </p>
-      <p>Size the free space map appropriately. You configure the free space map using the following
-        server configuration parameters:<ul id="ul_tyn_t3k_dp">
-          <li><codeph>max_fsm_pages</codeph></li>
-          <li><codeph>max_fsm_relations</codeph></li>
-        </ul></p>
       <p>For append-optimized tables, <codeph>VACUUM</codeph> requires enough available disk space
         to accommodate the new segment file during the <codeph>VACUUM</codeph> process. If the ratio
         of hidden rows to total rows in a segment file is less than a threshold value (10, by

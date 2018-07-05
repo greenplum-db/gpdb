@@ -51,6 +51,20 @@
 		</section>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_EXTERNAL_TABLE.xml"/> for more
 			information.</p>
+		<section id="ae1903381w">
+			<title>ALTER FOREIGN DATA WRAPPER</title>
+		</section>
+		<p conref="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml"/> for more
+			information.</p>
+		<section id="ae1903381t">
+			<title>ALTER FOREIGN TABLE</title>
+		</section>
+		<p conref="sql_commands/ALTER_FOREIGN_TABLE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_FOREIGN_TABLE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_FOREIGN_TABLE.xml"/> for more
+			information.</p>
 		<section id="ae1903381">
 			<title>ALTER FUNCTION</title>
 		</section>
@@ -142,6 +156,13 @@
 		<codeblock conref="sql_commands/ALTER_SEQUENCE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_SEQUENCE.xml"/> for more
 			information.</p>
+		<section id="ae1903545s">
+			<title>ALTER SERVER</title>
+		</section>
+		<p conref="sql_commands/ALTER_SERVER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_SERVER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_SERVER.xml"/> for more
+			information.</p>
 		<section id="ae1903563">
 			<title>ALTER TABLE</title>
 		</section>
@@ -169,6 +190,13 @@
 		<p conref="sql_commands/ALTER_USER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_USER.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_USER.xml"/> for more
+			information.</p>
+		<section id="ae1903787u">
+			<title>ALTER USER MAPPING</title>
+		</section>
+		<p conref="sql_commands/ALTER_USER_MAPPING.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_USER_MAPPING.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_USER_MAPPING.xml"/> for more
 			information.</p>
 		<section>
 			<title>ALTER VIEW</title>
@@ -278,6 +306,20 @@
 		<codeblock conref="sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_EXTERNAL_TABLE.xml"/> for more
 			information.</p>
+		<section id="ae1904203w">
+			<title>CREATE FOREIGN DATA WRAPPER</title>
+		</section>
+		<p conref="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml"/> for more
+			information.</p>
+		<section id="ae1904203t">
+			<title>CREATE FOREIGN TABLE</title>
+		</section>
+		<p conref="sql_commands/CREATE_FOREIGN_TABLE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_FOREIGN_TABLE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_FOREIGN_TABLE.xml"/> for more
+			information.</p>
 		<section id="ae1904203">
 			<title>CREATE FUNCTION</title>
 		</section>
@@ -376,6 +418,13 @@
 		<codeblock conref="sql_commands/CREATE_SEQUENCE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_SEQUENCE.xml"/> for more
 			information.</p>
+		<section id="ae1904425s">
+			<title>CREATE SERVER</title>
+		</section>
+		<p conref="sql_commands/CREATE_SERVER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_SERVER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_SERVER.xml"/> for more
+			information.</p>
 		<section id="ae1904445">
 			<title>CREATE TABLE</title>
 		</section>
@@ -410,6 +459,13 @@
 		<p conref="sql_commands/CREATE_USER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_USER.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_USER.xml"/> for more
+			information.</p>
+		<section id="ae1904741u">
+			<title>CREATE USER MAPPING</title>
+		</section>
+		<p conref="sql_commands/CREATE_USER_MAPPING.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_USER_MAPPING.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_USER_MAPPING.xml"/> for more
 			information.</p>
 		<section id="ae1904779">
 			<title>CREATE VIEW</title>
@@ -499,6 +555,20 @@
 		<p conref="sql_commands/DROP_EXTERNAL_TABLE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_EXTERNAL_TABLE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_EXTERNAL_TABLE.xml"/> for more
+			information.</p>
+		<section id="ae1904845w">
+			<title>DROP FOREIGN DATA WRAPPER</title>
+		</section>
+		<p conref="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml"/> for more
+			information.</p>
+		<section id="ae1904845t">
+			<title>DROP FOREIGN TABLE</title>
+		</section>
+		<p conref="sql_commands/DROP_FOREIGN_TABLE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_FOREIGN_TABLE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_FOREIGN_TABLE.xml"/> for more
 			information.</p>
 		<section id="ae1904857">
 			<title>DROP FUNCTION</title>
@@ -605,6 +675,13 @@
 		<codeblock conref="sql_commands/DROP_SEQUENCE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_SEQUENCE.xml"/> for more
 			information.</p>
+		<section id="ae1904923s">
+			<title>DROP SERVER</title>
+		</section>
+		<p conref="sql_commands/DROP_SERVER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_SERVER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_SERVER.xml"/> for more
+			information.</p>
 		<section id="ae1904929">
 			<title>DROP TABLE</title>
 		</section>
@@ -632,6 +709,13 @@
 		<p conref="sql_commands/DROP_USER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_USER.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_USER.xml"/> for more
+			information.</p>
+		<section id="ae1904953u">
+			<title>DROP USER MAPPING</title>
+		</section>
+		<p conref="sql_commands/DROP_USER_MAPPING.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_USER_MAPPING.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_USER_MAPPING.xml"/> for more
 			information.</p>
 		<section id="ae1904959">
 			<title>DROP VIEW</title>

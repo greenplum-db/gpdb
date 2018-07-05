@@ -217,7 +217,7 @@
           </plentry>
           <plentry>
             <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
-            <pd>Dump only tables (or views or sequences) matching the table pattern. Specify the
+            <pd>Dump only tables (or views or sequences or foreign tables) matching the table pattern. Specify the
               table in the format <codeph>schema.table</codeph>.</pd>
             <pd>Multiple tables can be selected by writing multiple <codeph>-t</codeph> switches.
               Also, the table parameter is interpreted as a pattern according to the same rules used

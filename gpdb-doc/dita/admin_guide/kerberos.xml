@@ -5,12 +5,14 @@
   <title id="nr110126">Using Kerberos Authentication</title>
   <shortdesc>You can control access to Greenplum Database with a Kerberos authentication server. </shortdesc>
   <body>
-    <p>Greenplum Database supports the Generic Security Service Application Program Interface
-      (GSSAPI) with Kerberos authentication. GSSAPI provides automatic authentication (single
-      sign-on) for systems that support it. You specify the Greenplum Database users (roles) that
-      require Kerberos authentication in the Greenplum Database configuration file
-        <filepath>pg_hba.conf</filepath>. The login fails if Kerberos authentication is not
-      available when a role attempts to log in to Greenplum Database.</p>
+    <p>Greenplum Database supports the Generic Security Service Application
+      Program Interface (GSSAPI) with Kerberos authentication. GSSAPI provides
+      automatic authentication (single sign-on) for systems that support it. You
+      specify the Greenplum Database users (roles) that require Kerberos
+      authentication in the Greenplum Database configuration file
+        <filepath>pg_hba.conf</filepath>. The login fails if Kerberos
+      authentication is not available when a role attempts to log in to
+      Greenplum Database.</p>
     <p>Kerberos provides a secure, encrypted authentication service. It does not encrypt data
       exchanged between the client and database and provides no authorization services. To encrypt
       data exchanged over the network, you must use an SSL connection. To manage authorization for
@@ -21,90 +23,332 @@
     <p>For more information about Kerberos, see <xref href="http://web.mit.edu/kerberos/"
         format="html">http://web.mit.edu/kerberos/</xref>.</p>
     <section id="kerberos_prereq">
-      <title id="nr159116">Requirements for Using Kerberos with Greenplum Database</title>
-      <p>The following items are required for using Kerberos with Greenplum Database:</p>
+      <title id="nr159116">Prerequisites</title>
+      <p>Before configuring Kerberos authentication for Greenplum Database,
+        ensure that:</p>
       <ul id="ul_ojr_rvj_2p">
-        <li id="nr157373">Kerberos Key Distribution Center (KDC) server using the
-            <codeph>krb5-server</codeph> library</li>
-        <li id="nr163731">Kerberos version 5 <codeph>krb5-libs</codeph> and
-            <codeph>krb5-workstation</codeph> packages installed on the Greenplum Database master
-          host </li>
-        <li id="nr159901">Greenplum Database version with support for Kerberos</li>
-        <li>System time on the Kerberos server and Greenplum Database master host must be
-          synchronized. (Install Linux <codeph>ntp</codeph> package on both servers.) </li>
-        <li id="nr163891">Network connectivity between the Kerberos server and the Greenplum
-          Database master</li>
-        <li id="nr166917">Java 1.7.0_17 or later is required to use Kerberos-authenticated JDBC on
-          Red Hat Enterprise Linux 6.x</li>
-      </ul>
+        <li id="nr157373">You can identify the KDC server you use for Kerberos
+          authentication and the Kerberos realm for your Greenplum Database
+            system.<ul id="ul_cn2_nfc_c2b">
+            <li>If you plan to use an MIT Kerberos KDC server but have not yet
+              configured it, see <xref href="#task_setup_kdc" format="dita"/>
+              for example instructions.</li>
+            <li>If you are using an existing Active Directory KDC server, also
+              ensure that you have:<ul id="ul_oq5_tfc_c2b">
+                <li>Installed all Active Directory service roles on your AD KDC
+                  server.</li>
+                <li>Enabled the LDAP service.</li>
+              </ul></li>
+          </ul></li>
+        <li>System time on the Kerberos Key Distribution Center (KDC) server and
+          Greenplum Database master is synchronized. (For example, install the
+            <codeph>ntp</codeph> package on both servers.) </li>
+        <li id="nr163891">Network connectivity exists between the KDC server and
+          the Greenplum Database master host. </li>
+        <li id="nr166917">Java 1.7.0_17 or later is installed on all Greenplum
+          Database hosts. Java 1.7.0_17 is required to use
+          Kerberos-authenticated JDBC on Red Hat Enterprise Linux 6.x or
+          7.x.</li>
+       </ul>
     </section>
     <section id="nr166539">
-      <title>Enabling Kerberos Authentication for Greenplum Database</title>
-      <p>Complete the following tasks to set up Kerberos authentication with Greenplum Database:</p>
-      <ol>
-        <li>Verify your system satisfies the prequisites for using Kerberos with Greenplum Database.
-          See <xref href="#topic1/kerberos_prereq" format="dita" type="section"/>.</li>
-        <li id="nr165098">Set up, or identify, a Kerberos Key Distribution Center (KDC) server to
-          use for authentication. See <xref href="#task_setup_kdc" format="dita"/>.</li>
-        <li>In a Kerberos database on the KDC server, set up a Kerberos realm and principals on the
-          server. For Greenplum Database, a principal is a Greenplum Database role that uses
-          Kerberos authentication. In the Kerberos database, a realm groups together Kerberos
-          principals that are Greenplum Database roles.</li>
-        <li id="nr165106">Create Kerberos <filepath>keytab</filepath> files for Greenplum Database.
-          To access Greenplum Database, you create a service key known only by Kerberos and
-          Greenplum Database. On the Kerberos server, the service key is stored in the Kerberos
-            database.<p>On the Greenplum Database master, the service key is stored in key tables,
-            which are files known as keytabs. The service keys are usually stored in the keytab file
-              <codeph>/etc/krb5.keytab</codeph>. This service key is the equivalent of the service's
-            password, and must be kept secure. Data that is meant to be read-only by the service is
-            encrypted using this key.</p></li>
-        <li id="nr165107">Install the Kerberos client packages and the keytab file on Greenplum
-          Database master.</li>
-        <li id="nr165111">Create a Kerberos ticket for <codeph>gpadmin</codeph> on the Greenplum
-          Database master node using the keytab file. The ticket contains the Kerberos
-          authentication credentials that grant access to the Greenplum Database.</li>
-      </ol>
-      <p>With Kerberos authentication configured on the Greenplum Database, you can use Kerberos for
-        PSQL and JDBC.<ul id="ul_iks_hss_bz">
-          <li><xref href="#topic7" type="task" format="dita"/></li>
-          <li><xref href="#topic9" type="task" format="dita"/></li>
-        </ul></p>
-      <p>You can also configure external authentication for clients running on a Microsoft Windows
-          system.<ul id="ul_rvk_vrs_bz">
-          <li>Configure Kerberos authentication for the Greenplum Database client utilities
-              <codeph>gpload</codeph> and <codeph>psql</codeph> on a Microsoft Windows system. See
-              <xref href="kerberos-win-client.xml#topic_vjg_d5m_sv" format="dita"/>.</li>
-          <li>Configure a Microsoft Windows user with a Microsoft Active Directory (AD) account for
-            single sign-on to a Greenplum Database system. See <xref
-              href="kerberos-win-client.xml#topic_uzb_t5m_sv" format="dita"/>.</li>
-        </ul></p>
+      <title>Procedure</title>
+      <p>Following are the tasks to complete to set up Kerberos authentication for
+        Greenplum Database.</p>
+      <ul>
+        <li><xref href="#task_m43_vwl_2p" format="dita"/></li>
+        <li><xref href="#topic6" format="dita"/></li>
+        <li id="nr165111"><xref href="#topic7" format="dita"/></li>
+        <li><xref href="#topic_kmr_gws_d2b" format="dita"/></li>
+        <li><xref href="#topic9" format="dita"/></li>
+        <li><xref href="kerberos-win-client.xml#topic_vjg_d5m_sv" format="dita"
+          /></li>
+        <li><xref href="kerberos-win-client.xml#topic_uzb_t5m_sv" format="dita"
+          /></li>
+      </ul>
     </section>
   </body>
-  <task id="task_setup_kdc">
-    <title>Install and Configure a Kerberos KDC Server</title>
-    <shortdesc>Steps to set up a Kerberos Key Distribution Center (KDC) server on a Red Hat
-      Enterprise Linux host for use with Greenplum Database.</shortdesc>
-    <taskbody>
-      <context>Follow these steps to install and configure a Kerberos Key Distribution Center (KDC)
-        server on a Red Hat Enterprise Linux host. </context>
-      <steps id="steps_r5w_rtc_2p">
-        <step>
-          <cmd>Install the Kerberos server packages:</cmd>
-          <stepxmp>
-            <codeblock>sudo yum install krb5-libs krb5-server krb5-workstation</codeblock>
-          </stepxmp>
-        </step>
-        <step>
-          <cmd>Edit the <filepath>/etc/krb5.conf</filepath> configuration file. The following
-            example shows a Kerberos server with a default <codeph>KRB.GREENPLUM.COM</codeph> realm. </cmd>
-          <stepxmp>
+  <topic id="task_m43_vwl_2p">
+    <title>Creating Greenplum Database Principals in the KDC Database</title>
+    <body>
+      <p>Create a service principal for the Greenplum Database service and a
+        Kerberos admin principal that allows managing the KDC database as the
+        gpadmin user. </p>
+      <ol id="steps_gq5_hzl_2p">
+        <li>Log in to the Kerberos KDC server as the root user.
+          <codeblock>$ ssh root@&lt;kdc-server></codeblock></li>
+        <li>Create a principal for the Greenplum Database service.
+            <codeblock># kadmin.local -q "addprinc -randkey postgres/mdw@GPDB.KRB"</codeblock><p>The
+              <codeph>-randkey</codeph> option prevents the command from
+            prompting for a password.</p><p>The <codeph>postgres</codeph> part
+            of the principal names matches the value of the Greenplum Database
+              <codeph>krb_srvname</codeph> server configuration parameter, which
+            is <codeph>postgres</codeph> by default.</p><p>The host name part of
+            the principal name must match the output of the
+              <codeph>hostname</codeph> command on the Greenplum Database master
+            host. If the <codeph>hostname</codeph> command shows the fully
+            qualified domain name (FQDN), use it in the principal name, for
+            example <codeph>postgres/mdw.example.com@GPDB.KRB</codeph>.
+            </p><p>The <codeph>GPDB.KRB</codeph> part of the principal name is
+            the Kerberos realm name.</p></li>
+        <li>Create a principal for the gpadmin/admin role.
+            <codeblock># kadmin.local -q "addprinc gpadmin/admin@GPDB.KRB"</codeblock><p>This
+            principal allows you to manage the KDC database when you are logged
+            in as gpadmin. Make sure that the Kerberos <codeph>kadm.acl</codeph>
+            configuration file contains an ACL to grant permissions to this
+            principal. For example, this ACL grants all permissions to any admin
+            user in the GPDB.KRB realm.
+            <codeblock>*/admin@GPDB.KRB *</codeblock></p></li>
+        <li> Create a keytab file with <codeph>kadmin.local</codeph>. The
+          following example creates a keytab file
+            <codeph>gpdb-kerberos.keytab</codeph> in the current directory with
+          authentication information for the Greenplum Database service
+          principal and the gpadmin/admin principal.
+          <codeblock># kadmin.local -q "ktadd -k gpdb-kerberos.keytab postgres/mdw@GPDB.KRB gadmin/admin@GPDB.KRB"</codeblock></li>
+        <li>Copy the keytab file to the master host.
+          <codeblock># scp gpdb-kerberos.keytab gpadmin@mdw:~</codeblock></li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic6">
+    <title id="nr162022">Installing the Kerberos Client on the Master
+      Host</title>
+    <body>
+      <p>Install the Kerberos client utilities and libraries on the
+        Greenplum Database master.</p>
+      <ol id="steps_ikn_z1l_d2b">
+        <li id="nr162024">
+         Install the Kerberos packages on the Greenplum Database master.
+            <codeblock>$ sudo yum install krb5-libs krb5-workstation</codeblock>
+        </li>
+        <li id="nr162025"> Copy the  <codeph>/etc/krb5.conf</codeph> file from
+          the KDC server to <codeph>/etc/krb5.conf</codeph> on the Greenplum
+          Master host. </li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic7" xml:lang="en">
+    <title id="nr157582">Configuring Greenplum Database to use Kerberos
+      Authentication</title>
+    <body>
+      <p>Configure Greenplum Database to use Kerberos.</p>
+      <ol id="steps_mhd_l3w_c2b">
+        <li>Log in to the Greenplum Database master host as the gpadmin user.
+            <codeblock>$ ssh gpadmin@&lt;master>
+$ source /usr/local/greenplum-db/greenplum_path.sh</codeblock>          
+        </li>
+        <li>Set the ownership and permissions of the keytab file you copied
+            from the KDC server.
+            <codeblock>$ chown gpadmin:gpadmin /home/gpadmin/gpdb-kerberos.keytab
+$ chmod 400 /home/gpadmin/gpdb-kerberos.keytab</codeblock>         
+        </li>
+        <li id="nr157586">Configure the location of the keytab file by setting the
+            Greenplum Database <codeph>krb_server_keyfile</codeph> server
+            configuration parameter. This <codeph>gpconfig</codeph> command
+            specifies the folder <filepath>/home/gpadmin</filepath> as the
+            location of the keytab file
+              <filepath>gpdb-kerberos.keytab</filepath>.
+            <codeblock>$ gpconfig -c krb_server_keyfile -v  '/home/gpadmin/gpdb-kerberos.keytab'</codeblock>         
+        </li>
+        <li id="nr157589">Modify the Greenplum Database file <codeph>pg_hba.conf</codeph>
+            to enable Kerberos support. For example, adding the following line
+            to <codeph>pg_hba.conf</codeph> adds GSSAPI and Kerberos
+            authentication support for connection requests from all users and
+            hosts on the same network to all Greenplum Database databases. 
+            <codeblock>host all all 0.0.0.0/0 gss include_realm=0 krb_realm=GPDB.KRB</codeblock>
+          
+          <p>Setting the <codeph>krb_realm</codeph> option to a realm name
+            ensures that only users from that realm can successfully
+            authenticate with Kerberos. Setting the
+              <codeph>include_realm</codeph> option to <codeph>0</codeph>
+            excludes the realm name from the authenticated user name. For
+            information about the <codeph>pg_hba.conf</codeph> file, see <xref
+              href="https://www.postgresql.org/docs/8.4/static/auth-pg-hba-conf.html"
+              scope="external" format="html">The pg_hba.conf file</xref> in the
+            Postgres documentation.</p>
+        </li>
+        <li>Restart Greenplum Database after updating the
+              <codeph>krb_server_keyfile</codeph> parameter and the
+              <codeph>pg_hba.conf</codeph> file.
+            <codeblock>$ gpstop -ar</codeblock>         
+        </li>
+        <li>Create the gpadmin/admin Greenplum Database superuser role.
+            <codeblock>$ createuser gpadmin/admin
+Shall the new role be a superuser? (y/n) y</codeblock>         
+          <p>The Kerberos keys for this database role are in the keyfile you
+            copied from the KDC server.</p>
+        </li>
+        <li id="nr166157">Create a ticket using <codeph>kinit</codeph> and show the tickets
+            in the Kerberos ticket cache with <codeph>klist</codeph>.
+            <codeblock>$ LD_LIBRARY_PATH= kinit -k -t /home/gpadmin/gpdb-kerberos.keytab gpadmin/admin@GPDB.KRB
+$ LD_LIBRARY_PATH= klist
+Ticket cache: FILE:/tmp/krb5cc_1000
+Default principal: gpadmin/admin@GPDB.KRB
+
+Valid starting       Expires              Service principal
+06/13/2018 17:37:35  06/14/2018 17:37:35  krbtgt/GPDB.KRB@GPDB.KRB</codeblock>
+            <note>When you set up the Greenplum Database environment by sourcing
+              the <codeph>greenplum-db_path.sh</codeph> script, the
+                <codeph>LD_LIBRARY_PATH</codeph> environment variable is set to
+              include the Greenplum Database <codeph>lib</codeph> directory,
+              which includes Kerberos libraries. This may cause Kerberos utility
+              commands such as <codeph>kinit</codeph> and
+                <codeph>klist</codeph> to fail due to version conflicts. The
+              solution is to run Kerberos utilities before you source the
+                <codeph>greenplum-db_path.sh</codeph> file or temporarily unset
+              the <codeph>LD_LIBRARY_PATH</codeph> variable when you execute
+              Kerberos utilities, as shown in the example.</note>         
+        </li>
+        <li id="nr166158">As a test, log in to the postgres database with the
+            <codeph>gpadmin/admin</codeph> role: <codeblock>$ psql -U "gpadmin/admin" -h mdw postgres
+psql (8.3.23)
+Type "help" for help.
+
+postgres=# select current_user;
+ current_user
+---------------
+ gpadmin/admin
+(1 row)</codeblock>
+          <note>When you start <codeph>psql</codeph> on the master host, you
+            must include the <codeph>-h &lt;master-hostname></codeph> option to
+            force a TCP connection because Kerberos authentication does not work
+            with local connections.</note>
+        </li>
+      </ol>
+      <p>If a Kerberos principal is not a Greenplum Database
+        user, a message similar to the following is displayed from the
+        <codeph>psql</codeph> command line when the user attempts to log in to
+        the database:
+        <codeblock>psql: krb5_sendauth: Bad response</codeblock></p>
+      <p>The
+        principal must be added as a Greenplum Database user.</p>
+    </body>
+  </topic>
+  <topic id="topic_kmr_gws_d2b">
+    <title>Mapping Kerberos Principals to Greenplum Database Roles</title>
+    <body>
+      <p>To connect to a Greenplum Database system with Kerberos authentication
+        enabled, a user first requests a ticket-granting ticket from the KDC
+        server using the <codeph>kinit</codeph> utility with a password or a
+        keytab file provided by the Kerberos admin. When the user then connects
+        to the Kerberos-enabled Greenplum Database system, the user's Kerberos
+        principle name will be the Greenplum Database role name, subject to
+        transformations specified in the options field of the
+          <codeph>gss</codeph> entry in the Greenplum Database
+          <codeph>pg_hba.conf</codeph> file:</p>
+      <ul id="ul_hzh_rjw_22b">
+        <li>If the <codeph>krb_realm=&lt;realm></codeph> option is present,
+          Greenplum Database only accepts Kerberos principals who are members pf
+          the specified realm. </li>
+        <li>If the <codeph>include_realm=0</codeph> option is specified, the
+          Greenplum Database role name is the Kerberos principal name without
+          the Kerberos realm. If the <codeph>include_realm=1</codeph> option is
+          instead specified, the Kerberos realm is not stripped from the
+          Greenplum Database rolename. The role must have been created with the
+          Greenplum Database <codeph>CREATE ROLE</codeph> command.</li>
+        <li>If the <codeph>map=&lt;map-name></codeph> option is specified, the
+          Kerberos principal name is compared to entries labeled with the
+          specified <codeph>&lt;map-name></codeph> in the
+            <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> file and
+          replaced with the Greenplum Database role name specified in the first
+          matching entry.</li>
+      </ul>
+      <p>A user name map is defined in the
+          <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph> configuration
+        file. This example defines a map named <codeph>mymap</codeph> with two
+        entries.</p>
+      <p>
+        <codeblock>
+# MAPNAME   SYSTEM-USERNAME        GP-USERNAME
+mymap       /^admin@GPDB.KRB$      gpadmin
+mymap       /^(.*)_gp)@GPDB.KRB$   \1</codeblock>
+      </p>
+      <p>The map name is specified in the <codeph>pg_hba.conf</codeph> Kerberos
+        entry in the options field:</p>
+      <p>
+        <codeblock>host all all 0.0.0.0/0 gss include_realm=0 krb_realm=GPDB.KRB map=mymap</codeblock>
+      </p>
+      <p>The first map entry matches the Kerberos principal admin@GPDB.KRB and
+        replaces it with the Greenplum Database gpadmin role name. The second
+        entry uses a wildcard to match any Kerberos principal in the GPDB-KRB
+        realm with a name ending with the characters <codeph>_gp</codeph> and
+        replaces it with the initial portion of the principal name. Greenplum
+        Database applies the first matching map entry in the
+          <codeph>pg_ident.conf</codeph> file, so the order of entries is
+        significant.</p>
+      <p>For more information about using username maps see <xref
+          href="https://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
+          scope="external" format="html">Username maps</xref> in the PostgreSQL
+        documentation.</p>
+    </body>
+  </topic>
+  <topic id="topic9" xml:lang="en">
+    <title id="nr168681">Configuring JDBC Kerberos Authentication for Greenplum
+      Database</title>
+    <shortdesc>Enable Kerberos-authenticated JDBC access to Greenplum
+      Database.</shortdesc>
+    <body>
+      <p>You can configure Greenplum Database to use Kerberos to run
+        user-defined Java functions. </p>
+      <ol id="steps_tj3_q3w_c2b">
+        <li>
+          <p id="nr161502">Ensure that Kerberos is installed and configured on
+            the Greenplum Database master. See <xref href="#topic6" type="task"
+              format="dita"/>.</p>
+        </li>
+        <li>
+          <p id="nr161503">Create the file
+              <filepath>.java.login.config</filepath> in the folder
+              <codeph>/home/gpadmin</codeph> and add the following text to the
+            file:</p>
+            <codeblock>pgjdbc {
+  com.sun.security.auth.module.Krb5LoginModule required
+  doNotPrompt=true
+  useTicketCache=true
+  debug=true
+  client=true;
+};</codeblock>         
+        </li>
+        <li id="nr157728">
+          <p>Create a Java application that connects to Greenplum Database
+            using Kerberos authentication. The following example database
+            connection URL uses a PostgreSQL JDBC driver and specifies
+            parameters for Kerberos authentication:</p>
+            <codeblock>jdbc:postgresql://mdw:5432/mytest?kerberosServerName=postgres
+&amp;jaasApplicationName=pgjdbc&amp;user=gpadmin/gpdb-kdc</codeblock>        
+          <p>The parameter names and values specified depend on how the Java
+            application performs Kerberos authentication.</p>
+        </li>
+        <li id="nr157717">
+          <p>Test the Kerberos login by running a sample Java application from
+            Greenplum Database.</p>
+        </li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="task_setup_kdc">
+    <title>Installing and Configuring a Kerberos KDC Server</title>
+    <shortdesc>Steps to set up a Kerberos Key Distribution Center (KDC) server
+      on a Red Hat Enterprise Linux host for use with Greenplum
+      Database.</shortdesc>
+    <body>
+      <p>If you do not already have a KDC, follow these steps to install
+        and configure a KDC server on a Red Hat Enterprise Linux host with a
+          <codeph>GPDB.KRB</codeph> realm. The host name of the KDC server in
+        this example is gpdb-kdc.</p>
+      <ol id="steps_r5w_rtc_2p">
+        <li>Install the Kerberos server and client
+          packages:<codeblock>$ sudo yum install krb5-libs krb5-server krb5-workstation</codeblock></li>
+        <li>Edit the <filepath>/etc/krb5.conf</filepath> configuration file. The
+          following example shows a Kerberos server configured with a default
+            <codeph>GPDB.KRB</codeph> realm.
             <codeblock>[logging]
  default = FILE:/var/log/krb5libs.log
  kdc = FILE:/var/log/krb5kdc.log
  admin_server = FILE:/var/log/kadmind.log
 
 [libdefaults]
- default_realm = KRB.GREENPLUM.COM
+ default_realm = GPDB.KRB
  dns_lookup_realm = false
  dns_lookup_kdc = false
  ticket_lifetime = 24h
@@ -115,15 +359,15 @@
  permitted_enctypes = aes128-cts des3-hmac-sha1 des-cbc-crc des-cbc-md5
 
 [realms]
- KRB.GREENPLUM.COM = {
-  kdc = kerberos-gpdb:88
-  admin_server = kerberos-gpdb:749
-  default_domain = kerberos-gpdb
+ GPDB.KRB = {
+  kdc = gpdb-kdc:88
+  admin_server = gpdb-kdc:749
+  default_domain = gpdb.krb
  }
 
 [domain_realm]
- .kerberos-gpdb = KRB.GREENPLUM.COM
- kerberos-gpdb = KRB.GREENPLUM.COM
+ .gpdb.krb = GPDB.KRB
+ gpdb.krb = GPDB.KRB
 
 [appdefaults]
  pam = {
@@ -133,307 +377,49 @@
     forwardable = true
     krb4_convert = false
  }
-</codeblock>
-          </stepxmp>
-          <info>
-            <p>The <codeph>kdc</codeph> and <codeph>admin_server</codeph> keys in the
-                <codeph>[realms]</codeph> section specify the host (<codeph>kerberos-gpdb</codeph>)
-              and port where the Kerberos server is running. IP numbers can be used in place of host
-              names. </p>
-            <p>If your Kerberos server manages authentication for other realms, you would instead
-              add the <codeph>KRB.GREENPLUM.COM</codeph> realm in the <codeph>[realms]</codeph> and
-                <codeph>[domain_realm]</codeph> section of the <codeph>kdc.conf</codeph> file. See
-              the <xref href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html"
-                scope="external">Kerberos documentation</xref> for information about the
-                <codeph>kdc.conf</codeph> file.</p>
-          </info>
-        </step>
-        <step>
-          <cmd>To create a Kerberos KDC database, run the <codeph>kdb5_util</codeph>. </cmd>
-          <stepxmp>
-            <codeblock>kdb5_util create -s</codeblock>
-          </stepxmp>
-          <info>The <codeph>kdb5_util</codeph>
-            <option>create</option> option creates the database to store keys for the Kerberos
-            realms that are managed by this KDC server. The <option>-s</option> option creates a
-            stash file. Without the stash file, every time the KDC server starts it requests a
-            password.</info>
-        </step>
-        <step>
-          <cmd>Add an administrative user to the KDC database with the <codeph>kadmin.local</codeph>
-            utility. Because it does not itself depend on Kerberos authentication, the
-              <codeph>kadmin.local</codeph> utility allows you to add an initial administrative user
-            to the local Kerberos server. To add the user <codeph>gpadmin</codeph> as an
-            administrative user to the KDC database, run the following command:</cmd>
-          <stepxmp>
-            <codeblock>kadmin.local -q "addprinc gpadmin/admin"</codeblock>
-          </stepxmp>
-          <info>Most users do not need administrative access to the Kerberos server. They can use
-              <codeph>kadmin</codeph> to manage their own principals (for example, to change their
-            own password). For information about <codeph>kadmin</codeph>, see the <xref
-              href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html" scope="external"
-              >Kerberos documentation</xref>. </info>
-        </step>
-        <step>
-          <cmd>If needed, edit the <filepath>/var/kerberos/krb5kdc/kadm5.acl</filepath> file to
-            grant the appropriate permissions to <codeph>gpadmin</codeph>.</cmd>
-        </step>
-        <step>
-          <cmd>Start the Kerberos daemons:</cmd>
-          <stepxmp>
-            <codeblock>/sbin/service krb5kdc start
-/sbin/service kadmin start</codeblock>
-          </stepxmp>
-        </step>
-        <step>
-          <cmd>To start Kerberos automatically upon restart:</cmd>
-          <stepxmp>
-            <codeblock>/sbin/chkconfig krb5kdc on
-/sbin/chkconfig kadmin on</codeblock>
-          </stepxmp>
-        </step>
-      </steps>
-    </taskbody>
-  </task>
-  <task id="task_m43_vwl_2p">
-    <title>Create Greenplum Database Roles in the KDC Database</title>
-    <shortdesc>Add principals to the Kerberos realm for Greenplum Database.</shortdesc>
-    <taskbody>
-      <context>Start <codeph>kadmin.local</codeph> in interactive mode, then add two principals to
-        the Greenplum Database Realm.</context>
-      <steps id="steps_gq5_hzl_2p">
-        <step>
-          <cmd>Start <codeph>kadmin.local</codeph> in interactive mode:</cmd>
-          <stepxmp>
-            <codeblock>kadmin.local</codeblock>
-          </stepxmp>
-        </step>
-        <step>
-          <cmd>Add principals:</cmd>
-          <stepxmp>
-            <pre>kadmin.local: <userinput>addprinc gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM
-</userinput>kadmin.local: <userinput>addprinc postgres/master.test.com@KRB.EXAMPLE.COM</userinput></pre>
-          </stepxmp>
-          <info>The <codeph>adprinc</codeph> commands prompt for passwords for each principal. The
-            first <codeph>addprinc</codeph> creates a Greenplum Database user as a principal,
-              <codeph>gpadmin/kerberos-gpdb</codeph>. The second <codeph>addprinc</codeph> command
-            creates the <codeph>postgres</codeph> process on the Greenplum Database master host as a
-            principal in the Kerberos KDC. This principal is required when using Kerberos
-            authentication with Greenplum Database. </info>
-        </step>
-        <step>
-          <cmd>Create a Kerberos keytab file with <codeph>kadmin.local</codeph>. The following
-            example creates a keytab file <codeph>gpdb-kerberos.keytab</codeph> in the current
-            directory with authentication information for the two principals.</cmd>
-          <stepxmp>
-            <codeblock>kadmin.local: <userinput>xst -k gpdb-kerberos.keytab
-    gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM
-    postgres/master.test.com@KRB.EXAMPLE.COM</userinput></codeblock>
-          </stepxmp>
-          <info>You will copy this file to the Greenplum Database master host.</info>
-        </step>
-        <step>
-          <cmd>Exit <codeph>kadmin.local</codeph> interactive mode with the <codeph>quit</codeph>
-            command:</cmd>
-          <stepxmp>
-            <codeph>kadmin.local: <userinput>quit</userinput></codeph>
-          </stepxmp>
-        </step>
-      </steps>
-    </taskbody>
-  </task>
-  <task id="topic6">
-    <title id="nr162022">Install and Configure the Kerberos Client</title>
-    <shortdesc>Steps to install the Kerberos client on the Greenplum Database master
-      host.</shortdesc>
-    <taskbody>
-      <context>Install the Kerberos client libraries on the Greenplum Database master and configure
-        the Kerberos client.</context>
-      <steps>
-        <step id="nr162024">
-          <cmd>Install the Kerberos packages on the Greenplum Database master.</cmd>
-          <stepxmp>
-            <codeblock>sudo yum install krb5-libs krb5-workstation</codeblock>
-          </stepxmp>
-        </step>
-        <step id="nr162025">
-          <cmd>Ensure that the <codeph>/etc/krb5.conf</codeph> file is the same as the one that is
-            on the Kerberos server.</cmd>
-        </step>
-        <step id="nr157526">
-          <cmd>Copy the <codeph>gpdb-kerberos.keytab</codeph> file that was generated on the
-            Kerberos server to the Greenplum Database master host.</cmd>
-        </step>
-        <step id="nr157528">
-          <cmd>Remove any existing tickets with the Kerberos utility <codeph>kdestroy</codeph>. Run
-            the utility as root.</cmd>
-          <stepxmp>
-            <codeblock>sudo kdestroy</codeblock>
-          </stepxmp>
-        </step>
-        <step id="nr157529">
-          <cmd>Use the Kerberos utility <codeph>kinit</codeph> to request a ticket using the keytab
-            file on the Greenplum Database master for
-              <codeph>gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeph>. The <option>-t</option> option
-            specifies the keytab file on the Greenplum Database master.</cmd>
-          <stepxmp>
-            <codeblock># kinit -k -t gpdb-kerberos.keytab gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeblock>
-          </stepxmp>
-        </step>
-        <step>
-          <cmd>Use the Kerberos utility <codeph>klist</codeph> to display the contents of the
-            Kerberos ticket cache on the Greenplum Database master. The following is an
-            example:</cmd>
-          <stepxmp>
-            <screen># klist
-Ticket cache: FILE:/tmp/krb5cc_108061
-Default principal: gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM
-Valid starting     Expires            Service principal
-03/28/13 14:50:26  03/29/13 14:50:26  krbtgt/KRB.GREENPLUM.COM     @KRB.EXAMPLE.COM
-    renew until 03/28/13 14:50:26</screen>
-          </stepxmp>
-        </step>
-      </steps>
-    </taskbody>
-    <task id="topic7" xml:lang="en">
-      <title id="nr157582">Set up Greenplum Database with Kerberos for PSQL</title>
-      <shortdesc>Configure a Greenplum Database to use Kerberos.</shortdesc>
-      <taskbody>
-        <context>After you have set up Kerberos on the Greenplum Database master, you can configure
-          Greenplum Database to use Kerberos. For information on setting up the Greenplum Database
-          master, see <xref href="#topic6" type="task" format="dita"/>.</context>
-        <steps>
-          <step>
-            <cmd>Create a Greenplum Database administrator role in the database
-                <codeph>postgres</codeph> for the Kerberos principal that is used as the database
-              administrator. The following example uses <codeph>gpamin/kerberos-gpdb</codeph>.</cmd>
-            <stepxmp>
-              <codeblock>psql postgres -c 'create role "gpadmin/kerberos-gpdb" login superuser;'
-</codeblock>
-            </stepxmp>
-            <info> The role you create in the database <codeph>postgres</codeph> will be available
-              in any new Greenplum Database that you create. </info>
-          </step>
-          <step id="nr157586">
-            <cmd>Modify <codeph>postgresql.conf</codeph> to specify the location of the keytab file.
-              For example, adding this line to the <codeph>postgresql.conf</codeph> specifies the
-              folder <filepath>/home/gpadmin</filepath> as the location of the keytab file<filepath>
-                gpdb-kerberos.keytab</filepath>.</cmd>
-            <stepxmp>
-              <codeblock>krb_server_keyfile = '/home/gpadmin/gpdb-kerberos.keytab'
-</codeblock>
-            </stepxmp>
-          </step>
-          <step id="nr157589">
-            <cmd>Modify the Greenplum Database file <codeph>pg_hba.conf</codeph> to enable Kerberos
-              support. Then restart Greenplum Database (<codeph>gpstop -ar</codeph>). For example,
-              adding the following line to <codeph>pg_hba.conf</codeph> adds GSSAPI and Kerberos
-              support. The value for <codeph>krb_realm</codeph> is the Kerberos realm that is used
-              for authentication to Greenplum Database.</cmd>
-            <stepxmp>
-              <codeblock>host all all 0.0.0.0/0 gss include_realm=0 krb_realm=KRB.GREENPLUM.COM</codeblock>
-            </stepxmp>
-            <info>For information about the <codeph>pg_hba.conf</codeph> file, see <xref
-                href="https://www.postgresql.org/docs/8.4/static/auth-pg-hba-conf.html"
-                scope="external" format="html">The pg_hba.conf file</xref> in the Postgres
-              documentation.</info>
-          </step>
-          <step id="nr166157">
-            <cmd>Create a ticket using <codeph>kinit</codeph> and show the tickets in the Kerberos
-              ticket cache with <codeph>klist</codeph>.</cmd>
-          </step>
-          <step id="nr166158">
-            <cmd>As a test, log in to the database as the <codeph>gpadmin</codeph> role with the
-              Kerberos credentials <codeph>gpadmin/kerberos-gpdb</codeph>:</cmd>
-            <stepxmp>
-              <codeblock>psql -U "gpadmin/kerberos-gpdb" -h master.test postgres
-</codeblock>
-            </stepxmp>
-            <info>
-              <p>A username map can be defined in the <codeph>pg_ident.conf</codeph> file and
-                specified in the <codeph>pg_hba.conf</codeph> file to simplify logging into
-                Greenplum Database. For example, this <codeph>psql</codeph> command logs into the
-                default Greenplum Database on <codeph>mdw.proddb</codeph> as the Kerberos principal
-                  <codeph>adminuser/mdw.proddb</codeph>:
-                <codeblock>$ psql -U "adminuser/mdw.proddb" -h mdw.proddb</codeblock>
-              </p>
-              <p>If the default user is <codeph>adminuser</codeph>, the
-                  <filepath>pg_ident.conf</filepath> file and the <filepath>pg_hba.conf</filepath>
-                file can be configured so that the <codeph>adminuser</codeph> can log in to the
-                database as the Kerberos principal <codeph>adminuser/mdw.proddb</codeph> without
-                specifying the <codeph>-U</codeph> option:
-                <codeblock>$ psql -h mdw.proddb</codeblock>
-              </p>
-              <p>The following username map is defined in the Greenplum Database file
-                  <codeph>$MASTER_DATA_DIRECTORY/pg_ident.conf</codeph>: </p>
-              <p>
-                <codeblock># MAPNAME   SYSTEM-USERNAME        GP-USERNAME
-mymap       /^(.*)mdw\.proddb$     adminuser</codeblock>
-              </p>
-              <p>The map can be specified in the <codeph>pg_hba.conf</codeph> file as part of the
-                line that enables Kerberos support:</p>
-              <p>
-                <codeblock>host all all 0.0.0.0/0 krb5 include_realm=0 krb_realm=proddb map=mymap</codeblock>
-              </p>
-              <p>For more information about specifying username maps see <xref
-                  href="https://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
-                  scope="external" format="html">Username maps</xref> in the Postgres
-                documentation.</p>
-            </info>
-          </step>
-          <step id="nr169659">
-            <cmd>If a Kerberos principal is not a Greenplum Database user, a message similar to the
-              following is displayed from the <codeph>psql</codeph> command line when the user
-              attempts to log in to the database:</cmd>
-            <stepxmp>
-              <codeblock>psql: krb5_sendauth: Bad response</codeblock>
-            </stepxmp>
-            <info>The principal must be added as a Greenplum Database user. </info>
-          </step>
-        </steps>
-      </taskbody>
-    </task>
-    <task id="topic9" xml:lang="en">
-      <title id="nr168681">Set up Greenplum Database with Kerberos for JDBC</title>
-      <shortdesc>Enable Kerberos-authenticated JDBC access to Greenplum Database.</shortdesc>
-      <taskbody>
-        <context>You can configure Greenplum Database to use Kerberos to run user-defined Java
-          functions. </context>
-        <steps>
-          <step>
-            <cmd id="nr161502">Ensure that Kerberos is installed and configured on the Greenplum
-              Database master. See <xref href="#topic6" type="task" format="dita"/>.</cmd>
-          </step>
-          <step>
-            <cmd id="nr161503">Create the file <filepath>.java.login.config</filepath> in the folder
-              /home/gpadmin and add the following text to the file:</cmd>
-            <stepxmp>
-              <codeblock>pgjdbc {
-  com.sun.security.auth.module.Krb5LoginModule required
-  doNotPrompt=true
-  useTicketCache=true
-  debug=true
-  client=true;
-};</codeblock>
-            </stepxmp>
-          </step>
-          <step id="nr157728">
-            <cmd>Create a Java application that connects to Greenplum Database using Kerberos
-              authentication. The following example database connection URL uses a PostgreSQL JDBC
-              driver and specifies parameters for Kerberos authentication:</cmd>
-            <stepxmp>
-              <codeblock>jdbc:postgresql://mdw:5432/mytest?kerberosServerName=postgres
-&amp;jaasApplicationName=pgjdbc&amp;user=gpadmin/kerberos-gpdb</codeblock>
-            </stepxmp>
-            <info>The parameter names and values specified depend on how the Java application
-              performs Kerberos authentication.</info>
-          </step>
-          <step id="nr157717">
-            <cmd>Test the Kerberos login by running a sample Java application from Greenplum
-              Database.</cmd>
-          </step>
-        </steps>
-      </taskbody>
-    </task>
-  </task>
+</codeblock><p>The
+              <codeph>kdc</codeph> and <codeph>admin_server</codeph> keys in the
+              <codeph>[realms]</codeph> section specify the host
+              (<codeph>gpdb-kdc</codeph>) and port where the Kerberos server is
+            running. IP numbers can be used in place of host names. </p><p>If
+            your Kerberos server manages authentication for other realms, you
+            would instead add the <codeph>GPDB.KRB</codeph> realm in the
+              <codeph>[realms]</codeph> and <codeph>[domain_realm]</codeph>
+            section of the <codeph>kdc.conf</codeph> file. See the <xref
+              href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html"
+              scope="external">Kerberos documentation</xref> for information
+            about the <codeph>kdc.conf</codeph> file.</p></li>
+        <li>To create the Kerberos database, run the <codeph>kdb5_util</codeph>.
+            <codeblock># kdb5_util create -s</codeblock><p>The
+              <codeph>kdb5_util</codeph>
+            <option>create</option> command creates the database to store keys
+            for the Kerberos realms that are managed by this KDC server. The
+              <option>-s</option> option creates a stash file. Without the stash
+            file, every time the KDC server starts it requests a
+          password.</p></li>
+        <li>Add an administrative user to the KDC database with the
+            <codeph>kadmin.local</codeph> utility. Because it does not itself
+          depend on Kerberos authentication, the <codeph>kadmin.local</codeph>
+          utility allows you to add an initial administrative user to the local
+          Kerberos server. To add the user <codeph>gpadmin</codeph> as an
+          administrative user to the KDC database, run the following
+            command:<codeblock># kadmin.local -q "addprinc gpadmin/admin"</codeblock><p>Most
+            users do not need administrative access to the Kerberos server. They
+            can use <codeph>kadmin</codeph> to manage their own principals (for
+            example, to change their own password). For information about
+              <codeph>kadmin</codeph>, see the <xref
+              href="http://web.mit.edu/kerberos/krb5-latest/doc/" format="html"
+              scope="external">Kerberos documentation</xref>. </p></li>
+        <li>If needed, edit the
+            <filepath>/var/kerberos/krb5kdc/kadm5.acl</filepath> file to grant
+          the appropriate permissions to <codeph>gpadmin</codeph>.</li>
+        <li>Start the Kerberos
+          daemons:<codeblock># /sbin/service krb5kdc start#
+/sbin/service kadmin start</codeblock></li>
+        <li>To start Kerberos automatically upon
+          restart:<codeblock># /sbin/chkconfig krb5kdc on
+# /sbin/chkconfig kadmin on</codeblock></li>
+      </ol>
+    </body>
+  </topic>
 </topic>
