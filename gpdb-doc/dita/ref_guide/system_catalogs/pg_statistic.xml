@@ -13,7 +13,15 @@
       expressions. These are described as if they were actual data columns; in particular,
         <codeph>starelid</codeph> references the index. No entry is made for an ordinary
       non-expression index column, however, since it would be redundant with the entry for the
-      underlying table column.</p>
+      underlying table column. Currently, entries for index expressions always have
+      <codeph>stainherit = false</codeph>.</p>
+    <p>When <codeph>stainherit = false</codeph>, there is normally one entry for each table column
+      that has been analyzed. If the table has inheritance children, Greenplum Database creates
+      a second entry with <codeph>stainherit = true</codeph>. This row represents the column's
+       statistics over the inheritance tree, for example, statistics for the data you would see
+        with <codeph>SELECT <varname>column</varname> FROM <varname>table</varname>*</codeph>,
+        whereas the <codeph>stainherit = false</codeph> row represents the results of
+        <codeph>SELECT <varname>column</varname> FROM ONLY <varname>table</varname></codeph>.</p>
     <p>Since different kinds of statistics may be appropriate for different kinds of data,
         <codeph>pg_statistic</codeph> is designed not to assume very much about what sort of
       statistics it stores. Only extremely general statistics (such as nullness) are given dedicated
@@ -56,6 +64,15 @@
             <entry colname="col2">int2</entry>
             <entry colname="col3">pg_attribute.attnum</entry>
             <entry colname="col4">The number of the described column.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>stainherit</codeph>
+            </entry>
+            <entry colname="col2">bool</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">If true, the statistics include inheritance child columns,
+              not just the values in the specified relations.</entry>
           </row>
           <row>
             <entry colname="col1">

@@ -65,6 +65,11 @@
               <pd>The number of the described column, beginning with 1.</pd>
             </plentry>
             <plentry>
+              <pt>stainherit</pt>
+              <pd>If true, the statistics include inheritance child columns, not just the
+                values in the specified relation.</pd>
+            </plentry>
+            <plentry>
               <pt>stanullfrac</pt>
               <pd>The fraction of the column's entries that are null.</pd>
             </plentry>
@@ -192,6 +197,10 @@
             <dlentry>
               <dt>attname</dt>
               <dd>The name of the column this row describes.</dd>
+            </dlentry>
+            <dlentry>
+              <dt>inherited</dt>
+              <dd>If true, the statistics include inheritance child columns.</dd>
             </dlentry>
             <dlentry>
               <dt>null_frac</dt>
