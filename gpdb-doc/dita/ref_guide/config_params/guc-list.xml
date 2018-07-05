@@ -4860,16 +4860,25 @@
     <body>
       <note>The <codeph>gp_resource_group_bypass</codeph> server configuration parameter is enforced
         only when resource group-based resource management is active.</note>
-      <p>Enables or disables enforcement of resource group limits on Greenplum Database resources.
-        Resource groups manage resources such as CPU, memory, and the number of concurrent
-        transactions that are used by queries and external components such as PL/Container. Default
-        value is <codeph>true</codeph>, enable enforcement of resource group limits. </p>
-      <p>You can set this parameter to <codeph>false</codeph> to bypass resource group resource
-        limitations so that a query can run immediately. For example, you can set the parameter to
-          <codeph>false</codeph> for a session to run a query against the system catalog or a
+      <p>Enables or disables the enforcement of resource group concurrent transaction limits on
+        Greenplum Database resources. The default value is <codeph>false</codeph>, enable the
+        enforcement of resource group limits. Resource groups manage resources such as CPU, memory,
+        and the number of concurrent transactions that are used by queries and external components
+        such as PL/Container. </p>
+      <p>When you set this parameter to <codeph>true</codeph> and a run a query, the query runs in
+        this environment:<ul id="ul_vgc_rw4_j2b">
+          <li>The query runs inside a resource group. The resource group assignment for the query
+            does not change.</li>
+          <li>The query memory quota is 1MB. The memory is allocated from resource group shared
+            memory or global shared memory. The query fails if there is not enough shared memory
+            available to fulfill the memory allocation request.</li>
+        </ul></p>
+      <p>You can set this parameter to <codeph>true</codeph> to bypass resource group resource
+        concurrent transaction limitations so that a query can run immediately. For example, you can
+        set the parameter to <codeph>true</codeph> for a session to run a system catalog query or a
         similar query that requires a minimal amount of resources.</p>
-      <p>This parameter can be set for a database system, an individual database, or a session or
-        query.</p>
+      <p>This parameter can be set for a session. The parameter cannot be set within a transaction
+        or a function.</p>
       <table id="table_szz_1yt_32b">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4886,7 +4895,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">false</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+              <entry colname="col3">session</entry>
             </row>
           </tbody>
         </tgroup>
