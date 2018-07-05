@@ -14,7 +14,7 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>CREATE USER MAPPING</codeph> defines a mapping of a user to a foreign server. A user mapping typically encapsulates connection information that a foreign-data wrapper uses together with the information encapsulated by a foreign server to access an external data source.</p>
-            <p>The owner of a foreign server can create user mappings for that server for any user. Also, a user can create a user mapping for his own user name if the <codeph>USAGE</codeph> privilege on the server has been granted to the user.</p>
+            <p>The owner of a foreign server can create user mappings for that server for any user. Also, a user can create a user mapping for their own user name if the <codeph>USAGE</codeph> privilege on the server has been granted to the user.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>

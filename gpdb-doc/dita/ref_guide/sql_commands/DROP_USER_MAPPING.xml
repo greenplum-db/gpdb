@@ -13,7 +13,7 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>DROP USER MAPPING</codeph> removes an existing user mapping from a foreign server.</p>
-            <p>The owner of a foreign server can drop user mappings for that server for any user. Also, a user can drop a user mapping for his own user name if the <codeph>USAGE</codeph> privilege on the server has been granted to the user.</p>
+            <p>The owner of a foreign server can drop user mappings for that server for any user. Also, a user can drop a user mapping for their own user name if the <codeph>USAGE</codeph> privilege on the server has been granted to the user.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>

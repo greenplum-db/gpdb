@@ -122,7 +122,7 @@ met). Essentially this allows the grantee to look up objects within the
 schema.</pd><pd>For sequences, this privilege allows the use of the 
 <codeph>nextval()</codeph> function.</pd>
         <pd>For foreign-data wrappers, this privilege enables the grantee to create new servers using that foreign-data wrapper.</pd>
-        <pd>For servers, this privilege enables the grantee to create, alter, and drop his own user's user mappings associated with that server. Also, it enables the grantee to query the options of the server and associated user mappings.</pd>
+        <pd>For servers, this privilege enables the grantee to create, alter, and drop their own user's user mappings associated with that server. Also, it enables the grantee to query the options of the server and associated user mappings.</pd>
      </plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
 key word is optional in Greenplum Database, though it is required by
 strict SQL. </pd></plentry><plentry><pt>PUBLIC</pt><pd>A special group-level role that denotes that the privileges are to
