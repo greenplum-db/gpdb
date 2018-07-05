@@ -105,14 +105,9 @@
         you may need to run <codeph>VACUUM</codeph> at least once a day to prevent the table from
         becoming bloated.</p>
       <note type="warning">When a table is significantly bloated, it is better to run
-          <codeph>ANALYZE</codeph>
-        <i>before</i> running <codeph>VACUUM</codeph>. Because <codeph>ANALYZE</codeph> uses
-        block-level sampling, a table with a high ratio of blocks containing no valid rows can cause
-          <codeph>ANALYZE</codeph> to set the <codeph>reltuples</codeph> column of the
-          <codeph>pg_class</codeph> system catalog to an inaccurate value or 0, which can lead to
-        poorly optimized queries. The <codeph>VACUUM</codeph> command produces a more accurate count
-        and when run after <codeph>ANALYZE</codeph> will correct an inaccurate row count
-        estimate.</note>
+          <codeph>VACUUM</codeph> before running <codeph>ANALYZE</codeph>. Analyzing a severely
+        bloated table can generate poor statistics if the sample contains empty pages, so it is good
+        practice to vacuum a bloated table before analyzing it. </note>
       <p>When a table accumulates significant bloat, running the <codeph>VACUUM</codeph> command is
         insufficient. For small tables, running <codeph>VACUUM FULL &lt;table_name></codeph> can
         reclaim space used by rows that overflowed the free space map and reduce the size of the
