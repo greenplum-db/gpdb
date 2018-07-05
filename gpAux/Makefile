@@ -858,7 +858,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpcleansegmentdir.py \
 	sbin/gpfixuserlimts \
 	sbin/gpgetstatususingtransition.py \
-	sbin/gprepairmirrorseg.py \
 	sbin/gpsegstart.py \
 	sbin/gpsegstop.py \
 	sbin/gpsegtoprimaryormirror.py \
