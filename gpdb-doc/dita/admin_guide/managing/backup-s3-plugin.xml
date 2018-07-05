@@ -41,12 +41,12 @@
       <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
 <xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
   <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">endpoint</xref>: &lt;<varname>S3-endpoint</varname>>
+  <xref href="#topic_ur2_fsn_ndb/s3-endpoint" format="dita">endpoint</xref>: &lt;<varname>S3-endpoint</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
   <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">encryption</xref>: [on|off]</codeblock>
+  <xref href="#topic_ur2_fsn_ndb/s3-encryption" format="dita">encryption</xref>: [on|off]</codeblock>
       <parml id="s3-exe-path">
         <plentry>
           <pt>executablepath</pt>
@@ -64,9 +64,9 @@
               </plentry>
               <plentry id="s3-endpoint">
                 <pt>endpoint</pt>
-                <pd>Optional. Specify this option connect to an S3 compatible service such as ECS.
-                  The plugin connects to the specified S3 endpoint (hostname or IP address) to
-                  access the S3 compatible data store. </pd>
+                <pd>Required for an S3 compatible service. Specify this option connect to an S3
+                  compatible service such as ECS. The plugin connects to the specified S3 endpoint
+                  (hostname or IP address) to access the S3 compatible data store. </pd>
                 <pd>If this option is specified, the plugin ignores the <codeph>region</codeph>
                   option and does not use AWS to resolve the endpoint. When this option is not
                   specified, the plugin uses the <codeph>region</codeph> to determine AWS S3
