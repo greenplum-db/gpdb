@@ -13,9 +13,15 @@
           <codeph><xref href="../../utility_guide/admin_utilities/gprestore.xml"
         >gprestore</xref></codeph>. Amazon S3 provides secure, durable, highly-scalable object
       storage.</p>
-    <p>The S3 storage plugin also supports connecting to <xref
+    <!--Pivotal only-->
+    <p otherprops="pivotal">The S3 storage plugin also supports connecting to <xref
         href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html" scope="external">Dell
         EMC Elastic Cloud Storage</xref> (ECS), an Amazon S3 compatible service. </p>
+    <!--OSS only-->
+    <p otherprops="oss-only">S3 storage plugin can also connect to an Amazon S3 compatible service
+      such as <xref href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html"
+        scope="external">Dell EMC Elastic Cloud Storage</xref> (ECS) and <xref
+        href="https://www.minio.io/" format="html" scope="external">Minio</xref>.</p>
     <p>To use the S3 storage plugin application, you specify the location of the plugin and the S3
       login and backup location in a configuration file. When you run <codeph>gpbackup</codeph> or
         <codeph>gprestore</codeph>, you specify the configuration file with the option
