@@ -4861,14 +4861,14 @@
       <note>The <codeph>gp_resource_group_bypass</codeph> server configuration parameter is enforced
         only when resource group-based resource management is active.</note>
       <p>Enables or disables the enforcement of resource group concurrent transaction limits on
-        Greenplum Database resources. The default value is <codeph>false</codeph>, enforce of
+        Greenplum Database resources. The default value is <codeph>false</codeph>, which enforces
         resource group transaction limits. Resource groups manage resources such as CPU, memory, and
         the number of concurrent transactions that are used by queries and external components such
         as PL/Container. </p>
-      <p>You can set this parameter to <codeph>true</codeph> to bypass resource group resource
-        concurrent transaction limitations so that a query can run immediately. For example, you can
-        set the parameter to <codeph>true</codeph> for a session to run a system catalog query or a
-        similar query that requires a minimal amount of resources. </p>
+      <p>You can set this parameter to <codeph>true</codeph> to bypass resource group concurrent
+        transaction limitations so that a query can run immediately. For example, you can set the
+        parameter to <codeph>true</codeph> for a session to run a system catalog query or a similar
+        query that requires a minimal amount of resources. </p>
       <p>When you set this parameter to <codeph>true</codeph> and a run a query, the query runs in
         this environment:<ul id="ul_vgc_rw4_j2b">
           <li>The query runs inside a resource group. The resource group assignment for the query
