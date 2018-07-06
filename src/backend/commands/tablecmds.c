@@ -7967,7 +7967,6 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 	AttrNumber	attnum;
 	List	   *children;
 	ObjectAddress object;
-	GpPolicy  *policy;
 	PartitionNode *pn;
 
 	/* At top level, permission check was done in ATPrepCmd, else do it */
@@ -8033,19 +8032,25 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 
 	ReleaseSysCache(tuple);
 
-	policy = rel->rd_cdbpolicy;
-	if (GpPolicyIsPartitioned(policy))
+	if (GpPolicyIsPartitioned(rel->rd_cdbpolicy))
 	{
 		int			ia = 0;
 
-		for (ia = 0; ia < policy->nattrs; ia++)
+		for (ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 		{
-			if (attnum == policy->attrs[ia])
+			if (attnum == rel->rd_cdbpolicy->attrs[ia])
 			{
+				rel->rd_cdbpolicy->nattrs = 0;
 				/* force a random distribution */
-				policy->nattrs = 0;
-				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
+				GpPolicy *policy = GpPolicyCopy(GetMemoryChunkContext(rel), rel->rd_cdbpolicy);
+				/*
+				 * replace policy first in catalog and then assign to
+				 * rd_cdbpolicy to make sure we have intended policy in relcache
+				 * even with relcache invalidation. Otherwise rd_cdbpolicy can
+				 * become invalid soon after assignment.
+				 */
 				GpPolicyReplace(RelationGetRelid(rel), policy);
+				rel->rd_cdbpolicy = policy;
 				if (Gp_role != GP_ROLE_EXECUTE)
 				    ereport(NOTICE,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -10041,7 +10046,6 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	ScanKeyData key[3];
 	SysScanDesc scan;
 	HeapTuple	depTup;
-	GpPolicy   *policy = rel->rd_cdbpolicy;
 	bool		sourceIsInt = false;
 	bool		targetIsInt = false;
 	bool		sourceIsVarlenA = false;
@@ -10134,7 +10138,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = NULL;
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(policy) &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 		!hashCompatible)
 	{
 		relContainsTuples = cdbRelMaxSegSize(rel) > 0;
@@ -10207,12 +10211,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 								relContainsTuples)
 							{
 								Assert(Gp_role == GP_ROLE_DISPATCH &&
-									   GpPolicyIsPartitioned(policy) &&
+									   GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 									   !hashCompatible);
 
-								for (int ia = 0; ia < policy->nattrs; ia++)
+								for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 								{
-									if (attnum == policy->attrs[ia])
+									if (attnum == rel->rd_cdbpolicy->attrs[ia])
 									{
 										ereport(ERROR,
 												(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -10253,12 +10257,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					{
 						Assert(Gp_role == GP_ROLE_DISPATCH &&
 							   !hashCompatible &&
-							   policy != NULL &&
-							   policy->ptype != POLICYTYPE_ENTRY);
+							   rel->rd_cdbpolicy != NULL &&
+							   rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
 
-						for (int ia = 0; ia < policy->nattrs; ia++)
+						for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 						{
-							if (attnum == policy->attrs[ia])
+							if (attnum == rel->rd_cdbpolicy->attrs[ia])
 							{
 								ereport(ERROR,
 										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -10420,7 +10424,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	heap_close(depRel, RowExclusiveLock);
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(policy) &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 		!hashCompatible)
 	{
 		ListCell *lc;
@@ -10438,9 +10442,9 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 		if (relContainsTuples)
 		{
-			for (int ia = 0; ia < policy->nattrs; ia++)
+			for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 			{
-				if (attnum == policy->attrs[ia])
+				if (attnum == rel->rd_cdbpolicy->attrs[ia])
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("cannot alter type of a column used in "
@@ -13226,8 +13230,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			/* always need to rebuild if changed from replicated policy */
 			if (!GpPolicyIsReplicated(rel->rd_cdbpolicy))
 			{
-				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
 				GpPolicyReplace(RelationGetRelid(rel), policy);
+				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
 
 				/* only need to rebuild if have new storage options */
 				if (!(DatumGetPointer(newOptions) || force_reorg))
@@ -13437,9 +13441,15 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			GpPolicy *random_policy = createRandomPartitionedPolicy(NULL);
 
 			original_policy = rel->rd_cdbpolicy;
+			/*
+			 * break the link to avoid original_policy from getting deleted if
+			 * relcache invalidation happens.
+			 */
+			rel->rd_cdbpolicy = NULL;
+			/* update the catalog first and then assign the policy to rd_cdbpolicy */
+			GpPolicyReplace(RelationGetRelid(rel), random_policy);
 			rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel),
 											 random_policy);
-			GpPolicyReplace(RelationGetRelid(rel), random_policy);
 		}
 
 		/* Step (b) - build CTAS */
@@ -13479,8 +13489,15 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		if (original_policy)
 		{
-			rel->rd_cdbpolicy = original_policy;
+			/*
+			 * update catalog first and then update the rd_cdbpolicy. This order
+			 * avoids original_policy from getting freed before we use it for
+			 * GpPolicyReplace() if relcache invalidation happens. Also, helps
+			 * to have the rd_cdbpolicy current instead of reverse order which
+			 * can invalidate our assignment to rd_cdbpolicy.
+			 */
 			GpPolicyReplace(RelationGetRelid(rel), original_policy);
+			rel->rd_cdbpolicy = original_policy;
 		}
 
 		/*
@@ -15491,14 +15508,12 @@ make_dist_clause(Relation rel)
 	int		i;
 	DistributedBy	*dist;
 	List 		*distro = NIL;
-	GpPolicy 	*policy;
 
 	dist = makeNode(DistributedBy);
-	policy = rel->rd_cdbpolicy;	
 
-	Assert(policy->ptype != POLICYTYPE_ENTRY);
+	Assert(rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
 
-	if (GpPolicyIsReplicated(policy))
+	if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
 	{
 		/* must be random distribution */
 		dist->ptype = POLICYTYPE_REPLICATED;

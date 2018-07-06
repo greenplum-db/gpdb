@@ -5088,14 +5088,12 @@ AdjustReplicatedTableCounts(EState *estate)
 	/* check if result_relations contain replicated table*/
 	for (i = 0; i < estate->es_num_result_relations; i++)
 	{
-		GpPolicy *policy = NULL;
 		resultRelInfo = estate->es_result_relations + i;
 
-		policy = resultRelInfo->ri_RelationDesc->rd_cdbpolicy;
-		if (!policy)
+		if (!resultRelInfo->ri_RelationDesc->rd_cdbpolicy)
 			continue;
 
-		if (GpPolicyIsReplicated(policy))
+		if (GpPolicyIsReplicated(resultRelInfo->ri_RelationDesc->rd_cdbpolicy))
 			containReplicatedTable = true;
 		else if (containReplicatedTable)
 		{

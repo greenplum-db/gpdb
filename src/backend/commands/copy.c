@@ -1917,7 +1917,6 @@ BeginCopy(bool is_from,
 static uint64
 CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 {
-	GpPolicy *policy = cstate->rel->rd_cdbpolicy;
 	CopyStmt   *dispatchStmt;
 	List	   *all_relids;
 	CdbPgResults pgresults = {0};
@@ -1955,9 +1954,10 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 
 	dispatchStmt->skip_ext_partition = cstate->skip_ext_partition;
 
-	if (policy)
+	if (cstate->rel->rd_cdbpolicy)
 	{
-		dispatchStmt->policy = GpPolicyCopy(CurrentMemoryContext, policy);
+		dispatchStmt->policy = GpPolicyCopy(CurrentMemoryContext,
+											cstate->rel->rd_cdbpolicy);
 	}
 	else
 	{
