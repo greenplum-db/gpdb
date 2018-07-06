@@ -371,12 +371,13 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb39" with data
 
-    Scenario: 40 Full backup and restore with -T and --truncate with dropped table
+    Scenario: 40 Full backup and restore with -T and --truncate with dropped table and external table
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb40"
-        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.heap_table --truncate"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.heap_table -T public.ext_tab --truncate"
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print "Skipping truncate of bkdb40.public.heap_table because the relation does not exist" to stdout
+        And gpdbrestore should print "Skipping truncate of bkdb40.public.heap_table because the relation does not exist or is an external table." to stdout
+        And gpdbrestore should print "Skipping truncate of bkdb40.public.ext_tab because the relation does not exist or is an external table." to stdout
         And verify that there is a "heap" table "public.heap_table" in "bkdb40" with data
 
     @nbupartII
@@ -1376,6 +1377,15 @@ Feature: Validate command line arguments
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
+
+    Scenario: 139 Full backup and restore with -S and --truncate
+        Given the old timestamps are read from json
+        And the backup test is initialized with database "bkdb139"
+        And there is a "heap" table "public.heap_table" in "bkdb139" with data
+        And there is an external table "ext_tab" in "bkdb139" with data for file "/tmp/ext_tab"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S public --truncate"
+        Then gpdbrestore should return a return code of 0
+        And verify that there is a "heap" table "public.heap_table" in "bkdb40" with data
 
     Scenario: 141 Backup with all GUC (system settings) set to defaults will succeed
         Given the old timestamps are read from json

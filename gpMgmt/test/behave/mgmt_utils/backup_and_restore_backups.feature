@@ -635,9 +635,10 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb39" is saved for verification
 
-    Scenario: 40 Full backup and restore with -T and --truncate with dropped table
+    Scenario: 40 Full backup and restore with -T and --truncate with dropped table and external table
         Given the backup test is initialized with database "bkdb40"
         And there is a "heap" table "public.heap_table" in "bkdb40" with data
+        And there is an external table "ext_tab" in "bkdb40" with data for file "/tmp/ext_tab"
         When the user runs "gpcrondump -a -x bkdb40"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1877,6 +1878,14 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb138" is saved for verification
+
+    Scenario: 139 Full backup and restore with -S and --truncate
+        Given the backup test is initialized with database "bkdb139"
+        And there is a "heap" table "public.heap_table" in "bkdb139" with data
+        And there is an external table "ext_tab" in "bkdb139" with data for file "/tmp/ext_tab"
+        When the user runs "gpcrondump -a -x bkdb139"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
 
     Scenario: 141 Backup with all GUC (system settings) set to defaults will succeed
         Given the backup test is initialized with database "bkdb141"
