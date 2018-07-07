@@ -2,7 +2,6 @@ bin/explain.pl
 bin/explain.pm
 bin/gpfaultinjector
 bin/gptorment.pl
-bin/lib/gpgetconfig.py
 bin/pgbench
 bin/run_operator_tests.pl
 lib/python/gppylib/programs/clsInjectFault.py

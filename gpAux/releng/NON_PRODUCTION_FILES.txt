@@ -3,7 +3,6 @@ bin/explain.pm
 bin/gpaddmirrors
 bin/gpfaultinjector
 bin/gptorment.pl
-bin/lib/gpgetconfig.py
 bin/lib/gptest.py
 bin/pgbench
 bin/postgresql_conf_gp_additions
