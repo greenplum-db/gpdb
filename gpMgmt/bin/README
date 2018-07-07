@@ -27,10 +27,6 @@ Where Things Go
 * If you are adding a GP module, please add it to the gppylib dir.
 * If you are adding a 3rd party module, please add it to the ext dir.
 
-List of Management Scripts Written in Perl
-------------------------------------------
-bin/run_operator_tests.pl -
-
 List of Management Scripts Written in Bash
 ------------------------------------------
 bin/gpinitsystem        -  Creates a new Greenplum Database

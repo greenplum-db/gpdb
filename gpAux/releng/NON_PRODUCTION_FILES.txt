@@ -6,6 +6,5 @@ bin/gptorment.pl
 bin/lib/gptest.py
 bin/pgbench
 bin/postgresql_conf_gp_additions
-bin/run_operator_tests.pl
 bin/test_fsync
 lib/python/gppylib/programs/clsInjectFault.py

@@ -802,7 +802,6 @@ PVK_SCRIPTS = \
 	bin/gpscp			\
 	bin/gpssh			\
 	bin/gpcheckperf			\
-	bin/run_operator_tests.pl	\
 	$(NULL)
 
 PVK_FILESET = \
