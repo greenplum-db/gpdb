@@ -35,7 +35,6 @@ from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
-from test.behave_utils.PgHba import PgHba, Entry
 from test.behave_utils.cluster_setup import TestCluster, reset_hosts
 from test.behave_utils.cluster_expand import Gpexpand
 from gppylib.commands.base import Command, REMOTE
