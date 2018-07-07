@@ -55,23 +55,6 @@ def getPostmasterPID(hostname, datadir):
         return -1
 
 #-----------------------------------------------
-class PySync(Command):
-    def __init__(self,name,srcDir,dstHost,dstDir,ctxt=LOCAL,remoteHost=None, options=None):
-        psync_executable=GPHOME + "/bin/lib/pysync.py"
-
-        # MPP-13617
-        if ':' in dstHost and not ']' in dstHost:
-            dstHost = '[' + dstHost + ']'
-
-        self.cmdStr="%s %s %s %s:%s" % (psync_executable,
-                                        options if options else "",
-                                        srcDir,
-                                        dstHost,
-                                        dstDir)
-        Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
-
-
-#-----------------------------------------------
 
 class CmdArgs(list):
     """
