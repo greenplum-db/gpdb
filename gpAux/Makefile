@@ -953,7 +953,6 @@ endif
 	rm -rf $(INSTLOC)/bin/lib/CVS
 	rm -rf $(INSTLOC)/bin/lib/.p4ignore
 	rm -rf $(INSTLOC)/bin/src
-	rm -f $(INSTLOC)/bin/gpchecksubnetcfg
 	rm -rf $(INSTLOC)/bin/gppylib
 	find $(INSTLOC)/lib/python/gppylib -name test -type d | xargs rm -rf
 

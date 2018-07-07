@@ -129,7 +129,6 @@ install: generate_greenplum_path_file
 	rm -rf $(DESTDIR)$(prefix)/bin/pythonSrc
 	rm -rf $(DESTDIR)$(prefix)/bin/Makefile
 	rm -rf $(DESTDIR)$(prefix)/bin/src
-	rm -f $(DESTDIR)$(prefix)/bin/gpchecksubnetcfg
 	rm -rf $(DESTDIR)$(prefix)/bin/gppylib
 	rm -rf $(DESTDIR)$(prefix)/bin/gpload_test
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
