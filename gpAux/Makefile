@@ -810,9 +810,7 @@ PVK_FILESET = \
 	bin/lib/gplib.py	\
 	bin/lib/pxssh.py	\
 	bin/lib/pexpect.py	\
-	bin/lib/gpsys.py	\
 	bin/lib/multidd		\
-	bin/lib/netserver	\
 	bin/lib/stream		\
 	$(NULL)
 
