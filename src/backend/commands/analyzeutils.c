@@ -102,9 +102,6 @@ float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, 
 					  MCVFreqPair **mcvPairRemaining, int rem_mcv,
 					  float4 *eachBucket);
 
-/* A few variables that don't seem worth passing around as parameters */
-static int	elevel = -1;
-
 #define DEFAULT_COLLATION_OID	100
 
 float4
