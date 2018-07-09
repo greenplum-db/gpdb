@@ -11,7 +11,6 @@ from gppylib.commands import unix
 from gppylib.commands import gp
 from gppylib.commands import base
 from gppylib.gparray import GpArray
-from gppylib.testold.testUtils import *
 from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
@@ -195,7 +194,6 @@ class GpMirrorListToBuild:
             from the mirrorsToBuild must be present in gpArray.
 
         """
-        testOutput("building %s segment(s)" % len(self.__mirrorsToBuild))
 
         if len(self.__mirrorsToBuild) == 0:
             self.__logger.info("No segments to " + actionName)

@@ -238,7 +238,6 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
     nonuser = True if mainOptions is not None and mainOptions.get("setNonuserOnToolLogger") else False
     exit_status = 1
 
-    # NOTE: if this logic is changed then also change test_main in testUtils.py
     try:
         execname = getProgramName()
         hostname = unix.getLocalHostname()
