@@ -302,43 +302,6 @@ class OpenBSDPlatform(GenericPlatform):
         return findCmdInPath('ping6')
 
 
-""" if self.SYSTEM == 'sunos':
-            self.PS_TXT='ef'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.ZCAT='gzcat'
-            self.PG_METHOD='trust'
-            self.NOLINE_ECHO='/usr/bin/echo'
-            self.MAIL='/bin/mailx'
-            self.PING_TIME='1'
-            self.DF=findCmdInPath('df')
-            self.DU_TXT='-s'
-        elif self.SYSTEM == 'linux':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO='%s -e' % self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='c'
-        elif self.SYSTEM == 'darwin':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='DYLD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO= self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='-c'
-        elif self.SYSTEM == 'freebsd':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO='%s -e' % self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='-c'
-"""
-
-
 # ---------------ping--------------------
 class Ping(Command):
     def __init__(self, name, hostToPing, ctxt=LOCAL, remoteHost=None, obj=None):
