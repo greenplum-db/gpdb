@@ -1067,13 +1067,15 @@ class ValidateIncludeTargets(Operation):
                 dump_tables.append(line.strip('\n'))
             include_file.close()
 
+        all_user_tables = get_user_table_list(self.context)
+
         for dump_table in dump_tables:
             if '.' not in dump_table:
                 raise ExceptionNoStackTraceNeeded("No schema name supplied for table %s" % dump_table)
             if dump_table.startswith('pg_temp_'):
                 continue
             schema, table = split_fqn(dump_table)
-            exists = CheckTableExists(self.context, schema, table).run()
+            exists = [schema, table] in all_user_tables
             if not exists:
                 raise ExceptionNoStackTraceNeeded("Table %s does not exist in %s database" % (dump_table, self.context.target_db))
             if self.context.dump_schema:
@@ -1100,11 +1102,12 @@ class ValidateExcludeTargets(Operation):
                 dump_tables.append(line.strip('\n'))
             exclude_file.close()
 
+        all_user_tables = get_user_table_list(self.context)
         for dump_table in dump_tables:
             if '.' not in dump_table:
                 raise ExceptionNoStackTraceNeeded("No schema name supplied for exclude table %s" % dump_table)
             schema, table = split_fqn(dump_table)
-            exists = CheckTableExists(self.context, schema, table).run()
+            exists = [schema, table] in all_user_tables
             if exists:
                 if self.context.dump_schema:
                     for dump_schema in self.context.dump_schema:
