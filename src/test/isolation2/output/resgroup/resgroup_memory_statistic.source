@@ -24,10 +24,10 @@ CREATE
 CREATE OR REPLACE VIEW eat_memory_on_slices AS SELECT count(null) FROM gp_dist_random('gp_id') t1, gp_dist_random('gp_id') t2 WHERE hold_memory(t1.dbid,20)=0 AND hold_memory(t2.dbid,20)=0 ;
 CREATE
 
-CREATE FUNCTION round_test(float, integer) RETURNS float AS $$ SELECT round($1 / $2) * $2 $$ LANGUAGE sql;
+CREATE OR REPLACE FUNCTION round_test(float, integer) RETURNS float AS $$ SELECT round($1 / $2) * $2 $$ LANGUAGE sql;
 CREATE
 
-CREATE VIEW memory_result AS SELECT rsgname, ismaster, round_test(avg(memory_usage), 10) AS avg_mem FROM( SELECT rsgname, CASE (j->'key')::text WHEN '"-1"'::text THEN 1 ELSE 0 END AS ismaster, ((j->'value')->>'used')::int AS memory_usage FROM( SELECT rsgname, row_to_json(json_each(memory_usage::json)) AS j FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test' )a )b GROUP BY (rsgname, ismaster) ORDER BY rsgname, ismaster;
+CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, ismaster, round_test(avg(memory_usage), 10) AS avg_mem FROM( SELECT rsgname, CASE (j->'key')::text WHEN '"-1"'::text THEN 1 ELSE 0 END AS ismaster, ((j->'value')->>'used')::int AS memory_usage FROM( SELECT rsgname, row_to_json(json_each(memory_usage::json)) AS j FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test' )a )b GROUP BY (rsgname, ismaster) ORDER BY rsgname, ismaster;
 CREATE
 
 CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30);

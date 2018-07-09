@@ -32,11 +32,11 @@ CREATE OR REPLACE VIEW eat_memory_on_slices AS
 	  AND hold_memory(t2.dbid,20)=0
 	;
 
-CREATE FUNCTION round_test(float, integer) RETURNS float AS $$
+CREATE OR REPLACE FUNCTION round_test(float, integer) RETURNS float AS $$
 	SELECT round($1 / $2) * $2
 $$ LANGUAGE sql;
 
-CREATE VIEW memory_result AS
+CREATE OR REPLACE VIEW memory_result AS
 	SELECT rsgname, ismaster, round_test(avg(memory_usage), 10) AS avg_mem
 	FROM(
 		SELECT rsgname,

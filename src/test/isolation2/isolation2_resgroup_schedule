@@ -8,6 +8,7 @@ test: resgroup/resgroup_name_convention
 
 # functions
 test: resgroup/resgroup_concurrency
+test: resgroup/resgroup_bypass
 test: resgroup/resgroup_alter_concurrency
 test: resgroup/resgroup_memory_statistic
 test: resgroup/resgroup_memory_limit
