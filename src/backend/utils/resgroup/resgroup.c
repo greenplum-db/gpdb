@@ -70,6 +70,11 @@
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
 
 /*
+ * A hard memory limit in by pass mode, in chunks
+ */
+#define RESGROUP_BYPASS_MODE_MEMORY_LIMIT	10
+
+/*
  * GUC variables.
  */
 int							gp_resgroup_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
@@ -169,6 +174,7 @@ struct ResGroupData
 	Oid			groupId;		/* Id for this group */
 	ResGroupCaps	caps;		/* capabilities of this group */
 	volatile int			nRunning;		/* number of running trans */
+	volatile int	nRunningBypassed;		/* number of running trans in bypass mode */
 	PROC_QUEUE	waitProcs;		/* list of PGPROC objects waiting on this group */
 	int			totalExecuted;	/* total number of executed trans */
 	int			totalQueued;	/* total number of queued trans	*/
@@ -250,8 +256,10 @@ static ResGroupProcData *self = &__self;
 /* If we are waiting on a group, this points to the associated group */
 static ResGroupData *groupAwaited = NULL;
 
-/* Is the transaction in bypass mode? */
-static bool bypassed = false;
+/* the resource group self is running in in bypass mode */
+static ResGroupData *bypassedGroup = NULL;
+/* a fake slot used in bypass mode */
+static ResGroupSlotData bypassedSlot;
 
 /* static functions */
 
@@ -300,6 +308,8 @@ static ResGroupSlotData *groupGetSlot(ResGroupData *group);
 static void groupPutSlot(ResGroupData *group, ResGroupSlotData *slot);
 static Oid decideResGroupId(void);
 static void decideResGroup(ResGroupInfo *pGroupInfo);
+static bool groupIncBypassedRef(ResGroupInfo *pGroupInfo);
+static void groupDecBypassedRef(ResGroupData *group);
 static ResGroupSlotData *groupAcquireSlot(ResGroupInfo *pGroupInfo);
 static void groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot);
 static void addTotalQueueDuration(ResGroupData *group);
@@ -695,9 +705,9 @@ ResGroupCheckForDrop(Oid groupId, char *name)
 
 	group = groupHashFind(groupId, true);
 
-	if (group->nRunning > 0)
+	if (group->nRunning + group->nRunningBypassed > 0)
 	{
-		int nQuery = group->nRunning + group->waitProcs.size;
+		int nQuery = group->nRunning + group->nRunningBypassed + group->waitProcs.size;
 
 		Assert(name != NULL);
 		ereport(ERROR,
@@ -961,7 +971,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 	switch (type)
 	{
 		case RES_GROUP_STAT_NRUNNING:
-			result = Int32GetDatum(group->nRunning);
+			result = Int32GetDatum(group->nRunning + group->nRunningBypassed);
 			break;
 		case RES_GROUP_STAT_NQUEUEING:
 			result = Int32GetDatum(group->waitProcs.size);
@@ -1096,16 +1106,28 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 	 * when this proc is assigned to a valid resource group.
 	 */
 	self->memUsage += memoryChunks;
-	if (!selfIsAssigned())
+	if (bypassedGroup)
 	{
-		if (bypassed && self->memUsage > 10)
-			LOG_RESGROUP_DEBUG(LOG,
-							   "too many memory allocated in resource group bypass mode: %d",
-							   self->memUsage);
-		return true;
-	}
+		/*
+		 * Do not allow to allocate more than the per proc limit.
+		 */
+		if (self->memUsage > RESGROUP_BYPASS_MODE_MEMORY_LIMIT)
+		{
+			self->memUsage -= memoryChunks;
+			return false;
+		}
 
-	Assert(slotIsInUse(slot));
+		/*
+		 * Set group & slot to bypassed ones so we could follow the limitation
+		 * checking logic as normal transactions.
+		 */
+		group = bypassedGroup;
+		slot = &bypassedSlot;
+	}
+	else if (!selfIsAssigned())
+		return true;
+
+	Assert(bypassedGroup || slotIsInUse(slot));
 	Assert(group->memUsage >= 0);
 	Assert(self->memUsage >= 0);
 
@@ -1155,10 +1177,19 @@ ResGroupReleaseMemory(int32 memoryChunks)
 	Assert(memoryChunks <= self->memUsage);
 
 	self->memUsage -= memoryChunks;
-	if (!selfIsAssigned())
+	if (bypassedGroup)
+	{
+		/*
+		 * Set group & slot to bypassed ones so we could follow the release
+		 * logic as normal transactions.
+		 */
+		group = bypassedGroup;
+		slot = &bypassedSlot;
+	}
+	else if (!selfIsAssigned())
 		return;
 
-	Assert(slotIsInUse(slot));
+	Assert(bypassedGroup || slotIsInUse(slot));
 
 	groupDecMemUsage(group, slot, memoryChunks);
 }
@@ -1169,9 +1200,19 @@ ResourceGroupGetQueryMemoryLimit(void)
 	ResGroupSlotData	*slot = self->slot;
 	int64				memSpill;
 
-	/* In bypass mode we assume memory usage should be low */
-	if (bypassed)
-		return 0;
+	if (bypassedGroup)
+	{
+		int64		bytesInMB = 1 << BITS_IN_MB;
+		int64		bytesInChunk = 1 << VmemTracker_GetChunkSizeInBits();
+
+		/*
+		 * In bypass mode there is a hard memory limit of
+		 * RESGROUP_BYPASS_MODE_MEMORY_LIMIT chunk,
+		 * we should make sure query_mem + misc mem <= chunk.
+		 */
+		return Min(bytesInMB,
+				   bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT / 2);
+	}
 
 	Assert(selfIsAssigned());
 
@@ -1227,6 +1268,7 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	group->groupId = groupId;
 	group->caps = *caps;
 	group->nRunning = 0;
+	group->nRunningBypassed = 0;
 	ProcQueueInit(&group->waitProcs);
 	group->totalExecuted = 0;
 	group->totalQueued = 0;
@@ -1657,6 +1699,44 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 
 	pGroupInfo->group = group;
 	pGroupInfo->groupId = groupId;
+}
+
+/*
+ * Increase the bypassed ref count
+ *
+ * Return true if the operation is done, or false if the group is dropped.
+ */
+static bool
+groupIncBypassedRef(ResGroupInfo *pGroupInfo)
+{
+	ResGroupData	*group = pGroupInfo->group;
+	bool			result = false;
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	/* Has the group been dropped? */
+	if (groupIsDropped(pGroupInfo))
+		goto end;
+
+	/* Is the group locked for drop? */
+	if (group->lockedForDrop)
+		goto end;
+
+	result = true;
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->nRunningBypassed, 1);
+
+end:
+	LWLockRelease(ResGroupLock);
+	return result;
+}
+
+/*
+ * Decrease the bypassed ref count
+ */
+static void
+groupDecBypassedRef(ResGroupData *group)
+{
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &group->nRunningBypassed, 1);
 }
 
 /*
@@ -2209,6 +2289,7 @@ void
 SerializeResGroupInfo(StringInfo str)
 {
 	int i;
+	int			itmp;
 	ResGroupCap	tmp;
 	ResGroupCaps	caps;
 
@@ -2254,6 +2335,9 @@ SerializeResGroupInfo(StringInfo str)
 			appendBinaryStringInfo(str, (char *) &tmp, sizeof(ResGroupCap));
 		}
 	}
+
+	itmp = htonl(bypassedSlot.groupId);
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(itmp));
 }
 
 /*
@@ -2266,6 +2350,7 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 						int len)
 {
 	int			i;
+	int			itmp;
 	ResGroupCap	tmp;
 	const char	*ptr = buf;
 
@@ -2309,6 +2394,10 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 			ptr += sizeof(ResGroupCap);
 		}
 	}
+
+	memcpy(&itmp, ptr, sizeof(itmp));
+	bypassedSlot.groupId = ntohl(itmp);
+	ptr += sizeof(itmp);
 
 	Assert(len == ptr - buf);
 }
@@ -2366,11 +2455,8 @@ AssignResGroupOnMaster(void)
 	 * if query should be bypassed, do not assign a
 	 * resource group, leave self unassigned
 	 */
-	bypassed = shouldBypassQuery(debug_query_string);
-	if (bypassed)
+	if (shouldBypassQuery(debug_query_string))
 	{
-		ResGroupCaps	caps;
-
 		/*
 		 * Although we decide to bypass this query we should load the
 		 * memory_spill_ratio setting from the resgroup, otherwise a
@@ -2378,19 +2464,35 @@ AssignResGroupOnMaster(void)
 		 * if it's the first query in the connection (make sure tab completion
 		 * is not triggered otherwise it will run some implicit query before
 		 * you execute the SHOW command).
+		 *
+		 * Also need to increase a bypassed ref count to prevent the group
+		 * being dropped concurrently.
 		 */
 		do {
 			decideResGroup(&groupInfo);
+		} while (!groupIncBypassedRef(&groupInfo));
 
-			/*
-			 * It's possible that the resgroup is concurrently dropped,
-			 * so we need to check again in such a case.
-			 */
-			if (groupInfo.group)
-				caps = groupInfo.group->caps;
-		} while (!groupInfo.group || groupInfo.group->groupId == InvalidOid);
+		/* Record which resgroup we are running in */
+		bypassedGroup = groupInfo.group;
 
-		groupSetMemorySpillRatio(&caps);
+		/* Update pg_stat_activity statistics */
+		bypassedGroup->totalExecuted++;
+		pgstat_report_resgroup(0, bypassedGroup->groupId);
+
+		/* Initialize the fake slot */
+		bypassedSlot.groupId = groupInfo.groupId;
+		bypassedSlot.memQuota = 0;
+		bypassedSlot.memUsage = 0;
+
+		/* Attach self memory usage to resgroup */
+		groupIncMemUsage(bypassedGroup, &bypassedSlot, self->memUsage);
+
+		/* Add into cgroup */
+		ResGroupOps_AssignGroup(bypassedGroup->groupId,
+								&bypassedGroup->caps,
+								MyProcPid);
+
+		groupSetMemorySpillRatio(&bypassedGroup->caps);
 		return;
 	}
 
@@ -2437,6 +2539,24 @@ UnassignResGroup(void)
 {
 	ResGroupData		*group = self->group;
 	ResGroupSlotData	*slot = self->slot;
+
+	if (bypassedGroup)
+	{
+		/* bypass mode ref count is only maintained on qd */
+		if (Gp_role == GP_ROLE_DISPATCH)
+			groupDecBypassedRef(bypassedGroup);
+
+		/* Detach self memory usage from resgroup */
+		groupDecMemUsage(bypassedGroup, &bypassedSlot, self->memUsage);
+
+		/* Reset the fake slot */
+		bypassedSlot.groupId = InvalidOid;
+		bypassedGroup = NULL;
+
+		/* Update pg_stat_activity statistics */
+		pgstat_report_resgroup(0, InvalidOid);
+		return;
+	}
 
 	if (!selfIsAssigned())
 		return;
@@ -2501,14 +2621,37 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	DeserializeResGroupInfo(&caps, &newGroupId, buf, len);
 
+	/*
+	 * QD will dispatch the resgroup id via bypassedSlot.groupId
+	 * in bypass mode.
+	 */
+	if (bypassedSlot.groupId != InvalidOid)
+	{
+		/* Are we already running in bypass mode? */
+		if (bypassedGroup != NULL)
+		{
+			Assert(bypassedGroup->groupId == bypassedSlot.groupId);
+			return;
+		}
+
+		/* Find out the resgroup by id */
+		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+		bypassedGroup = groupHashFind(bypassedSlot.groupId, true);
+		LWLockRelease(ResGroupLock);
+
+		Assert(bypassedGroup != NULL);
+
+		/* Initialize the fake slot */
+		bypassedSlot.memQuota = 0;
+		bypassedSlot.memUsage = 0;
+
+		/* Attach self memory usage to resgroup */
+		groupIncMemUsage(bypassedGroup, &bypassedSlot, self->memUsage);
+		return;
+	}
+
 	if (newGroupId == InvalidOid)
 	{
-		/*
-		 * if query should be bypassed, do not assign a
-		 * resource group, leave self unassigned
-		 */
-		bypassed = gp_resource_group_bypass;
-
 		UnassignResGroup();
 		return;
 	}
@@ -3089,6 +3232,7 @@ lockResGroupForDrop(ResGroupData *group)
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);
+	Assert(group->nRunningBypassed == 0);
 	group->lockedForDrop = true;
 }
 
@@ -3098,6 +3242,7 @@ unlockResGroupForDrop(ResGroupData *group)
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(group->nRunning == 0);
+	Assert(group->nRunningBypassed == 0);
 	group->lockedForDrop = false;
 }
 
@@ -3372,6 +3517,7 @@ resgroupDumpGroup(StringInfo str, ResGroupData *group)
 	appendStringInfo(str, "{");
 	appendStringInfo(str, "\"group_id\":%u,", group->groupId);
 	appendStringInfo(str, "\"nRunning\":%d,", group->nRunning);
+	appendStringInfo(str, "\"nRunningBypassed\":%d,", group->nRunningBypassed);
 	appendStringInfo(str, "\"locked_for_drop\":%d,", group->lockedForDrop);
 	appendStringInfo(str, "\"memExpected\":%d,", group->memExpected);
 	appendStringInfo(str, "\"memQuotaGranted\":%d,", group->memQuotaGranted);
