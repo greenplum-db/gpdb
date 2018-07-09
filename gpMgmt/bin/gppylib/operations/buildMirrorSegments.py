@@ -53,20 +53,6 @@ gDatabaseFiles = [
 ]
 
 
-def MPP_12038_fault_injection():
-    """This function will check for the environment variable
-    GP_MPP_12038 and if it is set will sleep for 2 * gp_fts_probe_interval.
-    This is used in this module to check interaction with the FTS prober and
-    should only be used for testing.  Note this delay is long enough for a 
-    small test installation but would likely not be long enough for a large
-    cluster."""
-    if os.getenv("GP_MPP_12038_INJECT_DELAY", None):
-        faultProber = faultProberInterface.getFaultProber()
-        probe_interval_secs = faultProber.getFaultProberInterval()
-        logger.info("Sleeping for %d seconds for MPP-12038 test..." % (probe_interval_secs * 2))
-        time.sleep(probe_interval_secs * 2)
-
-
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
 #                                 failed is not (if both set)...change that, or at least protect against problems
@@ -290,8 +276,6 @@ class GpMirrorListToBuild:
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
-            MPP_12038_fault_injection()
-
             self.__logger.info("Updating mirrors")
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
             if actionName ==  "add":
@@ -299,8 +283,6 @@ class GpMirrorListToBuild:
 
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
-
-            MPP_12038_fault_injection()
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
