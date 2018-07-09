@@ -3,10 +3,6 @@
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
 
-"""
-TODO: docs
-
-"""
 import os
 
 from gppylib.gplog import *
@@ -18,49 +14,6 @@ from gppylib.commands.base import *
 logger = get_default_logger()
 
 GPHOME=os.environ.get('GPHOME')
-
-
-
-
-#----------------------- postgresql.conf ----------------------
-#TODO:  what functions?
-
-
-
-
-#----------------------- pg_hba.conf ----------------------
-#TODO:  set of functions related to pg_hba.conf including:
-#  - reading it in
-#  - writing it out
-#  - appending to it.
-
-
-
-
-#----------------------- Basic PG maintenance ----------------------
-
-#TODO: set of functions related to basic pg maintenance:
-#  - initdb
-#  - pg_ctl
-#  - pg_config
-#  - pg_controldata
-
-#-------------initdb---------------------
-class InitDB(Command):
-    def __init__(self,name,db,ctxt=LOCAL,remoteHost=None):
-        self.db=db
-        self.cmdStr="$GPHOME/bin/initdb %s" % (db.getSegmentDataDirectory())
-        Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
-    
-    @staticmethod
-    def local(name,db):
-        cmd=InitDB(name,db)
-        cmd.run(validateAfter=True)
-                
-    @staticmethod
-    def remote(name,db,host):
-        cmd=InitDB(name,db,ctxt=REMOTE,remoteHost=host)
-        cmd.run(validateAfter=True) 
 
 class DbStatus(Command):
     def __init__(self,name,db,ctxt=LOCAL,remoteHost=None):
@@ -141,8 +94,6 @@ class ReadPostmasterTempFile(Command):
         return cmd
  
 
-
-
 def getProcWithParent(host,targetParentPID,procname):    
     """ returns (parentPID,procPID) tuple for the procname with the specified parent """
     cmdStr="ps -ef | grep '%s' | grep -v grep" % (procname)
@@ -175,7 +126,6 @@ def getProcWithParent(host,targetParentPID,procname):
     return (0,0)
 
 
-
 def getPostmasterPID(db):
     datadir = db.getSegmentDataDirectory()
     hostname = db.getSegmentHostName()
@@ -187,42 +137,6 @@ def getPostmasterPID(db):
     logger.critical(cmd.get_results().printResult())
     sout=cmd.get_results().stdout.lstrip(' ')
     return int(sout.split()[1])
-
-def killPostmaster(db,signal):
-    killPgProc(db,"postmaster",signal)
-
-def getBgWriterPID(db):
-    postmaster_pid=getPostmasterPID(db)    
-    hostname=db.getSegmentHostName()
-    return getProcWithParent(hostname,postmaster_pid,"postgres: writer process")
-        
-def killBgWriter(db,signal):
-    return killPgProc(db, "postgres: writer process",signal)
-
-    
-def getStatsCollectorPID(db):
-    postmaster_pid=getPostmasterPID(db)    
-    hostname=db.getSegmentHostName()
-    return getProcWithParent(hostname,postmaster_pid,"postgres: stats collector")
-    
-def killStatsCollector(db,signal):
-    return killPgProc(db,"postgres: stats collector",signal)
-
-def getWALSendServerPID(db):
-    postmaster_pid=getPostmasterPID(db)    
-    hostname=db.getSegmentHostName()
-    return getProcWithParent(hostname,postmaster_pid,"postgres: WAL Send Server")
-
-def killWALSendServer(db,signal):
-    return killPgProc(db,"postgres: WAL Send Server",signal)
-
-def getFTSProbePID(db):
-    postmaster_pid=getPostmasterPID(db)    
-    hostname=db.getSegmentHostName()
-    return getProcWithParent(hostname,postmaster_pid,"postgres: ftsprobe process")
-
-def killFTSProbe(db,signal):
-    return killPgProc(db,"postgres: ftsprobe process",signal)
 
 def killPgProc(db,procname,signal):
     postmasterPID=getPostmasterPID(db)
