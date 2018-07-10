@@ -4873,9 +4873,9 @@
         this environment:<ul id="ul_vgc_rw4_j2b">
           <li>The query runs inside a resource group. The resource group assignment for the query
             does not change.</li>
-          <li>The query memory quota is 1MB. The memory is allocated from resource group shared
-            memory or global shared memory. The query fails if there is not enough shared memory
-            available to fulfill the memory allocation request.</li>
+          <li>The query memory quota is 10 MB per query. The memory is allocated from resource group
+            shared memory or global shared memory. The query fails if there is not enough shared
+            memory available to fulfill the memory allocation request.</li>
         </ul></p>
       <p>This parameter can be set for a session. The parameter cannot be set within a transaction
         or a function.</p>
