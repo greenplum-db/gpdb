@@ -2740,6 +2740,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params,
 		case T_Unique:
 		case T_SetOp:
 		case T_Repeat:
+		case T_SplitUpdate:
 			break;
 
 		default:

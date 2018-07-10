@@ -418,11 +418,11 @@ INSERT INTO unique_tbl VALUES (4, 'five');
 BEGIN;
 -- default is immediate so this should fail right away
 UPDATE unique_tbl SET i = 1 WHERE i = 0;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 ROLLBACK;
 -- check is done at end of statement, so this should succeed
 UPDATE unique_tbl SET i = i+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 SELECT * FROM unique_tbl;
  i |  t   
 ---+------
@@ -462,7 +462,7 @@ BEGIN;
 INSERT INTO unique_tbl VALUES (1, 'five');
 INSERT INTO unique_tbl VALUES (5, 'one');
 UPDATE unique_tbl SET i = 4 WHERE i = 2;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 UPDATE unique_tbl SET i = 2 WHERE i = 4 AND t = 'four';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 DELETE FROM unique_tbl WHERE i = 1 AND t = 'one';

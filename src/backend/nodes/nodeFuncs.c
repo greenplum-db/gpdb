@@ -2812,7 +2812,14 @@ expression_tree_mutator(Node *node,
 				MUTATE(newnode->groupsets, grpingcl->groupsets, List *);
 				return (Node *)newnode;
 			}
+		case T_DMLActionExpr:
+			{
+				DMLActionExpr *action_expr = (DMLActionExpr *) node;
+				DMLActionExpr *new_action_expr;
 
+				FLATCOPY(new_action_expr, action_expr, DMLActionExpr);
+				return (Node *)new_action_expr;
+			}
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));

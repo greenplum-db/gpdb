@@ -248,9 +248,9 @@ SELECT * FROM trigger_test;
 (4 rows)
 
 UPDATE trigger_test SET i = 5 where i=3;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 UPDATE trigger_test SET i = 100 where i=1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 SELECT * FROM trigger_test;
  i |                v                 |   foo   
 ---+----------------------------------+---------

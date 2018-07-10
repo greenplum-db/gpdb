@@ -37,6 +37,7 @@ SELECT * FROM uctest ORDER BY 1, 2, 3;
 COMMIT;
 SELECT * FROM uctest ORDER BY 1, 2, 3;
 
+
 -- 
 -- UPDATE ... WHERE CURRENT against SELECT ... FOR SHARE
 --
@@ -170,9 +171,6 @@ DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank_1_prt_extra WHERE rank
 DELETE FROM portals_updatable_rank WHERE CURRENT OF c;	-- error out on wrong table
 ROLLBACK;
 
--- Partitioning, negative, cursor-agnostic: cannot update distribution key
-UPDATE portals_updatable_rank SET id = id + 1 WHERE CURRENT OF c;
-
 -- Partitioning, negative, cursor-agnostic: cannot move tuple across partitions
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank WHERE rank = 1;
@@ -270,6 +268,14 @@ FETCH 1 FROM a;
 UPDATE bar SET d = -1000 WHERE CURRENT OF a;
 COMMIT;
 SELECT * FROM bar ORDER BY 1, 2, 3, 4;
+
+-- Partitioning, update distribution key
+BEGIN;
+DECLARE c CURSOR FOR SELECT * FROM portals_updatable_rank  WHERE rank = 10;
+FETCH 1 FROM c;
+UPDATE portals_updatable_rank SET id = id + 1 WHERE CURRENT OF c;
+COMMIT;
+SELECT * FROM portals_updatable_rank  ORDER BY 1, 2, 3;
 
 -- 
 -- Expected Failure
@@ -413,9 +419,6 @@ DECLARE c1 CURSOR FOR SELECT * FROM ucview WHERE f1 = 3;
 FETCH 1 FROM c1;
 DELETE FROM ucview WHERE CURRENT OF c1;
 ROLLBACK;
-
--- Negative, cursor-agnostic: cannot update distribution key
-UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF a;
 
 -- Negative, cursor-agnostic: cannot update external tables
 CREATE EXTERNAL WEB TABLE ucexttest (x text) EXECUTE 'echo "foo";' FORMAT 'TEXT';

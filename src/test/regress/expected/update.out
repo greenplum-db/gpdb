@@ -2,7 +2,6 @@
 -- UPDATE ... SET <col> = DEFAULT;
 --
 CREATE TABLE update_test (
-	e   INT DEFAULT 1,
     a   INT DEFAULT 10,
     b   INT,
     c   TEXT
@@ -100,3 +99,203 @@ SELECT a, b, char_length(c) FROM update_test;
 (2 rows)
 
 DROP TABLE update_test;
+--
+-- text types. We should support the following updates.
+--
+drop table tab1;
+ERROR:  table "tab1" does not exist
+drop table tab2;
+ERROR:  table "tab2" does not exist
+CREATE TABLE tab1 (a varchar(15), b integer) DISTRIBUTED BY (a);
+CREATE TABLE tab2 (a varchar(15), b integer) DISTRIBUTED BY (a);
+UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
+drop table tab1;
+drop table tab2;
+CREATE TABLE tab1 (a text, b integer) DISTRIBUTED BY (a);
+CREATE TABLE tab2 (a text, b integer) DISTRIBUTED BY (a);
+UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
+drop table tab1;
+drop table tab2;
+CREATE TABLE tab1 (a varchar, b integer) DISTRIBUTED BY (a);
+CREATE TABLE tab2 (a varchar, b integer) DISTRIBUTED BY (a);
+UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
+drop table tab1;
+drop table tab2;
+CREATE TABLE tab1 (a char(15), b integer) DISTRIBUTED BY (a);
+CREATE TABLE tab2 (a char(15), b integer) DISTRIBUTED BY (a);
+UPDATE tab1 SET b = tab2.b FROM tab2 WHERE tab1.a = tab2.a;
+drop table tab1;
+drop table tab2;
+DROP TABLE IF EXISTS update_distr_key; 
+NOTICE:  table "update_distr_key" does not exist, skipping
+CREATE TABLE update_distr_key (a int, b int) DISTRIBUTED BY (a); 
+INSERT INTO update_distr_key select i, i* 10 from generate_series(0, 9) i; 
+UPDATE update_distr_key SET a = 5 WHERE b = 10; 
+SELECT * from update_distr_key; 
+ a | b  
+---+----
+ 3 | 30
+ 4 | 40
+ 5 | 50
+ 6 | 60
+ 7 | 70
+ 5 | 10
+ 8 | 80
+ 9 | 90
+ 0 |  0
+ 2 | 20
+(10 rows)
+
+DROP TABLE update_distr_key;
+-- below cases is to test multi-hash-cols
+CREATE TABLE tab3(c1 int, c2 int, c3 int, c4 int, c5 int) DISTRIBUTED BY (c1, c2, c3);
+CREATE TABLE tab5(c1 int, c2 int, c3 int, c4 int, c5 int) DISTRIBUTED BY (c1, c2, c3, c4, c5);
+INSERT INTO tab3 SELECT i, i, i, i, i FROM generate_series(1, 10)i;
+INSERT INTO tab5 SELECT i, i, i, i, i FROM generate_series(1, 10)i;
+-- test tab3
+SELECT gp_segment_id, * FROM tab3;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             0 |  1 |  1 |  1 |  1 |  1
+             0 |  2 |  2 |  2 |  2 |  2
+             0 |  3 |  3 |  3 |  3 |  3
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  5 |  5 |  5 |  5 |  5
+             0 |  6 |  6 |  6 |  6 |  6
+             0 |  7 |  7 |  7 |  7 |  7
+             0 |  8 |  8 |  8 |  8 |  8
+             0 |  9 |  9 |  9 |  9 |  9
+             0 | 10 | 10 | 10 | 10 | 10
+(10 rows)
+
+UPDATE tab3 set c1 = 9 where c4 = 1;
+SELECT gp_segment_id, * FROM tab3;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             2 |  9 |  1 |  1 |  1 |  1
+             0 |  2 |  2 |  2 |  2 |  2
+             0 |  3 |  3 |  3 |  3 |  3
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  5 |  5 |  5 |  5 |  5
+             0 |  6 |  6 |  6 |  6 |  6
+             0 |  7 |  7 |  7 |  7 |  7
+             0 |  8 |  8 |  8 |  8 |  8
+             0 |  9 |  9 |  9 |  9 |  9
+             0 | 10 | 10 | 10 | 10 | 10
+(10 rows)
+
+UPDATE tab3 set (c1,c2) = (5,6) where c4 = 1;
+SELECT gp_segment_id, * FROM tab3;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             0 |  2 |  2 |  2 |  2 |  2
+             0 |  3 |  3 |  3 |  3 |  3
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  5 |  5 |  5 |  5 |  5
+             0 |  6 |  6 |  6 |  6 |  6
+             0 |  7 |  7 |  7 |  7 |  7
+             0 |  8 |  8 |  8 |  8 |  8
+             0 |  9 |  9 |  9 |  9 |  9
+             0 | 10 | 10 | 10 | 10 | 10
+             1 |  5 |  6 |  1 |  1 |  1
+(10 rows)
+
+UPDATE tab3 set (c1,c2,c3) = (3,2,1) where c4 = 1;
+SELECT gp_segment_id, * FROM tab3;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             0 |  2 |  2 |  2 |  2 |  2
+             0 |  3 |  3 |  3 |  3 |  3
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  5 |  5 |  5 |  5 |  5
+             0 |  6 |  6 |  6 |  6 |  6
+             0 |  7 |  7 |  7 |  7 |  7
+             0 |  8 |  8 |  8 |  8 |  8
+             0 |  9 |  9 |  9 |  9 |  9
+             0 | 10 | 10 | 10 | 10 | 10
+             0 |  3 |  2 |  1 |  1 |  1
+(10 rows)
+
+-- test tab5
+SELECT gp_segment_id, * FROM tab5;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             2 |  2 |  2 |  2 |  2 |  2
+             2 |  5 |  5 |  5 |  5 |  5
+             2 |  6 |  6 |  6 |  6 |  6
+             2 |  9 |  9 |  9 |  9 |  9
+             0 |  1 |  1 |  1 |  1 |  1
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  8 |  8 |  8 |  8 |  8
+             1 |  3 |  3 |  3 |  3 |  3
+             1 |  7 |  7 |  7 |  7 |  7
+             1 | 10 | 10 | 10 | 10 | 10
+(10 rows)
+
+UPDATE tab5 set c1 = 1000 where c4 = 1;
+SELECT gp_segment_id, * FROM tab5;
+ gp_segment_id |  c1  | c2 | c3 | c4 | c5 
+---------------+------+----+----+----+----
+             1 |    3 |  3 |  3 |  3 |  3
+             1 |    7 |  7 |  7 |  7 |  7
+             1 |   10 | 10 | 10 | 10 | 10
+             2 |    2 |  2 |  2 |  2 |  2
+             2 |    5 |  5 |  5 |  5 |  5
+             2 |    6 |  6 |  6 |  6 |  6
+             2 |    9 |  9 |  9 |  9 |  9
+             2 | 1000 |  1 |  1 |  1 |  1
+             0 |    4 |  4 |  4 |  4 |  4
+             0 |    8 |  8 |  8 |  8 |  8
+(10 rows)
+
+UPDATE tab5 set (c1,c2) = (9,10) where c4 = 1;
+SELECT gp_segment_id, * FROM tab5;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  8 |  8 |  8 |  8 |  8
+             1 |  3 |  3 |  3 |  3 |  3
+             1 |  7 |  7 |  7 |  7 |  7
+             1 | 10 | 10 | 10 | 10 | 10
+             1 |  9 | 10 |  1 |  1 |  1
+             2 |  2 |  2 |  2 |  2 |  2
+             2 |  5 |  5 |  5 |  5 |  5
+             2 |  6 |  6 |  6 |  6 |  6
+             2 |  9 |  9 |  9 |  9 |  9
+(10 rows)
+
+UPDATE tab5 set (c1,c2,c4) = (5,8,6) where c4 = 1;
+SELECT gp_segment_id, * FROM tab5;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  8 |  8 |  8 |  8 |  8
+             0 |  5 |  8 |  1 |  6 |  1
+             2 |  2 |  2 |  2 |  2 |  2
+             2 |  5 |  5 |  5 |  5 |  5
+             2 |  6 |  6 |  6 |  6 |  6
+             2 |  9 |  9 |  9 |  9 |  9
+             1 |  3 |  3 |  3 |  3 |  3
+             1 |  7 |  7 |  7 |  7 |  7
+             1 | 10 | 10 | 10 | 10 | 10
+(10 rows)
+
+UPDATE tab5 set (c1,c2,c3,c4,c5) = (1,2,3,0,6) where c5 = 1;
+SELECT gp_segment_id, * FROM tab5;
+ gp_segment_id | c1 | c2 | c3 | c4 | c5 
+---------------+----+----+----+----+----
+             2 |  2 |  2 |  2 |  2 |  2
+             2 |  5 |  5 |  5 |  5 |  5
+             2 |  6 |  6 |  6 |  6 |  6
+             2 |  9 |  9 |  9 |  9 |  9
+             0 |  4 |  4 |  4 |  4 |  4
+             0 |  8 |  8 |  8 |  8 |  8
+             1 |  3 |  3 |  3 |  3 |  3
+             1 |  7 |  7 |  7 |  7 |  7
+             1 | 10 | 10 | 10 | 10 | 10
+             1 |  1 |  2 |  3 |  0 |  6
+(10 rows)
+
+-- clean up
+drop table tab3;
+drop table tab5;

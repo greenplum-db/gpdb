@@ -1555,7 +1555,7 @@ PL/pgSQL function "tg_pslot_biu" line 6 at SQL statement
 -- Fix the wrong name for patchfield PF0_2
 --
 update PField set name = 'PF0_2' where name = 'PF0_X';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 select * from PSlot order by slotname;
  slotname | pfname | slotlink | backlink 
 ----------+--------+----------+----------
@@ -1844,13 +1844,21 @@ create function test_found()
   return true;
   end;' language plpgsql;
 select test_found();
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-CONTEXT:  SQL statement "update found_test_tbl set a = 100 where a = 1"
-PL/pgSQL function "test_found" line 9 at SQL statement
+ test_found 
+------------
+ t
+(1 row)
+
 select * from found_test_tbl;
- a 
----
-(0 rows)
+  a  
+-----
+   3
+   4
+   5
+   6
+   2
+ 100
+(6 rows)
 
 --
 -- Test set-returning functions for PL/pgSQL
@@ -1865,9 +1873,15 @@ BEGIN
 	RETURN;
 END;' language plpgsql;
 select * from test_table_func_rec();
- a 
----
-(0 rows)
+  a  
+-----
+   2
+   3
+   4
+   5
+   6
+ 100
+(6 rows)
 
 create function test_table_func_row() returns setof found_test_tbl as '
 DECLARE
@@ -1879,9 +1893,15 @@ BEGIN
 	RETURN;
 END;' language plpgsql;
 select * from test_table_func_row();
- a 
----
-(0 rows)
+  a  
+-----
+   3
+   4
+   5
+   6
+ 100
+   2
+(6 rows)
 
 create function test_ret_set_scalar(int,int) returns setof int as '
 DECLARE

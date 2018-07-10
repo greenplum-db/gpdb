@@ -1279,23 +1279,21 @@ insert into TblUp4 values(1,2);
 -- end_ignore
 -- planner does not support updates on distribution keys
 update TblUp1 set a=100 where a not in (select a from TblUp3);
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from TblUp1;
- a | b 
----+---
- 1 | 2
- 3 | 4
- 5 | 6
+  a  | b 
+-----+---
+   1 | 2
+ 100 | 4
+ 100 | 6
 (3 rows)
 
 update TblUp2 set a=100 where a not in (select a from TblUp4);
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from TblUp2;
- a | b 
----+---
- 1 | 2
- 3 | 4
- 5 | 6
+  a  | b 
+-----+---
+   1 | 2
+ 100 | 4
+ 100 | 6
 (3 rows)
 
 --

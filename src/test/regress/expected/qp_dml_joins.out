@@ -1,3 +1,9 @@
+-- start_matchsubs
+-- m/ERROR:  moving tuple from partition .* to partition .* not supported/
+-- s/ERROR:  moving tuple from partition .* to partition .* not supported/ERROR:  cross-partition or multi-update to a row/
+-- m/ERROR:  multiple updates to a row by the same query is not allowed/
+-- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
+-- end_matchsubs
 -- First create a bunch of test tables
 SET statement_mem='250 MB';
 CREATE TABLE dml_ao_check_r (
@@ -2078,13 +2084,13 @@ SELECT SUM(d) FROM dml_heap_check_s;
 rollback;
 --Negative test: Update data that does not satisfy the check constraints
 UPDATE dml_heap_check_s SET a = 100 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a AND dml_heap_check_s.a = 99;
-ERROR:  moving tuple from partition "dml_heap_check_s_1_prt_11" to partition "dml_heap_check_s_1_prt_def" not supported  (seg0 127.0.0.1:40000 pid=18972)
+ERROR:  cross-partition or multi-update to a row  (seg0 127.0.0.1:40000 pid=18972)
 --Negative test - Update violates check constraint(not NULL constraint)
 UPDATE dml_heap_check_s SET b = NULL FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.b and dml_heap_check_s.b = 99;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  new row for relation "dml_heap_check_s_1_prt_5" violates check constraint "scheck_b"  (seg1 10.152.10.75:25433 pid=28939)
 --Negative test - Update moving tuple across partition .also violates the check constraint
 UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a;
-ERROR:  moving tuple from partition "dml_heap_check_s_1_prt_2" to partition "dml_heap_check_s_1_prt_def" not supported  (seg0 127.0.0.1:40000 pid=18972)
+ERROR:  cross-partition or multi-update to a row  (seg0 127.0.0.1:40000 pid=18972)
 --Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
@@ -3065,9 +3071,12 @@ SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_pt_s)foo;
 (1 row)
 
 UPDATE dml_heap_pt_s SET b = 10;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_pt_s)foo;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     1
+(1 row)
+
 rollback;
 --Update to default value
 begin;
@@ -3078,9 +3087,12 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = DEFAULT;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(a) FROM dml_heap_pt_r;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ sum 
+-----
+    
+(1 row)
+
 rollback;
 --Update to default value
 begin;
@@ -3098,7 +3110,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET a = DEFAULT, b = DEFAULT;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  cross-partition or multi-update to a row  (seg1 10.152.10.75:25433 pid=28939)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT SUM(b) FROM dml_heap_pt_r;
@@ -3135,7 +3147,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = generate_series(1,10), c ='n';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=28938)
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
@@ -3150,7 +3162,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.a + 1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=28938)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3162,9 +3174,11 @@ SELECT * FROM dml_heap_pt_r WHERE b = 20 ORDER BY 1;
 (0 rows)
 
 UPDATE dml_heap_pt_r SET a = v.i + 1 FROM (VALUES(100, 20)) as v(i, j) WHERE dml_heap_pt_r.b = v.j;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM dml_heap_pt_r WHERE b = 20 ORDER BY 1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ a | b | c | d 
+---+---+---+---
+(0 rows)
+
 rollback;
 --Update with Joins and set to constant value
 SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = 10;
@@ -3174,17 +3188,15 @@ SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = 10;
 (1 row)
 
 UPDATE dml_heap_pt_s SET b = 10 FROM dml_heap_pt_r WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = 10;
  count 
 -------
-     0
+    36
 (1 row)
 
 --Update distcol with predicate in subquery
 begin;
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.a + 1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a and dml_heap_pt_s.b in (SELECT dml_heap_pt_s.b + dml_heap_pt_r.a FROM dml_heap_pt_s,dml_heap_pt_r WHERE dml_heap_pt_r.a > 10);
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 rollback;
 --Update with aggregate in subquery
 begin;
@@ -3201,9 +3213,12 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 UPDATE dml_heap_pt_s SET b = (SELECT COUNT(*) FROM dml_heap_pt_s) FROM dml_heap_pt_r WHERE dml_heap_pt_r.a = dml_heap_pt_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = (SELECT COUNT(*) FROM dml_heap_pt_s);
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+    60
+(1 row)
+
 rollback;
 --Update and limit in subquery
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
@@ -3219,7 +3234,7 @@ SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = (SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 slice1 10.152.10.75:25433 pid=28939)
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
  count 
 -------
@@ -3248,7 +3263,7 @@ SELECT * FROM dml_heap_pt_r WHERE a = 1;
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a + 10 ,b = NULL FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 2= dml_heap_pt_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  cross-partition or multi-update to a row  (seg2 10.152.10.75:25434 pid=14697)
 SELECT * FROM dml_heap_pt_r WHERE a = 11 ORDER BY 1,2;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
@@ -3271,7 +3286,7 @@ SELECT dml_heap_pt_s.a ,dml_heap_pt_s.b,'z' FROM dml_heap_pt_r,dml_heap_pt_s WHE
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET (a,b,c) = (dml_heap_pt_s.a ,dml_heap_pt_s.b,'z') FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 1= dml_heap_pt_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  cross-partition or multi-update to a row  (seg2 10.152.10.75:25434 pid=14697)
 SELECT * FROM dml_heap_pt_r WHERE c='z' ORDER BY 1 LIMIT 1;
  a | b | c | d 
 ---+---+---+---
@@ -3288,9 +3303,8 @@ NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 --Update with prepare plans
 begin;
 PREPARE plan_upd as UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a +1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.b ;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 EXECUTE plan_upd;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=2898)
 rollback;
 --Update and case
 begin;
@@ -3301,9 +3315,12 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 20 ;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = (SELECT case when c = 'r' then MAX(b) else 100 end FROM dml_heap_pt_r GROUP BY c) ;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 20 ;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+     0
+(1 row)
+
 rollback;
 --Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_pt_r;
@@ -3313,7 +3330,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_pt_s ) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
 ------
@@ -3345,7 +3362,6 @@ SELECT SUM(a) FROM dml_heap_pt_v;
 (1 row)
 
 UPDATE dml_heap_pt_v SET a = dml_heap_pt_u.a FROM dml_heap_pt_u WHERE dml_heap_pt_u.b = dml_heap_pt_v.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(a) FROM dml_heap_pt_v;
  sum 
 -----
@@ -3361,27 +3377,17 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.b+1 FROM dml_heap_pt_p,dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b and dml_heap_pt_r.a = dml_heap_pt_p.b+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=2898)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
 --Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
-UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
+begin;
+UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
+ERROR:  cross-partition or multi-update to a row  (seg0 10.152.10.75:25432 pid=9661)
+rollback;
 --Update on table with composite distribution key
 begin;
 SELECT SUM(b) FROM dml_heap_pt_p;
@@ -3391,9 +3397,12 @@ SELECT SUM(b) FROM dml_heap_pt_p;
 (1 row)
 
 UPDATE dml_heap_pt_p SET b = (dml_heap_pt_p.b * 1.1)::int FROM dml_heap_pt_r WHERE dml_heap_pt_p.b = dml_heap_pt_r.a and dml_heap_pt_p.b = dml_heap_pt_r.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(b) FROM dml_heap_pt_p;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  sum  
+-------
+ 15152
+(1 row)
+
 rollback;
 --Update the partition key and move tuples across partitions( moving tuple to default partition)
 begin;
@@ -3404,7 +3413,7 @@ SELECT SUM(a) FROM dml_heap_pt_s;
 (1 row)
 
 UPDATE dml_heap_pt_s SET a = dml_heap_pt_r.a + 30000 FROM dml_heap_pt_r WHERE dml_heap_pt_r.b = dml_heap_pt_s.b;
-ERROR:  moving tuple from partition "dml_heap_pt_s_1_prt_2" to partition "dml_heap_pt_s_1_prt_def" not supported  (seg0 127.0.0.1:40000 pid=18972)
+ERROR:  cross-partition or multi-update to a row  (seg0 127.0.0.1:40000 pid=18972)
 SELECT SUM(a) FROM dml_heap_pt_s;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3793,7 +3802,7 @@ SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 (1 row)
 
 UPDATE dml_heap_r SET a = generate_series(1,10), c ='n';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 10.152.10.75:25433 pid=4138)
 SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
@@ -3808,9 +3817,12 @@ SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
 (1 row)
 
 UPDATE dml_heap_r SET a = dml_heap_r.a + 1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ sum 
+-----
+    
+(1 row)
+
 rollback;
 --Update and from values
 begin;
@@ -3821,9 +3833,12 @@ SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
 (1 row)
 
 UPDATE dml_heap_r SET a = v.i + 1 FROM (VALUES(100, 20)) as v(i, j) WHERE dml_heap_r.b = v.j;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ sum 
+-----
+  20
+(1 row)
+
 rollback;
 --Update with Joins and set to constant value
 begin;
@@ -3834,14 +3849,16 @@ SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
 (1 row)
 
 UPDATE dml_heap_s SET b = 10 FROM dml_heap_r WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+   102
+(1 row)
+
 rollback;
 --Update distcol with predicate in subquery
 begin;
 UPDATE dml_heap_r SET a = dml_heap_r.a + 1 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a and dml_heap_s.b in (SELECT dml_heap_s.b + dml_heap_r.a FROM dml_heap_s,dml_heap_r WHERE dml_heap_r.a > 10);
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 rollback;
 --Update with aggregate in subquery
 begin;
@@ -3852,7 +3869,7 @@ SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 (1 row)
 
 UPDATE dml_heap_s SET b = (SELECT COUNT(*) FROM dml_heap_s) FROM dml_heap_r WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 slice1 10.152.10.75:25432 pid=4139)
 SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3865,9 +3882,12 @@ SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
 (1 row)
 
 UPDATE dml_heap_r SET a = (SELECT DISTINCT(b) FROM dml_heap_s ORDER BY 1 LIMIT 1) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+   103
+(1 row)
+
 rollback;
 --Update multiple columns
 begin;
@@ -3890,11 +3910,18 @@ SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
 (1 row)
 
 UPDATE dml_heap_r SET a = dml_heap_s.a + 10 ,b = NULL FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ sum 
+-----
+    
+(1 row)
+
 SELECT COUNT(*) FROM dml_heap_r WHERE b is NULL;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+   112
+(1 row)
+
 rollback;
 --Update multiple columns
 begin;
@@ -3911,7 +3938,7 @@ SELECT dml_heap_s.a ,dml_heap_s.b,'z' FROM dml_heap_r,dml_heap_s WHERE dml_heap_
 (1 row)
 
 UPDATE dml_heap_r SET (a,b,c) = (dml_heap_s.a ,dml_heap_s.b,'z') FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 10.152.10.75:25433 pid=4138)
 SELECT * FROM dml_heap_r WHERE c='z' ORDER BY 1 LIMIT 1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
@@ -3920,9 +3947,8 @@ rollback;
 --Update with prepare plans
 begin;
 PREPARE plan_upd_2 as UPDATE dml_heap_r SET a = dml_heap_s.a +1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 EXECUTE plan_upd_2;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=4139)
 rollback;
 --Update and case
 begin;
@@ -3933,9 +3959,12 @@ SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
 (1 row)
 
 UPDATE dml_heap_r SET a = (SELECT case when c = 'r' then MAX(b) else 100 end FROM dml_heap_r GROUP BY c ORDER BY 1 LIMIT 1) ;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ count 
+-------
+   113
+(1 row)
+
 rollback;
 --Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_r;
@@ -3945,7 +3974,7 @@ SELECT SUM(a) FROM dml_heap_r;
 (1 row)
 
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_r;
  sum  
 ------
@@ -3994,7 +4023,7 @@ SELECT SUM(a) FROM dml_heap_v;
 (1 row)
 
 UPDATE dml_heap_v SET a = dml_heap_u.a FROM dml_heap_u WHERE dml_heap_u.b = dml_heap_v.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=4139)
 SELECT SUM(a) FROM dml_heap_v;
  sum 
 -----
@@ -4003,10 +4032,8 @@ SELECT SUM(a) FROM dml_heap_v;
 
 --Update with joins on multiple table
 UPDATE dml_heap_r SET a = dml_heap_r.b+1 FROM dml_heap_p,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b and dml_heap_r.a = dml_heap_p.b+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 10.152.10.75:25432 pid=4139)
 --Update on table with composite distribution key
 UPDATE dml_heap_p SET a = dml_heap_p.b % 2 FROM dml_heap_r WHERE dml_heap_p.b::int = dml_heap_r.b::int and dml_heap_p.a = dml_heap_r.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 --Update on table with composite distribution key
 UPDATE dml_heap_p SET b = (dml_heap_p.b * 1.1)::int FROM dml_heap_r WHERE dml_heap_p.b = dml_heap_r.a and dml_heap_p.b = dml_heap_r.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns

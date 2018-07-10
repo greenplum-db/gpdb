@@ -37,11 +37,13 @@
 
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
+#include "commands/trigger.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_policy.h"
 #include "catalog/pg_type.h"
 
 #include "catalog/pg_proc.h"
+#include "catalog/pg_trigger.h"
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"		/* isGreenplumDbHashable() */
@@ -50,6 +52,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbplan.h"
 #include "cdb/cdbpullup.h"
+#include "cdb/cdbsetop.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbtargeteddispatch.h"
 
@@ -1179,6 +1182,536 @@ request_explicit_motion(Plan *plan, Index resultRelationsIdx, List *rtable)
 	plan->flow->segidColIdx = segidColIdx;
 }
 
+typedef struct
+{
+	plan_tree_base_prefix	base;	/* Required prefix for
+									 * plan_tree_walker/mutator */
+
+	List					*absent_vars;
+	Index					result_relation_idx;
+	bool					found;
+} add_absent_targetlist_context;
+
+
+/*
+ * Workhorse for add_absent_targetlist.
+ */
+static void
+add_absent_targetlist_mutator(Plan *plan,
+							  add_absent_targetlist_context *pcontext)
+{
+	Node	*node;
+	int		targetResno;
+
+	node = (Node *) plan;
+
+	Assert(is_plan_node(node));
+
+	/*
+	 * GPDB_90_MERGE_FIXME: We also need to change width and cost here. But since the plan has been
+	 * generated at this stage, it is not clear how we could recalculate the cost.
+	 */
+	if (node->type >= T_SeqScan && node->type <=T_WorkTableScan)
+	{
+		Scan		*scan;
+		ListCell	*lcv;
+
+		scan = (Scan *) node;
+		if (scan->scanrelid != pcontext->result_relation_idx)
+			return;
+
+		targetResno = list_length(plan->targetlist) + 1;
+		foreach(lcv, pcontext->absent_vars)
+		{
+			TargetEntry	*newTle;
+			ListCell	*lct;
+
+			Assert(IsA(lfirst(lcv), Var));
+
+			/* Check if given var exists or not in targetlist */
+			foreach(lct, plan->targetlist)
+			{
+				TargetEntry	*tle;
+
+				Assert(IsA(lfirst(lct), TargetEntry));
+
+				tle = (TargetEntry *) lfirst(lct);
+				if (IsA(tle->expr, Var) &&
+					(((Var *) (tle->expr))->varattno == ((Var *) lfirst(lcv))->varattno))
+					break;
+			}
+
+			/* Skip the given var already exist in targetlist */
+			if (!lct)
+			{
+				newTle = makeTargetEntry((Expr *) lfirst(lcv), targetResno,
+										 "" /* resname */, false /* resjunk */);
+				plan->targetlist = lappend(plan->targetlist, newTle);
+				++targetResno;
+			}
+		}
+		pcontext->found = true;
+
+		return;
+	}
+
+	/* The scan node we want to add vars only exist atmost one child of the plan */
+	if (plan->lefttree)
+	{
+		add_absent_targetlist_mutator(plan->lefttree, pcontext);
+
+		if (!pcontext->found && plan->righttree)
+			add_absent_targetlist_mutator(plan->righttree, pcontext);
+
+		if (pcontext->found)
+		{
+			ListCell	*lcv;
+			int			targetResno;
+
+			targetResno = list_length(plan->targetlist) + 1;
+
+			foreach(lcv, pcontext->absent_vars)
+			{
+				Var			*var;
+				ListCell	*lct;
+				TargetEntry *tle;
+
+				Assert(IsA(lfirst(lcv), Var));
+
+				var = (Var *) lfirst(lcv);
+
+				/* Check given var exists or not in current targetlist */
+				foreach(lct, plan->targetlist)
+				{
+					tle = (TargetEntry *) lfirst(lct);
+
+					if (IsA(tle->expr, Var) &&
+						((Var *) tle->expr)->varno == pcontext->result_relation_idx &&
+						((Var *) tle->expr)->varattno == var->varattno)
+						break;
+				}
+
+				/* Skip if given var already exist in targetlist */
+				if (!lct)
+				{
+
+					tle = makeTargetEntry(lfirst(lcv), targetResno++, "" /* resname */, false /* junk */);
+					plan->targetlist = lappend(plan->targetlist, tle);
+				}
+			}
+
+			return;
+		}
+	}
+
+	return;
+}
+
+
+/*
+ * Some old attribute vars of relation maybe absent, so we need to add it back recursively.
+ *
+ * plan subroot of current plan tree we want to add vars.
+ * resultRelationsIdx the varno of scan node we search for adding vars. 
+ * varsAbsent the vars we want to add.
+ *
+ * We always check existence of var in varsAbsent. We append var to targetlist if var
+ * in varsAbsent doesn't exist.
+ *
+ * Please refer to make_splitupdate for more information.
+ */
+static void
+add_absent_targetlist(struct PlannerInfo *root, Plan *plan,
+					  List *varsAbsent, Index resultRelationsIdx)
+{
+	add_absent_targetlist_context context;
+
+	planner_init_plan_tree_base(&context.base, root);
+
+	context.absent_vars = varsAbsent;
+	context.result_relation_idx = resultRelationsIdx;
+	context.found = false;
+
+	return add_absent_targetlist_mutator(plan, &context);
+}
+
+static void
+failIfUpdateTriggers(Relation relation)
+{
+	bool	found = false;
+
+	if (relation->rd_rel->relhastriggers && NULL == relation->trigdesc)
+		RelationBuildTriggers(relation);
+
+	if (!relation->trigdesc)
+		return;
+
+	if (relation->rd_rel->relhastriggers)
+	{
+		for (int i = 0; i < relation->trigdesc->numtriggers && !found; i++)
+		{
+			Trigger trigger = relation->trigdesc->triggers[i];
+			found = trigger_enabled(trigger.tgoid) &&
+					(get_trigger_type(trigger.tgoid) & TRIGGER_TYPE_UPDATE) == TRIGGER_TYPE_UPDATE;
+			if (found)
+				break;
+		}
+	}
+
+	if (found || child_triggers(relation->rd_id, TRIGGER_TYPE_UPDATE))
+	{
+		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+						errmsg("UPDATE on distributed key columns is now supported in general."
+						       "But disabled for current statement because result relation has update triggers. "
+							   "Running trigger across segment is not supported")));
+		relation_close(relation, NoLock);
+	}
+}
+
+static void
+find_junk_tle(List *targetList, const char *junkAttrName, TargetEntry **targetEntry)
+{
+	ListCell	*lct;
+
+	*targetEntry = NULL;
+
+	foreach(lct, targetList)
+	{
+		TargetEntry	*tle = (TargetEntry*) lfirst(lct);
+
+		if (!tle->resjunk)
+			continue;
+
+		if (strcmp(tle->resname, junkAttrName) == 0)
+			*targetEntry = tle;
+	}
+}
+
+static void
+find_ctid_attribute_check(List *targetList, AttrNumber *ctidAttr, Index resultRelationsIdx)
+{
+	TargetEntry	*ctid;
+	Var			*var;
+
+	find_junk_tle(targetList, "ctid", &ctid);
+
+	Assert(NULL != ctid);
+	Assert(IsA(ctid->expr, Var));
+
+	var = (Var *) (ctid->expr);
+
+	/* Ctid should follow after normal attributes */
+	Assert((var->varno == resultRelationsIdx &&
+			var->varattno == SelfItemPointerAttributeNumber) ||
+		   (var->varnoold == resultRelationsIdx &&
+			var->varoattno == SelfItemPointerAttributeNumber));
+
+	*ctidAttr = ctid->resno;
+}
+
+/*
+ * Copy all junk attributes into dest
+ */
+static void
+copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
+{
+	ListCell	*currAppendCell;
+	ListCell	*lct;
+	Var			*var;
+	TargetEntry	*newTargetEntry;
+
+	/* There should be at least ctid exist */
+	Assert(startAttrIdx < list_length(src));
+
+	currAppendCell = list_nth_cell(src, startAttrIdx);
+
+	for_each_cell(lct, currAppendCell)
+	{
+		Assert(IsA(lfirst(lct), TargetEntry) && IsA(((TargetEntry *) lfirst(lct))->expr, Var));
+
+		var = copyObject(((TargetEntry *) lfirst(lct))->expr);
+		var->varno = OUTER;
+		var->varnoold = OUTER;
+		var->varattno = ((TargetEntry *) lfirst(lct))->resno;
+		var->varoattno = ((TargetEntry *) lfirst(lct))->resno;
+
+		newTargetEntry = makeTargetEntry((Expr *) var, startAttrIdx + 1, ((TargetEntry *) lfirst(lct))->resname,
+										 true);
+		*dest = lappend(*dest, newTargetEntry);
+		++startAttrIdx;
+	}
+}
+
+/*
+ * The delete index should be corrected after all absent vars have been pushed to targetlist of subplan, because
+ * not all absent vars will be added to targetlist, some of them maybe already exist.
+ */
+static void
+correct_delete_idxes(List *deleteColIdx, List *targetList, List *varsAbsent, int absentAttrStart)
+{
+	ListCell	*currAbsentTle = NULL;
+	ListCell	*lct;
+
+	Assert(list_length(targetList) >= absentAttrStart);
+
+	if (list_length(targetList) > absentAttrStart)
+		currAbsentTle = list_nth_cell(targetList, absentAttrStart);
+
+	foreach(lct, varsAbsent)
+	{
+		TargetEntry	*appendTarget;
+		int			attrno;
+
+		Assert(currAbsentTle);
+
+		attrno = (int) ((Var *) lfirst(lct))->varattno;
+		appendTarget = lfirst(currAbsentTle);
+		currAbsentTle = lnext(currAbsentTle);
+
+		Assert(IsA(appendTarget->expr, Var));
+		list_nth_cell(deleteColIdx, attrno - 1)->data.int_value = appendTarget->resno;
+	}
+}
+
+/*
+ * Check whether attributes exist in the targetlist of top plan.
+ * If not exist, we need to add it to varsAbsent for pushing down later.
+ *
+ * We generates informations as following:
+ *
+ * varsAbsent absent OLD tuple attribute vars we need to push down
+ * splitUpdateTargetList which should be a simple var list used by SplitUpdate
+ * insertColIdx which point to resno of corresponding attributes in targetlist
+ * deleteColIdx which contains placeholder, and value will be corrected later
+ */
+static void
+process_targetlist_for_splitupdate(TupleDesc resultDesc, Index resultRelationsIdx, List *targetlist, List **varsAbsent,
+								   List **splitUpdateTargetList, List **insertColIdx, List **deleteColIdx)
+{
+	int attrIdx;
+
+	for (attrIdx = 1; attrIdx <= resultDesc->natts; ++attrIdx)
+	{
+		TargetEntry			*tle;
+		Var					*splitVar;
+		TargetEntry			*splitTargetEntry;
+		Form_pg_attribute	attr;
+
+		*insertColIdx = lappend_int(*insertColIdx, attrIdx);
+		*deleteColIdx = lappend_int(*deleteColIdx, attrIdx);
+
+		tle = (TargetEntry *) list_nth(targetlist, attrIdx - 1);
+
+		Assert(tle);
+
+		attr = resultDesc->attrs[attrIdx - 1];
+		if (attr->attisdropped)
+		{
+			Assert(IsA(tle->expr, Const) && ((Const *) tle->expr)->constisnull);
+
+			splitTargetEntry = makeTargetEntry((Expr *) copyObject(tle->expr), tle->resno, tle->resname, tle->resjunk);
+			*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
+			continue;
+		}
+		else
+		{
+			splitVar = makeVar(OUTER, attrIdx, exprType((Node *) tle->expr),
+							   exprTypmod((Node *) tle->expr), exprCollation((Node *) tle->expr), 0 /* varlevelsup */);
+			splitTargetEntry = makeTargetEntry((Expr *) splitVar, tle->resno, tle->resname, tle->resjunk);
+			*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
+		}
+		/*
+		 *  if the TargetEntry is a Var and it is from the RESULT relation,
+		 *  it indicates that this column is not the column that we want to UPDATE.
+		 *  otherwise, we need add it to the lower plan node as an old values,
+		 *  so we record it as absent Vars, and we will add it to lower plan node in
+		 *  ensuing steps.
+		 */
+		if (IsA(tle->expr, Var) &&
+			((Var *) tle->expr)->varnoold == resultRelationsIdx &&
+			((Var *) tle->expr)->varoattno == attrIdx)
+			continue;
+
+		*varsAbsent = lappend(*varsAbsent,
+							 makeVar(resultRelationsIdx, attrIdx, exprType((Node *) tle->expr),
+									 exprTypmod((Node *) tle->expr), exprCollation((Node *) tle->expr), 0 /* varlevelsup */));
+	}
+}
+
+/*
+ * Add target entry for oid at the end of targetlist, as well as splitUpdateTargetList.
+ */
+static void
+add_oid_target_entry(PlannerInfo *root, Plan *subplan, Index resultRelationsIdx, List **splitUpdateTargetList, int *oidColIdx)
+{
+	Var			*oidVar;
+	Var			*splitVar;
+	TargetEntry	*splitTargetEntry;
+	int			oidIdx = 0;
+	ListCell	*lct;
+
+	oidVar = makeVar(resultRelationsIdx, ObjectIdAttributeNumber, OIDOID,
+					 -1 /* type mod */, InvalidOid, 0 /* varlevelsup */);
+
+	add_absent_targetlist(root, subplan, list_make1(oidVar), resultRelationsIdx);
+
+	foreach(lct, subplan->targetlist)
+	{
+		TargetEntry	*tle = (TargetEntry *) lfirst(lct);
+		if (IsA(tle->expr, Var) &&
+			((Var *) (tle->expr))->varno == resultRelationsIdx &&
+			((Var *) (tle->expr))->varattno == ObjectIdAttributeNumber)
+		{
+			break;
+		}
+		++oidIdx;
+	}
+
+	Assert(oidIdx < list_length(subplan->targetlist));
+
+	*oidColIdx = list_length(*splitUpdateTargetList) + 1;
+	splitVar = makeVar(OUTER, oidIdx + 1, OIDOID, -1 /* type mod */, InvalidOid, 0 /* varlevelsup */);
+	splitVar->varnoold = resultRelationsIdx;
+	splitVar->varoattno = ObjectIdAttributeNumber;
+	splitTargetEntry = makeTargetEntry((Expr *) splitVar, *oidColIdx, "oid", true);
+	*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
+}
+
+/*
+ * In legacy planner, we add a SplitUpdate node at top so that updating on distribution
+ * columns could be handled. The SplitUpdate will split each update into delete + insert.
+ *
+ * There are several important points should be highlighted:
+ *
+ * First, in order to split each update operation into two operations: delete + insert,
+ * we add several columns into targetlist:
+ * ctid: the tuple id used for deletion
+ * action: which is generated by SplitUpdate node, and can be value of delete or insert
+ * oid: if result relation has oids, we need to add oid to targetlist
+ *
+ * Second, if the result relation has update triggers, we should reject and error out, because currently
+ * we don't support running triggers on that.
+ *
+ * Third, to support deletion, and hash delete operation to correct segment, we need to get attributes of OLD
+ * tuple. As a result, we need add those columns back if not exist in the targetlist of subplan recursively.
+ *
+ * For example, a typical plan would be as following for statement:
+ * update foo set id = l.v + 1 from dep l where foo.v = l.id:
+ *
+ * |-- join ( targetlist: [ l.v + 1, foo.v, foo.ctid, foo.gp_segment_id ] )
+ *       |
+ *       |-- motion ( targetlist: [l.id, l.v] )
+ *       |    |
+ *       |    |-- seqscan on dep ....
+ *       |
+ *       |-- hash (targetlist [ v, foo.ctid, foo.gp_segment_id ] )
+ *            |
+ *            |-- seqscan on foo (targetlist: [ v, foo.ctid, foo.gp_segment_id ] )
+ *
+ * From the plan above, the target foo.id is assigned as l.v + 1, but old value of id is not available.
+ * So we need to add foo.id to seqscan on foo and its parent to make it available.
+ */
+SplitUpdate*
+make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte, Index resultRelationsIdx)
+{
+	AttrNumber		ctidColIdx = 0;
+	List			*deleteColIdx = NIL;
+	List			*insertColIdx = NIL;
+	List			*varsAbsent = NIL;
+	int				actionColIdx;
+	int				oidColIdx = 0;
+	int				absentAttrStart;
+	List			*splitUpdateTargetList = NIL;
+	TargetEntry		*newTargetEntry;
+	SplitUpdate		*splitupdate;
+	DMLActionExpr	*actionExpr;
+	Relation		resultRelation;
+	TupleDesc		resultDesc;
+	bool			hasOids = false;
+
+	Assert(IsA(mt, ModifyTable));
+
+	/* Suppose we already hold locks before caller */
+	resultRelation = relation_open(rte->relid, NoLock);
+
+	failIfUpdateTriggers(resultRelation);
+
+	resultDesc = RelationGetDescr(resultRelation);
+
+	/*
+	 * 1.insertColIdx/deleteColIdx: In split update mode, we have to form two tuples,
+	 *   one is for deleting and the other is for inserting, so we need record the correct
+	 *   attno which get from the target list of lower plan node. (NOTE:the deleteColIdx
+	 *   is not correct after process_targetlist_for_splitupdate function, we will
+	 *   correct it in correct_delete_idxes function.)
+	 * 2.we need to get the old value which would be used to compute the segment ID,
+	 *   but the lower plan node have no TargetEntry for old values, so we need to add
+	 *   add the TargetEntry of old values to the lower plan node, we use the varsAbsent
+	 *   to record the TargetEntry for old values.
+	 */
+	process_targetlist_for_splitupdate(resultDesc, resultRelationsIdx, subplan->targetlist, &varsAbsent,
+									   &splitUpdateTargetList, &insertColIdx, &deleteColIdx);
+
+	if (resultRelation->rd_rel->relhasoids)
+		hasOids = true;
+
+
+	relation_close(resultRelation, NoLock);
+
+	find_ctid_attribute_check(subplan->targetlist, &ctidColIdx, resultRelationsIdx);
+	copy_junk_attributes(subplan->targetlist, &splitUpdateTargetList, resultDesc->natts);
+
+	/* add the TargetEntry of old values to the lower plan node */
+	absentAttrStart = list_length(subplan->targetlist);
+
+	add_absent_targetlist(root, subplan, varsAbsent, resultRelationsIdx);
+
+	/*
+	 * the deleteColIdx which is returned by process_targetlist_for_splitupdate funciton
+	 * is not correct, now we correct it to the index of old values
+	 */
+	correct_delete_idxes(deleteColIdx, subplan->targetlist, varsAbsent, absentAttrStart);
+
+	if (hasOids)
+		add_oid_target_entry(root, subplan, resultRelationsIdx, &splitUpdateTargetList, &oidColIdx);
+
+	/* finally, we should add action column at the end of targetlist */
+	actionExpr = makeNode(DMLActionExpr);
+	actionColIdx = list_length(splitUpdateTargetList) + 1;
+	newTargetEntry = makeTargetEntry((Expr *) actionExpr, actionColIdx, "ColRef", true);
+	splitUpdateTargetList = lappend(splitUpdateTargetList, newTargetEntry);
+
+	splitupdate = makeNode(SplitUpdate);
+	splitupdate->actionColIdx = actionColIdx;
+
+	Assert(ctidColIdx > 0);
+
+	/* populate information generated above into splitupdate node */
+	splitupdate->ctidColIdx = ctidColIdx;
+	splitupdate->tupleoidColIdx = oidColIdx;
+	splitupdate->insertColIdx = insertColIdx;
+	splitupdate->deleteColIdx = deleteColIdx;
+	splitupdate->plan.targetlist = splitUpdateTargetList;
+	splitupdate->plan.lefttree = subplan;
+
+	/*
+	 * Now the plan tree has been determined, we have no choice, so use the
+	 * cost of lower plan node directly.
+	 */
+	splitupdate->plan.startup_cost = subplan->startup_cost;
+	splitupdate->plan.total_cost = subplan->total_cost;
+	splitupdate->plan.plan_rows = 2 * subplan->plan_rows;
+	splitupdate->plan.plan_width = subplan->plan_width;
+
+	/* we need an motion node above the SplitUpdate, so mark it as strewn */
+	mark_plan_strewn((Plan *) splitupdate);
+
+	mt->action_col_idxes = lappend_int(mt->action_col_idxes, actionColIdx);
+	mt->ctid_col_idxes = lappend_int(mt->ctid_col_idxes, ctidColIdx);
+	mt->oid_col_idxes = lappend_int(mt->oid_col_idxes, oidColIdx);
+
+	return splitupdate;
+}
 
 /*
  * Find the index of the segid column of the requested relation (relid) in the
@@ -1215,6 +1748,7 @@ find_segid_column(List *tlist, Index relid)
 	/* no segid column found */
 	return -1;
 }
+
 
 /* ----------------------------------------------------------------------- *
  * cdbmutate_warn_ctid_without_segid() warns the user if the plan refers to a

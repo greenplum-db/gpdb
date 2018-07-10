@@ -872,6 +872,18 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_SplitUpdate:
+			{
+				SplitUpdate	*splitUpdate = (SplitUpdate *) node;
+				SplitUpdate	*newSplitUpdate;
+
+				FLATCOPY(newSplitUpdate, splitUpdate, SplitUpdate);
+				PLANMUTATE(newSplitUpdate, splitUpdate);
+				return (Node *) newSplitUpdate;
+			}
+			break;
+
+
 			/*
 			 * The following cases are handled by expression_tree_mutator.	In
 			 * addition, we let expression_tree_mutator handle unrecognized

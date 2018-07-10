@@ -140,7 +140,7 @@ insert into zzz select a,b from m;
 -- that difference in the error DETAIL line
 \set VERBOSITY terse
 update zzz set a=m.b from m where m.a=zzz.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  duplicate key value violates unique constraint "zzz_pkey"  (seg1 10.152.10.32:25433 pid=2877)
 select * from zzz order by 1, 2;
  a  | b 
 ----+---
@@ -202,13 +202,21 @@ select * from update_pk_test order by 1,2;
 (1 row)
 
 explain update update_pk_test set a = 5;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Update on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=14)
+         Hash Key: a
+         ->  Split  (cost=0.00..1.01 rows=1 width=14)
+               ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
+ Optimizer: legacy query optimizer
+(6 rows)
+
 update update_pk_test set a = 5;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from update_pk_test order by 1,2;
  a | b 
 ---+---
- 1 | 5
+ 5 | 5
 (1 row)
 
 -- MPP-22599 DML queries that fallback to planner don't check for updates on
@@ -224,7 +232,12 @@ set optimizer_trace_fallback = on;
 -- Subquery that returns a row rather than a single scalar isn't supported
 -- in ORCA currently, so we can use that to trigger fallback.
 update update_pk_test set a=1 where row(1,2) = (SELECT 1, 2);
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+select * from update_pk_test order by 1,2;
+ a | b 
+---+---
+ 1 | 5
+(1 row)
+
 reset optimizer_trace_fallback;
 --
 -- Check that INSERT and DELETE triggers don't fire on UPDATE.
@@ -249,7 +262,6 @@ FOR EACH ROW
 EXECUTE PROCEDURE bfv_dml_error_func();
 UPDATE bfv_dml_trigger_test SET t = 'bar';
 UPDATE bfv_dml_trigger_test SET id = id + 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 --
 -- Verify that ExecInsert doesn't scribble on the old tuple, when the new
 -- tuple comes directly from the old table.

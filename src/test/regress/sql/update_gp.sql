@@ -150,3 +150,85 @@ UPDATE update_distr_key SET a = 5 WHERE b = 10;
 SELECT * from update_distr_key;
 
 DROP TABLE update_distr_key;
+
+-- Update distribution key
+
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists update_dist;
+drop table if exists ao_table;
+drop table if exists aoco_table;
+-- end_ignore
+
+-- Update normal table distribution key
+create table update_dist(a int) distributed by (a);
+insert into update_dist values(1);
+update update_dist set a=0 where a=1;
+select * from update_dist;
+
+-- Update distribution key with join
+
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+insert into r select generate_series(1, 5), generate_series(1, 5) * 2;
+insert into s select generate_series(1, 5), generate_series(1, 5) * 2;
+select * from r;
+select * from s;
+update r set a = r.a + 1 from s where r.a = s.a;
+select * from r;
+update r set a = r.a + 1 where a in (select a from s);
+select * from r;
+
+-- Update redistribution
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5);
+insert into s select generate_series(1, 5), generate_series(1, 5) * 2;
+select * from r;
+select * from s;
+update r set a = r.a + 1 from s where r.b = s.b;
+select * from r;
+update r set a = r.a + 1 where b in (select b from s);
+select * from r;
+
+-- Update hash aggreate group by
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5) * 2;
+insert into s select generate_series(1, 5), generate_series(1, 5);
+select * from r;
+select * from s;
+update s set a = s.a + 1 where exists (select 1 from r where s.a = r.b);
+select * from s;
+
+-- Update ao table distribution key
+create table ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
+insert into ao_table select g, g from generate_series(1, 5) g;
+select * from ao_table;
+update ao_table set a = a + 1 where b = 3;
+select * from ao_table;
+
+-- Update aoco table distribution key
+create table aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
+insert into aoco_table select g,g from generate_series(1, 5) g;
+select * from aoco_table;
+update aoco_table set a = a + 1 where b = 3;
+select * from aoco_table;
+
+-- Update prepare
+delete from s;
+insert into s select generate_series(1, 5), generate_series(1, 5);
+select * from r;
+select * from s;
+prepare update_s(int) as update s set a = s.a + $1 where exists (select 1 from r where s.a = r.b);
+execute update_s(10);
+select * from s;
+
+-- start_ignore
+drop table r;
+drop table s;
+drop table update_dist;
+drop table ao_table;
+drop table aoco_table;
+-- end_ignore

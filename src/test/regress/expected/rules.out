@@ -239,34 +239,42 @@ select * from rtest_v1 where b isnull;
 
 -- let attribute a differ (must be done on rtest_t1 - see above)
 update rtest_t1 set a = a + 10 where b isnull;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 delete from rtest_v1 where b isnull;
 select * from rtest_v1;
- a | b 
----+---
-(0 rows)
+ a | b
+---+----
+ 1 | 21
+ 2 | 22
+ 3 | 23
+(3 rows)
 
 -- now updates with constant expression
 update rtest_v1 set b = 42 where a = 2;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from rtest_v1;
- a | b 
----+---
-(0 rows)
+ a | b
+---+----
+ 1 | 21
+ 3 | 23
+ 2 | 42
+(3 rows)
 
 update rtest_v1 set b = 99 where b = 42;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from rtest_v1;
- a | b 
----+---
-(0 rows)
+ a | b
+---+----
+ 1 | 21
+ 3 | 23
+ 2 | 99
+(3 rows)
 
 update rtest_v1 set b = 88 where b < 50;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from rtest_v1;
- a | b 
----+---
-(0 rows)
+ a | b
+---+----
+ 2 | 99
+ 1 | 88
+ 3 | 88
+(3 rows)
 
 delete from rtest_v1;
 insert into rtest_v1 select rtest_t2.a, rtest_t3.b
@@ -282,13 +290,12 @@ select * from rtest_v1;
 
 -- updates in a mergejoin
 update rtest_v1 set b = rtest_t2.b from rtest_t2 where rtest_v1.a = rtest_t2.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 select * from rtest_v1;
  a | b  
 ---+----
- 1 | 31
- 2 | 32
- 3 | 33
+ 1 | 21
+ 2 | 22
+ 3 | 23
 (3 rows)
 
 insert into rtest_v1 select * from rtest_t3;
@@ -367,30 +374,24 @@ select * from rtest_admin;
 (3 rows)
 
 update rtest_person set pname = 'jwieck' where pdesc = 'Jan Wieck';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- Note: use ORDER BY here to ensure consistent output across all systems.
 -- The above UPDATE affects two rows with equal keys, so they could be
 -- updated in either order depending on the whim of the local qsort().
 select * from rtest_admin order by pname, sysname;
- pname | sysname 
--------+---------
- bm    | neptun
- jw    | notjw
- jw    | orion
+ pname  | sysname 
+--------+---------
+ bm     | pluto
+ jwieck | notjw
+ jwieck | orion
 (3 rows)
 
 delete from rtest_system where sysname = 'orion';
-ERROR:  Cannot parallelize that DELETE yet
-DETAIL:  Passage of data from one segment to another is not yet supported during DELETE operations.
-HINT:  The WHERE condition must specify equality between corresponding DISTRIBUTED BY columns of the target table and all joined tables.
 select * from rtest_interface;
  sysname | ifname 
 ---------+--------
- neptun  | eth0
  notjw   | eth0
- orion   | eth0
- orion   | eth1
-(4 rows)
+ pluto   | eth0
+(2 rows)
 
 select * from rtest_admin;
  pname | sysname 
@@ -406,9 +407,7 @@ select * from rtest_admin;
 insert into rtest_emp values ('wiecc', '5000.00');
 insert into rtest_emp values ('gates', '80000.00');
 update rtest_emp set ename = 'wiecx' where ename = 'wiecc';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 update rtest_emp set ename = 'wieck', salary = '6000.00' where ename = 'wiecx';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 update rtest_emp set salary = '7000.00' where ename = 'wieck';
 delete from rtest_emp where ename = 'gates';
 select ename, who = current_user as "matches user", action, newsal, oldsal from rtest_emplog order by ename, action, newsal;
@@ -417,7 +416,9 @@ select ename, who = current_user as "matches user", action, newsal, oldsal from 
  gates                | t            | fired      |      $0.00 | $80,000.00
  gates                | t            | hired      | $80,000.00 |      $0.00
  wiecc                | t            | hired      |  $5,000.00 |      $0.00
-(3 rows)
+ wieck                | t            | honored    |  $6,000.00 |  $5,000.00
+ wieck                | t            | honored    |  $7,000.00 |  $6,000.00
+(5 rows)
 
 insert into rtest_empmass values ('meyer', '4000.00');
 insert into rtest_empmass values ('maier', '5000.00');

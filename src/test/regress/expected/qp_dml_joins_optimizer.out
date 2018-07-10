@@ -1,3 +1,9 @@
+-- start_matchsubs
+-- m/ERROR:  moving tuple from partition .* to partition .* not supported/
+-- s/ERROR:  moving tuple from partition .* to partition .* not supported/ERROR:  cross-partition or multi-update to a row/
+-- m/ERROR:  multiple updates to a row by the same query is not allowed/
+-- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
+-- end_matchsubs
 -- First create a bunch of test tables
 SET statement_mem='250 MB';
 CREATE TABLE dml_ao_check_r (
@@ -3150,7 +3156,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = generate_series(1,10), c ='n';
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='n';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
@@ -3165,7 +3171,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.a + 1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3237,7 +3243,7 @@ SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = (SELECT DISTINCT(b) FROM dml_heap_pt_s ORDER BY 1 LIMIT 1) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
  count 
 -------
@@ -3266,7 +3272,7 @@ SELECT * FROM dml_heap_pt_r WHERE a = 1;
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a + 10 ,b = NULL FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 2= dml_heap_pt_s.b;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT * FROM dml_heap_pt_r WHERE a = 11 ORDER BY 1,2;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
@@ -3289,7 +3295,7 @@ SELECT dml_heap_pt_s.a ,dml_heap_pt_s.b,'z' FROM dml_heap_pt_r,dml_heap_pt_s WHE
 
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
 UPDATE dml_heap_pt_r SET (a,b,c) = (dml_heap_pt_s.a ,dml_heap_pt_s.b,'z') FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 1= dml_heap_pt_s.b;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT * FROM dml_heap_pt_r WHERE c='z' ORDER BY 1 LIMIT 1;
  a | b | c | d 
 ---+---+---+---
@@ -3307,7 +3313,7 @@ NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 begin;
 PREPARE plan_upd as UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a +1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.b ;
 EXECUTE plan_upd;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 rollback;
 --Update and case
 begin;
@@ -3382,27 +3388,17 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.b+1 FROM dml_heap_pt_p,dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b and dml_heap_pt_r.a = dml_heap_pt_p.b+1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  cross-partition or multi-update to a row  (seg0 10.34.53.37:25432 pid=9227)
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
 --Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
-UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-SELECT SUM(a) FROM dml_heap_pt_r;
- sum  
-------
- 5050
-(1 row)
-
+begin;
+UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
+ERROR:  moving tuple from partition "dml_heap_pt_p_1_prt_def" to partition "dml_heap_pt_p_1_prt_one" not supported  (seg0 10.152.10.75:25432 pid=19629)
+rollback;
 --Update on table with composite distribution key
 begin;
 SELECT SUM(b) FROM dml_heap_pt_p;
@@ -3412,9 +3408,12 @@ SELECT SUM(b) FROM dml_heap_pt_p;
 (1 row)
 
 UPDATE dml_heap_pt_p SET b = (dml_heap_pt_p.b * 1.1)::int FROM dml_heap_pt_r WHERE dml_heap_pt_p.b = dml_heap_pt_r.a and dml_heap_pt_p.b = dml_heap_pt_r.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT SUM(b) FROM dml_heap_pt_p;
-ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  sum  
+-------
+ 15152
+(1 row)
+
 rollback;
 --Update the partition key and move tuples across partitions( moving tuple to default partition)
 begin;
@@ -3817,7 +3816,7 @@ SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 (1 row)
 
 UPDATE dml_heap_r SET a = generate_series(1,10), c ='n';
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
@@ -3884,7 +3883,7 @@ SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 (1 row)
 
 UPDATE dml_heap_s SET b = (SELECT COUNT(*) FROM dml_heap_s) FROM dml_heap_r WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
@@ -3953,7 +3952,7 @@ SELECT dml_heap_s.a ,dml_heap_s.b,'z' FROM dml_heap_r,dml_heap_s WHERE dml_heap_
 (1 row)
 
 UPDATE dml_heap_r SET (a,b,c) = (dml_heap_s.a ,dml_heap_s.b,'z') FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT * FROM dml_heap_r WHERE c='z' ORDER BY 1 LIMIT 1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
@@ -3963,7 +3962,7 @@ rollback;
 begin;
 PREPARE plan_upd_2 as UPDATE dml_heap_r SET a = dml_heap_s.a +1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ;
 EXECUTE plan_upd_2;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 rollback;
 --Update and case
 begin;
@@ -4040,7 +4039,7 @@ SELECT SUM(a) FROM dml_heap_v;
 (1 row)
 
 UPDATE dml_heap_v SET a = dml_heap_u.a FROM dml_heap_u WHERE dml_heap_u.b = dml_heap_v.b;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 SELECT SUM(a) FROM dml_heap_v;
  sum 
 -----
@@ -4049,7 +4048,7 @@ SELECT SUM(a) FROM dml_heap_v;
 
 --Update with joins on multiple table
 UPDATE dml_heap_r SET a = dml_heap_r.b+1 FROM dml_heap_p,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b and dml_heap_r.a = dml_heap_p.b+1;
-ERROR:  multiple updates to a row by the same query is not allowed
+ERROR:  cross-partition or multi-update to a row
 --Update on table with composite distribution key
 UPDATE dml_heap_p SET a = dml_heap_p.b % 2 FROM dml_heap_r WHERE dml_heap_p.b::int = dml_heap_r.b::int and dml_heap_p.a = dml_heap_r.a;
 --Update on table with composite distribution key

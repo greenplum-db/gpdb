@@ -1555,7 +1555,7 @@ PL/pgSQL function "tg_pslot_biu" line 6 at SQL statement
 -- Fix the wrong name for patchfield PF0_2
 --
 update PField set name = 'PF0_2' where name = 'PF0_X';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 select * from PSlot order by slotname;
  slotname | pfname | slotlink | backlink 
 ----------+--------+----------+----------

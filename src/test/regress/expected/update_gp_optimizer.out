@@ -232,3 +232,246 @@ SELECT * from update_distr_key;
 (10 rows)
 
 DROP TABLE update_distr_key;
+-- Update distribution key
+-- start_ignore
+drop table if exists r;
+NOTICE:  table "r" does not exist, skipping
+drop table if exists s;
+NOTICE:  table "s" does not exist, skipping
+drop table if exists update_dist;
+NOTICE:  table "update_dist" does not exist, skipping
+drop table if exists ao_table;
+NOTICE:  table "ao_table" does not exist, skipping
+drop table if exists aoco_table;
+NOTICE:  table "aoco_table" does not exist, skipping
+-- end_ignore
+-- Update normal table distribution key
+create table update_dist(a int) distributed by (a);
+insert into update_dist values(1);
+update update_dist set a=0 where a=1;
+select * from update_dist;
+ a 
+---
+ 0
+(1 row)
+
+-- Update distribution key with join
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+insert into r select generate_series(1, 5), generate_series(1, 5) * 2;
+insert into s select generate_series(1, 5), generate_series(1, 5) * 2;
+select * from r;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  4
+ 3 |  6
+ 4 |  8
+ 5 | 10
+(5 rows)
+
+select * from s;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  4
+ 3 |  6
+ 4 |  8
+ 5 | 10
+(5 rows)
+
+update r set a = r.a + 1 from s where r.a = s.a;
+select * from r;
+ a | b  
+---+----
+ 4 |  6
+ 5 |  8
+ 6 | 10
+ 3 |  4
+ 2 |  2
+(5 rows)
+
+update r set a = r.a + 1 where a in (select a from s);
+select * from r;
+ a | b  
+---+----
+ 6 | 10
+ 3 |  2
+ 5 |  6
+ 6 |  8
+ 4 |  4
+(5 rows)
+
+-- Update redistribution
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5);
+insert into s select generate_series(1, 5), generate_series(1, 5) * 2;
+select * from r;
+ a | b 
+---+---
+ 3 | 3
+ 4 | 4
+ 5 | 5
+ 1 | 1
+ 2 | 2
+(5 rows)
+
+select * from s;
+ a | b  
+---+----
+ 3 |  6
+ 4 |  8
+ 5 | 10
+ 1 |  2
+ 2 |  4
+(5 rows)
+
+update r set a = r.a + 1 from s where r.b = s.b;
+select * from r;
+ a | b 
+---+---
+ 3 | 3
+ 5 | 5
+ 3 | 2
+ 5 | 4
+ 1 | 1
+(5 rows)
+
+update r set a = r.a + 1 where b in (select b from s);
+select * from r;
+ a | b 
+---+---
+ 3 | 3
+ 5 | 5
+ 6 | 4
+ 4 | 2
+ 1 | 1
+(5 rows)
+
+-- Update hash aggreate group by
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5) * 2;
+insert into s select generate_series(1, 5), generate_series(1, 5);
+select * from r;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  4
+ 3 |  6
+ 4 |  8
+ 5 | 10
+(5 rows)
+
+select * from s;
+ a | b 
+---+---
+ 3 | 3
+ 4 | 4
+ 5 | 5
+ 1 | 1
+ 2 | 2
+(5 rows)
+
+update s set a = s.a + 1 where exists (select 1 from r where s.a = r.b);
+select * from s;
+ a | b 
+---+---
+ 1 | 1
+ 3 | 3
+ 5 | 5
+ 5 | 4
+ 3 | 2
+(5 rows)
+
+-- Update ao table distribution key
+create table ao_table (a int, b int) WITH (appendonly=true) distributed by (a);
+insert into ao_table select g, g from generate_series(1, 5) g;
+select * from ao_table;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+(5 rows)
+
+update ao_table set a = a + 1 where b = 3;
+select * from ao_table;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 4 | 4
+ 5 | 5
+ 4 | 3
+(5 rows)
+
+-- Update aoco table distribution key
+create table aoco_table (a int, b int) WITH (appendonly=true, orientation=column) distributed by (a);
+insert into aoco_table select g,g from generate_series(1, 5) g;
+select * from aoco_table;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+(5 rows)
+
+update aoco_table set a = a + 1 where b = 3;
+select * from aoco_table;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 4 | 4
+ 5 | 5
+ 4 | 3
+(5 rows)
+
+-- Update prepare
+delete from s;
+insert into s select generate_series(1, 5), generate_series(1, 5);
+select * from r;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  4
+ 3 |  6
+ 4 |  8
+ 5 | 10
+(5 rows)
+
+select * from s;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+(5 rows)
+
+prepare update_s(int) as update s set a = s.a + $1 where exists (select 1 from r where s.a = r.b);
+execute update_s(10);
+select * from s;
+ a  | b 
+----+---
+  1 | 1
+ 14 | 4
+  3 | 3
+  5 | 5
+ 12 | 2
+(5 rows)
+
+-- start_ignore
+drop table r;
+drop table s;
+drop table update_dist;
+drop table ao_table;
+drop table aoco_table;
+-- end_ignore

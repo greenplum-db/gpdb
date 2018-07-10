@@ -1619,11 +1619,11 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
 				int segind = p->segindex;
 
-				/* 
+				/*
 				 * Assign mapping of external file to this segdb only if:
 				 * 1) This segdb is a valid primary.
-				 * 2) An external file wasn't already assigned to it. 
-				 * 3) If 'file' protocol, host of segdb and file must be 
+				 * 2) An external file wasn't already assigned to it.
+				 * 3) If 'file' protocol, host of segdb and file must be
 				 *    the same.
 				 *
 				 * This logic also guarantees that file that appears first in
@@ -2697,7 +2697,7 @@ create_tidscan_plan(PlannerInfo *root, TidPath *best_path,
 	 * Remove any clauses that are TID quals.  This is a bit tricky since the
 	 * tidquals list has implicit OR semantics.
 	 *
-	 * In the case of CURRENT OF, however, we do want the CurrentOfExpr to 
+	 * In the case of CURRENT OF, however, we do want the CurrentOfExpr to
 	 * reside in both the tidlist and the qual, as CurrentOfExpr is effectively
 	 * a ctid, gp_segment_id, and tableoid qual. Constant folding will
 	 * finish up this qual rewriting to ensure what we dispatch is a sane interpretation
@@ -4439,7 +4439,7 @@ make_subqueryscan(PlannerInfo *root,
 	plan->allParam = bms_copy(subplan->allParam);
 
 	/*
-	 * Note that, in most scan nodes, scanrelid refers to an entry in the rtable of the 
+	 * Note that, in most scan nodes, scanrelid refers to an entry in the rtable of the
 	 * containing plan; in a subqueryscan node, the containing plan is the higher
 	 * level plan!
 	 */
@@ -4863,8 +4863,8 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
  * add_sort_cost --- basic routine to accumulate Sort cost into a
  * plan node representing the input cost.
  *
- * Unused arguments (e.g., sortColIdx and sortOperators arrays) are 
- * included to allow for future improvements to sort costing.  Note 
+ * Unused arguments (e.g., sortColIdx and sortOperators arrays) are
+ * included to allow for future improvements to sort costing.  Note
  * that root may be NULL (e.g. when called outside make_sort).
  */
 Plan *
@@ -6179,6 +6179,9 @@ make_modifytable(PlannerInfo *root, CmdType operation, bool canSetTag,
 	node->returningLists = returningLists;
 	node->rowMarks = rowMarks;
 	node->epqParam = epqParam;
+	node->action_col_idxes = NIL;
+	node->ctid_col_idxes = NIL;
+	node->oid_col_idxes = NIL;
 
 	adjust_modifytable_flow(root, node);
 
@@ -6330,9 +6333,24 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 											targetPolicy->nattrs,
 											targetPolicy->attrs))
 				{
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-									errmsg("Cannot parallelize an UPDATE statement that updates the distribution columns")));
+					List	   *hashExpr;
+					Plan	*new_subplan;
+
+					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte, rti);
+					hashExpr = getExprListFromTargetList(new_subplan->targetlist,
+														 targetPolicy->nattrs,
+														 targetPolicy->attrs,
+														 false);
+					if (!repartitionPlan(new_subplan, false, false, hashExpr))
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+										errmsg("Cannot parallelize that UPDATE yet")));
+
+					lcp->data.ptr_value = new_subplan;
+					continue;
 				}
+				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
+				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
+				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
 				request_explicit_motion(subplan, rti, root->glob->finalrtable);
 			}
 			else if (targetPolicyType == POLICYTYPE_ENTRY)
@@ -6370,10 +6388,15 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 					 */
 					subplan->flow->req_move = MOVEMENT_NONE;
 				}
+				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
+				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
+				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
 			}
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
 			{
-				/* Do nothing here, see main work in cdbpath_motion_for_join() */
+				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
+				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
+				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
 				all_subplans_entry = false;
 			}
 			else

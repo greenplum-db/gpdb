@@ -65,6 +65,8 @@ extern void fixup_subplans(Plan *plan, PlannerInfo *root, SubPlanWalkerContext *
 extern void request_explicit_motion(Plan *plan, Index resultRelationIdx, List *rtable);
 extern void sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 									GpPolicy **targetPolicy, List **hashExpr);
+extern SplitUpdate *make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan,
+									 RangeTblEntry *rte, Index resultRelationsIdx);
 
 
 #endif   /* CDBMUTATE_H */

@@ -111,13 +111,12 @@ SELECT h.seqno AS i1492, h.random AS i1
 UPDATE hash_i4_heap
    SET seqno = 20000
    WHERE hash_i4_heap.random = 1492795354;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT h.seqno AS i20000
    FROM hash_i4_heap h
    WHERE h.random = 1492795354;
  i20000 
 --------
-   6866
+  20000
 (1 row)
 
 UPDATE hash_name_heap
@@ -134,7 +133,6 @@ SELECT h.seqno AS i6543, h.random AS c0_to_f
 UPDATE hash_name_heap
    SET seqno = 20000
    WHERE hash_name_heap.random = '76652222'::name;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 --
 -- this is the row we just replaced; index scan should return zero rows
 --
@@ -159,13 +157,12 @@ SELECT h.seqno AS i4002, h.random AS c0_to_p
 UPDATE hash_txt_heap
    SET seqno = 20000
    WHERE hash_txt_heap.random = '959363399'::text;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT h.seqno AS t20000
    FROM hash_txt_heap h
    WHERE h.random = '959363399'::text;
  t20000 
 --------
-   5489
+  20000
 (1 row)
 
 UPDATE hash_f8_heap
@@ -182,13 +179,12 @@ SELECT h.seqno AS i8096, h.random AS f1234_1234
 UPDATE hash_f8_heap
    SET seqno = 20000
    WHERE hash_f8_heap.random = '488912369'::float8;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT h.seqno AS f20000
    FROM hash_f8_heap h
    WHERE h.random = '488912369'::float8;
  f20000 
 --------
-   8932
+  20000
 (1 row)
 
 -- UPDATE hash_ovfl_heap

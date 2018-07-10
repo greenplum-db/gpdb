@@ -174,7 +174,8 @@ ExecInsert(TupleTableSlot *slot,
 		   EState *estate,
 		   bool canSetTag,
 		   PlanGenerator planGen,
-		   bool isUpdate)
+		   bool isUpdate,
+		   Oid	tupleOid)
 {
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
@@ -186,7 +187,7 @@ ExecInsert(TupleTableSlot *slot,
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
 	ItemPointerData lastTid;
-	Oid			tuple_oid = InvalidOid;
+	Oid			tuple_oid = tupleOid;
 
 	/*
 	 * get information on the (current) result relation
@@ -195,8 +196,12 @@ ExecInsert(TupleTableSlot *slot,
 	{
 		resultRelInfo = slot_get_partition(slot, estate);
 
-		/* Check whether the user provided the correct leaf part only if required */
-		if (!dml_ignore_target_partition_check)
+		/*
+		 * Check whether the user provided the correct leaf part only if required.
+		 * For isUpdate, the check for resultRelInfo equals to target partitioned relation id
+		 * has been done by checkPartitionUpdate before. So we don't need to check again here.
+		 */
+		if (!dml_ignore_target_partition_check && !isUpdate)
 		{
 			Assert(NULL != estate->es_result_partitions->part &&
 					NULL != resultRelInfo->ri_RelationDesc);
@@ -302,12 +307,10 @@ ExecInsert(TupleTableSlot *slot,
 	 */
 	if (resultRelationDesc->rd_rel->relhasoids)
 	{
-		tuple_oid = InvalidOid;
-
 		/*
 		 * But if this is really an UPDATE, try to preserve the old OID.
 		 */
-		if (isUpdate)
+		if (isUpdate && tuple_oid == InvalidOid)
 		{
 			GenericTuple gtuple;
 
@@ -514,7 +517,7 @@ ExecInsert(TupleTableSlot *slot,
  *		what to delete, and tupleid is invalid.
  *
  *		In GPDB, DELETE can be part of an update operation when
- *		there is a preceding SplitUpdate node. 
+ *		there is a preceding SplitUpdate node.
  *
  *		Returns RETURNING result if any, otherwise NULL.
  * ----------------------------------------------------------------
@@ -566,7 +569,8 @@ ExecDelete(ItemPointer tupleid,
 	{
 		/* BEFORE ROW DELETE Triggers */
 		if (resultRelInfo->ri_TrigDesc &&
-			resultRelInfo->ri_TrigDesc->trig_delete_before_row)
+			resultRelInfo->ri_TrigDesc->trig_delete_before_row &&
+			!isUpdate)
 		{
 			bool		dodelete;
 
@@ -583,12 +587,12 @@ ExecDelete(ItemPointer tupleid,
 	bool isAOColsTable = RelationIsAoCols(resultRelationDesc);
 	bool isExternalTable = RelationIsExternal(resultRelationDesc);
 
-	if (isExternalTable && estate->es_result_partitions && 
+	if (isExternalTable && estate->es_result_partitions &&
 		estate->es_result_partitions->part->parrelid != 0)
 	{
 		ereport(ERROR,
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("Delete from external partitions not supported.")));			
+			errmsg("Delete from external partitions not supported.")));
 	}
 
 	/* INSTEAD OF ROW DELETE Triggers */
@@ -765,7 +769,16 @@ ldelete:;
 		(resultRelInfo->ri_aoprocessed)++;
 	}
 
-	if (!(isAORowsTable || isAOColsTable) && planGen == PLANGEN_PLANNER)
+	/*
+	 * Note: Normally one would think that we have to delete index tuples
+	 * associated with the heap tuple now...
+	 *
+	 * ... but in POSTGRES, we have no need to do this because VACUUM will
+	 * take care of it later.  We can't delete index tuples immediately
+	 * anyway, since the tuple is still visible to other transactions.
+	 */
+
+	if (!(isAORowsTable || isAOColsTable) && planGen == PLANGEN_PLANNER && !isUpdate)
 	{
 		/* AFTER ROW DELETE Triggers */
 		ExecARDeleteTriggers(estate, resultRelInfo, tupleid);
@@ -1416,11 +1429,11 @@ ExecModifyTable(ModifyTableState *node)
 			/* advance to next subplan if any */
 			node->mt_whichplan++;
 			if (node->mt_whichplan < node->mt_nplans)
-			{
-				resultRelInfo++;
+		{
+				estate->es_result_relation_info = estate->es_result_relations + node->mt_whichplan;
+				resultRelInfo = estate->es_result_relation_info;
 				subplanstate = node->mt_plans[node->mt_whichplan];
-				junkfilter = resultRelInfo->ri_junkFilter;
-				estate->es_result_relation_info = resultRelInfo;
+				junkfilter = estate->es_result_relation_info->ri_junkFilter;
 				EvalPlanQualSetPlan(&node->mt_epqstate, subplanstate->plan,
 									node->mt_arowmarks[node->mt_whichplan]);
 				continue;
@@ -1480,11 +1493,53 @@ ExecModifyTable(ModifyTableState *node)
 		{
 			case CMD_INSERT:
 				slot = ExecInsert(slot, planSlot, estate, node->canSetTag,
-								  PLANGEN_PLANNER, false /* isUpdate */);
+								  PLANGEN_PLANNER,
+								  false /* isUpdate */, InvalidOid /* tupleOid */);
 				break;
 			case CMD_UPDATE:
-				slot = ExecUpdate(tupleid, oldtuple, slot, planSlot,
-								&node->mt_epqstate, estate, node->canSetTag);
+				{
+					int			action;
+					bool		isnull;
+					int			actionColIdx;
+					int			tupleoidColIdx;
+
+					actionColIdx = node->mt_action_col_idxes[node->mt_whichplan];
+					tupleoidColIdx = node->mt_oid_col_idxes[node->mt_whichplan];
+
+					/* It is planned as not split update mode */
+					if (actionColIdx <= 0)
+					{
+						slot = ExecUpdate(tupleid, oldtuple, slot, planSlot,
+										  &node->mt_epqstate, estate,
+										  node->canSetTag);
+						break;
+					}
+
+					action = DatumGetUInt32(slot_getattr(planSlot, actionColIdx, &isnull));
+					Assert(!isnull);
+
+					if (DML_INSERT == action)
+					{
+						Oid		tupleOid = InvalidOid;
+
+						if (tupleoidColIdx != 0)
+						{
+							bool			isnull;
+
+							tupleOid = slot_getattr(planSlot, tupleoidColIdx, &isnull);
+						}
+
+						if (estate->es_result_partitions)
+							checkPartitionUpdate(estate, slot, estate->es_result_relation_info);
+
+						slot = ExecInsert(slot, planSlot, estate, node->canSetTag,
+										  PLANGEN_PLANNER, true /* isUpdate */, tupleOid);
+					}
+					else /* DML_DELETE */
+						slot = ExecDelete(tupleid, oldtuple, planSlot,
+										  &node->mt_epqstate, estate, node->canSetTag,
+										  PLANGEN_PLANNER, true /* isUpdate */);
+				}
 				break;
 			case CMD_DELETE:
 				slot = ExecDelete(tupleid, oldtuple, planSlot,
@@ -1577,6 +1632,29 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	mtstate->mt_nplans = nplans;
 	/* set up epqstate with dummy subplan data for the moment */
 	EvalPlanQualInit(&mtstate->mt_epqstate, estate, NULL, NIL, node->epqParam);
+
+	if (CMD_UPDATE == operation)
+	{
+		Assert(list_length(node->ctid_col_idxes) == nplans);
+		Assert(list_length(node->action_col_idxes) == nplans);
+		Assert(list_length(node->oid_col_idxes) == nplans);
+
+		mtstate->mt_action_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->action_col_idxes));
+		mtstate->mt_ctid_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->ctid_col_idxes));
+		mtstate->mt_oid_col_idxes = (AttrNumber *) palloc0 (sizeof(AttrNumber) * list_length(node->oid_col_idxes));
+
+		i = 0;
+		foreach(l, node->action_col_idxes)
+			mtstate->mt_action_col_idxes[i++] = lfirst_int(l);
+
+		i = 0;
+		foreach(l, node->ctid_col_idxes)
+			mtstate->mt_ctid_col_idxes[i++] = lfirst_int(l);
+
+		i = 0;
+		foreach(l, node->oid_col_idxes)
+			mtstate->mt_oid_col_idxes[i++] = lfirst_int(l);
+	}
 
 	/* GPDB: Don't fire statement-triggers in QE reader processes */
 	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)

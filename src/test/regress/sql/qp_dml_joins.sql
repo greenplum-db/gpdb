@@ -1,3 +1,13 @@
+-- start_matchsubs
+
+-- m/ERROR:  moving tuple from partition .* to partition .* not supported/
+-- s/ERROR:  moving tuple from partition .* to partition .* not supported/ERROR:  cross-partition or multi-update to a row/
+
+-- m/ERROR:  multiple updates to a row by the same query is not allowed/
+-- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
+
+-- end_matchsubs
+
 -- First create a bunch of test tables
 SET statement_mem='250 MB';
 
@@ -1457,9 +1467,9 @@ rollback;
 --Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
-SELECT SUM(a) FROM dml_heap_pt_r;
-UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a;
-SELECT SUM(a) FROM dml_heap_pt_r;
+begin;
+UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
+rollback;
 
 --Update on table with composite distribution key
 begin;
