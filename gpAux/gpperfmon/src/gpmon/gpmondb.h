@@ -4,6 +4,7 @@
 #include "apr_general.h"
 #include "apr_md5.h"
 #include "apr_hash.h"
+#include "cdb/cdbcsv.h"
 
 /**
  * Validate the the gpperfmon database is correct and
@@ -96,6 +97,13 @@ int find_token_in_config_string(char*, char**, const char*);
 void process_line_in_hadoop_cluster_info(apr_pool_t*, apr_hash_t*, char*, char*, char*);
 int get_hadoop_hosts_and_add_to_hosts(apr_pool_t*, apr_hash_t*, mmon_options_t*);
 apr_status_t truncate_file(char*, apr_pool_t*);
+
+/**
+ * MPP-29418 workaround copy/external issue that csv line with like breaks cannot
+ * exceed gp_max_csv_line_length, here we substruct 1K for fixed length columns for
+ * data load safety
+ */
+#define HARVEST_CSV_SAFEGUARD (1024)
 
 #endif /* GPMONDB_H */
 

@@ -58,11 +58,8 @@ static const bool gpdb_exec_ddl(PGconn* conn, const char* ddl_query)
 	return errmsg == NULL;
 }
 
-// creates a connection and then runs the query
-static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
+static const char* gpdb_exec_with_connstr(PGconn** pconn, PGresult** pres, const char* query, const char* connstr)
 {
-	const char *connstr = "dbname='" GPMON_DB "' user='" GPMON_DBUSER
-	"' connect_timeout='30'";
 	PGconn *conn = NULL;
 
 	conn = PQconnectdb(connstr);
@@ -73,6 +70,26 @@ static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
 		return PQerrorMessage(conn);
 
 	return gpdb_exec_only(conn, pres, query);
+}
+
+// creates a connection and then runs the query
+static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
+{
+	const char *connstr = "dbname='" GPMON_DB "' user='" GPMON_DBUSER
+	"' connect_timeout='30'";
+
+	return gpdb_exec_with_connstr(pconn, pres, query, connstr);
+}
+
+static const char* gpdb_exec_harvest(PGconn** pconn, PGresult** pres, const char* query)
+{
+	const int CONNBUFSIZ = 256;
+	char connstr[CONNBUFSIZ];
+
+	snprintf(connstr, CONNBUFSIZ, "dbname='" GPMON_DB "' user='" GPMON_DBUSER
+		"' connect_timeout='30' options='-c gp_max_csv_line_length=%d'", MAX_GP_MAX_CSV_LINE_LENGTH);
+
+	return gpdb_exec_with_connstr(pconn, pres, query, connstr);
 }
 
 // persistant_conn is optional if you are already holding an open connectionconn
@@ -920,7 +937,7 @@ static apr_status_t harvest(const char* tbl, apr_pool_t* pool, PGconn* conN)
 
 	snprintf(qrybuf, QRYBUFSIZ, QRYFMT, tbl, tbl);
 
-	errmsg = gpdb_exec(&conn, &result, qrybuf);
+	errmsg = gpdb_exec_harvest(&conn, &result, qrybuf);
 	if (errmsg)
 	{
 		res = 1;

@@ -1391,6 +1391,7 @@ static int get_and_print_next_query_file_kvp(FILE* outfd, FILE* queryfd, char* q
     char *p = NULL;
     int field_len = 0;
     int retCode = 0;
+    bool replace_line_breaks = false;
 
     p = fgets(line, line_size, queryfd);
     line[line_size-1] = 0; // in case libc is buggy
@@ -1421,6 +1422,10 @@ static int get_and_print_next_query_file_kvp(FILE* outfd, FILE* queryfd, char* q
             return APR_NOTFOUND;
     }
 
+    if (field_len >= MAX_GP_MAX_CSV_LINE_LENGTH - HARVEST_CSV_SAFEGUARD) {
+        replace_line_breaks = true;
+    }
+
     fprintf(outfd, "\"");
     (*bytes_written)++;
 
@@ -1436,6 +1441,19 @@ static int get_and_print_next_query_file_kvp(FILE* outfd, FILE* queryfd, char* q
                 fputc('\"', outfd);
                 (*bytes_written)++;
             }
+
+            /**
+             * MPP-29418 COPY/External table have a limit for CSV length
+             * If it loads a row with line breaks and row length exceeds
+             * gp_max_csv_line_length, it will treat this CSV as bad format
+             * and fail the query.
+             * This workaround checks for line length and replace line breaks
+             * with space to prevent load failure.
+             * It may lead the long query statement slightly changed, but it
+             * is still better than fail to load or truncate the query text.
+             */
+            if (replace_line_breaks && (*p == '\n' || *p == '\r'))
+                *p = ' ';
 
             fputc(*p, outfd);
 
