@@ -31,10 +31,9 @@
         <p>The <codeph>gphdfs</codeph> protocol supports Parquet versions 1.7.0 and later. For each
           version, the required Parquet jar files are included in a bundled jar file
               <codeph>parquet-hadoop-bundle-&lt;<varname>version</varname>>.jar</codeph>. </p>
-        <p>The versions 1.6 and earlier <codeph>parquet-hadoop-bundle</codeph> are not supported.
-          These versions do not use the Java class names <codeph>org.apache.parquet</codeph>. The
-            <codeph>gphdfs</codeph> protocol expects the Parquet Java class names to be
-              <codeph>org.apache.parquet.<varname>xxx</varname></codeph>.</p>
+        <p>Earlier Parquet versions not use the Java class names <codeph>org.apache.parquet</codeph>
+          and are not supported. The <codeph>gphdfs</codeph> protocol expects the Parquet Java class
+          names to be <codeph>org.apache.parquet.<varname>xxx</varname></codeph>.</p>
         <note>The Cloudera 5.4.x Hadoop distribution includes some Parquet jar files. However, the
           Java class names in the jar files are <codeph>parquet.<varname>xxx</varname></codeph>. The
           jar files with the class name <codeph>org.apache.parquet</codeph> can be downloaded and
