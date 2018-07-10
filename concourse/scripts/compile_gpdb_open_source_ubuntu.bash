@@ -37,7 +37,7 @@ function build_gpdb() {
 }
 
 function unittest_check_gpdb() {
-  make -C gpdb_src/src/backend -s unittest-check
+  make -C gpdb_src/src/backend -s -j4 unittest-check
 }
 
 function export_gpdb() {
