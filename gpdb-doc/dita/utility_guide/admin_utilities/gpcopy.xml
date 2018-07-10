@@ -21,8 +21,10 @@
    [<b>--exclude-table-file</b> <varname>table-file1</varname>]
       [ <b>--exclude-table-file</b> <varname>table-file2</varname>] ... ]]
    [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b> | <b>--append</b> ]
+   [<b>--dry-run</b>]
    [<b>--analyze</b>]
    [<b>--validate</b> <varname>type</varname>]
+   [<b>--no-distribution-check</b>]
    [<b>--truncate-source-after</b> [<b>--yes</b>]]
    [<b>--metadata-only</b>]
    { <b>--dest-host</b> <varname>dest_host</varname> [<b>--dest-port</b> <varname>dest_port</varname>]
@@ -115,6 +117,14 @@
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
                             <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dry-run</pt>
+                    <pd>When you specify this option, <codeph>gpcopy</codeph> generates a list of
+                        the migration operations that would have been performed with the specified
+                        options. The data is not migrated. </pd>
+                    <pd>The information is displayed at the command line and written to the log
+                        file.</pd>
                 </plentry>
                 <plentry>
                     <pt>--jobs <varname>int</varname></pt>
@@ -286,6 +296,25 @@
                     <pd>The utility does not compress data when copying data to the same host.</pd>
                 </plentry>
                 <plentry>
+                    <pt>--no-distribution-check</pt>
+                    <pd>Specify this option to disable table data distribution checking. By default,
+                            <codeph>gpcopy</codeph> performs data distribution checking to ensure
+                        data is distributed to segment instances correctly. If distribution checking
+                        fails, the table copy fails. </pd>
+                    <pd>The utility does not support table data distribution checking when copying a
+                        partitioned table that is defined with a leaf table that is an external
+                        table or if a leaf table is defined with a distribution policy that is
+                        different from the root partitioned table. See "Copying Partitioned Tables
+                        "in <xref href="#topic1/notes_gpcopy" format="dita">Notes</xref>. <note
+                            type="warning">Before you perform a <codeph>gpcopy</codeph> operation
+                            with the <codeph>--no-distribution-check</codeph> option, ensure that
+                            you have a backup of the destination database and that the distribution
+                            policies of the tables that are being copied are the same in the source
+                            and destination database. Copying data into segment instances with
+                            incorrect data distribution can cause incorrect query results and can
+                            cause database corruption.</note></pd>
+                </plentry>
+                <plentry>
                     <pt>--quiet</pt>
                     <pd>If specified, suppress status messages at the command prompt. The messages
                         are sent only to the log file. Higher level messages such as warning and
@@ -380,7 +409,7 @@
                 </plentry>
             </parml>
         </section>
-        <section>
+        <section id="notes_gpcopy">
             <title>Notes</title>
             <p>If a <codeph>gpcopy</codeph> command specifies an invalid option, or specifies a
                 source table or database that does not exist, the utility returns an error and
@@ -441,6 +470,19 @@
                     with an external table, that leaf partition is created, but data is not copied. </p>
                 <p>You cannot copy an individual leaf partition, you must copy the entire
                     partitioned table.</p>
+                <p><codeph>gpcopy</codeph> does not support table data distribution checking when
+                    copying a partitioned table that is defined with a leaf table that is an
+                    external table or if a leaf table is defined with a distribution policy that is
+                    different from the root partitioned table. You can copy those tables in a
+                        <codeph>gpcopy</codeph> operation and specify the option
+                        <codeph>--no-distribution-check</codeph> to disable checking of data
+                    distribution. </p>
+                <note type="warning">Before you perform a <codeph>gpcopy</codeph> operation with the
+                        <codeph>--no-distribution-check</codeph> option, ensure that you have a
+                    backup of the destination database and that the distribution policies of the
+                    tables that are being copied are the same in the source and destination
+                    database. Copying data into segment instances with incorrect data distribution
+                    can cause incorrect query results and can cause database corruption.</note>
             </sectiondiv>
             <sectiondiv>
                 <p><b>Handling gpcopy Errors</b></p>
