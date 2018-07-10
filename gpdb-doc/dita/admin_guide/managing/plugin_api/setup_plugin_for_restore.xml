@@ -7,12 +7,17 @@
     <p>Plugin command to initialize a storage plugin for the restore operation.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><varname>plugin_executable</varname> <b>setup_plugin_for_restore</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname></codeblock>
+      <codeblock><varname>plugin_executable</varname> <b>setup_plugin_for_restore</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname> <varname>scope</varname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>gprestore</codeph> invokes the <codeph>setup_plugin_for_restore</codeph> plugin command on the master and all segment hosts during <codeph>gprestore</codeph> initialization phase.</p>
-      <p>The <codeph>setup_plugin_for_restore</codeph> command should perform the activities necessary to initialize the remote storage system before a restore operation begins. Set up activities may include creating remote directories, validating connectivity to the remote storage system, etc.</p>
+      <p><codeph>gprestore</codeph> invokes the <codeph>setup_plugin_for_restore</codeph> plugin
+        command on the master and all segment hosts during <codeph>gprestore</codeph> initialization
+        phase.</p>
+      <p>The <codeph>setup_plugin_for_restore</codeph> command should perform the activities
+        necessary to initialize the remote storage system before a restore operation begins. Set up
+        activities may include creating remote directories, validating connectivity to the remote
+        storage system, etc.</p>
     </section>
     <section id="section4"><title>Arguments</title><parml>
         <plentry>
@@ -21,12 +26,31 @@
         </plentry>
         <plentry>
           <pt><varname>local_backup_dir</varname></pt>
-          <pd>The local directory on the Greenplum Database host (master and segments) from which <codeph>gprestore</codeph> reads backup files. <codeph>gprestore</codeph> creates this local directory.</pd>
+          <pd>The local directory on the Greenplum Database host (master and segments) from which
+              <codeph>gprestore</codeph> reads backup files. <codeph>gprestore</codeph> creates this
+            local directory.</pd>
         </plentry>
-        </parml>
+        <plentry>
+          <pt><varname>scope</varname></pt>
+          <pd>The execution scope (host or segment instance) for the plugin. Specify one of these
+            values to execute the plugin based on the Greenplun Database configuration when the back
+            up started.<ul id="ul_rpk_tzt_k2b">
+              <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
+              <li><codeph>segment_host</codeph> - Execute the plugin once on the segment hosts.</li>
+              <li><codeph>segment</codeph> - Execute the plugin on the segment hosts, once for each
+                active segment instance.</li>
+            </ul></pd>
+          <pd>For example, you run the command twice, specifying the scope <codeph>master</codeph>
+            and then <codeph>segment_host</codeph> to run the plugin once on all the Greenplum
+            Database hosts.</pd>
+        </plentry>
+      </parml>
     </section>
     <section id="section5"><title>Exit Code</title>
-      <p>The <codeph>setup_plugin_for_restore</codeph> command must exit with a value of 0 on success, non-zero if an error occurs. In the case of a non-zero exit code, <codeph>gprestore</codeph> displays the contents of <codeph>stderr</codeph> to the user.</p>
+      <p>The <codeph>setup_plugin_for_restore</codeph> command must exit with a value of 0 on
+        success, non-zero if an error occurs. In the case of a non-zero exit code,
+          <codeph>gprestore</codeph> displays the contents of <codeph>stderr</codeph> to the
+        user.</p>
     </section>
   </body>
 </topic>
