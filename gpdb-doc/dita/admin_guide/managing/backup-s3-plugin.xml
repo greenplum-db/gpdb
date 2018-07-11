@@ -18,8 +18,8 @@
         href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html" scope="external">Dell
         EMC Elastic Cloud Storage</xref> (ECS), an Amazon S3 compatible service. </p>
     <!--OSS only-->
-    <p otherprops="oss-only">S3 storage plugin can also connect to an Amazon S3 compatible service
-      such as <xref href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html"
+    <p otherprops="oss-only">The S3 storage plugin can also connect to an Amazon S3 compatible
+      service such as <xref href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html"
         scope="external">Dell EMC Elastic Cloud Storage</xref> (ECS) and <xref
         href="https://www.minio.io/" format="html" scope="external">Minio</xref>.</p>
     <p>To use the S3 storage plugin application, you specify the location of the plugin and the S3
@@ -70,7 +70,7 @@
               </plentry>
               <plentry id="s3-endpoint">
                 <pt>endpoint</pt>
-                <pd>Required for an S3 compatible service. Specify this option connect to an S3
+                <pd>Required for an S3 compatible service. Specify this option to connect to an S3
                   compatible service such as ECS. The plugin connects to the specified S3 endpoint
                   (hostname or IP address) to access the S3 compatible data store. </pd>
                 <pd>If this option is specified, the plugin ignores the <codeph>region</codeph>
