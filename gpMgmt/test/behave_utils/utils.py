@@ -840,6 +840,10 @@ def create_int_table(context, table_name, table_type='heap', dbname='testdb'):
 
 
 def drop_database(context, dbname, host=None, port=0, user=None):
+    # We need this because context.conn might have a connection to the database that we are about to drop.
+    if hasattr(context, "conn") and (context.conn is not None) and (context.conn._cnx.db == dbname):
+        context.conn.close()
+
     LOOPS = 10
     if host == None or port == 0 or user == None:
         dropdb_cmd = 'dropdb %s' % dbname
