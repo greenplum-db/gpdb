@@ -97,18 +97,20 @@ options:
             <codeph>gpbackup</codeph> lifecycle at initialization, during backup, and at
           cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization,
-          during restore, and at cleanup/exit time.<draft-comment author="msk">DRAFT - hooks for
-            scope</draft-comment></li>
-        <li>The API provides hooks to specify the execution scope (host or segment instance) for a
-          setup or cleanup command. You can specify one of these values to execute the plugin based
-          on the Greenplun Database configuration when the back up started.<ul id="ul_rpk_tzt_k2b">
+          during restore, and at cleanup/exit time.</li>
+        <li>The API provides an argument that specifies the execution scope (host and number of
+          times the plugin is executed) for a plugin setup or cleanup command. <ul
+            id="ul_rpk_tzt_k2b">
             <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
-            <li><codeph>segment_host</codeph> - Execute the plugin once on the segment hosts.</li>
-            <li><codeph>segment</codeph> - Execute the plugin on the segment hosts, once for each
-              active segment instance.</li>
-          </ul>The values <codeph>segment_host</codeph> and <codeph>segment</codeph> are provided as
-          a segment host can host multiple segment instances. There might be some setup or cleanup
-          required at the segment host level as compared to each segment instance.</li>
+            <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
+              hosts.</li>
+            <li><codeph>segment</codeph> - Execute the plugin on each of the segment hosts, once for
+              each active segment instance.</li>
+          </ul>The Greenplum Database hosts and segment instances are based on the Greenplum
+          Database configuration when the back up started. The values <codeph>segment_host</codeph>
+          and <codeph>segment</codeph> are provided as a segment host can host multiple segment
+          instances. There might be some setup or cleanup required at the segment host level as
+          compared to each segment instance.</li>
       </ul>
 
       <p>The Backup/Restore Storage Plugin API defines the following call syntax for a
