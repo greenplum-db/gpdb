@@ -1,6 +1,6 @@
 ## Travis [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=master)](https://travis-ci.org/greenplum-db/gpdb)
 
-## Concourse [![Concourse Build Status](https://gpdb.data.pivotal.ci/api/v1/teams/gpdb/pipelines/gpdb_master/jobs/gpdb_rc_packaging_centos/badge)](https://gpdb.data.pivotal.ci/teams/gpdb)
+## Concourse [![Concourse Build Status](https://prod.ci.gpdb.pivotal.io/api/v1/teams/main/pipelines/5X_STABLE/badge)](https://prod.ci.gpdb.pivotal.io/teams/main/pipelines/5X_STABLE)
 
 ----------------------------------------------------------------------
 
