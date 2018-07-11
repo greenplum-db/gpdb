@@ -71,8 +71,11 @@
 
 /*
  * A hard memory limit in by pass mode, in chunks
+ * More chunks are reserved on QD than on QE because planner and orca
+ * may need more memory to generate and optimize the plan.
  */
-#define RESGROUP_BYPASS_MODE_MEMORY_LIMIT	10
+#define RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QD	30
+#define RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE	10
 
 /*
  * GUC variables.
@@ -1111,7 +1114,10 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 		/*
 		 * Do not allow to allocate more than the per proc limit.
 		 */
-		if (self->memUsage > RESGROUP_BYPASS_MODE_MEMORY_LIMIT)
+		if ((Gp_role == GP_ROLE_DISPATCH &&
+			 self->memUsage > RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QD) ||
+			(Gp_role == GP_ROLE_EXECUTE &&
+			 self->memUsage > RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE))
 		{
 			self->memUsage -= memoryChunks;
 			return false;
@@ -1200,6 +1206,8 @@ ResourceGroupGetQueryMemoryLimit(void)
 	ResGroupSlotData	*slot = self->slot;
 	int64				memSpill;
 
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
 	if (bypassedGroup)
 	{
 		int64		bytesInMB = 1 << BITS_IN_MB;
@@ -1207,11 +1215,12 @@ ResourceGroupGetQueryMemoryLimit(void)
 
 		/*
 		 * In bypass mode there is a hard memory limit of
-		 * RESGROUP_BYPASS_MODE_MEMORY_LIMIT chunk,
+		 * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE chunk,
 		 * we should make sure query_mem + misc mem <= chunk.
 		 */
+		return bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE / 2;
 		return Min(bytesInMB,
-				   bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT / 2);
+				   bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE / 2);
 	}
 
 	Assert(selfIsAssigned());

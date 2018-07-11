@@ -140,6 +140,10 @@ DROP
 --
 -- memory limit in bypass mode, on qd
 --
+-- orca will allocate 10M memory error buffer before optimization, and release
+-- it after that, so if optimizer is set to on, it will fail when the memory
+-- usage reaches 24M
+--
 
 61: SET ROLE role_bypass_test;
 SET
@@ -152,12 +156,11 @@ hold_memory
 -----------
 0          
 (1 row)
-SELECT * FROM memory_result;
-rsgname       |ismaster|avg_mem
---------------+--------+-------
-rg_bypass_test|0       |0      
-rg_bypass_test|1       |4      
-(2 rows)
+61: SELECT * FROM eat_memory_on_qd;
+hold_memory
+-----------
+0          
+(1 row)
 61: SELECT * FROM eat_memory_on_qd;
 hold_memory
 -----------
@@ -167,8 +170,34 @@ SELECT * FROM memory_result;
 rsgname       |ismaster|avg_mem
 --------------+--------+-------
 rg_bypass_test|0       |0      
-rg_bypass_test|1       |8      
+rg_bypass_test|1       |12     
 (2 rows)
+61: SELECT * FROM eat_memory_on_qd;
+hold_memory
+-----------
+0          
+(1 row)
+61: SELECT * FROM eat_memory_on_qd;
+hold_memory
+-----------
+0          
+(1 row)
+61: SELECT * FROM eat_memory_on_qd;
+hold_memory
+-----------
+0          
+(1 row)
+SELECT * FROM memory_result;
+rsgname       |ismaster|avg_mem
+--------------+--------+-------
+rg_bypass_test|0       |0      
+rg_bypass_test|1       |24     
+(2 rows)
+61: SELECT * FROM eat_memory_on_qd;
+hold_memory
+-----------
+0          
+(1 row)
 61: SELECT * FROM eat_memory_on_qd;
 ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
@@ -187,7 +216,7 @@ SELECT * FROM memory_result;
 rsgname       |ismaster|avg_mem
 --------------+--------+-------
 rg_bypass_test|0       |0      
-rg_bypass_test|1       |10     
+rg_bypass_test|1       |30     
 (2 rows)
 61q: ... <quitting>
 
