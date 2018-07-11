@@ -159,20 +159,16 @@ rg_bypass_test|0       |0
 rg_bypass_test|1       |4      
 (2 rows)
 61: SELECT * FROM eat_memory_on_qd;
-hold_memory
------------
-0          
-(1 row)
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
 SELECT * FROM memory_result;
 rsgname       |ismaster|avg_mem
 --------------+--------+-------
 rg_bypass_test|0       |0      
-rg_bypass_test|1       |8      
+rg_bypass_test|1       |0      
 (2 rows)
 61: SELECT * FROM eat_memory_on_qd;
-ERROR:  Out of memory
-DETAIL:  Resource group memory limit reached
-CONTEXT:  SQL function "hold_memory" statement 1
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
 SELECT * FROM memory_result;
 rsgname       |ismaster|avg_mem
 --------------+--------+-------
@@ -187,7 +183,7 @@ SELECT * FROM memory_result;
 rsgname       |ismaster|avg_mem
 --------------+--------+-------
 rg_bypass_test|0       |0      
-rg_bypass_test|1       |10     
+rg_bypass_test|1       |4      
 (2 rows)
 61q: ... <quitting>
 
