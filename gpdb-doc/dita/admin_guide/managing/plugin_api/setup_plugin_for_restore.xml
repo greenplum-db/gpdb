@@ -13,9 +13,8 @@
       <title>Description</title>
       <p><codeph>gprestore</codeph> invokes the <codeph>setup_plugin_for_restore</codeph> plugin
         command during <codeph>gprestore</codeph> initialization phase. The <varname>scope</varname>
-        argument specifies the execution scope (host and number of times the plugin is executed).
-          <codeph>gprestore</codeph> will invoke the command with each of the
-          <varname>scope</varname> values.</p>
+        argument specifies the execution scope. <codeph>gprestore</codeph> will invoke the command
+        with each of the <varname>scope</varname> values.</p>
       <p>The <codeph>setup_plugin_for_restore</codeph> command should perform the activities
         necessary to initialize the remote storage system before a restore operation begins. Set up
         activities may include creating remote directories, validating connectivity to the remote
@@ -39,11 +38,11 @@
               <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
               <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
                 hosts.</li>
-              <li><codeph>segment</codeph> - Execute the plugin on each of the segment hosts, once
-                for each active segment instance.</li>
+              <li><codeph>segment</codeph> - Execute the plugin once for each active segment
+                instance on the host running the segment instance.</li>
             </ul></pd>
           <pd>The Greenplum Database hosts and segment instances are based on the Greenplum Database
-            configuration when the back up started. </pd>
+            configuration when the back up was first initiated. </pd>
         </plentry>
       </parml>
     </section>

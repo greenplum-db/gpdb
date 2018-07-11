@@ -98,14 +98,13 @@ options:
           cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization,
           during restore, and at cleanup/exit time.</li>
-        <li>The API provides an argument that specifies the execution scope (host and number of
-          times the plugin is executed) for a plugin setup or cleanup command. <ul
-            id="ul_rpk_tzt_k2b">
+        <li>The API provides an argument that specifies the execution scope (master host, segment
+          host, or segment instance) for a plugin setup or cleanup command. <ul id="ul_rpk_tzt_k2b">
             <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
             <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
               hosts.</li>
-            <li><codeph>segment</codeph> - Execute the plugin on each of the segment hosts, once for
-              each active segment instance.</li>
+            <li><codeph>segment</codeph> - Execute the plugin once for each active segment instance
+              on the host running the segment instance.</li>
           </ul>The Greenplum Database hosts and segment instances are based on the Greenplum
           Database configuration when the back up started. The values <codeph>segment_host</codeph>
           and <codeph>segment</codeph> are provided as a segment host can host multiple segment
@@ -155,7 +154,7 @@ options:
                       >plugin_api_version</xref></entry>
                   <entry colname="col3" class="- topic/entry ">Return the version of the
                     Backup/Restore Storage Plugin API supported by the plugin. The only supported
-                    version is 0.1.0.</entry>
+                    version is 0.2.0.</entry>
                 </row>
                 <row class="- topic/row ">
                   <entry colname="col1" class="- topic/entry "><xref

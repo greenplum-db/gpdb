@@ -13,9 +13,9 @@
       <title>Description</title>
       <p><codeph>gpbackup</codeph> invokes the <codeph>cleanup_plugin_for_backup</codeph> plugin
         command when a <codeph>gpbackup</codeph> operation completes, both in success and failure
-        cases. The <varname>scope</varname> argument specifies the execution scope (host and number
-        of times the plugin is executed). <codeph>gpbackup</codeph> will invoke the command with
-        each of the <varname>scope</varname> values.</p>
+        cases. The <varname>scope</varname> argument specifies the execution scope.
+          <codeph>gpbackup</codeph> will invoke the command with each of the
+          <varname>scope</varname> values.</p>
       <p>The <codeph>cleanup_plugin_for_backup</codeph> command should perform the actions necessary
         to clean up the remote storage system after a backup. Clean up activities may include
         removing remote directories or temporary files created during the backup, disconnecting from
@@ -38,11 +38,11 @@
               <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
               <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
                 hosts.</li>
-              <li><codeph>segment</codeph> - Execute the plugin on each of the segment hosts, once
-                for each active segment instance.</li>
+              <li><codeph>segment</codeph> - Execute the plugin once for each active segment
+                instance on the host running the segment instance.</li>
             </ul></pd>
           <pd>The Greenplum Database hosts and segment instances are based on the Greenplum Database
-            configuration when the back up started. </pd>
+            configuration when the back up was first initiated. </pd>
         </plentry>
       </parml>
     </section>
