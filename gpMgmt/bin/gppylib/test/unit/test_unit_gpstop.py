@@ -43,6 +43,7 @@ class GpStop(GpTestCase):
             patch('gpstop.gphostcache.unix.Ping'),
             patch('gpstop.RemoteOperation'),
             patch('gpstop.base.WorkerPool'),
+            patch('gpstop.socket.gethostname'),
         ])
 
         sys.argv = ["gpstop"]  # reset to relatively empty args list
@@ -52,6 +53,7 @@ class GpStop(GpTestCase):
         self.mock_GpSegStopCmdInit = self.get_mock_from_apply_patch('__init__')
         self.mock_gparray = self.get_mock_from_apply_patch('initFromCatalog')
         self.mock_gparray.return_value = self.gparray
+        self.mock_socket = self.get_mock_from_apply_patch('gethostname')
 
     def tearDown(self):
         super(GpStop, self).tearDown()
@@ -158,7 +160,7 @@ class GpStop(GpTestCase):
                                                                    self.mirror3.getSegmentDbId()], log_messages)
 
         # call_obj[0] returns all unnamed arguments -> ['arg1', 'arg2']
-        # In this case, we have an object as an argument to poo.addCommand
+        # In this case, we have an object as an argument to pool.addCommand
         # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
         self.assertEquals(self.mock_GpSegStopCmdInit.call_args_list[0][1]['dbs'][0], self.primary0)
         self.assertEquals(self.mock_GpSegStopCmdInit.call_args_list[0][1]['dbs'][1], self.primary1)
@@ -341,6 +343,20 @@ class GpStop(GpTestCase):
         with self.assertRaisesRegexp(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
                                                                          "option with '-r' for restart."):
             self.subject.GpStop.createProgram(options, args)
+
+    def test_reload_config_use_local_context(self):
+        self.mock_socket.return_value = 'mdw'
+        sys.argv = ["gpstop", "-u"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+        self.mock_gparray.return_value = GpArray([self.master, self.primary0, self.primary1])
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.gparray = GpArray([self.master, self.primary0, self.primary1])
+        gpstop._sighup_cluster()
+        self.assertEquals(3, self.mock_workerpool.addCommand.call_count)
+        self.assertEquals(None, self.mock_workerpool.addCommand.call_args_list[0][0][0].remoteHost)
+        self.assertEquals("sdw1", self.mock_workerpool.addCommand.call_args_list[1][0][0].remoteHost)
+        self.assertEquals("sdw1", self.mock_workerpool.addCommand.call_args_list[2][0][0].remoteHost)
 
     def test_host_option_with_request_sighup_option_fails(self):
         sys.argv = ["gpstop", "--host", "sdw1", "-u"]
