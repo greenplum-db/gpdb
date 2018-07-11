@@ -304,8 +304,8 @@
                     <pd>The utility does not support table data distribution checking when copying a
                         partitioned table that is defined with a leaf table that is an external
                         table or if a leaf table is defined with a distribution policy that is
-                        different from the root partitioned table. See "Copying Partitioned Tables
-                        "in <xref href="#topic1/notes_gpcopy" format="dita">Notes</xref>. <note
+                        different from the root partitioned table. See "Copying Partitioned Tables "
+                        in <xref href="#topic1/notes_gpcopy" format="dita">Notes</xref>. <note
                             type="warning">Before you perform a <codeph>gpcopy</codeph> operation
                             with the <codeph>--no-distribution-check</codeph> option, ensure that
                             you have a backup of the destination database and that the distribution
