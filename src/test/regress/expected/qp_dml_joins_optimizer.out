@@ -1,4 +1,5 @@
 -- First create a bunch of test tables
+SET statement_mem='250 MB';
 CREATE TABLE dml_ao_check_r (
 	a int default 100 CHECK( a between 1 and 105),
 	b float8 CONSTRAINT rcheck_b CHECK( b <> 0.00 and b IS NOT NULL),
