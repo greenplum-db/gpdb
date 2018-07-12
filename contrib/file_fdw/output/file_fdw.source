@@ -200,11 +200,11 @@ SELECT tableoid::regclass, b FROM agg_csv;
 
 -- updates aren't supported
 INSERT INTO agg_csv VALUES(1,2.0);
-ERROR:  cannot insert into foreign table "agg_csv"
+ERROR:  foreign tables are read only. cannot change "agg_csv"
 UPDATE agg_csv SET a = 1;
-ERROR:  cannot update foreign table "agg_csv"
+ERROR:  foreign tables are read only. cannot change "agg_csv"
 DELETE FROM agg_csv WHERE a = 100;
-ERROR:  cannot delete from foreign table "agg_csv"
+ERROR:  foreign tables are read only. cannot change "agg_csv"
 -- but this should be ignored
 SELECT * FROM agg_csv FOR UPDATE;
   a  |    b    
@@ -243,7 +243,7 @@ SET ROLE file_fdw_user;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_text WHERE a > 0;
  Foreign Scan on public.agg_text
    Output: a, b
-   Filter: agg_text.a > 0
+   Filter: (agg_text.a > 0)
    Foreign File: @abs_srcdir@/data/agg.data
  Optimizer: legacy query optimizer
 

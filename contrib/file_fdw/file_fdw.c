@@ -378,6 +378,22 @@ fileGetOptions(Oid foreigntableid,
 	if (*filename == NULL)
 		elog(ERROR, "filename is required for file_fdw foreign tables");
 
+
+	if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+	{
+		/*
+		 * pass the on_segment option to COPY, which will replace the required
+		 * placeholder "<SEGID>" in filename
+		 */
+		options = list_append_unique(options, makeDefElem("on_segment", (Node *)makeInteger(TRUE)));
+	}
+	else if (table->exec_location == FTEXECLOCATION_ANY)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("file_fdw does not support mpp_execute option 'any'")));
+	}
+
 	*other_options = options;
 }
 
