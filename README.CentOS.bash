@@ -16,6 +16,7 @@ sudo yum install -y \
     libkadm5 \
     libyaml-devel \
     libxml2-devel \
+    openssl-devel \
     perl-ExtUtils-Embed \
     python-devel \
     python-pip \

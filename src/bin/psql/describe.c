@@ -267,7 +267,7 @@ describeTablespaces(const char *pattern, bool verbose)
 
 	initPQExpBuffer(&buf);
 
-	if (pset.sversion >= 90200)
+	if (pset.sversion >= 90200 || isGPDB6000OrLater())
 		printfPQExpBuffer(&buf,
 						  "SELECT spcname AS \"%s\",\n"
 						  "  pg_catalog.pg_get_userbyid(spcowner) AS \"%s\",\n"

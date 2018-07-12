@@ -383,13 +383,13 @@ fill_seq_with_data(Relation rel, HeapTuple tuple)
 
 	page = BufferGetPage(buf);
 
+	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+
 	PageInit(page, BufferGetPageSize(buf), sizeof(sequence_magic));
 	sm = (sequence_magic *) PageGetSpecialPointer(page);
 	sm->magic = SEQ_MAGIC;
 
 	/* Now insert sequence tuple */
-
-	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 
 	/*
 	 * Since VACUUM does not process sequences, we have to force the tuple

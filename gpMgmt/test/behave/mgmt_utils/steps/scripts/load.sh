@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # NON-PARTITION DATA
 ./reference_non_part.py | psql -e perftest 

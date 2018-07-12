@@ -28,32 +28,20 @@
     <topic id="topic_fdj_2sh_rt">
       <title>Required Parquet Jar Files</title>
       <body>
-        <p>Support for the Parquet file format requires these jar files:<sl>
-            <sli>parquet-hadoop-1.7.0.jar</sli>
-            <sli>parquet-common-1.7.0.jar</sli>
-            <sli>parquet-encoding-1.7.0.jar</sli>
-            <sli>parquet-column-1.7.0.jar</sli>
-            <sli>parquet-generator-1.7.0.jar</sli>
-            <sli>parquet-format-2.3.0-incubating.jar</sli>
-          </sl></p>
+        <p>The <codeph>gphdfs</codeph> protocol supports Parquet versions 1.7.0 and later. For each
+          version, the required Parquet jar files are included in a bundled jar file
+              <codeph>parquet-hadoop-bundle-&lt;<varname>version</varname>>.jar</codeph>. </p>
+        <p>Earlier Parquet versions not use the Java class names <codeph>org.apache.parquet</codeph>
+          and are not supported. The <codeph>gphdfs</codeph> protocol expects the Parquet Java class
+          names to be <codeph>org.apache.parquet.<varname>xxx</varname></codeph>.</p>
         <note>The Cloudera 5.4.x Hadoop distribution includes some Parquet jar files. However, the
           Java class names in the jar files are <codeph>parquet.<varname>xxx</varname></codeph>. The
-            <codeph>gphdfs</codeph> protocol uses the Java class names
-              <codeph>org.apache.parquet.<varname>xxx</varname></codeph>. The jar files with the
-          class name <codeph>org.apache.parquet</codeph> can be downloaded and installed on the
-          Greenplum Database hosts. </note>
-        <p>The <codeph>gphdfs</codeph> protocol also supports using
-            <codeph>parquet-hadoop-bundle-1.7.0.jar</codeph> that contains the classes required to
-          use Parquet within a Hadoop environment. These versions of
-            <codeph>parquet-hadoop-bundle</codeph> are not supported:<ul id="ul_e1z_4xr_zt">
-            <li>Version 1.6 and earlier. The versions do not use the Java class names
-                <codeph>org.apache.parquet</codeph></li>
-            <li>Version 1.8 and later. The versions contain the class <codeph>VersionParser</codeph>
-              that is not supported by <codeph>gphdfs</codeph>.</li>
-          </ul></p>
+          jar files with the class name <codeph>org.apache.parquet</codeph> can be downloaded and
+          installed on the Greenplum Database hosts. </note>
         <p>For information about downloading the Parquet jar files, see <xref
-            href="http://parquet.apache.org/downloads/" format="html" scope="external"
-            >http://parquet.apache.org/downloads/</xref></p>
+            href="https://mvnrepository.com/artifact/org.apache.parquet/parquet-hadoop-bundle"
+            format="html" scope="external"
+            >https://mvnrepository.com/artifact/org.apache.parquet/parquet-hadoop-bundle</xref></p>
         <p>On all the Greenplum Database hosts, ensure that the jar files are installed and are on
           the <codeph>classpath</codeph> used by the <codeph>gphdfs</codeph> protocol. The
             <codeph>classpath</codeph> is specified by the shell script
@@ -111,8 +99,8 @@ done</codeblock></p>
       <topic id="topic_f3f_124_hs">
         <title>Reading a Parquet File</title>
         <body>
-          <p>The following table identifies how Greenplum database converts the Parquet data type if the
-            Parquet schema definition does not contain an annotation.</p>
+          <p>The following table identifies how Greenplum database converts the Parquet data type if
+            the Parquet schema definition does not contain an annotation.</p>
           <table id="table_wm5_1x4_hs">
             <title>Data Type Conversion when Reading a Parquet File</title>
             <tgroup cols="2">
@@ -193,8 +181,8 @@ done</codeblock></p>
                   <entry>smallint</entry>
                 </row>
                 <row>
-                  <entry>int32, int64, fixed_len_byte_array, or binary with
-                      <codeph>decimal</codeph> annotation</entry>
+                  <entry>int32, int64, fixed_len_byte_array, or binary with <codeph>decimal</codeph>
+                    annotation</entry>
                   <entry>decimal</entry>
                 </row>
                 <row>

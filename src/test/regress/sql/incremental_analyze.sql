@@ -480,7 +480,7 @@ INSERT INTO foo SELECT i, i%3+3, 'text_'||i%200 FROM generate_series(1,1000)i;
 SET default_statistics_target to 3;
 ANALYZE FULLSCAN foo;
 SELECT tablename, n_distinct FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
--- Test ANLYZE MERGE behavior
+-- Test ANALYZE MERGE behavior
 -- Merge stats from only one partition
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));

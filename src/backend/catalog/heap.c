@@ -1300,6 +1300,7 @@ AddNewRelationType(const char *typeName,
  *	use_user_acl: TRUE if should look for user-defined default permissions;
  *		if FALSE, relacl is always set NULL
  *	allow_system_table_mods: TRUE to allow creation in system namespaces
+ *  is_part_child: TRUE if relation is a child partition
  *
  * Returns the OID of the new relation
  * --------------------------------
@@ -1327,7 +1328,8 @@ heap_create_with_catalog(const char *relname,
 						 Datum reloptions,
 						 bool use_user_acl,
 						 bool allow_system_table_mods,
-						 bool valid_opts)
+						 bool valid_opts,
+						 bool is_part_child)
 {
 	Relation	pg_class_desc;
 	Relation	new_rel_desc;
@@ -1502,12 +1504,19 @@ heap_create_with_catalog(const char *relname,
 	 *
 	 * Also not for the auxiliary heaps created for bitmap indexes or append-
 	 * only tables.
+	 *
+	 * In Greenplum, we do not create an array type for child
+	 * partitions. Child partitions are automatically named very similarly
+	 * which can cause typname collisions very easily. If there are a lot of
+	 * typname collisions, it's possible that makeArrayTypeName could fail to
+	 * create a typname and error us out.
 	 */
 	if (IsUnderPostmaster && ((relkind == RELKIND_RELATION && !appendOnlyRel) ||
 							  relkind == RELKIND_VIEW ||
 							  relkind == RELKIND_FOREIGN_TABLE ||
 							  relkind == RELKIND_COMPOSITE_TYPE) &&
-		relnamespace != PG_BITMAPINDEX_NAMESPACE)
+		relnamespace != PG_BITMAPINDEX_NAMESPACE &&
+		!is_part_child)
 	{
 		/* OK, so pre-assign a type OID for the array type */
 		Relation	pg_type = heap_open(TypeRelationId, AccessShareLock);

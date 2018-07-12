@@ -56,14 +56,17 @@ set enable_seqscan = off;
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=100.26..201.29 rows=2 width=8)
-   ->  Nested Loop  (cost=100.26..201.29 rows=2 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000100.36..20000000201.39 rows=4 width=8)
+   ->  Nested Loop  (cost=20000000100.36..20000000201.39 rows=2 width=8)
          Join Filter: f.id = b.id
-         ->  Bitmap Append-Only Column-Oriented Scan on foo f  (cost=100.26..200.27 rows=1 width=8)
-               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..100.26 rows=1 width=0)
-         ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
- Settings:  enable_hashjoin=off; enable_seqscan=off
-(7 rows)
+         ->  Seq Scan on bar b  (cost=10000000000.00..10000000001.01 rows=1 width=8)
+         ->  Bitmap Append-Only Column-Oriented Scan on foo f  (cost=100.36..200.37 rows=1 width=8)
+               Recheck Cond: f.id = b.id
+               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..100.36 rows=1 width=0)
+                     Index Cond: f.id = b.id
+ Settings:  enable_hashjoin=off; enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(10 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
  id 

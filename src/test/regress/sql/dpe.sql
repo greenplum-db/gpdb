@@ -137,14 +137,11 @@ explain select * from t, pt where tid = ptid;
 
 select * from t, pt where tid = ptid;
 
-set enable_hashjoin=on;
-set enable_nestloop=off;
-set enable_mergejoin=off;
-
 --
 -- index scan
 --
 
+set enable_nestloop=on;
 set enable_seqscan=off;
 set enable_indexscan=on;
 set enable_bitmapscan=off;

@@ -258,10 +258,15 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
 
-		/* We make sure we get a valid hostip here */
-		if (pRow->hostaddrs[0] == NULL)
+		/*
+		 * We make sure we get a valid hostip for primary here,
+		 * if hostip for mirrors can not be get, ignore the error.
+		 */
+		if (pRow->hostaddrs[0] == NULL &&
+			pRow->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
-		pRow->hostip = pstrdup(pRow->hostaddrs[0]);
+		if (pRow->hostaddrs[0] != NULL)
+			pRow->hostip = pstrdup(pRow->hostaddrs[0]);
 		Assert(strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
 
 		if (pRow->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
@@ -647,6 +652,16 @@ getDnsCachedAddress(char *name, int port, int elevel)
 		{
 			if (addrs)
 				pg_freeaddrinfo_all(hint.ai_family, addrs);
+
+			/*
+			 * If a host name is unknown, whether it is an error depends on its role:
+			 * - if it is a primary then it's an error;
+			 * - if it is a mirror then it's just a warning;
+			 * but we do not know the role information here, so always treat it as a
+			 * warning, the callers should check the role and decide what to do.
+			 */
+			if (ret != EAI_FAIL && elevel == ERROR)
+				elevel = WARNING;
 
 			ereport(elevel,
 					(errmsg("could not translate host name \"%s\", port \"%d\" to address: %s",

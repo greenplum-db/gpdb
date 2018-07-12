@@ -1704,7 +1704,6 @@ aocol_compression_ratio_internal(Relation parentrel)
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
 	bool		connected = false;
-	char		aocsseg_relname[NAMEDATALEN];
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
 	int64		eof = 0;
@@ -1719,11 +1718,9 @@ aocol_compression_ratio_internal(Relation parentrel)
 	Assert(OidIsValid(segrelid));
 
 	/*
-	 * get the name of the aoseg relation
+	 * open the aoseg relation
 	 */
 	aosegrel = heap_open(segrelid, AccessShareLock);
-	snprintf(aocsseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
-	heap_close(aosegrel, AccessShareLock);
 
 	/*
 	 * assemble our query string.
@@ -1742,6 +1739,8 @@ aocol_compression_ratio_internal(Relation parentrel)
 						 "from %s.%s",
 						 get_namespace_name(RelationGetNamespace(aosegrel)),
 						 RelationGetRelationName(aosegrel));
+
+	heap_close(aosegrel, AccessShareLock);
 
 	PG_TRY();
 	{

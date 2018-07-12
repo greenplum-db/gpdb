@@ -248,18 +248,15 @@ TidQualFromRestrictinfo(List *restrictinfo, int varno)
  *
  *	  Candidate paths are added to the rel's pathlist (using add_path).
  *
- * CDB: Instead of handing the paths to add_path(), we append them to a List
- * (*ppathlist) belonging to the caller.
- *
  * CDB TODO: Set rel->onerow if at most one tid is to be fetched.
  */
 void
-create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel, List** ppathlist)
+create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 {
 	List	   *tidquals;
 
 	tidquals = TidQualFromRestrictinfo(rel->baserestrictinfo, rel->relid);
 
 	if (tidquals)
-		*ppathlist = lappend(*ppathlist, create_tidscan_path(root, rel, tidquals));
+		add_path(root, rel, (Path *) create_tidscan_path(root, rel, tidquals));
 }

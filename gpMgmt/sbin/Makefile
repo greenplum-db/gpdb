@@ -5,7 +5,7 @@ endif
 
 install:
 	@# Copy everything except the makefile
-	find . -not -path '*Makefile' -type f -exec cp -- {} $(prefix)/sbin/{} \;
+	find . ! -path '*Makefile' -type f -exec cp -- {} $(prefix)/sbin/{} \;
 
 
 clean distclean:

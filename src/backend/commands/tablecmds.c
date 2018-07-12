@@ -812,7 +812,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
                                           reloptions,
 										  true,
 										  allowSystemTableModsDDL,
-										  valid_opts);
+										  valid_opts,
+										  stmt->is_part_child);
 
 	/*
 	 * Give a warning if you use OIDS=TRUE on user tables. We do this after calling
@@ -1769,6 +1770,21 @@ ExecuteTruncate(TruncateStmt *stmt)
 	foreach(cell, rels)
 	{
 		Relation	rel = (Relation) lfirst(cell);
+
+		if (RelationIsAppendOptimized(rel) && IS_QUERY_DISPATCHER())
+		{
+			/*
+			 * Drop the shared memory hash table entry for this table if it
+			 * exists. We must do so since before the rewrite we probably have few
+			 * non-zero segfile entries for this table while after the rewrite
+			 * only segno zero will be full and the others will be empty. By
+			 * dropping the hash entry we force refreshing the entry from the
+			 * catalog the next time a write into this AO table comes along.
+			 */
+			LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+			AORelRemoveHashEntry(RelationGetRelid(rel));
+			LWLockRelease(AOSegFileLock);
+		}
 
 		heap_close(rel, NoLock);
 	}
@@ -3678,10 +3694,6 @@ AlterTableGetLockLevel(List *cmds)
 			case AT_PartSplit:
 			case AT_PartTruncate:
 			case AT_PartAddInternal:
-				/*
-				 * GPDB_91_MERGE_FIXME: Is AccessExclusiveLock unnecessarily strict for
-				 * some of these?
-				 */
 				cmd_lockmode = AccessExclusiveLock;
 				break;
 
@@ -6893,76 +6905,6 @@ ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 			elog(ERROR, "unexpected ALTER TABLE subtype %d in ADD COLUMN command",
 				 cmd->subtype);
 	}
-
-	/* GPDB_91_MERGE_FIXME: I don't know if this is still needed or not.
-	 * Perhaps not, because of the new way OIDs are dispatched. We'll see when
-	 * we get to test this, I suppose.
-	 */
-#if 0
-	if (recurse)
-	{
-		/*
-		 * We are the master and the table has child(ren):
-		 * 		internally create and execute new AlterTableStmt(s) on child(ren)
-		 * 		before dispatching the original AlterTableStmt
-		 * This is to ensure that pg_constraint oid is consistent across segments for
-		 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
-		 */
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			List		*children;
-			ListCell	*lchild;
-
-			children = find_inheritance_children(RelationGetRelid(rel), NoLock);
-			DestReceiver *dest = None_Receiver;
-			foreach(lchild, children)
-			{
-				Oid 			childrelid = lfirst_oid(lchild);
-				Relation 		childrel;
-
-				RangeVar 		*rv;
-				AlterTableCmd 	*atc;
-				AlterTableStmt 	*ats;
-
-				if (childrelid == RelationGetRelid(rel))
-					continue;
-
-				childrel = heap_open(childrelid, AccessShareLock);
-				CheckTableNotInUse(childrel, "ALTER TABLE");
-
-				/* Recurse to child */
-				atc = copyObject(cmd);
-				if (cmd->subtype == AT_AddColumn || cmd->subtype == AT_AddColumnRecurse)
-					atc->subtype = AT_AddColumnRecurse;
-				else if (cmd->subtype == AT_AddOids)
-					atc->subtype = AT_AddOidsRecurse;
-				else
-					elog(ERROR, "unexpected ALTER TABLE subtype %d in ADD COLUMN command",
-						 cmd->subtype);
-
-				/* Child should see column as singly inherited */
-				((ColumnDef *) atc->def)->inhcount = 1;
-				((ColumnDef *) atc->def)->is_local = false;
-
-				rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
-								  get_rel_name(childrelid), -1);
-
-				ats = makeNode(AlterTableStmt);
-				ats->relation = rv;
-				ats->cmds = list_make1(atc);
-				ats->relkind = OBJECT_TABLE;
-
-				heap_close(childrel, NoLock);
-
-				ProcessUtility((Node *)ats,
-							   synthetic_sql,
-							   NULL,
-							   false, /* not top level */
-							   dest,
-							   NULL);
-			}
-		}
-#endif
 }
 
 static void
@@ -8025,7 +7967,6 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 	AttrNumber	attnum;
 	List	   *children;
 	ObjectAddress object;
-	GpPolicy  *policy;
 	PartitionNode *pn;
 
 	/* At top level, permission check was done in ATPrepCmd, else do it */
@@ -8091,19 +8032,25 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 
 	ReleaseSysCache(tuple);
 
-	policy = rel->rd_cdbpolicy;
-	if (GpPolicyIsPartitioned(policy))
+	if (GpPolicyIsPartitioned(rel->rd_cdbpolicy))
 	{
 		int			ia = 0;
 
-		for (ia = 0; ia < policy->nattrs; ia++)
+		for (ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 		{
-			if (attnum == policy->attrs[ia])
+			if (attnum == rel->rd_cdbpolicy->attrs[ia])
 			{
+				rel->rd_cdbpolicy->nattrs = 0;
 				/* force a random distribution */
-				policy->nattrs = 0;
-				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
+				GpPolicy *policy = GpPolicyCopy(GetMemoryChunkContext(rel), rel->rd_cdbpolicy);
+				/*
+				 * replace policy first in catalog and then assign to
+				 * rd_cdbpolicy to make sure we have intended policy in relcache
+				 * even with relcache invalidation. Otherwise rd_cdbpolicy can
+				 * become invalid soon after assignment.
+				 */
 				GpPolicyReplace(RelationGetRelid(rel), policy);
+				rel->rd_cdbpolicy = policy;
 				if (Gp_role != GP_ROLE_EXECUTE)
 				    ereport(NOTICE,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -9937,8 +9884,19 @@ ATPrepAlterColumnType(List **wqueue,
 		 * we waste effort, and because we need the expression to be parsed
 		 * against the original table rowtype.
 		 */
-		/* GPDB: we always need the RTE */
-		/* GPDB_91_MERGE_FIXME: Why do we always need the RTE? */
+		/*
+		 * GPDB: we always need the RTE. The main reason being to support
+		 * unknown to text implicit conversion for queries like
+		 * CREATE TABLE t AS SELECT j AS a, 'abc' AS i FROM
+		 * generate_series(1, 10) j;
+		 *
+		 * Executes autostats internally which runs query to collect the same
+		 * which fails without RTE. More supported examples of unknown to text
+		 * can be found in src/test/regress/sql/strings.sql.
+		 *
+		 * GPDB_10_MERGE_FIXME: Upstream fixes this problem in PG10 hence need
+		 * to live with this code till then.
+		 */
 		{
 			RangeTblEntry *rte;
 
@@ -10088,7 +10046,6 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	ScanKeyData key[3];
 	SysScanDesc scan;
 	HeapTuple	depTup;
-	GpPolicy   *policy = rel->rd_cdbpolicy;
 	bool		sourceIsInt = false;
 	bool		targetIsInt = false;
 	bool		sourceIsVarlenA = false;
@@ -10181,7 +10138,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = NULL;
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(policy) &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 		!hashCompatible)
 	{
 		relContainsTuples = cdbRelMaxSegSize(rel) > 0;
@@ -10254,12 +10211,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 								relContainsTuples)
 							{
 								Assert(Gp_role == GP_ROLE_DISPATCH &&
-									   GpPolicyIsPartitioned(policy) &&
+									   GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 									   !hashCompatible);
 
-								for (int ia = 0; ia < policy->nattrs; ia++)
+								for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 								{
-									if (attnum == policy->attrs[ia])
+									if (attnum == rel->rd_cdbpolicy->attrs[ia])
 									{
 										ereport(ERROR,
 												(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -10300,12 +10257,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					{
 						Assert(Gp_role == GP_ROLE_DISPATCH &&
 							   !hashCompatible &&
-							   policy != NULL &&
-							   policy->ptype != POLICYTYPE_ENTRY);
+							   rel->rd_cdbpolicy != NULL &&
+							   rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
 
-						for (int ia = 0; ia < policy->nattrs; ia++)
+						for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 						{
-							if (attnum == policy->attrs[ia])
+							if (attnum == rel->rd_cdbpolicy->attrs[ia])
 							{
 								ereport(ERROR,
 										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -10467,7 +10424,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	heap_close(depRel, RowExclusiveLock);
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(policy) &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
 		!hashCompatible)
 	{
 		ListCell *lc;
@@ -10485,9 +10442,9 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 		if (relContainsTuples)
 		{
-			for (int ia = 0; ia < policy->nattrs; ia++)
+			for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 			{
-				if (attnum == policy->attrs[ia])
+				if (attnum == rel->rd_cdbpolicy->attrs[ia])
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("cannot alter type of a column used in "
@@ -13076,6 +13033,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	RangeVar   *tmprv;
 	Oid			tmprelid;
 	Oid			tarrelid = RelationGetRelid(rel);
+	char		tarrelstorage = rel->rd_rel->relstorage;
 	List	   *oid_map = NIL;
 	bool        rand_pol = false;
 	bool        rep_pol = false;
@@ -13272,8 +13230,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			/* always need to rebuild if changed from replicated policy */
 			if (!GpPolicyIsReplicated(rel->rd_cdbpolicy))
 			{
-				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
 				GpPolicyReplace(RelationGetRelid(rel), policy);
+				rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
 
 				/* only need to rebuild if have new storage options */
 				if (!(DatumGetPointer(newOptions) || force_reorg))
@@ -13483,9 +13441,15 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			GpPolicy *random_policy = createRandomPartitionedPolicy(NULL);
 
 			original_policy = rel->rd_cdbpolicy;
+			/*
+			 * break the link to avoid original_policy from getting deleted if
+			 * relcache invalidation happens.
+			 */
+			rel->rd_cdbpolicy = NULL;
+			/* update the catalog first and then assign the policy to rd_cdbpolicy */
+			GpPolicyReplace(RelationGetRelid(rel), random_policy);
 			rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel),
 											 random_policy);
-			GpPolicyReplace(RelationGetRelid(rel), random_policy);
 		}
 
 		/* Step (b) - build CTAS */
@@ -13525,8 +13489,15 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		if (original_policy)
 		{
-			rel->rd_cdbpolicy = original_policy;
+			/*
+			 * update catalog first and then update the rd_cdbpolicy. This order
+			 * avoids original_policy from getting freed before we use it for
+			 * GpPolicyReplace() if relcache invalidation happens. Also, helps
+			 * to have the rd_cdbpolicy current instead of reverse order which
+			 * can invalidate our assignment to rd_cdbpolicy.
+			 */
 			GpPolicyReplace(RelationGetRelid(rel), original_policy);
+			rel->rd_cdbpolicy = original_policy;
 		}
 
 		/*
@@ -13733,6 +13704,25 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		object.objectSubId = 0;
 
 		performDeletion(&object, DROP_RESTRICT);
+	}
+
+	if (relstorage_is_ao(tarrelstorage) && IS_QUERY_DISPATCHER())
+	{
+		/*
+		 * Drop the shared memory hash table entry for this table if it
+		 * exists. We must do so since before the rewrite we probably have few
+		 * non-zero segfile entries for this table while after the rewrite
+		 * only segno zero will be full and the others will be empty. By
+		 * dropping the hash entry we force refreshing the entry from the
+		 * catalog the next time a write into this AO table comes along.
+		 *
+		 * Note that ALTER already took an exclusive lock on the old relation
+		 * so we are guaranteed to not drop the hash entry from under any
+		 * concurrent operation.
+		 */
+		LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+		AORelRemoveHashEntry(tarrelid);
+		LWLockRelease(AOSegFileLock);
 	}
 
 l_distro_fini:
@@ -14274,7 +14264,6 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 	}
 
 	/* execute the command */
-	/* GPDB_91_MERGE_FIXME: is this lock mode right? */
 	ATExecCmd(wqueue, tab, (rel2 ? &rel2 : rel), atc, AccessExclusiveLock);
 
 	if (!bPartitionCmd)
@@ -14570,7 +14559,7 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 	ATExecDropInherit(oldrel,
 			makeRangeVar(get_namespace_name(parent->rd_rel->relnamespace),
 					     RelationGetRelationName(parent), -1),
-					  AccessExclusiveLock, /* GPDB_91_MERGE_FIXME: lock mode? */
+					  AccessExclusiveLock, /* Not used for anything in ATExecDropInherit() */
 					  true);
 
 	inherit_parent(parent, newrel, true /* it's a partition */, NIL);
@@ -15519,14 +15508,12 @@ make_dist_clause(Relation rel)
 	int		i;
 	DistributedBy	*dist;
 	List 		*distro = NIL;
-	GpPolicy 	*policy;
 
 	dist = makeNode(DistributedBy);
-	policy = rel->rd_cdbpolicy;	
 
-	Assert(policy->ptype != POLICYTYPE_ENTRY);
+	Assert(rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
 
-	if (GpPolicyIsReplicated(policy))
+	if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
 	{
 		/* must be random distribution */
 		dist->ptype = POLICYTYPE_REPLICATED;

@@ -1308,6 +1308,11 @@ if test "$enable_gpfdist" = yes ; then
   AC_SUBST(have_yaml)
 fi
 
+if test "$enable_mapreduce" = yes; then
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_ERROR([libyaml is required for Greenplum Mapreduce])])
+  AC_SUBST(have_yaml)
+fi
+
 if test "$enable_gpperfmon" = yes; then
   CHECK_APR()
   GPAC_PATH_APU_1_CONFIG
@@ -1390,6 +1395,11 @@ AC_SUBST(OSSP_UUID_LIBS)
 if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_XERCES
   PGAC_CHECK_ORCA_LIBS
+fi
+
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  AC_CHECK_LIB(execinfo, backtrace, [], [AC_MSG_ERROR([library 'execinfo' is required for backtrace support])])
 fi
 
 ##
@@ -1569,6 +1579,11 @@ fi
 if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_VERSION
+fi
+
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  AC_CHECK_HEADERS([execinfo.h], [], [AC_MSG_ERROR([header file <execinfo.h> is required for backtrace support])])
 fi
 
 ##

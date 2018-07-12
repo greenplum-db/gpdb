@@ -90,9 +90,15 @@
       <li id="eu150510">
         <xref href="./pg_exttable.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150585">pg_foreign_data_wrapper (not supported)</li>
-      <li id="eu150589">pg_foreign_server (not supported)</li>
-      <li id="eu150593">pg_foreign_table (not supported)</li>
+      <li id="eu150585">
+        <xref href="./pg_foreign_data_wrapper.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="eu150589">
+        <xref href="./pg_foreign_server.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="eu150593">
+        <xref href="./pg_foreign_table.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="eu149914">
         <xref href="./pg_index.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -171,7 +177,9 @@
       <li id="eu151117">
         <xref href="./pg_type.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu151122">pg_user_mapping (not supported)</li>
+      <li id="eu151122">
+        <xref href="./pg_user_mapping.xml#topic1" type="topic" format="dita"/>
+      </li>
     </ul>
   </body>
 </topic>

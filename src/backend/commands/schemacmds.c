@@ -70,7 +70,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	{
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 
-		Assert(stmt->schemaname == InvalidOid);
+		Assert(stmt->schemaname == NULL);
 		Assert(stmt->authid == NULL);
 		Assert(stmt->schemaElts == NIL);
 

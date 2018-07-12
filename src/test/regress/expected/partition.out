@@ -7715,6 +7715,21 @@ NOTICE:  exchanged partition "other_log_ids" of relation "test_split_part" with 
 NOTICE:  dropped partition "other_log_ids" for relation "test_split_part"
 NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_New" for table "test_split_part"
 NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_other_log_ids" for table "test_split_part"
+-- Only the root partition should have automatically created an array type
+select typname, typtype, typcategory from pg_type where typname like '%test_split_part%' and typcategory = 'A';
+     typname      | typtype | typcategory 
+------------------+---------+-------------
+ _test_split_part | b       | A
+(1 row)
+
+select array_agg(test_split_part) from test_split_part where log_id = 500;
+   array_agg    
+----------------
+ {"(500,{10})"}
+(1 row)
+
+select array_agg(test_split_part_1_prt_other_log_ids) from test_split_part_1_prt_other_log_ids where log_id = 500;
+ERROR:  could not find array type for data type test_split_part_1_prt_other_log_ids
 -- Test that pg_get_partition_def() correctly dumps the renamed names for
 -- partitions. Originally reported in MPP-7232
 create table mpp7232a (a int, b int) distributed by (a) partition by range (b) (start (1) end (3) every (1));

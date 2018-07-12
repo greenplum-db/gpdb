@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #	Filename:-		gp_bash_functions.sh
 #	Status:-		Released
 #	Author:-		G L Coombe (Greenplum)
@@ -11,16 +11,11 @@
 #***************************************************************
 # Location Functions
 #******************************************************************************
-#Check that SHELL is /bin/bash
-	if [ $SHELL != /bin/bash ] && [ `ls -al /bin/sh|grep -c bash` -ne 1 ];then
-		echo "[FATAL]:-Scripts must be run by a user account that has SHELL=/bin/bash"
-		if [ -f /bin/bash ];then
-			echo "[INFO]:-/bin/bash exists, please update user account shell"
-		else
-			echo "[WARN]:-/bin/bash does not exist, does bash need to be installed?"
-		fi
-		exit 2
-	fi
+#Check that SHELL is Bash
+if [ -z $BASH ]; then
+	echo "[FATAL]:-Scripts must be executed using the Bash shell"
+	exit 2
+fi
 #CMDPATH is the list of locations to search for commands, in precedence order
 declare -a CMDPATH
 CMDPATH=(/usr/kerberos/bin /usr/sfw/bin /opt/sfw/bin /usr/local/bin /bin /usr/bin /sbin /usr/sbin /usr/ucb /sw/bin)
@@ -292,7 +287,7 @@ ERROR_EXIT () {
 		if [ $BACKOUT_FILE ]; then
 				if [ -s $BACKOUT_FILE ]; then
 						LOG_MSG "[WARN]:-Script has left Greenplum Database in an incomplete state"
-						LOG_MSG "[WARN]:-Run command /bin/bash $BACKOUT_FILE to remove these changes"
+						LOG_MSG "[WARN]:-Run command bash $BACKOUT_FILE to remove these changes"
 						BACKOUT_COMMAND "if [ x$MASTER_HOSTNAME != x\`$HOSTNAME\` ];then $ECHO \"[FATAL]:-Not on original master host $MASTER_HOSTNAME, backout script exiting!\";exit 2;fi"
 						$ECHO "$RM -f $BACKOUT_FILE" >> $BACKOUT_FILE
 				fi
@@ -1099,6 +1094,9 @@ PING_HOST () {
 		linux )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1
                         ;;
+		openbsd )
+			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+                        ;;
 		* )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
 	esac
@@ -1388,6 +1386,16 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		DF="`findCmdInPath df` -P"
+		DU_TXT="-c" ;;
+	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
+		IPV6_ADDR_LIST_CMD="ifconfig -a inet6"
+		LIB_TYPE="LD_LIBRARY_PATH"
+		PG_METHOD="ident"
+		HOST_ARCH_TYPE="uname -m"
+		NOLINE_ECHO="echo -e"
+		DEFAULT_LOCALE_SETTING=en_US.UTF-8
+		PING_TIME="-c 1"
+		DF="df -P"
 		DU_TXT="-c" ;;
 	* ) echo unknown ;;
 esac

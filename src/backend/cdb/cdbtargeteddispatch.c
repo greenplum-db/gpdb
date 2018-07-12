@@ -162,6 +162,7 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 
 	DirectDispatchCalculationInfo result;
 	RangeTblEntry *rte;
+	Relation	relation;
 
 	InitDirectDispatchCalculationInfo(&result);
 
@@ -186,33 +187,28 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 	Assert(plan->righttree == NULL);
 
 	/* open and get relation info */
+	rte = rt_fetch(rangeTableIndex, rtable);
+	if (rte->rtekind == RTE_RELATION)
 	{
-		Relation	relation;
+		/* Get a copy of the rel's GpPolicy from the relcache. */
+		relation = relation_open(rte->relid, NoLock);
+		policy = relation->rd_cdbpolicy;
 
-		rte = rt_fetch(rangeTableIndex, rtable);
-		if (rte->rtekind == RTE_RELATION)
+		if (policy != NULL)
 		{
-			/* Get a copy of the rel's GpPolicy from the relcache. */
-			relation = relation_open(rte->relid, NoLock);
-			policy = RelationGetPartitioningKey(relation);
-
-			if (policy != NULL)
+			parts = (PartitionKeyInfo *) palloc(policy->nattrs * sizeof(PartitionKeyInfo));
+			for (i = 0; i < policy->nattrs; i++)
 			{
-				parts = (PartitionKeyInfo *) palloc(policy->nattrs * sizeof(PartitionKeyInfo));
-				for (i = 0; i < policy->nattrs; i++)
-				{
-					parts[i].attr = relation->rd_att->attrs[policy->attrs[i] - 1];
-					parts[i].values = NULL;
-					parts[i].numValues = 0;
-					parts[i].counter = 0;
-				}
+				parts[i].attr = relation->rd_att->attrs[policy->attrs[i] - 1];
+				parts[i].values = NULL;
+				parts[i].numValues = 0;
+				parts[i].counter = 0;
 			}
-			relation_close(relation, NoLock);
 		}
-		else
-		{
-			/* fall through, policy will be NULL so we won't direct dispatch */
-		}
+	}
+	else
+	{
+		/* fall through, policy will be NULL so we won't direct dispatch */
 	}
 
 	if (rte->forceDistRandom ||
@@ -338,6 +334,9 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 			result.dd.isDirectDispatch = false;
 		}
 	}
+
+	if (rte->rtekind == RTE_RELATION)
+		relation_close(relation, NoLock);
 
 	result.haveProcessedAnyCalculations = true;
 	return result;

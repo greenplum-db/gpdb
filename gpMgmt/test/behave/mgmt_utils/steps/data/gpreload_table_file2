@@ -1,4 +1,0 @@
-public.ao_table: column1, column2 asc, column3
-public.ao_part_table: column1, column2 desc, column3
-public.co_table: column1, column2, column3 desc
-public.co_part_table: column1 asc, column2, column3

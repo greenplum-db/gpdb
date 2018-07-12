@@ -76,7 +76,7 @@ typedef struct CdbSreh
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
-	char	   filename[256];		/* "uri [filename]" */
+	char	   filename[MAXPGPATH];		/* "uri [filename]" */
 
 	bool	log_to_file;		/* or log into file? */
 	Oid		relid;				/* parent relation id */

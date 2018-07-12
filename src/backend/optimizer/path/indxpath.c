@@ -196,13 +196,9 @@ create_bitmap_scan_path(PlannerInfo *root,
  * 'rel' is the relation for which we want to generate index paths
  *
  * Note: check_partial_indexes() must have been run previously for this rel.
- *
- * CDB: Instead of handing the paths to add_path(), we append them to a List
- * (*pindexpathlist or *pbitmappathlist) belonging to the caller.
  */
 void
-create_index_paths(PlannerInfo *root, RelOptInfo *rel,
-				   List **pindexpathlist, List **pbitmappathlist)
+create_index_paths(PlannerInfo *root, RelOptInfo *rel)
 {
 	List	   *indexpaths;
 	List	   *bitindexpaths;
@@ -232,6 +228,19 @@ create_index_paths(PlannerInfo *root, RelOptInfo *rel,
 									 true, NULL, SAOP_FORBID, ST_ANYSCAN);
 
 	/*
+	 * CDB: Flag RelOptInfo if at most one row can satisfy index quals.
+	 */
+	foreach(l, indexpaths)
+	{
+		IndexPath  *ipath = (IndexPath *) lfirst(l);
+
+		if (ipath->num_leading_eq > 0 &&
+			ipath->num_leading_eq == ipath->indexinfo->ncolumns &&
+			ipath->indexinfo->unique)
+			rel->onerow = true;
+	}
+
+	/*
 	 * Submit all the ones that can form plain IndexScan plans to add_path. (A
 	 * plain IndexPath always represents a plain IndexScan plan; however some
 	 * of the indexes might support only bitmap scans, and those we mustn't
@@ -246,19 +255,21 @@ create_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	{
 		IndexPath  *ipath = (IndexPath *) lfirst(l);
 
-		/* CDB: Flag RelOptInfo if at most one row can satisfy index quals. */
-		if (ipath->num_leading_eq > 0 &&
-			ipath->num_leading_eq == ipath->indexinfo->ncolumns &&
-			ipath->indexinfo->unique)
-			rel->onerow = true;
-
 		/* Add index path to caller's list. */
-		if (ipath->indexinfo->amhasgettuple)
-			*pindexpathlist = lappend(*pindexpathlist, ipath);
+
+		/*
+		 * Random access to Append-Only is slow because AO doesn't use the buffer
+		 * pool and we want to avoid decompressing blocks multiple times.  So,
+		 * only consider bitmap paths because they are processed in TID order.
+		 * The appendonlyam.c module will optimize fetches in TID order by keeping
+		 * the last decompressed block between fetch calls.
+		 */
+		if (ipath->indexinfo->amhasgettuple &&
+			rel->relstorage == RELSTORAGE_HEAP)
+			add_path(root, rel, (Path *) ipath);
 
 		if (ipath->indexinfo->amhasgetbitmap &&
-			(!root->config->enable_seqscan ||
-			 ipath->path.pathkeys == NIL ||
+			(ipath->path.pathkeys == NIL ||
 			 ipath->indexselectivity < 1.0))
 			bitindexpaths = lappend(bitindexpaths, ipath);
 	}
@@ -288,11 +299,11 @@ create_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	if (bitindexpaths != NIL)
 	{
 		Path	   *bitmapqual;
-		Path	   *path = NULL;
+		Path	   *bpath;
 
 		bitmapqual = choose_bitmap_and(root, rel, bitindexpaths, NULL);
-		path = create_bitmap_scan_path(root, rel, bitmapqual, NULL);
-		*pbitmappathlist = lappend(*pbitmappathlist, path);
+		bpath = create_bitmap_scan_path(root, rel, bitmapqual, NULL);
+		add_path(root, rel, (Path *) bpath);
 	}
 }
 
@@ -1992,7 +2003,6 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 	ListCell   *l;
 	InnerIndexscanInfo *info;
 	MemoryContext oldcontext;
-	RangeTblEntry *rte;
 
 	Assert(rel->rtekind == RTE_RELATION);
 
@@ -2105,7 +2115,12 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 	{
 		IndexPath  *ipath = (IndexPath *) lfirst(l);
 
-		if (ipath->indexinfo->amhasgettuple)
+		/*
+		 * CDB: Only allow plain index scans on heap tables. AO/CO tables
+		 * don't support them.
+		 */
+		if (ipath->indexinfo->amhasgettuple &&
+			rel->relstorage == RELSTORAGE_HEAP)
 			indexpaths = lappend(indexpaths, ipath);
 
 		if (ipath->indexinfo->amhasgetbitmap)
@@ -2130,24 +2145,11 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 												clause_list, NIL,
 												false, outer_rel));
 
-	rte = rt_fetch(rel->relid, root->parse->rtable);
-	Assert(rel->relstorage != '\0');
-
-	/* Exclude plain index paths if user doesn't want them. */
-	if (!root->config->enable_indexscan && !root->config->mpp_trying_fallback_plan)
-		indexpaths = NIL;
-
-	/* Exclude plain index paths if the relation is an append-only relation. */
-	if (rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->relstorage == RELSTORAGE_AOCOLS)
-		indexpaths = NIL;
-
 	/*
 	 * If we found anything usable, generate a BitmapHeapPath for the most
 	 * promising combination of bitmap index paths.
 	 */
-	if (bitindexpaths != NIL &&
-		(root->config->enable_bitmapscan || root->config->mpp_trying_fallback_plan))
+	if (bitindexpaths != NIL)
 	{
 		Path	   *bitmapqual;
 		Path	   *bpath;

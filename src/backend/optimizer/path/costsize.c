@@ -207,17 +207,20 @@ cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root,
 	/* Should only be applied to base relations */
 	Assert(baserel->relid > 0);
 	Assert(baserel->rtekind == RTE_RELATION);
-	
+
+	if (!(root ? root->config->enable_seqscan : enable_seqscan))
+		startup_cost += disable_cost;
+
 	/*
 	 * disk costs
 	 */
 	run_cost += seq_page_cost * baserel->pages;
-	
+
 	/* CPU costs */
 	startup_cost += baserel->baserestrictcost.startup;
 	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
 	run_cost += cpu_per_tuple * baserel->tuples;
-	
+
 	path->path.startup_cost = startup_cost;
 	path->path.total_cost = startup_cost + run_cost;
 }
@@ -237,17 +240,20 @@ cost_aocsscan(AOCSPath *path, PlannerInfo *root,
 	/* Should only be applied to base relations */
 	Assert(baserel->relid > 0);
 	Assert(baserel->rtekind == RTE_RELATION);
-	
+
+	if (!(root ? root->config->enable_seqscan : enable_seqscan))
+		startup_cost += disable_cost;
+
 	/*
 	 * disk costs
 	 */
 	run_cost += seq_page_cost * baserel->pages;
-	
+
 	/* CPU costs */
 	startup_cost += baserel->baserestrictcost.startup;
 	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
 	run_cost += cpu_per_tuple * baserel->tuples;
-	
+
 	path->path.startup_cost = startup_cost;
 	path->path.total_cost = startup_cost + run_cost;
 }
@@ -275,12 +281,12 @@ cost_externalscan(ExternalPath *path, PlannerInfo *root,
 	 * disk costs
 	 */
 	run_cost += seq_page_cost * baserel->pages;
-	
+
 	/* CPU costs */
 	startup_cost += baserel->baserestrictcost.startup;
 	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
 	run_cost += cpu_per_tuple * baserel->tuples;
-	
+
 	path->path.startup_cost = startup_cost;
 	path->path.total_cost = startup_cost + run_cost;
 }
@@ -337,6 +343,9 @@ cost_index(IndexPath *path, PlannerInfo *root,
 		   IsA(index, IndexOptInfo));
 	Assert(baserel->relid > 0);
 	Assert(baserel->rtekind == RTE_RELATION);
+
+	if (!(root ? root->config->enable_indexscan : enable_indexscan))
+		startup_cost += disable_cost;
 
 	/*
 	 * Call index-access-method-specific code to estimate the processing cost
@@ -694,6 +703,9 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 	Assert(IsA(baserel, RelOptInfo));
 	Assert(baserel->relid > 0);
 	Assert(baserel->rtekind == RTE_RELATION);
+
+	if (!(root ? root->config->enable_bitmapscan : enable_bitmapscan))
+		startup_cost += disable_cost;
 
 	/*
 	 * Fetch total cost of obtaining the bitmap, as well as its total
@@ -1073,7 +1085,7 @@ cost_tidscan(Path *path, PlannerInfo *root,
 		Assert(baserel->baserestrictcost.startup >= disable_cost);
 		startup_cost -= disable_cost;
 	}
-	else if (!enable_tidscan)
+	else if (!(root ? root->config->enable_tidscan : enable_tidscan))
 		startup_cost += disable_cost;
 
 	/*
@@ -1378,7 +1390,7 @@ cost_sort(Path *path, PlannerInfo *root,
 	double		output_tuples;
 	long		sort_mem_bytes = (long) global_work_mem(root);
 
-	if (!enable_sort)
+	if (!(root ? root->config->enable_sort : enable_sort))
 		startup_cost += disable_cost;
 
 	/*
@@ -1906,6 +1918,10 @@ cost_nestloop(NestPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	Selectivity match_count;
 	bool		indexed_join_quals;
 
+
+	if (!enable_nestloop)
+		startup_cost += disable_cost;
+
 	/* estimate costs to rescan the inner relation */
 	cost_rescan(root, inner_path,
 				&inner_rescan_start_cost,
@@ -2073,7 +2089,7 @@ cost_mergejoin(MergePath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	if (inner_path_rows <= 0 || isnan(inner_path_rows))
 		inner_path_rows = 1;
 
-	if (!enable_mergejoin)
+	if (!(root ? root->config->enable_mergejoin : enable_mergejoin))
 		startup_cost += disable_cost;
 
 	/*
@@ -2483,6 +2499,9 @@ cost_hashjoin(HashPath *path, PlannerInfo *root, SpecialJoinInfo *sjinfo)
 	Selectivity outer_match_frac;
 	Selectivity match_count;
 	ListCell   *hcl;
+
+	if (!(root ? root->config->enable_hashjoin : enable_hashjoin))
+		startup_cost += disable_cost;
 
 	/*
 	 * Compute cost of the hashquals and qpquals (other restriction clauses)

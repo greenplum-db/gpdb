@@ -79,7 +79,7 @@ static void checkResgroupCapLimit(ResGroupLimitType type, ResGroupCap value);
 static void checkResgroupMemAuditor(ResGroupCaps *caps);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps);
 static void validateCapabilities(Relation rel, Oid groupid, ResGroupCaps *caps, bool newGroup);
-static void insertResgroupCapabilityEntry(Relation rel, Oid groupid, uint16 type, char *value);
+static void insertResgroupCapabilityEntry(Relation rel, Oid groupid, uint16 type, const char *value);
 static void updateResgroupCapabilityEntry(Relation rel,
 										  Oid groupId,
 										  ResGroupLimitType limitType,
@@ -1443,7 +1443,7 @@ static void
 insertResgroupCapabilityEntry(Relation rel,
 							 Oid groupid,
 							 uint16 type,
-							 char *value)
+							 const char *value)
 {
 	Datum new_record[Natts_pg_resgroupcapability];
 	bool new_record_nulls[Natts_pg_resgroupcapability];

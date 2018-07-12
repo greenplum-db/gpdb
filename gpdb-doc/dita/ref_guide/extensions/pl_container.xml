@@ -1341,6 +1341,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       <title>Notes</title>
       <body>
         <ul id="ul_j4g_vgs_wbb">
+          <li>PL/Container does not support the Greenplum Database domain object.</li>
           <li>PL/Container maintains the configuration file
               <codeph>plcontainer_configuration.xml</codeph> in the data directory of all Greenplum
             Database segment instances: master, standby master, primary, and mirror. This query

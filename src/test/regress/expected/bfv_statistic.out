@@ -20,9 +20,8 @@ explain select * from bfv_statistics_foo where a is not null and b >= 1;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.05 rows=3 width=8)
    ->  Seq Scan on bfv_statistics_foo  (cost=0.00..2.05 rows=1 width=8)
          Filter: a IS NOT NULL AND b >= 1
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(5 rows)
+ Optimizer: legacy query optimizer
+(4 rows)
 
 create table bfv_statistics_foo2(a int) distributed by (a);
 insert into bfv_statistics_foo2 select generate_series(1,5);
@@ -48,9 +47,8 @@ explain select a from bfv_statistics_foo2 where a > 1 order by a;
          Sort Key: a
          ->  Seq Scan on bfv_statistics_foo2  (cost=0.00..2.25 rows=5 width=4)
                Filter: a > 1
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(8 rows)
+ Optimizer: legacy query optimizer
+(7 rows)
 
 -- change stats manually so that MCV and MCF numbers do not match
 set allow_system_table_mods=DML;
@@ -65,9 +63,8 @@ explain select a from bfv_statistics_foo2 where a > 1 order by a;
          Sort Key: a
          ->  Seq Scan on bfv_statistics_foo2  (cost=0.00..2.25 rows=6 width=4)
                Filter: a > 1
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(8 rows)
+ Optimizer: legacy query optimizer
+(7 rows)
 
 --
 -- test missing statistics
@@ -131,9 +128,8 @@ explain select a from bfv_statistics_foo4 where a > 888;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=1 width=4)
    ->  Seq Scan on bfv_statistics_foo4  (cost=0.00..4.25 rows=1 width=4)
          Filter: a > 888
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(5 rows)
+ Optimizer: legacy query optimizer
+(4 rows)
 
 --
 -- Testing that the merging of memo groups inside Orca does not crash cardinality estimation inside Orca
@@ -447,12 +443,12 @@ SET allow_system_table_mods='DML';
 -- Broken MCVs
 UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
-ERROR:  invalid MCV array of type integer, for attribute of type text (selfuncs.c:4693)
+ERROR:  invalid MCV array of type integer, for attribute of type text (selfuncs.c:4700)
 -- Broken histogram
 UPDATE pg_statistic SET stakind2=2 WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
 UPDATE pg_statistic SET stavalues2='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2 and stakind2=2;
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
-ERROR:  invalid histogram of type integer, for attribute of type text (selfuncs.c:4693)
+ERROR:  invalid histogram of type integer, for attribute of type text (selfuncs.c:4661)
 RESET allow_system_table_mods;
 -- cardinality estimation for join on varchar, text, char and bpchar columns must account for FreqRemaining and NDVRemaining
 -- resulting in better cardinality numbers for the joins in orca

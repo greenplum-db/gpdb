@@ -9423,7 +9423,7 @@ fi
 $as_echo_n "checking Python configuration directory... " >&6; }
 python_majorversion=`${PYTHON} -c "import sys; print(sys.version[0])"`
 python_version=`${PYTHON} -c "import sys; print(sys.version[:3])"`
-if [ "${python_majorversion}" = "2" ];
+if  "${python_majorversion}" = "2" ;
 then
 	python_configdir=`${PYTHON} -c "from distutils.sysconfig import get_python_lib as f; import os; print(os.path.join(f(plat_specific=1,standard_lib=1),'config'))"`
 else
@@ -9442,7 +9442,6 @@ $as_echo_n "checking how to link an embedded Python application... " >&6; }
 python_libdir=`${PYTHON} -c "import distutils.sysconfig,string; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LIBDIR'))))"`
 python_ldlibrary=`${PYTHON} -c "import distutils.sysconfig,string; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LDLIBRARY'))))"`
 ldlibrary=`echo "${python_ldlibrary}" | sed -e 's/\.so$//' -e 's/\.dll$//' -e 's/\.dylib$//' -e 's/\.sl$//'`
-
 if test x"${python_libdir}" != x"" -a x"${python_ldlibrary}" != x"" -a x"${python_ldlibrary}" != x"${ldlibrary}"
 then
 	# New way: use the official shared library
@@ -9464,23 +9463,6 @@ python_additional_libs=`${PYTHON} -c "import distutils.sysconfig,string; print('
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${python_libspec} ${python_additional_libs}" >&5
 $as_echo "${python_libspec} ${python_additional_libs}" >&6; }
 
-
-# threaded python is not supported on OpenBSD
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether Python is compiled with thread support" >&5
-$as_echo_n "checking whether Python is compiled with thread support... " >&6; }
-pythreads=`${PYTHON} -c "import sys; print(int('thread' in sys.builtin_module_names))"`
-if test "$pythreads" = "1"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  case $host_os in
-  openbsd*)
-    as_fn_error $? "threaded Python not supported on this platform" "$LINENO" 5
-    ;;
-  esac
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
 
 
 fi
@@ -10862,6 +10844,68 @@ $as_echo "$as_me: WARNING: libyaml is not found. disabling transformations for g
 fi
 
   LIBS="$_LIBS"
+
+fi
+
+if test "$enable_mapreduce" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing yaml_parser_initialize" >&5
+$as_echo_n "checking for library containing yaml_parser_initialize... " >&6; }
+if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char yaml_parser_initialize ();
+int
+main ()
+{
+return yaml_parser_initialize ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' yaml; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_yaml_parser_initialize=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+
+else
+  ac_cv_search_yaml_parser_initialize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_yaml_parser_initialize" >&5
+$as_echo "$ac_cv_search_yaml_parser_initialize" >&6; }
+ac_res=$ac_cv_search_yaml_parser_initialize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  have_yaml=yes
+else
+  as_fn_error $? "libyaml is required for Greenplum Mapreduce" "$LINENO" 5
+fi
+
 
 fi
 
@@ -12252,6 +12296,57 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 fi
 
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for backtrace in -lexecinfo" >&5
+$as_echo_n "checking for backtrace in -lexecinfo... " >&6; }
+if ${ac_cv_lib_execinfo_backtrace+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lexecinfo  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char backtrace ();
+int
+main ()
+{
+return backtrace ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_execinfo_backtrace=yes
+else
+  ac_cv_lib_execinfo_backtrace=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_execinfo_backtrace" >&5
+$as_echo "$ac_cv_lib_execinfo_backtrace" >&6; }
+if test "x$ac_cv_lib_execinfo_backtrace" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBEXECINFO 1
+_ACEOF
+
+  LIBS="-lexecinfo $LIBS"
+
+else
+  as_fn_error $? "library 'execinfo' is required for backtrace support" "$LINENO" 5
+fi
+
+fi
+
 ##
 ## Header files
 ##
@@ -13274,6 +13369,24 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+
+fi
+
+# OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
+if test "$PORTNAME" = "openbsd"; then
+  for ac_header in execinfo.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "execinfo.h" "ac_cv_header_execinfo_h" "$ac_includes_default"
+if test "x$ac_cv_header_execinfo_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EXECINFO_H 1
+_ACEOF
+
+else
+  as_fn_error $? "header file <execinfo.h> is required for backtrace support" "$LINENO" 5
+fi
+
+done
 
 fi
 

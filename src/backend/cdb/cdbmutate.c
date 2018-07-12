@@ -348,6 +348,17 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 									 * redistibution of data
 									 */
 									Assert(list_length(policykeys) < MaxPolicyAttributeNumber);
+
+									if (list_member_int(policykeys, n))
+									{
+										TargetEntry *target = get_tle_by_resno(plan->targetlist, n);
+
+										ereport(ERROR,
+												(errcode(ERRCODE_DUPLICATE_COLUMN),
+												 errmsg("duplicate DISTRIBUTED BY column '%s'",
+														target->resname ? target->resname : "???")));
+									}
+
 									policykeys = lappend_int(policykeys, n);
 									found_expr = true;
 									break;

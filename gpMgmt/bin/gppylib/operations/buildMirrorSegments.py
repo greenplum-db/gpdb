@@ -22,7 +22,7 @@ from gppylib.commands.unix import check_pid_on_remotehost, Scp
 logger = gplog.get_default_logger()
 
 gDatabaseDirectories = [
-    # this list and the gDatabaseSubDirectories occur combined inside initdb.c
+    # this list occur inside initdb.c
     "global",
     "pg_log",
     "pg_xlog",
@@ -37,12 +37,6 @@ gDatabaseDirectories = [
     "base",
     "pg_tblspc",
     "pg_stat_tmp"
-]
-gDatabaseSubDirectories = [
-    "pg_xlog/archive_status",
-    "pg_multixact/members",
-    "pg_multixact/offsets",
-    "base/1"
 ]
 
 #

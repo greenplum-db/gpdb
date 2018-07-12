@@ -687,7 +687,7 @@ pg_total_relation_size(PG_FUNCTION_ARGS)
 	 * someone else might drop the table. It's better to return NULL for
 	 * already-dropped tables than throw an error and abort the whole query.
 	 */
-	if (!OidIsValid(get_rel_name(relOid)))
+	if (get_rel_name(relOid) == NULL)
 		PG_RETURN_NULL();
 
 	size = calculate_total_relation_size(relOid);

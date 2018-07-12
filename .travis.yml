@@ -32,6 +32,7 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - libevent-dev
+    - libperl-dev
     - g++-6
     - python-dev
     - python-yaml
@@ -84,23 +85,19 @@ before_script:
 ## ----------------------------------------------------------------------
 ## Perform build:
 ##   GPDB
-##   gpmapreduce
 ##   orafce
-##   gpfdist
 ## ----------------------------------------------------------------------
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud --enable-pxf
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl
 
   - make
   - make install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
   - make install USE_PGXS=1
-  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpmapreduce
-  - make install
-  - cd ${TRAVIS_BUILD_DIR}
+  - cd ${TRAVIS_BUILD_DIR}/
   - make unittest-check
   - postgres --version
   - initdb --version

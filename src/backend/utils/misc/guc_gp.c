@@ -89,6 +89,7 @@ static void assign_gp_default_storage_options(const char *newval, void *extra);
 
 static bool check_pljava_classpath_insecure(bool *newval, void **extra, GucSource source);
 static void assign_pljava_classpath_insecure(bool newval, void *extra);
+static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource source);
 
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
@@ -262,6 +263,7 @@ bool		gp_debug_resqueue_priority = false;
 int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
+bool		gp_resource_group_bypass;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
@@ -324,7 +326,6 @@ bool		dml_ignore_target_partition_check = false;
 
 /* Planner gucs */
 bool		gp_enable_hashjoin_size_heuristic = false;
-bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
 bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
@@ -687,17 +688,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"gp_enable_fallback_plan", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Plan types which are not enabled may be used when a "
-						 "query would be infeasible without them."),
-			gettext_noop("If false, planner rejects queries that cannot be "
-						 "satisfied using only the enabled plan types.")
-		},
-		&gp_enable_fallback_plan,
-		true,
-		NULL, NULL, NULL
-	},
-	{
 		{"gp_enable_direct_dispatch", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable dispatch for single-row-insert targetted mirror-pairs."),
 			gettext_noop("Don't involve the whole cluster if it isn't needed.")
@@ -880,7 +870,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL,
 		},
 		&gp_enable_groupext_distinct_pruning,
-		false /* GPDB_84_MERGE_FIXME: Turn GUC back to true and fix the failing tests */,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -3105,6 +3095,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
+			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
+			NULL
+		},
+		&gp_resource_group_bypass,
+		false,
+		check_gp_resource_group_bypass, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -3990,12 +3990,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL,
 		},
 		&gp_vmem_protect_limit,
-#ifdef __darwin__
-		0,
-#else
-		8192,
-#endif
-		0, INT_MAX / 2,
+		8192, 0, INT_MAX / 2,
 		NULL, NULL, NULL
 	},
 
@@ -5241,6 +5236,16 @@ assign_pljava_classpath_insecure(bool newval, void *extra)
 			pljava_cp->context = PGC_USERSET;
 		}
 	}
+}
+
+static bool
+check_gp_resource_group_bypass(bool *newval, void **extra, GucSource source)
+{
+	if (!ResGroupIsAssigned())
+		return true;
+
+	GUC_check_errmsg("SET gp_resource_group_bypass cannot run inside a transaction block");
+	return false;
 }
 
 static bool

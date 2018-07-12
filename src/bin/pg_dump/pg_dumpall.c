@@ -767,7 +767,7 @@ dumpResGroups(PGconn *conn)
 		{
 			const char *memory_auditor_name;
 			const char *cpu_prop;
-			const char cpu_setting[1024];
+			char cpu_setting[1024];
 
 			/*
 			 * Possible values of memory_auditor:

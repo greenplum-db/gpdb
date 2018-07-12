@@ -109,7 +109,7 @@ url_file_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 
 		if (pstate->cdbsreh)
 			snprintf(pstate->cdbsreh->filename,
-					 sizeof pstate->cdbsreh->filename,
+					 sizeof(pstate->cdbsreh->filename),
 					 "%s [%s]", ffile->common.url, fo.fname);
 	}
 	return want;

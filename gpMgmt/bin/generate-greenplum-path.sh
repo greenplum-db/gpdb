@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ x$1 != x ] ; then
     GPHOME_PATH=$1

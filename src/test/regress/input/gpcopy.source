@@ -293,7 +293,7 @@ COPY copy_regression_text3 from stdin with delimiter '|';
 an embedded linefeed sequence\nin column a|7|c text data|d text data|e text data
 \.
 
-SELECT * FROM copy_regression_text3 ORDER BY b;
+SELECT * FROM copy_regression_text3 ORDER BY b,a;
 
 DROP TABLE copy_regression_text1;
 DROP TABLE copy_regression_text2;
@@ -1168,3 +1168,7 @@ DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /dev/null' IGNORE EXTERNAL PARTITIONS;
 COPY sales TO PROGRAM 'printf <SEGID> && cat > /dev/null' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 DROP TABLE sales;
+CREATE TABLE ao_copy(c int) WITH (appendonly=true);
+COPY ao_copy TO '/tmp/ao<SEGID>.txt' ON SEGMENT;
+COPY ao_copy FROM '/tmp/ao<SEGID>.txt' ON SEGMENT;
+DROP TABLE ao_copy;

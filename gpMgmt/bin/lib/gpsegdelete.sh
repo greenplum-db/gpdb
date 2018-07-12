@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #	Filename:-		gpsegdelete.sh
 #	Version:-		$Revision$
 #	Updated:-		$Date$	

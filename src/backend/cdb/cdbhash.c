@@ -15,6 +15,8 @@
  */
 #include "postgres.h"
 
+#include <sys/socket.h>
+
 #include "access/tuptoaster.h"
 #include "utils/builtins.h"
 #include "catalog/pg_type.h"

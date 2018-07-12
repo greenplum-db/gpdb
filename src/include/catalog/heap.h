@@ -83,7 +83,8 @@ extern Oid heap_create_with_catalog(const char *relname,
 						 Datum reloptions,
 						 bool use_user_acl,
 						 bool allow_system_table_mods,
-						 bool valid_opts);
+						 bool valid_opts,
+						 bool is_part_child);
 
 extern void heap_drop_with_catalog(Oid relid);
 

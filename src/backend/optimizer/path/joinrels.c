@@ -234,12 +234,7 @@ join_search_one_level(PlannerInfo *root, int level)
 		 *----------
 		 */
 		if (joinrels[level] == NIL && root->join_info_list == NIL)
-		{
-			if (root->config->mpp_trying_fallback_plan)
-				elog(ERROR, "failed to build any %d-way joins", level);
-			else
-				elog(DEBUG1, "failed to build any %d-way joins", level);
-		}
+			elog(ERROR, "failed to build any %d-way joins", level);
 	}
 }
 

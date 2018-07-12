@@ -523,12 +523,10 @@ select * from t, pt where tid = ptid;
     0 |   0 | hello0 | bar |   48 | hello48 | world | drop this |    0
 (18 rows)
 
-set enable_hashjoin=on;
-set enable_nestloop=off;
-set enable_mergejoin=off;
 --
 -- index scan
 --
+set enable_nestloop=on;
 set enable_seqscan=off;
 set enable_indexscan=on;
 set enable_bitmapscan=off;

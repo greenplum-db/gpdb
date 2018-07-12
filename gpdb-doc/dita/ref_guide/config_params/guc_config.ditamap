@@ -99,7 +99,6 @@
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>
             <topicref href="guc-list.xml#gp_enable_direct_dispatch"/>
             <topicref href="guc-list.xml#gp_enable_exchange_default_partition"/>
-            <topicref href="guc-list.xml#gp_enable_fallback_plan"/>
             <topicref href="guc-list.xml#gp_enable_fast_sri"/>
             <topicref href="guc-list.xml#gp_enable_gpperfmon"/>
             <topicref href="guc-list.xml#gp_enable_groupext_distinct_gather"/>
@@ -146,6 +145,7 @@
             <topicref href="guc-list.xml#gp_max_packet_size"/>
             <topicref href="guc-list.xml#gp_max_plan_size"/>
             <topicref href="guc-list.xml#gp_max_slices"/>
+            <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
             <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
@@ -155,6 +155,11 @@
             <topicref href="guc-list.xml#gp_resqueue_priority"/>
             <topicref href="guc-list.xml#gp_resqueue_priority_cpucores_per_segment"/>
             <topicref href="guc-list.xml#gp_resqueue_priority_sweeper_interval"/>
+            <topicref href="guc-list.xml#gp_resgroup_memory_policy"/>
+            <topicref href="guc-list.xml#gp_resource_group_bypass"/>
+            <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
+            <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
+            <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_role"/>
             <topicref href="guc-list.xml#gp_safefswritesize"/>
             <topicref href="guc-list.xml#gp_segment_connect_timeout"/>

@@ -600,13 +600,12 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	Bitmapset  *polbm = NULL;
 	Bitmapset  *indbm = NULL;
 	int			i;
-	GpPolicy   *pol = rel->rd_cdbpolicy;
 
 	/*
 	 * Firstly, unique/primary key indexes aren't supported if we're
 	 * distributing randomly.
 	 */
-	if (GpPolicyIsRandomPartitioned(pol))
+	if (GpPolicyIsRandomPartitioned(rel->rd_cdbpolicy))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
@@ -615,15 +614,15 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	}
 
 	/* replicated table support unique/primary key indexes */
-	if (GpPolicyIsReplicated(pol))
+	if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
 		return;
 
 	/*
 	 * We use bitmaps to make intersection tests easier. As noted, order is
 	 * not relevant so looping is just painful.
 	 */
-	for (i = 0; i < pol->nattrs; i++)
-		polbm = bms_add_member(polbm, pol->attrs[i]);
+	for (i = 0; i < rel->rd_cdbpolicy->nattrs; i++)
+		polbm = bms_add_member(polbm, rel->rd_cdbpolicy->attrs[i]);
 	for (i = 0; i < nidxatts; i++)
 	{
 		if (indattr[i] < 0)
@@ -669,6 +668,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 			policy->attrs[i] = indattr[i];
 
 		GpPolicyReplace(rel->rd_id, policy);
+		rel->rd_cdbpolicy = policy;
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 			elog(NOTICE, "updating distribution policy to match new %s", isprimary ? "primary key" : "unique index");

@@ -236,50 +236,6 @@
 /* #define RTDEBUG */
 
 /*
- * This define lets the system header files know we are interested in features up to Posix 6
- *
- * Solaris is strange... If you want >= 600, you MUST use a C99 compiler, if < 600, you MUST
- * use a C89 compiler.  So, set it to 600 if we are C99, and set it to 500 if we aren't.
- */
-#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE<600
-#undef _XOPEN_SOURCE
-#if !defined(__sun__) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
-#define _XOPEN_SOURCE 600
-#else
-#define _XOPEN_SOURCE 500
-#endif
-#endif
-
-/* Define to activate features from IEEE Stds 1003.1-2001 */
-#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE<200112L
-#undef _POSIX_C_SOURCE
-/* Define to activate features from IEEE Stds 1003.1-2001 */
-#define _POSIX_C_SOURCE 200112L
-#endif
-
-/*
- * Solaris likes this to be defined if we define _XOPEN_SOURCE, otherwise
- * they turn off anything they think is an extension to XOPEN
- */
-#ifndef __EXTENSIONS__
-#define __EXTENSIONS__ 1
-#endif
-
-/*
- * OSX (darwin) wants this if XOPEN_SOURCE is defined
- */
-#ifndef _DARWIN_C_SOURCE
-#define _DARWIN_C_SOURCE 1
-#endif 
-
-/*
- * AIX wants this if XOPEN_SOURCE is defined
- */
-#ifdef _AIX
-#define _ALL_SOURCE
-#endif
-
-/*
  * Greenplum replication configuration file name.
  * This file will be used to store values of replication GUCs
  * set by set_gp_replication_config()

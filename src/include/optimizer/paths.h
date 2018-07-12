@@ -32,7 +32,7 @@ extern PGDLLIMPORT join_search_hook_type join_search_hook;
 
 extern RelOptInfo *make_one_rel(PlannerInfo *root, List *joinlist);
 extern RelOptInfo *standard_join_search(PlannerInfo *root, int levels_needed,
-					 List *initial_rels, bool fallback);
+					 List *initial_rels);
 
 #ifdef OPTIMIZER_DEBUG
 extern void debug_print_rel(PlannerInfo *root, RelOptInfo *rel);
@@ -43,8 +43,7 @@ extern void debug_print_rel(PlannerInfo *root, RelOptInfo *rel);
  *	  routines to generate index paths
  */
 
-extern void create_index_paths(PlannerInfo *root, RelOptInfo *rel,
-                               List **pindexpathlist, List **pbitmappathlist);
+extern void create_index_paths(PlannerInfo *root, RelOptInfo *rel);
 extern List *generate_bitmap_or_paths(PlannerInfo *root, RelOptInfo *rel,
 						 List *clauses, List *outer_clauses,
 						 RelOptInfo *outer_rel);
@@ -73,7 +72,7 @@ extern bool create_or_index_quals(PlannerInfo *root, RelOptInfo *rel);
  * tidpath.h
  *	  routines to generate tid paths
  */
-extern void create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel, List** ppathlist);
+extern void create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel);
 
 /*
  * joinpath.c

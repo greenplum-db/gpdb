@@ -28,9 +28,9 @@ ALTER TABLE name RENAME TO new_name
 ALTER TABLE name SET SCHEMA new_schema
 
 ALTER TABLE [ONLY] name SET 
-     DISTRIBUTED BY (column, [ ... ] ) 
+     WITH (REORGANIZE=true|false) 
+   | DISTRIBUTED BY (column, [ ... ] ) 
    | DISTRIBUTED RANDOMLY 
-   | WITH (REORGANIZE=true|false) 
 
 ALTER TABLE [ONLY] name action [, ... ]
 

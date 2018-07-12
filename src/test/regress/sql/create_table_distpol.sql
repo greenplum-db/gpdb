@@ -77,3 +77,7 @@ CREATE TABLE distpol_person_copy (LIKE distpol_person);
 select attrnums from gp_distribution_policy where localoid = 'distpol_person_copy'::regclass;
 
 RESET gp_create_table_random_default_distribution;
+
+-- Test duplicate distribute keys
+CREATE TABLE ctas_dup_dk as SELECT distinct age as c1, age as c2 from distpol_person; 
+SELECT distinct age c1, age c2 into ctas_dup_dk_1 from distpol_person;

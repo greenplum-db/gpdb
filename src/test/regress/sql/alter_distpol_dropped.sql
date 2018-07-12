@@ -3,7 +3,7 @@
 -- ATSDB can handle them as dropped types
 -- Here's the script to generate all this:
 /*
-#!/bin/bash
+#!/usr/bin/env bash
 align="int2 int4 char double"
 length="variable 1 3 4 11 17 19 23 32 196"
 pbv="true false"

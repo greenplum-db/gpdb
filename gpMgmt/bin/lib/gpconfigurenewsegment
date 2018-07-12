@@ -162,13 +162,6 @@ class ConfExpSegCmd(Command):
                     logger.info("create gp_dbid file for segment")
                     writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
 
-                    # Create pg_xlog/archive_status for new segment in case it dosen't exist.
-                    try:
-                        self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_xlog/archive_status"))
-                    except Exception, e:
-                        self.set_results(CommandResult(1,'',e,True,False))
-                        raise
-
                     logger.info("Updating %s/postgresql.conf" % self.datadir)
                     modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
                                                                           self.datadir + '/postgresql.conf',

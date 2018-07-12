@@ -26,7 +26,12 @@ PROGRAMS = createdb createlang createuser dropdb droplang dropuser clusterdb vac
 
 override CPPFLAGS := -I$(top_srcdir)/src/bin/pg_dump -I$(top_srcdir)/src/bin/psql -I$(libpq_srcdir) $(CPPFLAGS)
 
+
 all: $(PROGRAMS)
+
+ifeq ($(PORTNAME),openbsd)
+override CFLAGS += -pthread
+endif
 
 %: %.o $(WIN32RES)
 	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)

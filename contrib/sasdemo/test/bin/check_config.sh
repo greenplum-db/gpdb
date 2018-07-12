@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 NUMHOSTS=`psql -XtA -c "select count(distinct hostname) from gp_segment_configuration"`
 SEGMENTS=`psql -XtA -c "select count(distinct content) from gp_segment_configuration where content >= 0"`

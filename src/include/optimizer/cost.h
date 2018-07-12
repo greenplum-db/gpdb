@@ -81,10 +81,7 @@ extern bool enable_mergejoin;
 extern bool enable_hashjoin;
 extern int	constraint_exclusion;
 
-extern Cost disable_cost;
-
 extern bool gp_enable_hashjoin_size_heuristic;          /*CDB*/
-extern bool gp_enable_fallback_plan;
 extern bool gp_enable_predicate_propagation;
 
 extern double index_pages_fetched(double tuples_fetched, BlockNumber pages,

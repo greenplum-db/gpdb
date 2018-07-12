@@ -259,9 +259,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 
 	for (;;)
 	{
-		/* GPDB_84_MERGE_FIXME: can the baos_tbmres state be removed from
-		 * BitmapAppendOnlyScanState, or is it possible for it to be carried
-		 * through multiple calls to BitmapAppendOnlyScanNext()? */
 		TBMIterateResult *tbmres = node->baos_tbmres;
 
 		CHECK_FOR_INTERRUPTS();

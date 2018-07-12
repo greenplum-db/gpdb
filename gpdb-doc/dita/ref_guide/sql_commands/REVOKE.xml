@@ -19,6 +19,18 @@ REVOKE [GRANT OPTION FOR] { {CREATE | CONNECT
        FROM {rolename | PUBLIC} [, ...]
        [CASCADE | RESTRICT]
 
+REVOKE [ GRANT OPTION FOR ]
+       { USAGE | ALL [ PRIVILEGES ] }
+       ON FOREIGN DATA WRAPPER <varname>fdw_name</varname> [, ...]
+       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+       { USAGE | ALL [ PRIVILEGES ] }
+       ON FOREIGN SERVER <varname>server_name</varname> [, ...]
+       FROM { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...]
+       [ CASCADE | RESTRICT ]
+
 REVOKE [GRANT OPTION FOR] {EXECUTE | ALL [PRIVILEGES]}
        ON FUNCTION <varname>funcname</varname> ( [[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname>
                               [, ...]] ) [, ...]

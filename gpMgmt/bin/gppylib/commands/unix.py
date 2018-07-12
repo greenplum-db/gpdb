@@ -26,7 +26,8 @@ SUNOS = "sunos"
 LINUX = "linux"
 DARWIN = "darwin"
 FREEBSD = "freebsd"
-platform_list = [SUNOS, LINUX, DARWIN, FREEBSD]
+OPENBSD = "openbsd"
+platform_list = [SUNOS, LINUX, DARWIN, FREEBSD, OPENBSD]
 
 curr_platform = platform.uname()[0].lower()
 
@@ -328,6 +329,22 @@ class FreeBsdPlatform(GenericPlatform):
     def getMountDevFirst(self):
         return True
 
+class OpenBSDPlatform(GenericPlatform):
+    def __init__(self):
+        pass
+
+    def getName(self):
+        return "openbsd"
+
+    def get_machine_arch_cmd(self):
+        return 'uname -m'
+
+    def getMountDevFirst(self):
+        return True
+
+    def getPing6(self):
+        return findCmdInPath('ping6')
+
 
 """ if self.SYSTEM == 'sunos':
             self.PS_TXT='ef'
@@ -373,7 +390,7 @@ class Ping(Command):
         self.obj = obj
         pingToUse = findCmdInPath('ping')
 
-        if curr_platform == LINUX or curr_platform == DARWIN:
+        if curr_platform == LINUX or curr_platform == DARWIN or curr_platform == OPENBSD:
             # Get the family of the address we need to ping.  If it's AF_INET6
             # we must use ping6 to ping it.
             addrinfo = socket.getaddrinfo(hostToPing, None)
@@ -1041,5 +1058,7 @@ elif curr_platform == DARWIN:
     SYSTEM = DarwinPlatform()
 elif curr_platform == FREEBSD:
     SYSTEM = FreeBsdPlatform()
+elif curr_platform == OPENBSD:
+    SYSTEM = OpenBSDPlatform();
 else:
     raise Exception("Platform %s is not supported.  Supported platforms are: %s", SYSTEM, str(platform_list))

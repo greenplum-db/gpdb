@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Make sure we're running from the root git repository, not whatever submodule
 # we could have been called from.

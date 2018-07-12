@@ -119,7 +119,7 @@ jobs:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
-        timeout: 2h
+        timeout: 3h
         on_failure: *pr_failure
 
       - task: icw_gporca_orca_centos6
@@ -143,7 +143,7 @@ jobs:
           bin_gpdb: compiled_bits_ubuntu16
         params:
           TEST_SUITE: "icw"
-        timeout: 2h30m
+        timeout: 3h
         on_failure: *pr_failure
 
       - task: MU_check_centos

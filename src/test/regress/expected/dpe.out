@@ -273,9 +273,8 @@ explain select * from t, pt where t1 = pt1 and ptid = tid;
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(29 rows)
+ Optimizer: legacy query optimizer
+(28 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -438,9 +437,8 @@ explain select count(*) from t, pt where tid = ptid;
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=4)
                                        ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=4)
- Settings:  gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(31 rows)
+ Optimizer: legacy query optimizer
+(30 rows)
 
 select count(*) from t, pt where tid = ptid;
  count 
@@ -486,9 +484,8 @@ explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                        ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(34 rows)
+ Optimizer: legacy query optimizer
+(33 rows)
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid | rank 
@@ -575,9 +572,8 @@ explain select * from t, pt where tid = ptid
                            Filter: dpe_single.t.tid + 2
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                  ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(56 rows)
+ Optimizer: legacy query optimizer
+(55 rows)
 
 select * from t, pt where tid = ptid
 	  union all
@@ -689,9 +685,8 @@ explain select count(*) from
                                              Filter: dpe_single.t.tid + 2
                                              ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
                                                    ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(59 rows)
+ Optimizer: legacy query optimizer
+(58 rows)
 
 select count(*) from
 	( select * from t, pt where tid = ptid
@@ -766,12 +761,10 @@ select * from t, pt where tid = ptid;
     1 |   1 | hello1 | bar |   49 | hello49 | world | drop this |    1
 (18 rows)
 
-set enable_hashjoin=on;
-set enable_nestloop=off;
-set enable_mergejoin=off;
 --
 -- index scan
 --
+set enable_nestloop=on;
 set enable_seqscan=off;
 set enable_indexscan=on;
 set enable_bitmapscan=off;
@@ -779,30 +772,41 @@ set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                                                            QUERY PLAN                                                           
 --------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=20000001202.84..20000001202.91 rows=4 width=50)
-   ->  Merge Join  (cost=20000001202.84..20000001202.91 rows=2 width=50)
-         Merge Cond: t.tid = dpe_single.pt.ptid
-         ->  Sort  (cost=10000000001.12..10000000001.13 rows=2 width=19)
-               Sort Key: t.tid
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
-                     ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
-         ->  Sort  (cost=1201.72..1201.73 rows=2 width=31)
-               Sort Key: dpe_single.pt.ptid
-               ->  Append  (cost=0.00..1201.64 rows=2 width=31)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000001203.07 rows=6 width=50)
+   ->  Nested Loop  (cost=10000000000.00..10000001203.07 rows=2 width=50)
+         Join Filter: t.tid = dpe_single.pt.ptid
+         ->  Append  (cost=0.00..1201.64 rows=2 width=31)
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+               ->  Result  (cost=0.00..200.27 rows=1 width=31)
+                     One-Time Filter: PartSelected
                      ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..200.27 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
+         ->  Materialize  (cost=10000000000.00..10000000001.10 rows=2 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+                     Filter: t.tid
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+                           ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
  Optimizer: legacy query optimizer
-(23 rows)
+(34 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -842,14 +846,13 @@ explain select * from t, pt where tid = ptid;
                ->  Result  (cost=0.00..706.33 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Index Scan using ptid_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..706.33 rows=3 width=31)
-         ->  Materialize  (cost=1.08..1.12 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.08 rows=2 width=19)
+         ->  Materialize  (cost=10000000000.00..10000000001.10 rows=2 width=19)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
                      Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
-                           ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(29 rows)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+                           ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
+ Optimizer: legacy query optimizer
+(28 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -882,48 +885,48 @@ set enable_seqscan=on;
 set enable_hashjoin=on;
 set enable_nestloop=off;
 explain select * from t, pt where t1 = pt1;
-                                                                             QUERY PLAN                                                                              
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=2.13..8.87 rows=3 width=50)
-   ->  Hash Join  (cost=2.13..8.87 rows=3 width=50)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.13..20.00 rows=6 width=50)
+   ->  Hash Join  (cost=1.13..20.00 rows=2 width=50)
          Hash Cond: dpe_single.pt.pt1 = t.t1
-         ->  Append  (cost=0.00..6.54 rows=27 width=31)
-               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..1.09 rows=5 width=31)
-         ->  Hash  (cost=2.08..2.08 rows=2 width=19)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.08 rows=2 width=19)
-                     ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2
+         ->  Append  (cost=0.00..18.54 rows=18 width=31)
+               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
+         ->  Hash  (cost=1.08..1.08 rows=2 width=19)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
+                     ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
+ Optimizer: legacy query optimizer
 (14 rows)
 
 select * from t, pt where t1 = pt1;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
 ------+-----+--------+-----+------+--------+-------+-----------+------
-    1 |   1 | hello1 | bar |    1 | hello1 | world | drop this |    1
     0 |   0 | hello0 | bar |    0 | hello0 | world | drop this |    0
+    1 |   1 | hello1 | bar |    1 | hello1 | world | drop this |    1
 (2 rows)
 
 explain select * from t, pt where tid < ptid;
-                                                                             QUERY PLAN                                                                              
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=2.08..13.48 rows=18 width=50)
-   ->  Nested Loop  (cost=2.08..13.48 rows=18 width=50)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000022.60 rows=36 width=50)
+   ->  Nested Loop  (cost=10000000000.00..10000000022.60 rows=12 width=50)
          Join Filter: t.tid < dpe_single.pt.ptid
-         ->  Append  (cost=0.00..6.54 rows=27 width=31)
-               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..1.09 rows=5 width=31)
-               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..1.09 rows=5 width=31)
-         ->  Materialize  (cost=2.08..2.12 rows=2 width=19)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.08 rows=2 width=19)
-                     ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2
+         ->  Append  (cost=0.00..18.54 rows=18 width=31)
+               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
+               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
+         ->  Materialize  (cost=0.00..1.10 rows=2 width=19)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
+                     ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
+ Optimizer: legacy query optimizer
 (14 rows)
 
 select * from t, pt where tid < ptid;
@@ -1276,9 +1279,8 @@ explain select * from t, pt where a = b;
                      Filter: t.a
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=8)
                            ->  Seq Scan on t  (cost=0.00..2.05 rows=2 width=8)
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(26 rows)
+ Optimizer: legacy query optimizer
+(25 rows)
 
 select * from t, pt where a = b;
  id | a | id | b 
@@ -1342,9 +1344,8 @@ explain select * from t, pt where a = b;
                ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..2.02 rows=1 width=4)
                      Filter: t.a
                      ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(25 rows)
+ Optimizer: legacy query optimizer
+(24 rows)
 
 select * from t, pt where a = b;
  a | b 
@@ -1430,7 +1431,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer: legacy query optimizer
 (23 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
@@ -1540,9 +1541,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                            Filter: dim1.code, dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(50 rows)
+ Optimizer: legacy query optimizer
+(49 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -1628,7 +1628,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer: legacy query optimizer
 (23 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
@@ -1788,9 +1788,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(50 rows)
+ Optimizer: legacy query optimizer
+(49 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |   u   
@@ -1922,7 +1921,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer: legacy query optimizer
 (19 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
@@ -2012,9 +2011,8 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(30 rows)
+ Optimizer: legacy query optimizer
+(29 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -2108,7 +2106,7 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                        ->  Hash  (cost=1.04..1.04 rows=1 width=4)
                                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=4)
                                                    ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
+ Optimizer: legacy query optimizer
 (31 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
@@ -2178,9 +2176,8 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                                    Filter: dim1.pid
                                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=4)
                                                          ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(58 rows)
+ Optimizer: legacy query optimizer
+(57 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
  code | count 
@@ -2244,9 +2241,8 @@ explain select * from dim inner join malp on (dim.i = malp.i);
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                            Hash Key: dim.i
                            ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(21 rows)
+ Optimizer: legacy query optimizer
+(20 rows)
 
 set gp_dynamic_partition_pruning = off;
 select * from dim inner join malp on (dim.i = malp.i);
@@ -2319,9 +2315,8 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
          ->  Hash  (cost=2.20..2.20 rows=4 width=6)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
                      ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(18 rows)
+ Optimizer: legacy query optimizer
+(17 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
  id | t | id | t | id | t 
@@ -2365,9 +2360,8 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
          ->  Hash  (cost=2.20..2.20 rows=4 width=6)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
                      ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(30 rows)
+ Optimizer: legacy query optimizer
+(29 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
  id | t | id | t | id | t 
@@ -2435,9 +2429,8 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                                              ->  Sort  (cost=1.02..1.02 rows=1 width=8)
                                                    Sort Key: dpe_bugs.jpat.a
                                                    ->  Seq Scan on jpat  (cost=0.00..1.01 rows=1 width=8)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
- Optimizer status: legacy query optimizer
-(33 rows)
+ Optimizer: legacy query optimizer
+(32 rows)
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
      b      | count | a | a 

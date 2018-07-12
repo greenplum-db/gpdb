@@ -13,6 +13,8 @@
 			<topicref href="sql_commands/ALTER_DOMAIN.xml"/>
 			<topicref href="sql_commands/ALTER_EXTENSION.xml"/>
 			<topicref href="sql_commands/ALTER_EXTERNAL_TABLE.xml"/>
+			<topicref href="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml"/>
+			<topicref href="sql_commands/ALTER_FOREIGN_TABLE.xml"/>
 			<topicref href="sql_commands/ALTER_FUNCTION.xml"/>
 			<topicref href="sql_commands/ALTER_GROUP.xml"/>
 			<topicref href="sql_commands/ALTER_INDEX.xml"/>
@@ -26,11 +28,13 @@
 			<topicref href="sql_commands/ALTER_ROLE.xml"/>
 			<topicref href="sql_commands/ALTER_SCHEMA.xml"/>
 			<topicref href="sql_commands/ALTER_SEQUENCE.xml"/>
+			<topicref href="sql_commands/ALTER_SERVER.xml"/>
 			<topicref href="sql_commands/ALTER_TABLE.xml"/>
 			<topicref href="sql_commands/ALTER_TABLESPACE.xml"/>
 			<topicref href="sql_commands/ALTER_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/ALTER_TYPE.xml"/>
 			<topicref href="sql_commands/ALTER_USER.xml"/>
+			<topicref href="sql_commands/ALTER_USER_MAPPING.xml"/>
 			<topicref href="sql_commands/ALTER_VIEW.xml"/>
 			<topicref href="sql_commands/ANALYZE.xml"/>
 			<topicref href="sql_commands/BEGIN.xml"/>
@@ -47,6 +51,8 @@
 			<topicref href="sql_commands/CREATE_DOMAIN.xml"/>
 			<topicref href="sql_commands/CREATE_EXTENSION.xml"/>
 			<topicref href="sql_commands/CREATE_EXTERNAL_TABLE.xml"/>
+			<topicref href="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml"/>
+			<topicref href="sql_commands/CREATE_FOREIGN_TABLE.xml"/>
 			<topicref href="sql_commands/CREATE_FUNCTION.xml"/>
 			<topicref href="sql_commands/CREATE_GROUP.xml"/>
 			<topicref href="sql_commands/CREATE_INDEX.xml"/>
@@ -61,12 +67,14 @@
 			<topicref href="sql_commands/CREATE_RULE.xml"/>
 			<topicref href="sql_commands/CREATE_SCHEMA.xml"/>
 			<topicref href="sql_commands/CREATE_SEQUENCE.xml"/>
+			<topicref href="sql_commands/CREATE_SERVER.xml"/>
 			<topicref href="sql_commands/CREATE_TABLE.xml"/>
 			<topicref href="sql_commands/CREATE_TABLE_AS.xml"/>
 			<topicref href="sql_commands/CREATE_TABLESPACE.xml"/>
 			<topicref href="sql_commands/CREATE_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/CREATE_TYPE.xml"/>
 			<topicref href="sql_commands/CREATE_USER.xml"/>
+			<topicref href="sql_commands/CREATE_USER_MAPPING.xml"/>
 			<topicref href="sql_commands/CREATE_VIEW.xml"/>
 			<topicref href="sql_commands/DEALLOCATE.xml"/>
 			<topicref href="sql_commands/DECLARE.xml"/>
@@ -80,6 +88,8 @@
 			<topicref href="sql_commands/DROP_DOMAIN.xml"/>
 			<topicref href="sql_commands/DROP_EXTENSION.xml"/>
 			<topicref href="sql_commands/DROP_EXTERNAL_TABLE.xml"/>
+			<topicref href="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml"/>
+			<topicref href="sql_commands/DROP_FOREIGN_TABLE.xml"/>
 			<topicref href="sql_commands/DROP_FUNCTION.xml"/>
 			<topicref href="sql_commands/DROP_GROUP.xml"/>
 			<topicref href="sql_commands/DROP_INDEX.xml"/>
@@ -95,11 +105,13 @@
 			<topicref href="sql_commands/DROP_RULE.xml"/>
 			<topicref href="sql_commands/DROP_SCHEMA.xml"/>
 			<topicref href="sql_commands/DROP_SEQUENCE.xml"/>
+			<topicref href="sql_commands/DROP_SERVER.xml"/>
 			<topicref href="sql_commands/DROP_TABLE.xml"/>
 			<topicref href="sql_commands/DROP_TABLESPACE.xml"/>
 			<topicref href="sql_commands/DROP_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/DROP_TYPE.xml"/>
 			<topicref href="sql_commands/DROP_USER.xml"/>
+			<topicref href="sql_commands/DROP_USER_MAPPING.xml"/>
 			<topicref href="sql_commands/DROP_VIEW.xml"/>
 			<topicref href="sql_commands/END.xml"/>
 			<topicref href="sql_commands/EXECUTE.xml"/>
@@ -138,6 +150,12 @@
 			<topicref href="system_catalogs/catalog_ref-tables.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-views.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-html.xml#topic1">
+				<topicref href="system_catalogs/foreign_data_wrapper_options.xml"/>
+				<topicref href="system_catalogs/foreign_data_wrappers.xml"/>
+				<topicref href="system_catalogs/foreign_server_options.xml"/>
+				<topicref href="system_catalogs/foreign_servers.xml"/>
+				<topicref href="system_catalogs/foreign_table_options.xml"/>
+				<topicref href="system_catalogs/foreign_tables.xml"/>
 				<topicref href="system_catalogs/gp_configuration_history.xml"/>
 				<topicref href="system_catalogs/gp_distributed_log.xml"/>
 				<topicref href="system_catalogs/gp_distributed_xacts.xml"/>
@@ -177,6 +195,9 @@
 				<topicref href="system_catalogs/pg_enum.xml"/>
 				<topicref href="system_catalogs/pg_extension.xml"/>
 				<topicref href="system_catalogs/pg_exttable.xml"/>
+				<topicref href="system_catalogs/pg_foreign_data_wrapper.xml"/>
+				<topicref href="system_catalogs/pg_foreign_server.xml"/>
+				<topicref href="system_catalogs/pg_foreign_table.xml"/>
 				<topicref href="system_catalogs/pg_index.xml"/>
 				<topicref href="system_catalogs/pg_inherits.xml"/>
 				<topicref href="system_catalogs/pg_language.xml"/>
@@ -218,6 +239,9 @@
 				<topicref href="system_catalogs/pg_type.xml"/>
 				<topicref href="system_catalogs/pg_type_encoding.xml"/>
 				<topicref href="system_catalogs/pg_user_mapping.xml"/>
+				<topicref href="system_catalogs/pg_user_mappings.xml"/>
+				<topicref href="system_catalogs/user_mapping_options.xml"/>
+				<topicref href="system_catalogs/user_mappings.xml"/>
 			</topicref>
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>

@@ -15,6 +15,14 @@ GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [,...] | ALL
     ON DATABASE <varname>dbname</varname> [, ...]
     TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
+GRANT { USAGE | ALL [ PRIVILEGES ] }
+    ON FOREIGN DATA WRAPPER <varname>fdwname</varname> [, ...]
+    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { USAGE | ALL [ PRIVILEGES ] }
+    ON FOREIGN SERVER <varname>servername</varname> [, ...]
+    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
 GRANT { EXECUTE | ALL [PRIVILEGES] }
     ON FUNCTION <varname>funcname</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] 
 ] ) [, ...]
@@ -38,7 +46,7 @@ GRANT <varname>parent_role</varname> [, ...]
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
     ON PROTOCOL <varname>protocolname</varname>
     TO <varname>username</varname></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>GRANT</codeph> command has two basic variants: one that
-grants privileges on a database object (table, view, sequence, database,
+grants privileges on a database object (table, view, foreign table, sequence, database, foreign-data wrapper, foreign server,
 function, procedural language, schema, or tablespace), and one that grants
 membership in a role.</p><sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the <codeph>GRANT</codeph> command gives specific privileges
 on a database object to one or more roles. These privileges are added
@@ -112,7 +120,10 @@ of privilege that is applicable to procedural languages.</pd><pd>For schemas, al
 schema (assuming that the objects' own privilege requirements are also
 met). Essentially this allows the grantee to look up objects within the
 schema.</pd><pd>For sequences, this privilege allows the use of the 
-<codeph>nextval()</codeph> function. </pd></plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
+<codeph>nextval()</codeph> function.</pd>
+        <pd>For foreign-data wrappers, this privilege enables the grantee to create new servers using that foreign-data wrapper.</pd>
+        <pd>For servers, this privilege enables the grantee to create, alter, and drop their own user's user mappings associated with that server. Also, it enables the grantee to query the options of the server and associated user mappings.</pd>
+     </plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
 key word is optional in Greenplum Database, though it is required by
 strict SQL. </pd></plentry><plentry><pt>PUBLIC</pt><pd>A special group-level role that denotes that the privileges are to
 be granted to all roles, including those that may be created later. </pd></plentry><plentry><pt>WITH GRANT OPTION</pt><pd>The recipient of the privilege may in turn grant it to others.</pd></plentry><plentry><pt>WITH ADMIN OPTION</pt><pd>The member of a role may in turn grant membership in the role to

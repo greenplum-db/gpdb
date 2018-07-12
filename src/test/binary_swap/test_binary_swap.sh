@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 ## ==================================================================
 ## Required: regression database generated from src/test/regress

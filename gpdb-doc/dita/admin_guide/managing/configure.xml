@@ -467,9 +467,6 @@
                   <codeph>gp_enable_direct_dispatch</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_fallback_plan</codeph>
-                </p>
-                <p>
                   <codeph>gp_enable_fast_sri</codeph>
                 </p>
                 <p>

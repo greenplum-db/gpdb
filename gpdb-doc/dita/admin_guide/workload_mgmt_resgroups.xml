@@ -235,6 +235,10 @@
           <codeph>CONCURRENCY</codeph> limit. When a running transaction completes, Greenplum
         Database un-queues and executes the earliest queued transaction if sufficient memory
         resources exist.</p>
+      <p>You can set the server configuration parameter <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#gp_resource_group_bypass" type="section"
+            scope="peer">gp_resource_group_bypass</xref></codeph> to bypass a resource group
+        concurrency limit.</p>
     </body>
   </topic>
 

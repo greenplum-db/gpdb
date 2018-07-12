@@ -813,8 +813,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
     
     subroot->config = CopyPlannerConfig(root->config);
 	subroot->config->honor_order_by = false;
-	/* CDB: Clear fallback */
-	subroot->config->mpp_trying_fallback_plan = false;
 
 	/*
 	 * Pull up any SubLinks within the subquery's quals, so that we don't

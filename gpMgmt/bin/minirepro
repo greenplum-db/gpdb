@@ -258,7 +258,8 @@ def dump_stats(cur, oid_str, f_out):
             rowTypes = types + [vals[3] + '[]'] * 4
         for val, typ in zip(vals[5:], rowTypes):
             i = i + 1
-            if i == 9 and (val == 5 or val == 6):
+            str_val = "'%s'" % val
+            if i == 9 and (val == 98 or val == 99):
                 hll = True
 
             if val is None:
@@ -266,7 +267,7 @@ def dump_stats(cur, oid_str, f_out):
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = "E'%s'" % E(val)
             if i == 21 and hll == True:
-                rowVals.append('\t{0}::{1}'.format(val, 'bytea[]'))
+                rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}::{1}'.format(val, typ))
 
