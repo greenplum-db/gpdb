@@ -65,6 +65,7 @@ typedef struct ForeignTable
 	Oid			relid;			/* relation Oid */
 	Oid			serverid;		/* server Oid */
 	List	   *options;		/* ftoptions as DefElem list */
+	char		exec_location;  /* execute on MASTER, ANY or ALL SEGMENTS, Greenplum MPP specific */
 } ForeignTable;
 
 
@@ -80,5 +81,14 @@ extern List *GetForeignColumnOptions(Oid relid, AttrNumber attnum);
 
 extern Oid	get_foreign_data_wrapper_oid(const char *fdwname, bool missing_ok);
 extern Oid	get_foreign_server_oid(const char *servername, bool missing_ok);
+
+/* ----------------
+ *		compiler constants for ForeignTable's exec_location
+ * ----------------
+ */
+
+#define FTEXECLOCATION_ANY 'a'
+#define FTEXECLOCATION_MASTER 'm'
+#define FTEXECLOCATION_ALL_SEGMENTS 's'
 
 #endif   /* FOREIGN_H */

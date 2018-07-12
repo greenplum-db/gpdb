@@ -18,6 +18,7 @@
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
 #include "catalog/pg_user_mapping.h"
+#include "commands/defrem.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
 #include "lib/stringinfo.h"
@@ -223,6 +224,11 @@ GetForeignTable(Oid relid)
 	HeapTuple	tp;
 	Datum		datum;
 	bool		isnull;
+	ListCell *lc = NULL;
+	ListCell *prev = NULL;
+	char *mpp_execute = NULL;
+	char exec_location = FTEXECLOCATION_MASTER; /* mpp_execute master by default */
+
 
 	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tp))
@@ -242,6 +248,37 @@ GetForeignTable(Oid relid)
 		ft->options = NIL;
 	else
 		ft->options = untransformRelOptions(datum);
+
+	/* Get and separate out the mpp_execute option. */
+	foreach(lc, ft->options)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		if (strcmp(def->defname, "mpp_execute") == 0)
+		{
+			mpp_execute = defGetString(def);
+
+			if (pg_strcasecmp(mpp_execute, "any") == 0)
+				exec_location = FTEXECLOCATION_ANY;
+			else if (pg_strcasecmp(mpp_execute, "master") == 0)
+				exec_location = FTEXECLOCATION_MASTER;
+			else if (pg_strcasecmp(mpp_execute, "all segments") == 0)
+				exec_location = FTEXECLOCATION_ALL_SEGMENTS;
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%s\" is not a valid mpp_execute value",
+								mpp_execute)));
+			}
+
+			ft->options = list_delete_cell(ft->options, lc, prev);
+			break;
+		}
+		prev = lc;
+	}
+
+	ft->exec_location = exec_location;
 
 	ReleaseSysCache(tp);
 

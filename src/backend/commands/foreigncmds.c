@@ -172,9 +172,39 @@ transformGenericOptions(Oid catalogId,
 
 	result = optionListToArray(resultOptions);
 
+	/*
+	 * Check and separate out the mpp_execute option, fdwvalidator doesn't have
+	 * to handle it.
+	 */
+	ListCell   *optprev = NULL;
+	char	   *mpp_execute = NULL;
+	foreach(optcell, resultOptions)
+	{
+		DefElem    *def = (DefElem *) lfirst(optcell);
+
+		if (strcmp(def->defname, "mpp_execute") == 0)
+		{
+			mpp_execute = defGetString(def);
+
+			if (pg_strcasecmp(mpp_execute, "any") != 0 &&
+				pg_strcasecmp(mpp_execute, "master") != 0 &&
+				pg_strcasecmp(mpp_execute, "all segments") != 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%s\" is not a valid mpp_execute value",
+								mpp_execute)));
+			}
+
+			resultOptions = list_delete_cell(resultOptions, optcell, optprev);
+			break;
+		}
+		optprev = optcell;
+	}
+
 	if (OidIsValid(fdwvalidator))
 	{
-		Datum		valarg = result;
+		Datum valarg = optionListToArray(resultOptions);
 
 		/*
 		 * Pass a null options list as an empty array, so that validators

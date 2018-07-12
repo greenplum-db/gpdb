@@ -23,7 +23,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
     [, ... ]
 ] )
   SERVER <replaceable class="parameter">server_name</replaceable>
-[ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
+[ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
 
 <phrase>where <replaceable class="PARAMETER">column_constraint</replaceable> is:</phrase>
 
@@ -170,7 +170,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
    </varlistentry>
 
    <varlistentry>
-    <term><literal>OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ...] )</literal></term>
+    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ...] )</literal></term>
     <listitem>
      <para>
       Options to be associated with the new foreign table or one of its
@@ -179,6 +179,50 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
       data wrapper and are validated using the foreign-data wrapper's
       validator function.  Duplicate option names are not allowed (although
       it's OK for a table option and a column option to have the same name).
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="PARAMETER">mpp_execute</replaceable></term>
+    <listitem>
+     <para>
+     MASTER is the default, FDW requests for data from master.
+
+     ANY, FDW requests for data from master or one any segment, depends on
+     which path costs less.
+
+     ALL SEGMENTS, FDW requests for data from all segments, wrappers need to
+     have a policy matching the segments to data.
+
+     For instance, file_fdw probes the mpp_execute vaule, then load different
+     files based on the segment number. But something like gpfdist on the
+     foreign side doesn't need this, which hands out a different slice of the
+     data to each request, all segments could request the same location.
+
+     Code snippet to probe the mpp_execute value:
+<programlisting>
+ForeignTable *table = GetForeignTable(foreigntableid);
+
+if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+{
+    ...
+}
+else if (table->exec_location == FTEXECLOCATION_ANY)
+{
+    ...
+}
+else if (table->exec_location == FTEXECLOCATION_MASTER)
+{
+    ...
+}
+</programlisting>
+     
+     Code snippet to get the segment number:
+<programlisting>
+int segmengNumber = GpIdentity.segindex;
+int totalNumberOfSegments = getgpsegmentCount();
+</programlisting>
      </para>
     </listitem>
    </varlistentry>

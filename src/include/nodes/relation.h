@@ -24,6 +24,7 @@
 #include "storage/block.h"
 #include "nodes/plannerconfig.h"
 #include "cdb/cdbpathlocus.h"
+#include "foreign/foreign.h"
 
 
 /*
@@ -599,6 +600,9 @@ typedef struct RelOptInfo
 	List	   *joininfo;		/* RestrictInfo structures for join clauses
 								 * involving this rel */
 	bool		has_eclass_joins;		/* T means joininfo is incomplete */
+
+	/* used by foreign scan */
+	ForeignTable		*ftEntry;
 } RelOptInfo;
 
 /*

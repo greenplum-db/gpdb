@@ -2881,7 +2881,21 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.startup_cost = startup_cost;
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
-	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
+
+	switch (rel->ftEntry->exec_location)
+	{
+		case FTEXECLOCATION_ANY:
+			CdbPathLocus_MakeGeneral(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			CdbPathLocus_MakeStrewn(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		case FTEXECLOCATION_MASTER:
+			CdbPathLocus_MakeEntry(&(pathnode->path.locus));
+			break;
+		default:
+			elog(ERROR, "unrecognized exec_location '%c'", rel->ftEntry->exec_location);
+	}
 
 	pathnode->fdw_private = fdw_private;
 

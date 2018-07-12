@@ -152,7 +152,7 @@ test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts f
 # NB: temp.sql does a reconnect which transiently uses 2 connections,
 # so keep this parallel group to at most 19 tests
 # ----------
-test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table alter_extension sequence polymorphism rowtypes with xml
+test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table alter_extension sequence polymorphism rowtypes with xml gp_foreign_data
 
 # large objects are not supported by GPDB
 # test: largeobject

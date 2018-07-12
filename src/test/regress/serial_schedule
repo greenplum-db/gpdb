@@ -118,6 +118,7 @@ test: combocid
 test: tsearch
 test: tsdicts
 test: foreign_data
+test: gp_foreign_data
 test: window
 test: xmlmap
 test: functional_deps
