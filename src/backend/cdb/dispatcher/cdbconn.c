@@ -572,6 +572,7 @@ cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
 	PGresult   *pRes = NULL;
 	ExecStatusType stat;
 	int			i = 0;
+	bool retval = true;
 
 	/* PQstatus() is smart enough to handle NULL */
 	while (NULL != (pRes = PQgetResult(segdbDesc->conn)))
@@ -584,13 +585,31 @@ cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
 			 PQerrorMessage(segdbDesc->conn));
 
 		if (stat == PGRES_FATAL_ERROR || stat == PGRES_BAD_RESPONSE)
-			return true;
+		{
+			retval = true;
+			break;
+		}
 
 		if (i++ > retryCount)
-			return false;
+		{
+			retval = false;
+			break;
+		}
 	}
 
-	return true;
+	/*
+	 * Clear of all the notify messages as well.
+	 */
+	PGnotify   *notify = segdbDesc->conn->notifyHead;
+	while (notify != NULL)
+	{
+		PGnotify   *prev = notify;
+		notify = notify->next;
+		PQfreemem(prev);
+	}
+	segdbDesc->conn->notifyHead = segdbDesc->conn->notifyTail = NULL;
+
+	return retval;
 }
 
 /* Return if it's a bad connection */
