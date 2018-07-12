@@ -117,7 +117,7 @@ PXF filter pushdown can be used with these operators:
 To summarize, all of the following criteria must be met for filter pushdown to occur:
 * The Greenplum Database protocol that is used to access external data must use filter pushdown. The `pxf` external table protocol can use pushdown.
 * The external data source that is being accessed must support pushdown. For example, both HBase and Hive support pushdown.
-* For queries that use the `pxf` protocol, the underlying PXF connector must support filter pushdown. For example, HBase and Hive support pushdown.
+* For queries that use the `pxf` protocol, the underlying PXF connector must support filter pushdown. For example, the HBase and Hive connectors support pushdown.
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
