@@ -752,15 +752,15 @@ class GpStop:
         hostname = socket.gethostname()
         logger.info("Signalling all postmaster processes to reload")
         for db in dbList:
-            if db.getSegmentHostName() == "localhost" or db.getSegmentHostName() == hostname:
-                cmd = pg.ReloadDbConf(name="reload segment number " + str(db.getSegmentDbId())
-                                      , db=db
-                                      )
-            else:
-                cmd = pg.ReloadDbConf(name="reload segment number " + str(db.getSegmentDbId())
-                                  , db=db
-                                  , ctxt=REMOTE
-                                  , remoteHost=db.getSegmentHostName()
+            ctxt = REMOTE
+            remote_host = db.getSegmentHostName()
+            if db.getSegmentHostName() == hostname:
+                ctxt = LOCAL
+                remote_host = None
+            cmd = pg.ReloadDbConf(name="reload segment number " + str(db.getSegmentDbId()),
+                                  db=db,
+                                  ctxt=ctxt,
+                                  remoteHost=remote_host
                                   )
             self.pool.addCommand(cmd)
             dispatch_count = dispatch_count + 1
