@@ -20,6 +20,7 @@
 
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"
+#include "catalog/pg_foreign_table.h"
 #include "executor/executor.h"
 #include "executor/nodeHash.h"
 #include "foreign/fdwapi.h"
@@ -1048,6 +1049,7 @@ create_aocs_path(PlannerInfo *root, RelOptInfo *rel, Relids required_outer)
 	cost_aocsscan(pathnode, root, rel, pathnode->path.param_info);
 	return pathnode;
 }
+
 /*
 * Create a path for scanning an external table
  */
@@ -2836,7 +2838,18 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.startup_cost = startup_cost;
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
-	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
+
+	switch (rel->ftEntry->exec_location)
+	{
+		case FTEXECLOCATION_ANY:
+			CdbPathLocus_MakeGeneral(&(pathnode->path.locus));
+			break;
+		case FTEXECLOCATION_MASTER:
+			CdbPathLocus_MakeEntry(&(pathnode->path.locus));
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			CdbPathLocus_MakeStrewn(&(pathnode->path.locus));
+	}
 
 	pathnode->fdw_private = fdw_private;
 

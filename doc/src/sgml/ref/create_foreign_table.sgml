@@ -24,6 +24,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
 ] )
   SERVER <replaceable class="parameter">server_name</replaceable>
 [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
+[ EXECUTE ON { ANY | MASTER | ALL SEGMENTS } ]
 
 </synopsis>
  </refsynopsisdiv>

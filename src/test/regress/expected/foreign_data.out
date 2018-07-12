@@ -687,6 +687,7 @@ COMMENT ON COLUMN ft1.c1 IS 'ft1.c1';
  c3     | date    |           |                                | plain    |              | 
 Server: s0
 FDW Options: (delimiter ',', quote '"', "be quoted" 'value')
+Execute on: master segment
 Has OIDs: no
 
 \det+
@@ -702,6 +703,54 @@ SELECT * FROM ft1;                                              -- ERROR
 ERROR:  foreign-data wrapper "dummy" has no handler
 EXPLAIN SELECT * FROM ft1;                                      -- ERROR
 ERROR:  foreign-data wrapper "dummy" has no handler
+CREATE FOREIGN TABLE ft2 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',') EXECUTE ON a;               -- ERROR
+ERROR:  syntax error at or near "a"
+LINE 3: ) SERVER s0 OPTIONS (delimiter ',') EXECUTE ON a;
+                                                       ^
+CREATE FOREIGN TABLE ft2 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',') EXECUTE ON ANY;
+\d+ ft2
+                            Foreign table "public.ft2"
+ Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
+--------+---------+-----------+-------------+---------+--------------+-------------
+ c1     | integer |           |             | plain   |              | 
+Server: s0
+FDW Options: (delimiter ',')
+Execute on: any segment
+Has OIDs: no
+
+CREATE FOREIGN TABLE ft3 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',') EXECUTE ON MASTER;
+\d+ ft3
+                            Foreign table "public.ft3"
+ Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
+--------+---------+-----------+-------------+---------+--------------+-------------
+ c1     | integer |           |             | plain   |              | 
+Server: s0
+FDW Options: (delimiter ',')
+Execute on: master segment
+Has OIDs: no
+
+CREATE FOREIGN TABLE ft4 (
+	c1 int
+) SERVER s0 OPTIONS (delimiter ',') EXECUTE ON ALL SEGMENTS;
+\d+ ft4
+                            Foreign table "public.ft4"
+ Column |  Type   | Modifiers | FDW Options | Storage | Stats target | Description 
+--------+---------+-----------+-------------+---------+--------------+-------------
+ c1     | integer |           |             | plain   |              | 
+Server: s0
+FDW Options: (delimiter ',')
+Execute on: all segments
+Has OIDs: no
+
+DROP FOREIGN TABLE ft2;
+DROP FOREIGN TABLE ft3;
+DROP FOREIGN TABLE ft4;
 -- ALTER FOREIGN TABLE
 COMMENT ON FOREIGN TABLE ft1 IS 'foreign table';
 COMMENT ON FOREIGN TABLE ft1 IS NULL;
@@ -748,6 +797,7 @@ ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1;
  c10    | integer |           | (p1 'v1')                      | plain    |              | 
 Server: s0
 FDW Options: (delimiter ',', quote '"', "be quoted" 'value')
+Execute on: master segment
 Has OIDs: no
 
 -- can't change the column type if it's used elsewhere
@@ -792,6 +842,7 @@ ALTER FOREIGN TABLE foreign_schema.ft1 RENAME TO foreign_table_1;
  c10              | integer |           | (p1 'v1')
 Server: s0
 FDW Options: (quote '~', "be quoted" 'value', escape '@')
+Execute on: master segment
 
 -- alter noexisting table
 ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c4 integer;

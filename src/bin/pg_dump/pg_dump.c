@@ -64,6 +64,7 @@
 #include "pg_backup_db.h"
 #include "dumpmem.h"
 #include "dumputils.h"
+#include "catalog/pg_foreign_table.h"
 
 extern char *optarg;
 extern int	optind,
@@ -13041,6 +13042,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	char	   *storage;
 	char	   *srvname;
 	char	   *ftoptions = NULL;
+	char	   *exec_location = NULL;
 	int			j,
 				k;
 	bool		isPartitioned = false;
@@ -13127,6 +13129,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		{
 			int			i_srvname;
 			int			i_ftoptions;
+			int			i_exec_location;
 
 			reltypename = "FOREIGN TABLE";
 
@@ -13138,7 +13141,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 							  "' ' || pg_catalog.quote_literal(option_value) "
 							"FROM pg_catalog.pg_options_to_table(ftoptions) "
 							  "ORDER BY option_name"
-							  "), E',\n    ') AS ftoptions "
+							  "), E',\n    ') AS ftoptions, ft.exec_location "
 							  "FROM pg_catalog.pg_foreign_table ft "
 							  "JOIN pg_catalog.pg_foreign_server fs "
 							  "ON (fs.oid = ft.ftserver) "
@@ -13147,8 +13150,10 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			res = ExecuteSqlQueryForSingleRow(fout, query->data);
 			i_srvname = PQfnumber(res, "srvname");
 			i_ftoptions = PQfnumber(res, "ftoptions");
+			i_exec_location = PQfnumber(res, "exec_location");
 			srvname = pg_strdup(PQgetvalue(res, 0, i_srvname));
 			ftoptions = pg_strdup(PQgetvalue(res, 0, i_ftoptions));
+			exec_location = pg_strdup(PQgetvalue(res, 0, i_exec_location));
 			PQclear(res);
 		}
 		else
@@ -13156,6 +13161,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			reltypename = "TABLE";
 			srvname = NULL;
 			ftoptions = NULL;
+			exec_location = NULL;
 		}
 		numParents = tbinfo->numParents;
 		parents = tbinfo->parents;
@@ -13499,6 +13505,25 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		/* Dump generic options if any */
 		if (ftoptions && ftoptions[0])
 			appendPQExpBuffer(q, "\nOPTIONS (\n    %s\n)", ftoptions);
+
+		/* Dump EXECUTE ON clause */
+		if (exec_location && exec_location[0])
+		{
+			appendPQExpBuffer(q, "\nEXECUTE ON ");
+
+			switch (exec_location[0])
+			{
+				case FTEXECLOCATION_ANY:
+					appendPQExpBuffer(q, "ANY");
+					break;
+				case FTEXECLOCATION_ALL_SEGMENTS:
+					appendPQExpBuffer(q, "ALL SEGMENTS");
+					break;
+				default: /* FTEXECLOCATION_MASTER */
+					appendPQExpBuffer(q, "MASTER");
+					break;
+			}
+		}
 
 		appendPQExpBuffer(q, ";\n");
 

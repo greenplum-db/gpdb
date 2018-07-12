@@ -1189,6 +1189,7 @@ _readCreateForeignTableStmt(void)
 
 	READ_STRING_FIELD(servername);
 	READ_NODE_FIELD(options);
+	READ_NODE_FIELD(exec_location);
 
 	READ_DONE();
 }

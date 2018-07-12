@@ -372,7 +372,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <node>    table_value_select_clause
 
 %type <list>	opt_fdw_options fdw_options
-%type <defelt>	fdw_option
+%type <defelt>	fdw_option ft_exec_location_option
 
 %type <range>	OptTempTableName
 %type <into>	into_clause create_as_target
@@ -6284,7 +6284,7 @@ AlterForeignServerStmt: ALTER SERVER name foreign_server_version alter_generic_o
 CreateForeignTableStmt:
 		CREATE FOREIGN TABLE qualified_name
 			OptForeignTableElementList
-			SERVER name create_generic_options
+			SERVER name create_generic_options ft_exec_location_option
 				{
 					CreateForeignTableStmt *n = makeNode(CreateForeignTableStmt);
 					$4->relpersistence = RELPERSISTENCE_PERMANENT;
@@ -6295,11 +6295,12 @@ CreateForeignTableStmt:
 					/* FDW-specific data */
 					n->servername = $7;
 					n->options = $8;
+					n->exec_location = $9;
 					$$ = (Node *) n;
 				}
 		| CREATE FOREIGN TABLE IF_P NOT EXISTS qualified_name
 			OptForeignTableElementList
-			SERVER name create_generic_options
+			SERVER name create_generic_options ft_exec_location_option
 				{
 					CreateForeignTableStmt *n = makeNode(CreateForeignTableStmt);
 					$7->relpersistence = RELPERSISTENCE_PERMANENT;
@@ -6310,7 +6311,27 @@ CreateForeignTableStmt:
 					/* FDW-specific data */
 					n->servername = $10;
 					n->options = $11;
+					n->exec_location = $12;
 					$$ = (Node *) n;
+				}
+		;
+
+ft_exec_location_option:
+			EXECUTE ON ANY
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("any"));
+				}
+			| EXECUTE ON MASTER
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("master"));
+				}
+			| EXECUTE ON ALL SEGMENTS
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("all_segments"));
+				}
+			| /* EMPTY */
+				{
+					$$ = (DefElem *) NIL;
 				}
 		;
 

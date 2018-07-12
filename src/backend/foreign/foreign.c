@@ -219,6 +219,7 @@ GetForeignTable(Oid relid)
 	HeapTuple	tp;
 	Datum		datum;
 	bool		isnull;
+	char		exec_location;
 
 	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tp))
@@ -238,6 +239,14 @@ GetForeignTable(Oid relid)
 		ft->options = NIL;
 	else
 		ft->options = untransformRelOptions(datum);
+
+	exec_location = DatumGetChar(SysCacheGetAttr(FOREIGNTABLEREL, tp,
+													  Anum_pg_foreign_table_execlocation,
+													  &isnull));
+	if (isnull)
+		ft->exec_location = 'm';
+	else
+		ft->exec_location = exec_location;
 
 	ReleaseSysCache(tp);
 
