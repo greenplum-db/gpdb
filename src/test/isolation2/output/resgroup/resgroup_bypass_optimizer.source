@@ -126,16 +126,16 @@ ABORT
 -- gp_resource_group_bypass is not allowed inside a function
 --
 
-61: DROP FUNCTION IF EXISTS func_resgroup_bypass_test(int);
+DROP FUNCTION IF EXISTS func_resgroup_bypass_test(int);
 DROP
-61: CREATE FUNCTION func_resgroup_bypass_test(c1 int) RETURNS INT AS $$ SET gp_resource_group_bypass TO ON; -- inside a function SELECT 1 $$ LANGUAGE SQL;
+CREATE FUNCTION func_resgroup_bypass_test(c1 int) RETURNS INT AS $$ SET gp_resource_group_bypass TO ON; /* inside a function */ SELECT 1 $$ LANGUAGE SQL;
 CREATE
-61: SELECT func_resgroup_bypass_test(1);
+SELECT func_resgroup_bypass_test(1);
 ERROR:  SET gp_resource_group_bypass cannot run inside a transaction block
 CONTEXT:  SQL function "func_resgroup_bypass_test" statement 1
-61: DROP FUNCTION func_resgroup_bypass_test(int);
+DROP FUNCTION func_resgroup_bypass_test(int);
 DROP
-61q: ... <quitting>
+
 
 --
 -- memory limit in bypass mode, on qd

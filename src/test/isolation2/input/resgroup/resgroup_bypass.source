@@ -104,14 +104,14 @@ ALTER RESOURCE GROUP rg_bypass_test SET concurrency 0;
 -- gp_resource_group_bypass is not allowed inside a function
 --
 
-61: DROP FUNCTION IF EXISTS func_resgroup_bypass_test(int);
-61: CREATE FUNCTION func_resgroup_bypass_test(c1 int) RETURNS INT AS $$
-    	SET gp_resource_group_bypass TO ON; -- inside a function
-    	SELECT 1
-    $$ LANGUAGE SQL;
-61: SELECT func_resgroup_bypass_test(1);
-61: DROP FUNCTION func_resgroup_bypass_test(int);
-61q:
+DROP FUNCTION IF EXISTS func_resgroup_bypass_test(int);
+CREATE FUNCTION func_resgroup_bypass_test(c1 int) RETURNS INT AS $$
+	SET gp_resource_group_bypass TO ON; /* inside a function */
+	SELECT 1
+$$ LANGUAGE SQL;
+SELECT func_resgroup_bypass_test(1);
+DROP FUNCTION func_resgroup_bypass_test(int);
+
 
 --
 -- memory limit in bypass mode, on qd
