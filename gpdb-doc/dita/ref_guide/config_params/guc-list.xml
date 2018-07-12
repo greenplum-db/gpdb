@@ -3674,7 +3674,8 @@
     <body>
       <p>Enable filter pushdown when reading data from external tables. If pushdown fails, a query
         is executed without pushing filters to the external data source (instead, Greenplum Database
-        applies the same constraints to the result).</p>
+        applies the same constraints to the result). See <xref
+          href="../../admin_guide/external/g-external-tables.xml#topic3"/> for more information.</p>
       <table id="enable_filter_pushdown_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
