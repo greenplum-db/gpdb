@@ -118,6 +118,20 @@ SELECT * FROM agg_csv FOR UPDATE OF agg_csv;
 -- but this should be ignored
 SELECT * FROM agg_csv FOR UPDATE;
 
+-- MPP tests
+CREATE FOREIGN TABLE text_csv_any (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv')
+EXECUTE ON ANY;
+SELECT * FROM text_csv_any;
+CREATE FOREIGN TABLE text_csv_all (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv')
+EXECUTE ON ALL SEGMENTS;
+SELECT * FROM text_csv_all ORDER BY word1;
+
 -- privilege tests
 SET ROLE file_fdw_superuser;
 SELECT * FROM agg_text ORDER BY a;
