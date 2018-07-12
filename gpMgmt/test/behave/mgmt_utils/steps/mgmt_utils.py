@@ -2674,9 +2674,11 @@ def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', rem
     if '-n' in options:
         cmd = "gpinitstandby -a"
     elif remote:
+        # Trailing slashes will trip us up here; remove them
+        standby_data_dir = os.path.normpath(standby_data_dir)
         #if standby_data_dir exists on $hostname, remove it
         remove_dir(hostname, standby_data_dir)
-        # create the data dir on $hostname
+        # create the data dir's parent on $hostname
         create_dir(hostname, os.path.dirname(standby_data_dir))
         # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
         cmd = "gpinitstandby -a -s %s" % hostname
