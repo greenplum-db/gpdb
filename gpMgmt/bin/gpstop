@@ -327,7 +327,7 @@ class GpStop:
         self.gphome = gp.get_gphome()
         if self.master_datadir is None:
             self.master_datadir = gp.get_masterdatadir()
-        self.user = gp.get_user()
+        self.user = unix.getUserName()
         gp.check_permissions(self.user)
         self._read_postgresqlconf()
         self._check_db_running()
