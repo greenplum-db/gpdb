@@ -1147,13 +1147,6 @@ def distribute_tarball(queue,list,tarball):
 class GpError(Exception): pass
 
 ######
-def get_user():
-    username = os.environ.get('LOGNAME') or os.environ.get('USER')
-    if not username:
-        raise GpError('Environment Variable LOGNAME or USER not set')
-    return username
-
-
 def get_gphome():
     gphome=os.getenv('GPHOME',None)
     if not gphome:
