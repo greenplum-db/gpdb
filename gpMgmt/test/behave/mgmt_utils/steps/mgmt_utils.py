@@ -5684,7 +5684,7 @@ def step_impl(context, options):
     elif '-m' in options:
         dbname = 'postgres'
         with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, port=context.standby_port, dbname=dbname)) as conn:
-            query = """select datadir, port from pg_catalog.gp_segment_configuration where role='m' and content <> -1;"""
+            query = """select fselocation, port from pg_catalog.gp_segment_configuration, pg_catalog.pg_filespace_entry where fsedbid=dbid and role='m' and content <> -1;"""
             cursor = dbconn.execSQL(conn, query)
 
         for i in range(cursor.rowcount):
