@@ -4148,8 +4148,6 @@ def impl(context):
 		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
 		statrep = dbconn.execSQL(conn, check_stat_replication_query).fetchall()
 
-	context.standby_dbid = segconfig[0][0]
-
 	if len(segconfig) != 1:
 		raise Exception("gp_segment_configuration did not have standby master")
 
@@ -4171,7 +4169,7 @@ def impl(context, can_ssh):
 
 @then('verify the standby master is now acting as master')
 def impl(context):
-	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = %s" % context.standby_dbid
+	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'p' AND preferred_role = 'p' AND dbid = 1 AND hostname = '%s'" % context.standby_hostname
 	with dbconn.connect(dbconn.DbURL(hostname=context.standby_hostname, dbname='postgres', port=context.standby_port)) as conn:
 		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
 
