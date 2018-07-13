@@ -26,7 +26,7 @@
             <li><codeph>s3://</codeph> accesses files in an Amazon S3 bucket. See <xref
                   href="g-s3-protocol.xml#amazon-emr"/>.</li>
 
-            <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and Hive tables using the Greenplum Platform Extension Framework (PXF). See <xref href="g-pxf-protocol.xml"></xref>.</li>
+            <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and HBase and Hive tables using the Greenplum Platform Extension Framework (PXF). See <xref href="g-pxf-protocol.xml"></xref>.</li>
          </ul></p>
       <p>External tables access external files from within the database as if they are regular
          database tables. External tables defined with the
@@ -63,10 +63,11 @@
                   data warehousing</li>
                <li id="du210102">Reading external table data in parallel from multiple Greenplum
                   database segment instances, to optimize large load operations</li>
-               <li id="du210103">Filter pushdown. If a query contains <codeph>WHERE</codeph> clause,
-                  it may be passed to the external data source. See <xref
+               <li id="du210103">Filter pushdown. If a query contains a <codeph>WHERE</codeph> clause,
+                  it may be passed to the external data source. Refer to the <xref
                      href="../../ref_guide/config_params/guc-list.xml#gp_external_enable_filter_pushdown"
-                  />. Note that this feature is currently supported only with the
+                  /> server configuration parameter discussion for more information. Note that
+                  this feature is currently supported only with the
                      <codeph>pxf</codeph> protocol (see <xref href="g-pxf-protocol.xml"/>).</li>
             </ul><p>Readable external tables allow only <codeph>SELECT</codeph> operations.</p>
          </li>

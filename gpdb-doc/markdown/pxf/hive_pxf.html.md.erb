@@ -660,14 +660,108 @@ In the following example, you will create and populate a Hive table stored in OR
 
     `intarray` and `propmap` are again serialized as text strings.
 
+## <a id="partitionfiltering"></a>Partition Filtering
 
-## <a id="hive_partitioning"></a>Accessing Heterogeneous Partitioned Data
+The PXF Hive connector supports the Hive partitioning feature and directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition in a partitioned Hive table.
+
+To take advantage of PXF partition filtering pushdown, the Hive and PXF partition field names must be the same. Otherwise, PXF ignores partition filtering and the filtering is performed on the Greenplum Database side, impacting performance.
+
+**Note:** The Hive connector filters only on partition columns, not on other table attributes.
+
+PXF filter pushdown is disabled by default. You configure PXF filter pushdown as described in [Configuring Filter Pushdown](using_pxf.html#filter-pushdown).
+
+
+### <a id="hive_homog_part"></a>Example: Using the Hive Profile to Access Partitioned Homogenous Data
+
+In this example, you use the `Hive` profile to query a Hive table named `sales_part` that you partition on `delivery_state` and `delivery_city` fields. You then create a Greenplum Database external table to query `sales_part`. The procedure includes specific examples that illustrate filter pushdown.
+
+1. Create a Hive table named `sales_part` with two partition columns, `delivery_state` and `delivery_city:`
+
+    ``` sql
+    hive> CREATE TABLE sales_part (name string, type string, supplier_key int, price double)
+            PARTITIONED BY (delivery_state string, delivery_city string)
+            ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+    ```
+
+2. Load data into this Hive table and add some partitions:
+
+    ``` sql
+    hive> INSERT INTO TABLE sales_part
+            PARTITION(delivery_state = 'CALIFORNIA', delivery_city = 'Fresno')
+            VALUES ('block', 'widget', 33, 15.17);
+    hive> INSERT INTO TABLE sales_part
+            PARTITION(delivery_state = 'CALIFORNIA', delivery_city = 'Sacramento')
+            VALUES ('cube', 'widget', 11, 1.17);
+    hive> INSERT INTO TABLE sales_part
+            PARTITION(delivery_state = 'NEVADA', delivery_city = 'Reno')
+            VALUES ('dowel', 'widget', 51, 31.82);
+    hive> INSERT INTO TABLE sales_part
+            PARTITION(delivery_state = 'NEVADA', delivery_city = 'Las Vegas')
+            VALUES ('px49', 'pipe', 52, 99.82);
+    ```
+
+3. Query the `sales_part` table:
+
+    ``` sql
+    hive> SELECT * FROM sales_part;
+    ```
+
+    A `SELECT *` statement on a Hive partitioned table shows the partition fields at the end of the record.
+
+3. Examine the Hive/HDFS directory structure for the `sales_part` table:
+
+    ``` shell
+    $ sudo -u hdfs hdfs dfs -ls -R /apps/hive/warehouse/sales_part
+    /apps/hive/warehouse/sales_part/delivery_state=CALIFORNIA/delivery_city=Fresno/
+    /apps/hive/warehouse/sales_part/delivery_state=CALIFORNIA/delivery_city=Sacramento/
+    /apps/hive/warehouse/sales_part/delivery_state=NEVADA/delivery_city=Reno/
+    /apps/hive/warehouse/sales_part/delivery_state=NEVADA/delivery_city=Las Vegas/
+    ```
+
+4. Create a PXF external table to read the partitioned `sales_part` Hive table.  To take advantage of partition filter push-down, define fields corresponding to the Hive partition fields at the end of the `CREATE EXTERNAL TABLE` attribute list.
+
+    ``` shell
+    $ psql -d postgres
+    ```
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE pxf_sales_part(
+                 item_name TEXT, item_type TEXT,
+                 supplier_key INTEGER, item_price DOUBLE PRECISION,
+                 delivery_state TEXT, delivery_city TEXT)
+               LOCATION ('pxf://sales_part?Profile=Hive')
+               FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+    ```
+
+5. Query the table:
+
+    ``` sql
+    postgres=# SELECT * FROM pxf_sales_part;
+    ```
+
+6.  Perform another query (no pushdown) on `pxf_sales_part` to return records where the `delivery_city` is `Sacramento` and  `item_name` is `cube`
+
+    ``` sql
+    postgres=# SELECT * FROM pxf_sales_part WHERE delivery_city = 'Sacramento' AND item_name = 'cube';
+    ```
+
+    The query filters the `delivery_city` partition `Sacramento`. The filter on  `item_name` is not pushed down, since it is not a partition column. It is performed on the Greenplum Database side after all the data in the `Sacramento` partition is transferred for processing.
+
+7. Query (with pushdown) for all records where `delivery_state` is `CALIFORNIA`:
+
+    ``` sql
+    postgres=# SET gp_external_enable_filter_pushdown=on;
+    postgres=# SELECT * FROM pxf_sales_part WHERE delivery_state = 'CALIFORNIA';
+    ```
+
+    This query reads all of the data in the `CALIFORNIA` `delivery_state` partition, regardless of the city.
+
+
+### <a id="hive_heter_part"></a>Example: Using the Hive Profile to Access Partitioned Heterogenous Data
 
 You can use the PXF `Hive` profile with any Hive file storage types. With the `Hive` profile, you can access heterogeneous format data in a single Hive table where the partitions may be stored in different file formats.
 
-### <a id="example_hive_part_multi" class="no-quick-link"></a>Example: Using the Hive Profile with Heterogenous Data
-
-In this example, you create a partitioned Hive external table. The table is composed of the HDFS data files associated with the `sales_info` (text format) and `sales_info_rcfile` (RC format) Hive tables you created in previous exercises. You will partition the data by year, assigning the data from `sales_info` to the year 2013, and the data from `sales_info_rcfile` to the year 2016. (Ignore at the moment the fact that the tables contain the same data.) You will then use the PXF `Hive` profile to query this partitioned Hive external table.
+In this example, you create a partitioned Hive external table. The table is composed of the HDFS data files associated with the `sales_info` (text format) and `sales_info_rcfile` (RC format) Hive tables that you created in previous exercises. You will partition the data by year, assigning the data from `sales_info` to the year 2013, and the data from `sales_info_rcfile` to the year 2016. (Ignore at the moment the fact that the tables contain the same data.) You will then use the PXF `Hive` profile to query this partitioned Hive external table.
 
 1. Create a Hive external table named `hive_multiformpart` that is partitioned by a string field named `year`:
 
@@ -767,3 +861,38 @@ In this example, you create a partitioned Hive external table. The table is comp
     -----
      433
     ```
+
+## <a id="default_part"></a>Using PXF with Hive Default Partitions
+
+This topic describes a difference in query results between Hive and PXF queries when Hive tables use a default partition. When dynamic partitioning is enabled in Hive, a partitioned table may store data in a default partition. Hive creates a default partition when the value of a partitioning column does not match the defined type of the column (for example, when a NULL value is used for any partitioning column). In Hive, any query that includes a filter on a partition column *excludes* any data that is stored in the table's default partition.
+
+Similar to Hive, PXF represents a table's partitioning columns as columns that are appended to the end of the table. However, PXF translates any column value in a default partition to a NULL value. This means that a Greenplum Database query that includes an `IS NULL` filter on a partitioning column can return different results than the same Hive query.
+
+Consider a Hive partitioned table that is created with the statement:
+
+``` sql
+hive> CREATE TABLE sales (order_id bigint, order_amount float) PARTITIONED BY (xdate date);
+```
+
+The table is loaded with five rows that contain the following data:
+
+``` pre
+1.0    1900-01-01
+2.2    1994-04-14
+3.3    2011-03-31
+4.5    NULL
+5.0    2013-12-06
+```
+
+The insertion of row 4 creates a Hive default partition, because the partition column `xdate` contains a null value.
+
+In Hive, any query that filters on the partition column omits data in the default partition. For example, the following query returns no rows:
+
+``` sql
+hive> SELECT * FROM sales WHERE xdate IS null;
+```
+
+However, if you map this Hive table to a PXF external table in Greenplum Database, all default partition values are translated into actual NULL values. In Greenplum Database, executing the same query against the PXF external table returns row 4 as the result, because the filter matches the NULL value.
+
+Keep this behavior in mind when you execute `IS NULL` queries on Hive partitioned tables.
+

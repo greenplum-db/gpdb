@@ -92,32 +92,41 @@ GRANT INSERT ON PROTOCOL pxf TO bill;
 
 PXF supports filter pushdown. When filter pushdown is enabled, the constraints from the `WHERE` clause of a `SELECT` query can be extracted and passed to the external data source for filtering. This process can improve query performance, and can also reduce the amount of data that is transferred to Greenplum Database.
 
-You enable or disable filter pushdown for all external table protocols, including `pxf`, by setting the `gp_external_enable_filter_pushdown` configuration parameter. The default value is `off`; set it to `on` to enable filter pushdown.
+You enable or disable filter pushdown for all external table protocols, including `pxf`, by setting the `gp_external_enable_filter_pushdown` server configuration parameter. The default value of this configuration parameter is `off`; set it to `on` to enable filter pushdown. For example:
 
-**Note:** Some data sources do not support filter pushdown. Also, filter pushdown may not be supported with certain data types or operators. If a query accesses a data source that does not support filter push-down for the query constraints, the query is instead executed without filter pushdown (the data is first transferred to Greenplum Database and then filtered). 
+``` sql
+SHOW gp_external_enable_filter_pushdown;
+SET gp_external_enable_filter_pushdown TO 'on';
+```
 
-PXF accesses data sources using different connectors, and filter pushdown support is determined by the specific connector implementation. The following connectors support filter pushdown:
-* HBase
-* Hive
+**Note:** Some external data sources do not support filter pushdown. Also, filter pushdown may not be supported with certain data types or operators. If a query accesses a data source that does not support filter push-down for the query constraints, the query is instead executed without filter pushdown (the data is filtered after it is transferred to Greenplum Database). 
+
+PXF accesses data sources using different connectors, and filter pushdown support is determined by the specific connector implementation. The following PXF connectors support filter pushdown:
+
+- Hive Connector
 
 PXF filter pushdown can be used with these data types:
-* `INT`, array of `INT`
-* `FLOAT`
-* `NUMERIC`
-* `BOOL`
-* `CHAR`, `TEXT`, array of `TEXT`
-* `DATE`, `TIMESTAMP`.
+
+- `INT`, array of `INT`
+- `FLOAT`
+- `NUMERIC`
+- `BOOL`
+- `CHAR`, `TEXT`, array of `TEXT`
+- `DATE`, `TIMESTAMP`.
 
 PXF filter pushdown can be used with these operators:
-* `<`, `<=`, `>=`, `>`
-* `<>`, `=`
-* `IN`
-* `LIKE` (only for `TEXT` fields).
+
+- `<`, `<=`, `>=`, `>`
+- `<>`, `=`
+- `IN`
+- `LIKE` (only for `TEXT` fields).
 
 To summarize, all of the following criteria must be met for filter pushdown to occur:
-* The Greenplum Database protocol that is used to access external data must use filter pushdown. The `pxf` external table protocol can use pushdown.
-* The external data source that is being accessed must support pushdown. For example, both HBase and Hive support pushdown.
-* For queries that use the `pxf` protocol, the underlying PXF connector must support filter pushdown. For example, the HBase and Hive connectors support pushdown.
+
+* You enable external table filter pushdown by setting the `gp_external_enable_filter_pushdown` server configuration parameter to `'on'`.
+* The Greenplum Database protocol that you use to access external data source must support filter pushdown. The `pxf` external table protocol supports pushdown.
+* The external data source that you are accessing must support pushdown. For example, HBase and Hive support pushdown.
+* For queries on external tables that you create with the `pxf` protocol, the underlying PXF connector must also support filter pushdown. For example, only the PXF Hive connector supports pushdown.
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
