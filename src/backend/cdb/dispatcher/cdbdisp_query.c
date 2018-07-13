@@ -455,7 +455,6 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	MemoryContext oldContext;
 	DispatchCommandQueryParms *pQueryParms;
 	Gang		*primaryGang;
-	CdbComponentDatabaseInfo *qdinfo;
 	char		*queryText = NULL;
 	int		queryTextLength = 0;
 
@@ -538,8 +537,6 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 		   (rootIdx > sliceTbl->nMotions
 			&& rootIdx <= sliceTbl->nMotions + sliceTbl->nInitPlans));
 #endif
-
-	CdbComponentDatabaseInfo *qdinfo;
 
 	DispatchCommandQueryParms *pQueryParms = (DispatchCommandQueryParms *) palloc0(sizeof(*pQueryParms));
 
