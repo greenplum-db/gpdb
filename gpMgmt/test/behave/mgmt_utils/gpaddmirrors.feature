@@ -29,7 +29,8 @@ Feature: Tests for gpaddmirrors
         And there is a "ao" table "public.ao_table" in "gptest" with "100" rows
         And there is a "co" table "public.co_table" in "gptest" with "100" rows
         And gpaddmirrors adds mirrors with temporary data dir
-        And an FTS probe is triggered
+        # Now wait for primary and mirrors to get in sync; in WALREP `trigger FTS probe` would start
+        # the syncing process. Here we're relying on the wait built into the next step for that to happen.
         And the segments are synchronized
         When user kills all primary processes
         And user can start transactions
