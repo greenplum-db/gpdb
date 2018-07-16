@@ -98,8 +98,9 @@ options:
           cleanup/exit time.</li>
         <li>The API provides hooks into the <codeph>gprestore</codeph> lifecycle at initialization,
           during restore, and at cleanup/exit time.</li>
-        <li>The API provides an argument that specifies the execution scope (master host, segment
-          host, or segment instance) for a plugin setup or cleanup command. <ul id="ul_rpk_tzt_k2b">
+        <li>The API provides arguments that specify the execution scope (master host, segment host,
+          or segment instance) for a plugin setup or cleanup command. The scope can be one of these
+            values.<ul id="ul_rpk_tzt_k2b">
             <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
             <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
               hosts.</li>
@@ -154,7 +155,7 @@ options:
                       >plugin_api_version</xref></entry>
                   <entry colname="col3" class="- topic/entry ">Return the version of the
                     Backup/Restore Storage Plugin API supported by the plugin. The only supported
-                    version is 0.2.0.</entry>
+                    version is 0.3.0.</entry>
                 </row>
                 <row class="- topic/row ">
                   <entry colname="col1" class="- topic/entry "><xref

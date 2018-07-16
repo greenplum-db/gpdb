@@ -8,6 +8,7 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><varname>plugin_executable</varname> <b>setup_plugin_for_backup</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname> <varname>scope</varname></codeblock>
+      <codeblock><varname>plugin_executable</varname> <b>setup_plugin_for_backup</b> <varname>plugin_config_file</varname> <varname>local_backup_dir</varname> <varname>scope</varname> <varname>contentID</varname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -27,9 +28,16 @@
         </plentry>
         <plentry>
           <pt><varname>local_backup_dir</varname></pt>
-          <pd>The local directory on the Greenplum Database host (master and segments) to which
-              <codeph>gpbackup</codeph> will write backup files. <codeph>gpbackup</codeph> creates
-            this local directory.</pd>
+          <pd>The local directory on the Greenplum Database host (master and segments) from which
+              <codeph>gprestore</codeph> reads backup files. <codeph>gprestore</codeph> creates this
+            local directory.<ul id="ul_rrs_vts_m2b">
+              <li>When <varname>scope</varname> is <codeph>master</codeph> or
+                  <codeph>segment</codeph>, the <varname>local_backup_dir</varname> is the backup
+                directory corresponding to the <varname>contentID</varname> instance.</li>
+              <li>When the scope is <codeph>master_host</codeph>, the
+                  <varname>local_backup_dir</varname> is an arbitrary backup directory on the
+                host.</li>
+            </ul></pd>
         </plentry>
         <plentry>
           <pt><varname>scope</varname></pt>
@@ -39,10 +47,26 @@
               <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
                 hosts.</li>
               <li><codeph>segment</codeph> - Execute the plugin once for each active segment
-                instance on the host running the segment instance.</li>
+                instance on the host running the segment instance. The <varname>contentID</varname>
+                identifies segment instance.</li>
             </ul></pd>
           <pd>The Greenplum Database hosts and segment instances are based on the Greenplum Database
             configuration when the back up was first initiated. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>contentID</varname></pt>
+          <pd>
+            <p>The contentID of the Greenplum Database master or segment instance corresponding to
+              the scope. <varname>contentID</varname> is passed only when the
+                <varname>scope</varname> is <codeph>master</codeph> or <codeph>segment</codeph>.<ul
+                id="ul_okg_2bs_m2b">
+                <li>When <varname>scope</varname> is <codeph>master</codeph>, the
+                    <varname>contentID</varname> is <codeph>-1</codeph>.</li>
+                <li>When <varname>scope</varname> is <codeph>segment</codeph>, the utility executes
+                  the plugin once for each active segment instance on the host. The
+                    <varname>contentID</varname> identifies segment instance.</li>
+              </ul></p>
+          </pd>
         </plentry>
       </parml>
     </section>
