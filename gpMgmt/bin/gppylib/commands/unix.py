@@ -388,17 +388,29 @@ class Ping(Command):
     def __init__(self, name, hostToPing, ctxt=LOCAL, remoteHost=None, obj=None):
         self.hostToPing = hostToPing
         self.obj = obj
-        pingToUse = findCmdInPath('ping')
+        self.pingToUse = findCmdInPath('ping')
+        cmdStr = "%s -c 1 %s" % (self.pingToUse, self.hostToPing)
+        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
+    def run(self, validateAfter=False):
         if curr_platform == LINUX or curr_platform == DARWIN or curr_platform == OPENBSD:
             # Get the family of the address we need to ping.  If it's AF_INET6
             # we must use ping6 to ping it.
-            addrinfo = socket.getaddrinfo(hostToPing, None)
-            if addrinfo and addrinfo[0] and addrinfo[0][0] == socket.AF_INET6:
-                pingToUse = SYSTEM.getPing6()
 
-        cmdStr = "%s -c 1 %s" % (pingToUse, hostToPing)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+            try:
+                addrinfo = socket.getaddrinfo(self.hostToPing, None)
+                if addrinfo and addrinfo[0] and addrinfo[0][0] == socket.AF_INET6:
+                    self.pingToUse = SYSTEM.getPing6()
+                    self.cmdStr = "%s -c 1 %s" % (self.pingToUse, self.hostToPing)
+            except Exception as e:
+                self.results = CommandResult(1, '', 'Failed to get ip address: ' + str(e), False, True)
+                if validateAfter:
+                    self.validate()
+                else:
+                    # we know the next step of running ping is useless
+                    return
+
+        super(Ping, self).run(validateAfter)
 
     @staticmethod
     def ping_list(host_list):

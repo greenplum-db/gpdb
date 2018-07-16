@@ -675,7 +675,7 @@ class RMIExecutionContext(ExecutionContext):
         pass
 
 
-class Command:
+class Command(object):
     """ TODO:
     """
     name = None
