@@ -3399,6 +3399,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"gp_max_csv_line_length", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Maximum allowed length of a csv input data row in bytes"),
 			NULL,
+			GUC_GPDB_ADDOPT
 		},
 		&gp_max_csv_line_length,
 		1 * 1024 * 1024, 32 * 1024, 4 * 1024 * 1024,
