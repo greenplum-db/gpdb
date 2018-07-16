@@ -1617,3 +1617,45 @@ SELECT * FROM encoding_issue2 WHERE num = 5;
 
 DROP EXTERNAL TABLE encoding_issue;
 DROP EXTERNAL TABLE encoding_issue2;
+
+-- --------------------------------------
+-- gp_max_csv_line_length
+-- --------------------------------------
+
+CREATE OR REPLACE FUNCTION random_string(length integer) RETURNS text AS
+$$
+declare
+  chars text[] := '{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z}';
+  result text := '';
+  line text := '';
+  i integer := 0;
+  j integer := 0;
+  nloops integer := length / 1024;
+  c char := '';
+begin
+  for i in 1..nloops loop
+    line = '';
+    c = chars[1+random()*(array_length(chars, 1)-1)];
+    for j in 1..1024 loop
+      line = line || c;
+    end loop;
+    result = result || line || E'\n';
+  end loop;
+  return result;
+end;
+$$ LANGUAGE plpgsql;
+
+CREATE EXTERNAL TABLE gp_max_csv_line_length_issue (word text)
+LOCATION ('file://@hostname@/tmp/long_text.csv')
+FORMAT 'CSV';
+
+CREATE TABLE gp_max_csv_line_length_target (word text);
+
+COPY (SELECT random_string(3*1024*1024)) TO '/tmp/long_text.csv' WITH CSV;
+
+SET gp_max_csv_line_length TO 4194304;
+INSERT INTO gp_max_csv_line_length_target SELECT * FROM gp_max_csv_line_length_issue;
+
+DROP TABLE gp_max_csv_line_length_target;
+DROP EXTERNAL TABLE gp_max_csv_line_length_issue;
+DROP FUNCTION random_string(integer);
