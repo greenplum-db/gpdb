@@ -1260,10 +1260,6 @@ CreateExtension(CreateExtensionStmt *stmt)
 							stmt->extname)));
 	}
 
-	/* We want to promote user to superuser in QE when creating extension */
-	/* GPDB_91_MERGE_FIXME: I don't see any such promotion here. But this is doing
-	 * something else important. Update comment.
-	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
 		switch (stmt->create_ext_state)
