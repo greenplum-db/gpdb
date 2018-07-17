@@ -751,7 +751,7 @@ doNotifyingCommitPrepared(void)
 	{
 		succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_PREPARED, /* flags */ 0,
 												 currentGxact->gid, currentGxact->gxid,
-												 &badGangs, /* raiseError */ false,
+												 &badGangs, /* raiseError */ true,
 												 &direct, NULL, 0);
 	}
 	PG_CATCH();
@@ -799,10 +799,10 @@ doNotifyingCommitPrepared(void)
 		PG_TRY();
 		{
 			succeeded = doDispatchDtxProtocolCommand(
-					DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED, /* flags */ 0,
-					currentGxact->gid, currentGxact->gxid,
-					&badGangs, /* raiseError */ false,
-					&direct, NULL, 0);
+													 DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED, /* flags */ 0,
+													 currentGxact->gid, currentGxact->gxid,
+													 &badGangs, /* raiseError */ true,
+													 &direct, NULL, 0);
 		}
 		PG_CATCH();
 		{
