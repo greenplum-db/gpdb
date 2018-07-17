@@ -1,0 +1,99 @@
+---
+title: Fragmenter Class
+---
+
+The `org.apache.hawq.pxf.api.Fragmenter` abstract class defines the splitting of data from an external data source into `Fragment`s that PXF can process in parallel. You implement a `Fragmenter` when your connector supports reading from an external data source.
+
+The `Fragmenter` generates data source-specific metadata for each data `Fragment`. This metadata may include location, indexes, table/file names, etc. For example, if the external data source is an HDFS file, the HDFS connector `Fragmenter` returns a list of data `Fragment`s each containing an HDFS block. Each `Fragment` includes the location of the block. If the external data source is an HBase table, the HBase connector `Fragmenter` returns information about the table regions, including their locations.
+
+## <a id="classdef"></a>Class Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public abstract class Fragmenter extends Plugin {
+    protected List<Fragment> fragments;
+
+    /**
+     * Constructs a Fragmenter.
+     *
+     * @param metaData the input data
+     */
+    public Fragmenter(InputData metaData) {
+        super(metaData);
+        fragments = new LinkedList<>();
+    }
+
+    /**
+     * Gets the fragments of a given path (source name and location of each
+     * fragment). Used to get fragments of data that could be read in parallel
+     * from the different segments.
+     *
+     * @return list of data fragments
+     * @throws Exception if fragment list could not be retrieved
+     */
+    public abstract List<Fragment> getFragments() throws Exception;
+
+    /**
+     * Default implementation of statistics for fragments. 
+     *   Note:  PXF in Greenplum Database does not support 
+     *          fragment statistics
+     *
+     * @return default statistics
+     * @throws Exception if statistics cannot be gathered
+     */
+    public FragmentsStats getFragmentsStats() throws Exception {
+        List<Fragment> fragments = getFragments();
+        long fragmentsNumber = fragments.size();
+        return new FragmentsStats(fragmentsNumber,
+                FragmentsStats.DEFAULT_FRAGMENT_SIZE, fragmentsNumber
+                        * FragmentsStats.DEFAULT_FRAGMENT_SIZE);
+    }
+}
+```
+
+*Note*: PXF for Greenplum Database does not currently support fragment statistics.
+
+## <a id="impls"></a>Fragmenter Implementations
+
+If your connector supports the read operation on an external data source, the *Fragmenter* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.Fragmenter`.
+
+The PXF API includes these built-in `Fragmenter` implementations:
+
+<a id="fragmenter_table"></a>
+<table>
+<caption><span class="tablecap">Table 1. Built-in Fragmenter Implementations </span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Fragmenter Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hdfs.HdfsDataFragmenter</td>
+<td>Fragmenter for HDFS text, Avro, JSON, and SequenceFile format files.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.ParquetDataFragmenter</td>
+<td>Fragmenter for HDFS parquet format files.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hbase.HBaseDataFragmenter</td>
+<td>Fragmenter for HBase tables.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hive.HiveDataFragmenter</li>
+<td>All-purpose fragmenter for Hive tables. Auto-detects the file storage format and uses the optimal Fragmenter.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveInputFormatFragmenter</td>
+<td>Fragmenter for Hive tables with RC, ORC, or text file formats.</td>
+</tr>
+</tbody>
+</table>
+

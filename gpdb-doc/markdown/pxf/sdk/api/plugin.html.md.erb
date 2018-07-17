@@ -1,0 +1,32 @@
+---
+title: Plugin Class
+---
+
+The `Plugin` class is the base class for all PXF plug-in types. The *Accessor*, *Resolver*, and *Fragmenter* Java classes that you develop will extend the `org.apache.hawq.pxf.api.utilities.Plugin` class.
+
+The `Plugin` class provides access to the metadata associated with a specific user request (i.e. a `CREATE EXTERNAL TABLE`, or a `SELECT` from or `INSERT` into the external table). This information is available in the `InputData` class.
+
+## <a id="classdef"></a>Class Definition
+
+``` java
+package org.apache.hawq.pxf.api.utilities;
+
+public class Plugin {
+    protected InputData inputData;
+
+    /**
+     * Constructs a plugin.
+     *
+     * @param input the input data
+     */
+    public Plugin(InputData input);
+
+    /**
+     * Checks if the plugin is thread safe or not, based on inputData.
+     *
+     * @return true if plugin is thread safe
+     */
+    public boolean isThreadSafe();
+}
+```
+

@@ -1,0 +1,126 @@
+---
+title: OneField Class
+---
+
+The `org.apache.hawq.pxf.api.OneField` class represents one deserialized or serialized field in a `OneRow` object. PXF converts a `OneField` object to/from a Greenplum Database-readable `GPDBWritable` format.
+
+A class that implements the `ReadResolver` interface deserializes a `OneRow` record into a list of `OneField` objects. A class that implements the `ReadVectorizedResolver` interface deserializes a batch of `OneRow` records.
+
+A class that implements the `WriteResolver` interface serializes a list of `OneField` objects into a `OneRow` record.
+
+
+`OneField` objects are defined by a data type and a value. Instance variables in the `OneField` class include:
+
+| Data Type      | Variable Name |  Description    |
+|----------------|---------------------|--------------|
+| int    | type | The `DataType` OID identifying the type of field data. |
+| Object   | val | The field data.
+
+
+## <a id="classdef"></a>Class Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public class OneField {
+    /** OID value recognized by GPDBWritable. */
+    public int type;
+
+    /** Field value. */
+    public Object val;
+
+    public OneField() {
+    }
+
+    /**
+     * Constructs a OneField object.
+     *
+     * @param type the OID value recognized by GPDBWritable
+     * @param val the field value
+     */
+    public OneField(int type, Object val) {
+        this.type = type;
+        this.val = val;
+    }
+
+    @Override
+    public String toString() {
+        return val.toString();
+    }
+}
+```
+
+## <a id="datatypes"></a>Data Types Supported
+
+The `OneField.type` must be one of the `enums` defined in `org.apache.hawq.pxf.api.io.DataType`. The data type of the field value `val` is the appropriate Java class for the `OneField.type`. Supported types are:
+
+<a id="onefield_datatypes_table"></a>
+
+<table>
+<caption><span class="tablecap">Table 1. Resolver Supported Data Types</span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>PXF Type OID</p></th>
+<th><p>Data Value Java Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.SMALLINT</code></p></td>
+<td><p><code class="ph codeph">Short</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.INTEGER</code></p></td>
+<td><p><code class="ph codeph">Integer</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.BIGINT</code></p></td>
+<td><p><code class="ph codeph">Long</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.REAL</code></p></td>
+<td><p><code class="ph codeph">Float</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.FLOAT8</code></p></td>
+<td><p><code class="ph codeph">Double</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.NUMERIC</code></p></td>
+<td><p><code class="ph codeph">BigDecimal</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.BOOLEAN</code></p></td>
+<td><p><code class="ph codeph">Boolean</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.VARCHAR</code></p></td>
+<td><p><code class="ph codeph">String</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.BPCHAR</code></p></td>
+<td><p><code class="ph codeph">String</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.TEXT</code></p></td>
+<td><p><code class="ph codeph">String</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.BYTEA</code></p></td>
+<td><p><code class="ph codeph">byte []</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code class="ph codeph">DataType.TIMESTAMP</code></p></td>
+<td><p><code class="ph codeph">Timestamp</code></p></td>
+</tr>
+<tr class="odd">
+<td><p><code class="ph codeph">DataType.Date</code></p></td>
+<td><p><code class="ph codeph">Date</code></p></td>
+</tr>
+</tbody>
+</table>
+

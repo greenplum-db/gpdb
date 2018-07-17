@@ -1,0 +1,145 @@
+---
+title: Fragment Class
+---
+
+The `org.apache.hawq.pxf.api.Fragment` class represents a subset of data the `Fragmenter` reads from the external data source. Each data `Fragment` describes some part of the requested data set and includes information such as the the data source name (for example, the file or table name, etc.) and the name(s) of the host(s) on which the data is located.
+
+`Fragment` metadata identifies specific information about the fragment, such as the start index and length of the fragment or a region location.
+
+
+Instance variables defined by the `Fragment` class include:
+
+| Data Type         | Variable Name       |  Description           |
+|-------------------|---------------------|------------------------|
+| String    | sourceName | Absolute path, table name, etc. identifying the external data source. |
+| int    | index | The index of this `Fragment` in the list of `Fragment`s returned by the `Fragmenter`. |
+| String[]    | replicas | One or more host locations from which the *ReadAccessor* can read this `Fragment`. |
+| byte[]    | metadata | Connector-specific metadata associated with the `Fragment`, such as start location and length, region name; PXF passes this data to the *ReadAccessor*. |
+| byte[]    | userData | Connector-specific data associated with the `Fragment`; PXF passes this data to the *ReadAccessor*. |
+| String    | profile | The name of the recommended read profile for the `Fragment`. |
+
+
+## <a id="classdef"></a>Class Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public class Fragment {
+    /**
+     * File path+name, table name, etc.
+     */
+    private String sourceName;
+
+    /**
+     * Fragment index (incremented per sourceName).
+     */
+    private int index;
+
+    /**
+     * Fragment replicas (1 or more).
+     */
+    private String[] replicas;
+
+    /**
+     * Fragment metadata information (starting point + length, region location, etc.).
+     */
+    private byte[] metadata;
+
+    /**
+     * ThirdParty data added to a fragment. Ignored if null.
+     */
+    private byte[] userData;
+
+    /**
+     * Profile name, recommended for reading given Fragment.
+     */
+    private String profile;
+
+    /**
+     * Constructs a Fragment.
+     *
+     * @param sourceName the resource uri (File path+name, table name, etc.)
+     * @param hosts the replicas
+     * @param metadata the meta data (Starting point + length, region location, etc.).
+     */
+    public Fragment(String sourceName,
+                    String[] hosts,
+                    byte[] metadata) {
+        this.sourceName = sourceName;
+        this.replicas = hosts;
+        this.metadata = metadata;
+    }
+
+    /**
+     * Constructs a Fragment.
+     *
+     * @param sourceName the resource uri (File path+name, table name, etc.)
+     * @param hosts the replicas
+     * @param metadata the meta data (Starting point + length, region location, etc.).
+     * @param userData third party data added to a fragment.
+     */
+    public Fragment(String sourceName,
+                    String[] hosts,
+                    byte[] metadata,
+                    byte[] userData) {
+        this.sourceName = sourceName;
+        this.replicas = hosts;
+        this.metadata = metadata;
+        this.userData = userData;
+    }
+
+    public Fragment(String sourceName,
+            String[] hosts,
+            byte[] metadata,
+            byte[] userData,
+            String profile) {
+        this(sourceName, hosts, metadata, userData);
+        this.profile = profile;
+    }
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
+    }
+
+    public String[] getReplicas() {
+        return replicas;
+    }
+
+    public void setReplicas(String[] replicas) {
+        this.replicas = replicas;
+    }
+
+    public byte[] getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(byte[] metadata) {
+        this.metadata = metadata;
+    }
+
+    public byte[] getUserData() {
+        return userData;
+    }
+
+    public void setUserData(byte[] userData) {
+        this.userData = userData;
+    }
+
+    public String getProfile() {
+        return profile;
+    }
+
+    public void setProfile(String profile) {
+        this.profile = profile;
+    }
+}
+```
+

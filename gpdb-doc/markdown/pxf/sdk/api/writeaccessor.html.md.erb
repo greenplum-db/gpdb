@@ -1,0 +1,69 @@
+---
+title: WriteAccessor Interface
+---
+
+The `org.apache.hawq.pxf.api.WriteAccessor` interface defines the write operation to an external data source. A class that implements this interface writes `OneRow` records directly to the external data source.
+
+## <a id="intdef"></a>Interface Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public interface WriteAccessor {
+    /**
+     * Opens the resource for write.
+     *
+     * @return true if the resource is successfully opened
+     * @throws Exception if opening the resource failed
+     */
+    boolean openForWrite() throws Exception;
+
+    /**
+     * Writes the next object.
+     *
+     * @param onerow the object to be written
+     * @return true if the write succeeded
+     * @throws Exception writing to the resource failed
+     */
+    boolean writeNextObject(OneRow onerow) throws Exception;
+
+    /**
+     * Closes the resource for write.
+     *
+     * @throws Exception if closing the resource failed
+     */
+    void closeForWrite() throws Exception;
+}
+```
+
+## <a id="impls"></a>WriteAccessor Implementations
+
+A *WriteAccessor* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.utilities.Plugin` and `implements org.apache.hawq.pxf.api.WriteAccessor`.
+
+The PXF API includes the following `WriteAccessor` implementations:
+
+<a id="write_accessor_table"></a>
+<table>
+<caption><span class="tablecap">Table 1. Built-in WriteAccessor Implementations </span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Accessor Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.LineBreakAccessor</td>
+<td>Write accessor for HDFS text format files.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.SequenceFileAccessor</td>
+<td>Write accessor for HDFS SequenceFile format files.</td>
+</tr>
+</tbody>
+</table>
+

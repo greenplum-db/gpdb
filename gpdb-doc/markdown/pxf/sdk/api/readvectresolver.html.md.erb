@@ -1,0 +1,52 @@
+---
+title: ReadVectorizedResolver Interface
+---
+
+The `org.apache.hawq.pxf.api.ReadVectorizedResolver` interface defines the deserialization of data read from an external data source to Greenplum Database. A class that implements this interface generates a list of `OneField` objects from a batch of `OneRow` objects.
+
+## <a id="intdef"></a>Interface Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public interface ReadVectorizedResolver {
+
+    /**
+     * Returns resolved list of tuples
+     *
+     * @param batch unresolved batch
+     * @return list of tuples
+     */
+    public List<List<OneField>> getFieldsForBatch(OneRow batch);
+
+}
+```
+
+## <a id="impls"></a>ReadVectorizedResolver Implementations
+
+A *ReadVectorizedResolver* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.utilities.Plugin` and `implements org.apache.hawq.pxf.api.ReadVectorizedResolver`.
+
+The PXF API includes the following `ReadVectorizedResolver` implementation:
+
+<a id="readvect_resolver_table"></a>
+
+<table>
+<caption><span class="tablecap">Table 1. Built-in ReadVectorizedResolver Implementations</span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Resolver Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveORCVectorizedResolver</td>
+<td>Specialized <code class="ph codeph">HiveResolver</code> for a Hive table stored in ORC format. Use together with the <code class="ph codeph">HiveInputFormatFragmenter</code>/<code class="ph codeph">HiveORCVectorizedAccessor</code> classes.</td>
+</tr>
+</tbody>
+</table>
+

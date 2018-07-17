@@ -4,29 +4,29 @@ title: Introducing the PXF API
 
 You use the PXF API to add support for a new external data store, data format, or data access API to Greenplum Database. You can also use the PXF API to extend existing external data stores, formats, and APIs. The PXF API defines the data structures, classes, and interfaces that you need to map external data into a tabular form suitable for Greenplum Database, and vice-versa.
 
-The PXF API interfaces that you will implement or extend depend upon the external data store/API, data types, and operations (read, write) that your connector or plug-in will support, as well as the specific features you want to provide. 
+The PXF API interfaces that you will implement or extend depend upon the external data store/API, data types, and operations (read, write) that your connector or plug-in will support, as well as the specific features that you want to provide. 
 
 The PXF API defines classes including the following:
 
 | Class Name       | Description                                |
 |------------------|--------------------------------------------|
-| `Plugin`       | The base class for all PXF plug-in types.    |
-| `Fragmenter`       | The abstract class that defines how to split data from an external source into fragments.    |
-| `Fragment`       | A subset of data that can be read in parallel.    |
-| `OneRow`       | One record or row in a `Fragment`.  |
-| `OneField`       | One deserialized or serialized field in a `OneRow` record.    |
-| `InputData`       | Input data from Greenplum Database and common configuration information available to all plug-ins, and the helper methods to access this information.    |
+| [`Plugin`](api/plugin.html)       | The base class for all PXF plug-in types.    |
+| [`Fragmenter`](api/fragmenter.html)      | The abstract class that defines how to split data read from an external source into fragments.    |
+| [`Fragment`](api/fragment.html)       | A subset of data that can be read in parallel.    |
+| [`OneRow`](api/onerow.html)      | One record or row of data; extracted from a `Fragment` when reading from the external data source.  |
+| [`OneField`](api/onefield.html)       | One deserialized or serialized field in a `OneRow` record.    |
+| [`InputData`](api/inputdata.html)       | Input data from Greenplum Database and common configuration information available to all plug-ins, and the helper methods to access this information.    |
 
 
 The PXF API exposes the following interfaces:
 
 | Interface Name  | Description                                |
 |------------------|--------------------------------------------|
-| `ReadAccessor` |  Reads a `Fragment` and generates a list of `OneRow` records.  |
-| `ReadResolver` |  Deserializes a single `OneRow` record into a list of `OneField` objects.  |
-| `ReadVectorizedResolver` |  Deserializes a batch of `OneRow` records into tuples of `OneField` objects.  |
-| `WriteResolver` |  Serializes a list of `OneField` objects into a single `OneRow` record. |
-| `WriteAccessor` |  Writes `OneRow` records to the external data source. |
+| [`ReadAccessor`](api/readaccessor.html) |  Reads a `Fragment` and generates a list of `OneRow` records.  |
+| [`ReadResolver`](api/readresolver.html) |  Deserializes a single `OneRow` record into a list of `OneField` objects.  |
+| [`ReadVectorizedResolver`](api/readvectresolver.html) |  Deserializes a batch of `OneRow` records into tuples of `OneField` objects.  |
+| [`WriteResolver`](api/writeresolver.html) |  Serializes a list of `OneField` objects into a single `OneRow` record. |
+| [`WriteAccessor`](api/writeaccessor.html) |  Writes a `OneRow` record to the external data source. |
 
 
 Refer to the [PXF API JavaDocs](http://hawq.incubator.apache.org/docs/pxf/javadoc/) for detailed information about the classes and interfaces exposed by the API.

@@ -1,0 +1,62 @@
+---
+title: WriteResolver Interface
+---
+
+The `org.apache.hawq.pxf.api.WriteResolver` interface defines the serialization of data read from Greenplum Database. A class that implements this interface generates a `OneRow` object from a list of `OneField` objects.
+
+## <a id="intdef"></a>Interface Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public interface WriteResolver {
+    /**
+     * Constructs and sets the fields of a {@link OneRow}.
+     *
+     * @param record list of {@link OneField}
+     * @return the constructed {@link OneRow}
+     * @throws Exception if constructing a row from the fields failed
+     */
+    OneRow setFields(List<OneField> record) throws Exception;
+}
+```
+
+## <a id="impls"></a>WriteResolver Implementations
+
+A *WriteResolver* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.utilities.Plugin` and `implements org.apache.hawq.pxf.api.WriteResolver`.
+
+The PXF API includes the following `WriteResolver` implementations:
+
+<a id="write_resolver_table"></a>
+
+<table>
+<caption><span class="tablecap">Table 1. Built-in WriteResolver Implementations</span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Resolver Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.StringPassResolver</p></td>
+<td><p><code class="ph codeph">StringPassResolver</code> passes whole records (composed of any data types) as strings without parsing them</p></td>
+</tr>
+<tr class="even">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.WritableResolver</p></td>
+<td><p>Resolver for custom Hadoop readable/writable implementations. A custom serialization class can be specified with the `DATA-SCHEMA` option. Supports the following types:</p>
+<pre class="pre codeblock"><code>DataType.BOOLEAN
+DataType.INTEGER
+DataType.BIGINT
+DataType.REAL
+DataType.FLOAT8
+DataType.VARCHAR
+DataType.BYTEA</code></pre></td>
+</tr>
+</tbody>
+</table>
+

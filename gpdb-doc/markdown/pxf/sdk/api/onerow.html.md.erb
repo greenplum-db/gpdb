@@ -1,0 +1,77 @@
+---
+title: OneRow Class
+---
+
+The `org.apache.hawq.pxf.api.OneRow` class represents one record or row in the external data source. When reading, rows are extracted from a `Fragment`.
+
+A class that implements the `ReadAccessor` interface reads a `Fragment` from the external data source and generates `OneRow` records.
+
+A class that implements the `WriteAccessor` interface writes `OneRow` records directly to the external data source.
+
+Instance variables defined by the `OneRow` class include:
+
+| Data Type           | Variable Name |  Description  |
+|---------------------|----------------|----------------------|
+| Object   | key  | The key of the data record. (Optional) |
+| Object   | data | The record/row data. |
+
+In certain data formats such as SequenceFile, the data for a record is accompanied by a key. PXF reserves the Greenplum Database column name `recordkey` for representing such data formats.
+
+
+## <a id="classdef"></a>Class Definition
+
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public class OneRow {
+    private Object key;
+    private Object data;
+
+    public OneRow(){
+    }
+
+    /**
+     * Constructs a OneRow
+     *
+     * @param key the key for the record
+     * @param data the actual record
+     */
+    public OneRow(Object key, Object data) {
+        this.key = key;
+        this.data = data;
+    }
+
+    /**
+     * Constructs a OneRow without a key value
+     *
+     * @param data the actual record
+     */
+    public OneRow(Object data) {
+        this.data = data;
+    }
+
+    public void setKey(Object key) {
+        this.key = key;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    public Object getKey() {
+        return key;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    @Override
+    public String toString() {
+        return "OneRow:" + key + "->" + data;
+    }
+}
+
+```
+

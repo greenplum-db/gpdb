@@ -1,0 +1,109 @@
+---
+title: ReadResolver Interface
+---
+
+The `org.apache.hawq.pxf.api.ReadResolver` interface defines the deserialization of data read from an external data source into a form consumable by Greenplum Database. A class that implements this interface generates a list of `OneField` objects from a `OneRow` object.
+
+## <a id="intdef"></a>Interface Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public interface ReadResolver {
+    /**
+     * Gets the {@link OneField} list of one row.
+     *
+     * @param row the row to get the fields from
+     * @return the {@link OneField} list of one row.
+     * @throws Exception if decomposing the row into fields failed
+     */
+    List<OneField> getFields(OneRow row) throws Exception;
+}
+```
+
+## <a id="impls"></a>ReadResolver Implementations
+
+A *ReadResolver* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.utilities.Plugin` and `implements org.apache.hawq.pxf.api.ReadResolver`.
+
+The PXF API includes the following `ReadResolver` implementations:
+
+<a id="read_resolver_table"></a>
+
+<table>
+<caption><span class="tablecap">Table 1. Built-in ReadResolver Implementations</span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Resolver Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.StringPassResolver</p></td>
+<td><p><code class="ph codeph">StringPassResolver</code> passes whole records (composed of any data types) as strings without parsing them</p></td>
+</tr>
+<tr class="even">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.WritableResolver</p></td>
+<td><p>Resolver for custom Hadoop readable/writable implementations. A custom deserialization class can be specified with the `DATA-SCHEMA` option. Supports the following types:</p>
+<pre class="pre codeblock"><code>DataType.BOOLEAN
+DataType.INTEGER
+DataType.BIGINT
+DataType.REAL
+DataType.FLOAT8
+DataType.VARCHAR
+DataType.BYTEA</code></pre></td>
+</tr>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.AvroResolver</p></td>
+<td><p>Supports the same field types as <code class="ph codeph">WritableResolver</code>. </p></td>
+</tr>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.JsonResolver</p></td>
+<td><p>Resolver for HDFS JSON format files. Supports the same field types as <code class="ph codeph">WritableResolver</code> and also supports the following:</p>
+<pre class="pre codeblock"><code>DataType.SMALLINT
+DataType.BPCHAR
+DataType.TEXT</code></pre></td>
+</tr>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hdfs.ParquetResolver</p></td>
+<td><p>Resolver for HDFS parquet format files. Supports the same field types as <code class="ph codeph">WritableResolver</code> and also supports the following:</p><pre class="pre codeblock"><code>DataType.SMALLINT
+DataType.NUMERIC
+DataType.TEXT
+DataType.DATE
+DataType.TIMESTAMP</code></pre></td>
+</tr>
+<tr class="even">
+<td><p>org.apache.hawq.pxf.plugins.hbase.HBaseResolver</p></td>
+<td><p>Supports the same field types as <code class="ph codeph">WritableResolver</code> and also supports the following:</p>
+<pre class="pre codeblock"><code>DataType.SMALLINT
+DataType.NUMERIC
+DataType.TEXT
+DataType.BPCHAR
+DataType.TIMESTAMP</code></pre></td>
+</tr>
+<tr class="odd">
+<td><p>org.apache.hawq.pxf.plugins.hive.HiveResolver</p></td>
+<td><p>Supports the same field objects as <code class="ph codeph">WritableResolver</code> and also supports the following:</p>
+<pre class="pre codeblock"><code>DataType.SMALLINT
+DataType.TEXT
+DataType.TIMESTAMP</code></pre></td>
+</tr>
+<tr class="even">
+<td><p>org.apache.hawq.pxf.plugins.hive.HiveStringPassResolver</p></td>
+<td>Specialized <code class="ph codeph">HiveResolver</code> for a Hive table stored as text file. Use together with the <code class="ph codeph">HiveInputFormatFragmenter</code>/<code class="ph codeph">HiveLineBreakAccessor</code> classes.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveColumnarSerdeResolver</td>
+<td>Specialized <code class="ph codeph">HiveResolver</code> for a Hive table stored as RC file. Use together with the <code class="ph codeph">HiveInputFormatFragmenter</code>/<code class="ph codeph">HiveRCFileAccessor</code> classes.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hive.HiveORCSerdeResolver</td>
+<td>Specialized <code class="ph codeph">HiveResolver</code> for a Hive table stored as ORC format. Use together with the <code class="ph codeph">HiveInputFormatFragmenter</code>/<code class="ph codeph">HiveORCAccessor</code> classes.</td>
+</tr>
+</tbody>
+</table>
+

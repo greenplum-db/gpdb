@@ -1,0 +1,354 @@
+---
+title: InputData Class
+---
+
+The Greenplum Database user provides connector-specific information to PXF via the `CREATE EXTERNAL TABLE` `LOCATION` string. PXF passes this information to the connector plug-ins at runtime. The parameters in this string are available to a plug-in through methods in the `org.apache.hawq.pxf.api.utilities.InputData` class.
+
+The `InputData` class is an argument to the constructor of each connector plug-in. `InputData` includes the `CREATE EXTERNAL TABLE` table definintion and the data and the options that the user provides in the `LOCATION` string. The `Fragmenter` also writes fragment metadata to an instance of this class. 
+
+Instance variables defined by the `InputData` class include those identified in the table below. The values of these variables are derived from different sources - the SQL command issued by the user, from PXF, or from the Connector. 
+
+(Note: "LOCATION string", when specified in the table, refers to the string the Greenplum Database user provides in the `CREATE EXTERNAL TABLE` command `LOCATION` clause.)
+
+| Data Type      | Variable Name |  Source   | Description    |
+|----------------|---------------------|-------------|--------|
+| Map<String, String>    | requestParametersMap | LOCATION string  | The properties and values from the `LOCATION` string. |
+| ArrayList<ColumnDescriptor>  | tupleDescription | CREATE EXTERNAL TABLE table definition  | The external table column types, names, and other information. |
+|  int  | segmentId | PXF | The segment identifier.  |
+|  int  | totalSegments | PXF | The total number of Greenplum Database segments in the cluster. |
+|  byte[]  | fragmentMetadata | Fragmenter | Fragment identification information; Fragmenter-specific. For example, the start and end location. |
+|  byte[]  | userData | Fragmenter | Other Fragmenter-specific data for a fragment. Optional. |
+|  boolean  | filterStringValid | PXF | Identifies whether or not an external table query filter is provided. (Not implemented) |
+|  String  | filterString | PXF | External table query filter. (Not implemented) |
+|  String  | dataSource | LOCATION string | The external-data-source-specific data source identifier; for example, file path, table name, etc. |
+|  String  | profile | LOCATION string | The profile specified by the user. Optional. |
+|  String  | accessor | LOCATION string | The *Accessor* plug-in class name. The class name may be directly specified by the user or derived from the profile. |
+|  String  | resolver | LOCATION string | The *Resolver* plug-in class name. The class name may be directly specified by the user or derived from the profile. |
+|  String  | fragmenter | LOCATION string | The *Fragmenter* plug-in class name. The class name may be directly specified by the user or derived from the profile. Optional. |
+|  String  | metadata | LOCATION string | Metadata required by the connector. Connector-dependent. Optional. |
+|  boolean  | threadSafe | Connector plugin | Handle requests in single or multiple threads. Connector-dependent; for example, the HDFS connector turns this off when it must compress/uncompress a file. |
+|  ColumnDescriptor  | recordkeyColumn | CREATE EXTERNAL TABLE table definition | The recordkey column descriptor for the external table. Connector-dependent; for example, the HDFS connector supports SequenceFile format, which utilizes a recordkey for each row. Optional. |
+|  int  | numAttrsProjected | PXF | The number of columns projected. (Not implemented) |
+
+The `InputData` class includes getter and setter methods for most of these variables. Plug-ins can fetch the values of the plug-in-specific properties added to the `LOCATION` string with the `getUserProperty()` method.
+
+## <a id="classdef"></a>Class Definition
+
+``` java
+package org.apache.hawq.pxf.api.utilities;
+
+public class InputData {
+
+    /**
+     * Constructs an empty InputData
+     */
+    public InputData() {
+    }
+
+    /**
+     * Constructs an InputData from a copy. Used to create from an extending
+     * class.
+     *
+     * @param copy the input data to copy
+     */
+    public InputData(InputData copy) {
+
+        this.requestParametersMap = copy.requestParametersMap;
+        this.segmentId = copy.segmentId;
+        this.totalSegments = copy.totalSegments;
+        this.fragmentMetadata = copy.fragmentMetadata;
+        this.userData = copy.userData;
+        this.tupleDescription = copy.tupleDescription;
+        this.recordkeyColumn = copy.recordkeyColumn;
+        this.filterStringValid = copy.filterStringValid;
+        this.filterString = copy.filterString;
+        this.dataSource = copy.dataSource;
+        this.profile = copy.profile;
+        this.accessor = copy.accessor;
+        this.resolver = copy.resolver;
+        this.fragmenter = copy.fragmenter;
+        this.metadata = copy.metadata;
+        this.remoteLogin = copy.remoteLogin;
+        this.remoteSecret = copy.remoteSecret;
+        this.threadSafe = copy.threadSafe;
+    }
+
+    /**
+     * Returns a user defined property.
+     *
+     * @param userProp the lookup user property
+     * @return property value as a String
+     */
+    public String getUserProperty(String userProp) {
+        return requestParametersMap.get(USER_PROP_PREFIX + userProp.toUpperCase());
+    }
+
+    /**
+     * Sets the byte serialization of a fragment meta data.
+     *
+     * @param location start, len, and location of the fragment
+     */
+    public void setFragmentMetadata(byte[] location) {
+        this.fragmentMetadata = location;
+    }
+
+    /**
+     * The byte serialization of a data fragment.
+     *
+     * @return serialized fragment metadata
+     */
+    public byte[] getFragmentMetadata() {
+        return fragmentMetadata;
+    }
+
+    /**
+     * Gets any custom user data that may have been passed from the fragmenter.
+     * Will mostly be used by the accessor or resolver.
+     *
+     * @return fragment user data
+     */
+    public byte[] getFragmentUserData() {
+        return userData;
+    }
+
+    /**
+     * Sets any custom user data that needs to be shared across plugins. Will
+     * mostly be set by the fragmenter.
+     *
+     * @param userData user data
+     */
+    public void setFragmentUserData(byte[] userData) {
+        this.userData = userData;
+    }
+
+    /**
+     * Returns the number of segments in HAWQ.
+     *
+     * @return number of segments
+     */
+    public int getTotalSegments() {
+        return totalSegments;
+    }
+
+    /**
+     * Returns the current segment ID in HAWQ.
+     *
+     * @return current segment ID
+     */
+    public int getSegmentId() {
+        return segmentId;
+    }
+
+    /**
+     * Returns true if there is a filter string to parse.
+     *
+     * @return whether there is a filter string
+     */
+    public boolean hasFilter() {
+        return filterStringValid;
+    }
+
+    /**
+     * Returns the filter string, <tt>null</tt> if #hasFilter is <tt>false</tt>.
+     *
+     * @return the filter string or null
+     */
+    public String getFilterString() {
+        return filterString;
+    }
+
+    /**
+     * Returns tuple description.
+     *
+     * @return tuple description
+     */
+    public ArrayList<ColumnDescriptor> getTupleDescription() {
+        return tupleDescription;
+    }
+
+    /**
+     * Returns the number of columns in tuple description.
+     *
+     * @return number of columns
+     */
+    public int getColumns() {
+        return tupleDescription.size();
+    }
+
+    /**
+     * Returns column index from tuple description.
+     *
+     * @param index index of column
+     * @return column by index
+     */
+    public ColumnDescriptor getColumn(int index) {
+        return tupleDescription.get(index);
+    }
+
+    /**
+     * Returns the column descriptor of the recordkey column. If the recordkey
+     * column was not specified by the user in the create table statement will
+     * return null.
+     *
+     * @return column of record key or null
+     */
+    public ColumnDescriptor getRecordkeyColumn() {
+        return recordkeyColumn;
+    }
+
+    /**
+     * Returns the data source of the required resource (i.e a file path or a
+     * table name).
+     *
+     * @return data source
+     */
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    /**
+     * Sets the data source for the required resource.
+     *
+     * @param dataSource data source to be set
+     */
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    /**
+     * Returns the profile name.
+     *
+     * @return name of profile
+     */
+    public String getProfile() {
+        return profile;
+    }
+
+    /**
+     * Returns the ClassName for the java class that was defined as Accessor.
+     *
+     * @return class name for Accessor
+     */
+    public String getAccessor() {
+        return accessor;
+    }
+
+    /**
+     * Returns the ClassName for the java class that was defined as Resolver.
+     *
+     * @return class name for Resolver
+     */
+    public String getResolver() {
+        return resolver;
+    }
+
+    /**
+     * Returns the ClassName for the java class that was defined as Fragmenter
+     * or null if no fragmenter was defined.
+     *
+     * @return class name for Fragmenter or null
+     */
+    public String getFragmenter() {
+        return fragmenter;
+    }
+
+    /**
+     * Returns the ClassName for the java class that was defined as Metadata
+     * or null if no metadata was defined.
+     *
+     * @return class name for METADATA or null
+     */
+    public String getMetadata() {
+        return metadata;
+    }
+
+    /**
+     * Returns the contents of pxf_remote_service_login set in Hawq. Should the
+     * user set it to an empty string this function will return null.
+     *
+     * @return remote login details if set, null otherwise
+     */
+    public String getLogin() {
+        return remoteLogin;
+    }
+
+    /**
+     * Returns the contents of pxf_remote_service_secret set in Hawq. Should the
+     * user set it to an empty string this function will return null.
+     *
+     * @return remote password if set, null otherwise
+     */
+    public String getSecret() {
+        return remoteSecret;
+    }
+
+    /**
+     * Returns whether this request is thread safe.
+     * If it is not, request will be handled consequentially and not in parallel.
+     *
+     * @return whether the request is thread safe
+     */
+    public boolean isThreadSafe() {
+        return threadSafe;
+    }
+
+    /**
+     * Returns a data fragment index. plan to deprecate it in favor of using
+     * getFragmentMetadata().
+     *
+     * @return data fragment index
+     */
+    public int getDataFragment() {
+        return dataFragment;
+    }
+
+    /**
+     * Returns aggregate type, i.e - count, min, max, etc
+     * @return aggregate type
+     */
+    public EnumAggregationType getAggType() {
+        return aggType;
+    }
+
+    /**
+     * Sets aggregate type, one of @see EnumAggregationType value
+     * @param aggType aggregate type
+     */
+    public void setAggType(EnumAggregationType aggType) {
+        this.aggType = aggType;
+    }
+
+    /**
+     * Returns index of a fragment in a file
+     * @return index of a fragment
+     */
+    public int getFragmentIndex() {
+        return fragmentIndex;
+    }
+
+    /**
+     * Sets index of a fragment in a file
+     * @param fragmentIndex index of a fragment
+     */
+    public void setFragmentIndex(int fragmentIndex) {
+        this.fragmentIndex = fragmentIndex;
+    }
+
+    /**
+     * Returns number of attributes projected in a query
+     * @return number of attributes projected
+     */
+    public int getNumAttrsProjected() {
+        return numAttrsProjected;
+    }
+
+    /**
+     * Sets number of attributes projected
+     * @param numAttrsProjected number of attrivutes projected
+     */
+    public void setNumAttrsProjected(int numAttrsProjected) {
+        this.numAttrsProjected = numAttrsProjected;
+    }
+}
+```
+

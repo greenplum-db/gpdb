@@ -1,0 +1,116 @@
+---
+title: ReadAccessor Interface
+---
+
+The `org.apache.hawq.pxf.api.ReadAccessor` interface defines the read operation to an external data source. A class that implements this interface reads a `Fragment` and generates individual `OneRow` records.
+
+## <a id="classdef"></a>Interface Definition
+
+``` java
+package org.apache.hawq.pxf.api;
+
+public interface ReadAccessor {
+    /**
+     * Opens the resource for reading.
+     *
+     * @return true if the resource is successfully opened
+     * @throws Exception if opening the resource failed
+     */
+    boolean openForRead() throws Exception;
+
+    /**
+     * Reads the next object.
+     *
+     * @return the object which was read
+     * @throws Exception if reading from the resource failed
+     */
+    OneRow readNextObject() throws Exception;
+
+    /**
+     * Closes the resource.
+     *
+     * @throws Exception if closing the resource failed
+     */
+    void closeForRead() throws Exception;
+}
+```
+
+## <a id="impls"></a>ReadAccessor Implementations
+
+A *ReadAccessor* class that you develop with the PXF API `extends org.apache.hawq.pxf.api.utilities.Plugin` and `implements org.apache.hawq.pxf.api.ReadAccessor`.
+
+The PXF API includes the following `ReadAccessor` implementations:
+
+<a id="read_accessor_table"></a>
+<table>
+<caption><span class="tablecap">Table 1. Built-in ReadAccessor Implementations </span></caption>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Accessor Class</p></th>
+<th><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hdfs.HdfsAtomicDataAccessor</td>
+<td>Base class for accessing HDFS data sources which cannot be split. These will be accessed by a single Greenplum Database segment.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.QuotedLineBreakAccessor</td>
+<td>Read accessor for HDFS text files that have records with embedded linebreaks.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hdfs.HdfsSplittableDataAccessor</td>
+<td><p>Base class for accessing HDFS files using the Hadoop <code class="ph codeph">RecordReader</code> class.</p></td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.LineBreakAccessor</td>
+<td>Read accessor for HDFS text files.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.ParquetFileAccessor</td>
+<td>Read accessor for HDFS parquet format files.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hdfs.AvroFileAccessor</td>
+<td>Read accessor for HDFS Avro format files.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hdfs.SequenceFileAccessor</td>
+<td>Read accessor for HDFS SequenceFile format files.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hbase.HBaseAccessor </td>
+<td>Read accessor for HBase tables.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hive.HiveAccessor</td>
+<td>Read accessor for Hive tables.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveLineBreakAccessor</td>
+<td>Read accessor for Hive tables stored as text file format.</td>
+</tr>
+<tr class="even">
+<td>org.apache.hawq.pxf.plugins.hive.HiveRCFileAccessor</td>
+<td>Read accessor for Hive tables stored as RC file format.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveORCAccessor</td>
+<td>Read accessor for Hive tables stored as ORC format.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.hive.HiveORCVectorizedAccessor</td>
+<td>Read accessor (batch) for Hive tables stored as ORC format.</td>
+</tr>
+<tr class="odd">
+<td>org.apache.hawq.pxf.plugins.json.JsonAccessor</td>
+<td>Read accessor for HDFS JSON format files.</td>
+</tr>
+</tbody>
+</table>
+
