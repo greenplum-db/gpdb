@@ -2851,14 +2851,16 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid)
 		classform->relpages = 0;	/* it's empty until further notice */
 		classform->reltuples = 0;
 	}
-	if (should_have_valid_relfrozenxid(relation->rd_rel->relkind,
-									   relation->rd_rel->relstorage))
+
+	if (TransactionIdIsValid(classform->relfrozenxid))
 	{
 		classform->relfrozenxid = freezeXid;
-	}
-	else
-	{
-		classform->relfrozenxid = InvalidTransactionId;
+		/*
+		 * Don't know partition parent or not here but passing false is perfect
+		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
+		 */
+		Assert(should_have_valid_relfrozenxid(classform->relkind,
+											  classform->relstorage, false));
 	}
 
 	simple_heap_update(pg_class, &tuple->t_self, tuple);

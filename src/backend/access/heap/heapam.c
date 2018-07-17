@@ -2181,7 +2181,9 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	Buffer		buffer;
 	bool		all_visible_cleared = false;
 
-	Insist(RelationIsHeap(relation));
+	Assert(RelationIsHeap(relation));
+	Assert(IsBootstrapProcessingMode() ||
+		   TransactionIdIsNormal(relation->rd_rel->relfrozenxid));
 
 	if (relation->rd_rel->relhasoids)
 	{

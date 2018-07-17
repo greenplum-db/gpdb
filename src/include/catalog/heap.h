@@ -62,29 +62,30 @@ extern Relation heap_create(const char *relname,
 			bool allow_system_table_mods);
 
 extern Oid heap_create_with_catalog(const char *relname,
-						 Oid relnamespace,
-						 Oid reltablespace,
-						 Oid relid,
-						 Oid reltypeid,
-						 Oid reloftypeid,
-						 Oid ownerid,
-						 TupleDesc tupdesc,
-						 List *cooked_constraints,
-						 Oid relam,
-						 char relkind,
-						 char relpersistence,
-						 char relstorage,
-						 bool shared_relation,
-						 bool mapped_relation,
-						 bool oidislocal,
-						 int oidinhcount,
-						 OnCommitAction oncommit,
-                         const struct GpPolicy *policy,    /* MPP */
-						 Datum reloptions,
-						 bool use_user_acl,
-						 bool allow_system_table_mods,
-						 bool valid_opts,
-						 bool is_part_child);
+									Oid relnamespace,
+									Oid reltablespace,
+									Oid relid,
+									Oid reltypeid,
+									Oid reloftypeid,
+									Oid ownerid,
+									TupleDesc tupdesc,
+									List *cooked_constraints,
+									Oid relam,
+									char relkind,
+									char relpersistence,
+									char relstorage,
+									bool shared_relation,
+									bool mapped_relation,
+									bool oidislocal,
+									int oidinhcount,
+									OnCommitAction oncommit,
+									const struct GpPolicy *policy,    /* MPP */
+									Datum reloptions,
+									bool use_user_acl,
+									bool allow_system_table_mods,
+									bool valid_opts,
+									bool is_part_child,
+									bool is_part_parent);
 
 extern void heap_drop_with_catalog(Oid relid);
 
@@ -166,6 +167,7 @@ extern void MetaTrackDropObject(Oid		classid,
 		|| ((relkind) == RELKIND_SEQUENCE) \
 		|| ((relkind) == RELKIND_VIEW)) 
 
-extern bool should_have_valid_relfrozenxid(char relkind, char relstorage);
-
+extern bool should_have_valid_relfrozenxid(char relkind,
+										   char relstorage,
+										   bool is_partition_parent);
 #endif   /* HEAP_H */

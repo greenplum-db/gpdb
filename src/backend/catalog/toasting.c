@@ -262,7 +262,8 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 										   false,
 										   true,
 										   /* valid_opts */ false,
-										   /* is_part_child */ false);
+										   /* is_part_child */ false,
+										   /* is_part_parent */ false);
 	Assert(toast_relid != InvalidOid);
 
 	/* make the toast relation visible, else heap_open will fail */

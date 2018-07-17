@@ -734,7 +734,8 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace,
 										  false,
 										  /* allowSystemTableModsDDL */ true,
 										  /* valid_opts */ true,
-										  /* is_part_child */ false);
+										  /* is_part_child */ false,
+										  /* is_part_parent */ false);
 	Assert(OIDNewHeap != InvalidOid);
 
 	ReleaseSysCache(tuple);
@@ -1368,13 +1369,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	 * and then fail to commit the pg_class update.
 	 */
 
-	/* set rel1's frozen Xid */
-	if (relform1->relkind != RELKIND_INDEX)
-	{
-		Assert(TransactionIdIsNormal(frozenXid));
-		relform1->relfrozenxid = frozenXid;
-	}
-
 	/* swap size statistics too, since new rel has freshly-updated stats */
 	if (swap_stats)
 	{
@@ -1402,14 +1396,16 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	 * This needs to be performed after the relkind and relstorage has been
 	 * swapped to correctly reflect the relfrozenxid.
 	 */
-	if (should_have_valid_relfrozenxid(relform1->relkind, relform1->relstorage))
+	if (TransactionIdIsValid(relform1->relfrozenxid))
 	{
-		/* set rel1's frozen Xid */
-		Assert(TransactionIdIsNormal(frozenXid));
 		relform1->relfrozenxid = frozenXid;
+		/*
+		 * Don't know partition parent or not here but passing false is perfect
+		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
+		 */
+		Assert(should_have_valid_relfrozenxid(relform1->relkind,
+											  relform1->relstorage, false));
 	}
-	else
-		relform1->relfrozenxid = InvalidTransactionId;
 
 	/*
 	 * Update the tuples in pg_class --- unless the target relation of the

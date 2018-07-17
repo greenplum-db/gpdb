@@ -2249,6 +2249,7 @@ _readCreateStmt(void)
 	/* postCreate omitted */
 	READ_NODE_FIELD(deferredStmts);
 	READ_BOOL_FIELD(is_part_child);
+	READ_BOOL_FIELD(is_part_parent);
 	READ_BOOL_FIELD(is_add_part);
 	READ_BOOL_FIELD(is_split_part);
 	READ_OID_FIELD(ownerid);

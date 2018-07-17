@@ -47,6 +47,33 @@ NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_europe" 
 NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_mideast" for table "region_1_prt_region3"
 NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_australia" for table "region_1_prt_region3"
 NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_antarctica" for table "region_1_prt_region3"
+-- root and internal parent partitions should have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'region%' and relfrozenxid=0;
+       relname        
+----------------------
+ region
+ region_1_prt_region1
+ region_1_prt_region2
+ region_1_prt_region3
+(4 rows)
+
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'region%' and relfrozenxid=0;
+ gp_segment_id |       relname        
+---------------+----------------------
+             1 | region
+             1 | region_1_prt_region1
+             1 | region_1_prt_region2
+             1 | region_1_prt_region3
+             2 | region
+             2 | region_1_prt_region1
+             2 | region_1_prt_region2
+             2 | region_1_prt_region3
+             0 | region
+             0 | region_1_prt_region1
+             0 | region_1_prt_region2
+             0 | region_1_prt_region3
+(12 rows)
+
 create unique index region_pkey on region(r_regionkey);
 NOTICE:  building index for child partition "region_1_prt_region1"
 NOTICE:  building index for child partition "region_1_prt_region1_2_prt_africa"
@@ -7818,7 +7845,37 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_pkey" for 
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_aa_pkey" for table "sales_1_prt_aa"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_bb_pkey" for table "sales_1_prt_bb"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_cc_pkey" for table "sales_1_prt_cc"
+-- root partition (and only root) should have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+ relname 
+---------
+ sales
+(1 row)
+
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+ gp_segment_id | relname 
+---------------+---------
+             1 | sales
+             2 | sales
+             0 | sales
+(3 rows)
+
 alter table sales add column tax float;
+-- root partition (and only root) continues to have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+ relname 
+---------
+ sales
+(1 row)
+
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+ gp_segment_id | relname 
+---------------+---------
+             2 | sales
+             0 | sales
+             1 | sales
+(3 rows)
+
 alter table sales drop column tax;
 create table newpart(like sales);
 alter table newpart add constraint partable_pkey primary key(pkid, option3);

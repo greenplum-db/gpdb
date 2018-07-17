@@ -1687,6 +1687,9 @@ typedef struct CreateStmt
 								 * interior or leaf parts of the new table.  Not marked for a
 								 * a partition root or ordinary table.
 								 */
+	bool        is_part_parent; /* CDB: Marked during analysis for top and interior
+								 * parent of partition tables which don't contain
+								 * any data */
 	bool		is_add_part;	/* CDB: is create adding a part to a partition? */
 	bool		is_split_part;	/* CDB: is create spliting a part? */
 	Oid			ownerid;		/* OID of the role to own this. if InvalidOid, GetUserId() */

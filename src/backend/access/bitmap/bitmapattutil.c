@@ -180,7 +180,8 @@ _bitmap_create_lov_heapandindex(Relation rel,
 								 ONCOMMIT_NOOP, NULL /* GP Policy */,
 								 (Datum)0, false, true,
 								 /* valid_opts */ true,
-								 /* is_part_child */ false);
+								 /* is_part_child */ false,
+								 /* is_part_parent */ false);
 	*lovHeapOid = heapid;
 
 	/*

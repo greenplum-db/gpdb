@@ -781,6 +781,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 		if (newSub)
 			newSub->parentRel = copyObject(pBy->parentRel);
 
+		stmt->is_part_parent = true;
 		make_child_node(cxt, stmt, relname, curPby, (Node *) newSub,
 						pRuleCatalog, pPostCreate, pConstraint, pStoreAttr,
 						prtstr, bQuiet, colencs);

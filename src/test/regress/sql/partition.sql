@@ -25,6 +25,10 @@ subpartition by list (r_name) subpartition template
 	partition region3 start (5) end (8)
 );
 
+-- root and internal parent partitions should have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'region%' and relfrozenxid=0;
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'region%' and relfrozenxid=0;
+
 create unique index region_pkey on region(r_regionkey);
 
 copy region from stdin with delimiter '|';
@@ -3755,7 +3759,15 @@ distributed by (pkid) partition by range (option3)
 	partition cc start(201) end (300)
 );
 
+-- root partition (and only root) should have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+
 alter table sales add column tax float;
+-- root partition (and only root) continues to have relfrozenxid as 0
+select relname from pg_class where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r' and relname like 'sales%' and relfrozenxid=0;
+
 alter table sales drop column tax;
 
 create table newpart(like sales);
