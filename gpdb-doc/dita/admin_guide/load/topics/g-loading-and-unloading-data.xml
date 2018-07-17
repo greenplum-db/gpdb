@@ -29,6 +29,10 @@
           interfaces and access them in parallel. </li>
         <li>The <codeph>gpload</codeph> utility automates the steps of a load task using
             <codeph>gpfdist</codeph> and a YAML-formatted control file. </li>
+        <li otherprops="pivotal">The Greenplum-Kafka Connector provides high-speed, parallel
+           data transfer from Kafka to Greenplum Database. For information about using
+          the Greenplum-Kafka Connector, refer to the documentation at <xref
+            href="../../../greenplum-kafka/intro.xml" format="dita" scope="peer">Pivotal Greenplum-Kafka Connector</xref>.</li>
         <li otherprops="pivotal">The GemFire-Greenplum Connector allows the transfer of data between
           a Pivotal GemFire region and a Greenplum Database table. Pivotal GemFire is an in-memory
           data management system that provides reliable asynchronous event notifications and
