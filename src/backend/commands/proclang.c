@@ -184,7 +184,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 											false,		/* isWindowFunc */
 											false,		/* security_definer */
 											true,		/* isStrict */
-											PROVOLATILE_IMMUTABLE, // GPDB_90_MERGE_FIXME: why is this is IMMUTABLE in GPDB, when it's VOLATILE in the upstream?
+											PROVOLATILE_VOLATILE,
 											buildoidvector(funcargtypes, 1),
 											PointerGetDatum(NULL),
 											PointerGetDatum(NULL),
