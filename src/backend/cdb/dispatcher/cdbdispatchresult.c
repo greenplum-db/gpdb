@@ -557,6 +557,15 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 	return NULL;
 }
 
+/*
+ * The returned error object is allocated in TopTransactionContext.
+ * 
+ * Caution: do not use the returned object across transaction boundary.
+ * Current usages of this API are such that the returned object is either
+ * logged using elog() or rethrown, both within a transaction context, at the
+ * time of finishing a dispatched command.  The caution applies to future uses
+ * of this function.
+ */
 ErrorData *
 cdbdisp_get_PQerror(PGresult *pgresult)
 {
@@ -633,7 +642,11 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 	if (fld)
 		errcontext("%s", fld);
 
-	return errfinish_and_return(0);
+	Assert(TopTransactionContext);
+	MemoryContext oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+	ErrorData *edata = errfinish_and_return(0);
+	MemoryContextSwitchTo(oldcontext);
+	return edata;
 }
 
 /*
