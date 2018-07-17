@@ -801,6 +801,7 @@ doNotifyingCommitPrepared(void)
 		 */
 		InterruptHoldoffCount = savedInterruptHoldoffCount;
 		succeeded = false;
+		FlushErrorState();
 	}
 	PG_END_TRY();
 
@@ -849,6 +850,7 @@ doNotifyingCommitPrepared(void)
 			 */
 			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
+			FlushErrorState();
 		}
 		PG_END_TRY();
 	}
@@ -899,7 +901,7 @@ retryAbortPrepared(void)
 			succeeded = doDispatchDtxProtocolCommand(
 													 DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED, /* flags */ 0,
 													 currentGxact->gid, currentGxact->gxid,
-													 &badGangs, /* raiseError */ false,
+													 &badGangs, /* raiseError */ true,
 													 &direct, NULL, 0);
 			if (!succeeded)
 				elog(WARNING, "the distributed transaction 'Abort' broadcast "
@@ -913,6 +915,7 @@ retryAbortPrepared(void)
 			 */
 			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
+			FlushErrorState();
 		}
 		PG_END_TRY();
 	}
@@ -1008,7 +1011,7 @@ doNotifyingAbort(void)
 		{
 			succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
 													 currentGxact->gid, currentGxact->gxid,
-													 &badGangs, /* raiseError */ false,
+													 &badGangs, /* raiseError */ true,
 													 &direct, NULL, 0);
 		}
 		PG_CATCH();
@@ -1018,6 +1021,7 @@ doNotifyingAbort(void)
 			 */
 			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
+			FlushErrorState();
 		}
 		PG_END_TRY();
 
