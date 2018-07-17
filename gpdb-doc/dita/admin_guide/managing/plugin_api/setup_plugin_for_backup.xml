@@ -44,8 +44,8 @@
         </plentry>
         <plentry>
           <pt><varname>scope</varname></pt>
-          <pd>The execution scope, the host and number of times the plugin command is executed. <ul
-              id="ul_rpk_tzt_k2b">
+          <pd>The execution scope value indicates the host and number of times the plugin command is
+            executed. <varname>scope</varname> can be one of these values:<ul id="ul_rpk_tzt_k2b">
               <li><codeph>master</codeph> - Execute the plugin command once on the master host.</li>
               <li><codeph>segment_host</codeph> - Execute the plugin command once on each of the
                 segment hosts.</li>
@@ -64,7 +64,8 @@
               <li>When <varname>scope</varname> is <codeph>master</codeph>, the
                   <varname>contentID</varname> is <codeph>-1</codeph>.</li>
               <li>When <varname>scope</varname> is <codeph>segment</codeph>, the
-                  <varname>contentID</varname> identifies an active segment instance.</li>
+                  <varname>contentID</varname> is the content identifier of an active segment
+                instance.</li>
             </ul></pd>
         </plentry>
       </parml>
