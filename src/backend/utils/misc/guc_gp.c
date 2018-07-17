@@ -4379,7 +4379,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&dtx_phase2_retry_count,
-		2, 0, 10,
+		2, 0, 15,
 		NULL, NULL, NULL
 	},
 

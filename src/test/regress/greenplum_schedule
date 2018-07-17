@@ -57,6 +57,10 @@ test: query_finish_pending
 
 test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
 
+# The test must be run by itself as it injects a fault on QE to fail
+# at the 2nd phase of 2PC.
+test: dtm_retry
+
 test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 gp_transactions distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
 # 'partition' runs for a long time, so try to keep it together with other
