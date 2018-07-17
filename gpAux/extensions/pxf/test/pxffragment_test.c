@@ -33,7 +33,7 @@ static bool compareFragment(ListCell *fragment_cell1, ListCell *fragment_cell2);
 void
 test_filter_fragments_for_segment(void **state)
 {
-	/* --- 1 segment, all fragements should be processed by it */
+	/* --- 1 segment, all fragments should be processed by it */
 	char	   *expected_1_1_0[1] = {"0"};
 
 	/* 1 fragment */
@@ -206,6 +206,7 @@ test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], 
 		foreach_with_count(cell, filtered, i)
 		{
 			assert_true(compareString(((FragmentData *) lfirst(cell))->index, expected[i]));
+			assert_int_equal(i + 1, ((FragmentData *) lfirst(cell))->fragment_idx);
 		}
 	}
 	else

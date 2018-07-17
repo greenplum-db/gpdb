@@ -1,4 +1,5 @@
-#include "pxfheaders.h"
+#include "postgres.h"
+
 #include "pxffragment.h"
 
 #include "cdb/cdbtm.h"
@@ -383,7 +384,7 @@ filter_fragments_for_segment(List *list)
 			 * element, adjust cursor pointers
 			 */
 			FragmentData *frag = (FragmentData *) current->data.ptr_value;
-			frag->index = psprintf("%d", frag_index++);
+			frag->fragment_idx = frag_index++;
 			previous = current;
 			current = lnext(current);
 		}

@@ -74,6 +74,7 @@ test_gpbridge_import_start(void **state)
 	fragment->profile = NULL;
 	fragment->source_name = "source";
 	fragment->user_data = "user_data";
+	fragment->fragment_idx = 1;
 
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
 	List	   *list = list_make1(fragment);
@@ -93,6 +94,7 @@ test_gpbridge_import_start(void **state)
 	expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
+	expect_set_headers_call(headers, "X-GP-LAST-FRAGMENT", "true");
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
 	expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
 
@@ -257,6 +259,88 @@ test_gpbridge_read_one_fragment_buffer(void **state)
 }
 
 void
+test_gpbridge_read_first_fragment_buffer(void **state)
+{
+	/* init data in context that will be cleaned up */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+
+	initStringInfo(&context->uri);
+
+	/* setup list of fragments */
+	FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
+	FragmentData *next_fragment = (FragmentData *) palloc0(sizeof(FragmentData));
+
+	fragment->authority = AUTHORITY;
+	fragment->fragment_md = "md";
+	fragment->index = "1";
+	fragment->profile = NULL;
+	fragment->source_name = "source";
+	fragment->user_data = "user_data";
+	fragment->fragment_idx = 1;
+
+	next_fragment->authority = AUTHORITY;
+	next_fragment->fragment_md = "md";
+	next_fragment->index = "1";
+	next_fragment->profile = NULL;
+	next_fragment->source_name = "next_source";
+	next_fragment->user_data = "next_user_data";
+	next_fragment->fragment_idx = 2;
+
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	List	   *list = list_make2(fragment, next_fragment);
+
+	context->gphd_uri->fragments = list;
+	context->gphd_uri->profile = "profile";
+
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+
+	will_return(churl_headers_init, headers);
+
+	expect_any(build_http_headers, input);
+	/* might verify params later */
+	will_be_called(build_http_headers);
+
+	expect_set_headers_call(headers, "X-GP-DATA-DIR", fragment->source_name);
+	expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
+	expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
+
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
+
+	expect_value(churl_init_download, url, context->uri.data);
+	expect_value(churl_init_download, headers, headers);
+	will_return(churl_init_download, handle);
+
+	expect_value(churl_read_check_connectivity, handle, handle);
+	will_be_called(churl_read_check_connectivity);
+
+	/* call function under test */
+	gpbridge_import_start(context);
+
+	/* assert call results */
+	assert_int_equal(context->current_fragment, list_head(context->gphd_uri->fragments));
+
+	StringInfoData expected_uri;
+
+	initStringInfo(&expected_uri);
+	appendStringInfo(&expected_uri,
+					"http://%s/%s/%s/Bridge/",
+					AUTHORITY, PXF_SERVICE_PREFIX, PXF_VERSION);
+	assert_string_equal(context->uri.data, expected_uri.data);
+	assert_int_equal(context->churl_headers, headers);
+	assert_int_equal(context->churl_handle, handle);
+
+	/* cleanup */
+	list_free_deep(list);
+	pfree(handle);
+	pfree(headers);
+	pfree(context->gphd_uri);
+	pfree(context);
+}
+
+void
 test_gpbridge_read_next_fragment_buffer(void **state)
 {
 	/* init data in context */
@@ -280,6 +364,7 @@ test_gpbridge_read_next_fragment_buffer(void **state)
 	fragment->profile = NULL;
 	fragment->source_name = "source";
 	fragment->user_data = "user_data";
+	fragment->fragment_idx = 2;
 
 	List	   *list = list_make2(prev_fragment, fragment);
 
@@ -287,7 +372,7 @@ test_gpbridge_read_next_fragment_buffer(void **state)
 
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
 	context->gphd_uri->profile = "profile";
-	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	context->gphd_uri->fragments = list;
 
 	int			datalen = 10;
 	char	   *databuf = (char *) palloc0(datalen);
@@ -305,6 +390,7 @@ test_gpbridge_read_next_fragment_buffer(void **state)
 	expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
+	expect_set_headers_call(headers, "X-GP-LAST-FRAGMENT", "true");
 	expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
 	expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
 
@@ -462,6 +548,7 @@ main(int argc, char *argv[])
 		unit_test(test_gpbridge_import_start),
 		unit_test(test_gpbridge_read_one_fragment_less_than_buffer),
 		unit_test(test_gpbridge_read_one_fragment_buffer),
+		unit_test(test_gpbridge_read_first_fragment_buffer),
 		unit_test(test_gpbridge_read_next_fragment_buffer),
 		unit_test(test_gpbridge_read_last_fragment_finished),
 		unit_test(test_gpbridge_export_start),
