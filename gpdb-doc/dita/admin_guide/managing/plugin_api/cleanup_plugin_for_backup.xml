@@ -29,45 +29,43 @@
         </plentry>
         <plentry>
           <pt><varname>local_backup_dir</varname></pt>
-          <pd>The local directory on the Greenplum Database host (master and segments) from which
-              <codeph>gprestore</codeph> reads backup files. <codeph>gprestore</codeph> creates this
-            local directory.<ul id="ul_rrs_vts_m2b">
-              <li>When <varname>scope</varname> is <codeph>master</codeph> or
-                  <codeph>segment</codeph>, the <varname>local_backup_dir</varname> is the backup
-                directory corresponding to the <varname>contentID</varname> instance.</li>
-              <li>When the scope is <codeph>master_host</codeph>, the
+          <pd>The local directory on the Greenplum Database host (master and segments) to which
+              <codeph>gpbackup</codeph> wrote backup files.<ul id="ul_rrs_vts_m2b">
+              <li>When <varname>scope</varname> is <codeph>master</codeph>, the
+                  <varname>local_backup_dir</varname> is the backup directory of the Greenplum
+                Database master.</li>
+              <li>When <varname>scope</varname> is <codeph>segment</codeph>, the
+                  <varname>local_backup_dir</varname> is the backup directory of a segment instance.
+                The <varname>contentID</varname> identifies the segment instance.</li>
+              <li>When the scope is <codeph>segment_host</codeph>, the
                   <varname>local_backup_dir</varname> is an arbitrary backup directory on the
                 host.</li>
             </ul></pd>
         </plentry>
         <plentry>
           <pt><varname>scope</varname></pt>
-          <pd>The execution scope (host and number of times the plugin is executed) for the plugin.
-              <ul id="ul_rpk_tzt_k2b">
-              <li><codeph>master</codeph> - Execute the plugin once on the master host.</li>
-              <li><codeph>segment_host</codeph> - Execute the plugin once on each of the segment
-                hosts.</li>
-              <li><codeph>segment</codeph> - Execute the plugin once for each active segment
+          <pd>The execution scope, the host and number of times the plugin command is executed.  <ul
+              id="ul_rpk_tzt_k2b">
+              <li><codeph>master</codeph> - Execute the plugin command once on the master host.</li>
+              <li><codeph>segment_host</codeph> - Execute the plugin command once on each of the
+                segment hosts.</li>
+              <li><codeph>segment</codeph> - Execute the plugin command once for each active segment
                 instance on the host running the segment instance. The <varname>contentID</varname>
-                identifies segment instance.</li>
+                identifies the segment instance.</li>
             </ul></pd>
           <pd>The Greenplum Database hosts and segment instances are based on the Greenplum Database
             configuration when the back up was first initiated. </pd>
         </plentry>
         <plentry>
           <pt><varname>contentID</varname></pt>
-          <pd>
-            <p>The contentID of the Greenplum Database master or segment instance corresponding to
-              the scope. <varname>contentID</varname> is passed only when the
-                <varname>scope</varname> is <codeph>master</codeph> or <codeph>segment</codeph>.<ul
-                id="ul_okg_2bs_m2b">
-                <li>When <varname>scope</varname> is <codeph>master</codeph>, the
-                    <varname>contentID</varname> is <codeph>-1</codeph>.</li>
-                <li>When <varname>scope</varname> is <codeph>segment</codeph>, the utility executes
-                  the plugin once for each active segment instance on the host. The
-                    <varname>contentID</varname> identifies segment instance.</li>
-              </ul></p>
-          </pd>
+          <pd>The contentID of the Greenplum Database master or segment instance corresponding to
+            the scope. <varname>contentID</varname> is passed only when the <varname>scope</varname>
+            is <codeph>master</codeph> or <codeph>segment</codeph>.<ul id="ul_vqv_wly_m2b">
+              <li>When <varname>scope</varname> is <codeph>master</codeph>, the
+                  <varname>contentID</varname> is <codeph>-1</codeph>.</li>
+              <li>When <varname>scope</varname> is <codeph>segment</codeph>, the
+                  <varname>contentID</varname> identifies an active segment instance.</li>
+            </ul></pd>
         </plentry>
       </parml>
     </section>
