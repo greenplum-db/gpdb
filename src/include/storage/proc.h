@@ -164,8 +164,6 @@ struct PGPROC
 
 	bool serializableIsoLevel; /* true if proc has serializable isolation level set */
 
-	bool inDropTransaction; /* true if proc is in vacuum drop transaction */
-
 	/*
 	 * Information for resource group
 	 */

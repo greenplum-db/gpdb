@@ -310,7 +310,6 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit)
 			proc->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
 			proc->inCommit = false; /* be sure this is cleared in abort */
 			proc->serializableIsoLevel = false;
-			proc->inDropTransaction = false;
 
 			/* Clear the subtransaction-XID cache too while holding the lock */
 			proc->subxids.nxids = 0;
@@ -346,7 +345,6 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit)
 		proc->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
 		proc->inCommit = false; /* be sure this is cleared in abort */
 		proc->serializableIsoLevel = false;
-		proc->inDropTransaction = false;
 
 		Assert(proc->subxids.nxids == 0);
 		Assert(proc->subxids.overflowed == false);
@@ -382,7 +380,6 @@ ProcArrayClearTransaction(PGPROC *proc, bool commit)
 	/* redundant, but just in case */
 	proc->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
 	proc->serializableIsoLevel = false;
-	proc->inDropTransaction = false;
 
 	/* Clear the subtransaction-XID cache too */
 	proc->subxids.nxids = 0;
@@ -640,45 +637,6 @@ TransactionIdIsActive(TransactionId xid)
 		{
 			result = true;
 			break;
-		}
-	}
-
-	LWLockRelease(ProcArrayLock);
-
-	return result;
-}
-
-/*
- * Returns true if there are any UAO drop transaction active (except the current
- * one).
- *
- * If allDbs is TRUE then all backends are considered; if allDbs is FALSE
- * then only backends running in my own database are considered.
- */
-bool
-HasDropTransaction(bool allDbs)
-{
-	ProcArrayStruct *arrayP = procArray;
-	bool result = false; /* Assumes */
-	int			index;
-
-	LWLockAcquire(ProcArrayLock, LW_SHARED);
-
-	for (index = 0; index < arrayP->numProcs; index++)
-	{
-		volatile PGPROC *proc = arrayP->procs[index];
-		if (proc->pid == 0)
-			continue;			/* do not count prepared xacts */
-
-		if (allDbs || proc->databaseId == MyDatabaseId)
-		{
-			if (proc->inDropTransaction && proc != MyProc)
-			{
-				ereport((Debug_print_snapshot_dtm ? LOG : DEBUG3),
-						(errmsg("Found drop transaction: database %d, pid %d, xid %d, xmin %d",
-								proc->databaseId, proc->pid, proc->xid, proc->xmin)));
-				result = true;
-			}
 		}
 	}
 

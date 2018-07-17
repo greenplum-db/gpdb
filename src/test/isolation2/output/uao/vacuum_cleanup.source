@@ -1,15 +1,8 @@
--- @Description Test that when there is a parallel vacuum going on in drop phase, the age of
+-- @Description Test that when AO vacuum skips drop phase, the age of
 -- the AO/AOCS table gets reduced correctly.
 
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE
-
-1: create table ao_@orientation@_vacuum_cleanup1(a int, b int) with(appendonly=true, orientation=@orientation@);
-CREATE
-1: insert into ao_@orientation@_vacuum_cleanup1 select 1, i from generate_series(1, 100) i;
-INSERT 100
-1: update ao_@orientation@_vacuum_cleanup1 set b = b + 1;
-UPDATE 100
 
 -- The age of the table is 1 after the following statement
 2: create table ao_@orientation@_vacuum_cleanup2(a int, b int) with(appendonly=true, orientation=@orientation@);
@@ -21,30 +14,24 @@ INSERT 100
 2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
 
-
-1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 2);
-gp_inject_fault
----------------
-t              
-(1 row)
-
-2&: vacuum ao_@orientation@_vacuum_cleanup1;  <waiting ...>
-
-1: select wait_for_trigger_fault((select current_database()), 'vacuum_relation_open_relation_during_drop_phase', 2);
-wait_for_trigger_fault
-----------------------
-t                     
-(1 row)
-
 1: set vacuum_freeze_min_age = 0;
 SET
 -- Check the age of the table just before vacuum
 1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
 age|regexp_replace    
 ---+------------------
-5  |pg_<seg>_<oid>    
-5  |pg_aovisimap_<oid>
+3  |pg_<seg>_<oid>    
+3  |pg_aovisimap_<oid>
 (2 rows)
+
+-- Hold AccessShareLock to make AO VACUUM skip drop phase
+2: begin;
+BEGIN
+2: select count(*) from ao_@orientation@_vacuum_cleanup2;
+count
+-----
+100  
+(1 row)
 1: vacuum ao_@orientation@_vacuum_cleanup2;
 VACUUM
 
@@ -57,14 +44,8 @@ age|regexp_replace
 3  |pg_<seg>_<oid>    
 3  |pg_aovisimap_<oid>
 (2 rows)
-
-1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 2);
-gp_inject_fault
----------------
-t              
-(1 row)
-2<:  <... completed>
-VACUUM
+2: end;
+END
 
 -- Check that drop phase is skipped, but still the cleanup phase is performed
 -- when there are concurrent serializable transactions

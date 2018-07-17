@@ -585,7 +585,6 @@ MarkAsPreparing(TransactionId xid,
 	gxact->proc.inCommit = false;
 	gxact->proc.vacuumFlags = 0;
 	gxact->proc.serializableIsoLevel = false;
-	gxact->proc.inDropTransaction = false;
 	gxact->proc.lwWaiting = false;
 	gxact->proc.lwExclusive = false;
 	gxact->proc.lwWaitLink = NULL;
