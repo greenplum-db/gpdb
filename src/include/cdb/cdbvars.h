@@ -783,10 +783,6 @@ extern bool gp_dynamic_partition_pruning;
  */
 extern bool gp_cte_sharing;
 
-/* MPP-7770: disallow altering storage using SET WITH */
-
-extern bool	gp_setwith_alter_storage;
-
 /* Priority for the segworkers relative to the postmaster's priority */
 extern int gp_segworker_relative_priority;
 

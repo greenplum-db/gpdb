@@ -13104,11 +13104,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				if (pg_strcasecmp(reorg_str, def->defname) != 0)
 				{
 					/* MPP-7770: disable changing storage options for now */
-					if (!gp_setwith_alter_storage)
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("option \"%s\" not supported",
-								 		def->defname)));
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("option \"%s\" not supported",
+									def->defname)));
 
 					if (pg_strcasecmp(def->defname, "appendonly") == 0)
 					{
@@ -13671,12 +13670,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		 * needed because the same tuple has to be updated again
 		 */
 		CommandCounterIncrement();
-	}
-
-	if (gp_setwith_alter_storage)
-	{
-		RemoveAttributeEncodingsByRelid(tarrelid);
-		cloneAttributeEncoding(tmprelid, tarrelid, nattr);
 	}
 
 	/* now, reindex */

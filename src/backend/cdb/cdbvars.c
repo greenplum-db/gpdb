@@ -262,8 +262,6 @@ int			gp_sort_flags = 0;
 int			gp_dbg_flags = 0;
 int			gp_sort_max_distinct = 20000;
 
-bool		gp_setwith_alter_storage = FALSE;
-
 bool		gp_enable_tablespace_auto_mkdir = FALSE;
 
 /* Enable check for compatibility of encoding and locale in createdb */
