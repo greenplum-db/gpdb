@@ -44,11 +44,6 @@ select * from sto_alt_uao1_setstorage;
 SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is
 not NULL AND visimapidxid is not NULL AND relid='sto_alt_uao1_setstorage'::regclass;
 
-set gp_setwith_alter_storage = true;
-Alter Table sto_alt_uao1_setstorage
- set with (appendonly=true, compresslevel=3);
-select count(bigint_col) from sto_alt_uao1_setstorage;
-set gp_setwith_alter_storage = false;
 update sto_alt_uao1_setstorage set numeric_col = -numeric_col;
 delete from sto_alt_uao1_setstorage where numeric_col = 0;
 select * from sto_alt_uao1_setstorage;

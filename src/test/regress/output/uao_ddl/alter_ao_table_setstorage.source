@@ -81,16 +81,6 @@ not NULL AND visimapidxid is not NULL AND relid='sto_alt_uao1_setstorage'::regcl
               1
 (1 row)
 
-set gp_setwith_alter_storage = true;
-Alter Table sto_alt_uao1_setstorage
- set with (appendonly=true, compresslevel=3);
-select count(bigint_col) from sto_alt_uao1_setstorage;
- count 
--------
-     3
-(1 row)
-
-set gp_setwith_alter_storage = false;
 update sto_alt_uao1_setstorage set numeric_col = -numeric_col;
 delete from sto_alt_uao1_setstorage where numeric_col = 0;
 select * from sto_alt_uao1_setstorage;
@@ -104,7 +94,7 @@ set gp_select_invisible=true;
 select count(*) from sto_alt_uao1_setstorage;
  count 
 -------
-     6
+     9
 (1 row)
 
 set gp_select_invisible=false;

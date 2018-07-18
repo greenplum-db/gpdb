@@ -140,9 +140,6 @@ drop table atsdb, atsdb_1, atsdb_2;
 alter table pg_class set distributed by (relname);
 alter table pg_class set with(appendonly = true);
 
--- MPP-7770: allow testing of changing storage for now
-set gp_setwith_alter_storage = true;
-
 alter table pg_class set with(appendonly = true);
 
 -- WITH clause
@@ -371,10 +368,6 @@ create table abc (a int, b int, c int) distributed by (a);
 Alter table abc set distributed randomly;
 Alter table abc set with (reorganize=false) distributed randomly;
 drop table abc;
-
-
--- MPP-7770: disable changing storage options (default, for now)
-set gp_setwith_alter_storage = false;
 
 -- disallow, so fails
 create table atsdb (i int, j text) distributed by (j);

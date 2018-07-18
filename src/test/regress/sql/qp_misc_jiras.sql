@@ -2212,32 +2212,6 @@ else 'Unidentify' end
 ;
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
 
-create table qp_misc_jiras.x (a int, b int) distributed by (a);
-
-
---create index xi on x(a);
-
-insert into qp_misc_jiras.x values (1,2), (2,3), (3,4);
-
-select count(*) from qp_misc_jiras.x;
-
-set gp_setwith_alter_storage to true;
-
-alter table qp_misc_jiras.x set with (appendonly=true) distributed by (b);
-
-insert into qp_misc_jiras.x values (4,5), (5,6);
-
-select count(*) from qp_misc_jiras.x;
-
-
-alter table qp_misc_jiras.x set with (appendonly=false) distributed by (a);
-
-insert into qp_misc_jiras.x values (6,7), (7,8);
-
-select count(*) from qp_misc_jiras.x;
-
-drop table if exists qp_misc_jiras.x cascade;
-
 create table qp_misc_jiras.r
     (a int, b int, c int)
     with (appendonly = true)
