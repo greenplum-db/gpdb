@@ -673,7 +673,7 @@ PXF filter pushdown is disabled by default. You configure PXF filter pushdown as
 
 ### <a id="hive_homog_part"></a>Example: Using the Hive Profile to Access Partitioned Homogenous Data
 
-In this example, you use the `Hive` profile to query a Hive table named `sales_part` that you partition on `delivery_state` and `delivery_city` fields. You then create a Greenplum Database external table to query `sales_part`. The procedure includes specific examples that illustrate filter pushdown.
+In this example, you use the `Hive` profile to query a Hive table named `sales_part` that you partition on the `delivery_state` and `delivery_city` fields. You then create a Greenplum Database external table to query `sales_part`. The procedure includes specific examples that illustrate filter pushdown.
 
 1. Create a Hive table named `sales_part` with two partition columns, `delivery_state` and `delivery_city:`
 
@@ -739,7 +739,7 @@ In this example, you use the `Hive` profile to query a Hive table named `sales_p
     postgres=# SELECT * FROM pxf_sales_part;
     ```
 
-6.  Perform another query (no pushdown) on `pxf_sales_part` to return records where the `delivery_city` is `Sacramento` and  `item_name` is `cube`
+6.  Perform another query (no pushdown) on `pxf_sales_part` to return records where the `delivery_city` is `Sacramento` and  `item_name` is `cube`:
 
     ``` sql
     postgres=# SELECT * FROM pxf_sales_part WHERE delivery_city = 'Sacramento' AND item_name = 'cube';
@@ -884,7 +884,7 @@ The table is loaded with five rows that contain the following data:
 5.0    2013-12-06
 ```
 
-The insertion of row 4 creates a Hive default partition, because the partition column `xdate` contains a null value.
+Inserting row 4 creates a Hive default partition, because the partition column `xdate` contains a null value.
 
 In Hive, any query that filters on the partition column omits data in the default partition. For example, the following query returns no rows:
 
