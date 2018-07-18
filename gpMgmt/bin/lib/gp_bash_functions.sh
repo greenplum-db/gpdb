@@ -369,17 +369,17 @@ SED_PG_CONF () {
 				else
 					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
 				fi
-				RETVAL=$?
-				if [ $RETVAL -ne 0 ]; then
+				SED_DIFF=`diff $FILENAME.bak1 $FILENAME`
+				if [ x"" == x"$SED_DIFF" ]; then
 					ERROR_EXIT "[FATAL]:-Failed to replace $SEARCH_TXT in $FILENAME" 2
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
 				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
-				RETVAL=$?
-				if [ $RETVAL -ne 0 ]; then
-					ERROR_EXIT "[FATAL]:-Failed to replace #$SEARCH_TXT in $FILENAME" 2
+				SED_DIFF=`diff $FILENAME.bak2 $FILENAME`
+				if [ x"" == x"$SED_DIFF" ]; then
+					ERROR_EXIT "[FATAL]:-Failed to replace $SEARCH_TXT in $FILENAME" 2
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak2
