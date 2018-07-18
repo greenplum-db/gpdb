@@ -1,0 +1,18 @@
+2018-07-20 09:11:14|INFO|gpload session started 2018-07-20 09:11:14
+2018-07-20 09:11:14|INFO|setting schema 'public' for table 'texttable'
+2018-07-20 09:11:14|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-07-20 09:11:14|WARN|fast_match is ignored when reuse_tables is false!
+2018-07-20 09:11:14|INFO|running time: 0.28 seconds
+2018-07-20 09:11:14|INFO|rows Inserted          = 0
+2018-07-20 09:11:14|INFO|rows Updated           = 34
+2018-07-20 09:11:14|INFO|data formatting errors = 0
+2018-07-20 09:11:14|INFO|gpload succeeded
+2018-07-20 09:11:14|INFO|gpload session started 2018-07-20 09:11:14
+2018-07-20 09:11:14|INFO|setting schema 'public' for table 'texttable'
+2018-07-20 09:11:14|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-07-20 09:11:14|WARN|fast_match is ignored when reuse_tables is false!
+2018-07-20 09:11:14|INFO|running time: 0.29 seconds
+2018-07-20 09:11:14|INFO|rows Inserted          = 0
+2018-07-20 09:11:14|INFO|rows Updated           = 34
+2018-07-20 09:11:14|INFO|data formatting errors = 0
+2018-07-20 09:11:14|INFO|gpload succeeded

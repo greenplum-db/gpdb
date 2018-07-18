@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false'):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -177,6 +177,7 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n    - SCHEMA: "+externalSchema)
     f.write("\n   PRELOAD:")
     f.write("\n    - REUSE_TABLES: "+reuse_flag)
+    f.write("\n    - FAST_MATCH: "+fast_match)
     if staging_table:
         f.write("\n    - STAGING_TABLE: "+staging_table)
     f.write("\n")
@@ -425,7 +426,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,30):
+        for num in range(1,33):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -668,6 +669,27 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_14.txt','data_file.txt')
         write_config_file(mode='insert',reuse_flag='true',file='data_file.txt',log_errors=True, error_limit='100')
         self.doTest(29)
+
+    def test_30_gpload_reuse_table_update_mode_with_fast_match(self):
+        "30  gpload update mode with fast match"
+        drop_tables()
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='update',reuse_flag='true',fast_match='true',file='data_file.txt')
+        self.doTest(30)
+
+    def test_31_gpload_reuse_table_update_mode_with_fast_match_and_different_columns_number(self):
+        "31 gpload update mode with fast match and differenct columns number) "
+        psql_run(cmd="ALTER TABLE texttable ADD column n8 text",dbname='reuse_gptest')
+        copy_data('external_file_08.txt','data_file.txt')
+        write_config_file(mode='update',reuse_flag='true',fast_match='true',file='data_file.txt')
+        self.doTest(31)
+
+    def test_32_gpload_update_mode_without_reuse_table_with_fast_match(self):
+        "32  gpload update mode when reuse table is false and fast match is true"
+        drop_tables()
+        copy_data('external_file_08.txt','data_file.txt')
+        write_config_file(mode='update',reuse_flag='false',fast_match='true',file='data_file.txt')
+        self.doTest(32)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

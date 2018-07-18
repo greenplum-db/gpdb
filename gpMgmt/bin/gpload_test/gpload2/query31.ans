@@ -1,0 +1,26 @@
+2018-07-20 09:06:30|INFO|gpload session started 2018-07-20 09:06:30
+2018-07-20 09:06:30|INFO|setting schema 'public' for table 'texttable'
+2018-07-20 09:06:30|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-07-20 09:06:30|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_9faa546d615fa55cc3e9e2cee6f130b0
+2018-07-20 09:06:30|INFO|reusing external table ext_gpload_reusable_30024be2_8bfc_11e8_83d4_0242ac110002
+2018-07-20 09:06:30|ERROR|ERROR:  column "n8" does not exist
+LINE 1: ..."s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM ...
+                                                             ^
+ encountered while running INSERT INTO staging_gpload_reusable_9faa546d615fa55cc3e9e2cee6f130b0 ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM ext_gpload_reusable_30024be2_8bfc_11e8_83d4_0242ac110002
+2018-07-20 09:06:30|INFO|rows Inserted          = 0
+2018-07-20 09:06:30|INFO|rows Updated           = 0
+2018-07-20 09:06:30|INFO|data formatting errors = 0
+2018-07-20 09:06:30|INFO|gpload failed
+2018-07-20 09:06:30|INFO|gpload session started 2018-07-20 09:06:30
+2018-07-20 09:06:30|INFO|setting schema 'public' for table 'texttable'
+2018-07-20 09:06:30|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-07-20 09:06:30|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_9faa546d615fa55cc3e9e2cee6f130b0
+2018-07-20 09:06:30|INFO|reusing external table ext_gpload_reusable_30024be2_8bfc_11e8_83d4_0242ac110002
+2018-07-20 09:06:30|ERROR|ERROR:  column "n8" does not exist
+LINE 1: ..."s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM ...
+                                                             ^
+ encountered while running INSERT INTO staging_gpload_reusable_9faa546d615fa55cc3e9e2cee6f130b0 ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7","n8" FROM ext_gpload_reusable_30024be2_8bfc_11e8_83d4_0242ac110002
+2018-07-20 09:06:30|INFO|rows Inserted          = 0
+2018-07-20 09:06:30|INFO|rows Updated           = 0
+2018-07-20 09:06:30|INFO|data formatting errors = 0
+2018-07-20 09:06:30|INFO|gpload failed

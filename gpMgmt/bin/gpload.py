@@ -122,6 +122,7 @@ valid_tokens = {
     "preload": {'parse_children': True, 'parent': 'gpload'},
     "truncate": {'parse_children': False, 'parent': 'preload'},
     "reuse_tables": {'parse_children': False, 'parent': 'preload'},
+    "fast_match": {'parse_children': False, 'parent': 'preload'},
     "staging_table": {'parse_children': False, 'parent': 'preload'},
     "sql": {'parse_children': True, 'parent': 'gpload'},
     "before": {'parse_children': False, 'parent': 'sql'},
@@ -2074,6 +2075,66 @@ class gpload:
         self.log(self.DEBUG, "query used to identify reusable external relations: %s" % sql)
         return sql
 
+    # Fast path to find out whether we have an existing external table in the
+    # catalog which could be reused for this operation. we only make sure the
+    # location, data format and error limit are same. we don't check column
+    # names and types
+    #
+    # This function will return the SQL to run in order to find out whether
+    # such a table exists.
+    #
+    def get_fast_match_exttable_query(self, locationStr, formatType, formatOpts, limitStr, schemaName, log_errors):
+
+        sqlFormat = """select relname from pg_class
+                    join
+                    pg_exttable pgext
+                    on(pg_class.oid = pgext.reloid)
+                    %s
+                    where
+                    relstorage = 'x' and
+                    relname like 'ext_gpload_reusable_%%' and
+		    %s
+                    """
+
+        joinStr = ""
+        conditionStr = ""
+
+        # if schemaName is None, find the resuable ext table which is visible to
+        # current search path. Else find the resuable ext table under the specific
+        # schema, and this needs to join pg_namespace.
+        if schemaName is None:
+            joinStr = ""
+            conditionStr = "pg_table_is_visible(pg_class.oid)"
+        else:
+            joinStr = """join
+                    pg_namespace pgns
+                    on(pg_class.relnamespace = pgns.oid)"""
+            conditionStr = "pgns.nspname = '%s'" % schemaName
+
+        sql = sqlFormat % (joinStr, conditionStr)
+
+        if log_errors:
+            sql += " and pgext.fmterrtbl = pgext.reloid "
+        else:
+            sql += " and pgext.fmterrtbl IS NULL "
+
+        for i, l in enumerate(self.locations):
+            sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
+
+        sql+= """and pgext.fmttype = %s
+                 and pgext.writable = false
+                 and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
+
+        if limitStr:
+            sql += "and pgext.rejectlimit = %s " % limitStr
+        else:
+            sql += "and pgext.rejectlimit IS NULL "
+
+        sql+= "limit 1;"
+
+        self.log(self.DEBUG, "query used to fast match external relations:\n %s" % sql)
+        return sql
+
     #
     # Create a string from the following conditions to reuse staging table:
     # 1. same target table
@@ -2279,8 +2340,13 @@ class gpload:
             else:
                 # process the single quotes in order to successfully find an existing external table to reuse.
                 self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
-                sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
-                    limitStr, from_cols, self.extSchemaName, self.log_errors)
+                if self.fast_match:
+                    sql = self.get_fast_match_exttable_query(locationStr, formatType, self.formatOpts,
+                        limitStr, self.extSchemaName, self.log_errors)
+                else:
+                    sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
+                        limitStr, from_cols, self.extSchemaName, self.log_errors)
+
                 resultList = self.db.query(sql.encode('utf-8')).getresult()
                 if len(resultList) > 0:
                     # found an external table to reuse. no need to create one. we're done here.
@@ -2678,6 +2744,9 @@ class gpload:
         if preload:
             truncate = self.getconfig('gpload:preload:truncate',bool,False)
             self.reuse_tables = self.getconfig('gpload:preload:reuse_tables',bool,False)
+            self.fast_match = self.getconfig('gpload:preload:fast_match',bool,False)
+            if self.reuse_tables == False and self.fast_match == True:
+                self.log(self.WARN, 'fast_match is ignored when reuse_tables is false!')
             self.staging_table = self.getconfig('gpload:preload:staging_table', unicode, default=None)
         if self.error_table:
             self.log_errors = True
