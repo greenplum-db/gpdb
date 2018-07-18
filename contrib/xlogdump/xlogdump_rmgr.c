@@ -20,6 +20,7 @@
 #include "commands/dbcommands.h"
 #include "cdb/cdbappendonlyam.h"
 #include "access/xlogmm.h"
+#include "access/xlog_internal.h"
 
 #if PG_VERSION_NUM >=90000
 #include "utils/relmapper.h"
@@ -279,6 +280,28 @@ print_rmgr_xlog(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 	case XLOG_FPW_CHANGE:
 	{
 		snprintf(buf, sizeof(buf), "full_page_write changed:");
+		break;
+	}
+#endif
+
+#if PG_VERSION_NUM >= 80300
+	case XLOG_HINT:
+	{
+		char		spaceName[NAMEDATALEN] = "";
+		char		dbName[NAMEDATALEN]    = "";
+		char		relName[NAMEDATALEN]   = "";
+		BkpBlock  bkb;
+		char *blk = XLogRecGetData(record);
+
+		memcpy(&bkb, blk, sizeof(BkpBlock));
+
+		getSpaceName(bkb.node.spcNode, spaceName, sizeof(spaceName));
+		getDbName(bkb.node.dbNode, dbName, sizeof(dbName));
+		getRelName(bkb.node.relNode, relName, sizeof(relName));
+
+		snprintf(buf, sizeof(buf), "xlog hint: bkpblock s/d/r:%s/%s/%s blk:%u hole_off/len:%u/%u",
+		         spaceName, dbName, relName,
+		         bkb.block, bkb.hole_offset, bkb.hole_length);
 		break;
 	}
 #endif
