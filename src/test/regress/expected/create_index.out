@@ -1233,12 +1233,11 @@ create index hash_f8_index_3 on hash_f8_heap(random) where seqno > 1000;
 --
 -- Unfortunately this only tests about half the code paths because there are
 -- no concurrent updates happening to the table at the same time.
+--
+-- Concurrent index building is not currently supported in Greenplum.
+--start_ignore
 CREATE TABLE concur_heap (f1 text, f2 text, dk text) distributed by (dk);
 -- empty table
-CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
-ERROR:  CREATE INDEX CONCURRENTLY is not supported
--- MPP-9772, MPP-9773: re-enable CREATE INDEX CONCURRENTLY (off by default)
-set gp_create_index_concurrently=true;
 CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
 INSERT INTO concur_heap VALUES  ('a','b', '1');
 INSERT INTO concur_heap VALUES  ('b','b', '1');
@@ -1252,8 +1251,6 @@ ERROR:  duplicate key value violates unique constraint "concur_index2"
 DETAIL:  Key (dk, f1)=(1, b) already exists.
 -- check if constraint is enforced properly at build time
 CREATE UNIQUE INDEX CONCURRENTLY concur_index3 ON concur_heap(dk, f2);
-ERROR:  could not create unique index "concur_index3"
-DETAIL:  Key (dk, f2)=(1, b) is duplicated.
 -- test that expression indexes and partial indexes work concurrently
 CREATE INDEX CONCURRENTLY concur_index4 on concur_heap(f2) WHERE f1='a';
 CREATE INDEX CONCURRENTLY concur_index5 on concur_heap(f2) WHERE f1='x';
@@ -1288,6 +1285,7 @@ Indexes:
     "std_index" btree (f2)
 Distributed by: (dk)
 
+--end_ignore
 DROP TABLE concur_heap;
 --
 -- Test ADD CONSTRAINT USING INDEX

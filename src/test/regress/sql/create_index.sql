@@ -377,12 +377,11 @@ create index hash_f8_index_3 on hash_f8_heap(random) where seqno > 1000;
 --
 -- Unfortunately this only tests about half the code paths because there are
 -- no concurrent updates happening to the table at the same time.
-
+--
+-- Concurrent index building is not currently supported in Greenplum.
+--start_ignore
 CREATE TABLE concur_heap (f1 text, f2 text, dk text) distributed by (dk);
 -- empty table
-CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
--- MPP-9772, MPP-9773: re-enable CREATE INDEX CONCURRENTLY (off by default)
-set gp_create_index_concurrently=true;
 CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
 INSERT INTO concur_heap VALUES  ('a','b', '1');
 INSERT INTO concur_heap VALUES  ('b','b', '1');
@@ -415,6 +414,7 @@ COMMIT;
 -- "invalid" flag set.
 
 \d concur_heap
+--end_ignore
 
 DROP TABLE concur_heap;
 

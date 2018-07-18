@@ -259,7 +259,6 @@ DefineIndex(RangeVar *heapRelation,
 	LOCKMODE	heap_lockmode;
 	bool		need_longlock = true;
 	bool		shouldDispatch;
-	List	   *dispatch_oids;
 	char	   *altconname = stmt ? stmt->altconname : NULL;
 	int			i;
 
@@ -601,30 +600,24 @@ DefineIndex(RangeVar *heapRelation,
 					 concurrent,
 					 altconname);
 
+	if (shouldDispatch)
+	{
+		/* make sure the QE uses the same index name that we chose */
+		stmt->idxname = indexRelationName;
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR |
+									DF_WITH_SNAPSHOT |
+									DF_NEED_TWO_PHASE,
+									GetAssignedOidsForDispatch(),
+									NULL);
+
+		/* Set indcheckxmin in the master, if it was set on any segment */
+		if (!indexInfo->ii_BrokenHotChain)
+			cdb_sync_indcheckxmin_with_segments(indexRelationId);
+	}
+
 	if (!concurrent)
 	{
-		/*
-		 * Dispatch the command to all primary and mirror segment dbs.
-		 * Start a global transaction and reconfigure cluster if needed.
-		 * Wait for QEs to finish.  Exit via ereport(ERROR,...) if error.
-		 * (For a concurrent build, we do this later, see below.)
-		 */
-		if (shouldDispatch)
-		{
-			/* make sure the QE uses the same index name that we chose */
-			stmt->idxname = indexRelationName;
-			CdbDispatchUtilityStatement((Node *) stmt,
-										DF_CANCEL_ON_ERROR |
-										DF_WITH_SNAPSHOT |
-										DF_NEED_TWO_PHASE,
-										GetAssignedOidsForDispatch(),
-										NULL);
-
-			/* Set indcheckxmin in the master, if it was set on any segment */
-			if (!indexInfo->ii_BrokenHotChain)
-				cdb_sync_indcheckxmin_with_segments(indexRelationId);
-		}
-
 		/* Close the heap and we're done, in the non-concurrent case */
 		if (need_longlock)
 			heap_close(rel, NoLock);
@@ -632,6 +625,17 @@ DefineIndex(RangeVar *heapRelation,
 			heap_close(rel, heap_lockmode);
 		return;
 	}
+
+	/*
+	 * FIXME: concurrent index build needs additional work in Greenplum.  The
+	 * feature is disabled in Greenplum until this work is done.  In upstream,
+	 * concurrent index build is accomplished in three steps.  Each step is
+	 * performed in its own transaction.  In GPDB, each step must be performed
+	 * in its own distributed transaction.  Today, we only support dispatching
+	 * one IndexStmt.  QEs cannot distinguish the steps within a concurrent
+	 * index build.  May be, augment IndexStmt with a variable indicating which
+	 * step of concurrent index build a QE should perform?
+	 */
 
 	/* save lockrelid and locktag for below, then close rel */
 	heaprelid = rel->rd_lockInfo.lockRelId;
@@ -664,47 +668,8 @@ DefineIndex(RangeVar *heapRelation,
 	 */
 	LockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
 
-	/*
-	 * CommitTransactionCommand will throw an error, if we haven't dispatched
-	 * the assigned oids to the segments, so pick them up first. We will
-	 * dispatch them below, right after committing the transaction.
-	 *
-	 * FIXME: this has to be copied into TopMemoryContext, because the commit
-	 * releases anything else. It is currently leaked!
-	 */
-	{
-		MemoryContext old_context = MemoryContextSwitchTo(TopMemoryContext);
-
-		dispatch_oids = copyObject(GetAssignedOidsForDispatch());
-
-		MemoryContextSwitchTo(old_context);
-	}
-
 	PopActiveSnapshot();
 	CommitTransactionCommand();
-
-	/*
-	 * We dispatch the command to QEs after we've committed the creation of
-	 * the empty index in the master, but before we proceed to fill it.
-	 * This ensures that if something goes wrong, we don't end up in
-	 * a state where the index exists on some segments but not the master.
-	 * It also ensures that the index is only marked as valid on the
-	 * master, after it's been successfully built and marked as valid on
-	 * all the segments.
-	 */
-	if (shouldDispatch)
-	{
-		/*
-		 * Note: We don't use a snapshot. Each QE will create their own
-		 * transactions and take their own snapshots. We will wait later
-		 * later for all the current distributed transactions to finish, so
-		 * it's not important what exact snapshot is used here.
-		 */
-		CdbDispatchUtilityStatement((Node *)stmt,
-									DF_CANCEL_ON_ERROR,
-									dispatch_oids,
-									NULL);
-	}
 
 	StartTransactionCommand();
 

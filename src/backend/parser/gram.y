@@ -8111,10 +8111,8 @@ IndexStmt:	CREATE opt_unique INDEX opt_concurrently opt_index_name
 					n->whereClause = $14;
 					n->indexOid = InvalidOid;
 
-                    if (n->concurrent && !gp_create_index_concurrently)
+                    if (n->concurrent)
 					{
-						/* MPP-9772, MPP-9773: remove support for
-						   CREATE INDEX CONCURRENTLY */
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 								 errmsg("CREATE INDEX CONCURRENTLY is not supported")));

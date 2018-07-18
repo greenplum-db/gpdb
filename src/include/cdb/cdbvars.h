@@ -787,9 +787,6 @@ extern bool gp_cte_sharing;
 
 extern bool	gp_setwith_alter_storage;
 
-/* MPP-9772, MPP-9773: remove support for CREATE INDEX CONCURRENTLY */
-extern bool	gp_create_index_concurrently;
-
 /* Priority for the segworkers relative to the postmaster's priority */
 extern int gp_segworker_relative_priority;
 

@@ -771,18 +771,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		/* MPP-9772, MPP-9773: remove support for CREATE INDEX CONCURRENTLY */
-		{"gp_create_index_concurrently", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Allow concurrent index creation."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_create_index_concurrently,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_minmax_optimization", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of index scans with limit to implement MIN/MAX."),
 			NULL,
