@@ -5453,8 +5453,8 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	if (!RelationIsValid(onerel))
 	{
 		elogif(Debug_appendonly_print_compaction && isDropTransaction, LOG,
-				"\"%s\" drop phase skipped because we are unable to upgrade to AccessExclusiveLock",
-				RelationGetRelationName(onerel));
+				"drop phase skipped for relation %d because we are unable to upgrade to AccessExclusiveLock",
+				relid);
 		return NULL;
 	}
 
