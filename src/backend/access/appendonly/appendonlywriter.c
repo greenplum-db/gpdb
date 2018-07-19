@@ -38,7 +38,6 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbutil.h"
-#include "pg_config.h"
 
 /*
  * GUC variables

@@ -13,7 +13,6 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "pg_config.h"  /* Adding this helps eclipse see that USE_SNMP is set */
 
 #include <fcntl.h>
 #include <signal.h>
