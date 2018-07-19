@@ -12,17 +12,7 @@
  *
  *-------------------------------------------------------------------------
  */
-#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE<600
-#undef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 600
-#endif
-#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE<200112L
-#undef _POSIX_C_SOURCE
-/* Define to activate features from IEEE Stds 1003.1-2001 */
-#define _POSIX_C_SOURCE 200112L
-#endif
 #include "postgres.h"
-#include "pg_config.h"  /* Adding this helps eclipse see that USE_SNMP is set */
 
 #include <fcntl.h>
 #include <signal.h>
@@ -59,6 +49,8 @@ extern int	PostPortNumber;
 #endif
 
 #ifdef USE_SNMP
+#include <sys/types.h>
+
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/definitions.h>
 #include <net-snmp/types.h>
