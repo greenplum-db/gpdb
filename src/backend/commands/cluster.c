@@ -1398,6 +1398,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	 */
 	if (TransactionIdIsValid(relform1->relfrozenxid))
 	{
+		Assert(TransactionIdIsNormal(frozenXid));
 		relform1->relfrozenxid = frozenXid;
 		/*
 		 * Don't know partition parent or not here but passing false is perfect

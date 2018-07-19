@@ -2854,6 +2854,7 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid)
 
 	if (TransactionIdIsValid(classform->relfrozenxid))
 	{
+		Assert(TransactionIdIsNormal(freezeXid));
 		classform->relfrozenxid = freezeXid;
 		/*
 		 * Don't know partition parent or not here but passing false is perfect
