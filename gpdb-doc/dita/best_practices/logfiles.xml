@@ -38,7 +38,7 @@
             <entry>
               <codeph>$GPADMIN_HOME/gpAdminLogs/*</codeph>
             </entry>
-            <entry>Many different types of log files, directory on each server. <codeph>$GPADMIN_HOME</codeph> is the default location for the <codeph>gpAdminLogs/</codeph> directory, you can specify a different location when you run an administrative utility command.</entry>
+            <entry>Many different types of log files, directory on each server. <codeph>$GPADMIN_HOME</codeph> is the default location for the <codeph>gpAdminLogs/</codeph> directory. You can specify a different location when you run an administrative utility command.</entry>
           </row>
           <row>
             <entry>
