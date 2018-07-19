@@ -396,3 +396,25 @@ INSERT INTO foo_stats values (repeat('b', 100000), 'bbbbb2', 'cccc2', 3);
 ANALYZE foo_stats;
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
 DROP TABLE IF EXISTS foo_stats;
+
+-- Test the GUC gp_statistics_reltuples_only
+SET gp_autostats_mode to NONE;
+CREATE TABLE t1 (a int, b int);
+INSERT INTO t1 SELECT i,i FROM generate_series(1,10)i;
+CREATE TEMP TABLE t1_temp AS SELECT a,b FROM t1;
+-- relpages, reltuples empty for t1_temp
+SELECT relname, relpages, reltuples FROM pg_class WHERE relname = 't1_temp';
+SET gp_statistics_reltuples_for_temp_tables_only TO on;
+ANALYZE t1_temp (a);
+ANALYZE t1(a);
+-- Now relpages, reltuples will have value but pg_stats will be empty for t1_temp
+-- but not for t1.
+SELECT relname, relpages, reltuples FROM pg_class WHERE relname = 't1_temp';
+SELECT * FROM pg_stats WHERE tablename = 't1_temp';
+SELECT relname, relpages, reltuples FROM pg_class WHERE relname = 't1';
+SELECT schemaname, tablename, attname, null_frac, n_distinct, histogram_bounds FROM pg_stats WHERE tablename = 't1';
+-- start_ignore
+RESET gp_statistics_reltuples_for_temp_tables_only;
+RESET gp_autostats_mode;
+DROP TABLE IF EXISTS t1;
+-- end_ignore

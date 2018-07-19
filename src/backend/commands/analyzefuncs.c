@@ -20,6 +20,7 @@ bool			gp_statistics_use_fkeys = FALSE;
 int				gp_statistics_blocks_target = 25;
 double			gp_statistics_ndistinct_scaling_ratio_threshold = 0.10;
 double			gp_statistics_sampling_threshold = 10000;
+bool			gp_statistics_reltuples_for_temp_tables_only = FALSE;
 
 /**
  * This method estimates the number of tuples and pages in a heaptable relation. Getting the number of blocks is straightforward.

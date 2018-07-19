@@ -461,13 +461,27 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	/*
 	 * Acquire the sample rows
 	 */
-	numrows = acquire_sample_rows_by_query(onerel, attr_cnt, vacattrstats, &rows, targrows,
-										   &totalrows, &totaldeadrows, &totalpages, vacstmt->rootonly, colLargeRowIndexes);
+	if (gp_statistics_reltuples_for_temp_tables_only && RELATION_IS_LOCAL(onerel))
+	{
+		float4 relTuples = 0;
+		float4 relPages = 0;
 
-	/* change the privilige back to the table owner */
-	SetUserIdAndSecContext(onerel->rd_rel->relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+		analyzeEstimateReltuplesRelpages(RelationGetRelid(onerel), &relTuples, &relPages,
+										 vacstmt->rootonly);
 
+		totalrows = relTuples;
+		totalpages = relPages;
+		numrows = 0;
+	}
+	else
+	{
+		numrows = acquire_sample_rows_by_query(onerel, attr_cnt, vacattrstats, &rows, targrows,
+											   &totalrows, &totaldeadrows, &totalpages, vacstmt->rootonly, colLargeRowIndexes);
+
+		/* change the privilige back to the table owner */
+		SetUserIdAndSecContext(onerel->rd_rel->relowner,
+							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	}
 	/*
 	 * Compute the statistics.	Temporary results during the calculations for
 	 * each column are stored in a child context.  The calc routines are

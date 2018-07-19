@@ -2066,7 +2066,14 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_resqueue_priority,
 		true, NULL, NULL
 	},
-
+	{
+		{"gp_statistics_reltuples_for_temp_tables_only", PGC_USERSET, STATS_ANALYZE,
+			gettext_noop("This guc makes analyze collect only reltuple and relpages for temp tables."),
+			NULL
+		},
+		&gp_statistics_reltuples_for_temp_tables_only,
+		false, NULL, NULL
+	},
 	{
 		{"gp_change_tracking", PGC_SUSET, UNGROUPED,
 			gettext_noop("Allows disabling change tracking."),

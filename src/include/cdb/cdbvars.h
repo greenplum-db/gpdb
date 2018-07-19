@@ -906,6 +906,7 @@ extern bool		gp_statistics_use_fkeys;
 extern int 		gp_statistics_blocks_target;
 extern double	gp_statistics_ndistinct_scaling_ratio_threshold;
 extern double	gp_statistics_sampling_threshold;
+extern bool     gp_statistics_reltuples_for_temp_tables_only;
 
 /* Analyze tools */
 extern int gp_motion_slice_noop;
