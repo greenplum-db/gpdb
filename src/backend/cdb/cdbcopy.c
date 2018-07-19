@@ -49,7 +49,6 @@ makeCdbCopy(bool is_copy_in)
 
 	/* fresh start */
 	c->total_segs = 0;
-	c->primary_writer = NULL;
 	c->io_errors = false;
 	c->copy_in = is_copy_in;
 	c->skip_ext_partition = false;
@@ -75,9 +74,6 @@ makeCdbCopy(bool is_copy_in)
 		c->segdb_state[seg] = (SegDbState *) palloc(2 * sizeof(SegDbState));
 		c->segdb_state[seg][0] = SEGDB_IDLE;	/* Primary can't be OUT */
 	}
-
-	/* init gangs */
-	c->primary_writer = AllocateWriterGang();
 
 	/* init seg list for copy out */
 	if (!c->copy_in)
@@ -126,10 +122,8 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
 		stmt->policy = createRandomPartitionedPolicy(NULL);
 	}
 
-	CdbDispatchUtilityStatement((Node *) stmt,
-								(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT) | DF_CANCEL_ON_ERROR,
-								NIL,
-								NULL);
+	CdbDispatchCopyStart(c, (Node *)stmt,
+				(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT) | DF_CANCEL_ON_ERROR);	
 
 	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
 
@@ -146,7 +140,7 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
 void
 cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes)
 {
-	Gang	   *gp = c->primary_writer;
+	Gang	   *gp = c->dispatcherState->primaryResults->writer_gang;
 
 	for (int i = 0; i < gp->size; ++i)
 	{
@@ -178,7 +172,7 @@ cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer,
 	 * code above. I didn't do it because it's broken right now
 	 */
 
-	gp = c->primary_writer;
+	gp = c->dispatcherState->primaryResults->writer_gang;
 
 	q = getSegmentDescriptorFromGang(gp, target_seg);
 
@@ -225,7 +219,7 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 	c->copy_out_buf.data[0] = '\0';
 	c->copy_out_buf.cursor = 0;
 
-	gp = c->primary_writer;
+	gp = c->dispatcherState->primaryResults->writer_gang;
 
 	/*
 	 * MPP-7712: we used to issue the cancel-requests for each *row* we got
@@ -634,7 +628,7 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort
 	 * GPDB_91_MERGE_FIXME: ugh, this is nasty. We shouldn't be calling
 	 * cdbCopyEnd twice on the same CdbCopy in the first place!
 	 */
-	if (!c->primary_writer)
+	if (!c->dispatcherState || !c->dispatcherState->primaryResults->writer_gang)
 		return -1;
 
 	/* clean err message */
@@ -645,7 +639,7 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort
 	/* allocate a failed segment database pointer array */
 	failedSegDBs = (SegmentDatabaseDescriptor **) palloc(c->total_segs * 2 * sizeof(SegmentDatabaseDescriptor *));
 
-	gp = c->primary_writer;
+	gp = c->dispatcherState->primaryResults->writer_gang;
 	db_descriptors = gp->db_descriptors;
 	size = gp->size;
 
@@ -668,6 +662,8 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort
 								  &failed_count, &total_rows_rejected,
 								  total_rows_completed);
 
+	CdbDispatchCopyEnd(c);
+
 	/* If lost contact with segment db, try to reconnect. */
 	if (failed_count > 0)
 	{
@@ -675,7 +671,6 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort
 		elog(LOG, "COPY signals FTS to probe segments");
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
 		DisconnectAndDestroyAllGangs(true);
-		c->primary_writer = NULL;
 		ereport(ERROR,
 				(errmsg_internal("MPP detected %d segment failures, system is reconnected", failed_count),
 				 errSendAlert(true)));

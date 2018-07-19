@@ -45,6 +45,7 @@
 								 * DispatchCommandParms */
 #include "cdb/cdbdisp_dtx.h"	/* for qdSerializeDtxContextInfo() */
 #include "cdb/cdbdispatchresult.h"
+#include "cdb/cdbcopy.h"
 
 extern bool Test_print_direct_dispatch_info;
 
@@ -1481,4 +1482,87 @@ deserializeParamListInfo(const char *str, int slen)
 	}
 
 	return paramLI;
+}
+
+/*
+ * CdbDispatchCopyStart allocate a writer gang and
+ * dispatch the COPY command to segments.
+ *
+ * In COPY protocol, after a COPY command is dispatched, a response
+ * to this will be a PGresult object bearing a status code of
+ * PGRES_COPY_OUT or PGRES_COPY_IN, then client can use APIs like
+ * PQputCopyData/PQgetCopyData to copy in/out data.
+ *
+ * cdbdisp_checkDispatchResult() will block until all connections
+ * has issued a PGRES_COPY_OUT/PGRES_COPY_IN PGresult response.
+ */
+void
+CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
+{
+	DispatchCommandQueryParms *pQueryParms;
+	char *queryText;
+	int queryTextLength;
+	CdbDispatcherState *ds;
+	Gang *primaryGang;
+	MemoryContext oldContext;
+	ErrorData *error = NULL;
+	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
+	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
+
+	dtmPreCommand("CdbDispatchCopyStart", debug_query_string,
+				  NULL, needTwoPhase, withSnapshot,
+				  false /* inCursor */ );
+
+	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
+		   "CdbDispatchCopyStart: %s (needTwoPhase = %s)",
+		   debug_query_string, (needTwoPhase ? "true" : "false"));
+
+	pQueryParms = cdbdisp_buildUtilityQueryParms(stmt, flags, NULL);
+	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
+
+	/*
+	 * Dispatch the command.
+	 */
+	ds = cdbdisp_makeDispatcherState();
+
+	/*
+	 * Allocate a primary QE for every available segDB in the system.
+	 */
+	primaryGang = AllocateWriterGang();
+	Assert(primaryGang);
+
+	oldContext = MemoryContextSwitchTo(DispatcherContext);
+	ds->primaryResults = cdbdisp_makeDispatchResults(1, flags & DF_CANCEL_ON_ERROR);
+	ds->dispatchParams = cdbdisp_makeDispatchParams (1, queryText, queryTextLength);
+	ds->primaryResults->writer_gang = primaryGang;
+	MemoryContextSwitchTo(oldContext);
+
+	cdbdisp_dispatchToGang(ds, primaryGang, -1, DEFAULT_DISP_DIRECT);
+
+	cdbdisp_waitDispatchFinish(ds);
+
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
+
+	if (!cdbdisp_getDispatchResults(ds, &error))
+	{
+		Assert(error);
+		cdbdisp_destroyDispatcherState(ds);
+		ReThrowError(error);
+	}
+
+	/*
+	 * Notice: Do not call cdbdisp_finishCommand to destory dispatcher state,
+	 * following PQputCopyData/PQgetCopyData will be called on those connections
+	 */
+	cdbCopy->dispatcherState = ds;
+}
+
+void
+CdbDispatchCopyEnd(struct CdbCopy *cdbCopy)
+{
+	CdbDispatcherState *ds;
+
+	ds = cdbCopy->dispatcherState;
+	cdbCopy->dispatcherState = NULL;
+	cdbdisp_destroyDispatcherState(ds);
 }

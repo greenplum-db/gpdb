@@ -2475,6 +2475,9 @@ CopyToDispatch(CopyState cstate)
 				CopyToDispatchFlush(cstate);
 			}
 		} while(!done);
+
+		/* now it's safe to destroy the whole dispatcher state */
+		CdbDispatchCopyEnd(cdbCopy);
 	}
     /* catch error from CopyStart, CopySendEndOfRow or CopyToDispatchFlush */
 	PG_CATCH();
