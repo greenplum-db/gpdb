@@ -6,9 +6,23 @@
     <p>Know the location and content of system log files and monitor them on a regular basis and not
       just when problems arise.</p>
     <p>The following table shows the locations of the various Greenplum Database log files. In file
-      paths, <codeph><varname>date</varname></codeph> is a date in the format
-        <codeph>YYYYMMDD</codeph>, <codeph><varname>instance</varname></codeph> is the current
-      instance name, and <codeph><varname>n</varname></codeph> is the segment number.</p>
+      paths:</p><ul>
+        <li><codeph>$GPADMIN_HOME</codeph> refers to the home directory of the 
+          <codeph>gpadmin</codeph> operating system user.</li>
+        <li><codeph>$MASTER_DATA_DIRECTORY</codeph> refers to the master data directory
+           on the Greenplum Database master host.</li>
+        <li><codeph>$GPDATA_DIR</codeph> refers to a data directory on the Greenplum
+           Database segment host.</li>
+        <li><codeph><varname>host</varname></codeph> identifies the Greenplum Database
+          segment host name.</li>
+        <li><codeph><varname>segprefix</varname></codeph> identifies the segment
+          prefix.</li>
+        <li><codeph><varname>N</varname></codeph> identifies the segment instance
+          number.</li>
+        <li><codeph><varname>date</varname></codeph> is a date in the format
+          <codeph>YYYYMMDD</codeph>.</li>
+      </ul>
+    <p> </p>
     <table id="table_mkp_cgc_3r">
       <tgroup cols="2">
         <colspec colnum="1" colname="col1"/>
@@ -22,57 +36,71 @@
         <tbody>
           <row>
             <entry>
-              <codeph>/var/gpadmin/gpadminlogs/*</codeph>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/*</codeph>
             </entry>
-            <entry>Many different types of log files, directory on each server</entry>
+            <entry>Many different types of log files, directory on each server. <codeph>$GPADMIN_HOME</codeph> is the default location for the <codeph>gpAdminLogs/</codeph> directory, you can specify a different location when you run an administrative utility command.</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpadmin/gpadminlogs/gpstart_<varname>date</varname>.log</codeph>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/gpinitsystem_<varname>date</varname>.log</codeph>
+            </entry>
+            <entry>system initialization log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/gpstart_<varname>date</varname>.log</codeph>
             </entry>
             <entry>start log</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpadmin/gpadminlogs/gpstop_<varname>date</varname>.log</codeph>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/gpstop_<varname>date</varname>.log</codeph>
             </entry>
             <entry>stop log</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpadmin/gpadminlogs/gpsegstart.py_idb*gpadmin_<varname>date</varname>.log</codeph>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/gpsegstart.py_<varname>host</varname>:gpadmin_<varname>date</varname>.log</codeph>
             </entry>
-            <entry>segment start log</entry>
+            <entry>segment host start log</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpadmin/gpadminlogs/gpsegstop.py_idb*gpadmin_<varname>date</varname>.log</codeph>
+              <codeph>$GPADMIN_HOME/gpAdminLogs/gpsegstop.py_<varname>host</varname>:gpadmin_<varname>date</varname>.log</codeph>
             </entry>
-            <entry>segment stop log</entry>
+            <entry>segment host stop log</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpdb/<varname>instance</varname>/datamaster/gpseg-1/pg_log/startup.log</codeph>
+              <codeph>$MASTER_DATA_DIRECTORY/pg_log/startup.log</codeph>,
+              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/pg_log/startup.log</codeph>
             </entry>
-            <entry>instance start log</entry>
+            <entry>segment instance start log</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpdb/<varname>instance</varname>/datamaster/gpseg-1/gpperfmon/logs/gpmon.*.log</codeph>
+              <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs/gpmon.*.log</codeph>
             </entry>
             <entry>gpperfmon logs</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpdb/<varname>instance</varname>/datamirror/gpseg<varname>n</varname>/pg_log/*.csv</codeph>
+              <codeph>$MASTER_DATA_DIRECTORY/pg_log/*.csv</codeph>,
+              <codeph>$GPDATA_DIR/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
             </entry>
-            <entry>mirror segment logs</entry>
+            <entry>master and segment database logs</entry>
           </row>
           <row>
             <entry>
-              <codeph>/var/gpdb/<varname>instance</varname>/dataprimary/gpseg<varname>n</varname>/pg_log/*.csv</codeph>
+              <codeph>$GPDATA_DIR/mirror/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
             </entry>
-            <entry>primary segment logs</entry>
+            <entry>mirror segment database logs</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>$GPDATA_DIR/primary/<varname>segprefixN</varname>/pg_log/*.csv</codeph>
+            </entry>
+            <entry>primary segment database logs</entry>
           </row>
           <row>
             <entry>
