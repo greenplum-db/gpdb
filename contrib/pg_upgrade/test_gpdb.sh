@@ -106,14 +106,14 @@ check_vacuum_worked()
 
 	# Start the instance using the same pg_ctl invocation used by pg_upgrade.
 	"${NEW_BINDIR}/pg_ctl" -w -l /dev/null -D "${datadir}" \
-		-o "-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
+		-o "-p 18432 --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
 		start
 
 	# Query for the xmin ages.
 	local xmin_ages=$( \
 		PGOPTIONS='-c gp_session_role=utility' \
-		psql -c 'SELECT age(xmin) FROM pg_catalog.gp_segment_configuration GROUP BY age(xmin);' \
-			 -p 5432 -t -A template1 \
+		"${NEW_BINDIR}/psql" -c 'SELECT age(xmin) FROM pg_catalog.gp_segment_configuration GROUP BY age(xmin);' \
+			 -p 18432 -t -A template1 \
 	)
 
 	# Stop the instance.
@@ -121,7 +121,7 @@ check_vacuum_worked()
 
 	# Check to make sure all the xmins are frozen (maximum age).
 	while read age; do
-		if [ "$age" -ne 2147483647 ]; then
+		if [ "$age" -ne "2147483647" ]; then
 			echo "ERROR: gp_segment_configuration has an entry of age $age"
 			return 1
 		fi
