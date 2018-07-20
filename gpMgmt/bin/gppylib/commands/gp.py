@@ -8,7 +8,7 @@ TODO: docs!
 """
 import os, pickle, base64, time
 
-import re
+import re, socket
 
 from gppylib.gplog import *
 from gppylib.db import dbconn
@@ -1724,8 +1724,7 @@ class GpRecoverSeg(Command):
        Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 
 class GpReadConfig(Command):
-    def __init__(self, name, host, seg, guc_name, ctxt=LOCAL, remote_host=None):
-        self.host = host
+    def __init__(self, name, seg, guc_name):
         self.seg_db_id = seg.getSegmentDbId()
         self.seg_content_id = seg.getSegmentContentId()
         self.guc_name = guc_name
@@ -1733,6 +1732,11 @@ class GpReadConfig(Command):
         cat_path = findCmdInPath('cat')
 
         cmdStr = "%s %s/postgresql.conf" % (cat_path, seg.getSegmentDataDirectory())
+        ctxt = LOCAL
+        remote_host = None
+        if seg.hostname != socket.gethostname():
+            ctxt = REMOTE
+            remote_host = seg.hostname
         Command.__init__(self, name, cmdStr, ctxt, remote_host)
 
     def get_guc_value(self):
