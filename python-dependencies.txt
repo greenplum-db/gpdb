@@ -11,6 +11,5 @@ paramiko==1.18.1
 parse==1.8.2
 psutil==4.0.0
 pycrypto==2.6.1
-pylint==0.21.0
 setuptools==36.6.0
 unittest2==0.5.1
