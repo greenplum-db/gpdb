@@ -285,7 +285,9 @@ FaultInjector_InjectFaultNameIfSet(
 	 * some other mechanism needs to be placed to avoid flaky failures.
 	 */
 	if (IsAutoVacuumLauncherProcess() ||
-		(IsAutoVacuumWorkerProcess() && 0 != strcmp("vacuum_update_dat_frozen_xid", faultName)))
+		(IsAutoVacuumWorkerProcess() &&
+		 !(0 == strcmp("vacuum_update_dat_frozen_xid", faultName) ||
+			 0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName))))
 		return FaultInjectorTypeNotSpecified;
 
 	/*

@@ -100,6 +100,7 @@
 #include "utils/tqual.h"
 
 #include "cdb/cdbvars.h"
+#include "utils/faultinjector.h"
 
 
 /*
@@ -1606,8 +1607,10 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, dbname);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(DEBUG1,
+		ereport(LOG,
 				(errmsg("autovacuum: processing database \"%s\"", dbname)));
+
+		SIMPLE_FAULT_INJECTOR(AutoVacWorkerBeforeDoAutovacuum);
 
 		if (PostAuthDelay)
 			pg_usleep(PostAuthDelay * 1000000L);

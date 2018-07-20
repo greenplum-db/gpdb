@@ -241,6 +241,8 @@ FI_IDENT(VacuumUpdateDatFrozenXid, "vacuum_update_dat_frozen_xid")
 FI_IDENT(CollateLocaleOsLookup, "collate_locale_os_lookup")
 /* inject fault before create resource group committing */
 FI_IDENT(CreateResourceGroupFail, "create_resource_group_fail")
+/* inject fault before auto vacuum worker calls do_autovacuum */
+FI_IDENT(AutoVacWorkerBeforeDoAutovacuum, "auto_vac_worker_before_do_autovacuum")
 #endif
 
 /*
