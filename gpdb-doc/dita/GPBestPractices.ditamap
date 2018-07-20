@@ -61,7 +61,6 @@
     <chapter href="best_practices/gptransfer.xml"/>
     <chapter href="best_practices/security.xml"/>
     <chapter href="best_practices/encryption.xml"/>
-    <chapter href="best_practices/kerberos-hdfs.xml"/>
     <chapter href="best_practices/tuning_queries.xml"/>
     <chapter href="best_practices/ha.xml"/>
 </bookmap>

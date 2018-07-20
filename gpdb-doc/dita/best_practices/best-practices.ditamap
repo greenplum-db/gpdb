@@ -18,7 +18,6 @@
         <topicref href="gptransfer.xml"/>
         <topicref href="security.xml"/>
         <topicref href="encryption.xml"/>
-        <topicref href="kerberos-hdfs.xml"/>
         <topicref href="tuning_queries.xml"/>
         <topicref href="ha.xml"/>
     </topicref>
