@@ -448,7 +448,7 @@ def get_gucs_from_files(gucname):
     commands = []
     for host in hosts:
         for seg in host.dbs:
-            command = GpReadConfig("readConfig", host, seg, gucname)
+            command = GpReadConfig("readConfig", seg, gucname)
             commands.append(command)
             pool.addCommand(command)
 
