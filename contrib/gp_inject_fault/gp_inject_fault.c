@@ -14,7 +14,7 @@
 
 PG_MODULE_MAGIC;
 
-extern Datum gp_inject_fault(PG_FUNCTION_ARGS);
+extern Datum gp_inject_fault_new(PG_FUNCTION_ARGS);
 
 static StringInfo transitionMsgErrors;
 
@@ -37,26 +37,27 @@ checkForNeedToExitFn(void)
 	return false;
 }
 
-PG_FUNCTION_INFO_V1(gp_inject_fault);
+PG_FUNCTION_INFO_V1(gp_inject_fault_new);
 Datum
-gp_inject_fault(PG_FUNCTION_ARGS)
+gp_inject_fault_new(PG_FUNCTION_ARGS)
 {
 	char	   *faultName = TextDatumGetCString(PG_GETARG_DATUM(0));
 	char	   *type = TextDatumGetCString(PG_GETARG_DATUM(1));
 	char	   *ddlStatement = TextDatumGetCString(PG_GETARG_DATUM(2));
 	char	   *databaseName = TextDatumGetCString(PG_GETARG_DATUM(3));
 	char	   *tableName = TextDatumGetCString(PG_GETARG_DATUM(4));
-	int			numOccurrences = PG_GETARG_INT32(5);
-	int			sleepTimeSeconds = PG_GETARG_INT32(6);
-	int         dbid = PG_GETARG_INT32(7);
+	int			startOccurrence = PG_GETARG_INT32(5);
+	int			endOccurrence = PG_GETARG_INT32(6);
+	int			extraArg = PG_GETARG_INT32(7);
+	int         dbid = PG_GETARG_INT32(8);
 	StringInfo  faultmsg = makeStringInfo();
 
 	/* Fast path if injecting fault in our postmaster. */
 	if (GpIdentity.dbid == dbid)
 	{
-		appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%d\n%d\n",
+		appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n",
 						 faultName, type, ddlStatement, databaseName,
-						 tableName, numOccurrences, sleepTimeSeconds);
+						 tableName, startOccurrence, endOccurrence, extraArg);
 		int offset = 0;
 		char *response =
 			processTransitionRequest_faultInject(
@@ -130,10 +131,10 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	client.checkForNeedToExitFn = checkForNeedToExitFn;
 	transitionMsgErrors = makeStringInfo();
 
-	appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n",
+	appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n",
 					 "faultInject",	faultName, type, ddlStatement,
-					 databaseName, tableName, numOccurrences,
-					 sleepTimeSeconds);
+					 databaseName, tableName, startOccurrence, endOccurrence,
+					 extraArg);
 
 	if (sendTransitionMessage(&client, addrList, faultmsg->data, faultmsg->len,
 							  1 /* retries */, 60 /* timeout */) !=

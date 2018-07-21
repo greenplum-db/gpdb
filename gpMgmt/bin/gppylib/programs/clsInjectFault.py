@@ -55,8 +55,9 @@ class GpInjectFaultProgram:
         result.append( toNonNoneString(self.options.ddlStatement))
         result.append( toNonNoneString(self.options.databaseName))
         result.append( toNonNoneString(self.options.tableName))
-        result.append( toNonNoneString(self.options.numOccurrences))
-        result.append( toNonNoneString(self.options.sleepTimeSeconds))
+        result.append( toNonNoneString(self.options.numOccurrences)) # startOccurrence
+        result.append('-1') # endOccurrence
+        result.append( toNonNoneString(self.options.sleepTimeSeconds)) # extraArg
         return '\n'.join(result)
 
     #

@@ -3282,8 +3282,9 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 	char *ddlStatement = readNextStringFromString(inputBuf, offsetPtr, length);
 	char *databaseName = readNextStringFromString(inputBuf, offsetPtr, length);
 	char *tableName = readNextStringFromString(inputBuf, offsetPtr, length);
-	int numOccurrences = readIntFromString(inputBuf, offsetPtr, length, &wasRead);
-	int sleepTimeSeconds = readIntFromString(inputBuf, offsetPtr, length, &wasRead);
+	int startOccurrence = readIntFromString(inputBuf, offsetPtr, length, &wasRead);
+	int endOccurrence = readIntFromString(inputBuf, offsetPtr, length, &wasRead);
+	int extraArg = readIntFromString(inputBuf, offsetPtr, length, &wasRead);
 	FaultInjectorEntry_s	faultInjectorEntry;
 
 	init_ps_display("filerep fault inject process", "", "", "");
@@ -3296,8 +3297,8 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 		goto exit;
 	}
 
-	elog(DEBUG1, "FAULT INJECTED: Name %s Type %s, DDL %s, DB %s, Table %s, NumOccurrences %d  SleepTime %d",
-		 faultName, type, ddlStatement, databaseName, tableName, numOccurrences, sleepTimeSeconds );
+	elog(DEBUG1, "FAULT INJECTED: Name %s Type %s, DDL %s, DB %s, Table %s, StartOccurrence %d, EndOccurrence %d, extraArg %d",
+		 faultName, type, ddlStatement, databaseName, tableName, startOccurrence, endOccurrence, extraArg);
 
 	strlcpy(faultInjectorEntry.faultName, faultName, sizeof(faultInjectorEntry.faultName));
 	faultInjectorEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
@@ -3319,13 +3320,18 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 		goto exit;
 	}
 
-	faultInjectorEntry.sleepTime = sleepTimeSeconds;
-	if (sleepTimeSeconds < 0 || sleepTimeSeconds > 7200) {
-		ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-							errmsg("invalid sleep time, allowed range [0, 7200 sec]")));
+	faultInjectorEntry.extraArg = extraArg;
 
-		appendStringInfo(buf, "Failure: invalid sleep time, allowed range [0, 7200 sec]");
-		goto exit;
+	if (faultInjectorEntry.faultInjectorType == FaultInjectorTypeSleep)
+	{
+		if (extraArg < 0 || extraArg > 7200) {
+			ereport(COMMERROR,
+					(errcode(ERRCODE_PROTOCOL_VIOLATION),
+					 errmsg("invalid sleep time, allowed range [0, 7200 sec]")));
+
+			appendStringInfo(buf, "Failure: invalid sleep time, allowed range [0, 7200 sec]");
+			goto exit;
+		}
 	}
 
 	faultInjectorEntry.ddlStatement = FaultInjectorDDLStringToEnum(ddlStatement);
@@ -3341,15 +3347,28 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 
 	snprintf(faultInjectorEntry.tableName, sizeof(faultInjectorEntry.tableName), "%s", tableName);
 
-	faultInjectorEntry.occurrence = numOccurrences;
-	if (numOccurrences > 1000) {
-		ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-							errmsg("invalid occurrence number, allowed range [1, 1000]")));
+	if (startOccurrence > 1000)
+	{
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("invalid start occurrence number, allowed range [1, 1000]")));
 
-		appendStringInfo(buf, "Failure: invalid occurrence number, allowed range [1, 1000]");
+		appendStringInfo(buf, "Failure: invalid start occurrence number, allowed range [1, 1000]");
 		goto exit;
 	}
 
+	if (endOccurrence != INFINITE_END_OCCURRENCE && endOccurrence < startOccurrence)
+	{
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("invalid end occurrence number, allowed range [startOccurrence, ] or -1")));
+
+		appendStringInfo(buf, "Failure: invalid end occurrence number, allowed range [startOccurrence, ] or -1");
+		goto exit;
+	}
+
+	faultInjectorEntry.startOccurrence = startOccurrence;
+	faultInjectorEntry.endOccurrence = endOccurrence;
 
 	if (FaultInjector_SetFaultInjection(&faultInjectorEntry) == STATUS_OK) {
 		if (faultInjectorEntry.faultInjectorType == FaultInjectorTypeStatus) {
