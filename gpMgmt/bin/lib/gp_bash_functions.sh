@@ -372,13 +372,6 @@ SED_PG_CONF () {
 					$RM -f ${FILENAME}.bak1
 				fi
 				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
-				SED_DIFF=`diff $FILENAME.bak2 $FILENAME`
-				if [ x"" == x"$SED_DIFF" ]; then
-					ERROR_EXIT "[FATAL]:-Failed to replace $SEARCH_TXT in $FILENAME" 2
-				else
-					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
-					$RM -f ${FILENAME}.bak2
-				fi
 			fi
 	else
 		# trap DEBUG will always be called first, when other traps are triggered.
