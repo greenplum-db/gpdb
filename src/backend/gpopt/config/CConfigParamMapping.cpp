@@ -503,7 +503,8 @@ CConfigParamMapping::PbsPack
 	}
 
 	// enable nested loop index plans using nest params
-	pbs->FExchangeSet(EopttraceEnableNestLoopParams);
+	// instead of outer reference as in the case with GPDB 4/5
+	pbs->FExchangeSet(EopttraceIndexedNLJOuterRefAsParams);
 
 	return pbs;
 }
