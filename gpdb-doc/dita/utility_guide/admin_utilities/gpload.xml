@@ -790,18 +790,18 @@
                             <plentry>
                                 <pt id="cffastmatch">FAST_MATCH</pt>
                                 <pd>Optional. If set to true, <codeph>gpload</codeph> only searches
-                                    Greenplum Database for matching external table objects when
-                                    reusing external tables. The utility does not check the external
-                                    table column names and column types to ensure that the table can
+                                    the database for matching external table objects when reusing
+                                    external tables. The utility does not check the external table
+                                    column names and column types in the catalog table
+                                        <codeph>pg_attribute</codeph> to ensure that the table can
                                     be used for a <codeph>gpload</codeph> operation. Set the value
                                     to true to improve <codeph>gpload</codeph> performance when
                                     reusing external table objects and the database catalog table
                                         <codeph>pg_attribute</codeph> contains a large number of
-                                    rows. </pd>
+                                    rows. The utility returns an error and quits if the column
+                                    definitions are not compatible.</pd>
                                 <pd>The default value is false, the utility checks the external
-                                    table definition column names and column types. The utility
-                                    returns an error and quits if the column definitions are not
-                                    compatible.</pd>
+                                    table definition column names and column types. </pd>
                                 <pd><codeph>REUSE_TABLES: true</codeph> must also specified. If
                                         <codeph>REUSE_TABLES</codeph> is false or not specified and
                                         <codeph>FAST_MATCH: true</codeph> is specified,
