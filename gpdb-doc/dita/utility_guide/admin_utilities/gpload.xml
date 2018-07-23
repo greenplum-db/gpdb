@@ -216,8 +216,9 @@
               <varname>target_column_name</varname>: <varname>source_column_name</varname> | '<varname>expression</varname>'
    <xref href="#topic1/cfpreload" format="dita">PRELOAD</xref>:
     - <xref href="#topic1/cftruncate" format="dita">TRUNCATE</xref>: true | false
-    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: <varname>external_table_name</varname>
     - <xref href="#topic1/cfreusetables" format="dita">REUSE_TABLES</xref>: true | false
+    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: <varname>external_table_name</varname>
+    - <xref href="#topic1/cffastmatch" format="dita">FAST_MATCH</xref>: true | false
    <xref href="#topic1/cfsql" format="dita">SQL</xref>:
     - <xref href="#topic1/cfbefore" format="dita">BEFORE</xref>: "<varname>sql_command</varname>"
     - <xref href="#topic1/cfafter" format="dita">AFTER</xref>: "<varname>sql_command</varname>"</codeblock>
@@ -732,7 +733,27 @@
                             <plentry>
                                 <pt id="cftruncate">TRUNCATE</pt>
                                 <pd>Optional. If set to true, <codeph>gpload</codeph> will remove
-                                    all rows in the target table prior to loading it.</pd>
+                                    all rows in the target table prior to loading it. Default is
+                                    false.</pd>
+                            </plentry>
+                            <plentry>
+                                <pt id="cfreusetables">REUSE_TABLES</pt>
+                                <pd>Optional. If set to true, <codeph>gpload</codeph> will not drop
+                                    the external table objects and staging table objects it creates.
+                                    These objects will be reused for future load operations that use
+                                    the same load specifications. This improves performance of
+                                    trickle loads (ongoing small loads to the same target
+                                    table).</pd>
+                                <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
+                                        <codeph>REUSE_TABLES: true</codeph> must be specified to
+                                    retain the formatting errors in Greenplum Database error logs.
+                                    If <codeph>REUSE_TABLES: true</codeph> is not specified,
+                                    formatting error information is deleted after the
+                                        <codeph>gpload</codeph> operation.</pd>
+                                <pd>If the <varname>external_table_name</varname> exists, the
+                                    utility uses the existing table. The utility returns an error if
+                                    the table schema does not match the <codeph>OUTPUT</codeph>
+                                    table schema.</pd>
                             </plentry>
                             <plentry>
                                 <pt id="cfstagetbl">STAGING_TABLE</pt>
@@ -767,23 +788,24 @@
                                     default <codeph>PUBLIC</codeph> schema. </pd>
                             </plentry>
                             <plentry>
-                                <pt id="cfreusetables">REUSE_TABLES</pt>
-                                <pd>Optional. If set to true, <codeph>gpload</codeph> will not drop
-                                    the external table objects and staging table objects it creates.
-                                    These objects will be reused for future load operations that use
-                                    the same load specifications. This improves performance of
-                                    trickle loads (ongoing small loads to the same target
-                                    table).</pd>
-                                <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
-                                        <codeph>REUSE_TABLES: true</codeph> must be specified to
-                                    retain the formatting errors in Greenplum Database error logs.
-                                    If <codeph>REUSE_TABLES: true</codeph> is not specified,
-                                    formatting error information is deleted after the
-                                        <codeph>gpload</codeph> operation.</pd>
-                                <pd>If the <varname>external_table_name</varname> exists, the
-                                    utility uses the existing table. The utility returns an error if
-                                    the table schema does not match the <codeph>OUTPUT</codeph>
-                                    table schema.</pd>
+                                <pt id="cffastmatch">FAST_MATCH</pt>
+                                <pd>Optional. If set to true, <codeph>gpload</codeph> only searches
+                                    Greenplum Database for matching external table objects when
+                                    reusing external tables. The utility does not check the external
+                                    table column names and column types to ensure that the table can
+                                    be used for a <codeph>gpload</codeph> operation. Set the value
+                                    to true to improve <codeph>gpload</codeph> performance when
+                                    reusing external table objects and the database catalog table
+                                        <codeph>pg_attribute</codeph> contains a large number of
+                                    rows. </pd>
+                                <pd>The default value is false, the utility checks the external
+                                    table definition column names and column types. The utility
+                                    returns an error and quits if the column definitions are not
+                                    compatible.</pd>
+                                <pd><codeph>REUSE_TABLES: true</codeph> must also specified. If
+                                        <codeph>REUSE_TABLES</codeph> is false or not specified and
+                                        <codeph>FAST_MATCH: true</codeph> is specified,
+                                        <codeph>gpload</codeph> returns a warning message. </pd>
                             </plentry>
                         </parml></pd>
                 </plentry>
