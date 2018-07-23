@@ -1499,6 +1499,25 @@ CTranslatorDXLToPlStmt::PnljFromDXLNLJ
 	Plan *pplanRight = NULL;
 	if (pdxlnlj->FIndexNLJ())
 	{
+		const DrgPdxlcr *pdrgdxlcrOuterRefs = pdxlnlj->GetNestLoopParamsColRefs();
+		const ULONG ulLen = pdrgdxlcrOuterRefs->UlLength();
+		for (ULONG ul = 0; ul < ulLen; ul++)
+		{
+			CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
+			IMDId *pmdid = pdxlcr->PmdidType();
+			ULONG ulColid = pdxlcr->UlID();
+			INT iTypeModifier = pdxlcr->ITypeModifier();
+
+			if (NULL == dxltrctxRight.Pmecolidparamid(ulColid))
+			{
+				CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_pmp) CMappingElementColIdParamId(ulColid, m_pctxdxltoplstmt->UlNextParamId(), pmdid, iTypeModifier);
+#ifdef GPOS_DEBUG
+					BOOL fInserted =
+#endif
+						dxltrctxRight.FInsertParamMapping(ulColid, pmecolidparamid);
+					GPOS_ASSERT(fInserted);
+			}
+		}
 		// right child (the index scan side) has references to left child's columns,
 		// we need to translate left child first to load its columns into translation context
 		pplanLeft = PplFromDXL(pdxlnLeft, &dxltrctxLeft, pdrgpdxltrctxPrevSiblings);
@@ -1546,6 +1565,11 @@ CTranslatorDXLToPlStmt::PnljFromDXLNLJ
 					pdxltrctxOut
 					);
 
+	// create nest loop params for index nested loop joins
+	if (pdxlnlj->FIndexNLJ())
+	{
+		((NestLoop *)pplan)->nestParams = TranslateNestLoopParamList(pdxlnlj->GetNestLoopParamsColRefs(), &dxltrctxLeft, &dxltrctxRight);
+	}
 	pplan->lefttree = pplanLeft;
 	pplan->righttree = pplanRight;
 	pplan->nMotionNodes = pplanLeft->nMotionNodes + pplanRight->nMotionNodes;
@@ -5592,5 +5616,36 @@ CTranslatorDXLToPlStmt::PplanValueScan
 	return (Plan *) pvaluescan;
 }
 
+List *
+CTranslatorDXLToPlStmt::TranslateNestLoopParamList
+	(
+	DrgPdxlcr *pdrgdxlcrOuterRefs,
+	CDXLTranslateContext *dxltrctxLeft,
+	CDXLTranslateContext *dxltrctxRight
+	)
+{
+	List *nest_params_list = NIL;
+	for (ULONG ul = 0; ul < pdrgdxlcrOuterRefs->UlLength(); ul++)
+	{
+		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
+		ULONG ulColid = pdxlcr->UlID();
+		// left child context contains the target entry for the nest params col refs
+		const TargetEntry *target_entry = dxltrctxLeft->Pte(ulColid);
+		GPOS_ASSERT(NULL != target_entry);
+		Var *old_var = (Var *) target_entry->expr;
 
+		Var *new_var = gpdb::PvarMakeVar(OUTER, target_entry->resno, old_var->vartype, old_var->vartypmod, 0/*varlevelsup*/);
+		new_var->varnoold = old_var->varnoold;
+		new_var->varoattno = old_var->varoattno;
+
+		NestLoopParam *nest_params = MakeNode(NestLoopParam);
+		// right child context contains the param entry for the nest params col refs
+		const CMappingElementColIdParamId *colid_param_mapping = dxltrctxRight->Pmecolidparamid(ulColid);
+		GPOS_ASSERT(NULL != colid_param_mapping);
+		nest_params->paramno = colid_param_mapping->UlParamId();
+		nest_params->paramval = new_var;
+		nest_params_list = gpdb::PlAppendElement(nest_params_list, (void *) nest_params);
+	}
+	return nest_params_list;
+}
 // EOF

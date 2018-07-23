@@ -96,11 +96,6 @@ ExecBitmapTableScan(BitmapTableScanState *node)
 	TupleTableSlot *slot = DynamicScan_GetNextTuple(scanState, BitmapTableScanBeginPartition,
 			BitmapTableScanEndPartition, BitmapTableScanReScanPartition, BitmapTableScanFetchNext);
 
-	if (TupIsNull(slot) && !scanState->ps.delayEagerFree)
-	{
-		ExecEagerFreeBitmapTableScan(node);
-	}
-
 	return slot;
 }
 
