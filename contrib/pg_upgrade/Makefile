@@ -22,7 +22,7 @@ EXTRA_CLEAN = analyze_new_cluster.sh delete_old_cluster.sh log/ tmp_check/ \
               pg_upgrade_dump_*.custom pg_upgrade_*.log
 
 EXTRA_CLEAN += clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
-              hostfile
+              hostfile regression.diffs
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
