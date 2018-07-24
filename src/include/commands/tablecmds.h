@@ -109,6 +109,7 @@ extern void AtEOSubXact_on_commit_actions(bool isCommit,
 							  SubTransactionId mySubid,
 							  SubTransactionId parentSubid);
 
+extern bool rel_is_parent(Oid relid);
 extern bool rel_needs_long_lock(Oid relid);
 extern Oid  rel_partition_get_master(Oid relid);
 

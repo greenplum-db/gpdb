@@ -660,12 +660,25 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace,
 	HeapTuple	tuple;
 	Datum		reloptions;
 	bool		isNull;
-	bool		is_part;
+	bool		is_part_child;
+	bool		is_part_parent;
 
 	OldHeap = heap_open(OIDOldHeap, AccessExclusiveLock);
 	OldHeapDesc = RelationGetDescr(OldHeap);
 
-	is_part = !rel_needs_long_lock(OIDOldHeap);
+	is_part_child = !rel_needs_long_lock(OIDOldHeap);
+
+	/*
+	 * Check pg_inherits to determine if the OldHeap relation is a non-leaf
+	 * (parent) in a partition hierarchy.  This can be avoided for tables that
+	 * should have valid relfrozenxid based on relkind and relstorage.
+	 */
+	if (should_have_valid_relfrozenxid(OldHeap->rd_rel->relkind,
+									   OldHeap->rd_rel->relstorage,
+									   false))
+		is_part_parent = !TransactionIdIsValid(OldHeap->rd_rel->relfrozenxid);
+	else
+		is_part_parent = rel_is_parent(OIDOldHeap);
 
 	/*
 	 * Note that the NewHeap will not receive any of the defaults or
@@ -722,8 +735,8 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace,
 										  false,
 										  /* allowSystemTableModsDDL */ true,
 										  /* valid_opts */ true,
-										  /* is_part_child */ false,
-										  /* is_part_parent */ false);
+										  is_part_child,
+										  is_part_parent);
 	Assert(OIDNewHeap != InvalidOid);
 
 	ReleaseSysCache(tuple);
@@ -757,15 +770,16 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace,
 									 &isNull);
 		if (isNull)
 			reloptions = (Datum) 0;
-		AlterTableCreateToastTable(OIDNewHeap, reloptions, is_part, true /* is_create */);
+		AlterTableCreateToastTable(OIDNewHeap, reloptions, true /* is_create */,
+								   is_part_child, is_part_parent);
 
 		ReleaseSysCache(tuple);
 	}
-	AlterTableCreateAoSegTable(OIDNewHeap, is_part);
-	AlterTableCreateAoVisimapTable(OIDNewHeap, is_part);
+	AlterTableCreateAoSegTable(OIDNewHeap, is_part_child, is_part_parent);
+	AlterTableCreateAoVisimapTable(OIDNewHeap, is_part_child, is_part_parent);
 
     if (createAoBlockDirectory)
-	    AlterTableCreateAoBlkdirTable(OIDNewHeap, is_part);
+	    AlterTableCreateAoBlkdirTable(OIDNewHeap, is_part_child, is_part_parent);
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);
 

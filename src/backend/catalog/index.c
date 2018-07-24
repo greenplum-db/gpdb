@@ -2645,7 +2645,7 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 					 errmsg("Cannot create index concurrently. Create an index non-concurrently "
 					        "before creating an index concurrently in an appendonly table.")));
 
-		AlterTableCreateAoBlkdirTable(RelationGetRelid(parentRelation), false);
+		AlterTableCreateAoBlkdirTable(RelationGetRelid(parentRelation), false, false);
 
 		aoscan->blockDirectory =
 			(AppendOnlyBlockDirectory *)palloc0(sizeof(AppendOnlyBlockDirectory));
@@ -2779,7 +2779,7 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 					 errmsg("Cannot create index concurrently. Create an index non-concurrently "
 					        "before creating an index concurrently in an appendonly table.")));
 
-		AlterTableCreateAoBlkdirTable(RelationGetRelid(parentRelation), false);
+		AlterTableCreateAoBlkdirTable(RelationGetRelid(parentRelation), false, false);
 
 		aocsscan->blockDirectory =
 			(AppendOnlyBlockDirectory *)palloc0(sizeof(AppendOnlyBlockDirectory));
