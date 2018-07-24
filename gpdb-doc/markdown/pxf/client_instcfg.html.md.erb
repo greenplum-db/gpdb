@@ -59,18 +59,18 @@ Perform the following procedure to install and configure the appropriate clients
 
 5. Set up a `yum` repository for your desired Hadoop distribution on each segment host.
 
-    1. Download the `.repo` file for your Hadoop distribution. For example, to download the file for RHEL 6:
+    1. Download the `.repo` file for your Hadoop distribution. For example, to download the file for RHEL 7:
 
         For Cloudera distributions:
 
         ``` shell
-        gpadmin@gpmaster$ wget https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo
+        gpadmin@gpmaster$ wget https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/cloudera-cdh5.repo
         ```
 
         For Hortonworks Data Platform distributions:
 
         ``` shell
-        gpadmin@gpmaster$ wget http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo
+        gpadmin@gpmaster$ wget http://public-repo-1.hortonworks.com/HDP/centos7/2.x/updates/2.6.2.0/hdp.repo
         ```
         
     2. Copy the `.repo` file to each Greenplum Database segment host. For example:
