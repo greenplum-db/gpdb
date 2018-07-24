@@ -830,7 +830,7 @@ DELETE FROM delta_one USING delta_two WHERE delta_one.b = delta_two.b AND delta_
 -- This query should return the same output irrespective of GPDB
 -- configuration (1 segdb, 2 or more segdbs).
 SELECT distinct(a) FROM delta_one
-WHERE gp_segment_id = 0 AND delta_one.a IN (12, 80001, 1001)
+WHERE gp_segment_id = 2 AND delta_one.a IN (12, 80001, 1001)
 ORDER BY a;
    a   
 -------
@@ -868,7 +868,7 @@ set enable_nestloop=false;
 UPDATE delta_one SET a = 0 FROM delta_two WHERE delta_one.b = delta_two.b AND delta_one.a = delta_two.a AND
 (delta_two.a = 10 OR delta_two.a = 40000 OR delta_two.a = 20000);
 -- Ensure that tuples to be updated are all from the same GPDB segment.
-SELECT distinct(a) FROM delta_one WHERE gp_segment_id = 0 AND
+SELECT distinct(a) FROM delta_one WHERE gp_segment_id = 2 AND
 delta_one.a IN (12, 80001, 1001) ORDER BY a;
    a   
 -------
@@ -1318,7 +1318,7 @@ Insert into rle_type_2_delta_chkt values
 Select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('rle_type_2_delta_chkt');
     compr_ratio    | get_ao_compression_ratio 
 -------------------+--------------------------
- compression_ratio |                     0.97
+ compression_ratio |                        1
 (1 row)
 
 Select * from rle_type_2_delta_chkt order by a1;
@@ -1384,7 +1384,7 @@ Insert into rle_type_2_delta_chkf values
 Select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('rle_type_2_delta_chkf');
     compr_ratio    | get_ao_compression_ratio 
 -------------------+--------------------------
- compression_ratio |                     0.97
+ compression_ratio |                        1
 (1 row)
 
 Select * from rle_type_2_delta_chkf order by a1;

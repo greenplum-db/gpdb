@@ -1023,7 +1023,7 @@ select get_ao_compression_ratio('aocs_compress_table') > 1.2 and get_ao_compress
 select get_ao_distribution('aocs_compress_table');
  get_ao_distribution 
 ---------------------
- (0,1)
+ (2,1)
 (1 row)
 
 truncate table aocs_compress_table; -- after truncate, reclaim space from the table and index

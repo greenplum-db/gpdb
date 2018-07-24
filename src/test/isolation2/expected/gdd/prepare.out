@@ -41,25 +41,26 @@ CREATE OR REPLACE FUNCTION barrier() RETURNS void AS $$ SELECT pg_sleep(2) $$ LA
 CREATE
 
 -- verify the function
+-- Data distribution is sensitive to the underlying hash algorithm.
 SELECT segid(0,1);
 segid
 -----
-1    
+4    
 (1 row)
 SELECT segid(0,2);
 segid
 -----
-2    
+7    
 (1 row)
 SELECT segid(1,1);
 segid
 -----
-3    
+2    
 (1 row)
 SELECT segid(1,2);
 segid
 -----
-4    
+5    
 (1 row)
 
 -- start_ignore

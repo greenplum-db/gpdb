@@ -2313,13 +2313,19 @@ begin
   end loop;
 
   raise notice '---5---';
-  for _r in select * from conttesttbl loop
+  -- select from a heap table, the order is uncertain.
+  -- the test framework does not sort NOTICE
+  -- so we add `order by` here.
+  for _r in select * from conttesttbl order by v loop
     continue when _r.v <= 20;
     raise notice '%', _r.v;
   end loop;
 
   raise notice '---6---';
-  for _r in execute 'select * from conttesttbl' loop
+  -- select from a heap table, the order is uncertain.
+  -- the test framework does not sort NOTICE
+  -- so we add `order by` here.
+  for _r in execute 'select * from conttesttbl order by v' loop
     continue when _r.v <= 20;
     raise notice '%', _r.v;
   end loop;

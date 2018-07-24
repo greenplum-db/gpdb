@@ -45,7 +45,10 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 
 -- create table and show commits are not blocked
 create table fts_unblock_primary (a int) distributed by (a);
-insert into fts_unblock_primary values (1);
+-- This case aims to insert a tuple to seg0.
+-- Under jump consistent hash, int value 4 should
+-- be on seg0.
+insert into fts_unblock_primary values (4);
 
 -- skip FTS probes always
 create extension if not exists gp_inject_fault;
@@ -61,11 +64,11 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- this should block since mirror is not up and sync replication is on
 2: begin;
-2: insert into fts_unblock_primary values (1);
+2: insert into fts_unblock_primary values (4);
 2&: commit;
 
 -- this should not block due to direct dispatch to primary with active synced mirror
-insert into fts_unblock_primary values (3);
+insert into fts_unblock_primary values (2);
 
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);

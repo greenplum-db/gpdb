@@ -213,7 +213,9 @@ gp_segment_id|collname
 
 create table uses_collation (a text collate locale_missing_on_one_segment);
 CREATE
-insert into uses_collation values ('abc'), ('123');
+-- The case here aims to insert two tuples to seg0.
+-- Under jump consistent hash, ('bcd'), ('352') goes to seg0.
+insert into uses_collation values ('bcd'), ('352');
 INSERT 2
 
 SELECT gp_inject_fault('collate_locale_os_lookup', 'error', dbid) from gp_segment_configuration where content = 0 and role = 'p';

@@ -690,7 +690,7 @@ SELECT * FROM segment_reject_limit_from;
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject_limit_from');
           relname          |            filename            | bytenum |                     errmsg                      
 ---------------------------+--------------------------------+---------+-------------------------------------------------
- segment_reject_limit_from | /tmp/segment_reject_limit0.csv |         | invalid input syntax for integer: "a", column b
+ segment_reject_limit_from | /tmp/segment_reject_limit2.csv |         | invalid input syntax for integer: "a", column b
 (1 row)
 
 -- not exceed reject limit on segment

@@ -52,17 +52,17 @@ select * from dd_singlecol_1 where a is null or a=1;
 
 -- projections and disjunction
 
-select b from dd_singlecol_1 where a=1 or a=3;
+select b from dd_singlecol_1 where a=1 or a=2;
 
 -- negative cases: single column distr key, values don't hash to the same segment
 
-select * from dd_singlecol_1 where a=1 or a=2;
+select * from dd_singlecol_1 where a=1 or a=3;
 
-select * from dd_singlecol_1 where a in (1, 2);
+select * from dd_singlecol_1 where a in (1, 3);
 
 select * from dd_singlecol_1 where a is null or a=2;
 
-select * from dd_singlecol_1 where (a,b) in ((1,2),(3,4)); 
+select * from dd_singlecol_1 where (a,b) in ((1,2),(2,3)); 
 
 select * from dd_singlecol_1 where a between 1 and 2;
 
@@ -127,11 +127,11 @@ analyze dd_singlecol_idx2;
 
 -- disjunction with index scans
 
-select * from dd_singlecol_idx where (a=1 or a=3) and b<3;
+select * from dd_singlecol_idx where (a=1 or a=2) and b<2;
 
-select 'one' from dd_singlecol_idx where (a=1 or a=3) and b=1;
+select 'one' from dd_singlecol_idx where (a=1 or a=2) and b=1;
 
-select a, count(*) from dd_singlecol_idx where (a=1 or a=3) and b=1  group by a;
+select a, count(*) from dd_singlecol_idx where (a=1 or a=2) and b=1  group by a;
 
 select count(*) from dd_singlecol_idx;
 
@@ -146,11 +146,11 @@ insert into dd_singlecol_bitmap_idx values(null, null);
 analyze dd_singlecol_bitmap_idx;
 
 -- disjunction with bitmap index scans
-select * from dd_singlecol_bitmap_idx where (a=1 or a=3) and b<3;
+select * from dd_singlecol_bitmap_idx where (a=1 or a=2) and b<2;
 
-select * from dd_singlecol_bitmap_idx where (a=1 or a=3) and b=3 and c=3;
+select * from dd_singlecol_bitmap_idx where (a=1 or a=2) and b=2 and c=2;
 
-select * from dd_singlecol_bitmap_idx where (a=1 or a=3) and (b=3 or c=3);
+select * from dd_singlecol_bitmap_idx where (a=1 or a=2) and (b=2 or c=2);
 
 select * from dd_singlecol_bitmap_idx where a<5 and b=1;
 

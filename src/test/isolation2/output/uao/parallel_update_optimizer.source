@@ -29,7 +29,9 @@ ao      |AccessExclusiveLock|append-only segment file|1 segment
 ao      |AccessShareLock    |relation                |n segments
 ao      |RowExclusiveLock   |relation                |n segments
 (3 rows)
-1&: UPDATE ao SET b = 42 WHERE a = 2;  <waiting ...>
+-- The case here should update a tuple at the same seg with(1).
+-- Under jump hash, (3) and (1) are on the same seg(seg2).
+1&: UPDATE ao SET b = 42 WHERE a = 3;  <waiting ...>
 2: COMMIT;
 COMMIT
 1<:  <... completed>
@@ -40,11 +42,11 @@ COMMIT
 a|b 
 -+--
 1|42
-2|42
-3|3 
+2|2 
+3|42
 4|4 
 (4 rows)
-0U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
+2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
 tid             |segno|row_num
 ----------------+-----+-------
 (33554432,32769)|1    |1      

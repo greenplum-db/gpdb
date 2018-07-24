@@ -39,7 +39,10 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror and show commit on dbid 2 will block
 -1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL, NULL);
-0U&: insert into segwalrep_commit_blocking values (1);
+-- We should insert a tuple to segment 0.
+-- With jump consistent hash as the underlying hash algorithm,
+-- a int value of 4 is on seg0.
+0U&: insert into segwalrep_commit_blocking values (4);
 
 -- restart primary dbid 2
 -1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart', NULL, NULL, NULL);

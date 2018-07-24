@@ -16,6 +16,14 @@
 #define CDBHASH_H
 
 /*
+ * Hash Method
+ * if change here, please also change pg_database.h
+ */
+#define INVALID_HASH_METHOD      (-1)
+#define MODULE_HASH_METHOD       0
+#define JUMP_HASH_METHOD         1
+
+/*
  * hashing algorithms.
  */
 typedef enum
@@ -30,7 +38,8 @@ typedef enum
 typedef enum
 {
 	REDUCE_LAZYMOD = 1,
-	REDUCE_BITMASK
+	REDUCE_BITMASK,
+	REDUCE_JUMP_HASH
 } CdbHashReduce;
 
 /*

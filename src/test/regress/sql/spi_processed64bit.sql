@@ -24,6 +24,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
 SELECT gp_inject_fault_infinite('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
+-- Insert 1 ~ 40000 here can guarantee each segment's processing more than 10000 rows
+-- and less then 1000000(under jump hash or old module hash). This is the condition
+-- that will trigger the faultinjection.
 DO $$
 declare
   num_rows int8;
@@ -31,7 +34,7 @@ begin
 
   INSERT INTO public.spi64bittest (data)
   SELECT g
-    FROM generate_series(1, 30000) g;
+    FROM generate_series(1, 40000) g;
   GET DIAGNOSTICS num_rows = ROW_COUNT;
 
   RAISE NOTICE 'Inserted % rows', num_rows;

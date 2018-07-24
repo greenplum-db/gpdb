@@ -260,31 +260,33 @@ INSERT 1
 -- Actual test begins
 1: INSERT INTO AO VALUES (1);
 INSERT 1
-0U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
 segno|tupcount
 -----+--------
 1    |127     
 (1 row)
-1: INSERT INTO AO VALUES (2);
+-- Here we aim to insert a tuple to the same seg as (1).
+-- Under jump jash, (3) and (1) are on the same seg(seg2).
+1: INSERT INTO AO VALUES (3);
 INSERT 1
-0U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
 segno|tupcount
 -----+--------
 1    |128     
 (1 row)
 1: BEGIN;
 BEGIN
-1: INSERT INTO AO VALUES (2);
+1: INSERT INTO AO VALUES (3);
 INSERT 1
 2: BEGIN;
 BEGIN
-2: INSERT INTO AO VALUES (2);
+2: INSERT INTO AO VALUES (3);
 INSERT 1
 1: COMMIT;
 COMMIT
 2: COMMIT;
 COMMIT
-0U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
 segno|tupcount
 -----+--------
 1    |129     
@@ -292,9 +294,9 @@ segno|tupcount
 (2 rows)
 1: insert into ao select generate_series(1,100000);
 INSERT 100000
-1: INSERT INTO AO VALUES (2);
+1: INSERT INTO AO VALUES (3);
 INSERT 1
-0U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('ao');
 segno|case
 -----+----
 1    |many

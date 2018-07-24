@@ -1822,33 +1822,33 @@ select get_ao_compression_ratio('qp_misc_jiras.tbl7126_co_zlib3');
 select get_ao_distribution('qp_misc_jiras.tbl7126_ao');
  get_ao_distribution 
 ---------------------
- (2,33316)
- (1,33336)
- (0,33348)
+ (0,33326)
+ (1,33353)
+ (2,33321)
 (3 rows)
 
 select get_ao_distribution('qp_misc_jiras.tbl7126_ao_zlib3');
  get_ao_distribution 
 ---------------------
- (2,33323)
- (1,33315)
- (0,33362)
+ (2,33136)
+ (0,33445)
+ (1,33419)
 (3 rows)
 
 select get_ao_distribution('qp_misc_jiras.tbl7126_co');
  get_ao_distribution 
 ---------------------
- (2,33323)
- (0,33362)
- (1,33315)
+ (0,33445)
+ (2,33136)
+ (1,33419)
 (3 rows)
 
 select get_ao_distribution('qp_misc_jiras.tbl7126_co_zlib3');
  get_ao_distribution 
 ---------------------
- (2,33323)
- (0,33362)
- (1,33315)
+ (0,33445)
+ (2,33136)
+ (1,33419)
 (3 rows)
 
 -- end_ignore
@@ -2611,9 +2611,9 @@ language plpgsql;
 select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
  gp_segment_id |  a  | func3 
 ---------------+-----+-------
-             2 | 100 |     1
+             0 | 300 |     1
              1 | 200 |     1
-             1 | 300 |     1
+             2 | 100 |     1
 (3 rows)
 
 --
@@ -2824,9 +2824,9 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
  gp_segment_id | count  
 ---------------+--------
-             0 | 333088
-             1 | 333446
-             2 | 333466
+             2 | 333127
+             1 | 333558
+             0 | 333315
 (3 rows)
 
 -- start_ignore
@@ -3546,15 +3546,15 @@ insert into qp_misc_jiras.tbl9706aoc select i from generate_series(1, 100) i;
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706ao'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       31
-         1 |       32
+         0 |       32
+         1 |       40
 (2 rows)
 
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706aoc'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       31
-         1 |       32
+         0 |       32
+         1 |       40
 (2 rows)
 
 create table qp_misc_jiras.bmap2 (a varchar, b varchar);
@@ -3653,7 +3653,7 @@ INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'before creating trigger');
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             0 |  1 | before creating trigger
+             2 |  1 | before creating trigger
 (1 row)
 
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3675,9 +3675,9 @@ NOTICE:  2  (seg0 192.168.1.64:25432 pid=44904)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             0 |  1 | before creating trigger
              0 |  1 | after creating trigger1
-             0 |  2 | aaa1
+             2 |  1 | before creating trigger
+             2 |  2 | aaa1
 (3 rows)
 
 UPDATE qp_misc_jiras.test_trig SET id = id;
@@ -3687,9 +3687,9 @@ NOTICE:  3  (seg0 192.168.1.64:25432 pid=44904)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa            
 ---------------+----+--------------------------
-             0 |  2 | before creating trigger1
              0 |  2 | after creating trigger11
-             0 |  3 | aaa11
+             2 |  2 | before creating trigger1
+             2 |  3 | aaa11
 (3 rows)
 
 DROP TABLE qp_misc_jiras.test_trig;

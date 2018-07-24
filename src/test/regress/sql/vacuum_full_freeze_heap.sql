@@ -5,12 +5,12 @@ create index ivfheap on vfheap(b, c);
 
 -- delete half of table
 delete from vfheap where b between 0 and (select count(*) / 2 from vfheap);
-select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
-select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
+select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 2;
+select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 2;
 
 -- show pages are truncated
 vacuum full freeze vfheap;
-select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
-select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
+select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 2;
+select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 2;
 
 select max(b), min(substring(c, 10, 1)) from vfheap;

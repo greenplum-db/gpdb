@@ -558,39 +558,41 @@ select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j
 explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
                                                              QUERY PLAN                                                              
 -------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=30000000031.82..30000000032.05 rows=10 width=12)
+ Limit  (cost=30000000025.29..30000000025.51 rows=10 width=12)
    InitPlan 1 (returns $0)  (slice6)
-     ->  Limit  (cost=10000000000.00..10000000001.88 rows=1 width=0)
-           ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=10000000000.00..10000000001.88 rows=1 width=0)
-                 ->  Limit  (cost=10000000000.00..10000000001.86 rows=1 width=0)
-                       ->  Nested Loop  (cost=10000000000.00..10000000006.18 rows=2 width=0)
+     ->  Limit  (cost=10000000000.00..10000000001.58 rows=1 width=0)
+           ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=10000000000.00..10000000001.58 rows=1 width=0)
+                 ->  Limit  (cost=10000000000.00..10000000001.56 rows=1 width=0)
+                       ->  Nested Loop  (cost=10000000000.00..10000000005.18 rows=2 width=0)
                              ->  Seq Scan on c  (cost=0.00..3.11 rows=1 width=4)
                                    Filter: i = 10
-                             ->  Seq Scan on a  (cost=0.00..3.06 rows=1 width=4)
+                             ->  Seq Scan on a  (cost=0.00..2.06 rows=1 width=4)
                                    Filter: i = 10
-   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=20000000029.94..20000000030.17 rows=10 width=12)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=20000000023.70..20000000023.93 rows=10 width=12)
          Merge Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-         ->  Limit  (cost=20000000029.94..20000000029.97 rows=4 width=12)
-               ->  Sort  (cost=20000000029.94..20000000030.62 rows=90 width=12)
+         ->  Limit  (cost=20000000023.70..20000000023.73 rows=4 width=12)
+               ->  Sort  (cost=20000000023.70..20000000024.38 rows=90 width=12)
                      Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-                     ->  Result  (cost=20000000003.79..20000000024.11 rows=90 width=12)
+                     ->  Result  (cost=20000000005.77..20000000017.87 rows=90 width=12)
                            One-Time Filter: NOT $0
-                           ->  Nested Loop  (cost=20000000003.79..20000000024.11 rows=90 width=12)
-                                 ->  Hash Semi Join  (cost=10000000003.79..10000000011.77 rows=10 width=8)
-                                       Hash Cond: qp_correlated_query.a.j = qp_correlated_query.c.j
-                                       ->  Nested Loop  (cost=10000000000.00..10000000007.40 rows=10 width=12)
-                                             ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
-                                             ->  Materialize  (cost=0.00..3.39 rows=6 width=4)
-                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.30 rows=6 width=4)
-                                                         ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
-                                       ->  Hash  (cost=3.45..3.45 rows=9 width=4)
-                                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
+                           ->  Nested Loop  (cost=20000000005.77..20000000017.87 rows=90 width=12)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=5.77..5.92 rows=2 width=10)
+                                       ->  HashAggregate  (cost=5.76..5.81 rows=2 width=10)
+                                             Group Key: qp_correlated_query.a.ctid::bigint
+                                             ->  Hash Join  (cost=2.11..5.75 rows=2 width=10)
+                                                   Hash Cond: qp_correlated_query.c.j = qp_correlated_query.a.j
+                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
+                                                         ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+                                                   ->  Hash  (cost=2.05..2.05 rows=2 width=14)
+                                                         ->  Seq Scan on a  (cost=0.00..2.05 rows=2 width=14)
+                                 ->  Materialize  (cost=10000000000.00..10000000008.71 rows=18 width=8)
+                                       ->  Nested Loop  (cost=10000000000.00..10000000008.44 rows=18 width=8)
+                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.30 rows=6 width=4)
+                                                   ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+                                             ->  Materialize  (cost=0.00..3.13 rows=3 width=4)
                                                    ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
-                                 ->  Materialize  (cost=0.00..3.58 rows=9 width=4)
-                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
-                                             ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
  Optimizer: legacy query optimizer
-(32 rows)
+(34 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
  i | i  | j  

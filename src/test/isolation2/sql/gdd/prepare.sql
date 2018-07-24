@@ -41,6 +41,7 @@ RETURNS void AS $$
 $$ LANGUAGE sql;
 
 -- verify the function
+-- Data distribution is sensitive to the underlying hash algorithm.
 SELECT segid(0,1);
 SELECT segid(0,2);
 SELECT segid(1,1);

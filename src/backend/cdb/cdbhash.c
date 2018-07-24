@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 
 #include "access/tuptoaster.h"
+#include "commands/dbcommands.h"
 #include "utils/builtins.h"
 #include "catalog/pg_type.h"
 #include "parser/parse_type.h"
@@ -39,6 +40,9 @@
 #include "utils/complex_type.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
+
+
+static int MyDatabaseHashMethod = INVALID_HASH_METHOD;
 
 /* 32 bit FNV-1  non-zero initial basis */
 #define FNV1_32_INIT ((uint32)0x811c9dc5)
@@ -66,6 +70,8 @@ static uint32 fnv1_32_buf(void *buf, size_t len, uint32 hashval);
 static int	inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
 static int	ignoreblanks(char *data, int len);
 static int	ispowof2(int numsegs);
+static inline void set_database_hash_method(void);
+static inline int32 jump_consistent_hash(uint64 key, int32 num_segments);
 
 
 /*================================================================
@@ -94,6 +100,10 @@ makeCdbHash(int numsegs)
 
 	Assert(numsegs > 0);		/* verify number of segments is legal. */
 
+	set_database_hash_method();
+
+	Assert(MyDatabaseHashMethod != INVALID_HASH_METHOD);
+
 	/* Create a pointer to a CdbHash that includes the hash properties */
 	h = palloc(sizeof(CdbHash));
 
@@ -107,13 +117,18 @@ makeCdbHash(int numsegs)
 	 * set the reduction algorithm: If num_segs is power of 2 use bit mask,
 	 * else use lazy mod (h mod n)
 	 */
-	if (ispowof2(numsegs))
+	switch(MyDatabaseHashMethod)
 	{
-		h->reducealg = REDUCE_BITMASK;
-	}
-	else
-	{
-		h->reducealg = REDUCE_LAZYMOD;
+		case MODULE_HASH_METHOD:
+			h->reducealg = ispowof2(numsegs) ? REDUCE_BITMASK : REDUCE_LAZYMOD;
+			break;
+		case JUMP_HASH_METHOD:
+			h->reducealg = REDUCE_JUMP_HASH;
+			break;
+		default:
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid hash_method: %d", MyDatabaseHashMethod)));
 	}
 
 	/*
@@ -674,7 +689,9 @@ cdbhashreduce(CdbHash *h)
 								 * Database and therefore initialize to this
 								 * value for error checking? */
 
-	Assert(h->reducealg == REDUCE_BITMASK || h->reducealg == REDUCE_LAZYMOD);
+	Assert(h->reducealg == REDUCE_BITMASK ||
+		   h->reducealg == REDUCE_LAZYMOD ||
+		   h->reducealg == REDUCE_JUMP_HASH);
 
 	/*
 	 * Reduce our 32-bit hash value to a segment number
@@ -687,6 +704,10 @@ cdbhashreduce(CdbHash *h)
 
 		case REDUCE_LAZYMOD:
 			result = (h->hash) % (h->numsegs);	/* simple mod */
+			break;
+
+		case REDUCE_JUMP_HASH:
+			result = jump_consistent_hash(h->hash, h->numsegs);
 			break;
 	}
 
@@ -932,4 +953,33 @@ static int
 ispowof2(int numsegs)
 {
 	return !(numsegs & (numsegs - 1));
+}
+
+static inline void
+set_database_hash_method(void)
+{
+	Assert(MyDatabaseId != InvalidOid);
+
+	if (MyDatabaseHashMethod == INVALID_HASH_METHOD)
+		MyDatabaseHashMethod = get_database_hash_method(MyDatabaseId);
+}
+
+/*
+ * The following jump consistent hash algorithm is
+ * just the one from the original paper:
+ * https://arxiv.org/abs/1406.2294
+ */
+
+static inline int32
+jump_consistent_hash(uint64 key, int32 num_segments)
+{
+	int64 b = -1;
+	int64 j = 0;
+	while (j < num_segments)
+	{
+		b = j;
+		key = key * 2862933555777941757ULL + 1;
+		j = (b + 1) * ((double)(1LL << 31) / (double)((key >> 33) + 1));
+	}
+	return b;
 }

@@ -69,7 +69,10 @@ waiting for server to shut down done
 server stopped
 
 (1 row)
-0U&: insert into segwalrep_commit_blocking values (1);  <waiting ...>
+-- We should insert a tuple to segment 0.
+-- With jump consistent hash as the underlying hash algorithm,
+-- a int value of 4 is on seg0.
+0U&: insert into segwalrep_commit_blocking values (4);  <waiting ...>
 
 -- restart primary dbid 2
 -1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart', NULL, NULL, NULL);
@@ -135,10 +138,10 @@ a
 1 
 1 
 1 
-1 
 2 
 3 
 3 
+4 
 4 
 5 
 6 

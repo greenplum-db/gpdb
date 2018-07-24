@@ -73,7 +73,10 @@ SELECT lead(ten * 2, 1, -1) OVER (PARTITION BY four ORDER BY ten), ten, four FRO
 SELECT first_value(ten) OVER (PARTITION BY four ORDER BY ten), ten, four FROM tenk1 WHERE unique2 < 10;
 
 -- last_value returns the last row of the frame, which is CURRENT ROW in ORDER BY window.
-SELECT last_value(four) OVER (ORDER BY ten), ten, four FROM tenk1 WHERE unique2 < 10;
+-- the column `ten` is ordered, so we should call last_value on this
+-- column. Using other cols the result is flaky because there are
+-- tuples with the same `ten` while different other col values.
+SELECT last_value(ten) OVER (ORDER BY ten), ten, four FROM tenk1 WHERE unique2 < 10;
 
 set search_path=singleseg, public;
 SELECT last_value(ten) OVER (PARTITION BY four ORDER BY ten), ten, four FROM

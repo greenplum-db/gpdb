@@ -54,6 +54,8 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 -- Validate that the drop phase was skipped. segfile 1 should be in state 2
 -- (AWAITING_DROP)
+-- This result is related to data distribution.
+-- Current hash algorithm is jump-consistent-hash.
 1: SELECT gp_ao_or_aocs_seg_name('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
 
 2: commit;

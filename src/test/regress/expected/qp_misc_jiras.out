@@ -2607,7 +2607,7 @@ select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
 ---------------+-----+-------
              2 | 100 |     1
              1 | 200 |     1
-             1 | 300 |     1
+             0 | 300 |     1
 (3 rows)
 
 --
@@ -2818,9 +2818,9 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
  gp_segment_id | count  
 ---------------+--------
-             2 | 333466
-             1 | 333446
-             0 | 333088
+             2 | 333127
+             0 | 333315
+             1 | 333558
 (3 rows)
 
 -- start_ignore
@@ -3514,15 +3514,15 @@ insert into qp_misc_jiras.tbl9706aoc select i from generate_series(1, 100) i;
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706ao'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       31
-         1 |       32
+         0 |       32
+         1 |       40
 (2 rows)
 
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706aoc'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       31
-         1 |       32
+         0 |       32
+         1 |       40
 (2 rows)
 
 create table qp_misc_jiras.bmap2 (a varchar, b varchar);
@@ -3615,7 +3615,7 @@ INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'before creating trigger');
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             0 |  1 | before creating trigger
+             2 |  1 | before creating trigger
 (1 row)
 
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3637,9 +3637,9 @@ NOTICE:  2  (seg0 192.168.1.64:25432 pid=44904)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             0 |  1 | before creating trigger
              0 |  1 | after creating trigger1
-             0 |  2 | aaa1
+             2 |  1 | before creating trigger
+             2 |  2 | aaa1
 (3 rows)
 
 UPDATE qp_misc_jiras.test_trig SET id = id;
@@ -3649,9 +3649,9 @@ NOTICE:  3  (seg0 192.168.1.64:25432 pid=44904)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa            
 ---------------+----+--------------------------
-             0 |  2 | before creating trigger1
              0 |  2 | after creating trigger11
-             0 |  3 | aaa11
+             2 |  2 | before creating trigger1
+             2 |  3 | aaa11
 (3 rows)
 
 DROP TABLE qp_misc_jiras.test_trig;

@@ -11,11 +11,14 @@ DROP TABLE IF EXISTS public.spi64bittestpython;
 
 CREATE TABLE public.spi64bittestpython (id BIGSERIAL PRIMARY KEY, data BIGINT);
 
+-- Insert 1 ~ 40000 here can guarantee each segment's processing more than 10000 rows
+-- and less then 1000000(under jump hash or old module hash). This is the condition
+-- that will trigger the faultinjection.
 CREATE FUNCTION public.test_bigint_python()
 RETURNS BIGINT
 AS $$
 
-res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM generate_series(1, 30000) g")
+res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM generate_series(1, 40000) g")
 
 return res.nrows()
 

@@ -11,11 +11,14 @@ NOTICE:  table "spi64bittestpython" does not exist, skipping
 CREATE TABLE public.spi64bittestpython (id BIGSERIAL PRIMARY KEY, data BIGINT);
 NOTICE:  CREATE TABLE will create implicit sequence "spi64bittestpython_id_seq" for serial column "spi64bittestpython.id"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "spi64bittestpython_pkey" for table "spi64bittestpython"
+-- Insert 1 ~ 40000 here can guarantee each segment's processing more than 10000 rows
+-- and less then 1000000(under jump hash or old module hash). This is the condition
+-- that will trigger the faultinjection.
 CREATE FUNCTION public.test_bigint_python()
 RETURNS BIGINT
 AS $$
 
-res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM generate_series(1, 30000) g")
+res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM generate_series(1, 40000) g")
 
 return res.nrows()
 
@@ -24,14 +27,14 @@ $$ LANGUAGE plpythonu;
 SELECT public.test_bigint_python();
  test_bigint_python 
 --------------------
-              30000
+              40000
 (1 row)
 
 SELECT COUNT(*) AS count
   FROM public.spi64bittestpython;
  count 
 -------
- 30000
+ 40000
 (1 row)
 
 -- activate fault injection framework
@@ -54,7 +57,7 @@ NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
 SELECT public.test_bigint_python();
  test_bigint_python 
 --------------------
-         4294987275
+        12884901855
 (1 row)
 
 -- reset fault injection framework
@@ -77,7 +80,7 @@ SELECT COUNT(*) AS count
   FROM public.spi64bittestpython;
  count 
 -------
- 60000
+ 80000
 (1 row)
 
 -- drop test table

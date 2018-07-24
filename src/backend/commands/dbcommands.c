@@ -65,6 +65,7 @@
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
@@ -516,7 +517,8 @@ createdb(CreatedbStmt *stmt)
 	new_record[Anum_pg_database_datlastsysoid - 1] = ObjectIdGetDatum(src_lastsysoid);
 	new_record[Anum_pg_database_datfrozenxid - 1] = TransactionIdGetDatum(src_frozenxid);
 	new_record[Anum_pg_database_dattablespace - 1] = ObjectIdGetDatum(dst_deftablespace);
-
+	/* new created dbs all use jump hash */
+	new_record[Anum_pg_database_hashmethod - 1] = Int32GetDatum(JUMP_HASH_METHOD);
 	/*
 	 * We deliberately set datacl to default (NULL), rather than copying it
 	 * from the template database.	Copying it would be a bad idea when the
@@ -2082,6 +2084,29 @@ get_database_name(Oid dbid)
 	}
 	else
 		result = NULL;
+
+	return result;
+}
+
+int
+get_database_hash_method(Oid dbid)
+{
+	HeapTuple	dbtuple;
+	int         result;
+
+	dbtuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(dbid));
+	if (HeapTupleIsValid(dbtuple))
+	{
+		result = ((Form_pg_database) GETSTRUCT(dbtuple))->hashmethod;
+		ReleaseSysCache(dbtuple);
+	}
+	else
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_DATABASE),
+				 errmsg("database id(\"%d\) does not exist",
+						dbid)));
+	}
 
 	return result;
 }
