@@ -43,7 +43,7 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
                 and R to be installed, respectively. </p>
             <p otherprops="pivotal">On RHEL and SUSE platforms, download the appropriate extensions
-                from <xref href="https://network.pivotal.io" scope="external" format="html">Pivotal
+                from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html">Pivotal
                     Network</xref>, then install the extensions using the Greenplum Package Manager
                     (<codeph>gppkg</codeph>) utility to ensure that all dependencies are installed
                 as well as the extensions. See the Greenplum Database Utility Guide for details

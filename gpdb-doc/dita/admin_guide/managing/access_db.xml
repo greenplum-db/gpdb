@@ -296,7 +296,7 @@
                 <entry colname="col1">ODBC</entry>
                 <entry colname="col2">pgodbc</entry>
                 <entry colname="col3">Available in the Greenplum Database Connectivity package,
-                  which can be downloaded from <xref href="https://network.pivotal.io"
+                  which can be downloaded from <xref href="https://network.pivotal.io/products/pivotal-gpdb"
                     scope="external" format="html"><ph>Pivotal Network</ph></xref>.</entry>
               </row>
               <row>
@@ -304,7 +304,7 @@
                 <entry colname="col2">pgjdbc</entry>
                 <entry colname="col3">Available in the <i>Greenplum Database Connectivity</i>
                   package, which can be downloaded from <xref
-                    href="https://network.pivotal.io" scope="external" format="html"
+                    href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
                       ><ph>Pivotal Network</ph></xref>.</entry>
               </row>
               <row>
@@ -339,7 +339,7 @@
         <p>Download the appropriate PostgreSQL driver and configure connectivity to your Greenplum
           Database master instance. Greenplum provides a client tools package that contains the
           supported database drivers for Greenplum Database. Download the client tools packagefrom
-            <xref href="https://network.pivotal.io" scope="external" format="html"
+            <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
               ><ph>Pivotal Network </ph></xref>and documentation from <xref
             href="http://gpdb.docs.pivotal.io" scope="external" format="html"><ph>Pivotal
               Documentation</ph></xref>. </p>

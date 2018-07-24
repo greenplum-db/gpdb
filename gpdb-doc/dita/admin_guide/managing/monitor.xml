@@ -27,7 +27,7 @@
       <p otherprops="pivotal">Pivotal Greenplum Command Center, an optional web-based interface,
         graphically displays the metrics collected in the <codeph>gpperfmon</codeph> database and
         provides additional system management tools. Download the Greenplum Command Center package
-        from <xref href="https://network.pivotal.io" scope="external" format="html">Pivotal
+        from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html">Pivotal
           Network</xref> and view the documentation at the <xref href="http://gpcc.docs.pivotal.io"
           scope="external" format="html">Greenplum Command Center Documentation</xref> web site.
       </p>
