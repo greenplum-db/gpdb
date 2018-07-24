@@ -338,7 +338,7 @@
         </ol>
         <p>Download the appropriate PostgreSQL driver and configure connectivity to your Greenplum
           Database master instance. Greenplum provides a client tools package that contains the
-          supported database drivers for Greenplum Database. Download the client tools packagefrom
+          supported database drivers for Greenplum Database. Download the client tools package from
             <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
               ><ph>Pivotal Network </ph></xref>and documentation from <xref
             href="http://gpdb.docs.pivotal.io" scope="external" format="html"><ph>Pivotal
