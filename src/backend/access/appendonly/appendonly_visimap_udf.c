@@ -263,9 +263,9 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 			segno = fsinfo->segno;
 		}
 		else
-		{
-			Insist(false);
-		}
+			ereport(ERROR,
+					(errmsg("invalid function context"),
+					 errdetail("Storage must be either row or column oriented.")));
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, false, sizeof(nulls));

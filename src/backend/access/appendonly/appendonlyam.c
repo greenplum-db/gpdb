@@ -2837,7 +2837,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 	/* tableName */
 #endif
 
-	Insist(RelationIsAoRows(relation));
+	Assert(RelationIsAoRows(relation));
 
 	if (aoInsertDesc->useNoToast)
 		need_toast = false;
