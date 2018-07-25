@@ -95,7 +95,7 @@ then run command `ldconfig`.
   kernel.shmmax = 500000000
   kernel.shmmni = 4096
   kernel.shmall = 4000000000
-  kernel.sem = 250 512000 100 2048
+  kernel.sem = 500 1024000 200 4096
   kernel.sysrq = 1
   kernel.core_uses_pid = 1
   kernel.msgmnb = 65536

@@ -6,7 +6,7 @@ xfs_mount_options = rw,noatime,inode64,allocsize=16m
 sysctl.kernel.shmmax = 500000000
 sysctl.kernel.shmmni = 4096
 sysctl.kernel.shmall = 4000000000
-sysctl.kernel.sem = 250 512000 100 2048
+sysctl.kernel.sem = 500 1024000 200 4096
 sysctl.kernel.sysrq = 1
 sysctl.kernel.core_uses_pid = 1
 sysctl.kernel.msgmnb = 65536

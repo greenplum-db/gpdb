@@ -15,7 +15,7 @@ sudo bash -c 'printf "# GPDB-Specific Settings\n\n"                    >> /etc/s
 sudo bash -c 'printf "kernel.shmmax = 500000000\n"                     >> /etc/sysctl.d/gpdb.conf'
 sudo bash -c 'printf "kernel.shmmni = 4096\n"                          >> /etc/sysctl.d/gpdb.conf'
 sudo bash -c 'printf "kernel.shmall = 4000000000\n"                    >> /etc/sysctl.d/gpdb.conf'
-sudo bash -c 'printf "kernel.sem = 250 512000 100 2048\n"              >> /etc/sysctl.d/gpdb.conf'
+sudo bash -c 'printf "kernel.sem = 500 1024000 200 4096\n"             >> /etc/sysctl.d/gpdb.conf'
 sudo bash -c 'printf "kernel.sysrq = 1\n"                              >> /etc/sysctl.d/gpdb.conf'
 sudo bash -c 'printf "kernel.core_uses_pid = 1\n"                      >> /etc/sysctl.d/gpdb.conf'
 sudo bash -c 'printf "kernel.msgmnb = 65536\n"                         >> /etc/sysctl.d/gpdb.conf'
