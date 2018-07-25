@@ -34,7 +34,7 @@ ANALYZE segspace_test_hj_skew;
 
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
@@ -74,7 +74,7 @@ set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 
 begin;
 
@@ -114,7 +114,7 @@ set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 
 begin;
 
@@ -160,7 +160,7 @@ set gp_cte_sharing=on;
 
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 
 -- LEAK in UPDATE: update with sisc xslice sort
 update foo set j=m.cc1 from (
@@ -210,7 +210,7 @@ set statement_mem=1024; -- 1mb for 3 segment to get leak.
 
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 
 -- LEAK in DELETE with APPEND ONLY tables
 delete from testsisc using (
@@ -246,7 +246,7 @@ create table foo (c int, d int);
 
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
@@ -279,7 +279,7 @@ create table foo (c int, d int);
 
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 
 update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
 select * from

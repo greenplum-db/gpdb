@@ -214,7 +214,7 @@ select dirty_buffers() from gp_dist_random('gp_id')
 -- fsync_test1 and fsync_test2 tables. `num times hit` is corresponding
 -- to the number of files synced by `fsync_counter` fault type.
 select gp_inject_fault('fsync_counter', 'status', '', '', '', 0, 0, 2::smallint);
-NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'0' fault injection state:'triggered'  num times hit:'5'
+NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'5'
  gp_inject_fault 
 -----------------
  t

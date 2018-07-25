@@ -287,11 +287,12 @@ select cleanupAllGangs();
  t
 (1 row)
 
--- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
+-- Segment 0 should report an error upon getting a request.  The
+-- _new() API ensures that the fault is triggered exactly once.
+select gp_inject_fault_new('send_qe_details_init_backend', 'error', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -531,10 +532,11 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('gang_created', 'error', 1);
+-- The _new() API ensures that the fault is triggered exactly once.
+select gp_inject_fault_new('gang_created', 'error', 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 

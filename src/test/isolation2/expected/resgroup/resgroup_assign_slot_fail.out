@@ -26,9 +26,9 @@ gp_inject_fault
 ---------------
 t              
 (1 row)
-SELECT gp_inject_fault('resgroup_assigned_on_master', 'error', 1);
-gp_inject_fault
----------------
+SELECT gp_inject_fault_new('resgroup_assigned_on_master', 'error', 1);
+gp_inject_fault_new 
+--------------------
 t              
 (1 row)
 -- end_ignore

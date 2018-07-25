@@ -1094,23 +1094,31 @@ CONTEXT:  COPY copy_on_segment_check_tow_dsitkey, line 1: "0,0"
 -- COPY FROM ON SEGMENT DISTRIBUTED RANDOMLY
 CREATE TABLE COPY_ON_SEGMENT_DIST_RANDOMLY(a int) DISTRIBUTED RANDOMLY;
 -- Test COPY FROM ON SEGMENT processed overflow
-CREATE EXTENSION gp_inject_fault;
-SELECT gp_inject_fault('copy_from_high_processed', 'reset', '', '', '', 1, 0, 1);
+CREATE EXTENSION if not exists gp_inject_fault;
+SELECT gp_inject_fault('copy_from_high_processed', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-SELECT gp_inject_fault('copy_from_high_processed', 'skip', '', '', '', 1, 0, 1);
+-- The _new() API ensures that the fault is triggered only once.
+SELECT gp_inject_fault_new('copy_from_high_processed', 'skip', 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
 COPY COPY_ON_SEGMENT_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
 NOTICE:  Copied 4294967285 lines
+SELECT gp_inject_fault('copy_from_high_processed', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- COPY FROM ON SEGMENT partitoned table
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED(a int) DISTRIBUTED BY (a) PARTITION BY range(a) ( START (0) END (10) EVERY (5));
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);

@@ -89,7 +89,7 @@ DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDE
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
 select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', 2);
-NOTICE:  Success: fault name:'qe_got_snapshot_and_interconnect' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'triggered'  num times hit:'1'
+NOTICE:  Success: fault name:'qe_got_snapshot_and_interconnect' fault type:'suspend' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t

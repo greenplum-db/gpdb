@@ -26,7 +26,7 @@ NOTICE:  Success:
 SELECT COUNT(t1.*) FROM test_zlib_hashjoin AS t1, test_zlib_hashjoin AS t2 WHERE t1.i1=t2.i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -60,7 +60,7 @@ NOTICE:  Success:
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -126,7 +126,7 @@ select * from t1;
 (0 rows)
 
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t

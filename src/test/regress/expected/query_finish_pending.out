@@ -32,7 +32,7 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
 (1 row)
 
 select gp_inject_fault('execsort_mksort_mergeruns', 'status', 2);
-NOTICE:  Success: fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -77,7 +77,7 @@ LIMIT 2;
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
-NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -112,7 +112,7 @@ LIMIT 2;
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
-NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'set'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t

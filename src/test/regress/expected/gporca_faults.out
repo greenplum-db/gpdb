@@ -16,10 +16,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1);
+select gp_inject_fault_new('opt_relcache_translator_catalog_access', 'interrupt', 1);
 NOTICE:  Success:
- gp_inject_fault
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -57,10 +57,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1);
+select gp_inject_fault_new('opt_relcache_translator_catalog_access', 'interrupt', 1);
 NOTICE:  Success:
- gp_inject_fault
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 

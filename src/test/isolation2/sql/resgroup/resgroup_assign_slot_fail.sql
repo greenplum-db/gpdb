@@ -14,7 +14,7 @@ CREATE ROLE role_test RESOURCE GROUP rg_test;
 2: SET ROLE role_test;
 -- start_ignore
 SELECT gp_inject_fault('resgroup_assigned_on_master', 'reset', 1);
-SELECT gp_inject_fault('resgroup_assigned_on_master', 'error', 1);
+SELECT gp_inject_fault_new('resgroup_assigned_on_master', 'error', 1);
 -- end_ignore
 2: BEGIN;
 2: BEGIN;

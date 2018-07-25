@@ -172,8 +172,9 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 -- when creating reader gang, an error reported and only current gang is cleaned.
 select cleanupAllGangs();
 
--- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
+-- Segment 0 should report an error upon getting a request.  The
+-- _new() API ensures that the fault is triggered exactly once.
+select gp_inject_fault_new('send_qe_details_init_backend', 'error', 2);
 
 -- expect failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -303,7 +304,8 @@ DROP TABLE foo_test;
 --
 \c
 select gp_inject_fault('gang_created', 'reset', 1);
-select gp_inject_fault('gang_created', 'error', 1);
+-- The _new() API ensures that the fault is triggered exactly once.
+select gp_inject_fault_new('gang_created', 'error', 1);
 select 1 from gp_dist_random('gp_id') limit 1;
 -- if previous gang is not destroyed, snapshot collision would happen
 select 1 from gp_dist_random('gp_id') limit 1;

@@ -36,10 +36,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -52,7 +52,7 @@ SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE 
 ERROR:  canceling MPP operation  (seg0 slice2 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -100,10 +100,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -113,7 +113,7 @@ SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE 
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -157,10 +157,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+select gp_inject_fault_new('exec_hashjoin_new_batch', 'interrupt', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -172,7 +172,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -226,10 +226,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -242,7 +242,7 @@ update foo set j=m.cc1 from (
   where t1.i1 = t2.i2 ) as m;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice3 127.0.0.1:25432 pid=3175)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -297,10 +297,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -311,7 +311,7 @@ delete from testsisc using (
 ) src  where testsisc.i1 = src.i;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 127.0.0.1:25432 pid=3143)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -357,10 +357,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('workfile_write_failure', 'error', 2);
-NOTICE:  Success:
- gp_inject_fault 
------------------
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
+NOTICE:  Success: 
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -375,7 +375,7 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 (1 row)
 
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
@@ -413,10 +413,10 @@ NOTICE:  Success:
  t
 (1 row)
 
-select gp_inject_fault('workfile_write_failure', 'error', 2);
+select gp_inject_fault_new('workfile_write_failure', 'error', 2);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_inject_fault_new 
+---------------------
  t
 (1 row)
 
@@ -426,7 +426,7 @@ select * from
 where x.a = ctesisc.i1) y;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice1 127.0.0.1:25432 pid=3175)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
