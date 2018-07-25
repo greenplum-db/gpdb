@@ -55,6 +55,7 @@ typedef struct FragmentData
 	char	   *fragment_md;
 	char	   *user_data;
 	char	   *profile;
+	int 	    fragment_idx;
 } FragmentData;
 
 /*

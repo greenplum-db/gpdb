@@ -214,6 +214,7 @@ static void
 set_current_fragment_headers(gphadoop_context *context)
 {
 	FragmentData *frag_data = (FragmentData *) lfirst(context->current_fragment);
+	int fragment_count = list_length(context->gphd_uri->fragments);
 
 	elog(DEBUG2, "pxf: set_current_fragment_source_name: source_name %s, index %s, has user data: %s ",
 		 frag_data->source_name, frag_data->index, frag_data->user_data ? "TRUE" : "FALSE");
@@ -222,6 +223,11 @@ set_current_fragment_headers(gphadoop_context *context)
 	churl_headers_override(context->churl_headers, "X-GP-DATA-FRAGMENT", frag_data->index);
 	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-METADATA", frag_data->fragment_md);
 	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-INDEX", frag_data->index);
+
+	if (frag_data->fragment_idx == fragment_count)
+	{
+		churl_headers_override(context->churl_headers, "X-GP-LAST-FRAGMENT", "true");
+	}
 
 	if (frag_data->user_data)
 	{

@@ -371,6 +371,7 @@ filter_fragments_for_segment(List *list)
 			   *current = NULL;
 
 	int			index = 0;
+	int			frag_index = 1;
 	int4		shift = xid % GpIdentity.numsegments;
 
 	for (current = list_head(list); current != NULL; index++)
@@ -381,6 +382,8 @@ filter_fragments_for_segment(List *list)
 			 * current segment is the one that should process, keep the
 			 * element, adjust cursor pointers
 			 */
+			FragmentData *frag = (FragmentData *) current->data.ptr_value;
+			frag->fragment_idx = frag_index++;
 			previous = current;
 			current = lnext(current);
 		}
