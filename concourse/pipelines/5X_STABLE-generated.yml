@@ -86,14 +86,15 @@ groups:
   - gate_mm_start
   - MM_gprecoverseg
   - MM_gpcheckcat
+  - MM_gpinitstandby
+  - MM_gpactivatestandby
   - MM_analyzedb
   - MM_gpperfmon
   - MM_gpinitsystem
-  - MM_gpinitstandby
-  - MM_gpexpand_1
-  - MM_gpexpand_2
   - MM_gppkg
   - MM_gpcheck
+  - MM_gpexpand
+  - MM_gpaddmirrors
   - MM_pt-rebuild
   - MU_check_centos
   - gate_mm_end
@@ -219,14 +220,14 @@ groups:
   - gate_mm_start
   - MM_gprecoverseg
   - MM_gpcheckcat
+  - MM_gpinitstandby
+  - MM_gpactivatestandby
   - MM_analyzedb
   - MM_gpperfmon
   - MM_gpinitsystem
-  - MM_gpinitstandby
-  - MM_gpexpand_1
-  - MM_gpexpand_2
   - MM_gppkg
   - MM_gpcheck
+  - MM_gpexpand
   - MM_pt-rebuild
   - MU_check_centos
   - gate_mm_end
@@ -261,7 +262,6 @@ groups:
   - Postgis_Test_Planner_centos7
   - MADlib_Test_Orca_centos7
   - Postgis_Test_Orca_centos7
-  - gate_advanced_analytics_end
 
 ## ======================================================================
 
@@ -2553,6 +2553,86 @@ jobs:
   ensure:
     <<: *set_failed
 
+- name: MM_gpinitstandby
+  plan:
+  - *ccp_jitter_delay
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_start]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: true
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gpinitstandby
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+- name: MM_gpactivatestandby
+  plan:
+  - *ccp_jitter_delay
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_start]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: true
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gpactivatestandby
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 - name: MM_gppkg
   plan:
   - *ccp_jitter_delay
@@ -2617,6 +2697,43 @@ jobs:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
 
+- name: MM_gpexpand
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_start]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: pre_run_test_setup
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
+    image: centos-gpdb-dev-6
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    params:
+      BEHAVE_FLAGS: --tags=gpexpand
+    image: centos-gpdb-dev-6
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 - name: MM_analyzedb
   plan:
   - aggregate: *gets_for_behave
@@ -2643,15 +2760,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_TAGS: gpinitsystem
-
-- name: MM_gpinitstandby
-  plan:
-  - aggregate: *gets_for_behave
-  - task: gpinitstandby
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: gpinitstandby
 
 - name: MM_pt-rebuild
   plan:
@@ -2686,9 +2794,8 @@ jobs:
     params:
       TEST_OS: centos
 
-- name: MM_gpexpand_1
+- name: MM_gpaddmirrors
   plan:
-  - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
       params:
@@ -2706,89 +2813,18 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        number_of_nodes: 5
+        number_of_nodes: 4
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
-    image: centos-gpdb-dev-6
-    config:
-      platform: linux
-      inputs:
-       - name: ccp_src
-       - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/scripts/setup_ssh_to_cluster.sh
-          ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
-                      bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
+    file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      TINC_TARGET: gpexpand_1
-      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
-- name: MM_gpexpand_2
-  plan:
-  - *ccp_jitter_delay
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_mm_start]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 5
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
-    image: centos-gpdb-dev-6
-    config:
-      platform: linux
-      inputs:
-       - name: ccp_src
-       - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/scripts/setup_ssh_to_cluster.sh
-          ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
-                      bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: gpexpand_2
-      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      BEHAVE_FLAGS: --tags=gpaddmirrors
     on_success:
       <<: *ccp_destroy
   ensure:
@@ -2801,14 +2837,14 @@ jobs:
       passed: &gate_mm_end_passed
       - MM_gprecoverseg
       - MM_gpcheckcat
+      - MM_gpinitstandby
+      - MM_gpactivatestandby
       - MM_analyzedb
       - MM_gpperfmon
       - MM_gpinitsystem
-      - MM_gpinitstandby
-      - MM_gpexpand_1
-      - MM_gpexpand_2
       - MM_gppkg
       - MM_gpcheck
+      - MM_gpexpand
       - MM_pt-rebuild
       - MU_check_centos
       trigger: true
@@ -4180,7 +4216,9 @@ jobs:
       - mpp_resource_group_centos6
       - mpp_resource_group_centos7
       - MU_check_centos
+      - MM_gpaddmirrors
       - MM_gpcheck
+      - MM_gpexpand
       - DPM_backup-restore
       - MM_gppkg
       - MM_pt-rebuild
@@ -4216,12 +4254,11 @@ jobs:
       - DPM_backup_43_restore_5
       - MM_gprecoverseg
       - MM_gpcheckcat
+      - MM_gpinitstandby
+      - MM_gpactivatestandby
       - MM_analyzedb
       - MM_gpperfmon
       - MM_gpinitsystem
-      - MM_gpinitstandby
-      - MM_gpexpand_1
-      - MM_gpexpand_2
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
       - mpp_interconnect

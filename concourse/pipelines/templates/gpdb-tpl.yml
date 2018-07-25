@@ -274,6 +274,7 @@ groups:
   - MADlib_Test_[[ test_name ]]
   - Postgis_Test_[[ test_name ]]
 {% endfor %}
+  - gate_advanced_analytics_end
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -3622,6 +3623,7 @@ jobs:
       - mpp_resource_group_centos6
       - mpp_resource_group_centos7
       - MU_check_centos
+      - MM_gpaddmirrors
       - MM_gpcheck
       - MM_gpexpand
       - DPM_backup-restore
