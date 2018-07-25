@@ -18,6 +18,7 @@
 static void check_external_partition(void);
 static void check_covering_aoindex(void);
 static void check_partition_indexes(void);
+static void check_orphaned_toastrels(void);
 
 /*
  *	check_greenplum
@@ -33,6 +34,7 @@ check_greenplum(void)
 	check_external_partition();
 	check_covering_aoindex();
 	check_partition_indexes();
+	check_orphaned_toastrels();
 }
 
 /*
@@ -225,6 +227,68 @@ check_covering_aoindex(void)
 	}
 	else
 		check_ok();
+}
+
+static void
+check_orphaned_toastrels(void)
+{
+	bool			found = false;
+	int				dbnum;
+	char			output_path[MAXPGPATH];
+	FILE		   *script = NULL;
+
+	prep_status("Checking for orphaned TOAST relations");
+
+	snprintf(output_path, sizeof(output_path), "partitioned_tables.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		PGconn	   *conn;
+		int			ntups;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+								"WITH orphan_toast AS ( "
+								"    SELECT c.oid AS reloid, "
+								"           c.relname, t.oid AS toastoid, "
+								"           t.relname AS toastrelname "
+								"    FROM pg_catalog.pg_class t "
+								"         LEFT OUTER JOIN pg_catalog.pg_class c ON (c.reltoastrelid = t.oid) "
+								"    WHERE t.relname ~ '^pg_toast' AND "
+								"          t.relkind = 't') "
+								"SELECT reloid "
+								"FROM   orphan_toast "
+								"WHERE  reloid IS NULL");
+
+		ntups = PQntuples(res);
+		if (ntups > 0)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+
+			fprintf(script, "Database \"%s\" has %d orphaned toast tables\n", active_db->db_name, ntups);
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| Your installation contains orphaned toast tables which\n"
+			   "| must be dropped before upgrade.\n"
+			   "| A list of the problem databases is in the file:\n"
+			   "| \t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+
 }
 
 /*
