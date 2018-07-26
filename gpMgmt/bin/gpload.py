@@ -2819,6 +2819,7 @@ class gpload:
 
                     else:
                         os.kill(a.pid, signal.SIGKILL)
+                        os.waitpid(a.pid, 0)
                 except OSError:
                     pass
         self.log(self.LOG, 'terminating all threads')
