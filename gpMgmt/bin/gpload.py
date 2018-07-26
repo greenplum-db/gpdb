@@ -2898,4 +2898,6 @@ class gpload:
 if __name__ == '__main__':
     g = gpload(sys.argv[1:])
     g.run()
-    sys.exit(g.exitValue)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(g.exitValue)
