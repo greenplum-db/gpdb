@@ -348,7 +348,6 @@ SED_PG_CONF () {
 	FILENAME=$1;shift
 	SEARCH_TXT=$1;shift
 	SUB_TXT="$1";shift
-	KEEP_PREV=$1;shift
 	SED_HOST=$1
 	if [ x"" == x"$SED_HOST" ]; then
 			if [ `$GREP -c "${SEARCH_TXT}[ ]*=" $FILENAME` -gt 1 ]; then
@@ -364,26 +363,15 @@ SED_PG_CONF () {
 					LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME"
 				fi
 			else
-				if [ $KEEP_PREV -eq 0 ];then
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
-				else
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
-				fi
-				RETVAL=$?
-				if [ $RETVAL -ne 0 ]; then
+				$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
+				SED_DIFF=`diff $FILENAME.bak1 $FILENAME`
+				if [ x"" == x"$SED_DIFF" ]; then
 					ERROR_EXIT "[FATAL]:-Failed to replace $SEARCH_TXT in $FILENAME" 2
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
 				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
-				RETVAL=$?
-				if [ $RETVAL -ne 0 ]; then
-					ERROR_EXIT "[FATAL]:-Failed to replace #$SEARCH_TXT in $FILENAME" 2
-				else
-					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
-					$RM -f ${FILENAME}.bak2
-				fi
 			fi
 	else
 		# trap DEBUG will always be called first, when other traps are triggered.
@@ -406,11 +394,7 @@ SED_PG_CONF () {
 				LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME on $SED_HOST" 1
 			fi
 		else
-			if [ $KEEP_PREV -eq 0 ];then
-				$ECHO "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" > $SED_TMP_FILE
-			else
-				$ECHO "s/${SEARCH_TXT}.*/${SUB_TXT}/" > $SED_TMP_FILE
-			fi
+			$ECHO "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" > $SED_TMP_FILE
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
 			$TRUSTED_SHELL $SED_HOST "sed -i'.bak1' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then

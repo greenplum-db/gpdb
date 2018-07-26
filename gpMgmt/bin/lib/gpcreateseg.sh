@@ -156,11 +156,11 @@ PROCESS_QE () {
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO \"#----------------------\" >> ${GP_DIR}/$PG_CONF"
         RETVAL=$?
         PARA_EXIT $RETVAL "Update ${GP_DIR}/$PG_CONF file"
-        SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0 $GP_HOSTADDRESS
+        SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update port number to $GP_PORT"
-        SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0 $GP_HOSTADDRESS
+        SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update listen address"
-        SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" checkpoint_segments=$CHECK_POINT_SEGMENTS 0 $GP_HOSTADDRESS
+        SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" checkpoint_segments=$CHECK_POINT_SEGMENTS $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update checkpoint segments"
 
         if [ x"" != x"$PG_CONF_ADD_FILE" ]; then
@@ -169,7 +169,7 @@ PROCESS_QE () {
 	        do
 	            LOG_MSG "[INFO][$INST_COUNT]:-Adding config $NEW_PARAM to segment"
 	            SEARCH_TXT=`$ECHO $NEW_PARAM |$CUT -d"=" -f1`
-	            SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0 $GP_HOSTADDRESS
+	            SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM $GP_HOSTADDRESS
 	            PARA_EXIT $RETVAL "Update $PG_CONF $SEARCH_TXT $NEW_PARAM"
 	        done
         fi
