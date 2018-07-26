@@ -312,8 +312,9 @@
       <simpletable frame="none" id="simpletable_nq5_z2c_kr">
         <strow>
           <stentry>
-            <p>
-              <xref href="guc-list.xml#optimizer" type="section">optimizer</xref>
+            <p><xref href="guc-list.xml#gp_enable_relsize_collection" format="dita"
+                >gp_enable_relsize_collection</xref></p>
+            <p><xref href="guc-list.xml#optimizer" type="section">optimizer</xref>
             </p>
             <p>
               <xref href="guc-list.xml#optimizer_analyze_root_partition" type="section"

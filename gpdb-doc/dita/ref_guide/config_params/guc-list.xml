@@ -3451,11 +3451,11 @@
   <topic id="gp_enable_relsize_collection">
     <title>gp_enable_relsize_collection</title>
     <body>
-      <p>Enables the legacy query optimizer (planner) to use the estimated size of a table
-          (<codeph>pg_relation_size</codeph> function) if there are no statistics for the table. By
-        default, the planner uses a default value to estimate the number of rows if statistics are
-        not available. The default behavior improves query optimization time and reduces resource
-        queue usage in heavy workloads, but can lead to suboptimal plans.</p>
+      <p>Enables GPORCA and the legacy query optimizer (planner) to use the estimated size of a
+        table (<codeph>pg_relation_size</codeph> function) if there are no statistics for the table.
+        By default, GPORCA and the planner use a default value to estimate the number of rows if
+        statistics are not available. The default behavior improves query optimization time and
+        reduces resource queue usage in heavy workloads, but can lead to suboptimal plans.</p>
       <table id="table_b2v_b5t_3x">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
