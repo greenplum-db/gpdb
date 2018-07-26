@@ -136,6 +136,8 @@ typedef enum FaultInjectorIdentifier_e {
 	FinishPreparedTransactionAbortPass2AbortingCreateNeeded,	
 		/* abort: create pending => aborting create */
 
+	FinishPreparedStartOfFunction,
+
 	FileRepVerification,
 		/* trigger filerep verification for testing */
 	

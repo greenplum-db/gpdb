@@ -227,6 +227,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault after persistent state change is permanently stored during first pass */
 	_("finish_prepared_transaction_abort_pass2_aborting_create_needed"),
 		/* inject fault after physical drop and before final persistent state change is permanently stored during second pass */
+	_("finish_prepared_start_of_function"),
+		/* inject fault at the start of finish prepare step executed by QEs */
 	_("filerep_verification"),
 	    /* inject fault to start verification */
 	_("twophase_transaction_commit_prepared"),
