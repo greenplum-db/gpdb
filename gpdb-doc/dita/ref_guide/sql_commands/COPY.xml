@@ -33,7 +33,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         [NULL [ AS ] 'null string']
         [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
         [CSV [QUOTE [ AS ] 'quote'] 
-             [FORCE QUOTE column [, ...]] ]
+             [FORCE QUOTE column [, ...]] | * ]
       [IGNORE EXTERNAL PARTITIONS ]</codeblock>
     </section>
     <section id="section3">
@@ -275,8 +275,9 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         <plentry>
           <pt>FORCE QUOTE</pt>
           <pd>In <codeph>CSV COPY TO</codeph> mode, forces quoting to be used for all
-              non-<codeph>NULL</codeph> values in each specified column. <codeph>NULL</codeph>
-            output is never quoted.</pd>
+              non-<codeph>NULL</codeph> values in each specified column. If <codeph>*</codeph>
+              is specified then non-<codeph>NULL</codeph> values will be quoted in all columns.
+              <codeph>NULL</codeph> output is never quoted. </pd>
         </plentry>
         <plentry>
           <pt>FORCE NOT NULL</pt>
