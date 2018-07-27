@@ -168,8 +168,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				Oid			userid = GetUserId();
 				HeapTuple	tuple;
 
-				tuple = SearchSysCache1(AUTHOID,
-										ObjectIdGetDatum(userid));
+				tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(userid));
 				if (!HeapTupleIsValid(tuple))
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -271,13 +270,11 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 					}
 				}
 				else
-				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INTERNAL_ERROR),
-						  errmsg("internal error in DefineExternalRelation. "
-								 "protocol is %d, writable is %d",
-								 uri->protocol, iswritable)));
-				}
+							 errmsg("internal error in DefineExternalRelation"),
+							 errdetail("Protocol is %d, writable is %d",
+									   uri->protocol, iswritable)));
 
 				ReleaseSysCache(tuple);
 			}
@@ -335,7 +332,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 		if (dencoding)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("conflicting or redundant ENCODING specification")));
+					 errmsg("conflicting or redundant ENCODING specification")));
 		dencoding = defel;
 	}
 
@@ -351,8 +348,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				pg_valid_client_encoding(encoding_name) < 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("%d is not a valid encoding code",
-								encoding)));
+						 errmsg("%d is not a valid encoding code", encoding)));
 		}
 		else if (IsA(dencoding->arg, String))
 		{
@@ -396,9 +392,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 							 errmsg("number of locations (%d) exceeds the number of segments (%d)",
 									list_length(exttypeDesc->location_list),
 									getgpsegmentCount()),
-							 errhint("The table cannot be queried until cluster "
-									 "is expanded so that there are at least as "
-									 "many segments as locations.")));
+							 errhint("The table cannot be queried until cluster is expanded so that there are at least as many segments as locations.")));
 			}
 		}
 	}
@@ -789,6 +783,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	Datum		result;
 	char	   *format_str;
 	char	   *formatter = NULL;
+	StringInfoData cfbuf;
 
 	CopyState cstate = palloc0(sizeof(CopyStateData));
 
@@ -821,7 +816,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-				errmsg("formatter option only valid for custom formatters")));
+						 errmsg("formatter option only valid for custom formatters")));
 			}
 			else
 				elog(ERROR, "option \"%s\" not recognized",
@@ -843,19 +838,15 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 						   false /* is_copy */);
 
 		/*
-		 * build the format option string that will get stored in the catalog.
-		 */
-		StringInfoData cfbuf;
-
-		initStringInfo(&cfbuf);
-
-		/*
+		 * Build the format option string that will get stored in the catalog.
+		 *
 		 * NOTE: These are intentionally not escaped "correctly"! For
 		 * historical reasons, these options are stored in a weird format
 		 * that looks like they're SQL literals, but the escaping is
 		 * different. See comments in escape_fmtopts_string(), in
 		 * src/bin/pg_dump/dumputils.c.
 		 */
+		initStringInfo(&cfbuf);
 		appendStringInfo(&cfbuf, "delimiter '%s'", cstate->delim);
 		appendStringInfo(&cfbuf, " null '%s'", cstate->null_print);
 		appendStringInfo(&cfbuf, " escape '%s'", cstate->escape);
