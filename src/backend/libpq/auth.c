@@ -186,7 +186,7 @@ static krb5_principal pg_krb5_server;
 #endif
 
 static int	pg_GSS_recvauth(Port *port);
-static int check_valid_until_for_gssapi(Port *port);
+static int	check_valid_until_for_gssapi(Port *port);
 #endif   /* ENABLE_GSS */
 
 
@@ -643,10 +643,12 @@ ClientAuthentication(Port *port)
 
 		case uaGSS:
 #ifdef ENABLE_GSS
-			if (check_valid_until_for_gssapi(port) == STATUS_ERROR) {
+			if (check_valid_until_for_gssapi(port) == STATUS_ERROR)
+			{
 				ereport(FATAL,
 					(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-					errmsg("authentication failed for user \"%s\": valid until timestamp expired", port->user_name)));
+					 errmsg("authentication failed for user \"%s\": valid until timestamp expired",
+							port->user_name)));
 			}
 
 			sendAuthRequest(port, AUTH_REQ_GSS);
@@ -1136,18 +1138,16 @@ pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 			 errdetail_internal("%s: %s", msg_major, msg_minor)));
 }
 
-/* Check to see if the password of a user is valid 
- * (using the validuntil attribute associated with the pg_role)
- * for GSSAPI based authentication.
+/*
+ * Check to see if the password of a user is valid (using the validuntil
+ * attribute associated with the pg_role) for GSSAPI based authentication.
+ *
+ * This logic is copied from hashed_passwd_verify(), so we need to ensure
+ * these functions don't fall out of sync.
  */
 static int
 check_valid_until_for_gssapi(Port *port)
 {
-	/*
-	 * GPDB_90_MERGE_FIXME: this logic is copied from hashed_passwd_verify;
-	 * double-check it (especially the lack of password checks, which we may
-	 * need here) and consolidate it somehow so we don't fall out of sync.
-	 */
 	int			retval = STATUS_ERROR;
 	TimestampTz vuntil = 0;
 	HeapTuple	roleTup;
@@ -1162,9 +1162,7 @@ check_valid_until_for_gssapi(Port *port)
 	ImmediateInterruptOK = false;
 
 	/* Get role info from pg_authid */
-	roleTup = SearchSysCache(AUTHNAME,
-							 PointerGetDatum(port->user_name),
-							 0, 0, 0);
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(port->user_name));
 	if (!HeapTupleIsValid(roleTup))
 		return STATUS_ERROR;					/* no such user */
 
