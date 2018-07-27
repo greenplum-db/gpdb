@@ -5282,6 +5282,10 @@ format_opt_item:
 			{
 				$$ = makeDefElem("force_quote", (Node *)$3);
 			}
+			| FORCE QUOTE '*'
+			{
+				$$ = makeDefElem("force_quote", (Node *)makeNode(A_Star));
+			}
 			| FILL MISSING FIELDS
 			{
 				$$ = makeDefElem("fill_missing_fields", (Node *)makeInteger(TRUE));

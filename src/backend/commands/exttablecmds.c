@@ -812,7 +812,6 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 				strcmp(defel->defname, "escape") == 0 ||
 				strcmp(defel->defname, "force_not_null") == 0 ||
 				strcmp(defel->defname, "force_quote") == 0 ||
-				/* GPDB_90_MERGE_FIXME: add 'force_quote_all' here */
 				strcmp(defel->defname, "fill_missing_fields") == 0 ||
 				strcmp(defel->defname, "newline") == 0)
 			{
@@ -907,6 +906,9 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 				is_first_col = false;
 			}
 		}
+
+		if (cstate->force_quote_all)
+			appendStringInfo(&cfbuf, " force quote *");
 
 		if (cstate->eol_str)
 			appendStringInfo(&cfbuf, " newline '%s'", cstate->eol_str);

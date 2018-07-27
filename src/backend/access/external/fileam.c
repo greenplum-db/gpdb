@@ -87,7 +87,7 @@ static int	external_getdata_callback(void *outbuf, int datasize, void *extra);
 static int	external_getdata(URL_FILE *extfile, CopyState pstate, void *outbuf, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
-static List *parseCopyFormatString(char *fmtstr, char fmttype);
+static List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
 static void parseCustomFormatString(char *fmtstr, char **formatter_name, List **formatter_params);
 static Oid lookupCustomFormatter(char *formatter_name, bool iswritable);
 static void justifyDatabuf(StringInfo buf);
@@ -283,7 +283,7 @@ external_beginscan(Relation relation, uint32 scancounter,
 								&custom_formatter_params);
 	}
 	else
-		copyFmtOpts = parseCopyFormatString(fmtOptString, fmtType);
+		copyFmtOpts = parseCopyFormatString(relation, fmtOptString, fmtType);
 
 	/* pass external table's encoding to copy's options */
 	copyFmtOpts = appendCopyEncodingOption(copyFmtOpts, encoding);
@@ -618,7 +618,7 @@ external_insert_init(Relation rel)
 								&custom_formatter_params);
 	}
 	else
-		copyFmtOpts = parseCopyFormatString(extentry->fmtopts, extentry->fmtcode);
+		copyFmtOpts = parseCopyFormatString(rel, extentry->fmtopts, extentry->fmtcode);
 
 	/* pass external table's encoding to copy's options */
 	copyFmtOpts = appendCopyEncodingOption(copyFmtOpts, extentry->encoding);
@@ -1919,7 +1919,7 @@ strtokx2(const char *s,
 }
 
 static List *
-parseCopyFormatString(char *fmtstr, char fmttype)
+parseCopyFormatString(Relation rel, char *fmtstr, char fmttype)
 {
 	char	   *token;
 	const char *whitespace = " \t\n\r";
@@ -2018,6 +2018,32 @@ parseCopyFormatString(char *fmtstr, char fmttype)
 									 0, false, false, encoding);
 					if (!token || strchr(",", token[0]))
 						goto error;
+
+					/*
+					 * For a '*' token the format option is force_quote_all
+					 * and we need to recreate the column list for the entire
+					 * relation.
+					 */
+					if (strcmp(token, "*") == 0)
+					{
+						int			i;
+						TupleDesc	tupdesc = RelationGetDescr(rel);
+
+						for (i = 0; i < tupdesc->natts; i++)
+						{
+							Form_pg_attribute att = tupdesc->attrs[i];
+
+							if (att->attisdropped)
+								continue;
+
+							cols = lappend(cols, makeString(NameStr(att->attname)));
+						}
+
+						/* consume the comma if any */
+						token = strtokx2(NULL, whitespace, ",", "\"",
+										 0, false, false, encoding);
+						break;
+					}
 
 					cols = lappend(cols, makeString(pstrdup(token)));
 

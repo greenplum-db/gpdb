@@ -1464,17 +1464,21 @@ CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv4 (a int, b text) EXECUTE 'cat > @
 -- Create writable external table with force quote
 CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv5 (a int, b text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv5.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' '  QUOTE AS '"' FORCE QUOTE b);
 
+CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_csv6 (a int, b text, c text) EXECUTE 'cat > @abs_srcdir@/data/wet_csv6.tbl' FORMAT 'CSV' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ' QUOTE AS '"' FORCE QUOTE *);
+
 INSERT INTO tbl_wet_csv1 VALUES (generate_series(1,256), 'test_1');
 INSERT INTO tbl_wet_csv2 VALUES (generate_series(1,256), 'test_2');
 INSERT INTO tbl_wet_csv3 VALUES (generate_series(1,256), 'test_3');
 INSERT INTO tbl_wet_csv4 VALUES (generate_series(1,256), 'test_4');
 INSERT INTO tbl_wet_csv5 VALUES (generate_series(1,256), 'test_5');
+INSERT INTO tbl_wet_csv6 VALUES (generate_series(1,256), 'test_6', 'test_6_1');
 
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv1;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv2;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv3;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv4;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv5;
+DROP EXTERNAL TABLE IF EXISTS tbl_wet_csv6;
 
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_text1;

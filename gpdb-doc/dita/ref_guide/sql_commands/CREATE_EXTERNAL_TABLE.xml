@@ -85,7 +85,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
                [([QUOTE [AS] '<varname>quote</varname>'] 
                [DELIMITER [AS] '<varname>delimiter</varname>']
                [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] ]
+               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
            | 'AVRO' 
            | 'PARQUET'
@@ -106,7 +106,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
                [([QUOTE [AS] '<varname>quote</varname>'] 
                [DELIMITER [AS] '<varname>delimiter</varname>']
                [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] ]
+               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
 
 CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
@@ -120,7 +120,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
                [([QUOTE [AS] '<varname>quote</varname>'] 
                [DELIMITER [AS] '<varname>delimiter</varname>']
                [NULL [AS] '<varname>null string</varname>']
-               [FORCE QUOTE <varname>column</varname> [, ...]] ]
+               [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
     [ ENCODING '<varname>write_encoding</varname>' ]
@@ -422,8 +422,9 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         <plentry>
           <pt>FORCE QUOTE</pt>
           <pd>In <codeph>CSV</codeph> mode for writable external tables, forces quoting to be used
-            for all non-<codeph>NULL</codeph> values in each specified column. <codeph>NULL</codeph>
-            output is never quoted.</pd>
+            for all non-<codeph>NULL</codeph> values in each specified column. If <codeph>*</codeph>
+            is specified then non-<codeph>NULL</codeph> values will be quoted in all columns.
+            <codeph>NULL</codeph> output is never quoted.</pd>
         </plentry>
         <plentry>
           <pt>FILL MISSING FIELDS</pt>
