@@ -40,6 +40,15 @@ class GpInjectFaultProgram:
     #
     def __init__(self, options):
         self.options = options
+        # "-o 0" means the fault should be triggered indefinitely.
+        # Otherwise, the fault should be triggered exactly once.
+        if self.options.numOccurrences == 0:
+            self.options.endOccurrence = -1
+            self.options.numOccurrences = 1 # startOccurrence
+        else:
+            self.options.endOccurrence = self.options.numOccurrences
+            if self.options.numOccurrences < 0:
+                raise Exception("invalid value for -o option %s", self.options.numOccurrences)
 
     #
     # Build the fault transition message.  Fault options themselves will NOT be validated by the
@@ -56,7 +65,7 @@ class GpInjectFaultProgram:
         result.append( toNonNoneString(self.options.databaseName))
         result.append( toNonNoneString(self.options.tableName))
         result.append( toNonNoneString(self.options.numOccurrences)) # startOccurrence
-        result.append('-1') # endOccurrence
+        result.append( toNonNoneString(self.options.endOccurrence)) # endOccurrence
         result.append( toNonNoneString(self.options.sleepTimeSeconds)) # extraArg
         return '\n'.join(result)
 
