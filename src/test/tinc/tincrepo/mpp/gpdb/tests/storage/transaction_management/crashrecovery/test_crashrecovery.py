@@ -109,7 +109,7 @@ class CrashRecovery_2PC(TINCTestCase):
         self.proc = cmd.runNoWait()
         tinctest.logger.info("runNoWait: %s, pid: %d" % (cmd.cmdStr, self.proc.pid))
 
-        commitBlocked = self.filereputil.check_fault_status(fault_name='dtm_xlog_distributed_commit', status="triggered", seg_id='1', num_times_hit=1);
+        commitBlocked = self.filereputil.check_fault_status(fault_name='dtm_xlog_distributed_commit', seg_id='1', num_times_hit=1);
 
         # Shutdown of primary (and mirror) should happen only after
         # the commit is blocked due to suspend fault.

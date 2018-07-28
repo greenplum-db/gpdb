@@ -48,7 +48,7 @@ class BaseClass(MPPTestCase):
         tinctest.logger.info('Successfully reset fault_name : %s fault_type : %s  occurence : %s ' % (fault_name, type, occurence))
 
     def check_fault_status(self, fault_name, seg_id=None, role=None):
-        status = self.filereputil.check_fault_status(fault_name = fault_name, status ='triggered', max_cycle=20, role=role, seg_id=seg_id)
+        status = self.filereputil.check_fault_status(fault_name = fault_name, max_cycle=20, role=role, seg_id=seg_id)
         self.assertTrue(status, 'The fault is not triggered in the time expected')
 
     def incremental_recoverseg(self):

@@ -97,7 +97,7 @@ class AOCOAlterColumn(MPPTestCase):
         # Inject Fault to put one primary in panic
         self.fileutil.inject_fault(f='postmaster', y='reset',  seg_id=primary_dbid)
         self.fileutil.inject_fault(f='postmaster', y='panic',  seg_id=primary_dbid)
-        state=self.fileutil.check_fault_status(fault_name='postmaster', status='triggered')
+        state=self.fileutil.check_fault_status(fault_name='postmaster')
         self.log_segment_state()
         # Recover the down segments
         self.recover_seg()

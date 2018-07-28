@@ -57,7 +57,7 @@ class drop_obj(SQLTestCase):
     def setUp(self):
         super(drop_obj, self).setUp()
         self.util = Reindex()
-        self.util.check_fault_status(fault_name_ = "reindex_db", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+        self.util.check_fault_status(fault_name_ = "reindex_db", seg_id_ = 1, max_cycle_ = 20)
 
     def tearDown(self):
         self.util.inject_fault(operation_ = "reset", fault_ = "reindex_db", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
@@ -90,7 +90,7 @@ class add_index(SQLTestCase):
     def setUp(self):
         super(add_index, self).setUp()
         self.util = Reindex()
-        self.util.check_fault_status(fault_name_ = "reindex_relation", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+        self.util.check_fault_status(fault_name_ = "reindex_relation", seg_id_ = 1, max_cycle_ = 20)
 
     def tearDown(self):
         self.util.inject_fault(operation_ = "reset", fault_ = "reindex_relation", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
@@ -151,7 +151,7 @@ class insert_tup_gpfastseq(SQLTestCase):
     def setUp(self):
         super(insert_tup_gpfastseq, self).setUp()
         self.util = Reindex()
-        self.util.check_fault_status(fault_name_ = "reindex_relation", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+        self.util.check_fault_status(fault_name_ = "reindex_relation", seg_id_ = 1, max_cycle_ = 20)
 
     def tearDown(self):
         self.util.inject_fault(operation_ = "reset", fault_ = "reindex_relation", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
@@ -192,7 +192,7 @@ class reset_fault(SQLTestCase):
         ans = False
         while ctr < 10:
             ctr += 1
-            ans = self.util.check_fault_status(fault_name_ = "reindex_relation", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+            ans = self.util.check_fault_status(fault_name_ = "reindex_relation", seg_id_ = 1, max_cycle_ = 20)
             if ans == True:
                 ans2=self.util.inject_fault(operation_ = "reset", fault_ = "reindex_relation", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
                 if ans2[0] == True:

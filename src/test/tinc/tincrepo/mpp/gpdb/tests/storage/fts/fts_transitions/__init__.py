@@ -180,7 +180,7 @@ class FtsTransitions(MPPTestCase):
         self.start_db_with_no_rc_check()
 
     def check_fault_status(self, fault_name, seg_id=None, role=None):
-        status = self.fileutil.check_fault_status(fault_name = fault_name, status ='triggered', max_cycle=20, role=role, seg_id=seg_id)
+        status = self.fileutil.check_fault_status(fault_name = fault_name, max_cycle=20, role=role, seg_id=seg_id)
         self.assertTrue(status, 'The fault is not triggered in the time expected')
 
     def cluster_state(self):

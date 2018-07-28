@@ -38,11 +38,8 @@ class Reindex():
 
         return self.util.inject_fault(f=fault_, m=mode_ , y=operation_, r =prim_mirr_, seg_id= seg_id_, H='ALL', table=table_)
 
-    def check_fault_status(self, fault_name_ = None, status_ = None, seg_id_ = 1, max_cycle_=10):
-        if (fault_name_ is None or status_ is None):
-            raise Exception('Incorrect parameters provided for inject fault')
-
-        return self.util.check_fault_status(fault_name=fault_name_, status=status_, seg_id=seg_id_, max_cycle=max_cycle_)
+    def check_fault_status(self, fault_name_ = None, seg_id_ = 1, max_cycle_=10):
+        return self.util.check_fault_status(fault_name=fault_name_, seg_id=seg_id_, max_cycle=max_cycle_)
 
     def do_gpcheckcat(self):
         dbstate = GpdbVerify()

@@ -325,7 +325,7 @@ class FilerepTestCase(MPPTestCase):
         first_mirror_dbid = first_mirror_dbid.split('\n')[3].strip()
 
         tinctest.logger.info("\n Injecting faults on first mirror")
-        flag = self.util.check_fault_status(fault_name='fileRep_is_operation_completed', status='triggered', max_cycle=100);
+        flag = self.util.check_fault_status(fault_name='fileRep_is_operation_completed', max_cycle=100);
         if not flag:
             raise Exception("Fault fileRep_is_operation_completed didn't trigger")   
  

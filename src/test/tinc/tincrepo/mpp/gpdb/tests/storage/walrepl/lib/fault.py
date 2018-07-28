@@ -38,7 +38,7 @@ class Gpfault(object):
 
     def wait_triggered(self, fault_name):
 
-        search = "fault injection state:'triggered'"
+        search = "fault injection state:'completed'"
         for i in walrepl.polling(10, 3):
             result = self.fault_status(fault_name)
             stdout = result.stdout

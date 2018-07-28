@@ -109,27 +109,28 @@ class Filerepe2e_Util():
             return (ok,out)
        
     
-    def check_fault_status(self,fault_name = None, status = None, max_cycle=20, role='primary', seg_id=None, num_times_hit = None):
-        ''' 
+    def check_fault_status(self,fault_name = None, max_cycle=20, role='primary', seg_id=None, num_times_hit = None):
+        '''
         Check whether a fault is triggered. Poll till the fault is triggered
         @param name : Fault name
-        @param status : Status to be checked - triggered/completed
         @param seg_id : db_id of the segment
         '''
-        if (not fault_name) or (not status) :
-            self.fail("Need a value for fault_name and status to continue")
-    
+        if not fault_name:
+            self.fail("Need a value for fault_name to continue")
+
         poll =0
         while(poll < max_cycle):
             (ok, out) = self.inject_fault(f=fault_name, y='status', r=role, seg_id=seg_id)
             poll +=1
             for line in out.splitlines():
-                if line.find(fault_name) > 0 and line.find(status) > 0 :
-                    if num_times_hit and line.find("num times hit:'%d'" % num_times_hit) < 0 :
+                if (line.find(fault_name) > 0 and
+                    (line.find("completed") > 0 or
+                     line.find("triggered") > 0)):
+                    if num_times_hit and line.find("num times hit:'%d'" % num_times_hit) < 0:
                         tinctest.logger.info('Fault not hit num of times %d line %s ' % (num_times_hit,line))
                         continue
                     if num_times_hit:
-                        tinctest.logger.info('Fault %s is %s num_times_hit %d' % (fault_name,status, num_times_hit))
+                        tinctest.logger.info('Fault %s is triggered num_times_hit %d' % (fault_name, num_times_hit))
                     poll = 0 
                     return True
             #sleep a while before start polling again

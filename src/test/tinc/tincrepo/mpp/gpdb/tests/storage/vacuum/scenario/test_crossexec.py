@@ -80,7 +80,7 @@ class test_crossexec(SQLTestCase):
         triggered = False
         filereputil = Filerepe2e_Util()
         while poll < 10 and not triggered:
-            status = 'triggered'
+            status = 'completed'
             (ok, out) = filereputil.inject_fault(f=fault_name, y='status', seg_id='1')
             for line in out.splitlines():
                 if line.find(fault_name) > 0 and line.find(status) > 0:

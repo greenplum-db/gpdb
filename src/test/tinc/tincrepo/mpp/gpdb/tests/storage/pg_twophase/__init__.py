@@ -60,7 +60,7 @@ class PgtwoPhaseClass(MPPTestCase):
         @param fault_type : type of fault to ne suspended
         '''
         if fault_type == 'end_prepare_two_phase_sleep':
-            self.filereputil.inject_fault(f='end_prepare_two_phase_sleep', sleeptime='1000', y='sleep', r='primary', p=self.port)
+            self.filereputil.inject_fault(f='end_prepare_two_phase_sleep', sleeptime='1000', y='sleep', r='primary', p=self.port, o='0')
             tinctest.logger.info('Injected fault to sleep in end_prepare_two_phase')
 
         elif fault_type == 'abort':
@@ -184,7 +184,7 @@ class PgtwoPhaseClass(MPPTestCase):
         if fault_type == None:
             return self.get_trigger_status_old(trigger_count);
 
-        return self.filereputil.check_fault_status(fault_name=fault_type, status="triggered", seg_id='1', num_times_hit=trigger_count);
+        return self.filereputil.check_fault_status(fault_name=fault_type, seg_id='1', num_times_hit=trigger_count);
 
     def check_trigger_sql_hang(self, test_dir, fault_type = None):
         '''

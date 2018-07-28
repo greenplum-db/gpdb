@@ -253,7 +253,7 @@ class SuspendCheckpointCrashRecovery(MPPTestCase):
                 self.wait_till_all_sqls_done(6 + 1)
                 trigger_count = 6
             fault_type = self.get_faults_before_executing_trigger_sqls(pass_num, cluster_state, test_type, ddl_type, aborting_create_needed=False)
-            fault_hit = self.fileutil.check_fault_status(fault_name=fault_type, status="triggered", num_times_hit=trigger_count)
+            fault_hit = self.fileutil.check_fault_status(fault_name=fault_type, num_times_hit=trigger_count)
             if not fault_hit:
                raise Exception('Fault not hit expected number of times')
 
