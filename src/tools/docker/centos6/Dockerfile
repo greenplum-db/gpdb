@@ -4,7 +4,7 @@ FROM centos:centos6
 RUN yum makecache && \
     rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6 && \
     yum -y install epel-release java-1.7.0-openjdk-devel && \
-    yum -y install createrepo git iproute net-tools openssh-server rpm-build rsync sudo svn vim wget && \
+    yum -y install createrepo git iproute net-tools openssh-server rpm-build rsync sudo tree svn vim wget && \
     yum -y install ant-junit autoconf bison flex gperf indent libtool && \
     yum clean all
 
@@ -18,9 +18,9 @@ RUN yum makecache && \
     pip install psi lockfile && \
     yum clean all
 
-RUN cd /tmp && wget -q http://curl.haxx.se/download/curl-7.45.0.tar.bz2 && \
+RUN cd /tmp && wget -q http://curl.haxx.se/download/curl-7.51.0.tar.bz2 && \
     tar -xjf curl-*.tar.bz2 && rm curl-*.tar.bz2 && cd curl-* && \
-    ./configure --prefix=/usr > log-file 2>&1 && make -j4 >> log-file 2>&1 && \
+    ./configure --prefix=/usr --with-gssapi > log-file 2>&1 && make -j4 >> log-file 2>&1 && \
     make install >> log-file 2>&1 && rm -rf /tmp/curl-* && \
     wget -q https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo \
     -O /etc/yum.repos.d/epel-apache-maven.repo && yum install -y apache-maven && \
