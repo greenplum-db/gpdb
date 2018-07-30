@@ -825,8 +825,8 @@ _readIndexStmt(void)
 	READ_NODE_FIELD(options);
 	READ_NODE_FIELD(whereClause);
 	READ_NODE_FIELD(excludeOpNames);
-	READ_BOOL_FIELD(is_part_child);
 	READ_OID_FIELD(indexOid);
+	READ_BOOL_FIELD(is_part_child);
 	READ_BOOL_FIELD(unique);
 	READ_BOOL_FIELD(primary);
 	READ_BOOL_FIELD(isconstraint);
