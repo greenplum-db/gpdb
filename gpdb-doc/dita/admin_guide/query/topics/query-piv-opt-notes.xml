@@ -47,7 +47,10 @@
         optimizer) handle a table without statistics. By default, GPORCA uses a default value to
         estimate the number of rows if statistics are not available. When this value is
           <codeph>on</codeph>, GPORCA uses the estimated size of a table if there are no statistics
-        for the table.</li>
+        for the table. <p>This parameter is ignored for a root partition of a partitioned table. If
+          the root partition does not have statistics, GPORCA always uses the default value. You can
+          use <codeph>ANALZYE ROOTPARTITION</codeph> to collect statistics on the root partition.
+          See <codeph><xref href="../../../ref_guide/sql_commands/ANALYZE.xml"/></codeph>.</p></li>
     </ul>
     <p>These server configuration parameters control the display and logging of information.</p>
     <ul id="ul_t3j_fhw_xz">

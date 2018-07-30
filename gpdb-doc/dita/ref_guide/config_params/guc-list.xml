@@ -3456,6 +3456,10 @@
         By default, GPORCA and the planner use a default value to estimate the number of rows if
         statistics are not available. The default behavior improves query optimization time and
         reduces resource queue usage in heavy workloads, but can lead to suboptimal plans.</p>
+      <p>This parameter is ignored for a root partition of a partitioned table. When GPORCA is
+        enabled and the root partition does not have statistics, GPORCA always uses the default
+        value. You can use <codeph>ANALZYE ROOTPARTITION</codeph> to collect statistics on the root
+        partition. See <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"/></codeph>.</p>
       <table id="table_b2v_b5t_3x">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
