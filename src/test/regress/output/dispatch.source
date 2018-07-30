@@ -300,7 +300,7 @@ select pg_sleep(1); -- small delay to make sure the postmaster has noticed the c
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
-DETAIL:  segments is in recovery mode
+DETAIL:  Segments are in recovery mode.
 -- Wait for the quickdie() sleep to time out, and the server to restart.
 select pg_sleep(5);
  pg_sleep 

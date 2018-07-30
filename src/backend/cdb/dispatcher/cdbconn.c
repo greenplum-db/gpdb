@@ -275,8 +275,8 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 }								/* cdbconn_termSegmentDescriptor */
 
 /*
- * Connect to a QE as a client via libpq.
- * returns true if connected.
+ * Connect to a QE as a client via libpq. Returns a PGconn object in
+ * segdbDesc->conn which can be tested for connection status.
  */
 void
 cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
