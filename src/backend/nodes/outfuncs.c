@@ -2638,7 +2638,7 @@ _outIndexStmt(StringInfo str, IndexStmt *node)
 	WRITE_BOOL_FIELD(initdeferred);
 	WRITE_BOOL_FIELD(concurrent);
 	WRITE_STRING_FIELD(altconname);
-	/* GPDB_90_MERGE_FIXME: should we write is_split_part? */
+	WRITE_BOOL_FIELD(is_split_part);
 }
 
 static void
