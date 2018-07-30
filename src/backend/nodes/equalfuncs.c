@@ -1471,7 +1471,7 @@ _equalIndexStmt(IndexStmt *a, IndexStmt *b)
 	COMPARE_SCALAR_FIELD(deferrable);
 	COMPARE_SCALAR_FIELD(initdeferred);
 	COMPARE_SCALAR_FIELD(concurrent);
-	/* GPDB_90_MERGE_FIXME: should we compare altconname? */
+	COMPARE_STRING_FIELD(altconname);
 	COMPARE_SCALAR_FIELD(is_split_part);
 
 	return true;
