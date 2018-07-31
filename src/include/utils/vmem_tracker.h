@@ -44,8 +44,6 @@ extern int32 VmemTracker_ConvertVmemChunksToMB(int chunks);
 extern int32 VmemTracker_ConvertVmemMBToChunks(int mb);
 extern int64 VmemTracker_ConvertVmemChunksToBytes(int chunks);
 extern int32 VmemTracker_ConvertVmemBytesToChunks(int64 bytes);
-extern int32 VmemTracker_GetReservedVmemChunks(void);
-extern int64 VmemTracker_GetMaxReservedVmemChunks(void);
 extern int64 VmemTracker_GetMaxReservedVmemBytes(void);
 extern int64 VmemTracker_GetVmemLimitBytes(void);
 extern int32 VmemTracker_GetVmemLimitChunks(void);

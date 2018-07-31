@@ -379,16 +379,6 @@ VmemTracker_ConvertVmemBytesToChunks(int64 bytes)
 }
 
 /*
- * Returns the maximum vmem consumed by current process in "chunks" unit.
- */
-int64
-VmemTracker_GetMaxReservedVmemChunks(void)
-{
-	Assert(maxVmemChunksTracked >= trackedVmemChunks);
-	return maxVmemChunksTracked;
-}
-
-/*
  * Returns the maximum vmem consumed by current process in "bytes" unit.
  */
 int64
@@ -451,15 +441,6 @@ VmemTracker_GetMaxChunksPerQuery(void)
 {
 	return IsResGroupEnabled() ?
 		ResGroupGetMaxChunksPerQuery() : maxChunksPerQuery;
-}
-
-/*
- * Returns the vmem usage of current process in "chunks" unit.
- */
-int32
-VmemTracker_GetReservedVmemChunks(void)
-{
-	return trackedVmemChunks;
 }
 
 /*
