@@ -78,7 +78,7 @@ static DispatcherInternalFuncs *pDispatchFuncs = NULL;
  * assign one resultArray slot per QE of the Gang, paralleling the Gang's
  * db_descriptors array. Success or failure of each QE will be noted in
  * the QE's CdbDispatchResult entry; but before examining the results, the
- * caller must wait for execution to end by calling CdbCheckDispatchResult().
+ * caller must wait for execution to end by calling cdbdisp_checkDispatchResult().
  *
  * The CdbDispatchResults object owns some malloc'ed storage, so the caller
  * must make certain to free it by calling cdbdisp_destroyDispatcherState().
@@ -143,7 +143,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
 }
 
 /*
- * CdbCheckDispatchResult:
+ * cdbdisp_checkDispatchResult:
  *
  * Waits for completion of threads launched by cdbdisp_dispatchToGang().
  *
@@ -151,7 +151,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
  * will be canceled/finished according to waitMode.
  */
 void
-CdbCheckDispatchResult(struct CdbDispatcherState *ds,
+cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds,
 					   DispatchWaitMode waitMode)
 {
 	PG_TRY();
@@ -213,7 +213,7 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
 	}
 
 	/* wait QEs to return results or report errors */
-	CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
 
 	/* check if any error reported */
 	errorcode = ds->primaryResults->errcode;
@@ -233,7 +233,7 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
  * associated gang(s) executed the command successfully, throws an
  * error and does not return. No-op if both CdbDispatchResults ptrs are NULL.
  * This is a convenience function; callers with unusual requirements may
- * instead call CdbCheckDispatchResult(), etc., directly.
+ * instead call cdbdisp_checkDispatchResult(), etc., directly.
  */
 void
 cdbdisp_finishCommand(struct CdbDispatcherState *ds,
@@ -445,7 +445,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 void
 cdbdisp_cancelDispatch(CdbDispatcherState *ds)
 {
-	CdbCheckDispatchResult(ds, DISPATCH_WAIT_CANCEL);
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_CANCEL);
 }
 
 /*

@@ -972,7 +972,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 
 	/*
 	 * Need a try/catch block here so that if an ereport is called from
-	 * within ExecutePlan, we can clean up by calling CdbCheckDispatchResult.
+	 * within ExecutePlan, we can clean up by calling cdbdisp_checkDispatchResult.
 	 * This cleans up the asynchronous commands running through the threads launched from
 	 * CdbDispatchCommand.
 	 */
@@ -1160,7 +1160,7 @@ PG_TRY();
 		if (planstate->instrument && planstate->instrument->need_cdb)
 		{
 			/* Wait for all gangs to finish. */
-			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
+			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState,
 								   DISPATCH_WAIT_NONE);
 
 			/* Jam stats into subplan's Instrumentation nodes. */

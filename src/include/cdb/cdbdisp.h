@@ -120,7 +120,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
  * will be canceled/finished according to waitMode.
  */
 void
-CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
+cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 
 /*
  * cdbdisp_getDispatchResults:
