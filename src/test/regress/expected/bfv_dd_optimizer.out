@@ -1111,6 +1111,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_random select g, g%15 from generate_series(1, 100) g;
 INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 -- non hash distributed tables

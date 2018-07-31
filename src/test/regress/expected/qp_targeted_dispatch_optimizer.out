@@ -259,6 +259,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into boolean values ('t', 1);
 INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 alter table boolean set distributed by (boo, b);
@@ -922,7 +923,9 @@ INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=1232388"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.key, Ta.value from public.zoompp7620 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=46779"
+INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select Ta.key , (case when pg_column_size(Ta.value) > 1024 then NULL else Ta.value  end) as value, (case when Ta.value is NULL then false else true end) from public.zoompp7620 as Ta  limit 30000 "
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into mpp7620 values (200, 200);
@@ -932,9 +935,11 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE c
 insert into zoompp7620 select * from mpp7620 where key=200;
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
+INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
@@ -966,15 +971,15 @@ explain select * from (select * from mpp7620 where key=200) ss where key =200;
 (5 rows)
 
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Insert  (cost=0.00..431.03 rows=1 width=4)
-   ->  Result  (cost=0.00..431.00 rows=1 width=20)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-               ->  Table Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: key = 200
- Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..431.02 rows=1 width=4)
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+         ->  Result  (cost=0.00..431.00 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Table Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: key = 200
+ Optimizer: PQO version 2.67.0
 (7 rows)
 
 explain select key from mpp7620 where mpp7620.key=200;
