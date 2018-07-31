@@ -961,139 +961,135 @@ externalgettup_custom(FileScanDesc scan)
 			int			bytesread = external_getdata(scan->fs_file, pstate, pstate->raw_buf, RAW_BUF_SIZE);
 
 			if (bytesread > 0)
+			{
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
-			scan->raw_buf_done = false;
+				scan->raw_buf_done = false;
+			}
+			no_more_data = pstate->fe_eof && formatter->fmt_databuf.len <= 0 ;
 
 			/* HEADER not yet supported ... */
 			if (pstate->header_line)
 				elog(ERROR, "header line in custom format is not yet supported");
 		}
 
-		if (formatter->fmt_databuf.len > 0 || !pstate->fe_eof)
+		/* while there is still data in our buffer */
+		while (!scan->raw_buf_done)
 		{
-			/* while there is still data in our buffer */
-			while (!scan->raw_buf_done)
+			bool		error_caught = false;
+
+			/*
+			 * Invoke the custom formatter function.
+			 */
+			PG_TRY();
 			{
-				bool		error_caught = false;
+				FunctionCallInfoData fcinfo;
 
-				/*
-				 * Invoke the custom formatter function.
-				 */
-				PG_TRY();
-				{
-					FunctionCallInfoData fcinfo;
-
-					/* per call formatter prep */
-					FunctionCallPrepareFormatter(&fcinfo,
-												 0,
-												 pstate,
-												 scan->fs_custom_formatter_func,
-												 scan->fs_custom_formatter_params,
-												 formatter,
-												 scan->fs_rd,
-												 scan->fs_tupDesc,
-												 scan->in_functions,
-												 scan->typioparams);
-					(void) FunctionCallInvoke(&fcinfo);
-
-				}
-				PG_CATCH();
-				{
-					error_caught = true;
-
-					MemoryContextSwitchTo(formatter->fmt_perrow_ctx);
-
-					/*
-					 * Save any bad row information that was set by the user
-					 * in the formatter UDF (if any). Then handle the error in
-					 * FILEAM_HANDLE_ERROR.
-					 */
-					pstate->cur_lineno = formatter->fmt_badrow_num;
-					pstate->cur_byteno = formatter->fmt_bytesread;
-					resetStringInfo(&pstate->line_buf);
-
-					if (formatter->fmt_badrow_len > 0)
-					{
-						if (formatter->fmt_badrow_data)
-							appendBinaryStringInfo(&pstate->line_buf,
-												   formatter->fmt_badrow_data,
-												   formatter->fmt_badrow_len);
-
-						formatter->fmt_databuf.cursor += formatter->fmt_badrow_len;
-						if (formatter->fmt_databuf.cursor > formatter->fmt_databuf.len ||
-							formatter->fmt_databuf.cursor < 0)
-						{
-							formatter->fmt_databuf.cursor = formatter->fmt_databuf.len;
-						}
-					}
-
-					FILEAM_HANDLE_ERROR;
-
-					MemoryContextSwitchTo(oldctxt);
-				}
-				PG_END_TRY();
-
-				/*
-				 * Examine the function results. If an error was caught we
-				 * already handled it, so after checking the reject limit,
-				 * loop again and call the UDF for the next tuple.
-				 */
-				if (!error_caught)
-				{
-					switch (formatter->fmt_notification)
-					{
-						case FMT_NONE:
-
-							/* got a tuple back */
-
-							tuple = formatter->fmt_tuple;
-
-							if (pstate->cdbsreh)
-								pstate->cdbsreh->processed++;
-
-							MemoryContextReset(formatter->fmt_perrow_ctx);
-
-							return tuple;
-
-						case FMT_NEED_MORE_DATA:
-
-							/*
-							 * Callee consumed all data in the buffer. Prepare
-							 * to read more data into it.
-							 */
-							scan->raw_buf_done = true;
-							justifyDatabuf(&formatter->fmt_databuf);
-
-							if (pstate->fe_eof && formatter->fmt_databuf.len > 0)
-							{
-								/*
-								 * The formatter needs more data, but we have reached
-								 * EOF. This is an error.
-								 */
-								ereport(ERROR,
-										(ERRCODE_DATA_EXCEPTION,
-										 errmsg("unexpected end of file")));
-							}
-
-							continue;
-
-						default:
-							elog(ERROR, "unsupported formatter notification (%d)",
-								 formatter->fmt_notification);
-							break;
-					}
-				}
-				else
-				{
-					ErrorIfRejectLimitReached(pstate->cdbsreh);
-				}
+				/* per call formatter prep */
+				FunctionCallPrepareFormatter(&fcinfo,
+						0,
+						pstate,
+						scan->fs_custom_formatter_func,
+						scan->fs_custom_formatter_params,
+						formatter,
+						scan->fs_rd,
+						scan->fs_tupDesc,
+						scan->in_functions,
+						scan->typioparams);
+				(void) FunctionCallInvoke(&fcinfo);
 
 			}
+			PG_CATCH();
+			{
+				error_caught = true;
+
+				MemoryContextSwitchTo(formatter->fmt_perrow_ctx);
+
+				/*
+				 * Save any bad row information that was set by the user
+				 * in the formatter UDF (if any). Then handle the error in
+				 * FILEAM_HANDLE_ERROR.
+				 */
+				pstate->cur_lineno = formatter->fmt_badrow_num;
+				pstate->cur_byteno = formatter->fmt_bytesread;
+				resetStringInfo(&pstate->line_buf);
+
+				if (formatter->fmt_badrow_len > 0)
+				{
+					if (formatter->fmt_badrow_data)
+						appendBinaryStringInfo(&pstate->line_buf,
+								formatter->fmt_badrow_data,
+								formatter->fmt_badrow_len);
+
+					formatter->fmt_databuf.cursor += formatter->fmt_badrow_len;
+					if (formatter->fmt_databuf.cursor > formatter->fmt_databuf.len ||
+							formatter->fmt_databuf.cursor < 0)
+					{
+						formatter->fmt_databuf.cursor = formatter->fmt_databuf.len;
+					}
+				}
+
+				FILEAM_HANDLE_ERROR;
+
+				MemoryContextSwitchTo(oldctxt);
+			}
+			PG_END_TRY();
+
+			/*
+			 * Examine the function results. If an error was caught we
+			 * already handled it, so after checking the reject limit,
+			 * loop again and call the UDF for the next tuple.
+			 */
+			if (!error_caught)
+			{
+				switch (formatter->fmt_notification)
+				{
+					case FMT_NONE:
+
+						/* got a tuple back */
+
+						tuple = formatter->fmt_tuple;
+
+						if (pstate->cdbsreh)
+							pstate->cdbsreh->processed++;
+
+						MemoryContextReset(formatter->fmt_perrow_ctx);
+
+						return tuple;
+
+					case FMT_NEED_MORE_DATA:
+
+						/*
+						 * Callee consumed all data in the buffer. Prepare
+						 * to read more data into it.
+						 */
+						scan->raw_buf_done = true;
+						justifyDatabuf(&formatter->fmt_databuf);
+						continue;
+
+					default:
+						elog(ERROR, "unsupported formatter notification (%d)",
+								formatter->fmt_notification);
+						break;
+				}
+			}
+			else
+			{
+				ErrorIfRejectLimitReached(pstate->cdbsreh);
+			}
 		}
-		else
+		if (pstate->fe_eof && formatter->fmt_databuf.len >0)
 		{
 			no_more_data = true;
+			/*
+			 * The formatter needs more data, but we have reached
+			 * EOF. This is an error.
+			 */
+			ereport(WARNING,
+					(ERRCODE_DATA_EXCEPTION,
+					 errmsg("unexpected end of file")));
 		}
+
+
 	}
 
 	/*
