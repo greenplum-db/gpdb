@@ -2063,18 +2063,6 @@ parseCopyFormatString(char *fmtstr, char fmttype)
 
 			item = makeDefElem("newline", (Node *)makeString(pstrdup(token)));
 		}
-		else if (pg_strcasecmp(token, "formatter") == 0)
-		{
-			/* GPDB_91_MERGE_FIXME: what is this used for? */
-			token = strtokx2(NULL, whitespace, NULL, "'",
-							 nonstd_backslash, true, true, encoding);
-			if (!token)
-				goto error;
-
-			elog(WARNING,
-				 "external table internal parser will not use formatter %s",
-				 token);
-		}
 		else
 			goto error;
 

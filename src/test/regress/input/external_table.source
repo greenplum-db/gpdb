@@ -1617,3 +1617,11 @@ SELECT * FROM encoding_issue2 WHERE num = 5;
 
 DROP EXTERNAL TABLE encoding_issue;
 DROP EXTERNAL TABLE encoding_issue2;
+
+-- --------------------------------------
+-- Formatting
+-- --------------------------------------
+-- Illegal formatter option on CSV format
+CREATE EXTERNAL TABLE illegal_formatter (a integer, b integer)
+LOCATION ('file://localhost/data')
+FORMAT 'csv' (formatter='fixedwidth_in', address='46');
