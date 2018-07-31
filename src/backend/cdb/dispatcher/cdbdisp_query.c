@@ -267,6 +267,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	ListCell   *le;
 	int			gangCount;
 	MemoryContext oldContext;
+	ErrorData *qeError = NULL;
 
 	primaryGang = AllocateWriterGang();
 	Assert(primaryGang);
@@ -338,7 +339,16 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	cdbdisp_waitDispatchFinish(ds);
 
-	cdbdisp_finishCommand(ds, NULL, NULL, true);
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
+
+	cdbdisp_getDispatchResults(ds, &qeError);
+
+	cdbdisp_destroyDispatcherState(ds);
+
+	if (qeError)
+	{
+		ReThrowError(qeError);
+	}
 }
 
 /*
@@ -457,6 +467,8 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	Gang		*primaryGang;
 	char		*queryText = NULL;
 	int		queryTextLength = 0;
+	ErrorData *qeError = NULL;
+	CdbDispatchResults *pr = NULL;
 
 	if (log_dispatch_stats)
 		ResetUsage();
@@ -511,7 +523,19 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 
 	cdbdisp_waitDispatchFinish(ds);
 
-	cdbdisp_finishCommand(ds, NULL, cdb_pgresults, true);
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
+
+	pr = cdbdisp_getDispatchResults(ds, &qeError);
+
+	if (qeError)
+	{
+		cdbdisp_destroyDispatcherState(ds);
+		ReThrowError(qeError);
+	}
+
+	cdbdisp_returnResults(pr, cdb_pgresults);
+
+	cdbdisp_destroyDispatcherState(ds);
 }
 
 static DispatchCommandQueryParms *
@@ -1055,6 +1079,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	int			queryTextLength = 0;
 	struct SliceTable *sliceTbl;
 	CdbDispatcherState *ds;
+	ErrorData *qeError = NULL;
 
 	if (log_dispatch_stats)
 		ResetUsage();
@@ -1087,8 +1112,6 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	ds->primaryResults = cdbdisp_makeDispatchResults(nTotalSlices, cancelOnError);
 	ds->dispatchParams = cdbdisp_makeDispatchParams(nTotalSlices, queryText, queryTextLength);
 	MemoryContextSwitchTo(oldContext);
-
-	estate->dispatcherState = ds;
 
 	cdb_total_plans++;
 	cdb_total_slices += nSlices;
@@ -1209,7 +1232,12 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 		 * Check and free the results of all gangs. If any QE had an error,
 		 * report it and exit via PG_THROW.
 		 */
-		cdbdisp_finishCommand(ds, NULL, NULL, true);
+		cdbdisp_getDispatchResults(ds, &qeError);
+
+		cdbdisp_destroyDispatcherState(ds);
+
+		if (qeError)
+			ReThrowError(qeError);
 
 		/*
 		 * Wasn't an error, must have been an interrupt.
@@ -1237,6 +1265,8 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 				break;
 		}
 	}
+
+	estate->dispatcherState = ds;
 }
 
 static int *

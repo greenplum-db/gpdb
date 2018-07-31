@@ -430,7 +430,6 @@ FORMAT 'text' (delimiter '|')
 LOG ERRORS
 SEGMENT REJECT LIMIT 1000;
 INSERT INTO sreh_constr SELECT * FROM sreh_ext;
-NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
 ERROR:  new row for relation "sreh_constr" violates check constraint "sreh_constr_c_check"  (seg0 172.17.0.2:25432 pid=161224)
 DETAIL:  Failing row contains (14, 14, 14).
 SELECT linenum, rawdata FROM gp_read_error_log('sreh_constr') ORDER BY linenum;
