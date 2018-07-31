@@ -539,6 +539,8 @@ class GpAddMirrorsProgram:
         # check that heap_checksums is consistent across cluster, fail immediately if not
         self.validate_heap_checksums(gpArray)
 
+        self.checkMirrorOffset(gpArray)
+        
         # check that we actually have mirrors
         if gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded( \
