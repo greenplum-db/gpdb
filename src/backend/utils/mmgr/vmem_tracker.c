@@ -389,16 +389,6 @@ VmemTracker_GetMaxReservedVmemChunks(void)
 }
 
 /*
- * Returns the maximum vmem consumed by current process in "MB" unit.
- */
-int64
-VmemTracker_GetMaxReservedVmemMB(void)
-{
-	Assert(maxVmemChunksTracked >= trackedVmemChunks);
-	return CHUNKS_TO_MB(maxVmemChunksTracked);
-}
-
-/*
  * Returns the maximum vmem consumed by current process in "bytes" unit.
  */
 int64
@@ -470,15 +460,6 @@ int32
 VmemTracker_GetReservedVmemChunks(void)
 {
 	return trackedVmemChunks;
-}
-
-/*
- * Returns the vmem usage of current process in "bytes" unit.
- */
-int64
-VmemTracker_GetReservedVmemBytes(void)
-{
-	return CHUNKS_TO_BYTES(trackedVmemChunks);
 }
 
 /*
@@ -669,6 +650,26 @@ VmemTracker_ResetWaiver(void)
 	waivedChunks = 0;
 }
 
+#ifdef FAULT_INJECTOR
+/*
+ * Returns the maximum vmem consumed by current process in "MB" unit.
+ */
+static int64
+VmemTracker_GetMaxReservedVmemMB(void)
+{
+	Assert(maxVmemChunksTracked >= trackedVmemChunks);
+	return CHUNKS_TO_MB(maxVmemChunksTracked);
+}
+
+/*
+ * Returns the vmem usage of current process in "bytes" unit.
+ */
+static int64
+VmemTracker_GetReservedVmemBytes(void)
+{
+	return CHUNKS_TO_BYTES(trackedVmemChunks);
+}
+
 /*
  * Returns a bunch of different vmem usage stats such as max vmem usage,
  * current vmem usage, available vmem etc.
@@ -702,6 +703,7 @@ VmemTracker_Fault(int32 reason, int64 arg)
 
 	return -1;
 }
+#endif
 
 bool
 VmemTrackerIsActivated(void)

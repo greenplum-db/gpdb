@@ -45,9 +45,7 @@ extern int32 VmemTracker_ConvertVmemMBToChunks(int mb);
 extern int64 VmemTracker_ConvertVmemChunksToBytes(int chunks);
 extern int32 VmemTracker_ConvertVmemBytesToChunks(int64 bytes);
 extern int32 VmemTracker_GetReservedVmemChunks(void);
-extern int64 VmemTracker_GetReservedVmemBytes(void);
 extern int64 VmemTracker_GetMaxReservedVmemChunks(void);
-extern int64 VmemTracker_GetMaxReservedVmemMB(void);
 extern int64 VmemTracker_GetMaxReservedVmemBytes(void);
 extern int64 VmemTracker_GetVmemLimitBytes(void);
 extern int32 VmemTracker_GetVmemLimitChunks(void);
@@ -63,8 +61,9 @@ extern MemoryAllocationStatus VmemTracker_ReserveVmem(int64 newly_requested);
 extern void VmemTracker_ReleaseVmem(int64 to_be_freed_requested);
 extern void VmemTracker_RequestWaiver(int64 waiver_bytes);
 extern void VmemTracker_ResetWaiver(void);
+#ifdef FAULT_INJECTOR
 extern int64 VmemTracker_Fault(int32 reason, int64 arg);
-
+#endif
 extern int32 RedZoneHandler_GetRedZoneLimitChunks(void);
 extern int32 RedZoneHandler_GetRedZoneLimitMB(void);
 extern bool RedZoneHandler_IsVmemRedZone(void);
