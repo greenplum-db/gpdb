@@ -1211,7 +1211,7 @@ ResourceGroupGetQueryMemoryLimit(void)
 	if (bypassedGroup)
 	{
 		int64		bytesInMB = 1 << BITS_IN_MB;
-		int64		bytesInChunk = 1 << VmemTracker_GetChunkSizeInBits();
+		int64		bytesInChunk = (int64) 1 << VmemTracker_GetChunkSizeInBits();
 
 		/*
 		 * In bypass mode there is a hard memory limit of
