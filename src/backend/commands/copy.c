@@ -35,12 +35,6 @@
 #include "commands/defrem.h"
 #include "commands/trigger.h"
 #include "executor/executor.h"
-/*
- * GPDB_91_MERGE_FIXME: eww. cdbsreh.c does this PQArgBlock redefinition too, to
- * avoid the conflict with libpg-fe, above. Probably want to backport 01cca2c1
- * from upstream.
- */
-#define PQArgBlock PQArgBlock_
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "mb/pg_wchar.h"

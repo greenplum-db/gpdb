@@ -35,7 +35,6 @@
 #include "commands/dbcommands.h"
 #include "commands/tablecmds.h"
 #include "funcapi.h"
-#define PQArgBlock PQArgBlock_
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
