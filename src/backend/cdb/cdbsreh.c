@@ -357,9 +357,8 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
 }
 
 /*
- * Reports error if we reached segment reject limit. If non-NULL cdbCopy is passed,
- * it will call cdbCopyEnd to stop QE work before erroring out.
- * */
+ * Reports error if we reached segment reject limit.
+ */
 void
 ErrorIfRejectLimitReached(CdbSreh *cdbsreh)
 {

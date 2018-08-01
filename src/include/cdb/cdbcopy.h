@@ -68,7 +68,6 @@ extern void cdbCopyStart(CdbCopy *cdbCopy, CopyStmt *stmt, struct GpPolicy *poli
 extern void cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
 extern void cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
 extern bool cdbCopyGetData(CdbCopy *c, bool cancel, uint64 *rows_processed);
-extern int cdbCopyEnd(CdbCopy *c);
 extern int cdbCopyAbort(CdbCopy *c);
 /*
  * GPDB_91_MERGE_FIXME: let's consistently use uint64 as type for counting rows

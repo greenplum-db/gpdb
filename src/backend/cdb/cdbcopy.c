@@ -595,20 +595,6 @@ processCopyEndResults(CdbCopy *c,
 	return first_error;
 }
 
-/*
- * ends the copy command on all segment databases.
- * c->err_msg will include the error msg(s) if any.
- *
- * returns the number of rows rejected by QE's. Normally
- * will be 0 however in single row error handling mode
- * could be larger than 0.
- */
-int
-cdbCopyEnd(CdbCopy *c)
-{
-	return cdbCopyEndAndFetchRejectNum(c, NULL, NULL);
-}
-
 int
 cdbCopyAbort(CdbCopy *c)
 {
