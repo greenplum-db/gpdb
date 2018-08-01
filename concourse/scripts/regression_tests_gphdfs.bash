@@ -93,6 +93,10 @@ function install_mapr_client() {
 }
 
 function run_regression_test() {
+  # Add symlink for oracle7 compatibility
+  if [ "$TARGET_OS_VERSION" == "7" ] ; then
+    ln -s /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.191-2.6.15.4.0.1.el7_5.x86_64  /usr/lib/jvm/java-1.7.0-openjdk.x86_64
+  fi
 	su - gpadmin -c "bash /home/gpadmin/run_regression_test.sh $(pwd)"
 }
 
@@ -124,7 +128,11 @@ function _main() {
 	time setup_gpadmin_user
 	time install_mapr_client
 	time configure
-	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
+  if [ "$TARGET_OS_VERSION" == "7" ] ; then
+	  sed -i s/4096/unlimited/ /etc/security/limits.d/20-nproc.conf
+  else
+	  sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
+  fi
 	time install_gpdb
 	time make_cluster
 	time copy_jar_to_mapr_host
