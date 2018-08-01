@@ -601,7 +601,8 @@ LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT '
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- should error out as segment reject limit will be reached
 SELECT * FROM exttab_basic_3;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12084)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12084)
 CONTEXT:  External table exttab_basic_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Error log should be populated
 select count(*) > 0 from gp_read_error_log('exttab_basic_3');
@@ -632,7 +633,8 @@ LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT '
 LOG ERRORS SEGMENT REJECT LIMIT 5;
 -- Insert should fail
 INSERT INTO exttab_insert_1 select * from exttab_basic_5;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12121)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i (seg0 slice1 127.0.0.1:40000 pid=12121)
 CONTEXT:  External table exttab_basic_5, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT * from exttab_insert_1 order by i;
  i  |     j     
@@ -702,7 +704,8 @@ LOG ERRORS SEGMENT REJECT LIMIT 5;
 CREATE TABLE exttab_ctas_2 AS select * from exttab_basic_7;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12121)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12121)
 CONTEXT:  External table exttab_basic_7, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Table should not exist
 SELECT * from exttab_ctas_2 order by i;
@@ -792,7 +795,8 @@ SELECT e1.i, e2.j FROM exttab_cte_2 e1, exttab_cte_1 e2
 WHERE e1.i = e2.i ORDER BY e1.i
 )
 SELECT * FROM cte1 ORDER BY cte1.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12121)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12121)
 CONTEXT:  External table exttab_cte_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 select count(*) from gp_read_error_log('exttab_cte_2');
  count 
@@ -886,7 +890,8 @@ SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i 
 -- because how cursors scan the rows internally is implementation dependant.
 -- The test is here to track the issue.
 FETCH exttab_cur1;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12146)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12146)
 CONTEXT:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 COMMIT;
 -- This should have errors populated already
@@ -992,7 +997,8 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 (1 row)
 
 SELECT COUNT(*) FROM exttab_permissions_2;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12084)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12084)
 CONTEXT:  External table exttab_permissions_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Only superuser can do gp_truncate_error_log('*.*')
 DROP ROLE IF EXISTS exttab_non_superuser;
@@ -1200,7 +1206,8 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subq_2 WHERE i < 10) e2
 group by e1.j;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT COUNT(*) > 0 FROM
 (
@@ -1230,7 +1237,8 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 10) e2
 group by e1.j
 HAVING sum(distinct e1.i) > (SELECT max(i) FROM exttab_subq_2);
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice3 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice3 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT COUNT(*) > 0 FROM
 (
@@ -1326,7 +1334,8 @@ SELECT gp_truncate_error_log('exttab_subq_2');
 SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- CSQ
 SELECT gp_truncate_error_log('exttab_subq_1');
@@ -1345,7 +1354,8 @@ SELECT e1.i , e1.j FROM
 exttab_subq_1 e1, exttab_subq_1 e2
 WHERE e1.j = e2.j and
 e1.i + 1 IN ( SELECT i from exttab_subq_2 WHERE i <= e1.i);
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT COUNT(*) > 0 FROM
 (
@@ -1373,7 +1383,8 @@ SELECT gp_truncate_error_log('exttab_subq_2');
 SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice3 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice3 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT COUNT(*) > 0 FROM
 (
@@ -1501,7 +1512,8 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_2 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subtxs_2 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_subtxs_2, line 7 of file://@hostname@:@abs_srcdir@/data/exttab_more_errors.data, column i
 COMMIT;
 -- Error logs should not have been rolled back.
@@ -1637,7 +1649,8 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_2 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice2 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_txs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 COMMIT;
 -- Additional error rows should have been inserted into the error logs even if the tx is aborted.
@@ -1708,7 +1721,8 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_3 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_4 WHERE i < 10) e2
 WHERE e1.i = e2.i order by e1.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_txs_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 COMMIT;
 -- Error logs should not exist for these tables that would have been rolled back
@@ -1756,7 +1770,8 @@ $$
 LANGUAGE plpgsql volatile;
 -- Should fail
 SELECT * FROM exttab_udfs_func1();
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
@@ -1795,7 +1810,8 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 
 -- Should fail
 INSERT INTO exttab_udfs_insert_1 SELECT * FROM exttab_udfs_func1();
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
@@ -1883,7 +1899,8 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
@@ -1916,7 +1933,8 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
@@ -1949,7 +1967,8 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
@@ -1984,7 +2003,8 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
@@ -2025,7 +2045,8 @@ UNION
 SELECT * FROM exttab_union_2
 ) FOO
 order by FOO.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Error table count
 select count(*) > 0 from
@@ -2060,7 +2081,8 @@ insert into exttab_union_insert_1
 SELECT e1.i, e2.j from exttab_union_2 e1 INNER JOIN exttab_union_2 e2 ON e1.i = e2.i
 UNION ALL
 SELECT e1.i, e2.j from exttab_union_2 e1 INNER JOIN exttab_union_2 e2 ON e1.i = e2.i;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- should return 0 rows
 SELECT * from exttab_union_insert_1;
@@ -2146,7 +2168,8 @@ SELECT gp_truncate_error_log('exttab_views_2');
 
 -- This should error out
 SELECT * FROM exttab_views_3;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Error table should be populated
 SELECT count(*) > 0 FROM
@@ -2180,8 +2203,9 @@ SELECT gp_truncate_error_log('exttab_views_2');
 
 -- Should fail
 INSERT INTO exttab_views_insert_1 SELECT * FROM exttab_views_3;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
-CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i
+CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 -- should not have any rows
 SELECT * FROM exttab_views_insert_1;
  i | j | k 
@@ -2219,7 +2243,8 @@ SELECT gp_truncate_error_log('exttab_views_2');
 CREATE TABLE exttab_views_ctas_1 AS SELECT * FROM exttab_views_3 where length(j) < 100;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12322)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12322)
 CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT * FROM exttab_views_ctas_1;
 ERROR:  relation "exttab_views_ctas_1" does not exist
@@ -2256,7 +2281,8 @@ SELECT gp_truncate_error_log('exttab_views_2');
 CREATE TABLE exttab_views_ctas_1 AS SELECT * FROM exttab_views_3;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12313)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12313)
 CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 -- Relation should not exist
 SELECT * FROM exttab_views_ctas_1;
@@ -2370,7 +2396,8 @@ SELECT * FROM cte1 c1, cte2 c2
 WHERE c1.i = c2.i
 ORDER BY c1.i
 limit 5;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12357)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12357)
 CONTEXT:  External table exttab_windows_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT COUNT(*) > 0
 FROM
@@ -2404,7 +2431,8 @@ SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
 WHERE e1.i = e2.i LIMIT 5
 )
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 3;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice4 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice4 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT count(*) FROM gp_read_error_log('exttab_limit_2');
  count 
@@ -2479,7 +2507,8 @@ SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
 WHERE e1.i = e2.i LIMIT 3
 )
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 5;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice4 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice4 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_limit_2');
  ?column? 
@@ -2553,7 +2582,8 @@ SELECT gp_truncate_error_log('exttab_limit_2');
 (1 row)
 
 SELECT * FROM exttab_limit_1 e1, exttab_limit_2 e2 where e1.i = e2.i LIMIT 3;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12436)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12436)
 CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SELECT count(*) > 0 FROM
 (
@@ -2584,7 +2614,8 @@ LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 
 LOG ERRORS SEGMENT REJECT LIMIT 20000;
 -- should fail with an appropriate error message
 SELECT COUNT(*) FROM exttab_first_reject_limit_1;
-ERROR:  All 1000 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
+ERROR:  all 1000 first rows in this segment were rejected
+DETAIL:  Aborting operation regardless of REJECT LIMIT value, last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_first_reject_limit_1, line 1000 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data, column i
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_first_reject_limit_1');
  ?column? 
@@ -2622,7 +2653,8 @@ LOG ERRORS SEGMENT REJECT LIMIT 500;
 -- should report an error saying first rows were rejected
 SET gp_initial_bad_row_limit = 2;
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
-ERROR:  All 2 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
+ERROR:  all 2 first rows in this segment were rejected
+DETAIL:  Aborting operation regardless of REJECT LIMIT value, last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_first_reject_limit_2, line 2 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data, column i
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 
@@ -2639,7 +2671,8 @@ SELECT gp_truncate_error_log('exttab_first_reject_limit_2');
 (1 row)
 
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data, column i
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 
@@ -2656,7 +2689,8 @@ SELECT gp_truncate_error_log('exttab_first_reject_limit_2');
 (1 row)
 
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "error_0", column i  (seg0 slice1 127.0.0.1:40000 pid=12211)
 CONTEXT:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data, column i
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 

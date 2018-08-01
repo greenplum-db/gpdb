@@ -375,28 +375,26 @@ ErrorIfRejectLimitReached(CdbSreh *cdbsreh)
 			/* the special "first X rows are bad" case */
 			ereport(ERROR,
 					(errcode(ERRCODE_T_R_GP_REJECT_LIMIT_REACHED),
-					 errmsg("All %d first rows in this segment were rejected. "
-							"Aborting operation regardless of REJECT LIMIT value. "
-							"Last error was: %s",
-							gp_initial_bad_row_limit, cdbsreh->errmsg)));
+					 errmsg("all %d first rows in this segment were rejected",
+							gp_initial_bad_row_limit),
+					 errdetail("Aborting operation regardless of REJECT LIMIT value, last error was: %s",
+							   cdbsreh->errmsg)));
 			break;
 		case REJECT_UNPARSABLE_CSV:
 			/* the special "csv un-parsable" case */
 			ereport(ERROR,
 					(errcode(ERRCODE_T_R_GP_REJECT_LIMIT_REACHED),
-					 errmsg("Input includes invalid CSV data that corrupts the "
-							"ability to parse data rows. This usually means "
-							"several unescaped embedded QUOTE characters. "
-							"Data is not parsable. Last error was: %s",
-							cdbsreh->errmsg)));
+					 errmsg("input includes invalid CSV data that corrupts the ability to parse data rows"),
+					 errdetail("Data is not parsable, last error was: %s",
+							   cdbsreh->errmsg),
+					 errhint("This usually means several unescaped embedded QUOTE characters.")));
 			break;
 		case REJECT_LIMIT_REACHED:
 			/* the normal case */
 			ereport(ERROR,
 					(errcode(ERRCODE_T_R_GP_REJECT_LIMIT_REACHED),
-					 errmsg("Segment reject limit reached. Aborting operation. "
-							"Last error was: %s",
-							cdbsreh->errmsg)));
+					 errmsg("segment reject limit reached, aborting operation"),
+					 errdetail("Last error was: %s", cdbsreh->errmsg)));
 			break;
 		default:
 			elog(ERROR, "unknown reject code %d", code);

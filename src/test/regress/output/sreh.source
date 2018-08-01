@@ -5,9 +5,6 @@
 --
 -- start_matchsubs
 --
--- m/ERROR\:\s+Segment reject limit reached\.\s+Aborting operation\.\s+Last error was\:\s+(missing data for column|invalid input syntax for integer)/
--- s/Last error was\:(.*)/Last error was: MISSING_DATA_OR_INVALID_INPUT_SYNTAX_FOR_INTEGER/
---
 -- m/CONTEXT\:\s+COPY sreh_copy\,\s+line/
 -- s/line \d+(.*)/line SOME_LINE/
 --
@@ -39,7 +36,8 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 -- ROW reject limit only - low value that gets reached
 --
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' SEGMENT REJECT LIMIT 2;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "bad", column a
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "", column b
 CONTEXT:  COPY sreh_copy, line 8, column a
 SELECT * FROM sreh_copy ORDER BY a,b,c;
  a  | b  | c  
@@ -202,14 +200,16 @@ set gp_reject_percent_threshold = 100;
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 10 PERCENT; --pass
 NOTICE:  Found 9 data formatting errors (9 or more input rows). Rejected related input data.
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 2 PERCENT; --fail
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a
 CONTEXT:  COPY sreh_copy, line 107, column a
 --
 -- test PERCENT reject limit logic with custom threshold 10 (only practical for test purposes)
 --
 set gp_reject_percent_threshold = 10;
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 10 PERCENT; --fail
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a
 CONTEXT:  COPY sreh_copy, line 15, column a
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data3.data' DELIMITER '|' SEGMENT REJECT LIMIT 20 PERCENT; --pass
 NOTICE:  Found 9 data formatting errors (9 or more input rows). Rejected related input data.
@@ -283,10 +283,12 @@ LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )
 FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2;
 SELECT * FROM sreh_ext ORDER BY a;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "c"  (seg1 slice1 @hostname@:11002 pid=68457)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68457)
 CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 INSERT INTO sreh_target SELECT * FROM sreh_ext;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "c"  (seg1 slice1 @hostname@:11002 pid=68459)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "", column b  (seg1 slice1 @hostname@:11002 pid=68459)
 CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 SELECT count(*) FROM sreh_target;
  count 
@@ -467,14 +469,16 @@ LOCATION ('gpfdist://@hostname@:8080/bad_data3.data' )
 FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2 PERCENT;
 SELECT count(*) FROM sreh_ext_2percent; -- fail
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
 CONTEXT:  External table sreh_ext_2percent, line 107 of gpfdist://@hostname@:8080/bad_data3.data, column a
 --
 -- test PERCENT reject limit logic with custom threshold 10 (only practical for test purposes)
 --
 set gp_reject_percent_threshold = 10;
 SELECT count(*) FROM sreh_ext_10percent; -- fail
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
 CONTEXT:  External table sreh_ext_10percent, line 15 of gpfdist://@hostname@:8080/bad_data3.data, column a
 CREATE EXTERNAL TABLE sreh_ext_20percent(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data3.data' )

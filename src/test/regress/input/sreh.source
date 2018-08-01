@@ -6,9 +6,6 @@
 --
 -- start_matchsubs
 --
--- m/ERROR\:\s+Segment reject limit reached\.\s+Aborting operation\.\s+Last error was\:\s+(missing data for column|invalid input syntax for integer)/
--- s/Last error was\:(.*)/Last error was: MISSING_DATA_OR_INVALID_INPUT_SYNTAX_FOR_INTEGER/
---
 -- m/CONTEXT\:\s+COPY sreh_copy\,\s+line/
 -- s/line \d+(.*)/line SOME_LINE/
 --
