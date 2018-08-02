@@ -4,7 +4,7 @@
  *	  fetch tuples from a GiST scan.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -20,9 +20,9 @@
 #include "miscadmin.h"    /* work_mem */
 #include "nodes/tidbitmap.h"
 #include "pgstat.h"
-#include "storage/bufmgr.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 
 
 /*
@@ -260,7 +260,7 @@ gistScanPage(IndexScanDesc scan, GISTSearchItem *pageItem, double *myDistances,
 	/*
 	 * Check if we need to follow the rightlink. We need to follow it if the
 	 * page was concurrently split since we visited the parent (in which case
-	 * parentlsn < nsn), or if the the system crashed after a page split but
+	 * parentlsn < nsn), or if the system crashed after a page split but
 	 * before the downlink was inserted into the parent.
 	 */
 	if (!XLogRecPtrIsInvalid(pageItem->data.parentlsn) &&
@@ -309,12 +309,12 @@ gistScanPage(IndexScanDesc scan, GISTSearchItem *pageItem, double *myDistances,
 		 * Must call gistindex_keytest in tempCxt, and clean up any leftover
 		 * junk afterward.
 		 */
-		oldcxt = MemoryContextSwitchTo(so->tempCxt);
+		oldcxt = MemoryContextSwitchTo(so->giststate->tempCxt);
 
 		match = gistindex_keytest(scan, it, page, i, &recheck);
 
 		MemoryContextSwitchTo(oldcxt);
-		MemoryContextReset(so->tempCxt);
+		MemoryContextReset(so->giststate->tempCxt);
 
 		/* Ignore tuple if it doesn't match */
 		if (!match)

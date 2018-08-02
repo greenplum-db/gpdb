@@ -47,14 +47,14 @@ static void wrap_vars_with_fieldselect(List *targetlist, int varno, Oid newvarty
  * Preprocess query structure for consumption by the optimizer
  */
 Query *
-preprocess_query_optimizer(PlannerGlobal *glob, Query *query, ParamListInfo boundParams)
+preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundParams)
 {
 #ifdef USE_ASSERT_CHECKING
 	Query *qcopy = (Query *) copyObject(query);
 #endif
 
 	/* fold all constant expressions */
-	Query *res = fold_constants(glob, query, boundParams, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
+	Query *res = fold_constants(root, query, boundParams, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
 
 #ifdef USE_ASSERT_CHECKING
 	Assert(equal(qcopy, query) && "Preprocessing should not modify original query object");

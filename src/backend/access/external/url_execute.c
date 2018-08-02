@@ -372,7 +372,7 @@ url_execute_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 		 * Read one byte less than the maximum size to ensure zero
 		 * termination of the buffer.
 		 */
-		nread = piperead(efile->handle->pipes[EXEC_ERR_P], ebuf, ebuflen -1);
+		nread = read(efile->handle->pipes[EXEC_ERR_P], ebuf, ebuflen -1);
 
 		if(nread != -1)
 			ebuf[nread] = 0;
@@ -388,7 +388,7 @@ url_execute_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
 	URL_EXECUTE_FILE *efile = (URL_EXECUTE_FILE *) file;
 
-	return piperead(efile->handle->pipes[EXEC_DATA_P], ptr, size);
+	return read(efile->handle->pipes[EXEC_DATA_P], ptr, size);
 }
 
 size_t
@@ -403,7 +403,7 @@ url_execute_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
     /* ensure all data in buffer is send out to pipe*/
     while(size > offset)
     {
-        n = pipewrite(fd,p,size - offset);
+        n = write(fd,p,size - offset);
 
         if(n == -1) return -1;
 
@@ -613,10 +613,10 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 	const int READ = 0;
 	const int WRITE = 1;
 
-	if (pgpipe(data) < 0)
+	if (pipe(data) < 0)
 		return -1;
 
-	if (pgpipe(err) < 0)
+	if (pipe(err) < 0)
 	{
 		close(data[READ]);
 		close(data[WRITE]);
@@ -742,7 +742,7 @@ read_err_msg(int fid, StringInfo sinfo)
 
 	while (true)
 	{
-		int nread = piperead(fid, ebuf, ebuflen);
+		int nread = read(fid, ebuf, ebuflen);
 
 		if(nread == 0)
 		{

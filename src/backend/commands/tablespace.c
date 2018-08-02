@@ -46,7 +46,7 @@
  *
  * Portions Copyright (c) 2005-2010 Greenplum Inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -66,7 +66,6 @@
 #include "access/heapam.h"
 #include "access/reloptions.h"
 #include "access/sysattr.h"
-#include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
@@ -75,21 +74,18 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "commands/comment.h"
-#include "commands/defrem.h"
+#include "commands/seclabel.h"
 #include "commands/tablespace.h"
 #include "miscadmin.h"
 #include "postmaster/bgwriter.h"
 #include "storage/fd.h"
-#include "storage/procarray.h"
 #include "storage/standby.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
-#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "utils/syscache.h"
 #include "utils/tqual.h"
 
 #include "catalog/heap.h"
@@ -396,7 +392,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 
 	/* Post creation hook for new tablespace */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   TableSpaceRelationId, tablespaceoid, 0);
+						   TableSpaceRelationId, tablespaceoid, 0, NULL);
 
 	create_tablespace_directories(location, tablespaceoid);
 
@@ -517,6 +513,16 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 		aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_TABLESPACE,
 					   tablespacename);
 
+	/* DROP hook for the tablespace being removed */
+	if (object_access_hook)
+	{
+		ObjectAccessDrop drop_arg;
+
+		memset(&drop_arg, 0, sizeof(ObjectAccessDrop));
+		InvokeObjectAccessHook(OAT_DROP, TableSpaceRelationId,
+							   tablespaceoid, 0, &drop_arg);
+	}
+
 	/*
 	 * Remove the pg_tablespace tuple (this will roll back if we fail below)
 	 */
@@ -525,9 +531,10 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 	heap_endscan(scandesc);
 
 	/*
-	 * Remove any comments on this tablespace.
+	 * Remove any comments or security labels on this tablespace.
 	 */
 	DeleteSharedComments(tablespaceoid, TableSpaceRelationId);
+	DeleteSharedSecurityLabel(tablespaceoid, TableSpaceRelationId);
 
 	/*
 	 * Remove dependency on owner.
@@ -727,9 +734,13 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 /*
  * destroy_tablespace_directories
  *
- * Attempt to remove filesystem infrastructure
+ * Attempt to remove filesystem infrastructure for the tablespace.
  *
- * 'redo' indicates we are redoing a drop from XLOG; okay if nothing there
+ * 'redo' indicates we are redoing a drop from XLOG; in that case we should
+ * not throw an ERROR for problems, just LOG them.	The worst consequence of
+ * not removing files here would be failure to release some disk space, which
+ * does not justify throwing an error that would require manual intervention
+ * to get the database running again.
  *
  * Returns TRUE if successful, FALSE if some subdirectory is not empty
  */
@@ -766,8 +777,9 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 	 * with a warning.	This is because even though ProcessUtility disallows
 	 * DROP TABLESPACE in a transaction block, it's possible that a previous
 	 * DROP failed and rolled back after removing the tablespace directories
-	 * and symlink.  We want to allow a new DROP attempt to succeed at
-	 * removing the catalog entries, so we should not give a hard error here.
+	 * and/or symlink.	We want to allow a new DROP attempt to succeed at
+	 * removing the catalog entries (and symlink if still present), so we
+	 * should not give a hard error here.
 	 */
 	dirdesc = AllocateDir(linkloc_with_version_dir);
 	if (dirdesc == NULL)
@@ -779,8 +791,18 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 						(errcode_for_file_access(),
 						 errmsg("could not open directory \"%s\": %m",
 								linkloc_with_version_dir)));
+			/* The symlink might still exist, so go try to remove it */
+			goto remove_symlink;
+		}
+		else if (redo)
+		{
+			/* in redo, just log other types of error */
+			ereport(LOG,
+					(errcode_for_file_access(),
+					 errmsg("could not open directory \"%s\": %m",
+							linkloc_with_version_dir)));
 			pfree(linkloc_with_version_dir);
-			return true;
+			return false;
 		}
 		/* else let ReadDir report the error */
 	}
@@ -795,7 +817,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 		sprintf(subfile, "%s/%s", linkloc_with_version_dir, de->d_name);
 
 		/* This check is just to deliver a friendlier error message */
-		if (!directory_is_empty(subfile))
+		if (!redo && !directory_is_empty(subfile))
 		{
 			FreeDir(dirdesc);
 			pfree(subfile);
@@ -805,7 +827,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 
 		/* remove empty directory */
 		if (rmdir(subfile) < 0)
-			ereport(ERROR,
+			ereport(redo ? LOG : ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not remove directory \"%s\": %m",
 							subfile)));
@@ -817,23 +839,32 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 
 	/* remove version directory */
 	if (rmdir(linkloc_with_version_dir) < 0)
-		ereport(ERROR,
+	{
+		ereport(redo ? LOG : ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not remove directory \"%s\": %m",
 						linkloc_with_version_dir)));
+		pfree(linkloc_with_version_dir);
+		return false;
+	}
 
 	/*
 	 * Try to remove the symlink.  We must however deal with the possibility
 	 * that it's a directory instead of a symlink --- this could happen during
 	 * WAL replay (see TablespaceCreateDbspace), and it is also the case on
 	 * Windows where junction points lstat() as directories.
+	 *
+	 * Note: in the redo case, we'll return true if this final step fails;
+	 * there's no point in retrying it.  Also, ENOENT should provoke no more
+	 * than a warning.
 	 */
+remove_symlink:
 	linkloc = pstrdup(linkloc_with_version_dir);
 	get_parent_directory(linkloc);
 	if (lstat(linkloc, &st) == 0 && S_ISDIR(st.st_mode))
 	{
 		if (rmdir(linkloc) < 0)
-			ereport(ERROR,
+			ereport(redo ? LOG : ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not remove directory \"%s\": %m",
 							linkloc)));
@@ -841,7 +872,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 	else
 	{
 		if (unlink(linkloc) < 0)
-			ereport(ERROR,
+			ereport(redo ? LOG : (errno == ENOENT ? WARNING : ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not remove symbolic link \"%s\": %m",
 							linkloc)));
@@ -1333,14 +1364,14 @@ check_temp_tablespaces(char **newval, void **extra, GucSource source)
 			}
 
 			/*
-			 * In an interactive SET command, we ereport for bad info.  When
+			 * In an interactive SET command, we ereport for bad info.	When
 			 * source == PGC_S_TEST, we are checking the argument of an ALTER
-			 * DATABASE SET or ALTER USER SET command.  pg_dumpall dumps all
+			 * DATABASE SET or ALTER USER SET command.	pg_dumpall dumps all
 			 * roles before tablespaces, so if we're restoring a pg_dumpall
 			 * script the tablespace might not yet exist, but will be created
-			 * later.  Because of that, issue a NOTICE if source == PGC_S_TEST,
-			 * but accept the value anyway.  Otherwise, silently ignore any
-			 * bad list elements.
+			 * later.  Because of that, issue a NOTICE if source ==
+			 * PGC_S_TEST, but accept the value anyway.  Otherwise, silently
+			 * ignore any bad list elements.
 			 */
 			curoid = get_tablespace_oid(curname, source <= PGC_S_TEST);
 			if (curoid == InvalidOid)
@@ -1664,14 +1695,19 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		xl_tblspc_drop_rec *xlrec = (xl_tblspc_drop_rec *) XLogRecGetData(record);
 
 		/*
-		 * If we issued a WAL record for a drop tablespace it is because there
-		 * were no files in it at all. That means that no permanent objects
-		 * can exist in it at this point.
+		 * If we issued a WAL record for a drop tablespace it implies that
+		 * there were no files in it at all when the DROP was done. That means
+		 * that no permanent objects can exist in it at this point.
 		 *
 		 * It is possible for standby users to be using this tablespace as a
 		 * location for their temporary files, so if we fail to remove all
 		 * files then do conflict processing and try again, if currently
 		 * enabled.
+		 *
+		 * Other possible reasons for failure include bollixed file
+		 * permissions on a standby server when they were okay on the primary,
+		 * etc etc. There's not much we can do about that, so just remove what
+		 * we can and press on.
 		 */
 		if (!destroy_tablespace_directories(xlrec->ts_id, true))
 		{
@@ -1679,15 +1715,18 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 			/*
 			 * If we did recovery processing then hopefully the backends who
-			 * wrote temp files should have cleaned up and exited by now. So
-			 * lets recheck before we throw an error. If !process_conflicts
-			 * then this will just fail again.
+			 * wrote temp files should have cleaned up and exited by now.  So
+			 * retry before complaining.  If we fail again, this is just a LOG
+			 * condition, because it's not worth throwing an ERROR for (as
+			 * that would crash the database and require manual intervention
+			 * before we could get past this WAL record on restart).
 			 */
 			if (!destroy_tablespace_directories(xlrec->ts_id, true))
-				ereport(ERROR,
+				ereport(LOG,
 						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-						 errmsg("tablespace %u is not empty",
-								xlrec->ts_id)));
+				 errmsg("directories for tablespace %u could not be removed",
+						xlrec->ts_id),
+						 errhint("You can remove the directories manually if necessary.")));
 		}
 	}
 	else
@@ -1704,14 +1743,14 @@ tblspc_desc(StringInfo buf, XLogRecord *record)
 	{
 		xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *) rec;
 
-		appendStringInfo(buf, "create ts: %u \"%s\"",
+		appendStringInfo(buf, "create tablespace: %u \"%s\"",
 						 xlrec->ts_id, xlrec->ts_path);
 	}
 	else if (info == XLOG_TBLSPC_DROP)
 	{
 		xl_tblspc_drop_rec *xlrec = (xl_tblspc_drop_rec *) rec;
 
-		appendStringInfo(buf, "drop ts: %u", xlrec->ts_id);
+		appendStringInfo(buf, "drop tablespace: %u", xlrec->ts_id);
 	}
 	else
 		appendStringInfo(buf, "UNKNOWN");

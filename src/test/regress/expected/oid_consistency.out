@@ -559,13 +559,13 @@ SELECT * FROM constraint_t3 ORDER BY year, month, region, id;
 
 \d+ constraint_pt3_1_prt_2_2_prt_3_3_prt_europe
 Append-Only Table "public.constraint_pt3_1_prt_2_2_prt_3_3_prt_europe"
- Column |  Type   | Modifiers | Storage  | Description 
---------+---------+-----------+----------+-------------
- id     | integer |           | plain    | 
- year   | integer |           | plain    | 
- month  | integer |           | plain    | 
- day    | integer |           | plain    | 
- region | text    |           | extended | 
+ Column |  Type   | Modifiers | Storage  | Stats target | Description 
+--------+---------+-----------+----------+--------------+-------------
+ id     | integer |           | plain    |              | 
+ year   | integer |           | plain    |              | 
+ month  | integer |           | plain    |              | 
+ day    | integer |           | plain    |              | 
+ region | text    |           | extended |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768

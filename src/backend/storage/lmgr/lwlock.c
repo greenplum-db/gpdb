@@ -11,7 +11,7 @@
  * LWLocks to protect its shared state.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -91,9 +91,6 @@ NON_EXEC_STATIC LWLockPadded *LWLockArray = NULL;
 #define MAX_SIMUL_LWLOCKS	100
 #define MAX_FRAME_DEPTH  	64
 
-/* LW lock object id current PGPPROC is sleeping on (valid when PGPROC->lwWaiting = true) */
-static LWLockId lwWaitingLockId = NullLock;
-
 static int	num_held_lwlocks = 0;
 static LWLockId held_lwlocks[MAX_SIMUL_LWLOCKS];
 static bool held_lwlocks_exclusive[MAX_SIMUL_LWLOCKS];
@@ -139,6 +136,22 @@ LOG_LWDEBUG(const char *where, LWLockId lockid, const char *msg)
 
 #ifdef LWLOCK_STATS
 
+static void init_lwlock_stats(void);
+static void print_lwlock_stats(int code, Datum arg);
+
+static void
+init_lwlock_stats(void)
+{
+	int		   *LWLockCounter = (int *) ((char *) LWLockArray - 2 * sizeof(int));
+	int			numLocks = LWLockCounter[1];
+
+	sh_acquire_counts = calloc(numLocks, sizeof(int));
+	ex_acquire_counts = calloc(numLocks, sizeof(int));
+	block_counts = calloc(numLocks, sizeof(int));
+	counts_for_pid = MyProcPid;
+	on_shmem_exit(print_lwlock_stats, 0);
+}
+
 static void
 print_lwlock_stats(int code, Datum arg)
 {
@@ -183,8 +196,11 @@ NumLWLocks(void)
 	/* bufmgr.c needs two for each shared buffer */
 	numLocks += 2 * NBuffers;
 
+	/* proc.c needs one for each backend or auxiliary process */
+	numLocks += MaxBackends + NUM_AUXILIARY_PROCS;
+
 	/* clog.c needs one per CLOG buffer */
-	numLocks += NUM_CLOG_BUFFERS;
+	numLocks += CLOGShmemBuffers();
 
 	/* subtrans.c needs one per SubTrans buffer */
 	numLocks += NUM_SUBTRANS_BUFFERS;
@@ -419,21 +435,7 @@ LWLockAcquire(LWLockId lockid, LWLockMode mode)
 #ifdef LWLOCK_STATS
 	/* Set up local count state first time through in a given process */
 	if (counts_for_pid != MyProcPid)
-	{
-		int		   *LWLockCounter = (int *) ((char *) LWLockArray - 2 * sizeof(int));
-		int			numLocks = LWLockCounter[1];
-
-		sh_acquire_counts = calloc(numLocks, sizeof(int));
-		ex_acquire_counts = calloc(numLocks, sizeof(int));
-		block_counts = calloc(numLocks, sizeof(int));
-
-		if(!sh_acquire_counts || !ex_acquire_counts || !block_counts)
-			ereport(ERROR, errcode(ERRCODE_OUT_OF_MEMORY),
-				errmsg("LWLockAcquire failed: out of memory"));
-
-		counts_for_pid = MyProcPid;
-		on_shmem_exit(print_lwlock_stats, 0);
-	}
+		init_lwlock_stats();
 	/* Count lock acquisition attempts */
 	if (mode == LW_EXCLUSIVE)
 		ex_acquire_counts[lockid]++;
@@ -527,8 +529,7 @@ LWLockAcquire(LWLockId lockid, LWLockMode mode)
 			elog(PANIC, "cannot wait without a PGPROC structure");
 
 		proc->lwWaiting = true;
-		proc->lwExclusive = (mode == LW_EXCLUSIVE);
-		lwWaitingLockId = lockid;
+		proc->lwWaitMode = mode;
 		proc->lwWaitLink = NULL;
 		if (lock->head == NULL)
 			lock->head = proc;
@@ -688,6 +689,150 @@ LWLockConditionalAcquire(LWLockId lockid, LWLockMode mode)
 }
 
 /*
+ * LWLockAcquireOrWait - Acquire lock, or wait until it's free
+ *
+ * The semantics of this function are a bit funky.	If the lock is currently
+ * free, it is acquired in the given mode, and the function returns true.  If
+ * the lock isn't immediately free, the function waits until it is released
+ * and returns false, but does not acquire the lock.
+ *
+ * This is currently used for WALWriteLock: when a backend flushes the WAL,
+ * holding WALWriteLock, it can flush the commit records of many other
+ * backends as a side-effect.  Those other backends need to wait until the
+ * flush finishes, but don't need to acquire the lock anymore.  They can just
+ * wake up, observe that their records have already been flushed, and return.
+ */
+bool
+LWLockAcquireOrWait(LWLockId lockid, LWLockMode mode)
+{
+	volatile LWLock *lock = &(LWLockArray[lockid].lock);
+	PGPROC	   *proc = MyProc;
+	bool		mustwait;
+	int			extraWaits = 0;
+
+	PRINT_LWDEBUG("LWLockAcquireOrWait", lockid, lock);
+
+#ifdef LWLOCK_STATS
+	/* Set up local count state first time through in a given process */
+	if (counts_for_pid != MyProcPid)
+		init_lwlock_stats();
+#endif
+
+	/* Ensure we will have room to remember the lock */
+	if (num_held_lwlocks >= MAX_SIMUL_LWLOCKS)
+		elog(ERROR, "too many LWLocks taken");
+
+	/*
+	 * Lock out cancel/die interrupts until we exit the code section protected
+	 * by the LWLock.  This ensures that interrupts will not interfere with
+	 * manipulations of data structures in shared memory.
+	 */
+	HOLD_INTERRUPTS();
+
+	/* Acquire mutex.  Time spent holding mutex should be short! */
+	SpinLockAcquire(&lock->mutex);
+
+	/* If I can get the lock, do so quickly. */
+	if (mode == LW_EXCLUSIVE)
+	{
+		if (lock->exclusive == 0 && lock->shared == 0)
+		{
+			lock->exclusive++;
+			mustwait = false;
+		}
+		else
+			mustwait = true;
+	}
+	else
+	{
+		if (lock->exclusive == 0)
+		{
+			lock->shared++;
+			mustwait = false;
+		}
+		else
+			mustwait = true;
+	}
+
+	if (mustwait)
+	{
+		/*
+		 * Add myself to wait queue.
+		 *
+		 * If we don't have a PGPROC structure, there's no way to wait.  This
+		 * should never occur, since MyProc should only be null during shared
+		 * memory initialization.
+		 */
+		if (proc == NULL)
+			elog(PANIC, "cannot wait without a PGPROC structure");
+
+		proc->lwWaiting = true;
+		proc->lwWaitMode = LW_WAIT_UNTIL_FREE;
+		proc->lwWaitLink = NULL;
+		if (lock->head == NULL)
+			lock->head = proc;
+		else
+			lock->tail->lwWaitLink = proc;
+		lock->tail = proc;
+
+		/* Can release the mutex now */
+		SpinLockRelease(&lock->mutex);
+
+		/*
+		 * Wait until awakened.  Like in LWLockAcquire, be prepared for bogus
+		 * wakups, because we share the semaphore with ProcWaitForSignal.
+		 */
+		LOG_LWDEBUG("LWLockAcquireOrWait", lockid, "waiting");
+
+#ifdef LWLOCK_STATS
+		block_counts[lockid]++;
+#endif
+
+		TRACE_POSTGRESQL_LWLOCK_WAIT_START(lockid, mode);
+
+		for (;;)
+		{
+			/* "false" means cannot accept cancel/die interrupt here. */
+			PGSemaphoreLock(&proc->sem, false);
+			if (!proc->lwWaiting)
+				break;
+			extraWaits++;
+		}
+
+		TRACE_POSTGRESQL_LWLOCK_WAIT_DONE(lockid, mode);
+
+		LOG_LWDEBUG("LWLockAcquireOrWait", lockid, "awakened");
+	}
+	else
+	{
+		/* We are done updating shared state of the lock itself. */
+		SpinLockRelease(&lock->mutex);
+	}
+
+	/*
+	 * Fix the process wait semaphore's count for any absorbed wakeups.
+	 */
+	while (extraWaits-- > 0)
+		PGSemaphoreUnlock(&proc->sem);
+
+	if (mustwait)
+	{
+		/* Failed to get lock, so release interrupt holdoff */
+		RESUME_INTERRUPTS();
+		LOG_LWDEBUG("LWLockAcquireOrWait", lockid, "failed");
+		TRACE_POSTGRESQL_LWLOCK_WAIT_UNTIL_FREE_FAIL(lockid, mode);
+	}
+	else
+	{
+		/* Add lock to list of locks held by this backend */
+		held_lwlocks[num_held_lwlocks++] = lockid;
+		TRACE_POSTGRESQL_LWLOCK_WAIT_UNTIL_FREE(lockid, mode);
+	}
+
+	return !mustwait;
+}
+
+/*
  * LWLockRelease - release a previously acquired lock
  */
 void
@@ -772,33 +917,46 @@ LWLockRelease(LWLockId lockid)
 		if (lock->exclusive == 0 && lock->shared == 0 && lock->releaseOK)
 		{
 			/*
-			 * Remove the to-be-awakened PGPROCs from the queue.  If the front
-			 * waiter wants exclusive lock, awaken him only. Otherwise awaken
-			 * as many waiters as want shared access.
+			 * Remove the to-be-awakened PGPROCs from the queue.
 			 */
+			bool		releaseOK = true;
+
 			proc = head;
-			if (!proc->lwExclusive)
+
+			/*
+			 * First wake up any backends that want to be woken up without
+			 * acquiring the lock.
+			 */
+			while (proc->lwWaitMode == LW_WAIT_UNTIL_FREE && proc->lwWaitLink)
+				proc = proc->lwWaitLink;
+
+			/*
+			 * If the front waiter wants exclusive lock, awaken him only.
+			 * Otherwise awaken as many waiters as want shared access.
+			 */
+			if (proc->lwWaitMode != LW_EXCLUSIVE)
 			{
 				while (proc->lwWaitLink != NULL &&
-					   !proc->lwWaitLink->lwExclusive)
+					   proc->lwWaitLink->lwWaitMode != LW_EXCLUSIVE)
 				{
+					if (proc->lwWaitMode != LW_WAIT_UNTIL_FREE)
+						releaseOK = false;
 					proc = proc->lwWaitLink;
-					if (proc->pid != 0)
-					{
-						lock->releaseOK = false;
-					}					
 				}
 			}
 			/* proc is now the last PGPROC to be released */
 			lock->head = proc->lwWaitLink;
 			proc->lwWaitLink = NULL;
-			
-			/* proc->pid can be 0 if process exited while waiting for lock */
-			if (proc->pid != 0)
-			{
-				/* prevent additional wakeups until retryer gets to run */
-				lock->releaseOK = false;
-			}
+
+			/*
+			 * Prevent additional wakeups until retryer gets to run. Backends
+			 * that are just waiting for the lock to become free don't retry
+			 * automatically.
+			 */
+			if (proc->lwWaitMode != LW_WAIT_UNTIL_FREE)
+				releaseOK = false;
+
+			lock->releaseOK = releaseOK;
 		}
 		else
 		{

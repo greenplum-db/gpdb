@@ -28,29 +28,29 @@ INSERT 4
 7&: select pynestsleep2();  <waiting ...>
 
 
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'select pybusyloop()%' ORDER BY procpid LIMIT 2;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'select pybusyloop()%' ORDER BY pid LIMIT 2;
 pg_cancel_backend
 -----------------
 t                
 t                
 (2 rows)
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'select pysleep()%' ORDER BY procpid LIMIT 2;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'select pysleep()%' ORDER BY pid LIMIT 2;
 pg_cancel_backend
 -----------------
 t                
 t                
 (2 rows)
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'select pyspisleep()%' ORDER BY procpid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'select pyspisleep()%' ORDER BY pid LIMIT 1;
 pg_cancel_backend
 -----------------
 t                
 (1 row)
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'select pynestsleep()%' ORDER BY procpid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'select pynestsleep()%' ORDER BY pid LIMIT 1;
 pg_cancel_backend
 -----------------
 t                
 (1 row)
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'select pynestsleep2()%' ORDER BY procpid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE query LIKE 'select pynestsleep2()%' ORDER BY pid LIMIT 1;
 pg_cancel_backend
 -----------------
 t                
@@ -74,21 +74,21 @@ CONTEXT:  PL/Python function "pysleep"
 ERROR:  canceling statement due to user request: "test pg_cancel_backend"
 4q: ... <quitting>
 5<:  <... completed>
-ERROR:  plpy.SPIError: canceling statement due to user request: "test pg_cancel_backend"
+ERROR:  spiexceptions.QueryCanceled: canceling statement due to user request: "test pg_cancel_backend"
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "pyspisleep", line 3, in <module>
     rv = plpy.execute("select pg_sleep(100)")
 PL/Python function "pyspisleep"
 5q: ... <quitting>
 6<:  <... completed>
-ERROR:  plpy.SPIError: plpy.SPIError: canceling statement due to user request: "test pg_cancel_backend"
+ERROR:  spiexceptions.QueryCanceled: spiexceptions.QueryCanceled: canceling statement due to user request: "test pg_cancel_backend"
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "pynestsleep", line 3, in <module>
     rv = plpy.execute("select pyspisleep()")
 PL/Python function "pynestsleep"
 6q: ... <quitting>
 7<:  <... completed>
-ERROR:  plpy.SPIError: canceling statement due to user request: "test pg_cancel_backend"
+ERROR:  spiexceptions.QueryCanceled: canceling statement due to user request: "test pg_cancel_backend"
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "pynestsleep2", line 3, in <module>
     rv = plpy.execute("select pysleep()")

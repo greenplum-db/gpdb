@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -73,6 +73,7 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_tablespace.h"
+#include "pgstat.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "utils/guc.h"
@@ -128,7 +129,7 @@ int			max_files_per_process = 1000;
  * Note: the value of max_files_per_process is taken into account while
  * setting this variable, and so need not be tested separately.
  */
-static int	max_safe_fds = 32;	/* default if not changed */
+int			max_safe_fds = 32;	/* default if not changed */
 
 
 /* Debugging.... */
@@ -154,9 +155,6 @@ static int	max_safe_fds = 32;	/* default if not changed */
 #define FD_XACT_TRANSIENT	(1 << 2)	/* T = close (not delete) at aoXact,
 										 * but keep VFD */
 
-/* Flag to tell whether there are files to close/delete at end of transaction */
-static bool have_pending_fd_cleanup = false;
-
 typedef struct vfd
 {
 	int			fd;				/* current FD, or VFD_CLOSED if none */
@@ -165,7 +163,8 @@ typedef struct vfd
 	File		nextFree;		/* link to next free VFD, if in freelist */
 	File		lruMoreRecently;	/* doubly linked recency-of-use list */
 	File		lruLessRecently;
-	int64		seekPos;		/* current logical file position */
+	off_t		seekPos;		/* current logical file position */
+	off_t		fileSize;		/* current size of file (0 if not temporary) */
 	char	   *fileName;		/* name of file, or NULL for unused VFD */
 	/* NB: fileName is malloc'd, and must be free'd when closing the VFD */
 	int			fileFlags;		/* open(2) flags for (re)opening the file */
@@ -184,6 +183,17 @@ static Size SizeVfdCache = 0;
  * Number of file descriptors known to be in use by VFD entries.
  */
 static int	nfile = 0;
+
+/* True if there are files to close/delete at end of transaction */
+static bool have_pending_fd_cleanup = false;
+
+/*
+ * Tracks the total size of all temporary files.  Note: when temp_file_limit
+ * is being enforced, this cannot overflow since the limit cannot be more
+ * than INT_MAX kilobytes.	When not enforcing, it could theoretically
+ * overflow, but we don't care.
+ */
+static uint64 temporary_files_size = 0;
 
 /*
  * List of OS handles opened with AllocateFile, AllocateDir and
@@ -720,7 +730,7 @@ LruInsert(File file)
 		/* seek to the right position */
 		if (vfdP->seekPos != INT64CONST(0))
 		{
-			int64		returnValue;
+			off_t returnValue PG_USED_FOR_ASSERTS_ONLY;
 
 			returnValue = pg_lseek64(vfdP->fd, vfdP->seekPos, SEEK_SET);
 			Assert(returnValue != INT64CONST(-1));
@@ -931,7 +941,8 @@ PathNameOpenFile(FileName fileName, int fileFlags, int fileMode)
 	/* Saved flags are adjusted to be OK for re-opening file */
 	vfdP->fileFlags = fileFlags & ~(O_CREAT | O_TRUNC | O_EXCL);
 	vfdP->fileMode = fileMode;
-	vfdP->seekPos = INT64CONST(0);
+	vfdP->seekPos = 0;
+	vfdP->fileSize = 0;
 	vfdP->fdstate = 0x0;
 	vfdP->resowner = NULL;
 
@@ -1243,7 +1254,7 @@ OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError,
 void
 FileSetTransient(File file)
 {
-	Vfd		  *vfdP;
+	Vfd		   *vfdP;
 
 	Assert(FileIsValid(file));
 
@@ -1286,6 +1297,9 @@ FileClose(File file)
 	 */
 	if (vfdP->fdstate & FD_TEMPORARY)
 	{
+		struct stat filestats;
+		int			stat_errno;
+
 		/*
 		 * If we get an error, as could happen within the ereport/elog calls,
 		 * we'll come right back here during transaction abort.  Reset the
@@ -1295,23 +1309,26 @@ FileClose(File file)
 		 */
 		vfdP->fdstate &= ~FD_TEMPORARY;
 
-		if (log_temp_files >= 0)
+		/* Subtract its size from current usage (do first in case of error) */
+		temporary_files_size -= vfdP->fileSize;
+		vfdP->fileSize = 0;
+
+		/* first try the stat() */
+		if (stat(vfdP->fileName, &filestats))
+			stat_errno = errno;
+		else
+			stat_errno = 0;
+
+		/* in any case do the unlink */
+		if (unlink(vfdP->fileName))
+			elog(LOG, "could not unlink file \"%s\": %m", vfdP->fileName);
+
+		/* and last report the stat results */
+		if (stat_errno == 0)
 		{
-			struct stat filestats;
-			int			stat_errno;
+			pgstat_report_tempfile(filestats.st_size);
 
-			/* first try the stat() */
-			if (stat(vfdP->fileName, &filestats))
-				stat_errno = errno;
-			else
-				stat_errno = 0;
-
-			/* in any case do the unlink */
-			if (unlink(vfdP->fileName))
-				elog(LOG, "could not unlink file \"%s\": %m", vfdP->fileName);
-
-			/* and last report the stat results */
-			if (stat_errno == 0)
+			if (log_temp_files >= 0)
 			{
 				if ((filestats.st_size / 1024) >= log_temp_files)
 					ereport(LOG,
@@ -1319,17 +1336,11 @@ FileClose(File file)
 									vfdP->fileName,
 									(unsigned long) filestats.st_size)));
 			}
-			else
-			{
-				errno = stat_errno;
-				elog(LOG, "could not stat file \"%s\": %m", vfdP->fileName);
-			}
 		}
 		else
 		{
-			/* easy case, just do the unlink */
-			if (unlink(vfdP->fileName))
-				elog(LOG, "could not unlink file \"%s\": %m", vfdP->fileName);
+			errno = stat_errno;
+			elog(LOG, "could not stat file \"%s\": %m", vfdP->fileName);
 		}
 	}
 
@@ -1476,6 +1487,31 @@ FileWrite(File file, char *buffer, int amount)
 	}
 #endif
 
+	/*
+	 * If enforcing temp_file_limit and it's a temp file, check to see if the
+	 * write would overrun temp_file_limit, and throw error if so.	Note: it's
+	 * really a modularity violation to throw error here; we should set errno
+	 * and return -1.  However, there's no way to report a suitable error
+	 * message if we do that.  All current callers would just throw error
+	 * immediately anyway, so this is safe at present.
+	 */
+	if (temp_file_limit >= 0 && (VfdCache[file].fdstate & FD_TEMPORARY))
+	{
+		off_t		newPos = VfdCache[file].seekPos + amount;
+
+		if (newPos > VfdCache[file].fileSize)
+		{
+			uint64		newTotal = temporary_files_size;
+
+			newTotal += newPos - VfdCache[file].fileSize;
+			if (newTotal > (uint64) temp_file_limit * (uint64) 1024)
+				ereport(ERROR,
+						(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
+				 errmsg("temporary file size exceeds temp_file_limit (%dkB)",
+						temp_file_limit)));
+		}
+	}
+
 retry:
 	errno = 0;
 	returnCode = write(VfdCache[file].fd, buffer, amount);
@@ -1485,7 +1521,21 @@ retry:
 		errno = ENOSPC;
 
 	if (returnCode >= 0)
+	{
 		VfdCache[file].seekPos += returnCode;
+
+		/* maintain fileSize and temporary_files_size if it's a temp file */
+		if (VfdCache[file].fdstate & FD_TEMPORARY)
+		{
+			off_t		newPos = VfdCache[file].seekPos;
+
+			if (newPos > VfdCache[file].fileSize)
+			{
+				temporary_files_size += newPos - VfdCache[file].fileSize;
+				VfdCache[file].fileSize = newPos;
+			}
+		}
+	}
 	else
 	{
 		/*
@@ -1678,6 +1728,14 @@ FileTruncate(File file, int64 offset)
 
 	/* Assume we don't know the file position anymore */
 	VfdCache[file].seekPos = FileUnknownPos;
+
+	if (returnCode == 0 && VfdCache[file].fileSize > offset)
+	{
+		/* adjust our state for truncation of a temp file */
+		Assert(VfdCache[file].fdstate & FD_TEMPORARY);
+		temporary_files_size -= VfdCache[file].fileSize - offset;
+		VfdCache[file].fileSize = offset;
+	}
 
 	return returnCode;
 }
@@ -2226,18 +2284,18 @@ CleanupTempFiles(bool isProcExit)
 				if (fdstate & FD_TEMPORARY)
 				{
 					/*
-					 * If we're in the process of exiting a backend process, close
-					 * all temporary files. Otherwise, only close temporary files
-					 * local to the current transaction. They should be closed by
-					 * the ResourceOwner mechanism already, so this is just a
-					 * debugging cross-check.
+					 * If we're in the process of exiting a backend process,
+					 * close all temporary files. Otherwise, only close
+					 * temporary files local to the current transaction. They
+					 * should be closed by the ResourceOwner mechanism
+					 * already, so this is just a debugging cross-check.
 					 */
 					if (isProcExit)
 						FileClose(i);
 					else if (fdstate & FD_XACT_TEMPORARY)
 					{
 						elog(WARNING,
-							 "temporary file %s not closed at end-of-transaction",
+						"temporary file %s not closed at end-of-transaction",
 							 VfdCache[i].fileName);
 						FileClose(i);
 					}

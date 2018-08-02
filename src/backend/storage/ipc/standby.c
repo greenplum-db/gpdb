@@ -7,7 +7,7 @@
  *	AccessExclusiveLocks and starting snapshots for Hot Standby mode.
  *	Plus conflict recovery processing.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -29,6 +29,7 @@
 #include "storage/sinvaladt.h"
 #include "storage/standby.h"
 #include "utils/ps_status.h"
+#include "utils/timestamp.h"
 
 /* User-settable GUC parameters */
 int			vacuum_defer_cleanup_age;
@@ -204,7 +205,7 @@ ResolveRecoveryConflictWithVirtualXIDs(VirtualTransactionId *waitlist,
 		standbyWait_us = STANDBY_INITIAL_WAIT_US;
 
 		/* wait until the virtual xid is gone */
-		while (!ConditionalVirtualXactLockTableWait(*waitlist))
+		while (!VirtualXactLock(*waitlist, false))
 		{
 			/*
 			 * Report via ps if we have been waiting for more than 500 msec
@@ -293,7 +294,7 @@ ResolveRecoveryConflictWithTablespace(Oid tsid)
 	VirtualTransactionId *temp_file_users;
 
 	/*
-	 * Standby users may be currently using this tablespace for for their
+	 * Standby users may be currently using this tablespace for their
 	 * temporary files. We only care about current users because
 	 * temp_tablespace parameter will just ignore tablespaces that no longer
 	 * exist.
@@ -470,23 +471,24 @@ SendRecoveryConflictWithBufferPin(ProcSignalReason reason)
 
 /*
  * In Hot Standby perform early deadlock detection.  We abort the lock
- * wait if are about to sleep while holding the buffer pin that Startup
- * process is waiting for. The deadlock occurs because we can only be
- * waiting behind an AccessExclusiveLock, which can only clear when a
- * transaction completion record is replayed, which can only occur when
- * Startup process is not waiting. So if Startup process is waiting we
- * never will clear that lock, so if we wait we cause deadlock. If we
- * are the Startup process then no need to check for deadlocks.
+ * wait if we are about to sleep while holding the buffer pin that Startup
+ * process is waiting for.
+ *
+ * Note: this code is pessimistic, because there is no way for it to
+ * determine whether an actual deadlock condition is present: the lock we
+ * need to wait for might be unrelated to any held by the Startup process.
+ * Sooner or later, this mechanism should get ripped out in favor of somehow
+ * accounting for buffer locks in DeadLockCheck().	However, errors here
+ * seem to be very low-probability in practice, so for now it's not worth
+ * the trouble.
  */
 void
-CheckRecoveryConflictDeadlock(LWLockId partitionLock)
+CheckRecoveryConflictDeadlock(void)
 {
-	Assert(!InRecovery);
+	Assert(!InRecovery);		/* do not call in Startup process */
 
 	if (!HoldingBufferPinThatDelaysRecovery())
 		return;
-
-	LWLockRelease(partitionLock);
 
 	/*
 	 * Error message should match ProcessInterrupts() but we avoid calling
@@ -534,7 +536,9 @@ StandbyAcquireAccessExclusiveLock(TransactionId xid, Oid dbOid, Oid relOid)
 	LOCKTAG		locktag;
 
 	/* Already processed? */
-	if (TransactionIdDidCommit(xid) || TransactionIdDidAbort(xid))
+	if (!TransactionIdIsValid(xid) ||
+		TransactionIdDidCommit(xid) ||
+		TransactionIdDidAbort(xid))
 		return;
 
 	elog(trace_recovery(DEBUG4),
@@ -616,23 +620,18 @@ StandbyReleaseLockTree(TransactionId xid, int nsubxids, TransactionId *subxids)
 }
 
 /*
- * StandbyReleaseLocksMany
- *		Release standby locks held by XIDs < removeXid
- *
- * If keepPreparedXacts is true, keep prepared transactions even if
- * they're older than removeXid
+ * Called at end of recovery and when we see a shutdown checkpoint.
  */
-static void
-StandbyReleaseLocksMany(TransactionId removeXid, bool keepPreparedXacts)
+void
+StandbyReleaseAllLocks(void)
 {
 	ListCell   *cell,
 			   *prev,
 			   *next;
 	LOCKTAG		locktag;
 
-	/*
-	 * Release all matching locks.
-	 */
+	elog(trace_recovery(DEBUG2), "release all standby locks");
+
 	prev = NULL;
 	for (cell = list_head(RecoveryLockList); cell; cell = next)
 	{
@@ -640,10 +639,67 @@ StandbyReleaseLocksMany(TransactionId removeXid, bool keepPreparedXacts)
 
 		next = lnext(cell);
 
-		if (!TransactionIdIsValid(removeXid) || TransactionIdPrecedes(lock->xid, removeXid))
+		elog(trace_recovery(DEBUG4),
+			 "releasing recovery lock: xid %u db %u rel %u",
+			 lock->xid, lock->dbOid, lock->relOid);
+		SET_LOCKTAG_RELATION(locktag, lock->dbOid, lock->relOid);
+		if (!LockRelease(&locktag, AccessExclusiveLock, true))
+			elog(LOG,
+				 "RecoveryLockList contains entry for lock no longer recorded by lock manager: xid %u database %u relation %u",
+				 lock->xid, lock->dbOid, lock->relOid);
+		RecoveryLockList = list_delete_cell(RecoveryLockList, cell, prev);
+		pfree(lock);
+	}
+}
+
+/*
+ * StandbyReleaseOldLocks
+ *		Release standby locks held by XIDs that aren't running, as long
+ *		as they're not prepared transactions.
+ */
+void
+StandbyReleaseOldLocks(int nxids, TransactionId *xids)
+{
+	ListCell   *cell,
+			   *prev,
+			   *next;
+	LOCKTAG		locktag;
+
+	prev = NULL;
+	for (cell = list_head(RecoveryLockList); cell; cell = next)
+	{
+		xl_standby_lock *lock = (xl_standby_lock *) lfirst(cell);
+		bool		remove = false;
+
+		next = lnext(cell);
+
+		Assert(TransactionIdIsValid(lock->xid));
+
+		if (StandbyTransactionIdIsPrepared(lock->xid))
+			remove = false;
+		else
 		{
-			if (keepPreparedXacts && StandbyTransactionIdIsPrepared(lock->xid))
-				continue;
+			int			i;
+			bool		found = false;
+
+			for (i = 0; i < nxids; i++)
+			{
+				if (lock->xid == xids[i])
+				{
+					found = true;
+					break;
+				}
+			}
+
+			/*
+			 * If its not a running transaction, remove it.
+			 */
+			if (!found)
+				remove = true;
+		}
+
+		if (remove)
+		{
 			elog(trace_recovery(DEBUG4),
 				 "releasing recovery lock: xid %u db %u rel %u",
 				 lock->xid, lock->dbOid, lock->relOid);
@@ -661,27 +717,6 @@ StandbyReleaseLocksMany(TransactionId removeXid, bool keepPreparedXacts)
 }
 
 /*
- * Called at end of recovery and when we see a shutdown checkpoint.
- */
-void
-StandbyReleaseAllLocks(void)
-{
-	elog(trace_recovery(DEBUG2), "release all standby locks");
-	StandbyReleaseLocksMany(InvalidTransactionId, false);
-}
-
-/*
- * StandbyReleaseOldLocks
- *		Release standby locks held by XIDs < removeXid, as long
- *		as they're not prepared transactions.
- */
-void
-StandbyReleaseOldLocks(TransactionId removeXid)
-{
-	StandbyReleaseLocksMany(removeXid, true);
-}
-
-/*
  * --------------------------------------------------------------------
  *		Recovery handling for Rmgr RM_STANDBY_ID
  *
@@ -693,6 +728,9 @@ void
 standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+
+	/* Backup blocks are not used in standby records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	/* Do nothing if we're not in hot standby mode */
 	if (standbyState == STANDBY_DISABLED)
@@ -723,7 +761,7 @@ standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		ProcArrayApplyRecoveryInfo(&running);
 	}
 	else
-		elog(PANIC, "relation_redo: unknown op code %u", info);
+		elog(PANIC, "standby_redo: unknown op code %u", info);
 }
 
 static void
@@ -823,9 +861,16 @@ standby_desc(StringInfo buf, XLogRecord *record)
  * Later, when we apply the running xact data we must be careful to ignore
  * transactions already committed, since those commits raced ahead when
  * making WAL entries.
+ *
+ * The loose timing also means that locks may be recorded that have a
+ * zero xid, since xids are removed from procs before locks are removed.
+ * So we must prune the lock list down to ensure we hold locks only for
+ * currently running xids, performed by StandbyReleaseOldLocks().
+ * Zero xids should no longer be possible, but we may be replaying WAL
+ * from a time when they were possible.
  */
 void
-LogStandbySnapshot(TransactionId *oldestActiveXid, TransactionId *nextXid)
+LogStandbySnapshot(TransactionId *nextXid)
 {
 	RunningTransactions running;
 	xl_standby_lock *locks;
@@ -855,7 +900,6 @@ LogStandbySnapshot(TransactionId *oldestActiveXid, TransactionId *nextXid)
 	/* GetRunningTransactionData() acquired XidGenLock, we must release it */
 	LWLockRelease(XidGenLock);
 
-	*oldestActiveXid = running->oldestRunningXid;
 	*nextXid = running->nextXid;
 }
 
@@ -977,8 +1021,8 @@ LogAccessExclusiveLockPrepare(void)
 	 * RecordTransactionAbort() do not optimise away the transaction
 	 * completion record which recovery relies upon to release locks. It's a
 	 * hack, but for a corner case not worth adding code for into the main
-	 * commit path. Second, must must assign an xid before the lock is
-	 * recorded in shared memory, otherwise a concurrently executing
+	 * commit path. Second, we must assign an xid before the lock is recorded
+	 * in shared memory, otherwise a concurrently executing
 	 * GetRunningTransactionLocks() might see a lock associated with an
 	 * InvalidTransactionId which we later assert cannot happen.
 	 */

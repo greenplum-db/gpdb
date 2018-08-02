@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -424,7 +424,11 @@ ExecHashJoin(HashJoinState *node)
 
 						return result;
 					}
+					else
+						InstrCountFiltered2(node, 1);
 				}
+				else
+					InstrCountFiltered1(node, 1);
 				break;
 
 			case HJ_FILL_OUTER_TUPLE:
@@ -454,6 +458,8 @@ ExecHashJoin(HashJoinState *node)
 
 						return result;
 					}
+					else
+						InstrCountFiltered2(node, 1);
 				}
 				break;
 
@@ -486,6 +492,8 @@ ExecHashJoin(HashJoinState *node)
 
 					return result;
 				}
+				else
+					InstrCountFiltered2(node, 1);
 				break;
 
 			case HJ_NEED_NEW_BATCH:

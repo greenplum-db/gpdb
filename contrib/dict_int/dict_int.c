@@ -3,7 +3,7 @@
  * dict_int.c
  *	  Text search dictionary for integers
  *
- * Copyright (c) 2007-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/dict_int/dict_int.c
@@ -13,7 +13,6 @@
 #include "postgres.h"
 
 #include "commands/defrem.h"
-#include "fmgr.h"
 #include "tsearch/ts_public.h"
 
 PG_MODULE_MAGIC;

@@ -17,7 +17,7 @@
  *	sync.
  *
  *
- *	Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ *	Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *	Portions Copyright (c) 1994, Regents of the University of California
  *	Portions Copyright (c) 2000, Philip Warner
  *
@@ -33,8 +33,9 @@
  *-------------------------------------------------------------------------
  */
 
-#include "pg_backup_archiver.h"
 #include "compress_io.h"
+#include "dumpmem.h"
+#include "dumputils.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -126,9 +127,7 @@ InitArchiveFmt_Directory(ArchiveHandle *AH)
 	AH->DeClonePtr = NULL;
 
 	/* Set up our private context */
-	ctx = (lclContext *) calloc(1, sizeof(lclContext));
-	if (ctx == NULL)
-		die_horribly(AH, modulename, "out of memory\n");
+	ctx = (lclContext *) pg_calloc(1, sizeof(lclContext));
 	AH->formatData = (void *) ctx;
 
 	ctx->dataFH = NULL;
@@ -136,16 +135,14 @@ InitArchiveFmt_Directory(ArchiveHandle *AH)
 
 	/* Initialize LO buffering */
 	AH->lo_buf_size = LOBBUFSIZE;
-	AH->lo_buf = (void *) malloc(LOBBUFSIZE);
-	if (AH->lo_buf == NULL)
-		die_horribly(AH, modulename, "out of memory\n");
+	AH->lo_buf = (void *) pg_malloc(LOBBUFSIZE);
 
 	/*
 	 * Now open the TOC file
 	 */
 
 	if (!AH->fSpec || strcmp(AH->fSpec, "") == 0)
-		die_horribly(AH, modulename, "no output directory specified\n");
+		exit_horribly(modulename, "no output directory specified\n");
 
 	ctx->directory = AH->fSpec;
 
@@ -163,9 +160,9 @@ InitArchiveFmt_Directory(ArchiveHandle *AH)
 
 		tocFH = cfopen_read(fname, PG_BINARY_R);
 		if (tocFH == NULL)
-			die_horribly(AH, modulename,
-						 "could not open input file \"%s\": %s\n",
-						 fname, strerror(errno));
+			exit_horribly(modulename,
+						  "could not open input file \"%s\": %s\n",
+						  fname, strerror(errno));
 
 		ctx->dataFH = tocFH;
 
@@ -180,8 +177,8 @@ InitArchiveFmt_Directory(ArchiveHandle *AH)
 
 		/* Nothing else in the file, so close it again... */
 		if (cfclose(tocFH) != 0)
-			die_horribly(AH, modulename, "could not close TOC file: %s\n",
-						 strerror(errno));
+			exit_horribly(modulename, "could not close TOC file: %s\n",
+						  strerror(errno));
 		ctx->dataFH = NULL;
 	}
 }
@@ -197,16 +194,14 @@ _ArchiveEntry(ArchiveHandle *AH, TocEntry *te)
 	lclTocEntry *tctx;
 	char		fn[MAXPGPATH];
 
-	tctx = (lclTocEntry *) calloc(1, sizeof(lclTocEntry));
-	if (!tctx)
-		die_horribly(AH, modulename, "out of memory\n");
+	tctx = (lclTocEntry *) pg_calloc(1, sizeof(lclTocEntry));
 	if (te->dataDumper)
 	{
 		snprintf(fn, MAXPGPATH, "%d.dat", te->dumpId);
-		tctx->filename = strdup(fn);
+		tctx->filename = pg_strdup(fn);
 	}
 	else if (strcmp(te->desc, "BLOBS") == 0)
-		tctx->filename = strdup("blobs.toc");
+		tctx->filename = pg_strdup("blobs.toc");
 	else
 		tctx->filename = NULL;
 
@@ -248,9 +243,7 @@ _ReadExtraToc(ArchiveHandle *AH, TocEntry *te)
 
 	if (tctx == NULL)
 	{
-		tctx = (lclTocEntry *) calloc(1, sizeof(lclTocEntry));
-		if (!tctx)
-			die_horribly(AH, modulename, "out of memory\n");
+		tctx = (lclTocEntry *) pg_calloc(1, sizeof(lclTocEntry));
 		te->formatData = (void *) tctx;
 	}
 
@@ -295,8 +288,8 @@ _StartData(ArchiveHandle *AH, TocEntry *te)
 
 	ctx->dataFH = cfopen_write(fname, PG_BINARY_W, AH->compression);
 	if (ctx->dataFH == NULL)
-		die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
-					 fname, strerror(errno));
+		exit_horribly(modulename, "could not open output file \"%s\": %s\n",
+					  fname, strerror(errno));
 }
 
 /*
@@ -353,18 +346,19 @@ _PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
 	cfp = cfopen_read(filename, PG_BINARY_R);
 
 	if (!cfp)
-		die_horribly(AH, modulename, "could not open input file \"%s\": %s\n",
-					 filename, strerror(errno));
+		exit_horribly(modulename, "could not open input file \"%s\": %s\n",
+					  filename, strerror(errno));
 
-	buf = malloc(ZLIB_OUT_SIZE);
-	if (buf == NULL)
-		die_horribly(NULL, modulename, "out of memory\n");
+	buf = pg_malloc(ZLIB_OUT_SIZE);
 	buflen = ZLIB_OUT_SIZE;
 
 	while ((cnt = cfread(buf, buflen, cfp)))
 		ahwrite(buf, 1, cnt, AH);
 
 	free(buf);
+	if (cfclose(cfp) !=0)
+		exit_horribly(modulename, "could not close data file: %s\n",
+					  strerror(errno));
 }
 
 /*
@@ -403,8 +397,8 @@ _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
 	ctx->blobsTocFH = cfopen_read(fname, PG_BINARY_R);
 
 	if (ctx->blobsTocFH == NULL)
-		die_horribly(AH, modulename, "could not open large object TOC file \"%s\" for input: %s\n",
-					 fname, strerror(errno));
+		exit_horribly(modulename, "could not open large object TOC file \"%s\" for input: %s\n",
+					  fname, strerror(errno));
 
 	/* Read the blobs TOC file line-by-line, and process each blob */
 	while ((cfgets(ctx->blobsTocFH, line, MAXPGPATH)) != NULL)
@@ -413,8 +407,8 @@ _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
 		char		path[MAXPGPATH];
 
 		if (sscanf(line, "%u %s\n", &oid, fname) != 2)
-			die_horribly(AH, modulename, "invalid line in large object TOC file: %s\n",
-						 line);
+			exit_horribly(modulename, "invalid line in large object TOC file \"%s\": \"%s\"\n",
+						  fname, line);
 
 		StartRestoreBlob(AH, oid, ropt->dropSchema);
 		snprintf(path, MAXPGPATH, "%s/%s", ctx->directory, fname);
@@ -422,12 +416,12 @@ _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
 		EndRestoreBlob(AH, oid);
 	}
 	if (!cfeof(ctx->blobsTocFH))
-		die_horribly(AH, modulename, "error reading large object TOC file \"%s\"\n",
-					 fname);
+		exit_horribly(modulename, "error reading large object TOC file \"%s\"\n",
+					  fname);
 
 	if (cfclose(ctx->blobsTocFH) != 0)
-		die_horribly(AH, modulename, "could not close large object TOC file \"%s\": %s\n",
-					 fname, strerror(errno));
+		exit_horribly(modulename, "could not close large object TOC file \"%s\": %s\n",
+					  fname, strerror(errno));
 
 	ctx->blobsTocFH = NULL;
 
@@ -447,7 +441,7 @@ _WriteByte(ArchiveHandle *AH, const int i)
 	lclContext *ctx = (lclContext *) AH->formatData;
 
 	if (cfwrite(&c, 1, ctx->dataFH) != 1)
-		die_horribly(AH, modulename, "could not write byte\n");
+		exit_horribly(modulename, "could not write byte\n");
 
 	return 1;
 }
@@ -466,7 +460,7 @@ _ReadByte(ArchiveHandle *AH)
 
 	res = cfgetc(ctx->dataFH);
 	if (res == EOF)
-		die_horribly(AH, modulename, "unexpected end of file\n");
+		exit_horribly(modulename, "unexpected end of file\n");
 
 	return res;
 }
@@ -483,8 +477,8 @@ _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 
 	res = cfwrite(buf, len, ctx->dataFH);
 	if (res != len)
-		die_horribly(AH, modulename, "could not write to output file: %s\n",
-					 strerror(errno));
+		exit_horribly(modulename, "could not write to output file: %s\n",
+					  strerror(errno));
 
 	return res;
 }
@@ -530,8 +524,8 @@ _CloseArchive(ArchiveHandle *AH)
 		/* The TOC is always created uncompressed */
 		tocFH = cfopen_write(fname, PG_BINARY_W, 0);
 		if (tocFH == NULL)
-			die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
-						 fname, strerror(errno));
+			exit_horribly(modulename, "could not open output file \"%s\": %s\n",
+						  fname, strerror(errno));
 		ctx->dataFH = tocFH;
 
 		/*
@@ -544,8 +538,8 @@ _CloseArchive(ArchiveHandle *AH)
 		AH->format = archDirectory;
 		WriteToc(AH);
 		if (cfclose(tocFH) != 0)
-			die_horribly(AH, modulename, "could not close TOC file: %s\n",
-						 strerror(errno));
+			exit_horribly(modulename, "could not close TOC file: %s\n",
+						  strerror(errno));
 		WriteDataChunks(AH);
 	}
 	AH->FH = NULL;
@@ -574,8 +568,8 @@ _StartBlobs(ArchiveHandle *AH, TocEntry *te)
 	/* The blob TOC file is never compressed */
 	ctx->blobsTocFH = cfopen_write(fname, "ab", 0);
 	if (ctx->blobsTocFH == NULL)
-		die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
-					 fname, strerror(errno));
+		exit_horribly(modulename, "could not open output file \"%s\": %s\n",
+					  fname, strerror(errno));
 }
 
 /*
@@ -594,8 +588,8 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 	ctx->dataFH = cfopen_write(fname, PG_BINARY_W, AH->compression);
 
 	if (ctx->dataFH == NULL)
-		die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
-					 fname, strerror(errno));
+		exit_horribly(modulename, "could not open output file \"%s\": %s\n",
+					  fname, strerror(errno));
 }
 
 /*
@@ -617,7 +611,7 @@ _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 	/* register the blob in blobs.toc */
 	len = snprintf(buf, sizeof(buf), "%u blob_%u.dat\n", oid, oid);
 	if (cfwrite(buf, len, ctx->blobsTocFH) != len)
-		die_horribly(AH, modulename, "could not write to blobs TOC file\n");
+		exit_horribly(modulename, "could not write to blobs TOC file\n");
 }
 
 /*
@@ -643,13 +637,13 @@ createDirectory(const char *dir)
 	if (stat(dir, &st) == 0)
 	{
 		if (S_ISDIR(st.st_mode))
-			die_horribly(NULL, modulename,
-						 "cannot create directory %s, it exists already\n",
-						 dir);
+			exit_horribly(modulename,
+						  "cannot create directory %s, it exists already\n",
+						  dir);
 		else
-			die_horribly(NULL, modulename,
-						 "cannot create directory %s, a file with this name "
-						 "exists already\n", dir);
+			exit_horribly(modulename,
+						  "cannot create directory %s, a file with this name "
+						  "exists already\n", dir);
 	}
 
 	/*
@@ -658,8 +652,8 @@ createDirectory(const char *dir)
 	 * between our two calls.
 	 */
 	if (mkdir(dir, 0700) < 0)
-		die_horribly(NULL, modulename, "could not create directory %s: %s",
-					 dir, strerror(errno));
+		exit_horribly(modulename, "could not create directory %s: %s",
+					  dir, strerror(errno));
 }
 
 
@@ -673,7 +667,7 @@ prependDirectory(ArchiveHandle *AH, const char *relativeFilename)
 	dname = ctx->directory;
 
 	if (strlen(dname) + 1 + strlen(relativeFilename) + 1 > MAXPGPATH)
-		die_horribly(AH, modulename, "path name too long: %s", dname);
+		exit_horribly(modulename, "file name too long: \"%s\"", dname);
 
 	strcpy(buf, dname);
 	strcat(buf, "/");

@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/primnodes.h
@@ -95,6 +95,8 @@ typedef struct IntoClause
 	List	   *options;		/* options from WITH clause */
 	OnCommitAction onCommit;	/* what do we do at COMMIT? */
 	char	   *tableSpaceName; /* table space to use, or NULL */
+	bool		skipData;		/* true for WITH NO DATA */
+	Node       *distributedBy;  /* GPDB: columns to distribubte the data on. */
 } IntoClause;
 
 
@@ -122,15 +124,19 @@ typedef struct Expr
  * Note: during parsing/planning, varnoold/varoattno are always just copies
  * of varno/varattno.  At the tail end of planning, Var nodes appearing in
  * upper-level plan nodes are reassigned to point to the outputs of their
- * subplans; for example, in a join node varno becomes INNER or OUTER and
- * varattno becomes the index of the proper element of that subplan's target
- * list.  But varnoold/varoattno continue to hold the original values.
+ * subplans; for example, in a join node varno becomes INNER_VAR or OUTER_VAR
+ * and varattno becomes the index of the proper element of that subplan's
+ * target list.  But varnoold/varoattno continue to hold the original values.
  * The code doesn't really need varnoold/varoattno, but they are very useful
  * for debugging and interpreting completed plans, so we keep them around.
  */
-#define    INNER		65000
-#define    OUTER		65001
+#define    INNER_VAR		65000		/* reference to inner subplan */
+#define    OUTER_VAR		65001		/* reference to outer subplan */
+#define    INDEX_VAR		65002		/* reference to index column */
 
+#define IS_SPECIAL_VARNO(varno)		((varno) >= INNER_VAR)
+
+/* Symbols for the indexes of the special RTE entries in rules */
 #define    PRS2_OLD_VARNO			1
 #define    PRS2_NEW_VARNO			2
 
@@ -138,7 +144,7 @@ typedef struct Var
 {
 	Expr		xpr;
 	Index		varno;			/* index of this var's relation in the range
-								 * table (could also be INNER or OUTER) */
+								 * table, or INNER_VAR/OUTER_VAR/INDEX_VAR */
 	AttrNumber	varattno;		/* attribute number of this var, or zero for
 								 * all */
 	Oid			vartype;		/* pg_type OID for the type of this var */
@@ -978,11 +984,15 @@ typedef struct ArrayExpr
  * than vice versa.)  It is important not to assume that length(args) is
  * the same as the number of columns logically present in the rowtype.
  *
- * colnames is NIL in a RowExpr built from an ordinary ROW() expression.
- * It is provided in cases where we expand a whole-row Var into a RowExpr,
- * to retain the column alias names of the RTE that the Var referenced
- * (which would otherwise be very difficult to extract from the parsetree).
- * Like the args list, it is one-for-one with physical fields of the rowtype.
+ * colnames provides field names in cases where the names can't easily be
+ * obtained otherwise.	Names *must* be provided if row_typeid is RECORDOID.
+ * If row_typeid identifies a known composite type, colnames can be NIL to
+ * indicate the type's cataloged field names apply.  Note that colnames can
+ * be non-NIL even for a composite type, and typically is when the RowExpr
+ * was created by expanding a whole-row Var.  This is so that we can retain
+ * the column alias names of the RTE that the Var referenced (which would
+ * otherwise be very difficult to extract from the parsetree).	Like the
+ * args list, colnames is one-for-one with physical fields of the rowtype.
  */
 typedef struct RowExpr
 {

@@ -11,7 +11,7 @@
  * Transactions on Mathematical Software, Vol. 24, No. 4, December 1998,
  * pages 359-367.
  *
- * Copyright (c) 1998-2011, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/adt/numeric.c
@@ -30,6 +30,7 @@
 #include "catalog/pg_type.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/int8.h"
@@ -767,6 +768,52 @@ numeric_send(PG_FUNCTION_ARGS)
 
 
 /*
+ * numeric_transform() -
+ *
+ * Flatten calls to numeric's length coercion function that solely represent
+ * increases in allowable precision.  Scale changes mutate every datum, so
+ * they are unoptimizable.	Some values, e.g. 1E-1001, can only fit into an
+ * unconstrained numeric, so a change from an unconstrained numeric to any
+ * constrained numeric is also unoptimizable.
+ */
+Datum
+numeric_transform(PG_FUNCTION_ARGS)
+{
+	FuncExpr   *expr = (FuncExpr *) PG_GETARG_POINTER(0);
+	Node	   *ret = NULL;
+	Node	   *typmod;
+
+	Assert(IsA(expr, FuncExpr));
+	Assert(list_length(expr->args) >= 2);
+
+	typmod = (Node *) lsecond(expr->args);
+
+	if (IsA(typmod, Const) &&!((Const *) typmod)->constisnull)
+	{
+		Node	   *source = (Node *) linitial(expr->args);
+		int32		old_typmod = exprTypmod(source);
+		int32		new_typmod = DatumGetInt32(((Const *) typmod)->constvalue);
+		int32		old_scale = (old_typmod - VARHDRSZ) & 0xffff;
+		int32		new_scale = (new_typmod - VARHDRSZ) & 0xffff;
+		int32		old_precision = (old_typmod - VARHDRSZ) >> 16 & 0xffff;
+		int32		new_precision = (new_typmod - VARHDRSZ) >> 16 & 0xffff;
+
+		/*
+		 * If new_typmod < VARHDRSZ, the destination is unconstrained; that's
+		 * always OK.  If old_typmod >= VARHDRSZ, the source is constrained,
+		 * and we're OK if the scale is unchanged and the precision is not
+		 * decreasing.	See further notes in function header comment.
+		 */
+		if (new_typmod < (int32) VARHDRSZ ||
+			(old_typmod >= (int32) VARHDRSZ &&
+			 new_scale == old_scale && new_precision >= old_precision))
+			ret = relabel_to_typmod(source, new_typmod);
+	}
+
+	PG_RETURN_POINTER(ret);
+}
+
+/*
  * numeric() -
  *
  *	This is a special function called by the Postgres database system
@@ -1213,7 +1260,7 @@ width_bucket_numeric(PG_FUNCTION_ARGS)
 		NUMERIC_IS_NAN(bound2))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION),
-			  errmsg("operand, lower bound and upper bound cannot be NaN")));
+			 errmsg("operand, lower bound, and upper bound cannot be NaN")));
 
 	quick_init_var(&result_var);
 	quick_init_var(&count_var);
@@ -4198,7 +4245,7 @@ get_str_from_var(NumericVar *var, int dscale)
 	/*
 	 * Allocate space for the result.
 	 *
-	 * i is set to to # of decimal digits before decimal point. dscale is the
+	 * i is set to the # of decimal digits before decimal point. dscale is the
 	 * # of decimal digits we will print after decimal point. We may generate
 	 * as many as DEC_DIGITS-1 excess digits at the end, and in addition we
 	 * need room for sign, decimal point, null terminator.

@@ -3,7 +3,7 @@
  * postinit.c
  *	  postgres initialization utilities
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -588,7 +588,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	SharedInvalBackendInit(false);
 
 	if (MyBackendId > MaxBackends || MyBackendId <= 0)
-		elog(FATAL, "bad backend id: %d", MyBackendId);
+		elog(FATAL, "bad backend ID: %d", MyBackendId);
 
 	/* Now that we have a BackendId, we can participate in ProcSignal */
 	ProcSignalInit(MyBackendId);
@@ -675,6 +675,8 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 */
 	if (!bootstrap && !am_mirror)
 	{
+		/* statement_timestamp must be set for timeouts to work correctly */
+		SetCurrentStatementStartTimestamp();
 		StartTransactionCommand();
 		(void) GetTransactionSnapshot();
 	}
@@ -793,10 +795,10 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		 * is_authenticated_user_replication_role() performs a syscache lookup,
 		 * which cannot happen on mirror/standby.
 		 */
-		if (am_walsender && !is_authenticated_user_replication_role())
+		if (am_walsender && !superuser() && !is_authenticated_user_replication_role())
 			ereport(FATAL,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be replication role to start walsender")));
+					 errmsg("must be superuser or replication role to start walsender")));
 
 		if (am_ftshandler && !am_superuser)
 			ereport(FATAL,

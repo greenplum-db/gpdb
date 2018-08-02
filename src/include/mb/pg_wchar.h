@@ -3,7 +3,7 @@
  * pg_wchar.h
  *	  multibyte-character support
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/mb/pg_wchar.h
@@ -300,6 +300,8 @@ typedef int (*mblen_converter) (const unsigned char *mbstr);
 
 typedef int (*mbdisplaylen_converter) (const unsigned char *mbstr);
 
+typedef bool (*mbcharacter_incrementer) (unsigned char *mbstr, int len);
+
 typedef int (*mbverifier) (const unsigned char *mbstr, int len);
 
 typedef struct
@@ -411,6 +413,7 @@ extern int pg_encoding_mbcliplen(int encoding, const char *mbstr,
 extern int	pg_mbcharcliplen(const char *mbstr, int len, int imit);
 extern int	pg_encoding_max_length(int encoding);
 extern int	pg_database_encoding_max_length(void);
+extern mbcharacter_incrementer pg_database_encoding_character_incrementer(void);
 
 extern int	PrepareClientEncoding(int encoding);
 extern int	SetClientEncoding(int encoding);

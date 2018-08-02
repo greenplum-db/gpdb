@@ -273,11 +273,9 @@ insert into stabletesttab values (1000);
 -- This might evaluate the function, for cost estimate purposes. That's
 -- not of importance for this test.
 prepare myprep as select * from stabletesttab where id < stabletestfunc();
-NOTICE:  stabletestfunc executed
 -- Check that the stable function should be re-executed on every execution of the prepared statetement.
 execute myprep;
 NOTICE:  stabletestfunc executed
-NOTICE:  stabletestfunc executed
  id 
 ----
   1
@@ -285,14 +283,12 @@ NOTICE:  stabletestfunc executed
 
 execute myprep;
 NOTICE:  stabletestfunc executed
-NOTICE:  stabletestfunc executed
  id 
 ----
   1
 (1 row)
 
 execute myprep;
-NOTICE:  stabletestfunc executed
 NOTICE:  stabletestfunc executed
  id 
 ----

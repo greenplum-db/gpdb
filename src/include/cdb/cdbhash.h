@@ -97,4 +97,6 @@ extern bool typeIsArrayType(Oid typeoid);
 
 extern bool typeIsEnumType(Oid typeoid);
 
+extern bool typeIsRangeType(Oid typeoid);
+
 #endif   /* CDBHASH_H */

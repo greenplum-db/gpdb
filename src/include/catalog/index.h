@@ -4,7 +4,7 @@
  *	  prototypes for catalog/index.c.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/index.h
@@ -46,6 +46,7 @@ extern void index_check_primary_key(Relation heapRel,
 extern Oid index_create(Relation heapRelation,
 			 const char *indexRelationName,
 			 Oid indexRelationId,
+			 Oid relFileNode,
 			 IndexInfo *indexInfo,
 			 List *indexColNames,
 			 Oid accessMethodObjectId,
@@ -74,7 +75,7 @@ extern void index_constraint_create(Relation heapRelation,
 						bool update_pgindex,
 						bool allow_system_table_mods);
 
-extern void index_drop(Oid indexId);
+extern void index_drop(Oid indexId, bool concurrent);
 
 extern IndexInfo *BuildIndexInfo(Relation index);
 
@@ -115,7 +116,6 @@ extern bool reindex_relation(Oid relid, int flags);
 
 extern bool ReindexIsProcessingHeap(Oid heapOid);
 extern bool ReindexIsProcessingIndex(Oid indexOid);
-
-extern Oid IndexGetRelation(Oid indexId);
+extern Oid	IndexGetRelation(Oid indexId, bool missing_ok);
 
 #endif   /* INDEX_H */

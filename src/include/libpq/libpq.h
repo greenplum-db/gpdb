@@ -4,7 +4,7 @@
  *	  POSTGRES LIBPQ buffer structure definitions.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/libpq.h
@@ -72,6 +72,11 @@ extern bool pq_waitForDataUsingSelect(void);                /* GPDB only */
 /*
  * prototypes for functions in be-secure.c
  */
+extern char *ssl_cert_file;
+extern char *ssl_key_file;
+extern char *ssl_ca_file;
+extern char *ssl_crl_file;
+
 extern int	secure_initialize(void);
 extern bool secure_loaded_verify_locations(void);
 extern void secure_destroy(void);

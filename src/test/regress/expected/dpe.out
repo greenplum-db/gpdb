@@ -772,41 +772,27 @@ set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                                                            QUERY PLAN                                                           
 --------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000001203.07 rows=6 width=50)
-   ->  Nested Loop  (cost=10000000000.00..10000001203.07 rows=2 width=50)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000001203.42 rows=6 width=50)
+   ->  Nested Loop  (cost=10000000000.00..10000001203.42 rows=2 width=50)
          Join Filter: t.tid = dpe_single.pt.ptid
-         ->  Append  (cost=0.00..1201.64 rows=2 width=31)
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..200.27 rows=1 width=31)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+               ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
+         ->  Materialize  (cost=0.00..1201.99 rows=2 width=31)
+               ->  Append  (cost=0.00..1201.96 rows=2 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..200.27 rows=1 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..200.27 rows=1 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..200.27 rows=1 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..200.27 rows=1 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-               ->  Result  (cost=0.00..200.27 rows=1 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..200.27 rows=1 width=31)
+                     ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..200.33 rows=1 width=31)
                            Index Cond: pt1 = 'hello0'::text
-         ->  Materialize  (cost=10000000000.00..10000000001.10 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
-                     Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
-                           ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
  Optimizer: legacy query optimizer
-(34 rows)
+(20 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -822,37 +808,23 @@ set enable_indexscan=on;
 set enable_seqscan=off;
 set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid;
-                                                                                        QUERY PLAN                                                                                         
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=1.08..4243.93 rows=54 width=50)
-   ->  Nested Loop  (cost=1.08..4243.93 rows=18 width=50)
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000004242.77 rows=54 width=50)
+   ->  Nested Loop  (cost=10000000000.00..10000004242.77 rows=18 width=50)
          Join Filter: t.tid = dpe_single.pt.ptid
-         ->  Append  (cost=0.00..4237.99 rows=18 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..706.33 rows=3 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..706.33 rows=3 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..706.33 rows=3 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..706.33 rows=3 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..706.33 rows=3 width=31)
-               ->  Result  (cost=0.00..706.33 rows=3 width=31)
-                     One-Time Filter: PartSelected
-                     ->  Index Scan using ptid_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..706.33 rows=3 width=31)
-         ->  Materialize  (cost=10000000000.00..10000000001.10 rows=2 width=19)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
-                     Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
-                           ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=10000000000.00..10000000001.08 rows=2 width=19)
+               ->  Seq Scan on t  (cost=10000000000.00..10000000001.02 rows=1 width=19)
+         ->  Materialize  (cost=0.00..4238.58 rows=18 width=31)
+               ->  Append  (cost=0.00..4238.31 rows=18 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_junk_data on pt_1_prt_junk_data pt  (cost=0.00..706.39 rows=3 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_2 on pt_1_prt_2 pt  (cost=0.00..706.39 rows=3 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_3 on pt_1_prt_3 pt  (cost=0.00..706.39 rows=3 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_4 on pt_1_prt_4 pt  (cost=0.00..706.39 rows=3 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_5 on pt_1_prt_5 pt  (cost=0.00..706.39 rows=3 width=31)
+                     ->  Index Scan using ptid_idx_1_prt_6 on pt_1_prt_6 pt  (cost=0.00..706.39 rows=3 width=31)
  Optimizer: legacy query optimizer
-(28 rows)
+(14 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -913,19 +885,19 @@ select * from t, pt where t1 = pt1;
 explain select * from t, pt where tid < ptid;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000022.60 rows=36 width=50)
-   ->  Nested Loop  (cost=10000000000.00..10000000022.60 rows=12 width=50)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000023.00 rows=36 width=50)
+   ->  Nested Loop  (cost=10000000000.00..10000000023.00 rows=12 width=50)
          Join Filter: t.tid < dpe_single.pt.ptid
-         ->  Append  (cost=0.00..18.54 rows=18 width=31)
-               ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
-               ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Materialize  (cost=0.00..1.10 rows=2 width=19)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
-                     ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.08 rows=2 width=19)
+               ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=19)
+         ->  Materialize  (cost=0.00..18.81 rows=18 width=31)
+               ->  Append  (cost=0.00..18.54 rows=18 width=31)
+                     ->  Seq Scan on pt_1_prt_junk_data pt  (cost=0.00..3.09 rows=3 width=31)
+                     ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..3.09 rows=3 width=31)
+                     ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..3.09 rows=3 width=31)
+                     ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..3.09 rows=3 width=31)
+                     ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..3.09 rows=3 width=31)
+                     ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
  Optimizer: legacy query optimizer
 (14 rows)
 
@@ -1253,34 +1225,22 @@ set enable_hashjoin=off;
 set enable_seqscan=on;
 set enable_nestloop=on;
 explain select * from t, pt where a = b;
-                                                                                        QUERY PLAN                                                                                         
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..8.38 rows=5 width=16)
-   ->  Nested Loop  (cost=2.21..8.38 rows=2 width=16)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..8.02 rows=5 width=16)
+   ->  Nested Loop  (cost=0.00..8.02 rows=2 width=16)
          Join Filter: t.a = dpe_single.pt.b
-         ->  Append  (cost=0.00..5.05 rows=2 width=8)
-               ->  Result  (cost=0.00..1.01 rows=1 width=8)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_1 pt  (cost=0.00..1.01 rows=1 width=8)
-               ->  Result  (cost=0.00..1.01 rows=1 width=8)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..1.01 rows=1 width=8)
-               ->  Result  (cost=0.00..1.01 rows=1 width=8)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..1.01 rows=1 width=8)
-               ->  Result  (cost=0.00..1.01 rows=1 width=8)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..1.01 rows=1 width=8)
-               ->  Result  (cost=0.00..1.01 rows=1 width=8)
-                     One-Time Filter: PartSelected
-                     ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..1.01 rows=1 width=8)
-         ->  Materialize  (cost=2.21..2.31 rows=4 width=8)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..2.20 rows=4 width=8)
-                     Filter: t.a
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=8)
-                           ->  Seq Scan on t  (cost=0.00..2.05 rows=2 width=8)
+         ->  Seq Scan on t  (cost=0.00..2.05 rows=2 width=8)
+         ->  Materialize  (cost=0.00..5.25 rows=4 width=8)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..5.20 rows=4 width=8)
+                     ->  Append  (cost=0.00..5.05 rows=2 width=8)
+                           ->  Seq Scan on pt_1_prt_1 pt  (cost=0.00..1.01 rows=1 width=8)
+                           ->  Seq Scan on pt_1_prt_2 pt  (cost=0.00..1.01 rows=1 width=8)
+                           ->  Seq Scan on pt_1_prt_3 pt  (cost=0.00..1.01 rows=1 width=8)
+                           ->  Seq Scan on pt_1_prt_4 pt  (cost=0.00..1.01 rows=1 width=8)
+                           ->  Seq Scan on pt_1_prt_5 pt  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: legacy query optimizer
-(25 rows)
+(13 rows)
 
 select * from t, pt where a = b;
  id | a | id | b 

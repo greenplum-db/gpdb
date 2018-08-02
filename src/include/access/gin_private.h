@@ -2,7 +2,7 @@
  * gin_private.h
  *	  header file for postgres inverted index access method implementation.
  *
- *	Copyright (c) 2006-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2006-2012, PostgreSQL Global Development Group
  *
  *	src/include/access/gin_private.h
  *--------------------------------------------------------------------------
@@ -14,6 +14,7 @@
 #include "access/gin.h"
 #include "access/itup.h"
 #include "fmgr.h"
+#include "storage/bufmgr.h"
 #include "utils/rbtree.h"
 
 
@@ -23,6 +24,10 @@
  * Note: GIN does not include a page ID word as do the other index types.
  * This is OK because the opaque data is only 8 bytes and so can be reliably
  * distinguished by size.  Revisit this if the size ever increases.
+ * Further note: as of 9.2, SP-GiST also uses 8-byte special space.  This is
+ * still OK, as long as GIN isn't using all of the high-order bits in its
+ * flags word, because that way the flags word cannot match the page ID used
+ * by SP-GiST.
  */
 typedef struct GinPageOpaqueData
 {

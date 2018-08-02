@@ -51,4 +51,4 @@ unittest-check: unittest-check-local
 unittest-check-local:
 	@if [ -d $(CURDIR)/test ]; then $(MAKE) -C $(CURDIR)/test check; fi
 
-$(call recurse,coverage)
+$(call recurse,coverage maintainer-check)

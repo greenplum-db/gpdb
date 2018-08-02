@@ -121,6 +121,15 @@ struct variable
 	struct variable *next;
 };
 
+struct var_list
+{
+	int			number;
+	void	   *pointer;
+	struct var_list *next;
+};
+
+extern struct var_list *ivlist;
+
 /* Here are some methods used by the lib. */
 
 /* Returns a pointer to a string containing a simple type name. */
@@ -161,7 +170,7 @@ void		ecpg_raise(int line, int code, const char *sqlstate, const char *str);
 void		ecpg_raise_backend(int line, PGresult *result, PGconn *conn, int compat);
 char	   *ecpg_prepared(const char *, struct connection *);
 bool		ecpg_deallocate_all_conn(int lineno, enum COMPAT_MODE c, struct connection * conn);
-void		ecpg_log(const char *format,...);
+void		ecpg_log(const char *format,...) __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 bool		ecpg_auto_prepare(int, const char *, const int, char **, const char *);
 void		ecpg_init_sqlca(struct sqlca_t * sqlca);
 

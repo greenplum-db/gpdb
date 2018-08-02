@@ -381,15 +381,15 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "co_c
 CREATE TABLE
 \d+ co_compr_type_tb
                                                          Append-Only Columnar Table "public.co_compr_type_tb"
- Column |      Type       |                           Modifiers                           | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------+---------------------------------------------------------------+---------+------------------+-------------------+------------+-------------
- id     | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   | none             | 0                 | 32768      | 
- a1     | int_type1       |                                                               | plain   | zlib             | 2                 | 32768      | 
- a2     | char_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
- a3     | text_type1      |                                                               | plain   | zlib             | 7                 | 32768      | 
- a4     | date_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
- a5     | varchar_type1   |                                                               | plain   | zlib             | 9                 | 32768      | 
- a6     | timestamp_type1 |                                                               | plain   | rle_type         | 4                 | 32768      | 
+ Column |      Type       |                           Modifiers                           | Storage | Stats target | Compression Type | Compression Level | Block Size | Description
+--------+-----------------+---------------------------------------------------------------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | int_type1       |                                                               | plain   |              | zlib             | 2                 | 32768      |
+ a2     | char_type1      |                                                               | plain   |              | zlib             | 2                 | 32768      |
+ a3     | text_type1      |                                                               | plain   |              | zlib             | 7                 | 32768      |
+ a4     | date_type1      |                                                               | plain   |              | zlib             | 2                 | 32768      |
+ a5     | varchar_type1   |                                                               | plain   |              | zlib             | 9                 | 32768      |
+ a6     | timestamp_type1 |                                                               | plain   |              | rle_type         | 4                 | 32768      |
+ id     | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   |              | none             | 0                 | 32768      |
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column
@@ -511,14 +511,14 @@ Alter type int_type1 set default encoding (compresstype=rle_type,compresslevel=3
 ALTER TYPE
 \d+ co_compr_type_tb
                                                              Append-Only Columnar Table "public.co_compr_type_tb"
-     Column      |      Type       |                           Modifiers                           | Storage | Compression Type | Compression Level | Block Size | Description 
------------------+-----------------+---------------------------------------------------------------+---------+------------------+-------------------+------------+-------------
- id              | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   | none             | 0                 | 32768      | 
- a1              | int_type1       |                                                               | plain   | zlib             | 2                 | 32768      | 
- after_rename_a3 | text_type1      |                                                               | plain   | zlib             | 7                 | 32768      | 
- a4              | date_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
- a5              | varchar_type1   |                                                               | plain   | zlib             | 9                 | 32768      | 
- a6              | timestamp_type1 |                                                               | plain   | rle_type         | 4                 | 32768      | 
+     Column      |      Type       |                           Modifiers                           | Storage | Stats target | Compression Type | Compression Level | Block Size | Description
+-----------------+-----------------+---------------------------------------------------------------+---------+--------------+------------------+-------------------+------------+-------------
+ a1              | int_type1       |                                                               | plain   |              | zlib             | 2                 | 32768      |
+ a4              | date_type1      |                                                               | plain   |              | zlib             | 2                 | 32768      |
+ a5              | varchar_type1   |                                                               | plain   |              | zlib             | 9                 | 32768      |
+ a6              | timestamp_type1 |                                                               | plain   |              | rle_type         | 4                 | 32768      |
+ after_rename_a3 | text_type1      |                                                               | plain   |              | zlib             | 7                 | 32768      |
+ id              | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   |              | none             | 0                 | 32768      |
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column

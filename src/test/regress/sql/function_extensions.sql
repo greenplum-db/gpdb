@@ -66,7 +66,7 @@ select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
 create or replace function func5(int) returns int as
 $$
   select $1;
-$$ language "SQL";
+$$ language SQL;
 
 -- check prodataaccess column
 select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';

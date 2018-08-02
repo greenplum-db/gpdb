@@ -41,6 +41,7 @@ set gp_select_invisible = false;
 ALTER TABLE sto_alt_uao2_constraint  ADD CONSTRAINT lenchk CHECK (char_length(char_vary_col) < 10);
 insert into sto_alt_uao2_constraint values ('6_zero', 6, '6_zeroooooo', 6);
 ERROR:  new row for relation "sto_alt_uao2_constraint" violates check constraint "lenchk"  (seg0 127.0.0.1:25432 pid=24181)
+DETAIL:  Failing row contains (6_zero, 6, 6_zeroooooo, 6).
 select * from sto_alt_uao2_constraint order by bigint_col;
  text_col | bigint_col | char_vary_col | numeric_col 
 ----------+------------+---------------+-------------

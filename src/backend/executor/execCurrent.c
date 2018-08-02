@@ -3,7 +3,7 @@
  * execCurrent.c
  *	  executor support for WHERE CURRENT OF cursor
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	src/backend/executor/execCurrent.c
@@ -18,6 +18,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/portal.h"
+#include "utils/rel.h"
 
 #include "parser/parse_relation.h"
 #include "parser/parsetree.h"
@@ -298,7 +299,7 @@ getCurrentOf(CurrentOfExpr *cexpr,
 	{
 		ScanState  *scanstate;
 		bool		lisnull;
-		Oid			tuple_tableoid;
+		Oid tuple_tableoid PG_USED_FOR_ASSERTS_ONLY;
 		ItemPointer tuple_tid;
 
 		/*
@@ -477,6 +478,7 @@ search_plan_tree(PlanState *node, Oid table_oid)
 		case T_TableScanState:
 		case T_DynamicTableScanState:
 		case T_IndexScanState:
+		case T_IndexOnlyScanState:
 		case T_BitmapHeapScanState:
 		case T_BitmapAppendOnlyScanState:
 		case T_BitmapTableScanState:

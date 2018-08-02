@@ -7,7 +7,7 @@
  *	  transfer pending entries into the regular index structure.  This
  *	  wins because bulk insertion is much more efficient than retail.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -19,11 +19,10 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
-#include "catalog/index.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
-#include "storage/bufmgr.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 
 
 #define GIN_PAGE_FREESIZE \
@@ -290,7 +289,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 		if (metadata->head == InvalidBlockNumber)
 		{
 			/*
-			 * Main list is empty, so just copy sublist into main list
+			 * Main list is empty, so just insert sublist as main list
 			 */
 			START_CRIT_SECTION();
 
@@ -312,6 +311,14 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 			buffer = ReadBuffer(index, metadata->tail);
 			LockBuffer(buffer, GIN_EXCLUSIVE);
 			page = BufferGetPage(buffer);
+
+			rdata[0].next = rdata + 1;
+
+			rdata[1].buffer = buffer;
+			rdata[1].buffer_std = true;
+			rdata[1].data = NULL;
+			rdata[1].len = 0;
+			rdata[1].next = NULL;
 
 			Assert(GinPageGetOpaque(page)->rightlink == InvalidBlockNumber);
 
@@ -852,7 +859,7 @@ ginInsertCleanup(GinState *ginstate,
 			 * added to it.  If so, process those entries immediately.	There
 			 * shouldn't be very many, so we don't worry about the fact that
 			 * we're doing this with exclusive lock. Insertion algorithm
-			 * gurantees that inserted row(s) will not continue on next page.
+			 * guarantees that inserted row(s) will not continue on next page.
 			 * NOTE: intentionally no vacuum_delay_point in this loop.
 			 */
 			if (PageGetMaxOffsetNumber(page) != maxoff)

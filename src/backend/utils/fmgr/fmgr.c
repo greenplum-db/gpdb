@@ -3,7 +3,7 @@
  * fmgr.c
  *	  The Postgres function manager.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -226,7 +226,8 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	/*
 	 * If it has prosecdef set, non-null proconfig, or if a plugin wants to
 	 * hook function entry/exit, use fmgr_security_definer call handler ---
-	 * unless we are being called again by fmgr_security_definer.
+	 * unless we are being called again by fmgr_security_definer or
+	 * fmgr_info_other_lang.
 	 *
 	 * When using fmgr_security_definer, function stats tracking is always
 	 * disabled at the outer level, and instead we set the flag properly in
@@ -410,8 +411,8 @@ fmgr_info_other_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
 
 	/*
 	 * Look up the language's call handler function, ignoring any attributes
-	 * that would normally cause insertion of fmgr_security_definer.  We
-	 * need to get back a bare pointer to the actual C-language function.
+	 * that would normally cause insertion of fmgr_security_definer.  We need
+	 * to get back a bare pointer to the actual C-language function.
 	 */
 	fmgr_info_cxt_security(languageStruct->lanplcallfoid, &plfinfo,
 						   CurrentMemoryContext, true);

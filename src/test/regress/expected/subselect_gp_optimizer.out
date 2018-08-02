@@ -284,8 +284,8 @@ explain select array(select x from csq_m1); -- no initplan
 (4 rows)
 
 select array(select x from csq_m1); -- {1}
- ?column? 
-----------
+ array 
+-------
  {1}
 (1 row)
 
@@ -301,8 +301,8 @@ explain select array(select x from csq_d1); -- initplan
 (6 rows)
 
 select array(select x from csq_d1); -- {1}
- ?column? 
-----------
+ array 
+-------
  {1}
 (1 row)
 
@@ -335,10 +335,10 @@ FROM pg_catalog.pg_attribute a
 WHERE a.attrelid = 't3cozlib'::regclass AND a.attnum > 0 AND NOT a.attisdropped
 ORDER BY a.attnum
 ; -- expect to see 2 rows
- attname |    format_type    | ?column? | attnotnull | attnum | attstorage | col_description |   newcolumn    
----------+-------------------+----------+------------+--------+------------+-----------------+----------------
- c1      | integer           |          | f          |      1 | p          |                 | {'something'}
- c2      | character varying |          | f          |      2 | x          |                 | {'something2'}
+ attname |    format_type    | substring | attnotnull | attnum | attstorage | col_description |   newcolumn    
+---------+-------------------+-----------+------------+--------+------------+-----------------+----------------
+ c1      | integer           |           | f          |      1 | p          |                 | {'something'}
+ c2      | character varying |           | f          |      2 | x          |                 | {'something2'}
 (2 rows)
 
 --
@@ -1488,6 +1488,7 @@ EXPLAIN SELECT '' AS three, f1, f2
  Optimizer status: legacy query optimizer
 (12 rows)
 
+ANALYZE tenk1;
 EXPLAIN SELECT * FROM tenk1 a, tenk1 b
 WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                                                   QUERY PLAN                                                  
@@ -1739,8 +1740,8 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
 (14 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
- ?column? 
-----------
+ exists 
+--------
  t
 (1 row)
 

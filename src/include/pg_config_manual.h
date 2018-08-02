@@ -6,6 +6,9 @@
  * for developers.	If you edit any of these, be sure to do a *full*
  * rebuild (and an initdb if noted).
  *
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
  * src/include/pg_config_manual.h
  *------------------------------------------------------------------------
  */
@@ -22,7 +25,7 @@
 /*
  * Maximum number of arguments to a function.
  *
- * The minimum value is 9 (index cost estimation uses 9-argument functions).
+ * The minimum value is 8 (GIN indexes use 8-argument support functions).
  * The maximum possible value is around 600 (limited by index tuple size in
  * pg_proc's index; BLCKSZ larger than 8K would allow more).  Values larger
  * than needed will waste memory and processing time, but do not directly
@@ -163,6 +166,48 @@
 #define MAX_RANDOM_VALUE  (0x7FFFFFFF)
 
 /*
+ * Set the format style used by gcc to check printf type functions. We really
+ * want the "gnu_printf" style set, which includes what glibc uses, such
+ * as %m for error strings and %lld for 64 bit long longs. But not all gcc
+ * compilers are known to support it, so we just use "printf" which all
+ * gcc versions alive are known to support, except on Windows where
+ * using "gnu_printf" style makes a dramatic difference. Maybe someday
+ * we'll have a configure test for this, if we ever discover use of more
+ * variants to be necessary.
+ */
+#ifdef WIN32
+#define PG_PRINTF_ATTRIBUTE gnu_printf
+#else
+#define PG_PRINTF_ATTRIBUTE printf
+#endif
+
+/*
+ * On PPC machines, decide whether to use the mutex hint bit in LWARX
+ * instructions.  Setting the hint bit will slightly improve spinlock
+ * performance on POWER6 and later machines, but does nothing before that,
+ * and will result in illegal-instruction failures on some pre-POWER4
+ * machines.  By default we use the hint bit when building for 64-bit PPC,
+ * which should be safe in nearly all cases.  You might want to override
+ * this if you are building 32-bit code for a known-recent PPC machine.
+ */
+#ifdef HAVE_PPC_LWARX_MUTEX_HINT	/* must have assembler support in any case */
+#if defined(__ppc64__) || defined(__powerpc64__)
+#define USE_PPC_LWARX_MUTEX_HINT
+#endif
+#endif
+
+/*
+ * On PPC machines, decide whether to use LWSYNC instructions in place of
+ * ISYNC and SYNC.	This provides slightly better performance, but will
+ * result in illegal-instruction failures on some pre-POWER4 machines.
+ * By default we use LWSYNC when building for 64-bit PPC, which should be
+ * safe in nearly all cases.
+ */
+#if defined(__ppc64__) || defined(__powerpc64__)
+#define USE_PPC_LWSYNC
+#endif
+
+/*
  *------------------------------------------------------------------------
  * The following symbols are for enabling debugging code, not for
  * controlling user-visible features or resource limits.
@@ -210,7 +255,7 @@
  * Enable debugging print statements for WAL-related operations; see
  * also the wal_debug GUC var.
  */
-#define WAL_DEBUG
+/* #define WAL_DEBUG */
 
 /*
  * Enable injecting faults.

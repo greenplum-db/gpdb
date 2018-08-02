@@ -29,7 +29,7 @@
  * at runtime.	If we knew exactly which functions require collation
  * information, we could throw those errors at parse time instead.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -51,7 +51,7 @@
 /*
  * Collation strength (the SQL standard calls this "derivation").  Order is
  * chosen to allow comparisons to work usefully.  Note: the standard doesn't
- * seem to distingish between NONE and CONFLICT.
+ * seem to distinguish between NONE and CONFLICT.
  */
 typedef enum
 {

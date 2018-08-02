@@ -9,6 +9,8 @@ COMMENT ON TABLE tmp_wrong IS 'table comment';
 ERROR:  relation "tmp_wrong" does not exist
 COMMENT ON TABLE tmp IS 'table comment';
 COMMENT ON TABLE tmp IS NULL;
+ALTER TABLE tmp ADD COLUMN xmin integer; -- fails
+ERROR:  column name "xmin" conflicts with a system column name
 ALTER TABLE tmp ADD COLUMN a int4 default 3;
 ALTER TABLE tmp ADD COLUMN b name;
 ALTER TABLE tmp ADD COLUMN c text;
@@ -130,6 +132,10 @@ DROP TABLE tmp_new;
 DROP TABLE tmp_new2;
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)
+ALTER INDEX IF EXISTS __onek_unique1 RENAME TO tmp_onek_unique1;
+NOTICE:  relation "__onek_unique1" does not exist, skipping
+ALTER INDEX IF EXISTS __tmp_onek_unique1 RENAME TO onek_unique1;
+NOTICE:  relation "__tmp_onek_unique1" does not exist, skipping
 ALTER INDEX onek_unique1 RENAME TO tmp_onek_unique1;
 ALTER INDEX tmp_onek_unique1 RENAME TO onek_unique1;
 -- renaming views
@@ -156,6 +162,149 @@ DROP VIEW tmp_view_new;
 -- toast-like relation name
 alter table stud_emp rename to pg_toast_stud_emp;
 alter table pg_toast_stud_emp rename to stud_emp;
+-- renaming index should rename constraint as well
+ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "onek_unique1_key" for table "onek"
+ALTER INDEX onek_unique1_key RENAME TO onek_unique1_constraint_foo;
+ALTER TABLE onek DROP CONSTRAINT onek_unique1_constraint_foo;
+-- renaming constraint
+ALTER TABLE onek ADD CONSTRAINT onek_check_constraint CHECK (unique1 >= 0);
+ALTER TABLE onek RENAME CONSTRAINT onek_check_constraint TO onek_check_constraint_foo;
+ALTER TABLE onek DROP CONSTRAINT onek_check_constraint_foo;
+-- renaming constraint should rename index as well
+ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "onek_unique1_key" for table "onek"
+DROP INDEX onek_unique1_key;  -- to see whether it's there
+ERROR:  cannot drop index onek_unique1_key because constraint onek_unique1_constraint on table onek requires it
+HINT:  You can drop constraint onek_unique1_constraint on table onek instead.
+ALTER TABLE onek RENAME CONSTRAINT onek_unique1_constraint TO onek_unique1_constraint_foo;
+DROP INDEX onek_unique1_constraint_foo;  -- to see whether it's there
+ERROR:  cannot drop index onek_unique1_constraint_foo because constraint onek_unique1_constraint_foo on table onek requires it
+HINT:  You can drop constraint onek_unique1_constraint_foo on table onek instead.
+ALTER TABLE onek DROP CONSTRAINT onek_unique1_constraint_foo;
+-- renaming constraints vs. inheritance
+CREATE TABLE constraint_rename_test (a int CONSTRAINT con1 CHECK (a > 0), b int, c int);
+\d constraint_rename_test
+Table "public.constraint_rename_test"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+Check constraints:
+    "con1" CHECK (a > 0)
+Distributed by: (a)
+
+CREATE TABLE constraint_rename_test2 (a int CONSTRAINT con1 CHECK (a > 0), d int) INHERITS (constraint_rename_test);
+NOTICE:  merging column "a" with inherited definition
+NOTICE:  merging constraint "con1" with inherited definition
+\d constraint_rename_test2
+Table "public.constraint_rename_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+ d      | integer | 
+Check constraints:
+    "con1" CHECK (a > 0)
+Inherits: constraint_rename_test
+Distributed by: (a)
+
+ALTER TABLE constraint_rename_test2 RENAME CONSTRAINT con1 TO con1foo; -- fail
+ERROR:  cannot rename inherited constraint "con1"
+ALTER TABLE ONLY constraint_rename_test RENAME CONSTRAINT con1 TO con1foo; -- fail
+ERROR:  inherited constraint "con1" must be renamed in child tables too
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con1 TO con1foo; -- ok
+\d constraint_rename_test
+Table "public.constraint_rename_test"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+Check constraints:
+    "con1foo" CHECK (a > 0)
+Number of child tables: 1 (Use \d+ to list them.)
+Distributed by: (a)
+
+\d constraint_rename_test2
+Table "public.constraint_rename_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+ d      | integer | 
+Check constraints:
+    "con1foo" CHECK (a > 0)
+Inherits: constraint_rename_test
+Distributed by: (a)
+
+ALTER TABLE constraint_rename_test ADD CONSTRAINT con2 CHECK NO INHERIT (b > 0);
+ALTER TABLE ONLY constraint_rename_test RENAME CONSTRAINT con2 TO con2foo; -- ok
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con2foo TO con2bar; -- ok
+\d constraint_rename_test
+Table "public.constraint_rename_test"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+Check constraints:
+    "con1foo" CHECK (a > 0)
+    "con2bar" CHECK NO INHERIT (b > 0)
+Number of child tables: 1 (Use \d+ to list them.)
+Distributed by: (a)
+
+\d constraint_rename_test2
+Table "public.constraint_rename_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+ d      | integer | 
+Check constraints:
+    "con1foo" CHECK (a > 0)
+Inherits: constraint_rename_test
+Distributed by: (a)
+
+ALTER TABLE constraint_rename_test ADD CONSTRAINT con3 PRIMARY KEY (a);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "constraint_rename_test_pkey" for table "constraint_rename_test"
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con3 TO con3foo; -- ok
+\d constraint_rename_test
+Table "public.constraint_rename_test"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | not null
+ b      | integer | 
+ c      | integer | 
+Indexes:
+    "con3foo" PRIMARY KEY, btree (a)
+Check constraints:
+    "con1foo" CHECK (a > 0)
+    "con2bar" CHECK NO INHERIT (b > 0)
+Number of child tables: 1 (Use \d+ to list them.)
+Distributed by: (a)
+
+\d constraint_rename_test2
+Table "public.constraint_rename_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | integer | 
+ c      | integer | 
+ d      | integer | 
+Check constraints:
+    "con1foo" CHECK (a > 0)
+Inherits: constraint_rename_test
+Distributed by: (a)
+
+DROP TABLE constraint_rename_test2;
+DROP TABLE constraint_rename_test;
+ALTER TABLE IF EXISTS constraint_rename_test ADD CONSTRAINT con4 UNIQUE (a);
+NOTICE:  relation "constraint_rename_test" does not exist, skipping
 -- FOREIGN KEY CONSTRAINT adding TEST
 CREATE TABLE tmp2 (a int primary key) distributed by (a);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "tmp2_pkey" for table "tmp2"
@@ -202,14 +351,120 @@ DELETE FROM tmp3 where a=5;
 ALTER TABLE tmp3 validate constraint tmpconstr;
 ALTER TABLE tmp3 validate constraint tmpconstr;
 --end_ignore
+-- Try a non-verified CHECK constraint
+ALTER TABLE tmp3 ADD CONSTRAINT b_greater_than_ten CHECK (b > 10); -- fail
+ERROR:  check constraint "b_greater_than_ten" is violated by some row
+ALTER TABLE tmp3 ADD CONSTRAINT b_greater_than_ten CHECK (b > 10) NOT VALID; -- succeeds
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- fails
+ERROR:  check constraint "b_greater_than_ten" is violated by some row
+DELETE FROM tmp3 WHERE NOT b > 10;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- succeeds
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- succeeds
+-- Test inherited NOT VALID CHECK constraints
+select * from tmp3;
+ a | b  
+---+----
+ 1 | 20
+(1 row)
+
+CREATE TABLE tmp6 () INHERITS (tmp3);
+CREATE TABLE tmp7 () INHERITS (tmp3);
+NOTICE:  Table has parent, setting distribution columns to match parent table
+INSERT INTO tmp6 VALUES (6, 30), (1, 16);
+ALTER TABLE tmp3 ADD CONSTRAINT b_le_20 CHECK (b <= 20) NOT VALID;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_le_20;	-- fails
+ERROR:  check constraint "b_le_20" is violated by some row
+DELETE FROM tmp6 WHERE b > 20;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_le_20;	-- succeeds
+-- An already validated constraint must not be revalidated
+CREATE FUNCTION boo(int) RETURNS int IMMUTABLE STRICT LANGUAGE plpgsql AS $$ BEGIN RAISE NOTICE 'boo: %', $1; RETURN $1; END; $$;
+INSERT INTO tmp7 VALUES (1, 18);
+ALTER TABLE tmp7 ADD CONSTRAINT identity CHECK (b = boo(b));
+NOTICE:  boo: 18
+ALTER TABLE tmp3 ADD CONSTRAINT IDENTITY check (b = boo(b)) NOT VALID;
+NOTICE:  merging constraint "identity" with inherited definition
+ALTER TABLE tmp3 VALIDATE CONSTRAINT identity;
+NOTICE:  boo: 16  (seg1 172.17.0.2:25433 pid=452490)
+NOTICE:  boo: 20  (seg0 172.17.0.2:25432 pid=452488)
 -- Try (and fail) to create constraint from tmp5(a) to tmp4(a) - unique constraint on
 -- tmp4 is a,b
 ALTER TABLE tmp5 add constraint tmpconstr foreign key(a) references tmp4(a) match full;
 ERROR:  there is no unique constraint matching given keys for referenced table "tmp4"
+DROP TABLE tmp7;
+DROP TABLE tmp6;
 DROP TABLE tmp5;
 DROP TABLE tmp4;
 DROP TABLE tmp3;
 DROP TABLE tmp2;
+-- NOT VALID with plan invalidation -- ensure we don't use a constraint for
+-- exclusion until validated
+set constraint_exclusion TO 'partition';
+create table nv_parent (d date);
+create table nv_child_2010 () inherits (nv_parent);
+create table nv_child_2011 () inherits (nv_parent);
+alter table nv_child_2010 add check (d between '2010-01-01'::date and '2010-12-31'::date) not valid;
+alter table nv_child_2011 add check (d between '2011-01-01'::date and '2011-12-31'::date) not valid;
+explain (costs off) select * from nv_parent where d between '2011-08-01' and '2011-08-31';
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+         ->  Seq Scan on nv_child_2010 nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+         ->  Seq Scan on nv_child_2011 nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+ Optimizer: legacy query optimizer
+(9 rows)
+
+create table nv_child_2009 (check (d between '2009-01-01'::date and '2009-12-31'::date)) inherits (nv_parent);
+explain (costs off) select * from nv_parent where d between '2011-08-01'::date and '2011-08-31'::date;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+         ->  Seq Scan on nv_child_2010 nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+         ->  Seq Scan on nv_child_2011 nv_parent
+               Filter: d >= '08-01-2011'::date AND d <= '08-31-2011'::date
+ Optimizer: legacy query optimizer
+(9 rows)
+
+explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+         ->  Seq Scan on nv_child_2010 nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+         ->  Seq Scan on nv_child_2011 nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+         ->  Seq Scan on nv_child_2009 nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+ Optimizer: legacy query optimizer
+(11 rows)
+
+-- after validation, the constraint should be used
+alter table nv_child_2011 VALIDATE CONSTRAINT nv_child_2011_d_check;
+explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+         ->  Seq Scan on nv_child_2010 nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+         ->  Seq Scan on nv_child_2009 nv_parent
+               Filter: d >= '08-01-2009'::date AND d <= '08-31-2009'::date
+ Optimizer: legacy query optimizer
+(9 rows)
+
 -- Foreign key adding test with mixed types
 -- Note: these tables are TEMP to avoid name conflicts when this test
 -- is run in parallel with foreign_key.sql.
@@ -294,6 +549,7 @@ alter table atacc1 add constraint atacc_test1 check (test>3);
 -- should fail
 insert into atacc1 (test) values (2);
 ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"
+DETAIL:  Failing row contains (2).
 -- should succeed
 insert into atacc1 (test) values (4);
 drop table atacc1;
@@ -319,6 +575,7 @@ alter table atacc1 add constraint atacc_test1 check (test+test2<test3*4);
 -- should fail
 insert into atacc1 (test,test2,test3) values (4,4,2);
 ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"
+DETAIL:  Failing row contains (4, 4, 2).
 -- should succeed
 insert into atacc1 (test,test2,test3) values (4,4,5);
 drop table atacc1;
@@ -328,6 +585,7 @@ alter table atacc1 add check (test2>test);
 -- should fail for $2
 insert into atacc1 (test2, test) values (3, 4);
 ERROR:  new row for relation "atacc1" violates check constraint "atacc1_check"
+DETAIL:  Failing row contains (4, 3).
 drop table atacc1;
 -- inheritance related tests
 create table atacc1 (test int);
@@ -338,10 +596,12 @@ alter table atacc2 add constraint foo check (test2>0);
 -- fail and then succeed on atacc2
 insert into atacc2 (test2) values (-3);
 ERROR:  new row for relation "atacc2" violates check constraint "foo"
+DETAIL:  Failing row contains (-3).
 insert into atacc2 (test2) values (3);
 -- fail and then succeed on atacc3
 insert into atacc3 (test2) values (-3);
 ERROR:  new row for relation "atacc3" violates check constraint "foo"
+DETAIL:  Failing row contains (null, -3, null).
 insert into atacc3 (test2) values (3);
 drop table atacc3;
 drop table atacc2;
@@ -399,21 +659,21 @@ select test2 from atacc2;
 drop table atacc2 cascade;
 NOTICE:  drop cascades to table atacc3
 drop table atacc1;
--- adding only to a parent is disallowed as of 8.4
+-- adding only to a parent is allowed as of 9.2
 create table atacc1 (test int);
 create table atacc2 (test2 int) inherits (atacc1);
--- fail:
-alter table only atacc1 add constraint foo check (test>0);
-ERROR:  constraint must be added to child tables too
 -- ok:
-alter table only atacc2 add constraint foo check (test>0);
--- check constraint not there on parent
-insert into atacc1 (test) values (-3);
-insert into atacc1 (test) values (3);
--- check constraint is there on child
+alter table atacc1 add constraint foo check no inherit (test>0);
+-- check constraint is not there on child
 insert into atacc2 (test) values (-3);
-ERROR:  new row for relation "atacc2" violates check constraint "foo"
-insert into atacc2 (test) values (3);
+-- check constraint is there on parent
+insert into atacc1 (test) values (-3);
+ERROR:  new row for relation "atacc1" violates check constraint "foo"
+DETAIL:  Failing row contains (-3).
+insert into atacc1 (test) values (3);
+-- fail, violating row:
+alter table atacc2 add constraint foo check no inherit (test>0);
+ERROR:  check constraint "foo" is violated by some row
 drop table atacc2;
 drop table atacc1;
 -- test unique constraint adding
@@ -438,7 +698,7 @@ alter table atacc1 add constraint atacc_oid1 unique(oid);
 ERROR:  cannot create unique index on system column
 -- try to create duplicates via alter table using - should fail
 alter table atacc1 alter column test type integer using 0;
-ERROR:  could not create unique index "atacc1_test_key"
+ERROR:  could not create unique index "atacc1_test_key"  (seg2 172.17.0.2:25434 pid=389538)
 DETAIL:  Key (test)=(0) is duplicated.
 drop table atacc1;
 -- let's do one where the unique constraint fails when added
@@ -504,6 +764,7 @@ insert into atacc1 (test) values (4);
 -- inserting NULL should fail
 insert into atacc1 (test) values(NULL);
 ERROR:  null value in column "test" violates not-null constraint
+DETAIL:  Failing row contains (null).
 -- try adding a second primary key (should fail)
 alter table atacc1 add constraint atacc_oid1 primary key(oid);
 ERROR:  multiple primary keys for table "atacc1" are not allowed
@@ -569,10 +830,13 @@ ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
 DETAIL:  Key (test, test2)=(4, 4) already exists.
 insert into atacc1 (test,test2) values (NULL,3);
 ERROR:  null value in column "test" violates not-null constraint
+DETAIL:  Failing row contains (null, 3).
 insert into atacc1 (test,test2) values (3, NULL);
 ERROR:  null value in column "test2" violates not-null constraint
+DETAIL:  Failing row contains (3, null).
 insert into atacc1 (test,test2) values (NULL,NULL);
 ERROR:  null value in column "test" violates not-null constraint
+DETAIL:  Failing row contains (null, null).
 -- should all succeed
 insert into atacc1 (test,test2) values (4,5);
 insert into atacc1 (test,test2) values (5,4);
@@ -588,6 +852,7 @@ ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
 DETAIL:  Key (test)=(3) already exists.
 insert into atacc1 (test2, test) values (1, NULL);
 ERROR:  null value in column "test" violates not-null constraint
+DETAIL:  Failing row contains (null, 1).
 drop table atacc1;
 -- alter table / alter column [set/drop] not null tests
 -- try altering system catalogs, should fail
@@ -640,8 +905,10 @@ NOTICE:  Table has parent, setting distribution columns to match parent table
 alter table parent alter a set not null;
 insert into parent values (NULL);
 ERROR:  null value in column "a" violates not-null constraint
+DETAIL:  Failing row contains (null).
 insert into child (a, b) values (NULL, 'foo');
 ERROR:  null value in column "a" violates not-null constraint
+DETAIL:  Failing row contains (null, foo).
 alter table parent alter a drop not null;
 insert into parent values (NULL);
 insert into child (a, b) values (NULL, 'foo');
@@ -653,13 +920,16 @@ delete from parent;
 alter table only parent alter a set not null;
 insert into parent values (NULL);
 ERROR:  null value in column "a" violates not-null constraint
+DETAIL:  Failing row contains (null).
 alter table child alter a set not null;
 insert into child (a, b) values (NULL, 'foo');
 ERROR:  null value in column "a" violates not-null constraint
+DETAIL:  Failing row contains (null, foo).
 delete from child;
 alter table child alter a set not null;
 insert into child (a, b) values (NULL, 'foo');
 ERROR:  null value in column "a" violates not-null constraint
+DETAIL:  Failing row contains (null, foo).
 drop table child;
 drop table parent;
 -- test setting and removing default values
@@ -1096,6 +1366,11 @@ ERROR:  inherited column "a" must be renamed in child tables too
 -- these should work
 alter table renameColumn rename column a to d;
 alter table renameColumnChild rename column b to a;
+-- these should work
+alter table if exists doesnt_exist_tab rename column a to d;
+NOTICE:  relation "doesnt_exist_tab" does not exist, skipping
+alter table if exists doesnt_exist_tab rename column b to a;
+NOTICE:  relation "doesnt_exist_tab" does not exist, skipping
 -- this should work
 alter table renameColumn add column w int;
 -- this should fail
@@ -1399,6 +1674,7 @@ NOTICE:  merging definition of column "f2" for child "c1"
 insert into p1 values (1,2,'abc');
 insert into c1 values(11,'xyz',33,0); -- should fail
 ERROR:  new row for relation "c1" violates check constraint "p1_a1_check"
+DETAIL:  Failing row contains (11, xyz, 33, 0).
 insert into c1 values(11,'xyz',33,22);
 select * from p1;
  f1 | a1 | f2  
@@ -1460,7 +1736,8 @@ select f3,max(f1) from foo group by f3;
 
 -- Simple tests for alter table column type
 alter table foo alter f1 TYPE integer; -- fails
-ERROR:  column "f1" cannot be cast to type integer
+ERROR:  column "f1" cannot be cast automatically to type integer
+HINT:  Specify a USING expression to perform the conversion.
 alter table foo alter f1 TYPE varchar(10);
 create table anothertab (atcol1 serial8, atcol2 boolean,
 	constraint anothertab_chk check (atcol1 <= 3))
@@ -1476,7 +1753,8 @@ select * from anothertab;
 (2 rows)
 
 alter table anothertab alter column atcol1 type boolean; -- fails
-ERROR:  column "atcol1" cannot be cast to type boolean
+ERROR:  column "atcol1" cannot be cast automatically to type boolean
+HINT:  Specify a USING expression to perform the conversion.
 alter table anothertab alter column atcol1 type integer;
 select * from anothertab;
  atcol1 | atcol2 
@@ -1487,6 +1765,7 @@ select * from anothertab;
 
 insert into anothertab (atcol1, atcol2) values (45, null); -- fails
 ERROR:  new row for relation "anothertab" violates check constraint "anothertab_chk"
+DETAIL:  Failing row contains (45, null).
 insert into anothertab (atcol1, atcol2) values (default, null);
 select * from anothertab;
  atcol1 | atcol2 
@@ -1510,7 +1789,7 @@ select * from anothertab;
 
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
-ERROR:  default for column "atcol1" cannot be cast to type boolean
+ERROR:  default for column "atcol1" cannot be cast automatically to type boolean
 alter table anothertab alter column atcol1 drop default;
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
@@ -1561,7 +1840,7 @@ drop table another;
 create table tab1 (a int, b text);
 create table tab2 (x int, y tab1);
 alter table tab1 alter column b type varchar; -- fails
-ERROR:  cannot alter table "tab1" because column "tab2"."y" uses its rowtype
+ERROR:  cannot alter table "tab1" because column "tab2.y" uses its row type
 -- disallow recursive containment of row types
 create temp table recur1 (f1 int);
 alter table recur1 add column f2 recur1; -- fails
@@ -1620,92 +1899,90 @@ and c.relname != 'my_locks'
 group by c.relname;
 create table alterlock (f1 int primary key, f2 text);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "alterlock_pkey" for table "alterlock"
--- share update exclusive
 begin; alter table alterlock alter column f2 set statistics 150;
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
 (1 row)
 
 rollback;
 begin; alter table alterlock cluster on alterlock_pkey;
 select * from my_locks order by 1;
-    relname     |       max_lockmode       
-----------------+--------------------------
- alterlock      | ShareUpdateExclusiveLock
- alterlock_pkey | ShareUpdateExclusiveLock
+    relname     |    max_lockmode     
+----------------+---------------------
+ alterlock      | AccessExclusiveLock
+ alterlock_pkey | AccessExclusiveLock
 (2 rows)
 
 commit;
 begin; alter table alterlock set without cluster;
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
 (1 row)
 
 commit;
 begin; alter table alterlock set (fillfactor = 100);
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
- pg_toast  | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
+ pg_toast  | AccessExclusiveLock
 (2 rows)
 
 commit;
 begin; alter table alterlock reset (fillfactor);
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
- pg_toast  | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
+ pg_toast  | AccessExclusiveLock
 (2 rows)
 
 commit;
 begin; alter table alterlock set (toast.autovacuum_enabled = off);
 WARNING:  autovacuum is not supported in Greenplum
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
- pg_toast  | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
+ pg_toast  | AccessExclusiveLock
 (2 rows)
 
 commit;
 begin; alter table alterlock set (autovacuum_enabled = off);
 WARNING:  autovacuum is not supported in Greenplum
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
- pg_toast  | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
+ pg_toast  | AccessExclusiveLock
 (2 rows)
 
 commit;
 begin; alter table alterlock alter column f2 set (n_distinct = 1);
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
 (1 row)
 
 rollback;
 begin; alter table alterlock alter column f2 set storage extended;
 select * from my_locks order by 1;
-  relname  |       max_lockmode       
------------+--------------------------
- alterlock | ShareUpdateExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
 (1 row)
 
 rollback;
--- share row exclusive
 begin; alter table alterlock alter column f2 set default 'x';
 select * from my_locks order by 1;
-  relname  |     max_lockmode      
------------+-----------------------
- alterlock | ShareRowExclusiveLock
+  relname  |    max_lockmode     
+-----------+---------------------
+ alterlock | AccessExclusiveLock
 (1 row)
 
 rollback;
@@ -1760,7 +2037,7 @@ create view alter1.v1 as select * from alter1.t1;
 create function alter1.plus1(int) returns int as 'select $1+1' language sql CONTAINS SQL;
 create domain alter1.posint integer check (value > 0);
 create type alter1.ctype as (f1 int, f2 text);
-create function alter1.same(alter1.ctype, alter1.ctype) returns boolean language sql 
+create function alter1.same(alter1.ctype, alter1.ctype) returns boolean language sql
 as 'select $1.f1 is not distinct from $2.f1 and $1.f2 is not distinct from $2.f2';
 create operator alter1.=(procedure = alter1.same, leftarg  = alter1.ctype, rightarg = alter1.ctype);
 create operator class alter1.ctype_hash_ops default for type alter1.ctype using hash as
@@ -1899,7 +2176,7 @@ DROP TYPE test_type;
 CREATE TYPE test_type1 AS (a int, b text);
 CREATE TABLE test_tbl1 (x int, y test_type1);
 ALTER TYPE test_type1 ALTER ATTRIBUTE b TYPE varchar; -- fails
-ERROR:  cannot alter type "test_type1" because column "test_tbl1"."y" uses it
+ERROR:  cannot alter type "test_type1" because column "test_tbl1.y" uses it
 CREATE TYPE test_type2 AS (a int, b text);
 CREATE TABLE test_tbl2 OF test_type2;
 CREATE TABLE test_tbl2_subclass () INHERITS (test_tbl2);
@@ -2066,6 +2343,55 @@ ALTER TABLE tt7 NOT OF;
  y      | numeric(8,2) | 
 Distributed by: (x)
 
+-- make sure we can drop a constraint on the parent but it remains on the child
+CREATE TABLE test_drop_constr_parent (c text CHECK (c IS NOT NULL));
+CREATE TABLE test_drop_constr_child () INHERITS (test_drop_constr_parent);
+ALTER TABLE ONLY test_drop_constr_parent DROP CONSTRAINT "test_drop_constr_parent_c_check";
+-- should fail
+INSERT INTO test_drop_constr_child (c) VALUES (NULL);
+ERROR:  new row for relation "test_drop_constr_child" violates check constraint "test_drop_constr_parent_c_check"
+DETAIL:  Failing row contains (null).
+DROP TABLE test_drop_constr_parent CASCADE;
+NOTICE:  drop cascades to table test_drop_constr_child
+--
+-- IF EXISTS test
+--
+ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
+NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
+NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
+NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;
+NOTICE:  relation "tt8" does not exist, skipping
+ALTER TABLE IF EXISTS tt8 SET SCHEMA alter2;
+NOTICE:  relation "tt8" does not exist, skipping
+CREATE TABLE tt8(a int);
+CREATE SCHEMA alter2;
+ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
+NOTICE:  updating distribution policy to match new primary key
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "tt8_pkey" for table "tt8"
+ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
+ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
+ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;
+ALTER TABLE IF EXISTS tt8 SET SCHEMA alter2;
+\d alter2.tt8
+          Table "alter2.tt8"
+ Column |  Type   |     Modifiers      
+--------+---------+--------------------
+ a      | integer | 
+ f1     | integer | not null default 0
+Indexes:
+    "tt8_pkey" PRIMARY KEY, btree (f1)
+Check constraints:
+    "tt8_f_check" CHECK (f1 >= 0 AND f1 <= 10)
+Distributed by: (f1)
+
+DROP TABLE alter2.tt8;
+DROP SCHEMA alter2;
 --
 -- Test for splitting after dropping a column
 --

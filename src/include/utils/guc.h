@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * src/include/utils/guc.h
@@ -124,7 +124,7 @@ typedef struct ConfigVariable
 } ConfigVariable;
 
 extern bool ParseConfigFile(const char *config_file, const char *calling_file,
-				int depth, int elevel,
+				bool strict, int depth, int elevel,
 				ConfigVariable **head_p, ConfigVariable **tail_p);
 extern bool ParseConfigFp(FILE *fp, const char *config_file,
 			  int depth, int elevel,
@@ -168,7 +168,7 @@ typedef enum
 	/* Types of set_config_option actions */
 	GUC_ACTION_SET,				/* regular SET command */
 	GUC_ACTION_LOCAL,			/* SET LOCAL command */
-	GUC_ACTION_SAVE				/* function SET option */
+	GUC_ACTION_SAVE				/* function SET option, or temp assignment */
 } GucAction;
 
 #define GUC_QUALIFIER_SEPARATOR '.'
@@ -318,6 +318,8 @@ extern int	log_min_messages;
 extern int	client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
+
+extern int	temp_file_limit;
 
 extern int	num_temp_buffers;
 
@@ -657,7 +659,8 @@ extern void DefineCustomEnumVariable(
 
 extern void EmitWarningsOnPlaceholders(const char *className);
 
-extern const char *GetConfigOption(const char *name, bool restrict_superuser);
+extern const char *GetConfigOption(const char *name, bool missing_ok,
+				bool restrict_superuser);
 extern const char *GetConfigOptionResetString(const char *name);
 extern void ProcessConfigFile(GucContext context);
 extern void InitializeGUCOptions(void);
@@ -671,9 +674,9 @@ extern void ParseLongOption(const char *string, char **name, char **value);
 extern bool parse_int(const char *value, int *result, int flags,
 		  const char **hintmsg);
 extern bool parse_real(const char *value, double *result);
-extern bool set_config_option(const char *name, const char *value,
+extern int set_config_option(const char *name, const char *value,
 				  GucContext context, GucSource source,
-				  GucAction action, bool changeVal);
+				  GucAction action, bool changeVal, int elevel);
 extern char *GetConfigOptionByName(const char *name, const char **varname);
 extern void GetConfigOptionByNum(int varnum, const char **values, bool *noshow);
 extern int	GetNumConfigOptions(void);

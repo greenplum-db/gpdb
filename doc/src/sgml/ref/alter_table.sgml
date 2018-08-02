@@ -21,18 +21,21 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER TABLE [ONLY] name RENAME [COLUMN] column TO new_column
+ALTER TABLE [ IF EXISTS ] [ONLY] name RENAME [COLUMN] column TO new_column
 
-ALTER TABLE name RENAME TO new_name
+ALTER TABLE [ IF EXISTS ] name RENAME TO new_name
 
-ALTER TABLE name SET SCHEMA new_schema
+ALTER TABLE [ IF EXISTS ] [ ONLY ] name
+    RENAME CONSTRAINT constraint_name TO new_constraint_name
 
-ALTER TABLE [ONLY] name SET 
+ALTER TABLE [ IF EXISTS ] name SET SCHEMA new_schema
+
+ALTER TABLE [ IF EXISTS ] [ONLY] name SET 
      WITH (REORGANIZE=true|false) 
    | DISTRIBUTED BY (column, [ ... ] ) 
    | DISTRIBUTED RANDOMLY 
 
-ALTER TABLE [ONLY] name action [, ... ]
+ALTER TABLE [ IF EXISTS ] [ONLY] name action [, ... ]
 
 ALTER TABLE name 
    [ ALTER PARTITION { partition_name | FOR (RANK(number)) 
@@ -167,6 +170,16 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
+    <term><literal>IF EXISTS</literal></term>
+    <listitem>
+     <para>
+      Do not throw an error if the table does not exist. A notice is issued
+      in this case.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>SET DATA TYPE</literal></term>
     <listitem>
      <para>
@@ -291,27 +304,23 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>ADD <replaceable class="PARAMETER">table_constraint</replaceable>
-          [ NOT VALID ]</literal></term>
+    <term><literal>ADD <replaceable class="PARAMETER">table_constraint</replaceable> [ NOT VALID ]</literal></term>
     <listitem>
      <para>
       This form adds a new constraint to a table using the same syntax as
-      <xref linkend="SQL-CREATETABLE">. Newly added foreign key constraints can
-      also be defined as <literal>NOT VALID</literal> to avoid the
-      potentially lengthy initial check that must otherwise be performed.
-      Constraint checks are skipped at create table time, so
-      <xref linkend="SQL-CREATETABLE"> does not contain this option.
-     </para>
-    </listitem>
-   </varlistentry>
-
-   <varlistentry>
-    <term><literal>VALIDATE CONSTRAINT</literal></term>
-    <listitem>
-     <para>
-      This form validates a foreign key constraint that was previously created
-      as <literal>NOT VALID</literal>. Constraints already marked valid do not
-      cause an error response.
+      <xref linkend="SQL-CREATETABLE">, plus the option <literal>NOT
+      VALID</literal>, which is currently only allowed for foreign key
+      and CHECK constraints.
+      If the constraint is marked <literal>NOT VALID</literal>, the
+      potentially-lengthy initial check to verify that all rows in the table
+      satisfy the constraint is skipped.  The constraint will still be
+      enforced against subsequent inserts or updates (that is, they'll fail
+      unless there is a matching row in the referenced table, in the case
+      of foreign keys; and they'll fail unless the new row matches the
+      specified check constraints).  But the
+      database will not assume that the constraint holds for all rows in
+      the table, until it is validated by using the <literal>VALIDATE
+      CONSTRAINT</literal> option.
      </para>
     </listitem>
    </varlistentry>
@@ -364,6 +373,21 @@ Where column_reference_storage_directive is:
        official constraint using this syntax.  See the example below.
       </para>
      </note>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>VALIDATE CONSTRAINT</literal></term>
+    <listitem>
+     <para>
+      This form validates a foreign key or check constraint that was previously created
+      as <literal>NOT VALID</literal>, by scanning the table to ensure there
+      are no rows for which the constraint is not satisfied.
+      Nothing happens if the constraint is already marked valid.
+      The value of separating validation from initial creation of the
+      constraint is that validation requires a lesser lock on the table
+      than constraint creation does.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -421,7 +445,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>CLUSTER</literal></term>
+    <term><literal>CLUSTER ON</literal></term>
     <listitem>
      <para>
       This form selects the default index for future
@@ -528,7 +552,11 @@ Where column_reference_storage_directive is:
 
      <para>
       There must also be matching child-table constraints for all
-      <literal>CHECK</literal> constraints of the parent. Currently
+      <literal>CHECK</literal> constraints of the parent, except those
+      marked non-inheritable (that is, created with <literal>ALTER TABLE ONLY</literal>)
+      in the parent, which are ignored; all child-table constraints matched
+      must not be marked non-inheritable.
+      Currently
       <literal>UNIQUE</literal>, <literal>PRIMARY KEY</literal>, and
       <literal>FOREIGN KEY</literal> constraints are not considered, but
       this might change in the future.
@@ -601,8 +629,8 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
       The <literal>RENAME</literal> forms change the name of a table
-      (or an index, sequence, or view) or the name of an individual column in
-      a table. There is no effect on the stored data.
+      (or an index, sequence, or view), the name of an individual column in
+      a table, or the name of a constraint of the table. There is no effect on the stored data.
      </para>
     </listitem>
    </varlistentry>
@@ -648,6 +676,9 @@ Where column_reference_storage_directive is:
    the table's schema.  (These restrictions enforce that altering the owner
    doesn't do anything you couldn't do by dropping and recreating the table.
    However, a superuser can alter ownership of any table anyway.)
+   To add a column or alter a column type or use the <literal>OF</literal>
+   clause, you must also have <literal>USAGE</literal> privilege on the data
+   type.
   </para>
  </refsect1>
 
@@ -922,7 +953,8 @@ Where column_reference_storage_directive is:
 
    <para>
     If a table has any descendant tables, it is not permitted to add,
-    rename, or change the type of a column in the parent table without doing
+    rename, or change the type of a column, or rename an inherited constraint
+    in the parent table without doing
     the same to the descendants.  That is, <command>ALTER TABLE ONLY</command>
     will be rejected.  This ensures that the descendants always have
     columns matching the parent.
@@ -942,8 +974,8 @@ Where column_reference_storage_directive is:
     The <literal>TRIGGER</>, <literal>CLUSTER</>, <literal>OWNER</>,
     and <literal>TABLESPACE</> actions never recurse to descendant tables;
     that is, they always act as though <literal>ONLY</> were specified.
-    Adding a constraint can recurse only for <literal>CHECK</> constraints,
-    and is required to do so for such constraints.
+    Adding a constraint recurses only for <literal>CHECK</> constraints
+    that are not marked <literal>NO INHERIT</>.
    </para>
 
    <para>
@@ -1022,6 +1054,13 @@ ALTER TABLE distributors RENAME TO suppliers;
   </para>
 
   <para>
+   To rename an existing constraint:
+<programlisting>
+ALTER TABLE distributors RENAME CONSTRAINT zipchk TO zip_check;
+</programlisting>
+  </para>
+
+  <para>
    To add a not-null constraint to a column:
 <programlisting>
 ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;
@@ -1037,6 +1076,14 @@ ALTER TABLE distributors ALTER COLUMN street DROP NOT NULL;
 <programlisting>
 ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5);
 </programlisting>
+  </para>
+
+  <para>
+   To add a check constraint only to a table and not to its children:
+<programlisting>
+ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK NO INHERIT (char_length(zipcode) = 5);
+</programlisting>
+   (The check constraint will not be inherited by future children, either.)
   </para>
 
   <para>
@@ -1057,7 +1104,7 @@ ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;
   <para>
    To add a foreign key constraint to a table:
 <programlisting>
-ALTER TABLE distributors ADD CONSTRAINT distfk FOREIGN KEY (address) REFERENCES addresses (address) MATCH FULL;
+ALTER TABLE distributors ADD CONSTRAINT distfk FOREIGN KEY (address) REFERENCES addresses (address);
 </programlisting>
   </para>
 
@@ -1097,8 +1144,7 @@ ALTER TABLE myschema.distributors SET SCHEMA yourschema;
 CREATE UNIQUE INDEX CONCURRENTLY dist_id_temp_idx ON distributors (dist_id);
 ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
     ADD CONSTRAINT distributors_pkey PRIMARY KEY USING INDEX dist_id_temp_idx;
-</programlisting>
-  </para>
+</programlisting></para>
 
  </refsect1>
 
@@ -1130,3 +1176,7 @@ ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
   </simplelist>
  </refsect1>
 </refentry>
+
+<!-- Keep this comment at the end of the file
+	 GPDB_92_MERGE_FIXME: Why not follow pg upstram to format for 'alter table' document?
+-->

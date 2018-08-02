@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -66,7 +66,6 @@ InsertRule(char *rulname,
 {
 	char	   *evqual = nodeToString(event_qual);
 	char	   *actiontree = nodeToString((Node *) action);
-	int			i;
 	Datum		values[Natts_pg_rewrite];
 	bool		nulls[Natts_pg_rewrite];
 	bool		replaces[Natts_pg_rewrite];
@@ -84,16 +83,15 @@ InsertRule(char *rulname,
 	 */
 	MemSet(nulls, false, sizeof(nulls));
 
-	i = 0;
 	namestrcpy(&rname, rulname);
-	values[i++] = NameGetDatum(&rname); /* rulename */
-	values[i++] = ObjectIdGetDatum(eventrel_oid);		/* ev_class */
-	values[i++] = Int16GetDatum(evslot_index);	/* ev_attr */
-	values[i++] = CharGetDatum(evtype + '0');	/* ev_type */
-	values[i++] = CharGetDatum(RULE_FIRES_ON_ORIGIN);	/* ev_enabled */
-	values[i++] = BoolGetDatum(evinstead);		/* is_instead */
-	values[i++] = CStringGetTextDatum(evqual);	/* ev_qual */
-	values[i++] = CStringGetTextDatum(actiontree);		/* ev_action */
+	values[Anum_pg_rewrite_rulename - 1] = NameGetDatum(&rname);
+	values[Anum_pg_rewrite_ev_class - 1] = ObjectIdGetDatum(eventrel_oid);
+	values[Anum_pg_rewrite_ev_attr - 1] = Int16GetDatum(evslot_index);
+	values[Anum_pg_rewrite_ev_type - 1] = CharGetDatum(evtype + '0');
+	values[Anum_pg_rewrite_ev_enabled - 1] = CharGetDatum(RULE_FIRES_ON_ORIGIN);
+	values[Anum_pg_rewrite_is_instead - 1] = BoolGetDatum(evinstead);
+	values[Anum_pg_rewrite_ev_qual - 1] = CStringGetTextDatum(evqual);
+	values[Anum_pg_rewrite_ev_action - 1] = CStringGetTextDatum(actiontree);
 
 	/*
 	 * Ready to store new pg_rewrite tuple
@@ -186,7 +184,7 @@ InsertRule(char *rulname,
 
 	/* Post creation hook for new rule */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   RewriteRelationId, rewriteObjectId, 0);
+						   RewriteRelationId, rewriteObjectId, 0, NULL);
 
 	heap_close(pg_rewrite_desc, RowExclusiveLock);
 
@@ -204,11 +202,14 @@ DefineRule(RuleStmt *stmt, const char *queryString)
 	Node	   *whereClause;
 	Oid			relId;
 
-	/* Parse analysis ... */
+	/* Parse analysis. */
 	transformRuleStmt(stmt, queryString, &actions, &whereClause);
 
-	/* ... find the relation ... */
-	relId = RangeVarGetRelid(stmt->relation, false);
+	/*
+	 * Find and lock the relation.	Lock level should match
+	 * DefineQueryRewrite.
+	 */
+	relId = RangeVarGetRelid(stmt->relation, AccessExclusiveLock, false);
 
 	/* ... and execute */
 	DefineQueryRewrite(stmt->rulename,
@@ -246,14 +247,14 @@ DefineQueryRewrite(char *rulename,
 	/*
 	 * If we are installing an ON SELECT rule, we had better grab
 	 * AccessExclusiveLock to ensure no SELECTs are currently running on the
-	 * event relation.	For other types of rules, it is sufficient to grab
-	 * ShareRowExclusiveLock to lock out insert/update/delete actions and to
-	 * ensure that we lock out current CREATE RULE statements.
+	 * event relation. For other types of rules, it would be sufficient to
+	 * grab ShareRowExclusiveLock to lock out insert/update/delete actions and
+	 * to ensure that we lock out current CREATE RULE statements; but because
+	 * of race conditions in access to catalog entries, we can't do that yet.
+	 *
+	 * Note that this lock level should match the one used in DefineRule.
 	 */
-	if (event_type == CMD_SELECT)
-		event_relation = heap_open(event_relid, AccessExclusiveLock);
-	else
-		event_relation = heap_open(event_relid, ShareRowExclusiveLock);
+	event_relation = heap_open(event_relid, AccessExclusiveLock);
 
 	/*
 	 * Verify relation is of a type that rules can sensibly be applied to.
@@ -328,8 +329,7 @@ DefineQueryRewrite(char *rulename,
 		query = (Query *) linitial(action);
 		if (!is_instead ||
 			query->commandType != CMD_SELECT ||
-			query->utilityStmt != NULL ||
-			query->intoClause != NULL)
+			query->utilityStmt != NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("rules on SELECT must have action INSTEAD SELECT")));

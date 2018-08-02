@@ -18,14 +18,6 @@ UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
 ALTER TABLE cor RENAME TO newcor2;
 ALTER TABLE newcor2 RENAME TO cor;
 DROP TABLE cor;
--- relname is out of sync
-CREATE TABLE cor (a int, b int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-UPDATE pg_class SET relname='othercor' WHERE relname='cor';
-ALTER TABLE othercor RENAME TO tmpcor;
-ALTER TABLE tmpcor RENAME TO cor;
-DROP TABLE cor;
 RESET allow_system_table_mods;
 RESET gp_allow_rename_relation_without_lock;
 -- MPP-20466 Dis-allow duplicate constraint names for same table
@@ -71,7 +63,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 ALTER TABLE altable DROP COLUMN b;
 ALTER TABLE altable ADD CONSTRAINT c_check CHECK (c > 0);
 INSERT INTO altable(a, c) VALUES(0, -10);
-ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:40000 pid=21750)
+ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:25432 pid=21869)
+DETAIL:  Failing row contains (0, null, -10).
 SELECT * FROM altable ORDER BY 1;
  a | c 
 ---+---
@@ -111,7 +104,8 @@ SELECT * FROM altable ORDER BY 1;
 (1 row)
 
 UPDATE altable SET c = -10;
-ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:40000 pid=21750)
+ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:25432 pid=21869)
+DETAIL:  Failing row contains (0, null, -10).
 SELECT * FROM altable ORDER BY 1;
  a | c  
 ---+----

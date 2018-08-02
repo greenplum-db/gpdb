@@ -25,7 +25,7 @@
  * AMs support this.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_opclass.h
@@ -89,7 +89,7 @@ typedef FormData_pg_opclass *Form_pg_opclass;
  *		initial contents of pg_opclass
  *
  * Note: we hard-wire an OID only for a few entries that have to be explicitly
- * referenced in the C code for bootstrapping purposes.  The rest get OIDs
+ * referenced in the C code or in built-in catalog entries.  The rest get OIDs
  * assigned on-the-fly during initdb.
  * ----------------
  */
@@ -106,11 +106,13 @@ DATA(insert (	403		char_ops			PGNSP PGUID  429   18 t 0 ));
 DATA(insert (	405		char_ops			PGNSP PGUID  431   18 t 0 ));
 DATA(insert (	403		cidr_ops			PGNSP PGUID 1974  869 f 0 ));
 DATA(insert (	405		cidr_ops			PGNSP PGUID 1975  869 f 0 ));
-DATA(insert (	403		date_ops			PGNSP PGUID  434 1082 t 0 ));
+DATA(insert OID = 3122 ( 403	date_ops	PGNSP PGUID  434 1082 t 0 ));
+#define DATE_BTREE_OPS_OID 3122
 DATA(insert (	405		date_ops			PGNSP PGUID  435 1082 t 0 ));
 DATA(insert (	403		float4_ops			PGNSP PGUID 1970  700 t 0 ));
 DATA(insert (	405		float4_ops			PGNSP PGUID 1971  700 t 0 ));
-DATA(insert (	403		float8_ops			PGNSP PGUID 1970  701 t 0 ));
+DATA(insert OID = 3123 ( 403	float8_ops	PGNSP PGUID 1970  701 t 0 ));
+#define FLOAT8_BTREE_OPS_OID 3123
 DATA(insert (	405		float8_ops			PGNSP PGUID 1971  701 t 0 ));
 DATA(insert (	403		inet_ops			PGNSP PGUID 1974  869 t 0 ));
 DATA(insert (	405		inet_ops			PGNSP PGUID 1975  869 t 0 ));
@@ -136,7 +138,8 @@ DATA(insert (	405		macaddr_ops			PGNSP PGUID 1985  829 t 0 ));
  */
 DATA(insert (	403		name_ops			PGNSP PGUID 1986   19 t 2275 ));
 DATA(insert (	405		name_ops			PGNSP PGUID 1987   19 t 0 ));
-DATA(insert (	403		numeric_ops			PGNSP PGUID 1988 1700 t 0 ));
+DATA(insert OID = 3125 ( 403	numeric_ops PGNSP PGUID 1988 1700 t 0 ));
+#define NUMERIC_BTREE_OPS_OID 3125
 DATA(insert (	405		numeric_ops			PGNSP PGUID 1998 1700 t 0 ));
 DATA(insert (	403		complex_ops			PGNSP PGUID 3221 7198 t 0 ));
 DATA(insert OID = 1981 ( 403	oid_ops		PGNSP PGUID 1989   26 t 0 ));
@@ -145,18 +148,21 @@ DATA(insert (	405		oid_ops				PGNSP PGUID 1990   26 t 0 ));
 DATA(insert (	403		oidvector_ops		PGNSP PGUID 1991   30 t 0 ));
 DATA(insert (	405		oidvector_ops		PGNSP PGUID 1992   30 t 0 ));
 DATA(insert (	403		record_ops			PGNSP PGUID 2994 2249 t 0 ));
-DATA(insert (	403		text_ops			PGNSP PGUID 1994   25 t 0 ));
+DATA(insert OID = 3126 ( 403	text_ops	PGNSP PGUID 1994   25 t 0 ));
+#define TEXT_BTREE_OPS_OID 3126
 DATA(insert (	405		text_ops			PGNSP PGUID 1995   25 t 0 ));
 DATA(insert (	403		time_ops			PGNSP PGUID 1996 1083 t 0 ));
 DATA(insert (	405		time_ops			PGNSP PGUID 1997 1083 t 0 ));
-DATA(insert (	403		timestamptz_ops		PGNSP PGUID  434 1184 t 0 ));
+DATA(insert OID = 3127 ( 403	timestamptz_ops PGNSP PGUID  434 1184 t 0 ));
+#define TIMESTAMPTZ_BTREE_OPS_OID 3127
 DATA(insert (	405		timestamptz_ops		PGNSP PGUID 1999 1184 t 0 ));
 DATA(insert (	403		timetz_ops			PGNSP PGUID 2000 1266 t 0 ));
 DATA(insert (	405		timetz_ops			PGNSP PGUID 2001 1266 t 0 ));
 DATA(insert (	403		varbit_ops			PGNSP PGUID 2002 1562 t 0 ));
 DATA(insert (	403		varchar_ops			PGNSP PGUID 1994   25 f 0 ));
 DATA(insert (	405		varchar_ops			PGNSP PGUID 1995   25 f 0 ));
-DATA(insert (	403		timestamp_ops		PGNSP PGUID  434 1114 t 0 ));
+DATA(insert OID = 3128 ( 403	timestamp_ops	PGNSP PGUID  434 1114 t 0 ));
+#define TIMESTAMP_BTREE_OPS_OID 3128
 DATA(insert (	405		timestamp_ops		PGNSP PGUID 2040 1114 t 0 ));
 DATA(insert (	403		text_pattern_ops	PGNSP PGUID 2095   25 f 0 ));
 DATA(insert (	403		varchar_pattern_ops PGNSP PGUID 2095   25 f 0 ));
@@ -220,6 +226,12 @@ DATA(insert (	783		tsvector_ops		PGNSP PGUID 3655  3614 t 3642 ));
 DATA(insert (	2742	tsvector_ops		PGNSP PGUID 3659  3614 t 25 ));
 DATA(insert (	403		tsquery_ops			PGNSP PGUID 3683  3615 t 0 ));
 DATA(insert (	783		tsquery_ops			PGNSP PGUID 3702  3615 t 20 ));
+DATA(insert (	403		range_ops			PGNSP PGUID 3901  3831 t 0 ));
+DATA(insert (	405		range_ops			PGNSP PGUID 3903  3831 t 0 ));
+DATA(insert (	783		range_ops			PGNSP PGUID 3919  3831 t 0 ));
+DATA(insert (	4000	quad_point_ops		PGNSP PGUID 4015  600 t 0 ));
+DATA(insert (	4000	kd_point_ops		PGNSP PGUID 4016  600 f 0 ));
+DATA(insert (	4000	text_ops			PGNSP PGUID 4017  25 t 0 ));
 
 DATA(insert (	403		xlogloc_ops			PGNSP PGUID 7080  3310 t 0 ));
 

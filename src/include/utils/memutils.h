@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/memutils.h
@@ -199,8 +199,11 @@ extern void MemoryContextReset(MemoryContext context);
 extern void MemoryContextResetChildren(MemoryContext context);
 extern void MemoryContextDeleteChildren(MemoryContext context);
 extern void MemoryContextResetAndDeleteChildren(MemoryContext context);
+extern void MemoryContextSetParent(MemoryContext context,
+					   MemoryContext new_parent);
 extern Size GetMemoryChunkSpace(void *pointer);
 extern MemoryContext GetMemoryChunkContext(void *pointer);
+extern MemoryContext MemoryContextGetParent(MemoryContext context);
 extern bool MemoryContextIsEmpty(MemoryContext context);
 
 /* Statistics */
@@ -233,7 +236,8 @@ __declspec(noreturn)
 extern void MemoryContextError(int errorcode, MemoryContext context,
                                const char *sfile, int sline,
                                const char *fmt, ...)
-                              __attribute__((__noreturn__));
+                              __attribute__((__noreturn__))
+                              __attribute__((format(PG_PRINTF_ATTRIBUTE, 5, 6)));
 
 /*
  * This routine handles the context-type-independent part of memory

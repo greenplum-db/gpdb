@@ -3,7 +3,7 @@
  * aclchk.c
  *	  Routines to check access control permissions.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -54,6 +54,7 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
+#include "parser/parse_type.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -128,6 +129,7 @@ static void ExecGrant_Largeobject(InternalGrant *grantStmt);
 static void ExecGrant_Namespace(InternalGrant *grantStmt);
 static void ExecGrant_Tablespace(InternalGrant *grantStmt);
 static void ExecGrant_ExtProtocol(InternalGrant *grantstmt);
+static void ExecGrant_Type(InternalGrant *grantStmt);
 
 static void SetDefaultACLsInSchemas(InternalDefaultACL *iacls, List *nspnames);
 static void SetDefaultACL(InternalDefaultACL *iacls);
@@ -198,10 +200,10 @@ merge_acl_with_grant(Acl *old_acl, bool is_grant,
 
 	foreach(j, grantees)
 	{
-		AclItem aclitem;
+		AclItem		aclitem;
 		Acl		   *newer_acl;
 
-		aclitem.	ai_grantee = lfirst_oid(j);
+		aclitem.ai_grantee = lfirst_oid(j);
 
 		/*
 		 * Grant options can only be granted to individual roles, not PUBLIC.
@@ -214,7 +216,7 @@ merge_acl_with_grant(Acl *old_acl, bool is_grant,
 					(errcode(ERRCODE_INVALID_GRANT_OPERATION),
 					 errmsg("grant options can only be granted to roles")));
 
-		aclitem.	ai_grantor = grantorId;
+		aclitem.ai_grantor = grantorId;
 
 		/*
 		 * The asymmetry in the conditions here comes from the spec.  In
@@ -291,6 +293,8 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs,
 			break;
 		case ACL_KIND_EXTPROTOCOL:
 			whole_mask = ACL_ALL_RIGHTS_EXTPROTOCOL;
+		case ACL_KIND_TYPE:
+			whole_mask = ACL_ALL_RIGHTS_TYPE;
 			break;
 		default:
 			elog(ERROR, "unrecognized object kind: %d", objkind);
@@ -540,6 +544,10 @@ ExecuteGrantStmt(GrantStmt *stmt)
 			all_privileges = ACL_ALL_RIGHTS_DATABASE;
 			errormsg = gettext_noop("invalid privilege type %s for database");
 			break;
+		case ACL_OBJECT_DOMAIN:
+			all_privileges = ACL_ALL_RIGHTS_TYPE;
+			errormsg = gettext_noop("invalid privilege type %s for domain");
+			break;
 		case ACL_OBJECT_FUNCTION:
 			all_privileges = ACL_ALL_RIGHTS_FUNCTION;
 			errormsg = gettext_noop("invalid privilege type %s for function");
@@ -559,6 +567,10 @@ ExecuteGrantStmt(GrantStmt *stmt)
 		case ACL_OBJECT_TABLESPACE:
 			all_privileges = ACL_ALL_RIGHTS_TABLESPACE;
 			errormsg = gettext_noop("invalid privilege type %s for tablespace");
+			break;
+		case ACL_OBJECT_TYPE:
+			all_privileges = ACL_ALL_RIGHTS_TYPE;
+			errormsg = gettext_noop("invalid privilege type %s for type");
 			break;
 		case ACL_OBJECT_FDW:
 			all_privileges = ACL_ALL_RIGHTS_FDW;
@@ -686,6 +698,10 @@ ExecGrantStmt_oids(InternalGrant *istmt)
 		case ACL_OBJECT_DATABASE:
 			ExecGrant_Database(istmt);
 			break;
+		case ACL_OBJECT_DOMAIN:
+		case ACL_OBJECT_TYPE:
+			ExecGrant_Type(istmt);
+			break;
 		case ACL_OBJECT_FDW:
 			ExecGrant_Fdw(istmt);
 			break;
@@ -720,6 +736,11 @@ ExecGrantStmt_oids(InternalGrant *istmt)
  * objectNamesToOids
  *
  * Turn a list of object names of a given type into an Oid list.
+ *
+ * XXX: This function doesn't take any sort of locks on the objects whose
+ * names it looks up.  In the face of concurrent DDL, we might easily latch
+ * onto an old version of an object, causing the GRANT or REVOKE statement
+ * to fail.
  */
 static List *
 objectNamesToOids(GrantObjectType objtype, List *objnames)
@@ -738,7 +759,7 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 				RangeVar   *relvar = (RangeVar *) lfirst(cell);
 				Oid			relOid;
 
-				relOid = RangeVarGetRelid(relvar, false);
+				relOid = RangeVarGetRelid(relvar, NoLock, false);
 				objects = lappend_oid(objects, relOid);
 			}
 			break;
@@ -750,6 +771,17 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 
 				dbid = get_database_oid(dbname, false);
 				objects = lappend_oid(objects, dbid);
+			}
+			break;
+		case ACL_OBJECT_DOMAIN:
+		case ACL_OBJECT_TYPE:
+			foreach(cell, objnames)
+			{
+				List	   *typname = (List *) lfirst(cell);
+				Oid			oid;
+
+				oid = typenameTypeId(NULL, makeTypeNameFromNameList(typname));
+				objects = lappend_oid(objects, oid);
 			}
 			break;
 		case ACL_OBJECT_FUNCTION:
@@ -1050,6 +1082,10 @@ ExecAlterDefaultPrivilegesStmt(AlterDefaultPrivilegesStmt *stmt)
 			all_privileges = ACL_ALL_RIGHTS_FUNCTION;
 			errormsg = gettext_noop("invalid privilege type %s for function");
 			break;
+		case ACL_OBJECT_TYPE:
+			all_privileges = ACL_ALL_RIGHTS_TYPE;
+			errormsg = gettext_noop("invalid privilege type %s for type");
+			break;
 		default:
 			elog(ERROR, "unrecognized GrantStmt.objtype: %d",
 				 (int) action->objtype);
@@ -1242,6 +1278,12 @@ SetDefaultACL(InternalDefaultACL *iacls)
 				this_privileges = ACL_ALL_RIGHTS_FUNCTION;
 			break;
 
+		case ACL_OBJECT_TYPE:
+			objtype = DEFACLOBJ_TYPE;
+			if (iacls->all_privs && this_privileges == ACL_NO_RIGHTS)
+				this_privileges = ACL_ALL_RIGHTS_TYPE;
+			break;
+
 		default:
 			elog(ERROR, "unrecognized objtype: %d",
 				 (int) iacls->objtype);
@@ -1329,7 +1371,7 @@ SetDefaultACL(InternalDefaultACL *iacls)
 			myself.objectId = HeapTupleGetOid(tuple);
 			myself.objectSubId = 0;
 
-			performDeletion(&myself, DROP_RESTRICT);
+			performDeletion(&myself, DROP_RESTRICT, 0);
 		}
 	}
 	else
@@ -1490,6 +1532,9 @@ RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid)
 				break;
 			case DatabaseRelationId:
 				istmt.objtype = ACL_OBJECT_DATABASE;
+				break;
+			case TypeRelationId:
+				istmt.objtype = ACL_OBJECT_TYPE;
 				break;
 			case ProcedureRelationId:
 				istmt.objtype = ACL_OBJECT_FUNCTION;
@@ -3355,174 +3400,312 @@ ExecGrant_Tablespace(InternalGrant *istmt)
 	heap_close(relation, RowExclusiveLock);
 }
 
+
+static void
+ExecGrant_Type(InternalGrant *istmt)
+{
+    Relation	relation;
+    ListCell   *cell;
+
+    if (istmt->all_privs && istmt->privileges == ACL_NO_RIGHTS)
+        istmt->privileges = ACL_ALL_RIGHTS_TYPE;
+
+    relation = heap_open(TypeRelationId, RowExclusiveLock);
+
+    foreach(cell, istmt->objects)
+    {
+        Oid			typId = lfirst_oid(cell);
+        Form_pg_type pg_type_tuple;
+        Datum		aclDatum;
+        bool		isNull;
+        AclMode		avail_goptions;
+        AclMode		this_privileges;
+        Acl		   *old_acl;
+        Acl		   *new_acl;
+        Oid			grantorId;
+        Oid			ownerId;
+        HeapTuple	newtuple;
+        Datum		values[Natts_pg_type];
+        bool		nulls[Natts_pg_type];
+        bool		replaces[Natts_pg_type];
+        int			noldmembers;
+        int			nnewmembers;
+        Oid		   *oldmembers;
+        Oid		   *newmembers;
+        HeapTuple	tuple;
+
+        /* Search syscache for pg_type */
+        tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typId));
+        if (!HeapTupleIsValid(tuple))
+            elog(ERROR, "cache lookup failed for type %u", typId);
+
+        pg_type_tuple = (Form_pg_type) GETSTRUCT(tuple);
+
+        if (pg_type_tuple->typelem != 0 && pg_type_tuple->typlen == -1)
+            ereport(ERROR,
+                    (errcode(ERRCODE_INVALID_GRANT_OPERATION),
+                            errmsg("cannot set privileges of array types"),
+                            errhint("Set the privileges of the element type instead.")));
+
+        /* Used GRANT DOMAIN on a non-domain? */
+        if (istmt->objtype == ACL_OBJECT_DOMAIN &&
+            pg_type_tuple->typtype != TYPTYPE_DOMAIN)
+            ereport(ERROR,
+                    (errcode(ERRCODE_WRONG_OBJECT_TYPE),
+                            errmsg("\"%s\" is not a domain",
+                                   NameStr(pg_type_tuple->typname))));
+
+        /*
+         * Get owner ID and working copy of existing ACL. If there's no ACL,
+         * substitute the proper default.
+         */
+        ownerId = pg_type_tuple->typowner;
+        aclDatum = heap_getattr(tuple, Anum_pg_type_typacl,
+                                RelationGetDescr(relation), &isNull);
+        if (isNull)
+        {
+            old_acl = acldefault(istmt->objtype, ownerId);
+            /* There are no old member roles according to the catalogs */
+            noldmembers = 0;
+            oldmembers = NULL;
+        }
+        else
+        {
+            old_acl = DatumGetAclPCopy(aclDatum);
+            /* Get the roles mentioned in the existing ACL */
+            noldmembers = aclmembers(old_acl, &oldmembers);
+        }
+
+        /* Determine ID to do the grant as, and available grant options */
+        select_best_grantor(GetUserId(), istmt->privileges,
+                            old_acl, ownerId,
+                            &grantorId, &avail_goptions);
+
+        /*
+         * Restrict the privileges to what we can actually grant, and emit the
+         * standards-mandated warning and error messages.
+         */
+        this_privileges =
+                restrict_and_check_grant(istmt->is_grant, avail_goptions,
+                                         istmt->all_privs, istmt->privileges,
+                                         typId, grantorId, ACL_KIND_TYPE,
+                                         NameStr(pg_type_tuple->typname),
+                                         0, NULL);
+
+        /*
+         * Generate new ACL.
+         */
+        new_acl = merge_acl_with_grant(old_acl, istmt->is_grant,
+                                       istmt->grant_option, istmt->behavior,
+                                       istmt->grantees, this_privileges,
+                                       grantorId, ownerId);
+
+        /*
+         * We need the members of both old and new ACLs so we can correct the
+         * shared dependency information.
+         */
+        nnewmembers = aclmembers(new_acl, &newmembers);
+
+        /* finished building new ACL value, now insert it */
+        MemSet(values, 0, sizeof(values));
+        MemSet(nulls, false, sizeof(nulls));
+        MemSet(replaces, false, sizeof(replaces));
+
+        replaces[Anum_pg_type_typacl - 1] = true;
+        values[Anum_pg_type_typacl - 1] = PointerGetDatum(new_acl);
+
+        newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
+                                     nulls, replaces);
+
+        simple_heap_update(relation, &newtuple->t_self, newtuple);
+
+        /* keep the catalog indexes up to date */
+        CatalogUpdateIndexes(relation, newtuple);
+
+        /* Update the shared dependency ACL info */
+        updateAclDependencies(TypeRelationId, typId, 0,
+                              ownerId,
+                              noldmembers, oldmembers,
+                              nnewmembers, newmembers);
+
+        ReleaseSysCache(tuple);
+        pfree(new_acl);
+
+        /* prevent error when processing duplicate objects */
+        CommandCounterIncrement();
+    }
+
+    heap_close(relation, RowExclusiveLock);
+}
+
 static void
 ExecGrant_ExtProtocol(InternalGrant *istmt)
 {
-	Relation	relation;
-	ListCell   *cell;
+    Relation	relation;
+    ListCell   *cell;
 
-	if (istmt->all_privs && istmt->privileges == ACL_NO_RIGHTS)
-		istmt->privileges = ACL_ALL_RIGHTS_EXTPROTOCOL;
+    if (istmt->all_privs && istmt->privileges == ACL_NO_RIGHTS)
+        istmt->privileges = ACL_ALL_RIGHTS_EXTPROTOCOL;
 
-	relation = heap_open(ExtprotocolRelationId, RowExclusiveLock);
+    relation = heap_open(ExtprotocolRelationId, RowExclusiveLock);
 
-	foreach(cell, istmt->objects)
-	{
-		Oid			ptcid = lfirst_oid(cell);
-		bool		isNull;
-		bool		isTrusted;
-		AclMode		avail_goptions;
-		AclMode		this_privileges;
-		Acl		   *old_acl;
-		Acl		   *new_acl;
-		Oid			grantorId;
-		Oid			ownerId;
-		Name	    ptcname;
-		HeapTuple	tuple;
-		HeapTuple	newtuple;
-		Datum		values[Natts_pg_extprotocol];
-		bool		nulls[Natts_pg_extprotocol];
-		bool		replaces[Natts_pg_extprotocol];
-		int			noldmembers;
-		int			nnewmembers;
-		Oid		   *oldmembers;
-		Oid		   *newmembers;
-		Datum		ownerDatum;
-		Datum		aclDatum;
-		Datum		trustedDatum;
-		Datum		ptcnameDatum;
-		ScanKeyData entry[1];
-		SysScanDesc scan;
-		TupleDesc	reldsc = RelationGetDescr(relation);
+    foreach(cell, istmt->objects)
+    {
+        Oid			ptcid = lfirst_oid(cell);
+        bool		isNull;
+        bool		isTrusted;
+        AclMode		avail_goptions;
+        AclMode		this_privileges;
+        Acl		   *old_acl;
+        Acl		   *new_acl;
+        Oid			grantorId;
+        Oid			ownerId;
+        Name	    ptcname;
+        HeapTuple	tuple;
+        HeapTuple	newtuple;
+        Datum		values[Natts_pg_extprotocol];
+        bool		nulls[Natts_pg_extprotocol];
+        bool		replaces[Natts_pg_extprotocol];
+        int			noldmembers;
+        int			nnewmembers;
+        Oid		   *oldmembers;
+        Oid		   *newmembers;
+        Datum		ownerDatum;
+        Datum		aclDatum;
+        Datum		trustedDatum;
+        Datum		ptcnameDatum;
+        ScanKeyData entry[1];
+        SysScanDesc scan;
+        TupleDesc	reldsc = RelationGetDescr(relation);
 
-		/* There's no syscache for pg_extprotocol, so must look the hard way */
-		ScanKeyInit(&entry[0],
-					ObjectIdAttributeNumber,
-					BTEqualStrategyNumber, F_OIDEQ,
-					ObjectIdGetDatum(ptcid));
-		scan = systable_beginscan(relation, ExtprotocolOidIndexId, true,
-								  SnapshotNow, 1, entry);
-		tuple = systable_getnext(scan);
-		if (!HeapTupleIsValid(tuple))
-			elog(ERROR, "lookup failed for external protocol %u", ptcid);
-		
-		ownerDatum = heap_getattr(tuple, 
-								  Anum_pg_extprotocol_ptcowner,
-								  reldsc, 
-								  &isNull);
-		
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("protocol '%u' has no owner defined",
-							 ptcid)));	
+        /* There's no syscache for pg_extprotocol, so must look the hard way */
+        ScanKeyInit(&entry[0],
+                    ObjectIdAttributeNumber,
+                    BTEqualStrategyNumber, F_OIDEQ,
+                    ObjectIdGetDatum(ptcid));
+        scan = systable_beginscan(relation, ExtprotocolOidIndexId, true,
+                                  SnapshotNow, 1, entry);
+        tuple = systable_getnext(scan);
+        if (!HeapTupleIsValid(tuple))
+            elog(ERROR, "lookup failed for external protocol %u", ptcid);
 
-		/*
-		 * Get owner ID and working copy of existing ACL. If there's no ACL,
-		 * substitute the proper default.
-		 */
-		ownerId = DatumGetObjectId(ownerDatum);
-		
-		aclDatum = heap_getattr(tuple, 
-								Anum_pg_extprotocol_ptcacl,
-								reldsc, 
-								&isNull);
-		
-		if (isNull)
-			old_acl = acldefault(ACL_OBJECT_EXTPROTOCOL, ownerId);
-		else
-			old_acl = DatumGetAclPCopy(aclDatum);
+        ownerDatum = heap_getattr(tuple,
+                                  Anum_pg_extprotocol_ptcowner,
+                                  reldsc,
+                                  &isNull);
 
-		ptcnameDatum = heap_getattr(tuple, 
-									Anum_pg_extprotocol_ptcname,
-									reldsc, 
-									&isNull);
+        if(isNull)
+            ereport(ERROR,
+                    (errcode(ERRCODE_UNDEFINED_OBJECT),
+                            errmsg("protocol '%u' has no owner defined",
+                                   ptcid)));
 
-		ptcname = DatumGetName(ptcnameDatum);
-		
-		if(isNull)
-			ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("internal error: protocol '%u' has no name defined",
-						 ptcid)));
-		
-		trustedDatum = heap_getattr(tuple, 
-									Anum_pg_extprotocol_ptctrusted,
-									reldsc, 
-									&isNull);
-			
-		isTrusted = DatumGetBool(trustedDatum);
-		
-		if (!isTrusted)
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("protocol \"%s\" is not trusted",
-							NameStr(*ptcname)),
-				   errhint("Only superusers may use untrusted protocols.")));
+        /*
+         * Get owner ID and working copy of existing ACL. If there's no ACL,
+         * substitute the proper default.
+         */
+        ownerId = DatumGetObjectId(ownerDatum);
 
-		/* Determine ID to do the grant as, and available grant options */
-		select_best_grantor(GetUserId(), istmt->privileges,
-							old_acl, ownerId,
-							&grantorId, &avail_goptions);
+        aclDatum = heap_getattr(tuple,
+                                Anum_pg_extprotocol_ptcacl,
+                                reldsc,
+                                &isNull);
 
-		/*
-		 * Restrict the privileges to what we can actually grant, and emit the
-		 * standards-mandated warning and error messages.
-		 */
-		this_privileges =
-			restrict_and_check_grant(istmt->is_grant, avail_goptions,
-									 istmt->all_privs, istmt->privileges,
-									 ptcid, grantorId, ACL_KIND_EXTPROTOCOL,
-									 NameStr(*ptcname),
-									 0, NULL);
+        if (isNull)
+            old_acl = acldefault(ACL_OBJECT_EXTPROTOCOL, ownerId);
+        else
+            old_acl = DatumGetAclPCopy(aclDatum);
 
-		/*
-		 * Generate new ACL.
-		 *
-		 * We need the members of both old and new ACLs so we can correct the
-		 * shared dependency information.
-		 */
-		noldmembers = aclmembers(old_acl, &oldmembers);
+        ptcnameDatum = heap_getattr(tuple,
+                                    Anum_pg_extprotocol_ptcname,
+                                    reldsc,
+                                    &isNull);
 
-		new_acl = merge_acl_with_grant(old_acl, istmt->is_grant,
-									   istmt->grant_option, istmt->behavior,
-									   istmt->grantees, this_privileges,
-									   grantorId, ownerId);
+        ptcname = DatumGetName(ptcnameDatum);
 
-		nnewmembers = aclmembers(new_acl, &newmembers);
+        if(isNull)
+            ereport(ERROR,
+                    (errcode(ERRCODE_UNDEFINED_OBJECT),
+                            errmsg("internal error: protocol '%u' has no name defined",
+                                   ptcid)));
 
-		/* finished building new ACL value, now insert it */
-		MemSet(values, 0, sizeof(values));
-		MemSet(nulls, false, sizeof(nulls));
-		MemSet(replaces, false, sizeof(replaces));
+        trustedDatum = heap_getattr(tuple,
+                                    Anum_pg_extprotocol_ptctrusted,
+                                    reldsc,
+                                    &isNull);
 
-		replaces[Anum_pg_extprotocol_ptcacl - 1] = true;
-		values[Anum_pg_extprotocol_ptcacl - 1] = PointerGetDatum(new_acl);
+        isTrusted = DatumGetBool(trustedDatum);
 
-		newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
-									 nulls, replaces);
+        if (!isTrusted)
+            ereport(ERROR,
+                    (errcode(ERRCODE_WRONG_OBJECT_TYPE),
+                            errmsg("protocol \"%s\" is not trusted",
+                                   NameStr(*ptcname)),
+                            errhint("Only superusers may use untrusted protocols.")));
 
-		simple_heap_update(relation, &newtuple->t_self, newtuple);
+        /* Determine ID to do the grant as, and available grant options */
+        select_best_grantor(GetUserId(), istmt->privileges,
+                            old_acl, ownerId,
+                            &grantorId, &avail_goptions);
 
-		/* keep the catalog indexes up to date */
-		CatalogUpdateIndexes(relation, newtuple);
+        /*
+         * Restrict the privileges to what we can actually grant, and emit the
+         * standards-mandated warning and error messages.
+         */
+        this_privileges =
+                restrict_and_check_grant(istmt->is_grant, avail_goptions,
+                                         istmt->all_privs, istmt->privileges,
+                                         ptcid, grantorId, ACL_KIND_EXTPROTOCOL,
+                                         NameStr(*ptcname),
+                                         0, NULL);
 
-		/* Update the shared dependency ACL info */
-		updateAclDependencies(ExtprotocolRelationId,
-							  HeapTupleGetOid(tuple), 0,
-							  ownerId,
-							  noldmembers, oldmembers,
-							  nnewmembers, newmembers);
+        /*
+         * Generate new ACL.
+         *
+         * We need the members of both old and new ACLs so we can correct the
+         * shared dependency information.
+         */
+        noldmembers = aclmembers(old_acl, &oldmembers);
 
-		systable_endscan(scan);
+        new_acl = merge_acl_with_grant(old_acl, istmt->is_grant,
+                                       istmt->grant_option, istmt->behavior,
+                                       istmt->grantees, this_privileges,
+                                       grantorId, ownerId);
 
-		pfree(new_acl);
+        nnewmembers = aclmembers(new_acl, &newmembers);
 
-		/* prevent error when processing duplicate objects */
-		CommandCounterIncrement();
-	}
+        /* finished building new ACL value, now insert it */
+        MemSet(values, 0, sizeof(values));
+        MemSet(nulls, false, sizeof(nulls));
+        MemSet(replaces, false, sizeof(replaces));
 
-	heap_close(relation, RowExclusiveLock);
+        replaces[Anum_pg_extprotocol_ptcacl - 1] = true;
+        values[Anum_pg_extprotocol_ptcacl - 1] = PointerGetDatum(new_acl);
+
+        newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
+                                     nulls, replaces);
+
+        simple_heap_update(relation, &newtuple->t_self, newtuple);
+
+        /* keep the catalog indexes up to date */
+        CatalogUpdateIndexes(relation, newtuple);
+
+        /* Update the shared dependency ACL info */
+        updateAclDependencies(ExtprotocolRelationId,
+                              HeapTupleGetOid(tuple), 0,
+                              ownerId,
+                              noldmembers, oldmembers,
+                              nnewmembers, newmembers);
+
+        systable_endscan(scan);
+
+        pfree(new_acl);
+
+        /* prevent error when processing duplicate objects */
+        CommandCounterIncrement();
+    }
+
+    heap_close(relation, RowExclusiveLock);
 }
 
 static AclMode
@@ -3806,6 +3989,8 @@ pg_aclmask(AclObjectKind objkind, Oid table_oid, AttrNumber attnum, Oid roleid,
 			return pg_foreign_server_aclmask(table_oid, roleid, mask, how);
 		case ACL_KIND_EXTPROTOCOL:
 			return pg_extprotocol_aclmask(table_oid, roleid, mask, how);
+		case ACL_KIND_TYPE:
+			return pg_type_aclmask(table_oid, roleid, mask, how);
 		default:
 			elog(ERROR, "unrecognized objkind: %d",
 				 (int) objkind);
@@ -4517,81 +4702,155 @@ pg_foreign_server_aclmask(Oid srv_oid, Oid roleid,
 }
 
 /*
+ * Exported routine for examining a user's privileges for a type.
+ */
+AclMode
+pg_type_aclmask(Oid type_oid, Oid roleid, AclMode mask, AclMaskHow how)
+{
+    AclMode		result;
+    HeapTuple	tuple;
+    Datum		aclDatum;
+    bool		isNull;
+    Acl		   *acl;
+    Oid			ownerId;
+
+    Form_pg_type typeForm;
+
+    /* Bypass permission checks for superusers */
+    if (superuser_arg(roleid))
+        return mask;
+
+    /*
+     * Must get the type's tuple from pg_type
+     */
+    tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_oid));
+    if (!HeapTupleIsValid(tuple))
+        ereport(ERROR,
+                (errmsg("type with OID %u does not exist",
+                        type_oid)));
+    typeForm = (Form_pg_type) GETSTRUCT(tuple);
+
+    /* "True" array types don't manage permissions of their own */
+    if (typeForm->typelem != 0 && typeForm->typlen == -1)
+    {
+        Oid			elttype_oid = typeForm->typelem;
+
+        ReleaseSysCache(tuple);
+
+        tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(elttype_oid));
+        if (!HeapTupleIsValid(tuple))
+            ereport(ERROR,
+                    (errmsg("type with OID %u does not exist",
+                            type_oid)));
+        typeForm = (Form_pg_type) GETSTRUCT(tuple);
+    }
+
+    /*
+     * Normal case: get the type's ACL from pg_type
+     */
+    ownerId = typeForm->typowner;
+
+    aclDatum = SysCacheGetAttr(TYPEOID, tuple,
+                               Anum_pg_type_typacl, &isNull);
+    if (isNull)
+    {
+        /* No ACL, so build default ACL */
+        acl = acldefault(ACL_OBJECT_TYPE, ownerId);
+        aclDatum = (Datum) 0;
+    }
+    else
+    {
+        /* detoast rel's ACL if necessary */
+        acl = DatumGetAclP(aclDatum);
+    }
+
+    result = aclmask(acl, roleid, ownerId, mask, how);
+
+    /* if we have a detoasted copy, free it */
+    if (acl && (Pointer) acl != DatumGetPointer(aclDatum))
+        pfree(acl);
+
+    ReleaseSysCache(tuple);
+
+    return result;
+}
+
+/*
  * Exported routine for examining a user's privileges for an external
  * protocol.
  */
 AclMode
 pg_extprotocol_aclmask(Oid ptcOid, Oid roleid,
-					   AclMode mask, AclMaskHow how)
+                       AclMode mask, AclMaskHow how)
 {
-	AclMode		result;
-	HeapTuple	tuple;
-	Datum		aclDatum;
-	Datum		ownerDatum;
-	bool		isNull;
-	Acl		   *acl;
-	Oid			ownerId;
-	Relation	rel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
+    AclMode		result;
+    HeapTuple	tuple;
+    Datum		aclDatum;
+    Datum		ownerDatum;
+    bool		isNull;
+    Acl		   *acl;
+    Oid			ownerId;
+    Relation	rel;
+    ScanKeyData scankey;
+    SysScanDesc sscan;
 
-	/* Bypass permission checks for superusers */
-	if (superuser_arg(roleid))
-		return mask;
-	
-	rel = heap_open(ExtprotocolRelationId, AccessShareLock);
+    /* Bypass permission checks for superusers */
+    if (superuser_arg(roleid))
+        return mask;
 
-	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(ptcOid));
-	sscan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
-	tuple = systable_getnext(sscan);
+    rel = heap_open(ExtprotocolRelationId, AccessShareLock);
 
-	/* We assume that there can be at most one matching tuple */
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "protocol %u could not be found", ptcOid);
+    ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+                BTEqualStrategyNumber, F_OIDEQ,
+                ObjectIdGetDatum(ptcOid));
+    sscan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
+                               SnapshotNow, 1, &scankey);
+    tuple = systable_getnext(sscan);
 
-	ownerDatum = heap_getattr(tuple, 
-							  Anum_pg_extprotocol_ptcowner, 
-							  RelationGetDescr(rel),
-							  &isNull);
-	
-	if(isNull)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("got invalid extprotocol owner value: NULL")));	
+    /* We assume that there can be at most one matching tuple */
+    if (!HeapTupleIsValid(tuple))
+        elog(ERROR, "protocol %u could not be found", ptcOid);
 
-	ownerId = DatumGetObjectId(ownerDatum);
+    ownerDatum = heap_getattr(tuple,
+                              Anum_pg_extprotocol_ptcowner,
+                              RelationGetDescr(rel),
+                              &isNull);
 
-	aclDatum = heap_getattr(tuple, 
-							Anum_pg_extprotocol_ptcacl, 
-							RelationGetDescr(rel),
-						    &isNull);
-	
-	if (isNull)
-	{
-		/* No ACL, so build default ACL */
-		acl = acldefault(ACL_OBJECT_EXTPROTOCOL, ownerId);
-		aclDatum = (Datum) 0;
-	}
-	else
-	{
-		/* detoast rel's ACL if necessary */
-		acl = DatumGetAclP(aclDatum);
-	}
+    if(isNull)
+        ereport(ERROR,
+                (errcode(ERRCODE_UNDEFINED_OBJECT),
+                        errmsg("got invalid extprotocol owner value: NULL")));
 
-	result = aclmask(acl, roleid, ownerId, mask, how);
+    ownerId = DatumGetObjectId(ownerDatum);
 
-	/* if we have a detoasted copy, free it */
-	if (acl && (Pointer) acl != DatumGetPointer(aclDatum))
-		pfree(acl);
+    aclDatum = heap_getattr(tuple,
+                            Anum_pg_extprotocol_ptcacl,
+                            RelationGetDescr(rel),
+                            &isNull);
 
-	/* Finish up scan and close pg_extprotocol catalog. */
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
+    if (isNull)
+    {
+        /* No ACL, so build default ACL */
+        acl = acldefault(ACL_OBJECT_EXTPROTOCOL, ownerId);
+        aclDatum = (Datum) 0;
+    }
+    else
+    {
+        /* detoast rel's ACL if necessary */
+        acl = DatumGetAclP(aclDatum);
+    }
 
-	return result;
+    result = aclmask(acl, roleid, ownerId, mask, how);
+
+    /* if we have a detoasted copy, free it */
+    if (acl && (Pointer) acl != DatumGetPointer(aclDatum))
+        pfree(acl);
+
+    /* Finish up scan and close pg_extprotocol catalog. */
+    systable_endscan(sscan);
+    heap_close(rel, AccessShareLock);
+
+    return result;
 }
 
 /*
@@ -4828,16 +5087,28 @@ pg_foreign_server_aclcheck(Oid srv_oid, Oid roleid, AclMode mode)
 }
 
 /*
+ * Exported routine for checking a user's access privileges to a type
+ */
+AclResult
+pg_type_aclcheck(Oid type_oid, Oid roleid, AclMode mode)
+{
+    if (pg_type_aclmask(type_oid, roleid, mode, ACLMASK_ANY) != 0)
+        return ACLCHECK_OK;
+    else
+        return ACLCHECK_NO_PRIV;
+}
+
+/*
  * Exported routine for checking a user's access privileges to an
  * external protocol
  */
 AclResult
 pg_extprotocol_aclcheck(Oid ptcid, Oid roleid, AclMode mode)
 {
-	if (pg_extprotocol_aclmask(ptcid, roleid, mode, ACLMASK_ANY) != 0)
-		return ACLCHECK_OK;
-	else
-		return ACLCHECK_NO_PRIV;
+    if (pg_extprotocol_aclmask(ptcid, roleid, mode, ACLMASK_ANY) != 0)
+        return ACLCHECK_OK;
+    else
+        return ACLCHECK_NO_PRIV;
 }
 
 /*
@@ -5488,6 +5759,10 @@ get_user_default_acl(GrantObjectType objtype, Oid ownerId, Oid nsp_oid)
 
 		case ACL_OBJECT_FUNCTION:
 			defaclobjtype = DEFACLOBJ_FUNCTION;
+			break;
+
+		case ACL_OBJECT_TYPE:
+			defaclobjtype = DEFACLOBJ_TYPE;
 			break;
 
 		default:

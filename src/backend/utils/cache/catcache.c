@@ -3,7 +3,7 @@
  * catcache.c
  *	  System catalog cache for tuples matching a key.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -425,44 +425,26 @@ CatCacheRemoveCList(CatCache *cache, CatCList *cl)
 /*
  *	CatalogCacheIdInvalidate
  *
- *	Invalidate entries in the specified cache, given a hash value and
- *	item pointer.  Positive entries are deleted if they match the item
- *	pointer.  Negative entries must be deleted if they match the hash
- *	value (since we do not have the exact key of the tuple that's being
- *	inserted).	But this should only rarely result in loss of a cache
- *	entry that could have been kept.
+ *	Invalidate entries in the specified cache, given a hash value.
  *
- *	Note that it's not very relevant whether the tuple identified by
- *	the item pointer is being inserted or deleted.	We don't expect to
- *	find matching positive entries in the one case, and we don't expect
- *	to find matching negative entries in the other; but we will do the
- *	right things in any case.
+ *	We delete cache entries that match the hash value, whether positive
+ *	or negative.  We don't care whether the invalidation is the result
+ *	of a tuple insertion or a deletion.
+ *
+ *	We used to try to match positive cache entries by TID, but that is
+ *	unsafe after a VACUUM FULL on a system catalog: an inval event could
+ *	be queued before VACUUM FULL, and then processed afterwards, when the
+ *	target tuple that has to be invalidated has a different TID than it
+ *	did when the event was created.  So now we just compare hash values and
+ *	accept the small risk of unnecessary invalidations due to false matches.
  *
  *	This routine is only quasi-public: it should only be used by inval.c.
  */
 void
-CatalogCacheIdInvalidate(int cacheId,
-						 uint32 hashValue,
-						 ItemPointer pointer)
+CatalogCacheIdInvalidate(int cacheId, uint32 hashValue)
 {
 	CatCache   *ccp;
 
-	/*
-	 * sanity checks
-	 */
-#ifdef USE_ASSERT_CHECKING
-	/* Add some debug info for MPP-5739 */
-	if (!ItemPointerIsValid(pointer))
-	{
-		elog(LOG, "CatalogCacheIdInvalidate: cacheId %d, hash %u IP %p", cacheId, hashValue, pointer);
-		if (pointer != NULL)
-		{
-			elog(LOG, "CatalogCacheIdInvalidate: bogus item (?): (blkid.hi %d blkid.lo %d posid %d)",
-				 pointer->ip_blkid.bi_hi, pointer->ip_blkid.bi_lo, pointer->ip_posid);
-		}
-	}
-#endif
-	Assert(ItemPointerIsValid(pointer));
 	CACHE1_elog(DEBUG2, "CatalogCacheIdInvalidate: called");
 
 	/*
@@ -510,11 +492,7 @@ CatalogCacheIdInvalidate(int cacheId,
 
 			nextelt = DLGetSucc(elt);
 
-			if (hashValue != ct->hash_value)
-				continue;		/* ignore non-matching hash values */
-
-			if (ct->negative ||
-				ItemPointerEquals(pointer, &ct->tuple.t_self))
+			if (hashValue == ct->hash_value)
 			{
 				if (ct->refcount > 0 ||
 					(ct->c_list && ct->c_list->refcount > 0))
@@ -709,18 +687,14 @@ CatalogCacheFlushCatalog(Oid catId)
 
 	for (cache = CacheHdr->ch_caches; cache; cache = cache->cc_next)
 	{
-		/* We can ignore uninitialized caches, since they must be empty */
-		if (cache->cc_tupdesc == NULL)
-			continue;
-
 		/* Does this cache store tuples of the target catalog? */
-		if (cache->cc_tupdesc->attrs[0]->attrelid == catId)
+		if (cache->cc_reloid == catId)
 		{
 			/* Yes, so flush all its contents */
 			ResetCatalogCache(cache);
 
 			/* Tell inval.c to call syscache callbacks for this cache */
-			CallSyscacheCallbacks(cache->id, NULL);
+			CallSyscacheCallbacks(cache->id, 0);
 		}
 	}
 
@@ -1368,6 +1342,46 @@ ReleaseCatCache(HeapTuple tuple)
 
 
 /*
+ *	GetCatCacheHashValue
+ *
+ *		Compute the hash value for a given set of search keys.
+ *
+ * The reason for exposing this as part of the API is that the hash value is
+ * exposed in cache invalidation operations, so there are places outside the
+ * catcache code that need to be able to compute the hash values.
+ */
+uint32
+GetCatCacheHashValue(CatCache *cache,
+					 Datum v1,
+					 Datum v2,
+					 Datum v3,
+					 Datum v4)
+{
+	ScanKeyData cur_skey[CATCACHE_MAXKEYS];
+
+	/*
+	 * one-time startup overhead for each cache
+	 */
+	if (cache->cc_tupdesc == NULL)
+		CatalogCacheInitializeCache(cache);
+
+	/*
+	 * initialize the search key information
+	 */
+	memcpy(cur_skey, cache->cc_skey, sizeof(cur_skey));
+	cur_skey[0].sk_argument = v1;
+	cur_skey[1].sk_argument = v2;
+	cur_skey[2].sk_argument = v3;
+	cur_skey[3].sk_argument = v4;
+
+	/*
+	 * calculate the hash value
+	 */
+	return CatalogCacheComputeHashValue(cache, cache->cc_nkeys, cur_skey);
+}
+
+
+/*
  *	SearchCatCacheList
  *
  *		Generate a list of all tuples matching a partial key (that is,
@@ -1683,8 +1697,8 @@ CatalogCacheCreateEntry(CatCache *cache, HeapTuple ntp,
 
 	/*
 	 * If there are any out-of-line toasted fields in the tuple, expand them
-	 * in-line.  This saves cycles during later use of the catcache entry,
-	 * and also protects us against the possibility of the toast tuples being
+	 * in-line.  This saves cycles during later use of the catcache entry, and
+	 * also protects us against the possibility of the toast tuples being
 	 * freed before we attempt to fetch them, in case of something using a
 	 * slightly stale catcache entry.
 	 */
@@ -1804,10 +1818,15 @@ build_dummy_tuple(CatCache *cache, int nkeys, ScanKey skeys)
  *	The lists of tuples that need to be flushed are kept by inval.c.  This
  *	routine is a helper routine for inval.c.  Given a tuple belonging to
  *	the specified relation, find all catcaches it could be in, compute the
- *	correct hash value for each such catcache, and call the specified function
- *	to record the cache id, hash value, and tuple ItemPointer in inval.c's
- *	lists.	CatalogCacheIdInvalidate will be called later, if appropriate,
+ *	correct hash value for each such catcache, and call the specified
+ *	function to record the cache id and hash value in inval.c's lists.
+ *	CatalogCacheIdInvalidate will be called later, if appropriate,
  *	using the recorded information.
+ *
+ *	For an insert or delete, tuple is the target tuple and newtuple is NULL.
+ *	For an update, we are called just once, with tuple being the old tuple
+ *	version and newtuple the new version.  We should make two list entries
+ *	if the tuple's hash value changed, but only one if it didn't.
  *
  *	Note that it is irrelevant whether the given tuple is actually loaded
  *	into the catcache at the moment.  Even if it's not there now, it might
@@ -1823,7 +1842,8 @@ build_dummy_tuple(CatCache *cache, int nkeys, ScanKey skeys)
 void
 PrepareToInvalidateCacheTuple(Relation relation,
 							  HeapTuple tuple,
-							void (*function) (int, uint32, ItemPointer, Oid))
+							  HeapTuple newtuple,
+							  void (*function) (int, uint32, Oid))
 {
 	CatCache   *ccp;
 	Oid			reloid;
@@ -1844,13 +1864,16 @@ PrepareToInvalidateCacheTuple(Relation relation,
 	/* ----------------
 	 *	for each cache
 	 *	   if the cache contains tuples from the specified relation
-	 *		   compute the tuple's hash value in this cache,
+	 *		   compute the tuple's hash value(s) in this cache,
 	 *		   and call the passed function to register the information.
 	 * ----------------
 	 */
 
 	for (ccp = CacheHdr->ch_caches; ccp; ccp = ccp->cc_next)
 	{
+		uint32		hashvalue;
+		Oid			dbid;
+
 		if (ccp->cc_reloid != reloid)
 			continue;
 
@@ -1858,10 +1881,20 @@ PrepareToInvalidateCacheTuple(Relation relation,
 		if (ccp->cc_tupdesc == NULL)
 			CatalogCacheInitializeCache(ccp);
 
-		(*function) (ccp->id,
-					 CatalogCacheComputeTupleHashValue(ccp, tuple),
-					 &tuple->t_self,
-					 ccp->cc_relisshared ? (Oid) 0 : MyDatabaseId);
+		hashvalue = CatalogCacheComputeTupleHashValue(ccp, tuple);
+		dbid = ccp->cc_relisshared ? (Oid) 0 : MyDatabaseId;
+
+		(*function) (ccp->id, hashvalue, dbid);
+
+		if (newtuple)
+		{
+			uint32		newhashvalue;
+
+			newhashvalue = CatalogCacheComputeTupleHashValue(ccp, newtuple);
+
+			if (newhashvalue != hashvalue)
+				(*function) (ccp->id, newhashvalue, dbid);
+		}
 	}
 }
 

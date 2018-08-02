@@ -10,6 +10,7 @@ SELECT relname, relhasindex
    FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace
    WHERE relkind = 'r' AND (nspname ~ '^pg_temp_') IS NOT TRUE
    AND relname NOT LIKE 'gp_%'
+   AND relname NOT LIKE '__gp_%'
    AND relname <> 'pg_resqueue'
    ORDER BY relname;
 

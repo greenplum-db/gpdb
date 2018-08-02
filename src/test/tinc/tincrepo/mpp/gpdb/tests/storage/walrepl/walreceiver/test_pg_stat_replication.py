@@ -34,11 +34,12 @@ class case(GPLibPQTestCase):
           View "pg_catalog.pg_stat_replication"
       Column      |           Type           | Modifiers
 ------------------+--------------------------+-----------
- procpid          | integer                  |
+ pid              | integer                  |
  usesysid         | oid                      |
  usename          | name                     |
  application_name | text                     |
  client_addr      | inet                     |
+ client_hostname  | text                     |
  client_port      | integer                  |
  backend_start    | timestamp with time zone |
  state            | text                     |

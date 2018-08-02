@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_largeobject_metadata.h
@@ -31,7 +31,10 @@
 CATALOG(pg_largeobject_metadata,2995)
 {
 	Oid			lomowner;		/* OID of the largeobject owner */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		lomacl[1];		/* access permissions */
+#endif
 } FormData_pg_largeobject_metadata;
 
 /* ----------------

@@ -9,7 +9,7 @@
  * contains variables.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -30,12 +30,18 @@
 #include "optimizer/walkers.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
-
+#include "utils/lsyscache.h"
 
 typedef struct
 {
 	Relids		varnos;
 } pull_varnos_context;
+
+typedef struct
+{
+	Bitmapset  *varattnos;
+	Index		varno;
+} pull_varattnos_context;
 
 typedef struct
 {
@@ -65,7 +71,7 @@ typedef struct
 	bool		inserted_sublink;		/* have we inserted a SubLink? */
 } flatten_join_alias_vars_context;
 
-static bool pull_varattnos_walker(Node *node, Bitmapset **varattnos);
+static bool pull_varattnos_walker(Node *node, pull_varattnos_context *context);
 static bool contain_var_clause_walker(Node *node, void *context);
 static bool contain_vars_of_level_walker(Node *node, int *sublevels_up);
 static bool locate_var_of_level_walker(Node *node,
@@ -228,28 +234,45 @@ pull_varnos(Node *node)
 	return pull_varnos_of_level(node, 0);
 }
 
+/*
+ * CDB
+ */
+Relids
+pull_upper_varnos(Node *node)
+{
+	return pull_varnos_of_level(node, 1);
+}
+
 
 /*
  * pull_varattnos
  *		Find all the distinct attribute numbers present in an expression tree,
  *		and add them to the initial contents of *varattnos.
- *		Only Vars that reference RTE 1 of rtable level zero are considered.
+ *		Only Vars of the given varno and rtable level zero are considered.
  *
  * Attribute numbers are offset by FirstLowInvalidHeapAttributeNumber so that
  * we can include system attributes (e.g., OID) in the bitmap representation.
  *
- * Currently, this does not support subqueries nor expressions containing
- * references to multiple tables; not needed since it's only applied to
- * index expressions and predicates.
+ * Currently, this does not support unplanned subqueries; that is not needed
+ * for current uses.  It will handle already-planned SubPlan nodes, though,
+ * looking into only the "testexpr" and the "args" list.  (The subplan cannot
+ * contain any other references to Vars of the current level.)
  */
 void
-pull_varattnos(Node *node, Bitmapset **varattnos)
+pull_varattnos(Node *node, Index varno, Bitmapset **varattnos)
 {
-	(void) pull_varattnos_walker(node, varattnos);
+	pull_varattnos_context context;
+
+	context.varattnos = *varattnos;
+	context.varno = varno;
+
+	(void) pull_varattnos_walker(node, &context);
+
+	*varattnos = context.varattnos;
 }
 
 static bool
-pull_varattnos_walker(Node *node, Bitmapset **varattnos)
+pull_varattnos_walker(Node *node, pull_varattnos_context *context)
 {
 	if (node == NULL)
 		return false;
@@ -257,17 +280,18 @@ pull_varattnos_walker(Node *node, Bitmapset **varattnos)
 	{
 		Var		   *var = (Var *) node;
 
-		Assert(var->varno == 1);
-		*varattnos = bms_add_member(*varattnos,
+		if (var->varno == context->varno && var->varlevelsup == 0)
+			context->varattnos =
+				bms_add_member(context->varattnos,
 						 var->varattno - FirstLowInvalidHeapAttributeNumber);
 		return false;
 	}
-	/* Should not find a subquery or subplan */
+
+	/* Should not find an unplanned subquery */
 	Assert(!IsA(node, Query));
-	Assert(!IsA(node, SubPlan));
 
 	return expression_tree_walker(node, pull_varattnos_walker,
-								  (void *) varattnos);
+								  (void *) context);
 }
 
 static bool
@@ -771,38 +795,44 @@ flatten_join_alias_vars_mutator(Node *node,
 			/* Must expand whole-row reference */
 			RowExpr    *rowexpr;
 			List	   *fields = NIL;
+			List	   *colnames = NIL;
 			AttrNumber	attnum;
-			ListCell   *l;
+			ListCell   *lv;
+			ListCell   *ln;
 
 			attnum = 0;
-			foreach(l, rte->joinaliasvars)
+			Assert(list_length(rte->joinaliasvars) == list_length(rte->eref->colnames));
+			forboth(lv, rte->joinaliasvars, ln, rte->eref->colnames)
 			{
-				newvar = (Node *) lfirst(l);
+				newvar = (Node *) lfirst(lv);
 				attnum++;
 				/* Ignore dropped columns */
 				if (IsA(newvar, Const))
 					continue;
+				newvar = copyObject(newvar);
 
 				/*
 				 * If we are expanding an alias carried down from an upper
 				 * query, must adjust its varlevelsup fields.
 				 */
 				if (context->sublevels_up != 0)
-				{
-					newvar = copyObject(newvar);
 					IncrementVarSublevelsUp(newvar, context->sublevels_up, 0);
-				}
+				/* Preserve original Var's location, if possible */
+				if (IsA(newvar, Var))
+					((Var *) newvar)->location = var->location;
 				/* Recurse in case join input is itself a join */
 				/* (also takes care of setting inserted_sublink if needed) */
 				newvar = flatten_join_alias_vars_mutator(newvar, context);
 				fields = lappend(fields, newvar);
+				/* We need the names of non-dropped columns, too */
+				colnames = lappend(colnames, copyObject((Node *) lfirst(ln)));
 			}
 			rowexpr = makeNode(RowExpr);
 			rowexpr->args = fields;
 			rowexpr->row_typeid = var->vartype;
 			rowexpr->row_format = COERCE_IMPLICIT_CAST;
-			rowexpr->colnames = NIL;
-			rowexpr->location = -1;
+			rowexpr->colnames = colnames;
+			rowexpr->location = var->location;
 
 			return (Node *) rowexpr;
 		}
@@ -810,16 +840,18 @@ flatten_join_alias_vars_mutator(Node *node,
 		/* Expand join alias reference */
 		Assert(var->varattno > 0);
 		newvar = (Node *) list_nth(rte->joinaliasvars, var->varattno - 1);
+		newvar = copyObject(newvar);
 
 		/*
 		 * If we are expanding an alias carried down from an upper query, must
 		 * adjust its varlevelsup fields.
 		 */
 		if (context->sublevels_up != 0)
-		{
-			newvar = copyObject(newvar);
 			IncrementVarSublevelsUp(newvar, context->sublevels_up, 0);
-		}
+
+		/* Preserve original Var's location, if possible */
+		if (IsA(newvar, Var))
+			((Var *) newvar)->location = var->location;
 
 		/* Recurse in case join input is itself a join */
 		newvar = flatten_join_alias_vars_mutator(newvar, context);

@@ -3,7 +3,7 @@
  * slru.h
  *		Simple LRU buffering for transaction status logfiles
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/slru.h
@@ -146,7 +146,16 @@ extern void SimpleLruWritePage(SlruCtl ctl, int slotno);
 extern void SimpleLruFlush(SlruCtl ctl, bool checkpoint);
 extern void SimpleLruTruncate(SlruCtl ctl, int cutoffPage);
 extern void SimpleLruTruncateWithLock(SlruCtl ctl, int cutoffPage);
-extern bool SlruScanDirectory(SlruCtl ctl, int cutoffPage, bool doDeletions);
 extern bool SimpleLruPageExists(SlruCtl ctl, int pageno);
+
+typedef bool (*SlruScanCallback) (SlruCtl ctl, char *filename, int segpage,
+											  void *data);
+extern bool SlruScanDirectory(SlruCtl ctl, SlruScanCallback callback, void *data);
+
+/* SlruScanDirectory public callbacks */
+extern bool SlruScanDirCbReportPresence(SlruCtl ctl, char *filename,
+							int segpage, void *data);
+extern bool SlruScanDirCbDeleteAll(SlruCtl ctl, char *filename, int segpage,
+					   void *data);
 
 #endif   /* SLRU_H */

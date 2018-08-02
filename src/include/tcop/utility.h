@@ -4,7 +4,7 @@
  *	  prototypes for utility.c.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/tcop/utility.h
@@ -33,6 +33,8 @@ extern void standard_ProcessUtility(Node *parsetree, const char *queryString,
 extern bool UtilityReturnsTuples(Node *parsetree);
 
 extern TupleDesc UtilityTupleDescriptor(Node *parsetree);
+
+extern Query *UtilityContainsQuery(Node *parsetree);
 
 extern const char *CreateCommandTag(Node *parsetree);
 

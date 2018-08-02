@@ -36,6 +36,8 @@ typedef struct WalSnd
 	WalSndState state;			/* this walsender's state */
 	XLogRecPtr	sentPtr;		/* WAL has been sent up to this point */
 	bool		sendKeepalive;	/* do we send keepalives on this connection? */
+	bool		needreload;		/* does currently-open file need to be
+								 * reloaded? */
 
 	/*
 	 * The xlog locations that have been written, flushed, and applied by

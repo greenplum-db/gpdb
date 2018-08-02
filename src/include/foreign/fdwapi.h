@@ -3,7 +3,7 @@
  * fdwapi.h
  *	  API for foreign-data wrappers
  *
- * Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2012, PostgreSQL Global Development Group
  *
  * src/include/foreign/fdwapi.h
  *
@@ -20,41 +20,23 @@ struct ExplainState;
 
 
 /*
- * FdwPlan is the information returned to the planner by PlanForeignScan.
- */
-typedef struct FdwPlan
-{
-	NodeTag		type;
-
-	/*
-	 * Cost estimation info. The startup_cost is time before retrieving the
-	 * first row, so it should include costs of connecting to the remote host,
-	 * sending over the query, etc.  Note that PlanForeignScan also ought to
-	 * set baserel->rows and baserel->width if it can produce any usable
-	 * estimates of those values.
-	 */
-	Cost		startup_cost;	/* cost expended before fetching any tuples */
-	Cost		total_cost;		/* total cost (assuming all tuples fetched) */
-
-	/*
-	 * FDW private data, which will be available at execution time.
-	 *
-	 * Note that everything in this list must be copiable by copyObject(). One
-	 * way to store an arbitrary blob of bytes is to represent it as a bytea
-	 * Const.  Usually, though, you'll be better off choosing a representation
-	 * that can be dumped usefully by nodeToString().
-	 */
-	List	   *fdw_private;
-} FdwPlan;
-
-
-/*
  * Callback function signatures --- see fdwhandler.sgml for more info.
  */
 
-typedef FdwPlan *(*PlanForeignScan_function) (Oid foreigntableid,
-														  PlannerInfo *root,
-														RelOptInfo *baserel);
+typedef void (*GetForeignRelSize_function) (PlannerInfo *root,
+														RelOptInfo *baserel,
+														Oid foreigntableid);
+
+typedef void (*GetForeignPaths_function) (PlannerInfo *root,
+													  RelOptInfo *baserel,
+													  Oid foreigntableid);
+
+typedef ForeignScan *(*GetForeignPlan_function) (PlannerInfo *root,
+														 RelOptInfo *baserel,
+														  Oid foreigntableid,
+													  ForeignPath *best_path,
+															 List *tlist,
+														 List *scan_clauses);
 
 typedef void (*ExplainForeignScan_function) (ForeignScanState *node,
 													struct ExplainState *es);
@@ -68,26 +50,46 @@ typedef void (*ReScanForeignScan_function) (ForeignScanState *node);
 
 typedef void (*EndForeignScan_function) (ForeignScanState *node);
 
+typedef int (*AcquireSampleRowsFunc) (Relation relation, int elevel,
+											   HeapTuple *rows, int targrows,
+												  double *totalrows,
+												  double *totaldeadrows);
+
+typedef bool (*AnalyzeForeignTable_function) (Relation relation,
+												 AcquireSampleRowsFunc *func,
+													BlockNumber *totalpages);
 
 /*
  * FdwRoutine is the struct returned by a foreign-data wrapper's handler
  * function.  It provides pointers to the callback functions needed by the
  * planner and executor.
  *
- * Currently, all functions must be supplied.  Later there may be optional
- * additions.  It's recommended that the handler initialize the struct with
- * makeNode(FdwRoutine) so that all fields are set to zero.
+ * More function pointers are likely to be added in the future.  Therefore
+ * it's recommended that the handler initialize the struct with
+ * makeNode(FdwRoutine) so that all fields are set to NULL.  This will
+ * ensure that no fields are accidentally left undefined.
  */
 typedef struct FdwRoutine
 {
 	NodeTag		type;
 
-	PlanForeignScan_function PlanForeignScan;
+	/*
+	 * These functions are required.
+	 */
+	GetForeignRelSize_function GetForeignRelSize;
+	GetForeignPaths_function GetForeignPaths;
+	GetForeignPlan_function GetForeignPlan;
 	ExplainForeignScan_function ExplainForeignScan;
 	BeginForeignScan_function BeginForeignScan;
 	IterateForeignScan_function IterateForeignScan;
 	ReScanForeignScan_function ReScanForeignScan;
 	EndForeignScan_function EndForeignScan;
+
+	/*
+	 * These functions are optional.  Set the pointer to NULL for any that are
+	 * not provided.
+	 */
+	AnalyzeForeignTable_function AnalyzeForeignTable;
 } FdwRoutine;
 
 

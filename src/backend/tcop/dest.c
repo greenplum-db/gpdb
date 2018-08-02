@@ -4,7 +4,7 @@
  *	  support for communication destinations
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -31,7 +31,7 @@
 #include "access/printtup.h"
 #include "access/xact.h"
 #include "commands/copy.h"
-#include "executor/executor.h"
+#include "commands/createas.h"
 #include "executor/functions.h"
 #include "executor/tstoreReceiver.h"
 #include "libpq/libpq.h"
@@ -120,7 +120,7 @@ CreateDestReceiver(CommandDest dest)
 			return CreateTuplestoreDestReceiver();
 
 		case DestIntoRel:
-			return CreateIntoRelDestReceiver();
+			return CreateIntoRelDestReceiver(NULL);
 
 		case DestCopyOut:
 			return CreateCopyDestReceiver();

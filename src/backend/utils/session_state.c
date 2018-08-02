@@ -82,16 +82,6 @@ SessionState_Acquire(int sessionId)
 	if (NULL == acquired)
 	{
 		acquired = AllSessionStateEntries->freeList;
-		Assert(INVALID_SESSION_ID == acquired->sessionId &&
-				acquired->runawayStatus == RunawayStatus_NotRunaway &&
-				0 == acquired->pinCount &&
-				CLEANUP_COUNTDOWN_BEFORE_RUNAWAY == acquired->cleanupCountdown &&
-				0 == acquired->activeProcessCount &&
-				0 == acquired->sessionVmem &&
-				0 == acquired->spinLock &&
-				0 == acquired->sessionVmemRunaway &&
-				0 == acquired->commandCountRunaway &&
-				!acquired->isModifiedSessionId);
 
 		AllSessionStateEntries->freeList = acquired->next;
 

@@ -35,7 +35,6 @@ EXCL_OBJS=\
 # of the test programs. Feel free to link them back (i.e. remove them from
 # this exclusion list) as needed.
 EXCL_OBJS+=\
-	src/backend/access/gist/%.o \
 	src/backend/access/gin/gininsert.o \
 	src/backend/access/gin/ginxlog.o \
 	src/backend/access/gin/ginentrypage.o \
@@ -50,18 +49,14 @@ EXCL_OBJS+=\
 	src/backend/access/hash/hash.o \
 	src/backend/access/hash/hashsearch.o \
 	\
-	src/backend/utils/adt/ascii.o \
 	src/backend/utils/adt/cash.o \
 	src/backend/utils/adt/char.o \
 	src/backend/utils/adt/complex_type.o \
 	src/backend/utils/adt/domains.o \
 	src/backend/utils/adt/enum.o \
-	src/backend/utils/adt/geo_ops.o \
 	src/backend/utils/adt/geo_selfuncs.o \
-	src/backend/utils/adt/gp_dump_oids.o \
 	src/backend/utils/adt/gp_optimizer_functions.o \
 	src/backend/utils/adt/interpolate.o \
-	src/backend/utils/adt/json.o \
 	src/backend/utils/adt/jsonfuncs.o \
 	src/backend/utils/adt/like.o \
 	src/backend/utils/adt/like_match.o \

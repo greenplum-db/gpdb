@@ -4317,7 +4317,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"repl_catchup_within_range", PGC_SUSET, WAL_REPLICATION,
+		{"repl_catchup_within_range", PGC_SUSET, REPLICATION_STANDBY,
 			gettext_noop("Sets the maximum number of xlog segments allowed to lag"
 					  " when the backends can start blocking despite the WAL"
 					   " sender being in catchup phase. (Master Mirroring)"),
@@ -5781,7 +5781,7 @@ set_gp_replication_config(const char *name, const char *value)
 					               GpReplicationConfigFilename)));
 
 		/* parse it */
-		if (!ParseConfigFile(GpReplicationConfigFilename, 0, PGC_SUSET, LOG, &head, &tail))
+		if (!ParseConfigFile(GpReplicationConfigFilename, 0, true, PGC_SUSET, LOG, &head, &tail))
 			ereport(ERROR,
 			        (errcode(ERRCODE_CONFIG_FILE_ERROR),
 					        errmsg("could not parse contents of file \"%s\"",

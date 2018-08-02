@@ -35,16 +35,16 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (7 rows)
 
 \d+ delta_all
-                                         Append-Only Columnar Table "public.delta_all"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                                Append-Only Columnar Table "public.delta_all"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -142,17 +142,17 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (8 rows)
 
 \d+ delta_alter
-                                                               Append-Only Columnar Table "public.delta_alter"
- Column |            Type             |                        Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
- id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    | none             | 0                 | 32768      | 
- a1     | integer                     |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |                                                          | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |                                                          | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |                                                          | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |                                                          | extended | rle_type         | 4                 | 32768      | 
+                                                                       Append-Only Columnar Table "public.delta_alter"
+ Column |            Type             |                        Modifiers                         | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+----------------------------------------------------------+----------+--------------+------------------+-------------------+------------+-------------
+ id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    |              | none             | 0                 | 32768      | 
+ a1     | integer                     |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |                                                          | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |                                                          | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |                                                          | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -191,17 +191,17 @@ select * from delta_alter order by id limit 10;
 Alter table delta_alter Alter column a2 Type double precision;
 Alter table delta_alter Alter column a4 Type interval;
 \d+ delta_alter
-                                                               Append-Only Columnar Table "public.delta_alter"
- Column |            Type             |                        Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
- id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    | none             | 0                 | 32768      | 
- a1     | integer                     |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a2     | double precision            |                                                          | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |                                                          | plain    | rle_type         | 3                 | 32768      | 
- a4     | interval                    |                                                          | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |                                                          | extended | rle_type         | 4                 | 32768      | 
+                                                                       Append-Only Columnar Table "public.delta_alter"
+ Column |            Type             |                        Modifiers                         | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+----------------------------------------------------------+----------+--------------+------------------+-------------------+------------+-------------
+ id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    |              | none             | 0                 | 32768      | 
+ a1     | integer                     |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | double precision            |                                                          | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |                                                          | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | interval                    |                                                          | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -233,17 +233,17 @@ Alter table delta_alter Alter column a1 Type bigint;
 Alter table delta_alter Alter column a6 Type timestamp;
 Alter table delta_alter Alter column a5 Type timestamp with time zone;
 \d+ delta_alter
-                                                               Append-Only Columnar Table "public.delta_alter"
- Column |            Type             |                        Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
- id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    | none             | 0                 | 32768      | 
- a1     | bigint                      |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a2     | double precision            |                                                          | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |                                                          | plain    | rle_type         | 3                 | 32768      | 
- a4     | interval                    |                                                          | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp with time zone    |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp without time zone |                                                          | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |                                                          | extended | rle_type         | 4                 | 32768      | 
+                                                                       Append-Only Columnar Table "public.delta_alter"
+ Column |            Type             |                        Modifiers                         | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+----------------------------------------------------------+----------+--------------+------------------+-------------------+------------+-------------
+ id     | integer                     | not null default nextval('delta_alter_id_seq'::regclass) | plain    |              | none             | 0                 | 32768      | 
+ a1     | bigint                      |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | double precision            |                                                          | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |                                                          | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | interval                    |                                                          | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp with time zone    |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp without time zone |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -298,16 +298,16 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (7 rows)
 
 \d+ delta_bitmap_ins
-                                     Append-Only Columnar Table "public.delta_bitmap_ins"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_bitmap_ins"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Indexes:
     "dl_ix_bt" bitmap (a1)
@@ -379,16 +379,16 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (7 rows)
 
 \d+ delta_btree_ins
-                                      Append-Only Columnar Table "public.delta_btree_ins"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_btree_ins"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Indexes:
     "dl_ix_br" btree (a1)
@@ -459,16 +459,16 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (7 rows)
 
 \d+ delta_ins_bitmap
-                                     Append-Only Columnar Table "public.delta_ins_bitmap"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_ins_bitmap"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -492,16 +492,16 @@ Insert into delta_ins_bitmap select
     from generate_series(100,130)i;
 Create index dl_ins_bt_ix on  delta_ins_bitmap using bitmap(a3);
 \d+ delta_ins_bitmap
-                                     Append-Only Columnar Table "public.delta_ins_bitmap"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_ins_bitmap"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Indexes:
     "dl_ins_bt_ix" bitmap (a3)
@@ -556,16 +556,16 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (7 rows)
 
 \d+ delta_ins_btree
-                                      Append-Only Columnar Table "public.delta_ins_btree"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_ins_btree"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -589,16 +589,16 @@ Insert into delta_ins_btree select
     from generate_series(100,130)i;
 Create index dl_br_ix on  delta_ins_btree(a3);
 \d+ delta_ins_btree
-                                      Append-Only Columnar Table "public.delta_ins_btree"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | rle_type         | 1                 | 32768      | 
- a7     | text                        |           | extended | rle_type         | 4                 | 32768      | 
+                                             Append-Only Columnar Table "public.delta_ins_btree"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Indexes:
     "dl_br_ix" btree (a3)
@@ -663,15 +663,15 @@ Insert into delta_blocks select
     else timestamp '2014-07-22 14:00:00.333892-07' end
     from generate_series(1,100000)i;
 \d+ delta_blocks
-                                       Append-Only Columnar Table "public.delta_blocks"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 1                 | 8192       | 
- a2     | bigint                      |           | plain   | rle_type         | 1                 | 8192       | 
- a3     | date                        |           | plain   | rle_type         | 1                 | 8192       | 
- a4     | time without time zone      |           | plain   | rle_type         | 1                 | 8192       | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 1                 | 8192       | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 1                 | 8192       | 
+                                              Append-Only Columnar Table "public.delta_blocks"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 1                 | 8192       | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 1                 | 8192       | 
+ a3     | date                        |           | plain   |              | rle_type         | 1                 | 8192       | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 1                 | 8192       | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 1                 | 8192       | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 1                 | 8192       | 
 Checksum: f
 Indexes:
     "dl_bt_ix" bitmap (a1)
@@ -726,18 +726,18 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (9 rows)
 
 \d+ delta_none
-                                        Append-Only Columnar Table "public.delta_none"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | none             | 0                 | 32768      | 
- a3     | date                        |           | plain    | rle_type         | 2                 | 32768      | 
- a4     | time without time zone      |           | plain    | rle_type         | 3                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | none             | 0                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | none             | 0                 | 32768      | 
- a7     | integer                     |           | plain    | rle_type         | 4                 | 32768      | 
- a8     | bigint                      |           | plain    | none             | 0                 | 32768      | 
- a9     | text                        |           | extended | rle_type         | 2                 | 32768      | 
+                                                Append-Only Columnar Table "public.delta_none"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | none             | 0                 | 32768      | 
+ a3     | date                        |           | plain    |              | rle_type         | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | rle_type         | 3                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | none             | 0                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | none             | 0                 | 32768      | 
+ a7     | integer                     |           | plain    |              | rle_type         | 4                 | 32768      | 
+ a8     | bigint                      |           | plain    |              | none             | 0                 | 32768      | 
+ a9     | text                        |           | extended |              | rle_type         | 2                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -802,12 +802,12 @@ Select a2, a3, a5 from delta_none where a1 <2 order by a2, a3, a5 limit 10;
 CREATE TABLE delta_one (a INT, b INT, c CHAR(100)) WITH (appendonly=true, orientation=column, compresstype=rle_type)
 DISTRIBUTED BY (b);
 \d+ delta_one
-                                  Append-Only Columnar Table "public.delta_one"
- Column |      Type      | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+----------------+-----------+----------+------------------+-------------------+------------+-------------
- a      | integer        |           | plain    | rle_type         | 1                 | 32768      | 
- b      | integer        |           | plain    | rle_type         | 1                 | 32768      | 
- c      | character(100) |           | extended | rle_type         | 1                 | 32768      | 
+                                          Append-Only Columnar Table "public.delta_one"
+ Column |      Type      | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+----------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a      | integer        |           | plain    |              | rle_type         | 1                 | 32768      | 
+ b      | integer        |           | plain    |              | rle_type         | 1                 | 32768      | 
+ c      | character(100) |           | extended |              | rle_type         | 1                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, checksum=false
@@ -1091,18 +1091,18 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (9 rows)
 
 \d+ delta_zlib
-                                        Append-Only Columnar Table "public.delta_zlib"
- Column |            Type             | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+----------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain    | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain    | zlib             | 1                 | 32768      | 
- a3     | date                        |           | plain    | zlib             | 2                 | 32768      | 
- a4     | time without time zone      |           | plain    | zlib             | 3                 | 32768      | 
- a5     | timestamp without time zone |           | plain    | zlib             | 4                 | 32768      | 
- a6     | timestamp with time zone    |           | plain    | zlib             | 5                 | 32768      | 
- a7     | integer                     |           | plain    | zlib             | 6                 | 32768      | 
- a8     | bigint                      |           | plain    | zlib             | 7                 | 32768      | 
- a9     | text                        |           | extended | rle_type         | 2                 | 32768      | 
+                                                Append-Only Columnar Table "public.delta_zlib"
+ Column |            Type             | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain    |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain    |              | zlib             | 1                 | 32768      | 
+ a3     | date                        |           | plain    |              | zlib             | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain    |              | zlib             | 3                 | 32768      | 
+ a5     | timestamp without time zone |           | plain    |              | zlib             | 4                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain    |              | zlib             | 5                 | 32768      | 
+ a7     | integer                     |           | plain    |              | zlib             | 6                 | 32768      | 
+ a8     | bigint                      |           | plain    |              | zlib             | 7                 | 32768      | 
+ a9     | text                        |           | extended |              | rle_type         | 2                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, checksum=false
@@ -1192,15 +1192,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_1_delta_null
-                                  Append-Only Columnar Table "public.rle_type_1_delta_null"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 1                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 1                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 1                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 1                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 1                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 1                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_1_delta_null"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 1                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 1                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 1                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 1                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 1                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 1                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, checksum=false
@@ -1291,15 +1291,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_2_delta_chkt
-                                  Append-Only Columnar Table "public.rle_type_2_delta_chkt"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 2                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 2                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 2                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 2                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 2                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_2_delta_chkt"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: t
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=true
@@ -1357,15 +1357,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_2_delta_chkf
-                                  Append-Only Columnar Table "public.rle_type_2_delta_chkf"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 2                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 2                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 2                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 2                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 2                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_2_delta_chkf"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=false
@@ -1426,15 +1426,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_2_delta_null
-                                  Append-Only Columnar Table "public.rle_type_2_delta_null"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 2                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 2                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 2                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 2                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 2                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 2                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_2_delta_null"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=false
@@ -1549,15 +1549,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_3_delta_null
-                                  Append-Only Columnar Table "public.rle_type_3_delta_null"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 3                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 3                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 3                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 3                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 3                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 3                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_3_delta_null"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 3                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 3                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 3                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 3                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 3                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 3                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3, checksum=false
@@ -1648,15 +1648,15 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 (6 rows)
 
 \d+ rle_type_4_delta_null
-                                  Append-Only Columnar Table "public.rle_type_4_delta_null"
- Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
- a1     | integer                     |           | plain   | rle_type         | 4                 | 32768      | 
- a2     | bigint                      |           | plain   | rle_type         | 4                 | 32768      | 
- a3     | date                        |           | plain   | rle_type         | 4                 | 32768      | 
- a4     | time without time zone      |           | plain   | rle_type         | 4                 | 32768      | 
- a5     | timestamp without time zone |           | plain   | rle_type         | 4                 | 32768      | 
- a6     | timestamp with time zone    |           | plain   | rle_type         | 4                 | 32768      | 
+                                          Append-Only Columnar Table "public.rle_type_4_delta_null"
+ Column |            Type             | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   |              | rle_type         | 4                 | 32768      | 
+ a2     | bigint                      |           | plain   |              | rle_type         | 4                 | 32768      | 
+ a3     | date                        |           | plain   |              | rle_type         | 4                 | 32768      | 
+ a4     | time without time zone      |           | plain   |              | rle_type         | 4                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   |              | rle_type         | 4                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   |              | rle_type         | 4                 | 32768      | 
 Checksum: f
 Has OIDs: no
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, checksum=false

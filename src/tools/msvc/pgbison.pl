@@ -14,14 +14,21 @@ $bisonver=(split(/\s+/,$bisonver))[3]; # grab version number
 
 unless ($bisonver eq '1.875' || $bisonver ge '2.2')
 {
+<<<<<<< HEAD
     print "WARNING! Bison install not found, or unsupported Bison version.\n";
     print "echo Attempting to build without.\n";
     exit 0;
+=======
+	print "WARNING! Bison install not found, or unsupported Bison version.\n";
+	print "echo Attempting to build without.\n";
+	exit 0;
+>>>>>>> 80edfd76591fdb9beec061de3c05ef4e9d96ce56
 }
 
 my $input = shift;
 if ($input !~ /\.y$/)
 {
+<<<<<<< HEAD
     print "Input must be a .y file\n";
     exit 1;
 }
@@ -29,6 +36,15 @@ elsif (!-e $input)
 {
     print "Input file $input not found\n";
     exit 1;
+=======
+	print "Input must be a .y file\n";
+	exit 1;
+}
+elsif (!-e $input)
+{
+	print "Input file $input not found\n";
+	exit 1;
+>>>>>>> 80edfd76591fdb9beec061de3c05ef4e9d96ce56
 }
 
 (my $output = $input) =~ s/\.y$/.c/;

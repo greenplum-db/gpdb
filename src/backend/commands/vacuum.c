@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -29,6 +29,7 @@
 #include "access/heapam.h"
 #include "access/appendonlywriter.h"
 #include "access/appendonlytid.h"
+#include "access/visibilitymap.h"
 #include "catalog/heap.h"
 #include "access/transam.h"
 #include "access/xact.h"
@@ -147,7 +148,7 @@ static void vacuum_appendonly_index(Relation indexRelation,
  * tables separately.
  *
  * for_wraparound is used by autovacuum to let us know when it's forcing
- * a vacuum for wraparound, which should not be auto-cancelled.
+ * a vacuum for wraparound, which should not be auto-canceled.
  *
  * bstrategy is normally given as NULL, but in autovacuum it can be passed
  * in to use the same buffer strategy object across multiple vacuum() calls.
@@ -310,6 +311,9 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 
 		VacuumCostActive = (VacuumCostDelay > 0);
 		VacuumCostBalance = 0;
+		VacuumPageHit = 0;
+		VacuumPageMiss = 0;
+		VacuumPageDirty = 0;
 
 		if (vacstmt->options & VACOPT_VACUUM)
 		{
@@ -1024,10 +1028,16 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 			Oid			relid;
 			List	   *prels = NIL;
 
-			/* the caller should've separated VACUUMs and ANALYZEs into separate
-			 * commands before getting here.
+			/*
+			 * Since we don't take a lock here, the relation might be gone, or the
+			 * RangeVar might no longer refer to the OID we look up here.  In the
+			 * former case, VACUUM will do nothing; in the latter case, it will
+			 * process the OID we looked up here, rather than the new one.
+			 * Neither is ideal, but there's little practical alternative, since
+			 * we're going to commit this transaction and begin a new one between
+			 * now and then.
 			 */
-			relid = RangeVarGetRelid(vacstmt->relation, false);
+			relid = RangeVarGetRelid(vacstmt->relation, NoLock, false);
 
 			if (rel_is_partitioned(relid))
 			{
@@ -1057,7 +1067,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 			 */
 			Oid relationOid = InvalidOid;
 
-			relationOid = RangeVarGetRelid(vacstmt->relation, false);
+			relationOid = RangeVarGetRelid(vacstmt->relation, NoLock, false);
 			PartStatus ps = rel_part_status(relationOid);
 
 			if (ps != PART_STATUS_ROOT && (vacstmt->options & VACOPT_ROOTONLY))
@@ -1361,6 +1371,7 @@ vac_update_relstats_from_list(List *updated_stats)
 		{
 			stats->rel_pages = stats->rel_pages / getgpsegmentCount();
 			stats->rel_tuples = stats->rel_tuples / getgpsegmentCount();
+			stats->relallvisible = stats->relallvisible / getgpsegmentCount();
 		}
 
 		/*
@@ -1369,6 +1380,7 @@ vac_update_relstats_from_list(List *updated_stats)
 		 */
 		vac_update_relstats(rel,
 							stats->rel_pages, stats->rel_tuples,
+							stats->relallvisible,
 							rel->rd_rel->relhasindex, InvalidTransactionId,
 							false /* isvacuum */);
 		relation_close(rel, AccessShareLock);
@@ -1407,6 +1419,7 @@ vac_update_relstats_from_list(List *updated_stats)
 void
 vac_update_relstats(Relation relation,
 					BlockNumber num_pages, double num_tuples,
+					BlockNumber num_all_visible_pages,
 					bool hasindex, TransactionId frozenxid, bool isvacuum)
 {
 	Oid			relid = RelationGetRelid(relation);
@@ -1435,6 +1448,7 @@ vac_update_relstats(Relation relation,
 		{
 			num_pages = relation->rd_rel->relpages;
 			num_tuples = relation->rd_rel->reltuples;
+			num_all_visible_pages = relation->rd_rel->relallvisible;
 		}
 		else if (Gp_role == GP_ROLE_EXECUTE)
 		{
@@ -1451,6 +1465,7 @@ vac_update_relstats(Relation relation,
 			stats.relid = RelationGetRelid(relation);
 			stats.rel_pages = num_pages;
 			stats.rel_tuples = num_tuples;
+			stats.relallvisible = num_all_visible_pages;
 			pq_sendint(&buf, sizeof(VPgClassStats), sizeof(int));
 			pq_sendbytes(&buf, (char *) &stats, sizeof(VPgClassStats));
 			pq_endmessage(&buf);
@@ -1492,6 +1507,11 @@ vac_update_relstats(Relation relation,
 	if (pgcform->reltuples != (float4) num_tuples)
 	{
 		pgcform->reltuples = (float4) num_tuples;
+		dirty = true;
+	}
+	if (pgcform->relallvisible != (int32) num_all_visible_pages)
+	{
+		pgcform->relallvisible = (int32) num_all_visible_pages;
 		dirty = true;
 	}
 	if (pgcform->relhasindex != hasindex)
@@ -1835,7 +1855,7 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 			MyProc->vacuumFlags |= PROC_IN_VACUUM;
 #endif
 			if (for_wraparound)
-				MyProc->vacuumFlags |= PROC_VACUUM_FOR_WRAPAROUND;
+				MyPgXact->vacuumFlags |= PROC_VACUUM_FOR_WRAPAROUND;
 			LWLockRelease(ProcArrayLock);
 		}
 
@@ -2423,6 +2443,7 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 	if (!stats->estimated_count)
 		vac_update_relstats(indrel,
 							stats->num_pages, stats->num_index_tuples,
+							visibilitymap_count(indrel),
 							false, InvalidTransactionId,
 							true /* isvacuum */);
 
@@ -2503,6 +2524,7 @@ vacuum_appendonly_index(Relation indexRelation,
 	if (!stats->estimated_count)
 		vac_update_relstats(indexRelation,
 							stats->num_pages, stats->num_index_tuples,
+							visibilitymap_count(indexRelation),
 							false, InvalidTransactionId,
 							true /* isvacuum */);
 
@@ -2771,6 +2793,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults* cdb_pgresu
 			{
 				tmp_stats->rel_pages += pgclass_stats->rel_pages;
 				tmp_stats->rel_tuples += pgclass_stats->rel_tuples;
+				tmp_stats->relallvisible += pgclass_stats->relallvisible;
 				break;
 			}
 		}

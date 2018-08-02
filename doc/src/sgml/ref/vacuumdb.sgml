@@ -23,26 +23,26 @@ PostgreSQL documentation
   <cmdsynopsis>
    <command>vacuumdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
-   <group><arg>--full</arg><arg>-f</arg></group>
-   <group><arg>--freeze</arg><arg>-F</arg></group>
-   <group><arg>--verbose</arg><arg>-v</arg></group>
-   <group><arg>--analyze</arg><arg>-z</arg></group>
-   <group><arg>--analyze-only</arg><arg>-Z</arg></group>
-   <arg>--table | -t <replaceable>table</replaceable>
-    <arg>( <replaceable class="parameter">column</replaceable> [,...] )</arg>
+   <arg rep="repeat"><replaceable>option</replaceable></arg>
+   <arg choice="opt">
+    <group choice="plain">
+     <arg choice="plain"><option>--table</option></arg>
+     <arg choice="plain"><option>-t</option></arg>
+    </group>
+    <replaceable>table</replaceable>
+    <arg choice="opt">( <replaceable class="parameter">column</replaceable> [,...] )</arg>
    </arg>
-   <arg><replaceable>dbname</replaceable></arg>
+   <arg choice="opt"><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
 
   <cmdsynopsis>
    <command>vacuumdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
-   <group><arg>--full</arg><arg>-f</arg></group>
-   <group><arg>--freeze</arg><arg>-F</arg></group>
-   <group><arg>--verbose</arg><arg>-v</arg></group>
-   <group><arg>--analyze</arg><arg>-z</arg></group>
-   <group><arg>--analyze-only</arg><arg>-Z</arg></group>
-   <group><arg>--all</arg><arg>-a</arg></group>
+   <arg rep="repeat"><replaceable>option</replaceable></arg>
+   <group choice="plain">
+    <arg choice="plain"><option>--all</option></arg>
+    <arg choice="plain"><option>-a</option></arg>
+   </group>
   </cmdsynopsis>
  </refsynopsisdiv>
 
@@ -284,6 +284,18 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term><option>--maintenance-db=<replaceable class="parameter">dbname</replaceable></></term>
+      <listitem>
+       <para>
+         Specifies the name of the database to connect to discover what other
+         databases should be vacuumed. If not specified, the
+         <literal>postgres</literal> database will be used,
+         and if that does not exist, <literal>template1</literal> will be used.
+       </para>
+      </listitem>
+     </varlistentry>
     </variablelist>
    </para>
  </refsect1>
@@ -369,8 +381,7 @@ PostgreSQL documentation
     <literal>bar</literal> of the table for the optimizer:
 <screen>
 <prompt>$ </prompt><userinput>vacuumdb --analyze --verbose --table 'foo(bar)' xyzzy</userinput>
-</screen>
-   </para>
+</screen></para>
 
  </refsect1>
 

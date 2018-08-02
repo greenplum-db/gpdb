@@ -5,6 +5,10 @@
 -- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
 -- end_matchsubs
 -- First create a bunch of test tables
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
 SET statement_mem='250 MB';
 CREATE TABLE dml_ao_check_r (
 	a int default 100 CHECK( a between 1 and 105),
@@ -292,6 +296,7 @@ SELECT COUNT(*) FROM dml_ao_check_p;
 
 INSERT INTO dml_ao_check_p select generate_series(1,100),'p', generate_series(1,100);
 ERROR:  new row for relation "dml_ao_check_p" violates check constraint "dml_ao_check_p_check"  (seg0 127.0.0.1:25432 pid=87948)
+DETAIL:  Failing row contains (1, p, 1, null).
 SELECT COUNT(*) FROM dml_ao_check_p;
  count 
 -------
@@ -328,6 +333,7 @@ SELECT COUNT(*) FROM (SELECT dml_ao_check_r.a + 110 , 0, dml_ao_check_r.c, NULL 
 
 INSERT INTO dml_ao_check_r SELECT dml_ao_check_r.a + 110 , 0, dml_ao_check_r.c, NULL FROM dml_ao_check_r, dml_ao_check_s WHERE dml_ao_check_r.a = dml_ao_check_s.a;
 ERROR:  null value in column "d" violates not-null constraint
+DETAIL:  Failing row contains (118, 0, r, null).
 SELECT COUNT(*) FROM dml_ao_check_r;
  count 
 -------
@@ -1137,6 +1143,7 @@ SELECT COUNT(*) FROM dml_co_check_p;
 
 INSERT INTO dml_co_check_p select generate_series(1,100),'p', generate_series(1,100);
 ERROR:  new row for relation "dml_co_check_p" violates check constraint "dml_co_check_p_check"
+DETAIL:  Failing row contains (1, p, 1, null).
 SELECT COUNT(*) FROM dml_co_check_p;
  count 
 -------
@@ -1173,6 +1180,7 @@ SELECT COUNT(*) FROM (SELECT dml_co_check_r.a + 110 , dml_co_check_r.b, dml_co_c
 
 INSERT INTO dml_co_check_r SELECT dml_co_check_r.a + 110 , dml_co_check_r.b, dml_co_check_r.c, dml_co_check_r.d FROM dml_co_check_r, dml_co_check_s WHERE dml_co_check_r.a = dml_co_check_s.a AND dml_co_check_r.b > 10;
 ERROR:  new row for relation "dml_co_check_r_1_prt_def" violates check constraint "dml_co_check_r_a_check"
+DETAIL:  Failing row contains (138, 93.24, r, 4).
 SELECT COUNT(*) FROM dml_co_check_r;
  count 
 -------
@@ -1194,6 +1202,7 @@ SELECT COUNT(*) FROM (SELECT dml_co_check_r.a + 110 , 0, dml_co_check_r.c, NULL 
 
 INSERT INTO dml_co_check_r SELECT dml_co_check_r.a + 110 , 0, dml_co_check_r.c, NULL FROM dml_co_check_r, dml_co_check_s WHERE dml_co_check_r.a = dml_co_check_s.a;
 ERROR:  null value in column "d" violates not-null constraint
+DETAIL:  Failing row contains (118, 0, r, null).
 SELECT COUNT(*) FROM dml_co_check_r;
  count 
 -------
@@ -2003,6 +2012,7 @@ SELECT COUNT(*) FROM dml_heap_check_p;
 
 INSERT INTO dml_heap_check_p select generate_series(1,100),'p', generate_series(1,100);
 ERROR:  new row for relation "dml_heap_check_p" violates check constraint "dml_heap_check_p_check"
+DETAIL:  Failing row contains (1, p, 1, null).
 SELECT COUNT(*) FROM dml_heap_check_p;
  count 
 -------
@@ -2039,6 +2049,7 @@ SELECT COUNT(*) FROM (SELECT dml_heap_check_r.a + 110 , dml_heap_check_r.b, dml_
 
 INSERT INTO dml_heap_check_r SELECT dml_heap_check_r.a + 110 , dml_heap_check_r.b, dml_heap_check_r.c, dml_heap_check_r.d FROM dml_heap_check_r, dml_heap_check_s WHERE dml_heap_check_r.a = dml_heap_check_s.a AND dml_heap_check_r.b > 10;
 ERROR:  new row for relation "dml_heap_check_r_1_prt_def" violates check constraint "dml_heap_check_r_a_check"
+DETAIL:  Failing row contains (138, 93.24, r, 4).
 SELECT COUNT(*) FROM dml_heap_check_r;
  count 
 -------
@@ -2060,6 +2071,7 @@ SELECT COUNT(*) FROM (SELECT dml_heap_check_r.a + 110 , 0, dml_heap_check_r.c, N
 
 INSERT INTO dml_heap_check_r SELECT dml_heap_check_r.a + 110 , 0, dml_heap_check_r.c, NULL FROM dml_heap_check_r, dml_heap_check_s WHERE dml_heap_check_r.a = dml_heap_check_s.a;
 ERROR:  null value in column "d" violates not-null constraint
+DETAIL:  Failing row contains (111, 0, r, null).
 SELECT COUNT(*) FROM dml_heap_check_r;
  count 
 -------
@@ -2085,12 +2097,15 @@ rollback;
 --Negative test: Update data that does not satisfy the check constraints
 UPDATE dml_heap_check_s SET a = 100 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a AND dml_heap_check_s.a = 99;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_def" violates check constraint "dml_heap_check_s_a_check"
+DETAIL:  Failing row contains (199, 297, s, 16).
 --Negative test - Update violates check constraint(not NULL constraint)
 UPDATE dml_heap_check_s SET b = NULL FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.b and dml_heap_check_s.b = 99;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_5" violates check constraint "scheck_b"
+DETAIL:  Failing row contains (33, null, s, 5).
 --Negative test - Update moving tuple across partition .also violates the check constraint
 UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_def" violates check constraint "dml_heap_check_s_a_check"
+DETAIL:  Failing row contains (115, 15, s, 0).
 --Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_s;

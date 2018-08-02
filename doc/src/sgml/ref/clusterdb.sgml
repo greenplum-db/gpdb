@@ -23,16 +23,16 @@ PostgreSQL documentation
   <cmdsynopsis>
    <command>clusterdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
-   <group><arg>--verbose</arg><arg>-v</arg></group>
-   <arg>--table | -t <replaceable>table</replaceable> </arg>
-   <arg><replaceable>dbname</replaceable></arg>
+   <group choice="opt"><arg choice="plain"><option>--verbose</option></arg><arg choice="plain"><option>-v</option></arg></group>
+   <arg choice="opt"><group choice="plain"><arg choice="plain"><option>--table</option></arg><arg choice="plain"><option>-t</option></arg></group> <replaceable>table</replaceable> </arg>
+   <arg choice="opt"><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
 
   <cmdsynopsis>
    <command>clusterdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
-   <group><arg>--verbose</arg><arg>-v</arg></group>
-   <group><arg>--all</arg><arg>-a</arg></group>
+   <group choice="opt"><arg choice="plain"><option>--verbose</option></arg><arg choice="plain"><option>-v</option></arg></group>
+   <group choice="plain"><arg choice="plain"><option>--all</option></arg><arg choice="plain"><option>-a</option></arg></group>
   </cmdsynopsis>
  </refsynopsisdiv>
 
@@ -229,6 +229,18 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term><option>--maintenance-db=<replaceable class="parameter">dbname</replaceable></></term>
+      <listitem>
+       <para>
+         Specifies the name of the database to connect to discover what other
+         databases should be clustered. If not specified, the
+         <literal>postgres</literal> database will be used,
+         and if that does not exist, <literal>template1</literal> will be used.
+       </para>
+      </listitem>
+     </varlistentry>
     </variablelist>
    </para>
  </refsect1>
@@ -293,8 +305,7 @@ PostgreSQL documentation
     <literal>xyzzy</literal>:
 <screen>
 <prompt>$ </prompt><userinput>clusterdb --table foo xyzzy</userinput>
-</screen>
-   </para>
+</screen></para>
 
  </refsect1>
 

@@ -36,7 +36,7 @@
  * to look like NO SCROLL cursors.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/portal.h
@@ -46,9 +46,9 @@
 #ifndef PORTAL_H
 #define PORTAL_H
 
+#include "datatype/timestamp.h"
 #include "executor/execdesc.h"
 #include "utils/resowner.h"
-#include "utils/timestamp.h"
 
 /*
  * We have several execution strategies for Portals, depending on what
@@ -222,6 +222,7 @@ extern Portal CreateNewPortal(void);
 extern void PinPortal(Portal portal);
 extern void UnpinPortal(Portal portal);
 extern void MarkPortalDone(Portal portal);
+extern void MarkPortalFailed(Portal portal);
 extern void PortalDrop(Portal portal, bool isTopCommit);
 extern Portal GetPortalByName(const char *name);
 extern void PortalDefineQuery(Portal portal,

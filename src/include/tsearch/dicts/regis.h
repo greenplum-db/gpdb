@@ -2,9 +2,9 @@
  *
  * regis.h
  *
- * Declarations for for fast regex subset, used by ISpell
+ * Declarations for fast regex subset, used by ISpell
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * src/include/tsearch/dicts/regis.h
  *

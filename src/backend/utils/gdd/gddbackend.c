@@ -367,7 +367,7 @@ GlobalDeadLockDetectorLoop(void)
 			break;
 
 		/* no need to live on if postmaster has died */
-		if (!PostmasterIsAlive(true))
+		if (!PostmasterIsAlive())
 			exit(1);
 
 		if (got_SIGHUP)

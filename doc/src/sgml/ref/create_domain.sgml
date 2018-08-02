@@ -59,6 +59,11 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
    Define a domain rather than setting up each table's constraint
    individually.
   </para>
+
+  <para>
+   To be able to create a domain, you must have <literal>USAGE</literal>
+   privilege on the underlying type.
+  </para>
  </refsect1>
 
  <refsect1>
@@ -162,8 +167,7 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
    <varlistentry>
     <term><literal>CHECK (<replaceable class="PARAMETER">expression</replaceable>)</literal></term>
     <listitem>
-     <para>
-      <literal>CHECK</literal> clauses specify integrity constraints or tests
+     <para><literal>CHECK</> clauses specify integrity constraints or tests
       which values of the domain must satisfy.
       Each constraint must be an expression
       producing a Boolean result.  It should use the key word <literal>VALUE</literal>
@@ -190,8 +194,8 @@ CREATE DOMAIN <replaceable class="parameter">name</replaceable> [ AS ] <replacea
 <programlisting>
 CREATE DOMAIN us_postal_code AS TEXT
 CHECK(
-   VALUE ~ '^\\d{5}$'
-OR VALUE ~ '^\\d{5}-\\d{4}$'
+   VALUE ~ '^\d{5}$'
+OR VALUE ~ '^\d{5}-\d{4}$'
 );
 
 CREATE TABLE us_snail_addy (
@@ -202,8 +206,7 @@ CREATE TABLE us_snail_addy (
   city TEXT NOT NULL,
   postal us_postal_code NOT NULL
 );
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1 id="SQL-CREATEDOMAIN-compatibility">

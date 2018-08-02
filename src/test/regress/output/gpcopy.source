@@ -543,8 +543,9 @@ COPY errcopy to '/tmp/errcopy.csv' csv null '';
 TRUNCATE errcopy;
 ALTER table errcopy ALTER c SET NOT null;
 COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
-ERROR:  null value in column "c" violates not-null constraint  (seg1 subraa4-mac:40001 pid=87506)
-CONTEXT:  COPY errcopy, line 7: "5,5,"
+ERROR:  null value in column "c" violates not-null constraint
+DETAIL:  Failing row contains (5, 5, null).
+CONTEXT:  COPY errcopy, line 7
 SELECT * FROM errcopy;
  a | b | c 
 ---+---+---

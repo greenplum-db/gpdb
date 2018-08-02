@@ -22,6 +22,7 @@
  * Replication is either synchronous or not synchronous (async). If it is
  * async, we just fastpath out of here. If it is sync, then we wait for
  * the write or flush location on the standby before releasing the waiting backend.
+ * Further complexity in that interaction is expected in later releases.
  *
  * The best performing way to manage the waiting backends is to have a
  * single ordered queue of waiting backends, so that we can avoid
@@ -45,22 +46,15 @@
 #include <unistd.h>
 
 #include "access/xact.h"
-#include "access/xlog_internal.h"
 #include "miscadmin.h"
-#include "postmaster/autovacuum.h"
 #include "replication/syncrep.h"
 #include "replication/walsender.h"
 #include "replication/walsender_private.h"
-#include "storage/latch.h"
-#include "storage/ipc.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "storage/procsignal.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
-#include "utils/guc.h"
-#include "utils/guc_tables.h"
-#include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/faultinjector.h"
 #include "pgstat.h"
@@ -74,7 +68,7 @@ char	   *SyncRepStandbyNames;
 
 static bool announce_next_takeover = true;
 
-static int	SyncRepWaitMode = SYNC_REP_WAIT_FLUSH;
+static int	SyncRepWaitMode = SYNC_REP_NO_WAIT;
 
 static void SyncRepQueueInsert(int mode);
 static void SyncRepCancelWait(void);
@@ -321,7 +315,7 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		 * acknowledgement, because all the wal sender processes will exit. So
 		 * just bail out.
 		 */
-		if (!PostmasterIsAlive(true))
+		if (!PostmasterIsAlive())
 		{
 			ProcDiePending = true;
 			whereToSendOutput = DestNone;
@@ -411,7 +405,7 @@ SyncRepCancelWait(void)
 }
 
 void
-SyncRepCleanupAtProcExit(int code, Datum arg)
+SyncRepCleanupAtProcExit(void)
 {
 	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
 	{
@@ -576,7 +570,7 @@ SyncRepGetStandbyPriority(void)
 }
 
 /*
- * Walk the specified queue from head.  Set the state of any backends that
+ * Walk the specified queue from head.	Set the state of any backends that
  * need to be woken, remove them from the queue, and then wake them.
  * Pass all = true to wake whole queue; otherwise, just wake up to
  * the walsender's LSN.
@@ -769,4 +763,21 @@ check_synchronous_standby_names(char **newval, void **extra, GucSource source)
 	list_free(elemlist);
 
 	return true;
+}
+
+void
+assign_synchronous_commit(int newval, void *extra)
+{
+	switch (newval)
+	{
+		case SYNCHRONOUS_COMMIT_REMOTE_WRITE:
+			SyncRepWaitMode = SYNC_REP_WAIT_WRITE;
+			break;
+		case SYNCHRONOUS_COMMIT_REMOTE_FLUSH:
+			SyncRepWaitMode = SYNC_REP_WAIT_FLUSH;
+			break;
+		default:
+			SyncRepWaitMode = SYNC_REP_NO_WAIT;
+			break;
+	}
 }

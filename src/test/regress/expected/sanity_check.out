@@ -9,6 +9,7 @@ SELECT relname, relhasindex
    FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace
    WHERE relkind = 'r' AND (nspname ~ '^pg_temp_') IS NOT TRUE
    AND relname NOT LIKE 'gp_%'
+   AND relname NOT LIKE '__gp_%'
    AND relname <> 'pg_resqueue'
    ORDER BY relname;
          relname         | relhasindex 
@@ -41,6 +42,7 @@ SELECT relname, relhasindex
  default_tbl             | f
  defaultexpr_tbl         | f
  dept                    | f
+ dupindexcols            | t
  e_star                  | f
  emp                     | f
  equipment_r             | f
@@ -56,7 +58,6 @@ SELECT relname, relhasindex
  hobbies_r               | f
  ihighway                | t
  inet_tbl                | f
- inhe                    | f
  inhf                    | f
  inhx                    | t
  insert_tbl              | f
@@ -65,6 +66,8 @@ SELECT relname, relhasindex
  int8_tbl                | f
  interval_tbl            | f
  iportaltest             | f
+ kd_point_tbl            | t
+ log_table               | f
  lseg_tbl                | f
  main_table              | f
  money_data              | f
@@ -120,10 +123,12 @@ SELECT relname, relhasindex
  pg_opfamily             | t
  pg_pltemplate           | t
  pg_proc                 | t
+ pg_range                | t
  pg_rewrite              | t
  pg_seclabel             | t
  pg_shdepend             | t
  pg_shdescription        | t
+ pg_shseclabel           | t
  pg_statistic            | t
  pg_tablespace           | t
  pg_trigger              | t
@@ -136,6 +141,7 @@ SELECT relname, relhasindex
  pg_user_mapping         | t
  point_tbl               | t
  polygon_tbl             | t
+ quad_point_tbl          | t
  ramp                    | f
  real_city               | f
  reltime_tbl             | f
@@ -151,8 +157,11 @@ SELECT relname, relhasindex
  sql_sizing_profiles     | f
  stud_emp                | f
  student                 | f
+ suffix_text_tbl         | t
  tenk1                   | t
  tenk2                   | t
+ test_range_excl         | t
+ test_range_gist         | t
  test_tsvector           | f
  text_tbl                | f
  time_tbl                | f
@@ -161,7 +170,7 @@ SELECT relname, relhasindex
  timetz_tbl              | f
  tinterval_tbl           | f
  varchar_tbl             | f
-(146 rows)
+(153 rows)
 
 --
 -- another sanity check: every system catalog that has OIDs should have

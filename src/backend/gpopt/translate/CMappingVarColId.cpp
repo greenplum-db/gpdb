@@ -77,7 +77,7 @@ CMappingVarColId::Pgpdbattoptcol
 	{
 		// Agg and Materialize need to employ OUTER, since they have other
 		// values in GPDB world
-		ulVarNo = OUTER;
+		ulVarNo = OUTER_VAR;
 	}
 
 	CGPDBAttInfo *pgpdbattinfo = GPOS_NEW(m_pmp) CGPDBAttInfo(ulAbsQueryLevel, ulVarNo, pvar->varattno);

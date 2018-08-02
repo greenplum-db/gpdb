@@ -1322,7 +1322,7 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 	text	   *relname = PG_GETARG_TEXT_P(0);
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	aoRelOid = RangeVarGetRelid(parentrv, false);
+	aoRelOid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	typedef struct Context
 	{
@@ -1516,7 +1516,7 @@ gp_update_ao_master_stats_name(PG_FUNCTION_ARGS)
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	relid = RangeVarGetRelid(parentrv, false);
+	relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return gp_update_ao_master_stats_internal(relid, SnapshotNow);
 }
@@ -1770,7 +1770,7 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-		relid = RangeVarGetRelid(parentrv, false);
+		relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 		/* get the relid of the parent (main) relation */
 		parentrel = heap_openrv(parentrv, AccessShareLock);
@@ -1937,7 +1937,7 @@ get_ao_compression_ratio_name(PG_FUNCTION_ARGS)
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	relid = RangeVarGetRelid(parentrv, false);
+	relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return ao_compression_ratio_internal(relid);
 }

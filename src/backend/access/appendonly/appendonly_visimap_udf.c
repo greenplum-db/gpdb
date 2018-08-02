@@ -143,7 +143,7 @@ gp_aovisimap_name(PG_FUNCTION_ARGS)
 	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	relid = RangeVarGetRelid(parentrv, false);
+	relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return gp_aovisimap_internal(fcinfo, relid);
 }
@@ -318,7 +318,7 @@ gp_aovisimap_hidden_info_name(PG_FUNCTION_ARGS)
 	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	relid = RangeVarGetRelid(parentrv, false);
+	relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return gp_aovisimap_hidden_info_internal(fcinfo, relid);
 }
@@ -483,7 +483,7 @@ gp_aovisimap_entry_name(PG_FUNCTION_ARGS)
 	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	relid = RangeVarGetRelid(parentrv, false);
+	relid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return gp_aovisimap_entry_internal(fcinfo, relid);
 }

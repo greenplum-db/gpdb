@@ -221,7 +221,7 @@ void gpmon_qlog_packet_init(gpmon_packet_t *gpmonPacket)
 	gpmon_gettmid(&gpmonPacket->u.qlog.key.tmid);
 	gpmonPacket->u.qlog.key.ssid = gp_session_id;
 
-	username = GetConfigOption("session_authorization", false); /* does not have to be freed */
+	username = GetConfigOption("session_authorization", false, false); /* does not have to be freed */
 	/* User Id.  We use session authorization_string (so to make sense with session id) */
 	snprintf(gpmonPacket->u.qlog.user, sizeof(gpmonPacket->u.qlog.user), "%s",
 			username ? username : "");

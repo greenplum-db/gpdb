@@ -159,10 +159,11 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
   </note>
 
   <para>
-   To be able to create a cast, you must own the source or the target
-   data type.  To create a binary-coercible cast, you must be superuser.
-   (This restriction is made because an erroneous binary-coercible cast
-   conversion can easily crash the server.)
+   To be able to create a cast, you must own the source or the target data type
+   and have <literal>USAGE</literal> privilege on the other type.  To create a
+   binary-coercible cast, you must be superuser.  (This restriction is made
+   because an erroneous binary-coercible cast conversion can easily crash the
+   server.)
   </para>
  </refsect1>
 
@@ -285,6 +286,11 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
    coercion in a single step.  When no such entry is available, coercion
    to a type that uses a type modifier involves two cast steps, one to
    convert between data types and a second to apply the modifier.
+  </para>
+
+  <para>
+   A cast to or from a domain type currently has no effect.  Casting
+   to or from a domain uses the casts associated with its underlying type.
   </para>
 
  </refsect1>

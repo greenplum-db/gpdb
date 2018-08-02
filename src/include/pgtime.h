@@ -3,7 +3,7 @@
  * pgtime.h
  *	  PostgreSQL internal timezone library
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/include/pgtime.h
@@ -67,33 +67,21 @@ extern bool pg_interpret_timezone_abbrev(const char *abbrev,
 extern size_t pg_strftime(char *s, size_t max, const char *format,
 			const struct pg_tm * tm);
 
-extern void pg_timezone_initialize(void);
-extern pg_tz *pg_tzset(const char *tzname);
-extern pg_tz *pg_tzset_offset(long gmtoffset);
-extern bool pg_tz_acceptable(pg_tz *tz);
 extern bool pg_get_timezone_offset(const pg_tz *tz, long int *gmtoff);
 extern const char *pg_get_timezone_name(pg_tz *tz);
+extern bool pg_tz_acceptable(pg_tz *tz);
+
+/* these functions and variables are in pgtz.c */
+
+extern pg_tz *session_timezone;
+extern pg_tz *log_timezone;
+
+extern void pg_timezone_initialize(void);
+extern pg_tz *pg_tzset(const char *tzname);
 
 extern pg_tzenum *pg_tzenumerate_start(void);
 extern pg_tz *pg_tzenumerate_next(pg_tzenum *dir);
 extern void pg_tzenumerate_end(pg_tzenum *dir);
-
-extern pg_tz *session_timezone;
-extern pg_tz *log_timezone;
-/*
- * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 has been merged.
- * gmt_timezone has been made obsolete with log_timezone being set by
- * pg_timezone_initialize(), but in order to avoid merge conflicts in
- * the code the callers are still allowed to use gmt_timezone.
- */
-#define gmt_timezone log_timezone
-
-/*
- * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 is merged. This
- * function was renamed but callers are left unchanged to avoid merge
- * conflicts.
- */
-#define tz_acceptable(X) pg_tz_acceptable(X)
 
 /*
  * GpMonotonicTime: used to guarantee that the elapsed time is in

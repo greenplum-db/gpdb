@@ -4,7 +4,7 @@
  *	  definition of default ACLs for new objects.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_default_acl.h
@@ -33,11 +33,9 @@ CATALOG(pg_default_acl,826)
 	Oid			defaclnamespace;	/* OID of namespace, or 0 for all */
 	char		defaclobjtype;	/* see DEFACLOBJ_xxx constants below */
 
-	/*
-	 * VARIABLE LENGTH FIELDS start here.
-	 */
-
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		defaclacl[1];	/* permissions to add at CREATE time */
+#endif
 } FormData_pg_default_acl;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -75,5 +73,6 @@ typedef FormData_pg_default_acl *Form_pg_default_acl;
 #define DEFACLOBJ_RELATION		'r'		/* table, view */
 #define DEFACLOBJ_SEQUENCE		'S'		/* sequence */
 #define DEFACLOBJ_FUNCTION		'f'		/* function */
+#define DEFACLOBJ_TYPE			'T'		/* type */
 
 #endif   /* PG_DEFAULT_ACL_H */

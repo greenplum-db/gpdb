@@ -3,7 +3,7 @@
  * nodeFuncs.h
  *		Various general-purpose manipulations of Node trees
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/nodeFuncs.h
@@ -26,17 +26,18 @@
 #define QTW_DONT_COPY_QUERY			0x20		/* do not copy top Query */
 
 
-extern Oid	exprType(Node *expr);
-extern int32 exprTypmod(Node *expr);
-extern bool exprIsLengthCoercion(Node *expr, int32 *coercedTypmod);
+extern Oid	exprType(const Node *expr);
+extern int32 exprTypmod(const Node *expr);
+extern bool exprIsLengthCoercion(const Node *expr, int32 *coercedTypmod);
+extern Node *relabel_to_typmod(Node *expr, int32 typmod);
 extern bool expression_returns_set(Node *clause);
 
-extern Oid	exprCollation(Node *expr);
-extern Oid	exprInputCollation(Node *expr);
+extern Oid	exprCollation(const Node *expr);
+extern Oid	exprInputCollation(const Node *expr);
 extern void exprSetCollation(Node *expr, Oid collation);
 extern void exprSetInputCollation(Node *expr, Oid inputcollation);
 
-extern int	exprLocation(Node *expr);
+extern int	exprLocation(const Node *expr);
 
 extern bool expression_tree_walker(Node *node, bool (*walker) (),
 											   void *context);

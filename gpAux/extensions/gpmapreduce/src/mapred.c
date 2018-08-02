@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <unistd.h>     /* for file "access" test */
 #include <errno.h>
+#include "pg_config_manual.h"
 
 #define scalarfree(x)							\
 	do {										\
@@ -102,6 +103,8 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 
 void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 								mapred_object_t *obj);
+int mapred_obj_error(mapred_object_t *obj, char *fmt, ...)
+	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 /* Wrappers around malloc/free to handle error conditions more cleanly */
 void *mapred_malloc(int size)

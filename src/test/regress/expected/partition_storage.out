@@ -98,15 +98,15 @@ NOTICE:  exchanged partition "def" of relation "pt_heap_tab" with relation "co_c
 NOTICE:  exchanged partition "pqr" of relation "pt_heap_tab" with relation "heap_can"
 --Check for the storage properties and indexes of the two tables involved in the exchange
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | zlib             | 5                 | 32768      | 
- b       | text    |           | extended | zlib             | 5                 | 32768      | 
- c       | integer |           | plain    | zlib             | 5                 | 32768      | 
- d       | integer |           | plain    | zlib             | 5                 | 32768      | 
- e       | numeric |           | main     | zlib             | 5                 | 32768      | 
- success | boolean |           | plain    | zlib             | 5                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ b       | text    |           | extended |              | zlib             | 5                 | 32768      | 
+ c       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ d       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ e       | numeric |           | main     |              | zlib             | 5                 | 32768      | 
+ success | boolean |           | plain    |              | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_heap_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
@@ -118,15 +118,15 @@ Options: appendonly=true, orientation=column, compresslevel=5
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
@@ -141,15 +141,15 @@ Options: appendonly=true, compresslevel=1
 Distributed by: (a)
 
  \d+ ao_can
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_heap_tab_1_prt_abc1_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_1_prt_abc1_upper_idx" btree (upper(b))
@@ -299,15 +299,15 @@ NOTICE:  exchanged partition "def" of relation "pt_ao_tab" with relation "co_can
 NOTICE:  exchanged partition "pqr" of relation "pt_ao_tab" with relation "heap_can"
 --Check for the storage properties and indexes of the two tables involved in the exchange
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | zlib             | 5                 | 32768      | 
- b       | text    |           | extended | zlib             | 5                 | 32768      | 
- c       | integer |           | plain    | zlib             | 5                 | 32768      | 
- d       | integer |           | plain    | zlib             | 5                 | 32768      | 
- e       | numeric |           | main     | zlib             | 5                 | 32768      | 
- success | boolean |           | plain    | zlib             | 5                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ b       | text    |           | extended |              | zlib             | 5                 | 32768      | 
+ c       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ d       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ e       | numeric |           | main     |              | zlib             | 5                 | 32768      | 
+ success | boolean |           | plain    |              | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_ao_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
@@ -319,15 +319,15 @@ Options: appendonly=true, orientation=column, compresslevel=5
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
@@ -342,15 +342,15 @@ Options: appendonly=true, compresslevel=1
 Distributed by: (a)
 
  \d+ ao_can
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_ao_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_1_prt_stu_upper_idx" btree (upper(b))
@@ -511,15 +511,15 @@ NOTICE:  exchanged partition "pqr" of relation "pt_co_tab" with relation "co_can
 NOTICE:  exchanged partition "xyz2" of relation "pt_co_tab" with relation "heap_can"
 --Check for the storage properties and indexes of the two tables involved in the exchange
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | zlib             | 5                 | 32768      | 
- b       | text    |           | extended | zlib             | 5                 | 32768      | 
- c       | integer |           | plain    | zlib             | 5                 | 32768      | 
- d       | integer |           | plain    | zlib             | 5                 | 32768      | 
- e       | numeric |           | main     | zlib             | 5                 | 32768      | 
- success | boolean |           | plain    | zlib             | 5                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ b       | text    |           | extended |              | zlib             | 5                 | 32768      | 
+ c       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ d       | integer |           | plain    |              | zlib             | 5                 | 32768      | 
+ e       | numeric |           | main     |              | zlib             | 5                 | 32768      | 
+ success | boolean |           | plain    |              | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_co_tab_1_prt_xyz2_a_idx" btree (a) WHERE c > 10
@@ -531,15 +531,15 @@ Options: appendonly=true, orientation=column, compresslevel=5
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: zlib
 Compression Level: 5
 Block Size: 32768
@@ -554,15 +554,15 @@ Options: appendonly=true, compresslevel=5
 Distributed by: (a)
 
  \d+ ao_can
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_co_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_1_prt_stu_upper_idx" btree (upper(b))
@@ -705,15 +705,15 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_newao" for ta
  alter table pt_heap_tab_rng exchange partition newao with table co_can; -- AO <=> CO
  alter table pt_heap_tab_rng exchange partition newco with table heap_can; -- CO <=> HEAP
  \d+ ao_can 
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_heap_tab_rng_1_prt_heap1_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_rng_1_prt_heap1_upper_idx" btree (upper(b))
@@ -724,15 +724,15 @@ Options: appendonly=false
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -747,15 +747,15 @@ Options: appendonly=true
 Distributed by: (a)
 
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | none             | 0                 | 32768      | 
- b       | text    |           | extended | none             | 0                 | 32768      | 
- c       | integer |           | plain    | none             | 0                 | 32768      | 
- d       | integer |           | plain    | none             | 0                 | 32768      | 
- e       | numeric |           | main     | none             | 0                 | 32768      | 
- success | boolean |           | plain    | none             | 0                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ b       | text    |           | extended |              | none             | 0                 | 32768      | 
+ c       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ d       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ e       | numeric |           | main     |              | none             | 0                 | 32768      | 
+ success | boolean |           | plain    |              | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_heap_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
@@ -900,15 +900,15 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_newheap" for ta
  alter table pt_ao_tab_rng exchange partition ao1 with table co_can;-- AO <=> CO
  alter table pt_ao_tab_rng exchange partition newco with table heap_can; --CO <=> HEAP
  \d+ ao_can 
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_ao_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
@@ -919,15 +919,15 @@ Options: appendonly=false
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -942,15 +942,15 @@ Options: appendonly=true
 Distributed by: (a)
 
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | none             | 0                 | 32768      | 
- b       | text    |           | extended | none             | 0                 | 32768      | 
- c       | integer |           | plain    | none             | 0                 | 32768      | 
- d       | integer |           | plain    | none             | 0                 | 32768      | 
- e       | numeric |           | main     | none             | 0                 | 32768      | 
- success | boolean |           | plain    | none             | 0                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ b       | text    |           | extended |              | none             | 0                 | 32768      | 
+ c       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ d       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ e       | numeric |           | main     |              | none             | 0                 | 32768      | 
+ success | boolean |           | plain    |              | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_ao_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
@@ -1095,15 +1095,15 @@ NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_newheap" for ta
  alter table pt_co_tab_rng exchange partition newao with table co_can; -- AO <=> CO
  alter table pt_co_tab_rng exchange partition co1 with table heap_can; -- CO <=> HEAP
  \d+ ao_can 
-                 Table "public.ao_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                         Table "public.ao_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Indexes:
     "pt_co_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
@@ -1114,15 +1114,15 @@ Options: appendonly=false
 Distributed by: (a)
 
  \d+ co_can
-           Append-Only Table "public.co_can"
- Column  |  Type   | Modifiers | Storage  | Description 
----------+---------+-----------+----------+-------------
- a       | integer |           | plain    | 
- b       | text    |           | extended | 
- c       | integer |           | plain    | 
- d       | integer |           | plain    | 
- e       | numeric |           | main     | 
- success | boolean |           | plain    | 
+                   Append-Only Table "public.co_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Description 
+---------+---------+-----------+----------+--------------+-------------
+ a       | integer |           | plain    |              | 
+ b       | text    |           | extended |              | 
+ c       | integer |           | plain    |              | 
+ d       | integer |           | plain    |              | 
+ e       | numeric |           | main     |              | 
+ success | boolean |           | plain    |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -1137,15 +1137,15 @@ Options: appendonly=true
 Distributed by: (a)
 
  \d+ heap_can
-                                Append-Only Columnar Table "public.heap_can"
- Column  |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
----------+---------+-----------+----------+------------------+-------------------+------------+-------------
- a       | integer |           | plain    | none             | 0                 | 32768      | 
- b       | text    |           | extended | none             | 0                 | 32768      | 
- c       | integer |           | plain    | none             | 0                 | 32768      | 
- d       | integer |           | plain    | none             | 0                 | 32768      | 
- e       | numeric |           | main     | none             | 0                 | 32768      | 
- success | boolean |           | plain    | none             | 0                 | 32768      | 
+                                       Append-Only Columnar Table "public.heap_can"
+ Column  |  Type   | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+---------+---------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ b       | text    |           | extended |              | none             | 0                 | 32768      | 
+ c       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ d       | integer |           | plain    |              | none             | 0                 | 32768      | 
+ e       | numeric |           | main     |              | none             | 0                 | 32768      | 
+ success | boolean |           | plain    |              | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
     "pt_co_tab_rng_1_prt_co1_a_idx" btree (a) WHERE c > 10

@@ -34,6 +34,10 @@ select count(*)  AS invisi_and_visi_tups from sto_alt_uao1_default;
 set gp_select_invisible = false;
 -- Alter column set NOT NULL
 Alter Table sto_alt_uao1_default ALTER COLUMN text_col SET NOT NULL;
+-- start_matchsubs
+-- m/^DETAIL:  Failing row contains \(.*\).$/
+-- s/.//gs
+-- end_matchsubs
 insert into sto_alt_uao1_default values (5, '5_zero', 5, 5, 5, '{5}', 5, 5, '1-1-2002', 5);
 select * from sto_alt_uao1_default order by bigint_col;
 

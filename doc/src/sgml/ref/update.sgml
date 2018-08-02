@@ -224,10 +224,12 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ * ] [ [ AS 
 UPDATE <replaceable class="parameter">count</replaceable>
 </screen>
    The <replaceable class="parameter">count</replaceable> is the number
-   of rows updated.  If <replaceable class="parameter">count</replaceable> is
-   0, no rows matched the <replaceable
-   class="parameter">condition</replaceable> (this is not considered
-   an error).
+   of rows updated, including matched rows whose values did not change.
+   Note that the number may be less than the number of rows that matched
+   the <replaceable class="parameter">condition</replaceable> when
+   updates were suppressed by a <literal>BEFORE UPDATE</> trigger.  If
+   <replaceable class="parameter">count</replaceable> is 0, no rows were
+   updated by the query (this is not considered an error).
   </para>
 
   <para>
@@ -346,8 +348,7 @@ COMMIT;
    <literal>c_films</> is currently positioned:
 <programlisting>
 UPDATE films SET kind = 'Dramatic' WHERE CURRENT OF c_films;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>

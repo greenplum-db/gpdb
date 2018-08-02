@@ -3,7 +3,7 @@
  * explain.h
  *	  prototypes for explain.c
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * src/include/commands/explain.h
@@ -32,6 +32,7 @@ typedef struct ExplainState
 	bool		costs;			/* print costs */
 	bool		buffers;		/* print buffer usage */
 	bool		dxl;			/* CDB: print DXL */
+	bool		timing;			/* print timing */
 	ExplainFormat format;		/* output format */
 	/* other states */
 	PlannedStmt *pstmt;			/* top of plan */
@@ -48,6 +49,7 @@ typedef struct ExplainState
 
 /* Hook for plugins to get control in ExplainOneQuery() */
 typedef void (*ExplainOneQuery_hook_type) (Query *query,
+													   IntoClause *into,
 													   ExplainState *es,
 													 const char *queryString,
 													   ParamListInfo params);
@@ -65,10 +67,12 @@ extern void ExplainInitState(ExplainState *es);
 
 extern TupleDesc ExplainResultDesc(ExplainStmt *stmt);
 
-extern void ExplainOneUtility(Node *utilityStmt, ExplainState *es,
+extern void ExplainOneUtility(Node *utilityStmt, IntoClause *into,
+				  ExplainState *es,
 				  const char *queryString, ParamListInfo params);
 
-extern void ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
+extern void ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into,
+			   ExplainState *es,
 			   const char *queryString, ParamListInfo params);
 
 extern void ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc);

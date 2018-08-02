@@ -4,7 +4,7 @@
  *	  prototypes for the creator functions (for primitive nodes)
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/makefuncs.h
@@ -20,7 +20,7 @@
 extern A_Expr *makeA_Expr(A_Expr_Kind kind, List *name,
 		   Node *lexpr, Node *rexpr, int location);
 
-extern A_Expr *makeSimpleA_Expr(A_Expr_Kind kind, const char *name,
+extern A_Expr *makeSimpleA_Expr(A_Expr_Kind kind, char *name,
 				 Node *lexpr, Node *rexpr, int location);
 
 extern Var *makeVar(Index varno,
@@ -35,7 +35,8 @@ extern Var *makeVarFromTargetEntry(Index varno,
 
 extern Var *makeWholeRowVar(RangeTblEntry *rte,
 				Index varno,
-				Index varlevelsup);
+				Index varlevelsup,
+				bool allowScalar);
 
 extern TargetEntry *makeTargetEntry(Expr *expr,
 				AttrNumber resno,

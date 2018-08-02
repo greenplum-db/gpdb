@@ -349,8 +349,8 @@ explain select array(select x from csq_m1); -- no initplan
 (5 rows)
 
 select array(select x from csq_m1); -- {1}
- ?column? 
-----------
+ array 
+-------
  {1}
 (1 row)
 
@@ -366,8 +366,8 @@ explain select array(select x from csq_d1); -- initplan
 (6 rows)
 
 select array(select x from csq_d1); -- {1}
- ?column? 
-----------
+ array 
+-------
  {1}
 (1 row)
 
@@ -400,10 +400,10 @@ FROM pg_catalog.pg_attribute a
 WHERE a.attrelid = 't3cozlib'::regclass AND a.attnum > 0 AND NOT a.attisdropped
 ORDER BY a.attnum
 ; -- expect to see 2 rows
- attname |    format_type    | ?column? | attnotnull | attnum | attstorage | col_description |   newcolumn    
----------+-------------------+----------+------------+--------+------------+-----------------+----------------
- c1      | integer           |          | f          |      1 | p          |                 | {'something'}
- c2      | character varying |          | f          |      2 | x          |                 | {'something2'}
+ attname |    format_type    | substring | attnotnull | attnum | attstorage | col_description |   newcolumn    
+---------+-------------------+-----------+------------+--------+------------+-----------------+----------------
+ c1      | integer           |           | f          |      1 | p          |                 | {'something'}
+ c2      | character varying |           | f          |      2 | x          |                 | {'something2'}
 (2 rows)
 
 --
@@ -1055,16 +1055,12 @@ explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
 explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
 union all
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
-                      QUERY PLAN                      
-------------------------------------------------------
- Append  (cost=1063.00..2126.04 rows=1 width=0)
-   ->  Result  (cost=1063.00..1063.01 rows=1 width=0)
-         One-Time Filter: false
-   ->  Result  (cost=1063.00..1063.01 rows=1 width=0)
-         One-Time Filter: false
- Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
-(7 rows)
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
+ Optimizer: legacy query optimizer
+(3 rows)
 
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
 union all
@@ -1486,28 +1482,28 @@ EXPLAIN SELECT '' AS three, f1, f2
  Optimizer status: legacy query optimizer
 (12 rows)
 
+ANALYZE tenk1;
 EXPLAIN SELECT * FROM tenk1 a, tenk1 b
 WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                                                   QUERY PLAN                                                  
 --------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=872.40..1679.60 rows=10090 width=488)
-   ->  Hash Join  (cost=872.40..1679.60 rows=3364 width=488)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=864.30..1635.81 rows=9955 width=488)
+   ->  Hash Join  (cost=864.30..1635.81 rows=3319 width=488)
          Hash Cond: c.unique1 = a.unique1
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=556.38..1212.22 rows=3364 width=248)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=551.31..1185.94 rows=3319 width=248)
                Hash Key: c.unique1
-               ->  Hash Join  (cost=556.38..1010.42 rows=3364 width=248)
+               ->  Hash Join  (cost=551.31..986.84 rows=3319 width=248)
                      Hash Cond: c.unique2 = b.unique2
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=240.35..543.05 rows=3364 width=8)
-                           ->  HashAggregate  (cost=240.35..341.25 rows=3364 width=8)
-                                 Group By: c.unique1, c.unique2
-                                 ->  Seq Scan on tenk1 c  (cost=0.00..189.90 rows=3364 width=8)
-                     ->  Hash  (cost=189.90..189.90 rows=3364 width=244)
-                           ->  Seq Scan on tenk1 b  (cost=0.00..189.90 rows=3364 width=244)
-         ->  Hash  (cost=189.90..189.90 rows=3364 width=244)
-               ->  Seq Scan on tenk1 a  (cost=0.00..189.90 rows=3364 width=244)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(17 rows)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=238.33..536.98 rows=3319 width=8)
+                           ->  HashAggregate  (cost=238.33..337.88 rows=3319 width=8)
+                                 Group Key: c.unique1, c.unique2
+                                 ->  Seq Scan on tenk1 c  (cost=0.00..188.55 rows=3319 width=8)
+                     ->  Hash  (cost=188.55..188.55 rows=3319 width=244)
+                           ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=244)
+         ->  Hash  (cost=188.55..188.55 rows=3319 width=244)
+               ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=244)
+ Optimizer: legacy query optimizer
+(14 rows)
 
 -- Correlated subselects
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
@@ -1699,8 +1695,8 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
 (16 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
- ?column? 
-----------
+ exists 
+--------
  t
 (1 row)
 

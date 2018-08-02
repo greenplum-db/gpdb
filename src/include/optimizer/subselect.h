@@ -4,7 +4,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/subselect.h
@@ -34,7 +34,9 @@ extern void SS_finalize_plan(PlannerInfo *root, Plan *plan,
 				 bool attach_initplans);
 extern Param *SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 					Oid resulttype, int32 resulttypmod, Oid resultcollation);
-extern Param *assign_nestloop_param(PlannerInfo *root, Var *var);
+extern Param *assign_nestloop_param_var(PlannerInfo *root, Var *var);
+extern Param *assign_nestloop_param_placeholdervar(PlannerInfo *root,
+									 PlaceHolderVar *phv);
 extern int	SS_assign_special_param(PlannerInfo *root);
 
 

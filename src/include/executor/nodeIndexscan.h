@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeIndexscan.h
@@ -26,9 +26,12 @@ extern void ExecIndexRestrPos(IndexScanState *node);
 extern void ExecReScanIndexScan(IndexScanState *node);
 extern void ExecEagerFreeIndexScan(IndexScanState *node);
 
-/* routines exported to share code with nodeBitmapIndexscan.c */
+/*
+ * These routines are exported to share code with nodeIndexonlyscan.c and
+ * nodeBitmapIndexscan.c
+ */
 extern void ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					   Index scanrelid, List *quals, bool isorderby,
+					   List *quals, bool isorderby,
 					   ScanKey *scanKeys, int *numScanKeys,
 					   IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					   IndexArrayKeyInfo **arrayKeys, int *numArrayKeys);

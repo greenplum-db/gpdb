@@ -4,7 +4,7 @@
  * src/backend/utils/adt/formatting.c
  *
  *
- *	 Portions Copyright (c) 1999-2011, PostgreSQL Global Development Group
+ *	 Portions Copyright (c) 1999-2012, PostgreSQL Global Development Group
  *
  *
  *	 TO_CHAR(); TO_TIMESTAMP(); TO_DATE(); TO_NUMBER();
@@ -459,7 +459,7 @@ typedef struct TmToChar
 {
 	struct pg_tm tm;			/* classic 'tm' struct */
 	fsec_t		fsec;			/* fractional seconds */
-	char	   *tzn;			/* timezone */
+	const char *tzn;			/* timezone */
 } TmToChar;
 
 #define tmtcTm(_X)	(&(_X)->tm)
@@ -967,6 +967,7 @@ static void dump_node(FormatNode *node, int max);
 
 static char *get_th(char *num, int type);
 static char *str_numth(char *dest, char *num, int type);
+static int	adjust_partial_year_to_2020(int year);
 static int	strspace_len(char *str);
 static int	strdigits_len(char *str);
 static void from_char_set_mode(TmFromChar *tmfc, const FromCharDateMode mode);
@@ -1014,7 +1015,7 @@ index_seq_search(char *str, const KeyWord *kw, const int *index)
 
 		do
 		{
-			if (!strncmp(str, k->name, k->len))
+			if (strncmp(str, k->name, k->len) == 0)
 				return k;
 			k++;
 			if (!k->name)
@@ -1034,7 +1035,7 @@ suff_search(char *str, KeySuffix *suf, int type)
 		if (s->type != type)
 			continue;
 
-		if (!strncmp(str, s->name, s->len))
+		if (strncmp(str, s->name, s->len) == 0)
 			return s;
 	}
 	return NULL;
@@ -1106,6 +1107,7 @@ NUMDesc_prepare(NUMDesc *num, FormatNode *n, char *func)
 			case NUM_D:
 				num->flag |= NUM_F_LDECIMAL;
 				num->need_locale = TRUE;
+				/* FALLTHROUGH */
 			case NUM_DEC:
 				if (IS_DECIMAL(num))
 					ereport(ERROR,
@@ -1557,7 +1559,9 @@ str_tolower(const char *buff, size_t nbytes, Oid collid)
 #endif   /* USE_WIDE_UPPER_LOWER */
 	else
 	{
+#ifdef HAVE_LOCALE_T
 		pg_locale_t mylocale = 0;
+#endif
 		char	   *p;
 
 		if (collid != DEFAULT_COLLATION_OID)
@@ -1573,7 +1577,9 @@ str_tolower(const char *buff, size_t nbytes, Oid collid)
 						 errmsg("could not determine which collation to use for lower() function"),
 						 errhint("Use the COLLATE clause to set the collation explicitly.")));
 			}
+#ifdef HAVE_LOCALE_T
 			mylocale = pg_newlocale_from_collation(collid);
+#endif
 		}
 
 		result = pnstrdup(buff, nbytes);
@@ -1678,7 +1684,9 @@ str_toupper(const char *buff, size_t nbytes, Oid collid)
 #endif   /* USE_WIDE_UPPER_LOWER */
 	else
 	{
+#ifdef HAVE_LOCALE_T
 		pg_locale_t mylocale = 0;
+#endif
 		char	   *p;
 
 		if (collid != DEFAULT_COLLATION_OID)
@@ -1694,7 +1702,9 @@ str_toupper(const char *buff, size_t nbytes, Oid collid)
 						 errmsg("could not determine which collation to use for upper() function"),
 						 errhint("Use the COLLATE clause to set the collation explicitly.")));
 			}
+#ifdef HAVE_LOCALE_T
 			mylocale = pg_newlocale_from_collation(collid);
+#endif
 		}
 
 		result = pnstrdup(buff, nbytes);
@@ -1823,7 +1833,9 @@ str_initcap(const char *buff, size_t nbytes, Oid collid)
 #endif   /* USE_WIDE_UPPER_LOWER */
 	else
 	{
+#ifdef HAVE_LOCALE_T
 		pg_locale_t mylocale = 0;
+#endif
 		char	   *p;
 
 		if (collid != DEFAULT_COLLATION_OID)
@@ -1839,7 +1851,9 @@ str_initcap(const char *buff, size_t nbytes, Oid collid)
 						 errmsg("could not determine which collation to use for initcap() function"),
 						 errhint("Use the COLLATE clause to set the collation explicitly.")));
 			}
+#ifdef HAVE_LOCALE_T
 			mylocale = pg_newlocale_from_collation(collid);
+#endif
 		}
 
 		result = pnstrdup(buff, nbytes);
@@ -2067,6 +2081,31 @@ is_next_separator(FormatNode *n)
 	return TRUE;				/* some non-digit input (separator) */
 }
 
+
+static int
+adjust_partial_year_to_2020(int year)
+{
+	/*
+	 * Adjust all dates toward 2020;  this is effectively what happens when we
+	 * assume '70' is 1970 and '69' is 2069.
+	 */
+	/* Force 0-69 into the 2000's */
+	if (year < 70)
+		return year + 2000;
+	/* Force 70-99 into the 1900's */
+	else if (year >= 70 && year < 100)
+		return year + 1900;
+	/* Force 100-519 into the 2000's */
+	else if (year >= 100 && year < 519)
+		return year + 2000;
+	/* Force 520-999 into the 1000's */
+	else if (year >= 520 && year < 1000)
+		return year + 1000;
+	else
+		return year;
+}
+
+
 static int
 strspace_len(char *str)
 {
@@ -2246,7 +2285,7 @@ from_char_parse_int_len(int *dest, char **src, const int len, FormatNode *node)
  * Don't call this function if the field differs in length from the format
  * keyword (as with HH24; the keyword length is 4, but the field length is 2).
  * In such cases, call from_char_parse_int_len() instead to specify the
- * required length explictly.
+ * required length explicitly.
  */
 static int
 from_char_parse_int(int *dest, char **src, FormatNode *node)
@@ -3130,43 +3169,23 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 				break;
 			case DCH_YYY:
 			case DCH_IYY:
-				from_char_parse_int(&out->year, &s, n);
+				if (from_char_parse_int(&out->year, &s, n) < 4)
+					out->year = adjust_partial_year_to_2020(out->year);
 				out->yysz = 3;
-
-				/*
-				 * 3-digit year: '100' ... '999' = 1100 ... 1999 '000' ...
-				 * '099' = 2000 ... 2099
-				 */
-				if (out->year >= 100)
-					out->year += 1000;
-				else
-					out->year += 2000;
 				s += SKIP_THth(n->suffix);
 				break;
 			case DCH_YY:
 			case DCH_IY:
-				from_char_parse_int(&out->year, &s, n);
+				if (from_char_parse_int(&out->year, &s, n) < 4)
+					out->year = adjust_partial_year_to_2020(out->year);
 				out->yysz = 2;
-
-				/*
-				 * 2-digit year: '00' ... '69'	= 2000 ... 2069 '70' ... '99'
-				 * = 1970 ... 1999
-				 */
-				if (out->year < 70)
-					out->year += 2000;
-				else
-					out->year += 1900;
 				s += SKIP_THth(n->suffix);
 				break;
 			case DCH_Y:
 			case DCH_I:
-				from_char_parse_int(&out->year, &s, n);
+				if (from_char_parse_int(&out->year, &s, n) < 4)
+					out->year = adjust_partial_year_to_2020(out->year);
 				out->yysz = 1;
-
-				/*
-				 * 1-digit year: always +2000
-				 */
-				out->year += 2000;
 				s += SKIP_THth(n->suffix);
 				break;
 			case DCH_RM:
@@ -4693,7 +4712,7 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
 			 */
 			if (Np->last_relevant && Np->Num->zero_end > Np->num_pre)
 			{
-				char   *last_zero;
+				char	   *last_zero;
 
 				last_zero = Np->number + (Np->Num->zero_end - Np->num_pre);
 				if (Np->last_relevant < last_zero)

@@ -38,7 +38,7 @@ def getDatabaseList(conn):
 
 def getUserPIDs(conn):
     """dont count ourselves"""
-    sql = """SELECT procpid FROM pg_stat_activity WHERE procpid != pg_backend_pid()"""
+    sql = """SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid()"""
     return basicSQLExec(conn,sql)
 
 def doesSchemaExist(conn,schemaname):

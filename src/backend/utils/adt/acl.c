@@ -3,7 +3,7 @@
  * acl.c
  *	  Basic access control list data structures manipulation routines.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -110,10 +110,12 @@ static Oid	convert_server_name(text *servername);
 static AclMode convert_server_priv_string(text *priv_type_text);
 static Oid	convert_tablespace_name(text *tablespacename);
 static AclMode convert_tablespace_priv_string(text *priv_type_text);
+static Oid	convert_type_name(text *typename);
+static AclMode convert_type_priv_string(text *priv_type_text);
 static AclMode convert_role_priv_string(text *priv_type_text);
 static AclResult pg_role_aclcheck(Oid role_oid, Oid roleid, AclMode mode);
 
-static void RoleMembershipCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr);
+static void RoleMembershipCacheCallback(Datum arg, int cacheid, uint32 hashvalue);
 static Oid	get_role_oid_or_public(const char *rolname);
 
 
@@ -786,6 +788,10 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 		case ACL_OBJECT_EXTPROTOCOL:
 			world_default = ACL_NO_RIGHTS;
 			owner_default = ACL_ALL_RIGHTS_EXTPROTOCOL;
+		case ACL_OBJECT_DOMAIN:
+		case ACL_OBJECT_TYPE:
+			world_default = ACL_USAGE;
+			owner_default = ACL_ALL_RIGHTS_TYPE;
 			break;
 		default:
 			elog(ERROR, "unrecognized objtype: %d", (int) objtype);
@@ -819,7 +825,7 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 	 * owner's ordinary privileges are self-granted; this lets him revoke
 	 * them.  We implement the owner's grant options without any explicit
 	 * "_SYSTEM"-like ACL entry, by internally special-casing the owner
-	 * whereever we are testing grant options.
+	 * wherever we are testing grant options.
 	 */
 	if (owner_default != ACL_NO_RIGHTS)
 	{
@@ -829,6 +835,64 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 	}
 
 	return acl;
+}
+
+
+/*
+ * SQL-accessible version of acldefault().	Hackish mapping from "char" type to
+ * ACL_OBJECT_* values, but it's only used in the information schema, not
+ * documented for general use.
+ */
+Datum
+acldefault_sql(PG_FUNCTION_ARGS)
+{
+	char		objtypec = PG_GETARG_CHAR(0);
+	Oid			owner = PG_GETARG_OID(1);
+	GrantObjectType objtype = 0;
+
+	switch (objtypec)
+	{
+		case 'c':
+			objtype = ACL_OBJECT_COLUMN;
+			break;
+		case 'r':
+			objtype = ACL_OBJECT_RELATION;
+			break;
+		case 's':
+			objtype = ACL_OBJECT_SEQUENCE;
+			break;
+		case 'd':
+			objtype = ACL_OBJECT_DATABASE;
+			break;
+		case 'f':
+			objtype = ACL_OBJECT_FUNCTION;
+			break;
+		case 'l':
+			objtype = ACL_OBJECT_LANGUAGE;
+			break;
+		case 'L':
+			objtype = ACL_OBJECT_LARGEOBJECT;
+			break;
+		case 'n':
+			objtype = ACL_OBJECT_NAMESPACE;
+			break;
+		case 't':
+			objtype = ACL_OBJECT_TABLESPACE;
+			break;
+		case 'F':
+			objtype = ACL_OBJECT_FDW;
+			break;
+		case 'S':
+			objtype = ACL_OBJECT_FOREIGN_SERVER;
+			break;
+		case 'T':
+			objtype = ACL_OBJECT_TYPE;
+			break;
+		default:
+			elog(ERROR, "unrecognized objtype abbreviation: %c", objtypec);
+	}
+
+	PG_RETURN_ACL_P(acldefault(objtype, owner));
 }
 
 
@@ -1975,7 +2039,8 @@ try_convert_table_name(text *tablename)
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(tablename));
 
-	return RangeVarGetRelid(relrv, true);
+	/* We might not even have permissions on this relation; don't lock it. */
+	return RangeVarGetRelid(relrv, NoLock, false);
 }
 
 /*
@@ -4270,6 +4335,206 @@ convert_tablespace_priv_string(text *priv_type_text)
 }
 
 /*
+ * has_type_privilege variants
+ *		These are all named "has_type_privilege" at the SQL level.
+ *		They take various combinations of type name, type OID,
+ *		user name, user OID, or implicit user = current_user.
+ *
+ *		The result is a boolean value: true if user has the indicated
+ *		privilege, false if not, or NULL if object doesn't exist.
+ */
+
+/*
+ * has_type_privilege_name_name
+ *		Check user privileges on a type given
+ *		name username, text typename, and text priv name.
+ */
+Datum
+has_type_privilege_name_name(PG_FUNCTION_ARGS)
+{
+	Name		username = PG_GETARG_NAME(0);
+	text	   *typename = PG_GETARG_TEXT_P(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			roleid;
+	Oid			typeoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = get_role_oid_or_public(NameStr(*username));
+	typeoid = convert_type_name(typename);
+	mode = convert_type_priv_string(priv_type_text);
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_type_privilege_name
+ *		Check user privileges on a type given
+ *		text typename and text priv name.
+ *		current_user is assumed
+ */
+Datum
+has_type_privilege_name(PG_FUNCTION_ARGS)
+{
+	text	   *typename = PG_GETARG_TEXT_P(0);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
+	Oid			roleid;
+	Oid			typeoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = GetUserId();
+	typeoid = convert_type_name(typename);
+	mode = convert_type_priv_string(priv_type_text);
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_type_privilege_name_id
+ *		Check user privileges on a type given
+ *		name usename, type oid, and text priv name.
+ */
+Datum
+has_type_privilege_name_id(PG_FUNCTION_ARGS)
+{
+	Name		username = PG_GETARG_NAME(0);
+	Oid			typeoid = PG_GETARG_OID(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			roleid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = get_role_oid_or_public(NameStr(*username));
+	mode = convert_type_priv_string(priv_type_text);
+
+	if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+		PG_RETURN_NULL();
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_type_privilege_id
+ *		Check user privileges on a type given
+ *		type oid, and text priv name.
+ *		current_user is assumed
+ */
+Datum
+has_type_privilege_id(PG_FUNCTION_ARGS)
+{
+	Oid			typeoid = PG_GETARG_OID(0);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
+	Oid			roleid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = GetUserId();
+	mode = convert_type_priv_string(priv_type_text);
+
+	if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+		PG_RETURN_NULL();
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_type_privilege_id_name
+ *		Check user privileges on a type given
+ *		roleid, text typename, and text priv name.
+ */
+Datum
+has_type_privilege_id_name(PG_FUNCTION_ARGS)
+{
+	Oid			roleid = PG_GETARG_OID(0);
+	text	   *typename = PG_GETARG_TEXT_P(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			typeoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	typeoid = convert_type_name(typename);
+	mode = convert_type_priv_string(priv_type_text);
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_type_privilege_id_id
+ *		Check user privileges on a type given
+ *		roleid, type oid, and text priv name.
+ */
+Datum
+has_type_privilege_id_id(PG_FUNCTION_ARGS)
+{
+	Oid			roleid = PG_GETARG_OID(0);
+	Oid			typeoid = PG_GETARG_OID(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	AclMode		mode;
+	AclResult	aclresult;
+
+	mode = convert_type_priv_string(priv_type_text);
+
+	if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+		PG_RETURN_NULL();
+
+	aclresult = pg_type_aclcheck(typeoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ *		Support routines for has_type_privilege family.
+ */
+
+/*
+ * Given a type name expressed as a string, look it up and return Oid
+ */
+static Oid
+convert_type_name(text *typename)
+{
+	char	   *typname = text_to_cstring(typename);
+	Oid			oid;
+
+	oid = DatumGetObjectId(DirectFunctionCall1(regtypein,
+											   CStringGetDatum(typname)));
+
+	if (!OidIsValid(oid))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("type \"%s\" does not exist", typname)));
+
+	return oid;
+}
+
+/*
+ * convert_type_priv_string
+ *		Convert text string to AclMode value.
+ */
+static AclMode
+convert_type_priv_string(text *priv_type_text)
+{
+	static const priv_map type_priv_map[] = {
+		{"USAGE", ACL_USAGE},
+		{"USAGE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_USAGE)},
+		{NULL, 0}
+	};
+
+	return convert_any_priv_string(priv_type_text, type_priv_map);
+}
+
+
+/*
  * pg_has_role variants
  *		These are all named "pg_has_role" at the SQL level.
  *		They take various combinations of role name, role OID,
@@ -4503,7 +4768,7 @@ initialize_acl(void)
  *		Syscache inval callback function
  */
 static void
-RoleMembershipCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
+RoleMembershipCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
 {
 	/* Force membership caches to be recomputed on next use */
 	cached_privs_role = InvalidOid;

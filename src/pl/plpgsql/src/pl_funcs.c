@@ -3,7 +3,7 @@
  * pl_funcs.c		- Misc functions for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -265,6 +265,33 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 	return "unknown";
 }
 
+/*
+ * GET DIAGNOSTICS item name as a string, for use in error messages etc.
+ */
+const char *
+plpgsql_getdiag_kindname(int kind)
+{
+	switch (kind)
+	{
+		case PLPGSQL_GETDIAG_ROW_COUNT:
+			return "ROW_COUNT";
+		case PLPGSQL_GETDIAG_RESULT_OID:
+			return "RESULT_OID";
+		case PLPGSQL_GETDIAG_ERROR_CONTEXT:
+			return "PG_EXCEPTION_CONTEXT";
+		case PLPGSQL_GETDIAG_ERROR_DETAIL:
+			return "PG_EXCEPTION_DETAIL";
+		case PLPGSQL_GETDIAG_ERROR_HINT:
+			return "PG_EXCEPTION_HINT";
+		case PLPGSQL_GETDIAG_RETURNED_SQLSTATE:
+			return "RETURNED_SQLSTATE";
+		case PLPGSQL_GETDIAG_MESSAGE_TEXT:
+			return "MESSAGE_TEXT";
+	}
+
+	return "unknown";
+}
+
 
 /**********************************************************************
  * Release memory when a PL/pgSQL function is no longer needed
@@ -419,9 +446,18 @@ free_assign(PLpgSQL_stmt_assign *stmt)
 static void
 free_if(PLpgSQL_stmt_if *stmt)
 {
+	ListCell   *l;
+
 	free_expr(stmt->cond);
-	free_stmts(stmt->true_body);
-	free_stmts(stmt->false_body);
+	free_stmts(stmt->then_body);
+	foreach(l, stmt->elsif_list)
+	{
+		PLpgSQL_if_elsif *elif = (PLpgSQL_if_elsif *) lfirst(l);
+
+		free_expr(elif->cond);
+		free_stmts(elif->stmts);
+	}
+	free_stmts(stmt->else_body);
 }
 
 static void
@@ -850,20 +886,29 @@ dump_assign(PLpgSQL_stmt_assign *stmt)
 static void
 dump_if(PLpgSQL_stmt_if *stmt)
 {
+	ListCell   *l;
+
 	dump_ind();
 	printf("IF ");
 	dump_expr(stmt->cond);
 	printf(" THEN\n");
+	dump_stmts(stmt->then_body);
+	foreach(l, stmt->elsif_list)
+	{
+		PLpgSQL_if_elsif *elif = (PLpgSQL_if_elsif *) lfirst(l);
 
-	dump_stmts(stmt->true_body);
-
-	if (stmt->false_body != NIL)
+		dump_ind();
+		printf("    ELSIF ");
+		dump_expr(elif->cond);
+		printf(" THEN\n");
+		dump_stmts(elif->stmts);
+	}
+	if (stmt->else_body != NIL)
 	{
 		dump_ind();
 		printf("    ELSE\n");
-		dump_stmts(stmt->false_body);
+		dump_stmts(stmt->else_body);
 	}
-
 	dump_ind();
 	printf("    ENDIF\n");
 }
@@ -1389,7 +1434,7 @@ dump_getdiag(PLpgSQL_stmt_getdiag *stmt)
 	ListCell   *lc;
 
 	dump_ind();
-	printf("GET DIAGNOSTICS ");
+	printf("GET %s DIAGNOSTICS ", stmt->is_stacked ? "STACKED" : "CURRENT");
 	foreach(lc, stmt->diag_items)
 	{
 		PLpgSQL_diag_item *diag_item = (PLpgSQL_diag_item *) lfirst(lc);
@@ -1397,22 +1442,8 @@ dump_getdiag(PLpgSQL_stmt_getdiag *stmt)
 		if (lc != list_head(stmt->diag_items))
 			printf(", ");
 
-		printf("{var %d} = ", diag_item->target);
-
-		switch (diag_item->kind)
-		{
-			case PLPGSQL_GETDIAG_ROW_COUNT:
-				printf("ROW_COUNT");
-				break;
-
-			case PLPGSQL_GETDIAG_RESULT_OID:
-				printf("RESULT_OID");
-				break;
-
-			default:
-				printf("???");
-				break;
-		}
+		printf("{var %d} = %s", diag_item->target,
+			   plpgsql_getdiag_kindname(diag_item->kind));
 	}
 	printf("\n");
 }
@@ -1430,7 +1461,7 @@ plpgsql_dumptree(PLpgSQL_function *func)
 	PLpgSQL_datum *d;
 
 	printf("\nExecution tree of successfully compiled PL/pgSQL function %s:\n",
-		   func->fn_name);
+		   func->fn_signature);
 
 	printf("\nFunction's data area:\n");
 	for (i = 0; i < func->ndatums; i++)
@@ -1507,6 +1538,6 @@ plpgsql_dumptree(PLpgSQL_function *func)
 	dump_indent = 0;
 	printf("%3d:", func->action->lineno);
 	dump_block(func->action);
-	printf("\nEnd of execution tree of function %s\n\n", func->fn_name);
+	printf("\nEnd of execution tree of function %s\n\n", func->fn_signature);
 	fflush(stdout);
 }

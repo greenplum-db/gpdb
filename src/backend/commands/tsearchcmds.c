@@ -4,7 +4,7 @@
  *
  *	  Routines for tsearch manipulation commands
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,7 +22,6 @@
 #include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
-#include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_namespace.h"
@@ -39,11 +38,8 @@
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
 #include "tsearch/ts_cache.h"
-#include "tsearch/ts_public.h"
 #include "tsearch/ts_utils.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
-#include "utils/catcache.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
@@ -278,7 +274,8 @@ DefineTSParser(List *names, List *parameters)
 	makeParserDependencies(tup);
 
 	/* Post creation hook for new text search parser */
-	InvokeObjectAccessHook(OAT_POST_CREATE, TSParserRelationId, prsOid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   TSParserRelationId, prsOid, 0, NULL);
 
 	heap_freetuple(tup);
 
@@ -301,66 +298,6 @@ DefineTSParser(List *names, List *parameters)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
-}
-
-/*
- * DROP TEXT SEARCH PARSER
- */
-void
-RemoveTSParsers(DropStmt *drop)
-{
-	ObjectAddresses *objects;
-	ListCell   *cell;
-
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("must be superuser to drop text search parsers")));
-
-	/*
-	 * First we identify all the objects, then we delete them in a single
-	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
-	 * RESTRICT errors if one of the objects depends on another.
-	 */
-	objects = new_object_addresses();
-
-	foreach(cell, drop->objects)
-	{
-		List	   *names = (List *) lfirst(cell);
-		Oid			prsOid;
-		ObjectAddress object;
-
-		prsOid = get_ts_parser_oid(names, true);
-
-		if (!OidIsValid(prsOid))
-		{
-			if (!drop->missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("text search parser \"%s\" does not exist",
-								NameListToString(names))));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE,
-						(errmsg("text search parser \"%s\" does not exist, skipping",
-								NameListToString(names))));
-			}
-			continue;
-		}
-
-		object.classId = TSParserRelationId;
-		object.objectId = prsOid;
-		object.objectSubId = 0;
-
-		add_exact_object_address(&object, objects);
-	}
-
-	performMultipleDeletions(objects, drop->behavior);
-
-	free_object_addresses(objects);
 }
 
 /*
@@ -650,7 +587,7 @@ DefineTSDictionary(List *names, List *parameters)
 
 	/* Post creation hook for new text search dictionary */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   TSDictionaryRelationId, dictOid, 0);
+						   TSDictionaryRelationId, dictOid, 0, NULL);
 
 	heap_freetuple(tup);
 
@@ -770,77 +707,6 @@ AlterTSDictionaryNamespace_oid(Oid dictId, Oid newNspOid)
 	heap_close(rel, RowExclusiveLock);
 
 	return oldNspOid;
-}
-
-/*
- * DROP TEXT SEARCH DICTIONARY
- */
-void
-RemoveTSDictionaries(DropStmt *drop)
-{
-	ObjectAddresses *objects;
-	ListCell   *cell;
-
-	/*
-	 * First we identify all the objects, then we delete them in a single
-	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
-	 * RESTRICT errors if one of the objects depends on another.
-	 */
-	objects = new_object_addresses();
-
-	foreach(cell, drop->objects)
-	{
-		List	   *names = (List *) lfirst(cell);
-		Oid			dictOid;
-		ObjectAddress object;
-		HeapTuple	tup;
-		Oid			namespaceId;
-
-		dictOid = get_ts_dict_oid(names, true);
-
-		if (!OidIsValid(dictOid))
-		{
-			if (!drop->missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-					   errmsg("text search dictionary \"%s\" does not exist",
-							  NameListToString(names))));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE,
-						(errmsg("text search dictionary \"%s\" does not exist, skipping",
-								NameListToString(names))));
-			}
-			continue;
-		}
-
-		tup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictOid));
-		if (!HeapTupleIsValid(tup))		/* should not happen */
-			elog(ERROR, "cache lookup failed for text search dictionary %u",
-				 dictOid);
-
-		/* Permission check: must own dictionary or its namespace */
-		namespaceId = ((Form_pg_ts_dict) GETSTRUCT(tup))->dictnamespace;
-		if (!pg_ts_dict_ownercheck(dictOid, GetUserId()) &&
-			!pg_namespace_ownercheck(namespaceId, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TSDICTIONARY,
-						   NameListToString(names));
-
-		object.classId = TSDictionaryRelationId;
-		object.objectId = dictOid;
-		object.objectSubId = 0;
-
-		add_exact_object_address(&object, objects);
-
-		ReleaseSysCache(tup);
-	}
-
-	performMultipleDeletions(objects, drop->behavior);
-
-	free_object_addresses(objects);
 }
 
 /*
@@ -1216,7 +1082,8 @@ DefineTSTemplate(List *names, List *parameters)
 	makeTSTemplateDependencies(tup);
 
 	/* Post creation hook for new text search template */
-	InvokeObjectAccessHook(OAT_POST_CREATE, TSTemplateRelationId, dictOid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   TSTemplateRelationId, dictOid, 0, NULL);
 
 	heap_freetuple(tup);
 
@@ -1327,66 +1194,6 @@ AlterTSTemplateNamespace_oid(Oid tmplId, Oid newNspOid)
 	heap_close(rel, RowExclusiveLock);
 
 	return oldNspOid;
-}
-
-/*
- * DROP TEXT SEARCH TEMPLATE
- */
-void
-RemoveTSTemplates(DropStmt *drop)
-{
-	ObjectAddresses *objects;
-	ListCell   *cell;
-
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("must be superuser to drop text search templates")));
-
-	/*
-	 * First we identify all the objects, then we delete them in a single
-	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
-	 * RESTRICT errors if one of the objects depends on another.
-	 */
-	objects = new_object_addresses();
-
-	foreach(cell, drop->objects)
-	{
-		List	   *names = (List *) lfirst(cell);
-		Oid			tmplOid;
-		ObjectAddress object;
-
-		tmplOid = get_ts_template_oid(names, true);
-
-		if (!OidIsValid(tmplOid))
-		{
-			if (!drop->missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("text search template \"%s\" does not exist",
-								NameListToString(names))));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE,
-							(errmsg("text search template \"%s\" does not exist, skipping",
-									NameListToString(names))));
-			}
-			continue;
-		}
-
-		object.classId = TSTemplateRelationId;
-		object.objectId = tmplOid;
-		object.objectSubId = 0;
-
-		add_exact_object_address(&object, objects);
-	}
-
-	performMultipleDeletions(objects, drop->behavior);
-
-	free_object_addresses(objects);
 }
 
 /*
@@ -1675,7 +1482,8 @@ DefineTSConfiguration(List *names, List *parameters)
 	makeConfigurationDependencies(tup, false, mapRel);
 
 	/* Post creation hook for new text search configuration */
-	InvokeObjectAccessHook(OAT_POST_CREATE, TSConfigRelationId, cfgOid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   TSConfigRelationId, cfgOid, 0, NULL);
 
 	heap_freetuple(tup);
 
@@ -1796,73 +1604,6 @@ AlterTSConfigurationNamespace_oid(Oid cfgId, Oid newNspOid)
 	heap_close(rel, RowExclusiveLock);
 
 	return oldNspOid;
-}
-
-/*
- * DROP TEXT SEARCH CONFIGURATION
- */
-void
-RemoveTSConfigurations(DropStmt *drop)
-{
-	ObjectAddresses *objects;
-	ListCell   *cell;
-
-	/*
-	 * First we identify all the objects, then we delete them in a single
-	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
-	 * RESTRICT errors if one of the objects depends on another.
-	 */
-	objects = new_object_addresses();
-
-	foreach(cell, drop->objects)
-	{
-		List	   *names = (List *) lfirst(cell);
-		Oid			cfgOid;
-		Oid			namespaceId;
-		ObjectAddress object;
-		HeapTuple	tup;
-
-		tup = GetTSConfigTuple(names);
-
-		if (!HeapTupleIsValid(tup))
-		{
-			if (!drop->missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-					errmsg("text search configuration \"%s\" does not exist",
-						   NameListToString(names))));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE,
-							(errmsg("text search configuration \"%s\" does not exist, skipping",
-									NameListToString(names))));
-			}
-			continue;
-		}
-
-		/* Permission check: must own configuration or its namespace */
-		cfgOid = HeapTupleGetOid(tup);
-		namespaceId = ((Form_pg_ts_config) GETSTRUCT(tup))->cfgnamespace;
-		if (!pg_ts_config_ownercheck(cfgOid, GetUserId()) &&
-			!pg_namespace_ownercheck(namespaceId, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TSCONFIGURATION,
-						   NameListToString(names));
-
-		object.classId = TSConfigRelationId;
-		object.objectId = cfgOid;
-		object.objectSubId = 0;
-
-		add_exact_object_address(&object, objects);
-
-		ReleaseSysCache(tup);
-	}
-
-	performMultipleDeletions(objects, drop->behavior);
-
-	free_object_addresses(objects);
 }
 
 /*

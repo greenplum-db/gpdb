@@ -224,8 +224,7 @@ GetConnection(void)
 		tmpparam = PQparameterStatus(tmpconn, "integer_datetimes");
 		if (!tmpparam)
 		{
-			fprintf(stderr,
-					_("%s: could not determine server setting for integer_datetimes\n"),
+			fprintf(stderr, _("%s: could not determine server setting for integer_datetimes\n"),
 					progname);
 			PQfinish(tmpconn);
 			exit(1);
@@ -237,8 +236,7 @@ GetConnection(void)
 		if (strcmp(tmpparam, "off") != 0)
 #endif
 		{
-			fprintf(stderr,
-			 _("%s: integer_datetimes compile flag does not match server\n"),
+			fprintf(stderr, _("%s: integer_datetimes compile flag does not match server\n"),
 					progname);
 			PQfinish(tmpconn);
 			exit(1);

@@ -3,7 +3,7 @@
  * ts_typanalyze.c
  *	  functions for gathering statistics from tsvector columns
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -18,7 +18,6 @@
 #include "commands/vacuum.h"
 #include "tsearch/ts_type.h"
 #include "utils/builtins.h"
-#include "utils/hsearch.h"
 
 
 /* A hash key for lexemes */
@@ -187,7 +186,7 @@ compute_tsvector_stats(VacAttrStats *stats,
 	hash_ctl.match = lexeme_match;
 	hash_ctl.hcxt = CurrentMemoryContext;
 	lexemes_tab = hash_create("Analyzed lexemes table",
-							  bucket_width * 7,
+							  num_mcelem,
 							  &hash_ctl,
 					HASH_ELEM | HASH_FUNCTION | HASH_COMPARE | HASH_CONTEXT);
 
@@ -378,6 +377,11 @@ compute_tsvector_stats(VacAttrStats *stats,
 			 * able to find out the minimal and maximal frequency without
 			 * going through all the values.  We keep those two extra
 			 * frequencies in two extra cells in mcelem_freqs.
+			 *
+			 * (Note: the MCELEM statistics slot definition allows for a third
+			 * extra number containing the frequency of nulls, but we don't
+			 * create that for a tsvector column, since null elements aren't
+			 * possible.)
 			 */
 			mcelem_values = (Datum *) palloc(num_mcelem * sizeof(Datum));
 			mcelem_freqs = (float4 *) palloc((num_mcelem + 2) * sizeof(float4));

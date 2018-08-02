@@ -24,7 +24,7 @@
  * the TID array, just enough to hold as many heap tuples as fit on one page.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -64,6 +64,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/pg_rusage.h"
+#include "utils/timestamp.h"
 #include "utils/tqual.h"
 
 #include "cdb/cdbappendonlyam.h"
@@ -134,6 +135,7 @@ static void lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt);
 static void lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			   Relation *Irel, int nindexes, bool scan_all);
 static void lazy_vacuum_heap(Relation onerel, LVRelStats *vacrelstats);
+static bool lazy_check_needs_freeze(Buffer buf);
 static void lazy_vacuum_index(Relation indrel,
 				  IndexBulkDeleteResult **stats,
 				  LVRelStats *vacrelstats);
@@ -171,18 +173,23 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	BlockNumber possibly_freeable;
 	PGRUsage	ru0;
 	TimestampTz starttime = 0;
-	bool		scan_all;		/* should we scan all pages? */
-	bool		scanned_all;	/* did we actually scan all pages? */
+	long		secs;
+	int			usecs;
+	double		read_rate,
+				write_rate;
+	bool		scan_all;
 	TransactionId freezeTableLimit;
 	BlockNumber new_rel_pages;
 	double		new_rel_tuples;
+	BlockNumber new_rel_allvisible;
 	TransactionId new_frozen_xid;
 
-	pg_rusage_init(&ru0);
-
 	/* measure elapsed time iff autovacuum logging requires it */
-	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration > 0)
+	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration >= 0)
+	{
+		pg_rusage_init(&ru0);
 		starttime = GetCurrentTimestamp();
+	}
 
 	if (vacstmt->options & VACOPT_VERBOSE)
 		elevel = INFO;
@@ -254,21 +261,6 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	vac_close_indexes(nindexes, Irel, NoLock);
 
 	/*
-	 * Compute whether we actually scanned the whole relation. If we did, we
-	 * can adjust relfrozenxid.
-	 *
-	 * NB: We need to check this before truncating the relation, because that
-	 * will change ->rel_pages.
-	 */
-	if (vacrelstats->scanned_pages < vacrelstats->rel_pages)
-	{
-		Assert(!scan_all);
-		scanned_all = false;
-	}
-	else
-		scanned_all = true;
-
-	/*
 	 * Optionally truncate the relation.
 	 *
 	 * Don't even think about it unless we have a shot at releasing a goodly
@@ -288,13 +280,17 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	 *
 	 * A corner case here is that if we scanned no pages at all because every
 	 * page is all-visible, we should not update relpages/reltuples, because
-	 * we have no new information to contribute.  In particular this keeps
-	 * us from replacing relpages=reltuples=0 (which means "unknown tuple
+	 * we have no new information to contribute.  In particular this keeps us
+	 * from replacing relpages=reltuples=0 (which means "unknown tuple
 	 * density") with nonzero relpages and reltuples=0 (which means "zero
 	 * tuple density") unless there's some actual evidence for the latter.
 	 *
-	 * Also, don't change relfrozenxid if we skipped any pages, since then
-	 * we don't know for certain that all tuples have a newer xmin.
+	 * We do update relallvisible even in the corner case, since if the table
+	 * is all-visible we'd definitely like to know that.  But clamp the value
+	 * to be not more than what we're setting relpages to.
+	 *
+	 * Also, don't change relfrozenxid if we skipped any pages, since then we
+	 * don't know for certain that all tuples have a newer xmin.
 	 */
 	new_rel_pages = vacrelstats->rel_pages;
 	new_rel_tuples = vacrelstats->new_rel_tuples;
@@ -304,10 +300,18 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 		new_rel_tuples = vacrelstats->old_rel_tuples;
 	}
 
-	new_frozen_xid = scanned_all ? FreezeLimit : InvalidTransactionId;
+	new_rel_allvisible = visibilitymap_count(onerel);
+	if (new_rel_allvisible > new_rel_pages)
+		new_rel_allvisible = new_rel_pages;
+
+	new_frozen_xid = FreezeLimit;
+	if (vacrelstats->scanned_pages < vacrelstats->rel_pages)
+		new_frozen_xid = InvalidTransactionId;
 
 	vac_update_relstats(onerel,
-						new_rel_pages, new_rel_tuples,
+						new_rel_pages,
+						new_rel_tuples,
+						new_rel_allvisible,
 						vacrelstats->hasindex,
 						new_frozen_xid,
 						true /* isvacuum */);
@@ -315,7 +319,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	/* report results to the stats collector, too */
 	pgstat_report_vacuum(RelationGetRelid(onerel),
 						 onerel->rd_rel->relisshared,
-						 vacrelstats->new_rel_tuples);
+						 new_rel_tuples);
 
 	if (gp_indexcheck_vacuum == INDEX_CHECK_ALL ||
 		(gp_indexcheck_vacuum == INDEX_CHECK_SYSTEM &&
@@ -333,13 +337,29 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	/* and log the action if appropriate */
 	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration >= 0)
 	{
+		TimestampTz endtime = GetCurrentTimestamp();
+
 		if (Log_autovacuum_min_duration == 0 ||
-			TimestampDifferenceExceeds(starttime, GetCurrentTimestamp(),
+			TimestampDifferenceExceeds(starttime, endtime,
 									   Log_autovacuum_min_duration))
+		{
+			TimestampDifference(starttime, endtime, &secs, &usecs);
+
+			read_rate = 0;
+			write_rate = 0;
+			if ((secs > 0) || (usecs > 0))
+			{
+				read_rate = (double) BLCKSZ *VacuumPageMiss / (1024 * 1024) /
+							(secs + usecs / 1000000.0);
+				write_rate = (double) BLCKSZ *VacuumPageDirty / (1024 * 1024) /
+							(secs + usecs / 1000000.0);
+			}
 			ereport(LOG,
 					(errmsg("automatic vacuum of table \"%s.%s.%s\": index scans: %d\n"
 							"pages: %d removed, %d remain\n"
 							"tuples: %.0f removed, %.0f remain\n"
+							"buffer usage: %d hits, %d misses, %d dirtied\n"
+					"avg read rate: %.3f MiB/s, avg write rate: %.3f MiB/s\n"
 							"system usage: %s",
 							get_database_name(MyDatabaseId),
 							get_namespace_name(RelationGetNamespace(onerel)),
@@ -349,7 +369,12 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 							vacrelstats->rel_pages,
 							vacrelstats->tuples_deleted,
 							vacrelstats->new_rel_tuples,
+							VacuumPageHit,
+							VacuumPageMiss,
+							VacuumPageDirty,
+							read_rate, write_rate,
 							pg_rusage_show(&ru0))));
+		}
 	}
 }
 
@@ -439,6 +464,7 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 		vac_update_relstats(onerel,
 							vacrelstats->rel_pages,
 							vacrelstats->new_rel_tuples,
+							visibilitymap_count(onerel),
 							vacrelstats->hasindex,
 							FreezeLimit,
 							true /* isvacuum */);
@@ -486,13 +512,18 @@ vacuum_log_cleanup_info(Relation rel, LVRelStats *vacrelstats)
 /*
  *	lazy_scan_heap() -- scan an open heap relation
  *
- *		This routine sets commit status bits, builds lists of dead tuples
- *		and pages with free space, and calculates statistics on the number
- *		of live tuples in the heap.  When done, or when we run low on space
- *		for dead-tuple TIDs, invoke vacuuming of indexes and heap.
+ *		This routine prunes each page in the heap, which will among other
+ *		things truncate dead tuples to dead line pointers, defragment the
+ *		page, and set commit status bits (see heap_page_prune).  It also builds
+ *		lists of dead tuples and pages with free space, calculates statistics
+ *		on the number of live tuples in the heap, and marks pages as
+ *		all-visible if appropriate.  When done, or when we run low on space for
+ *		dead-tuple TIDs, invoke vacuuming of indexes and call lazy_vacuum_heap
+ *		to reclaim dead line pointers.
  *
- *		If there are no indexes then we just vacuum each dirty page as we
- *		process it, since there's no point in gathering many tuples.
+ *		If there are no indexes then we can reclaim line pointers on the fly;
+ *		dead line pointers need only be retained until all index pointers that
+ *		reference them have been killed.
  */
 static void
 lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
@@ -559,6 +590,15 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 	 * Note: if scan_all is true, we won't actually skip any pages; but we
 	 * maintain next_not_all_visible_block anyway, so as to set up the
 	 * all_visible_according_to_vm flag correctly for each page.
+	 *
+	 * Note: The value returned by visibilitymap_test could be slightly
+	 * out-of-date, since we make this test before reading the corresponding
+	 * heap page or locking the buffer.  This is OK.  If we mistakenly think
+	 * that the page is all-visible when in fact the flag's just been cleared,
+	 * we might fail to vacuum the page.  But it's OK to skip pages when
+	 * scan_all is not set, so no great harm done; the next vacuum will find
+	 * them.  If we make the reverse mistake and vacuum a page unnecessarily,
+	 * it'll just be a no-op.
 	 */
 	for (next_not_all_visible_block = 0;
 		 next_not_all_visible_block < nblocks;
@@ -588,6 +628,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		bool		all_visible_according_to_vm;
 		bool		all_visible;
 		bool		has_dead_tuples;
+		TransactionId visibility_cutoff_xid = InvalidTransactionId;
 
 		if (blkno == next_not_all_visible_block)
 		{
@@ -623,8 +664,6 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 
 		vacuum_delay_point();
 
-		vacrelstats->scanned_pages++;
-
 		/*
 		 * If we are close to overrunning the available space for dead-tuple
 		 * TIDs, pause and do a cycle of vacuuming before we tackle this page.
@@ -632,6 +671,18 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		if ((vacrelstats->max_dead_tuples - vacrelstats->num_dead_tuples) < MaxHeapTuplesPerPage &&
 			vacrelstats->num_dead_tuples > 0)
 		{
+			/*
+			 * Before beginning index vacuuming, we release any pin we may
+			 * hold on the visibility map page.  This isn't necessary for
+			 * correctness, but we do it anyway to avoid holding the pin
+			 * across a lengthy, unrelated operation.
+			 */
+			if (BufferIsValid(vmbuffer))
+			{
+				ReleaseBuffer(vmbuffer);
+				vmbuffer = InvalidBuffer;
+			}
+
 			/* Log cleanup info before we touch indexes */
 			vacuum_log_cleanup_info(onerel, vacrelstats);
 
@@ -653,11 +704,56 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			vacrelstats->num_index_scans++;
 		}
 
+		/*
+		 * Pin the visibility map page in case we need to mark the page
+		 * all-visible.  In most cases this will be very cheap, because we'll
+		 * already have the correct page pinned anyway.  However, it's
+		 * possible that (a) next_not_all_visible_block is covered by a
+		 * different VM page than the current block or (b) we released our pin
+		 * and did a cycle of index vacuuming.
+		 */
+		visibilitymap_pin(onerel, blkno, &vmbuffer);
+
 		buf = ReadBufferExtended(onerel, MAIN_FORKNUM, blkno,
 								 RBM_NORMAL, vac_strategy);
 
 		/* We need buffer cleanup lock so that we can prune HOT chains. */
-		LockBufferForCleanup(buf);
+		if (!ConditionalLockBufferForCleanup(buf))
+		{
+			/*
+			 * If we're not scanning the whole relation to guard against XID
+			 * wraparound, it's OK to skip vacuuming a page.  The next vacuum
+			 * will clean it up.
+			 */
+			if (!scan_all)
+			{
+				ReleaseBuffer(buf);
+				continue;
+			}
+
+			/*
+			 * If this is a wraparound checking vacuum, then we read the page
+			 * with share lock to see if any xids need to be frozen. If the
+			 * page doesn't need attention we just skip and continue. If it
+			 * does, we wait for cleanup lock.
+			 *
+			 * We could defer the lock request further by remembering the page
+			 * and coming back to it later, or we could even register
+			 * ourselves for multiple buffers and then service whichever one
+			 * is received first.  For now, this seems good enough.
+			 */
+			LockBuffer(buf, BUFFER_LOCK_SHARE);
+			if (!lazy_check_needs_freeze(buf))
+			{
+				UnlockReleaseBuffer(buf);
+				continue;
+			}
+			LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+			LockBufferForCleanup(buf);
+			/* drop through to normal processing */
+		}
+
+		vacrelstats->scanned_pages++;
 
 		page = BufferGetPage(buf);
 
@@ -710,25 +806,16 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			empty_pages++;
 			freespace = PageGetHeapFreeSpace(page);
 
+			/* empty pages are always all-visible */
 			if (!PageIsAllVisible(page))
 			{
 				PageSetAllVisible(page);
 				MarkBufferDirty(buf);
+				visibilitymap_set(onerel, blkno, InvalidXLogRecPtr, vmbuffer,
+								  InvalidTransactionId);
 			}
 
-			LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-
-			/* Update the visibility map */
-			if (!all_visible_according_to_vm)
-			{
-				visibilitymap_pin(onerel, blkno, &vmbuffer);
-				LockBuffer(buf, BUFFER_LOCK_SHARE);
-				if (PageIsAllVisible(page))
-					visibilitymap_set(onerel, blkno, PageGetLSN(page), &vmbuffer);
-				LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-			}
-
-			ReleaseBuffer(buf);
+			UnlockReleaseBuffer(buf);
 			RecordPageWithFreeSpace(onerel, blkno, freespace);
 			continue;
 		}
@@ -857,6 +944,10 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 							all_visible = false;
 							break;
 						}
+
+						/* Track newest xmin on page. */
+						if (TransactionIdFollows(xmin, visibility_cutoff_xid))
+							visibility_cutoff_xid = xmin;
 					}
 					break;
 				case HEAPTUPLE_RECENTLY_DEAD:
@@ -898,8 +989,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 				 * Each non-removable tuple must be checked to see if it needs
 				 * freezing.  Note we already have exclusive buffer lock.
 				 */
-				if (heap_freeze_tuple(tuple.t_data, FreezeLimit,
-									  InvalidBuffer))
+				if (heap_freeze_tuple(tuple.t_data, FreezeLimit))
 					frozen[nfrozen++] = offnum;
 			}
 		}						/* scan along page */
@@ -944,11 +1034,42 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 
 		freespace = PageGetHeapFreeSpace(page);
 
-		/* Update the all-visible flag on the page */
-		if (!PageIsAllVisible(page) && all_visible)
+		/* mark page all-visible, if appropriate */
+		if (all_visible)
 		{
-			PageSetAllVisible(page);
-			MarkBufferDirty(buf);
+			if (!PageIsAllVisible(page))
+			{
+				PageSetAllVisible(page);
+				MarkBufferDirty(buf);
+				visibilitymap_set(onerel, blkno, InvalidXLogRecPtr, vmbuffer,
+								  visibility_cutoff_xid);
+			}
+			else if (!all_visible_according_to_vm)
+			{
+				/*
+				 * It should never be the case that the visibility map page is
+				 * set while the page-level bit is clear, but the reverse is
+				 * allowed.  Set the visibility map bit as well so that we get
+				 * back in sync.
+				 */
+				visibilitymap_set(onerel, blkno, InvalidXLogRecPtr, vmbuffer,
+								  visibility_cutoff_xid);
+			}
+		}
+
+		/*
+		 * As of PostgreSQL 9.2, the visibility map bit should never be set if
+		 * the page-level bit is clear.  However, it's possible that the bit
+		 * got cleared after we checked it and before we took the buffer
+		 * content lock, so we must recheck before jumping to the conclusion
+		 * that something bad has happened.
+		 */
+		else if (all_visible_according_to_vm && !PageIsAllVisible(page)
+				 && visibilitymap_test(onerel, blkno, &vmbuffer))
+		{
+			elog(WARNING, "page is not marked all-visible but visibility map bit is set in relation \"%s\" page %u",
+				 relname, blkno);
+			visibilitymap_clear(onerel, blkno, vmbuffer);
 		}
 
 		/*
@@ -970,28 +1091,10 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 				 relname, blkno);
 			PageClearAllVisible(page);
 			MarkBufferDirty(buf);
-
-			/*
-			 * Normally, we would drop the lock on the heap page before
-			 * updating the visibility map, but since this case shouldn't
-			 * happen anyway, don't worry about that.
-			 */
-			visibilitymap_clear(onerel, blkno);
+			visibilitymap_clear(onerel, blkno, vmbuffer);
 		}
 
-		LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-
-		/* Update the visibility map */
-		if (!all_visible_according_to_vm && all_visible)
-		{
-			visibilitymap_pin(onerel, blkno, &vmbuffer);
-			LockBuffer(buf, BUFFER_LOCK_SHARE);
-			if (PageIsAllVisible(page))
-				visibilitymap_set(onerel, blkno, PageGetLSN(page), &vmbuffer);
-			LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-		}
-
-		ReleaseBuffer(buf);
+		UnlockReleaseBuffer(buf);
 
 		/* Remember the location of the last page with nonremovable tuples */
 		if (hastup)
@@ -1106,7 +1209,12 @@ lazy_vacuum_heap(Relation onerel, LVRelStats *vacrelstats)
 
 		buf = ReadBufferExtended(onerel, MAIN_FORKNUM, tblk, RBM_NORMAL,
 								 vac_strategy);
-		LockBufferForCleanup(buf);
+		if (!ConditionalLockBufferForCleanup(buf))
+		{
+			ReleaseBuffer(buf);
+			++tupindex;
+			continue;
+		}
 		tupindex = lazy_vacuum_page(onerel, tblk, buf, tupindex, vacrelstats);
 
 		/* Now that we've compacted the page, record its available space */
@@ -1184,6 +1292,50 @@ lazy_vacuum_page(Relation onerel, BlockNumber blkno, Buffer buffer,
 }
 
 /*
+ *	lazy_check_needs_freeze() -- scan page to see if any tuples
+ *					 need to be cleaned to avoid wraparound
+ *
+ * Returns true if the page needs to be vacuumed using cleanup lock.
+ */
+static bool
+lazy_check_needs_freeze(Buffer buf)
+{
+	Page		page;
+	OffsetNumber offnum,
+				maxoff;
+	HeapTupleHeader tupleheader;
+
+	page = BufferGetPage(buf);
+
+	if (PageIsNew(page) || PageIsEmpty(page))
+	{
+		/* PageIsNew probably shouldn't happen... */
+		return false;
+	}
+
+	maxoff = PageGetMaxOffsetNumber(page);
+	for (offnum = FirstOffsetNumber;
+		 offnum <= maxoff;
+		 offnum = OffsetNumberNext(offnum))
+	{
+		ItemId		itemid;
+
+		itemid = PageGetItemId(page, offnum);
+
+		if (!ItemIdIsNormal(itemid))
+			continue;
+
+		tupleheader = (HeapTupleHeader) PageGetItem(page, itemid);
+
+		if (heap_tuple_needs_freeze(tupleheader, FreezeLimit, buf))
+			return true;
+	}							/* scan along page */
+
+	return false;
+}
+
+
+/*
  *	lazy_vacuum_index() -- vacuum one index relation.
  *
  *		Delete all the index entries pointing to tuples listed in
@@ -1248,8 +1400,11 @@ lazy_cleanup_index(Relation indrel,
 	 */
 	if (!stats->estimated_count)
 		vac_update_relstats(indrel,
-							stats->num_pages, stats->num_index_tuples,
-							false, InvalidTransactionId,
+							stats->num_pages,
+							stats->num_index_tuples,
+							0,
+							false,
+							InvalidTransactionId,
 							true /* isvacuum */);
 
 	ereport(elevel,

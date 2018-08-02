@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  *	  src/include/utils/guc_tables.h
  *
@@ -67,6 +67,7 @@ enum config_group
 	APPENDONLY_TABLES,                  /*CDB*/
 	RESOURCES,
 	RESOURCES_MEM,
+	RESOURCES_DISK,
 	RESOURCES_KERNEL,
 	RESOURCES_VACUUM_DELAY,
 	RESOURCES_BGWRITER,
@@ -76,8 +77,10 @@ enum config_group
 	WAL_SETTINGS,
 	WAL_CHECKPOINTS,
 	WAL_ARCHIVING,
-	WAL_REPLICATION,
-	WAL_STANDBY_SERVERS,
+	REPLICATION,
+	REPLICATION_SENDING,
+	REPLICATION_MASTER,
+	REPLICATION_STANDBY,
 	QUERY_TUNING,
 	QUERY_TUNING_METHOD,
 	QUERY_TUNING_COST,
@@ -154,9 +157,11 @@ typedef struct guc_stack
 	int			nest_level;		/* nesting depth at which we made entry */
 	GucStackState state;		/* see enum above */
 	GucSource	source;			/* source of the prior value */
+	/* masked value's source must be PGC_S_SESSION, so no need to store it */
+	GucContext	scontext;		/* context that set the prior value */
+	GucContext	masked_scontext;	/* context that set the masked value */
 	config_var_value prior;		/* previous value of variable */
 	config_var_value masked;	/* SET value in a GUC_SET_LOCAL entry */
-	/* masked value's source must be PGC_S_SESSION, so no need to store it */
 } GucStack;
 
 /*
@@ -179,16 +184,18 @@ struct config_generic
 	enum config_group group;	/* to help organize variables by function */
 	const char *short_desc;		/* short desc. of this variable's purpose */
 	const char *long_desc;		/* long desc. of this variable's purpose */
-	int			flags;			/* flag bits, see below */
+	int			flags;			/* flag bits, see guc.h */
 	/* variable fields, initialized at runtime: */
 	enum config_type vartype;	/* type of variable (set only at startup) */
 	int			status;			/* status bits, see below */
-	GucSource	reset_source;	/* source of the reset_value */
 	GucSource	source;			/* source of the current actual value */
+	GucSource	reset_source;	/* source of the reset_value */
+	GucContext	scontext;		/* context that set the current value */
+	GucContext	reset_scontext; /* context that set the reset value */
 	GucStack   *stack;			/* stacked prior values */
 	void	   *extra;			/* "extra" pointer for current actual value */
 	char	   *sourcefile;		/* file current setting is from (NULL if not
-								 * file) */
+								 * set in config file) */
 	int			sourceline;		/* line in source file */
 };
 

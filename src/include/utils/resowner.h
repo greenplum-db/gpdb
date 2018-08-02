@@ -9,7 +9,7 @@
  * See utils/resowner/README for more info.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/resowner.h
@@ -19,7 +19,6 @@
 #ifndef RESOWNER_H
 #define RESOWNER_H
 
-#include "storage/buf.h"
 #include "storage/fd.h"
 #include "storage/lock.h"
 #include "utils/catcache.h"

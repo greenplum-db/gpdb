@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -31,8 +31,6 @@
  */
 #include "postgres.h"
 
-#include "access/genam.h"
-#include "access/heapam.h"
 #include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/reloptions.h"
@@ -42,7 +40,6 @@
 #include "catalog/gp_policy.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
-#include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
 #include "catalog/pg_appendonly_fn.h"
@@ -75,8 +72,6 @@
 #include "parser/parse_collate.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
-#include "storage/bufmgr.h"
-#include "storage/freespace.h"
 #include "storage/predicate.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"
@@ -86,6 +81,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"             /* CDB: GetMemoryChunkContext */
 #include "utils/relcache.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
@@ -130,10 +126,12 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static void StoreRelCheck(Relation rel, char *ccname, Node *expr,
-			  bool is_local, int inhcount);
+			  bool is_validated, bool is_local, int inhcount,
+			  bool is_no_inherit);
 static void StoreConstraints(Relation rel, List *cooked_constraints);
 static bool MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
-							bool allow_merge, bool is_local);
+							bool allow_merge, bool is_local,
+							bool is_no_inherit);
 static Node *cookConstraint(ParseState *pstate,
 			   Node *raw_constraint,
 			   char *relname);
@@ -156,7 +154,7 @@ static List *insert_ordered_unique_oid(List *list, Oid datum);
  */
 
 /*
- * The initializers below do not include the attoptions or attacl fields,
+ * The initializers below do not include trailing variable length fields,
  * but that's OK - we're never going to reference anything beyond the
  * fixed-size portion of the structure anyway.
  */
@@ -266,7 +264,8 @@ SystemAttributeByName(const char *attname, bool relhasoids)
  *		heap_create		- Create an uncataloged heap relation
  *
  *		Note API change: the caller must now always provide the OID
- *		to use for the relation.
+ *		to use for the relation.  The relfilenode may (and, normally,
+ *		should) be left unspecified.
  *
  *		rel->rd_rel is initialized by RelationBuildLocalRelation,
  *		and is mostly zeroes at return.
@@ -277,6 +276,7 @@ heap_create(const char *relname,
 			Oid relnamespace,
 			Oid reltablespace,
 			Oid relid,
+			Oid relfilenode,
 			TupleDesc tupDesc,
 			Oid relam,
 			char relkind,
@@ -339,6 +339,16 @@ heap_create(const char *relname,
 	}
 
 	/*
+	 * Unless otherwise requested, the physical ID (relfilenode) is initially
+	 * the same as the logical ID (OID).  When the caller did specify a
+	 * relfilenode, it already exists; do not attempt to create it.
+	 */
+	if (OidIsValid(relfilenode))
+		create_storage = false;
+	else
+		relfilenode = relid;
+
+	/*
 	 * Never allow a pg_class entry to explicitly specify the database's
 	 * default tablespace in reltablespace; force it to zero instead. This
 	 * ensures that if the database is cloned with a different default
@@ -357,6 +367,7 @@ heap_create(const char *relname,
 									 relnamespace,
 									 tupDesc,
 									 relid,
+									 relfilenode,
 									 reltablespace,
                                      relkind,           /*CDB*/
 									 shared_relation,
@@ -937,6 +948,7 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	/* start out with empty permissions and empty options */
 	nulls[Anum_pg_attribute_attacl - 1] = true;
 	nulls[Anum_pg_attribute_attoptions - 1] = true;
+	nulls[Anum_pg_attribute_attfdwoptions - 1] = true;
 
 	tup = heap_form_tuple(RelationGetDescr(pg_attribute_rel), values, nulls);
 
@@ -1094,6 +1106,7 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_reltablespace - 1] = ObjectIdGetDatum(rd_rel->reltablespace);
 	values[Anum_pg_class_relpages - 1] = Int32GetDatum(rd_rel->relpages);
 	values[Anum_pg_class_reltuples - 1] = Float4GetDatum(rd_rel->reltuples);
+	values[Anum_pg_class_relallvisible - 1] = Int32GetDatum(rd_rel->relallvisible);
 	values[Anum_pg_class_reltoastrelid - 1] = ObjectIdGetDatum(rd_rel->reltoastrelid);
 	values[Anum_pg_class_reltoastidxid - 1] = ObjectIdGetDatum(rd_rel->reltoastidxid);
 	values[Anum_pg_class_relhasindex - 1] = BoolGetDatum(rd_rel->relhasindex);
@@ -1181,16 +1194,19 @@ AddNewRelationTuple(Relation pg_class_desc,
 				new_rel_reltup->relpages = 1000;
 				new_rel_reltup->reltuples = 1000000;
 			}
+			new_rel_reltup->relallvisible = 0;
 			break;
 		case RELKIND_SEQUENCE:
 			/* Sequences always have a known size */
 			new_rel_reltup->relpages = 1;
 			new_rel_reltup->reltuples = 1;
+			new_rel_reltup->relallvisible = 0;
 			break;
 		default:
 			/* Views, etc, have no disk storage */
 			new_rel_reltup->relpages = 0;
 			new_rel_reltup->reltuples = 0;
+			new_rel_reltup->relallvisible = 0;
 			break;
 	}
 
@@ -1289,10 +1305,12 @@ AddNewRelationType(const char *typeName,
  *	reltablespace: OID of tablespace it goes in
  *	relid: OID to assign to new rel, or InvalidOid to select a new OID
  *	reltypeid: OID to assign to rel's rowtype, or InvalidOid to select one
+ *	reloftypeid: if a typed table, OID of underlying type; else InvalidOid
  *	ownerid: OID of new rel's owner
  *	tupdesc: tuple descriptor (source of column definitions)
  *	cooked_constraints: list of precooked check constraints and defaults
  *	relkind: relkind for new rel
+ *	relpersistence: rel's persistence status (permanent, temp, or unlogged)
  *	shared_relation: TRUE if it's to be a shared relation
  *	mapped_relation: TRUE if the relation will use the relfilenode map
  *	oidislocal: TRUE if oid column (if any) should be marked attislocal
@@ -1480,6 +1498,7 @@ heap_create_with_catalog(const char *relname,
 							   relnamespace,
 							   reltablespace,
 							   relid,
+							   InvalidOid,
 							   tupdesc,
 							   relam,
 							   relkind,
@@ -1581,7 +1600,7 @@ heap_create_with_catalog(const char *relname,
 				   F_ARRAY_SEND,	/* array send (bin) proc */
 				   InvalidOid,	/* typmodin procedure - none */
 				   InvalidOid,	/* typmodout procedure - none */
-				   InvalidOid,	/* analyze procedure - default */
+				   F_ARRAY_TYPANALYZE,	/* array analyze procedure */
 				   new_type_oid,	/* array element type - the rowtype */
 				   true,		/* yes, this is an array type */
 				   InvalidOid,	/* this has no array type */
@@ -1656,6 +1675,10 @@ heap_create_with_catalog(const char *relname,
 	 * should they have any ACL entries.  The same applies for extension
 	 * dependencies.
 	 *
+	 * If it's a temp table, we do not make it an extension member; this
+	 * prevents the unintuitive result that deletion of the temp table at
+	 * session end would make the whole extension go away.
+	 *
 	 * Also, skip this in bootstrap mode, since we don't make dependencies
 	 * while bootstrapping.
 	 */
@@ -1675,7 +1698,9 @@ heap_create_with_catalog(const char *relname,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 		recordDependencyOnOwner(RelationRelationId, relid, ownerid);
-		recordDependencyOnCurrentExtension(&myself, false);
+
+		if (relpersistence != RELPERSISTENCE_TEMP)
+			recordDependencyOnCurrentExtension(&myself, false);
 
 		if (reloftypeid)
 		{
@@ -1699,7 +1724,8 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/* Post creation hook for new relation */
-	InvokeObjectAccessHook(OAT_POST_CREATE, RelationRelationId, relid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   RelationRelationId, relid, 0, NULL);
 
 	/*
 	 * Store any supplied constraints and defaults.
@@ -1796,12 +1822,7 @@ heap_create_with_catalog(const char *relname,
 	if (relpersistence == RELPERSISTENCE_UNLOGGED)
 	{
 		Assert(relkind == RELKIND_RELATION || relkind == RELKIND_TOASTVALUE);
-
-		smgrcreate(new_rel_desc->rd_smgr, INIT_FORKNUM, false);
-		if (XLogIsNeeded())
-			log_smgrcreate(&new_rel_desc->rd_smgr->smgr_rnode.node,
-						   INIT_FORKNUM);
-		smgrimmedsync(new_rel_desc->rd_smgr, INIT_FORKNUM);
+		heap_create_init_fork(new_rel_desc);
 	}
 
 	/*
@@ -1814,6 +1835,22 @@ heap_create_with_catalog(const char *relname,
 	return relid;
 }
 
+/*
+ * Set up an init fork for an unlogged table so that it can be correctly
+ * reinitialized on restart.  Since we're going to do an immediate sync, we
+ * only need to xlog this if archiving or streaming is enabled.  And the
+ * immediate sync is required, because otherwise there's no guarantee that
+ * this will hit the disk before the next checkpoint moves the redo pointer.
+ */
+void
+heap_create_init_fork(Relation rel)
+{
+	RelationOpenSmgr(rel);
+	smgrcreate(rel->rd_smgr, INIT_FORKNUM, false);
+	if (XLogIsNeeded())
+		log_smgrcreate(&rel->rd_smgr->smgr_rnode.node, INIT_FORKNUM);
+	smgrimmedsync(rel->rd_smgr, INIT_FORKNUM);
+}
 
 /*
  *		RelationRemoveInheritance
@@ -2083,7 +2120,7 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
  */
 void
 RemoveAttrDefault(Oid relid, AttrNumber attnum,
-				  DropBehavior behavior, bool complain)
+				  DropBehavior behavior, bool complain, bool internal)
 {
 	Relation	attrdef_rel;
 	ScanKeyData scankeys[2];
@@ -2114,7 +2151,8 @@ RemoveAttrDefault(Oid relid, AttrNumber attnum,
 		object.objectId = HeapTupleGetOid(tuple);
 		object.objectSubId = 0;
 
-		performDeletion(&object, behavior);
+		performDeletion(&object, behavior,
+						internal ? PERFORM_DELETION_INTERNAL : 0);
 
 		found = true;
 	}
@@ -2474,7 +2512,8 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
  */
 static void
 StoreRelCheck(Relation rel, char *ccname, Node *expr,
-			  bool is_local, int inhcount)
+			  bool is_validated, bool is_local, int inhcount,
+			  bool is_no_inherit)
 {
 	char	   *ccbin;
 	char	   *ccsrc;
@@ -2537,7 +2576,7 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  CONSTRAINT_CHECK,		/* Constraint Type */
 						  false,	/* Is Deferrable */
 						  false,	/* Is Deferred */
-						  true, /* Is Validated */
+						  is_validated,
 						  RelationGetRelid(rel),		/* relation */
 						  attNos,		/* attrs in the constraint */
 						  keycount,		/* # attrs in the constraint */
@@ -2557,7 +2596,8 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  ccbin,	/* Binary form of check constraint */
 						  ccsrc,	/* Source form of check constraint */
 						  is_local,		/* conislocal */
-						  inhcount);	/* coninhcount */
+						  inhcount,		/* coninhcount */
+						  is_no_inherit);		/* connoinherit */
 
 	pfree(ccbin);
 	pfree(ccsrc);
@@ -2597,8 +2637,8 @@ StoreConstraints(Relation rel, List *cooked_constraints)
 				StoreAttrDefault(rel, con->attnum, con->expr);
 				break;
 			case CONSTR_CHECK:
-				StoreRelCheck(rel, con->name, con->expr,
-							  con->is_local, con->inhcount);
+				StoreRelCheck(rel, con->name, con->expr, !con->skip_validation,
+						   con->is_local, con->inhcount, con->is_no_inherit);
 				numchecks++;
 				break;
 			default:
@@ -2711,8 +2751,10 @@ AddRelationNewConstraints(Relation rel,
 		cooked->name = NULL;
 		cooked->attnum = colDef->attnum;
 		cooked->expr = expr;
+		cooked->skip_validation = false;
 		cooked->is_local = is_local;
 		cooked->inhcount = is_local ? 0 : 1;
+		cooked->is_no_inherit = false;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2780,7 +2822,8 @@ AddRelationNewConstraints(Relation rel,
 			 * what ATAddCheckConstraint wants.)
 			 */
 			if (MergeWithExistingConstraint(rel, ccname, expr,
-											allow_merge, is_local))
+											allow_merge, is_local,
+											cdef->is_no_inherit))
 				continue;
 		}
 		else
@@ -2826,7 +2869,8 @@ AddRelationNewConstraints(Relation rel,
 		/*
 		 * OK, store it.
 		 */
-		StoreRelCheck(rel, ccname, expr, is_local, is_local ? 0 : 1);
+		StoreRelCheck(rel, ccname, expr, !cdef->skip_validation, is_local,
+					  is_local ? 0 : 1, cdef->is_no_inherit);
 
 		numchecks++;
 
@@ -2835,8 +2879,10 @@ AddRelationNewConstraints(Relation rel,
 		cooked->name = ccname;
 		cooked->attnum = 0;
 		cooked->expr = expr;
+		cooked->skip_validation = cdef->skip_validation;
 		cooked->is_local = is_local;
 		cooked->inhcount = is_local ? 0 : 1;
+		cooked->is_no_inherit = cdef->is_no_inherit;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2862,10 +2908,13 @@ AddRelationNewConstraints(Relation rel,
  *
  * Returns TRUE if merged (constraint is a duplicate), or FALSE if it's
  * got a so-far-unique name, or throws error if conflict.
+ *
+ * XXX See MergeConstraintsIntoExisting too if you change this code.
  */
 static bool
 MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
-							bool allow_merge, bool is_local)
+							bool allow_merge, bool is_local,
+							bool is_no_inherit)
 {
 	bool		found;
 	Relation	conDesc;
@@ -2917,16 +2966,30 @@ MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 				errmsg("constraint \"%s\" for relation \"%s\" already exists",
 					   ccname, RelationGetRelationName(rel))));
-			/* OK to update the tuple */
-			ereport(NOTICE,
-			   (errmsg("merging constraint \"%s\" with inherited definition",
-					   ccname)));
+
 			tup = heap_copytuple(tup);
 			con = (Form_pg_constraint) GETSTRUCT(tup);
+
+			/* If the constraint is "no inherit" then cannot merge */
+			if (con->connoinherit)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("constraint \"%s\" conflicts with non-inherited constraint on relation \"%s\"",
+								ccname, RelationGetRelationName(rel))));
+
 			if (is_local)
 				con->conislocal = true;
 			else
 				con->coninhcount++;
+			if (is_no_inherit)
+			{
+				Assert(is_local);
+				con->connoinherit = true;
+			}
+			/* OK to update the tuple */
+			ereport(NOTICE,
+			   (errmsg("merging constraint \"%s\" with inherited definition",
+					   ccname)));
 			simple_heap_update(conDesc, &tup->t_self, tup);
 			CatalogUpdateIndexes(conDesc, tup);
 			break;

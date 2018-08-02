@@ -4,7 +4,7 @@
  *	  implementation for PostgreSQL generic linked list package
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -31,7 +31,7 @@
  * Check that the specified List is valid (so far as we can tell).
  */
 static void
-check_list_invariants(List *list)
+check_list_invariants(const List *list)
 {
 	if (list == NIL)
 		return;
@@ -383,7 +383,7 @@ list_truncate(List *list, int new_size)
  * failure if there is no such cell.
  */
 ListCell *
-list_nth_cell(List *list, int n)
+list_nth_cell(const List *list, int n)
 {
 	ListCell   *match;
 
@@ -422,7 +422,7 @@ list_nth_replace(List *list, int n, void *new_data)
  * specified list. (List elements begin at 0.)
  */
 void *
-list_nth(List *list, int n)
+list_nth(const List *list, int n)
 {
 	Assert(IsPointerList(list));
 	return lfirst(list_nth_cell(list, n));
@@ -433,7 +433,7 @@ list_nth(List *list, int n)
  * specified list.
  */
 int
-list_nth_int(List *list, int n)
+list_nth_int(const List *list, int n)
 {
 	Assert(IsIntegerList(list));
 	return lfirst_int(list_nth_cell(list, n));
@@ -444,7 +444,7 @@ list_nth_int(List *list, int n)
  * list.
  */
 Oid
-list_nth_oid(List *list, int n)
+list_nth_oid(const List *list, int n)
 {
 	Assert(IsOidList(list));
 	return lfirst_oid(list_nth_cell(list, n));
@@ -456,9 +456,9 @@ list_nth_oid(List *list, int n)
  * Node as 'datum'.
  */
 bool
-list_member(List *list, void *datum)
+list_member(const List *list, const void *datum)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsPointerList(list));
 	check_list_invariants(list);
@@ -477,9 +477,9 @@ list_member(List *list, void *datum)
  * determined by using simple pointer comparison.
  */
 bool
-list_member_ptr(List *list, void *datum)
+list_member_ptr(const List *list, const void *datum)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsPointerList(list));
 	check_list_invariants(list);
@@ -497,9 +497,9 @@ list_member_ptr(List *list, void *datum)
  * Return true iff the integer 'datum' is a member of the list.
  */
 bool
-list_member_int(List *list, int datum)
+list_member_int(const List *list, int datum)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsIntegerList(list));
 	check_list_invariants(list);
@@ -517,9 +517,9 @@ list_member_int(List *list, int datum)
  * Return true iff the OID 'datum' is a member of the list.
  */
 bool
-list_member_oid(List *list, Oid datum)
+list_member_oid(const List *list, Oid datum)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsOidList(list));
 	check_list_invariants(list);
@@ -709,10 +709,10 @@ list_delete_first(List *list)
  * performance bottleneck.
  */
 List *
-list_union(List *list1, List *list2)
+list_union(const List *list1, const List *list2)
 {
 	List	   *result;
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsPointerList(list1));
 	Assert(IsPointerList(list2));
@@ -733,10 +733,10 @@ list_union(List *list1, List *list2)
  * pointer comparison.
  */
 List *
-list_union_ptr(List *list1, List *list2)
+list_union_ptr(const List *list1, const List *list2)
 {
 	List	   *result;
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsPointerList(list1));
 	Assert(IsPointerList(list2));
@@ -756,10 +756,10 @@ list_union_ptr(List *list1, List *list2)
  * This variant of list_union() operates upon lists of integers.
  */
 List *
-list_union_int(List *list1, List *list2)
+list_union_int(const List *list1, const List *list2)
 {
 	List	   *result;
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsIntegerList(list1));
 	Assert(IsIntegerList(list2));
@@ -779,10 +779,10 @@ list_union_int(List *list1, List *list2)
  * This variant of list_union() operates upon lists of OIDs.
  */
 List *
-list_union_oid(List *list1, List *list2)
+list_union_oid(const List *list1, const List *list2)
 {
 	List	   *result;
-	ListCell   *cell;
+	const ListCell *cell;
 
 	Assert(IsOidList(list1));
 	Assert(IsOidList(list2));
@@ -812,10 +812,10 @@ list_union_oid(List *list1, List *list2)
  * to in the result.
  */
 List *
-list_intersection(List *list1, List *list2)
+list_intersection(const List *list1, const List *list2)
 {
 	List	   *result;
-	ListCell   *cell;
+	const ListCell *cell;
 
 	if (list1 == NIL || list2 == NIL)
 		return NIL;
@@ -844,9 +844,9 @@ list_intersection(List *list1, List *list2)
  * membership via equal()
  */
 List *
-list_difference(List *list1, List *list2)
+list_difference(const List *list1, const List *list2)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 	List	   *result = NIL;
 
 	Assert(IsPointerList(list1));
@@ -870,9 +870,9 @@ list_difference(List *list1, List *list2)
  * simple pointer equality.
  */
 List *
-list_difference_ptr(List *list1, List *list2)
+list_difference_ptr(const List *list1, const List *list2)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 	List	   *result = NIL;
 
 	Assert(IsPointerList(list1));
@@ -895,9 +895,9 @@ list_difference_ptr(List *list1, List *list2)
  * This variant of list_difference() operates upon lists of integers.
  */
 List *
-list_difference_int(List *list1, List *list2)
+list_difference_int(const List *list1, const List *list2)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 	List	   *result = NIL;
 
 	Assert(IsIntegerList(list1));
@@ -920,9 +920,9 @@ list_difference_int(List *list1, List *list2)
  * This variant of list_difference() operates upon lists of OIDs.
  */
 List *
-list_difference_oid(List *list1, List *list2)
+list_difference_oid(const List *list1, const List *list2)
 {
-	ListCell   *cell;
+	const ListCell *cell;
 	List	   *result = NIL;
 
 	Assert(IsOidList(list1));
@@ -1146,7 +1146,7 @@ list_free_deep(List *list)
  * Return a shallow copy of the specified list.
  */
 List *
-list_copy(List *oldlist)
+list_copy(const List *oldlist)
 {
 	List	   *newlist;
 	ListCell   *newlist_prev;
@@ -1189,7 +1189,7 @@ list_copy(List *oldlist)
  * Return a shallow copy of the specified list, without the first N elements.
  */
 List *
-list_copy_tail(List *oldlist, int nskip)
+list_copy_tail(const List *oldlist, int nskip)
 {
 	List	   *newlist;
 	ListCell   *newlist_prev;
@@ -1254,10 +1254,10 @@ list_copy_tail(List *oldlist, int nskip)
  * list_length() macro in order to avoid the overhead of a function
  * call.
  */
-int			length(List *list);
+int			length(const List *list);
 
 int
-length(List *list)
+length(const List *list)
 {
 	return list_length(list);
 }

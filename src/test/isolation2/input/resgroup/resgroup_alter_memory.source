@@ -19,13 +19,13 @@ $$ LANGUAGE sql;
 
 -- After a 'q' command the client connection is disconnected but the
 -- QD may still be alive, if we then query pg_stat_activity quick enough
--- we might still see this session with current_query '<IDLE>'.
+-- we might still see this session with query '<IDLE>'.
 -- A filter is put to filter out this kind of quitted sessions.
 CREATE OR REPLACE VIEW rg_activity_status AS
-	SELECT rsgname, waiting_reason, current_query
+	SELECT rsgname, waiting_reason, state, query
 	FROM pg_stat_activity
 	WHERE rsgname in ('rg1_memory_test', 'rg2_memory_test')
-	  AND current_query <> '<IDLE>'
+	  AND query <> '<IDLE>'
 	ORDER BY sess_id;
 
 CREATE OR REPLACE VIEW rg_mem_status AS

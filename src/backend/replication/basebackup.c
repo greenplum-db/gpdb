@@ -146,6 +146,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			char		fullpath[MAXPGPATH];
 			char		linkpath[MAXPGPATH];
 			char	   *relpath = NULL;
+
 			int			rllen;
 
 			/* Skip special stuff */
@@ -189,6 +190,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			ti->size = opt->progress ? sendTablespace(fullpath, true) : -1;
 			tablespaces = lappend(tablespaces, ti);
 #else
+
 			/*
 			 * If the platform does not have symbolic links, it should not be
 			 * possible to have tablespaces - clearly somebody else created
@@ -196,7 +198,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			 */
 			ereport(WARNING,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("tablespaces are not supported on this platform")));
+				  errmsg("tablespaces are not supported on this platform")));
 #endif
 		}
 
@@ -240,6 +242,22 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			}
 			else
 				sendTablespace(ti->path, false);
+
+			/* In the main tar, include pg_control last. */
+			if (ti->path == NULL)
+			{
+				struct stat statbuf;
+
+				if (lstat(XLOG_CONTROL_FILE, &statbuf) != 0)
+				{
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not stat control file \"%s\": %m",
+									XLOG_CONTROL_FILE)));
+				}
+
+				sendFile(XLOG_CONTROL_FILE, XLOG_CONTROL_FILE, &statbuf, false);
+			}
 
 			/*
 			 * If we're including WAL, and this is the main data directory we
@@ -462,7 +480,7 @@ SendBaseBackup(BaseBackupCmd *cmd)
 	dir = AllocateDir("pg_tblspc");
 	if (!dir)
 		ereport(ERROR,
-				(errmsg("unable to open directory pg_tblspc: %m")));
+				(errmsg("could not open directory \"%s\": %m", "pg_tblspc")));
 
 	perform_base_backup(&opt, dir);
 

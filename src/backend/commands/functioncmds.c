@@ -5,7 +5,7 @@
  *	  Routines for CREATE and DROP FUNCTION commands and CREATE and DROP
  *	  CAST commands.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -93,8 +93,10 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 {
 	Oid			rettype;
 	Type		typtup;
+	AclResult	aclresult;
 
 	typtup = LookupTypeName(NULL, returnType, NULL);
+
 
 	if (typtup)
 	{
@@ -165,6 +167,11 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 		rettype = TypeShellMake(typname, namespaceId, GetUserId());
 		Assert(OidIsValid(rettype));
 	}
+
+	aclresult = pg_type_aclcheck(rettype, GetUserId(), ACL_USAGE);
+	if (aclresult != ACLCHECK_OK)
+		aclcheck_error(aclresult, ACL_KIND_TYPE,
+					   format_type_be(rettype));
 
 	*prorettype_p = rettype;
 	*returnsSet_p = returnType->setof;
@@ -242,6 +249,7 @@ interpret_function_parameter_list(List *parameters,
 		bool		isinput = false;
 		Oid			toid;
 		Type		typtup;
+		AclResult	aclresult;
 
 		typtup = LookupTypeName(NULL, t, NULL);
 		if (typtup)
@@ -277,6 +285,11 @@ interpret_function_parameter_list(List *parameters,
 							TypeNameToString(t))));
 			toid = InvalidOid;	/* keep compiler quiet */
 		}
+
+		aclresult = pg_type_aclcheck(toid, GetUserId(), ACL_USAGE);
+		if (aclresult != ACLCHECK_OK)
+			aclcheck_error(aclresult, ACL_KIND_TYPE,
+						   format_type_be(toid));
 
 		if (t->setof)
 		{
@@ -477,6 +490,7 @@ compute_common_attribute(DefElem *defel,
 						 DefElem **volatility_item,
 						 DefElem **strict_item,
 						 DefElem **security_item,
+						 DefElem **leakproof_item,
 						 List **set_items,
 						 DefElem **cost_item,
 						 DefElem **rows_item,
@@ -503,6 +517,13 @@ compute_common_attribute(DefElem *defel,
 			goto duplicate_error;
 
 		*security_item = defel;
+	}
+	else if (strcmp(defel->defname, "leakproof") == 0)
+	{
+		if (*leakproof_item)
+			goto duplicate_error;
+
+		*leakproof_item = defel;
 	}
 	else if (strcmp(defel->defname, "set") == 0)
 	{
@@ -718,6 +739,7 @@ compute_attributes_sql_style(List *options,
 							 char *volatility_p,
 							 bool *strict_p,
 							 bool *security_definer,
+							 bool *leakproof_p,
 							 ArrayType **proconfig,
 							 float4 *procost,
 							 float4 *prorows,
@@ -731,6 +753,7 @@ compute_attributes_sql_style(List *options,
 	DefElem    *volatility_item = NULL;
 	DefElem    *strict_item = NULL;
 	DefElem    *security_item = NULL;
+	DefElem    *leakproof_item = NULL;
 	List	   *set_items = NIL;
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
@@ -769,6 +792,7 @@ compute_attributes_sql_style(List *options,
 										  &volatility_item,
 										  &strict_item,
 										  &security_item,
+										  &leakproof_item,
 										  &set_items,
 										  &cost_item,
 										  &rows_item,
@@ -813,6 +837,8 @@ compute_attributes_sql_style(List *options,
 		*strict_p = intVal(strict_item->arg);
 	if (security_item)
 		*security_definer = intVal(security_item->arg);
+	if (leakproof_item)
+		*leakproof_p = intVal(leakproof_item->arg);
 	if (set_items)
 		*proconfig = update_proconfig_value(NULL, set_items);
 	if (cost_item)
@@ -1105,7 +1131,6 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	Oid			prorettype;
 	bool		returnsSet;
 	char	   *language;
-	char	   *languageName;
 	Oid			languageOid;
 	Oid			languageValidator;
 	char	   *funcname;
@@ -1120,7 +1145,8 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	Oid			requiredResultType;
 	bool		isWindowFunc,
 				isStrict,
-				security;
+				security,
+				isLeakProof;
 	char		volatility;
 	ArrayType  *proconfig;
 	float4		procost;
@@ -1148,6 +1174,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	isWindowFunc = false;
 	isStrict = false;
 	security = false;
+	isLeakProof = false;
 	volatility = PROVOLATILE_VOLATILE;
 	proconfig = NULL;
 	procost = -1;				/* indicates not set */
@@ -1159,20 +1186,17 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	compute_attributes_sql_style(stmt->options,
 								 &as_clause, &language,
 								 &isWindowFunc, &volatility,
-								 &isStrict, &security,
+								 &isStrict, &security, &isLeakProof,
 								 &proconfig, &procost, &prorows,
 								 &dataAccess, &execLocation);
 
-	/* Convert language name to canonical case */
-	languageName = case_translate_language_name(language);
-
 	/* Look up the language and validate permissions */
-	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(languageName));
+	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(language));
 	if (!HeapTupleIsValid(languageTuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("language \"%s\" does not exist", languageName),
-				 (PLTemplateExists(languageName) ?
+				 errmsg("language \"%s\" does not exist", language),
+				 (PLTemplateExists(language) ?
 				  errhint("Use CREATE LANGUAGE to load the language into the database.") : 0)));
 
 	languageOid = HeapTupleGetOid(languageTuple);
@@ -1213,6 +1237,15 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	 * tuple lookup, as we need language oid.
 	 */
 	validate_sql_data_access(dataAccess, volatility, languageOid);
+	/*
+	 * Only superuser is allowed to create leakproof functions because it
+	 * possibly allows unprivileged users to reference invisible tuples to be
+	 * filtered out using views for row-level security.
+	 */
+	if (isLeakProof && !superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("only superuser can define a leakproof function")));
 
 	/*
 	 * Convert remaining parameters of CREATE to form wanted by
@@ -1260,7 +1293,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	compute_attributes_with_style(stmt->withClause, &isStrict, &volatility,
 								  &describeQualName);
 
-	interpret_AS_clause(languageOid, languageName, funcname, as_clause,
+	interpret_AS_clause(languageOid, language, funcname, as_clause,
 						&prosrc_str, &probin_str);
 	
 	/* double check that we really have a function body */
@@ -1308,6 +1341,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					stmt->replace,
 					returnsSet,
 					prorettype,
+					GetUserId(),
 					languageOid,
 					languageValidator,
 					describeFuncOid,
@@ -1316,6 +1350,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					false,		/* not an aggregate */
 					isWindowFunc,
 					security,
+					isLeakProof,
 					isStrict,
 					volatility,
 					parameterTypes,
@@ -1336,86 +1371,6 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
 									GetAssignedOidsForDispatch(),
-									NULL);
-	}
-}
-
-/*
- * RemoveFunction
- *		Deletes a function.
- */
-void
-RemoveFunction(RemoveFuncStmt *stmt)
-{
-	List	   *functionName = stmt->name;
-	List	   *argTypes = stmt->args;	/* list of TypeName nodes */
-	Oid			funcOid;
-	HeapTuple	tup;
-	ObjectAddress object;
-
-	/*
-	 * Find the function, do permissions and validity checks
-	 */
-	funcOid = LookupFuncNameTypeNames(functionName, argTypes, stmt->missing_ok);
-	if (!OidIsValid(funcOid))
-	{
-		/* can only get here if stmt->missing_ok */
-		ereport(NOTICE,
-				(errmsg("function %s(%s) does not exist, skipping",
-						NameListToString(functionName),
-						TypeNameListToString(argTypes))));
-		return;
-	}
-
-	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcOid));
-	if (!HeapTupleIsValid(tup)) /* should not happen */
-		elog(ERROR, "cache lookup failed for function %u", funcOid);
-
-	/* Permission check: must own func or its namespace */
-	if (!pg_proc_ownercheck(funcOid, GetUserId()) &&
-	  !pg_namespace_ownercheck(((Form_pg_proc) GETSTRUCT(tup))->pronamespace,
-							   GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
-					   NameListToString(functionName));
-
-	/* check bootstrap object */
-	CheckForModifySystemFunc(funcOid, functionName);
-
-	if (((Form_pg_proc) GETSTRUCT(tup))->proisagg)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is an aggregate function",
-						NameListToString(functionName)),
-				 errhint("Use DROP AGGREGATE to drop aggregate functions.")));
-
-	if (((Form_pg_proc) GETSTRUCT(tup))->prolang == INTERNALlanguageId)
-	{
-		/* "Helpful" NOTICE when removing a builtin function ... */
-		if (Gp_role != GP_ROLE_EXECUTE)
-		ereport(NOTICE,
-				(errcode(ERRCODE_WARNING),
-				 errmsg("removing built-in function \"%s\"",
-						NameListToString(functionName))));
-	}
-
-	ReleaseSysCache(tup);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = ProcedureRelationId;
-	object.objectId = funcOid;
-	object.objectSubId = 0;
-
-	performDeletion(&object, stmt->behavior);
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
 									NULL);
 	}
 }
@@ -1693,6 +1648,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 	DefElem    *volatility_item = NULL;
 	DefElem    *strict_item = NULL;
 	DefElem    *security_def_item = NULL;
+	DefElem    *leakproof_item = NULL;
 	List	   *set_items = NIL;
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
@@ -1737,6 +1693,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 									 &volatility_item,
 									 &strict_item,
 									 &security_def_item,
+									 &leakproof_item,
 									 &set_items,
 									 &cost_item,
 									 &rows_item,
@@ -1751,6 +1708,14 @@ AlterFunction(AlterFunctionStmt *stmt)
 		procForm->proisstrict = intVal(strict_item->arg);
 	if (security_def_item)
 		procForm->prosecdef = intVal(security_def_item->arg);
+	if (leakproof_item)
+	{
+		if (intVal(leakproof_item->arg) && !superuser())
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				  errmsg("only superuser can define a leakproof function")));
+		procForm->proleakproof = intVal(leakproof_item->arg);
+	}
 	if (cost_item)
 	{
 		procForm->procost = defGetNumeric(cost_item);
@@ -1952,6 +1917,7 @@ CreateCast(CreateCastStmt *stmt)
 	char		sourcetyptype;
 	char		targettyptype;
 	Oid			funcid;
+	Oid			castid;
 	int			nargs;
 	char		castcontext;
 	char		castmethod;
@@ -1961,6 +1927,7 @@ CreateCast(CreateCastStmt *stmt)
 	bool		nulls[Natts_pg_cast];
 	ObjectAddress myself,
 				referenced;
+	AclResult	aclresult;
 
 	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
 	targettypeid = typenameTypeId(NULL, stmt->targettype);
@@ -1988,6 +1955,27 @@ CreateCast(CreateCastStmt *stmt)
 				 errmsg("must be owner of type %s or type %s",
 						format_type_be(sourcetypeid),
 						format_type_be(targettypeid))));
+
+	aclresult = pg_type_aclcheck(sourcetypeid, GetUserId(), ACL_USAGE);
+	if (aclresult != ACLCHECK_OK)
+		aclcheck_error(aclresult, ACL_KIND_TYPE,
+					   format_type_be(sourcetypeid));
+
+	aclresult = pg_type_aclcheck(targettypeid, GetUserId(), ACL_USAGE);
+	if (aclresult != ACLCHECK_OK)
+		aclcheck_error(aclresult, ACL_KIND_TYPE,
+					   format_type_be(targettypeid));
+
+	/* Domains are allowed for historical reasons, but we warn */
+	if (sourcetyptype == TYPTYPE_DOMAIN)
+		ereport(WARNING,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cast will be ignored because the source data type is a domain")));
+
+	else if (targettyptype == TYPTYPE_DOMAIN)
+		ereport(WARNING,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cast will be ignored because the target data type is a domain")));
 
 	/* Detemine the cast method */
 	if (stmt->func != NULL)
@@ -2197,13 +2185,13 @@ CreateCast(CreateCastStmt *stmt)
 
 	tuple = heap_form_tuple(RelationGetDescr(relation), values, nulls);
 
-	simple_heap_insert(relation, tuple);
+	castid = simple_heap_insert(relation, tuple);
 
 	CatalogUpdateIndexes(relation, tuple);
 
 	/* make dependency entries */
 	myself.classId = CastRelationId;
-	myself.objectId = HeapTupleGetOid(tuple);
+	myself.objectId = castid;
 	myself.objectSubId = 0;
 
 	/* dependency on source type */
@@ -2232,7 +2220,7 @@ CreateCast(CreateCastStmt *stmt)
 
 	/* Post creation hook for new cast */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   CastRelationId, myself.objectId, 0);
+						   CastRelationId, castid, 0, NULL);
 
 	heap_freetuple(tuple);
 
@@ -2248,61 +2236,6 @@ CreateCast(CreateCastStmt *stmt)
 									NULL);
 	}
 	
-}
-
-
-
-/*
- * DROP CAST
- */
-void
-DropCast(DropCastStmt *stmt)
-{
-	Oid			sourcetypeid;
-	Oid			targettypeid;
-	ObjectAddress object;
-
-	/* when dropping a cast, the types must exist even if you use IF EXISTS */
-	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
-	targettypeid = typenameTypeId(NULL, stmt->targettype);
-
-	object.classId = CastRelationId;
-	object.objectId = get_cast_oid(sourcetypeid, targettypeid,
-								   stmt->missing_ok);
-	object.objectSubId = 0;
-
-	if (!OidIsValid(object.objectId))
-	{
-		ereport(NOTICE,
-			 (errmsg("cast from type %s to type %s does not exist, skipping",
-					 format_type_be(sourcetypeid),
-					 format_type_be(targettypeid))));
-		return;
-	}
-
-	/* Permission check */
-	if (!pg_type_ownercheck(sourcetypeid, GetUserId())
-		&& !pg_type_ownercheck(targettypeid, GetUserId()))
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("must be owner of type %s or type %s",
-						format_type_be(sourcetypeid),
-						format_type_be(targettypeid))));
-
-	/*
-	 * Do the deletion
-	 */
-	performDeletion(&object, stmt->behavior);
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
-									NULL);
-	}
 }
 
 /*
@@ -2447,7 +2380,6 @@ ExecuteDoStmt(DoStmt *stmt)
 	DefElem    *as_item = NULL;
 	DefElem    *language_item = NULL;
 	char	   *language;
-	char	   *languageName;
 	Oid			laninline;
 	HeapTuple	languageTuple;
 	Form_pg_language languageStruct;
@@ -2491,16 +2423,13 @@ ExecuteDoStmt(DoStmt *stmt)
 	else
 		language = "plpgsql";
 
-	/* Convert language name to canonical case */
-	languageName = case_translate_language_name(language);
-
 	/* Look up the language and validate permissions */
-	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(languageName));
+	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(language));
 	if (!HeapTupleIsValid(languageTuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("language \"%s\" does not exist", languageName),
-				 (PLTemplateExists(languageName) ?
+				 errmsg("language \"%s\" does not exist", language),
+				 (PLTemplateExists(language) ?
 				  errhint("Use CREATE LANGUAGE to load the language into the database.") : 0)));
 
 	codeblock->langOid = HeapTupleGetOid(languageTuple);

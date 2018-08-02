@@ -33,7 +33,7 @@
  * of ALTER TABLE.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -51,6 +51,7 @@
 #include "catalog/indexing.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_operator.h"
+#include "catalog/pg_range.h"
 #include "catalog/pg_type.h"
 #include "commands/defrem.h"
 #include "utils/builtins.h"
@@ -60,7 +61,6 @@
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 #include "utils/typcache.h"
 #include "cdb/cdbvars.h"
 
@@ -124,6 +124,7 @@ int32 NextRecordTypmod = 0;		/* number of entries used */
 static void TypeCacheRelCallback(Datum arg, Oid relid);
 
 static void load_typcache_tupdesc(TypeCacheEntry *typentry);
+static void load_rangetype_info(TypeCacheEntry *typentry);
 static bool array_element_has_equality(TypeCacheEntry *typentry);
 static bool array_element_has_compare(TypeCacheEntry *typentry);
 static bool array_element_has_hashing(TypeCacheEntry *typentry);
@@ -209,6 +210,7 @@ lookup_type_cache(Oid type_id, int flags)
 		typentry->typlen = typtup->typlen;
 		typentry->typbyval = typtup->typbyval;
 		typentry->typalign = typtup->typalign;
+		typentry->typstorage = typtup->typstorage;
 		typentry->typtype = typtup->typtype;
 		typentry->typrelid = typtup->typrelid;
 
@@ -452,6 +454,16 @@ lookup_type_cache(Oid type_id, int flags)
 		load_typcache_tupdesc(typentry);
 	}
 
+	/*
+	 * If requested, get information about a range type
+	 */
+	if ((flags & TYPECACHE_RANGE_INFO) &&
+		typentry->rngelemtype == NULL &&
+		typentry->typtype == TYPTYPE_RANGE)
+	{
+		load_rangetype_info(typentry);
+	}
+
 	return typentry;
 }
 
@@ -481,6 +493,62 @@ load_typcache_tupdesc(TypeCacheEntry *typentry)
 	typentry->tupDesc->tdrefcount++;
 
 	relation_close(rel, AccessShareLock);
+}
+
+/*
+ * load_rangetype_info --- helper routine to set up range type information
+ */
+static void
+load_rangetype_info(TypeCacheEntry *typentry)
+{
+	Form_pg_range pg_range;
+	HeapTuple	tup;
+	Oid			subtypeOid;
+	Oid			opclassOid;
+	Oid			canonicalOid;
+	Oid			subdiffOid;
+	Oid			opfamilyOid;
+	Oid			opcintype;
+	Oid			cmpFnOid;
+
+	/* get information from pg_range */
+	tup = SearchSysCache1(RANGETYPE, ObjectIdGetDatum(typentry->type_id));
+	/* should not fail, since we already checked typtype ... */
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for range type %u",
+			 typentry->type_id);
+	pg_range = (Form_pg_range) GETSTRUCT(tup);
+
+	subtypeOid = pg_range->rngsubtype;
+	typentry->rng_collation = pg_range->rngcollation;
+	opclassOid = pg_range->rngsubopc;
+	canonicalOid = pg_range->rngcanonical;
+	subdiffOid = pg_range->rngsubdiff;
+
+	ReleaseSysCache(tup);
+
+	/* get opclass properties and look up the comparison function */
+	opfamilyOid = get_opclass_family(opclassOid);
+	opcintype = get_opclass_input_type(opclassOid);
+
+	cmpFnOid = get_opfamily_proc(opfamilyOid, opcintype, opcintype,
+								 BTORDER_PROC);
+	if (!RegProcedureIsValid(cmpFnOid))
+		elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
+			 BTORDER_PROC, opcintype, opcintype, opfamilyOid);
+
+	/* set up cached fmgrinfo structs */
+	fmgr_info_cxt(cmpFnOid, &typentry->rng_cmp_proc_finfo,
+				  CacheMemoryContext);
+	if (OidIsValid(canonicalOid))
+		fmgr_info_cxt(canonicalOid, &typentry->rng_canonical_finfo,
+					  CacheMemoryContext);
+	if (OidIsValid(subdiffOid))
+		fmgr_info_cxt(subdiffOid, &typentry->rng_subdiff_finfo,
+					  CacheMemoryContext);
+
+	/* Lastly, set up link to the element type --- this marks data valid */
+	typentry->rngelemtype = lookup_type_cache(subtypeOid, 0);
 }
 
 

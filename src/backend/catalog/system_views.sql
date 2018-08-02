@@ -3,7 +3,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * src/backend/catalog/system_views.sql
  */
@@ -126,29 +126,54 @@ CREATE VIEW pg_stats AS
         stawidth AS avg_width,
         stadistinct AS n_distinct,
         CASE
-            WHEN stakind1 IN (1, 4) THEN stavalues1
-            WHEN stakind2 IN (1, 4) THEN stavalues2
-            WHEN stakind3 IN (1, 4) THEN stavalues3
-            WHEN stakind4 IN (1, 4) THEN stavalues4
+            WHEN stakind1 = 1 THEN stavalues1
+            WHEN stakind2 = 1 THEN stavalues2
+            WHEN stakind3 = 1 THEN stavalues3
+            WHEN stakind4 = 1 THEN stavalues4
+            WHEN stakind5 = 1 THEN stavalues5
         END AS most_common_vals,
         CASE
-            WHEN stakind1 IN (1, 4) THEN stanumbers1
-            WHEN stakind2 IN (1, 4) THEN stanumbers2
-            WHEN stakind3 IN (1, 4) THEN stanumbers3
-            WHEN stakind4 IN (1, 4) THEN stanumbers4
+            WHEN stakind1 = 1 THEN stanumbers1
+            WHEN stakind2 = 1 THEN stanumbers2
+            WHEN stakind3 = 1 THEN stanumbers3
+            WHEN stakind4 = 1 THEN stanumbers4
+            WHEN stakind5 = 1 THEN stanumbers5
         END AS most_common_freqs,
         CASE
             WHEN stakind1 = 2 THEN stavalues1
             WHEN stakind2 = 2 THEN stavalues2
             WHEN stakind3 = 2 THEN stavalues3
             WHEN stakind4 = 2 THEN stavalues4
+            WHEN stakind5 = 2 THEN stavalues5
         END AS histogram_bounds,
         CASE
             WHEN stakind1 = 3 THEN stanumbers1[1]
             WHEN stakind2 = 3 THEN stanumbers2[1]
             WHEN stakind3 = 3 THEN stanumbers3[1]
             WHEN stakind4 = 3 THEN stanumbers4[1]
-        END AS correlation
+            WHEN stakind5 = 3 THEN stanumbers5[1]
+        END AS correlation,
+        CASE
+            WHEN stakind1 = 4 THEN stavalues1
+            WHEN stakind2 = 4 THEN stavalues2
+            WHEN stakind3 = 4 THEN stavalues3
+            WHEN stakind4 = 4 THEN stavalues4
+            WHEN stakind5 = 4 THEN stavalues5
+        END AS most_common_elems,
+        CASE
+            WHEN stakind1 = 4 THEN stanumbers1
+            WHEN stakind2 = 4 THEN stanumbers2
+            WHEN stakind3 = 4 THEN stanumbers3
+            WHEN stakind4 = 4 THEN stanumbers4
+            WHEN stakind5 = 4 THEN stanumbers5
+        END AS most_common_elem_freqs,
+        CASE
+            WHEN stakind1 = 5 THEN stanumbers1
+            WHEN stakind2 = 5 THEN stanumbers2
+            WHEN stakind3 = 5 THEN stanumbers3
+            WHEN stakind4 = 5 THEN stanumbers4
+            WHEN stakind5 = 5 THEN stanumbers5
+        END AS elem_count_histogram
     FROM pg_statistic s JOIN pg_class c ON (c.oid = s.starelid)
          JOIN pg_attribute a ON (c.oid = attrelid AND attnum = s.staattnum)
          LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace)
@@ -292,7 +317,37 @@ FROM
 	pg_seclabel l
 	JOIN pg_namespace nsp ON l.classoid = nsp.tableoid AND l.objoid = nsp.oid
 WHERE
-	l.objsubid = 0;
+	l.objsubid = 0
+UNION ALL
+SELECT
+	l.objoid, l.classoid, 0::int4 AS objsubid,
+	'database'::text AS objtype,
+	NULL::oid AS objnamespace,
+	quote_ident(dat.datname) AS objname,
+	l.provider, l.label
+FROM
+	pg_shseclabel l
+	JOIN pg_database dat ON l.classoid = dat.tableoid AND l.objoid = dat.oid
+UNION ALL
+SELECT
+	l.objoid, l.classoid, 0::int4 AS objsubid,
+	'tablespace'::text AS objtype,
+	NULL::oid AS objnamespace,
+	quote_ident(spc.spcname) AS objname,
+	l.provider, l.label
+FROM
+	pg_shseclabel l
+	JOIN pg_tablespace spc ON l.classoid = spc.tableoid AND l.objoid = spc.oid
+UNION ALL
+SELECT
+	l.objoid, l.classoid, 0::int4 AS objsubid,
+	'role'::text AS objtype,
+	NULL::oid AS objnamespace,
+	quote_ident(rol.rolname) AS objname,
+	l.provider, l.label
+FROM
+	pg_shseclabel l
+	JOIN pg_authid rol ON l.classoid = rol.tableoid AND l.objoid = rol.oid;
 
 CREATE VIEW pg_settings AS
     SELECT * FROM pg_show_all_settings() AS A;
@@ -499,7 +554,7 @@ CREATE VIEW pg_stat_activity AS
     SELECT
             S.datid AS datid,
             D.datname AS datname,
-            S.procpid,
+            S.pid,
             S.sess_id,
             S.usesysid,
             U.rolname AS usename,
@@ -510,8 +565,10 @@ CREATE VIEW pg_stat_activity AS
             S.backend_start,
             S.xact_start,
             S.query_start,
+            S.state_change,
             S.waiting,
-            S.current_query,
+            S.state,
+            S.query,
 
             S.waiting_reason,
             S.rsgid,
@@ -523,7 +580,7 @@ CREATE VIEW pg_stat_activity AS
 
 CREATE VIEW pg_stat_replication AS
     SELECT
-            S.procpid,
+            S.pid,
             S.usesysid,
             U.rolname AS usename,
             S.application_name,
@@ -541,7 +598,7 @@ CREATE VIEW pg_stat_replication AS
     FROM pg_stat_get_activity(NULL) AS S, pg_authid U,
             pg_stat_get_wal_senders() AS W
     WHERE S.usesysid = U.oid AND
-            S.procpid = W.procpid;
+            S.pid = W.pid;
 
 CREATE FUNCTION gp_stat_get_master_replication() RETURNS SETOF RECORD AS
 $$
@@ -566,7 +623,7 @@ LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 CREATE VIEW gp_stat_replication AS
     SELECT *, pg_catalog.gp_replication_error() AS sync_error
     FROM pg_catalog.gp_stat_get_master_replication() AS R
-    (gp_segment_id integer, procpid integer, usesysid oid,
+    (gp_segment_id integer, pid integer, usesysid oid,
      usename name, application_name text, client_addr inet, client_hostname text,
      client_port integer, backend_start timestamptz, state text,
      sent_location text, write_location text, flush_location text,
@@ -574,7 +631,7 @@ CREATE VIEW gp_stat_replication AS
     UNION ALL
     (
         SELECT G.gp_segment_id
-            , R.procpid, R.usesysid, R.usename, R.application_name, R.client_addr
+            , R.pid, R.usesysid, R.usename, R.application_name, R.client_addr
             , R.client_hostname, R.client_port, R.backend_start, R.state
 	    , R.sent_location, R.write_location, R.flush_location
 	    , R.replay_location, R.sync_priority, R.sync_state, G.sync_error
@@ -587,7 +644,7 @@ CREATE VIEW gp_stat_replication AS
             WHERE C.role = 'm'
         ) G
         LEFT OUTER JOIN pg_catalog.gp_stat_get_segment_replication() AS R
-        (gp_segment_id integer, procpid integer, usesysid oid,
+        (gp_segment_id integer, pid integer, usesysid oid,
          usename name, application_name text, client_addr inet,
 	 client_hostname text, client_port integer, backend_start timestamptz,
 	 state text, sent_location text, write_location text, flush_location text,
@@ -611,6 +668,11 @@ CREATE VIEW pg_stat_database AS
             pg_stat_get_db_tuples_updated(D.oid) AS tup_updated,
             pg_stat_get_db_tuples_deleted(D.oid) AS tup_deleted,
             pg_stat_get_db_conflict_all(D.oid) AS conflicts,
+            pg_stat_get_db_temp_files(D.oid) AS temp_files,
+            pg_stat_get_db_temp_bytes(D.oid) AS temp_bytes,
+            pg_stat_get_db_deadlocks(D.oid) AS deadlocks,
+            pg_stat_get_db_blk_read_time(D.oid) AS blk_read_time,
+            pg_stat_get_db_blk_write_time(D.oid) AS blk_write_time,
             pg_stat_get_db_stat_reset_time(D.oid) AS stats_reset
     FROM pg_database D;
 
@@ -1059,8 +1121,8 @@ CREATE VIEW pg_stat_user_functions AS
             N.nspname AS schemaname,
             P.proname AS funcname,
             pg_stat_get_function_calls(P.oid) AS calls,
-            pg_stat_get_function_time(P.oid) / 1000 AS total_time,
-            pg_stat_get_function_self_time(P.oid) / 1000 AS self_time
+            pg_stat_get_function_total_time(P.oid) AS total_time,
+            pg_stat_get_function_self_time(P.oid) AS self_time
     FROM pg_proc P LEFT JOIN pg_namespace N ON (N.oid = P.pronamespace)
     WHERE P.prolang != 12  -- fast check to eliminate built-in functions
           AND pg_stat_get_function_calls(P.oid) IS NOT NULL;
@@ -1071,8 +1133,8 @@ CREATE VIEW pg_stat_xact_user_functions AS
             N.nspname AS schemaname,
             P.proname AS funcname,
             pg_stat_get_xact_function_calls(P.oid) AS calls,
-            pg_stat_get_xact_function_time(P.oid) / 1000 AS total_time,
-            pg_stat_get_xact_function_self_time(P.oid) / 1000 AS self_time
+            pg_stat_get_xact_function_total_time(P.oid) AS total_time,
+            pg_stat_get_xact_function_self_time(P.oid) AS self_time
     FROM pg_proc P LEFT JOIN pg_namespace N ON (N.oid = P.pronamespace)
     WHERE P.prolang != 12  -- fast check to eliminate built-in functions
           AND pg_stat_get_xact_function_calls(P.oid) IS NOT NULL;
@@ -1081,6 +1143,8 @@ CREATE VIEW pg_stat_bgwriter AS
     SELECT
         pg_stat_get_bgwriter_timed_checkpoints() AS checkpoints_timed,
         pg_stat_get_bgwriter_requested_checkpoints() AS checkpoints_req,
+        pg_stat_get_checkpoint_write_time() AS checkpoint_write_time,
+        pg_stat_get_checkpoint_sync_time() AS checkpoint_sync_time,
         pg_stat_get_bgwriter_buf_written_checkpoints() AS buffers_checkpoint,
         pg_stat_get_bgwriter_buf_written_clean() AS buffers_clean,
         pg_stat_get_bgwriter_maxwritten_clean() AS maxwritten_clean,

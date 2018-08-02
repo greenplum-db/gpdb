@@ -139,7 +139,7 @@ SELECT * FROM writetest, temptest; -- ok
 (0 rows)
 
 CREATE TABLE test AS SELECT * FROM writetest; -- fail
-ERROR:  cannot execute SELECT INTO in a read-only transaction
+ERROR:  cannot execute CREATE TABLE AS in a read-only transaction
 START TRANSACTION READ WRITE;
 DROP TABLE writetest; -- ok
 COMMIT;
@@ -601,28 +601,11 @@ fetch from foo;
 (1 row)
 
 abort;
--- tests for the "tid" type
-SELECT '(3, 3)'::tid = '(3, 4)'::tid;
- ?column? 
-----------
- f
-(1 row)
-
-SELECT '(3, 3)'::tid = '(3, 3)'::tid;
- ?column? 
-----------
- t
-(1 row)
-
-SELECT '(3, 3)'::tid <> '(3, 3)'::tid;
- ?column? 
-----------
- f
-(1 row)
-
-SELECT '(3, 3)'::tid <> '(3, 4)'::tid;
- ?column? 
-----------
- t
-(1 row)
-
+-- Test for successful cleanup of an aborted transaction at session exit.
+-- THIS MUST BE THE LAST TEST IN THIS FILE.
+begin;
+select 1/0;
+ERROR:  division by zero
+rollback to X;
+ERROR:  no such savepoint
+-- DO NOT ADD ANYTHING HERE.

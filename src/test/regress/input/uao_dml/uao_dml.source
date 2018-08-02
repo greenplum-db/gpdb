@@ -8,6 +8,11 @@ set gp_default_storage_options='orientation=@orientation@';
 -- testing the optimizer, so just disable ORCA to work around that.
 set optimizer=off;
 
+-- With gp_select_invisible set true, the snapshot will be SnapshotAnyData.
+-- But in one case of IndexOnlyScan, only MVCC snapshots are supported.
+-- So we disable IndexOnlyScan here, as what we want to test is gp_select_invisible.
+set enable_indexonlyscan=off;
+
 -- @Description Tests basic delete feature with two AO blocks
 -- 
 DROP TABLE IF EXISTS foo;

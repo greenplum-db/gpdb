@@ -4,7 +4,7 @@
  *	  local buffer manager. Fast buffer manager for temporary tables,
  *	  which never need to be WAL-logged or checkpointed, etc.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  *
@@ -19,7 +19,6 @@
 #include "executor/instrument.h"
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
-#include "storage/smgr.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
@@ -288,6 +287,10 @@ MarkLocalBufferDirty(Buffer buffer)
 	Assert(LocalRefCount[bufid] > 0);
 
 	bufHdr = &LocalBufferDescriptors[bufid];
+
+	if (!(bufHdr->flags & BM_DIRTY))
+		pgBufferUsage.local_blks_dirtied++;
+
 	bufHdr->flags |= BM_DIRTY;
 }
 
@@ -323,6 +326,46 @@ DropRelFileNodeLocalBuffers(RelFileNode rnode, ForkNumber forkNum,
 			RelFileNodeEquals(bufHdr->tag.rnode, rnode) &&
 			bufHdr->tag.forkNum == forkNum &&
 			bufHdr->tag.blockNum >= firstDelBlock)
+		{
+			if (LocalRefCount[i] != 0)
+				elog(ERROR, "block %u of %s is still referenced (local %u)",
+					 bufHdr->tag.blockNum,
+					 relpathbackend(bufHdr->tag.rnode, MyBackendId,
+									bufHdr->tag.forkNum),
+					 LocalRefCount[i]);
+			/* Remove entry from hashtable */
+			hresult = (LocalBufferLookupEnt *)
+				hash_search(LocalBufHash, (void *) &bufHdr->tag,
+							HASH_REMOVE, NULL);
+			if (!hresult)		/* shouldn't happen */
+				elog(ERROR, "local buffer hash table corrupted");
+			/* Mark buffer invalid */
+			CLEAR_BUFFERTAG(bufHdr->tag);
+			bufHdr->flags = 0;
+			bufHdr->usage_count = 0;
+		}
+	}
+}
+
+/*
+ * DropRelFileNodeAllLocalBuffers
+ *		This function removes from the buffer pool all pages of all forks
+ *		of the specified relation.
+ *
+ *		See DropRelFileNodeAllBuffers in bufmgr.c for more notes.
+ */
+void
+DropRelFileNodeAllLocalBuffers(RelFileNode rnode)
+{
+	int			i;
+
+	for (i = 0; i < NLocBuffer; i++)
+	{
+		BufferDesc *bufHdr = &LocalBufferDescriptors[i];
+		LocalBufferLookupEnt *hresult;
+
+		if ((bufHdr->flags & BM_TAG_VALID) &&
+			RelFileNodeEquals(bufHdr->tag.rnode, rnode))
 		{
 			if (LocalRefCount[i] != 0)
 				elog(ERROR, "block %u of %s is still referenced (local %u)",

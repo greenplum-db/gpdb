@@ -4,7 +4,7 @@
  *	  This file contains routines to support creation of toast tables
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -14,13 +14,11 @@
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
-#include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_namespace.h"
@@ -31,6 +29,7 @@
 #include "nodes/makefuncs.h"
 #include "storage/lmgr.h"
 #include "utils/builtins.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 /* Potentially set by contrib/pg_upgrade_support functions */
@@ -349,7 +348,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
 	if (IsBinaryUpgrade)
 		toastIndexOid = GetPreassignedOidForRelation(namespaceid, toast_idxname);
 
-	toast_idxid = index_create(toast_rel, toast_idxname, toastIndexOid,
+	toast_idxid = index_create(toast_rel, toast_idxname, toastIndexOid, InvalidOid,
 				 indexInfo,
 				 list_make2("chunk_id", "chunk_seq"),
 				 BTREE_AM_OID,

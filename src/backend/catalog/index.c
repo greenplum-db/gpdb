@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,11 +25,10 @@
 
 #include <unistd.h>
 
-#include "access/genam.h"
-#include "access/heapam.h"
 #include "access/relscan.h"
 #include "access/sysattr.h"
 #include "access/transam.h"
+#include "access/visibilitymap.h"
 #include "access/xact.h"
 #include "bootstrap/bootstrap.h"
 #include "catalog/aoblkdir.h"
@@ -68,7 +67,6 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/relcache.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 #include "utils/snapmgr.h"
@@ -682,6 +680,8 @@ UpdateIndexRelation(Oid indexoid,
  * indexRelationId: normally, pass InvalidOid to let this routine
  *		generate an OID for the index.	During bootstrap this may be
  *		nonzero to specify a preselected OID.
+ * relFileNode: normally, pass InvalidOid to get new storage.  May be
+ *		nonzero to attach an existing valid build.
  * indexInfo: same info executor uses to insert into the index
  * indexColNames: column names to use for index (List of char *)
  * accessMethodObjectId: OID of index AM to use
@@ -707,6 +707,7 @@ Oid
 index_create(Relation heapRelation,
 			 const char *indexRelationName,
 			 Oid indexRelationId,
+			 Oid relFileNode,
 			 IndexInfo *indexInfo,
 			 List *indexColNames,
 			 Oid accessMethodObjectId,
@@ -840,6 +841,7 @@ index_create(Relation heapRelation,
 								namespaceId,
 								tableSpaceId,
 								indexRelationId,
+								relFileNode,
 								indexTupDesc,
 								accessMethodObjectId,
 								RELKIND_INDEX,
@@ -1145,7 +1147,7 @@ index_create(Relation heapRelation,
 						   true,
 						   isprimary,
 						   InvalidOid,
-						   heapRelation->rd_rel->reltuples);
+						   -1.0);
 		/* Make the above update visible */
 		CommandCounterIncrement();
 	}
@@ -1251,7 +1253,8 @@ index_constraint_create(Relation heapRelation,
 								   NULL,
 								   NULL,
 								   true,		/* islocal */
-								   0);	/* inhcount */
+								   0,	/* inhcount */
+								   false);		/* noinherit */
 
 	/*
 	 * Register the index as internally dependent on the constraint.
@@ -1321,7 +1324,7 @@ index_constraint_create(Relation heapRelation,
 						   true,
 						   true,
 						   InvalidOid,
-						   heapRelation->rd_rel->reltuples);
+						   -1.0);
 
 	/*
 	 * If needed, mark the index as primary and/or deferred in pg_index.
@@ -1377,7 +1380,7 @@ index_constraint_create(Relation heapRelation,
  * else associated dependencies won't be cleaned up.
  */
 void
-index_drop(Oid indexId)
+index_drop(Oid indexId, bool concurrent)
 {
 	Oid			heapId;
 	Relation	userHeapRelation;
@@ -1386,6 +1389,11 @@ index_drop(Oid indexId)
 	HeapTuple	tuple;
 	bool		hasexprs;
 	bool		need_long_lock;
+	LockRelId	heaprelid,
+				indexrelid;
+	LOCKTAG		heaplocktag;
+	VirtualTransactionId *old_lockholders;
+	Form_pg_index indexForm;
 
 	/*
 	 * To drop an index safely, we must grab exclusive lock on its parent
@@ -1397,16 +1405,127 @@ index_drop(Oid indexId)
 	 * proceeding until we commit and send out a shared-cache-inval notice
 	 * that will make them update their index lists.
 	 */
-	heapId = IndexGetRelation(indexId);
-	userHeapRelation = heap_open(heapId, AccessExclusiveLock);
-
-	userIndexRelation = index_open(indexId, AccessExclusiveLock);
+	heapId = IndexGetRelation(indexId, false);
+	if (concurrent)
+	{
+		userHeapRelation = heap_open(heapId, ShareUpdateExclusiveLock);
+		userIndexRelation = index_open(indexId, ShareUpdateExclusiveLock);
+	}
+	else
+	{
+		userHeapRelation = heap_open(heapId, AccessExclusiveLock);
+		userIndexRelation = index_open(indexId, AccessExclusiveLock);
+	}
 
 	/*
-	 * There can no longer be anyone *else* touching the index, but we might
-	 * still have open queries using it in our own session.
+	 * We might still have open queries using it in our own session.
 	 */
 	CheckTableNotInUse(userIndexRelation, "DROP INDEX");
+
+	/*
+	 * Drop Index concurrently is similar in many ways to creating an index
+	 * concurrently, so some actions are similar to DefineIndex()
+	 */
+	if (concurrent)
+	{
+		/*
+		 * Mark index invalid by updating its pg_index entry
+		 *
+		 * Don't Assert(indexForm->indisvalid) because we may be trying to
+		 * clear up after an error when trying to create an index which left
+		 * the index invalid
+		 */
+		indexRelation = heap_open(IndexRelationId, RowExclusiveLock);
+
+		tuple = SearchSysCacheCopy1(INDEXRELID,
+									ObjectIdGetDatum(indexId));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for index %u", indexId);
+		indexForm = (Form_pg_index) GETSTRUCT(tuple);
+
+		indexForm->indisvalid = false;	/* make unusable for queries */
+		indexForm->indisready = false;	/* make invisible to changes */
+
+		simple_heap_update(indexRelation, &tuple->t_self, tuple);
+		CatalogUpdateIndexes(indexRelation, tuple);
+
+		heap_close(indexRelation, RowExclusiveLock);
+
+		/*
+		 * Invalidate the relcache for the table, so that after this
+		 * transaction we will refresh the index list. Forgetting just the
+		 * index is not enough.
+		 */
+		CacheInvalidateRelcache(userHeapRelation);
+
+		/* save lockrelid and locktag for below, then close but keep locks */
+		heaprelid = userHeapRelation->rd_lockInfo.lockRelId;
+		SET_LOCKTAG_RELATION(heaplocktag, heaprelid.dbId, heaprelid.relId);
+		heap_close(userHeapRelation, NoLock);
+
+		indexrelid = userIndexRelation->rd_lockInfo.lockRelId;
+		index_close(userIndexRelation, NoLock);
+
+		/*
+		 * For a concurrent drop, it's important to make the catalog entries
+		 * visible to other transactions before we drop the index. The index
+		 * will be marked not indisvalid, so that no one else tries to either
+		 * insert into it or use it for queries.
+		 *
+		 * We must commit our current transaction so that the index update
+		 * becomes visible; then start another.  Note that all the data
+		 * structures we just built are lost in the commit.  The only data we
+		 * keep past here are the relation IDs.
+		 *
+		 * Before committing, get a session-level lock on the table, to ensure
+		 * that neither it nor the index can be dropped before we finish. This
+		 * cannot block, even if someone else is waiting for access, because
+		 * we already have the same lock within our transaction.
+		 */
+		LockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
+		LockRelationIdForSession(&indexrelid, ShareUpdateExclusiveLock);
+
+		PopActiveSnapshot();
+		CommitTransactionCommand();
+		StartTransactionCommand();
+
+		/*
+		 * Now we must wait until no running transaction could have the table
+		 * open with the old list of indexes.  To do this, inquire which xacts
+		 * currently would conflict with AccessExclusiveLock on the table --
+		 * ie, which ones have a lock of any kind on the table. Then wait for
+		 * each of these xacts to commit or abort.	Note we do not need to
+		 * worry about xacts that open the table for writing after this point;
+		 * they will see the index as invalid when they open the relation.
+		 *
+		 * Note: the reason we use actual lock acquisition here, rather than
+		 * just checking the ProcArray and sleeping, is that deadlock is
+		 * possible if one of the transactions in question is blocked trying
+		 * to acquire an exclusive lock on our table.  The lock code will
+		 * detect deadlock and error out properly.
+		 *
+		 * Note: GetLockConflicts() never reports our own xid, hence we need
+		 * not check for that.	Also, prepared xacts are not reported, which
+		 * is fine since they certainly aren't going to do anything more.
+		 */
+		old_lockholders = GetLockConflicts(&heaplocktag, AccessExclusiveLock);
+
+		while (VirtualTransactionIdIsValid(*old_lockholders))
+		{
+			VirtualXactLock(*old_lockholders, true);
+			old_lockholders++;
+		}
+
+		/*
+		 * Re-open relations to allow us to complete our actions.
+		 *
+		 * At this point, nothing should be accessing the index, but lets
+		 * leave nothing to chance and grab AccessExclusiveLock on the index
+		 * before the physical deletion.
+		 */
+		userHeapRelation = heap_open(heapId, ShareUpdateExclusiveLock);
+		userIndexRelation = index_open(indexId, AccessExclusiveLock);
+	}
 
 	/*
 	 * All predicate locks on the index are about to be made invalid. Promote
@@ -1482,6 +1601,16 @@ index_drop(Oid indexId)
 	 * Close owning rel, but keep lock
 	 */
 	heap_close(userHeapRelation, need_long_lock ? NoLock : AccessExclusiveLock);
+
+
+	/*
+	 * Release the session locks before we go.
+	 */
+	if (concurrent)
+	{
+		UnlockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
+		UnlockRelationIdForSession(&indexrelid, ShareUpdateExclusiveLock);
+	}
 }
 
 /* ----------------------------------------------------------------
@@ -1638,9 +1767,10 @@ FormIndexDatum(struct IndexInfo *indexInfo,
  * isprimary: if true, set relhaspkey true; else no change
  * reltoastidxid: if not InvalidOid, set reltoastidxid to this value;
  *		else no change
- * reltuples: set reltuples to this value
+ * reltuples: if >= 0, set reltuples to this value; else no change
  *
- * relpages is also updated (using RelationGetNumberOfBlocks()).
+ * If reltuples >= 0, relpages and relallvisible are also updated (using
+ * RelationGetNumberOfBlocks() and visibilitymap_count()).
  *
  * NOTE: an important side-effect of this operation is that an SI invalidation
  * message is sent out to all backends --- including me --- causing relcache
@@ -1690,9 +1820,11 @@ index_update_stats(Relation rel,
 	 * It is safe to use a non-transactional update even though our
 	 * transaction could still fail before committing.	Setting relhasindex
 	 * true is safe even if there are no indexes (VACUUM will eventually fix
-	 * it), likewise for relhaspkey.  And of course the relpages and reltuples
-	 * counts are correct (or at least more so than the old values)
-	 * regardless.
+	 * it), likewise for relhaspkey.  And of course the new relpages and
+	 * reltuples counts are correct regardless.  However, we don't want to
+	 * change relpages (or relallvisible) if the caller isn't providing an
+	 * updated reltuples count, because that would bollix the
+	 * reltuples/relpages ratio which is what's really important.
 	 */
 
 	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
@@ -1755,25 +1887,33 @@ index_update_stats(Relation rel,
 		}
 	}
 
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (reltuples >= 0 && Gp_role != GP_ROLE_DISPATCH)
 	{
-		/**
-		 * Do not overwrite relpages, reltuples in QD.
-		 */
-		if (rd_rel->reltuples != (float4) reltuples)
-		{
-			rd_rel->reltuples = (float4) reltuples;
-			dirty = true;
-		}
-
 		BlockNumber relpages = RelationGetNumberOfBlocks(rel);
+		BlockNumber relallvisible;
+
+		if (rd_rel->relkind != RELKIND_INDEX)
+			relallvisible = visibilitymap_count(rel);
+		else	/* don't bother for indexes */
+			relallvisible = 0;
 
 		if (rd_rel->relpages != (int32) relpages)
 		{
 			rd_rel->relpages = (int32) relpages;
 			dirty = true;
 		}
+		if (rd_rel->reltuples != (float4) reltuples)
+		{
+			rd_rel->reltuples = (float4) reltuples;
+			dirty = true;
+		}
+		if (rd_rel->relallvisible != (int32) relallvisible)
+		{
+			rd_rel->relallvisible = (int32) relallvisible;
+			dirty = true;
+		}
 	}
+
 	/*
 	 * If anything changed, write out the tuple
 	 */
@@ -3247,7 +3387,7 @@ index_set_state_flags(Oid indexId, IndexStateFlagsAction action)
  * relation it is an index on.	Uses the system cache.
  */
 Oid
-IndexGetRelation(Oid indexId)
+IndexGetRelation(Oid indexId, bool missing_ok)
 {
 	HeapTuple	tuple;
 	Form_pg_index index;
@@ -3255,7 +3395,11 @@ IndexGetRelation(Oid indexId)
 
 	tuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexId));
 	if (!HeapTupleIsValid(tuple))
+	{
+		if (missing_ok)
+			return InvalidOid;
 		elog(ERROR, "cache lookup failed for index %u", indexId);
+	}
 	index = (Form_pg_index) GETSTRUCT(tuple);
 	Assert(index->indexrelid == indexId);
 
@@ -3283,7 +3427,7 @@ reindex_index(Oid indexId, bool skip_constraint_checks)
 	 * Open and lock the parent heap relation.	ShareLock is sufficient since
 	 * we only need to be sure no schema or data changes are going on.
 	 */
-	heapId = IndexGetRelation(indexId);
+	heapId = IndexGetRelation(indexId, false);
 	heapRelation = heap_open(heapId, ShareLock);
 
 	namespaceId = RelationGetNamespace(heapRelation);
@@ -3526,7 +3670,8 @@ reindex_relation(Oid relid, int flags)
 
 	/*
 	 * Open and lock the relation.	ShareLock is sufficient since we only need
-	 * to prevent schema and data changes in it.
+	 * to prevent schema and data changes in it.  The lock level used here
+	 * should match ReindexTable().
 	 */
 	rel = heap_open(relid, ShareLock);
 

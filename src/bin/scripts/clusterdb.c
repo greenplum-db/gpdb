@@ -2,7 +2,7 @@
  *
  * clusterdb
  *
- * Portions Copyright (c) 2002-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2002-2012, PostgreSQL Global Development Group
  *
  * src/bin/scripts/clusterdb.c
  *
@@ -18,7 +18,8 @@ static void cluster_one_database(const char *dbname, bool verbose, const char *t
 					 const char *host, const char *port,
 					 const char *username, enum trivalue prompt_password,
 					 const char *progname, bool echo);
-static void cluster_all_databases(bool verbose, const char *host, const char *port,
+static void cluster_all_databases(bool verbose, const char *maintenance_db,
+					  const char *host, const char *port,
 					  const char *username, enum trivalue prompt_password,
 					  const char *progname, bool echo, bool quiet);
 
@@ -40,6 +41,7 @@ main(int argc, char *argv[])
 		{"all", no_argument, NULL, 'a'},
 		{"table", required_argument, NULL, 't'},
 		{"verbose", no_argument, NULL, 'v'},
+		{"maintenance-db", required_argument, NULL, 2},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -48,6 +50,7 @@ main(int argc, char *argv[])
 	int			c;
 
 	const char *dbname = NULL;
+	const char *maintenance_db = NULL;
 	char	   *host = NULL;
 	char	   *port = NULL;
 	char	   *username = NULL;
@@ -100,24 +103,31 @@ main(int argc, char *argv[])
 			case 'v':
 				verbose = true;
 				break;
+			case 2:
+				maintenance_db = optarg;
+				break;
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
 		}
 	}
 
-	switch (argc - optind)
+	/*
+	 * Non-option argument specifies database name as long as it wasn't
+	 * already specified with -d / --dbname
+	 */
+	if (optind < argc && dbname == NULL)
 	{
-		case 0:
-			break;
-		case 1:
-			dbname = argv[optind];
-			break;
-		default:
-			fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
-					progname, argv[optind + 1]);
-			fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
-			exit(1);
+		dbname = argv[optind];
+		optind++;
+	}
+
+	if (optind < argc)
+	{
+		fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
+				progname, argv[optind + 1]);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+		exit(1);
 	}
 
 	setup_cancel_handler();
@@ -137,7 +147,7 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
-		cluster_all_databases(verbose, host, port, username, prompt_password,
+		cluster_all_databases(verbose, maintenance_db, host, port, username, prompt_password,
 							  progname, echo, quiet);
 	}
 	else
@@ -177,10 +187,11 @@ cluster_one_database(const char *dbname, bool verbose, const char *table,
 	if (verbose)
 		appendPQExpBuffer(&sql, " VERBOSE");
 	if (table)
-		appendPQExpBuffer(&sql, " %s", fmtId(table));
+		appendPQExpBuffer(&sql, " %s", table);
 	appendPQExpBuffer(&sql, ";\n");
 
-	conn = connectDatabase(dbname, host, port, username, prompt_password, progname);
+	conn = connectDatabase(dbname, host, port, username, prompt_password,
+						   progname, false);
 	if (!executeMaintenanceCommand(conn, sql.data, echo))
 	{
 		if (table)
@@ -198,7 +209,8 @@ cluster_one_database(const char *dbname, bool verbose, const char *table,
 
 
 static void
-cluster_all_databases(bool verbose, const char *host, const char *port,
+cluster_all_databases(bool verbose, const char *maintenance_db,
+					  const char *host, const char *port,
 					  const char *username, enum trivalue prompt_password,
 					  const char *progname, bool echo, bool quiet)
 {
@@ -206,7 +218,8 @@ cluster_all_databases(bool verbose, const char *host, const char *port,
 	PGresult   *result;
 	int			i;
 
-	conn = connectDatabase("postgres", host, port, username, prompt_password, progname);
+	conn = connectMaintenanceDatabase(maintenance_db, host, port, username,
+									  prompt_password, progname);
 	result = executeQuery(conn, "SELECT datname FROM pg_database WHERE datallowconn ORDER BY 1;", progname, echo);
 	PQfinish(conn);
 
@@ -250,6 +263,7 @@ help(const char *progname)
 	printf(_("  -U, --username=USERNAME   user name to connect as\n"));
 	printf(_("  -w, --no-password         never prompt for password\n"));
 	printf(_("  -W, --password            force password prompt\n"));
+	printf(_("  --maintenance-db=DBNAME   alternate maintenance database\n"));
 	printf(_("\nRead the description of the SQL command CLUSTER for details.\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }

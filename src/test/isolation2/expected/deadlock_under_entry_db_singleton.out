@@ -95,6 +95,6 @@ founddeadlockprocess
 1<:  <... completed>
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db 127.0.0.1:15432 pid=94879)
 CONTEXT:  SQL statement "UPDATE deadlock_entry_db_singleton_table SET d = d + 1  WHERE c = $1"
-PL/pgSQL function "function_volatile" line 3 at SQL statement
+PL/pgSQL function function_volatile(integer) line 3 at SQL statement
 2<:  <... completed>
 UPDATE 10

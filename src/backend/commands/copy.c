@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -45,6 +45,7 @@
 #include "libpq/pqformat.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "optimizer/clauses.h"
 #include "optimizer/planner.h"
 #include "parser/parse_relation.h"
 #include "rewrite/rewriteHandler.h"
@@ -54,6 +55,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 
 #include "access/appendonlywriter.h"
@@ -168,6 +170,11 @@ static uint64 CopyToDispatch(CopyState cstate);
 static uint64 CopyTo(CopyState cstate);
 static uint64 CopyFrom(CopyState cstate);
 static uint64 CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt);
+static void CopyFromInsertBatch(CopyState cstate, EState *estate,
+					CommandId mycid, int hi_options,
+					ResultRelInfo *resultRelInfo, TupleTableSlot *myslot,
+					BulkInsertState bistate,
+					int nBufferedTuples, HeapTuple *bufferedTuples);
 static bool CopyReadLineText(CopyState cstate);
 static int	CopyReadAttributesText(CopyState cstate);
 static int	CopyReadAttributesCSV(CopyState cstate);
@@ -236,6 +243,12 @@ static unsigned int
 GetTargetSeg(GpDistributionData *distData, Datum *baseValues, bool *baseNulls);
 static ProgramPipes *open_program_pipes(char *command, bool forwrite);
 static void close_program_pipes(CopyState cstate, bool ifThrow);
+static void cdbFlushInsertBatches(List *resultRels,
+					  CopyState cstate,
+					  EState *estate,
+					  CommandId mycid,
+					  int hi_options,
+					  TupleTableSlot *baseSlot);
 
 /* ==========================================================================
  * The following macros aid in major refactoring of data processing code (in
@@ -485,7 +498,7 @@ SendCopyEnd(CopyState cstate)
 static void
 CopySendData(CopyState cstate, const void *databuf, int datasize)
 {
-	appendBinaryStringInfo(cstate->fe_msgbuf, (char *) databuf, datasize);
+	appendBinaryStringInfo(cstate->fe_msgbuf, databuf, datasize);
 }
 
 static void
@@ -523,9 +536,9 @@ CopySendEndOfRow(CopyState cstate)
 #endif
 			}
 
-			(void) fwrite(fe_msgbuf->data, fe_msgbuf->len,
-						  1, cstate->copy_file);
-			if (ferror(cstate->copy_file))
+			if (fwrite(fe_msgbuf->data, fe_msgbuf->len, 1,
+					   cstate->copy_file) != 1 ||
+				ferror(cstate->copy_file))
 			{
 				if (cstate->is_program)
 				{
@@ -717,7 +730,7 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 				/* Only a \. terminator is legal EOF in old protocol */
 				ereport(ERROR,
 						(errcode(ERRCODE_CONNECTION_FAILURE),
-						 errmsg("unexpected EOF on client connection")));
+						 errmsg("unexpected EOF on client connection with an open transaction")));
 			}
 			bytesread += datasize;		/* update the count of bytes that were
 										 * read so far */
@@ -737,11 +750,11 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 					if (mtype == EOF)
 						ereport(ERROR,
 								(errcode(ERRCODE_CONNECTION_FAILURE),
-							 errmsg("unexpected EOF on client connection")));
+								 errmsg("unexpected EOF on client connection with an open transaction")));
 					if (pq_getmessage(cstate->fe_msgbuf, 0))
 						ereport(ERROR,
 								(errcode(ERRCODE_CONNECTION_FAILURE),
-							 errmsg("unexpected EOF on client connection")));
+								 errmsg("unexpected EOF on client connection with an open transaction")));
 					switch (mtype)
 					{
 						case 'd':		/* CopyData */
@@ -1757,7 +1770,8 @@ BeginCopy(bool is_from,
 		query = (Query *) linitial(rewritten);
 
 		/* Query mustn't use INTO, either */
-		if (query->intoClause)
+		if (query->utilityStmt != NULL &&
+			IsA(query->utilityStmt, CreateTableAsStmt))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("COPY (SELECT INTO) is not supported")));
@@ -2590,7 +2604,7 @@ CopyTo(CopyState cstate)
 		int32		tmp;
 
 		/* Signature */
-		CopySendData(cstate, (char *) BinarySignature, 11);
+		CopySendData(cstate, BinarySignature, 11);
 		/* Flags field */
 		tmp = 0;
 		if (cstate->oids)
@@ -3121,6 +3135,41 @@ limit_printout_length(const char *str)
 }
 
 /*
+ * Wrapper function of CopyFromInsertBatch
+ *
+ * Flush all relations have buffered tuples
+ */
+static void
+cdbFlushInsertBatches(List *resultRels,
+					  CopyState cstate,
+					  EState *estate,
+					  CommandId mycid,
+					  int hi_options,
+					  TupleTableSlot *baseSlot)
+{
+	ListCell *cell;
+	ResultRelInfo *oldRelInfo;
+	oldRelInfo = estate->es_result_relation_info;
+	foreach (cell, resultRels)
+	{
+		ResultRelInfo *relInfo = (ResultRelInfo *)lfirst(cell);
+		if (relInfo->nBufferedTuples > 0)
+		{
+			estate->es_result_relation_info = relInfo;
+			CopyFromInsertBatch(cstate, estate, mycid, hi_options,
+								relInfo,
+								baseSlot,
+								relInfo->biState,
+								relInfo->nBufferedTuples,
+								relInfo->bufferedTuples);
+		}
+		relInfo->nBufferedTuples = 0;
+		relInfo->bufferedTuplesSize = 0;
+	}
+	estate->es_result_relation_info = oldRelInfo;
+}
+
+/*
  * Copy FROM file to relation.
  */
 static uint64
@@ -3133,18 +3182,23 @@ CopyFrom(CopyState cstate)
 	bool		*partNulls = NULL;
 	ResultRelInfo *resultRelInfo;
 	ResultRelInfo *parentResultRelInfo;
+	List *resultRelInfoList = NULL;
 	EState	   *estate = CreateExecutorState(); /* for ExecConstraints() */
 	TupleTableSlot *baseSlot;
 	ExprContext *econtext;		/* used for ExecEvalExpr for default atts */
 	MemoryContext oldcontext = CurrentMemoryContext;
+
 	ErrorContextCallback errcontext;
 	CommandId	mycid = GetCurrentCommandId(true);
 	int			hi_options = 0; /* start with default heap_insert options */
-	BulkInsertState bistate;
 	CdbCopy    *cdbCopy = NULL;
 	bool		is_check_distkey;
 	GpDistributionData	*distData = NULL; /* distribution data used to compute target seg */
 	uint64		processed = 0;
+    bool		useHeapMultiInsert;
+#define MAX_BUFFERED_TUPLES 1000
+	int			nTotalBufferedTuples = 0;
+	Size		totalBufferedTuplesSize = 0;
 	int			i;
 	Datum	   *baseValues;
 	bool	   *baseNulls;
@@ -3263,18 +3317,37 @@ CopyFrom(CopyState cstate)
 	/* Triggers might need a slot as well */
 	estate->es_trig_tuple_slot = ExecInitExtraTupleSlot(estate);
 
+	/*
+	 * It's more efficient to prepare a bunch of tuples for insertion, and
+	 * insert them in one heap_multi_insert() call, than call heap_insert()
+	 * separately for every tuple. However, we can't do that if there are
+	 * BEFORE/INSTEAD OF triggers, or we need to evaluate volatile default
+	 * expressions. Such triggers or expressions might query the table we're
+	 * inserting to, and act differently if the tuples that have already been
+	 * processed and prepared for insertion are not there.
+	 */
+	if ((resultRelInfo->ri_TrigDesc != NULL &&
+		 (resultRelInfo->ri_TrigDesc->trig_insert_before_row ||
+		  resultRelInfo->ri_TrigDesc->trig_insert_instead_row)) ||
+		cstate->volatile_defexprs)
+	{
+		useHeapMultiInsert = false;
+	}
+
 	/* Prepare to catch AFTER triggers. */
 	AfterTriggerBeginQuery();
 
 	/*
-	 * Check BEFORE STATEMENT insertion triggers. It's debateable whether we
+	 * Check BEFORE STATEMENT insertion triggers. It's debatable whether we
 	 * should do this for COPY, since it's not really an "INSERT" statement as
 	 * such. However, executing these triggers maintains consistency with the
 	 * EACH ROW triggers that we already fire on COPY.
 	 */
 	ExecBSInsertTriggers(estate, resultRelInfo);
 
-	bistate = GetBulkInsertState();
+	partValues = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
+	partNulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
+
 	econtext = GetPerTupleExprContext(estate);
 
 	/* Set up callback to identify error line number */
@@ -3415,8 +3488,15 @@ CopyFrom(CopyState cstate)
 
 		CHECK_FOR_INTERRUPTS();
 
-		/* Reset the per-tuple exprcontext */
-		ResetPerTupleExprContext(estate);
+		if (nTotalBufferedTuples == 0)
+		{
+			/*
+			 * Reset the per-tuple exprcontext. We can only do this if the
+			 * tuple buffer is empty (calling the context the per-tuple memory
+			 * context is a bit of a misnomer now
+			 */
+			ResetPerTupleExprContext(estate);
+		}
 
 		/* Switch into its memory context */
 		MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
@@ -3443,18 +3523,6 @@ CopyFrom(CopyState cstate)
 			 * and stored the tuple in the correct slot.
 			 */
 			resultRelInfo = estate->es_result_relation_info;
-
-			/* GPDB_91_MERGE_FIXME: We should probably keep BulkInsertState in
-			 * ResultRelInfo, so that we could keep one open for each partition
-			 * we insert to.
-			 */
-			if (resultRelInfo != parentResultRelInfo)
-			{
-				MemoryContextSwitchTo(estate->es_query_cxt);
-				FreeBulkInsertState(bistate);
-				bistate = GetBulkInsertState();
-				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
-			}
 		}
 		else
 		{
@@ -3497,8 +3565,6 @@ CopyFrom(CopyState cstate)
 					continue;
 
 				estate->es_result_relation_info = resultRelInfo;
-				FreeBulkInsertState(bistate);
-				bistate = GetBulkInsertState();
 			}
 			MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 
@@ -3675,65 +3741,118 @@ CopyFrom(CopyState cstate)
 		if (!skip_tuple)
 		{
 			char		relstorage = RelinfoGetStorage(resultRelInfo);
-			List	   *recheckIndexes = NIL;
 			ItemPointerData insertedTid;
 
 			/* Check the constraints of the tuple */
 			if (resultRelInfo->ri_RelationDesc->rd_att->constr)
 				ExecConstraints(resultRelInfo, slot, estate);
 
+			if (useHeapMultiInsert)
+			{
+				char relstorage = RelinfoGetStorage(resultRelInfo);
+				if (relstorage != RELSTORAGE_AOROWS &&
+					relstorage != RELSTORAGE_AOCOLS &&
+					relstorage != RELSTORAGE_EXTERNAL)
+					useHeapMultiInsert = true;
+				else
+					useHeapMultiInsert = false;
+			}
+
 			/* OK, store the tuple and create index entries for it */
-			if (relstorage == RELSTORAGE_AOROWS)
-			{
-				MemTuple	mtuple;
-
-				mtuple = ExecFetchSlotMemTuple(slot, false);
-
-				/* inserting into an append only relation */
-				appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, loaded_oid,
-								  (AOTupleId *) &insertedTid);
-			}
-			else if (relstorage == RELSTORAGE_AOCOLS)
-			{
-				aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
-				insertedTid = *slot_get_ctid(slot);
-			}
-			else if (relstorage == RELSTORAGE_EXTERNAL)
-			{
-				HeapTuple tuple;
-
+			if (useHeapMultiInsert) {
+				HeapTuple	tuple;
 				tuple = ExecFetchSlotHeapTuple(slot);
-				external_insert(resultRelInfo->ri_extInsertDesc, tuple);
-				ItemPointerSetInvalid(&insertedTid);
+
+				resultRelInfoList = list_append_unique_ptr(resultRelInfoList, resultRelInfo);
+				if (resultRelInfo->bufferedTuples == NULL)
+				{
+					resultRelInfo->bufferedTuples = palloc(MAX_BUFFERED_TUPLES * sizeof(HeapTuple));
+					resultRelInfo->nBufferedTuples = 0;
+					resultRelInfo->bufferedTuplesSize = 0;
+				}
+
+				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				/* Add this tuple to the tuple buffer */
+				resultRelInfo->bufferedTuples[resultRelInfo->nBufferedTuples++] = heap_copytuple(tuple);
+				resultRelInfo->bufferedTuplesSize += tuple->t_len;
+				nTotalBufferedTuples++;
+				totalBufferedTuplesSize += tuple->t_len;
+				MemoryContextSwitchTo(estate->es_query_cxt);
+
+				/*
+				 * If the buffer filled up, flush it. Also flush if the total
+				 * size of all the tuples in the buffer becomes large, to
+				 * avoid using large amounts of memory for the buffers when
+				 * the tuples are exceptionally wide.
+				 */
+				/*
+				 * GPDB_92_MERGE_FIXME: MAX_BUFFERED_TUPLES and 65535 might not be
+				 * the best value for partition table
+				 */
+				if (nTotalBufferedTuples == MAX_BUFFERED_TUPLES ||
+					totalBufferedTuplesSize > 65535)
+				{
+					cdbFlushInsertBatches(resultRelInfoList, cstate, estate, mycid, hi_options, slot);
+					nTotalBufferedTuples = 0;
+					totalBufferedTuplesSize = 0;
+				}
+			} else {
+				List	   *recheckIndexes = NIL;
+
+				if (relstorage == RELSTORAGE_AOROWS)
+				{
+					MemTuple	mtuple;
+
+					mtuple = ExecFetchSlotMemTuple(slot, false);
+
+					/* inserting into an append only relation */
+					appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, loaded_oid,
+									  (AOTupleId *) &insertedTid);
+				}
+				else if (relstorage == RELSTORAGE_AOCOLS)
+				{
+					aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
+					insertedTid = *slot_get_ctid(slot);
+				}
+				else if (relstorage == RELSTORAGE_EXTERNAL)
+				{
+					HeapTuple tuple;
+
+					tuple = ExecFetchSlotHeapTuple(slot);
+					external_insert(resultRelInfo->ri_extInsertDesc, tuple);
+					ItemPointerSetInvalid(&insertedTid);
+				}
+				else
+				{
+					HeapTuple tuple;
+					tuple = ExecFetchSlotHeapTuple(slot);
+
+					if (cstate->file_has_oids)
+						HeapTupleSetOid(tuple, loaded_oid);
+					/* OK, store the tuple and create index entries for it */
+					heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, hi_options,
+								resultRelInfo->biState,
+								GetCurrentTransactionId());
+					insertedTid = tuple->t_self;
+				}
+
+				if (resultRelInfo->ri_NumIndices > 0)
+					recheckIndexes = ExecInsertIndexTuples(slot, &insertedTid,
+														   estate);
+
+				/* AFTER ROW INSERT Triggers */
+				if (resultRelInfo->ri_TrigDesc &&
+					resultRelInfo->ri_TrigDesc->trig_insert_after_row)
+				{
+					HeapTuple tuple;
+
+					tuple = ExecFetchSlotHeapTuple(slot);
+					ExecARInsertTriggers(estate, resultRelInfo, tuple,
+										 recheckIndexes);
+				}
+
+				list_free(recheckIndexes);
 			}
-			else
-			{
-				HeapTuple tuple;
-
-				tuple = ExecFetchSlotHeapTuple(slot);
-				if (cstate->file_has_oids)
-					HeapTupleSetOid(tuple, loaded_oid);
-				heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, hi_options, bistate,
-							GetCurrentTransactionId());
-				insertedTid = tuple->t_self;
-			}
-
-			if (resultRelInfo->ri_NumIndices > 0)
-				recheckIndexes = ExecInsertIndexTuples(slot, &insertedTid,
-													   estate);
-
-			/* AFTER ROW INSERT Triggers */
-			if (resultRelInfo->ri_TrigDesc &&
-				resultRelInfo->ri_TrigDesc->trig_insert_after_row)
-			{
-				HeapTuple tuple;
-
-				tuple = ExecFetchSlotHeapTuple(slot);
-				ExecARInsertTriggers(estate, resultRelInfo, tuple,
-									 recheckIndexes);
-			}
-
-			list_free(recheckIndexes);
 
 			/*
 			 * We count only tuples not suppressed by a BEFORE INSERT trigger;
@@ -3762,11 +3881,12 @@ CopyFrom(CopyState cstate)
 		CopyInitDataParser(cstate);
 	}
 	elog(DEBUG1, "Segment %u, Copied %lu rows.", GpIdentity.segindex, processed);
+	/* Flush any remaining buffered tuples */
+	if (useHeapMultiInsert)
+		cdbFlushInsertBatches(resultRelInfoList, cstate, estate, mycid, hi_options, baseSlot);
 
 	/* Done, clean up */
 	error_context_stack = errcontext.previous;
-
-	FreeBulkInsertState(bistate);
 
 	MemoryContextSwitchTo(estate->es_query_cxt);
 
@@ -3909,6 +4029,69 @@ CopyFrom(CopyState cstate)
 }
 
 /*
+ * A subroutine of CopyFrom, to write the current batch of buffered heap
+ * tuples to the heap. Also updates indexes and runs AFTER ROW INSERT
+ * triggers.
+ */
+static void
+CopyFromInsertBatch(CopyState cstate, EState *estate, CommandId mycid,
+					int hi_options, ResultRelInfo *resultRelInfo,
+					TupleTableSlot *myslot, BulkInsertState bistate,
+					int nBufferedTuples, HeapTuple *bufferedTuples)
+{
+	MemoryContext oldcontext;
+	int			i;
+
+	/*
+	 * heap_multi_insert leaks memory, so switch to short-lived memory context
+	 * before calling it.
+	 */
+	oldcontext = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+	heap_multi_insert(resultRelInfo->ri_RelationDesc,
+					  bufferedTuples,
+					  nBufferedTuples,
+					  mycid,
+					  hi_options,
+					  bistate,
+					  GetCurrentTransactionId());
+	MemoryContextSwitchTo(oldcontext);
+
+	/*
+	 * If there are any indexes, update them for all the inserted tuples, and
+	 * run AFTER ROW INSERT triggers.
+	 */
+	if (resultRelInfo->ri_NumIndices > 0)
+	{
+		for (i = 0; i < nBufferedTuples; i++)
+		{
+			List	   *recheckIndexes;
+
+			ExecStoreHeapTuple(bufferedTuples[i], myslot, InvalidBuffer, false);
+			recheckIndexes =
+				ExecInsertIndexTuples(myslot, &(bufferedTuples[i]->t_self),
+									  estate);
+			ExecARInsertTriggers(estate, resultRelInfo,
+								 bufferedTuples[i],
+								 recheckIndexes);
+			list_free(recheckIndexes);
+		}
+	}
+
+	/*
+	 * There's no indexes, but see if we need to run AFTER ROW INSERT triggers
+	 * anyway.
+	 */
+	else if (resultRelInfo->ri_TrigDesc != NULL &&
+			 resultRelInfo->ri_TrigDesc->trig_insert_after_row)
+	{
+		for (i = 0; i < nBufferedTuples; i++)
+			ExecARInsertTriggers(estate, resultRelInfo,
+								 bufferedTuples[i],
+								 NIL);
+	}
+}
+
+/*
  * Setup to read tuples from a file for COPY FROM.
  *
  * 'rel': Used as a template for the tuples
@@ -3940,6 +4123,7 @@ BeginCopyFrom(Relation rel,
 	int		   *defmap;
 	ExprState **defexprs;
 	MemoryContext oldcontext;
+	bool		volatile_defexprs;
 
 	cstate = BeginCopy(true, rel, NULL, NULL, attnamelist, options);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
@@ -3973,6 +4157,7 @@ BeginCopyFrom(Relation rel,
 	attr = tupDesc->attrs;
 	num_phys_attrs = tupDesc->natts;
 	num_defaults = 0;
+	volatile_defexprs = false;
 
 	/*
 	 * Pick up the required catalog information for each attribute in the
@@ -4016,6 +4201,9 @@ BeginCopyFrom(Relation rel,
 								 expression_planner((Expr *) defexpr), NULL);
 				defmap[num_defaults] = attnum - 1;
 				num_defaults++;
+
+				if (!volatile_defexprs)
+					volatile_defexprs = contain_volatile_functions(defexpr);
 			}
 		}
 	}
@@ -4025,6 +4213,7 @@ BeginCopyFrom(Relation rel,
 	cstate->typioparams = typioparams;
 	cstate->defmap = defmap;
 	cstate->defexprs = defexprs;
+	cstate->volatile_defexprs = volatile_defexprs;
 	cstate->num_defaults = num_defaults;
 	cstate->is_program = is_program;
 

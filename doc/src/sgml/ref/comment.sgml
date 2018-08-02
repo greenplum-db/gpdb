@@ -23,10 +23,10 @@ PostgreSQL documentation
 <synopsis>
 COMMENT ON
 {
-  AGGREGATE <replaceable class="PARAMETER">aggregate_name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) |
+  AGGREGATE <replaceable class="PARAMETER">agg_name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) |
   CAST (<replaceable>sourcetype</replaceable> AS <replaceable>target_type</replaceable>) |
   COLLATION <replaceable class="PARAMETER">object_name</replaceable> |
-  COLUMN <replaceable class="PARAMETER">table_name</replaceable>.<replaceable class="PARAMETER">column_name</replaceable> |
+  COLUMN <replaceable class="PARAMETER">relation_name</replaceable>.<replaceable class="PARAMETER">column_name</replaceable> |
   CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
   CONVERSION <replaceable class="PARAMETER">object_name</replaceable> |
   DATABASE <replaceable class="PARAMETER">object_name</replaceable> |
@@ -105,8 +105,8 @@ COMMENT ON
   <variablelist>
    <varlistentry>
     <term><replaceable class="parameter">object_name</replaceable></term>
-    <term><replaceable class="parameter">table_name.column_name</replaceable></term>
-    <term><replaceable class="parameter">aggregate_name</replaceable></term>
+    <term><replaceable class="parameter">relation_name</replaceable>.<replaceable>column_name</replaceable></term>
+    <term><replaceable class="parameter">agg_name</replaceable></term>
     <term><replaceable class="parameter">constraint_name</replaceable></term>
     <term><replaceable class="parameter">function_name</replaceable></term>
     <term><replaceable class="parameter">operator_name</replaceable></term>
@@ -118,6 +118,9 @@ COMMENT ON
       aggregates, collations, conversions, domains, foreign tables, functions,
       indexes, operators, operator classes, operator families, sequences,
       text search objects, types, and views can be schema-qualified.
+      When commenting on a column,
+      <replaceable class="parameter">relation_name</replaceable> must refer
+      to a table, view, composite type, or foreign table.
      </para>
     </listitem>
    </varlistentry>
@@ -288,8 +291,7 @@ COMMENT ON TEXT SEARCH TEMPLATE snowball IS 'Snowball stemmer';
 COMMENT ON TRIGGER my_trigger ON my_table IS 'Used for RI';
 COMMENT ON TYPE complex IS 'Complex number data type';
 COMMENT ON VIEW my_view IS 'View of departmental costs';
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>

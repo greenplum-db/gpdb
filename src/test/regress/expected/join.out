@@ -2495,6 +2495,133 @@ order by c.name;
 
 rollback;
 --
+-- test incorrect handling of placeholders that only appear in targetlists,
+-- per bug #6154
+--
+SELECT * FROM
+( SELECT 1 as key1 ) sub1
+LEFT JOIN
+( SELECT sub3.key3, sub4.value2, COALESCE(sub4.value2, 66) as value3 FROM
+    ( SELECT 1 as key3 ) sub3
+    LEFT JOIN
+    ( SELECT sub5.key5, COALESCE(sub6.value1, 1) as value2 FROM
+        ( SELECT 1 as key5 ) sub5
+        LEFT JOIN
+        ( SELECT 2 as key6, 42 as value1 ) sub6
+        ON sub5.key5 = sub6.key6
+    ) sub4
+    ON sub4.key5 = sub3.key3
+) sub2
+ON sub1.key1 = sub2.key3;
+ key1 | key3 | value2 | value3 
+------+------+--------+--------
+    1 |    1 |      1 |      1
+(1 row)
+
+-- test the path using join aliases, too
+SELECT * FROM
+( SELECT 1 as key1 ) sub1
+LEFT JOIN
+( SELECT sub3.key3, value2, COALESCE(value2, 66) as value3 FROM
+    ( SELECT 1 as key3 ) sub3
+    LEFT JOIN
+    ( SELECT sub5.key5, COALESCE(sub6.value1, 1) as value2 FROM
+        ( SELECT 1 as key5 ) sub5
+        LEFT JOIN
+        ( SELECT 2 as key6, 42 as value1 ) sub6
+        ON sub5.key5 = sub6.key6
+    ) sub4
+    ON sub4.key5 = sub3.key3
+) sub2
+ON sub1.key1 = sub2.key3;
+ key1 | key3 | value2 | value3 
+------+------+--------+--------
+    1 |    1 |      1 |      1
+(1 row)
+
+--
+-- test case where a PlaceHolderVar is used as a nestloop parameter
+--
+EXPLAIN (COSTS OFF)
+SELECT qq, unique1
+  FROM
+  ( SELECT COALESCE(q1, 0) AS qq FROM int8_tbl a ) AS ss1
+  FULL OUTER JOIN
+  ( SELECT COALESCE(q2, -1) AS qq FROM int8_tbl b ) AS ss2
+  USING (qq)
+  INNER JOIN tenk1 c ON qq = unique2;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  Hash Join
+         Hash Cond: c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint)))
+         ->  Seq Scan on tenk1 c
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                     ->  Hash Full Join
+                           Hash Cond: COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: COALESCE(a.q1, 0::bigint)
+                                 ->  Seq Scan on int8_tbl a
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: COALESCE(b.q2, (-1)::bigint)
+                                       ->  Seq Scan on int8_tbl b
+ Optimizer: legacy query optimizer
+(16 rows)
+
+SELECT qq, unique1
+  FROM
+  ( SELECT COALESCE(q1, 0) AS qq FROM int8_tbl a ) AS ss1
+  FULL OUTER JOIN
+  ( SELECT COALESCE(q2, -1) AS qq FROM int8_tbl b ) AS ss2
+  USING (qq)
+  INNER JOIN tenk1 c ON qq = unique2;
+ qq  | unique1 
+-----+---------
+ 123 |    4596
+ 123 |    4596
+ 456 |    7318
+(3 rows)
+
+--
+-- test case where a PlaceHolderVar is propagated into a subquery
+--
+explain (costs off)
+select * from
+  int8_tbl t1 left join
+  (select q1 as x, 42 as y from int8_tbl t2) ss
+  on t1.q2 = ss.x
+where
+  1 = (select 1 from int8_tbl t3 where ss.y is not null limit 1)
+order by 1,2;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Merge Key: t1.q1, t1.q2
+   ->  Sort
+         Sort Key: t1.q1, t1.q2
+         ->  Hash Left Join
+               Hash Cond: t1.q2 = t2.q1
+               Filter: 1 = ((SubPlan 1))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1.q2
+                     ->  Seq Scan on int8_tbl t1
+               ->  Hash
+                     ->  Seq Scan on int8_tbl t2
+               SubPlan 1  (slice3; segments: 3)
+                 ->  Limit
+                       ->  Limit
+                             ->  Result
+                                   One-Time Filter: (42) IS NOT NULL
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                     ->  Seq Scan on int8_tbl t3
+ Optimizer: legacy query optimizer
+(22 rows)
+
+--
 -- test case where a PlaceHolderVar is propagated into a subquery
 --
 select * from
@@ -2581,6 +2708,212 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
 ----+---------+------
   0 |       0 |    0
 (1 row)
+
+--
+-- test for ability to use a cartesian join when necessary
+--
+explain (costs off)
+select * from
+  tenk1 join int4_tbl on f1 = twothousand,
+  int4(sin(1)) q1,
+  int4(sin(0)) q2
+where q1 = thousand or q2 = thousand;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         Join Filter: q1.q1 = tenk1.thousand OR q2.q2 = tenk1.thousand
+         ->  Nested Loop
+               ->  Hash Join
+                     Hash Cond: tenk1.twothousand = int4_tbl.f1
+                     ->  Seq Scan on tenk1
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                 ->  Seq Scan on int4_tbl
+               ->  Materialize
+                     ->  Function Scan on q1
+         ->  Materialize
+               ->  Function Scan on q2
+ Optimizer: legacy query optimizer
+(15 rows)
+
+explain (costs off)
+select * from
+  tenk1 join int4_tbl on f1 = twothousand,
+  int4(sin(1)) q1,
+  int4(sin(0)) q2
+where thousand = (q1 + q2);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Join
+         Hash Cond: tenk1.twothousand = int4_tbl.f1
+         ->  Hash Join
+               Hash Cond: tenk1.thousand = (q1.q1 + q2.q2)
+               ->  Seq Scan on tenk1
+               ->  Hash
+                     ->  Nested Loop
+                           ->  Function Scan on q1
+                           ->  Materialize
+                                 ->  Function Scan on q2
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on int4_tbl
+ Optimizer: legacy query optimizer
+(15 rows)
+
+--
+-- test placement of movable quals in a parameterized join tree
+--
+explain (costs off)
+select * from tenk1 t1 left join
+  (tenk1 t2 join tenk1 t3 on t2.thousand = t3.unique2)
+  on t1.hundred = t2.hundred and t1.ten = t3.ten
+where t1.unique1 = 1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: t2.hundred = t1.hundred AND t3.ten = t1.ten
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: 1
+               ->  Hash Join
+                     Hash Cond: t2.thousand = t3.unique2
+                     ->  Seq Scan on tenk1 t2
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                 ->  Seq Scan on tenk1 t3
+         ->  Hash
+               ->  Index Scan using tenk1_unique1 on tenk1 t1
+                     Index Cond: unique1 = 1
+ Optimizer: legacy query optimizer
+(15 rows)
+
+explain (costs off)
+select * from tenk1 t1 left join
+  (tenk1 t2 join tenk1 t3 on t2.thousand = t3.unique2)
+  on t1.hundred = t2.hundred and t1.ten + t2.ten = t3.ten
+where t1.unique1 = 1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: t2.hundred = t1.hundred
+         Join Filter: (t1.ten + t2.ten) = t3.ten
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: 1
+               ->  Hash Join
+                     Hash Cond: t2.thousand = t3.unique2
+                     ->  Seq Scan on tenk1 t2
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                 ->  Seq Scan on tenk1 t3
+         ->  Hash
+               ->  Index Scan using tenk1_unique1 on tenk1 t1
+                     Index Cond: unique1 = 1
+ Optimizer: legacy query optimizer
+(16 rows)
+
+explain (costs off)
+select count(*) from
+  tenk1 a join tenk1 b on a.unique1 = b.unique2
+  left join tenk1 c on a.unique2 = b.unique1 and c.thousand = a.thousand
+  join int4_tbl on b.thousand = f1;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice5; segments: 3)
+         ->  Aggregate
+               ->  Hash Right Join
+                     Hash Cond: c.thousand = a.thousand
+                     Join Filter: a.unique2 = b.unique1
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: c.thousand
+                           ->  Seq Scan on tenk1 c
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                 Hash Key: a.thousand
+                                 ->  Hash Join
+                                       Hash Cond: a.unique1 = b.unique2
+                                       ->  Seq Scan on tenk1 a
+                                       ->  Hash
+                                             ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                                   Hash Key: b.unique2
+                                                   ->  Hash Join
+                                                         Hash Cond: b.thousand = int4_tbl.f1
+                                                         ->  Seq Scan on tenk1 b
+                                                         ->  Hash
+                                                               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                                     ->  Seq Scan on int4_tbl
+ Optimizer: legacy query optimizer
+(25 rows)
+
+select count(*) from
+  tenk1 a join tenk1 b on a.unique1 = b.unique2
+  left join tenk1 c on a.unique2 = b.unique1 and c.thousand = a.thousand
+  join int4_tbl on b.thousand = f1;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off)
+select b.unique1 from
+  tenk1 a join tenk1 b on a.unique1 = b.unique2
+  left join tenk1 c on b.unique1 = 42 and c.thousand = a.thousand
+  join int4_tbl i1 on b.thousand = f1
+  right join int4_tbl i2 on i2.f1 = b.tenthous
+  order by 1;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)
+   Merge Key: b.unique1
+   ->  Sort
+         Sort Key: b.unique1
+         ->  Hash Right Join
+               Hash Cond: b.tenthous = i2.f1
+               ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                     Hash Key: b.tenthous
+                     ->  Hash Right Join
+                           Hash Cond: c.thousand = a.thousand
+                           Join Filter: b.unique1 = 42
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: c.thousand
+                                 ->  Seq Scan on tenk1 c
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                       Hash Key: a.thousand
+                                       ->  Hash Join
+                                             Hash Cond: a.unique1 = b.unique2
+                                             ->  Seq Scan on tenk1 a
+                                             ->  Hash
+                                                   ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                                         Hash Key: b.unique2
+                                                         ->  Hash Join
+                                                               Hash Cond: b.thousand = i1.f1
+                                                               ->  Seq Scan on tenk1 b
+                                                               ->  Hash
+                                                                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                                           ->  Seq Scan on int4_tbl i1
+               ->  Hash
+                     ->  Seq Scan on int4_tbl i2
+ Optimizer: legacy query optimizer
+(32 rows)
+
+select b.unique1 from
+  tenk1 a join tenk1 b on a.unique1 = b.unique2
+  left join tenk1 c on b.unique1 = 42 and c.thousand = a.thousand
+  join int4_tbl i1 on b.thousand = f1
+  right join int4_tbl i2 on i2.f1 = b.tenthous
+  order by 1;
+ unique1 
+---------
+       0
+        
+        
+        
+        
+(5 rows)
 
 --
 -- test join removal

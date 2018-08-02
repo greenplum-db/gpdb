@@ -7,7 +7,7 @@
  * detection and resolution algorithms.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -455,6 +455,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 					 int *nSoftEdges)	/* output argument */
 {
 	PGPROC	   *proc;
+	PGXACT	   *pgxact;
 	LOCK	   *lock;
 	PROCLOCK   *proclock;
 	SHM_QUEUE  *procLocks;
@@ -521,6 +522,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 	while (proclock)
 	{
 		proc = proclock->tag.myProc;
+		pgxact = &ProcGlobal->allPgXact[proc->pgprocno];
 
 		/* A proc never blocks itself */
 		if (proc != checkProc)
@@ -567,7 +569,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 					 * ProcArrayLock.
 					 */
 					if (checkProc == MyProc &&
-						proc->vacuumFlags & PROC_IS_AUTOVACUUM)
+						pgxact->vacuumFlags & PROC_IS_AUTOVACUUM)
 						blocking_autovacuum_proc = proc;
 
 					/* We're done looking at this proclock */
@@ -949,10 +951,12 @@ DeadLockReport(void)
 					  pgstat_get_backend_current_activity(info->pid, false));
 	}
 
+	pgstat_report_deadlock();
+
 	ereport(ERROR,
 			(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
 			 errmsg("deadlock detected"),
-			 errdetail("%s", clientbuf.data),
+			 errdetail_internal("%s", clientbuf.data),
 			 errdetail_log("%s", logbuf.data),
 			 errhint("See server log for query details.")));
 }

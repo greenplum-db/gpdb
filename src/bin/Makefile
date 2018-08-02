@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin (client programs)
 #
-# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/Makefile
@@ -18,11 +18,15 @@ unittest-check:
 
 SUBDIRS = initdb pg_ctl pg_dump \
 	psql scripts pg_config pg_controldata pg_resetxlog pg_basebackup
+
 ifeq ($(PORTNAME), win32)
-SUBDIRS+=pgevent
+SUBDIRS += pgevent
+else
+ALWAYS_SUBDIRS += pgevent
 endif
 ifeq ($(enable_gpfdist), yes)
 SUBDIRS+=gpfdist
 endif
 
 $(recurse)
+$(recurse_always)

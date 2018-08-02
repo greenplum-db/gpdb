@@ -1,12 +1,12 @@
 /*-------------------------------------------------------------------------
  *
  * datetime.h
- *	  Definitions for the date/time and other date/time support code.
+ *	  Definitions for date/time support code.
  *	  The support code is shared with other date data types,
  *	   including abstime, reltime, date, and time.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/datetime.h
@@ -16,9 +16,7 @@
 #ifndef DATETIME_H
 #define DATETIME_H
 
-#include <limits.h>
-#include <math.h>
-
+#include "nodes/nodes.h"
 #include "utils/timestamp.h"
 
 /* this struct is declared in utils/tzparser.h: */
@@ -259,30 +257,6 @@ extern const int day_tab[2][13];
 #define isleap(y) (((y) % 4) == 0 && (((y) % 100) != 0 || ((y) % 400) == 0))
 
 
-/* Julian date support for date2j() and j2date()
- *
- * IS_VALID_JULIAN checks the minimum date exactly, but is a bit sloppy
- * about the maximum, since it's far enough out to not be especially
- * interesting.
- */
-
-#define JULIAN_MINYEAR (-4713)
-#define JULIAN_MINMONTH (11)
-#define JULIAN_MINDAY (24)
-#define JULIAN_MAXYEAR (5874898)
-
-#define IS_VALID_JULIAN(y,m,d) ((((y) > JULIAN_MINYEAR) \
-  || (((y) == JULIAN_MINYEAR) && (((m) > JULIAN_MINMONTH) \
-  || (((m) == JULIAN_MINMONTH) && ((d) >= JULIAN_MINDAY))))) \
- && ((y) < JULIAN_MAXYEAR))
-
-#define JULIAN_MAX (2147483494) /* == date2j(JULIAN_MAXYEAR, 1 ,1) */
-
-/* Julian-date equivalents of Day 0 in Unix and Postgres reckoning */
-#define UNIX_EPOCH_JDATE		2440588 /* == date2j(1970, 1, 1) */
-#define POSTGRES_EPOCH_JDATE	2451545 /* == date2j(2000, 1, 1) */
-
-
 /*
  * Datetime input parsing routines (ParseDateTime, DecodeDateTime, etc)
  * return zero or a positive value on success.	On failure, they return
@@ -321,14 +295,16 @@ extern void DateTimeParseError(int dterr, const char *str,
 extern int	DetermineTimeZoneOffset(struct pg_tm * tm, pg_tz *tzp);
 
 extern void EncodeDateOnly(struct pg_tm * tm, int style, char *str);
-extern void EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, int *tzp, int style, char *str);
-extern void EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, char *str);
+extern void EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, int style, char *str);
+extern void EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char *tzn, int style, char *str);
 extern void EncodeInterval(struct pg_tm * tm, fsec_t fsec, int style, char *str);
 
 extern int	DecodeSpecial(int field, char *lowtoken, int *val);
 extern int	DecodeUnits(int field, char *lowtoken, int *val);
 
 extern int	j2day(int jd);
+
+extern Node *TemporalTransform(int32 max_precis, Node *node);
 
 extern bool CheckDateTokenTables(void);
 

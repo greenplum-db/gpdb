@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/builtins.h
@@ -97,6 +97,12 @@ extern Datum has_tablespace_privilege_id_name(PG_FUNCTION_ARGS);
 extern Datum has_tablespace_privilege_id_id(PG_FUNCTION_ARGS);
 extern Datum has_tablespace_privilege_name(PG_FUNCTION_ARGS);
 extern Datum has_tablespace_privilege_id(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_name_name(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_name_id(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_id_name(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_id_id(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_name(PG_FUNCTION_ARGS);
+extern Datum has_type_privilege_id(PG_FUNCTION_ARGS);
 extern Datum pg_has_role_name_name(PG_FUNCTION_ARGS);
 extern Datum pg_has_role_name_id(PG_FUNCTION_ARGS);
 extern Datum pg_has_role_id_name(PG_FUNCTION_ARGS);
@@ -288,7 +294,7 @@ extern void pg_lltoa(int64 ll, char *a);
 
 /*
  *		Per-opclass comparison functions for new btrees.  These are
- *		stored in pg_amproc and defined in access/nbtree/nbtcompare.c
+ *		stored in pg_amproc; most are defined in access/nbtree/nbtcompare.c
  */
 extern Datum btboolcmp(PG_FUNCTION_ARGS);
 extern Datum btint2cmp(PG_FUNCTION_ARGS);
@@ -312,6 +318,19 @@ extern Datum bttintervalcmp(PG_FUNCTION_ARGS);
 extern Datum btcharcmp(PG_FUNCTION_ARGS);
 extern Datum btnamecmp(PG_FUNCTION_ARGS);
 extern Datum bttextcmp(PG_FUNCTION_ARGS);
+
+/*
+ *		Per-opclass sort support functions for new btrees.	Like the
+ *		functions above, these are stored in pg_amproc; most are defined in
+ *		access/nbtree/nbtcompare.c
+ */
+extern Datum btint2sortsupport(PG_FUNCTION_ARGS);
+extern Datum btint4sortsupport(PG_FUNCTION_ARGS);
+extern Datum btint8sortsupport(PG_FUNCTION_ARGS);
+extern Datum btfloat4sortsupport(PG_FUNCTION_ARGS);
+extern Datum btfloat8sortsupport(PG_FUNCTION_ARGS);
+extern Datum btoidsortsupport(PG_FUNCTION_ARGS);
+extern Datum btnamesortsupport(PG_FUNCTION_ARGS);
 
 /* float.c */
 extern PGDLLIMPORT int extra_float_digits;
@@ -454,6 +473,7 @@ extern Datum pg_database_size_name(PG_FUNCTION_ARGS);
 extern Datum pg_relation_size(PG_FUNCTION_ARGS);
 extern Datum pg_total_relation_size(PG_FUNCTION_ARGS);
 extern Datum pg_size_pretty(PG_FUNCTION_ARGS);
+extern Datum pg_size_pretty_numeric(PG_FUNCTION_ARGS);
 extern Datum pg_table_size(PG_FUNCTION_ARGS);
 extern Datum pg_indexes_size(PG_FUNCTION_ARGS);
 extern Datum pg_relation_filenode(PG_FUNCTION_ARGS);
@@ -490,6 +510,7 @@ extern Datum pg_rotate_logfile(PG_FUNCTION_ARGS);
 extern Datum pg_sleep(PG_FUNCTION_ARGS);
 extern Datum pg_get_keywords(PG_FUNCTION_ARGS);
 extern Datum pg_typeof(PG_FUNCTION_ARGS);
+extern Datum pg_collation_for(PG_FUNCTION_ARGS);
 
 /* oid.c */
 extern Datum oidin(PG_FUNCTION_ARGS);
@@ -551,6 +572,8 @@ extern Datum anynonarray_in(PG_FUNCTION_ARGS);
 extern Datum anynonarray_out(PG_FUNCTION_ARGS);
 extern Datum anyenum_in(PG_FUNCTION_ARGS);
 extern Datum anyenum_out(PG_FUNCTION_ARGS);
+extern Datum anyrange_in(PG_FUNCTION_ARGS);
+extern Datum anyrange_out(PG_FUNCTION_ARGS);
 extern Datum void_in(PG_FUNCTION_ARGS);
 extern Datum void_out(PG_FUNCTION_ARGS);
 extern Datum void_recv(PG_FUNCTION_ARGS);
@@ -655,6 +678,7 @@ extern Datum pg_get_ruledef(PG_FUNCTION_ARGS);
 extern Datum pg_get_ruledef_ext(PG_FUNCTION_ARGS);
 extern Datum pg_get_viewdef(PG_FUNCTION_ARGS);
 extern Datum pg_get_viewdef_ext(PG_FUNCTION_ARGS);
+extern Datum pg_get_viewdef_wrap(PG_FUNCTION_ARGS);
 extern Datum pg_get_viewdef_name(PG_FUNCTION_ARGS);
 extern Datum pg_get_viewdef_name_ext(PG_FUNCTION_ARGS);
 extern Datum pg_get_indexdef(PG_FUNCTION_ARGS);
@@ -769,6 +793,7 @@ extern Datum varcharrecv(PG_FUNCTION_ARGS);
 extern Datum varcharsend(PG_FUNCTION_ARGS);
 extern Datum varchartypmodin(PG_FUNCTION_ARGS);
 extern Datum varchartypmodout(PG_FUNCTION_ARGS);
+extern Datum varchar_transform(PG_FUNCTION_ARGS);
 extern Datum varchar(PG_FUNCTION_ARGS);
 
 /* varlena.c */
@@ -831,6 +856,8 @@ extern Datum unknownsend(PG_FUNCTION_ARGS);
 
 extern Datum pg_column_size(PG_FUNCTION_ARGS);
 
+extern Datum bytea_string_agg_transfn(PG_FUNCTION_ARGS);
+extern Datum bytea_string_agg_finalfn(PG_FUNCTION_ARGS);
 extern Datum string_agg_transfn(PG_FUNCTION_ARGS);
 extern Datum string_agg_finalfn(PG_FUNCTION_ARGS);
 
@@ -966,6 +993,9 @@ extern Datum macaddr_eq(PG_FUNCTION_ARGS);
 extern Datum macaddr_ge(PG_FUNCTION_ARGS);
 extern Datum macaddr_gt(PG_FUNCTION_ARGS);
 extern Datum macaddr_ne(PG_FUNCTION_ARGS);
+extern Datum macaddr_not(PG_FUNCTION_ARGS);
+extern Datum macaddr_and(PG_FUNCTION_ARGS);
+extern Datum macaddr_or(PG_FUNCTION_ARGS);
 extern Datum macaddr_trunc(PG_FUNCTION_ARGS);
 extern Datum hashmacaddr(PG_FUNCTION_ARGS);
 
@@ -976,6 +1006,7 @@ extern Datum numeric_recv(PG_FUNCTION_ARGS);
 extern Datum numeric_send(PG_FUNCTION_ARGS);
 extern Datum numerictypmodin(PG_FUNCTION_ARGS);
 extern Datum numerictypmodout(PG_FUNCTION_ARGS);
+extern Datum numeric_transform(PG_FUNCTION_ARGS);
 extern Datum numeric (PG_FUNCTION_ARGS);
 extern Datum numeric_abs(PG_FUNCTION_ARGS);
 extern Datum numeric_uminus(PG_FUNCTION_ARGS);
@@ -1189,6 +1220,26 @@ extern Datum window_lead_with_offset_and_default(PG_FUNCTION_ARGS);
 extern Datum window_first_value(PG_FUNCTION_ARGS);
 extern Datum window_last_value(PG_FUNCTION_ARGS);
 extern Datum window_nth_value(PG_FUNCTION_ARGS);
+
+/* access/spgist/spgquadtreeproc.c */
+extern Datum spg_quad_config(PG_FUNCTION_ARGS);
+extern Datum spg_quad_choose(PG_FUNCTION_ARGS);
+extern Datum spg_quad_picksplit(PG_FUNCTION_ARGS);
+extern Datum spg_quad_inner_consistent(PG_FUNCTION_ARGS);
+extern Datum spg_quad_leaf_consistent(PG_FUNCTION_ARGS);
+
+/* access/spgist/spgkdtreeproc.c */
+extern Datum spg_kd_config(PG_FUNCTION_ARGS);
+extern Datum spg_kd_choose(PG_FUNCTION_ARGS);
+extern Datum spg_kd_picksplit(PG_FUNCTION_ARGS);
+extern Datum spg_kd_inner_consistent(PG_FUNCTION_ARGS);
+
+/* access/spgist/spgtextproc.c */
+extern Datum spg_text_config(PG_FUNCTION_ARGS);
+extern Datum spg_text_choose(PG_FUNCTION_ARGS);
+extern Datum spg_text_picksplit(PG_FUNCTION_ARGS);
+extern Datum spg_text_inner_consistent(PG_FUNCTION_ARGS);
+extern Datum spg_text_leaf_consistent(PG_FUNCTION_ARGS);
 
 /* access/gin/ginarrayproc.c */
 extern Datum ginarrayextract(PG_FUNCTION_ARGS);

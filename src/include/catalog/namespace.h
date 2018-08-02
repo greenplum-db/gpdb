@@ -4,7 +4,7 @@
  *	  prototypes for functions in backend/catalog/namespace.c
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/namespace.h
@@ -49,14 +49,18 @@ typedef struct OverrideSearchPath
 typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
 										   Oid oldRelId, void *callback_arg);
 
-extern Oid	get_namespace_oid(const char *nspname, bool missing_ok);
-extern Oid	RangeVarGetRelid(const RangeVar *relation, bool failOK);
-extern Oid  RangeVarGetRelidExtended(const RangeVar *relation,
+#define RangeVarGetRelid(relation, lockmode, missing_ok) \
+	RangeVarGetRelidExtended(relation, lockmode, missing_ok, false, NULL, NULL)
+
+extern Oid RangeVarGetRelidExtended(const RangeVar *relation,
 						 LOCKMODE lockmode, bool missing_ok, bool nowait,
 						 RangeVarGetRelidCallback callback,
 						 void *callback_arg);
 extern Oid	RangeVarGetCreationNamespace(const RangeVar *newRelation);
-extern Oid	RangeVarGetAndCheckCreationNamespace(const RangeVar *newRelation);
+extern Oid RangeVarGetAndCheckCreationNamespace(RangeVar *newRelation,
+									 LOCKMODE lockmode,
+									 Oid *existing_relation_id);
+extern void RangeVarAdjustRelationPersistence(RangeVar *newRelation, Oid nspid);
 extern Oid	RelnameGetRelid(const char *relname);
 extern bool RelationIsVisible(Oid relid);
 
@@ -128,6 +132,7 @@ extern Oid	GetTempToastNamespace(void);
 extern void ResetTempTableNamespace(void);
 
 extern OverrideSearchPath *GetOverrideSearchPath(MemoryContext context);
+extern OverrideSearchPath *CopyOverrideSearchPath(OverrideSearchPath *path);
 extern void PushOverrideSearchPath(OverrideSearchPath *newpath);
 extern void PopOverrideSearchPath(void);
 

@@ -1,5 +1,5 @@
 test: select_for_update
-#test for global distributed deadlock detector
+# test for global distributed deadlock detector
 test: gdd/prepare
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/local-deadlock-03 gdd/non-lock-105 gdd/non-lock-107
 test: gdd/avoid-qd-deadlock

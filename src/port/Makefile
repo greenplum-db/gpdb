@@ -30,10 +30,9 @@ include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(top_builddir)/src/port -DFRONTEND $(CPPFLAGS)
 LIBS += $(PTHREAD_LIBS)
 
-OBJS = $(LIBOBJS) $(PG_CRC32C_OBJS) chklocale.o dirmod.o exec.o \
-	inet_net_ntop.o noblock.o path.o \
-	pgcheckdir.o pgmkdirp.o pgsleep.o pgstrcasecmp.o quotes.o qsort.o \
-	qsort_arg.o sprompt.o thread.o tar.o wait_error.o
+OBJS = $(LIBOBJS) $(PG_CRC32C_OBJS) chklocale.o dirmod.o erand48.o exec.o fls.o inet_net_ntop.o \
+	noblock.o path.o pgcheckdir.o pg_crc.o pgmkdirp.o pgsleep.o \
+	pgstrcasecmp.o quotes.o qsort.o qsort_arg.o sprompt.o thread.o tar.o wait_error.o
 
 # foo_srv.o and foo.o are both built from foo.c, but only foo.o has -DFRONTEND
 OBJS_SRV = $(OBJS:%.o=%_srv.o)
@@ -54,8 +53,7 @@ libpgport.a: $(OBJS)
 	$(AR) $(AROPT) $@ $^
 
 # thread.o needs PTHREAD_CFLAGS (but thread_srv.o does not)
-thread.o: thread.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(PTHREAD_CFLAGS) -c $<
+thread.o: CFLAGS+=$(PTHREAD_CFLAGS)
 
 # pg_crc32c_sse42.o and its _srv.o version need CFLAGS_SSE42
 pg_crc32c_sse42.o: CFLAGS+=$(CFLAGS_SSE42)
@@ -68,7 +66,14 @@ pg_crc32c_sse42_srv.o: CFLAGS+=$(CFLAGS_SSE42)
 libpgport_srv.a: $(OBJS_SRV)
 	$(AR) $(AROPT) $@ $^
 
-%_srv.o: %.c
+# Because this uses its own compilation rule, it doesn't use the
+# dependency tracking logic from Makefile.global.  To make sure that
+# dependency tracking works anyway for the *_srv.o files, depend on
+# their *.o siblings as well, which do have proper dependencies.  It's
+# a hack that might fail someday if there is a *_srv.o without a
+# corresponding *.o, but it works for now (and those would probably go
+# into src/backend/port/ anyway).
+%_srv.o: %.c %.o
 	$(CC) $(CFLAGS) $(subst -DFRONTEND,, $(CPPFLAGS)) -c $< -o $@
 
 $(OBJS_SRV): | submake-errcodes

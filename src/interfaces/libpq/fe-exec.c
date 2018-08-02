@@ -61,6 +61,8 @@ static bool static_std_strings = false;
 
 static PGEvent *dupEvents(PGEvent *events, int count);
 static bool pqAddTuple(PGresult *res, PGresAttValue *tup);
+static int pqStdRowProcessor(PGresult *res, const PGdataValue *columns,
+				  const char **errmsgp, void *param);
 static int PQsendQueryGuts(PGconn *conn,
 				const char *command,
 				const char *stmtName,
@@ -71,6 +73,8 @@ static int PQsendQueryGuts(PGconn *conn,
 				const int *paramFormats,
 				int resultFormat);
 static void parseInput(PGconn *conn);
+static int dummyRowProcessor(PGresult *res, const PGdataValue *columns,
+				  const char **errmsgp, void *param);
 static bool PQexecStart(PGconn *conn);
 static PGresult *PQexecFinish(PGconn *conn);
 static int PQsendDescribe(PGconn *conn, char desc_type,
@@ -1082,7 +1086,7 @@ pqRowProcessor(PGconn *conn, const char **errmsgp)
 	 * memory for gettext() to do anything.
 	 */
 	tup = (PGresAttValue *)
-		pqResultAlloc(res, nfields * sizeof(PGresAttValue), TRUE);
+			pqResultAlloc(res, nfields * sizeof(PGresAttValue), TRUE);
 	if (tup == NULL)
 		goto fail;
 
@@ -1135,11 +1139,128 @@ pqRowProcessor(PGconn *conn, const char **errmsgp)
 
 	return 1;
 
-fail:
+	fail:
 	/* release locally allocated PGresult, if we made one */
 	if (res != conn->result)
 		PQclear(res);
 	return 0;
+}
+
+/*
+ * PQsetRowProcessor
+ *	  Set function that copies row data out from the network buffer,
+ *	  along with a passthrough parameter for it.
+ */
+void
+PQsetRowProcessor(PGconn *conn, PQrowProcessor func, void *param)
+{
+	if (!conn)
+		return;
+
+	if (func)
+	{
+		/* set custom row processor */
+		conn->rowProcessor = func;
+		conn->rowProcessorParam = param;
+	}
+	else
+	{
+		/* set default row processor */
+		conn->rowProcessor = pqStdRowProcessor;
+		conn->rowProcessorParam = conn;
+	}
+}
+
+/*
+ * PQgetRowProcessor
+ *	  Get current row processor of PGconn.
+ *	  If param is not NULL, also store the passthrough parameter at *param.
+ */
+PQrowProcessor
+PQgetRowProcessor(const PGconn *conn, void **param)
+{
+	if (!conn)
+	{
+		if (param)
+			*param = NULL;
+		return NULL;
+	}
+
+	if (param)
+		*param = conn->rowProcessorParam;
+	return conn->rowProcessor;
+}
+
+/*
+ * pqStdRowProcessor
+ *	  Add the received row to the PGresult structure
+ *	  Returns 1 if OK, -1 if error occurred.
+ *
+ * Note: "param" should point to the PGconn, but we don't actually need that
+ * as of the current coding.
+ */
+static int
+pqStdRowProcessor(PGresult *res, const PGdataValue *columns,
+				  const char **errmsgp, void *param)
+{
+	int			nfields = res->numAttributes;
+	PGresAttValue *tup;
+	int			i;
+
+	if (columns == NULL)
+	{
+		/* New result set ... we have nothing to do in this function. */
+		return 1;
+	}
+
+	/*
+	 * Basically we just allocate space in the PGresult for each field and
+	 * copy the data over.
+	 *
+	 * Note: on malloc failure, we return -1 leaving *errmsgp still NULL,
+	 * which caller will take to mean "out of memory".	This is preferable to
+	 * trying to set up such a message here, because evidently there's not
+	 * enough memory for gettext() to do anything.
+	 */
+	tup = (PGresAttValue *)
+		pqResultAlloc(res, nfields * sizeof(PGresAttValue), TRUE);
+	if (tup == NULL)
+		return -1;
+
+	for (i = 0; i < nfields; i++)
+	{
+		int			clen = columns[i].len;
+
+		if (clen < 0)
+		{
+			/* null field */
+			tup[i].len = NULL_LEN;
+			tup[i].value = res->null_field;
+		}
+		else
+		{
+			bool		isbinary = (res->attDescs[i].format != 0);
+			char	   *val;
+
+			val = (char *) pqResultAlloc(res, clen + 1, isbinary);
+			if (val == NULL)
+				return -1;
+
+			/* copy and zero-terminate the data (even if it's binary) */
+			memcpy(val, columns[i].value, clen);
+			val[clen] = '\0';
+
+			tup[i].len = clen;
+			tup[i].value = val;
+		}
+	}
+
+	/* And add the tuple to the PGresult's tuple array */
+	if (!pqAddTuple(res, tup))
+		return -1;
+
+	/* Success */
+	return 1;
 }
 
 /*
@@ -1660,6 +1781,9 @@ PQconsumeInput(PGconn *conn)
  * parseInput: if appropriate, parse input data from backend
  * until input is exhausted or a stopping state is reached.
  * Note that this function will NOT attempt to read more data from the backend.
+ *
+ * Note: callers of parseInput must be prepared for a longjmp exit when we are
+ * in PGASYNC_BUSY state, since an external row processor might do that.
  */
 static void
 parseInput(PGconn *conn)
@@ -1807,6 +1931,49 @@ PQgetResult(PGconn *conn)
 	return res;
 }
 
+/*
+ * PQskipResult
+ *	  Get the next PGresult produced by a query, but discard any data rows.
+ *
+ * This is mainly useful for cleaning up after a longjmp out of a row
+ * processor, when resuming processing of the current query result isn't
+ * wanted.	Note that this is of little value in an async-style application,
+ * since any preceding calls to PQisBusy would have already called the regular
+ * row processor.
+ */
+PGresult *
+PQskipResult(PGconn *conn)
+{
+	PGresult   *res;
+	PQrowProcessor savedRowProcessor;
+
+	if (!conn)
+		return NULL;
+
+	/* temporarily install dummy row processor */
+	savedRowProcessor = conn->rowProcessor;
+	conn->rowProcessor = dummyRowProcessor;
+	/* no need to save/change rowProcessorParam */
+
+	/* fetch the next result */
+	res = PQgetResult(conn);
+
+	/* restore previous row processor */
+	conn->rowProcessor = savedRowProcessor;
+
+	return res;
+}
+
+/*
+ * Do-nothing row processor for PQskipResult
+ */
+static int
+dummyRowProcessor(PGresult *res, const PGdataValue *columns,
+				  const char **errmsgp, void *param)
+{
+	return 1;
+}
+
 
 /*
  * PQexec
@@ -1913,7 +2080,7 @@ PQexecStart(PGconn *conn)
 	 * Silently discard any prior query result that application didn't eat.
 	 * This is probably poor design, but it's here for backward compatibility.
 	 */
-	while ((result = PQgetResult(conn)) != NULL)
+	while ((result = PQskipResult(conn)) != NULL)
 	{
 		ExecStatusType resultStatus = result->resultStatus;
 

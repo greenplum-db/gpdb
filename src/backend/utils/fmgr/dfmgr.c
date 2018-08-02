@@ -3,7 +3,7 @@
  * dfmgr.c
  *	  Dynamic function manager code.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -432,7 +432,7 @@ incompatible_module_error(const char *libname,
 	ereport(ERROR,
 			(errmsg("incompatible library \"%s\": magic block mismatch",
 					libname),
-			 errdetail("%s", details.data)));
+			 errdetail_internal("%s", details.data)));
 }
 
 /*

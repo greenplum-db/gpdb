@@ -46,7 +46,7 @@
 					# (change requires restart)
 
 # If external_pid_file is not explicitly set, no extra PID file is written.
-#external_pid_file = '(none)'		# write an extra PID file
+#external_pid_file = ''			# write an extra PID file
 					# (change requires restart)
 
 
@@ -91,6 +91,10 @@
 #ssl_ciphers = 'ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH'	# allowed SSL ciphers
 					# (change requires restart)
 #ssl_renegotiation_limit = 512MB	# amount of data between renegotiations
+#ssl_cert_file = 'server.crt'		# (change requires restart)
+#ssl_key_file = 'server.key'		# (change requires restart)
+#ssl_ca_file = ''			# (change requires restart)
+#ssl_crl_file = ''			# (change requires restart)
 #password_encryption = on
 #db_user_namespace = off
 
@@ -127,6 +131,11 @@ max_prepared_transactions = 250		# can be 0 or more
 #maintenance_work_mem = 64MB		# min 1MB
 #max_stack_depth = 2MB			# min 100kB
 
+# - Disk -
+
+#temp_file_limit = -1			# limits per-session temp file space
+					# in kB, or -1 for no limit
+
 # - Kernel Resource Usage -
 
 #max_files_per_process = 1000		# min 25
@@ -143,7 +152,7 @@ max_prepared_transactions = 250		# can be 0 or more
 
 # - Asynchronous Behavior -
 
-#effective_io_concurrency = 1		# 1-1000. 0 disables prefetching
+#effective_io_concurrency = 1		# 1-1000; 0 disables prefetching
 
 #------------------------------------------------------------------------------
 # QUERY TUNING
@@ -153,6 +162,7 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #enable_bitmapscan = on
 #enable_indexscan = on
+#enable_indexonlyscan = on
 #enable_material = on
 #enable_seqscan = on
 #enable_tidscan = on
@@ -375,6 +385,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #track_activities = on
 #track_counts = off
+#track_io_timing = off
 #track_functions = none			# none, pl, all
 #track_activity_query_size = 1024 	# (change requires restart)
 #update_process_title = on
@@ -559,8 +570,8 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 # ERROR HANDLING
 #------------------------------------------------------------------------------
 
-#exit_on_error = off				# terminate session on any error?
-#restart_after_crash = on			# reinitialize after backend crash?
+#exit_on_error = off			# terminate session on any error?
+#restart_after_crash = on		# reinitialize after backend crash?
 
 
 #------------------------------------------------------------------------------

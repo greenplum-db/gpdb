@@ -10,7 +10,7 @@
  * via functions such as SubTransGetTopmostTransaction().
  *
  *
- *	Copyright (c) 2003-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2003-2012, PostgreSQL Global Development Group
  *	Author: Jan Wieck, Afilias USA INC.
  *	64-bit txids: Marko Kreen, Skype Technologies
  *
@@ -323,7 +323,8 @@ bad_format:
 /*
  * txid_current() returns int8
  *
- *		Return the current toplevel transaction ID as TXID
+ *	Return the current toplevel transaction ID as TXID
+ *	If the current transaction does not have one, one is assigned.
  */
 Datum
 txid_current(PG_FUNCTION_ARGS)

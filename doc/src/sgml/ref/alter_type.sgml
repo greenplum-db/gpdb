@@ -157,6 +157,8 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable> SET DEFAULT ENCODIN
    the type's schema.  (These restrictions enforce that altering the owner
    doesn't do anything you couldn't do by dropping and recreating the type.
    However, a superuser can alter ownership of any type anyway.)
+   To add an attribute or alter an attribute type, you must also
+   have <literal>USAGE</literal> privilege on the data type.
   </para>
  </refsect1>
 
@@ -314,8 +316,7 @@ ALTER TYPE compfoo ADD ATTRIBUTE f3 int;
    To add a new value to an enum type in a particular sort position:
 <programlisting>
 ALTER TYPE colors ADD VALUE 'orange' AFTER 'red';
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>

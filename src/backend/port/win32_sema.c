@@ -3,7 +3,7 @@
  * win32_sema.c
  *	  Microsoft Windows Win32 Semaphores Emulation
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32_sema.c
@@ -91,7 +91,7 @@ PGSemaphoreCreate(PGSemaphore sema)
 	}
 	else
 		ereport(PANIC,
-				(errmsg("could not create semaphore: error code %d", (int) GetLastError())));
+				(errmsg("could not create semaphore: error code %lu", GetLastError())));
 }
 
 /*
@@ -162,7 +162,7 @@ PGSemaphoreLock(PGSemaphore sema, bool interruptOK)
 
 	if (errno != 0)
 		ereport(FATAL,
-				(errmsg("could not lock semaphore: error code %d", (int) GetLastError())));
+		(errmsg("could not lock semaphore: error code %lu", GetLastError())));
 }
 
 /*
@@ -175,7 +175,7 @@ PGSemaphoreUnlock(PGSemaphore sema)
 {
 	if (!ReleaseSemaphore(*sema, 1, NULL))
 		ereport(FATAL,
-				(errmsg("could not unlock semaphore: error code %d", (int) GetLastError())));
+				(errmsg("could not unlock semaphore: error code %lu", GetLastError())));
 }
 
 /*
@@ -204,7 +204,7 @@ PGSemaphoreTryLock(PGSemaphore sema)
 
 	/* Otherwise we are in trouble */
 	ereport(FATAL,
-			(errmsg("could not try-lock semaphore: error code %d", (int) GetLastError())));
+	(errmsg("could not try-lock semaphore: error code %lu", GetLastError())));
 
 	/* keep compiler quiet */
 	return false;

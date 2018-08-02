@@ -3,7 +3,7 @@
  * path.c
  *	  portable path handling routines
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -100,6 +100,24 @@ skip_drive(const char *path)
 
 #define skip_drive(path)	(path)
 #endif
+
+/*
+ *	has_drive_prefix
+ *
+ * Return true if the given pathname has a drive prefix.
+ *
+ * GPDB_92_MERGE_FIXEME: To keep compiler happy, return
+ * false directly if not WIN32.
+ */
+bool
+has_drive_prefix(const char *path)
+{
+#ifdef WIN32
+	return skip_drive(path) != path;
+#else
+	return false;
+#endif
+}
 
 /*
  *	first_dir_separator
@@ -320,7 +338,7 @@ canonicalize_path(char *path)
 		}
 		else if (pending_strips > 0 && *spath != '\0')
 		{
-			/* trim a regular directory name cancelled by ".." */
+			/* trim a regular directory name canceled by ".." */
 			trim_directory(path);
 			pending_strips--;
 			/* foo/.. should become ".", not empty */
@@ -449,7 +467,7 @@ get_progname(const char *argv0)
 	if (progname == NULL)
 	{
 		fprintf(stderr, "%s: out of memory\n", nodir_name);
-		exit(1);				/* This could exit the postmaster */
+		abort();				/* This could exit the postmaster */
 	}
 
 #if defined(__CYGWIN__) || defined(WIN32)

@@ -4,7 +4,7 @@
  *	  POSTGRES internal predicate locking definitions.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/predicate_internals.h
@@ -57,9 +57,26 @@ typedef struct SERIALIZABLEXACT
 {
 	VirtualTransactionId vxid;	/* The executing process always has one of
 								 * these. */
+
+	/*
+	 * We use two numbers to track the order that transactions commit. Before
+	 * commit, a transaction is marked as prepared, and prepareSeqNo is set.
+	 * Shortly after commit, it's marked as committed, and commitSeqNo is set.
+	 * This doesn't give a strict commit order, but these two values together
+	 * are good enough for us, as we can always err on the safe side and
+	 * assume that there's a conflict, if we can't be sure of the exact
+	 * ordering of two commits.
+	 *
+	 * Note that a transaction is marked as prepared for a short period during
+	 * commit processing, even if two-phase commit is not used. But with
+	 * two-phase commit, a transaction can stay in prepared state for some
+	 * time.
+	 */
+	SerCommitSeqNo prepareSeqNo;
 	SerCommitSeqNo commitSeqNo;
-	union						/* these values are not both interesting at
-								 * the same time */
+
+	/* these values are not both interesting at the same time */
+	union
 	{
 		SerCommitSeqNo earliestOutConflictCommit;		/* when committed with
 														 * conflict out */
@@ -90,22 +107,22 @@ typedef struct SERIALIZABLEXACT
 	int			pid;			/* pid of associated process */
 } SERIALIZABLEXACT;
 
-#define SXACT_FLAG_ROLLED_BACK				0x00000001
-#define SXACT_FLAG_COMMITTED				0x00000002
+#define SXACT_FLAG_COMMITTED			0x00000001		/* already committed */
+#define SXACT_FLAG_PREPARED				0x00000002		/* about to commit */
+#define SXACT_FLAG_ROLLED_BACK			0x00000004		/* already rolled back */
+#define SXACT_FLAG_DOOMED				0x00000008		/* will roll back */
 /*
  * The following flag actually means that the flagged transaction has a
  * conflict out *to a transaction which committed ahead of it*.  It's hard
  * to get that into a name of a reasonable length.
  */
-#define SXACT_FLAG_CONFLICT_OUT				0x00000004
-#define SXACT_FLAG_READ_ONLY				0x00000008
-#define SXACT_FLAG_MARKED_FOR_DEATH			0x00000010
-#define SXACT_FLAG_DEFERRABLE_WAITING		0x00000020
-#define SXACT_FLAG_RO_SAFE					0x00000040
-#define SXACT_FLAG_RO_UNSAFE				0x00000080
-#define SXACT_FLAG_SUMMARY_CONFLICT_IN		0x00000100
-#define SXACT_FLAG_SUMMARY_CONFLICT_OUT		0x00000200
-#define SXACT_FLAG_PREPARED					0x00000400
+#define SXACT_FLAG_CONFLICT_OUT			0x00000010
+#define SXACT_FLAG_READ_ONLY			0x00000020
+#define SXACT_FLAG_DEFERRABLE_WAITING	0x00000040
+#define SXACT_FLAG_RO_SAFE				0x00000080
+#define SXACT_FLAG_RO_UNSAFE			0x00000100
+#define SXACT_FLAG_SUMMARY_CONFLICT_IN	0x00000200
+#define SXACT_FLAG_SUMMARY_CONFLICT_OUT 0x00000400
 
 /*
  * The following types are used to provide an ad hoc list for holding
@@ -133,8 +150,8 @@ typedef struct PredXactListData
 	/*
 	 * These global variables are maintained when registering and cleaning up
 	 * serializable transactions.  They must be global across all backends,
-	 * but are not needed outside the predicate.c source file. Protected
-	 * by SerializableXactHashLock.
+	 * but are not needed outside the predicate.c source file. Protected by
+	 * SerializableXactHashLock.
 	 */
 	TransactionId SxactGlobalXmin;		/* global xmin for active serializable
 										 * transactions */

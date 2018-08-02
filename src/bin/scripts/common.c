@@ -4,7 +4,7 @@
  *		Common support routines for bin/scripts/
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/common.c
@@ -93,7 +93,7 @@ handle_help_version_opts(int argc, char *argv[],
 PGconn *
 connectDatabase(const char *dbname, const char *pghost, const char *pgport,
 				const char *pguser, enum trivalue prompt_password,
-				const char *progname)
+				const char *progname, bool fail_ok)
 {
 	PGconn	   *conn;
 	char	   *password = NULL;
@@ -163,6 +163,11 @@ connectDatabase(const char *dbname, const char *pghost, const char *pgport,
 	/* check to see that the backend connection was successfully made */
 	if (PQstatus(conn) == CONNECTION_BAD)
 	{
+		if (fail_ok)
+		{
+			PQfinish(conn);
+			return NULL;
+		}
 		fprintf(stderr, _("%s: could not connect to database %s: %s"),
 				progname, dbname, PQerrorMessage(conn));
 		exit(1);
@@ -171,6 +176,31 @@ connectDatabase(const char *dbname, const char *pghost, const char *pgport,
 	return conn;
 }
 
+/*
+ * Try to connect to the appropriate maintenance database.
+ */
+PGconn *
+connectMaintenanceDatabase(const char *maintenance_db, const char *pghost,
+						   const char *pgport, const char *pguser,
+						   enum trivalue prompt_password,
+						   const char *progname)
+{
+	PGconn	   *conn;
+
+	/* If a maintenance database name was specified, just connect to it. */
+	if (maintenance_db)
+		return connectDatabase(maintenance_db, pghost, pgport, pguser,
+							   prompt_password, progname, false);
+
+	/* Otherwise, try postgres first and then template1. */
+	conn = connectDatabase("postgres", pghost, pgport, pguser, prompt_password,
+						   progname, true);
+	if (!conn)
+		conn = connectDatabase("template1", pghost, pgport, pguser,
+							   prompt_password, progname, false);
+
+	return conn;
+}
 
 /*
  * Run a query, return the results, exit program on failure.
@@ -289,10 +319,9 @@ yesno_prompt(const char *question)
 {
 	char		prompt[256];
 
-	/*
-	 * translator: This is a question followed by the translated options for
-	 * "yes" and "no".
-	 */
+	/*------
+	   translator: This is a question followed by the translated options for
+	   "yes" and "no". */
 	snprintf(prompt, sizeof(prompt), _("%s (%s/%s) "),
 			 _(question), _(PG_YESLETTER), _(PG_NOLETTER));
 
@@ -378,7 +407,7 @@ ResetCancelConn(void)
 
 #ifndef WIN32
 /*
- * Handle interrupt signals by cancelling the current command,
+ * Handle interrupt signals by canceling the current command,
  * if it's being executed through executeMaintenanceCommand(),
  * and thus has a cancelConn set.
  */

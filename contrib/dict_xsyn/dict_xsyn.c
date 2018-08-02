@@ -3,7 +3,7 @@
  * dict_xsyn.c
  *	  Extended synonym dictionary
  *
- * Copyright (c) 2007-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/dict_xsyn/dict_xsyn.c
@@ -15,7 +15,6 @@
 #include <ctype.h>
 
 #include "commands/defrem.h"
-#include "fmgr.h"
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_utils.h"
 
@@ -70,7 +69,7 @@ find_word(char *in, char **end)
 static int
 compare_syn(const void *a, const void *b)
 {
-	return strcmp(((Syn *) a)->key, ((Syn *) b)->key);
+	return strcmp(((const Syn *) a)->key, ((const Syn *) b)->key);
 }
 
 static void
@@ -247,7 +246,6 @@ dxsyn_lexize(PG_FUNCTION_ARGS)
 				res[nsyns].lexeme = pnstrdup(syn, end - syn);
 				res[nsyns].nvariant = 0;
 				res[nsyns].flags = 0;
-
 				nsyns++;
 			}
 

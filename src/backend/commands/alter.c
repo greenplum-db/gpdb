@@ -3,7 +3,7 @@
  * alter.c
  *	  Drivers for generic alter commands
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -34,11 +34,10 @@
 #include "commands/typecmds.h"
 #include "commands/user.h"
 #include "miscadmin.h"
-#include "parser/parse_clause.h"
 #include "tcop/utility.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -62,6 +61,10 @@ ExecRenameStmt(RenameStmt *stmt)
 			RenameCollation(stmt->object, stmt->newname);
 			break;
 
+		case OBJECT_CONSTRAINT:
+			RenameConstraint(stmt);
+			break;
+
 		case OBJECT_CONVERSION:
 			RenameConversion(stmt->object, stmt->newname);
 			break;
@@ -72,6 +75,14 @@ ExecRenameStmt(RenameStmt *stmt)
 
 		case OBJECT_EXTPROTOCOL:
 			RenameExtProtocol(stmt->subname, stmt->newname);
+			break;
+
+		case OBJECT_FDW:
+			RenameForeignDataWrapper(stmt->subname, stmt->newname);
+			break;
+
+		case OBJECT_FOREIGN_SERVER:
+			RenameForeignServer(stmt->subname, stmt->newname);
 			break;
 
 		case OBJECT_FUNCTION:
@@ -106,66 +117,18 @@ ExecRenameStmt(RenameStmt *stmt)
 		case OBJECT_SEQUENCE:
 		case OBJECT_VIEW:
 		case OBJECT_INDEX:
+		case OBJECT_FOREIGN_TABLE:
+			RenameRelation(stmt);
+			break;
+
 		case OBJECT_COLUMN:
 		case OBJECT_ATTRIBUTE:
+			renameatt(stmt);
+			break;
+
 		case OBJECT_TRIGGER:
-		case OBJECT_FOREIGN_TABLE:
-			{
-				Oid			relid;
-
-				/*
-				 * In the dispatcher, resolve the name to OID, and update the
-				 * stmt struct with the OID. In the QE, use the OID from the
-				 * struct (which was filled in by the dispatcher).
-				 */
-				if (Gp_role == GP_ROLE_DISPATCH)
-				{
-					CheckRelationOwnership(stmt->relation, true);
-
-					stmt->objid = RangeVarGetRelid(stmt->relation, false);
-				}
-				relid = stmt->objid;
-
-				switch (stmt->renameType)
-				{
-					case OBJECT_TABLE:
-					case OBJECT_SEQUENCE:
-					case OBJECT_VIEW:
-					case OBJECT_INDEX:
-					case OBJECT_FOREIGN_TABLE:
-						{
-							/*
-							 * RENAME TABLE requires that we (still) hold
-							 * CREATE rights on the containing namespace, as
-							 * well as ownership of the table.
-							 */
-							Oid			namespaceId = get_rel_namespace(relid);
-							AclResult	aclresult;
-
-							aclresult = pg_namespace_aclcheck(namespaceId,
-															  GetUserId(),
-															  ACL_CREATE);
-							if (aclresult != ACLCHECK_OK)
-								aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
-											get_namespace_name(namespaceId));
-
-							RenameRelation(relid, stmt->newname, stmt->renameType, stmt);
-							break;
-						}
-					case OBJECT_COLUMN:
-					case OBJECT_ATTRIBUTE:
-						renameatt(relid, stmt);
-						break;
-					case OBJECT_TRIGGER:
-						renametrig(relid,
-								   stmt->subname,		/* old att name */
-								   stmt->newname);		/* new att name */
-						break;
-					default:
-						 /* can't happen */ ;
-				}
-				break;
-			}
+			renametrig(stmt);
+			break;
 
 		case OBJECT_TSPARSER:
 			RenameTSParser(stmt->object, stmt->newname);
@@ -183,8 +146,9 @@ ExecRenameStmt(RenameStmt *stmt)
 			RenameTSConfiguration(stmt->object, stmt->newname);
 			break;
 
+		case OBJECT_DOMAIN:
 		case OBJECT_TYPE:
-			RenameType(stmt->object, stmt->newname);
+			RenameType(stmt);
 			break;
 
 		default:
@@ -250,9 +214,7 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 		case OBJECT_TABLE:
 		case OBJECT_VIEW:
 		case OBJECT_FOREIGN_TABLE:
-			CheckRelationOwnership(stmt->relation, true);
-			AlterTableNamespace(stmt->relation, stmt->newschema,
-								stmt->objectType, AccessExclusiveLock);
+			AlterTableNamespace(stmt);
 			break;
 
 		case OBJECT_TSPARSER:
@@ -273,7 +235,7 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 
 		case OBJECT_TYPE:
 		case OBJECT_DOMAIN:
-			AlterTypeNamespace(stmt->object, stmt->newschema);
+			AlterTypeNamespace(stmt->object, stmt->newschema, stmt->objectType);
 			break;
 
 		default:
@@ -449,8 +411,8 @@ AlterObjectNamespace(Relation rel, int oidCacheId, int nameCacheId,
 		if (Anum_owner <= 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-							(errmsg("must be superuser to set schema of %s",
-									getObjectDescriptionOids(classId, objid)))));
+					 (errmsg("must be superuser to set schema of %s",
+							 getObjectDescriptionOids(classId, objid)))));
 
 		/* Otherwise, must be owner of the existing object */
 		owner = heap_getattr(tup, Anum_owner, RelationGetDescr(rel), &isnull);
@@ -575,7 +537,7 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 
 		case OBJECT_TYPE:
 		case OBJECT_DOMAIN:		/* same as TYPE */
-			AlterTypeOwner(stmt->object, newowner);
+			AlterTypeOwner(stmt->object, newowner, stmt->objectType);
 			break;
 
 		case OBJECT_TSDICTIONARY:

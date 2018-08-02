@@ -69,3 +69,12 @@ DROP ROLE test_psql_du_e7;
 CREATE ROLE test_psql_du_e8 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gphdfs');
 \du test_psql_du_e8
 DROP ROLE test_psql_du_e8;
+
+-- Test replication and verbose. GPDB specific attributes are mixed with PG attributes.
+-- Our role describe code is easy to be buggy when we merge with PG upstream code.
+-- The tests here are used to double-confirm the correctness of our role describe code.
+CREATE ROLE test_psql_du_e9 WITH SUPERUSER REPLICATION;
+COMMENT ON ROLE test_psql_du_e9 IS 'test_role_description';
+\du test_psql_du_e9
+\du+ test_psql_du_e9
+DROP ROLE test_psql_du_e9;

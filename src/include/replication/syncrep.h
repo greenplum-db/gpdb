@@ -38,7 +38,7 @@ extern char *SyncRepStandbyNames;
 extern void SyncRepWaitForLSN(XLogRecPtr XactCommitLSN);
 
 /* called at backend exit */
-extern void SyncRepCleanupAtProcExit(int code, Datum arg);
+extern void SyncRepCleanupAtProcExit(void);
 
 /* called by wal sender */
 extern void SyncRepInitConfig(void);
@@ -48,7 +48,9 @@ extern void SyncRepReleaseWaiters(void);
 extern void SyncRepUpdateSyncStandbysDefined(void);
 
 /* called by various procs */
-extern int     SyncRepWakeQueue(bool all, int mode);
+extern int	SyncRepWakeQueue(bool all, int mode);
+
 extern bool check_synchronous_standby_names(char **newval, void **extra, GucSource source);
+extern void assign_synchronous_commit(int newval, void *extra);
 
 #endif   /* _SYNCREP_H */

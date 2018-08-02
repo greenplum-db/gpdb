@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  * src/bin/psql/mbprint.c
  *
@@ -12,7 +12,6 @@
 
 #include "postgres_fe.h"
 #include "mbprint.h"
-#include "libpq-fe.h"
 #ifndef PGSCRIPTS
 #include "settings.h"
 #endif
@@ -169,11 +168,12 @@ mb_utf_validate(unsigned char *pwcs)
  */
 
 /*
- * pg_wcswidth is the dumb width function. It assumes that everything will
- * only appear on one line. OTOH it is easier to use if this applies to you.
+ * pg_wcswidth is the dumb display-width function.
+ * It assumes that everything will appear on one line.
+ * OTOH it is easier to use than pg_wcssize if this applies to you.
  */
 int
-pg_wcswidth(const unsigned char *pwcs, size_t len, int encoding)
+pg_wcswidth(const char *pwcs, size_t len, int encoding)
 {
 	int			width = 0;
 
@@ -182,15 +182,16 @@ pg_wcswidth(const unsigned char *pwcs, size_t len, int encoding)
 		int			chlen,
 					chwidth;
 
-		chlen = PQmblen((const char *) pwcs, encoding);
-		if (chlen > len)
+		chlen = PQmblen(pwcs, encoding);
+		if (len < (size_t) chlen)
 			break;				/* Invalid string */
 
-		chwidth = PQdsplen((const char *) pwcs, encoding);
-
+		chwidth = PQdsplen(pwcs, encoding);
 		if (chwidth > 0)
 			width += chwidth;
+
 		pwcs += chlen;
+		len -= chlen;
 	}
 	return width;
 }
@@ -206,7 +207,7 @@ pg_wcswidth(const unsigned char *pwcs, size_t len, int encoding)
  * This MUST be kept in sync with pg_wcsformat!
  */
 void
-pg_wcssize(unsigned char *pwcs, size_t len, int encoding,
+pg_wcssize(const unsigned char *pwcs, size_t len, int encoding,
 		   int *result_width, int *result_height, int *result_format_size)
 {
 	int			w,
@@ -218,10 +219,10 @@ pg_wcssize(unsigned char *pwcs, size_t len, int encoding,
 
 	for (; *pwcs && len > 0; pwcs += chlen)
 	{
-		chlen = PQmblen((char *) pwcs, encoding);
+		chlen = PQmblen((const char *) pwcs, encoding);
 		if (len < (size_t) chlen)
 			break;
-		w = PQdsplen((char *) pwcs, encoding);
+		w = PQdsplen((const char *) pwcs, encoding);
 
 		if (chlen == 1)			/* single-byte char */
 		{
@@ -289,7 +290,7 @@ pg_wcssize(unsigned char *pwcs, size_t len, int encoding,
  * This MUST be kept in sync with pg_wcssize!
  */
 void
-pg_wcsformat(unsigned char *pwcs, size_t len, int encoding,
+pg_wcsformat(const unsigned char *pwcs, size_t len, int encoding,
 			 struct lineptr * lines, int count)
 {
 	int			w,
@@ -299,10 +300,10 @@ pg_wcsformat(unsigned char *pwcs, size_t len, int encoding,
 
 	for (; *pwcs && len > 0; pwcs += chlen)
 	{
-		chlen = PQmblen((char *) pwcs, encoding);
+		chlen = PQmblen((const char *) pwcs, encoding);
 		if (len < (size_t) chlen)
 			break;
-		w = PQdsplen((char *) pwcs, encoding);
+		w = PQdsplen((const char *) pwcs, encoding);
 
 		if (chlen == 1)			/* single-byte char */
 		{
@@ -384,7 +385,7 @@ unsigned char *
 mbvalidate(unsigned char *pwcs, int encoding)
 {
 	if (encoding == PG_UTF8)
-		mb_utf_validate((unsigned char *) pwcs);
+		mb_utf_validate(pwcs);
 	else
 	{
 		/*

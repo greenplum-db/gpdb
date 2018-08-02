@@ -851,7 +851,7 @@ select plpgsql_uc_test();
 NOTICE:  3, 3
 ERROR:  cursor "c" is not a simply updatable scan of table "uctest3"
 CONTEXT:  SQL statement "update uctest3 set i = i * 100, j = r.j * 2 where current of c"
-PL/pgSQL function "plpgsql_uc_test" line 9 at SQL statement
+PL/pgSQL function plpgsql_uc_test() line 9 at SQL statement
 select * from uctest3;
  i | j 
 ---+---

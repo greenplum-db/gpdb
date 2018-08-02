@@ -907,11 +907,11 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo select i, i%6, repeat('aaaa', 100000) FROM generate_series(1, 100)i;
 ANALYZE foo;
 SELECT * FROM pg_stats WHERE tablename like 'foo%' and attname = 'c' ORDER BY attname,tablename;
- schemaname |  tablename  | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
- public     | foo         | c       | t         |         0 |      1024 |          0 |                  |                   |                  |            
- public     | foo_1_prt_1 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |            
- public     | foo_1_prt_2 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |            
+ schemaname |  tablename  | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+ public     | foo         | c       | t         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
+ public     | foo_1_prt_1 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
+ public     | foo_1_prt_2 | c       | f         |         0 |      1024 |          0 |                  |                   |                  |             |                   |                        | 
 (3 rows)
 
 -- Test ANALYZE full scan HLL
@@ -950,7 +950,7 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1;
 ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -994,7 +994,7 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
 ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
  tablename | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -----------+---------+-----------+------------+------------------+-------------------+------------------
@@ -1013,7 +1013,7 @@ UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
 ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -1032,7 +1032,7 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1(c);
 ANALYZE MERGE foo(c);
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -1048,7 +1048,7 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 -- Merge fails as all partitions are empty and are not analyzed
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
@@ -1057,7 +1057,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:473)
+ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 -- Merge errors on partition of a table
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
@@ -1080,7 +1080,7 @@ INSERT INTO FOO SELECT i,i%6 FROM generate_series(1,1000)i;
 ANALYZE foo_1_prt_1;
 ANALYZE FULLSCAN foo_1_prt_2;
 ANALYZE MERGE foo;
-ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:3924)
+ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)
 HINT:  Re-run ANALYZE or ANALYZE FULLSCAN
 -- Test merging of stats for a newly added partition
 -- Do not collect samples while merging stats

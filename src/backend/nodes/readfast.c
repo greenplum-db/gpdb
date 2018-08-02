@@ -227,7 +227,6 @@ _readQuery(void)
 	READ_BOOL_FIELD(canSetTag);
 	READ_NODE_FIELD(utilityStmt);
 	READ_INT_FIELD(resultRelation);
-	READ_NODE_FIELD(intoClause);
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
@@ -254,6 +253,7 @@ _readQuery(void)
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
 	READ_NODE_FIELD(constraintDeps);
+	READ_BOOL_FIELD(isCTAS);
 
 	/* policy not serialized */
 
@@ -449,6 +449,13 @@ _readConstraint(void)
 		break;
 
 		case CONSTR_CHECK:
+			/*
+			 * GPDB: need dispatch skip_validation and is_no_inherit for statement like:
+			 * ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11) NOT VALID;
+			 * ALTER TABLE constraint_rename_test ADD CONSTRAINT con2 CHECK NO INHERIT (b > 0);
+			 */
+			READ_BOOL_FIELD(skip_validation);
+			READ_BOOL_FIELD(is_no_inherit);
 		case CONSTR_DEFAULT:
 			READ_NODE_FIELD(raw_expr);
 			READ_STRING_FIELD(cooked_expr);
@@ -514,24 +521,12 @@ _readDropStmt(void)
 	READ_LOCALS(DropStmt);
 
 	READ_NODE_FIELD(objects);
+	READ_NODE_FIELD(arguments);
 	READ_ENUM_FIELD(removeType,ObjectType);
 	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
 	READ_BOOL_FIELD(missing_ok);
 	READ_BOOL_FIELD(bAllowPartn);
-
-	READ_DONE();
-}
-
-static DropPropertyStmt *
-_readDropPropertyStmt(void)
-{
-	READ_LOCALS(DropPropertyStmt);
-
-	READ_NODE_FIELD(relation);
-	READ_STRING_FIELD(property);
-	READ_ENUM_FIELD(removeType,ObjectType);
-	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
-	READ_BOOL_FIELD(missing_ok);
+	READ_BOOL_FIELD(concurrent);
 
 	READ_DONE();
 }
@@ -622,6 +617,7 @@ _readAlterObjectSchemaStmt(void)
 	READ_NODE_FIELD(objarg);
 	READ_STRING_FIELD(addname);
 	READ_STRING_FIELD(newschema);
+	READ_BOOL_FIELD(missing_ok);
 	READ_ENUM_FIELD(objectType,ObjectType); Assert(local_node->objectType <= OBJECT_VIEW);
 
 	READ_DONE();
@@ -666,7 +662,6 @@ _readSelectStmt(void)
 	READ_BOOL_FIELD(all);
 	READ_NODE_FIELD(larg);
 	READ_NODE_FIELD(rarg);
-	READ_NODE_FIELD(distributedBy);
 	READ_DONE();
 }
 
@@ -1174,6 +1169,17 @@ _readCreateStmt(void)
 	READ_DONE();
 }
 
+static CreateRangeStmt *
+_readCreateRangeStmt(void)
+{
+	READ_LOCALS(CreateRangeStmt);
+
+	READ_NODE_FIELD(typeName);
+	READ_NODE_FIELD(params);
+
+	READ_DONE();
+}
+
 static CreateForeignTableStmt *
 _readCreateForeignTableStmt(void)
 {
@@ -1359,19 +1365,6 @@ _readCreateExternalStmt(void)
 	READ_DONE();
 }
 
-static DropPLangStmt *
-_readDropPLangStmt(void)
-{
-	READ_LOCALS(DropPLangStmt);
-
-	READ_STRING_FIELD(plname);
-	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-
-}
-
 static AlterDomainStmt *
 _readAlterDomainStmt(void)
 {
@@ -1382,6 +1375,7 @@ _readAlterDomainStmt(void)
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(def);
 	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
+	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -1393,19 +1387,6 @@ _readAlterDefaultPrivilegesStmt(void)
 
 	READ_NODE_FIELD(options);
 	READ_NODE_FIELD(action);
-
-	READ_DONE();
-}
-
-static RemoveFuncStmt *
-_readRemoveFuncStmt(void)
-{
-	READ_LOCALS(RemoveFuncStmt);
-	READ_ENUM_FIELD(kind,ObjectType); Assert(local_node->kind <= OBJECT_VIEW);
-	READ_NODE_FIELD(name);
-	READ_NODE_FIELD(args);
-	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
-	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -1489,7 +1470,6 @@ _readPlannedStmt(void)
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(resultRelations);
 	READ_NODE_FIELD(utilityStmt);
-	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(subplans);
 	READ_BITMAPSET_FIELD(rewindPlanIDs);
 
@@ -1508,6 +1488,7 @@ _readPlannedStmt(void)
 	READ_NODE_FIELD(intoPolicy);
 
 	READ_UINT64_FIELD(query_mem);
+	READ_NODE_FIELD(intoClause);
 	READ_DONE();
 }
 
@@ -1520,7 +1501,7 @@ _readQueryDispatchDesc(void)
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
 	READ_NODE_FIELD(cursorPositions);
-	READ_BOOL_FIELD(validate_reloptions);
+	READ_BOOL_FIELD(useChangedAOOpts);
 	READ_DONE();
 }
 
@@ -1766,6 +1747,20 @@ _readExternalScan(void)
 	READ_DONE();
 }
 
+static ForeignScan *
+_readForeignScan(void)
+{
+	READ_LOCALS(ForeignScan);
+
+	readScanInfo((Scan *)local_node);
+
+	READ_NODE_FIELD(fdw_exprs);
+	READ_NODE_FIELD(fdw_private);
+	READ_BOOL_FIELD(fsSystemCol);
+
+	READ_DONE();
+}
+
 static LogicalIndexInfo *
 readLogicalIndexInfo(void)
 {
@@ -1799,6 +1794,18 @@ readIndexScanFields(IndexScan *local_node)
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
 }
 
+static void
+readIndexOnlyScanFields(IndexOnlyScan *local_node)
+{
+	readScanInfo((Scan *)local_node);
+
+	READ_OID_FIELD(indexid);
+	READ_NODE_FIELD(indexqual);
+	READ_NODE_FIELD(indexorderby);
+	READ_NODE_FIELD(indextlist);
+	READ_ENUM_FIELD(indexorderdir, ScanDirection);
+}
+
 /*
  * _readIndexScan
  */
@@ -1808,6 +1815,16 @@ _readIndexScan(void)
 	READ_LOCALS(IndexScan);
 
 	readIndexScanFields(local_node);
+
+	READ_DONE();
+}
+
+static IndexOnlyScan *
+_readIndexOnlyScan(void)
+{
+	READ_LOCALS(IndexOnlyScan);
+
+	readIndexOnlyScanFields(local_node);
 
 	READ_DONE();
 }
@@ -1931,8 +1948,6 @@ _readSubqueryScan(void)
 	readScanInfo((Scan *)local_node);
 
 	READ_NODE_FIELD(subplan);
-	/* Planner-only: subrtable -- don't serialize. */
-	READ_NODE_FIELD(subrowmark);
 
 	READ_DONE();
 }
@@ -2850,18 +2865,6 @@ _readAlterFdwStmt(void)
 	READ_DONE();
 }
 
-static DropFdwStmt *
-_readDropFdwStmt(void)
-{
-	READ_LOCALS(DropFdwStmt);
-
-	READ_STRING_FIELD(fdwname);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-
-	READ_DONE();
-}
-
 static CreateForeignServerStmt *
 _readCreateForeignServerStmt(void)
 {
@@ -2885,18 +2888,6 @@ _readAlterForeignServerStmt(void)
 	READ_STRING_FIELD(version);
 	READ_NODE_FIELD(options);
 	READ_BOOL_FIELD(has_version);
-
-	READ_DONE();
-}
-
-static DropForeignServerStmt *
-_readDropForeignServerStmt(void)
-{
-	READ_LOCALS(DropForeignServerStmt);
-
-	READ_STRING_FIELD(servername);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
 
 	READ_DONE();
 }
@@ -3180,6 +3171,9 @@ readNodeBinary(void)
 			case T_IndexScan:
 				return_value = _readIndexScan();
 				break;
+			case T_IndexOnlyScan:
+				return_value = _readIndexOnlyScan();
+				break;
 			case T_DynamicIndexScan:
 				return_value = _readDynamicIndexScan();
 				break;
@@ -3212,6 +3206,9 @@ readNodeBinary(void)
 				break;
 			case T_ValuesScan:
 				return_value = _readValuesScan();
+				break;
+			case T_ForeignScan:
+				return_value = _readForeignScan();
 				break;
 			case T_Join:
 				return_value = _readJoin();
@@ -3507,9 +3504,6 @@ readNodeBinary(void)
 			case T_FunctionParameter:
 				return_value = _readFunctionParameter();
 				break;
-			case T_RemoveFuncStmt:
-				return_value = _readRemoveFuncStmt();
-				break;
 			case T_AlterFunctionStmt:
 				return_value = _readAlterFunctionStmt();
 				break;
@@ -3524,14 +3518,14 @@ readNodeBinary(void)
 			case T_CreateEnumStmt:
 				return_value = _readCreateEnumStmt();
 				break;
+			case T_CreateRangeStmt:
+				return_value = _readCreateRangeStmt();
+				break;
 			case T_AlterEnumStmt:
 				return_value = _readAlterEnumStmt();
 				break;
 			case T_CreateCastStmt:
 				return_value = _readCreateCastStmt();
-				break;
-			case T_DropCastStmt:
-				return_value = _readDropCastStmt();
 				break;
 			case T_CreateOpClassStmt:
 				return_value = _readCreateOpClassStmt();
@@ -3544,12 +3538,6 @@ readNodeBinary(void)
 				break;
 			case T_AlterOpFamilyStmt:
 				return_value = _readAlterOpFamilyStmt();
-				break;
-			case T_RemoveOpClassStmt:
-				return_value = _readRemoveOpClassStmt();
-				break;
-			case T_RemoveOpFamilyStmt:
-				return_value = _readRemoveOpFamilyStmt();
 				break;
 			case T_CreateConversionStmt:
 				return_value = _readCreateConversionStmt();
@@ -3564,9 +3552,6 @@ readNodeBinary(void)
 				break;
 			case T_DropStmt:
 				return_value = _readDropStmt();
-				break;
-			case T_DropPropertyStmt:
-				return_value = _readDropPropertyStmt();
 				break;
 
 			case T_DropOwnedStmt:
@@ -3788,9 +3773,6 @@ readNodeBinary(void)
 			case T_CreatePLangStmt:
 				return_value = _readCreatePLangStmt();
 				break;
-			case T_DropPLangStmt:
-				return_value = _readDropPLangStmt();
-				break;
 			case T_VacuumStmt:
 				return_value = _readVacuumStmt();
 				break;
@@ -3898,17 +3880,11 @@ readNodeBinary(void)
 			case T_CreateUserMappingStmt:
 				return_value = _readCreateUserMappingStmt();
 				break;
-			case T_DropForeignServerStmt:
-				return_value = _readDropForeignServerStmt();
-				break;
 			case T_AlterForeignServerStmt:
 				return_value = _readAlterForeignServerStmt();
 				break;
 			case T_CreateForeignServerStmt:
 				return_value = _readCreateForeignServerStmt();
-				break;
-			case T_DropFdwStmt:
-				return_value = _readDropFdwStmt();
 				break;
 			case T_AlterFdwStmt:
 				return_value = _readAlterFdwStmt();

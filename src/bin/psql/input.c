@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  * src/bin/psql/input.c
  */
@@ -45,12 +45,7 @@ static int	history_lines_added;
 #define NL_IN_HISTORY	0x01
 #endif
 
-#ifdef HAVE_ATEXIT
 static void finishInput(void);
-#else
-/* designed for use with on_exit() */
-static void finishInput(int, void *);
-#endif
 
 
 /*
@@ -290,6 +285,16 @@ initializeInput(int flags)
 		history_lines_added = 0;
 
 		histfile = GetVariable(pset.vars, "HISTFILE");
+
+		if (histfile == NULL)
+		{
+			char	   *envhist;
+
+			envhist = getenv("PSQL_HISTORY");
+			if (envhist != NULL && strlen(envhist) > 0)
+				histfile = envhist;
+		}
+
 		if (histfile == NULL)
 		{
 			if (get_home_path(home))
@@ -313,11 +318,7 @@ initializeInput(int flags)
 	}
 #endif
 
-#ifdef HAVE_ATEXIT
 	atexit(finishInput);
-#else
-	on_exit(finishInput, NULL);
-#endif
 }
 
 
@@ -412,11 +413,7 @@ saveHistory(char *fname, int max_lines, bool appendFlag, bool encodeFlag)
 
 
 static void
-#ifdef HAVE_ATEXIT
 finishInput(void)
-#else
-finishInput(int exitstatus, void *arg)
-#endif
 {
 #ifdef USE_READLINE
 	if (useHistory && psql_history)

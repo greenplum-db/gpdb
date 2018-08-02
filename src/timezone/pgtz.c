@@ -17,11 +17,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-/*
- * GPDB_92_MERGE_FIXME: Remove timestamp.h and include datatype/timestamp.h
- * instead when a7801b62f21bd051444bd1119cd3745ecc8e14ec has been merged.
- */
-#include "timestamp.h"
+#include "datatype/timestamp.h"
 #include "miscadmin.h"
 #include "pgtz.h"
 #include "storage/fd.h"
@@ -316,6 +312,11 @@ pg_tzset(const char *name)
 	return &tzp->tz;
 }
 
+#if 0
+/*
+ * GPDB_94_MERGE_FIXME: uncomment this code after merging in
+ * 631dc390f49909a5c8ebd6002cfb2bcee5415a9d from 9.4 dev
+ */
 /*
  * Load a fixed-GMT-offset timezone.
  * This is used for SQL-spec SET TIME ZONE INTERVAL 'foo' cases.
@@ -358,6 +359,7 @@ pg_tzset_offset(long gmtoffset)
 
 	return pg_tzset(tzname);
 }
+#endif
 
 /*
  * Initialize timezone library

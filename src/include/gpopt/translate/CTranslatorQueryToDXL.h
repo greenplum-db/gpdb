@@ -420,7 +420,7 @@ namespace gpdxl
 
 		    // translate a CTAS query
 			CDXLNode *PdxlnCTAS();
-			
+
 			// translate CTAS storage options
 			CDXLCtasStorageOptions::DrgPctasOpt *Pdrgpctasopt(List *plOptions, IMDRelation::Erelstoragetype *perelstoragetype);
 			

@@ -7,7 +7,7 @@
 #    header files.  The .bki files are used to initialize the postgres
 #    template database.
 #
-# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/catalog/genbki.pl
@@ -370,7 +370,8 @@ sub emit_pgattr_row
         attislocal    => 't',
         attinhcount   => '0',
         attacl        => '_null_',
-        attoptions    => '_null_'
+        attoptions    => '_null_',
+        attfdwoptions => '_null_'
     );
     return {%PGATTR_DEFAULTS, %row};
 }
@@ -401,6 +402,7 @@ sub emit_schemapg_row
     # Only the fixed-size portions of the descriptors are ever used.
     delete $row->{attacl};
     delete $row->{attoptions};
+    delete $row->{attfdwoptions};
 
     # Expand booleans from 'f'/'t' to 'false'/'true'.
     # Some values might be other macros (eg FLOAT4PASSBYVAL), don't change.

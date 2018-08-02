@@ -12,6 +12,9 @@
 -- m/CONTEXT\:\s+COPY sreh_copy\,\s+line/
 -- s/line \d+(.*)/line SOME_LINE/
 --
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+--
 -- end_matchsubs
 
 -- ###########################################################

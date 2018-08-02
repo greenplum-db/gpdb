@@ -52,21 +52,25 @@ cdbpath_contains_wts(Path *path);
 static inline double
 cdbpath_rows(PlannerInfo *root, Path *path)
 {
-    double rows;
-    Path  *p;
+	/* GPDB_92_MERGE_FIXME: Maybe we should think about removing this function.
+	 * That will eliminate merge risk since pg upstream (since 9.2) uses
+	 * path->rows directly.
+	 */
+	Path  *p;
 
 	p = (IsA(path, CdbMotionPath))  ? ((CdbMotionPath *)path)->subpath
 		: path;
 
-	rows = IsA(p, BitmapHeapPath)   ? ((BitmapHeapPath *)p)->rows
-		: IsA(p, BitmapAppendOnlyPath) ? ((BitmapAppendOnlyPath *)p)->rows
-		: IsA(p, IndexPath)        ? ((IndexPath *)p)->rows
-		: IsA(p, UniquePath)       ? ((UniquePath *)p)->rows
-		: CdbPathLocus_IsReplicated(path->locus)
-		? path->parent->rows * root->config->cdbpath_segments
-		: path->parent->rows;
+	if (IsA(p, BitmapHeapPath) ||
+			IsA(p, BitmapAppendOnlyPath) ||
+			IsA(p, IndexPath) ||
+			IsA(p, UniquePath))
+		return p->rows;
 
-    return rows;
+	if (CdbPathLocus_IsReplicated(path->locus))
+		return  (path->parent->rows * root->config->cdbpath_segments);
+
+	return  path->parent->rows;
 }                               /* cdbpath_rows */
 
 #endif   /* CDBPATH_H */

@@ -26,7 +26,7 @@ CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED] TABLE [ IF NOT EXISTS ] 
 [ ENCODING ( storage_directive [,...] ) ]
 ] 
    | table_constraint
-   | LIKE other_table [{INCLUDING | EXCLUDING} 
+   | LIKE source_table [{INCLUDING | EXCLUDING}
                       {DEFAULTS | CONSTRAINTS}] ...}
    [, ... ] ]
    [column_reference_storage_directive [, ... ]
@@ -87,7 +87,7 @@ where column_constraint is:
             [WITH ( FILLFACTOR = value )]
    | PRIMARY KEY [USING INDEX TABLESPACE tablespace] 
                  [WITH ( FILLFACTOR = value )]
-   | CHECK ( expression )
+   | CHECK [ NO INHERIT ] ( expression )
    | DEFAULT default_expr
 and table_constraint is:
    [CONSTRAINT constraint_name]
@@ -97,7 +97,7 @@ and table_constraint is:
    | PRIMARY KEY ( column_name [, ... ] ) 
                  [USING INDEX TABLESPACE tablespace] 
                  [WITH ( FILLFACTOR=value )] 
-   | CHECK ( expression )
+   | CHECK [ NO INHERIT ] ( expression )
 where partition_type is:
     LIST
   | RANGE
@@ -186,11 +186,18 @@ Where column_reference_storage_directive is:
    
    "Column-level Compression" in the Greenplum Database Administrator Guide.
   </para>
+
   <para>
    Note: You cannot create a table with both column encodings
  
    and compression parameters in a WITH clause.
-  </para?
+  </para>
+
+  <para>
+   To be able to create a table, you must have <literal>USAGE</literal>
+   privilege on all column types or the type in the <literal>OF</literal>
+   clause, respectively.
+  </para>
  </refsect1>
 
  <refsect1>
@@ -224,7 +231,8 @@ Where column_reference_storage_directive is:
      <para>
       Optionally, <literal>GLOBAL</literal> or <literal>LOCAL</literal>
       can be written before <literal>TEMPORARY</> or <literal>TEMP</>.
-      This makes no difference in <productname>PostgreSQL</>, but see
+      This presently makes no difference in <productname>PostgreSQL</>
+      and is deprecated; see
       <xref linkend="sql-createtable-compatibility"
       endterm="sql-createtable-compatibility-title">.
      </para>
@@ -355,13 +363,13 @@ Where column_reference_storage_directive is:
       error will be reported.
      </para>
 
-     <para>
-      <literal>CHECK</> constraints are merged in essentially the same way as
+     <para><literal>CHECK</> constraints are merged in essentially the same way as
       columns: if multiple parent tables and/or the new table definition
       contain identically-named <literal>CHECK</> constraints, these
       constraints must all have the same check expression, or an error will be
       reported.  Constraints having the same name and expression will
-      be merged into one copy.  Notice that an unnamed <literal>CHECK</>
+      be merged into one copy.  A constraint marked <literal>NO INHERIT</> in a
+      parent will not be considered.  Notice that an unnamed <literal>CHECK</>
       constraint in the new table will never be merged, since a unique name
       will always be chosen for it.
      </para>
@@ -374,7 +382,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>LIKE <replaceable>parent_table</replaceable> [ <replaceable>like_option</replaceable> ... ]</literal></term>
+    <term><literal>LIKE <replaceable>source_table</replaceable> [ <replaceable>like_option</replaceable> ... ]</literal></term>
     <listitem>
      <para>
       The <literal>LIKE</literal> clause specifies a table from which
@@ -407,8 +415,7 @@ Where column_reference_storage_directive is:
       table, unless the <literal>INCLUDING INDEXES</literal> clause is
       specified.
      </para>
-     <para>
-      <literal>STORAGE</> settings for the copied column definitions will only
+     <para><literal>STORAGE</> settings for the copied column definitions will only
       be copied if <literal>INCLUDING STORAGE</literal> is specified.  The
       default behavior is to exclude <literal>STORAGE</> settings, resulting
       in the copied columns in the new table having type-specific default
@@ -421,8 +428,7 @@ Where column_reference_storage_directive is:
       is specified. The default behavior is to exclude comments, resulting in
       the copied columns and constraints in the new table having no comments.
      </para>
-     <para>
-      <literal>INCLUDING ALL</literal> is an abbreviated form of
+     <para><literal>INCLUDING ALL</literal> is an abbreviated form of
       <literal>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS</literal>.
      </para>
      <para>
@@ -431,6 +437,11 @@ Where column_reference_storage_directive is:
       named columns and constraints.
       If the same name is specified explicitly or in another
       <literal>LIKE</literal> clause, an error is signalled.
+     </para>
+     <para>
+      The <literal>LIKE</literal> clause can also be used to copy columns from
+      views, foreign tables, or composite types.  Inapplicable options (e.g., <literal>INCLUDING
+      INDEXES</literal> from a view) are ignored.
      </para>
     </listitem>
    </varlistentry>
@@ -483,7 +494,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>CHECK ( <replaceable class="PARAMETER">expression</replaceable> )</literal></term>
+    <term><literal>CHECK [ NO INHERIT ] ( <replaceable class="PARAMETER">expression</replaceable> )</literal></term>
     <listitem>
      <para>
       The <literal>CHECK</> clause specifies an expression producing a
@@ -501,6 +512,11 @@ Where column_reference_storage_directive is:
       Currently, <literal>CHECK</literal> expressions cannot contain
       subqueries nor refer to variables other than columns of the
       current row.
+     </para>
+
+     <para>
+      A constraint marked with <literal>NO INHERIT</> will not propagate to
+      child tables.
      </para>
     </listitem>
    </varlistentry>
@@ -619,7 +635,8 @@ Where column_reference_storage_directive is:
       cannot be used.  Although it's allowed, there is little point in using
       B-tree or hash indexes with an exclusion constraint, because this
       does nothing that an ordinary unique constraint doesn't do better.
-      So in practice the access method will always be <acronym>GiST</>.
+      So in practice the access method will always be <acronym>GiST</> or
+      <acronym>SP-GiST</>.
      </para>
 
      <para>
@@ -874,8 +891,7 @@ Where column_reference_storage_directive is:
          </para>
         </listitem>
        </varlistentry>
-      </variablelist>
-     </para>
+      </variablelist></para>
     </listitem>
    </varlistentry>
 
@@ -1137,9 +1153,7 @@ CREATE TABLE films (
     kind        varchar(10),
     len         interval hour to minute
 );
-</programlisting>
 
-<programlisting>
 CREATE TABLE distributors (
      did    integer PRIMARY KEY DEFAULT nextval('serial'),
      name   varchar(40) NOT NULL CHECK (name &lt;&gt; '')
@@ -1227,9 +1241,7 @@ CREATE TABLE distributors (
     name    varchar(40),
     PRIMARY KEY(did)
 );
-</programlisting>
 
-<programlisting>
 CREATE TABLE distributors (
     did     integer PRIMARY KEY,
     name    varchar(40)
@@ -1335,8 +1347,7 @@ CREATE TABLE employees OF employee_type (
     PRIMARY KEY (name),
     salary WITH OPTIONS DEFAULT 1000
 );
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1 id="SQL-CREATETABLE-compatibility">
@@ -1371,13 +1382,21 @@ CREATE TABLE employees OF employee_type (
    </para>
 
    <para>
-    The standard's distinction between global and local temporary tables
-    is not in <productname>PostgreSQL</productname>, since that distinction
-    depends on the concept of modules, which
-    <productname>PostgreSQL</productname> does not have.
+    The SQL standard also distinguishes between global and local temporary
+    tables, where a local temporary table has a separate set of contents for
+    each SQL module within each session, though its definition is still shared
+    across sessions.  Since <productname>PostgreSQL</productname> does not
+    support SQL modules, this distinction is not relevant in
+    <productname>PostgreSQL</productname>.
+   </para>
+
+   <para>
     For compatibility's sake, <productname>PostgreSQL</productname> will
     accept the <literal>GLOBAL</literal> and <literal>LOCAL</literal> keywords
-    in a temporary table declaration, but they have no effect.
+    in a temporary table declaration, but they currently have no effect.
+    Use of these keywords is discouraged, since future versions of
+    <productname>PostgreSQL</productname> might adopt a more
+    standard-compliant interpretation of their meaning.
    </para>
 
    <para>

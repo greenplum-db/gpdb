@@ -39,6 +39,7 @@
 #include "catalog/pg_type.h"                /* INT4OID */
 #include "utils/guc.h"
 #include "utils/lsyscache.h"                /* get_typavgwidth */
+#include "optimizer/pathnode.h"
 
 /*
  * Define a canonical form of a ROLLUP.
@@ -134,6 +135,12 @@ typedef struct GroupExtContext
 	List *pathkeys;
 } GroupExtContext;
 
+typedef struct SubqueryScanWalkerContext
+{
+	SubqueryScan *firstSubqueryScan;
+} SubqueryScanWalkerContext;
+
+
 static void destroyGroupExtContext(GroupExtContext *context);
 static List *convert_gs_to_rollups(AttrNumber *grpColIdx, Oid *grpOperators,
 								   int numGroupCols,
@@ -196,6 +203,38 @@ char *canonicalRollupToString(CanonicalRollup *cr);
 char *canonicalGroupingSetsToString(CanonicalGroupingSets *cgs);
 char *bitmapsetToString(Bitmapset *bms);
 #endif
+
+/*
+ * Walker to find the first SubqueryScan node.
+ */
+static bool
+subqueryScanWalker(Plan *node,
+				  void *context)
+{
+	SubqueryScanWalkerContext *ctx = (SubqueryScanWalkerContext *) context;
+	Assert(ctx);
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubqueryScan))
+	{
+		ctx->firstSubqueryScan = (SubqueryScan *) node;
+		return true;
+	 }
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, subqueryScanWalker, ctx);
+}
+
+static SubqueryScan*
+findFirstSubqueryScan(Plan *node)
+{
+	SubqueryScanWalkerContext ctx;
+	ctx.firstSubqueryScan = NULL;
+	subqueryScanWalker(node, &ctx);
+	return ctx.firstSubqueryScan;
+}
 
 /**
  * Method returns the target entry from list which matches the ressortgroupref.
@@ -697,6 +736,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		if (context->current_rollup->grpset_counts[group_no] > 0)
 		{
 			AggStrategy aggstrategy;
+			SubqueryScan *splan;
 			groupColIdx = context->grpColIdx;
 			groupOperators = context->grpOperators;
 
@@ -760,6 +800,11 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 				current_qual = NIL;
 				current_tlist = tlist1;
 			}
+
+			/* update subplan if current_lefttree has been modified */
+			splan = findFirstSubqueryScan(current_lefttree);
+			if (splan != NULL && splan->subplan != root->simple_rel_array[1]->subplan)
+				root->simple_rel_array[1]->subplan = splan->subplan;
 
 			/* Add an Agg node */
 			agg_node = add_first_agg(root, context,
@@ -1697,12 +1742,10 @@ plan_append_aggs_with_rewrite(PlannerInfo *root,
 			final_query->rtable = lappend(final_query->rtable, newrte);
 			subquery_tlist = generate_subquery_tlist(list_length(final_query->rtable),
 													 agg_plan->targetlist, true, &resno_map);
-			agg_plan = (Plan *)make_subqueryscan(root, subquery_tlist,
+			agg_plan = (Plan *)make_subqueryscan(subquery_tlist,
 												 NIL,
 												 list_length(final_query->rtable),
-												 agg_plan,
-												 final_query->rtable,
-												 final_query->rowMarks);
+												 agg_plan);
 			mark_passthru_locus(agg_plan, true, true);
 			pfree(resno_map);
 		}
@@ -1814,6 +1857,14 @@ add_first_agg(PlannerInfo *root,
 	return agg_node;
 }
 
+static void
+destroyGroupExtContext(GroupExtContext *context)
+{
+	if (context->sub_tlist)
+		list_free(context->sub_tlist);
+	if (context->canonical_rollups)
+		list_free_deep(context->canonical_rollups);
+}
 /*
  * Generate a list of subplans based on context->subplan.
  */
@@ -1860,13 +1911,34 @@ generate_list_subplans(PlannerInfo *root, int num_subplans,
 	return subplans;
 }
 
-static void
-destroyGroupExtContext(GroupExtContext *context)
+/*
+ * Generate a list of simple_rel_array 
+ */
+static List *
+generate_list_simple_rel_array(PlannerInfo *root, int num_subplans)
 {
-	if (context->sub_tlist)
-		list_free(context->sub_tlist);
-	if (context->canonical_rollups)
-		list_free_deep(context->canonical_rollups);
+	int i;
+	int j;
+	List *relArrayList = NULL;
+
+	for (i = 0; i < num_subplans; i++)
+	{
+		int arraySize = root->simple_rel_array_size;
+		RelOptInfo **relArray = (RelOptInfo **) palloc0(sizeof(RelOptInfo *) * arraySize);
+		for (j = 0; j < arraySize; j++)
+		{
+			RelOptInfo *rel = NULL;
+			if (root->simple_rel_array[j] != NULL)
+			{
+				rel = makeNode(RelOptInfo);
+				memcpy(rel, root->simple_rel_array[j], sizeof(RelOptInfo));
+			}
+			relArray[j] = rel; 
+		}
+		relArrayList = lappend(relArrayList, relArray);
+	}
+
+	return relArrayList;
 }
 
 /*
@@ -2164,6 +2236,94 @@ append_colIdx(AttrNumber *colIdx, Oid *operators, int numcols, int colno,
 	}
 }
 
+static PlannerInfo *
+add_subroot_for_subqueryscan(PlannerInfo *root, RangeTblEntry *rte)
+{
+	RelOptInfo *rel;
+	int array_size = 2;
+	PlannerInfo *subroot = makeNode(PlannerInfo);
+	memcpy(subroot, root, sizeof(PlannerInfo));
+
+	subroot->simple_rel_array_size = array_size;
+	subroot->simple_rel_array = (RelOptInfo **) palloc0(sizeof(RelOptInfo *) * array_size);
+	subroot->simple_rte_array = (RangeTblEntry **) palloc0(sizeof(RangeTblEntry *) * array_size);
+
+	subroot->simple_rte_array[1] = rte;
+	rel = build_simple_rel(subroot, 1, RELOPT_BASEREL);
+
+	if (root->simple_rel_array_size > 1 && root->simple_rel_array[1] != NULL)
+	{
+		rel->subroot = root->simple_rel_array[1]->subroot;
+		rel->subplan = root->simple_rel_array[1]->subplan;
+	}
+
+	return subroot;
+}
+
+static void
+rebuild_append_simple_rel_and_rte(PlannerInfo *root,
+								  List *rtable,
+								  List *subplans,
+								  List *subroots)
+{
+
+	int			i;
+	int			array_size;
+	ListCell	*l1, *l2, *l3;
+	RelOptInfo	*rel;
+
+	if (root->simple_rel_array)
+		pfree(root->simple_rel_array);
+
+	if (root->simple_rte_array)
+		pfree(root->simple_rte_array);
+
+	array_size = list_length(rtable) + 1;
+	root->simple_rel_array_size = array_size;
+	root->simple_rel_array =
+		(RelOptInfo **) palloc0(sizeof(RelOptInfo *) * array_size);
+	root->simple_rte_array =
+		(RangeTblEntry **) palloc0(sizeof(RangeTblEntry *) * array_size);
+
+	Assert(list_length(rtable) == list_length(subplans));
+	Assert(list_length(subplans) == list_length(subroots));
+
+	i = 0;
+	forthree(l1, rtable, l2, subroots, l3, subplans)
+	{
+		SubqueryScan	*splan;
+		PlannerInfo		*sroot;
+		RangeTblEntry	*rte;
+
+		/* skip the first one */
+		i++;
+
+		rte = (RangeTblEntry *)lfirst(l1);
+		if (rte == NULL || rte->rtekind == RTE_JOIN)
+			continue;
+
+		root->simple_rte_array[i] = rte; 
+		if (rte->rtekind == RTE_VOID)
+			rel = makeNode(RelOptInfo);
+		else
+			rel = build_simple_rel(root, i, RELOPT_BASEREL);
+
+		sroot = (PlannerInfo *)lfirst(l2);
+		splan = (SubqueryScan *)lfirst(l3);
+
+		rel->subroot = sroot;
+		if (splan != NULL)
+		{
+			splan->scan.scanrelid = i;
+			rel->subplan = splan->subplan;
+		}
+		else
+		{
+			rel->subplan = NULL;
+		}
+	}
+}
+
 static Plan *
 plan_list_rollup_plans(PlannerInfo *root,
 					   GroupExtContext *context,
@@ -2171,9 +2331,12 @@ plan_list_rollup_plans(PlannerInfo *root,
 {
 	Plan *result_plan;
 	GpSetOpType optype = PSETOP_NONE;
-	List *rollup_plans = NIL;
+	List *rollup_plans = NULL;
+	List *rollup_subroots = NULL;
+	List *rollup_subplans = NULL;
 	int rollup_no;
 	List *subplans = NIL;
+	List *relArrayList = NIL;
 	List *orig_tlist = context->tlist;
 	AttrNumber *orig_grpColIdx = context->grpColIdx;
 	Oid *orig_grpOperators = context->grpOperators;
@@ -2221,6 +2384,9 @@ plan_list_rollup_plans(PlannerInfo *root,
 		subplans = generate_list_subplans(root,
 										  list_length(context->canonical_rollups),
 										  context);
+
+		relArrayList = generate_list_simple_rel_array(root,
+										  list_length(context->canonical_rollups));
 	}
 	else
 	{
@@ -2257,6 +2423,9 @@ plan_list_rollup_plans(PlannerInfo *root,
 	{
 		Plan *subplan = (Plan *)list_nth(subplans, rollup_no);
 		Plan *rollup_plan;
+		PlannerInfo * rollup_subroot = NULL;
+		SubqueryScan * rollup_subplan = NULL;
+		int i;
 
 		context->current_rollup = (CanonicalRollup *)
 			list_nth(context->canonical_rollups, rollup_no);
@@ -2293,10 +2462,12 @@ plan_list_rollup_plans(PlannerInfo *root,
 				gp_enable_groupext_distinct_pruning = false;
 		}
 
+		if (rollup_no > 0)
+			root->simple_rel_array = (RelOptInfo**)list_nth(relArrayList, rollup_no);
+
 		rollup_plan = make_aggs_for_rollup(root, context, subplan);
 
 		new_numGroups += *context->p_dNumGroups;
-
 		if (rollup_no > 0 && list_length(context->canonical_rollups) > 1)
 		{
 			RangeTblEntry *newrte;
@@ -2319,6 +2490,7 @@ plan_list_rollup_plans(PlannerInfo *root,
 				}
 			}
 
+
 			/* Since the range table for each rollup plan may be different,
 			 * we build a new range table to include all range table entries.
 			 */
@@ -2328,19 +2500,44 @@ plan_list_rollup_plans(PlannerInfo *root,
 			final_query->rtable = lappend(final_query->rtable, newrte);
 			subquery_tlist = generate_subquery_tlist(list_length(final_query->rtable),
 													 rollup_plan->targetlist, true, &resno_map);
-			rollup_plan = (Plan *) make_subqueryscan(root, subquery_tlist,
+			rollup_plan = (Plan *) make_subqueryscan(subquery_tlist,
 													 NIL,
 													 list_length(final_query->rtable),
-													 rollup_plan,
-													 root->parse->rtable,
-													 root->parse->rowMarks);
+													 rollup_plan);
 			mark_passthru_locus(rollup_plan, true, true);
 			pfree(resno_map);
-		}
 
+			rollup_subroot = add_subroot_for_subqueryscan(root, newrte);
+			rollup_subplan = (SubqueryScan *)rollup_plan;
+			rollup_subroots = lappend(rollup_subroots, rollup_subroot);
+			rollup_subplans = lappend(rollup_subplans, rollup_subplan);
+		}
 		else
 		{
 			final_query = root->parse;
+
+			for (i = 1; i < root->simple_rel_array_size; i++)
+			{
+				if (root->simple_rel_array[i] != NULL)
+				{
+					rollup_subroots = lappend(rollup_subroots, root->simple_rel_array[i]->subroot);
+					rollup_subplans = lappend(rollup_subplans, root->simple_rel_array[i]->subplan);
+				}
+				else
+				{
+					rollup_subroots = lappend(rollup_subroots, NULL);
+					rollup_subplans = lappend(rollup_subplans, NULL);
+				}
+			}
+
+			if (root->simple_rel_array_size == 2 &&
+				root->simple_rel_array[1] != NULL &&
+				root->simple_rte_array[1] != NULL &&
+				root->simple_rte_array[1]->rtekind == RTE_SUBQUERY)
+			{
+				rollup_subplan = findFirstSubqueryScan(rollup_plan);
+				list_nth_replace(rollup_subplans, 0, rollup_subplan);
+			}
 		}
 
 		rollup_plans = lappend(rollup_plans, rollup_plan);
@@ -2361,8 +2558,17 @@ plan_list_rollup_plans(PlannerInfo *root,
 
 		/* set the final pathkey to NIL */
 		context->current_pathkeys = NIL;
+
+		/*
+		 * GPDB_92_MERGE_FIXME:
+		 * Assign subroot and subplan for rel. They are needed in
+		 * function set_subqueryscan_references().
+		 */
+		rebuild_append_simple_rel_and_rte(root,
+										  final_query->rtable,
+										  rollup_subplans,
+										  rollup_subroots);
 	}
-	
 	else
 	{
 		Assert (list_length(rollup_plans) == 1);
@@ -2644,7 +2850,7 @@ add_repeat_node(Plan *result_plan, int repeat_count, uint64 grouping)
 	}
 	else
 	{
-		repeatCountExpr = (Expr *)makeVar(OUTER,
+		repeatCountExpr = (Expr *)makeVar(OUTER_VAR,
 										  repeat_count_resno,
 										  INT4OID,
 										  -1,

@@ -640,15 +640,15 @@ LINE 1: select a,median(b) from perct4 group by median(c);
                                                 ^
 -- SQL with Outer aggregate reference and IDF
 select ( (select sum(a) from perct group by b having median(t.a) < 5 limit 1 ) ) from perct t;
- ?column? 
-----------
-         
+ sum 
+-----
+    
 (1 row)
 
 select ( select percentile_cont(0.6) within group (order by t.a) from perct where a <10 limit 1 )  from perct t;
- ?column? 
-----------
-     60.4
+ percentile_cont 
+-----------------
+            60.4
 (1 row)
 
 -- SQL with Group by () and IDF

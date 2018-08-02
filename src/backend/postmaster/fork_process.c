@@ -4,7 +4,7 @@
  *	 EXEC_BACKEND case; it might be extended to do so, but it would be
  *	 considerably more complex.
  *
- * Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/postmaster/fork_process.c
@@ -71,12 +71,40 @@ fork_process(void)
 		 * process sizes *including shared memory*.  (This is unbelievably
 		 * stupid, but the kernel hackers seem uninterested in improving it.)
 		 * Therefore it's often a good idea to protect the postmaster by
-		 * setting its oom_adj value negative (which has to be done in a
-		 * root-owned startup script).	If you just do that much, all child
+		 * setting its oom_score_adj value negative (which has to be done in a
+		 * root-owned startup script). If you just do that much, all child
 		 * processes will also be protected against OOM kill, which might not
-		 * be desirable.  You can then choose to build with LINUX_OOM_ADJ
-		 * #defined to 0, or some other value that you want child processes to
-		 * adopt here.
+		 * be desirable.  You can then choose to build with
+		 * LINUX_OOM_SCORE_ADJ #defined to 0, or to some other value that you
+		 * want child processes to adopt here.
+		 */
+#ifdef LINUX_OOM_SCORE_ADJ
+		{
+			/*
+			 * Use open() not stdio, to ensure we control the open flags. Some
+			 * Linux security environments reject anything but O_WRONLY.
+			 */
+			int			fd = open("/proc/self/oom_score_adj", O_WRONLY, 0);
+
+			/* We ignore all errors */
+			if (fd >= 0)
+			{
+				char		buf[16];
+				int			rc;
+
+				snprintf(buf, sizeof(buf), "%d\n", LINUX_OOM_SCORE_ADJ);
+				rc = write(fd, buf, strlen(buf));
+				(void) rc;
+				close(fd);
+			}
+		}
+#endif   /* LINUX_OOM_SCORE_ADJ */
+
+		/*
+		 * Older Linux kernels have oom_adj not oom_score_adj.  This works
+		 * similarly except with a different scale of adjustment values.
+		 * If it's necessary to build Postgres to work with either API,
+		 * you can define both LINUX_OOM_SCORE_ADJ and LINUX_OOM_ADJ.
 		 */
 #ifdef LINUX_OOM_ADJ
 		{
@@ -90,9 +118,11 @@ fork_process(void)
 			if (fd >= 0)
 			{
 				char		buf[16];
+				int			rc;
 
 				snprintf(buf, sizeof(buf), "%d\n", LINUX_OOM_ADJ);
-				(void) write(fd, buf, strlen(buf));
+				rc = write(fd, buf, strlen(buf));
+				(void) rc;
 				close(fd);
 			}
 		}

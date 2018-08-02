@@ -5,7 +5,7 @@
 #endif
 
 /*
- * Make sure _WIN32_WINNT has the minumum required value.
+ * Make sure _WIN32_WINNT has the minimum required value.
  * Leave a higher value in place.
 */
 #if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0501
@@ -31,7 +31,7 @@
  * The Mingw64 headers choke if this is already defined - they
  * define it themselves.
  */
-#if !defined(WIN64) || defined(WIN32_ONLY_COMPILER)
+#if !defined(__MINGW64_VERSION_MAJOR) || defined(WIN32_ONLY_COMPILER)
 #define _WINSOCKAPI_
 #endif
 #include <winsock2.h>
@@ -230,8 +230,12 @@ int			setitimer(int which, const struct itimerval * value, struct itimerval * ov
 #define fseeko(stream, offset, origin) _fseeki64(stream, offset, origin)
 #define ftello(stream) _ftelli64(stream)
 #else
+#ifndef fseeko
 #define fseeko(stream, offset, origin) fseeko64(stream, offset, origin)
+#endif
+#ifndef ftello
 #define ftello(stream) ftello64(stream)
+#endif
 #endif
 
 /*
@@ -270,25 +274,56 @@ typedef int pid_t;
 #define EINTR WSAEINTR
 #undef EAGAIN
 #define EAGAIN WSAEWOULDBLOCK
-#undef EMSGSIZE
+#ifndef EMSGSIZE
 #define EMSGSIZE WSAEMSGSIZE
-#undef EAFNOSUPPORT
+#endif
+#ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT WSAEAFNOSUPPORT
-#undef EWOULDBLOCK
+#endif
+#ifndef EWOULDBLOCK
 #define EWOULDBLOCK WSAEWOULDBLOCK
-#undef ECONNRESET
+#endif
+#ifndef ECONNRESET
 #define ECONNRESET WSAECONNRESET
-#undef EINPROGRESS
+#endif
+#ifndef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
-#undef ENOBUFS
+#endif
+#ifndef ENOBUFS
 #define ENOBUFS WSAENOBUFS
-#undef EPROTONOSUPPORT
+#endif
+#ifndef EPROTONOSUPPORT
 #define EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#undef ECONNREFUSED
+#endif
+#ifndef ECONNREFUSED
 #define ECONNREFUSED WSAECONNREFUSED
+#endif
+#ifndef EBADFD
 #define EBADFD WSAENOTSOCK
-#undef EOPNOTSUPP
+#endif
+#ifndef EOPNOTSUPP
 #define EOPNOTSUPP WSAEOPNOTSUPP
+#endif
+
+/*
+ * For Microsoft Visual Studio 2010 and above we intentionally redefine
+ * the regular Berkeley error constants and set them to the WSA constants.
+ * Note that this will break if those constants are used for anything else
+ * than Windows Sockets errors.
+ */
+#if _MSC_VER >= 1600
+#pragma warning(disable:4005)
+#define EMSGSIZE WSAEMSGSIZE
+#define EAFNOSUPPORT WSAEAFNOSUPPORT
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#define EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#define ECONNRESET WSAECONNRESET
+#define EINPROGRESS WSAEINPROGRESS
+#define ENOBUFS WSAENOBUFS
+#define ECONNREFUSED WSAECONNREFUSED
+#define EOPNOTSUPP WSAEOPNOTSUPP
+#pragma warning(default:4005)
+#endif
 
 /*
  * Extended locale functions with gratuitous underscore prefixes.

@@ -9,12 +9,11 @@
  * in postgresql.conf. If these limits are reached or passed, the
  * current logfile is closed and a new one is created (rotated).
  * The logfiles are stored in a subdirectory (configurable in
- * postgresql.conf), using an internal naming scheme that mangles
- * creation time and current postmaster pid.
+ * postgresql.conf), using a user-selectable naming scheme.
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
- * Copyright (c) 2004-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -41,6 +40,7 @@
 #include "postmaster/syslogger.h"
 #include "postmaster/sendalert.h"
 #include "storage/ipc.h"
+#include "storage/latch.h"
 #include "storage/pg_shmem.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
@@ -103,40 +103,24 @@ static const char *alert_file_pattern = "gpdb-alert-%Y-%m-%d_%H%M%S.csv";
 static char *alert_last_file_name = NULL;
 static bool alert_log_level_opened = false;
 static bool write_to_alert_log = false;
+static Latch sysLoggerLatch;
 
-/* An err msg may break into several pipe chunks, so we need a buffer to assemble them.
- * We fix the number of buffers.  Generally a relative small number should suffice.
- * If we run out, we will flush partial message.  The assemble code will make sure we
- * may log partial msg, but we never garble msg.  We also make sure the output is valid
- * csv (except last line, if syslogger is killed before finish writing a line).
- *
- * We loop over the saved chunk, because number of buffers are small.
- */
 /*
- * Buffers for saving partial messages from different backends. We don't expect
- * that there will be very many outstanding at one time, so 20 seems plenty of
- * leeway. If this array gets full we won't lose messages, but we will lose
- * the protocol protection against them being partially written or interleaved.
+ * Buffers for saving partial messages from different backends.
  *
+ * Keep NBUFFER_LISTS lists of these, with the entry for a given source pid
+ * being in the list numbered (pid % NBUFFER_LISTS), so as to cut down on
+ * the number of entries we have to examine for any one incoming message.
+ * There must never be more than one entry for the same source pid.
+ *
+ * An inactive buffer is not removed from its list, just held for re-use.
  * An inactive buffer has pid == 0 and undefined contents of data.
  */
 
-
-PipeProtoChunk saved_chunks[CHUNK_SLOTS];
-
-/* Find an unused chunk */
-static PipeProtoChunk *find_unused_chunk()
-{
-    int i;
-    for(i=0; i<CHUNK_SLOTS; ++i)
-    {
-        if(saved_chunks[i].hdr.pid == 0)
-            return &saved_chunks[i];
-    }
-
-    /* oops, all used.  */
-    return NULL;
-}
+#if 0
+#define NBUFFER_LISTS 256
+static List *buffer_lists[NBUFFER_LISTS];
+#endif
 
 /* These must be exported for EXEC_BACKEND case ... annoying */
 #ifndef WIN32
@@ -192,6 +176,72 @@ static void set_next_rotation_time(void);
 static void sigHupHandler(SIGNAL_ARGS);
 static void sigUsr1Handler(SIGNAL_ARGS);
 
+/*
+ * GPDB_92_MERGE_FIXME_AFTER_RUNNING: This is a ugly hack.
+ * PG 9.2 changes to use dynamic lists for chunk use. It uses the pid of as
+ * index. pid is extracted from the data after pipe read, however our current code
+ * is differnt than upstream pg. PG has a temp buffer. It analyzes the buffer
+ * to get pid and then allocates a chunk if needed using the pid as an index,
+ * and finally copies the buffer to the new chunk. GP code does not do copy
+ * so it is impossible (or ugly hacking needed) to get a new chunk from the
+ * unknown pid information. GP code is faster of course, however given this
+ * code is not hot spot, maybe we should refactor our code to align with pg upstream.
+ * GP seems to have special and better logging for 3rd party module output.
+ * I'm not sure about other reasons of the different GP implmentation, but
+ * We'd better refer pg (9.2 and latest) code and refactor the code after
+ * gp code is running.
+ *
+ * To workaround previous constraint, I temporarily revert to use previous
+ * non-pid indexed chunks but keep the pg9.2 code in this file, some of
+ * which is commented out. Note other changes in pg 9.2 e.g. latch changes
+ * are kept.
+ *
+ */
+PipeProtoChunk saved_chunks[CHUNK_SLOTS];
+
+/* Get an available chunk */
+static PipeProtoChunk *get_avail_chunk()
+{
+	int i;
+
+	for(i=0; i<CHUNK_SLOTS; ++i)
+	{
+		if(saved_chunks[i].hdr.pid == 0)
+			return &saved_chunks[i];
+    }
+
+	syslogger_flush_chunks();
+
+	/* Recheck again. */
+	for(i=0; i<CHUNK_SLOTS; ++i)
+	{
+		if(saved_chunks[i].hdr.pid == 0)
+			return &saved_chunks[i];
+    }
+
+	pg_unreachable();
+#if 0
+	List *buffer_list;
+	ListCell   *cell;
+	PipeProtoChunk *buf;
+
+	buffer_list = buffer_lists[pid % NBUFFER_LISTS];
+	foreach(cell, buffer_list)
+	{
+		buf =  (PipeProtoChunk *) lfirst(cell);
+
+		if (buf->hdr.pid == 0)
+			return buf;
+	}
+
+	buf = palloc(sizeof(PipeProtoChunk));
+	buf->hdr.pid = 0;
+	buffer_list = lappend(buffer_list, buf);
+	buffer_lists[p.pid % NBUFFER_LISTS] = buffer_list;
+
+    return buf;
+#endif
+}
 
 /*
  * Main entry point for syslogger process
@@ -203,12 +253,14 @@ SysLoggerMain(int argc, char *argv[])
 	char	   *currentLogDir;
 	char	   *currentLogFilename;
 	int			currentLogRotationAge;
+	pg_time_t	now;
 
     IsUnderPostmaster = true;	/* we are a postmaster subprocess now */
 
     MyProcPid = getpid();		/* reset MyProcPid */
 
 	MyStartTime = time(NULL);	/* set our start time in case we call elog */
+	now = MyStartTime;
 
 #ifdef EXEC_BACKEND
     syslogger_parseArgs(argc, argv);
@@ -285,13 +337,16 @@ SysLoggerMain(int argc, char *argv[])
         elog(FATAL, "setsid() failed: %m");
 #endif
 
-    /*
-     * Properly accept or ignore signals the postmaster might send us
-     *
-     * Note: we ignore all termination signals, and instead exit only when all
-     * upstream processes are gone, to ensure we don't miss any dying gasps of
-     * broken backends...
-     */
+	/* Initialize private latch for use by signal handlers */
+	InitLatch(&sysLoggerLatch);
+
+	/*
+	 * Properly accept or ignore signals the postmaster might send us
+	 *
+	 * Note: we ignore all termination signals, and instead exit only when all
+	 * upstream processes are gone, to ensure we don't miss any dying gasps of
+	 * broken backends...
+	 */
 
     pqsignal(SIGHUP, sigHupHandler);	/* set flag to read config file */
     pqsignal(SIGINT, SIG_IGN);
@@ -343,51 +398,57 @@ SysLoggerMain(int argc, char *argv[])
         bool		time_based_rotation = false;
 		int			size_rotation_for = 0;
 		bool		size_rotation_for_alert = false;
+		long		cur_timeout;
+		int			cur_flags;
 
 #ifndef WIN32
-        int			bytesRead = 0;
-        int			rc;
-        fd_set		rfds;
-        struct timeval timeout;
+		int			bytesRead = 0;
+		int			rc;
 #endif
 
-        if (got_SIGHUP)
-        {
-            got_SIGHUP = false;
-            ProcessConfigFile(PGC_SIGHUP);
+		/* Clear any already-pending wakeups */
+		ResetLatch(&sysLoggerLatch);
 
-            /*
-             * Check if the log directory or filename pattern changed in
-             * postgresql.conf. If so, force rotation to make sure we're
-             * writing the logfiles in the right place.
-             */
-            if (strcmp(Log_directory, currentLogDir) != 0)
-            {
-                pfree(currentLogDir);
-                currentLogDir = pstrdup(Log_directory);
-                rotation_requested = true;
+		/*
+		 * Process any requests or signals received recently.
+		 */
+		if (got_SIGHUP)
+		{
+			got_SIGHUP = false;
+			ProcessConfigFile(PGC_SIGHUP);
+
+			/*
+			 * Check if the log directory or filename pattern changed in
+			 * postgresql.conf. If so, force rotation to make sure we're
+			 * writing the logfiles in the right place.
+			 */
+			if (strcmp(Log_directory, currentLogDir) != 0)
+			{
+				pfree(currentLogDir);
+				currentLogDir = pstrdup(Log_directory);
+				rotation_requested = true;
 
 				/*
 				 * Also, create new directory if not present; ignore errors
 				 */
 				mkdir(Log_directory, S_IRWXU);
 			}
-            if (strcmp(Log_filename, currentLogFilename) != 0)
-            {
-                pfree(currentLogFilename);
-                currentLogFilename = pstrdup(Log_filename);
-                rotation_requested = true;
-            }
+			if (strcmp(Log_filename, currentLogFilename) != 0)
+			{
+				pfree(currentLogFilename);
+				currentLogFilename = pstrdup(Log_filename);
+				rotation_requested = true;
+			}
 
-            /*
-             * If rotation time parameter changed, reset next rotation time,
-             * but don't immediately force a rotation.
-             */
-            if (currentLogRotationAge != Log_RotationAge)
-            {
-                currentLogRotationAge = Log_RotationAge;
-                set_next_rotation_time();
-            }
+			/*
+			 * If rotation time parameter changed, reset next rotation time,
+			 * but don't immediately force a rotation.
+			 */
+			if (currentLogRotationAge != Log_RotationAge)
+			{
+				currentLogRotationAge = Log_RotationAge;
+				set_next_rotation_time();
+			}
 
 			/*
 			 * If we had a rotation-disabling failure, re-enable rotation
@@ -398,9 +459,9 @@ SysLoggerMain(int argc, char *argv[])
 				rotation_disabled = false;
 				rotation_requested = true;
 			}
-        }
+		}
 
-        if (!rotation_requested && Log_RotationAge > 0 && !rotation_disabled)
+		if (Log_RotationAge > 0 && !rotation_disabled)
         {
             /* Do a logfile rotation if it's time */
             pg_time_t	now = (pg_time_t) time(NULL);
@@ -466,37 +527,42 @@ SysLoggerMain(int argc, char *argv[])
 						   NULL, gp_perf_mon_directory, alert_file_pattern,
                            &alertLogFile, &alert_last_file_name);
 		}
-#ifndef WIN32
 
 		/*
-		 * Wait for some data, timing out after 1 second
+		 * Calculate time till next time-based rotation, so that we don't
+		 * sleep longer than that.	We assume the value of "now" obtained
+		 * above is still close enough.  Note we can't make this calculation
+		 * until after calling logfile_rotate(), since it will advance
+		 * next_rotation_time.
 		 */
-		FD_ZERO(&rfds);
-		FD_SET(syslogPipe[0], &rfds);
+		if (Log_RotationAge > 0 && !rotation_disabled)
+		{
+			if (now < next_rotation_time)
+				cur_timeout = (next_rotation_time - now) * 1000L;		/* msec */
+			else
+				cur_timeout = 0;
+			cur_flags = WL_TIMEOUT;
+		}
+		else
+		{
+			cur_timeout = -1L;
+			cur_flags = 0;
+		}
 
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+		/*
+		 * Sleep until there's something to do
+		 */
+#ifndef WIN32
+		rc = WaitLatchOrSocket(&sysLoggerLatch,
+							   WL_LATCH_SET | WL_SOCKET_READABLE | cur_flags,
+							   syslogPipe[0],
+							   cur_timeout);
 
-        rc = select(syslogPipe[0] + 1, &rfds, NULL, NULL, &timeout);
-
-        if (rc < 0)
+		if (rc & WL_SOCKET_READABLE)
         {
-            if (errno != EINTR)
-                ereport(LOG,
-                        (errcode_for_socket_access(),
-                         errmsg("select() failed in logger process: %m")));
-        }
-        else if (rc > 0 && FD_ISSET(syslogPipe[0], &rfds))
-        {
-            PipeProtoChunk *chunk = find_unused_chunk();
+            PipeProtoChunk *chunk = get_avail_chunk();
             int readPos = 0;
 
-            if(chunk == NULL)
-                syslogger_flush_chunks();
-
-            chunk = find_unused_chunk();
-
-			Assert(chunk != NULL);
 
 			/* Read data to fill the buffer up to PIPE_CHUNK_SIZE bytes */
 		next_chunkloop:
@@ -514,7 +580,7 @@ SysLoggerMain(int argc, char *argv[])
 				 * showing up in the logfile. Hopefully, this is very rare.
 				 */
 				readPos = bytesRead;
-				bytesRead = piperead(syslogPipe[0], (char *)chunk + readPos, PIPE_CHUNK_SIZE - readPos);
+				bytesRead = read(syslogPipe[0], (char *)chunk + readPos, PIPE_CHUNK_SIZE - readPos);
 			}
 			
 			if (bytesRead == 0)
@@ -551,7 +617,7 @@ SysLoggerMain(int argc, char *argv[])
 					 */
 					if (needBytes > 0)
 					{
-						bytesRead =	piperead(syslogPipe[0],
+						bytesRead =	read(syslogPipe[0],
 											 ((char *)chunk) + (bytesRead + readPos),
 											 needBytes);
 
@@ -567,17 +633,10 @@ SysLoggerMain(int argc, char *argv[])
 					if (needBytes < 0)
 					{
 						int moreBytes = bytesRead + readPos - chunk_size;
-						PipeProtoChunk *new_chunk = find_unused_chunk();
+						PipeProtoChunk *new_chunk = get_avail_chunk();
 
 						Assert(moreBytes > 0);
 						
-						if (new_chunk == NULL)
-						{
-							syslogger_flush_chunks();
-							new_chunk = find_unused_chunk();
-							Assert(new_chunk != NULL);
-						}
-
 						memmove((char *)new_chunk, ((char *)chunk) + chunk_size, moreBytes);
 						chunk = new_chunk;
 						bytesRead = moreBytes;
@@ -659,8 +718,8 @@ SysLoggerMain(int argc, char *argv[])
 
 		/*
 		 * On Windows we leave it to a separate thread to transfer data and
-		 * detect pipe EOF.  The main thread just wakes up once a second to
-		 * check for SIGHUP and rotation conditions.
+		 * detect pipe EOF.  The main thread just wakes up to handle SIGHUP
+		 * and rotation conditions.
 		 *
 		 * Server code isn't generally thread-safe, so we ensure that only one
 		 * of the threads is active at a time by entering the critical section
@@ -668,7 +727,9 @@ SysLoggerMain(int argc, char *argv[])
 		 */
 		LeaveCriticalSection(&sysloggerSection);
 
-		pg_usleep(1000000L);
+		(void) WaitLatch(&sysLoggerLatch,
+						 WL_LATCH_SET | cur_flags,
+						 cur_timeout);
 
 		EnterCriticalSection(&sysloggerSection);
 #endif   /* WIN32 */
@@ -751,9 +812,9 @@ SysLogger_Start(void)
 	 * is a bit klugy but we have little choice.
 	 */
 #ifndef WIN32
-    if (syslogPipe[0] < 0)
-    {
-        if (pgpipe(syslogPipe) < 0)
+	if (syslogPipe[0] < 0)
+	{
+		if (pipe(syslogPipe) < 0)
 			ereport(FATAL,
 					(errcode_for_socket_access(),
 					 (errmsg("could not create pipe for syslog: %m"))));
@@ -863,14 +924,15 @@ SysLogger_Start(void)
 						ereport(FATAL,
 							(errcode_for_file_access(),
 							 errmsg("could not redirect stderr: %m")));
-                    close(fd);
-                    _setmode(_fileno(stderr),_O_BINARY);
-					/*
-					 * Now we are done with the write end of the pipe.
-					 * CloseHandle() must not be called because the preceding
-					 * close() closes the underlying handle.
-					 */
-                    syslogPipe[1] = 0;
+				close(fd);
+				_setmode(_fileno(stderr), _O_BINARY);
+
+				/*
+				 * Now we are done with the write end of the pipe.
+				 * CloseHandle() must not be called because the preceding
+				 * close() closes the underlying handle.
+				 */
+				syslogPipe[1] = 0;
 #endif
                     redirection_done = true;
                 }
@@ -1024,7 +1086,7 @@ syslogger_append_timestamp(pg_time_t stamp_time, bool amsyslogger, bool append_c
 #else
                 "%Y-%m-%d %H:%M:%S",
 #endif
-                pg_localtime(&stamp_time, log_timezone ? log_timezone : gmt_timezone));
+                pg_localtime(&stamp_time, log_timezone));
 		if (amsyslogger)
 			write_syslogger_file_binary(strbuf, strlen(strbuf), LOG_DESTINATION_STDERR);
 		else
@@ -1069,7 +1131,7 @@ syslogger_append_current_timestamp(bool amsyslogger)
 #else
             "%Y-%m-%d %H:%M:%S        ",
 #endif
-            pg_localtime(&stamp_time, log_timezone ? log_timezone : gmt_timezone));
+            pg_localtime(&stamp_time, log_timezone));
 
     /* 'paste' milliseconds into place... */
     sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
@@ -1664,6 +1726,28 @@ static void syslogger_flush_chunks()
     {
         saved_chunks[i].hdr.pid = 0;
     }
+
+#if 0
+	int			i;
+
+	/* Dump any incomplete protocol messages */
+	for (i = 0; i < NBUFFER_LISTS; i++)
+	{
+		List	   *list = buffer_lists[i];
+		ListCell   *cell;
+
+		foreach(cell, list)
+		{
+			PipeProtoChunk *buf = (PipeProtoChunk *) lfirst(cell);
+			StringInfo	str = &(buf->data);
+
+			if(buf->hdr.pid != 0 && buf->hdr.chunk_no == 0)
+				syslogger_log_chunk_list(buf);
+
+			buf->hdr.pid = 0;
+		}
+	}
+#endif
 }
 
 static void syslogger_handle_chunk(PipeProtoChunk *chunk)
@@ -1798,6 +1882,12 @@ process_pipe_input(char *logbuffer, int *bytes_in_logbuffer)
 			(p.is_last == 't' || p.is_last == 'f' ||
 			 p.is_last == 'T' || p.is_last == 'F'))
 		{
+			List	   *buffer_list;
+			ListCell   *cell;
+			save_buffer *existing_slot = NULL,
+					   *free_slot = NULL;
+			StringInfo	str;
+
 			chunklen = PIPE_HEADER_SIZE + p.len;
 
 			/* Fall out of loop if we don't have the whole chunk yet */
@@ -1910,7 +2000,7 @@ void write_syslogger_file(const char *buffer, int count, int destination)
 /*
  * Worker thread to transfer data from the pipe to the current logfile.
  *
- * We need this because on Windows, WaitForSingleObject does not work on
+ * We need this because on Windows, WaitforMultipleObjects does not work on
  * unnamed pipes: it always reports "signaled", so the blocking ReadFile won't
  * allow for SIGHUP; and select is for sockets only.
  */
@@ -1962,6 +2052,9 @@ pipeThread(void *arg)
 
     /* if there's any data left then force it out now */
     flush_pipe_input(logbuffer, &bytes_in_logbuffer);
+
+	/* set the latch to waken the main thread, which will quit */
+	SetLatch(&sysLoggerLatch);
 
 	LeaveCriticalSection(&sysloggerSection);
 	_endthread();
@@ -2213,12 +2306,22 @@ set_next_rotation_time(void)
 static void
 sigHupHandler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	got_SIGHUP = true;
+	SetLatch(&sysLoggerLatch);
+
+	errno = save_errno;
 }
 
 /* SIGUSR1: set flag to rotate logfile */
 static void
 sigUsr1Handler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	rotation_requested = true;
+	SetLatch(&sysLoggerLatch);
+
+	errno = save_errno;
 }

@@ -3024,7 +3024,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 
 	aoInsertDesc->insertCount++;
 	if (!aoInsertDesc->update_mode)
-		pgstat_count_heap_insert(relation);
+		pgstat_count_heap_insert(relation, 1);
 	else
 		pgstat_count_heap_update(relation, false);
 	aoInsertDesc->lastSequence++;

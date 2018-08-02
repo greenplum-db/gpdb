@@ -4,7 +4,7 @@
 #    Perl module that extracts info from catalog headers into Perl
 #    data structures
 #
-# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/catalog/Catalog.pm
@@ -192,6 +192,7 @@ sub Catalogs
             elsif ($declaring_attributes)
             {
                 next if (/^{|^$/);
+                next if (/^#/);
                 if (/^}/)
                 {
                     undef $declaring_attributes;
@@ -199,6 +200,7 @@ sub Catalogs
                 else
                 {
                     my ($atttype, $attname) = split /\s+/, $_;
+                    die "parse error ($input_file)" unless $attname;
                     if (exists $RENAME_ATTTYPE{$atttype})
                     {
                         $atttype = $RENAME_ATTTYPE{$atttype};

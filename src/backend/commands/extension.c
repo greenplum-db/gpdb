@@ -12,7 +12,7 @@
  * postgresql.conf and recovery.conf.  An extension also has an installation
  * script file, containing SQL commands to create the extension's objects.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -42,17 +42,14 @@
 #include "commands/comment.h"
 #include "commands/extension.h"
 #include "commands/schemacmds.h"
-#include "commands/trigger.h"
-#include "executor/executor.h"
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
-#include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
@@ -481,9 +478,10 @@ parse_extension_control_file(ExtensionControlFile *control,
 	}
 
 	/*
-	 * Parse the file content, using GUC's file parsing code
+	 * Parse the file content, using GUC's file parsing code.  We need not
+	 * check the return value since any errors will be thrown at ERROR level.
 	 */
-	ParseConfigFp(file, filename, 0, ERROR, &head, &tail);
+	(void) ParseConfigFp(file, filename, 0, ERROR, &head, &tail);
 
 	FreeFile(file);
 
@@ -633,7 +631,7 @@ read_extension_aux_control_file(const ExtensionControlFile *pcontrol,
 }
 
 /*
- * Read a SQL script file into a string, and convert to database encoding
+ * Read an SQL script file into a string, and convert to database encoding
  */
 static char *
 read_extension_script_file(const ExtensionControlFile *control,
@@ -824,11 +822,11 @@ execute_extension_script(CreateExtensionStmt *stmt,
 	if (client_min_messages < WARNING)
 		(void) set_config_option("client_min_messages", "warning",
 								 PGC_USERSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true);
+								 GUC_ACTION_SAVE, true, 0);
 	if (log_min_messages < WARNING)
 		(void) set_config_option("log_min_messages", "warning",
 								 PGC_SUSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true);
+								 GUC_ACTION_SAVE, true, 0);
 
 	/*
 	 * Set up the search path to contain the target schema, then the schemas
@@ -837,7 +835,8 @@ execute_extension_script(CreateExtensionStmt *stmt,
 	 *
 	 * Note: it might look tempting to use PushOverrideSearchPath for this,
 	 * but we cannot do that.  We have to actually set the search_path GUC in
-	 * case the extension script examines or changes it.
+	 * case the extension script examines or changes it.  In any case, the
+	 * GUC_ACTION_SAVE method is just as convenient.
 	 */
 	initStringInfo(&pathbuf);
 	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
@@ -852,7 +851,7 @@ execute_extension_script(CreateExtensionStmt *stmt,
 
 	(void) set_config_option("search_path", pathbuf.data,
 							 PGC_USERSET, PGC_S_SESSION,
-							 GUC_ACTION_LOCAL, true);
+							 GUC_ACTION_SAVE, true, 0);
 
 	/*
 	 * Set creating_extension and related variables so that
@@ -883,7 +882,7 @@ execute_extension_script(CreateExtensionStmt *stmt,
 
 		/*
 		 * If it's not relocatable, substitute the target schema name for
-		 * occcurrences of @extschema@.
+		 * occurrences of @extschema@.
 		 *
 		 * For a relocatable extension, we needn't do this.  There cannot be
 		 * any need for @extschema@, else it wouldn't be relocatable.
@@ -906,8 +905,8 @@ execute_extension_script(CreateExtensionStmt *stmt,
 		{
 			t_sql = DirectFunctionCall3(replace_text,
 										t_sql,
-										CStringGetTextDatum("MODULE_PATHNAME"),
-							CStringGetTextDatum(control->module_pathname));
+									  CStringGetTextDatum("MODULE_PATHNAME"),
+							  CStringGetTextDatum(control->module_pathname));
 		}
 
 		/* And now back to C string */
@@ -952,8 +951,7 @@ execute_extension_script(CreateExtensionStmt *stmt,
 	CurrentExtensionObject = InvalidOid;
 
 	/*
-	 * Restore GUC variables for the remainder of the current transaction.
-	 * Again use SET LOCAL, so we won't affect the session value.
+	 * Restore the GUC variables we set above.
 	 */
 	AtEOXact_GUC(true, save_nestlevel);
 	if (Gp_role == GP_ROLE_DISPATCH && stmt != NULL)
@@ -1652,73 +1650,10 @@ InsertExtensionTuple(const char *extName, Oid extOwner,
 	}
 	/* Post creation hook for new extension */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   ExtensionRelationId, extensionOid, 0);
+						   ExtensionRelationId, extensionOid, 0, NULL);
 
 	return extensionOid;
 }
-
-
-/*
- *	RemoveExtensions
- *		Implements DROP EXTENSION.
- */
-void
-RemoveExtensions(DropStmt *drop)
-{
-	ObjectAddresses *objects;
-	ListCell   *cell;
-
-	/*
-	 * First we identify all the extensions, then we delete them in a single
-	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
-	 * RESTRICT errors if one of the extensions depends on another.
-	 */
-	objects = new_object_addresses();
-
-	foreach(cell, drop->objects)
-	{
-		List	   *names = (List *) lfirst(cell);
-		char	   *extensionName;
-		Oid			extensionId;
-		ObjectAddress object;
-
-		if (list_length(names) != 1)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("extension name cannot be qualified")));
-		extensionName = strVal(linitial(names));
-
-		extensionId = get_extension_oid(extensionName, drop->missing_ok);
-
-		if (!OidIsValid(extensionId))
-		{
-			ereport(NOTICE,
-					(errmsg("extension \"%s\" does not exist, skipping",
-							extensionName)));
-			continue;
-		}
-
-		/* Permission check: must own extension */
-		if (!pg_extension_ownercheck(extensionId, GetUserId()))
-			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTENSION,
-						   extensionName);
-
-		object.classId = ExtensionRelationId;
-		object.objectId = extensionId;
-		object.objectSubId = 0;
-
-		add_exact_object_address(&object, objects);
-	}
-
-	/*
-	 * Do the deletions.  Objects contained in the extension(s) are removed by
-	 * means of their dependency links to the extensions.
-	 */
-	performMultipleDeletions(objects, drop->behavior);
-
-	free_object_addresses(objects);
-}
-
 
 /*
  * Guts of extension deletion.
@@ -1733,6 +1668,23 @@ RemoveExtensionById(Oid extId)
 	SysScanDesc scandesc;
 	HeapTuple	tuple;
 	ScanKeyData entry[1];
+
+	/*
+	 * Disallow deletion of any extension that's currently open for insertion;
+	 * else subsequent executions of recordDependencyOnCurrentExtension()
+	 * could create dangling pg_depend records that refer to a no-longer-valid
+	 * pg_extension OID.  This is needed not so much because we think people
+	 * might write "DROP EXTENSION foo" in foo's own script files, as because
+	 * errors in dependency management in extension script files could give
+	 * rise to cases where an extension is dropped as a result of recursing
+	 * from some contained object.	Because of that, we must test for the case
+	 * here, not at some higher level of the DROP EXTENSION command.
+	 */
+	if (extId == CurrentExtensionObject)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+		  errmsg("cannot drop extension \"%s\" because it is being modified",
+				 get_extension_name(extId))));
 
 	rel = heap_open(ExtensionRelationId, RowExclusiveLock);
 
@@ -2202,7 +2154,7 @@ pg_extension_config_dump(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("pg_extension_config_dump() can only be called "
-						"from a SQL script executed by CREATE EXTENSION")));
+						"from an SQL script executed by CREATE EXTENSION")));
 
 	/*
 	 * Check that the table exists and is a member of the extension being
@@ -2811,7 +2763,7 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
 	 * against concurrent DROP and ALTER EXTENSION ADD/DROP operations.
 	 */
 	object = get_object_address(stmt->objtype, stmt->objname, stmt->objargs,
-								&relation, ShareUpdateExclusiveLock);
+								&relation, ShareUpdateExclusiveLock, false);
 
 	/* Permission check: must own target object, too */
 	check_object_ownership(GetUserId(), stmt->objtype, object,

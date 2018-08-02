@@ -4,7 +4,7 @@
  *	  POSTGRES buffer manager definitions.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/bufmgr.h
@@ -54,6 +54,7 @@ extern bool memory_protect_buffer_pool;
 extern bool zero_damaged_pages;
 extern int	bgwriter_lru_maxpages;
 extern double bgwriter_lru_multiplier;
+extern bool track_io_timing;
 extern int	target_prefetch_pages;
 extern bool bgwriter_flush_all_buffers;
 
@@ -88,20 +89,24 @@ extern PGDLLIMPORT int32 *LocalRefCount;
  *		True iff the given buffer number is valid (either as a shared
  *		or local buffer).
  *
- * This is not quite the inverse of the BufferIsInvalid() macro, since this
- * adds sanity rangechecks on the buffer number.
- *
  * Note: For a long time this was defined the same as BufferIsPinned,
  * that is it would say False if you didn't hold a pin on the buffer.
  * I believe this was bogus and served only to mask logic errors.
  * Code should always know whether it has a buffer reference,
  * independently of the pin state.
+ *
+ * Note: For a further long time this was not quite the inverse of the
+ * BufferIsInvalid() macro, in that it also did sanity checks to verify
+ * that the buffer number was in range.  Most likely, this macro was
+ * originally intended only to be used in assertions, but its use has
+ * since expanded quite a bit, and the overhead of making those checks
+ * even in non-assert-enabled builds can be significant.  Thus, we've
+ * now demoted the range checks to assertions within the macro itself.
  */
 #define BufferIsValid(bufnum) \
 ( \
-	(bufnum) != InvalidBuffer && \
-	(bufnum) >= -NLocBuffer && \
-	(bufnum) <= NBuffers \
+	AssertMacro((bufnum) <= NBuffers && (bufnum) >= -NLocBuffer), \
+	(bufnum) != InvalidBuffer  \
 )
 
 /*
@@ -193,11 +198,14 @@ extern void FlushRelationBuffers(Relation rel);
 extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNodeBackend rnode,
 					   ForkNumber forkNum, BlockNumber firstDelBlock);
+extern void DropRelFileNodeAllBuffers(RelFileNodeBackend rnode);
 extern void DropDatabaseBuffers(Oid dbid);
 extern XLogRecPtr BufferGetLSNAtomic(Buffer buffer);
 
 #define RelationGetNumberOfBlocks(reln) \
 	RelationGetNumberOfBlocksInFork(reln, MAIN_FORKNUM)
+
+extern bool BufferIsPermanent(Buffer buffer);
 
 #ifdef NOT_USED
 extern void PrintPinnedBufs(void);
@@ -218,7 +226,7 @@ extern bool HoldingBufferPinThatDelaysRecovery(void);
 extern void AbortBufferIO(void);
 
 extern void BufmgrCommit(void);
-extern void BgBufferSync(void);
+extern bool BgBufferSync(void);
 
 extern void AtProcExit_LocalBuffers(void);
 

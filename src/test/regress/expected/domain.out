@@ -199,16 +199,19 @@ insert into nulltest values ('a', 'b', 'c', 'd', NULL);
 ERROR:  domain dcheck does not allow null values
 insert into nulltest values ('a', 'b', 'c', 'd', 'a');
 ERROR:  new row for relation "nulltest" violates check constraint "nulltest_col5_check"
+DETAIL:  Failing row contains (a, b, c, d, a).
 INSERT INTO nulltest values (NULL, 'b', 'c', 'd', 'd');
 ERROR:  domain dnotnull does not allow null values
 INSERT INTO nulltest values ('a', NULL, 'c', 'd', 'c');
 ERROR:  domain dnotnull does not allow null values
 INSERT INTO nulltest values ('a', 'b', NULL, 'd', 'c');
 ERROR:  null value in column "col3" violates not-null constraint
+DETAIL:  Failing row contains (a, b, null, d, c).
 INSERT INTO nulltest values ('a', 'b', 'c', NULL, 'd'); -- Good
 -- Test copy
 COPY nulltest FROM stdin; --fail
 ERROR:  null value in column "col3" violates not-null constraint
+DETAIL:  Failing row contains (a, b, null, d, d).
 CONTEXT:  COPY nulltest, line 1: "a	b	\N	d	d"
 COPY nulltest FROM stdin; --fail
 ERROR:  domain dcheck does not allow null values
@@ -216,6 +219,7 @@ CONTEXT:  COPY nulltest, line 1, column col5: null input
 -- Last row is bad
 COPY nulltest FROM stdin;
 ERROR:  new row for relation "nulltest" violates check constraint "nulltest_col5_check"
+DETAIL:  Failing row contains (a, b, c, null, a).
 CONTEXT:  COPY nulltest, line 3: "a	b	c	\N	a"
 select * from nulltest;
  col1 | col2 | col3 | col4 | col5 
@@ -262,12 +266,14 @@ create table defaulttest
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "defaulttest_pkey" for table "defaulttest"
 insert into defaulttest(col4) values(0); -- fails, col5 defaults to null
 ERROR:  null value in column "col5" violates not-null constraint
+DETAIL:  Failing row contains (3, 12, 5, 0, null, 88, 8000, 12.12).
 alter table defaulttest alter column col5 drop default;
 insert into defaulttest default values; -- succeeds, inserts domain default
 -- We used to treat SET DEFAULT NULL as equivalent to DROP DEFAULT; wrong
 alter table defaulttest alter column col5 set default null;
 insert into defaulttest(col4) values(0); -- fails
 ERROR:  null value in column "col5" violates not-null constraint
+DETAIL:  Failing row contains (3, 12, 5, 0, null, 88, 8000, 12.12).
 alter table defaulttest alter column col5 drop default;
 insert into defaulttest default values;
 insert into defaulttest default values;
@@ -353,6 +359,23 @@ alter domain con drop constraint t;
 insert into domcontest values (-5); --fails
 ERROR:  value for domain con violates check constraint "con_check"
 insert into domcontest values (42);
+alter domain con drop constraint nonexistent;
+ERROR:  constraint "nonexistent" of domain "con" does not exist
+alter domain con drop constraint if exists nonexistent;
+NOTICE:  constraint "nonexistent" of domain "con" does not exist, skipping
+-- Test ALTER DOMAIN .. CONSTRAINT .. NOT VALID
+create domain things AS INT;
+CREATE TABLE thethings (id int, stuff things);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO thethings (stuff) VALUES (55);
+ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11);
+ERROR:  column "stuff" of table "thethings" contains values that violate the new constraint
+ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11) NOT VALID;
+ALTER DOMAIN things VALIDATE CONSTRAINT meow;
+ERROR:  column "stuff" of table "thethings" contains values that violate the new constraint
+UPDATE thethings SET stuff = 10;
+ALTER DOMAIN things VALIDATE CONSTRAINT meow;
 -- Confirm ALTER DOMAIN with RULES.
 create table domtab (col1 integer);
 create domain dom as integer;
@@ -473,7 +496,7 @@ begin
 end$$ language plpgsql;
 select doubledecrement(3); -- fail because of implicit null assignment
 ERROR:  domain pos_int does not allow null values
-CONTEXT:  PL/pgSQL function "doubledecrement" line 3 during statement block local variable initialization
+CONTEXT:  PL/pgSQL function doubledecrement(pos_int) line 3 during statement block local variable initialization
 create or replace function doubledecrement(p1 pos_int) returns pos_int as $$
 declare v pos_int := 0;
 begin
@@ -481,7 +504,7 @@ begin
 end$$ language plpgsql;
 select doubledecrement(3); -- fail at initialization assignment
 ERROR:  value for domain pos_int violates check constraint "pos_int_check"
-CONTEXT:  PL/pgSQL function "doubledecrement" line 3 during statement block local variable initialization
+CONTEXT:  PL/pgSQL function doubledecrement(pos_int) line 3 during statement block local variable initialization
 create or replace function doubledecrement(p1 pos_int) returns pos_int as $$
 declare v pos_int := 1;
 begin
@@ -494,10 +517,10 @@ select doubledecrement(0); -- fail before call
 ERROR:  value for domain pos_int violates check constraint "pos_int_check"
 select doubledecrement(1); -- fail at assignment to v
 ERROR:  value for domain pos_int violates check constraint "pos_int_check"
-CONTEXT:  PL/pgSQL function "doubledecrement" line 4 at assignment
+CONTEXT:  PL/pgSQL function doubledecrement(pos_int) line 4 at assignment
 select doubledecrement(2); -- fail at return
 ERROR:  value for domain pos_int violates check constraint "pos_int_check"
-CONTEXT:  PL/pgSQL function "doubledecrement" while casting return value to function's return type
+CONTEXT:  PL/pgSQL function doubledecrement(pos_int) while casting return value to function's return type
 select doubledecrement(3); -- good
  doubledecrement 
 -----------------
@@ -511,12 +534,12 @@ create type ddtest1 as (f1 posint);
 create table ddtest2(f1 ddtest1);
 insert into ddtest2 values(row(-1));
 alter domain posint add constraint c1 check(value >= 0);
-ERROR:  cannot alter type "posint" because column "ddtest2"."f1" uses it
+ERROR:  cannot alter type "posint" because column "ddtest2.f1" uses it
 drop table ddtest2;
 create table ddtest2(f1 ddtest1[], distkey int) distributed by (distkey);
 insert into ddtest2 values('{(-1)}');
 alter domain posint add constraint c1 check(value >= 0);
-ERROR:  cannot alter type "posint" because column "ddtest2"."f1" uses it
+ERROR:  cannot alter type "posint" because column "ddtest2.f1" uses it
 drop table ddtest2;
 alter domain posint add constraint c1 check(value >= 0);
 create domain posint2 as posint check (value % 2 = 0);
@@ -546,7 +569,7 @@ end$$ language plpgsql;
 select array_elem_check(121.00);
 ERROR:  numeric field overflow
 DETAIL:  A field with precision 4, scale 2 must round to an absolute value less than 10^2. Rounded overflowing value: 121.00
-CONTEXT:  PL/pgSQL function "array_elem_check" line 5 at assignment
+CONTEXT:  PL/pgSQL function array_elem_check(numeric) line 5 at assignment
 select array_elem_check(1.23456);
  array_elem_check 
 ------------------
@@ -564,7 +587,7 @@ end$$ language plpgsql;
 select array_elem_check(121.00);
 ERROR:  numeric field overflow
 DETAIL:  A field with precision 4, scale 2 must round to an absolute value less than 10^2. Rounded overflowing value: 121.00
-CONTEXT:  PL/pgSQL function "array_elem_check" line 5 at assignment
+CONTEXT:  PL/pgSQL function array_elem_check(numeric) line 5 at assignment
 select array_elem_check(1.23456);
  array_elem_check 
 ------------------
@@ -582,7 +605,7 @@ end$$ language plpgsql;
 select array_elem_check(121.00);
 ERROR:  numeric field overflow
 DETAIL:  A field with precision 4, scale 2 must round to an absolute value less than 10^2. Rounded overflowing value: 121.00
-CONTEXT:  PL/pgSQL function "array_elem_check" line 5 at assignment
+CONTEXT:  PL/pgSQL function array_elem_check(numeric) line 5 at assignment
 select array_elem_check(1.23456);
  array_elem_check 
 ------------------
@@ -630,5 +653,19 @@ select array_elem_check(3);
 
 select array_elem_check(-1);
 ERROR:  value for domain orderedpair violates check constraint "orderedpair_check"
-CONTEXT:  PL/pgSQL function "array_elem_check" line 5 at assignment
+CONTEXT:  PL/pgSQL function array_elem_check(integer) line 5 at assignment
 drop function array_elem_check(int);
+--
+-- Renaming
+--
+create domain testdomain1 as int;
+alter domain testdomain1 rename to testdomain2;
+alter type testdomain2 rename to testdomain3;  -- alter type also works
+drop domain testdomain3;
+--
+-- Renaming domain constraints
+--
+create domain testdomain1 as int constraint unsigned check (value > 0);
+alter domain testdomain1 rename constraint unsigned to unsigned_foo;
+alter domain testdomain1 drop constraint unsigned_foo;
+drop domain testdomain1;

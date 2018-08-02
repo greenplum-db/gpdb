@@ -19,7 +19,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -110,9 +110,10 @@ preprocess_minmax_aggregates(PlannerInfo *root, List *tlist)
 	 * We also restrict the query to reference exactly one table, since join
 	 * conditions can't be handled reasonably.  (We could perhaps handle a
 	 * query containing cartesian-product joins, but it hardly seems worth the
-	 * trouble.)  However, the single real table could be buried in several
-	 * levels of FromExpr due to subqueries.  Note the single table could be
-	 * an inheritance parent, too.
+	 * trouble.)  However, the single table could be buried in several levels
+	 * of FromExpr due to subqueries.  Note the "single" table could be an
+	 * inheritance parent, too, including the case of a UNION ALL subquery
+	 * that's been flattened to an appendrel.
 	 */
 	jtnode = parse->jointree;
 	while (IsA(jtnode, FromExpr))
@@ -125,7 +126,11 @@ preprocess_minmax_aggregates(PlannerInfo *root, List *tlist)
 		return;
 	rtr = (RangeTblRef *) jtnode;
 	rte = planner_rt_fetch(rtr->rtindex, root);
-	if (rte->rtekind != RTE_RELATION)
+	if (rte->rtekind == RTE_RELATION)
+		 /* ordinary relation, ok */ ;
+	else if (rte->rtekind == RTE_SUBQUERY && rte->inh)
+		 /* flattened UNION ALL subquery, ok */ ;
+	else
 		return;
 
 	/*

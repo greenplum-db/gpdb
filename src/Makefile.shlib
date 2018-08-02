@@ -130,7 +130,7 @@ ifeq ($(PORTNAME), darwin)
     ifneq ($(SO_MAJOR_VERSION), 0)
       version_link	= -compatibility_version $(SO_MAJOR_VERSION) -current_version $(SO_MAJOR_VERSION).$(SO_MINOR_VERSION)
     endif
-    LINK.shared		= $(COMPILER) -dynamiclib -install_name "$(libdir)/lib$(NAME).$(SO_MAJOR_VERSION)$(DLSUFFIX)" $(version_link) $(exported_symbols_list) -multiply_defined suppress
+    LINK.shared		= $(COMPILER) -dynamiclib -install_name '$(libdir)/lib$(NAME).$(SO_MAJOR_VERSION)$(DLSUFFIX)' $(version_link) $(exported_symbols_list) -multiply_defined suppress
     shlib		= lib$(NAME).$(SO_MAJOR_VERSION).$(SO_MINOR_VERSION)$(DLSUFFIX)
     shlib_major		= lib$(NAME).$(SO_MAJOR_VERSION)$(DLSUFFIX)
   else
@@ -154,19 +154,6 @@ ifeq ($(PORTNAME), openbsd)
     SHLIB_LINK		+= -lc
   else
     LINK.shared		= $(LD) -x -Bshareable -Bforcearchive
-  endif
-endif
-
-ifeq ($(PORTNAME), bsdi)
-  ifeq ($(DLSUFFIX), .so)
-    LINK.shared		= $(COMPILER) -shared
-    ifdef soname
-      LINK.shared	+= -Wl,-x,-soname,$(soname)
-    endif
-    SHLIB_LINK		+= -lc
-  endif
-  ifeq ($(DLSUFFIX), .o)
-    LINK.shared		= shlicc -O $(LDREL)
   endif
 endif
 
@@ -268,10 +255,6 @@ ifeq ($(PORTNAME), solaris)
   endif
 endif
 
-ifeq ($(PORTNAME), sunos4)
-  LINK.shared		= $(LD) -assert pure-text -Bdynamic
-endif
-
 ifeq ($(PORTNAME), osf)
   LINK.shared		= $(LD) -shared -expect_unresolved '*'
 endif
@@ -286,14 +269,6 @@ ifeq ($(PORTNAME), sco)
   ifdef soname
     LINK.shared		+= -Wl,-h,$(soname)
   endif
-endif
-
-ifeq ($(PORTNAME), svr4)
-  LINK.shared		= $(LD) -G
-endif
-
-ifeq ($(PORTNAME), univel)
-  LINK.shared		= $(LD) -G -z text
 endif
 
 ifeq ($(PORTNAME), unixware)

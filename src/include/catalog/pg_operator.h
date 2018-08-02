@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_operator.h
@@ -1155,6 +1155,13 @@ DESCR("greater than");
 DATA(insert OID = 1225 (  ">="	   PGNSP PGUID b f f 829 829	 16 1223 1222 macaddr_ge scalargtsel scalargtjoinsel ));
 DESCR("greater than or equal");
 
+DATA(insert OID = 3147 (  "~"	   PGNSP PGUID l f f	  0 829 829 0 0 macaddr_not - - ));
+DESCR("bitwise not");
+DATA(insert OID = 3148 (  "&"	   PGNSP PGUID b f f	829 829 829 0 0 macaddr_and - - ));
+DESCR("bitwise and");
+DATA(insert OID = 3149 (  "|"	   PGNSP PGUID b f f	829 829 829 0 0 macaddr_or - - ));
+DESCR("bitwise or");
+
 /* INET type (these also support CIDR via implicit cast) */
 DATA(insert OID = 1201 (  "="	   PGNSP PGUID b t t 869 869	 16 1201 1202 network_eq eqsel eqjoinsel ));
 DESCR("equal");
@@ -1560,12 +1567,15 @@ DATA(insert OID = 2590 (  "|&>"    PGNSP PGUID b f f 718 718	16	 0	 0 circle_ove
 DESCR("overlaps or is above");
 
 /* overlap/contains/contained for arrays */
-DATA(insert OID = 2750 (  "&&"	   PGNSP PGUID b f f 2277 2277	16 2750  0 arrayoverlap areasel areajoinsel ));
+DATA(insert OID = 2750 (  "&&"	   PGNSP PGUID b f f 2277 2277	16 2750  0 arrayoverlap arraycontsel arraycontjoinsel ));
 DESCR("overlaps");
-DATA(insert OID = 2751 (  "@>"	   PGNSP PGUID b f f 2277 2277	16 2752  0 arraycontains contsel contjoinsel ));
+#define OID_ARRAY_OVERLAP_OP	2750
+DATA(insert OID = 2751 (  "@>"	   PGNSP PGUID b f f 2277 2277	16 2752  0 arraycontains arraycontsel arraycontjoinsel ));
 DESCR("contains");
-DATA(insert OID = 2752 (  "<@"	   PGNSP PGUID b f f 2277 2277	16 2751  0 arraycontained contsel contjoinsel ));
+#define OID_ARRAY_CONTAINS_OP	2751
+DATA(insert OID = 2752 (  "<@"	   PGNSP PGUID b f f 2277 2277	16 2751  0 arraycontained arraycontsel arraycontjoinsel ));
 DESCR("is contained by");
+#define OID_ARRAY_CONTAINED_OP	2752
 
 /* capturing operators to preserve pre-8.3 behavior of text concatenation */
 DATA(insert OID = 2779 (  "||"	   PGNSP PGUID b f f 25 2776	25	 0 0 textanycat - - ));
@@ -1720,6 +1730,46 @@ DATA(insert OID = 2992 (  "<="	   PGNSP PGUID b f f 2249 2249 16 2993 2991 recor
 DESCR("less than or equal");
 DATA(insert OID = 2993 (  ">="	   PGNSP PGUID b f f 2249 2249 16 2992 2990 record_ge scalargtsel scalargtjoinsel ));
 DESCR("greater than or equal");
+
+/* generic range type operators */
+DATA(insert OID = 3882 (  "="	   PGNSP PGUID b t t 3831 3831 16 3882 3883 range_eq eqsel eqjoinsel ));
+DESCR("equal");
+DATA(insert OID = 3883 (  "<>"	   PGNSP PGUID b f f 3831 3831 16 3883 3882 range_ne neqsel neqjoinsel ));
+DESCR("not equal");
+DATA(insert OID = 3884 (  "<"	   PGNSP PGUID b f f 3831 3831 16 3887 3886 range_lt scalarltsel scalarltjoinsel ));
+DESCR("less than");
+DATA(insert OID = 3885 (  "<="	   PGNSP PGUID b f f 3831 3831 16 3886 3887 range_le scalarltsel scalarltjoinsel ));
+DESCR("less than or equal");
+DATA(insert OID = 3886 (  ">="	   PGNSP PGUID b f f 3831 3831 16 3885 3884 range_ge scalargtsel scalargtjoinsel ));
+DESCR("greater than or equal");
+DATA(insert OID = 3887 (  ">"	   PGNSP PGUID b f f 3831 3831 16 3884 3885 range_gt scalargtsel scalargtjoinsel ));
+DESCR("greater than");
+DATA(insert OID = 3888 (  "&&"	   PGNSP PGUID b f f 3831 3831 16 3888 0 range_overlaps areasel areajoinsel ));
+DESCR("overlaps");
+DATA(insert OID = 3889 (  "@>"	   PGNSP PGUID b f f 3831 2283 16 3891 0 range_contains_elem contsel contjoinsel ));
+DESCR("contains");
+DATA(insert OID = 3890 (  "@>"	   PGNSP PGUID b f f 3831 3831 16 3892 0 range_contains contsel contjoinsel ));
+DESCR("contains");
+DATA(insert OID = 3891 (  "<@"	   PGNSP PGUID b f f 2283 3831 16 3889 0 elem_contained_by_range contsel contjoinsel ));
+DESCR("is contained by");
+DATA(insert OID = 3892 (  "<@"	   PGNSP PGUID b f f 3831 3831 16 3890 0 range_contained_by contsel contjoinsel ));
+DESCR("is contained by");
+DATA(insert OID = 3893 (  "<<"	   PGNSP PGUID b f f 3831 3831 16 3894 0 range_before scalarltsel scalarltjoinsel ));
+DESCR("is left of");
+DATA(insert OID = 3894 (  ">>"	   PGNSP PGUID b f f 3831 3831 16 3893 0 range_after scalargtsel scalargtjoinsel ));
+DESCR("is right of");
+DATA(insert OID = 3895 (  "&<"	   PGNSP PGUID b f f 3831 3831 16 0 0 range_overleft scalarltsel scalarltjoinsel ));
+DESCR("overlaps or is left of");
+DATA(insert OID = 3896 (  "&>"	   PGNSP PGUID b f f 3831 3831 16 0 0 range_overright scalargtsel scalargtjoinsel ));
+DESCR("overlaps or is right of");
+DATA(insert OID = 3897 (  "-|-"    PGNSP PGUID b f f 3831 3831 16 3897 0 range_adjacent contsel contjoinsel ));
+DESCR("is adjacent to");
+DATA(insert OID = 3898 (  "+"	   PGNSP PGUID b f f 3831 3831 3831 3898 0 range_union - - ));
+DESCR("range union");
+DATA(insert OID = 3899 (  "-"	   PGNSP PGUID b f f 3831 3831 3831 0 0 range_minus - - ));
+DESCR("range difference");
+DATA(insert OID = 3900 (  "*"	   PGNSP PGUID b f f 3831 3831 3831 3900 0 range_intersect - - ));
+DESCR("range intersection");
 
 
 

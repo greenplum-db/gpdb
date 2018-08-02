@@ -3,7 +3,7 @@
  * findtimezone.c
  *	  Functions for determining the default timezone to use.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/bin/initdb/findtimezone.c
@@ -52,7 +52,7 @@ pg_TZDIR(void)
  * This is simpler than the backend function of the same name because
  * we assume that the input string has the correct case already, so there
  * is no need for case-folding.  (This is obviously true if we got the file
- * name from the filesystem to start with.  The only other place it can come
+ * name from the filesystem to start with.	The only other place it can come
  * from is the environment variable TZ, and there seems no need to allow
  * case variation in that; other programs aren't likely to.)
  *
@@ -571,7 +571,6 @@ scan_available_timezones(char *tzdir, char *tzdirsub, struct tztry * tt,
 
 	pgfnames_cleanup(names);
 }
-
 #else							/* WIN32 */
 
 static const struct
@@ -658,9 +657,10 @@ static const struct
 		"Cen. Australia Standard Time", "Cen. Australia Daylight Time",
 		"Australia/Adelaide"
 	},							/* (GMT+09:30) Adelaide */
+	/* Central America (other than Mexico) generally does not observe DST */
 	{
 		"Central America Standard Time", "Central America Daylight Time",
-		"CST6CDT"
+		"CST6"
 	},							/* (GMT-06:00) Central America */
 	{
 		"Central Asia Standard Time", "Central Asia Daylight Time",

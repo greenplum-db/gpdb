@@ -4,7 +4,7 @@
  *	  lexical scanning for PL/pgSQL
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -110,6 +110,7 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("array", K_ARRAY, UNRESERVED_KEYWORD)
 	PG_KEYWORD("backward", K_BACKWARD, UNRESERVED_KEYWORD)
 	PG_KEYWORD("constant", K_CONSTANT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("current", K_CURRENT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("cursor", K_CURSOR, UNRESERVED_KEYWORD)
 	PG_KEYWORD("debug", K_DEBUG, UNRESERVED_KEYWORD)
 	PG_KEYWORD("detail", K_DETAIL, UNRESERVED_KEYWORD)
@@ -124,20 +125,26 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("last", K_LAST, UNRESERVED_KEYWORD)
 	PG_KEYWORD("log", K_LOG, UNRESERVED_KEYWORD)
 	PG_KEYWORD("message", K_MESSAGE, UNRESERVED_KEYWORD)
+	PG_KEYWORD("message_text", K_MESSAGE_TEXT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("next", K_NEXT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("no", K_NO, UNRESERVED_KEYWORD)
 	PG_KEYWORD("notice", K_NOTICE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("option", K_OPTION, UNRESERVED_KEYWORD)
+	PG_KEYWORD("pg_exception_context", K_PG_EXCEPTION_CONTEXT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("pg_exception_detail", K_PG_EXCEPTION_DETAIL, UNRESERVED_KEYWORD)
+	PG_KEYWORD("pg_exception_hint", K_PG_EXCEPTION_HINT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("prior", K_PRIOR, UNRESERVED_KEYWORD)
 	PG_KEYWORD("query", K_QUERY, UNRESERVED_KEYWORD)
 	PG_KEYWORD("relative", K_RELATIVE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("result_oid", K_RESULT_OID, UNRESERVED_KEYWORD)
+	PG_KEYWORD("returned_sqlstate", K_RETURNED_SQLSTATE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("reverse", K_REVERSE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("row_count", K_ROW_COUNT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("rowtype", K_ROWTYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("scroll", K_SCROLL, UNRESERVED_KEYWORD)
 	PG_KEYWORD("slice", K_SLICE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("sqlstate", K_SQLSTATE, UNRESERVED_KEYWORD)
+	PG_KEYWORD("stacked", K_STACKED, UNRESERVED_KEYWORD)
 	PG_KEYWORD("type", K_TYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("use_column", K_USE_COLUMN, UNRESERVED_KEYWORD)
 	PG_KEYWORD("use_variable", K_USE_VARIABLE, UNRESERVED_KEYWORD)
@@ -414,6 +421,36 @@ plpgsql_append_source_text(StringInfo buf,
 	Assert(startlocation <= endlocation);
 	appendBinaryStringInfo(buf, scanorig + startlocation,
 						   endlocation - startlocation);
+}
+
+/*
+ * Peek two tokens ahead in the input stream. The first token and its
+ * location the query are returned in *tok1_p and *tok1_loc, second token
+ * and its location in *tok2_p and *tok2_loc.
+ *
+ * NB: no variable or unreserved keyword lookup is performed here, they will
+ * be returned as IDENT. Reserved keywords are resolved as usual.
+ */
+void
+plpgsql_peek2(int *tok1_p, int *tok2_p, int *tok1_loc, int *tok2_loc)
+{
+	int			tok1,
+				tok2;
+	TokenAuxData aux1,
+				aux2;
+
+	tok1 = internal_yylex(&aux1);
+	tok2 = internal_yylex(&aux2);
+
+	*tok1_p = tok1;
+	if (tok1_loc)
+		*tok1_loc = aux1.lloc;
+	*tok2_p = tok2;
+	if (tok2_loc)
+		*tok2_loc = aux2.lloc;
+
+	push_back_token(tok2, &aux2);
+	push_back_token(tok1, &aux1);
 }
 
 /*

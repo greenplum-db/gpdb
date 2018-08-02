@@ -257,7 +257,7 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype * type, const int bra
 		if ((var->type->type != type->type) ||
 			(var->type->type_name && !type->type_name) ||
 			(!var->type->type_name && type->type_name) ||
-			(var->type->type_name && type->type_name && strcmp(var->type->type_name, type->type_name)))
+			(var->type->type_name && type->type_name && strcmp(var->type->type_name, type->type_name) != 0))
 			mmerror(PARSE_ERROR, ET_ERROR, "variable \"%s\" is hidden by a local variable of a different type", name);
 		else if (var->brace_level != brace_level)
 			mmerror(PARSE_ERROR, ET_WARNING, "variable \"%s\" is hidden by a local variable", name);
@@ -271,7 +271,7 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype * type, const int bra
 			if ((var->type->type != ind_type->type) ||
 				(var->type->type_name && !ind_type->type_name) ||
 				(!var->type->type_name && ind_type->type_name) ||
-				(var->type->type_name && ind_type->type_name && strcmp(var->type->type_name, ind_type->type_name)))
+				(var->type->type_name && ind_type->type_name && strcmp(var->type->type_name, ind_type->type_name) != 0))
 				mmerror(PARSE_ERROR, ET_ERROR, "indicator variable \"%s\" is hidden by a local variable of a different type", ind_name);
 			else if (var->brace_level != ind_brace_level)
 				mmerror(PARSE_ERROR, ET_WARNING, "indicator variable \"%s\" is hidden by a local variable", ind_name);
@@ -375,8 +375,6 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type,
 	{
 		char	   *variable = (char *) mm_alloc(strlen(name) + ((prefix == NULL) ? 0 : strlen(prefix)) + 4);
 		char	   *offset = (char *) mm_alloc(strlen(name) + strlen("sizeof(struct varchar_)") + 1 + strlen(varcharsize) + sizeof(int) * CHAR_BIT * 10 / 3);
-		char	   *var_name,
-				   *ptr;
 
 		switch (type)
 		{
@@ -398,16 +396,14 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type,
 				else
 					sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
 
-				/* remove trailing [] is name is array element */
-				var_name = mm_strdup(name);
-				ptr = strchr(var_name, '[');
-				if (ptr)
-					*ptr = '\0';
+				/*
+				 * If we created a varchar structure atomatically, counter is
+				 * greater than 0.
+				 */
 				if (counter)
-					sprintf(offset, "sizeof(struct varchar_%s_%d)", var_name, counter);
+					sprintf(offset, "sizeof(struct varchar_%d)", counter);
 				else
-					sprintf(offset, "sizeof(struct varchar_%s)", var_name);
-				free(var_name);
+					sprintf(offset, "sizeof(struct varchar)");
 				break;
 			case ECPGt_char:
 			case ECPGt_unsigned_char:

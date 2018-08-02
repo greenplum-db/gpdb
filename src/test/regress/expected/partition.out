@@ -1,4 +1,8 @@
 set enable_partition_rules = false;
+drop table if exists d;
+drop table if exists c;
+drop table if exists b;
+drop table if exists a;
 -- Check multi level partition COPY
 create table region
 (
@@ -506,7 +510,8 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 -- but we do now, so the following tries to insert a value that can't go
 -- in part 6.
 insert into bar_p values(10, 10);
-ERROR:  new row for relation "bar_p" violates check constraint "foo_p_1_prt_6_check"  (seg1 slarimac:40001 pid=97876)
+ERROR:  new row for relation "bar_p" violates check constraint "foo_p_1_prt_6_check"  (seg2 127.0.0.1:25434 pid=10977)
+DETAIL:  Failing row contains (10, 10).
 drop table foo_p;
 select * from bar_p;
  i | j 

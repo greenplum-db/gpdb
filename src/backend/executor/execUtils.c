@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -56,7 +56,6 @@
 #include "parser/parsetree.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
-#include "utils/relcache.h"
 #include "utils/tqual.h"
 
 #include "nodes/primnodes.h"
@@ -155,6 +154,7 @@ CreateExecutorState(void)
 	estate->es_trig_target_relations = NIL;
 	estate->es_trig_tuple_slot = NULL;
 	estate->es_trig_oldtup_slot = NULL;
+	estate->es_trig_newtup_slot = NULL;
 
 	estate->es_param_list_info = NULL;
 	estate->es_param_exec_vals = NULL;
@@ -170,8 +170,6 @@ CreateExecutorState(void)
 
 	estate->es_top_eflags = 0;
 	estate->es_instrument = 0;
-	estate->es_select_into = false;
-	estate->es_into_oids = false;
 	estate->es_finished = false;
 
 	estate->es_exprcontexts = NIL;
@@ -652,19 +650,21 @@ ExecBuildProjectionInfo(List *targetList,
 
 			switch (variable->varno)
 			{
-				case INNER:
+				case INNER_VAR:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
 															 ecxt_innertuple);
 					if (projInfo->pi_lastInnerVar < attnum)
 						projInfo->pi_lastInnerVar = attnum;
 					break;
 
-				case OUTER:
+				case OUTER_VAR:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
 															 ecxt_outertuple);
 					if (projInfo->pi_lastOuterVar < attnum)
 						projInfo->pi_lastOuterVar = attnum;
 					break;
+
+					/* INDEX_VAR is handled by default case */
 
 				default:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
@@ -714,15 +714,17 @@ get_last_attnums(Node *node, ProjectionInfo *projInfo)
 
 		switch (variable->varno)
 		{
-			case INNER:
+			case INNER_VAR:
 				if (projInfo->pi_lastInnerVar < attnum)
 					projInfo->pi_lastInnerVar = attnum;
 				break;
 
-			case OUTER:
+			case OUTER_VAR:
 				if (projInfo->pi_lastOuterVar < attnum)
 					projInfo->pi_lastOuterVar = attnum;
 				break;
+
+				/* INDEX_VAR is handled by default case */
 
 			default:
 				if (projInfo->pi_lastScanVar < attnum)

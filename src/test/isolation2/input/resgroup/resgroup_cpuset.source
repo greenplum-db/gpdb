@@ -179,9 +179,9 @@ CREATE VIEW busy AS
     ;
 
 CREATE VIEW cancel_all AS
-    SELECT pg_cancel_backend(procpid)
+    SELECT pg_cancel_backend(pid)
     FROM pg_stat_activity
-    WHERE current_query LIKE 'SELECT * FROM busy%';
+    WHERE query LIKE 'SELECT * FROM busy%';
 
 GRANT ALL ON busy TO role1_cpuset_test;
 

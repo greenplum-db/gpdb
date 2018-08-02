@@ -14,7 +14,8 @@
 #define DLSUFFIX "To compile dfmgr.c we need to define this"
 
 /* Redefine errdetail and errmsg to capture the error detail for later comparison */
-#define errdetail errdetail_impl
+#define errdetail errdetail_internal_impl
+#define errdetail_internal errdetail_internal_impl
 #define errmsg errmsg_impl
 /*
  * Redefine errfinish to throw an error *only if* the error message matches our
@@ -49,7 +50,7 @@ int errmsg_impl(const char *fmt, ...)
 	return 0;
 }
 
-int errdetail_impl(const char* fmt, ...)
+int errdetail_internal_impl(const char* fmt, ...)
 {
     StringInfoData	buf;
     initStringInfo(&buf);

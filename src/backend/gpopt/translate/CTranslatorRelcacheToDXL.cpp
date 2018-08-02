@@ -2279,11 +2279,12 @@ CTranslatorRelcacheToDXL::PimdobjRelStats
 		// CMDName ctor created a copy of the string
 		GPOS_DELETE(pstrRelName);
 
-		BlockNumber pages = 0;
+		BlockNumber pg_attribute_unused() pages = 0;
+		double pg_attribute_unused() allvisfrac = 0.0;
 		GpPolicy *pgppolicy = gpdb::Pdistrpolicy(rel);
 		if (!pgppolicy ||pgppolicy->ptype != POLICYTYPE_PARTITIONED)
 		{
-			gpdb::EstimateRelationSize(rel, NULL, &pages, &rows);
+			gpdb::EstimateRelationSize(rel, NULL, &pages, &rows, &allvisfrac);
 		}
 		else
 		{
@@ -2294,7 +2295,7 @@ CTranslatorRelcacheToDXL::PimdobjRelStats
 				RelOptInfo *relOptInfo = makeNode(RelOptInfo);
 				relOptInfo->cdbpolicy = gpdb::Pdistrpolicy(rel);
 
-				gpdb::CdbEstimateRelationSize(relOptInfo, rel, NULL, &pages, &rows);
+				gpdb::CdbEstimateRelationSize(relOptInfo, rel, NULL, &pages, &rows, &allvisfrac);
 				pfree(relOptInfo);
 
 			}

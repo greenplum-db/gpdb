@@ -21,21 +21,25 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
+ALTER FOREIGN TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable>
     <replaceable class="PARAMETER">action</replaceable> [, ... ]
-ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
+ALTER FOREIGN TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable>
     RENAME [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> TO <replaceable class="PARAMETER">new_column</replaceable>
-ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
+ALTER FOREIGN TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable>
     RENAME TO <replaceable class="PARAMETER">new_name</replaceable>
-ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
+ALTER FOREIGN TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable>
     SET SCHEMA <replaceable class="PARAMETER">new_schema</replaceable>
 
 <phrase>where <replaceable class="PARAMETER">action</replaceable> is one of:</phrase>
 
-    ADD [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> <replaceable class="PARAMETER">type</replaceable>
+    ADD [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> <replaceable class="PARAMETER">type</replaceable> [ NULL | NOT NULL ]
     DROP [ COLUMN ] [ IF EXISTS ] <replaceable class="PARAMETER">column</replaceable> [ RESTRICT | CASCADE ]
     ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> [ SET DATA ] TYPE <replaceable class="PARAMETER">type</replaceable>
     ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> { SET | DROP } NOT NULL
+    ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> SET STATISTICS <replaceable class="PARAMETER">integer</replaceable>
+    ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> SET ( <replaceable class="PARAMETER">attribute_option</replaceable> = <replaceable class="PARAMETER">value</replaceable> [, ... ] )
+    ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> RESET ( <replaceable class="PARAMETER">attribute_option</replaceable> [, ... ] )
+    ALTER [ COLUMN ] <replaceable class="PARAMETER">column</replaceable> OPTIONS ( [ ADD | SET | DROP ] <replaceable class="PARAMETER">option</replaceable> ['<replaceable class="PARAMETER">value</replaceable>'] [, ... ])
     OWNER TO <replaceable class="PARAMETER">new_owner</replaceable>
     OPTIONS ( [ ADD | SET | DROP ] <replaceable class="PARAMETER">option</replaceable> ['<replaceable class="PARAMETER">value</replaceable>'] [, ... ])
 </synopsis>
@@ -75,6 +79,16 @@ ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
    </varlistentry>
 
    <varlistentry>
+    <term><literal>IF EXISTS</literal></term>
+    <listitem>
+     <para>
+      Do not throw an error if the foreign table does not exist. A notice is
+      issued in this case.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>SET DATA TYPE</literal></term>
     <listitem>
      <para>
@@ -88,6 +102,31 @@ ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
     <listitem>
      <para>
       Mark a column as allowing, or not allowing, null values.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>SET STATISTICS</literal></term>
+    <listitem>
+     <para>
+      This form
+      sets the per-column statistics-gathering target for subsequent
+      <xref linkend="sql-analyze"> operations.
+      See the similar form of <xref linkend="sql-altertable">
+      for more details.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>SET ( <replaceable class="PARAMETER">attribute_option</replaceable> = <replaceable class="PARAMETER">value</replaceable> [, ... ] )</literal></term>
+    <term><literal>RESET ( <replaceable class="PARAMETER">attribute_option</replaceable> [, ... ] )</literal></term>
+    <listitem>
+     <para>
+      This form sets or resets per-attribute options.
+      See the similar form of <xref linkend="sql-altertable">
+      for more details.
      </para>
     </listitem>
    </varlistentry>
@@ -125,12 +164,13 @@ ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
     <term><literal>OPTIONS ( [ ADD | SET | DROP ] <replaceable class="PARAMETER">option</replaceable> ['<replaceable class="PARAMETER">value</replaceable>'] [, ... ] )</literal></term>
     <listitem>
      <para>
-      Change options for the foreign table or the column of the foreign table.
+      Change options for the foreign table or one of its columns.
       <literal>ADD</>, <literal>SET</>, and <literal>DROP</>
       specify the action to be performed.  <literal>ADD</> is assumed
-      if no operation is explicitly specified.  Option names must be
-      unique; names and values are also validated using the foreign
-      data wrapper library.
+      if no operation is explicitly specified.  Duplicate option names are not
+      allowed (although it's OK for a table option and a column option to have
+      the same name).  Option names and values are also validated using the
+      foreign data wrapper library.
      </para>
     </listitem>
    </varlistentry>
@@ -150,13 +190,13 @@ ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
    You must own the table to use <command>ALTER FOREIGN TABLE</>.
    To change the schema of a foreign table, you must also have
    <literal>CREATE</literal> privilege on the new schema.
-   To add the table as a new child of a parent table, you must own the
-   parent table as well.
    To alter the owner, you must also be a direct or indirect member of the new
    owning role, and that role must have <literal>CREATE</literal> privilege on
    the table's schema.  (These restrictions enforce that altering the owner
    doesn't do anything you couldn't do by dropping and recreating the table.
    However, a superuser can alter ownership of any table anyway.)
+   To add a column or alter a column type, you must also
+   have <literal>USAGE</literal> privilege on the data type.
   </para>
  </refsect1>
 
@@ -260,12 +300,11 @@ ALTER FOREIGN TABLE <replaceable class="PARAMETER">name</replaceable>
    </para>
 
    <para>
-    Consistency with the foreign server is not checked when a column is
-    added or removed with <literal>ADD COLUMN</literal> or
-    <literal>DROP COLUMN</literal>, a system <literal>oid</> column is added
-    or removed, a <literal>CHECK</> or <literal>NOT NULL</> constraint is
-    added, or column type is changed with <literal>SET DATA TYPE</>.  It is the
-    user's responsibility to ensure that the table definition matches the
+    Consistency with the foreign server is not checked when a column is added
+    or removed with <literal>ADD COLUMN</literal> or
+    <literal>DROP COLUMN</literal>, a <literal>NOT NULL</> constraint is
+    added, or a column type is changed with <literal>SET DATA TYPE</>.  It is
+    the user's responsibility to ensure that the table definition matches the
     remote side.
    </para>
 
@@ -289,8 +328,7 @@ ALTER FOREIGN TABLE distributors ALTER COLUMN street SET NOT NULL;
    To change options of a foreign table:
 <programlisting>
 ALTER FOREIGN TABLE myschema.distributors OPTIONS (ADD opt1 'value', SET opt2, 'value2', DROP opt3 'value3');
-</programlisting>
-  </para>
+</programlisting></para>
 
  </refsect1>
 

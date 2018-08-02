@@ -11,6 +11,9 @@
 -- m/CONTEXT\:\s+COPY sreh_copy\,\s+line/
 -- s/line \d+(.*)/line SOME_LINE/
 --
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+--
 -- end_matchsubs
 -- ###########################################################
 -- COPY 
@@ -152,8 +155,9 @@ CREATE TABLE sreh_constr(a int check (a > 10));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 COPY sreh_constr FROM STDIN DELIMITER '|' LOG ERRORS SEGMENT REJECT LIMIT 1000;
-ERROR:  new row for relation "sreh_constr" violates check constraint "sreh_constr_a_check"  (seg0 @hostname@:11001 pid=68456)
-CONTEXT:  COPY sreh_constr, line 5: "9"
+ERROR:  new row for relation "sreh_constr" violates check constraint "sreh_constr_a_check"
+DETAIL:  Failing row contains (10).
+CONTEXT:  COPY sreh_constr, line 4
 WITH error_log AS (SELECT gp_read_error_log('sreh_constr')) select count(*) from error_log;
  count 
 -------
@@ -425,7 +429,8 @@ LOG ERRORS
 SEGMENT REJECT LIMIT 1000;
 INSERT INTO sreh_constr SELECT * FROM sreh_ext;
 NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
-ERROR:  new row for relation "sreh_constr" violates check constraint "sreh_constr_c_check"  (seg1 172.17.0.7:40001 pid=2210)
+ERROR:  new row for relation "sreh_constr" violates check constraint "sreh_constr_c_check"  (seg0 172.17.0.2:25432 pid=161224)
+DETAIL:  Failing row contains (14, 14, 14).
 SELECT linenum, rawdata FROM gp_read_error_log('sreh_constr') ORDER BY linenum;
  linenum | rawdata 
 ---------+---------

@@ -1,0 +1,8 @@
+-- start_matchsubs
+m/ \(pltcl\.c:\d+\)/
+s/ \(pltcl\.c:\d+\)//
+-- end_matchsubs
+
+-- start_matchignore
+m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
+-- end_matchignore

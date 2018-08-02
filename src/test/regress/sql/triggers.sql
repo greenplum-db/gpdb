@@ -308,6 +308,32 @@ SELECT pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'main_table'::regc
 UPDATE main_table SET a = 50;
 UPDATE main_table SET b = 10;
 
+--
+-- Test case for bug with BEFORE trigger followed by AFTER trigger with WHEN
+--
+
+CREATE TABLE some_t (some_col boolean NOT NULL);
+CREATE FUNCTION dummy_update_func() RETURNS trigger AS $$
+BEGIN
+  RAISE NOTICE 'dummy_update_func(%) called: action = %, old = %, new = %',
+    TG_ARGV[0], TG_OP, OLD, NEW;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER some_trig_before BEFORE UPDATE ON some_t FOR EACH ROW
+  EXECUTE PROCEDURE dummy_update_func('before');
+CREATE TRIGGER some_trig_aftera AFTER UPDATE ON some_t FOR EACH ROW
+  WHEN (NOT OLD.some_col AND NEW.some_col)
+  EXECUTE PROCEDURE dummy_update_func('aftera');
+CREATE TRIGGER some_trig_afterb AFTER UPDATE ON some_t FOR EACH ROW
+  WHEN (NOT NEW.some_col)
+  EXECUTE PROCEDURE dummy_update_func('afterb');
+INSERT INTO some_t VALUES (TRUE);
+UPDATE some_t SET some_col = TRUE;
+UPDATE some_t SET some_col = FALSE;
+UPDATE some_t SET some_col = TRUE;
+DROP TABLE some_t;
+
 -- bogus cases
 CREATE TRIGGER error_upd_and_col BEFORE UPDATE OR UPDATE OF a ON main_table
 FOR EACH ROW EXECUTE PROCEDURE trigger_func('error_upd_and_col');
@@ -935,3 +961,67 @@ SELECT * FROM city_view;
 
 DROP TABLE city_table CASCADE;
 DROP TABLE country_table;
+
+
+-- Test pg_trigger_depth()
+
+create table depth_a (id int not null primary key);
+create table depth_b (id int not null primary key);
+create table depth_c (id int not null primary key);
+
+create function depth_a_tf() returns trigger
+  language plpgsql as $$
+begin
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  insert into depth_b values (new.id);
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  return new;
+end;
+$$;
+create trigger depth_a_tr before insert on depth_a
+  for each row execute procedure depth_a_tf();
+
+create function depth_b_tf() returns trigger
+  language plpgsql as $$
+begin
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  begin
+    execute 'insert into depth_c values (' || new.id::text || ')';
+  exception
+    when sqlstate 'U9999' then
+      raise notice 'SQLSTATE = U9999: depth = %', pg_trigger_depth();
+  end;
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  if new.id = 1 then
+    execute 'insert into depth_c values (' || new.id::text || ')';
+  end if;
+  return new;
+end;
+$$;
+create trigger depth_b_tr before insert on depth_b
+  for each row execute procedure depth_b_tf();
+
+create function depth_c_tf() returns trigger
+  language plpgsql as $$
+begin
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  if new.id = 1 then
+    raise exception sqlstate 'U9999';
+  end if;
+  raise notice '%: depth = %', tg_name, pg_trigger_depth();
+  return new;
+end;
+$$;
+create trigger depth_c_tr before insert on depth_c
+  for each row execute procedure depth_c_tf();
+
+select pg_trigger_depth();
+insert into depth_a values (1);
+select pg_trigger_depth();
+insert into depth_a values (2);
+select pg_trigger_depth();
+
+drop table depth_a, depth_b, depth_c;
+drop function depth_a_tf();
+drop function depth_b_tf();
+drop function depth_c_tf();

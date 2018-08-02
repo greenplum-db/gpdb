@@ -11,7 +11,7 @@
 
 -- EXECUTE statement(cached plan) will be blocked when the concurrency limit of the resource queue is reached.
 0:SELECT rsqcountvalue FROM gp_toolkit.gp_resqueue_status WHERE rsqname='rq_concurrency_test';
-0:SELECT waiting_reason from pg_stat_activity where current_query = 'EXECUTE fooplan;';
+0:SELECT waiting_reason from pg_stat_activity where query = 'EXECUTE fooplan;';
 
 1:END;
 

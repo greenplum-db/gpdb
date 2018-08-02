@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_foreign_data_wrapper.h
@@ -35,10 +35,10 @@ CATALOG(pg_foreign_data_wrapper,2328)
 	Oid			fdwhandler;		/* handler function, or 0 if none */
 	Oid			fdwvalidator;	/* option validation function, or 0 if none */
 
-	/* VARIABLE LENGTH FIELDS start here. */
-
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		fdwacl[1];		/* access permissions */
 	text		fdwoptions[1];	/* FDW options */
+#endif
 } FormData_pg_foreign_data_wrapper;
 
 /* ----------------

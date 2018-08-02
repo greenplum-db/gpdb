@@ -176,7 +176,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
         If not specified,
         <literal>NOLOGIN</literal> is the default, except when
         <command>CREATE ROLE</> is invoked through its alternative spelling
-        <command>CREATE USER</>.
+        <xref linkend="sql-createuser">.
        </para>
       </listitem>
      </varlistentry>
@@ -191,8 +191,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
         A role having the <literal>REPLICATION</> attribute is a very
         highly privileged role, and should only be used on roles actually
         used for replication. If not specified,
-        <literal>NOREPLICATION</literal> is the default for all roles except
-        superusers.
+        <literal>NOREPLICATION</literal> is the default.
        </para>
       </listitem>
      </varlistentry>
@@ -274,8 +273,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
      <varlistentry>
       <term><literal>IN GROUP</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
-       <para>
-        <literal>IN GROUP</literal> is an obsolete spelling of
+       <para><literal>IN GROUP</literal> is an obsolete spelling of
         <literal>IN ROLE</>.
        </para>
       </listitem>
@@ -484,8 +482,7 @@ CREATE ROLE miriam WITH LOGIN PASSWORD 'jw8s0F4' VALID UNTIL '2005-01-01';
    Create a role that can create databases and manage roles:
 <programlisting>
 CREATE ROLE admin WITH CREATEDB CREATEROLE;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>

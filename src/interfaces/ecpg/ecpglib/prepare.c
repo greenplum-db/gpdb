@@ -19,7 +19,7 @@ typedef struct
 	char		stmtID[STMTID_SIZE];
 	char	   *ecpgQuery;
 	long		execs;			/* # of executions		*/
-	char	   *connection;		/* connection for the statement		*/
+	const char *connection;		/* connection for the statement		*/
 } stmtCacheEntry;
 
 static int	nextStmtID = 1;
@@ -124,7 +124,7 @@ prepare_common(int lineno, struct connection * con, const char *name, const char
 	stmt->command = ecpg_strdup(variable, lineno);
 	stmt->inlist = stmt->outlist = NULL;
 
-	/* if we have C variables in our statment replace them with '?' */
+	/* if we have C variables in our statement replace them with '?' */
 	replace_variables(&(stmt->command), lineno);
 
 	/* add prepared statement to our list */
@@ -361,7 +361,7 @@ SearchStmtCache(const char *ecpgQuery)
 	{
 		if (stmtCacheEntries[entNo].stmtID[0])	/* check if entry is in use		*/
 		{
-			if (!strcmp(ecpgQuery, stmtCacheEntries[entNo].ecpgQuery))
+			if (strcmp(ecpgQuery, stmtCacheEntries[entNo].ecpgQuery) == 0)
 				break;			/* found it		*/
 		}
 		++entNo;				/* incr entry #		*/
@@ -456,14 +456,14 @@ AddStmtToCache(int lineno,		/* line # of statement		*/
 	entry = &stmtCacheEntries[entNo];
 	entry->lineno = lineno;
 	entry->ecpgQuery = ecpg_strdup(ecpgQuery, lineno);
-	entry->connection = (char *) connection;
+	entry->connection = connection;
 	entry->execs = 0;
 	memcpy(entry->stmtID, stmtID, sizeof(entry->stmtID));
 
 	return (entNo);
 }
 
-/* handle cache and preparation of statments in auto-prepare mode */
+/* handle cache and preparation of statements in auto-prepare mode */
 bool
 ecpg_auto_prepare(int lineno, const char *connection_name, const int compat, char **name, const char *query)
 {

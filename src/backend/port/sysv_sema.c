@@ -4,7 +4,7 @@
  *	  Implement PGSemaphores using SysV semaphore facilities
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -22,9 +22,6 @@
 #endif
 #ifdef HAVE_SYS_SEM_H
 #include <sys/sem.h>
-#endif
-#ifdef HAVE_KERNEL_OS_H
-#include <kernel/OS.h>
 #endif
 
 #include "miscadmin.h"

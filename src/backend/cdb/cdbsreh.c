@@ -688,7 +688,7 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 		 */
 
 		relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-		relid = RangeVarGetRelid(relrv, true);
+		relid = RangeVarGetRelid(relrv, NoLock, true);
 
 		/* If the relation has gone, silently return no tuples. */
 		if (OidIsValid(relid))
@@ -901,7 +901,7 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 		AclResult	aclresult;
 
 		relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-		relid = RangeVarGetRelid(relrv, true);
+		relid = RangeVarGetRelid(relrv, NoLock, true);
 
 		/* Return false if the relation does not exist. */
 		if (!OidIsValid(relid))

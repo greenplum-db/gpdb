@@ -2102,12 +2102,12 @@ HINT:  Use an explicit ordering operator or modify the query.
 -- that matches expectations
 SELECT * FROM multiset_4( TABLE( SELECT 1::integer, 'hello'::text) ) as tf(a int);
 ERROR:  invalid output tuple for function multiset_example
-HINT:  expected (integer, text)
+HINT:  Expected (integer, text).
 -- ERROR no support for SELECT INTO in a TableValueExpression
 SELECT * FROM multiset_2( TABLE( SELECT * INTO should_error FROM example ) );
-ERROR:  subquery in TABLE value expression cannot have SELECT INTO
+ERROR:  SELECT ... INTO is not allowed here
 LINE 1: SELECT * FROM multiset_2( TABLE( SELECT * INTO should_error ...
-                                  ^
+                                                       ^
 -- MPP-14180  ERROR: We don't support TableValueExpressions with external correlations
 SELECT * from example e1
 WHERE a > (SELECT a FROM multiset_2( TABLE( SELECT * FROM example e2 WHERE e1.a=e2.a))) ;
@@ -2290,7 +2290,7 @@ NOTICE:  Dropping a column that is part of the distribution policy forces a NULL
 -- ERROR: input tuple does not conform to expectations of multiset_5
 SELECT * FROM multiset_5( TABLE( SELECT 'hello'::text) ) as tf;
 ERROR:  invalid input tuple for function multiset_example
-HINT:  expected (integer, text)
+HINT:  Expected (integer, text).
 -- However, this should work despite the output tupdesc having a dropped column.
 SELECT * FROM multiset_5( TABLE( SELECT 1::integer, 'hello'::text) ) as tf;
    b   
@@ -2859,23 +2859,25 @@ SELECT * FROM project( TABLE( SELECT * FROM pg_am ),
   CASE 1 WHEN 2 THEN 1 ELSE GREATEST(1, COALESCE(1+1)) END);
  amstrategies 
 --------------
-            0
-            0
+            5
             1
+            0
+            0
+            0
             5
-            5
-(5 rows)
+(6 rows)
 
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ),
   CASE WHEN 3 IS NOT NULL AND 1 IN (1, 2) THEN floor(NULLIF(2, 3))::int END);
  amstrategies 
 --------------
-            0
-            0
+            5
             1
+            0
+            0
+            0
             5
-            5
-(5 rows)
+(6 rows)
 
 -- ERROR: invalid operations demonstrating different return types
 SELECT extract(day from id) FROM project( TABLE( SELECT * FROM history ), 1);

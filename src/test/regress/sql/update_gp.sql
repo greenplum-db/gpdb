@@ -70,7 +70,7 @@ INSERT INTO keo3 VALUES ('1', '1');
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
-EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
         ON b.projects_pk=a.user_vie_project_code_pk
         WHERE a.user_vie_fiscal_year_period_sk =
@@ -93,7 +93,7 @@ SELECT user_vie_act_cntr_marg_cum FROM keo1;
 -- Explicit Redistribution motion should not be added in case of GPDB Planner (test case not applicable to ORCA)
 CREATE TABLE keo5 (x int, y int) DISTRIBUTED BY (x);
 INSERT INTO keo5 VALUES (1,1);
-EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
 DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
 SELECT x FROM keo5;
 

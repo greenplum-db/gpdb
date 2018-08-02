@@ -62,7 +62,6 @@
 
 #include "postgres.h"
 
-#include "px.h"
 #include "px-crypt.h"
 
 /* for ntohl/htonl */
@@ -408,8 +407,8 @@ des_setkey(const char *key)
 	if (!des_initialised)
 		des_init();
 
-	rawkey0 = ntohl(*(uint32 *) key);
-	rawkey1 = ntohl(*(uint32 *) (key + 4));
+	rawkey0 = ntohl(*(const uint32 *) key);
+	rawkey1 = ntohl(*(const uint32 *) (key + 4));
 
 	if ((rawkey0 | rawkey1)
 		&& rawkey0 == old_rawkey0
@@ -713,7 +712,7 @@ px_crypt_des(const char *key, const char *setting)
 
 		/*
 		 * Double check that we weren't given a short setting. If we were, the
-		 * above code will probably have created wierd values for count and
+		 * above code will probably have created weird values for count and
 		 * salt, but we don't really care. Just make sure the output string
 		 * doesn't have an extra NUL in it.
 		 */

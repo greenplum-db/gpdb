@@ -53,7 +53,7 @@ set enable_seqscan = off;
 -- start_ignore
 -- Known_opt_diff: OPT-929
 -- end_ignore
-explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f where f.id = b.id;
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000100.36..20000000201.39 rows=4 width=8)

@@ -3,7 +3,7 @@
  * auto_explain.c
  *
  *
- * Copyright (c) 2008-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2008-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/auto_explain/auto_explain.c
@@ -23,6 +23,7 @@ static int	auto_explain_log_min_duration = -1; /* msec or -1 */
 static bool auto_explain_log_analyze = false;
 static bool auto_explain_log_verbose = false;
 static bool auto_explain_log_buffers = false;
+static bool auto_explain_log_timing = false;
 static int	auto_explain_log_format = EXPLAIN_FORMAT_TEXT;
 static bool auto_explain_log_nested_statements = false;
 
@@ -133,6 +134,17 @@ _PG_init(void)
 							 NULL,
 							 NULL);
 
+	DefineCustomBoolVariable("auto_explain.log_timing",
+							 "Collect timing data, not just row counts.",
+							 NULL,
+							 &auto_explain_log_timing,
+							 true,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL,
+							 NULL);
+
 	EmitWarningsOnPlaceholders("auto_explain");
 
 	/* Install hooks. */
@@ -170,7 +182,12 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if (auto_explain_log_analyze && (eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
 		{
-			queryDesc->instrument_options |= INSTRUMENT_TIMER;
+			if (auto_explain_log_timing)
+				queryDesc->instrument_options |= INSTRUMENT_TIMER;
+			else
+				queryDesc->instrument_options |= INSTRUMENT_ROWS;
+
+
 			if (auto_explain_log_buffers)
 				queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
 		}
@@ -281,6 +298,13 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			/* Remove last line break */
 			if (es.str->len > 0 && es.str->data[es.str->len - 1] == '\n')
 				es.str->data[--es.str->len] = '\0';
+
+			/* Fix JSON to output an object */
+			if (auto_explain_log_format == EXPLAIN_FORMAT_JSON)
+			{
+				es.str->data[0] = '{';
+				es.str->data[es.str->len - 1] = '}';
+			}
 
 			/*
 			 * Note: we rely on the existing logging of context or

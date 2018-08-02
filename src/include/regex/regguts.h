@@ -181,35 +181,53 @@ union tree
 #define tcolor	colors.ccolor
 #define tptr	ptrs.pptr
 
-/* internal per-color descriptor structure for the color machinery */
+/*
+ * Per-color data structure for the compile-time color machinery
+ *
+ * If "sub" is not NOSUB then it is the number of the color's current
+ * subcolor, i.e. we are in process of dividing this color (character
+ * equivalence class) into two colors.	See src/backend/regex/README for
+ * discussion of subcolors.
+ *
+ * Currently-unused colors have the FREECOL bit set and are linked into a
+ * freelist using their "sub" fields, but only if their color numbers are
+ * less than colormap.max.	Any array entries beyond "max" are just garbage.
+ */
 struct colordesc
 {
 	uchr		nchrs;			/* number of chars of this color */
-	color		sub;			/* open subcolor (if any); free chain ptr */
-#define  NOSUB	 COLORLESS
-	struct arc *arcs;			/* color chain */
+	color		sub;			/* open subcolor, if any; or free-chain ptr */
+#define  NOSUB	 COLORLESS		/* value of "sub" when no open subcolor */
+	struct arc *arcs;			/* chain of all arcs of this color */
 	chr			firstchr;		/* char first assigned to this color */
-	int			flags;
+	int			flags;			/* bit values defined next */
 #define  FREECOL 01				/* currently free */
 #define  PSEUDO  02				/* pseudocolor, no real chars */
 #define  UNUSEDCOLOR(cd) ((cd)->flags&FREECOL)
 	union tree *block;			/* block of solid color, if any */
 };
 
-/* the color map itself */
+/*
+ * The color map itself
+ *
+ * Only the "tree" part is used at execution time, and that only via the
+ * GETCOLOR() macro.  Possibly that should be separated from the compile-time
+ * data.
+ */
 struct colormap
 {
 	int			magic;
 #define  CMMAGIC 0x876
 	struct vars *v;				/* for compile error reporting */
-	size_t		ncds;			/* number of colordescs */
-	size_t		max;			/* highest in use */
+	size_t		ncds;			/* allocated length of colordescs array */
+	size_t		max;			/* highest color number currently in use */
 	color		free;			/* beginning of free chain (if non-0) */
-	struct colordesc *cd;
+	struct colordesc *cd;		/* pointer to array of colordescs */
 #define  CDEND(cm)	 (&(cm)->cd[(cm)->max + 1])
+	/* If we need up to NINLINECDS, we store them here to save a malloc */
 #define  NINLINECDS  ((size_t)10)
 	struct colordesc cdspace[NINLINECDS];
-	union tree	tree[NBYTS];	/* tree top, plus fill blocks */
+	union tree	tree[NBYTS];	/* tree top, plus lower-level fill blocks */
 };
 
 /* optimization magic to do fast chr->color mapping */
@@ -230,19 +248,25 @@ struct colormap
 
 
 /*
- * Interface definitions for locale-interface functions in locale.c.
+ * Interface definitions for locale-interface functions in regc_locale.c.
  */
 
-/* Representation of a set of characters. */
+/*
+ * Representation of a set of characters.  chrs[] represents individual
+ * code points, ranges[] represents ranges in the form min..max inclusive.
+ *
+ * Note that in cvecs gotten from newcvec() and intended to be freed by
+ * freecvec(), both arrays of chrs are after the end of the struct, not
+ * separately malloc'd; so chrspace and rangespace are effectively immutable.
+ */
 struct cvec
 {
 	int			nchrs;			/* number of chrs */
-	int			chrspace;		/* number of chrs possible */
+	int			chrspace;		/* number of chrs allocated in chrs[] */
 	chr		   *chrs;			/* pointer to vector of chrs */
 	int			nranges;		/* number of ranges (chr pairs) */
-	int			rangespace;		/* number of chrs possible */
+	int			rangespace;		/* number of ranges allocated in ranges[] */
 	chr		   *ranges;			/* pointer to vector of chr pairs */
-	/* both batches of chrs are on the end */
 };
 
 
@@ -362,10 +386,28 @@ struct cnfa
 
 /*
  * subexpression tree
+ *
+ * "op" is one of:
+ *		'='  plain regex without interesting substructure (implemented as DFA)
+ *		'b'  back-reference (has no substructure either)
+ *		'('  capture node: captures the match of its single child
+ *		'.'  concatenation: matches a match for left, then a match for right
+ *		'|'  alternation: matches a match for left or a match for right
+ *		'*'  iteration: matches some number of matches of its single child
+ *
+ * Note: the right child of an alternation must be another alternation or
+ * NULL; hence, an N-way branch requires N alternation nodes, not N-1 as you
+ * might expect.  This could stand to be changed.  Actually I'd rather see
+ * a single alternation node with N children, but that will take revising
+ * the representation of struct subre.
+ *
+ * Note: when a backref is directly quantified, we stick the min/max counts
+ * into the backref rather than plastering an iteration node on top.  This is
+ * for efficiency: there is no need to search for possible division points.
  */
 struct subre
 {
-	char		op;				/* '|', '.' (concat), 'b' (backref), '(', '=' */
+	char		op;				/* see type codes above */
 	char		flags;
 #define  LONGER  01				/* prefers longer match */
 #define  SHORTER 02				/* prefers shorter match */
@@ -381,10 +423,10 @@ struct subre
 #define  PREF(f) ((f)&LOCAL)
 #define  PREF2(f1, f2)	 ((PREF(f1) != 0) ? PREF(f1) : PREF(f2))
 #define  COMBINE(f1, f2) (UP((f1)|(f2)) | PREF2(f1, f2))
-	short		retry;			/* index into retry memory */
+	short		id;				/* ID of subre (1..ntree-1) */
 	int			subno;			/* subexpression number (for 'b' and '(') */
-	short		min;			/* min repetitions, for backref only */
-	short		max;			/* max repetitions, for backref only */
+	short		min;			/* min repetitions for iteration or backref */
+	short		max;			/* max repetitions for iteration or backref */
 	struct subre *left;			/* left child, if any (also freelist chain) */
 	struct subre *right;		/* right child, if any */
 	struct state *begin;		/* outarcs from here... */
@@ -418,7 +460,7 @@ struct guts
 	size_t		nsub;			/* copy of re_nsub */
 	struct subre *tree;
 	struct cnfa search;			/* for fast preliminary search */
-	int			ntree;
+	int			ntree;			/* number of subre's, less one */
 	struct colormap cmap;
 	int			FUNCPTR(compare, (const chr *, const chr *, size_t));
 	struct subre *lacons;		/* lookahead-constraint vector */

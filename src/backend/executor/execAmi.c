@@ -3,7 +3,7 @@
  * execAmi.c
  *	  miscellaneous executor access method routines
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	src/backend/executor/execAmi.c
@@ -26,6 +26,7 @@
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
+#include "executor/nodeIndexonlyscan.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeLimit.h"
 #include "executor/nodeLockRows.h"
@@ -58,6 +59,7 @@
 #include "executor/nodeBitmapAppendOnlyscan.h"
 #include "executor/nodeShareInputScan.h"
 #include "nodes/nodeFuncs.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 
@@ -189,6 +191,9 @@ ExecReScan(PlanState *node)
 
 		case T_DynamicIndexScanState:
 			ExecReScanDynamicIndex((DynamicIndexScanState *) node);
+
+		case T_IndexOnlyScanState:
+			ExecReScanIndexOnlyScan((IndexOnlyScanState *) node);
 			break;
 
 		case T_BitmapIndexScanState:
@@ -349,6 +354,10 @@ ExecMarkPos(PlanState *node)
 			elog(ERROR, "Marking scan position for external relation is not supported");
 			break;			
 
+		case T_IndexOnlyScanState:
+			ExecIndexOnlyMarkPos((IndexOnlyScanState *) node);
+			break;
+
 		case T_TidScanState:
 			ExecTidMarkPos((TidScanState *) node);
 			break;
@@ -374,6 +383,10 @@ ExecMarkPos(PlanState *node)
 				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to mark position of Motion operator")
 				));
+			break;
+
+		case T_ForeignScanState:
+			elog(ERROR, "Marking scan position for foreign relation is not supported");
 			break;
 
 		default:
@@ -423,6 +436,10 @@ ExecRestrPos(PlanState *node)
 			elog(ERROR, "Restoring scan position is not yet supported for external relation scan");
 			break;			
 
+		case T_IndexOnlyScanState:
+			ExecIndexOnlyRestrPos((IndexOnlyScanState *) node);
+			break;
+
 		case T_TidScanState:
 			ExecTidRestrPos((TidScanState *) node);
 			break;
@@ -448,6 +465,10 @@ ExecRestrPos(PlanState *node)
 				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to restore position of Motion operator")
 				));
+			break;
+
+		case T_ForeignScanState:
+			elog(ERROR, "Restoring scan position is not yet supported for foreign relation scan");
 			break;
 
 		default:
@@ -478,6 +499,7 @@ ExecSupportsMarkRestore(NodeTag plantype)
 	{
 		case T_SeqScan:
 		case T_IndexScan:
+		case T_IndexOnlyScan:
 		case T_TidScan:
 		case T_ValuesScan:
 		case T_Material:
@@ -551,6 +573,10 @@ ExecSupportsBackwardScan(Plan *node)
 			return IndexSupportsBackwardScan(((IndexScan *) node)->indexid) &&
 				TargetListSupportsBackwardScan(node->targetlist);
 
+		case T_IndexOnlyScan:
+			return IndexSupportsBackwardScan(((IndexOnlyScan *) node)->indexid) &&
+				TargetListSupportsBackwardScan(node->targetlist);
+
 		case T_SubqueryScan:
 			return ExecSupportsBackwardScan(((SubqueryScan *) node)->subplan) &&
 				TargetListSupportsBackwardScan(node->targetlist);
@@ -603,9 +629,11 @@ ExecEagerFree(PlanState *node)
 		case T_TableFunctionState:
 		case T_DynamicTableScanState:
 		case T_DynamicIndexScanState:
+		case T_IndexOnlyScanState:
 		case T_SequenceState:
 		case T_PartitionSelectorState:
 		case T_WorkTableScanState:
+		case T_ForeignScanState:
 			break;
 
 		case T_TableScanState:
@@ -787,6 +815,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		case T_SortState:
 		case T_AggState:
 		case T_WindowAggState:
+		case T_ForeignScanState:
 		{
 			planstate_walk_node(outerPlanState(node), EagerFreeWalker, &ctx);
 			break;
@@ -848,7 +877,8 @@ TargetListSupportsBackwardScan(List *targetlist)
 }
 
 /*
- * An IndexScan node supports backward scan only if the index's AM does.
+ * An IndexScan or IndexOnlyScan node supports backward scan only if the
+ * index's AM does.
  */
 static bool
 IndexSupportsBackwardScan(Oid indexid)

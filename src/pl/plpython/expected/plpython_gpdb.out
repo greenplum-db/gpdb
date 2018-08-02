@@ -73,6 +73,7 @@ select named_tuple_test();
 (1 row)
 
 --
+-- These test results will follow the upsteam results
 CREATE OR REPLACE FUNCTION oneline() returns text as $$ 
 return 'No spaces' 
 $$ language plpythonu;
@@ -114,22 +115,22 @@ union all
 select multiline2() 
 union all 
 select multiline3();
-                                                  oneline                                                   
-------------------------------------------------------------------------------------------------------------
+                                                          oneline                                                          
+---------------------------------------------------------------------------------------------------------------------------
  No spaces
  "'a string with # and "" inside another string with #  and '' inside 
-  One space                                                                                                +
-   Two spaces                                                                                              +
-    Three spaces                                                                                           +
- No spaces
-                                                                                                           +
- The ' in the comment should not cause this line to begin with a tab                                       +
- This is a rather long string containing                                                                   +
-     several lines of text just as you would do in C.                                                      +
-      Note that whitespace at the beginning of the line issignificant. The string can contain both ' and ".+
- This is an another long string containing\n\                                                              +
- two lines of text and defined with the r\"...\" syntax.
-                                                                                                           +
-   # This is not a comment so the quotes at the end of the line do end the string 
+  One space                                                                                                               +
+           Two spaces                                                                                                     +
+            Three spaces                                                                                                  +
+         No spaces
+                                                                                                                          +
+         The ' in the comment should not cause this line to begin with a tab                                              +
+         This is a rather long string containing                                                                          +
+             several lines of text just as you would do in C.                                                             +
+              Note that whitespace at the beginning of the line is       significant. The string can contain both ' and ".+
+ This is an another long string containing\n\                                                                             +
+         two lines of text and defined with the r\"...\" syntax.
+                                                                                                                          +
+           # This is not a comment so the quotes at the end of the line do end the string 
 (5 rows)
 

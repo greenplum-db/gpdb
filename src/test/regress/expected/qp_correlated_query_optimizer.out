@@ -1639,11 +1639,11 @@ select * from D order by D.i;
 -- Basic queries with WHERE clause
 -- -- -- --
 select a, (select y from qp_csq_t2 where x=a) from qp_csq_t1 where b < 8 order by a;
- a | ?column? 
----+----------
- 1 |        1
- 3 |        9
- 5 |       25
+ a | y  
+---+----
+ 1 |  1
+ 3 |  9
+ 5 | 25
 (3 rows)
 
 select a, x from qp_csq_t2, qp_csq_t1 where qp_csq_t1.a = (select x) order by a;
@@ -1664,8 +1664,8 @@ select a from qp_csq_t1 where (select (y*2)>b from qp_csq_t2 where a=x) order by
 (3 rows)
 
 SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by a;
- a | ?column? 
----+----------
+ a |   d   
+---+-------
  1 | one
  3 | three
  5 | five
@@ -1674,8 +1674,8 @@ SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by
 
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a order by a;
- a | ?column? 
----+----------
+ a |   d   
+---+-------
  1 | one
  3 | three
  5 | five

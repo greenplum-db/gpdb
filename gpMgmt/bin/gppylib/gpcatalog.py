@@ -304,7 +304,7 @@ class GPCatalog():
         #   - relowner has its own checks:
         #       => may want to separate out "owner" columns like acl and oid
         self._tables['pg_class']._setKnownDifferences(
-            "relfilenode relpages reltuples relhasindex relhaspkey relowner relfrozenxid")
+            "relfilenode relpages reltuples relhasindex relhaspkey relowner relfrozenxid relallvisible")
 
         # pg_type: typowner has its own checks:
         #       => may want to separate out "owner" columns like acl and oid

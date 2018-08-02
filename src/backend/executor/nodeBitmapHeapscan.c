@@ -16,7 +16,7 @@
  * index qual conditions.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -35,7 +35,6 @@
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/relscan.h"
 #include "access/transam.h"
 #include "executor/execdebug.h"
@@ -48,6 +47,7 @@
 #include "parser/parsetree.h"
 #include "cdb/cdbvars.h" /* gp_select_invisible */
 #include "nodes/tidbitmap.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
@@ -122,7 +122,10 @@ BitmapHeapNext(BitmapHeapScanState *node)
 	Node  		*tbm;
 	GenericBMIterator *tbmiterator;
 	TBMIterateResult *tbmres;
+#ifdef USE_PREFETCH
 	GenericBMIterator *prefetch_iterator;
+#endif
+
 	OffsetNumber targoffset;
 	TupleTableSlot *slot;
 	bool		more = true;
@@ -139,7 +142,9 @@ BitmapHeapNext(BitmapHeapScanState *node)
 	tbm = node->tbm;
 	tbmiterator = node->tbmiterator;
 	tbmres = node->tbmres;
+#ifdef USE_PREFETCH
 	prefetch_iterator = node->prefetch_iterator;
+#endif
 
 	/*
 	 * If we haven't yet performed the underlying index scan, do it, and begin
@@ -343,14 +348,21 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		 * We recheck the qual conditions for every tuple, since the bitmap
 		 * may contain invalid entries from deleted tuples.
 		 */
-		econtext->ecxt_scantuple = slot;
-		ResetExprContext(econtext);
-
-		if (!ExecQual(node->bitmapqualorig, econtext, false))
+		/*
+		 * GPDB_92_MERGE_FIXME:
+		 * PG check "if (tbmres->recheck)" here. Do we really not want this?
+		 */
 		{
-			/* Fails recheck, so drop it and loop back for another */
-			ExecClearTuple(slot);
-			continue;
+			econtext->ecxt_scantuple = slot;
+			ResetExprContext(econtext);
+
+			if (!ExecQual(node->bitmapqualorig, econtext, false))
+			{
+				/* Fails recheck, so drop it and loop back for another */
+				InstrCountFiltered2(node, 1);
+				ExecClearTuple(slot);
+				continue;
+			}
 		}
 
 		/* OK to return this tuple */
@@ -422,9 +434,11 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 		{
 			OffsetNumber offnum = tbmres->offsets[curslot];
 			ItemPointerData tid;
+			HeapTupleData heapTuple;
 
 			ItemPointerSet(&tid, page, offnum);
-			if (heap_hot_search_buffer(&tid, scan->rs_rd, buffer, snapshot, NULL))
+			if (heap_hot_search_buffer(&tid, scan->rs_rd, buffer, snapshot,
+									   &heapTuple, NULL, true))
 				scan->rs_vistuples[ntup++] = ItemPointerGetOffsetNumber(&tid);
 		}
 	}
@@ -442,14 +456,22 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 		{
 			ItemId		lp;
 			HeapTupleData loctup;
+			bool		valid;
 
 			lp = PageGetItemId(dp, offnum);
 			if (!ItemIdIsNormal(lp))
 				continue;
 			loctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
 			loctup.t_len = ItemIdGetLength(lp);
-			if (HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer))
+			ItemPointerSet(&loctup.t_self, page, offnum);
+			valid = HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer);
+			if (valid)
+			{
 				scan->rs_vistuples[ntup++] = offnum;
+				PredicateLockTuple(scan->rs_rd, &loctup, snapshot);
+			}
+			CheckForSerializableConflictOut(valid, scan->rs_rd, &loctup,
+											buffer, snapshot);
 		}
 	}
 

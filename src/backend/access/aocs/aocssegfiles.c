@@ -43,6 +43,7 @@
 #include "cdb/cdbappendonlystorageread.h"
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "utils/datumstream.h"
+#include "utils/int8.h"
 #include "utils/fmgroids.h"
 #include "access/aocssegfiles.h"
 #include "access/aosegfiles.h"
@@ -1306,7 +1307,7 @@ gp_aocsseg_name(PG_FUNCTION_ARGS)
 	text	   *relname = PG_GETARG_TEXT_P(0);
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
-	aocsRelOid = RangeVarGetRelid(parentrv, false);
+	aocsRelOid = RangeVarGetRelid(parentrv, NoLock, false);
 
 	return gp_aocsseg_internal(fcinfo, aocsRelOid);
 }

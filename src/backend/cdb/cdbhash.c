@@ -29,6 +29,7 @@
 #include "utils/cash.h"
 #include "utils/datetime.h"
 #include "utils/nabstime.h"
+#include "utils/rangetypes.h"
 #include "utils/varbit.h"
 #include "utils/uuid.h"
 #include "fmgr.h"
@@ -198,6 +199,8 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	TimeInterval tinterval;
 	AbsoluteTime tinterval_len;
 
+	RangeType *range;
+
 	Numeric		num;
 	bool		bool_buf;
 	char		char_buf;
@@ -230,6 +233,8 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	if (typeIsEnumType(type))
 		type = ANYENUMOID;
 
+	if (typeIsRangeType(type))
+		type = ANYRANGEOID;
 	/*
 	 * Select the hash to be performed according to the field type we are
 	 * adding to the hash.
@@ -369,6 +374,11 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 													 * hashing */
 			buf = &intbuf;
 			len = sizeof(intbuf);
+			break;
+		case ANYRANGEOID:
+			range = DatumGetRangeType(datum);
+			len = VARSIZE(range) - sizeof(RangeType);
+			buf = (void*)(range + 1);
 			break;
 
 		case TIDOID:			/* tuple id (6 bytes) */
@@ -546,7 +556,6 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			 * (INSERT and COPY do so).
 			 */
 		case ANYARRAYOID:
-
 			arrbuf = DatumGetArrayTypeP(datum);
 			len = VARSIZE(arrbuf) - VARHDRSZ;
 			buf = VARDATA(arrbuf);
@@ -720,6 +729,22 @@ typeIsEnumType(Oid typeoid)
 }
 
 bool
+typeIsRangeType(Oid typeoid)
+{
+	Type		tup = typeidType(typeoid);
+	Form_pg_type typeform;
+	bool		res = false;
+
+	typeform = (Form_pg_type) GETSTRUCT(tup);
+
+	if (typeform->typtype == 'r' && typeform->typinput == F_RANGE_IN)
+		res = true;
+
+	ReleaseSysCache(tup);
+	return res;
+}
+
+bool
 isGreenplumDbHashable(Oid typid)
 {
 	/* we can hash all arrays */
@@ -732,6 +757,9 @@ isGreenplumDbHashable(Oid typid)
 
 	/* we can hash all enums */
 	if (typeIsEnumType(typid))
+		return true;
+
+	if (typeIsRangeType(typid))
 		return true;
 
 	/*

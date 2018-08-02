@@ -1,5 +1,7 @@
 @echo off
+
 REM src/tools/msvc/pgbison.bat
+<<<<<<< HEAD
 
 IF NOT EXIST src\tools\msvc\buildenv.pl goto nobuildenv
 perl -e "require 'src/tools/msvc/buildenv.pl'; while(($k,$v) = each %ENV) { print qq[\@SET $k=$v\n]; }" > bldenv.bat
@@ -51,3 +53,9 @@ exit 1
 echo WARNING! Bison install not found, or unsupported Bison version.
 echo Attempting to build without.
 exit 0
+=======
+REM all the logic for this now belongs in pgbison.pl. This file really
+REM only exists so you don't have to type "perl src/tools/msvc/pgbison.pl"
+REM Resist any temptation to add any logic here.
+@perl src/tools/msvc/pgbison.pl %*
+>>>>>>> 80edfd76591fdb9beec061de3c05ef4e9d96ce56

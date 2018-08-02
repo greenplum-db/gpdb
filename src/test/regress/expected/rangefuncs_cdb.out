@@ -1,18 +1,19 @@
 SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
-       name        | setting 
--------------------+---------
- enable_bitmapscan | on
- enable_groupagg   | on
- enable_hashagg    | on
- enable_hashjoin   | on
- enable_indexscan  | on
- enable_material   | on
- enable_mergejoin  | off
- enable_nestloop   | off
- enable_seqscan    | on
- enable_sort       | on
- enable_tidscan    | on
-(11 rows)
+         name         | setting 
+----------------------+---------
+ enable_bitmapscan    | on
+ enable_groupagg      | on
+ enable_hashagg       | on
+ enable_hashjoin      | on
+ enable_indexonlyscan | on
+ enable_indexscan     | on
+ enable_material      | on
+ enable_mergejoin     | off
+ enable_nestloop      | off
+ enable_seqscan       | on
+ enable_sort          | on
+ enable_tidscan       | on
+(12 rows)
 
 DROP TABLE IF EXISTS foo;
 NOTICE:  table "foo" does not exist, skipping

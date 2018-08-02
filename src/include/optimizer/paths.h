@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/paths.h
@@ -45,22 +45,25 @@ extern void debug_print_rel(PlannerInfo *root, RelOptInfo *rel);
 
 extern void create_index_paths(PlannerInfo *root, RelOptInfo *rel);
 extern List *generate_bitmap_or_paths(PlannerInfo *root, RelOptInfo *rel,
-						 List *clauses, List *outer_clauses,
-						 RelOptInfo *outer_rel);
-extern void best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
-					 RelOptInfo *outer_rel, JoinType jointype,
-					 Path **cheapest_startup, Path **cheapest_total);
+						 List *clauses, List *other_clauses,
+						 bool restriction_only);
 extern bool relation_has_unique_index_for(PlannerInfo *root, RelOptInfo *rel,
-							  List *restrictlist);
-extern bool eclass_matches_any_index(EquivalenceClass *ec,
-						 EquivalenceMember *em,
-						 RelOptInfo *rel);
+							  List *restrictlist,
+							  List *exprlist, List *oprlist);
+extern bool eclass_member_matches_indexcol(EquivalenceClass *ec,
+							   EquivalenceMember *em,
+							   IndexOptInfo *index, int indexcol);
 extern bool match_index_to_operand(Node *operand, int indexcol,
 					   IndexOptInfo *index);
-extern List *expand_indexqual_conditions(IndexOptInfo *index,
-							List *clausegroups);
+extern void expand_indexqual_conditions(IndexOptInfo *index,
+							List *indexclauses, List *indexclausecols,
+							List **indexquals_p, List **indexqualcols_p);
 extern void check_partial_indexes(PlannerInfo *root, RelOptInfo *rel);
-extern List *flatten_clausegroups_list(List *clausegroups);
+extern Expr *adjust_rowcompare_for_index(RowCompareExpr *clause,
+							IndexOptInfo *index,
+							int indexcol,
+							List **indexcolnos,
+							bool *var_on_left_p);
 
 /*
  * orindxpath.c
@@ -108,11 +111,12 @@ extern EquivalenceClass *get_eclass_for_sort_expr(PlannerInfo *root,
 						 Oid opcintype,
 						 Oid collation,
 						 Index sortref,
+						 Relids rel,
 						 bool create_it);
 extern void generate_base_implied_equalities(PlannerInfo *root);
 extern List *generate_join_implied_equalities(PlannerInfo *root,
-								 RelOptInfo *joinrel,
-								 RelOptInfo *outer_rel,
+								 Relids join_relids,
+								 Relids outer_relids,
 								 RelOptInfo *inner_rel);
 extern bool exprs_known_equal(PlannerInfo *root, Node *item1, Node *item2);
 extern void add_child_rel_equivalences(PlannerInfo *root,
@@ -122,15 +126,16 @@ extern void add_child_rel_equivalences(PlannerInfo *root,
 extern void mutate_eclass_expressions(PlannerInfo *root,
 						  Node *(*mutator) (),
 						  void *context);
-extern List *find_eclass_clauses_for_index_join(PlannerInfo *root,
-								   RelOptInfo *rel,
-								   Relids outer_relids);
+extern List *generate_implied_equalities_for_indexcol(PlannerInfo *root,
+										 IndexOptInfo *index,
+										 int indexcol);
 extern bool have_relevant_eclass_joinclause(PlannerInfo *root,
 								RelOptInfo *rel1, RelOptInfo *rel2);
 extern bool has_relevant_eclass_joinclause(PlannerInfo *root,
 							   RelOptInfo *rel1);
 extern bool eclass_useful_for_merging(EquivalenceClass *eclass,
 						  RelOptInfo *rel);
+extern bool is_redundant_derived_clause(RestrictInfo *rinfo, List *clauselist);
 
 /*
  * pathkeys.c
@@ -161,9 +166,11 @@ extern List *canonicalize_pathkeys(PlannerInfo *root, List *pathkeys);
 extern PathKeysComparison compare_pathkeys(List *keys1, List *keys2);
 extern bool pathkeys_contained_in(List *keys1, List *keys2);
 extern Path *get_cheapest_path_for_pathkeys(List *paths, List *pathkeys,
+							   Relids required_outer,
 							   CostSelector cost_criterion);
 extern Path *get_cheapest_fractional_path_for_pathkeys(List *paths,
 										  List *pathkeys,
+										  Relids required_outer,
 										  double fraction);
 extern List *build_index_pathkeys(PlannerInfo *root, IndexOptInfo *index,
 					 ScanDirection scandir);

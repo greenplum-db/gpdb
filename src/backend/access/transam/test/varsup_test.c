@@ -84,9 +84,10 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	const int xid = 25;
 	VariableCacheData data;
 	PGPROC proc;
+	PGXACT xact;
 
 	MyProc = &proc;
-
+	MyPgXact = &xact;
 	/*
 	 * make sure nextXid is between xidWarnLimit and xidStopLimit to trigger
 	 * the ereport(WARNING).
@@ -132,7 +133,7 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	PG_TRY();
 	{
 		GetNewTransactionId(false);
-		assert_int_equal(proc.xid, xid);
+		assert_int_equal(xact.xid, xid);
 	}
 	PG_CATCH();
 	{

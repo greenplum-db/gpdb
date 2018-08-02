@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/smgr.h
@@ -16,9 +16,7 @@
 #ifndef SMGR_H
 #define SMGR_H
 
-#include "access/xlog.h"
 #include "fmgr.h"
-#include "storage/backendid.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 
@@ -64,7 +62,7 @@ typedef struct SMgrRelationData
 	 * submodules.	Do not touch them from elsewhere.
 	 */
 	int			smgr_which;		/* storage manager selector */
-	bool		smgr_transient;	/* T if files are to be closed at EOXact */
+	bool		smgr_transient; /* T if files are to be closed at EOXact */
 
 	/* for md.c; NULL for forks that are not open */
 	struct _MdfdVec *md_fd[MAX_FORKNUM + 1];
@@ -85,8 +83,9 @@ extern void smgrcloseall(void);
 extern void smgrclosenode(RelFileNodeBackend rnode);
 extern void smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
 extern void smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
-extern void smgrdounlink(SMgrRelation reln, ForkNumber forknum,
-						 bool isRedo, char relstorage);
+extern void smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage);
+extern void smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum,
+		bool isRedo, char relstorage);
 extern void smgrextend(SMgrRelation reln, ForkNumber forknum,
 		   BlockNumber blocknum, char *buffer, bool skipFsync);
 extern void smgrprefetch(SMgrRelation reln, ForkNumber forknum,

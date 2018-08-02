@@ -1,5 +1,9 @@
 set enable_partition_rules = false;
 
+drop table if exists d;
+drop table if exists c;
+drop table if exists b;
+drop table if exists a;
 -- Check multi level partition COPY
 create table region
 (

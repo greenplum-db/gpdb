@@ -8,6 +8,11 @@
 --  - EXCLUDE clauses
 --
 
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
+
 --
 -- DEFAULT syntax
 --
@@ -88,7 +93,7 @@ CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'),
 	y TEXT DEFAULT '-NULL-',
 	z INT DEFAULT -1 * (nextval('insert_seq')-1),
 	CONSTRAINT INSERT_CON CHECK (x >= 3 AND y <> 'check failed' AND x < 8),
-	CHECK (x + z = 0));
+	CHECK (x + z = 0)) DISTRIBUTED BY(y);
 
 INSERT INTO INSERT_TBL(x,z) VALUES (2, -2);
 
@@ -159,6 +164,34 @@ SELECT * FROM INSERT_CHILD;
 DROP TABLE INSERT_CHILD;
 
 --
+-- Check NO INHERIT type of constraints and inheritance
+--
+
+CREATE TABLE ATACC1 (TEST INT
+	CHECK NO INHERIT (TEST > 0));
+
+CREATE TABLE ATACC2 (TEST2 INT) INHERITS (ATACC1);
+-- check constraint is not there on child
+INSERT INTO ATACC2 (TEST) VALUES (-3);
+-- check constraint is there on parent
+INSERT INTO ATACC1 (TEST) VALUES (-3);
+DROP TABLE ATACC1 CASCADE;
+
+CREATE TABLE ATACC1 (TEST INT, TEST2 INT
+	CHECK (TEST > 0), CHECK NO INHERIT (TEST2 > 10));
+
+CREATE TABLE ATACC2 () INHERITS (ATACC1);
+-- check constraint is there on child
+INSERT INTO ATACC2 (TEST) VALUES (-3);
+-- check constraint is there on parent
+INSERT INTO ATACC1 (TEST) VALUES (-3);
+-- check constraint is not there on child
+INSERT INTO ATACC2 (TEST2) VALUES (3);
+-- check constraint is there on parent
+INSERT INTO ATACC1 (TEST2) VALUES (3);
+DROP TABLE ATACC1 CASCADE;
+
+--
 -- Check constraints on INSERT INTO
 --
 
@@ -197,7 +230,6 @@ DROP TABLE tmp;
 --
 -- Check constraints on UPDATE
 --
-ALTER TABLE insert_tbl SET DISTRIBUTED BY (y);
 
 UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
 UPDATE INSERT_TBL SET x = 6 WHERE x = 6;

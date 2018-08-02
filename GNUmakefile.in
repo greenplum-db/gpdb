@@ -40,6 +40,9 @@ $(call recurse,world,doc src config contrib,all)
 world:
 	+@echo "PostgreSQL, contrib, and documentation successfully made. Ready to install."
 
+# build src/ before contrib/
+world-contrib-recurse: world-src-recurse
+
 html man:
 	$(MAKE) -C doc $@
 
@@ -73,6 +76,9 @@ install-docs:
 $(call recurse,install-world,doc src config contrib,install)
 install-world:
 	+@echo "PostgreSQL, contrib, and documentation installation complete."
+
+# build src/ before contrib/
+install-world-contrib-recurse: install-world-src-recurse
 
 $(call recurse,installdirs uninstall coverage,doc src config contrib)
 
@@ -124,7 +130,7 @@ create-tinc-test-cluster: destroy-demo-cluster
 check: all
 
 check installcheck installcheck-parallel:
-	$(MAKE) -C src/test $@
+	$(MAKE) -C src/test/regress $@
 
 $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib,check)
 
@@ -137,7 +143,7 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib,check)
 # which probably indicates that we're relying on undefined behavior... we should
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
-$(call recurse,installcheck-world,src/test,installcheck-good)
+$(call recurse,installcheck-world,src/test/regress,installcheck-good)
 $(call recurse,installcheck-world, \
 			   src/test/fsync \
 			   src/test/walrep \

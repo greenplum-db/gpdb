@@ -7,7 +7,7 @@
  * accessed via the extended FE/BE query protocol.
  *
  *
- * Copyright (c) 2002-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/commands/prepare.c
@@ -19,6 +19,7 @@
 #include "access/xact.h"
 #include "catalog/gp_policy.h"
 #include "catalog/pg_type.h"
+#include "commands/createas.h"
 #include "commands/prepare.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -30,11 +31,10 @@
 #include "parser/parse_type.h"
 #include "rewrite/rewriteHandler.h"
 #include "tcop/pquery.h"
-#include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
-#include "utils/memutils.h"
 #include "utils/snapmgr.h"
+#include "utils/timestamp.h"
 
 /*
  * The hash table in which prepared queries are stored. This is
@@ -55,11 +55,11 @@ static Datum build_regtype_array(Oid *param_types, int num_params);
 void
 PrepareQuery(PrepareStmt *stmt, const char *queryString)
 {
+	CachedPlanSource *plansource;
 	Oid		   *argtypes = NULL;
 	int			nargs;
 	Query	   *query;
-	List	   *query_list,
-			   *plan_list;
+	List	   *query_list;
 	int			i;
 	NodeTag		srctag;  /* GPDB */
 
@@ -71,6 +71,13 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PSTATEMENT_DEFINITION),
 				 errmsg("invalid statement name: must not be empty")));
+
+	/*
+	 * Create the CachedPlanSource before we do parse analysis, since it needs
+	 * to see the unmodified raw parse tree.
+	 */
+	plansource = CreateCachedPlan(stmt->query, queryString,
+								  CreateCommandTag(stmt->query));
 
 	/* Transform list of TypeNames to array of type OIDs */
 	nargs = list_length(stmt->argtypes);
@@ -105,7 +112,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 	 * information about unknown parameters to be deduced from context.
 	 *
 	 * Because parse analysis scribbles on the raw querytree, we must make a
-	 * copy to ensure we have a pristine raw tree to cache.  FIXME someday.
+	 * copy to ensure we don't modify the passed-in tree.  FIXME someday.
 	 */
 	query = parse_analyze_varparams((Node *) copyObject(stmt->query),
 									queryString,
@@ -153,26 +160,33 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 	/* Rewrite the query. The result could be 0, 1, or many queries. */
 	query_list = QueryRewrite(query);
 
-	/* Generate plans for queries. */
-	plan_list = pg_plan_queries(query_list, 0, NULL);
+	/* Finish filling in the CachedPlanSource */
+	CompleteCachedPlan(plansource,
+					   query_list,
+					   NULL,
+					   srctag,
+					   argtypes,
+					   nargs,
+					   NULL,
+					   NULL,
+					   0,		/* default cursor options */
+					   true);	/* fixed result */
 
 	/*
 	 * Save the results.
 	 */
 	StorePreparedStatement(stmt->name,
-						   stmt->query,
-						   queryString,
-						   srctag,
-						   CreateCommandTag((Node *) query),
-						   argtypes,
-						   nargs,
-						   0,	/* default cursor options */
-						   plan_list,
+						   plansource,
 						   true);
 }
 
 /*
- * Implements the 'EXECUTE' utility statement.
+ * ExecuteQuery --- implement the 'EXECUTE' utility statement.
+ *
+ * This code also supports CREATE TABLE ... AS EXECUTE.  That case is
+ * indicated by passing a non-null intoClause.	The DestReceiver is already
+ * set up correctly for CREATE TABLE AS, but we still have to make a few
+ * other adjustments here.
  *
  * Note: this is one of very few places in the code that needs to deal with
  * two query strings at once.  The passed-in queryString is that of the
@@ -181,8 +195,8 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
  * source is that of the original PREPARE.
  */
 void
-ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
-			 ParamListInfo params,
+ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause,
+			 const char *queryString, ParamListInfo params,
 			 DestReceiver *dest, char *completionTag)
 {
 	PreparedStatement *entry;
@@ -192,14 +206,13 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	EState	   *estate = NULL;
 	Portal		portal;
 	char	   *query_string;
+	int			eflags;
+	long		count;
 
 	/* Look it up in the hash table */
 	entry = FetchPreparedStatement(stmt->name, true);
 
-	/* Shouldn't have a non-fully-planned plancache entry */
-	if (!entry->plansource->fully_planned)
-		elog(ERROR, "EXECUTE does not support unplanned prepared statements");
-	/* Shouldn't get any non-fixed-result cached plan, either */
+	/* Shouldn't find a non-fixed-result cached plan */
 	if (!entry->plansource->fixed_result)
 		elog(ERROR, "EXECUTE does not support variable-result cached plans");
 
@@ -208,7 +221,9 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	{
 		/*
 		 * Need an EState to evaluate parameters; must not delete it till end
-		 * of query, in case parameters are pass-by-reference.
+		 * of query, in case parameters are pass-by-reference.	Note that the
+		 * passed-in "params" could possibly be referenced in the parameter
+		 * expressions.
 		 */
 		estate = CreateExecutorState();
 		estate->es_param_list_info = params;
@@ -224,6 +239,10 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	/* Copy the plan's saved query string into the portal's memory */
 	query_string = MemoryContextStrdup(PortalGetHeapMemory(portal),
 									   entry->plansource->query_string);
+
+	/* Replan if needed, and increment plan refcount for portal */
+	cplan = GetCachedPlan(entry->plansource, paramLI, false, intoClause);
+	plan_list = cplan->stmt_list;
 
 	/*
 	 * For CREATE TABLE / AS EXECUTE, we must make a copy of the stored query
@@ -245,19 +264,9 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	 * that, we also have to pass the into-clause to
 	 * RevalidateCachedPlanWithParams. (MPP-8135)
 	 */
-	if (stmt->into)
+	if (intoClause)
 	{
-		MemoryContext oldContext;
 		PlannedStmt *pstmt;
-
-		/* Replan if needed, and increment plan refcount transiently */
-		cplan = RevalidateCachedPlanWithParams(entry->plansource, true,
-											   paramLI, stmt->into);
-
-		/* Copy plan into portal's context, and modify */
-		oldContext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
-
-		plan_list = copyObject(cplan->stmt_list);
 
 		if (list_length(plan_list) != 1)
 			ereport(ERROR,
@@ -270,20 +279,24 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("prepared statement is not a SELECT")));
-		pstmt->intoClause = copyObject(stmt->into);
 
-		MemoryContextSwitchTo(oldContext);
+		/*GPDB: Save the target information in PlannedStmt */
+		pstmt->intoClause = copyObject(intoClause);
 
-		/* We no longer need the cached plan refcount ... */
-		ReleaseCachedPlan(cplan, true);
-		/* ... and we don't want the portal to depend on it, either */
-		cplan = NULL;
+		/* Set appropriate eflags */
+		eflags = GetIntoRelEFlags(intoClause);
+
+		/* And tell PortalRun whether to run to completion or not */
+		if (intoClause->skipData)
+			count = 0;
+		else
+			count = FETCH_ALL;
 	}
 	else
 	{
-		/* Replan if needed, and increment plan refcount for portal */
-		cplan = RevalidateCachedPlanWithParams(entry->plansource, false, paramLI, NULL);
-		plan_list = cplan->stmt_list;
+		/* Plain old EXECUTE */
+		eflags = 0;
+		count = FETCH_ALL;
 	}
 
 	PortalDefineQuery(portal,
@@ -295,11 +308,11 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 					  cplan);
 
 	/*
-	 * Run the portal to completion.
+	 * Run the portal as appropriate.
 	 */
-	PortalStart(portal, paramLI, GetActiveSnapshot(), NULL);
+	PortalStart(portal, paramLI, eflags, GetActiveSnapshot(), NULL);
 
-	(void) PortalRun(portal, FETCH_ALL, false, dest, dest, completionTag);
+	(void) PortalRun(portal, count, false, dest, dest, completionTag);
 
 	PortalDrop(portal, false);
 
@@ -409,7 +422,7 @@ EvaluateParams(PreparedStatement *pstmt, List *params,
 		ParamExternData *prm = &paramLI->params[i];
 
 		prm->ptype = param_types[i];
-		prm->pflags = 0;
+		prm->pflags = PARAM_FLAG_CONST;
 		prm->value = ExecEvalExprSwitchContext(n,
 											   GetPerTupleExprContext(estate),
 											   &prm->isnull,
@@ -443,58 +456,26 @@ InitQueryHashTable(void)
 
 /*
  * Store all the data pertaining to a query in the hash table using
- * the specified key.  All the given data is copied into either the hashtable
- * entry or the underlying plancache entry, so the caller can dispose of its
- * copy.
- *
- * Exception: commandTag is presumed to be a pointer to a constant string,
- * or possibly NULL, so it need not be copied.	Note that commandTag should
- * be NULL only if the original query (before rewriting) was empty.
+ * the specified key.  The passed CachedPlanSource should be "unsaved"
+ * in case we get an error here; we'll save it once we've created the hash
+ * table entry.
  * The original query nodetag is saved as well, only used if resource
  * scheduling is enabled.
  */
 void
 StorePreparedStatement(const char *stmt_name,
-					   Node *raw_parse_tree,
-					   const char *query_string,
-					   NodeTag	   sourceTag,
-					   const char *commandTag,
-					   Oid *param_types,
-					   int num_params,
-					   int cursor_options,
-					   List *stmt_list,
+					   CachedPlanSource *plansource,
 					   bool from_sql)
 {
 	PreparedStatement *entry;
-	CachedPlanSource *plansource;
+	TimestampTz cur_ts = GetCurrentStatementStartTimestamp();
 	bool		found;
 
 	/* Initialize the hash table, if necessary */
 	if (!prepared_queries)
 		InitQueryHashTable();
 
-	/* Check for pre-existing entry of same name */
-	hash_search(prepared_queries, stmt_name, HASH_FIND, &found);
-
-	if (found)
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_PSTATEMENT),
-				 errmsg("prepared statement \"%s\" already exists",
-						stmt_name)));
-
-	/* Create a plancache entry */
-	plansource = CreateCachedPlan(raw_parse_tree,
-								  query_string,
-								  sourceTag,
-								  commandTag,
-								  param_types,
-								  num_params,
-								  cursor_options,
-								  stmt_list,
-								  true,
-								  true);
-
-	/* Now we can add entry to hash table */
+	/* Add entry to hash table */
 	entry = (PreparedStatement *) hash_search(prepared_queries,
 											  stmt_name,
 											  HASH_ENTER,
@@ -502,13 +483,18 @@ StorePreparedStatement(const char *stmt_name,
 
 	/* Shouldn't get a duplicate entry */
 	if (found)
-		elog(ERROR, "duplicate prepared statement \"%s\"",
-			 stmt_name);
+		ereport(ERROR,
+				(errcode(ERRCODE_DUPLICATE_PSTATEMENT),
+				 errmsg("prepared statement \"%s\" already exists",
+						stmt_name)));
 
 	/* Fill in the hash table entry */
 	entry->plansource = plansource;
 	entry->from_sql = from_sql;
-	entry->prepare_time = GetCurrentStatementStartTimestamp();
+	entry->prepare_time = cur_ts;
+
+	/* Now it's safe to move the CachedPlanSource to permanent memory */
+	SaveCachedPlan(plansource);
 }
 
 /*
@@ -555,7 +541,7 @@ FetchPreparedStatementResultDesc(PreparedStatement *stmt)
 {
 	/*
 	 * Since we don't allow prepared statements' result tupdescs to change,
-	 * there's no need for a revalidate call here.
+	 * there's no need to worry about revalidating the cached plan here.
 	 */
 	Assert(stmt->plansource->fixed_result);
 	if (stmt->plansource->resultDesc)
@@ -577,24 +563,12 @@ List *
 FetchPreparedStatementTargetList(PreparedStatement *stmt)
 {
 	List	   *tlist;
-	CachedPlan *cplan;
 
-	/* No point in looking if it doesn't return tuples */
-	if (stmt->plansource->resultDesc == NULL)
-		return NIL;
+	/* Get the plan's primary targetlist */
+	tlist = CachedPlanGetTargetList(stmt->plansource);
 
-	/* Make sure the plan is up to date */
-	cplan = RevalidateCachedPlan(stmt->plansource, true);
-
-	/* Get the primary statement and find out what it returns */
-	tlist = FetchStatementTargetList(PortalListGetPrimaryStmt(cplan->stmt_list));
-
-	/* Copy into caller's context so we can release the plancache entry */
-	tlist = (List *) copyObject(tlist);
-
-	ReleaseCachedPlan(cplan, true);
-
-	return tlist;
+	/* Copy into caller's context in case plan gets invalidated */
+	return (List *) copyObject(tlist);
 }
 
 /*
@@ -661,11 +635,14 @@ DropAllPreparedStatements(void)
 /*
  * Implements the 'EXPLAIN EXECUTE' utility statement.
  *
+ * "into" is NULL unless we are doing EXPLAIN CREATE TABLE AS EXECUTE,
+ * in which case executing the query should result in creating that table.
+ *
  * Note: the passed-in queryString is that of the EXPLAIN EXECUTE,
  * not the original PREPARE; we get the latter string from the plancache.
  */
 void
-ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
+ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es,
 					const char *queryString, ParamListInfo params)
 {
 	PreparedStatement *entry;
@@ -679,10 +656,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
 	/* Look it up in the hash table */
 	entry = FetchPreparedStatement(execstmt->name, true);
 
-	/* Shouldn't have a non-fully-planned plancache entry */
-	if (!entry->plansource->fully_planned)
-		elog(ERROR, "EXPLAIN EXECUTE does not support unplanned prepared statements");
-	/* Shouldn't get any non-fixed-result cached plan, either */
+	/* Shouldn't find a non-fixed-result cached plan */
 	if (!entry->plansource->fixed_result)
 		elog(ERROR, "EXPLAIN EXECUTE does not support variable-result cached plans");
 
@@ -707,9 +681,23 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
 
 	query_string = entry->plansource->query_string;
 
+	/* Evaluate parameters, if any */
+	if (entry->plansource->num_params)
+	{
+		/*
+		 * Need an EState to evaluate parameters; must not delete it till end
+		 * of query, in case parameters are pass-by-reference.	Note that the
+		 * passed-in "params" could possibly be referenced in the parameter
+		 * expressions.
+		 */
+		estate = CreateExecutorState();
+		estate->es_param_list_info = params;
+		paramLI = EvaluateParams(entry, execstmt->params,
+								 queryString, estate);
+	}
+
 	/* Replan if needed, and acquire a transient refcount */
-	cplan = RevalidateCachedPlanWithParams(entry->plansource, true,
-										   paramLI, execstmt->into);
+	cplan = GetCachedPlan(entry->plansource, paramLI, true, into);
 
 	plan_list = cplan->stmt_list;
 
@@ -719,27 +707,9 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
 		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
 
 		if (IsA(pstmt, PlannedStmt))
-		{
-			if (execstmt->into)
-			{
-				if (pstmt->commandType != CMD_SELECT ||
-					pstmt->utilityStmt != NULL)
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("prepared statement is not a SELECT")));
-
-				/* Copy the stmt so we can modify it */
-				pstmt = copyObject(pstmt);
-
-				pstmt->intoClause = execstmt->into;
-			}
-
-			ExplainOnePlan(pstmt, es, query_string, paramLI);
-		}
+			ExplainOnePlan(pstmt, into, es, query_string, paramLI);
 		else
-		{
-			ExplainOneUtility((Node *) pstmt, es, query_string, params);
-		}
+			ExplainOneUtility((Node *) pstmt, into, es, query_string, paramLI);
 
 		/* No need for CommandCounterIncrement, as ExplainOnePlan did it */
 

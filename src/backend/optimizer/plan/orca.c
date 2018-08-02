@@ -88,6 +88,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 {
 	/* flag to check if optimizer unexpectedly failed to produce a plan */
 	bool			fUnexpectedFailure = false;
+	PlannerInfo		*root;
 	PlannerGlobal  *glob;
 	Query		   *pqueryCopy;
 	PlannedStmt    *result;
@@ -102,7 +103,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 */
 	glob = makeNode(PlannerGlobal);
 	glob->paramlist = NIL;
-	glob->subrtables = NIL;
+	glob->subroots = NIL;
 	glob->rewindPlanIDs = NULL;
 	glob->transientPlan = false;
 	glob->oneoffPlan = false;
@@ -119,6 +120,13 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
 
+	root = makeNode(PlannerInfo);
+	root->parse = parse;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
 	/* create a local copy to hand to the optimizer */
 	pqueryCopy = (Query *) copyObject(parse);
 
@@ -130,7 +138,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 * glob->invalItems, for any functions that are inlined or eliminated
 	 * away. (We will find dependencies to other objects later, after planning).
 	 */
-	pqueryCopy = preprocess_query_optimizer(glob, pqueryCopy, boundParams);
+	pqueryCopy = preprocess_query_optimizer(root, pqueryCopy, boundParams);
 
 	/* Ok, invoke ORCA. */
 	result = PplstmtOptimize(pqueryCopy, &fUnexpectedFailure);
@@ -159,6 +167,18 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->subplans = result->subplans;
 
 	/*
+	 * Fake a subroot for each subplan, so that postprocessing steps don't
+	 * choke.
+	 */
+	glob->subroots = NIL;
+	foreach(lp, glob->subplans)
+	{
+		PlannerInfo *subroot = makeNode(PlannerInfo);
+		subroot->glob = glob;
+		glob->subroots = lappend(glob->subroots, subroot);
+	}
+
+	/*
 	 * For optimizer, we already have share_id and the plan tree is already a
 	 * tree. However, the apply_shareinput_dag_to_tree walker does more than
 	 * DAG conversion. It will also populate column names for RTE_CTE entries
@@ -169,12 +189,12 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 
-		collect_shareinput_producers(glob, subplan, result->rtable);
+		collect_shareinput_producers(root, subplan);
 	}
-	collect_shareinput_producers(glob, result->planTree, result->rtable);
+	collect_shareinput_producers(root, result->planTree);
 
 	/* Post-process ShareInputScan nodes */
-	(void) apply_shareinput_xslice(result->planTree, glob);
+	(void) apply_shareinput_xslice(result->planTree, root);
 
 	/*
 	 * Fix ShareInputScans for EXPLAIN, like in standard_planner(). For all
@@ -184,9 +204,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 
-		lfirst(lp) = replace_shareinput_targetlists(glob, subplan, result->rtable);
+		lfirst(lp) = replace_shareinput_targetlists(root, subplan);
 	}
-	result->planTree = replace_shareinput_targetlists(glob, result->planTree, result->rtable);
+	result->planTree = replace_shareinput_targetlists(root, result->planTree);
 
 	/*
 	 * To save on memory, and on the network bandwidth when the plan is
@@ -213,9 +233,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 
-		cdb_extract_plan_dependencies(glob, subplan);
+		cdb_extract_plan_dependencies(root, subplan);
 	}
-	cdb_extract_plan_dependencies(glob, result->planTree);
+	cdb_extract_plan_dependencies(root, result->planTree);
 
 	/*
 	 * Also extract dependencies from the original Query tree. This is needed

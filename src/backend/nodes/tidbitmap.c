@@ -20,7 +20,7 @@
  * point, but for now that seems useless complexity.
  *
  *
- * Copyright (c) 2003-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/nodes/tidbitmap.c
@@ -36,7 +36,6 @@
 #include "executor/instrument.h"	/* Instrumentation */
 #include "nodes/bitmapset.h"
 #include "nodes/tidbitmap.h"
-#include "storage/bufpage.h"
 #include "utils/hsearch.h"
 
 #define WORDNUM(x)	((x) / TBM_BITS_PER_BITMAPWORD)
@@ -1177,7 +1176,7 @@ tbm_lossify(TIDBitmap *tbm)
 	 *
 	 * Since we are called as soon as nentries exceeds maxentries, we should
 	 * push nentries down to significantly less than maxentries, or else we'll
-	 * just end up doing this again very soon.  We shoot for maxentries/2.
+	 * just end up doing this again very soon.	We shoot for maxentries/2.
 	 */
 	Assert(!tbm->iterating);
 	Assert(tbm->status == TBM_HASH);
@@ -1198,7 +1197,7 @@ tbm_lossify(TIDBitmap *tbm)
 		/* This does the dirty work ... */
 		tbm_mark_page_lossy(tbm, page->blockno);
 
-		if (tbm->nentries <= tbm->maxentries)
+		if (tbm->nentries <= tbm->maxentries / 2)
 		{
 			/* we have done enough */
 			hash_seq_term(&status);
@@ -1213,14 +1212,14 @@ tbm_lossify(TIDBitmap *tbm)
 	}
 
 	/*
-	 * With a big bitmap and small work_mem, it's possible that we cannot
-	 * get under maxentries.  Again, if that happens, we'd end up uselessly
+	 * With a big bitmap and small work_mem, it's possible that we cannot get
+	 * under maxentries.  Again, if that happens, we'd end up uselessly
 	 * calling tbm_lossify over and over.  To prevent this from becoming a
 	 * performance sink, force maxentries up to at least double the current
 	 * number of entries.  (In essence, we're admitting inability to fit
-	 * within work_mem when we do this.)  Note that this test will not fire
-	 * if we broke out of the loop early; and if we didn't, the current
-	 * number of entries is simply not reducible any further.
+	 * within work_mem when we do this.)  Note that this test will not fire if
+	 * we broke out of the loop early; and if we didn't, the current number of
+	 * entries is simply not reducible any further.
 	 */
 	if (tbm->nentries > tbm->maxentries / 2)
 		tbm->maxentries = Min(tbm->nentries, (INT_MAX - 1) / 2) * 2;
@@ -1232,8 +1231,8 @@ tbm_lossify(TIDBitmap *tbm)
 static int
 tbm_comparator(const void *left, const void *right)
 {
-	BlockNumber l = (*((const PagetableEntry **) left))->blockno;
-	BlockNumber r = (*((const PagetableEntry **) right))->blockno;
+	BlockNumber l = (*((PagetableEntry *const *) left))->blockno;
+	BlockNumber r = (*((PagetableEntry *const *) right))->blockno;
 
 	if (l < r)
 		return -1;

@@ -16,13 +16,6 @@ ALTER TABLE cor RENAME TO newcor2;
 ALTER TABLE newcor2 RENAME TO cor;
 DROP TABLE cor;
 
--- relname is out of sync
-CREATE TABLE cor (a int, b int);
-UPDATE pg_class SET relname='othercor' WHERE relname='cor';
-ALTER TABLE othercor RENAME TO tmpcor;
-ALTER TABLE tmpcor RENAME TO cor;
-DROP TABLE cor;
-
 RESET allow_system_table_mods;
 RESET gp_allow_rename_relation_without_lock;
 

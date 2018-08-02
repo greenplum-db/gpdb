@@ -87,7 +87,7 @@ select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
 create or replace function func5(int) returns int as
 $$
   select $1;
-$$ language "SQL";
+$$ language SQL;
 -- check prodataaccess column
 select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
  proname | proargnames | prodataaccess 
@@ -168,7 +168,7 @@ $$ language plpgsql stable modifies sql data;
 select * from func1_mod_int_stb(5) order by 1;
 ERROR:  UPDATE is not allowed in a non-volatile function
 CONTEXT:  SQL statement "update bar set d = d+1 where c = $1"
-PL/pgSQL function "func1_mod_int_stb" line 3 at SQL statement
+PL/pgSQL function func1_mod_int_stb(integer) line 3 at SQL statement
 drop function func2(anyelement, anyelement, bool);
 drop function func3();
 drop function func4(int, int);

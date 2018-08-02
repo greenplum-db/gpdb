@@ -1762,7 +1762,7 @@ SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, 
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
 	   (SELECT i, j FROM exttab_udfs_2 WHERE i < 10) e2
 	   group by e1.j"
-PL/pgSQL function "exttab_udfs_func1" line 3 at EXECUTE statement
+PL/pgSQL function exttab_udfs_func1() line 3 at EXECUTE statement
 -- Should be populated
 SELECT COUNT(*) > 0 FROM
 (
@@ -1801,7 +1801,7 @@ SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, 
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
 	   (SELECT i, j FROM exttab_udfs_2 WHERE i < 10) e2
 	   group by e1.j"
-PL/pgSQL function "exttab_udfs_func1" line 3 at EXECUTE statement
+PL/pgSQL function exttab_udfs_func1() line 3 at EXECUTE statement
 SELECT * FROM exttab_udfs_insert_1;
  a 
 ---
@@ -1882,12 +1882,12 @@ SELECT * FROM exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
-PL/pgSQL function "exttab_udfs_func2" line 9 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
-PL/pgSQL function "exttab_udfs_func2" line 25 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 25 at SQL statement
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
@@ -1915,12 +1915,12 @@ SELECT exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
-PL/pgSQL function "exttab_udfs_func2" line 9 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
-PL/pgSQL function "exttab_udfs_func2" line 25 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 25 at SQL statement
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
@@ -1948,12 +1948,12 @@ INSERT INTO exttab_udfs_insert_1 SELECT * FROM exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
-PL/pgSQL function "exttab_udfs_func2" line 9 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12226)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
-PL/pgSQL function "exttab_udfs_func2" line 25 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 25 at SQL statement
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
@@ -1983,12 +1983,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
-PL/pgSQL function "exttab_udfs_func2" line 9 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "error_1", column i  (seg0 slice1 127.0.0.1:40000 pid=12217)
 CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_2"
-PL/pgSQL function "exttab_udfs_func2" line 25 at SQL statement
+PL/pgSQL function exttab_udfs_func2() line 25 at SQL statement
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
@@ -2899,7 +2899,7 @@ SET gp_log_gang TO DEBUG;
 SELECT * FROM exttab_error_context_callback_func();
 ERROR:  invalid input syntax for integer: "1|1_number"  (seg0 slice1 127.0.0.1:40000 pid=12458)
 CONTEXT:  External table exttab_error_context_callback, line 1 of file://@hostname@@abs_srcdir@/data/exttab.data, column c1
-PL/pgSQL function "exttab_error_context_callback_func" line 5 at FOR over SELECT rows
+PL/pgSQL function exttab_error_context_callback_func() line 5 at FOR over SELECT rows
 SET gp_log_gang TO DEFAULT;
 DROP FUNCTION exttab_error_context_callback_func();
 DROP EXTERNAL TABLE exttab_error_context_callback;

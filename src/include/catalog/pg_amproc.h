@@ -19,7 +19,7 @@
  * some don't pay attention to non-default functions at all.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_amproc.h
@@ -89,33 +89,43 @@ DATA(insert (	426   1042 1042 1 1078 ));
 DATA(insert (	428   17 17 1 1954 ));
 DATA(insert (	429   18 18 1 358 ));
 DATA(insert (	434   1082 1082 1 1092 ));
+DATA(insert (	434   1082 1082 2 3136 ));
 DATA(insert (	434   1082 1114 1 2344 ));
 DATA(insert (	434   1082 1184 1 2357 ));
 DATA(insert (	434   1114 1114 1 2045 ));
+DATA(insert (	434   1114 1114 2 3137 ));
 DATA(insert (	434   1114 1082 1 2370 ));
 DATA(insert (	434   1114 1184 1 2526 ));
 DATA(insert (	434   1184 1184 1 1314 ));
+DATA(insert (	434   1184 1184 2 3137 ));
 DATA(insert (	434   1184 1082 1 2383 ));
 DATA(insert (	434   1184 1114 1 2533 ));
 DATA(insert (	1970   700 700 1 354 ));
+DATA(insert (	1970   700 700 2 3132 ));
 DATA(insert (	1970   700 701 1 2194 ));
 DATA(insert (	1970   701 701 1 355 ));
+DATA(insert (	1970   701 701 2 3133 ));
 DATA(insert (	1970   701 700 1 2195 ));
 DATA(insert (	1974   869 869 1 926 ));
 DATA(insert (	1976   21 21 1 350 ));
+DATA(insert (	1976   21 21 2 3129 ));
 DATA(insert (	1976   21 23 1 2190 ));
 DATA(insert (	1976   21 20 1 2192 ));
 DATA(insert (	1976   23 23 1 351 ));
+DATA(insert (	1976   23 23 2 3130 ));
 DATA(insert (	1976   23 20 1 2188 ));
 DATA(insert (	1976   23 21 1 2191 ));
 DATA(insert (	1976   20 20 1 842 ));
+DATA(insert (	1976   20 20 2 3131 ));
 DATA(insert (	1976   20 23 1 2189 ));
 DATA(insert (	1976   20 21 1 2193 ));
 DATA(insert (	1982   1186 1186 1 1315 ));
 DATA(insert (	1984   829 829 1 836 ));
 DATA(insert (	1986   19 19 1 359 ));
+DATA(insert (	1986   19 19 2 3135 ));
 DATA(insert (	1988   1700 1700 1 1769 ));
 DATA(insert (	1989   26 26 1 356 ));
+DATA(insert (	1989   26 26 2 3134 ));
 DATA(insert (	1991   30 30 1 404 ));
 DATA(insert (	2994   2249 2249 1 2987 ));
 DATA(insert (	1994   25 25 1 360 ));
@@ -344,6 +354,33 @@ DATA(insert (	3659   3614 3614 4 3658 ));
 DATA(insert (	3659   3614 3614 5 2700 ));
 DATA(insert (	3626   3614 3614 1 3622 ));
 DATA(insert (	3683   3615 3615 1 3668 ));
+DATA(insert (	3901   3831 3831 1 3870 ));
+DATA(insert (	3903   3831 3831 1 3902 ));
+DATA(insert (	3919   3831 3831 1 3875 ));
+DATA(insert (	3919   3831 3831 2 3876 ));
+DATA(insert (	3919   3831 3831 3 3877 ));
+DATA(insert (	3919   3831 3831 4 3878 ));
+DATA(insert (	3919   3831 3831 5 3879 ));
+DATA(insert (	3919   3831 3831 6 3880 ));
+DATA(insert (	3919   3831 3831 7 3881 ));
+
+
+/* sp-gist */
+DATA(insert (	4015   600 600 1 4018 ));
+DATA(insert (	4015   600 600 2 4019 ));
+DATA(insert (	4015   600 600 3 4020 ));
+DATA(insert (	4015   600 600 4 4021 ));
+DATA(insert (	4015   600 600 5 4022 ));
+DATA(insert (	4016   600 600 1 4023 ));
+DATA(insert (	4016   600 600 2 4024 ));
+DATA(insert (	4016   600 600 3 4025 ));
+DATA(insert (	4016   600 600 4 4026 ));
+DATA(insert (	4016   600 600 5 4022 ));
+DATA(insert (	4017   25 25 1 4027 ));
+DATA(insert (	4017   25 25 2 4028 ));
+DATA(insert (	4017   25 25 3 4029 ));
+DATA(insert (	4017   25 25 4 4030 ));
+DATA(insert (	4017   25 25 5 4031 ));
 
 /*
  * the operator routines for the on-disk bitmap index.

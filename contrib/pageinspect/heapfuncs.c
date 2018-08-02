@@ -15,7 +15,7 @@
  * there's hardly any use case for using these without superuser-rights
  * anyway.
  *
- * Copyright (c) 2007-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/pageinspect/heapfuncs.c
@@ -25,12 +25,7 @@
 
 #include "postgres.h"
 
-#include "fmgr.h"
 #include "funcapi.h"
-#include "access/heapam.h"
-#include "access/transam.h"
-#include "catalog/namespace.h"
-#include "catalog/pg_type.h"
 #include "utils/builtins.h"
 #include "miscadmin.h"
 

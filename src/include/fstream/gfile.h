@@ -1,7 +1,9 @@
 #ifndef GFILE_H
 #define GFILE_H
 
-/*#include "c.h"*/
+#ifndef WIN32
+#include "c.h"
+#endif
 #include <sys/types.h>
 #ifdef HAVE_LIBBZ2
 #include <bzlib.h>
@@ -90,7 +92,7 @@ off_t gfile_get_compressed_size(gfile_t*fd);
 off_t gfile_get_compressed_position(gfile_t*fd);
 ssize_t gfile_read(gfile_t* fd, void* ptr, size_t len); /* gfile_read reads as much as it can--short read indicates error. */
 ssize_t gfile_write(gfile_t* fd, void* ptr, size_t len);
-void gfile_printf_then_putc_newline(const char*format,...) __attribute__ ((__format__ (__printf__, 1, 0)));
+void gfile_printf_then_putc_newline(const char*format,...) __attribute__ ((__format__ (PG_PRINTF_ATTRIBUTE, 1, 2)));
 void*gfile_malloc(size_t size);
 void gfile_free(void*a);
 

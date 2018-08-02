@@ -5,7 +5,7 @@
  * Interactions between userspace and selinux in kernelspace,
  * using libselinux api.
  *
- * Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2012, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -44,6 +44,12 @@ static struct
 		{
 			{
 				"transition", SEPG_PROCESS__TRANSITION
+			},
+			{
+				"dyntransition", SEPG_PROCESS__DYNTRANSITION
+			},
+			{
+				"setcurrent", SEPG_PROCESS__SETCURRENT
 			},
 			{
 				NULL, 0UL
@@ -642,7 +648,7 @@ bool
 sepgsql_getenforce(void)
 {
 	if (sepgsql_mode == SEPGSQL_MODE_DEFAULT &&
-		security_getenforce() > 0)
+		selinux_status_getenforce() > 0)
 		return true;
 
 	return false;
@@ -824,7 +830,7 @@ sepgsql_compute_avd(const char *scontext,
  * given security context.
  *
  * scontext: security context of the subject (mostly, peer process).
- * tcontext: security context of the the upper database object.
+ * tcontext: security context of the upper database object.
  * tclass: class code (SEPG_CLASS_*) of the new object in creation
  */
 char *

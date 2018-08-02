@@ -1,6 +1,8 @@
 /*
  * contrib/btree_gist/btree_ts.c
  */
+#include "postgres.h"
+
 #include "btree_gist.h"
 #include "btree_utils_num.h"
 #include "utils/builtins.h"
@@ -104,8 +106,8 @@ gbt_tslt(const void *a, const void *b)
 static int
 gbt_tskey_cmp(const void *a, const void *b)
 {
-	tsKEY	   *ia = (tsKEY *) (((Nsrt *) a)->t);
-	tsKEY	   *ib = (tsKEY *) (((Nsrt *) b)->t);
+	tsKEY	   *ia = (tsKEY *) (((const Nsrt *) a)->t);
+	tsKEY	   *ib = (tsKEY *) (((const Nsrt *) b)->t);
 	int			res;
 
 	res = DatumGetInt32(DirectFunctionCall2(timestamp_cmp, TimestampGetDatumFast(ia->lower), TimestampGetDatumFast(ib->lower)));

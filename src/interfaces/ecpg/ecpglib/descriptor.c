@@ -155,36 +155,36 @@ set_int_item(int lineno, int *target, const void *var, enum ECPGttype vartype)
 	switch (vartype)
 	{
 		case ECPGt_short:
-			*target = *(short *) var;
+			*target = *(const short *) var;
 			break;
 		case ECPGt_int:
-			*target = *(int *) var;
+			*target = *(const int *) var;
 			break;
 		case ECPGt_long:
-			*target = *(long *) var;
+			*target = *(const long *) var;
 			break;
 		case ECPGt_unsigned_short:
-			*target = *(unsigned short *) var;
+			*target = *(const unsigned short *) var;
 			break;
 		case ECPGt_unsigned_int:
-			*target = *(unsigned int *) var;
+			*target = *(const unsigned int *) var;
 			break;
 		case ECPGt_unsigned_long:
-			*target = *(unsigned long *) var;
+			*target = *(const unsigned long *) var;
 			break;
 #ifdef HAVE_LONG_LONG_INT
 		case ECPGt_long_long:
-			*target = *(long long int *) var;
+			*target = *(const long long int *) var;
 			break;
 		case ECPGt_unsigned_long_long:
-			*target = *(unsigned long long int *) var;
+			*target = *(const unsigned long long int *) var;
 			break;
 #endif   /* HAVE_LONG_LONG_INT */
 		case ECPGt_float:
-			*target = *(float *) var;
+			*target = *(const float *) var;
 			break;
 		case ECPGt_double:
-			*target = *(double *) var;
+			*target = *(const double *) var;
 			break;
 		default:
 			ecpg_raise(lineno, ECPG_VAR_NOT_NUMERIC, ECPG_SQLSTATE_RESTRICTED_DATA_TYPE_ATTRIBUTE_VIOLATION, NULL);
@@ -229,6 +229,7 @@ get_char_item(int lineno, void *var, enum ECPGttype vartype, char *value, int va
 
 #define RETURN_IF_NO_DATA	if (ntuples < 1) \
 				{ \
+					va_end(args); \
 					ecpg_raise(lineno, ECPG_NOT_FOUND, ECPG_SQLSTATE_NO_DATA, NULL); \
 					return (false); \
 				}
@@ -248,13 +249,17 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 	ecpg_init_sqlca(sqlca);
 	ECPGresult = ecpg_result_by_descriptor(lineno, desc_name);
 	if (!ECPGresult)
+	{
+		va_end(args);
 		return (false);
+	}
 
 	ntuples = PQntuples(ECPGresult);
 
 	if (index < 1 || index > PQnfields(ECPGresult))
 	{
 		ecpg_raise(lineno, ECPG_INVALID_DESCRIPTOR_INDEX, ECPG_SQLSTATE_INVALID_DESCRIPTOR_INDEX, NULL);
+		va_end(args);
 		return (false);
 	}
 
@@ -312,68 +317,98 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 
 			case ECPGd_name:
 				if (!get_char_item(lineno, var, vartype, PQfname(ECPGresult, index), varcharsize))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: NAME = %s\n", PQfname(ECPGresult, index));
 				break;
 
 			case ECPGd_nullable:
 				if (!get_int_item(lineno, var, vartype, 1))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				break;
 
 			case ECPGd_key_member:
 				if (!get_int_item(lineno, var, vartype, 0))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				break;
 
 			case ECPGd_scale:
 				if (!get_int_item(lineno, var, vartype, (PQfmod(ECPGresult, index) - VARHDRSZ) & 0xffff))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: SCALE = %d\n", (PQfmod(ECPGresult, index) - VARHDRSZ) & 0xffff);
 				break;
 
 			case ECPGd_precision:
 				if (!get_int_item(lineno, var, vartype, PQfmod(ECPGresult, index) >> 16))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: PRECISION = %d\n", PQfmod(ECPGresult, index) >> 16);
 				break;
 
 			case ECPGd_octet:
 				if (!get_int_item(lineno, var, vartype, PQfsize(ECPGresult, index)))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: OCTET_LENGTH = %d\n", PQfsize(ECPGresult, index));
 				break;
 
 			case ECPGd_length:
 				if (!get_int_item(lineno, var, vartype, PQfmod(ECPGresult, index) - VARHDRSZ))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: LENGTH = %d\n", PQfmod(ECPGresult, index) - VARHDRSZ);
 				break;
 
 			case ECPGd_type:
 				if (!get_int_item(lineno, var, vartype, ecpg_dynamic_type(PQftype(ECPGresult, index))))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: TYPE = %d\n", ecpg_dynamic_type(PQftype(ECPGresult, index)));
 				break;
 
 			case ECPGd_di_code:
 				if (!get_int_item(lineno, var, vartype, ecpg_dynamic_type_DDT(PQftype(ECPGresult, index))))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: TYPE = %d\n", ecpg_dynamic_type_DDT(PQftype(ECPGresult, index)));
 				break;
 
 			case ECPGd_cardinality:
 				if (!get_int_item(lineno, var, vartype, PQntuples(ECPGresult)))
+				{
+					va_end(args);
 					return (false);
+				}
 
 				ecpg_log("ECPGget_desc: CARDINALITY = %d\n", PQntuples(ECPGresult));
 				break;
@@ -388,9 +423,10 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 				 */
 				if (arrsize > 0 && ntuples > arrsize)
 				{
-					ecpg_log("ECPGget_desc on line %d: incorrect number of matches; %d don't fit into array of %d\n",
+					ecpg_log("ECPGget_desc on line %d: incorrect number of matches; %d don't fit into array of %ld\n",
 							 lineno, ntuples, arrsize);
 					ecpg_raise(lineno, ECPG_TOO_MANY_MATCHES, ECPG_SQLSTATE_CARDINALITY_VIOLATION, NULL);
+					va_end(args);
 					return false;
 				}
 				/* allocate storage if needed */
@@ -399,7 +435,10 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 					void	   *mem = (void *) ecpg_alloc(offset * ntuples, lineno);
 
 					if (!mem)
+					{
+						va_end(args);
 						return false;
+					}
 					*(void **) var = mem;
 					ecpg_add_mem(mem, lineno);
 					var = mem;
@@ -408,7 +447,10 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 				for (act_tuple = 0; act_tuple < ntuples; act_tuple++)
 				{
 					if (!get_int_item(lineno, var, vartype, PQgetlength(ECPGresult, act_tuple, index)))
+					{
+						va_end(args);
 						return (false);
+					}
 					var = (char *) var + offset;
 					ecpg_log("ECPGget_desc: RETURNED[%d] = %d\n", act_tuple, PQgetlength(ECPGresult, act_tuple, index));
 				}
@@ -417,6 +459,7 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 			default:
 				snprintf(type_str, sizeof(type_str), "%d", type);
 				ecpg_raise(lineno, ECPG_UNKNOWN_DESCRIPTOR_ITEM, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, type_str);
+				va_end(args);
 				return (false);
 		}
 
@@ -436,7 +479,7 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 		memset(&stmt, 0, sizeof stmt);
 		stmt.lineno = lineno;
 
-		/* desparate try to guess something sensible */
+		/* desperate try to guess something sensible */
 		stmt.connection = ecpg_get_connection(NULL);
 		ecpg_store_result(ECPGresult, index, &stmt, &data_var);
 
@@ -457,9 +500,10 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 		 */
 		if (data_var.ind_arrsize > 0 && ntuples > data_var.ind_arrsize)
 		{
-			ecpg_log("ECPGget_desc on line %d: incorrect number of matches (indicator); %d don't fit into array of %d\n",
+			ecpg_log("ECPGget_desc on line %d: incorrect number of matches (indicator); %d don't fit into array of %ld\n",
 					 lineno, ntuples, data_var.ind_arrsize);
 			ecpg_raise(lineno, ECPG_TOO_MANY_MATCHES, ECPG_SQLSTATE_CARDINALITY_VIOLATION, NULL);
+			va_end(args);
 			return false;
 		}
 
@@ -469,7 +513,10 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 			void	   *mem = (void *) ecpg_alloc(data_var.ind_offset * ntuples, lineno);
 
 			if (!mem)
+			{
+				va_end(args);
 				return false;
+			}
 			*(void **) data_var.ind_pointer = mem;
 			ecpg_add_mem(mem, lineno);
 			data_var.ind_value = mem;
@@ -478,12 +525,16 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 		for (act_tuple = 0; act_tuple < ntuples; act_tuple++)
 		{
 			if (!get_int_item(lineno, data_var.ind_value, data_var.ind_type, -PQgetisnull(ECPGresult, act_tuple, index)))
+			{
+				va_end(args);
 				return (false);
+			}
 			data_var.ind_value = (char *) data_var.ind_value + data_var.ind_offset;
 			ecpg_log("ECPGget_desc: INDICATOR[%d] = %d\n", act_tuple, -PQgetisnull(ECPGresult, act_tuple, index));
 		}
 	}
 	sqlca->sqlerrd[2] = ntuples;
+	va_end(args);
 	return (true);
 }
 
@@ -575,6 +626,7 @@ ECPGset_desc(int lineno, const char *desc_name, int index,...)
 					if (!ecpg_store_input(lineno, true, var, &tobeinserted, false))
 					{
 						ecpg_free(var);
+						va_end(args);
 						return false;
 					}
 
@@ -612,11 +664,13 @@ ECPGset_desc(int lineno, const char *desc_name, int index,...)
 					snprintf(type_str, sizeof(type_str), "%d", itemtype);
 					ecpg_raise(lineno, ECPG_UNKNOWN_DESCRIPTOR_ITEM, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, type_str);
 					ecpg_free(var);
+					va_end(args);
 					return false;
 				}
 		}
 	}
 	ecpg_free(var);
+	va_end(args);
 
 	return true;
 }
@@ -652,7 +706,7 @@ ECPGdeallocate_desc(int line, const char *name)
 	ecpg_init_sqlca(sqlca);
 	for (desc = get_descriptors(), prev = NULL; desc; prev = desc, desc = desc->next)
 	{
-		if (!strcmp(name, desc->name))
+		if (strcmp(name, desc->name) == 0)
 		{
 			if (prev)
 				prev->next = desc->next;

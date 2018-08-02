@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -32,7 +32,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "access/genam.h"
 #include "access/reloptions.h"
 #include "access/sysattr.h"
 #include "access/transam.h"
@@ -65,7 +64,6 @@
 #include "optimizer/prep.h"
 #include "optimizer/var.h"
 #include "rewrite/rewriteDefine.h"
-#include "storage/fd.h"
 #include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/array.h"
@@ -74,7 +72,6 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/relcache.h"
 #include "utils/relmapper.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
@@ -393,6 +390,7 @@ RelationParseRelOptions(Relation relation, HeapTuple tuple)
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
 		case RELKIND_INDEX:
+		case RELKIND_VIEW:
 			break;
 		default:
 			return;
@@ -1442,6 +1440,7 @@ formrdesc(const char *relationName, Oid relationReltype,
 
 	relation->rd_rel->relpages = 0;
 	relation->rd_rel->reltuples = 0;
+	relation->rd_rel->relallvisible = 0;
 	relation->rd_rel->relkind = RELKIND_RELATION;
 	relation->rd_rel->relstorage = RELSTORAGE_HEAP;
 	relation->rd_rel->relhasoids = hasoids;
@@ -2000,7 +1999,7 @@ RelationClearRelation(Relation relation, bool rebuild)
 		 * on next access.	Meanwhile it's not any less valid than it was
 		 * before, so any code that might expect to continue accessing it
 		 * isn't hurt by the rebuild failure.  (Consider for example a
-		 * subtransaction that ALTERs a table and then gets cancelled partway
+		 * subtransaction that ALTERs a table and then gets canceled partway
 		 * through the cache entry rebuild.  The outer transaction should
 		 * still see the not-modified cache entry as valid.)  The worst
 		 * consequence of an error is leaking the necessarily-unreferenced new
@@ -2213,11 +2212,11 @@ RelationCacheInvalidateEntry(Oid relationId)
  *	 so hash_seq_search will complete safely; (b) during the second pass we
  *	 only hold onto pointers to nondeletable entries.
  *
- *	 The two-phase approach also makes it easy to ensure that we process
- *	 nailed-in-cache indexes before other nondeletable items, and that we
- *	 process pg_class_oid_index first of all.  In scenarios where a nailed
- *	 index has been given a new relfilenode, we have to detect that update
- *	 before the nailed index is used in reloading any other relcache entry.
+ *	 The two-phase approach also makes it easy to update relfilenodes for
+ *	 mapped relations before we do anything else, and to ensure that the
+ *	 second pass processes nailed-in-cache items before other nondeletable
+ *	 items.  This should ensure that system catalogs are up to date before
+ *	 we attempt to use them to reload information about other open relations.
  */
 void
 RelationCacheInvalidate(void)
@@ -2229,6 +2228,11 @@ RelationCacheInvalidate(void)
 	List	   *rebuildList = NIL;
 	ListCell   *l;
 
+	/*
+	 * Reload relation mapping data before starting to reconstruct cache.
+	 */
+	RelationMapInvalidateAll();
+
 	/* Phase 1 */
 	hash_seq_init(&status, RelationIdCache);
 
@@ -2239,7 +2243,7 @@ RelationCacheInvalidate(void)
 		/* Must close all smgr references to avoid leaving dangling ptrs */
 		RelationCloseSmgr(relation);
 
-		/* Ignore new relations, since they are never SI targets */
+		/* Ignore new relations, since they are never cross-backend targets */
 		if (relation->rd_createSubid != InvalidSubTransactionId)
 			continue;
 
@@ -2254,21 +2258,32 @@ RelationCacheInvalidate(void)
 		else
 		{
 			/*
-			 * Add this entry to list of stuff to rebuild in second pass.
-			 * pg_class_oid_index goes on the front of rebuildFirstList, other
-			 * nailed indexes on the back, and everything else into
-			 * rebuildList (in no particular order).
+			 * If it's a mapped relation, immediately update its rd_node in
+			 * case its relfilenode changed.  We must do this during phase 1
+			 * in case the relation is consulted during rebuild of other
+			 * relcache entries in phase 2.  It's safe since consulting the
+			 * map doesn't involve any access to relcache entries.
 			 */
-			if (relation->rd_isnailed &&
-				relation->rd_rel->relkind == RELKIND_INDEX)
-			{
-				if (RelationGetRelid(relation) == ClassOidIndexId)
-					rebuildFirstList = lcons(relation, rebuildFirstList);
-				else
-					rebuildFirstList = lappend(rebuildFirstList, relation);
-			}
-			else
+			if (RelationIsMapped(relation))
+				RelationInitPhysicalAddr(relation);
+
+			/*
+			 * Add this entry to list of stuff to rebuild in second pass.
+			 * pg_class goes to the front of rebuildFirstList while
+			 * pg_class_oid_index goes to the back of rebuildFirstList, so
+			 * they are done first and second respectively.  Other nailed
+			 * relations go to the front of rebuildList, so they'll be done
+			 * next in no particular order; and everything else goes to the
+			 * back of rebuildList.
+			 */
+			if (RelationGetRelid(relation) == RelationRelationId)
+				rebuildFirstList = lcons(relation, rebuildFirstList);
+			else if (RelationGetRelid(relation) == ClassOidIndexId)
+				rebuildFirstList = lappend(rebuildFirstList, relation);
+			else if (relation->rd_isnailed)
 				rebuildList = lcons(relation, rebuildList);
+			else
+				rebuildList = lappend(rebuildList, relation);
 		}
 	}
 
@@ -2278,11 +2293,6 @@ RelationCacheInvalidate(void)
 	 * will re-open catalog files.
 	 */
 	smgrcloseall();
-
-	/*
-	 * Reload relation mapping data before starting to reconstruct cache.
-	 */
-	RelationMapInvalidateAll();
 
 	/* Phase 2: rebuild the items found to need rebuild in phase 1 */
 	foreach(l, rebuildFirstList)
@@ -2555,6 +2565,7 @@ RelationBuildLocalRelation(const char *relname,
 						   Oid relnamespace,
 						   TupleDesc tupDesc,
 						   Oid relid,
+						   Oid relfilenode,
 						   Oid reltablespace,
 			               char relkind,            /*CDB*/
 						   bool shared_relation,
@@ -2692,10 +2703,8 @@ RelationBuildLocalRelation(const char *relname,
 
 	/*
 	 * Insert relation physical and logical identifiers (OIDs) into the right
-	 * places.	Note that the physical ID (relfilenode) is initially the same
-	 * as the logical ID (OID); except that for a mapped relation, we set
-	 * relfilenode to zero and rely on RelationInitPhysicalAddr to consult the
-	 * map.
+	 * places.	For a mapped relation, we set relfilenode to zero and rely on
+	 * RelationInitPhysicalAddr to consult the map.
 	 *
 	 * In GPDB, the table's logical OID is allocated in the master, and might
 	 * already be in use as a relfilenode of an existing relation in a segment.
@@ -2849,6 +2858,7 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid)
 	{
 		classform->relpages = 0;	/* it's empty until further notice */
 		classform->reltuples = 0;
+		classform->relallvisible = 0;
 	}
 
 	if (TransactionIdIsValid(classform->relfrozenxid))
@@ -3464,6 +3474,8 @@ CheckConstraintFetch(Relation relation)
 			     "pg_class reports %d constraint record(s) for rel %s, but found extra in pg_constraint",
 			     ncheck, RelationGetRelationName(relation));
 
+		check[found].ccvalid = conform->convalidated;
+		check[found].ccnoinherit = conform->connoinherit;
 		check[found].ccname = MemoryContextStrdup(CacheMemoryContext,
 												  NameStr(conform->conname));
 
@@ -3568,16 +3580,37 @@ RelationGetIndexList(Relation relation)
 	while (HeapTupleIsValid(htup = systable_getnext(indscan)))
 	{
 		Form_pg_index index = (Form_pg_index) GETSTRUCT(htup);
+		Datum		indclassDatum;
+		oidvector  *indclass;
+		bool		isnull;
+
+		/*
+		 * Ignore any indexes that are currently being dropped
+		 */
+		if (!index->indisvalid && !index->indisready)
+			continue;
 
 		/* Add index's OID to result list in the proper order */
 		result = insert_ordered_oid(result, index->indexrelid);
+
+		/*
+		 * indclass cannot be referenced directly through the C struct,
+		 * because it comes after the variable-width indkey field.	Must
+		 * extract the datum the hard way...
+		 */
+		indclassDatum = heap_getattr(htup,
+									 Anum_pg_index_indclass,
+									 GetPgIndexDescriptor(),
+									 &isnull);
+		Assert(!isnull);
+		indclass = (oidvector *) DatumGetPointer(indclassDatum);
 
 		/* Check to see if it is a unique, non-partial btree index on OID */
 		if (IndexIsValid(index) &&
 			index->indnatts == 1 &&
 			index->indisunique && index->indimmediate &&
 			index->indkey.values[0] == ObjectIdAttributeNumber &&
-			index->indclass.values[0] == OID_BTREE_OPS_OID &&
+			indclass->values[0] == OID_BTREE_OPS_OID &&
 			heap_attisnull(htup, Anum_pg_index_indpred))
 			oidIndex = index->indexrelid;
 	}
@@ -3911,10 +3944,10 @@ RelationGetIndexAttrBitmap(Relation relation)
 		}
 
 		/* Collect all attributes used in expressions, too */
-		pull_varattnos((Node *) indexInfo->ii_Expressions, &indexattrs);
+		pull_varattnos((Node *) indexInfo->ii_Expressions, 1, &indexattrs);
 
 		/* Collect all attributes in the index predicate, too */
-		pull_varattnos((Node *) indexInfo->ii_Predicate, &indexattrs);
+		pull_varattnos((Node *) indexInfo->ii_Predicate, 1, &indexattrs);
 
 		index_close(indexDesc, AccessShareLock);
 	}
@@ -4718,8 +4751,8 @@ RelationCacheInitFilePreInvalidate(void)
 		/*
 		 * The file might not be there if no backend has been started since
 		 * the last removal.  But complain about failures other than ENOENT.
-		 * Fortunately, it's not too late to abort the transaction if we
-		 * can't get rid of the would-be-obsolete init file.
+		 * Fortunately, it's not too late to abort the transaction if we can't
+		 * get rid of the would-be-obsolete init file.
 		 */
 		if (errno != ENOENT)
 			ereport(ERROR,

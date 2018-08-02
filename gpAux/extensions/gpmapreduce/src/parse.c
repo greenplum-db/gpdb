@@ -7,7 +7,10 @@
 #include <yaml.h>
 
 #include <stdarg.h>
+#include "pg_config_manual.h"
 
+int mapred_parse_error(mapred_parser_t *parser, char *fmt, ...)
+	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj);
 
 /* -------------------------------------------------------------------------- */
@@ -393,13 +396,13 @@ void parser_set_name(mapred_parser_t *parser, char *value)
 	if (!value || strlen(value) == 0)
 	{
 		value = "?";
-		mapred_parse_error(parser, "Invalid NAME", value);
+		mapred_parse_error(parser, "Invalid NAME: %s", value);
 	}
 
 	/* If the object already has a name => throw an error */
 	if (parser->current_obj->name)
 	{
-		mapred_parse_error(parser, "Duplicate NAME", value);
+		mapred_parse_error(parser, "Duplicate NAME: %s", value);
 		return;
 	}
 

@@ -30,6 +30,7 @@
 #include "nodes/execnodes.h"	/* CdbProcess, Slice, SliceTable */
 #include "postmaster/postmaster.h"
 #include "tcop/tcopprot.h"
+#include "utils/int8.h"
 #include "utils/portal.h"
 #include "utils/sharedsnapshot.h"
 #include "tcop/pquery.h"

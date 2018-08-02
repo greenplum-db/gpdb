@@ -27,7 +27,7 @@ PostgreSQL documentation
    <command>pg_dump</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg rep="repeat"><replaceable>option</replaceable></arg>
-   <arg><replaceable>dbname</replaceable></arg>
+   <arg choice="opt"><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
 
@@ -113,12 +113,12 @@ PostgreSQL documentation
       <listitem>
        <para>
         Dump only the data, not the schema (data definitions).
+        Table data, large objects, and sequence values are dumped.
        </para>
 
        <para>
-        This option is only meaningful for the plain-text format.  For
-        the archive formats, you can specify the option when you
-        call <command>pg_restore</command>.
+        This option is similar to, but for historical reasons not identical
+        to, specifying <option>--section=data</>.
        </para>
       </listitem>
      </varlistentry>
@@ -268,10 +268,7 @@ PostgreSQL documentation
           </para>
          </listitem>
         </varlistentry>
-
-       </variablelist>
-       </para>
-
+       </variablelist></para>
       </listitem>
      </varlistentry>
 
@@ -406,6 +403,20 @@ PostgreSQL documentation
       <listitem>
        <para>
         Dump only the object definitions (schema), not data.
+       </para>
+       <para>
+        This option is the inverse of <option>--data-only</>.
+        It is similar to, but for historical reasons not identical to,
+        specifying
+        <option>--section=pre-data --section=post-data</>.
+       </para>
+       <para>
+        (Do not confuse this with the <option>--schema</> option, which
+        uses the word <quote>schema</> in a different meaning.)
+       </para>
+       <para>
+        To exclude table data for only a subset of tables in the database,
+        see <option>--exclude-table-data</>.
        </para>
       </listitem>
      </varlistentry>
@@ -616,6 +627,24 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>--exclude-table-data=<replaceable class="parameter">table</replaceable></option></term>
+      <listitem>
+       <para>
+        Do not dump data for any tables matching the <replaceable
+        class="parameter">table</replaceable> pattern. The pattern is
+        interpreted according to the same rules as for <option>-t</>.
+        <option>--exclude-table-data</> can be given more than once to
+        exclude tables matching any of several patterns. This option is
+        useful when you need the definition of a particular table even
+        though you do not need the data in it.
+       </para>
+       <para>
+        To exclude data for all tables in the database, see <option>--schema-only</>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--inserts</option></term>
       <listitem>
        <para>
@@ -696,6 +725,25 @@ PostgreSQL documentation
         additional keywords.
        </para>
       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>--section=<replaceable class="parameter">sectionname</replaceable></option></term>
+       <listitem>
+         <para>
+          Only dump the named section. The section name can be
+          <option>pre-data</>, <option>data</>, or <option>post-data</>.
+          This option can be specified more than once to select multiple
+          sections. The default is to dump all sections.
+         </para>
+         <para>
+          The data section contains actual table data as well as large-object
+          definitions.
+          Post-data items consist of definitions of indexes, triggers, rules
+          and constraints other than validated check constraints.
+          Pre-data items consist of all other data definition items.
+         </para>
+       </listitem>
      </varlistentry>
 
      <varlistentry>
@@ -1082,8 +1130,7 @@ CREATE DATABASE foo WITH TEMPLATE template0;
 
 <screen>
 <prompt>$</prompt> <userinput>pg_dump -t '"MixedCaseName"' mydb &gt; mytab.sql</userinput>
-</screen>
-  </para>
+</screen></para>
 
  </refsect1>
 

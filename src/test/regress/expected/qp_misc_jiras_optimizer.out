@@ -2598,7 +2598,7 @@ language plpgsql;
 select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_misc_jiras.pg_foo"  (seg1 slice1 nikos-mac:25433 pid=95127)
 CONTEXT:  SQL statement "select count(*) from qp_misc_jiras.pg_foo"
-PL/pgSQL function "func2" line 5 at EXECUTE statement
+PL/pgSQL function func2(integer) line 5 at EXECUTE statement
 create or replace function func3(int) returns int as $$
 declare
 	t1 int;

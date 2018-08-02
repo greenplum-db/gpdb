@@ -7,7 +7,7 @@
  * It can be used to buffer either ordinary C strings (null-terminated text)
  * or arbitrary binary data.  All storage is allocated with palloc().
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/lib/stringinfo.h
@@ -107,7 +107,9 @@ __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
  * without modifying str.  Typically the caller would enlarge str and retry
  * on false return --- see appendStringInfo for standard usage pattern.
  */
-extern bool appendStringInfoVA(StringInfo str, const char *fmt, va_list args);
+extern bool
+appendStringInfoVA(StringInfo str, const char *fmt, va_list args)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 0)));
 
 /*------------------------
  * appendStringInfoString

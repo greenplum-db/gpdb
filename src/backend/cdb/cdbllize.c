@@ -186,11 +186,9 @@ cdbparallelize(PlannerInfo *root,
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			if (query->intoClause)
-			{
-				/* SELECT INTO always created partitioned tables. */
+			/* SELECT INTO / CREATE TABLE AS always created partitioned tables. */
+			if (query->isCTAS)
 				context->resultSegments = true;
-			}
 			break;
 
 		case CMD_INSERT:
@@ -360,7 +358,7 @@ ContainsParamWalker(Node *expr, void *ctx)
 }
 
 /**
- * Replaces all vars in an expression with OUTER vars referring to the
+ * Replaces all vars in an expression with OUTER_VAR vars referring to the
  * targetlist contained in the context (ctx->outerTL).
  */
 static Node *
@@ -381,7 +379,7 @@ MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx)
 		Var		   *vOrig = (Var *) expr;
 		Var		   *vOuter = (Var *) copyObject(vOrig);
 
-		vOuter->varno = OUTER;
+		vOuter->varno = OUTER_VAR;
 		vOuter->varattno = tle->resno;
 		vOuter->varnoold = vOrig->varno;
 		return (Node *) vOuter;
@@ -1476,6 +1474,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_Limit:
 		case T_Sort:
 		case T_Material:
+		case T_ForeignScan:
 			if (plan_tree_walker(node, motion_sanity_walker, result))
 				return true;
 			break;

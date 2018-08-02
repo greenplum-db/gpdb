@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/sysattr.h"
+#include "catalog/pg_class.h"
 #include "nodes/plannodes.h"
 #include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"
@@ -412,8 +413,12 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 	}
 
 	if (CMD_SELECT == pquery->commandType)
-	{		
-		if (!optimizer_enable_ctas && NULL != pquery->intoClause)
+	{
+		// GPDB_92_MERGE_FIXME: CTAS is a UTILITY statement after upstream
+		// refactoring commit 9dbf2b7d . We are temporarily *always* falling
+		// back. Detect CTAS harder when we get back to it.
+
+		if (!optimizer_enable_ctas && pquery->isCTAS)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA"));
 		}
@@ -637,13 +642,15 @@ CTranslatorQueryToDXL::PdxlnFromQuery()
 	switch (m_pquery->commandType)
 	{
 		case CMD_SELECT:
-			if (NULL == m_pquery->intoClause)
+			if (!m_pquery->isCTAS)
 			{
 				return PdxlnFromQueryInternal();
 			}
+			else
+			{
+				return PdxlnCTAS();
+			}
 
-			return PdxlnCTAS();
-			
 		case CMD_INSERT:
 			return PdxlnInsert();
 
@@ -773,10 +780,14 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 
 	m_fCTASQuery = true;
 	CDXLNode *pdxlnQuery = PdxlnFromQueryInternal();
-	
-	IntoClause *pintocl = m_pquery->intoClause;
-		
-	CMDName *pmdnameRel = CDXLUtils::PmdnameFromSz(m_pmp, pintocl->rel->relname);
+
+	// GPDB_92_MERGE_FIXME: we should plumb through the intoClause
+//	IntoClause *pintocl = m_pquery->intoClause;
+	IntoClause *pintocl = NULL;
+
+//	const char *const relname = pintocl->rel->relname;
+	const char *const relname = "fake ctas rel";
+	CMDName *pmdnameRel = CDXLUtils::PmdnameFromSz(m_pmp, relname);
 	
 	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(m_pmp) DrgPdxlcd(m_pmp);
 	
@@ -785,7 +796,8 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 	DrgPul *pdrgpulSource = GPOS_NEW(m_pmp) DrgPul(m_pmp);
 	DrgPi* pdrgpiVarTypMod = GPOS_NEW(m_pmp) DrgPi(m_pmp);
 	
-	List *plColnames = pintocl->colNames;
+//	List *plColnames = pintocl->colNames;
+	List *plColnames = NIL;
 	for (ULONG ul = 0; ul < ulColumns; ul++)
 	{
 		TargetEntry *pte = (TargetEntry *) gpdb::PvListNth(m_pquery->targetList, ul);
@@ -863,23 +875,31 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 	CMDIdGPDB *pmdid = GPOS_NEW(m_pmp) CMDIdGPDBCtas(oid);
 	
 	CMDName *pmdnameTableSpace = NULL;
-	if (NULL != pintocl->tableSpaceName)
+//	if (NULL != pintocl->tableSpaceName)
+	if (false)
 	{
 		pmdnameTableSpace = CDXLUtils::PmdnameFromSz(m_pmp, pintocl->tableSpaceName);
 	}
 	
 	CMDName *pmdnameSchema = NULL;
-	if (NULL != pintocl->rel->schemaname)
+//	if (NULL != pintocl->rel->schemaname)
+	if (false)
 	{
 		pmdnameSchema = CDXLUtils::PmdnameFromSz(m_pmp, pintocl->rel->schemaname);
 	}
 	
-	CDXLCtasStorageOptions::ECtasOnCommitAction ectascommit = (CDXLCtasStorageOptions::ECtasOnCommitAction) pintocl->onCommit;
-	
+//	CDXLCtasStorageOptions::ECtasOnCommitAction ectascommit = (CDXLCtasStorageOptions::ECtasOnCommitAction) pintocl->onCommit;
+	CDXLCtasStorageOptions::ECtasOnCommitAction ectascommit = CDXLCtasStorageOptions::EctascommitNOOP;
+
 	IMDRelation::Erelstoragetype erelstorage = IMDRelation::ErelstorageHeap;
-	CDXLCtasStorageOptions::DrgPctasOpt *pdrgpctasopt = Pdrgpctasopt(pintocl->options, &erelstorage);
-	
-	BOOL fHasOids = gpdb::FInterpretOidsOption(pintocl->options);
+//	CDXLCtasStorageOptions::DrgPctasOpt *pdrgpctasopt = Pdrgpctasopt(pintocl->options, &erelstorage);
+	CDXLCtasStorageOptions::DrgPctasOpt *pdrgpctasopt = Pdrgpctasopt(NIL, &erelstorage);
+
+//	BOOL fHasOids = gpdb::FInterpretOidsOption(pintocl->options);
+	BOOL fHasOids = false;
+
+//	BOOL fTempTable = pintocl->rel->relpersistence == RELPERSISTENCE_TEMP;
+	BOOL fTempTable = true;
 	CDXLLogicalCTAS *pdxlopCTAS = GPOS_NEW(m_pmp) CDXLLogicalCTAS
 									(
 									m_pmp, 
@@ -890,7 +910,7 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 									GPOS_NEW(m_pmp) CDXLCtasStorageOptions(pmdnameTableSpace, ectascommit, pdrgpctasopt),
 									ereldistrpolicy,
 									pdrgpulDistr,  
-									pintocl->rel->relpersistence == RELPERSISTENCE_TEMP,
+									fTempTable,
 									fHasOids,
 									erelstorage, 
 									pdrgpulSource,
@@ -3437,6 +3457,13 @@ CTranslatorQueryToDXL::PdxlnFromDerivedTable
 	ULONG ulCurrQueryLevel
 	)
 {
+	if (true == prte->security_barrier)
+	{
+		GPOS_ASSERT(RTE_SUBQUERY == prte->rtekind);
+		// otherwise ORCA most likely pushes potentially leaky filters down
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("views with security_barrier ON"));
+	}
+
 	Query *pqueryDerTbl = prte->subquery;
 	GPOS_ASSERT(NULL != pqueryDerTbl);
 

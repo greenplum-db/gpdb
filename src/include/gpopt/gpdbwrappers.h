@@ -525,8 +525,8 @@ namespace gpdb {
 	List *PlRelationOids(void);
 
 	// estimate the relation size using the real number of blocks and tuple density
-	void EstimateRelationSize(Relation rel,	int32 *attr_widths,	BlockNumber *pages,	double *tuples);
-	void CdbEstimateRelationSize (RelOptInfo *relOptInfo, Relation rel, int32 *attr_widths, BlockNumber *pages, double *tuples);
+	void EstimateRelationSize(Relation rel,	int32 *attr_widths,	BlockNumber *pages,	double *tuples, double *allvisfrac);
+	void CdbEstimateRelationSize (RelOptInfo *relOptInfo, Relation rel, int32 *attr_widths, BlockNumber *pages, double *tuples, double *allvisfrac);
 
 	// close the given relation
 	void CloseRelation(Relation rel);

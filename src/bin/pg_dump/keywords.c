@@ -4,7 +4,7 @@
  *	  lexical token lookup for key words in PostgreSQL
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -23,8 +23,8 @@
  */
 #define PG_KEYWORD(a,b,c) {a,0,c},
 
-const ScanKeyword ScanKeywords[] = {
+const ScanKeyword FEScanKeywords[] = {
 #include "parser/kwlist.h"
 };
 
-const int	NumScanKeywords = lengthof(ScanKeywords);
+const int	NumFEScanKeywords = lengthof(FEScanKeywords);

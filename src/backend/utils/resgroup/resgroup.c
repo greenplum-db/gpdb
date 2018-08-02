@@ -2969,7 +2969,7 @@ groupSetMemorySpillRatio(const ResGroupCaps *caps)
 
 	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
 	set_config_option("memory_spill_ratio", value, PGC_USERSET, PGC_S_RESGROUP,
-			GUC_ACTION_SET, true);
+			GUC_ACTION_SET, true, 0);
 }
 
 void

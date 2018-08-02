@@ -103,103 +103,103 @@ select recurse(40, 3, false); -- committed
 select recurse(10, 3, true); -- aborted
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 3
  recurse 
 ---------
@@ -253,7 +253,7 @@ release sp4;
 select recurse(2, 4, true);
 NOTICE:  abort me 4
 CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
-PL/pgSQL function "recurse" line 7 at PERFORM
+PL/pgSQL function recurse(integer,integer,boolean) line 7 at PERFORM
 NOTICE:  abort me 4
  recurse 
 ---------

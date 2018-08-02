@@ -41,7 +41,7 @@ int gp_strcoll(const char *left, const char *right)
 							       "for the collation specified by LC_COLLATE ('%s').  First string has length %lu "
 							       "and value (limited to 100 characters): '%.100s'.  Second string has length %lu "
 							       "and value (limited to 100 characters): '%.100s'",
-									GetConfigOption("lc_collate", false),
+									GetConfigOption("lc_collate", false, false),
 									(unsigned long) SAFE_STR_LENGTH(left),
 									NULL_TO_DUMMY_STR(left),
 									(unsigned long) SAFE_STR_LENGTH(left),
@@ -84,7 +84,7 @@ size_t gp_strxfrm(char *dst, const char *src, size_t n)
 							        "is not valid for the collation specified by LC_COLLATE ('%s').  "
 							        "The string has length %lu "
 							        "and value (limited to 100 characters): '%.100s'",
-									GetConfigOption("lc_collate", false),
+									GetConfigOption("lc_collate", false, false),
 									(unsigned long) SAFE_STR_LENGTH(src),
 									NULL_TO_DUMMY_STR(src))));
 		}

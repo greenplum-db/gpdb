@@ -2879,7 +2879,8 @@ create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by
  pn       | integer |           | plain   | 
  grouping | bigint  |           | plain   | 
 View definition:
- SELECT sale.cn, sale.vn, sale.pn, grouping(sale.cn, sale.vn, sale.pn) AS "grouping"
+ SELECT sale.cn, sale.vn, sale.pn, 
+    grouping(sale.cn, sale.vn, sale.pn) AS "grouping"
    FROM sale
   GROUP BY sale.vn, sale.pn, ROLLUP (sale.cn);
 
@@ -5975,7 +5976,7 @@ group by a
 union all
 select null, null, array_agg((a+1)*x order by x), array_agg((b+1)*y order by y)
 from r6756 r
-;
+order by 1,2;
  a | b |       array_agg       |       array_agg       
 ---+---+-----------------------+-----------------------
  0 | 0 | {1}                   | {1}
@@ -5989,7 +5990,8 @@ from r6756 r
 
 select a, b, array_agg((a+1)*x order by x), array_agg((b+1)*y order by y)
 from r6756 r
-group by rollup (a,b);
+group by rollup (a,b)
+order by 1,2;
  a | b |       array_agg       |       array_agg       
 ---+---+-----------------------+-----------------------
  0 | 0 | {1}                   | {1}
@@ -6042,13 +6044,13 @@ insert into cust_agg values
   ('verru', 450, 'hats');
 -- return customer name from cust_agg with count of prod_agg table 
 select cusname,(select count(*) from prod_agg) from cust_agg;
- cusname | ?column? 
----------+----------
- jay     |        5
- mahi    |        5
- verru   |        5
- aryan   |        5
- nitu    |        5
+ cusname | count 
+---------+-------
+ aryan   |     5
+ nitu    |     5
+ verru   |     5
+ jay     |     5
+ mahi    |     5
 (5 rows)
 
 -- clean up

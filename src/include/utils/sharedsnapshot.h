@@ -23,6 +23,7 @@ typedef struct SharedSnapshotSlot
 	int4	 		slotid;
 	pid_t	 		pid; /* pid of writer seg */
 	PGPROC			*writer_proc;
+	PGXACT			*writer_xact;
 	TransactionId	xid;
 	CommandId       cid;
 	TimestampTz		startTimestamp;

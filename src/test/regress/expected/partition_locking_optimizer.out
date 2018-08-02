@@ -72,12 +72,21 @@ NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_7" for table "partl
 NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_8" for table "partlockt"
 NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_9" for table "partlockt"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-  coalesce   |        mode         | locktype |  node  
--------------+---------------------+----------+--------
- partlockt   | AccessExclusiveLock | relation | master
- toast index | AccessExclusiveLock | relation | master
- toast table | ShareLock           | relation | master
-(3 rows)
+     coalesce      |        mode         | locktype |  node  
+-------------------+---------------------+----------+--------
+ partlockt         | AccessExclusiveLock | relation | master
+ partlockt_1_prt_1 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_2 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_3 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_4 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_5 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_6 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_7 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_8 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_9 | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast table       | ShareLock           | relation | master
+(12 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
   coalesce   |        mode         | locktype |    node    
@@ -121,12 +130,15 @@ NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_1" for table "partl
 NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_2" for table "partlockt"
 NOTICE:  CREATE TABLE will create partition "partlockt_1_prt_3" for table "partlockt"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-  coalesce   |        mode         | locktype |  node  
--------------+---------------------+----------+--------
- partlockt   | AccessExclusiveLock | relation | master
- toast index | AccessExclusiveLock | relation | master
- toast table | ShareLock           | relation | master
-(3 rows)
+     coalesce      |        mode         | locktype |  node  
+-------------------+---------------------+----------+--------
+ partlockt         | AccessExclusiveLock | relation | master
+ partlockt_1_prt_1 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_2 | AccessExclusiveLock | relation | master
+ partlockt_1_prt_3 | AccessExclusiveLock | relation | master
+ toast index       | AccessExclusiveLock | relation | master
+ toast table       | ShareLock           | relation | master
+(6 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
   coalesce   |        mode         | locktype |    node    

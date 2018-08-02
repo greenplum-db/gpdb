@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -105,7 +105,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	Path	   *cheapestpath;
 	Path	   *sortedpath;
 	Index		rti;
-	ListCell   *lc;
 	double		total_pages;
 
 	/* Make tuple_fraction, limit_tuples accessible to lower-level routines */
@@ -146,15 +145,11 @@ query_planner(PlannerInfo *root, List *tlist,
 	}
 
 	/*
-	 * Init planner lists to empty, and set up the array to hold RelOptInfos
-	 * for "simple" rels.
+	 * Init planner lists to empty.
 	 *
 	 * NOTE: append_rel_list was set up by subquery_planner, so do not touch
 	 * here; eq_classes and minmax_aggs may contain data already, too.
 	 */
-	root->simple_rel_array_size = list_length(parse->rtable) + 1;
-	root->simple_rel_array = (RelOptInfo **)
-		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
 	root->join_rel_list = NIL;
 	root->join_rel_hash = NULL;
 	root->join_rel_level = NULL;
@@ -169,17 +164,10 @@ query_planner(PlannerInfo *root, List *tlist,
 
 	/*
 	 * Make a flattened version of the rangetable for faster access (this is
-	 * OK because the rangetable won't change any more).
+	 * OK because the rangetable won't change any more), and set up an empty
+	 * array for indexing base relations.
 	 */
-	root->simple_rte_array = (RangeTblEntry **)
-		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
-	rti = 1;
-	foreach(lc, parse->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-
-		root->simple_rte_array[rti++] = rte;
-	}
+	setup_simple_rel_arrays(root);
 
 	/*
 	 * Construct RelOptInfo nodes for all base relations in query, and
@@ -415,6 +403,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	sortedpath =
 		get_cheapest_fractional_path_for_pathkeys(final_rel->pathlist,
 												  root->query_pathkeys,
+												  NULL,
 												  tuple_fraction);
 
 	/* Don't return same path in both guises; just wastes effort */

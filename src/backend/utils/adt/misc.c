@@ -3,7 +3,7 @@
  * misc.c
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -20,10 +20,9 @@
 #include <math.h>
 #include <unistd.h>
 
-#include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/pg_type.h"
 #include "catalog/pg_tablespace.h"
+#include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -31,10 +30,13 @@
 #include "postmaster/syslogger.h"
 #include "storage/fd.h"
 #include "storage/pmsignal.h"
+#include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/backend_cancel.h"
-#include "utils/builtins.h"
+#include "utils/lsyscache.h"
 #include "tcop/tcopprot.h"
+#include "utils/builtins.h"
+#include "utils/timestamp.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
@@ -71,15 +73,42 @@ current_query(PG_FUNCTION_ARGS)
 }
 
 /*
- * Functions to send signals to other backends.
+ * Send a signal to another backend.
+ * The signal is delivered if the user is either a superuser or the same
+ * role as the backend being signaled. For "dangerous" signals, an explicit
+ * check for superuser needs to be done prior to calling this function.
+ *
+ * Returns 0 on success, 1 on general failure, and 2 on permission error.
+ * In the event of a general failure (returncode 1), a warning message will
+ * be emitted. For permission errors, doing that is the responsibility of
+ * the caller.
  */
-static bool
+#define SIGNAL_BACKEND_SUCCESS 0
+#define SIGNAL_BACKEND_ERROR 1
+#define SIGNAL_BACKEND_NOPERMISSION 2
+static int
 pg_signal_backend(int pid, int sig, char *msg)
 {
+	PGPROC	   *proc;
+
 	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-			(errmsg("must be superuser to signal other server processes"))));
+	{
+		/*
+		 * Since the user is not superuser, check for matching roles. Trust
+		 * that BackendPidGetProc will return NULL if the pid isn't valid,
+		 * even though the check for whether it's a backend process is below.
+		 * The IsBackendPid check can't be relied on as definitive even if it
+		 * was first. The process might end between successive checks
+		 * regardless of their order. There's no way to acquire a lock on an
+		 * arbitrary process to prevent that. But since so far all the callers
+		 * of this mechanism involve some request for ending the process
+		 * anyway, that it might end on its own first is not a problem.
+		 */
+		proc = BackendPidGetProc(pid);
+
+		if (proc == NULL || proc->roleId != GetUserId())
+			return SIGNAL_BACKEND_NOPERMISSION;
+	}
 
 	if (!IsBackendPid(pid))
 	{
@@ -89,7 +118,7 @@ pg_signal_backend(int pid, int sig, char *msg)
 		 */
 		ereport(WARNING,
 				(errmsg("PID %d is not a PostgreSQL server process", pid)));
-		return false;
+		return SIGNAL_BACKEND_ERROR;
 	}
 
 	/* If the user supplied a message to the signalled backend */
@@ -103,6 +132,14 @@ pg_signal_backend(int pid, int sig, char *msg)
 			ereport(NOTICE,
 					(errmsg("message is too long and has been truncated")));
 	}
+	/*
+	 * Can the process we just validated above end, followed by the pid being
+	 * recycled for a new process, before reaching here?  Then we'd be trying
+	 * to kill the wrong thing.  Seems near impossible when sequential pid
+	 * assignment and wraparound is used.  Perhaps it could happen on a system
+	 * where pid re-use is randomized.	That race condition possibility seems
+	 * too unlikely to worry about.
+	 */
 
 	/* If we have setsid(), signal the backend's whole process group */
 #ifdef HAVE_SETSID
@@ -114,23 +151,26 @@ pg_signal_backend(int pid, int sig, char *msg)
 		/* Again, just a warning to allow loops */
 		ereport(WARNING,
 				(errmsg("could not send signal to process %d: %m", pid)));
-		return false;
+		return SIGNAL_BACKEND_ERROR;
 	}
-	return true;
+	return SIGNAL_BACKEND_SUCCESS;
 }
 
-static bool
-pg_cancel_backend_internal(pid_t pid, char *msg)
-{
-    bool         r = pg_signal_backend(pid, SIGINT, msg);
-
-    return r;
-}
-
+/*
+ * Signal to cancel a backend process.	This is allowed if you are superuser or
+ * have the same role as the process being canceled.
+ */
 Datum
 pg_cancel_backend(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_BOOL(pg_cancel_backend_internal(PG_GETARG_INT32(0), NULL));
+	int			r = pg_signal_backend(PG_GETARG_INT32(0), SIGINT, NULL);
+
+	if (r == SIGNAL_BACKEND_NOPERMISSION)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser or have the same role to cancel queries running in other server processes"))));
+
+	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
 }
 
 Datum
@@ -139,21 +179,29 @@ pg_cancel_backend_msg(PG_FUNCTION_ARGS)
 	pid_t		pid = PG_GETARG_INT32(0);
 	char 	   *msg = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-	PG_RETURN_BOOL(pg_cancel_backend_internal(pid, msg));
+	int			r = pg_signal_backend(pid, SIGINT, msg);
+
+	if (r == SIGNAL_BACKEND_NOPERMISSION)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser or have the same role to cancel queries running in other server processes"))));
+
+	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
 }
 
-static bool
-pg_terminate_backend_internal(pid_t pid, char *msg)
-{
-    bool	r = pg_signal_backend(pid, SIGTERM, msg);
-
-    return r;
-}
-
+/*
+ * Signal to terminate a backend process.  Only allowed by superuser.
+ */
 Datum
 pg_terminate_backend(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_BOOL(pg_terminate_backend_internal(PG_GETARG_INT32(0), NULL));
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			 errmsg("must be superuser to terminate other server processes"),
+				 errhint("You can cancel your own processes with pg_cancel_backend().")));
+
+	PG_RETURN_BOOL(pg_signal_backend(PG_GETARG_INT32(0), SIGTERM, NULL) == SIGNAL_BACKEND_SUCCESS);
 }
 
 Datum
@@ -162,7 +210,13 @@ pg_terminate_backend_msg(PG_FUNCTION_ARGS)
 	pid_t		pid = PG_GETARG_INT32(0);
 	char 	   *msg = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
-	PG_RETURN_BOOL(pg_terminate_backend_internal(pid, msg));
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			 errmsg("must be superuser to terminate other server processes"),
+				 errhint("You can cancel your own processes with pg_cancel_backend().")));
+
+	PG_RETURN_BOOL(pg_signal_backend(pid, SIGTERM, msg) == SIGNAL_BACKEND_SUCCESS);
 }
 
 /*
@@ -219,6 +273,9 @@ gp_cancel_query(PG_FUNCTION_ARGS)
 											PG_GETARG_INT32(1)));
 }
 
+/*
+ * Signal to reload the database configuration
+ */
 Datum
 pg_reload_conf(PG_FUNCTION_ARGS)
 {
@@ -369,28 +426,43 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 Datum
 pg_tablespace_location(PG_FUNCTION_ARGS)
 {
-	Oid		tablespaceOid = PG_GETARG_OID(0);
-	char	sourcepath[MAXPGPATH];
-	char	targetpath[MAXPGPATH];
-	int		rllen;
+	Oid			tablespaceOid = PG_GETARG_OID(0);
+	char		sourcepath[MAXPGPATH];
+	char		targetpath[MAXPGPATH];
+	int			rllen;
 
 	/*
-	 * Return empty string for our two default tablespace
+	 * It's useful to apply this function to pg_class.reltablespace, wherein
+	 * zero means "the database's default tablespace".	So, rather than
+	 * throwing an error for zero, we choose to assume that's what is meant.
+	 */
+	if (tablespaceOid == InvalidOid)
+		tablespaceOid = MyDatabaseTableSpace;
+
+	/*
+	 * Return empty string for the cluster's default tablespaces
 	 */
 	if (tablespaceOid == DEFAULTTABLESPACE_OID ||
 		tablespaceOid == GLOBALTABLESPACE_OID)
 		PG_RETURN_TEXT_P(cstring_to_text(""));
 
 #if defined(HAVE_READLINK) || defined(WIN32)
+
 	/*
-	 * Find the location of the tablespace by reading the symbolic link that is
-	 * in pg_tblspc/<oid>.
+	 * Find the location of the tablespace by reading the symbolic link that
+	 * is in pg_tblspc/<oid>.
 	 */
 	snprintf(sourcepath, sizeof(sourcepath), "pg_tblspc/%u", tablespaceOid);
-	rllen =readlink(sourcepath, targetpath, sizeof(targetpath));
-	if (rllen < 0 || rllen >= sizeof(targetpath))
+
+	rllen = readlink(sourcepath, targetpath, sizeof(targetpath));
+	if (rllen < 0)
 		ereport(ERROR,
-				(errmsg("could not read symbolic link \"%s\": %m", sourcepath)));
+				(errmsg("could not read symbolic link \"%s\": %m",
+						sourcepath)));
+	else if (rllen >= sizeof(targetpath))
+		ereport(ERROR,
+				(errmsg("symbolic link \"%s\" target is too long",
+						sourcepath)));
 	targetpath[rllen] = '\0';
 
 	PG_RETURN_TEXT_P(cstring_to_text(targetpath));
@@ -398,6 +470,7 @@ pg_tablespace_location(PG_FUNCTION_ARGS)
 	ereport(ERROR,
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("tablespaces are not supported on this platform")));
+	PG_RETURN_NULL();
 #endif
 }
 
@@ -525,4 +598,30 @@ Datum
 pg_typeof(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_OID(get_fn_expr_argtype(fcinfo->flinfo, 0));
+}
+
+
+/*
+ * Implementation of the COLLATE FOR expression; returns the collation
+ * of the argument.
+ */
+Datum
+pg_collation_for(PG_FUNCTION_ARGS)
+{
+	Oid			typeid;
+	Oid			collid;
+
+	typeid = get_fn_expr_argtype(fcinfo->flinfo, 0);
+	if (!typeid)
+		PG_RETURN_NULL();
+	if (!type_is_collatable(typeid) && typeid != UNKNOWNOID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("collations are not supported by type %s",
+						format_type_be(typeid))));
+
+	collid = PG_GET_COLLATION();
+	if (!collid)
+		PG_RETURN_NULL();
+	PG_RETURN_TEXT_P(cstring_to_text(generate_collation_name(collid)));
 }

@@ -3,7 +3,7 @@
  * foreign.c
  *		  support for foreign-data wrappers, servers and user mappings.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  src/backend/foreign/foreign.c
@@ -13,28 +13,19 @@
 #include "postgres.h"
 
 #include "access/reloptions.h"
-#include "catalog/namespace.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_foreign_table.h"
-#include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
-#include "funcapi.h"
 #include "miscadmin.h"
-#include "nodes/parsenodes.h"
-#include "utils/acl.h"
-#include "utils/array.h"
 #include "utils/builtins.h"
-#include "utils/lsyscache.h"
-#include "utils/memutils.h"
 #include "utils/syscache.h"
 
 
 extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
 extern Datum postgresql_fdw_validator(PG_FUNCTION_ARGS);
-
 
 
 /*
@@ -77,7 +68,6 @@ GetForeignDataWrapper(Oid fdwid)
 
 	return fdw;
 }
-
 
 
 /*
@@ -256,6 +246,39 @@ GetForeignTable(Oid relid)
 
 
 /*
+ * GetForeignColumnOptions - Get attfdwoptions of given relation/attnum
+ * as list of DefElem.
+ */
+List *
+GetForeignColumnOptions(Oid relid, AttrNumber attnum)
+{
+	List	   *options;
+	HeapTuple	tp;
+	Datum		datum;
+	bool		isnull;
+
+	tp = SearchSysCache2(ATTNUM,
+						 ObjectIdGetDatum(relid),
+						 Int16GetDatum(attnum));
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for attribute %d of relation %u",
+			 attnum, relid);
+	datum = SysCacheGetAttr(ATTNUM,
+							tp,
+							Anum_pg_attribute_attfdwoptions,
+							&isnull);
+	if (isnull)
+		options = NIL;
+	else
+		options = untransformRelOptions(datum);
+
+	ReleaseSysCache(tp);
+
+	return options;
+}
+
+
+/*
  * GetFdwRoutine - call the specified foreign-data wrapper handler routine
  * to get its FdwRoutine struct.
  */
@@ -371,8 +394,17 @@ deflist_to_tuplestore(ReturnSetInfo *rsinfo, List *options)
 		DefElem    *def = lfirst(cell);
 
 		values[0] = CStringGetTextDatum(def->defname);
-		values[1] = CStringGetTextDatum(((Value *) def->arg)->val.str);
-		nulls[0] = nulls[1] = false;
+		nulls[0] = false;
+		if (def->arg)
+		{
+			values[1] = CStringGetTextDatum(((Value *) (def->arg))->val.str);
+			nulls[1] = false;
+		}
+		else
+		{
+			values[1] = (Datum) 0;
+			nulls[1] = true;
+		}
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
@@ -497,6 +529,7 @@ postgresql_fdw_validator(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(true);
 }
 
+
 /*
  * get_foreign_data_wrapper_oid - given a FDW name, look up the OID
  *
@@ -516,6 +549,7 @@ get_foreign_data_wrapper_oid(const char *fdwname, bool missing_ok)
 						fdwname)));
 	return oid;
 }
+
 
 /*
  * get_foreign_server_oid - given a FDW name, look up the OID

@@ -96,6 +96,10 @@ s/overlaps existing partition "r\d+"/partition "r##########"/
 m/Table "pg_temp_\d+.temp/
 s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 
+# Mask out some numbers (part of temp table schema) that vary from run to run.
+m/Hash Cond: pg_temp_\d+/
+s/Hash Cond: pg_temp_\d+/Hash Cond: pg_temp_#####/
+
 # Mask out oid in error concurrent drop message
 m/\d+ was concurrently dropped/
 s/\d+ was concurrently dropped/##### was concurrently dropped/
@@ -105,6 +109,8 @@ m/ERROR:  There are more external files \(URLs\) than primary segments that can 
 s/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/ERROR:  There are more external files (URLs) than primary segments that can read them./
 
 # Mask out linenumber of the erroring file
-m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge \(analyze.c:\d+\)/
-s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge \(analyze.c:\d+\)/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
+m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/
+s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
+m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
+s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
 -- end_matchsubs

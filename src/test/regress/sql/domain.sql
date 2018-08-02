@@ -260,6 +260,19 @@ alter domain con drop constraint t;
 insert into domcontest values (-5); --fails
 insert into domcontest values (42);
 
+alter domain con drop constraint nonexistent;
+alter domain con drop constraint if exists nonexistent;
+
+-- Test ALTER DOMAIN .. CONSTRAINT .. NOT VALID
+create domain things AS INT;
+CREATE TABLE thethings (id int, stuff things);
+INSERT INTO thethings (stuff) VALUES (55);
+ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11);
+ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11) NOT VALID;
+ALTER DOMAIN things VALIDATE CONSTRAINT meow;
+UPDATE thethings SET stuff = 10;
+ALTER DOMAIN things VALIDATE CONSTRAINT meow;
+
 -- Confirm ALTER DOMAIN with RULES.
 create table domtab (col1 integer);
 create domain dom as integer;
@@ -474,3 +487,23 @@ select array_elem_check(3);
 select array_elem_check(-1);
 
 drop function array_elem_check(int);
+
+
+--
+-- Renaming
+--
+
+create domain testdomain1 as int;
+alter domain testdomain1 rename to testdomain2;
+alter type testdomain2 rename to testdomain3;  -- alter type also works
+drop domain testdomain3;
+
+
+--
+-- Renaming domain constraints
+--
+
+create domain testdomain1 as int constraint unsigned check (value > 0);
+alter domain testdomain1 rename constraint unsigned to unsigned_foo;
+alter domain testdomain1 drop constraint unsigned_foo;
+drop domain testdomain1;

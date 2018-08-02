@@ -1367,7 +1367,7 @@ apr_hash_t *get_active_queries(apr_pool_t *pool)
 		return NULL;
 	}
 
-	const char *qry= "SELECT sess_id, current_query FROM pg_stat_activity;";
+	const char *qry= "SELECT sess_id, query FROM pg_stat_activity;";
 	const char *errmsg = gpdb_exec_only(conn, &result, qry);
 	if (errmsg)
 	{

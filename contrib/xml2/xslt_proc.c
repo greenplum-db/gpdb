@@ -40,7 +40,7 @@ Datum		xslt_process(PG_FUNCTION_ARGS);
 #ifdef USE_LIBXSLT
 
 /* declarations to come from xpath.c */
-extern void pgxml_parser_init(void);
+extern PgXmlErrorContext *pgxml_parser_init(PgXmlStrictness strictness);
 
 /* local defs */
 static const char **parse_params(text *paramstr);
@@ -83,7 +83,7 @@ xslt_process(PG_FUNCTION_ARGS)
 	}
 
 	/* Setup parser */
-	pgxml_parser_init();
+	xmlerrcxt = pgxml_parser_init(PG_XML_STRICTNESS_LEGACY);
 
 	/* Parse document */
 	doctree = xmlParseMemory((char *) VARDATA(doct),
@@ -111,8 +111,10 @@ xslt_process(PG_FUNCTION_ARGS)
 	{
 		xmlFreeDoc(doctree);
 		xsltCleanupGlobals();
-		xml_ereport(ERROR, ERRCODE_EXTERNAL_ROUTINE_EXCEPTION,
-					"failed to parse stylesheet");
+
+		pg_xml_done(xmlerrcxt, true);
+
+		PG_RE_THROW();
 	}
 
 	xslt_ctxt = xsltNewTransformContext(stylesheet, doctree);

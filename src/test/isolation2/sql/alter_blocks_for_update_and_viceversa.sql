@@ -7,13 +7,13 @@
 2: UPDATE alter_block SET b = b + 1;
 1&: ALTER TABLE alter_block SET DISTRIBUTED BY (b);
 -- Alter process should be blocked
-2: SELECT waiting FROM pg_stat_activity where current_query like 'ALTER TABLE alter_block %';
+2: SELECT waiting FROM pg_stat_activity where query like 'ALTER TABLE alter_block %';
 2: COMMIT;
 1<:
 -- Now validate ALTER blocks the UPDATE
 2: BEGIN;
 2: ALTER TABLE alter_block SET DISTRIBUTED BY (a);
 1&: UPDATE alter_block SET b = b + 1;
-2: SELECT waiting FROM pg_stat_activity where current_query like 'UPDATE alter_block SET %';
+2: SELECT waiting FROM pg_stat_activity where query like 'UPDATE alter_block SET %';
 2: COMMIT;
 1<:
