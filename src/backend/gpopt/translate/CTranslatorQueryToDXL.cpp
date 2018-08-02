@@ -776,7 +776,8 @@ CDXLNode *
 CTranslatorQueryToDXL::PdxlnCTAS()
 {
 	GPOS_ASSERT(CMD_SELECT == m_pquery->commandType);
-	GPOS_ASSERT(NULL != m_pquery->intoClause);
+	// GPDB_92_MERGE_FIXME: we should plumb through the intoClause
+//	GPOS_ASSERT(NULL != m_pquery->intoClause);
 
 	m_fCTASQuery = true;
 	CDXLNode *pdxlnQuery = PdxlnFromQueryInternal();
