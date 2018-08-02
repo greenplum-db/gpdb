@@ -65,7 +65,7 @@ groups:
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
-  - icw_extensions_gpcloud
+  - icw_extensions_gps3ext
   - test_gpdb_debian_package
   - gate_icw_end
   - QP_memory-accounting
@@ -190,7 +190,7 @@ groups:
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
-  - icw_extensions_gpcloud
+  - icw_extensions_gps3ext
   - test_gpdb_debian_package
   - QP_memory-accounting
   - QP_optimizer-functional
@@ -1658,7 +1658,7 @@ jobs:
     params:
       DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
 
-- name: icw_extensions_gpcloud
+- name: icw_extensions_gps3ext
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1666,9 +1666,12 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: bin_gpdb_centos6
       passed: [gate_icw_start]
+    - get: bin_gpdb_centos7
+      passed: [gate_icw_start]
     - get: compiled_bits_ubuntu16
       passed: [gate_icw_start]
     - get: centos-gpdb-dev-6
+    - get: oracle-gpdb-test-7
     - get: ubuntu-gpdb-dev-16
   - aggregate:
     - task: unit_tests_gpcloud
@@ -1676,11 +1679,20 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         TARGET_OS: centos
-    - task: regression_tests_gpcloud_centos
+    - task: regression_tests_gpcloud_centos6
       input_mapping:
         bin_gpdb: bin_gpdb_centos6
       file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
       image: centos-gpdb-dev-6
+      params:
+        gpcloud_access_key_id: {{gpcloud-access-key-id}}
+        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        TARGET_OS: centos
+    - task: regression_tests_gpcloud_oracle7
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos7
+      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
+      image: oracle-gpdb-test-7
       params:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
@@ -1769,7 +1781,7 @@ jobs:
       - icw_gporca_sles11
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
-      - icw_extensions_gpcloud
+      - icw_extensions_gps3ext
       - QP_memory-accounting
       - QP_optimizer-functional
       trigger: true
@@ -1778,7 +1790,7 @@ jobs:
       - icw_planner_centos6
       - icw_gporca_centos6
       - icw_planner_ictcp_centos6
-      - icw_extensions_gpcloud
+      - icw_extensions_gps3ext
       - QP_memory-accounting
       - QP_optimizer-functional
     - get: bin_gpdb_centos7
@@ -3601,7 +3613,7 @@ jobs:
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
       - test_gpdb_debian_package
-      - icw_extensions_gpcloud
+      - icw_extensions_gps3ext
       - client_loader_remote_test_aix
       - mpp_resource_group_centos6
       - mpp_resource_group_centos7
