@@ -2323,7 +2323,7 @@ transform_array_Const_to_ArrayExpr(Const *c)
 	if (elemtype == InvalidOid)
 		return (Expr *) c;	/* not an array */
 
-	ac = (ArrayType *) c->constvalue;
+	ac = DatumGetArrayTypeP(c->constvalue);
 	nelems = ArrayGetNItems(ARR_NDIM(ac), ARR_DIMS(ac));
 
 	/* All set, extract the elements, and an ArrayExpr to hold them. */
