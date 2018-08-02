@@ -57,7 +57,7 @@ function gen_env(){
 
 		\${HADOOP_HOME}/bin/hdfs namenode -format -force
 		\${HADOOP_HOME}/sbin/start-dfs.sh
-	else		
+	else
 		export HADOOP_HOME=/opt/mapr/hadoop/hadoop-2.7.0
 		wget -O \${HADOOP_HOME}/share/hadoop/common/lib/parquet-hadoop-bundle-1.8.1.jar http://central.maven.org/maven2/org/apache/parquet/parquet-hadoop-bundle/1.8.1/parquet-hadoop-bundle-1.8.1.jar
 	fi
@@ -93,10 +93,10 @@ function install_mapr_client() {
 }
 
 function run_regression_test() {
-  # Add symlink for oracle7 compatibility
-  if [ "$TARGET_OS_VERSION" == "7" ] ; then
-    ln -s /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.191-2.6.15.4.0.1.el7_5.x86_64  /usr/lib/jvm/java-1.7.0-openjdk.x86_64
-  fi
+	# Add symlink for oracle7 compatibility
+	if [ "$TARGET_OS_VERSION" == "7" ] ; then
+		ln -s /usr/lib/jvm/java-1.7.0-openjdk /usr/lib/jvm/java-1.7.0-openjdk.x86_64
+	fi
 	su - gpadmin -c "bash /home/gpadmin/run_regression_test.sh $(pwd)"
 }
 
@@ -128,11 +128,7 @@ function _main() {
 	time setup_gpadmin_user
 	time install_mapr_client
 	time configure
-  if [ "$TARGET_OS_VERSION" == "7" ] ; then
-	  sed -i s/4096/unlimited/ /etc/security/limits.d/20-nproc.conf
-  else
-	  sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
-  fi
+	sed -i s/\(1024\|4096\)/unlimited/ /etc/security/limits.d/*-nproc.conf
 	time install_gpdb
 	time make_cluster
 	time copy_jar_to_mapr_host
