@@ -512,7 +512,7 @@ main(int argc, char *argv[])
 		 * Greenplum doesn't allow altering system catalogs without
 		 * setting the allow_system_table_mods GUC first.
 		 */
-		fprintf(OPF, "SET allow_system_table_mods = 'dml';\n");
+		fprintf(OPF, "SET allow_system_table_mods = true;\n");
 		fprintf(OPF, "\n");
 	}
 
@@ -1746,7 +1746,7 @@ dumpCreateDB(PGconn *conn)
 
 			appendPQExpBuffer(buf, ";\n");
 
-			appendPQExpBuffer(buf, "SET allow_system_table_mods = 'dml';\n");
+			appendPQExpBuffer(buf, "SET allow_system_table_mods = true;\n");
 
 			if (strcmp(dbistemplate, "t") == 0)
 			{

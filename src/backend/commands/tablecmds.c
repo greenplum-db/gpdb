@@ -853,7 +853,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
                                           stmt->policy,  /*CDB*/
                                           reloptions,
 										  true,
-										  allowSystemTableModsDDL,
+										  allowSystemTableMods,
 										  valid_opts,
 										  stmt->is_part_child,
 										  stmt->is_part_parent);
@@ -1068,7 +1068,7 @@ MetaTrackValidKindNsp(Form_pg_class rd_rel)
 		 * MPP-7773: don't track objects in system namespace
 		 * if modifying system tables (eg during upgrade)  
 		 */
-		if (allowSystemTableModsDDL)
+		if (allowSystemTableMods)
 			return false;
 	}
 
@@ -1468,7 +1468,7 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   rel->relname);
 
-	if (!allowSystemTableModsDDL && IsSystemClass(classform))
+	if (!allowSystemTableMods && IsSystemClass(classform))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -1904,7 +1904,7 @@ truncate_check_rel(Relation rel)
 		aclcheck_error(aclresult, ACL_KIND_CLASS,
 					   RelationGetRelationName(rel));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(rel))
+	if (!allowSystemTableMods && IsSystemRelation(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -2783,7 +2783,7 @@ renameatt_check(Oid myrelid, Form_pg_class classform, bool recursing)
 	if (!pg_class_ownercheck(myrelid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   NameStr(classform->relname));
-	if (!allowSystemTableModsDDL && IsSystemClass(classform))
+	if (!allowSystemTableMods && IsSystemClass(classform))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -3397,7 +3397,7 @@ RenameRelationInternal(Oid myrelid, const char *newrelname)
 		/* MPP-7773: don't track objects in system namespace
 		 * if modifying system tables (eg during upgrade)
 		 */
-		( ! ( (PG_CATALOG_NAMESPACE == namespaceId) && (allowSystemTableModsDDL)))
+		( ! ( (PG_CATALOG_NAMESPACE == namespaceId) && (allowSystemTableMods)))
 		&& (   MetaTrackValidRelkind(targetrelation->rd_rel->relkind)
 			&& METATRACK_VALIDNAMESPACE(namespaceId)
 			   && (!(isAnyTempNamespace(namespaceId)))
@@ -6772,7 +6772,7 @@ ATSimplePermissions(Relation rel, int allowed_targets)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   RelationGetRelationName(rel));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(rel))
+	if (!allowSystemTableMods && IsSystemRelation(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -7993,7 +7993,7 @@ ATPrepSetStatistics(Relation rel, const char *colName, Node *newValue, LOCKMODE 
 	 * We do our own permission checking because (a) we want to allow SET
 	 * STATISTICS on indexes (for expressional index columns), and (b) we want
 	 * to allow SET STATISTICS on system catalogs without requiring
-	 * allowSystemTableModsDDL to be turned on.
+	 * allowSystemTableMods to be turned on.
 	 */
 	if (rel->rd_rel->relkind != RELKIND_RELATION &&
 		rel->rd_rel->relkind != RELKIND_INDEX &&
@@ -8721,7 +8721,7 @@ ATExecAddIndexConstraint(AlteredTableInfo *tab, Relation rel,
 							stmt->initdeferred,
 							stmt->primary,
 							true,
-							allowSystemTableModsDDL);
+							allowSystemTableMods);
 
 	index_close(indexRel, NoLock);
 }
@@ -8974,7 +8974,7 @@ ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 				 errmsg("referenced relation \"%s\" is not a table",
 						RelationGetRelationName(pkrel))));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(pkrel))
+	if (!allowSystemTableMods && IsSystemRelation(pkrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -18773,7 +18773,7 @@ RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid, Oid oldrelid,
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS, rv->relname);
 
 	/* No system table modifications unless explicitly allowed. */
-	if (!allowSystemTableModsDDL && IsSystemClass(classform))
+	if (!allowSystemTableMods && IsSystemClass(classform))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",

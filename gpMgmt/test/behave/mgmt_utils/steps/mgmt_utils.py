@@ -1893,7 +1893,7 @@ def impl(context, table, dbname, segid):
     source_file = os.path.join(os.environ.get('GPHOME'), 'greenplum_path.sh')
     # Yes, the below line is ugly.  It looks much uglier when done with separate strings, given the multiple levels of escaping required.
     remote_cmd = """
-ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_session_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=\'dml\'; DELETE FROM pg_attribute where attrelid=\'%s\'::regclass::oid;\\\""
+ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_session_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=true; DELETE FROM pg_attribute where attrelid=\'%s\'::regclass::oid;\\\""
 """ % (host, source_file, user, port, dbname, table)
     run_command(context, remote_cmd.strip())
 
@@ -1966,7 +1966,7 @@ def impl(context, dir):
 def impl(context, user_table, catalog_table, primary_key, db_name):
     delete_qry = "delete from %s where %s='%s'::regclass::oid;" % (catalog_table, primary_key, user_table)
     with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
-        for qry in ["set allow_system_table_mods='dml';", "set allow_segment_dml=true;", delete_qry]:
+        for qry in ["set allow_system_table_mods=true;", "set allow_segment_dml=true;", delete_qry]:
             dbconn.execSQL(conn, qry)
             conn.commit()
 

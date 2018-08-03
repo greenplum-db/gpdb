@@ -53,7 +53,7 @@ explain select a from bfv_statistics_foo2 where a > 1 order by a;
 (8 rows)
 
 -- change stats manually so that MCV and MCF numbers do not match
-set allow_system_table_mods=DML;
+set allow_system_table_mods=true;
 update pg_statistic set stavalues1='{6,3,1,5,4,2}'::int[] where starelid='bfv_statistics_foo2'::regclass;
 -- excercise the translator
 explain select a from bfv_statistics_foo2 where a > 1 order by a;
@@ -441,7 +441,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO test_broken_stats VALUES(1, 'abc'), (2, 'cde'), (3, 'efg'), (3, 'efg'), (3, 'efg'), (1, 'abc'), (2, 'cde'); 
 ANALYZE test_broken_stats;
-SET allow_system_table_mods='DML';
+SET allow_system_table_mods=true;
 -- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
 -- start_matchsubs
 -- m/ERROR:  invalid .* of type .*, for attribute of type .* \(selfuncs\.c\:\d+\)/

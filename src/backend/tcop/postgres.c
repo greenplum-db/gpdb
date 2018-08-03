@@ -4375,7 +4375,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				 */
 				SetConfigOption("maintenance_mode",         "true", ctx, gucsource);
 				SetConfigOption("allow_segment_DML",        "true", ctx, gucsource);
-				SetConfigOption("allow_system_table_mods",  "dml",  ctx, gucsource);
+				SetConfigOption("allow_system_table_mods",  "true",  ctx, gucsource);
 				break;
 
 			case 'N':
@@ -4388,7 +4388,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'O':
 				/* Only use in single user mode */
-				SetConfigOption("allow_system_table_mods", "all", ctx, gucsource);
+				SetConfigOption("allow_system_table_mods", "true", ctx, gucsource);
 				break;
 
 			case 'o':
@@ -4441,7 +4441,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				 */
 				SetConfigOption("upgrade_mode",                         "true", ctx, gucsource);
 				SetConfigOption("allow_segment_DML",  		            "true", ctx, gucsource);
-				SetConfigOption("allow_system_table_mods",              "all",  ctx, gucsource);
+				SetConfigOption("allow_system_table_mods",              "true",  ctx, gucsource);
 				break;
 
 			case 'v':

@@ -399,14 +399,6 @@ static const struct config_enum_entry synchronous_commit_options[] = {
 	{NULL, 0, false}
 };
 
-static const struct config_enum_entry allow_system_table_mods_options[] = {
-	{"none", ALLOW_SYSTEM_TABLE_MODS_NONE, false},
-	{"ddl", ALLOW_SYSTEM_TABLE_MODS_DDL, false},
-	{"dml", ALLOW_SYSTEM_TABLE_MODS_DML, false},
-	{"all", ALLOW_SYSTEM_TABLE_MODS_ALL, false},
-	{NULL, 0, false}
-};
-
 /*
  * Options for enum values stored in other modules
  */
@@ -501,9 +493,6 @@ static int	effective_io_concurrency;
 
 /* should be static, but commands/variable.c needs to get at this */
 char	   *role_string;
-
-static bool check_allow_system_table_mods(int *newval, void **extra,
-							  GucSource source);
 
 /*
  * Displayable names for context types (enum GucContext)
@@ -1489,6 +1478,17 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&hot_standby_feedback,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"allow_system_table_mods", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allows modifications of the structure of system tables."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&allowSystemTableMods,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3232,16 +3232,6 @@ static struct config_string ConfigureNamesString[] =
 
 static struct config_enum ConfigureNamesEnum[] =
 {
-	{
-		{"allow_system_table_mods", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("Allows ddl/dml modifications of system tables."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&allowSystemTableModsMask,
-		ALLOW_SYSTEM_TABLE_MODS_NONE, allow_system_table_mods_options,
-		check_allow_system_table_mods, NULL, NULL
-	},
 	{
 		{"backslash_quote", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
 			gettext_noop("Sets whether \"\\'\" is allowed in string literals."),
@@ -9397,24 +9387,6 @@ show_log_file_mode(void)
 
 	snprintf(buf, sizeof(buf), "%04o", Log_file_mode);
 	return buf;
-}
-
-/*
- * Assign hook routine for "allow_system_table_mods" GUC.
- * Setting it DDL or ALL requires either:
- * 		- upgrade_mode GUC set
- * 		- in single user mode
- */
-static bool
-check_allow_system_table_mods(int *newval, void **extra, GucSource source)
-{
-	if (IsUnderPostmaster && ((*newval) & ALLOW_SYSTEM_TABLE_MODS_DDL) != 0)
-	{
-		GUC_check_errdetail("\"allow_system_table_mods\" = \"ddl\" is only allowed in single-user mode");
-		return false;
-	}
-
-	return true;
 }
 
 #include "guc-file.c"

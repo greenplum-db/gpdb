@@ -2472,7 +2472,7 @@ ExecuteDoStmt(DoStmt *stmt)
 static void
 CheckForModifySystemFunc(Oid funcOid, List *funcName)
 {
-	if (!allowSystemTableModsDDL && funcOid < FirstBootstrapObjectId)
+	if (!allowSystemTableMods && funcOid < FirstBootstrapObjectId)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission defined: \"%s\" is a system function",

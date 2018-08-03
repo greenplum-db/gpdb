@@ -507,7 +507,7 @@ class SQLIsolationTestCase:
         catalog across the *entire* cluster. To perform a utility-mode query on
         all segments and the master, you can use *U commands:
 
-        *U: SET allow_system_table_mods = 'DML';
+        *U: SET allow_system_table_mods = true;
         *U: UPDATE pg_catalog.<table> SET <column> = <value> WHERE <cond>;
 
         Since the number of query results returned by a *U command depends on

@@ -1,4 +1,4 @@
-set allow_system_table_mods='dml';
+set allow_system_table_mods=true;
 CREATE TABLE sales (trans_id int, date date, amount 
 decimal(9,2), region text) 
 DISTRIBUTED BY (trans_id)

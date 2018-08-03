@@ -124,7 +124,7 @@ drop table if exists mrs_u2;
 
 drop table if exists csq_m1;
 create table csq_m1();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;
@@ -182,7 +182,7 @@ ORDER BY a.attnum
 
 drop table if exists csq_m1;
 create table csq_m1();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;

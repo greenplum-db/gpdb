@@ -1008,7 +1008,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
-SET allow_system_table_mods = 'DML';
+SET allow_system_table_mods=true;
 UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass and ATTNAME in ('a','b','c');
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;

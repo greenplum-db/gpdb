@@ -4142,7 +4142,7 @@ pg_class_aclmask(Oid table_oid, Oid roleid,
 		if (IsSystemClass(classForm) &&
 			classForm->relkind != RELKIND_VIEW &&
 			!has_rolcatupdate(roleid) &&
-			!allowSystemTableModsDDL)
+			!allowSystemTableMods)
 		{
 #ifdef ACLDEBUG
 			elog(DEBUG2, "permission denied for system catalog update");

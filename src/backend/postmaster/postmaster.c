@@ -747,7 +747,7 @@ PostmasterMain(int argc, char *argv[])
 				 */
 				SetConfigOption("maintenance_mode",  	  	"true", PGC_POSTMASTER, PGC_S_ARGV);
 				SetConfigOption("allow_segment_DML", 	  	"true", PGC_POSTMASTER, PGC_S_ARGV);
-				SetConfigOption("allow_system_table_mods",	"dml",  PGC_POSTMASTER, PGC_S_ARGV);
+				SetConfigOption("allow_system_table_mods",	"true",  PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
 			case 'N':
@@ -761,7 +761,7 @@ PostmasterMain(int argc, char *argv[])
 
 			case 'O':
 				/* Only use in single user mode */
-				SetConfigOption("allow_system_table_mods", "all", PGC_POSTMASTER, PGC_S_ARGV);
+				SetConfigOption("allow_system_table_mods", "true", PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
 			case 'o':
@@ -827,7 +827,7 @@ PostmasterMain(int argc, char *argv[])
 				 */
 				SetConfigOption("upgrade_mode",                         "true", PGC_POSTMASTER, PGC_S_ARGV);
 				SetConfigOption("allow_segment_DML",  		            "true", PGC_POSTMASTER, PGC_S_ARGV);
-				SetConfigOption("allow_system_table_mods",              "all",  PGC_POSTMASTER, PGC_S_ARGV);
+				SetConfigOption("allow_system_table_mods",              "true",  PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
 			case 'W':

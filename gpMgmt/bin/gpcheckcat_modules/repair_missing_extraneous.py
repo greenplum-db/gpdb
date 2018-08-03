@@ -12,11 +12,11 @@ class RepairMissingExtraneous:
 
     def _generate_delete_sql_for_oid(self, pk_name, oids):
         escaped_pk_name = escapeDoubleQuoteInSQLString(pk_name)
-        delete_sql = 'BEGIN;set allow_system_table_mods="dml";delete from {0} where {1} in ({2});COMMIT;'
+        delete_sql = 'BEGIN;set allow_system_table_mods=true;delete from {0} where {1} in ({2});COMMIT;'
         return delete_sql.format(self._escaped_catalog_name, escaped_pk_name, ','.join(str(oid) for oid in oids))
 
     def _generate_delete_sql_for_pkeys(self, pk_names):
-        delete_sql = 'BEGIN;set allow_system_table_mods="dml";'
+        delete_sql = 'BEGIN;set allow_system_table_mods=true;'
         for issue in self._issues:
             delete_issue_sql = 'delete from {0} where '
             for pk, issue_col in zip(pk_names, issue):

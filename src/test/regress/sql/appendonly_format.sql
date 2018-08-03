@@ -39,7 +39,7 @@ commit;
 
 
 begin;
-set local allow_system_table_mods = 'dml';
+set local allow_system_table_mods = true;
 
 -- Hack the format version number in the pg_aoseg table. The name of the
 -- table changes, so have to use dynamic SQL here.

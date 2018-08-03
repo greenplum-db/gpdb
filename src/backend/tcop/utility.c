@@ -80,7 +80,7 @@ ProcessUtility_hook_type ProcessUtility_hook = NULL;
  * Verify user has ownership of specified relation, else ereport.
  *
  * If noCatalogs is true then we also deny access to system catalogs,
- * except when allowSystemTableModsDDL is true.
+ * except when allowSystemTableMods is true.
  */
 void
 CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
@@ -107,7 +107,7 @@ CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
 
 	if (noCatalogs)
 	{
-		if (!allowSystemTableModsDDL &&
+		if (!allowSystemTableMods &&
 			IsSystemClass((Form_pg_class) GETSTRUCT(tuple)))
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),

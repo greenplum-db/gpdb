@@ -378,7 +378,7 @@ def main():
     f_out.writelines(['\n-- ',
                            '\n-- Allow system table modifications',
                            '\n-- ',
-                           '\nset allow_system_table_mods="DML";\n\n'])
+                           '\nset allow_system_table_mods=true;\n\n'])
 
     # dump table stats
     print "Writing table statistics ..."

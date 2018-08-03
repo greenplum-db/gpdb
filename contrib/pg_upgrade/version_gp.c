@@ -311,7 +311,7 @@ new_gpdb5_0_invalidate_indexes(void)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 		/*
 		 * check_mode doesn't do much interesting for this but at least
@@ -379,7 +379,7 @@ new_gpdb_invalidate_bitmap_indexes(void)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 		/*
 		 * check mode doesn't do much interesting for this but at least

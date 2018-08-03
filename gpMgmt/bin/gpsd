@@ -222,7 +222,7 @@ def main():
     sys.stdout.writelines(['\n-- ',
                            '\n-- Allow system table modifications',
                            '\n-- ',
-                           '\nset allow_system_table_mods="DML";\n\n'])
+                           '\nset allow_system_table_mods=true;\n\n'])
     sys.stdout.flush()
 
     try:

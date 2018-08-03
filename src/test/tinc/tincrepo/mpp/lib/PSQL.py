@@ -381,9 +381,9 @@ class PSQL(Command):
         @raise PSQLException: When the sql file cannot be located.
         """
         if PGOPTIONS:
-            PGOPTIONS = PGOPTIONS + " -c gp_session_role=utility -c allow_system_table_mods=dml"
+            PGOPTIONS = PGOPTIONS + " -c gp_session_role=utility -c allow_system_table_mods=true"
         else:
-            PGOPTIONS =  "-c gp_session_role=utility -c allow_system_table_mods=dml"
+            PGOPTIONS =  "-c gp_session_role=utility -c allow_system_table_mods=true"
         return PSQL.run_sql_file(sql_file = sql_file, out_file = out_file, dbname = dbname,
                                  host = host, port = port,
                                  username = username, password = password,
@@ -438,9 +438,9 @@ class PSQL(Command):
         @return: Output of the sql command
         """
         if PGOPTIONS:
-            PGOPTIONS = PGOPTIONS + " -c gp_session_role=utility -c allow_system_table_mods=dml"
+            PGOPTIONS = PGOPTIONS + " -c gp_session_role=utility -c allow_system_table_mods=true"
         else:
-            PGOPTIONS =  "-c gp_session_role=utility -c allow_system_table_mods=dml"
+            PGOPTIONS =  "-c gp_session_role=utility -c allow_system_table_mods=true"
         return PSQL.run_sql_command(sql_cmd = sql_cmd, out_file = out_file, dbname = dbname,
                                     host = host, port = port, username = username, password = password,
                                     PGOPTIONS = PGOPTIONS, flags = flags,

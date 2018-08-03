@@ -20,7 +20,7 @@ test: instr_in_shmem_setup
 # run separately - because slot counter may influenced by other parallel queries
 test: instr_in_shmem
 
-test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan update_gp returning_gp
+test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp
 test: spi_processed64bit
 test: python_processed64bit
 

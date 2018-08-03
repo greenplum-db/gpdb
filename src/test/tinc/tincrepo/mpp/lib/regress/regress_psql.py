@@ -256,7 +256,7 @@ class PSQLCommandLineRegressionTests(unittest.TestCase):
             self.assertTrue(os.path.exists(out_file))
             with open(out_file, 'r') as f:
                 output = f.read()
-                self.assertIsNotNone(re.search('DML', output))
+                self.assertIsNotNone(re.search('true', output))
         finally:
             os.remove(out_file)
             self.assertFalse(os.path.exists(out_file))
@@ -268,7 +268,7 @@ class PSQLCommandLineRegressionTests(unittest.TestCase):
 
         sql_cmd = 'show allow_system_table_mods;'
         output = PSQL.run_sql_command_catalog_update(sql_cmd = sql_cmd)
-        self.assertIsNotNone(re.search('DML', output))
+        self.assertIsNotNone(re.search('true', output))
 
         sql_cmd = 'show client_min_messages;'
         output = PSQL.run_sql_command_catalog_update(sql_cmd = sql_cmd,

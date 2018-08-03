@@ -23,7 +23,7 @@ WHERE staactionname = 'ALTER' AND stasubtype = 'SET'
 AND objid = (SELECT oid FROM pg_authid WHERE rolname = 'shoperation_user');
 
 -- Check if ALTER ROLE IN DATABASE updates role object in pg_stat_last_shoperation
-SET allow_system_table_mods=dml;
+SET allow_system_table_mods=true;
 DELETE FROM pg_stat_last_shoperation WHERE staactionname = 'ALTER' AND stasubtype = 'SET' AND objid = (SELECT oid FROM pg_authid WHERE rolname = 'shoperation_user');
 RESET allow_system_table_mods;
 

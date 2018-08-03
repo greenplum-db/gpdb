@@ -266,7 +266,7 @@ DefineQueryRewrite(char *rulename,
 				 errmsg("\"%s\" is not a table or view",
 						RelationGetRelationName(event_relation))));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(event_relation))
+	if (!allowSystemTableMods && IsSystemRelation(event_relation))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",

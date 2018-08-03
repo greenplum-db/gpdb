@@ -196,7 +196,7 @@ CreateTrigger(CreateTrigStmt *stmt, const char *queryString,
 				 errmsg("\"%s\" is not a table or view",
 						RelationGetRelationName(rel))));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(rel))
+	if (!allowSystemTableMods && IsSystemRelation(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -1127,7 +1127,7 @@ RemoveTriggerById(Oid trigOid)
 				 errmsg("\"%s\" is not a table or view",
 						RelationGetRelationName(rel))));
 
-	if (!allowSystemTableModsDDL && IsSystemRelation(rel))
+	if (!allowSystemTableMods && IsSystemRelation(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",
@@ -1233,7 +1233,7 @@ RangeVarCallbackForRenameTrigger(const RangeVar *rv, Oid relid, Oid oldrelid,
 	/* you must own the table to rename one of its triggers */
 	if (!pg_class_ownercheck(relid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS, rv->relname);
-	if (!allowSystemTableModsDDL && IsSystemClass(form))
+	if (!allowSystemTableMods && IsSystemClass(form))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",

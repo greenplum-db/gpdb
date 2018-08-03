@@ -246,7 +246,7 @@ restore_aosegment_tables(void)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 		for (relnum = 0; relnum < olddb->rel_arr.nrels; relnum++)
 		{

@@ -1,5 +1,5 @@
 -- ALTER TABLE ... RENAME on corrupted relations
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods = true;
 SET gp_allow_rename_relation_without_lock = ON;
 -- missing entry
 CREATE TABLE cor (a int, b float);

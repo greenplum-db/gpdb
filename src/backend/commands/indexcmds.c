@@ -804,7 +804,7 @@ DefineIndex(RangeVar *heapRelation,
 					 collationObjectId, classObjectId,
 					 coloptions, reloptions, primary,
 					 isconstraint, deferrable, initdeferred,
-					 allowSystemTableModsDDL,
+					 allowSystemTableMods,
 					 skip_build || concurrent,
 					 concurrent,
 					 altconname);

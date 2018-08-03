@@ -24,7 +24,7 @@ SET search_path to orca, public;
 -- end_ignore
 
 create table orca.r();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='orca.r'::regclass;
 reset allow_system_table_mods;
 
@@ -34,7 +34,7 @@ alter table orca.r add column b int;
 insert into orca.r select i, i/3 from generate_series(1,20) i;
 
 create table orca.s();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='orca.s'::regclass;
 reset allow_system_table_mods;
 alter table orca.s add column c int;
@@ -807,7 +807,7 @@ CREATE TABLE orca.tmp_verd_s_pp_provtabs_agt_0015_extract1 (
 )
 WITH (appendonly=true, compresstype=zlib) DISTRIBUTED BY (uid136);
 
- set allow_system_table_mods="DML";
+ set allow_system_table_mods=true;
 
  UPDATE pg_class
  SET
@@ -1243,7 +1243,7 @@ AND a.guelt_ab <= b.guelt_ab AND a.guelt_bis > b.guelt_ab
 ;
 
 set optimizer_segments = 3;
-set allow_system_table_mods="NONE";
+set allow_system_table_mods=false;
 -- Arrayref
 drop table if exists orca.arrtest;
 create table orca.arrtest (
@@ -1283,7 +1283,7 @@ select count(*) from foo_missing_stats where a = 10;
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.a;
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.b;
 
-set allow_system_table_mods="DML";
+set allow_system_table_mods=true;
 delete from pg_statistic where starelid='foo_missing_stats'::regclass;
 delete from pg_statistic where starelid='bar_missing_stats'::regclass;
 

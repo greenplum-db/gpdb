@@ -893,7 +893,7 @@ index_create(Relation heapRelation,
 				/* MPP-7773: don't track objects in system namespace
 				 * if modifying system tables (eg during upgrade)  
 				 */
-				if (allowSystemTableModsDDL)
+				if (allowSystemTableMods)
 					doIt = false;
 				break;
 
@@ -3591,7 +3591,7 @@ reindex_index(Oid indexId, bool skip_constraint_checks)
 				/* MPP-7773: don't track objects in system namespace
 				 * if modifying system tables (eg during upgrade)  
 				 */
-				if (allowSystemTableModsDDL)
+				if (allowSystemTableMods)
 					doIt = false;
 				break;
 

@@ -2224,21 +2224,21 @@ CheckValidResultRel(Relation resultRel, CmdType operation)
 
 		/* GPDB additions */
 		case RELKIND_AOSEGMENTS:
-			if (!allowSystemTableModsDML)
+			if (!allowSystemTableMods)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO segment listing relation \"%s\"",
 								RelationGetRelationName(resultRel))));
 			break;
 		case RELKIND_AOBLOCKDIR:
-			if (!allowSystemTableModsDML)
+			if (!allowSystemTableMods)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO block directory relation \"%s\"",
 								RelationGetRelationName(resultRel))));
 			break;
 		case RELKIND_AOVISIMAP:
-			if (!allowSystemTableModsDML)
+			if (!allowSystemTableMods)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO visibility map relation \"%s\"",

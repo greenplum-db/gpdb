@@ -27,7 +27,7 @@ select stanumbers1, stavalues1 from pg_statistic where starelid='bfv_statistics_
 explain select a from bfv_statistics_foo2 where a > 1 order by a;
 
 -- change stats manually so that MCV and MCF numbers do not match
-set allow_system_table_mods=DML;
+set allow_system_table_mods=true;
 update pg_statistic set stavalues1='{6,3,1,5,4,2}'::int[] where starelid='bfv_statistics_foo2'::regclass;
 
 -- excercise the translator
@@ -270,7 +270,7 @@ CREATE TABLE good_tab(a int, b text);
 CREATE TABLE test_broken_stats(a int, b text);
 INSERT INTO test_broken_stats VALUES(1, 'abc'), (2, 'cde'), (3, 'efg'), (3, 'efg'), (3, 'efg'), (1, 'abc'), (2, 'cde'); 
 ANALYZE test_broken_stats;
-SET allow_system_table_mods='DML';
+SET allow_system_table_mods=true;
 
 -- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
 

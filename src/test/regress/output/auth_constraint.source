@@ -864,7 +864,7 @@ DROP ROLE abc;
 --
 -- Exercise catalog DML and pg_auth_time_constraint trigger
 --
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods=true;
 CREATE ROLE abc;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 insert into pg_auth_time_constraint (select oid, 2, '12:00:00', 3, '12:00:00' from pg_authid where rolname = 'abc');
@@ -972,7 +972,7 @@ WARNING:  time constraints added on superuser role
 
 drop role abc;
 create role abc superuser;
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods=true;
 insert into pg_auth_time_constraint (select oid, 1, '00:00:00', 1, '24:00:00' from pg_authid where rolname = 'abc');
 SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
 WARNING:  time constraints added on superuser role

@@ -2303,7 +2303,7 @@ dumpDatabase(Archive *fout)
 	{
 		appendPQExpBuffer(creaQry, "\n-- For binary upgrade, set datfrozenxid.\n");
 
-		appendPQExpBuffer(creaQry, "SET allow_system_table_mods = 'dml';\n");
+		appendPQExpBuffer(creaQry, "SET allow_system_table_mods = true;\n");
 
 		appendPQExpBuffer(creaQry, "UPDATE pg_catalog.pg_database\n"
 						  "SET datfrozenxid = '%u'\n"
@@ -2362,7 +2362,7 @@ dumpDatabase(Archive *fout)
 		i_relfrozenxid = PQfnumber(lo_res, "relfrozenxid");
 
 		appendPQExpBuffer(loOutQry, "\n-- For binary upgrade, set pg_largeobject.relfrozenxid\n");
-		appendPQExpBuffer(loOutQry, "SET allow_system_table_mods = 'dml';\n");
+		appendPQExpBuffer(loOutQry, "SET allow_system_table_mods = true;\n");
 		appendPQExpBuffer(loOutQry, "UPDATE pg_catalog.pg_class\n"
 						  "SET relfrozenxid = '%u'\n"
 						  "WHERE oid = %u;\n",
@@ -2397,7 +2397,7 @@ dumpDatabase(Archive *fout)
 
 			appendPQExpBuffer(loOutQry, "\n-- For binary upgrade, set pg_largeobject_metadata.relfrozenxid\n");
 
-			appendPQExpBuffer(loOutQry, "SET allow_system_table_mods = 'dml';\n");
+			appendPQExpBuffer(loOutQry, "SET allow_system_table_mods = true;\n");
 
 			appendPQExpBuffer(loOutQry, "UPDATE pg_catalog.pg_class\n"
 							  "SET relfrozenxid = '%u'\n"
@@ -8478,7 +8478,7 @@ dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
 			/* stash separately for insertion after the CREATE TYPE */
 			appendPQExpBuffer(dropped,
 					  "\n-- For binary upgrade, recreate dropped column.\n");
-			appendPQExpBuffer(dropped, "SET allow_system_table_mods = 'dml';\n");
+			appendPQExpBuffer(dropped, "SET allow_system_table_mods = true;\n");
 			appendPQExpBuffer(dropped, "UPDATE pg_catalog.pg_attribute\n"
 							  "SET attlen = %s, "
 							  "attalign = '%s', attbyval = false\n"
@@ -13605,7 +13605,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			 * Greenplum doesn't allow altering system catalogs without
 			 * setting the allow_system_table_mods GUC first.
 			 */
-			appendPQExpBuffer(q, "SET allow_system_table_mods = 'dml';\n");
+			appendPQExpBuffer(q, "SET allow_system_table_mods = true;\n");
 
 			for (j = 0; j < tbinfo->numatts; j++)
 			{
@@ -13726,7 +13726,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			}
 
 			/*
-			 * We have probably bumped allow_system_table_mods to 'dml' in the
+			 * We have probably bumped allow_system_table_mods to true in the
 			 * above processing, but even we didn't let's just reset it here
 			 * since it doesn't to do any harm to.
 			 */

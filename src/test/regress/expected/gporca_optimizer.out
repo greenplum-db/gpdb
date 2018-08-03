@@ -20,7 +20,7 @@ set optimizer_enable_master_only_queries = on;
 create schema orca;
 create table orca.r();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='orca.r'::regclass;
 reset allow_system_table_mods;
 alter table orca.r add column a int;
@@ -28,7 +28,7 @@ alter table orca.r add column b int;
 insert into orca.r select i, i/3 from generate_series(1,20) i;
 create table orca.s();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='orca.s'::regclass;
 reset allow_system_table_mods;
 alter table orca.s add column c int;
@@ -8907,7 +8907,7 @@ CREATE TABLE orca.tmp_verd_s_pp_provtabs_agt_0015_extract1 (
     erstellt_am_134 timestamp(5) without time zone
 )
 WITH (appendonly=true, compresstype=zlib) DISTRIBUTED BY (uid136);
- set allow_system_table_mods="DML";
+ set allow_system_table_mods=true;
  UPDATE pg_class
  SET
          relpages = 30915::int, reltuples = 7.28661e+07::real WHERE relname = 'tmp_verd_s_pp_provtabs_agt_0015_extract1' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'xvclin');
@@ -9344,7 +9344,7 @@ AND a.guelt_ab <= b.guelt_ab AND a.guelt_bis > b.guelt_ab
 (0 rows)
 
 set optimizer_segments = 3;
-set allow_system_table_mods="NONE";
+set allow_system_table_mods=false;
 -- Arrayref
 drop table if exists orca.arrtest;
 NOTICE:  table "arrtest" does not exist, skipping
@@ -9440,7 +9440,7 @@ with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 wher
     16
 (1 row)
 
-set allow_system_table_mods="DML";
+set allow_system_table_mods=true;
 delete from pg_statistic where starelid='foo_missing_stats'::regclass;
 NOTICE:  One or more columns in the following table(s) do not have statistics: pg_statistic
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.

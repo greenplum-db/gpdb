@@ -103,7 +103,7 @@ bool		HasCTZSet = false;
 int			CTimeZone = 0;
 
 bool		enableFsync = true;
-int			allowSystemTableModsMask = ALLOW_SYSTEM_TABLE_MODS_NONE;
+bool		allowSystemTableMods = false;
 int			planner_work_mem = 32768;
 int			work_mem = 32768;
 int			statement_mem = 256000;
