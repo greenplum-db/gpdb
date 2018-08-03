@@ -74,3 +74,14 @@ SELECT * FROM homer;
 
 DELETE FROM ONLY homer WHERE a = 3;
 SELECT * FROM homer;
+
+-- ORCA should not fallback when ONLY clause is used on external tables
+-- start_ignore
+DROP TABLE IF EXISTS t1;
+DROP TABLE IF EXISTS ext_table_no_fallback;
+CREATE TABLE heap_t1 (a int, b int) DISTRIBUTED BY (b);
+CREATE EXTERNAL TABLE ext_table_no_fallback (a int, b int) LOCATION ('gpfdist://myhost:8080/test.csv') FORMAT 'CSV';
+-- end_ignore
+EXPLAIN SELECT * FROM ext_table_no_fallback;
+EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
+EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;

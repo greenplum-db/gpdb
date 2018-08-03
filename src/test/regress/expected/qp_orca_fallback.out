@@ -141,3 +141,38 @@ SELECT * FROM homer;
  4 | 3 | 44
 (4 rows)
 
+-- ORCA should not fallback when ONLY clause is used on external tables
+-- start_ignore
+DROP TABLE IF EXISTS t1;
+NOTICE:  table "t1" does not exist, skipping
+DROP TABLE IF EXISTS ext_table_no_fallback;
+NOTICE:  table "ext_table_no_fallback" does not exist, skipping
+CREATE TABLE heap_t1 (a int, b int) DISTRIBUTED BY (b);
+CREATE EXTERNAL TABLE ext_table_no_fallback (a int, b int) LOCATION ('gpfdist://myhost:8080/test.csv') FORMAT 'CSV';
+-- end_ignore
+EXPLAIN SELECT * FROM ext_table_no_fallback;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
+   ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
+ Optimizer: legacy query optimizer
+(3 rows)
+
+EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
+   ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
+ Optimizer: legacy query optimizer
+(3 rows)
+
+EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Insert on heap_t1  (cost=0.00..11000.00 rows=333334 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..11000.00 rows=333334 width=8)
+         Hash Key: ext_table_no_fallback.b
+         ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
+ Optimizer: legacy query optimizer
+(5 rows)
+
