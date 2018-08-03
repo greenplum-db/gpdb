@@ -459,7 +459,7 @@ resources:
 - name: oracle-gpdb-test-7
   type: docker-image
   source:
-    repository: toolsmiths/oracle7-test
+    repository: pivotaldata/oracle7-test
     tag: gpdb5-latest
 
 - name: ubuntu-gpdb-dev-16
