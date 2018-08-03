@@ -320,12 +320,6 @@ int			gp_autostats_on_change_threshold = 100000;
 bool		log_autostats = true;
 
 /* --------------------------------------------------------------------------------------------------
- * Miscellaneous developer use
- */
-
-bool		gp_dev_notice_agg_cost = false;
-
-/* --------------------------------------------------------------------------------------------------
  * Server debugging
  */
 

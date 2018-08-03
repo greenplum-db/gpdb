@@ -899,8 +899,6 @@ cdb_grouping_planner(PlannerInfo *root,
 	if (consider_agg & AGG_1PHASE)
 	{
 		cost_1phase_aggregation(root, &ctx, &plan_1p);
-		if (gp_dev_notice_agg_cost)
-			elog(NOTICE, "1-phase cost: %.6f", plan_1p.plan_cost);
 		if (plan_info == NULL || plan_info->plan_cost > plan_1p.plan_cost)
 			plan_info = &plan_1p;
 	}
@@ -908,8 +906,6 @@ cdb_grouping_planner(PlannerInfo *root,
 	if (consider_agg & (AGG_2PHASE | AGG_2PHASE_DQA))
 	{
 		cost_2phase_aggregation(root, &ctx, &plan_2p);
-		if (gp_dev_notice_agg_cost)
-			elog(NOTICE, "2-phase cost: %.6f", plan_2p.plan_cost);
 		if (plan_info == NULL || plan_info->plan_cost > plan_2p.plan_cost)
 			plan_info = &plan_2p;
 	}
@@ -917,8 +913,6 @@ cdb_grouping_planner(PlannerInfo *root,
 	if (consider_agg & AGG_3PHASE)
 	{
 		cost_3phase_aggregation(root, &ctx, &plan_3p);
-		if (gp_dev_notice_agg_cost)
-			elog(NOTICE, "3-phase cost: %.6f", plan_3p.plan_cost);
 		if (plan_info == NULL || !enable_groupagg || plan_info->plan_cost > plan_3p.plan_cost)
 			plan_info = &plan_3p;
 	}
