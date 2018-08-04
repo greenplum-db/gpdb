@@ -30,7 +30,8 @@ function setup_gpadmin_user() {
 
 function _main() {
 	time configure
-        sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
+        sed -i s/1024/unlimited/ /etc/security/limits.d/*-nproc.conf # centos6
+        sed -i s/4096/unlimited/ /etc/security/limits.d/*-nproc.conf # centos7
 	time install_gpdb
 	time setup_gpadmin_user
 	time gen_env
