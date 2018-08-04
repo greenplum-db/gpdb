@@ -2807,6 +2807,8 @@ log_line_prefix(StringInfo buf, ErrorData *edata)
 						if (subXid >= FirstNormalTransactionId)
 							appendStringInfo(buf, ", sx%u, ", subXid);
 					}
+
+					break;
 				}
 			case 'e':
 				appendStringInfoString(buf, unpack_sql_state(edata->sqlerrcode));

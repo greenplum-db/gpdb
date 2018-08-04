@@ -788,6 +788,7 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 		case ACL_OBJECT_EXTPROTOCOL:
 			world_default = ACL_NO_RIGHTS;
 			owner_default = ACL_ALL_RIGHTS_EXTPROTOCOL;
+			break;
 		case ACL_OBJECT_DOMAIN:
 		case ACL_OBJECT_TYPE:
 			world_default = ACL_USAGE;
