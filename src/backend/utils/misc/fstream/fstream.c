@@ -417,7 +417,7 @@ static int glob_adjust(fstream_t* fs, char* filename, int* response_code, const 
 	{
 		*response_code = 500;
 		*response_string = "fstream out of memory allocating copy of temporary file name";
-		gfile_printf_then_putc_newline(*response_string);
+		gfile_printf_then_putc_newline("%s", *response_string);
 		return 1;
 	}
 
@@ -527,7 +527,7 @@ fstream_open(const char *path, const struct fstream_options *options,
 		{
 			*response_code = 500;
 			*response_string = "failed to get temporary directory for paths file";
-			gfile_printf_then_putc_newline(*response_string);
+			gfile_printf_then_putc_newline("%s", *response_string);
 			fstream_close(fs);
 			return 0;
 		}
@@ -537,7 +537,7 @@ fstream_open(const char *path, const struct fstream_options *options,
 		{
 			*response_code = 500;
 			*response_string = "failed to open temporary paths file";
-			gfile_printf_then_putc_newline(*response_string);
+			gfile_printf_then_putc_newline("%s", *response_string);
 			fstream_close(fs);
 			return 0;
 		}
@@ -555,7 +555,7 @@ fstream_open(const char *path, const struct fstream_options *options,
 
 				*response_code = 500;
 				*response_string = "failed to fully write path to temporary paths file";
-				gfile_printf_then_putc_newline(*response_string);
+				gfile_printf_then_putc_newline("%s", *response_string);
 				fstream_close(fs);
 				return 0;
 			}
