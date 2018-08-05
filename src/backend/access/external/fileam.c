@@ -947,13 +947,12 @@ externalgettup_custom(FileScanDesc scan)
 	HeapTuple	tuple;
 	CopyState	pstate = scan->fs_pstate;
 	FormatterData *formatter = scan->fs_formatter;
-	bool		no_more_data = false;
 	MemoryContext oldctxt = CurrentMemoryContext;
 
 	Assert(formatter);
 
 	/* while didn't finish processing the entire file */
-	while (!no_more_data)
+	while (!(scan->raw_buf_done && pstate->fe_eof))
 	{
 		/* need to fill our buffer with data? */
 		if (scan->raw_buf_done)
@@ -965,7 +964,6 @@ externalgettup_custom(FileScanDesc scan)
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
 				scan->raw_buf_done = false;
 			}
-			no_more_data = pstate->fe_eof && formatter->fmt_databuf.len <= 0 ;
 
 			/* HEADER not yet supported ... */
 			if (pstate->header_line)
@@ -1029,6 +1027,7 @@ externalgettup_custom(FileScanDesc scan)
 				}
 
 				FILEAM_HANDLE_ERROR;
+				FlushErrorState();
 
 				MemoryContextSwitchTo(oldctxt);
 			}
@@ -1077,25 +1076,23 @@ externalgettup_custom(FileScanDesc scan)
 				ErrorIfRejectLimitReached(pstate->cdbsreh);
 			}
 		}
-		if (pstate->fe_eof && formatter->fmt_databuf.len >0)
-		{
-			no_more_data = true;
-			/*
-			 * The formatter needs more data, but we have reached
-			 * EOF. This is an error.
-			 */
-			ereport(WARNING,
-					(ERRCODE_DATA_EXCEPTION,
-					 errmsg("unexpected end of file")));
-		}
-
-
 	}
+	if (formatter->fmt_databuf.len > 0)
+	{
+		/*
+		 * The formatter needs more data, but we have reached
+		 * EOF. This is an error.
+		 */
+		ereport(WARNING,
+				(ERRCODE_DATA_EXCEPTION,
+				 errmsg("unexpected end of file")));
+	}
+
+
 
 	/*
 	 * if we got here we finished reading all the data.
 	 */
-	Assert(no_more_data);
 	scan->fs_inited = false;
 
 	return NULL;
