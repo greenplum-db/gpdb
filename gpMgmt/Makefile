@@ -27,6 +27,7 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstop \
 	bin/gpsys1 \
 	bin/gpcheckcat \
+	bin/gptransfer \
 	sbin/gpaddconfig.py \
 	sbin/gpchangeuserpassword \
 	sbin/gpcleansegmentdir.py \
