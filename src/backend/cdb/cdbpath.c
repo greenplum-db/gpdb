@@ -1480,10 +1480,7 @@ cdbpath_dedup_fixup_baserel(Path *path, CdbpathDedupFixupContext *ctx)
 	}
 
 	/* Add these vars to the rel's list of result columns. */
-	/* GPDB_92_MERGE_FIXME: set create_new_ph as true or false?
-	 * I'm setting it as safe value true here.
-	 */
-	add_vars_to_targetlist(ctx->root, rowid_vars, ctx->distinct_on_rowid_relids, true);
+	add_vars_to_targetlist(ctx->root, rowid_vars, ctx->distinct_on_rowid_relids, false);
 
 	/* Recalculate width of the rel's result rows. */
 	set_rel_width(ctx->root, rel);
