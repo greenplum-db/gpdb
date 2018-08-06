@@ -9709,6 +9709,8 @@ dumpCast(Archive *fout, CastInfo *cast)
 	PQExpBuffer delqry;
 	PQExpBuffer labelq;
 	FuncInfo   *funcInfo = NULL;
+	char	   *sourceType;
+	char	   *targetType;
 
 	/* Skip if not to be dumped */
 	if (!cast->dobj.dump || dataOnly)
@@ -9778,13 +9780,13 @@ dumpCast(Archive *fout, CastInfo *cast)
 	delqry = createPQExpBuffer();
 	labelq = createPQExpBuffer();
 
+	sourceType = getFormattedTypeName(fout, cast->castsource, zeroAsNone);
+	targetType = getFormattedTypeName(fout, cast->casttarget, zeroAsNone);
 	appendPQExpBuffer(delqry, "DROP CAST (%s AS %s);\n",
-					getFormattedTypeName(fout, cast->castsource, zeroAsNone),
-				   getFormattedTypeName(fout, cast->casttarget, zeroAsNone));
+					  sourceType, targetType);
 
 	appendPQExpBuffer(defqry, "CREATE CAST (%s AS %s) ",
-					getFormattedTypeName(fout, cast->castsource, zeroAsNone),
-				   getFormattedTypeName(fout, cast->casttarget, zeroAsNone));
+					  sourceType, targetType);
 
 	switch (cast->castmethod)
 	{
@@ -9822,8 +9824,7 @@ dumpCast(Archive *fout, CastInfo *cast)
 	appendPQExpBuffer(defqry, ";\n");
 
 	appendPQExpBuffer(labelq, "CAST (%s AS %s)",
-					getFormattedTypeName(fout, cast->castsource, zeroAsNone),
-				   getFormattedTypeName(fout, cast->casttarget, zeroAsNone));
+					  sourceType, targetType);
 
 	if (binary_upgrade)
 		binary_upgrade_extension_member(defqry, &cast->dobj, labelq->data);
@@ -9840,6 +9841,9 @@ dumpCast(Archive *fout, CastInfo *cast)
 	dumpComment(fout, labelq->data,
 				NULL, "",
 				cast->dobj.catId, 0, cast->dobj.dumpId);
+
+	free(sourceType);
+	free(targetType);
 
 	destroyPQExpBuffer(defqry);
 	destroyPQExpBuffer(delqry);
