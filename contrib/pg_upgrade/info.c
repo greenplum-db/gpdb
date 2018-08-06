@@ -902,8 +902,6 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 			 * cluster is based on PostgreSQL 8.2  (Greenplum 4.3.x).
 			 */
 			curr->gpdb4_heap_conversion_needed = true;
-
-			pg_free(numeric_rels);
 		}
 		else
 			curr->gpdb4_heap_conversion_needed = false;
@@ -911,6 +909,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	PQclear(res);
 
 	PQfinish(conn);
+
+	pg_free(numeric_rels);
 
 	dbinfo->rel_arr.rels = relinfos;
 	dbinfo->rel_arr.nrels = num_rels;

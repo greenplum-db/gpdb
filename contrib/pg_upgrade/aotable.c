@@ -81,6 +81,7 @@ restore_aosegment_table(PGconn *conn, RelInfo *rel)
 	if (PQntuples(res) == 0)
 	{
 		PQclear(res);
+		destroyPQExpBuffer(query);
 		return;
 	}
 
