@@ -835,8 +835,6 @@ extern int gp_workfile_bytes_to_checksum;
 /* The type of work files that HashJoin should use */
 extern int gp_workfile_type_hashjoin;
 
-/* Disable logging while creating mapreduce views */
-extern bool gp_mapreduce_define;
 extern bool coredump_on_memerror;
 
 /*

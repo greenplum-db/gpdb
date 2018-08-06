@@ -66,6 +66,10 @@ void usage(char *procname, boolean full)
 			"  -p | --port <port>            database server port\n"
 			"  -U | --username <username>    database user name\n"
 			"  -W | --password               prompt for password\n"
+			"\n"
+			"Debug options:\n"
+			"  -D | --debug                  enable some debugging output\n"
+			"  -P | --print                  print-only mode, do not run jobs\n"
 			);
 	}
 }
@@ -105,18 +109,12 @@ int main (int argc, char *argv[])
 		{"port",     required_argument, 0, 'p'},
 		{"file",     required_argument, 0, 'f'},
 		{"key",      required_argument, 0, 'k'},
-#ifdef INTERNAL_BUILD
 		{"print",    no_argument,       0, 'P'},
 		{"debug",    no_argument,       0, 'D'},
-#endif
 		{0, 0, 0, 0}
 	};
 
-#ifdef INTERNAL_BUILD
 	static char* short_options = "VvWxXU:h:p:f:k:?PD";
-#else
-	static char* short_options = "VvWxXU:h:p:f:k:?";
-#endif
 
 	while (1)
 	{
@@ -158,15 +156,13 @@ int main (int argc, char *argv[])
 				global_explain_flag |= global_explain | global_analyze;
 				break;
 
-#ifdef INTERNAL_BUILD
-			case 'P':  /* --print (INTERNAL_BUILD only) */
+			case 'P':  /* --print */
 				global_print_flag = 1;
 				break;
 
-			case 'D':  /* --debug (INTERNAL_BUILD only) */
+			case 'D':  /* --debug */
 				global_debug_flag = 1;
 				break;
-#endif
 
 			case 'W':  /* --password */
 				forceprompt = true;

@@ -1204,7 +1204,7 @@ exec_mpp_query(const char *query_string,
 	}
 
 
-	if (log_statement != LOGSTMT_NONE && !gp_mapreduce_define)
+	if (log_statement != LOGSTMT_NONE)
 	{
 		/*
 		 * TODO need to log SELECT INTO as DDL
@@ -2829,10 +2829,6 @@ check_log_statement(List *stmt_list)
 {
 	ListCell   *stmt_item;
 
-	/* Disable statement logging during mapreduce */
-	if (gp_mapreduce_define)
-		return false;
-
 	if (log_statement == LOGSTMT_NONE)
 		return false;
 	if (log_statement == LOGSTMT_ALL)
@@ -2868,10 +2864,6 @@ check_log_statement(List *stmt_list)
 int
 check_log_duration(char *msec_str, bool was_logged)
 {
-	/* Disable statement logging during mapreduce */
-	if (gp_mapreduce_define)
-		return 0;
-
 	if (log_duration || log_min_duration_statement >= 0)
 	{
 		long		secs;

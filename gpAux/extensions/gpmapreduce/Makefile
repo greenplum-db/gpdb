@@ -43,10 +43,6 @@ all: submake-libpq gpmapreduce all-lib
 gpmapreduce: $(MAPREDOBJS) $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) $(MAPREDOBJS) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
-internal:
-	rm -f $(SRCDIR)/mapred.o $(SRCDIR)/main.o
-	$(MAKE) CFLAGS="-DINTERNAL_BUILD $(CFLAGS)" all
-
 $(SRCDIR)/yaml_scan.c: $(SRCDIR)/yaml_parse.h $(SRCDIR)/yaml_scan.l
 ifdef FLEX
 	cd $(SRCDIR) ; \
