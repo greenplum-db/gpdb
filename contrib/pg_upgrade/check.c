@@ -1096,7 +1096,7 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 								"		c.relnamespace = n.oid AND "
 							  "		n.nspname != 'pg_catalog' AND "
 						 "		n.nspname != 'information_schema'",
-						GET_MAJOR_VERSION(old_cluster.major_version == 802) ?
+						GET_MAJOR_VERSION(old_cluster.major_version) == 802 ?
 							"0" :
 							"'pg_catalog.regconfig'::pg_catalog.regtype, "
 							"'pg_catalog.regdictionary'::pg_catalog.regtype ");
