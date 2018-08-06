@@ -589,7 +589,9 @@ extern void parseOidArray(const char *str, Oid *array, int arraysize);
 
 extern void sortDumpableObjects(DumpableObject **objs, int numObjs);
 extern void sortDumpableObjectsByTypeName(DumpableObject **objs, int numObjs);
+#if 0 /* GPDB_100_MERGE_FIXME: we don't support pre-7.3 dumps. */
 extern void sortDumpableObjectsByTypeOid(DumpableObject **objs, int numObjs);
+#endif
 
 
 /*
