@@ -1605,18 +1605,6 @@
           </stentry>
         </strow>
       </simpletable>
-      <p>This parameter controls validation between Greenplum Database primary segment and standby
-        segment during incremental resynchronization.</p>
-      <simpletable frame="none" id="simpletable_mkj_z1r_3s">
-        <strow>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#filerep_mirrorvalidation_during_resync"
-                >filerep_mirrorvalidation_during_resync</xref>
-            </p>
-          </stentry>
-        </strow>
-      </simpletable>
     </body>
   </topic>
   <topic id="topic56">

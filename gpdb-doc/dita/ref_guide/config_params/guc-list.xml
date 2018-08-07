@@ -143,9 +143,6 @@
               <xref href="#extra_float_digits"/>
             </li>
             <li>
-              <xref href="#filerep_mirrorvalidation_during_resync"/>
-            </li>
-            <li>
               <xref href="#from_collapse_limit"/>
             </li>
             <li>
@@ -2159,37 +2156,6 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">0</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="filerep_mirrorvalidation_during_resync">
-    <title>filerep_mirrorvalidation_during_resync</title>
-    <body>
-      <p>The default setting <codeph>false</codeph> improves Greenplum Database performance during
-        incremental resynchronization of segment mirrors. Setting the value to <codeph>true</codeph>
-        enables checking for the existence of files for all relations on the segment mirror during
-        incremental resynchronization. Checking for files degrades performance of the incremental
-        resynchronization process but provides a minimal check of database objects.</p>
-      <table id="table_pfd_cyq_3s">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Boolean </entry>
-              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
