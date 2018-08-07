@@ -52,7 +52,6 @@ install:
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
-	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
