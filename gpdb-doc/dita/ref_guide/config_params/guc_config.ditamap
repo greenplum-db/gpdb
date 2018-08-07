@@ -114,9 +114,6 @@
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
             <topicref href="guc-list.xml#gp_external_max_segs"/>
             <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_count"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_idle"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_interval"/>
             <topicref href="guc-list.xml#gp_fts_probe_interval"/>
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
             <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>

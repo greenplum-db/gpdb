@@ -279,15 +279,6 @@
               <xref href="#gp_external_enable_filter_pushdown"/>
             </li>
             <li>
-              <xref href="#gp_filerep_tcp_keepalives_count"/>
-            </li>
-            <li>
-              <xref href="#gp_filerep_tcp_keepalives_idle"/>
-            </li>
-            <li>
-              <xref href="#gp_filerep_tcp_keepalives_interval"/>
-            </li>
-            <li>
               <xref href="#gp_fts_probe_interval"/>
             </li>
             <li>
@@ -3669,98 +3660,6 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_filerep_tcp_keepalives_count">
-    <title>gp_filerep_tcp_keepalives_count</title>
-    <body>
-      <p>How many keepalives may be lost before the connection is considered dead. A value of 0 uses
-        the system default. If TCP_KEEPCNT is not supported, this parameter must be 0. </p>
-      <p>Use this parameter for all connections that are between a primary and mirror segment. Use
-          <codeph>tcp_keepalives_count</codeph> for settings that are not between a primary and
-        mirror segment.</p>
-      <table id="gp_filerep_tcp_keepalives_count_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">number of lost keepalives</entry>
-              <entry colname="col2">2</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_filerep_tcp_keepalives_idle">
-    <title>gp_filerep_tcp_keepalives_idle</title>
-    <body>
-      <p>Number of seconds between sending keepalives on an otherwise idle connection. A value of 0
-        uses the system default. If TCP_KEEPIDLE is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are between a primary and mirror segment. Use
-          <codeph>tcp_keepalives_idle</codeph> for settings that are not between a primary and
-        mirror segment.</p>
-      <table id="gp_filerep_tcp_keepalives_idle_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">number of seconds</entry>
-              <entry colname="col2">1 min</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_filerep_tcp_keepalives_interval">
-    <title>gp_filerep_tcp_keepalives_interval</title>
-    <body>
-      <p>How many seconds to wait for a response to a keepalive before retransmitting. A value of 0
-        uses the system default. If TCP_KEEPINTVL is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are between a primary and mirror segment. Use
-        tcp_keepalives_interval for settings that are not between a primary and mirror segment.</p>
-      <table id="gp_filerep_tcp_keepalives_interval_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">number of seconds</entry>
-              <entry colname="col2">30 sec</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -9094,9 +8993,7 @@
     <body>
       <p>How many keepalives may be lost before the connection is considered dead. A value of 0 uses
         the system default. If TCP_KEEPCNT is not supported, this parameter must be 0. </p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.
-        Use gp_filerep_tcp_keepalives_count for settings that are between a primary and mirror
-        segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
       <table id="tcp_keepalives_count_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9125,9 +9022,7 @@
     <body>
       <p>Number of seconds between sending keepalives on an otherwise idle connection. A value of 0
         uses the system default. If TCP_KEEPIDLE is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.
-        Use gp_filerep_tcp_keepalives_idle for settings that are between a primary and mirror
-        segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
       <table id="tcp_keepalives_idle_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9156,9 +9051,7 @@
     <body>
       <p>How many seconds to wait for a response to a keepalive before retransmitting. A value of 0
         uses the system default. If TCP_KEEPINTVL is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.
-        Use gp_filerep_tcp_keepalives_interval for settings that are between a primary and mirror
-        segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
       <table id="tcp_keepalives_interval_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
