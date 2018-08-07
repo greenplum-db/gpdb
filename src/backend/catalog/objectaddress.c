@@ -645,7 +645,7 @@ get_relation_by_qualified_name(ObjectType objtype, List *objname,
 
 	relation = relation_openrv_extended(makeRangeVarFromNameList(objname),
 										lockmode, missing_ok,
-										false /*GPDB_92_MERGE_FIXME: what is the expected noWait?*/);
+										false);
 	if (!relation)
 		return address;
 
