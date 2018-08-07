@@ -35,30 +35,6 @@ class Filerepe2e_Util():
         PSQL.run_sql_command("create extension if not exists gp_inject_fault", results=results)
         assert results['rc'] == 0
 
-    def wait_till_change_tracking_transition(self,num_seg=None):
-        """
-        PURPOSE:
-            Poll till change tracking state achieved: Wait till all segments transition to change tracking state
-        @num_seg : Excepted number of segments down. If not given checks for all segments
-        @return:
-            True [if success] False [if state not in ct for more than 600 secs]
-            number of nodes not in ct    
-         
-        """
-        gpcfg = GPDBConfig() 
-        if num_seg is None:
-            num_seg = gpcfg.get_countprimarysegments()
-        num_cl = gpcfg.count_of_nodes_in_mode('c')
-        count = 0
-        while(int(num_cl) < num_seg):
-            tinctest.logger.info("waiting for DB to go into change tracking")
-            sleep(10)
-            num_cl = gpcfg.count_of_nodes_in_mode('c')
-            count = count + 1
-            if (count > 80):
-               raise Exception("Timed out: cluster not in change tracking")
-        return (True,num_cl)
-
     def inject_fault(self, y = None, f = None, r ='mirror', seg_id = None, H='ALL', m ='async', extra_arg=0,
                      s_o=1, e_o=1, table = '', database = ''):
         '''
