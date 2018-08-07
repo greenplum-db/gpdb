@@ -356,6 +356,13 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elem[] =
 		&optimizer_array_constraints,
 		false, // m_fNegate
 		GPOS_WSZ_LIT("Allows the constraint framework to derive array constraints in the optimizer.")
+		},
+
+		{
+		EopttraceForceRedistributeOnInsertOnRandomDistrTables,
+		&optimize_force_random_distribution_on_insert,
+		false, // m_fNegate
+		GPOS_WSZ_LIT("Force redistribute motion on insert on randomly distributed tables.")
 		}
 };
 

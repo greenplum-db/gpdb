@@ -451,6 +451,7 @@ bool		optimizer_array_constraints;
 bool		optimizer_cte_inlining;
 bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
+bool		optimize_force_random_distribution_on_insert;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -3071,6 +3072,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_resource_group_bypass,
 		false,
 		check_gp_resource_group_bypass, NULL, NULL
+	},
+
+	{
+		{"optimize_force_random_distribution_on_insert", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Force random redistribution on insert on randomly distributed tables."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimize_force_random_distribution_on_insert,
+		true,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
