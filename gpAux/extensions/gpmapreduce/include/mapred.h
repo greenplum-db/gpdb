@@ -1,6 +1,8 @@
 #ifndef MAPRED_H
 #define MAPRED_H
 
+#include <postgres_fe.h>
+
 #ifndef YAML_H
 #include <yaml.h>
 #endif

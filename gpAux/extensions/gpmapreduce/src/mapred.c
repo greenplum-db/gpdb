@@ -6,7 +6,6 @@
 #include <stdarg.h>
 #include <unistd.h>     /* for file "access" test */
 #include <errno.h>
-#include "pg_config_manual.h"
 
 #define scalarfree(x)							\
 	do {										\

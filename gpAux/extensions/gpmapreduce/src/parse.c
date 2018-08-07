@@ -7,7 +7,6 @@
 #include <yaml.h>
 
 #include <stdarg.h>
-#include "pg_config_manual.h"
 
 int mapred_parse_error(mapred_parser_t *parser, char *fmt, ...)
 	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
