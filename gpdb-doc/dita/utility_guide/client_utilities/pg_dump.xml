@@ -301,6 +301,16 @@
               regular PostgreSQL system.</pd>
           </plentry>
           <plentry>
+            <pt>--function-oids <varname>oids</varname></pt>
+            <pd>Dump the function(s) specified in the <varname>oids</varname> list of
+              object identifiers.</pd>
+          </plentry>
+          <plentry>
+            <pt>--relation-oids <varname>oids</varname></pt>
+            <pd>Dump the relation(s) specified in the <varname>oids</varname> list of
+              object identifiers.</pd>
+          </plentry>
+          <plentry>
             <pt>-Z 0..9 | --compress=0..9</pt>
             <pd>Specify the compression level to use in archive formats that support compression.
               Currently only the <varname>custom</varname> archive format supports compression.</pd>
