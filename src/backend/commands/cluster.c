@@ -720,7 +720,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace,
                                           NULL,                         /*CDB*/
 										  reloptions,
 										  false,
-										  /* allowSystemTableModsDDL */ true,
+										  /* allowSystemTableMods */ true,
 										  /* valid_opts */ true,
 										  /* is_part_child */ false,
 										  /* is_part_parent */ false);

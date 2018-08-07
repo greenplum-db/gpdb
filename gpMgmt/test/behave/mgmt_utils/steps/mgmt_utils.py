@@ -1978,7 +1978,7 @@ def impl(context, user_table, catalog_table, primary_key, db_name):
     delete_qry = "delete from %s where %s='%s'::regclass::oid;" % (catalog_table, primary_key, user_table)
 
     with dbconn.connect(dbconn.DbURL(dbname=db_name, port=port, hostname=host), utility=True,
-                        allowSystemTableMods='dml') as conn:
+                        allowSystemTableMods=True) as conn:
         for qry in [delete_qry]:
             dbconn.execSQL(conn, qry)
             conn.commit()

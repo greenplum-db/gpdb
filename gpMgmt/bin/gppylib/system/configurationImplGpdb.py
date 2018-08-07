@@ -114,7 +114,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
             logger.critical("Configuration is invalid")
             raise InvalidSegmentConfiguration(gpArray)
 
-        conn = dbconn.connect(self.__masterDbUrl, useUtilityMode, allowSystemTableMods='dml')
+        conn = dbconn.connect(self.__masterDbUrl, useUtilityMode, allowSystemTableMods=True)
         dbconn.execSQL(conn, "BEGIN")
 
         # compute what needs to be updated
