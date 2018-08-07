@@ -54,9 +54,6 @@ class BaseClass(MPPTestCase):
     def incremental_recoverseg(self):
         self.gprecover.incremental()
 
-    def wait_till_change_tracking(self):
-        self.filereputil.wait_till_change_tracking_transition()
-
     def run_sql_in_background(self, sql_cmd):
         PSQL.run_sql_command(sql_cmd, background=True)
 
