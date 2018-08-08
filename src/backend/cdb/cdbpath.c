@@ -1112,16 +1112,6 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		return cdbpathlocus_join(outer.locus, inner.locus);
 
 	/*
-	 * Kludge used internally for querying catalogs on segment dbs. Each QE
-	 * will join the catalogs that are local to its own segment. The catalogs
-	 * don't have partitioning keys.  No motion needed.
-	 */
-	else if (CdbPathLocus_IsStrewn(outer.locus) &&
-			 CdbPathLocus_IsStrewn(inner.locus) &&
-			 cdbpathlocus_querysegmentcatalogs)
-		return outer.locus;
-
-	/*
 	 * Both sources are partitioned.  Redistribute or replicate one or both.
 	 */
 	else
