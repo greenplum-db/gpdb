@@ -4442,6 +4442,7 @@ _copyCreateForeignTableStmt(const CreateForeignTableStmt *from)
 
 	COPY_STRING_FIELD(servername);
 	COPY_NODE_FIELD(options);
+	COPY_NODE_FIELD(exec_location);
 
 	return newnode;
 }

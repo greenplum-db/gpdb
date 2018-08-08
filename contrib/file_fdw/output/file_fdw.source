@@ -198,6 +198,27 @@ SELECT * FROM agg_csv FOR UPDATE;
   42 |  324.78
 (3 rows)
 
+-- MPP tests
+CREATE FOREIGN TABLE text_csv_any (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv')
+EXECUTE ON ANY;
+SELECT * FROM text_csv_any;
+ERROR:  file_fdw could not execute on any
+CREATE FOREIGN TABLE text_csv_all (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv')
+EXECUTE ON ALL SEGMENTS;
+SELECT * FROM text_csv_all;
+ word1 | word2 
+-------+-------
+ AAA   | aaa
+ BBB   | abc
+ FOO   | bar
+(3 rows)
+
 -- privilege tests
 SET ROLE file_fdw_superuser;
 SELECT * FROM agg_text ORDER BY a;
@@ -243,7 +264,7 @@ SET ROLE file_fdw_superuser;
 -- cleanup
 RESET ROLE;
 DROP EXTENSION file_fdw CASCADE;
-NOTICE:  drop cascades to 8 other objects
+NOTICE:  drop cascades to 10 other objects
 DETAIL:  drop cascades to server file_server
 drop cascades to user mapping for file_fdw_user
 drop cascades to user mapping for file_fdw_superuser
@@ -252,4 +273,6 @@ drop cascades to foreign table agg_text
 drop cascades to foreign table agg_csv
 drop cascades to foreign table agg_bad
 drop cascades to foreign table text_csv
+drop cascades to foreign table text_csv_any
+drop cascades to foreign table text_csv_all
 DROP ROLE file_fdw_superuser, file_fdw_user, no_priv_user;

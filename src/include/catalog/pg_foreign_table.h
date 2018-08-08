@@ -34,6 +34,7 @@ CATALOG(pg_foreign_table,3118) BKI_WITHOUT_OIDS
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text		ftoptions[1];	/* FDW-specific options */
 #endif
+	char		exec_location;
 } FormData_pg_foreign_table;
 
 /* ----------------
@@ -48,9 +49,14 @@ typedef FormData_pg_foreign_table *Form_pg_foreign_table;
  * ----------------
  */
 
-#define Natts_pg_foreign_table					3
+#define Natts_pg_foreign_table					4
 #define Anum_pg_foreign_table_ftrelid			1
 #define Anum_pg_foreign_table_ftserver			2
 #define Anum_pg_foreign_table_ftoptions			3
+#define Anum_pg_foreign_table_execlocation		4
+
+#define FTEXECLOCATION_ANY 'a'
+#define FTEXECLOCATION_MASTER 'm'
+#define FTEXECLOCATION_ALL_SEGMENTS 's'
 
 #endif   /* PG_FOREIGN_TABLE_H */

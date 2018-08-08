@@ -2575,6 +2575,7 @@ _outCreateForeignTableStmt(StringInfo str, const CreateForeignTableStmt *node)
 
 	WRITE_STRING_FIELD(servername);
 	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(exec_location);
 }
 
 #endif /* COMPILING_BINARY_FUNCS */

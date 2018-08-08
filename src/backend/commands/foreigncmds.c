@@ -1465,6 +1465,7 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 	Oid			ownerId;
 	ForeignDataWrapper *fdw;
 	ForeignServer *server;
+	char exec_location = 'm';
 
 	/*
 	 * Advance command counter to ensure the pg_attribute tuple is visible;
@@ -1490,6 +1491,18 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 
 	fdw = GetForeignDataWrapper(server->fdwid);
 
+	if (stmt->exec_location) {
+		char *str = strVal(stmt->exec_location->arg);
+		if (strcmp(str, "any") == 0)
+			exec_location = FTEXECLOCATION_ANY;
+		else if (strcmp(str, "master") == 0)
+			exec_location = FTEXECLOCATION_MASTER;
+		else if (strcmp(str, "all_segments") == 0)
+			exec_location = FTEXECLOCATION_ALL_SEGMENTS;
+		else
+			elog(ERROR, "invalid data access \"%s\"", str);
+	}
+
 	/*
 	 * Insert tuple into pg_foreign_table.
 	 */
@@ -1508,6 +1521,8 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
 		values[Anum_pg_foreign_table_ftoptions - 1] = ftoptions;
 	else
 		nulls[Anum_pg_foreign_table_ftoptions - 1] = true;
+
+	values[Anum_pg_foreign_table_execlocation - 1] = exec_location;
 
 	tuple = heap_form_tuple(ftrel->rd_att, values, nulls);
 

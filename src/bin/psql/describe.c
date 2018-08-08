@@ -21,6 +21,7 @@
 #include "print.h"
 #include "settings.h"
 #include "variables.h"
+#include "catalog/pg_foreign_table.h"
 
 
 #define SYM_POLICYTYPE_REPLICATED 'r'
@@ -2765,7 +2766,7 @@ describeOneTableDetails(const char *schemaname,
 							  "       array_to_string(ARRAY(SELECT "
 							  "       quote_ident(option_name) ||  ' ' || "
 							  "       quote_literal(option_value)  FROM "
-							"       pg_options_to_table(ftoptions)),  ', ') "
+							"       pg_options_to_table(ftoptions)),  ', '), f.exec_location "
 							  "FROM pg_catalog.pg_foreign_table f,\n"
 							  "     pg_catalog.pg_foreign_server s\n"
 							  "WHERE f.ftrelid = %s AND s.oid = f.ftserver;",
@@ -2791,6 +2792,23 @@ describeOneTableDetails(const char *schemaname,
 				printfPQExpBuffer(&buf, "FDW Options: (%s)", ftoptions);
 				printTableAddFooter(&cont, buf.data);
 			}
+
+			/* Print per-table execute on option */
+			switch (*PQgetvalue(result, 0, 2)) {
+				case FTEXECLOCATION_MASTER:
+					printfPQExpBuffer(&buf, "Execute on: master segment");
+					break;
+				case FTEXECLOCATION_ALL_SEGMENTS:
+					printfPQExpBuffer(&buf, "Execute on: all segments");
+					break;
+				case FTEXECLOCATION_ANY:
+					printfPQExpBuffer(&buf, "Execute on: any segment");
+					break;
+				default:
+					printfPQExpBuffer(&buf, "Execute on: ERROR: invalid catalog entry (describe.c)");
+			}
+			printTableAddFooter(&cont, buf.data);
+
 			PQclear(result);
 		}
 

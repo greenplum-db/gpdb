@@ -65,6 +65,7 @@ typedef struct ForeignTable
 	Oid			relid;			/* relation Oid */
 	Oid			serverid;		/* server Oid */
 	List	   *options;		/* ftoptions as DefElem list */
+	char		exec_location;
 } ForeignTable;
 
 
