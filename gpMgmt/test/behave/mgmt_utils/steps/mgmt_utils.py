@@ -246,7 +246,7 @@ def impl(context, dbconn, version):
 @given('database "{dbname}" exists')
 @then('database "{dbname}" exists')
 def impl(context, dbname):
-    create_database_if_not_exists(context, dbname)
+    create_database_if_not_exists(context, dbname, saveConnInfoInContext=True)
 
 
 @given('database "{dbname}" is created if not exists on host "{HOST}" with port "{PORT}" with user "{USER}"')
