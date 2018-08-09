@@ -425,6 +425,7 @@ tbm_union_page(TIDBitmap *a, const PagetableEntry *bpage)
 			/* Both pages are exact, merge at the bit level */
 			for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
 				apage->words[wordnum] |= bpage->words[wordnum];
+			apage->recheck |= bpage->recheck;
 		}
 	}
 
@@ -778,8 +779,8 @@ tbm_iterate_page(PagetableEntry *page, TBMIterateResult *output)
 	if (page->ischunk)
 	{
 		ntuples = -1;
+		output->recheck = true;
 	}
-
 	else
 	{
 		/* scan bitmap to extract individual offset numbers */
@@ -801,6 +802,7 @@ tbm_iterate_page(PagetableEntry *page, TBMIterateResult *output)
 				}
 			}
 		}
+		output->recheck = page->recheck;
 	}
 
 	output->blockno = page->blockno;
@@ -896,7 +898,6 @@ tbm_next_page(TBMIterator *iterator, bool *more)
 			nextpage = (PagetableEntry *) palloc(sizeof(PagetableEntry));
 			nextpage->ischunk = true;
 			nextpage->blockno = chunk_blockno;
-			nextpage->recheck = true;
 			iterator->schunkbit++;
 			return nextpage;
 		}
@@ -1546,6 +1547,7 @@ opstream_iterate(StreamBMIterator *iterator, PagetableEntry *e)
 	List	   *matches;
 	bool		empty;
 
+	Assert(n->type == BMS_OR || n->type == BMS_AND);
 
 	/*
 	 * First, iterate through each input bitmap stream and save the block
@@ -1636,7 +1638,7 @@ restart:
 				continue;
 			}
 
-			/* already initialised, so OR together */
+			/* already initialised, so OR/AND together */
 			if (tmp->ischunk == true)
 			{
 				/*
@@ -1648,6 +1650,7 @@ restart:
 				list_free_deep(matches);
 				return res;
 			}
+
 			/* union/intersect existing output and new matches */
 			for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
 			{
@@ -1656,6 +1659,7 @@ restart:
 				else
 					e->words[wordnum] &= tmp->words[wordnum];
 			}
+			e->recheck |= tmp->recheck;
 		}
 		else if (n->type == BMS_AND)
 		{

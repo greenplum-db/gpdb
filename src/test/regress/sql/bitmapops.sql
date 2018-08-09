@@ -36,6 +36,21 @@ SELECT count(*) FROM bmscantest WHERE a = 1 AND b = 1;
 -- Test bitmap-or.
 SELECT count(*) FROM bmscantest WHERE a = 1 OR b = 1;
 
+-- Test mix BitmapOp load of on-disk bitmap index scan and in-memory bitmap index scan:
+CREATE TABLE bmscantest2 (a int, b int, c int, d int, t text);
+INSERT INTO bmscantest2
+  SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+  FROM generate_series(1,70000) r;
+CREATE INDEX i_bmtest2_a ON bmscantest2 USING BITMAP(a);
+CREATE INDEX i_bmtest2_b ON bmscantest2 USING BITMAP(b);
+CREATE INDEX i_bmtest2_c ON bmscantest2(c);
+CREATE INDEX i_bmtest2_d ON bmscantest2(d);
+
+SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
+SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
+
+SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
+SELECT count(*) FROM bmscantest2 WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 
 -- clean up
 DROP TABLE bmscantest;

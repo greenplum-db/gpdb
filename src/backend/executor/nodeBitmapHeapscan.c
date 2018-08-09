@@ -128,7 +128,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 
 	OffsetNumber targoffset;
 	TupleTableSlot *slot;
-	bool		more = true;
 
 	/*
 	 * extract necessary information from index scan node
@@ -193,9 +192,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 				return NULL;
 
 			node->tbmres = tbmres = tbm_generic_iterate(tbmiterator);
-			more = (tbmres != NULL);
 
-			if (!more)
+			if (tbmres == NULL)
 			{
 				/* no more entries in the bitmap */
 				break;
@@ -225,7 +223,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			 */
 			if (tbmres->blockno >= scan->rs_nblocks)
 			{
-				more = false;
 				tbmres->ntuples = 0;
 				continue;
 			}
@@ -293,7 +290,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		 */
 		if (scan->rs_cindex < 0 || scan->rs_cindex >= scan->rs_ntuples)
 		{
-			more = false;
 			tbmres->ntuples = 0;
 			continue;
 		}
@@ -353,8 +349,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 					   false);
 
 		/*
-		 * We recheck the qual conditions for every tuple, since the bitmap
-		 * may contain invalid entries from deleted tuples.
+		 * If we are using lossy info, we have to recheck the qual conditions
+		 * at every tuple.
 		 */
 		if (tbmres->recheck)
 		{
