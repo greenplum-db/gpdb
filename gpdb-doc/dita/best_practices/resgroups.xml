@@ -2,7 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_hhc_z5w_r4">
   <title>Memory and Resource Management with Resource Groups</title>
-  <shortdesc>Managing Greenplum Database resources with resource groups</shortdesc>
+  <shortdesc>Managing Greenplum Database resources with resource groups.</shortdesc>
   <body>
     <p>Memory, CPU, and concurrent transaction management have a significant impact on
       performance in a Greenplum Database cluster. Resource groups are a newer resource
@@ -31,7 +31,7 @@
         many out-of-memory conditions by configuring resource groups to manage expected
         workloads. </p>
       <p>The following operating system and Greenplum Database memory settings are
-        significant when you manage your Greenplum Database resources with resource groups:</p>
+        significant when you manage Greenplum Database resources with resource groups:</p>
       <ul id="ul_xv2_phn_1s">
         <li>
           <b>vm.overcommit_memory</b>
@@ -90,8 +90,8 @@
       <ul id="ul_q4x_g1g_zt">
         <li>Total RAM = 256GB </li>
         <li>Swap = 64GB </li>
-        <li>8 primary segments and 8 mirror segments per host, in blocks of 4 hosts.</li>
-        <li>Maximum number of primaries per host during failure is 11.</li>
+        <li>8 primary segments and 8 mirror segments per host, in blocks of 4 hosts</li>
+        <li>Maximum number of primaries per host during failure is 11</li>
       </ul>
       <p>The usable memory available on a host is a function of 
         the amount of RAM and swap space configured for the system, as well as the
@@ -117,9 +117,8 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
     <section id="configuring_rg">
       <title>Configuring Resource Groups</title>
       <p>Greenplum Database resource groups provide a powerful mechanism for managing the workload
-        of the cluster. You can use resource groups to limit both the number of concurrent
-        active queries and the amount of CPU and memory that can be consumed by queries
-        running in the resource group.</p>
+        of the cluster. Consider these general guidelines when you configure resource groups
+        for your system:</p>
       <ul id="ul_svy_b3n_1s">
         <li>A transaction submitted by any Greenplum Database role with
             <codeph>SUPERUSER</codeph> privileges runs under the default resource
@@ -145,6 +144,10 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
           group for the workload and the time of day.</li>
         <li>Use the <codeph>gptoolkit</codeph> views to examine resource group resource
             usage and to monitor how the groups are working.</li>
+        <li otherprops="pivotal">A Greenplum Database workload is a resource group with
+          special assignment capabilities. Consider using Pivotal Greenplum Command Center
+          to create and manage workloads, and to define the criteria under which Command
+          Center dynamically assigns a transaction to a workload.</li>
       </ul>
     </section>
     <section id="section113x" xml:lang="en">
@@ -162,7 +165,7 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
         The default <codeph>CONCURRENCY</codeph> value for the <codeph>admin_group</codeph>
         resource group is 10.</p>
       <p>Certain Greenplum Database administrative utilities may use more than one
-        <codeph>CONCURRENCY</codeph> slot at runtime; for example, <codeph>gpbackup</codeph>
+        <codeph>CONCURRENCY</codeph> slot at runtime, such as <codeph>gpbackup</codeph>
         that you invoke with the <codeph>--jobs</codeph> option. If the utility(s) you run
         require more concurrent transactions than that configured for <codeph>admin_group</codeph>,
         consider temporarily increasing the group's <codeph>MEMORY_LIMIT</codeph> and
