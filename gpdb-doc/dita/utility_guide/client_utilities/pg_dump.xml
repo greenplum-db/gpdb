@@ -302,13 +302,17 @@
           </plentry>
           <plentry>
             <pt>--function-oids <varname>oids</varname></pt>
-            <pd>Dump the function(s) specified in the <varname>oids</varname> list of
-              object identifiers.</pd>
+            <pd>Dump the function(s) specified in the <varname>oids</varname> list of object
+              identifiers. (This option is provided solely for use by other administration
+              utilities; its use for any other purpose is not recommended or supported. The
+              behaviour of the option may change in future releases without notice.)</pd>
           </plentry>
           <plentry>
             <pt>--relation-oids <varname>oids</varname></pt>
-            <pd>Dump the relation(s) specified in the <varname>oids</varname> list of
-              object identifiers.</pd>
+            <pd>Dump the relation(s) specified in the <varname>oids</varname> list of object
+              identifiers. (This option is provided solely for use by other administration
+              utilities; its use for any other purpose is not recommended or supported. The
+              behaviour of the option may change in future releases without notice.)</pd>
           </plentry>
           <plentry>
             <pt>-Z 0..9 | --compress=0..9</pt>
