@@ -206,7 +206,14 @@ net.ipv4.ip_local_port_range = 10000 65535
 net.core.netdev_max_backlog = 10000
 net.core.rmem_max = 2097152
 net.core.wmem_max = 2097152
-vm.overcommit_memory = 2</codeblock><note>
+vm.overcommit_memory = 2
+vm.swappiness = 10
+vm.dirty_expire_centisecs = 500
+vm.dirty_writeback_centisecs = 100
+vm.dirty_background_ratio = 0
+vm.dirty_ratio=0
+vm.dirty_background_bytes = 1610612736
+vm.dirty_bytes = 4294967296</codeblock><note>
               When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
                 <codeph>vm.overcommit_ratio</codeph>. For information about calculating the value
               for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, see the Greenplum Database server
