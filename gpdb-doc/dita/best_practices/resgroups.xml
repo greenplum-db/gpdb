@@ -125,7 +125,7 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
             <codeph>SUPERUSER</codeph> privileges runs under the default resource
             group named <codeph>admin_group</codeph>. Keep this in mind when
             scheduling and running Greenplum administration utilities.</li>
-        <li>Ensure that each role is assigned a resource group. If you do not assign
+        <li>Ensure that you assign each non-admin role a resource group. If you do not assign
             a resource group to a role, queries submitted by the role are handled by the
             default resource group named <codeph>default_group</codeph>.</li>
         <li>Use the <codeph>CONCURRENCY</codeph> resource group parameter to limit the
