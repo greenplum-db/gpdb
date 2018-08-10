@@ -117,7 +117,9 @@ groups:
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
+{% if "centos6" in os_types or "centos7" in os_types%}
   - madlib_build_gppkg
+{% endif %}
 {% if "centos6" in os_types %}
   - MADlib_Test_orca_centos6
   - MADlib_Test_planner_centos6
@@ -288,7 +290,9 @@ groups:
 - name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
+{% if "centos6" in os_types or "centos7" in os_types%}
   - madlib_build_gppkg
+{% endif %}
 {% if "centos6" in os_types %}
   - MADlib_Test_orca_centos6
   - MADlib_Test_planner_centos6
@@ -660,47 +664,47 @@ resources:
 - name: madlib_gppkg
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{madlib-gppkg-gp6-bucket-name}}
-    secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: bin_madlib_artifacts_centos6/madlib-master-gp6-rhel6-x86_64.gppkg
-    region_name: us-west-2
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file:  {{madlib-gppkg-versioned-file}}
+    region_name: {{madlib-s3-region}}
 
 - name: cmake_tar
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{madlib-ppr-bucket}}
-    region_name: us-west-2
-    secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: {{madlib-cmake-versioned_file}}
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-cmake-versioned-file}}
 
 - name: pyxb
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{madlib-ppr-bucket}}
-    region_name: us-west-2
-    secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: PyXB-1.2.6.tar.gz
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-pyxb-versioned-file}}
 
 - name: eigen
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{madlib-ppr-bucket}}
-    region_name: us-west-2
-    secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: 3.2.tar.gz
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-eigen-versioned-file}}
 
 - name: boost
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{madlib-ppr-bucket}}
-    region_name: us-west-2
-    secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: boost_1_61_0.tar.gz
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-boost-versioned-file}}
 {% endif %}
 
 - name: reduced-frequency-trigger
@@ -2320,11 +2324,11 @@ jobs:
       - compile_gpdb_centos7
 {% endif %}
 
+{% if "centos6" in os_types or "centos7" in os_types%}
 - name: madlib_build_gppkg
   plan:
   - aggregate:
     - get: madlib_src
-      trigger: true
     - get: madlib_ci
     - get: cmake_tar
     - get: pyxb
@@ -2351,6 +2355,7 @@ jobs:
     - put: madlib_gppkg
       params:
         file: madlib_master_artifacts/madlib-*.gppkg
+{% endif %}
 
 {% if "centos6" in os_types %}
 - name: MADlib_Test_planner_centos6
