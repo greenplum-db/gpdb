@@ -724,6 +724,125 @@ NOTICE:  CREATE TABLE will create partition "sto_ao_ao_1_prt_5" for table "sto_a
 NOTICE:  CREATE TABLE will create partition "sto_ao_ao_1_prt_5_2_prt_subothers" for table "sto_ao_ao_1_prt_5"
 NOTICE:  CREATE TABLE will create partition "sto_ao_ao_1_prt_5_2_prt_sub1" for table "sto_ao_ao_1_prt_5"
 NOTICE:  CREATE TABLE will create partition "sto_ao_ao_1_prt_5_2_prt_sub2" for table "sto_ao_ao_1_prt_5"
+-- Non-leaf (empty) partitions along with their auxiliary tables
+-- should have relfrozenxid = 0.  Select the names of those tables
+-- within this partition hierarchy whose aoseg auxiliary tables have
+-- relfrozenxid = 0.
+select c1.relname from pg_appendonly a, pg_class c1, pg_class c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.segrelid = c2.oid;
+        relname         
+------------------------
+ sto_ao_ao_1_prt_2
+ sto_ao_ao
+ sto_ao_ao_1_prt_others
+ sto_ao_ao_1_prt_3
+ sto_ao_ao_1_prt_4
+ sto_ao_ao_1_prt_5
+(6 rows)
+
+-- Same query as above but obtain relnames from segments.
+select c2.gp_segment_id, c1.relname from pg_appendonly a, pg_class c1,
+gp_dist_random('pg_class') c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.segrelid = c2.oid;
+ gp_segment_id |        relname         
+---------------+------------------------
+             1 | sto_ao_ao_1_prt_2
+             1 | sto_ao_ao
+             1 | sto_ao_ao_1_prt_others
+             1 | sto_ao_ao_1_prt_3
+             1 | sto_ao_ao_1_prt_4
+             1 | sto_ao_ao_1_prt_5
+             2 | sto_ao_ao_1_prt_2
+             2 | sto_ao_ao
+             2 | sto_ao_ao_1_prt_others
+             2 | sto_ao_ao_1_prt_3
+             2 | sto_ao_ao_1_prt_4
+             2 | sto_ao_ao_1_prt_5
+             0 | sto_ao_ao_1_prt_2
+             0 | sto_ao_ao
+             0 | sto_ao_ao_1_prt_others
+             0 | sto_ao_ao_1_prt_3
+             0 | sto_ao_ao_1_prt_4
+             0 | sto_ao_ao_1_prt_5
+(18 rows)
+
+-- Same two queries as above but for visimap auxiliary table.
+select c1.relname from pg_appendonly a, pg_class c1, pg_class c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.visimaprelid = c2.oid;
+        relname         
+------------------------
+ sto_ao_ao_1_prt_2
+ sto_ao_ao
+ sto_ao_ao_1_prt_others
+ sto_ao_ao_1_prt_3
+ sto_ao_ao_1_prt_4
+ sto_ao_ao_1_prt_5
+(6 rows)
+
+-- Obtain relnames from segments whose visimap tables have relfrozenxid = 0.
+select c2.gp_segment_id, c1.relname from pg_appendonly a, pg_class c1,
+gp_dist_random('pg_class') c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.visimaprelid = c2.oid;
+ gp_segment_id |        relname         
+---------------+------------------------
+             0 | sto_ao_ao_1_prt_2
+             0 | sto_ao_ao
+             0 | sto_ao_ao_1_prt_others
+             0 | sto_ao_ao_1_prt_3
+             0 | sto_ao_ao_1_prt_4
+             0 | sto_ao_ao_1_prt_5
+             2 | sto_ao_ao_1_prt_2
+             2 | sto_ao_ao
+             2 | sto_ao_ao_1_prt_others
+             2 | sto_ao_ao_1_prt_3
+             2 | sto_ao_ao_1_prt_4
+             2 | sto_ao_ao_1_prt_5
+             1 | sto_ao_ao_1_prt_2
+             1 | sto_ao_ao
+             1 | sto_ao_ao_1_prt_others
+             1 | sto_ao_ao_1_prt_3
+             1 | sto_ao_ao_1_prt_4
+             1 | sto_ao_ao_1_prt_5
+(18 rows)
+
+-- Same validation toast - select all relnames whose toast tables have relfrozenxid = 0.
+select c1.relname from pg_class c1, pg_class c2 where c1.relname like 'sto_ao_ao%' and
+c2.relfrozenxid = 0 and c1.reltoastrelid = c2.oid;
+        relname         
+------------------------
+ sto_ao_ao_1_prt_2
+ sto_ao_ao
+ sto_ao_ao_1_prt_others
+ sto_ao_ao_1_prt_3
+ sto_ao_ao_1_prt_4
+ sto_ao_ao_1_prt_5
+(6 rows)
+
+-- Obtain relnames from segments whose toast tables have relfrozenxid = 0.
+select c2.gp_segment_id, c1.relname from pg_class c1, gp_dist_random('pg_class') c2 where
+c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and c1.reltoastrelid = c2.oid;
+ gp_segment_id |        relname         
+---------------+------------------------
+             2 | sto_ao_ao_1_prt_2
+             2 | sto_ao_ao
+             2 | sto_ao_ao_1_prt_others
+             2 | sto_ao_ao_1_prt_3
+             2 | sto_ao_ao_1_prt_4
+             2 | sto_ao_ao_1_prt_5
+             1 | sto_ao_ao_1_prt_2
+             1 | sto_ao_ao
+             1 | sto_ao_ao_1_prt_others
+             1 | sto_ao_ao_1_prt_3
+             1 | sto_ao_ao_1_prt_4
+             1 | sto_ao_ao_1_prt_5
+             0 | sto_ao_ao_1_prt_2
+             0 | sto_ao_ao
+             0 | sto_ao_ao_1_prt_others
+             0 | sto_ao_ao_1_prt_3
+             0 | sto_ao_ao_1_prt_4
+             0 | sto_ao_ao_1_prt_5
+(18 rows)
+
 create table exh_ao_ao (like sto_ao_ao) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- Exchange default sub-partition, should fail
@@ -740,8 +859,84 @@ ERROR:  Cannot specify a name, rank, or value for a DEFAULT partition in this co
 -- Exchange a partition that has sub partitions, should fail.
 alter table sto_ao_ao exchange partition for ('2008-01-01') with table exh_ao_ao;
 ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has children
-drop table sto_ao_ao;
-drop table exh_ao_ao;
+-- Alter table that causes rewrite.  Then validate that auxiliary
+-- tables of non-leaf partitions still have relfrozenxid = 0.
+alter table sto_ao_ao alter column col4 type bigint;
+-- aoseg
+select c1.relname from pg_appendonly a, pg_class c1, pg_class c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.segrelid = c2.oid;
+        relname         
+------------------------
+ sto_ao_ao
+ sto_ao_ao_1_prt_others
+ sto_ao_ao_1_prt_2
+ sto_ao_ao_1_prt_3
+ sto_ao_ao_1_prt_4
+ sto_ao_ao_1_prt_5
+(6 rows)
+
+select c2.gp_segment_id, c1.relname from pg_appendonly a, pg_class c1,
+gp_dist_random('pg_class') c2 where
+c1.oid = a.relid and c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and a.segrelid = c2.oid;
+ gp_segment_id |        relname         
+---------------+------------------------
+             1 | sto_ao_ao
+             1 | sto_ao_ao_1_prt_others
+             1 | sto_ao_ao_1_prt_2
+             1 | sto_ao_ao_1_prt_3
+             1 | sto_ao_ao_1_prt_4
+             1 | sto_ao_ao_1_prt_5
+             2 | sto_ao_ao
+             2 | sto_ao_ao_1_prt_others
+             2 | sto_ao_ao_1_prt_2
+             2 | sto_ao_ao_1_prt_3
+             2 | sto_ao_ao_1_prt_4
+             2 | sto_ao_ao_1_prt_5
+             0 | sto_ao_ao
+             0 | sto_ao_ao_1_prt_others
+             0 | sto_ao_ao_1_prt_2
+             0 | sto_ao_ao_1_prt_3
+             0 | sto_ao_ao_1_prt_4
+             0 | sto_ao_ao_1_prt_5
+(18 rows)
+
+-- toast
+select c1.relname from pg_class c1, pg_class c2 where c1.relname like 'sto_ao_ao%' and
+c2.relfrozenxid = 0 and c1.reltoastrelid = c2.oid;
+        relname         
+------------------------
+ sto_ao_ao
+ sto_ao_ao_1_prt_others
+ sto_ao_ao_1_prt_2
+ sto_ao_ao_1_prt_3
+ sto_ao_ao_1_prt_4
+ sto_ao_ao_1_prt_5
+(6 rows)
+
+select c2.gp_segment_id, c1.relname from pg_class c1, gp_dist_random('pg_class') c2 where
+c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and c1.reltoastrelid = c2.oid;
+ gp_segment_id |        relname         
+---------------+------------------------
+             0 | sto_ao_ao
+             0 | sto_ao_ao_1_prt_others
+             0 | sto_ao_ao_1_prt_2
+             0 | sto_ao_ao_1_prt_3
+             0 | sto_ao_ao_1_prt_4
+             0 | sto_ao_ao_1_prt_5
+             1 | sto_ao_ao
+             1 | sto_ao_ao_1_prt_others
+             1 | sto_ao_ao_1_prt_2
+             1 | sto_ao_ao_1_prt_3
+             1 | sto_ao_ao_1_prt_4
+             1 | sto_ao_ao_1_prt_5
+             2 | sto_ao_ao
+             2 | sto_ao_ao_1_prt_others
+             2 | sto_ao_ao_1_prt_2
+             2 | sto_ao_ao_1_prt_3
+             2 | sto_ao_ao_1_prt_4
+             2 | sto_ao_ao_1_prt_5
+(18 rows)
+
 -- XXX: not yet: VALIDATE parameter
 -- Exchange a partition with an external table; ensure that we require to use
 -- WITHOUT VALIDATION and that the new partition won't be included in TRUNCATE
