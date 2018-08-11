@@ -3,7 +3,7 @@ FROM centos:centos6
 ## Install some basic utilities and build tools
 RUN yum makecache && \
     rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6 && \
-    yum -y install epel-release java-1.7.0-openjdk-devel && \
+    yum -y install epel-release java-1.8.0-openjdk-devel && \
     yum -y install createrepo git iproute net-tools openssh-server rpm-build rsync sudo tree svn vim wget && \
     yum -y install ant-junit autoconf bison flex gperf indent libtool && \
     yum clean all
