@@ -105,12 +105,8 @@ SELECT * FROM homer;
  4 | 3 | 44
 (4 rows)
 
--- ORCA should not fallback when ONLY clause is used on external tables
+-- ORCA should not fallback just because external tables are in FROM clause
 -- start_ignore
-DROP TABLE IF EXISTS t1;
-NOTICE:  table "t1" does not exist, skipping
-DROP TABLE IF EXISTS ext_table_no_fallback;
-NOTICE:  table "ext_table_no_fallback" does not exist, skipping
 CREATE TABLE heap_t1 (a int, b int) DISTRIBUTED BY (b);
 CREATE EXTERNAL TABLE ext_table_no_fallback (a int, b int) LOCATION ('gpfdist://myhost:8080/test.csv') FORMAT 'CSV';
 -- end_ignore
@@ -122,6 +118,7 @@ EXPLAIN SELECT * FROM ext_table_no_fallback;
  Optimizer: legacy query optimizer
 (3 rows)
 
+-- ORCA should fallback due to ONLY keyword
 EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------

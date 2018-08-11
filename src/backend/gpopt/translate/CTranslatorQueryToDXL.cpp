@@ -2995,15 +2995,7 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 												   ULONG  //current_query_level
 )
 {
-	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
-		m_mp, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
-
-	CDXLLogicalGet *dxlop = NULL;
-	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
-
-
-	if (false == rte->inh &&
-		IMDRelation::ErelstorageExternal != md_rel->RetrieveRelStorageType())
+	if (false == rte->inh)
 	{
 		GPOS_ASSERT(RTE_RELATION == rte->rtekind);
 		// RangeTblEntry::inh is set to false iff there is ONLY in the FROM
@@ -3013,6 +3005,12 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	}
 
 	// construct table descriptor for the scan node from the range table entry
+	CDXLTableDescr *table_descr = CTranslatorUtils::GetTableDescr(
+		m_mp, m_md_accessor, m_colid_counter, rte, &m_has_distributed_tables);
+
+	CDXLLogicalGet *dxlop = NULL;
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
+
 	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
 	{
 		dxlop = GPOS_NEW(m_mp) CDXLLogicalExternalGet(m_mp, table_descr);

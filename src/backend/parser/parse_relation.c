@@ -822,9 +822,6 @@ addRangeTableEntry(ParseState *pstate,
 	rte->alias = alias;
 	rte->rtekind = RTE_RELATION;
 
-	/* external tables don't allow inheritance */
-	if (RelationIsExternal(rel))
-		inh = false;
 
 	/*
 	 * Build the list of effective column names using user-supplied aliases
