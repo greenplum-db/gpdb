@@ -126,6 +126,21 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
     rel->cdbpolicy = RelationGetPartitioningKey(relation);
 
 	rel->relstorage = relation->rd_rel->relstorage;
+	if (rel->relstorage == RELSTORAGE_AOROWS ||
+		rel->relstorage == RELSTORAGE_AOCOLS)
+	{
+		if (strcmp(NameStr(relation->rd_appendonly->compresstype), "") == 0 ||
+			pg_strcasecmp(NameStr(relation->rd_appendonly->compresstype), "none") == 0)
+		{
+			rel->iscompressed = false;
+		}
+		else
+		{
+			rel->iscompressed = true;
+		}
+	}
+	else
+		rel->iscompressed = false;
 
 	/* If it's an external table, get locations and format from catalog */
 	if (rel->relstorage == RELSTORAGE_EXTERNAL)

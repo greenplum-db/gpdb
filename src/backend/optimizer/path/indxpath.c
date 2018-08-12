@@ -602,21 +602,8 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 			ipath->indexinfo->unique)
 			rel->onerow = true;
 
-		/*
-		 * Random access to Append-Only is slow because AO doesn't use the buffer
-		 * pool and we want to avoid decompressing blocks multiple times. Only
-		 * allow that if the gp_enable_appendonly_indexscan GUC is enabled.
-		 * (The appendonlyam.c module will optimize fetches in TID order by keeping
-		 * the last decompressed block between fetch calls, so fetching multiple
-		 * TIDs that are close to each other is not that expensive, but we have no
-		 * way to model that.)
-		 */
-		if (index->amhasgettuple &&
-			(rel->relstorage == RELSTORAGE_HEAP ||
-			 root->config->gp_enable_appendonly_indexscan))
-		{
+		if (index->amhasgettuple)
 			add_path(root, rel, (Path *) ipath);
-		}
 
 		if (index->amhasgetbitmap &&
 			/* GPDB: Give a chance of bitmap index path if seqscan is disabled.

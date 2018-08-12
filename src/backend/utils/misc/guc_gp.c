@@ -327,7 +327,8 @@ bool		gp_ignore_error_table = false;
 bool		dml_ignore_target_partition_check = false;
 
 /* Planner gucs */
-bool		gp_enable_appendonly_indexscan = false;
+double		gp_appendonly_random_page_cost = DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST;
+double		gp_compressed_random_page_cost = DEFAULT_GP_COMPRESSED_RANDOM_PAGE_COST;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_predicate_propagation = false;
 bool		gp_enable_minmax_optimization = true;
@@ -674,14 +675,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&enable_groupagg,
 		true,
 		NULL, NULL, NULL
-	},
-	{
-		{"gp_enable_appendonly_indexscan", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enables the planner's use of index scan plans for append-only tables."),
-			NULL
-		},
-		&gp_enable_appendonly_indexscan,
-		false, NULL, NULL
 	},
 	{
 		{"gp_enable_hashjoin_size_heuristic", PGC_USERSET, QUERY_TUNING_METHOD,
@@ -4440,6 +4433,28 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&gp_workfile_limit_per_query,
 		0, 0, SIZE_MAX / 1024,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_appendonly_random_page_cost", PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Sets the planner's estimate of the cost of a "
+						 "nonsequentially fetched disk page from an append-only table."),
+			NULL
+		},
+		&gp_appendonly_random_page_cost,
+		DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST, 0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_compressed_random_page_cost", PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Sets the planner's estimate of the cost of a "
+						 "nonsequentially fetched disk page from a compressed append-only table."),
+			NULL
+		},
+		&gp_compressed_random_page_cost,
+		DEFAULT_GP_COMPRESSED_RANDOM_PAGE_COST, 0, DBL_MAX,
 		NULL, NULL, NULL
 	},
 

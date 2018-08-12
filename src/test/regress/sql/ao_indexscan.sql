@@ -14,7 +14,6 @@ set optimizer=off;
 set enable_seqscan=off;
 set enable_bitmapscan=off;
 set enable_indexscan=on;
-set gp_enable_appendonly_indexscan=on;
 
 -- A simple key-value lookup query. Should use an Index scan, because we disabled
 -- bitmap scans.

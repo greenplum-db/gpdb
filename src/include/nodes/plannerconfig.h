@@ -24,7 +24,6 @@ typedef struct PlannerConfig
 	bool		enable_mergejoin;
 	bool		enable_hashjoin;
 	bool        gp_enable_hashjoin_size_heuristic;
-	bool		gp_enable_appendonly_indexscan;
 	bool        gp_enable_predicate_propagation;
 	int			cdbpath_segments;
 	int			constraint_exclusion;

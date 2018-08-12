@@ -25,6 +25,8 @@
 /* If you change these, update backend/utils/misc/postgresql.sample.conf */
 #define DEFAULT_SEQ_PAGE_COST  1.0
 #define DEFAULT_RANDOM_PAGE_COST  100.0
+#define DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST 1000.0
+#define DEFAULT_GP_COMPRESSED_RANDOM_PAGE_COST 10000.0
 #define DEFAULT_CPU_TUPLE_COST	0.01
 #define DEFAULT_CPU_INDEX_TUPLE_COST 0.005
 #define DEFAULT_CPU_OPERATOR_COST  0.0025
@@ -81,7 +83,8 @@ extern bool enable_material;
 extern bool enable_mergejoin;
 extern bool enable_hashjoin;
 extern int	constraint_exclusion;
-extern bool gp_enable_appendonly_indexscan;
+extern double gp_appendonly_random_page_cost;
+extern double gp_compressed_random_page_cost;
 
 extern bool gp_enable_hashjoin_size_heuristic;          /*CDB*/
 extern bool gp_enable_predicate_propagation;

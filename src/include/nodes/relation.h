@@ -546,6 +546,7 @@ typedef struct RelOptInfo
 	double		tuples;
     struct GpPolicy   *cdbpolicy;      /* distribution of stored tuples */
 	char		relstorage;		/* from pg_class.relstorage */
+	bool		iscompressed;	/* is the table compressed? */
 	double		allvisfrac;
 	/* use "struct Plan" to avoid including plannodes.h here */
 	struct Plan *subplan;		/* if subquery (in GPDB: or CTE) */

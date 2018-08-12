@@ -442,6 +442,31 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count)
 							  &spc_random_page_cost,
 							  &spc_seq_page_cost);
 
+	/*
+	 * Random access to Append-Only is slow, because AO doesn't use the buffer
+	 * pool. And accessing a compressed AO table is even slower, as we need to
+	 * decompress a whole block for each fetch. (The AO fetcher keeps the last
+	 * decompressed block between fetch calls, so fetching multiple TIDs that are
+	 * close to each other is not that expensive. But that effect is taken into
+	 * account below, where we estimate the number of main-table pages fetched,
+	 * and not here in the per-page cost).
+	 */
+	if (baserel->relstorage == RELSTORAGE_AOROWS ||
+		baserel->relstorage == RELSTORAGE_AOCOLS)
+	{
+		/*
+		 * Note that we purposedly add the cost to random_page_cost.
+		 * 'random_page_cost' represents the raw I/O cost, while
+		 * gp_compressed_random_page_cost and gp_appendonly_random_page_cost
+		 * represent the extra cost to seek to the right position, specific
+		 * to AO tables.
+		 */
+		if (baserel->iscompressed)
+			spc_random_page_cost += gp_compressed_random_page_cost;
+		else
+			spc_random_page_cost += gp_appendonly_random_page_cost;
+	}
+
 	/*----------
 	 * Estimate number of main-table pages fetched, and compute I/O cost.
 	 *
