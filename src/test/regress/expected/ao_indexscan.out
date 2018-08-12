@@ -1,0 +1,144 @@
+-- Test index scans on AO tables.
+-- Create a test table
+create table aoindexscantab (i int4, j int4) with (appendonly=true, compresstype=zlib);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into aoindexscantab select g, g % 10000 from generate_series(1, 100000) g;
+create index on aoindexscantab(j);
+create index on aoindexscantab(i);
+-- Disable ORCA for these tests. ORCA doesn't currently create index scans on AO
+-- tables. Enable this once ORCA learns to do that.
+set optimizer=off;
+-- Force the use of index scans.
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+set enable_indexscan=on;
+set gp_enable_appendonly_indexscan=on;
+-- A simple key-value lookup query. Should use an Index scan, because we disabled
+-- bitmap scans.
+explain (costs off) select i, j from aoindexscantab where i = 90;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using aoindexscantab_i_idx on aoindexscantab
+         Index Cond: i = 90
+ Optimizer: legacy query optimizer
+(4 rows)
+
+select i, j from aoindexscantab where i = 90;
+ i  | j  
+----+----
+ 90 | 90
+(1 row)
+
+-- This could be an index-only scan, but we don't support index-only scans on
+-- AO tables.
+explain (costs off) select i from aoindexscantab where i = 90;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using aoindexscantab_i_idx on aoindexscantab
+         Index Cond: i = 90
+ Optimizer: legacy query optimizer
+(4 rows)
+
+select i from aoindexscantab where i = 90;
+ i  
+----
+ 90
+(1 row)
+
+-- Slightly more realistic cases for index scans on an AO table, where the
+-- planner should choose an index scan over a bitmap scan, not because we
+-- forced it, but because it's cheaper
+set enable_bitmapscan=on;
+explain (costs off) select * from aoindexscantab order by i limit 5;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: i
+         ->  Limit
+               ->  Index Scan using aoindexscantab_i_idx on aoindexscantab
+ Optimizer: legacy query optimizer
+(6 rows)
+
+select * from aoindexscantab order by i limit 5;
+ i | j 
+---+---
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+(5 rows)
+
+explain (costs off) select j from aoindexscantab order by j limit 15;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: j
+         ->  Limit
+               ->  Index Scan using aoindexscantab_j_idx on aoindexscantab
+ Optimizer: legacy query optimizer
+(6 rows)
+
+select j from aoindexscantab order by j limit 15;
+ j 
+---
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1
+ 1
+ 1
+ 1
+ 1
+(15 rows)
+
+-- Also try an AOCS table.
+create table aocsindexscantab (i int4, j int4) with (appendonly=true, orientation=column, compresstype=zlib);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into aocsindexscantab select g, g % 10000 from generate_series(1, 100000) g;
+create index on aocsindexscantab(j);
+create index on aocsindexscantab(i);
+set enable_bitmapscan=off;
+explain (costs off) select i, j from aocsindexscantab where i = 90;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using aocsindexscantab_i_idx on aocsindexscantab
+         Index Cond: i = 90
+ Optimizer: legacy query optimizer
+(4 rows)
+
+select i, j from aocsindexscantab where i = 90;
+ i  | j  
+----+----
+ 90 | 90
+(1 row)
+
+explain (costs off) select i from aocsindexscantab where i = 90;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using aocsindexscantab_i_idx on aocsindexscantab
+         Index Cond: i = 90
+ Optimizer: legacy query optimizer
+(4 rows)
+
+select i from aocsindexscantab where i = 90;
+ i  
+----
+ 90
+(1 row)
+

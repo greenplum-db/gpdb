@@ -490,6 +490,13 @@ ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags)
 	}
 
 	/*
+	 * The planner should only generate index-only scans on heap tables, but let's
+	 * sanity check.
+	 */
+	if (!RelationIsHeap(currentRelation))
+		elog(ERROR, "cannot perform index-only scan on a non-heap table");
+
+	/*
 	 * Initialize scan descriptor.
 	 */
 	indexstate->ioss_ScanDesc = index_beginscan(currentRelation,

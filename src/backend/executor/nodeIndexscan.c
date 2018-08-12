@@ -25,15 +25,19 @@
 #include "postgres.h"
 
 #include "access/nbtree.h"
+#include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
 #include "optimizer/clauses.h"
+#include "parser/parsetree.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 
 /* ----------------------------------------------------------------
  *		IndexNext
@@ -51,6 +55,7 @@ IndexNext(IndexScanState *node)
 	IndexScanDesc scandesc;
 	HeapTuple	tuple;
 	TupleTableSlot *slot;
+	Relation	currentRelation;
 
 	/*
 	 * extract necessary information from index scan node
@@ -66,43 +71,85 @@ IndexNext(IndexScanState *node)
 			direction = ForwardScanDirection;
 	}
 	scandesc = node->iss_ScanDesc;
+	currentRelation = node->ss.ss_currentRelation;
 	econtext = node->ss.ps.ps_ExprContext;
 	slot = node->ss.ss_ScanTupleSlot;
 
 	/*
 	 * ok, now that we have what we need, fetch the next tuple.
 	 */
-	while ((tuple = index_getnext(scandesc, direction)) != NULL)
+	if (RelationIsHeap(currentRelation))
 	{
-		/*
-		 * Store the scanned tuple in the scan tuple slot of the scan state.
-		 * Note: we pass 'false' because tuples returned by amgetnext are
-		 * pointers onto disk pages and must not be pfree()'d.
-		 */
-		ExecStoreHeapTuple(tuple,	/* tuple to store */
-					   slot,	/* slot to store in */
-					   scandesc->xs_cbuf,		/* buffer containing tuple */
-					   false);	/* don't pfree */
-
-		/*
-		 * If the index was lossy, we have to recheck the index quals using
-		 * the fetched tuple.
-		 */
-		if (scandesc->xs_recheck)
+		while ((tuple = index_getnext(scandesc, direction)) != NULL)
 		{
-			econtext->ecxt_scantuple = slot;
-			ResetExprContext(econtext);
-			if (!ExecQual(node->indexqualorig, econtext, false))
-			{
-				/* Fails recheck, so drop it and loop back for another */
-				InstrCountFiltered2(node, 1);
-				continue;
-			}
-		}
+			/*
+			 * Store the scanned tuple in the scan tuple slot of the scan state.
+			 * Note: we pass 'false' because tuples returned by amgetnext are
+			 * pointers onto disk pages and must not be pfree()'d.
+			 */
+			ExecStoreHeapTuple(tuple,	/* tuple to store */
+							   slot,	/* slot to store in */
+							   scandesc->xs_cbuf,		/* buffer containing tuple */
+							   false);	/* don't pfree */
 
-		return slot;
+			/*
+			 * If the index was lossy, we have to recheck the index quals using
+			 * the fetched tuple.
+			 */
+			if (scandesc->xs_recheck)
+			{
+				econtext->ecxt_scantuple = slot;
+				ResetExprContext(econtext);
+				if (!ExecQual(node->indexqualorig, econtext, false))
+				{
+					/* Fails recheck, so drop it and loop back for another */
+					InstrCountFiltered2(node, 1);
+					continue;
+				}
+			}
+
+			return slot;
+		}
 	}
-	
+	else if (RelationIsAppendOptimized(currentRelation))
+	{
+		while (index_getnext_tid(scandesc, direction))
+		{
+			AOTupleId aoTid;
+
+			tbm_convert_appendonly_tid_out(&(scandesc->xs_ctup.t_self), &aoTid);
+
+			if (RelationIsAoRows(currentRelation))
+				appendonly_fetch(node->iss_AOFetchDesc, &aoTid, slot);
+			else
+				aocs_fetch(node->iss_AOCSFetchDesc, &aoTid, slot);
+
+			if (TupIsNull(slot))
+				continue;
+
+			/*
+			 * If the index was lossy, we have to recheck the index quals using
+			 * the fetched tuple.
+			 */
+			if (scandesc->xs_recheck)
+			{
+				econtext->ecxt_scantuple = slot;
+				ResetExprContext(econtext);
+				if (!ExecQual(node->indexqualorig, econtext, false))
+				{
+					/* Fails recheck, so drop it and loop back for another */
+					InstrCountFiltered2(node, 1);
+					continue;
+				}
+			}
+
+			return slot;
+		}
+	}
+	else
+		elog(ERROR, "unexpected relation type '%c' in index scan",
+			 currentRelation->rd_rel->relstorage);
+
 	/*
 	 * if we get here it means the index scan failed so we are at the end of
 	 * the scan..
@@ -631,6 +678,77 @@ ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
 		index_rescan(indexstate->iss_ScanDesc,
 					 indexstate->iss_ScanKeys, indexstate->iss_NumScanKeys,
 				indexstate->iss_OrderByKeys, indexstate->iss_NumOrderByKeys);
+
+	/*
+	 * Initialize fetch descriptor for Append-Only tables.
+	 */
+	if (RelationIsHeap(currentRelation))
+	{
+		/* no initialization needed for heap fetches. */
+	}
+	else if (RelationIsAoRows(currentRelation))
+	{
+		Snapshot appendOnlyMetaDataSnapshot = estate->es_snapshot;
+
+		if (appendOnlyMetaDataSnapshot == SnapshotAny)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+		indexstate->iss_AOFetchDesc =
+			appendonly_fetch_init(currentRelation,
+								  estate->es_snapshot,
+								  appendOnlyMetaDataSnapshot);
+	}
+	else if (RelationIsAoCols(currentRelation))
+	{
+		bool		*proj;
+		int			colno;
+		Snapshot	appendOnlyMetaDataSnapshot = estate->es_snapshot;
+
+		if (SnapshotAny == appendOnlyMetaDataSnapshot)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+
+		/*
+		 * Obtain the projection.
+		 */
+		Assert(currentRelation->rd_att != NULL);
+
+		proj = (bool *) palloc0(sizeof(bool) * currentRelation->rd_att->natts);
+
+		GetNeededColumnsForScan((Node *) node->scan.plan.targetlist, proj, currentRelation->rd_att->natts);
+		GetNeededColumnsForScan((Node *) node->scan.plan.qual, proj, currentRelation->rd_att->natts);
+
+		for (colno = 0; colno < currentRelation->rd_att->natts; colno++)
+		{
+			if (proj[colno])
+				break;
+		}
+
+		/*
+		 * At least project one column. Since the tids stored in the index may not have
+		 * a corresponding tuple any more (because of previous crashes, for example), we
+		 * need to read the tuple to make sure.
+		 */
+		if (colno == currentRelation->rd_att->natts)
+			proj[0] = true;
+
+		indexstate->iss_AOCSFetchDesc =
+			aocs_fetch_init(currentRelation, estate->es_snapshot,
+							appendOnlyMetaDataSnapshot, proj);
+	}
+	else
+		elog(ERROR, "unexpected relation type '%c' in index scan",
+			 currentRelation->rd_rel->relstorage);
 
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
@@ -1208,5 +1326,17 @@ ExecEagerFreeIndexScan(IndexScanState *node)
 	{
 		index_endscan(node->iss_ScanDesc);
 		node->iss_ScanDesc = NULL;
+	}
+	if (node->iss_AOFetchDesc != NULL)
+	{
+		appendonly_fetch_finish(node->iss_AOFetchDesc);
+		pfree(node->iss_AOFetchDesc);
+		node->iss_AOFetchDesc = NULL;
+	}
+	if (node->iss_AOCSFetchDesc != NULL)
+	{
+		aocs_fetch_finish(node->iss_AOCSFetchDesc);
+		pfree(node->iss_AOCSFetchDesc);
+		node->iss_AOCSFetchDesc = NULL;
 	}
 }

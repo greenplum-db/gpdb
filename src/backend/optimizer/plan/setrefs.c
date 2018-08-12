@@ -534,14 +534,6 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					return cdb_insert_result_node(root, plan, rtoffset);
 
 				splan->scan.scanrelid += rtoffset;
-
-#ifdef USE_ASSERT_CHECKING
-				RangeTblEntry *rte = rt_fetch(splan->scan.scanrelid, root->glob->finalrtable);
-				char relstorage = get_rel_relstorage(rte->relid);
-				Assert(relstorage != RELSTORAGE_AOROWS &&
-					   relstorage != RELSTORAGE_AOCOLS);
-#endif
-
 				splan->scan.plan.targetlist =
 					fix_scan_list(root, splan->scan.plan.targetlist, rtoffset);
 				splan->scan.plan.qual =

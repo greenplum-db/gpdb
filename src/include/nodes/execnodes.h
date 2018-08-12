@@ -40,6 +40,8 @@ struct MemTupleBinding;
 struct MemTupleData;
 struct HeapScanDescData;
 struct FileScanDescData;
+struct AppendOnlyFetchDescData;
+struct AOCSFetchDescData;
 struct SliceTable;
 
 /* ----------------
@@ -1817,6 +1819,8 @@ typedef struct IndexScanState
 	ExprContext *iss_RuntimeContext;
 	Relation	iss_RelationDesc;
 	IndexScanDesc iss_ScanDesc;
+	struct AppendOnlyFetchDescData *iss_AOFetchDesc;
+	struct AOCSFetchDescData *iss_AOCSFetchDesc;
 
 	/*
 	 * tableOid is the oid of the partition or relation on which our current
