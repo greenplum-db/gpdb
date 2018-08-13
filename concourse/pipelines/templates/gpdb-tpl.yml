@@ -2495,6 +2495,7 @@ jobs:
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
+      - madlib_build_gppkg
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
       - MADlib_Test_orca_centos7
