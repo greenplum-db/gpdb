@@ -198,7 +198,10 @@ ALTER PROTOCOL demoprot_untrusted OWNER TO extprotu; -- should fail. protocol is
 GRANT SELECT ON PROTOCOL demoprot_untrusted TO extprotu; -- should fail. protocol is not trusted
 GRANT SELECT ON PROTOCOL demoprot TO extprotu;
 GRANT INSERT ON PROTOCOL demoprot TO extprotu;
+\t on
+-- print with tuples-only mode : suppress diff related to user string length.
 SELECT ptcname, ptcacl FROM PG_EXTPROTOCOL WHERE ptcname = 'demoprot';
+\t off
 SET SESSION AUTHORIZATION extprotu;
 
 CREATE WRITABLE EXTERNAL TABLE ext_w(a int) location('demoprot://demoprotfile.txt') format 'text'; -- should succeed

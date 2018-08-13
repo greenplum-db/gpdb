@@ -248,11 +248,11 @@ ERROR:  protocol "demoprot_untrusted" is not trusted
 HINT:  Only superusers may use untrusted protocols.
 GRANT SELECT ON PROTOCOL demoprot TO extprotu;
 GRANT INSERT ON PROTOCOL demoprot TO extprotu;
+\t on
+-- print with tuples-only mode : suppress diff related to user string length.
 SELECT ptcname, ptcacl FROM PG_EXTPROTOCOL WHERE ptcname = 'demoprot';
- ptcname  |                  ptcacl                  
-----------+------------------------------------------
- demoprot | {gpadmin=ar/gpadmin,extprotu=ar/gpadmin}
-(1 row)
+ demoprot | {@gpcurusername@=ar/@gpcurusername@,extprotu=ar/@gpcurusername@}
+\t off
 
 SET SESSION AUTHORIZATION extprotu;
 CREATE WRITABLE EXTERNAL TABLE ext_w(a int) location('demoprot://demoprotfile.txt') format 'text'; -- should succeed
