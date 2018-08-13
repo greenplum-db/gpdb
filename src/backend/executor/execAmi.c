@@ -807,6 +807,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		case T_TableScanState:
 		case T_DynamicTableScanState:
 		case T_DynamicIndexScanState:
+		case T_IndexOnlyScanState:
 		case T_ExternalScanState:
 		case T_IndexScanState:
 		case T_BitmapHeapScanState:
