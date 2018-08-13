@@ -4578,14 +4578,9 @@ add_second_stage_agg(PlannerInfo *root,
 		*p_current_pathkeys = NIL;
 
 	/*
-	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
-	 * for it. Make a copy of the groupClause since freeing the arrays can
-	 * pull out references still in use from underneath it.
-	 * We do not free root->simple_rel_array and root->simple_rte_array since
-	 * they are used by subroot.
-	 * GPDB_92_MERGE_FIXME: Do we still need to copy groupClause?
+	 * Since the rtable has changed, we had better recreate RelOptInfo entrys
+	 * for it.
 	 */
-	root->parse->groupClause = copyObject(root->parse->groupClause);
 	rebuild_simple_rel_and_rte(root);
 
 	/*
