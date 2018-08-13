@@ -39,6 +39,13 @@
           <codeph>--backup-dir</codeph> to consolidate the backup files, include the same
           <codeph>--backup-dir</codeph> option with <codeph>gprestore</codeph> to locate the backup
         files.</p>
+      <p>If the backup you specify is an incremental backup, you need a complete set of backup
+        files, a full backup and any required incremental backups. <codeph>gprestore</codeph>
+        ensures the complete backup set is available before attempting to restore a backup. <note
+          type="important">For incremental back up sets, the backups must be on a single device. For
+          example, a backup set must all be on a Data Domain system. </note></p>
+      <p>For information about incremental backups, see <xref
+          href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
         same name as the name specified when creating the backup set. If the target database exists
         and a table being restored exists in the database, the restore operation fails. Include the
@@ -312,6 +319,19 @@ $ gprestore --timestamp 20171103152558 --redirect-db demo2</codeblock></p>
       <p>Restore only the "wikipedia" schema included in the backup
         set:<codeblock>$ dropdb demo
 $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</codeblock></p>
+      <p>If you restore from an incremental backup set, all the required files in the backup set
+        must be available to <codeph>gprestore</codeph>. For example, the following timestamp keys
+        specify an incremental backup set. 20170514054532 is the full backup and the others are
+        incremental backups.</p>
+      <pre>20170514054532 (full backup)
+20170714095512 
+20170914081205 
+20171114064330 
+20180114051246</pre>
+      <p>The following <codeph>gprestore</codeph> command specifies the timestamp 20121114064330.
+        The incremental backup with the timestamps 20120714095512 and 20120914081205 and the full
+        backup must be available to perform a restore.</p>
+      <codeblock>gpdbrestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>
