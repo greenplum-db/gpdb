@@ -4578,7 +4578,7 @@ add_second_stage_agg(PlannerInfo *root,
 		*p_current_pathkeys = NIL;
 
 	/*
-	 * Since the rtable has changed, we had better recreate RelOptInfo entry
+	 * Since the rtable has changed, we had better recreate RelOptInfo entrys
 	 * for it.
 	 */
 	rebuild_simple_rel_and_rte(root);
