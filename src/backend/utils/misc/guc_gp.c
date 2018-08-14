@@ -3060,7 +3060,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_GPDB_ADDOPT
 		},
 		&gp_external_enable_filter_pushdown,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
