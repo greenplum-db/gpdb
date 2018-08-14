@@ -413,8 +413,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	 *  explicitly). Not for foreign tables, though.
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
-		stmt->policy = transformDistributedBy(&cxt, (DistributedBy *)stmt->distributedBy,
-							   (DistributedBy *)likeDistributedBy, bQuiet);
+		stmt->policy = transformDistributedBy(&cxt, stmt->distributedBy,
+							   likeDistributedBy, bQuiet);
 
 	if ((stmt->partitionBy != NULL) &&
 		GpPolicyIsReplicated(stmt->policy))

@@ -3821,7 +3821,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $10;
 					n->tablespacename = $11;
 					n->if_not_exists = false;
-					n->distributedBy = $12;
+					n->distributedBy = (DistributedBy *) $12;
 					n->partitionBy = $13;
 					n->relKind = RELKIND_RELATION;
 					n->policy = 0;
@@ -3843,7 +3843,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $13;
 					n->tablespacename = $14;
 					n->if_not_exists = true;
-					n->distributedBy = $15;
+					n->distributedBy = (DistributedBy *) $15;
 					n->partitionBy = $16;
 					n->relKind = RELKIND_RELATION;
 					n->policy = 0;
@@ -3865,7 +3865,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $9;
 					n->tablespacename = $10;
 					n->if_not_exists = false;
-					n->distributedBy = $11;
+					n->distributedBy = (DistributedBy *) $11;
 					n->partitionBy = $12;
 					n->relKind = RELKIND_RELATION;
 					n->policy = 0;
@@ -3887,7 +3887,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $12;
 					n->tablespacename = $13;
 					n->if_not_exists = true;
-					n->distributedBy = $14;
+					n->distributedBy = (DistributedBy *) $14;
 					n->partitionBy = $15;
 					n->relKind = RELKIND_RELATION;
 					n->policy = 0;
@@ -5116,7 +5116,7 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							n->extOptions = $15;
 							n->encoding = $16;
 							n->sreh = $17;
-							n->distributedBy = $18;
+							n->distributedBy = (DistributedBy *) $18;
 							n->policy = 0;
 							
 							/* various syntax checks for EXECUTE external table */

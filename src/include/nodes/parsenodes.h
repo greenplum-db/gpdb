@@ -1682,8 +1682,7 @@ typedef struct CreateStmt
 	char	   *tablespacename; /* table space to use, or NULL */
 	bool		if_not_exists;	/* just do nothing if it already exists? */
 
-	/* GPDB_91_MERGE_FIXME: why is this not a DistributedBy*? */
-	Node       *distributedBy;   /* what columns we distribute the data by */
+	DistributedBy *distributedBy;   /* what columns we distribute the data by */
 	Node       *partitionBy;     /* what columns we partition the data by */
 	char	    relKind;         /* CDB: force relkind to this */
 	char		relStorage;
@@ -1739,7 +1738,7 @@ typedef struct CreateExternalStmt
 	List       *extOptions;		/* generic options to external table */
 	List	   *encoding;		/* List (size 1 max) of DefElem nodes for
 								   data encoding */
-	Node       *distributedBy;   /* what columns we distribute the data by */
+	DistributedBy *distributedBy;   /* what columns we distribute the data by */
 	struct GpPolicy  *policy;	/* used for writable tables */
 
 } CreateExternalStmt;

@@ -403,7 +403,7 @@ intorel_initplan(struct QueryDesc *queryDesc, int eflags)
 	else
 		relstorage = RELSTORAGE_HEAP;
 
-	create->distributedBy = into->distributedBy; /* Seems to be not needed? */
+	create->distributedBy = (DistributedBy *) into->distributedBy; /* Seems to be not needed? */
 	create->partitionBy = NULL; /* CTAS does not not support partition. */
 
     create->policy = queryDesc->plannedstmt->intoPolicy;

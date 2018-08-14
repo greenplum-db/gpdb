@@ -13730,7 +13730,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro, List
 		List **col_encs = NULL;
 
 		cs->relKind = RELKIND_RELATION;
-		cs->distributedBy = (Node *)distro;
+		cs->distributedBy = distro;
 		cs->relation = tmpname;
 		cs->ownerid = rel->rd_rel->relowner;
 		cs->tablespacename = get_tablespace_name(rel->rd_rel->reltablespace);
