@@ -90,9 +90,10 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	while (doscan)
 	{
 		bitmap = index_getbitmap(scandesc, node->biss_result);
+		/* bitmap cannot be NULL here. */
+		Assert(bitmap);
 
-		if ((NULL != bitmap) &&
-			!(IsA(bitmap, TIDBitmap) || IsA(bitmap, StreamBitmap)))
+		if (!(IsA(bitmap, TIDBitmap) || IsA(bitmap, StreamBitmap)))
 		{
 			elog(ERROR, "unrecognized result from bitmap index scan");
 		}
@@ -106,8 +107,12 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 		if (node->ss.ps.instrument && (node->ss.ps.instrument)->need_cdb)
 			tbm_generic_set_instrument(bitmap, node->ss.ps.instrument);
 
-		if (node->biss_result == NULL)
-			node->biss_result = (Node *) bitmap;
+		/* 
+		 * bitmap is already an accumulated value(both for streambitmap and
+		 * tidbitmap. And it cannot be NULL. So we always update node->biss_result.
+		 * with bitmap.
+		 */
+		node->biss_result = (Node *) bitmap;
 
 		doscan = ExecIndexAdvanceArrayKeys(node->biss_ArrayKeys,
 										   node->biss_NumArrayKeys);

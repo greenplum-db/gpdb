@@ -234,6 +234,24 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 		{
 			stream_add_node((StreamBitmap *)bm, is, BMS_OR);
 		}
+		else if(IsA(bm, TIDBitmap))
+		{
+			TIDBitmap *tbm = (TIDBitmap *)bm;
+			StreamBitmap *sb = makeNode(StreamBitmap);
+			
+			Assert(tbm_is_empty(tbm));
+			tbm_free(tbm);
+			/* 
+			 * We must create the StreamBitmap outside of our temporary
+			 * memory context. The reason is, because we glue all the 
+			 * related streams together, bitmap_stream_free() will
+			 * descend the stream tree and free up all the nodes by
+			 * killing their memory context. If we lose the StreamBitmap
+			 * memory, we'll be reading invalid memory.
+			 */
+			sb->streamNode = is;
+			bm = (Node *)sb;
+		}
 		else
 		{
 			elog(ERROR, "non stream bitmap"); 
@@ -253,7 +271,8 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 	else
 	{
 		/* Return an empty bitmap */
-		bm = (Node *) tbm_create(10 * 1024L);
+		if (!bm)
+			bm = (Node *) tbm_create(10 * 1024L);
 	}
 
 	PG_RETURN_POINTER(bm);
