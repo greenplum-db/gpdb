@@ -18,6 +18,12 @@ select count(*) from bm_test where i in(1, 2);
     20
 (1 row)
 
+select count(*) from bm_test where i in(1, 8); -- tuple with i = 1 and i = 8 is on different segments
+ count 
+-------
+    20
+(1 row)
+
 select * from bm_test where i > 10;
  i | t 
 ---+---
