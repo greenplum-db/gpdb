@@ -1604,7 +1604,8 @@ INSERT INTO gp_max_csv_line_length_target SELECT * FROM gp_max_csv_line_length_i
 DROP TABLE gp_max_csv_line_length_target;
 DROP EXTERNAL TABLE gp_max_csv_line_length_issue;
 
--- Incomplete external data fileREATE OR REPLACE FUNCTION gpformatter() RETURNS record
+-- Incomplete external data file
+CREATE OR REPLACE FUNCTION gpformatter() RETURNS record
 AS '$libdir/gpformatter.so', 'formatter_import'
 LANGUAGE C STABLE;
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_gpformatter;
