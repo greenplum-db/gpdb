@@ -234,6 +234,9 @@ MemoryAccounting_GetAccountCurrentBalance(MemoryAccountIdType memoryAccountId);
 extern uint64
 MemoryAccounting_GetGlobalPeak(void);
 
+extern bool
+MemoryAccounting_IsLiveAccount(MemoryAccountIdType id);
+
 extern void
 MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
 		MemoryAccountIdType accountCount, StringInfoData *str, uint32 indentation);

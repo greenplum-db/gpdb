@@ -66,22 +66,6 @@ extern uint64 MemoryAccountingOutstandingBalance;
 extern uint64 MemoryAccountingPeakBalance;
 
 /*
- * MemoryAccounting_IsLiveAccount
- *    Checks if an account is live.
- *
- * id: the id of the account
- */
-static inline bool
-MemoryAccounting_IsLiveAccount(MemoryAccountIdType id)
-{
-	AssertImply(NULL == shortLivingMemoryAccountArray, liveAccountStartId == nextAccountId);
-	bool isValidShortLivingAccount = (id >= liveAccountStartId &&
-      id < (liveAccountStartId + (NULL == shortLivingMemoryAccountArray ? 0 : shortLivingMemoryAccountArray->accountCount)));
-	return isValidShortLivingAccount ||
-	    ((id <= MEMORY_OWNER_TYPE_END_LONG_LIVING) && (id > MEMORY_OWNER_TYPE_Undefined)) /* Valid long living? */;
-}
-
-/*
  * MemoryAccounting_ConvertIdToAccount
  *    Converts an account ID to an account pointer.
  *

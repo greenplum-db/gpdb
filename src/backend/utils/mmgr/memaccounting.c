@@ -385,6 +385,22 @@ MemoryAccounting_GetGlobalPeak()
 }
 
 /*
+ * MemoryAccounting_IsLiveAccount
+ *    Checks if an account is live.
+ *
+ * id: the id of the account
+ */
+bool
+MemoryAccounting_IsLiveAccount(MemoryAccountIdType id)
+{
+	AssertImply(NULL == shortLivingMemoryAccountArray, liveAccountStartId == nextAccountId);
+	bool isValidShortLivingAccount = (id >= liveAccountStartId &&
+									  id < (liveAccountStartId + (NULL == shortLivingMemoryAccountArray ? 0 : shortLivingMemoryAccountArray->accountCount)));
+	return isValidShortLivingAccount ||
+		   ((id <= MEMORY_OWNER_TYPE_END_LONG_LIVING) && (id > MEMORY_OWNER_TYPE_Undefined)) /* Valid long living? */;
+}
+
+/*
  * MemoryAccounting_Serialize
  * 		Serializes the current memory accounting tree into the "buffer"
  */
