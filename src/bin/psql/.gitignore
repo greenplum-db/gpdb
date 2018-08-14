@@ -4,5 +4,6 @@
 /dumputils.c
 /keywords.c
 /kwlookup.c
+/lex.backup
 
 /psql
