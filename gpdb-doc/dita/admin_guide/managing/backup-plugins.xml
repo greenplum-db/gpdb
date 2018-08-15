@@ -3,10 +3,6 @@
 <topic id="topic_isj_khw_sbs">
   <title>Using gpbackup Storage Plugins</title>
   <body>
-    <note type="warning">The storage plugin functionality for <codeph>gpbackup</codeph> and
-        <codeph>gprestore</codeph> is an experimental feature is not intended for use in a
-      production environment. Experimental features are subject to change without notice in future
-      releases.</note>
     <p>You can configure the Greenplum Database <xref
         href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
         <xref href="../../utility_guide/admin_utilities/gprestore.xml"

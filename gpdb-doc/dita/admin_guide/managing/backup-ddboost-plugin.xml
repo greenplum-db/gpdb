@@ -3,10 +3,6 @@
 <topic id="topic_ddb-plugin" otherprops="pivotal">
   <title>Using the DD Boost Storage Plugin with gpbackup and gprestore</title>
   <body>
-    <note type="warning">The DD Boost storage plugin for <codeph>gpbackup</codeph> and
-        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
-      production environment. Experimental features are subject to change without notice in future
-      releases.</note>
     <note>The DD Boost storage plugin is available only in the commercial release of Pivotal
       Greenplum Database.</note>
     <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
@@ -205,9 +201,6 @@ options:
         hosts.</p>
       <p>The DD Boost storage plugin application must be in the same location on every Greenplum
         Database host. The configuration file is required only on the master host.</p>
-      <p>When running <codeph>gpbackup</codeph>, the <codeph>--plugin-config</codeph> option is
-        supported only with <codeph>--single-data-file</codeph> or
-        <codeph>--metadata-only</codeph>.</p>
       <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
         files in this location in the Data Domain storage unit. </p>
       <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
