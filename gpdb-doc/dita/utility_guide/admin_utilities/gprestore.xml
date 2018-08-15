@@ -39,18 +39,18 @@
           <codeph>--backup-dir</codeph> to consolidate the backup files, include the same
           <codeph>--backup-dir</codeph> option with <codeph>gprestore</codeph> to locate the backup
         files.</p>
-      <p>If the backup you specify is an incremental backup, you need a complete set of backup
-        files, a full backup and any required incremental backups. <codeph>gprestore</codeph>
-        ensures the complete backup set is available before attempting to restore a backup. <note
-          type="important">For incremental back up sets, the backups must be on a single device. For
+      <p>If the backup you specify is an incremental backup, you need a complete set of backup files
+        (a full backup and any required incremental backups). <codeph>gprestore</codeph> ensures
+        that the complete backup set is available before attempting to restore a backup. <note
+          type="important">For incremental backup sets, the backups must be on a single device. For
           example, a backup set must all be on a Data Domain system. </note></p>
       <p>For information about incremental backups, see <xref
           href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
-        same name as the name specified when creating the backup set. If the target database exists
-        and a table being restored exists in the database, the restore operation fails. Include the
-          <codeph>--create-db</codeph> option if the target database does not exist in the cluster.
-        You can optionally restore a backup set to a different database by using the
+        the same name as the name specified when creating the backup set. If the target database
+        exists and a table being restored exists in the database, the restore operation fails.
+        Include the <codeph>--create-db</codeph> option if the target database does not exist in the
+        cluster. You can optionally restore a backup set to a different database by using the
           <codeph>--redirect-db</codeph> option.</p>
       <p>When restoring a backup set that contains data from some leaf partitions of a partitioned
         tables, the partitioned table is restored along with the data for the leaf partitions. For

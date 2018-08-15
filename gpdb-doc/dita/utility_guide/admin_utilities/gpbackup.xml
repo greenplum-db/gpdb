@@ -212,11 +212,10 @@
         </plentry>
         <plentry id="incremental">
           <pt><b>--incremental</b></pt>
-          <pd>Specify this option to create an incremental backup that will either be added to an
-            existing incremental backup set, or be used to create a backup set. A backup set is a
-            full backup and one or more incremental backups. The backups in the set must be created
-            with a consistent set of backup options to ensure that the backup set can be used in a
-            restore operation. </pd>
+          <pd>Specify this option to add an incremental backup to an incremental backup set. A
+            backup set is a full backup and one or more incremental backups. The backups in the set
+            must be created with a consistent set of backup options to ensure that the backup set
+            can be used in a restore operation. </pd>
           <pd>By default, <codeph>gpbackup</codeph> attempts to find the most recent existing backup
             with a consistent set of options. If the backup is a full backup, the utility creates a
             backup set. If the backup is an incremental backup, the utility adds the backup to the
@@ -230,9 +229,9 @@
                   <varname>backup-timestamp</varname></pt>
                 <pd>Optional. Specifies the timestamp of a backup. The specified backup must have
                   backup options that are consistent with the incremental backup that is being
-                  created. If the specified backup is full backup, the utility creates a backup set.
-                  If the specified backup is an incremental backup, the utility adds the incremental
-                  backup to the existing backup set.</pd>
+                  created. If the specified backup is a full backup, the utility creates a backup
+                  set. If the specified backup is an incremental backup, the utility adds the
+                  incremental backup to the existing backup set.</pd>
               </plentry>
             </parml>
           </pd>

@@ -11,9 +11,10 @@
       (including append-optimized, column-oriented tables) only if the tables have changed. For
       partitioned append-optimized tables, only the changed partitions are backed up. </p>
     <p>Incremental backups are efficient when the total amount of data in append-optimized tables or
-      table partitions that changed is small compared to the data has not changed. </p>
-    <p>An incremental backup backs up an append-optimized only if one of the following operations
-      was performed on the table after the last full or incremental backup:</p>
+      table partitions that changed is small compared to the data that has not changed since the
+      last backup. </p>
+    <p>An incremental backup backs up an append-optimized table only if one of the following
+      operations was performed on the table after the last full or incremental backup:</p>
     <ul id="ul_cvy_xhp_34">
       <li>
         <codeph>ALTER TABLE</codeph>
@@ -37,47 +38,39 @@
   <topic id="topic_kvf_mkr_t2b">
     <title>About Incremental Backup Sets</title>
     <body>
-      <section>
-        <p>A complete incremental backup set includes the following backups:<ul id="ul_gzr_nkr_t2b">
-            <li>A full backup with a timestamp before the current incremental backup. This is the
-              full backup that the incremental backups are based on.</li>
-            <li>The set of incremental backups that capture the changes to the database from the
-              time of the full backup.</li>
-          </ul></p>
-        <p>For example, you create a full backup and then create three daily incremental backups.
-          The full backup and all three incremental backups are the backup set and are required to
-          restore data to the database.</p>
-        <p>When adding an incremental backup to a backup set, <codeph>gpbackup</codeph> ensures that
-          the base full backup and the incremental backups are consistent by checking these
-            <codeph>gpbackup</codeph> options.<ul id="ul_hzr_nkr_t2b">
-            <li><codeph>--backup-dir</codeph> - The directory must be the same. The backup set, full
-              backup and incremental backups must be in the same location.</li>
-            <li><codeph>--plugin-config</codeph> - The configuration must reference the same plugin
-              binary.</li>
-            <li><codeph>--dbname</codeph> - The database must be the same.</li>
-            <li><codeph>--single-data-file</codeph> - This option must be either specified or absent
-              for all backups in the set.</li>
-            <li>The options that filter tables and schemas such as
-                <codeph>--include-table-file</codeph> or <codeph>--include-schema</codeph> must be
-              the same.<p>When checking schema filters, only the schemas are checked, not the schema
-                objects.</p></li>
-            <li><codeph>--with-stats</codeph> - If the <codeph>--with-stats</codeph> option is
-              specified on a full backup, it must be specified for all incremental backups. If
-                <codeph>--with-stats</codeph> is specified on an incremental backup and not on the
-              full backup the backup fails.</li>
-            <li>If compression is used on the on the full backup, compression must be used on the
-              incremental backups, different compression levels are allowed (the default is
-              compression level 1). You can specify <codeph>--no-compression</codeph> on a full
-              backup and use compression on the incremental backups.</li>
-          </ul></p>
-        <p>If you try adding an incremental backup to a backup set, the backup operation fails if
-          the <codeph>gpbackup</codeph> options are not consistent.</p>
-        <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>
-          utility options, see <xref href="../../utility_guide/admin_utilities/gpbackup.xml"
-            >gpbackup</xref> and <xref href="../../utility_guide/admin_utilities/gprestore.xml"
-            >gprestore</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Utility
-              Guide</cite></ph>.</p>
-      </section>
+      <p>An incremental backup set includes the following backups:<ul id="ul_gzr_nkr_t2b">
+          <li>A full backup. This is the full backup that the incremental backups are based on. </li>
+          <li>The set of incremental backups that capture the changes to the database from the time
+            of the full backup.</li>
+        </ul></p>
+      <p>For example, you can create a full backup and then create three daily incremental backups.
+        The full backup and all three incremental backups are the backup set. For information about
+        using an incremental backup set, see <xref href="#topic_btr_xfr_t2b/incr_backup_scenario"
+          format="dita"/>.</p>
+      <p>When you create or add to an incremental backup set, <codeph>gpbackup</codeph> ensures that
+        the backups in the set are created with a consistent set of backup options to ensure that
+        the backup set can be used in a restore operation. For information about backup set
+        consistency, see <xref href="#topic_btr_xfr_t2b" format="dita"/>.</p>
+      <p>When you create an incremental backup you include these options with the other
+          <codeph>gpbackup</codeph> options to create a backup:<ul id="ul_lmq_rs5_p2b">
+          <li><codeph>--leaf-partition-data</codeph> - Required for all backups in the incremental
+            backup set.<ul id="ul_sr1_cbv_p2b">
+              <li>Required when you create a full backup that will be the base backup for an
+                incremental backup set.</li>
+              <li>Required when you create an incremental backup.</li>
+            </ul></li>
+          <li><codeph>--incremental</codeph> - Required when you create an incremental backup.<p>You
+              cannot combine <codeph>--data-only</codeph> or <codeph>--metadata-only</codeph> with
+                <codeph>--incremental</codeph>.</p></li>
+          <li><codeph>--from-timestamp</codeph> - Optional. This option can be used with
+              <codeph>--incremental</codeph>. The timestamp you specify is an existing backup. The
+            timestamp can be either a full backup or incremental backup. The backup being created
+            must be compatible with the backup specified with the <codeph>--from-timestamp</codeph>
+              option.<p>If you do not specify <codeph>--from-timestamp</codeph>,
+                <codeph>gpbackup</codeph> attempts to find a compatible backup based on information
+              in the <codeph>gpbackup</codeph> history file. See <xref
+                href="#topic_btr_xfr_t2b/incr_backup_notes" format="dita"/>.</p></li>
+        </ul></p>
     </body>
   </topic>
   <topic id="topic_btr_xfr_t2b">
@@ -85,34 +78,46 @@
     <body>
       <ul id="ul_ors_2lr_t2b">
         <li><xref href="#topic_btr_xfr_t2b/incr_backup_scenario" format="dita"/></li>
+        <li><xref href="#topic_btr_xfr_t2b/gpbackup_increment" format="dita"/></li>
+        <li><xref href="#topic_btr_xfr_t2b/gprestore_increment" format="dita"/></li>
         <li><xref href="#topic_btr_xfr_t2b/incr_backup_notes" format="dita"/></li>
       </ul>
-      <p>You use these <codeph>gpbackup</codeph> options to create an incremental backup set.<ul
-          id="ul_lmq_rs5_p2b">
-          <li><codeph>--incremental</codeph> - Required when you create an incremental backup.</li>
-          <li><codeph>--partitioned-table-data</codeph><ul id="ul_sr1_cbv_p2b">
-              <li>Required when you create a full backup that will be the base backup for an
-                incremental backup set.</li>
-              <li>Required when you create an incremental backup.</li>
-            </ul></li>
-          <li><codeph>--from-timestamp</codeph> - Optional. The timestamp is for an existing backup
-            that the incremental backup will be based on. The timestamp can be either a full backup
-            or incremental backup. The backup being created must be compatible with the backup
-            specified with the <codeph>--from-timestamp</codeph> option.<p>If you do not specify
-                <codeph>--from-timestamp</codeph>, <codeph>gpcrondump</codeph> attempts to find a
-              compatible backup based on information in the <codeph>gpbackup</codeph> history file.
-              See <xref href="#topic_btr_xfr_t2b/incr_backup_notes" format="dita"/>.</p></li>
+      <p>When you add an incremental backup to a backup set, <codeph>gpbackup</codeph> ensures that
+        the full backup and the incremental backups are consistent by checking these
+          <codeph>gpbackup</codeph> options:<ul id="ul_hzr_nkr_t2b">
+          <li><codeph>--dbname</codeph> - The database must be the same.</li>
+          <li><codeph>--backup-dir</codeph> - The directory must be the same. The backup set, the
+            full backup and the incremental backups, must be in the same location.</li>
+          <li><codeph>--single-data-file</codeph> - This option must be either specified or absent
+            for all backups in the set.</li>
+          <li><codeph>--plugin-config</codeph> - If this option is specified, it must be specified
+            for all backups in the backup set. The configuration must reference the same plugin
+            binary.</li>
+          <li>
+            <codeph>--include-table-file</codeph>, <codeph>--include-schema</codeph>, or any other
+            options that filter tables and schemas must be the same. <p>When checking schema
+              filters, only the schema names are checked, not the objects contained in the
+              schemas.</p></li>
+          <li><codeph>--no-compression</codeph> - If this option is specified, it must be specified
+            for all backups in the backup set. <p>If compression is used on the on the full backup,
+              compression must be used on the incremental backups. Different compression levels are
+              allowed for the backups in the backup set. For a backup, the default is compression
+              level 1.</p></li>
         </ul></p>
-      <p>You cannot combine <codeph>--data-only</codeph> or <codeph>--metadata-only</codeph> with
-          <codeph>--incremental</codeph>.</p>
+      <p>If you try to add an incremental backup to a backup set, the backup operation fails if the
+          <codeph>gpbackup</codeph> options are not consistent.</p>
+      <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
+        options, see <xref href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref>
+        and <xref href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Utility Guide</cite></ph>.</p>
       <section id="incr_backup_scenario">
         <title>Example Using Incremental Backup Sets</title>
-        <p>Each backup has a key, which is a timestamp taken when the backup is created. For
-          example, if you create a backup on May 14, 2017, the backup set file names contain
+        <p>Each backup has a timestamp taken when the backup is created. For example, if you create
+          a backup on May 14, 2017, the backup file names contain
               <codeph>20170514<varname>hhmmss</varname></codeph>. The <varname>hhmmss</varname>
           represents the time: hour, minute, and second.</p>
-        <p>This example assumes that you have created both full and incremental backups of the
-          database <i>mytest</i>. To create the full backups, you used this command: </p>
+        <p>This example assumes that you have created two full backups and incremental backups of
+          the database <i>mytest</i>. To create the full backups, you used this command: </p>
         <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data</codeblock>
         <p>You created incremental backups with this command:</p>
         <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental</codeblock>
@@ -139,67 +144,25 @@
           the options <codeph>--leaf-partition-data</codeph> and
           <codeph>--incremental</codeph>.<codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental</codeblock></p>
         <p>You can specify the <codeph>--from-timestamp</codeph> option to create an incremental
-          backup base on an existing incremental or full backup. Based on the example, this command
+          backup based on an existing incremental or full backup. Based on the example, this command
           adds a fourth incremental backup to the backup set that includes
             <codeph>20170914081205</codeph> as an incremental backup and uses
             <codeph>20170514054532</codeph> as the full backup.</p>
-        <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental --from-timesamp 20170914081205</codeblock>
-        <p>This command creates in incremental backup set based on the full backup
+        <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental --from-timestamp 20170914081205</codeblock>
+        <p>This command creates an incremental backup set based on the full backup
             <codeph>20171114064330</codeph> and is separate from the backup set that includes the
           incremental backup
-          <codeph>20180114051246</codeph>.<codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental --from-timesamp 20171114064330</codeblock></p>
+          <codeph>20180114051246</codeph>.<codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental --from-timestamp 20171114064330</codeblock></p>
         <p>To restore a database with the incremental backup <codeph>20170914081205</codeph>, you
           need the incremental backups <codeph>20120914081205</codeph> and
             <codeph>20170714095512</codeph>, and the full backup <codeph>20170514054532</codeph>.
           This would be the <codeph>gprestore</codeph> command.
           <codeblock>gprestore --backup-dir /backupdir --timestamp 20170914081205</codeblock></p>
       </section>
-      <section id="incr_backup_notes">
-        <title>Incremental Backup Notes</title>
-        <p>To create an incremental backup, or to restore data from an incremental backup set, you
-          need the complete backup set. When you archive incremental backups, the complete backup
-          set must be archived. You must archive all the files created on the master and all
-          segments. </p>
-        <p>Each time <codeph>gpbackup</codeph> runs, the utility adds backup information to the
-          history file <codeph>gpbackup_history.yaml</codeph> in the Greenplum Database master data
-          directory. The file includes backup options and other backup information. </p>
-        <p>If you do not specify the <codeph>--from-timestamp</codeph> option when you create an
-          incremental backup, <codeph>gpbackup</codeph> uses the most recent backup with a
-          consistent set of options. The utility checks the backup history file to find the backup
-          with a consistent set of options. If the utility cannot find a backup with a consistent
-          set of options or the history file does not exist, <codeph>gpbackup</codeph> displays a
-          message stating that a full backup must be created before an incremental can be created. </p>
-        <p>If you specify the <codeph>--from-timestamp</codeph> option when you create an
-          incremental backup, <codeph>gpbackup</codeph> ensures that the options of the backup being
-          created is consistent with the options of the specified backup.</p>
-        <p>You can perform a restore operation from any backup in the backup set. However, changes
-          captured in incremental backups later than the backup use to restore database data will
-          not be restored.</p>
-        <p>When restoring from an incremental backup set, <codeph>gprestore</codeph> checks the
-          backups and restores each append-optimized table from the most recent version of the
-          append-optimized table in the backup set and restores the heap tables from the latest
-          backup.</p>
-        <p>The incremental back up set, a full backup and associated incremental backups, must be on
-          a single device. For example, a the backups in a backup set must all be on a file system
-          or must all be on a Data Domain system. </p>
-        <note type="warning">Changes to the Greenplum Database segment configuration invalidate
-          incremental backups. After you change the segment configuration, for example, add segment
-          instances, you must create a full backup before you can create an incremental
-          backup.</note>
-      </section>
-    </body>
-  </topic>
-  <topic id="topic11" xml:lang="en">
-    <title>Incremental Backup and Restore Example</title>
-    <body>
-      <ul id="ul_frp_v3r_t2b">
-        <li><xref href="#topic11/gpbackup_increment" format="dita"/></li>
-        <li><xref href="#topic11/gprestore_increment" format="dita"/></li>
-      </ul>
       <section id="gpbackup_increment">
         <title>Creating an Incremental Backup with gpbackup</title>
-        <p>The <codeph>gpbackup</codeph> output displays the timestamp of the backup that the
-          incremental back is based on. In this example, the incremental backup is based on the
+        <p>The <codeph>gpbackup</codeph> output displays the timestamp of the backup on which the
+          incremental backup is based. In this example, the incremental backup is based on the
           backup with timestamp <codeph>20180802171642</codeph>. The backup
             <codeph>20180802171642</codeph> be an incremental or full backup.</p>
         <codeblock>$ <b>gpbackup --dbname test --backup-dir /backups --leaf-partition-data --incremental</b>
@@ -227,12 +190,11 @@ Tables backed up:  4 / 4 [======================================================
       </section>
       <section id="gprestore_increment">
         <title>Restoring from an Incremental Backup with gprestore</title>
-        <p>When restoring an from an incremental backup set, the <codeph>gprestore</codeph> log the
-          backups in the backup set that are used to restore a database. You can display the backups
-          on the command line if you specify the <codeph>--verbose</codeph> option. For example, the
-          following <codeph>gprestore</codeph> command restores a backup using the timestamp
-            <codeph>20180807092740</codeph>, an incremental backup. The output includes the backups
-          that were used to restore the database
+        <p>When restoring an from an incremental backup, you can specify the
+            <codeph>--verbose</codeph> option to display the backups that are used in the restore
+          operation on the command line. For example, the following <codeph>gprestore</codeph>
+          command restores a backup using the timestamp <codeph>20180807092740</codeph>, an
+          incremental backup. The output includes the backups that were used to restore the database
           data.<codeblock>$ <b>gprestore --create-db --timestamp 20180807162904 --verbose</b>
 ...
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[INFO]:-Pre-data metadata restore complete
@@ -254,8 +216,49 @@ Tables backed up:  4 / 4 [======================================================
 20180807:16:31:57 gprestore:gpadmin:mdw:008603-[INFO]:-Post-data metadata restore complete
 ...</codeblock></p>
         <p>The output shows that the restore operation used three backups. </p>
+        <p>When restoring an from an incremental backup, <codeph>gprestore</codeph> also lists the
+          backups that are used in the restore operation in the <codeph>gprestore</codeph> log
+          file.</p>
         <p>During the restore operation, <codeph>gprestore</codeph> displays an error if the full
           backup or other required incremental backup is not available. </p>
+      </section>
+      <section id="incr_backup_notes">
+        <title>Incremental Backup Notes</title>
+        <p>To create an incremental backup, or to restore data from an incremental backup set, you
+          need the complete backup set. When you archive incremental backups, the complete backup
+          set must be archived. You must archive all the files created on the master and all
+          segments. </p>
+        <p>Each time <codeph>gpbackup</codeph> runs, the utility adds backup information to the
+          history file <codeph>gpbackup_history.yaml</codeph> in the Greenplum Database master data
+          directory. The file includes backup options and other backup information. </p>
+        <p>If you do not specify the <codeph>--from-timestamp</codeph> option when you create an
+          incremental backup, <codeph>gpbackup</codeph> uses the most recent backup with a
+          consistent set of options. The utility checks the backup history file to find the backup
+          with a consistent set of options. If the utility cannot find a backup with a consistent
+          set of options or the history file does not exist, <codeph>gpbackup</codeph> displays a
+          message stating that a full backup must be created before an incremental can be created. </p>
+        <p>If you specify the <codeph>--from-timestamp</codeph> option when you create an
+          incremental backup, <codeph>gpbackup</codeph> ensures that the options of the backup that
+          is being created are consistent with the options of the specified backup.</p>
+        <p>The <codeph>gpbackup</codeph> option <codeph>--with-stats</codeph> is not required to be
+          the same for all backups in the backup set. However, to perform a restore operation with
+          the <codeph>gprestore</codeph> option <codeph>--with-stats</codeph> to restore statistics,
+          the backup you specify must have must have used the <codeph>--with-stats</codeph> when
+          creating the backup. </p>
+        <p>You can perform a restore operation from any backup in the backup set. However, changes
+          captured in incremental backups later than the backup use to restore database data will
+          not be restored.</p>
+        <p>When restoring from an incremental backup set, <codeph>gprestore</codeph> checks the
+          backups and restores each append-optimized table from the most recent version of the
+          append-optimized table in the backup set and restores the heap tables from the latest
+          backup.</p>
+        <p>The incremental back up set, a full backup and associated incremental backups, must be on
+          a single device. For example, the backups in a backup set must all be on a file system or
+          must all be on a Data Domain system. </p>
+        <note type="warning">Changes to the Greenplum Database segment configuration invalidate
+          incremental backups. After you change the segment configuration (add or remove segment
+          instances), you must create a full backup before you can create an incremental
+          backup.</note>
       </section>
     </body>
   </topic>

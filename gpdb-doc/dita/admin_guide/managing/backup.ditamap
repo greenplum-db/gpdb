@@ -14,7 +14,6 @@
       <topicref href="backup-gpbackup-incremental.xml">
         <topicref href="backup-gpbackup-incremental.xml#topic_kvf_mkr_t2b"/>
         <topicref href="backup-gpbackup-incremental.xml#topic_btr_xfr_t2b"/>
-        <topicref href="backup-gpbackup-incremental.xml#topic11"/>
       </topicref>
       <topicref href="backup-boostfs.xml">
         <topicref href="backup-boostfs.xml#topic_zp4_mvv_bdb"/>
