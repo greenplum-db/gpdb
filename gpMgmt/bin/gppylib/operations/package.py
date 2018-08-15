@@ -518,14 +518,20 @@ class ValidateInstallPackage(Operation):
             #    package geos-3.2.2-1.x86_64 is already installed
             #    package proj-4.7.0-1.x86_64 is already installed
             #    package postgis-1.0-1.x86_64 is already installed
+
+            already_installed_msg = None
             for line in lines:
                 if 'already installed' in line.lower():
-                    package_name = line.split()[1]
-                    rpm_name = "%s.rpm" % package_name
-                    rpm_set.remove(rpm_name)
-                else:
-                    # This is unexpected, so bubble up the ExecutionError.
-                    raise
+                    already_installed_msg = line
+                    break
+
+            if already_installed_msg is not None:
+                package_name = already_installed_msg.split()[1]
+                rpm_name = "%s.rpm" % package_name
+                rpm_set.remove(rpm_name)
+            else:
+                # This is unexpected, so bubble up the ExecutionError.
+                raise
 
         # MPP-14359 - installation and uninstallation prechecks must also consider
         # the archive. That is, if a partial installation had added all rpms
