@@ -2563,7 +2563,7 @@ create_nestloop_path(PlannerInfo *root,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-                     List *mergeclause_list,    /*CDB*/
+                     List *cdbclause_list,    /*CDB*/
 					 List *pathkeys)
 {
 	NestPath       *pathnode;
@@ -2584,7 +2584,7 @@ create_nestloop_path(PlannerInfo *root,
                                          jointype,
                                          &outer_path,       /* INOUT */
                                          &inner_path,       /* INOUT */
-                                         mergeclause_list,
+                                         cdbclause_list,
                                          pathkeys,
                                          NIL,
                                          false,
@@ -2676,7 +2676,7 @@ create_mergejoin_path(PlannerInfo *root,
 					  List *restrict_clauses,
 					  List *pathkeys,
 					  List *mergeclauses,
-                      List *allmergeclauses,    /*CDB*/
+                      List *cdbclauses,    /*CDB*/
 					  List *outersortkeys,
 					  List *innersortkeys)
 {
@@ -2713,7 +2713,7 @@ create_mergejoin_path(PlannerInfo *root,
                                          jointype,
                                          &outer_path,       /* INOUT */
                                          &inner_path,       /* INOUT */
-                                         allmergeclauses,
+										 cdbclauses,
                                          outermotionkeys,
                                          innermotionkeys,
                                          outersortkeys == NIL,
@@ -2834,7 +2834,7 @@ create_hashjoin_path(PlannerInfo *root,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-                     List *mergeclause_list,    /*CDB*/
+                     List *cdbclause_list,    /*CDB*/
 					 List *hashclauses)
 {
 	HashPath       *pathnode;
@@ -2849,7 +2849,7 @@ create_hashjoin_path(PlannerInfo *root,
 										 jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
-										 mergeclause_list,
+										 cdbclause_list,
 										 NIL,   /* don't care about ordering */
 										 NIL,
 										 false,

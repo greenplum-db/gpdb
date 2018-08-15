@@ -233,6 +233,42 @@ WITH RECURSIVE subdept(id, parent_department, name) AS
 )
 SELECT count(*) FROM subdept;
 
+-- MPP-29458
+create table SECO_t1 (id  numeric(10,0) ,field_dt date) distributed by (id);
+create table SECO_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (id,field_tms);
+
+insert into seco_t1 values(10 ,'2018-1-10');
+insert into seco_t1 values(11 ,'2018-1-11');
+insert into seco_t2 values(10 ,'2018-1-10'::timestamp);
+insert into seco_t2 values(11 ,'2018-1-11'::timestamp);
+
+-- Test nest loop redistribute keys
+set enable_nestloop to on;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+select count(*) from seco_t1 t1 ,seco_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+
+-- Test hash join redistribute keys
+set enable_nestloop to off;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+select count(*) from seco_t1 t1 ,seco_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+
+drop table SECO_t1;
+drop table SECO_t2;
+
+-- Test merge join redistribute keys
+create table SECO_t1 (id  numeric(10,0) ,field_dt date) distributed randomly;
+
+create table SECO_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (field_tms);
+
+insert into SECO_t1 values(10 ,'2018-1-10');
+insert into SECO_t1 values(11 ,'2018-1-11');
+insert into SECO_t2 values(10 ,'2018-1-10'::timestamp);
+insert into SECO_t2 values(11 ,'2018-1-11'::timestamp);
+
+select * from SECO_t1 t1 full outer join SECO_t2 t2 on T1.id = T2.id and T1.field_dt = t2.field_tms;
+
 -- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

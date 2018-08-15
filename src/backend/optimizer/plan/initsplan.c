@@ -1606,6 +1606,42 @@ check_mergejoinable(RestrictInfo *restrictinfo)
 	 */
 }
 
+
+bool
+is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
+{
+	Expr	   *clause = restrictinfo->clause;
+	Oid			opno;
+
+	/**
+	 * If this is a IS NOT FALSE boolean test, we can peek underneath.
+	 */
+	if (IsA(clause, BooleanTest))
+	{
+		BooleanTest *bt = (BooleanTest *) clause;
+
+		if (bt->booltesttype == IS_NOT_FALSE)
+		{
+			clause = bt->arg;
+		}
+	}
+
+	if (restrictinfo->pseudoconstant)
+		return false;
+	if (!is_opclause(clause))
+		return false;
+	if (list_length(((OpExpr *) clause)->args) != 2)
+		return false;
+
+	opno = ((OpExpr *) clause)->opno;
+
+	if (op_hashjoinable(opno) &&
+		!contain_volatile_functions((Node *) clause))
+		return true;
+	else
+		return false;
+}
+
 /*
  * check_hashjoinable
  *	  If the restrictinfo's clause is hashjoinable, set the hashjoin
