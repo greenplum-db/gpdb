@@ -96,7 +96,7 @@ InitPlanCache(void)
  * The caller must already have successfully parsed/planned the query;
  * about all that we do here is copy it into permanent storage.
  *
- * raw_parse_tree: output of raw_parser()
+ * raw_parse_tree: output of raw_parser(), or NULL if empty query
  * query_string: original query text (can be NULL if not available, but
  *		that is discouraged because it degrades error message quality)
  * commandTag: compile-time-constant tag for query, or NULL if empty query
@@ -532,7 +532,8 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 			{
 				SelectStmt *select;
 
-				if (!IsA(plansource->raw_parse_tree, SelectStmt))
+				if (plansource->raw_parse_tree == NULL ||
+					!IsA(plansource->raw_parse_tree, SelectStmt))
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 							 errmsg("prepared statement is not a SELECT")));
@@ -553,12 +554,15 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 			 * parse_analyze_varparams(), assuming that the caller never wants
 			 * the parameter types to change from the original values.
 			 */
-			slist = pg_analyze_and_rewrite(raw_parse_tree,
-										   plansource->query_string,
-										   plansource->param_types,
-										   plansource->num_params);
+			if (raw_parse_tree == NULL)
+				slist = NIL;
+			else
+				slist = pg_analyze_and_rewrite(raw_parse_tree,
+											   plansource->query_string,
+											   plansource->param_types,
+											   plansource->num_params);
 
-			if (plansource->fully_planned)
+			if (plansource->fully_planned && slist != NULL)
 			{
 				/*
 				 * Generate plans for queries.
@@ -583,7 +587,11 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 			 * condition than equalTupleDescs() here?
 			 */
 			resultDesc = PlanCacheComputeResultDesc(slist);
-			if (resultDesc == NULL && plansource->resultDesc == NULL)
+			if (slist == NULL)
+			{
+				/* Of course there is not plan and do not return tuples. */
+			}
+			else if (resultDesc == NULL && plansource->resultDesc == NULL)
 			{
 				/* OK, doesn't return tuples */
 			}

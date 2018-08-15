@@ -48,7 +48,7 @@
  */
 typedef struct CachedPlanSource
 {
-	Node	   *raw_parse_tree; /* output of raw_parser() */
+	Node	   *raw_parse_tree; /* output of raw_parser(), or NULL */
 	char	   *query_string;	/* text of query, or NULL */
 	const char *commandTag;		/* command tag (a constant!), or NULL */
 	NodeTag		sourceTag;		/* GPDB: Original statement NodeTag */
