@@ -1,4 +1,9 @@
 -- Test bitmap AND and OR
+-- Currently GPDB sets random_page_cost as 100 while Postgres sets it as 4.
+-- This make some BitmapOps plans are not as expected, so temporarily
+-- settting random_page_cost as 4 to test those functionalities.
+-- Also add exaplain tests to make sure BitmapOps are tested.
+SET random_page_cost  = 4;
 -- Generate enough data that we can test the lossy bitmaps.
 -- There's 55 tuples per page in the table. 53 is just
 -- below 55, so that an index scan with qual a = constant
@@ -46,6 +51,24 @@ CREATE INDEX i_bmtest2_a ON bmscantest2 USING BITMAP(a);
 CREATE INDEX i_bmtest2_b ON bmscantest2 USING BITMAP(b);
 CREATE INDEX i_bmtest2_c ON bmscantest2(c);
 CREATE INDEX i_bmtest2_d ON bmscantest2(d);
+EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Aggregate  (cost=58.43..58.44 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=58.37..58.42 rows=1 width=8)
+         ->  Aggregate  (cost=58.37..58.38 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest2  (cost=54.24..58.26 rows=15 width=0)
+                     Recheck Cond: b = 1 AND c = 1 AND a = 1
+                     ->  BitmapAnd  (cost=54.24..54.24 rows=1 width=0)
+                           ->  Bitmap Index Scan on i_bmtest2_b  (cost=0.00..17.13 rows=394 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..18.29 rows=445 width=0)
+                                 Index Cond: c = 1
+                           ->  Bitmap Index Scan on i_bmtest2_a  (cost=0.00..18.29 rows=445 width=0)
+                                 Index Cond: a = 1
+ Optimizer: legacy query optimizer
+(13 rows)
+
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
  count 
 -------
@@ -57,6 +80,24 @@ SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 -------
     23
 (1 row)
+
+EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Aggregate  (cost=449.02..449.03 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=448.96..449.01 rows=1 width=8)
+         ->  Aggregate  (cost=448.96..448.97 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest2  (cost=35.24..439.52 rows=1259 width=0)
+                     Recheck Cond: a = 1 OR b = 1 OR c = 1
+                     ->  BitmapOr  (cost=35.24..35.24 rows=1282 width=0)
+                           ->  Bitmap Index Scan on i_bmtest2_a  (cost=0.00..7.62 rows=445 width=0)
+                                 Index Cond: a = 1
+                           ->  Bitmap Index Scan on i_bmtest2_b  (cost=0.00..6.50 rows=394 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..18.29 rows=445 width=0)
+                                 Index Cond: c = 1
+ Optimizer: legacy query optimizer
+(13 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
  count 

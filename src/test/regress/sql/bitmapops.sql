@@ -1,5 +1,11 @@
 -- Test bitmap AND and OR
 
+-- Currently GPDB sets random_page_cost as 100 while Postgres sets it as 4.
+-- This make some BitmapOps plans are not as expected, so temporarily
+-- settting random_page_cost as 4 to test those functionalities.
+-- Also add exaplain tests to make sure BitmapOps are tested.
+SET random_page_cost  = 4;
+
 
 -- Generate enough data that we can test the lossy bitmaps.
 
@@ -46,9 +52,11 @@ CREATE INDEX i_bmtest2_b ON bmscantest2 USING BITMAP(b);
 CREATE INDEX i_bmtest2_c ON bmscantest2(c);
 CREATE INDEX i_bmtest2_d ON bmscantest2(d);
 
+EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 
+EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 
