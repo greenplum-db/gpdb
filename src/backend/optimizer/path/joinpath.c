@@ -118,9 +118,6 @@ add_paths_to_joinrel(PlannerInfo *root,
 												restrictlist,
 												jointype);
 
-
-
-
 	/*
 	 * 1. Consider mergejoin paths where both relations must be explicitly
 	 * sorted.

@@ -1606,7 +1606,10 @@ check_mergejoinable(RestrictInfo *restrictinfo)
 	 */
 }
 
-
+/*
+ * is_restrictinfo_hashjoinable
+ *	  If the restrictinfo's clause is hashjoinable, return true.
+ */
 bool
 is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
 {
