@@ -716,22 +716,6 @@ int8inc(PG_FUNCTION_ARGS)
 	}
 }
 
-Datum
-int8dec(PG_FUNCTION_ARGS)
-{
-	int64		arg = PG_GETARG_INT64(0);
-	int64		result;
-
-	result = arg - 1;
-	/* Overflow check */
-	if (result > 0 && arg < 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-				 errmsg("bigint out of range")));
-
-	PG_RETURN_INT64(result);
-}
-
 /*
  * These functions are exactly like int8inc but are used for aggregates that
  * count only non-null values.	Since the functions are declared strict,

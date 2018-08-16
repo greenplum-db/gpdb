@@ -456,10 +456,6 @@ static void strip_var(NumericVar *var);
 static void compute_bucket(Numeric operand, Numeric bound1, Numeric bound2,
 			   NumericVar *count_var, NumericVar *result_var);
 
-static ArrayType *do_numeric_amalg_demalg(ArrayType *aTransArray, 
-										  ArrayType *bTransArray,
-										  bool is_amalg); /* MPP */
-
 
 /* ----------------------------------------------------------------------
  *
@@ -2783,7 +2779,7 @@ numeric_float4(PG_FUNCTION_ARGS)
  */
 
 static inline ArrayType *
-do_numeric_accum_decum(ArrayType *transarray, Numeric newval, bool accum)
+do_numeric_accum(ArrayType *transarray, Numeric newval)
 {
 	Datum	   *transdatums;
 	int			ndatums;
@@ -2802,28 +2798,13 @@ do_numeric_accum_decum(ArrayType *transarray, Numeric newval, bool accum)
 	sumX = transdatums[1];
 	sumX2 = transdatums[2];
 
-	if (accum)
-	{
-		N = DirectFunctionCall1(numeric_inc, N);
-		sumX = DirectFunctionCall2(numeric_add, sumX,
-								   NumericGetDatum(newval));
-		sumX2 = DirectFunctionCall2(numeric_add, sumX2,
-									DirectFunctionCall2(numeric_mul,
-														NumericGetDatum(newval),
-														NumericGetDatum(newval)));
-	}
-	else
-	{
-		N = DirectFunctionCall1(numeric_dec, N);
-		sumX = DirectFunctionCall2(numeric_sub, sumX,
-								   NumericGetDatum(newval));
-		sumX2 = DirectFunctionCall2(numeric_sub, sumX2,
-									DirectFunctionCall2(numeric_mul,
-														NumericGetDatum(newval),
-														NumericGetDatum(newval)));
-
-
-	}
+	N = DirectFunctionCall1(numeric_inc, N);
+	sumX = DirectFunctionCall2(numeric_add, sumX,
+							   NumericGetDatum(newval));
+	sumX2 = DirectFunctionCall2(numeric_add, sumX2,
+								DirectFunctionCall2(numeric_mul,
+													NumericGetDatum(newval),
+													NumericGetDatum(newval)));
 	transdatums[0] = N;
 	transdatums[1] = sumX;
 	transdatums[2] = sumX2;
@@ -2840,16 +2821,7 @@ numeric_accum(PG_FUNCTION_ARGS)
 	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
 	Numeric		newval = PG_GETARG_NUMERIC(1);
 
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, true));
-}
-
-Datum
-numeric_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Numeric		newval = PG_GETARG_NUMERIC(1);
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, false));
+	PG_RETURN_ARRAYTYPE_P(do_numeric_accum(transarray, newval));
 }
 
 /*
@@ -2870,7 +2842,7 @@ int2_accum(PG_FUNCTION_ARGS)
 
 	newval = DatumGetNumeric(DirectFunctionCall1(int2_numeric, newval2));
 
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, true));
+	PG_RETURN_ARRAYTYPE_P(do_numeric_accum(transarray, newval));
 }
 
 Datum
@@ -2882,7 +2854,7 @@ int4_accum(PG_FUNCTION_ARGS)
 
 	newval = DatumGetNumeric(DirectFunctionCall1(int4_numeric, newval4));
 
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, true));
+	PG_RETURN_ARRAYTYPE_P(do_numeric_accum(transarray, newval));
 }
 
 Datum
@@ -2894,48 +2866,8 @@ int8_accum(PG_FUNCTION_ARGS)
 
 	newval = DatumGetNumeric(DirectFunctionCall1(int8_numeric, newval8));
 
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, true));
+	PG_RETURN_ARRAYTYPE_P(do_numeric_accum(transarray, newval));
 }
-
-/*
- * Integer decumulators for windowing.
- */
-Datum
-int2_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Datum		newval2 = PG_GETARG_DATUM(1);
-	Numeric		newval;
-
-	newval = DatumGetNumeric(DirectFunctionCall1(int2_numeric, newval2));
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, false));
-}
-
-Datum
-int4_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Datum		newval4 = PG_GETARG_DATUM(1);
-	Numeric		newval;
-
-	newval = DatumGetNumeric(DirectFunctionCall1(int4_numeric, newval4));
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, false));
-}
-
-Datum
-int8_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Datum		newval8 = PG_GETARG_DATUM(1);
-	Numeric		newval;
-
-	newval = DatumGetNumeric(DirectFunctionCall1(int8_numeric, newval8));
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_accum_decum(transarray, newval, false));
-}
-
 
 /*
  * Workhorse routine for the standard deviance and variance
@@ -3250,111 +3182,6 @@ int8_sum(PG_FUNCTION_ARGS)
 }
 
 /*
- * SUM inverse transition functions for integer types. We essentially do the
- * opposite of the above routines.
- */
-Datum
-int2_invsum(PG_FUNCTION_ARGS)
-{
-	int64		newval;
-	int64 		oldsum;
-
-	if (PG_ARGISNULL(0))
-	{
-		/* No non-null input seen so far... */
-		if (PG_ARGISNULL(1))
-			PG_RETURN_NULL();	/* still no non-null */
-		/* 
-		 * We shouldn't be called with non-null input if the transition value
-		 * is NULL
-		 */
-		elog(ERROR, "internal error: inversion function called with NULL "
-			 "transition value but non-NULL argument");
-	}
-
-	oldsum = PG_GETARG_INT64(0);
-
-	/* Leave sum unchanged if new input is null. */
-	if (PG_ARGISNULL(1))
-		PG_RETURN_INT64(oldsum);
-
-	/* OK to do the addition. */
-	newval = oldsum - (int64) PG_GETARG_INT16(1);
-
-	PG_RETURN_INT64(newval);
-}
-
-Datum
-int4_invsum(PG_FUNCTION_ARGS)
-{
-	int64		newval;
-	int64 		oldsum;
-
-	if (PG_ARGISNULL(0))
-	{
-		/* No non-null input seen so far... */
-		if (PG_ARGISNULL(1))
-			PG_RETURN_NULL();	/* still no non-null */
-		/* 
-		 * We shouldn't be called with non-null input if the transition value
-		 * is NULL
-		 */
-		elog(ERROR, "internal error: inversion function called with NULL "
-			 "transition value but non-NULL argument");
-	}
-
-	oldsum = PG_GETARG_INT64(0);
-
-	/* Leave sum unchanged if new input is null. */
-	if (PG_ARGISNULL(1))
-		PG_RETURN_INT64(oldsum);
-
-	/* OK to do the addition. */
-	newval = oldsum - (int64) PG_GETARG_INT32(1);
-
-	PG_RETURN_INT64(newval);
-}
-
-Datum
-int8_invsum(PG_FUNCTION_ARGS)
-{
-	Numeric		oldsum;
-	Datum		newval;
-
-	if (PG_ARGISNULL(0))
-	{
-		/* No non-null input seen so far... */
-		if (PG_ARGISNULL(1))
-			PG_RETURN_NULL();	/* still no non-null */
-
-		/* 
-		 * We shouldn't be called with non-null input if the transition value
-		 * is NULL
-		 */
-		elog(ERROR, "internal error: inversion function called with NULL "
-			 "transition value but non-NULL argument");
-	}
-
-	/*
-	 * Note that we cannot special-case the nodeAgg case here, as we do for
-	 * int2_sum and int4_sum: numeric is of variable size, so we cannot modify
-	 * our first parameter in-place.
-	 */
-
-	oldsum = PG_GETARG_NUMERIC(0);
-
-	/* Leave sum unchanged if new input is null. */
-	if (PG_ARGISNULL(1))
-		PG_RETURN_NUMERIC(oldsum);
-
-	/* OK to do the addition. */
-	newval = DirectFunctionCall1(int8_numeric, PG_GETARG_DATUM(1));
-
-	PG_RETURN_DATUM(DirectFunctionCall2(numeric_sub,
-										NumericGetDatum(oldsum), newval));
-}
-
-/*
  * Routines for avg int type.  The transition datatype is a int64 for count, and a float8 for sum.
  */
 
@@ -3368,12 +3195,12 @@ typedef struct IntFloatAvgTransdata
 	float8 sum;
 } IntFloatAvgTransdata;
 
-static inline Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, float8 newval, bool acc)
+static inline Datum
+intfloat_avg_accum(IntFloatAvgTransdata *transdata, float8 newval)
 {
 	if(transdata == NULL || VARSIZE(transdata) != sizeof(IntFloatAvgTransdata))
 	{
 		/* If first time execution, need to allocate memory for this */
-		Assert(acc);
 		transdata = (IntFloatAvgTransdata *) palloc(sizeof(IntFloatAvgTransdata));
 		SET_VARSIZE(transdata, sizeof(IntFloatAvgTransdata));
 		transdata->count = 0;
@@ -3384,23 +3211,15 @@ static inline Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, fl
 		Assert(VARSIZE(transdata) == sizeof(IntFloatAvgTransdata));
 	}
 
-	if(acc)
-	{
-		++transdata->count;
-		transdata->sum += newval;
-	}
-	else
-	{
-		--transdata->count;
-		transdata->sum -= newval;
-	}
+	++transdata->count;
+	transdata->sum += newval;
 
 	return PointerGetDatum(transdata); 
 }
 
 static inline Datum
-intfloat_avg_amalg_demalg(IntFloatAvgTransdata* tr0,
-						  IntFloatAvgTransdata *tr1, bool amalg)
+intfloat_avg_amalg(IntFloatAvgTransdata* tr0,
+				   IntFloatAvgTransdata *tr1)
 {
 	if(tr0 == NULL || VARSIZE(tr0) != sizeof(IntFloatAvgTransdata))
 	{
@@ -3416,16 +3235,8 @@ intfloat_avg_amalg_demalg(IntFloatAvgTransdata* tr0,
 	Assert(VARSIZE(tr0) == sizeof(IntFloatAvgTransdata));
 	Assert(VARSIZE(tr1) == sizeof(IntFloatAvgTransdata));
 
-	if(amalg)
-	{
-		tr0->count += tr1->count;
-		tr0->sum += tr1->sum;
-	}
-	else
-	{
-		tr0->count -= tr1->count;
-		tr0->sum -= tr1->sum;
-	}
+	tr0->count += tr1->count;
+	tr0->sum += tr1->sum;
 
 	return PointerGetDatum(tr0);
 }
@@ -3437,7 +3248,7 @@ int2_avg_accum(PG_FUNCTION_ARGS)
 	int16		newval = PG_GETARG_INT16(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, true);
+	return intfloat_avg_accum(tr, newval);
 }
 		
 Datum
@@ -3447,7 +3258,7 @@ int4_avg_accum(PG_FUNCTION_ARGS)
 	int32		newval = PG_GETARG_INT32(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, true);
+	return intfloat_avg_accum(tr, newval);
 }
 
 Datum
@@ -3457,7 +3268,7 @@ int8_avg_accum(PG_FUNCTION_ARGS)
 	int64		newval = PG_GETARG_INT64(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, true);
+	return intfloat_avg_accum(tr, newval);
 }
 
 Datum
@@ -3467,7 +3278,7 @@ float4_avg_accum(PG_FUNCTION_ARGS)
 	float4		newval = PG_GETARG_FLOAT4(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, true);
+	return intfloat_avg_accum(tr, newval);
 }
 
 Datum
@@ -3477,57 +3288,7 @@ float8_avg_accum(PG_FUNCTION_ARGS)
 	float8		newval = PG_GETARG_FLOAT8(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, true);
-}
-
-Datum
-int2_avg_decum(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata *tr = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	int16		newval = PG_GETARG_INT16(1);
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, false);
-}
-
-Datum
-int4_avg_decum(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata *tr = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	int32		newval = PG_GETARG_INT32(1);
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, false);
-}
-
-Datum
-int8_avg_decum(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata *tr = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	int64		newval = PG_GETARG_INT64(1);
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, false);
-}
-
-Datum
-float4_avg_decum(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata *tr = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	float4		newval = PG_GETARG_FLOAT4(1);
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, false);
-}
-
-Datum
-float8_avg_decum(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata *tr = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	float8		newval = PG_GETARG_FLOAT8(1);
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_accum_decum(tr, newval, false);
+	return intfloat_avg_accum(tr, newval);
 }
 
 Datum 
@@ -3537,7 +3298,7 @@ int8_avg_amalg(PG_FUNCTION_ARGS)
 	IntFloatAvgTransdata* d1 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_amalg_demalg(d0, d1, true);
+	return intfloat_avg_amalg(d0, d1);
 }
 
 Datum 
@@ -3547,27 +3308,9 @@ float8_avg_amalg(PG_FUNCTION_ARGS)
 	IntFloatAvgTransdata* d1 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_amalg_demalg(d0, d1, true);
+	return intfloat_avg_amalg(d0, d1);
 }
 
-Datum
-int8_avg_demalg(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata* d0 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	IntFloatAvgTransdata* d1 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(1);
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_amalg_demalg(d0, d1, false);
-}
-
-
-Datum
-float8_avg_demalg(PG_FUNCTION_ARGS)
-{
-	IntFloatAvgTransdata* d0 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(0);
-	IntFloatAvgTransdata* d1 = (IntFloatAvgTransdata *) PG_GETARG_BYTEA_P(1);
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return intfloat_avg_amalg_demalg(d0, d1, false);
-}
 
 Datum
 int8_avg(PG_FUNCTION_ARGS)
@@ -3642,14 +3385,12 @@ static inline NumericAvgTransData *num_avg_store_sum(NumericAvgTransData* tr, Nu
 }
 
 static Datum 
-numeric_avg_accum_decum(NumericAvgTransData *tr, Numeric newval, bool acc) 
+do_numeric_avg_accum(NumericAvgTransData *tr, Numeric newval)
 {
 	if(!tr || VARSIZE(tr) < sizeof(NumericAvgTransData))
 	{
 		/* Give it 5 extra digits hope that we do not need to palloc immediately */
 		int len = offsetof(NumericAvgTransData, sum) + VARSIZE(newval) + 10;
-		
-		Assert(acc);
 		
 		/* Per comments in review CR-206 we assume that the newval arguement
 		 * is a plain (untoasted) 4-byte-header Datum, so we can copy the
@@ -3666,10 +3407,7 @@ numeric_avg_accum_decum(NumericAvgTransData *tr, Numeric newval, bool acc)
 	{
 		Numeric num_sum = (Numeric) (&(tr->sum));
 
-		if(acc)
-			++tr->count;
-		else 
-			--tr->count;
+		++tr->count;
 
 		if(NUMERIC_IS_NAN(newval) || NUMERIC_IS_NAN(num_sum))
 			tr = num_avg_store_sum(tr, &const_nan);
@@ -3683,10 +3421,7 @@ numeric_avg_accum_decum(NumericAvgTransData *tr, Numeric newval, bool acc)
 			init_ro_var_from_num(num_sum, &v1);
 			init_ro_var_from_num(newval, &v2);
 
-			if(acc)
-				add_var(&v1, &v2, &result);
-			else
-				sub_var(&v1, &v2, &result);
+			add_var(&v1, &v2, &result);
 
 			tr = num_avg_store_sum(tr, &result);
 		}
@@ -3702,7 +3437,7 @@ numeric_avg_accum(PG_FUNCTION_ARGS)
 	Datum result;
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	result = numeric_avg_accum_decum(tr, newval, true);
+	result = do_numeric_avg_accum(tr, newval);
 	/* pfree(newval);
 	 *  Removed to fix MPP-6135.  Other (numeric,numeric) --> numeric
 	 *  accumulators don't free their value argument (2nd numeric).
@@ -3712,27 +3447,15 @@ numeric_avg_accum(PG_FUNCTION_ARGS)
 }
 
 Datum
-numeric_avg_decum(PG_FUNCTION_ARGS)
+numeric_avg_amalg(PG_FUNCTION_ARGS)
 {
-	NumericAvgTransData *tr = (NumericAvgTransData *) PG_GETARG_BYTEA_P(0); 
-	Numeric newval = PG_GETARG_NUMERIC(1);
-	Datum result;
+	NumericAvgTransData *tr0 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(0);
+	NumericAvgTransData *tr1 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(1);
 
 	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	result = numeric_avg_accum_decum(tr, newval, false);
-	/* pfree(newval);
-	 *  See comment in numeric_avg_accum.  This didn't actually occur as
-	 *  part of MPP-6135, but symmetry suggests it can cause a problem.
-	 */
-	return result;
-}
-
-static Datum numeric_avg_amalg_demalg(NumericAvgTransData* tr0, NumericAvgTransData* tr1, bool amalg)
-{
 
 	if(!tr0 || VARSIZE(tr0) < sizeof(NumericAvgTransData))
 	{
-		Assert(amalg);
 		return PointerGetDatum(tr1);
 	}
 
@@ -3743,10 +3466,7 @@ static Datum numeric_avg_amalg_demalg(NumericAvgTransData* tr0, NumericAvgTransD
 		Numeric n0 = (Numeric) (&(tr0->sum));
 		Numeric n1 = (Numeric) (&(tr1->sum));
 
-		if(amalg)
-			tr0->count += tr1->count;
-		else
-			tr0->count -= tr1->count;
+		tr0->count += tr1->count;
 
 		if(NUMERIC_IS_NAN(n0) || NUMERIC_IS_NAN(n1))
 			tr0 = num_avg_store_sum(tr0, &const_nan);
@@ -3760,34 +3480,13 @@ static Datum numeric_avg_amalg_demalg(NumericAvgTransData* tr0, NumericAvgTransD
 			init_ro_var_from_num(n0, &v0);
 			init_ro_var_from_num(n1, &v1);
 
-			if(amalg)
-				add_var(&v0, &v1, &result);
-			else
-				sub_var(&v0, &v1, &result);
+			add_var(&v0, &v1, &result);
 
 			tr0 = num_avg_store_sum(tr0, &result);
 		}
 	}
 
 	return PointerGetDatum(tr0);
-}
-
-Datum numeric_avg_amalg(PG_FUNCTION_ARGS)
-{
-	NumericAvgTransData *tr0 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(0); 
-	NumericAvgTransData *tr1 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(1); 
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return numeric_avg_amalg_demalg(tr0, tr1, true);
-}
-
-Datum numeric_avg_demalg(PG_FUNCTION_ARGS)
-{
-	NumericAvgTransData *tr0 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(0); 
-	NumericAvgTransData *tr1 = (NumericAvgTransData *) PG_GETARG_BYTEA_P(1); 
-
-	Assert(fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context));
-	return numeric_avg_amalg_demalg(tr0, tr1, false);
 }
 
 Datum
@@ -7102,10 +6801,11 @@ strip_var(NumericVar *var)
  * ----------------------------------------------------------------------
  */
 
-static ArrayType *
-do_numeric_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
-						bool is_amalg)
+Datum
+numeric_amalg(PG_FUNCTION_ARGS)
 {
+	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
 	Datum	   *transdatums;
 	int			ndatums;
 	Datum		aN, bN,
@@ -7133,10 +6833,7 @@ do_numeric_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
 	bSumX = transdatums[1];
 	bSumX2 = transdatums[2];
 
-	if (is_amalg)
-		malgfunc = numeric_add;
-	else
-		malgfunc = numeric_sub;
+	malgfunc = numeric_add;
 
 	aN = DirectFunctionCall2(malgfunc, aN, bN);
 	aSumX = DirectFunctionCall2(malgfunc, aSumX, bSumX);
@@ -7148,28 +6845,7 @@ do_numeric_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
 
 	result = construct_array(transdatums, 3,
 							 NUMERICOID, -1, false, 'i');
-
-	return result;
-}
-
-Datum
-numeric_amalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_amalg_demalg(aTransArray, bTransArray,
-												  true));
-}
-
-Datum
-numeric_demalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(do_numeric_amalg_demalg(aTransArray, bTransArray,
-												  false));
+	PG_RETURN_ARRAYTYPE_P(result);
 }
 
 /* Helper for MPP, declared here and in nodeWindow.c

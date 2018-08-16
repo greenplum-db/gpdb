@@ -1237,13 +1237,9 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 						Oid transfn_oid,
 						Oid finalfn_oid,
 						Oid prelimfn_oid,
-						Oid invtransfn_oid,
-						Oid invprelimfn_oid,
 						Expr **transfnexpr,
 						Expr **finalfnexpr,
-						Expr **prelimfnexpr,
-						Expr **invtransfnexpr,
-						Expr **invprelimfnexpr)
+						Expr **prelimfnexpr)
 {
 	Param	   *argp;
 	List	   *args;
@@ -1346,49 +1342,6 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 											  InvalidOid,
 											  agg_input_collation,
 											  COERCE_DONTCARE);
-	}
-
-	/* inverse functions */
-	if (OidIsValid(invtransfn_oid))
-	{
-		/*
-		 * Build expr tree for inverse transition function
-		 */
-		argp = makeNode(Param);
-		argp->paramkind = PARAM_EXEC;
-		argp->paramid = -1;
-		argp->paramtype = agg_state_type;
-		argp->paramtypmod = -1;
-		argp->location = -1;
-		args = list_make1(argp);
-
-		*invtransfnexpr = (Expr *) makeFuncExpr(invtransfn_oid,
-												agg_state_type,
-												args,
-												InvalidOid,
-												agg_input_collation,
-												COERCE_DONTCARE);
-	}
-
-	if (OidIsValid(invprelimfn_oid))
-	{
-		/*
-		 * Build expr tree for inverse prelim function
-		 */
-		argp = makeNode(Param);
-		argp->paramkind = PARAM_EXEC;
-		argp->paramid = -1;
-		argp->paramtype = agg_state_type;
-		argp->paramtypmod = -1;
-		argp->location = -1;
-		args = list_make1(argp);
-
-		*invprelimfnexpr = (Expr *) makeFuncExpr(invprelimfn_oid,
-												 agg_state_type,
-												 args,
-												 InvalidOid,
-												 agg_input_collation,
-												 COERCE_DONTCARE);
 	}
 }
 

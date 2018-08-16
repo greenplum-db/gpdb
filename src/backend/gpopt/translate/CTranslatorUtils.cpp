@@ -2458,10 +2458,10 @@ CTranslatorUtils::CheckAggregateWindowFn
 
 	WindowFunc *winfunc = (WindowFunc *) node;
 
-	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasPrelimOrInvPrelimFunc(winfunc->winfnoid))
+	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasPrelimFunc(winfunc->winfnoid))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT("Aggregate window function without prelim or inverse prelim function"));
+				GPOS_WSZ_LIT("Aggregate window function without prelim function"));
 	}
 }
 

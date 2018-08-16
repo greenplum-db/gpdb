@@ -2070,13 +2070,9 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 								transfn_oid,
 								finalfn_oid,
 								peraggstate->prelimfn_oid /* prelim */ ,
-								InvalidOid /* invtrans */ ,
-								InvalidOid /* invprelim */ ,
 								&transfnexpr,
 								&finalfnexpr,
-								&prelimfnexpr,
-								NULL,
-								NULL);
+								&prelimfnexpr);
 
 		fmgr_info(transfn_oid, &peraggstate->transfn);
 		fmgr_info_set_expr((Node *) transfnexpr, &peraggstate->transfn);

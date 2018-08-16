@@ -175,9 +175,6 @@ namespace gpdb {
 	// does aggregate have a preliminary function
 	bool AggHasPrelimFunc(Oid aggid);
 
-	// does aggregate have a prelim or inverse prelim function
-	bool AggHasPrelimOrInvPrelimFunc(Oid aggid);
-
 	// intermediate result type of given aggregate
 	Oid GetAggregate(const char* agg, Oid type_oid);
 
