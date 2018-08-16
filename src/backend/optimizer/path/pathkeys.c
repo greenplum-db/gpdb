@@ -176,7 +176,7 @@ gen_implied_qual(PlannerInfo *root,
 		return;
 
 	/* No inferences may be performed across an outer join */
-	if (old_rinfo->ojscope_relids && !bms_is_subset(new_qualscope, old_rinfo->ojscope_relids))
+	if (old_rinfo->ojscope_relids)
 		return;
 
 	/*

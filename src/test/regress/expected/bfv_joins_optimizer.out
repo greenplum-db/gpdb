@@ -3172,3 +3172,60 @@ EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric
  Optimizer status: PQO version 3.2.0
 (11 rows)
 
+-- Do not push down any implied predicates to the Left Outer Join
+DROP TABLE IF EXISTS member;
+DROP TABLE IF EXISTS member_group;
+DROP TABLE IF EXISTS member_subgroup;
+DROP TABLE IF EXISTS region;
+CREATE TABLE member(member_id int NOT NULL, group_id int NOT NULL) DISTRIBUTED BY(member_id);
+CREATE TABLE member_group(group_id int NOT NULL) DISTRIBUTED BY(group_id);
+CREATE TABLE region(region_id char(4), county_name varchar(25)) DISTRIBUTED BY(region_id);
+CREATE TABLE member_subgroup(subgroup_id int NOT NULL, group_id int NOT NULL, subgroup_name text) DISTRIBUTED RANDOMLY;
+INSERT INTO region SELECT i, i FROM generate_series(1, 200) i;
+INSERT INTO member_group SELECT i FROM generate_series(1, 15) i;
+INSERT INTO member SELECT i, i%15 FROM generate_series(1, 10000) i;
+--start_ignore
+ANALYZE member;
+ANALYZE member_group;
+ANALYZE region;
+ANALYZE member_subgroup;
+--end_ignore
+EXPLAIN SELECT member.member_id
+FROM member
+INNER JOIN member_group
+ON member.group_id = member_group.group_id
+INNER JOIN member_subgroup
+ON member_group.group_id = member_subgroup.group_id
+LEFT OUTER JOIN region
+ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = region.county_name);
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1724.73 rows=1 width=4)
+   ->  Hash Left Join  (cost=0.00..1724.73 rows=1 width=4)
+         Hash Cond: member_subgroup.subgroup_name = region.county_name::text
+         Join Filter: member_group."group_id" = ANY ('{12,13,14,15}'::integer[])
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1293.72 rows=1 width=16)
+               Hash Key: member_subgroup.subgroup_name
+               ->  Hash Join  (cost=0.00..1293.72 rows=1 width=16)
+                     Hash Cond: member."group_id" = member_group."group_id" AND member_subgroup."group_id" = member_group."group_id"
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.72 rows=1 width=20)
+                           Hash Key: member."group_id"
+                           ->  Hash Join  (cost=0.00..862.72 rows=1 width=20)
+                                 Hash Cond: member."group_id" = member_subgroup."group_id"
+                                 ->  Table Scan on member  (cost=0.00..431.07 rows=3334 width=8)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Table Scan on member_subgroup  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Hash  (cost=431.00..431.00 rows=5 width=4)
+                           ->  Table Scan on member_group  (cost=0.00..431.00 rows=5 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=67 width=3)
+               ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=67 width=3)
+                     Hash Key: region.county_name::text
+                     ->  Table Scan on region  (cost=0.00..431.00 rows=67 width=3)
+ Optimizer status: PQO version 3.6.0
+(23 rows)
+
+DROP TABLE member;
+DROP TABLE member_group;
+DROP TABLE member_subgroup;
+DROP TABLE region;
