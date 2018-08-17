@@ -21,6 +21,7 @@
    [<b>--include-table-file</b> <varname>file_name</varname>]
    [<b>--data-only</b> | <b>--metadata-only</b>]
    [<b>--jobs</b> <varname>int</varname>]
+   [<b>--on-error-continue</b>]
    [<b>--plugin-config</b> <varname>config_file_location</varname>]
    [<b>--quiet</b>]
    [<b>--redirect-db</b> <varname>database_name</varname>]
@@ -115,12 +116,12 @@
             created with the <codeph>gpbackup</codeph> option <codeph>--metadata-only</codeph> does
             not contain table data.</pd>
           <pd>To restore only database tables, without restoring the table data, see the option
-                <codeph><xref href="#topic_phj_g5j_tbb/metadata_only" format="dita"
-                >--metadata-only</xref></codeph>.</pd>
+                <codeph><xref href="#topic1/metadata_only" format="dita"
+              >--metadata-only</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--debug</b></pt>
-          <pd>Optional. Displays verbose debug messages during operation.</pd>
+          <pd>Optional. Displays verbose and debug log messages during a restore operation.</pd>
         </plentry>
         <plentry>
           <pt><b>--exclude-schema</b>
@@ -225,16 +226,26 @@
         <plentry id="metadata_only">
           <pt><b>--metadata-only</b></pt>
           <pd>Optional. Creates database tables from a backup created with the
-              <codeph>gpbackup</codeph> utility, but does not restore the table data. To create a
-            specific set of tables from a backup set, you can specify an option to include tables or
-            schemas or exclude tables or schemas. Specify the option <codeph>--with-globals</codeph>
-            to restore the Greenplum Database system objects.</pd>
+              <codeph>gpbackup</codeph> utility, but does not restore the table data. This option
+            assumes the tables do not exist in the target database. To create a specific set of
+            tables from a backup set, you can specify an option to include tables or schemas or
+            exclude tables or schemas. Specify the option <codeph>--with-globals</codeph> to restore
+            the Greenplum Database system objects.</pd>
           <pd>The backup set must contain the DDL for tables to be restored. For example, a backup
             created with the <codeph>gpbackup</codeph> option <codeph>--data-only</codeph> does not
             contain the DDL for tables. </pd>
           <pd>To restore table data after you create the database tables, see the option
-                <codeph><xref href="#topic_phj_g5j_tbb/data_only" format="dita"
-              >--data-only</xref></codeph>.</pd>
+                <codeph><xref href="#topic1/data_only" format="dita"
+            >--data-only</xref></codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--on-error-continue</b></pt>
+          <pd>Optional. Specify this option to continue the restore operation when an SQL error
+            occurs when creating database metadata (such as tables, roles, or functions) or
+            restoring data. If another type of error occurs, the utility exits. The utility displays
+            an error summary and writes error information to the <codeph>gprestore</codeph> log file
+            and continues the restore operation. </pd>
+          <pd>The default is to exit on the first error.</pd>
         </plentry>
         <plentry>
           <pt><b>--plugin-config</b>
@@ -261,7 +272,7 @@
         </plentry>
         <plentry>
           <pt><b>--verbose</b></pt>
-          <pd>Optional. Print verbose log messages.</pd>
+          <pd>Optional. Displays verbose log messages during a restore operation.</pd>
         </plentry>
         <plentry>
           <pt><b>--version</b></pt>
