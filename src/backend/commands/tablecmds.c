@@ -12019,6 +12019,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						useExistingColumnAttributes);
+		queryDesc->gpmon_pkt = NULL;
 
 		PG_TRY();
 		{
