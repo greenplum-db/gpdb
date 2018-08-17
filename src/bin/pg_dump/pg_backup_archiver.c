@@ -897,9 +897,7 @@ restore_toc_entry(ArchiveHandle *AH, TocEntry *te, bool is_parallel)
 						ahprintf(AH, "TRUNCATE TABLE %s%s;\n\n",
 								 (PQserverVersion(AH->connection) >= 80400 ?
 								  "ONLY " : ""),
-							  fmtQualifiedId(PQserverVersion(AH->connection),
-											 te->namespace,
-											 te->tag));
+								 fmtQualifiedId(te->namespace, te->tag));
 					}
 
 					/*
@@ -993,9 +991,7 @@ _disableTriggersIfNecessary(ArchiveHandle *AH, TocEntry *te)
 	 * connection; and anyway we don't promise our output will load pre-7.3).
 	 */
 	ahprintf(AH, "ALTER TABLE %s DISABLE TRIGGER ALL;\n\n",
-			 fmtQualifiedId(70300,
-							te->namespace,
-							te->tag));
+			 fmtQualifiedId(te->namespace, te->tag));
 }
 
 static void
@@ -1021,9 +1017,7 @@ _enableTriggersIfNecessary(ArchiveHandle *AH, TocEntry *te)
 	 * Enable them.  As above, force schema qualification.
 	 */
 	ahprintf(AH, "ALTER TABLE %s ENABLE TRIGGER ALL;\n\n",
-			 fmtQualifiedId(70300,
-							te->namespace,
-							te->tag));
+			 fmtQualifiedId(te->namespace, te->tag));
 }
 
 /*

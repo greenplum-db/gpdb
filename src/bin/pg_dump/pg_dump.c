@@ -156,11 +156,9 @@ bool gp_attribute_encoding_available = false;
 
 /*
  * Macro for producing quoted, schema-qualified name of a dumpable object.
- * Note implicit dependence on "fout"; we should get rid of that argument.
  */
 #define fmtQualifiedDumpable(obj) \
-	fmtQualifiedId(fout->remoteVersion, \
-				   (obj)->dobj.namespace->dobj.name, \
+	fmtQualifiedId((obj)->dobj.namespace->dobj.name, \
 				   (obj)->dobj.name)
 static DumpId binary_upgrade_dumpid;
 
@@ -15852,8 +15850,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				char tmpExtTable[500] = {0};
 				relname = pg_strdup(PQgetvalue(res, i, i_relname));
 				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				char *qualTmpExtTable = pg_strdup(fmtQualifiedId(fout->remoteVersion,
-																 tbinfo->dobj.namespace->dobj.name,
+				char *qualTmpExtTable = pg_strdup(fmtQualifiedId(tbinfo->dobj.namespace->dobj.name,
 																 tmpExtTable));
 
 				appendPQExpBuffer(q, "ALTER TABLE %s ", qualrelname);

@@ -72,8 +72,7 @@ extern int	quote_all_identifiers;
 extern PQExpBuffer (*getLocalPQExpBuffer) (void);
 
 extern const char *fmtId(const char *identifier);
-extern const char *fmtQualifiedId(int remoteVersion,
-			   const char *schema, const char *id);
+extern const char *fmtQualifiedId( const char *schema, const char *id);
 extern char *formatPGVersionNumber(int version_number, bool include_minor,
 					  char *buf, size_t buflen);
 extern void appendStringLiteral(PQExpBuffer buf, const char *str,
