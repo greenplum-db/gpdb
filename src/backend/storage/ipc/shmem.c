@@ -65,6 +65,10 @@
 
 #include "postgres.h"
 
+#ifdef MPROTECT_BUFFERS
+#include <unistd.h>
+#endif
+
 #include "access/transam.h"
 #include "miscadmin.h"
 #include "storage/lwlock.h"
@@ -183,7 +187,11 @@ ShmemAlloc(Size size)
 
 	newStart = shmemseghdr->freeoffset;
 
-	/* extra alignment for large requests, since they are probably buffers */
+	/*
+	 * Extra alignment for large requests, since they are probably buffers.
+	 * This is also needed for mprotect based shared buffer debugging
+	 * (-DMPROTECT_BUFFERS).
+	 */
 	if (size >= BLCKSZ)
 	{
 		newStart =  TYPEALIGN(ShmemSystemPageSize, newStart);
