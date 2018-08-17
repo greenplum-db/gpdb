@@ -25,6 +25,7 @@
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
 struct CdbPgResults;
 struct Gang; /* #include "cdb/cdbgang.h" */
+enum GangType;
 
 /*
  * Types of message to QE when we wait for it.
@@ -43,11 +44,11 @@ typedef struct CdbDispatchDirectDesc
 	uint16 content[1];
 } CdbDispatchDirectDesc;
 
-extern CdbDispatchDirectDesc default_dispatch_direct_desc;
-#define DEFAULT_DISP_DIRECT (&default_dispatch_direct_desc)
-
 typedef struct CdbDispatcherState
 {
+	bool isExtendedQuery;
+	List *allocatedGangs;
+	bool recycleGang;
 	struct CdbDispatchResults *primaryResults;
 	void *dispatchParams;
 } CdbDispatcherState;
@@ -59,11 +60,13 @@ typedef struct DispatcherInternalFuncs
 	int (*getWaitSocketFd)(struct CdbDispatcherState *ds);
 	void* (*makeDispatchParams)(int maxSlices, char *queryText, int queryTextLen);
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
-	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp,
-			int sliceIndex, CdbDispatchDirectDesc *direct);
+	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp, int sliceIndex);
 	void (*waitDispatchFinish)(struct CdbDispatcherState *ds);
 
 }DispatcherInternalFuncs;
+
+struct Gang *
+cdbdisp_allocateGang(CdbDispatcherState *ds, enum GangType type, List *segments);
 
 /*--------------------------------------------------------------------*/
 /*
@@ -98,8 +101,7 @@ typedef struct DispatcherInternalFuncs
 void
 cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
-					   int sliceIndex,
-					   CdbDispatchDirectDesc *direct);
+					   int sliceIndex);
 
 /*
  * cdbdisp_waitDispatchFinish:
@@ -159,7 +161,7 @@ cdbdisp_cancelDispatch(CdbDispatcherState *ds);
  *
  * Call cdbdisp_destroyDispatcherState to free it.
  */
-CdbDispatcherState * cdbdisp_makeDispatcherState(void);
+CdbDispatcherState * cdbdisp_makeDispatcherState(bool isExtendedQuery);
 
 /*
  * Free memory in CdbDispatcherState
@@ -169,10 +171,11 @@ CdbDispatcherState * cdbdisp_makeDispatcherState(void);
  */
 void cdbdisp_destroyDispatcherState(CdbDispatcherState *ds);
 
-void *
-cdbdisp_makeDispatchParams(int maxSlices,
-						  char *queryText,
-						  int queryTextLen);
+void
+cdbdisp_makeDispatchParams(CdbDispatcherState *ds,
+						   int maxSlices,
+						   char *queryText,
+						   int queryTextLen);
 
 bool cdbdisp_checkForCancel(CdbDispatcherState * ds);
 int cdbdisp_getWaitSocketFd(CdbDispatcherState *ds);
@@ -180,5 +183,9 @@ int cdbdisp_getWaitSocketFd(CdbDispatcherState *ds);
 void cdbdisp_onProcExit(void);
 
 void cdbdisp_setAsync(bool async);
+
+void cdbdisp_markNamedPortalGangsDestroy(void);
+
+void cdbdisp_cleanupAllDispatcherState(void);
 
 #endif   /* CDBDISP_H */

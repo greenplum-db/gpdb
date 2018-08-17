@@ -75,24 +75,18 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  ErrorData **qeError,
 							  int *numresults,
 							  bool *badGangs,
-							  CdbDispatchDirectDesc *direct,
+							  List *twophaseSegments,
 							  char *serializedDtxContextInfo,
 							  int serializedDtxContextInfoLen)
 {
 	CdbDispatcherState *ds;
 	CdbDispatchResults *pr;
-	MemoryContext oldContext;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
 	Gang	   *primaryGang;
 	char	   *queryText = NULL;
 	int			queryTextLen = 0;
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "CdbDispatchDtxProtocolCommand: %s for gid = %s, direct content #: %d",
-		 dtxProtocolCommandLoggingStr, gid,
-		 direct->directed_dispatch ? direct->content[0] : -1);
 
 	*badGangs = false;
 	*qeError = NULL;
@@ -109,33 +103,21 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	dtxProtocolParms.serializedDtxContextInfo = serializedDtxContextInfo;
 	dtxProtocolParms.serializedDtxContextInfoLen = serializedDtxContextInfoLen;
 
-	/*
-	 * Allocate a primary QE for every available segDB in the system.
-	 */
-	primaryGang = AllocateWriterGang();
-
-	Assert(primaryGang);
-
-	if (primaryGang->dispatcherActive)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("query plan with multiple segworker groups is not supported"),
-				 errhint("dispatching DTX commands to a busy gang")));
-	}
+	queryText = buildGpDtxProtocolCommand(&dtxProtocolParms, &queryTextLen);
 
 	/*
 	 * Dispatch the command.
 	 */
-	ds = cdbdisp_makeDispatcherState();
-	oldContext = MemoryContextSwitchTo(DispatcherContext);
-	queryText = buildGpDtxProtocolCommand(&dtxProtocolParms, &queryTextLen);
-	ds->primaryResults = cdbdisp_makeDispatchResults(1, false);
-	ds->dispatchParams = cdbdisp_makeDispatchParams (1, queryText, queryTextLen);
-	ds->primaryResults->writer_gang = primaryGang;
-	MemoryContextSwitchTo(oldContext);
+	ds = cdbdisp_makeDispatcherState(false);
 
-	cdbdisp_dispatchToGang(ds, primaryGang, -1, direct);
+	primaryGang = cdbdisp_allocateGang(ds, GANGTYPE_PRIMARY_WRITER, twophaseSegments);
+
+	Assert(primaryGang);
+
+	cdbdisp_makeDispatchResults(ds, 1, false);
+	cdbdisp_makeDispatchParams(ds, 1, queryText, queryTextLen);
+
+	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 
 	cdbdisp_waitDispatchFinish(ds);
 

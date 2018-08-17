@@ -39,6 +39,7 @@
 #include "libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbfts.h"
+#include "cdb/cdbdisp.h"		/* me */
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbgang.h"		/* me */
 #include "cdb/cdbgang_thread.h"
@@ -55,231 +56,30 @@
 #define MAX_CACHED_1_GANGS 1
 
 /*
- * Which gang this QE belongs to; this would be used in PostgresMain to find out
- * the slice this QE should execute
+ * Unique QE identifier, it's set when the QE is started up, it
+ * will be use to go through slice table to find which slice
+ * this QE should execute.
  */
-int			qe_gang_id = 0;
+int			qe_identifier = 0;
 
 /*
  * number of primary segments on this host
  */
 int			host_segments = 0;
 
-MemoryContext GangContext = NULL;
-Gang	   *CurrentGangCreating = NULL;
-
 CreateGangFunc pCreateGangFunc = NULL;
-
-/*
- * Points to the result of getCdbComponentDatabases()
- */
-static CdbComponentDatabases *cdb_component_dbs = NULL;
 
 static int	largest_gangsize = 0;
 
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
 
-static List *allocatedReaderGangsN = NIL;
-static List *availableReaderGangsN = NIL;
-static List *allocatedReaderGangs1 = NIL;
-static List *availableReaderGangs1 = NIL;
 static Gang *primaryWriterGang = NULL;
 
-/*
- * Every gang created must have a unique identifier
- */
-#define PRIMARY_WRITER_GANG_ID 1
-static int	gang_id_counter = 2;
-
-
-static Gang *createGang(GangType type, int gang_id, int size, int content);
-static void disconnectAndDestroyAllReaderGangs(bool destroyAllocated);
-
-static bool isTargetPortal(const char *p1, const char *p2);
 static bool cleanupGang(Gang *gp);
 static void resetSessionForPrimaryGangLoss(void);
-static CdbComponentDatabaseInfo *copyCdbComponentDatabaseInfo(
-							 CdbComponentDatabaseInfo *dbInfo);
-static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
-						   CdbComponentDatabases *cdbs, int segIndex);
-static void addGangToAllocated(Gang *gp);
-static Gang *getAvailableGang(GangType type, int size, int content);
-#ifdef USE_ASSERT_CHECKING
-static bool readerGangsExist(void);
-#endif
 
-/*
- * Create a reader gang.
- *
- * @type can be GANGTYPE_ENTRYDB_READER, GANGTYPE_SINGLETON_READER or GANGTYPE_PRIMARY_READER.
- */
-Gang *
-AllocateReaderGang(GangType type, char *portal_name)
-{
-	MemoryContext oldContext = NULL;
-	Gang	   *gp = NULL;
-	int			size = 0;
-	int			content = 0;
-
-	ELOG_DISPATCHER_DEBUG("AllocateReaderGang for portal %s: allocatedReaderGangsN %d, availableReaderGangsN %d, "
-						  "allocatedReaderGangs1 %d, availableReaderGangs1 %d",
-						  (portal_name ? portal_name : "<unnamed>"),
-						  list_length(allocatedReaderGangsN),
-						  list_length(availableReaderGangsN),
-						  list_length(allocatedReaderGangs1),
-						  list_length(availableReaderGangs1));
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-	{
-		elog(FATAL, "dispatch process called with role %d", Gp_role);
-	}
-
-	insist_log(IsTransactionOrTransactionBlock(),
-			   "cannot allocate segworker group outside of transaction");
-
-	if (GangContext == NULL)
-	{
-		GangContext = AllocSetContextCreate(TopMemoryContext, "Gang Context",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE);
-	}
-	Assert(GangContext != NULL);
-	oldContext = MemoryContextSwitchTo(GangContext);
-
-	switch (type)
-	{
-		case GANGTYPE_ENTRYDB_READER:
-			content = -1;
-			size = 1;
-			break;
-
-		case GANGTYPE_SINGLETON_READER:
-			content = gp_singleton_segindex;
-			size = 1;
-			break;
-
-		case GANGTYPE_PRIMARY_READER:
-			content = 0;
-			size = getgpsegmentCount();
-			break;
-
-		default:
-			Assert(false);
-	}
-
-	/*
-	 * First, we look for an unallocated but created gang of the right type if
-	 * it exists, we return it. Else, we create a new gang
-	 */
-	gp = getAvailableGang(type, size, content);
-	if (gp == NULL)
-	{
-		ELOG_DISPATCHER_DEBUG("Creating a new reader size %d gang for %s",
-							  size, (portal_name ? portal_name : "unnamed portal"));
-
-		gp = createGang(type, gang_id_counter++, size, content);
-		gp->allocated = true;
-	}
-
-	/*
-	 * make sure no memory is still allocated for previous portal name that
-	 * this gang belonged to
-	 */
-	if (gp->portal_name)
-		pfree(gp->portal_name);
-
-	/* let the gang know which portal it is being assigned to */
-	gp->portal_name = (portal_name ? pstrdup(portal_name) : (char *) NULL);
-
-	addGangToAllocated(gp);
-
-	MemoryContextSwitchTo(oldContext);
-
-	ELOG_DISPATCHER_DEBUG("on return: allocatedReaderGangs %d, availableReaderGangsN %d, "
-						  "allocatedReaderGangs1 %d, availableReaderGangs1 %d",
-						  list_length(allocatedReaderGangsN),
-						  list_length(availableReaderGangsN),
-						  list_length(allocatedReaderGangs1),
-						  list_length(availableReaderGangs1));
-
-	return gp;
-}
-
-/*
- * Create a writer gang.
- */
-Gang *
-AllocateWriterGang()
-{
-	Gang	   *writerGang = NULL;
-	MemoryContext oldContext = NULL;
-	int			i = 0;
-
-	ELOG_DISPATCHER_DEBUG("AllocateWriterGang begin.");
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-	{
-		elog(FATAL, "dispatch process called with role %d", Gp_role);
-	}
-
-	/*
-	 * First, we look for an unallocated but created gang of the right type if
-	 * it exists, we return it. Else, we create a new gang
-	 */
-	if (primaryWriterGang != NULL)
-	{
-		if (!GangOK(primaryWriterGang))
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("could not connect to segment: initialization of segworker group failed")));
-		}
-		else
-		{
-			ELOG_DISPATCHER_DEBUG("Reusing an existing primary writer gang");
-			writerGang = primaryWriterGang;
-		}
-	}
-
-	if (writerGang == NULL)
-	{
-		int			nsegdb = getgpsegmentCount();
-
-		insist_log(IsTransactionOrTransactionBlock(),
-				   "cannot allocate segworker group outside of transaction");
-
-		if (GangContext == NULL)
-		{
-			GangContext = AllocSetContextCreate(TopMemoryContext,
-												"Gang Context",
-												ALLOCSET_DEFAULT_MINSIZE,
-												ALLOCSET_DEFAULT_INITSIZE,
-												ALLOCSET_DEFAULT_MAXSIZE);
-		}
-		Assert(GangContext != NULL);
-		oldContext = MemoryContextSwitchTo(GangContext);
-
-		writerGang = createGang(GANGTYPE_PRIMARY_WRITER,
-								PRIMARY_WRITER_GANG_ID, nsegdb, -1);
-		writerGang->allocated = true;
-
-		/*
-		 * set "whoami" for utility statement. non-utility statement will
-		 * overwrite it in function getCdbProcessList.
-		 */
-		for (i = 0; i < writerGang->size; i++)
-			setQEIdentifier(&writerGang->db_descriptors[i], -1, writerGang->perGangContext);
-
-		MemoryContextSwitchTo(oldContext);
-	}
-
-	ELOG_DISPATCHER_DEBUG("AllocateWriterGang end.");
-
-	primaryWriterGang = writerGang;
-	return writerGang;
-}
+static int getGangMaxVmem(Gang *gp);
 
 /*
  * Creates a new gang by logging on a session to each segDB involved.
@@ -287,35 +87,67 @@ AllocateWriterGang()
  * call this function in GangContext memory context.
  * elog ERROR or return a non-NULL gang.
  */
-static Gang *
-createGang(GangType type, int gang_id, int size, int content)
+Gang *
+cdbdisp_allocateGang(CdbDispatcherState *ds, GangType type, List *segments)
 {
-	return pCreateGangFunc(type, gang_id, size, content);
-}
+	MemoryContext oldContext;
+	SegmentType segmentType;
+	Gang *newGang = NULL;
 
-/*
- * Test if the connections of the primary writer gang are alive.
- */
-bool
-isPrimaryWriterGangAlive(void)
-{
-	if (primaryWriterGang == NULL)
-		return false;
+	ELOG_DISPATCHER_DEBUG("cdbdisp_allocateGang begin.");
 
-	int			size = primaryWriterGang->size;
-	int			i = 0;
-
-	Assert(size == getgpsegmentCount());
-
-	for (i = 0; i < size; i++)
+	if (Gp_role != GP_ROLE_DISPATCH)
 	{
-		SegmentDatabaseDescriptor *segdb = &primaryWriterGang->db_descriptors[i];
-
-		if (!isSockAlive(segdb->conn->sock))
-			return false;
+		elog(FATAL, "dispatch process called with role %d", Gp_role);
 	}
 
-	return true;
+	if (segments == NIL)
+		return NULL;
+
+	if (type == GANGTYPE_PRIMARY_WRITER && primaryWriterGang != NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("query plan with multiple segworker groups is not supported"),
+				 errhint("likely caused by a function that reads or modifies data in a distributed table")));
+	}
+
+	Assert(DispatcherContext);
+	oldContext = MemoryContextSwitchTo(DispatcherContext);
+
+	if (type == GANGTYPE_PRIMARY_WRITER)
+		segmentType = SEGMENTTYPE_EXPLICT_WRITER;
+	/* for extended query like cursor, must specify a reader */
+	else if (ds->isExtendedQuery)
+		segmentType = SEGMENTTYPE_EXPLICT_READER;
+	else
+		segmentType = SEGMENTTYPE_ANY;
+
+	newGang = pCreateGangFunc(segments, segmentType);
+	newGang->allocated = true;
+	newGang->type = type;
+
+	ds->allocatedGangs = lcons(newGang, ds->allocatedGangs);
+
+	ELOG_DISPATCHER_DEBUG("cdbdisp_allocateGang end.");
+
+	if (type == GANGTYPE_PRIMARY_WRITER)
+	{
+		int i;
+		/*
+		 * set "whoami" for utility statement. non-utility statement will
+		 * overwrite it in function getCdbProcessList.
+		 */
+		for (i = 0; i < newGang->size; i++)
+			cdbconn_setQEIdentifier(newGang->db_descriptors[i], -1);
+
+		primaryWriterGang = newGang;
+
+	}
+
+	MemoryContextSwitchTo(oldContext);
+
+	return newGang;
 }
 
 /*
@@ -360,89 +192,6 @@ segment_failure_due_to_recovery(const char *error_message)
 }
 
 /*
- * Read gp_segment_configuration catalog table and build a CdbComponentDatabases.
- *
- * Read the catalog if FTS is reconfigured.
- *
- * We don't want to destroy cdb_component_dbs when one gang get destroyed, so allocate
- * it in GangContext instead of perGangContext.
- */
-CdbComponentDatabases *
-getComponentDatabases(void)
-{
-	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
-	Assert(GangContext != NULL);
-
-	uint8		ftsVersion = getFtsVersion();
-	MemoryContext oldContext = MemoryContextSwitchTo(GangContext);
-
-	if (cdb_component_dbs == NULL)
-	{
-		cdb_component_dbs = getCdbComponentDatabases();
-		cdb_component_dbs->fts_version = ftsVersion;
-	}
-	else if (cdb_component_dbs->fts_version != ftsVersion)
-	{
-		ELOG_DISPATCHER_DEBUG("FTS rescanned, get new component databases info.");
-		freeCdbComponentDatabases(cdb_component_dbs);
-		cdb_component_dbs = getCdbComponentDatabases();
-		cdb_component_dbs->fts_version = ftsVersion;
-	}
-
-	MemoryContextSwitchTo(oldContext);
-
-	return cdb_component_dbs;
-}
-
-/*
- * Make a copy of CdbComponentDatabaseInfo.
- *
- * Caller destroy it.
- */
-static CdbComponentDatabaseInfo *
-copyCdbComponentDatabaseInfo(
-							 CdbComponentDatabaseInfo *dbInfo)
-{
-	int			i = 0;
-	int			size = sizeof(CdbComponentDatabaseInfo);
-	CdbComponentDatabaseInfo *newInfo = palloc0(size);
-
-	memcpy(newInfo, dbInfo, size);
-
-	if (dbInfo->hostip)
-		newInfo->hostip = pstrdup(dbInfo->hostip);
-
-	/* So far, we don't need them. */
-	newInfo->address = NULL;
-	newInfo->hostname = NULL;
-	for (i = 0; i < COMPONENT_DBS_MAX_ADDRS; i++)
-		newInfo->hostaddrs[i] = NULL;
-
-	return newInfo;
-}
-
-/*
- * Find CdbComponentDatabases in the array by segment index.
- */
-static CdbComponentDatabaseInfo *
-findDatabaseInfoBySegIndex(
-						   CdbComponentDatabases *cdbs, int segIndex)
-{
-	Assert(cdbs != NULL);
-	int			i = 0;
-	CdbComponentDatabaseInfo *cdbInfo = NULL;
-
-	for (i = 0; i < cdbs->total_segment_dbs; i++)
-	{
-		cdbInfo = &cdbs->segment_db_info[i];
-		if (segIndex == cdbInfo->segindex)
-			break;
-	}
-
-	return cdbInfo;
-}
-
-/*
  * Reads the GP catalog tables and build a CdbComponentDatabases structure.
  * It then converts this to a Gang structure and initializes all the non-connection related fields.
  *
@@ -450,105 +199,46 @@ findDatabaseInfoBySegIndex(
  * Returns a not-null pointer.
  */
 Gang *
-buildGangDefinition(GangType type, int gang_id, int size, int content)
+buildGangDefinition(List *segments, SegmentType segmentType)
 {
-	Gang	   *newGangDefinition = NULL;
-	CdbComponentDatabaseInfo *cdbinfo = NULL;
-	CdbComponentDatabaseInfo *cdbInfoCopy = NULL;
-	SegmentDatabaseDescriptor *segdbDesc = NULL;
-	MemoryContext perGangContext = NULL;
+	Gang *newGangDefinition = NULL;
+	ListCell *lc;
+	int	i = 0;
+	int	size;
+	int contentId;
 
-	int			segCount = 0;
-	int			i = 0;
+	size = list_length(segments);
 
-	ELOG_DISPATCHER_DEBUG("buildGangDefinition:Starting %d qExec processes for %s gang",
-						  size, gangTypeToString(type));
+	ELOG_DISPATCHER_DEBUG("buildGangDefinition:Starting %d qExec processes for gang", size);
 
-	Assert(CurrentMemoryContext == GangContext);
-	Assert(size == 1 || size == getgpsegmentCount());
-
-	/* read gp_segment_configuration and build CdbComponentDatabases */
-	cdb_component_dbs = getComponentDatabases();
-
-	if (cdb_component_dbs == NULL ||
-		cdb_component_dbs->total_segments <= 0 ||
-		cdb_component_dbs->total_segment_dbs <= 0)
-		insist_log(false, "schema not populated while building segworker group");
-
-	perGangContext = AllocSetContextCreate(GangContext, "Per Gang Context",
-										   ALLOCSET_DEFAULT_MINSIZE,
-										   ALLOCSET_DEFAULT_INITSIZE,
-										   ALLOCSET_DEFAULT_MAXSIZE);
-	Assert(perGangContext != NULL);
-	MemoryContextSwitchTo(perGangContext);
+	Assert(CurrentMemoryContext == DispatcherContext);
 
 	/* allocate a gang */
 	newGangDefinition = (Gang *) palloc0(sizeof(Gang));
-	newGangDefinition->type = type;
+	newGangDefinition->type = GANGTYPE_UNALLOCATED;
 	newGangDefinition->size = size;
-	newGangDefinition->gang_id = gang_id;
 	newGangDefinition->allocated = false;
-	newGangDefinition->noReuse = false;
-	newGangDefinition->dispatcherActive = false;
 	newGangDefinition->portal_name = NULL;
-	newGangDefinition->perGangContext = perGangContext;
 	newGangDefinition->db_descriptors =
-		(SegmentDatabaseDescriptor *) palloc0(size * sizeof(SegmentDatabaseDescriptor));
+		(SegmentDatabaseDescriptor **) palloc0(size * sizeof(SegmentDatabaseDescriptor*));
 
-	/* initialize db_descriptors */
-	switch (type)
+	PG_TRY();
 	{
-		case GANGTYPE_ENTRYDB_READER:
-			cdbinfo = &cdb_component_dbs->entry_db_info[0];
-			cdbInfoCopy = copyCdbComponentDatabaseInfo(cdbinfo);
-			segdbDesc = &newGangDefinition->db_descriptors[0];
-			cdbconn_initSegmentDescriptor(segdbDesc, cdbInfoCopy);
-			setQEIdentifier(segdbDesc, -1, perGangContext);
-			break;
-
-		case GANGTYPE_SINGLETON_READER:
-			cdbinfo = findDatabaseInfoBySegIndex(cdb_component_dbs, content);
-			cdbInfoCopy = copyCdbComponentDatabaseInfo(cdbinfo);
-			segdbDesc = &newGangDefinition->db_descriptors[0];
-			cdbconn_initSegmentDescriptor(segdbDesc, cdbInfoCopy);
-			setQEIdentifier(segdbDesc, -1, perGangContext);
-			break;
-
-		case GANGTYPE_PRIMARY_READER:
-		case GANGTYPE_PRIMARY_WRITER:
-
-			/*
-			 * We loop through the segment_db_info.  Each item has a segindex.
-			 * They are sorted by segindex, and there can be > 1
-			 * segment_db_info for a given segindex (currently, there can be 1
-			 * or 2)
-			 */
-			for (i = 0; i < cdb_component_dbs->total_segment_dbs; i++)
-			{
-				cdbinfo = &cdb_component_dbs->segment_db_info[i];
-				if (SEGMENT_IS_ACTIVE_PRIMARY(cdbinfo))
-				{
-					segdbDesc = &newGangDefinition->db_descriptors[segCount];
-					cdbInfoCopy = copyCdbComponentDatabaseInfo(cdbinfo);
-					cdbconn_initSegmentDescriptor(segdbDesc, cdbInfoCopy);
-					setQEIdentifier(segdbDesc, -1, perGangContext);
-					segCount++;
-				}
-			}
-
-			if (size != segCount)
-			{
-				DisconnectAndDestroyAllGangs(true);
-				elog(ERROR, "Not all primary segment instances are active and connected");
-			}
-			break;
-
-		default:
-			Assert(false);
+		foreach_with_count (lc, segments , i)
+		{
+			contentId = lfirst_int(lc);
+			newGangDefinition->db_descriptors[i] =
+						cdbcomponent_allocateIdleSegdb(contentId, segmentType);
+		}
 	}
+	PG_CATCH();
+	{
+		DisconnectAndDestroyGang(newGangDefinition);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 
 	ELOG_DISPATCHER_DEBUG("buildGangDefinition done");
-	MemoryContextSwitchTo(GangContext);
 	return newGangDefinition;
 }
 
@@ -647,7 +337,7 @@ makeOptions(void)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	qdinfo = &cdb_component_dbs->entry_db_info[0];
+	qdinfo = cdbcomponent_getComponentInfo(-1); 
 	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->hostip);
 	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->port);
 
@@ -672,7 +362,7 @@ makeOptions(void)
  */
 bool
 build_gpqeid_param(char *buf, int bufsz,
-				   bool is_writer, int gangId, int hostSegs)
+				   bool is_writer, int identifier, int hostSegs)
 {
 	int		len;
 #ifdef HAVE_INT64_TIMESTAMP
@@ -687,7 +377,7 @@ build_gpqeid_param(char *buf, int bufsz,
 
 	len = snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
 				   gp_session_id, PgStartTime,
-				   (is_writer ? "true" : "false"), gangId, hostSegs);
+				   (is_writer ? "true" : "false"), identifier, hostSegs);
 
 	return (len > 0 && len < bufsz);
 }
@@ -748,9 +438,10 @@ cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_is_writer", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
 
+	/* qe_identifier */
 	if (gpqeid_next_param(&cp, &np))
 	{
-		qe_gang_id = (int) strtol(cp, NULL, 10);
+		qe_identifier = (int) strtol(cp, NULL, 10);
 	}
 
 	if (gpqeid_next_param(&cp, &np))
@@ -762,7 +453,7 @@ cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
 	if (!cp || np)
 		goto bad;
 
-	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_gang_id <= 0 || host_segments <= 0)
+	if (gp_session_id <= 0 || PgStartTime <= 0 || host_segments <= 0)
 		goto bad;
 
 	pfree(gpqeid);
@@ -770,176 +461,6 @@ cdbgang_parse_gpqeid_params(struct Port *port __attribute__((unused)),
 
 bad:
 	elog(FATAL, "Segment dispatched with invalid option: 'gpqeid=%s'", gpqeid_value);
-}
-
-/*
- * This is where we keep track of all the gangs that exist for this session.
- * On a QD, gangs can either be "available" (not currently in use), or "allocated".
- *
- * On a Dispatch Agent, we just store them in the "available" lists, as the DA doesn't
- * keep track of allocations (it assumes the QD will keep track of what is allocated or not).
- *
- */
-List *
-getAllIdleReaderGangs()
-{
-	List	   *res = NIL;
-	ListCell   *le;
-
-	/*
-	 * Do not use list_concat() here, it would destructively modify the lists!
-	 */
-	foreach(le, availableReaderGangsN)
-	{
-		res = lappend(res, lfirst(le));
-	}
-	foreach(le, availableReaderGangs1)
-	{
-		res = lappend(res, lfirst(le));
-	}
-
-	return res;
-}
-
-List *
-getAllAllocatedReaderGangs()
-{
-	List	   *res = NIL;
-	ListCell   *le;
-
-	/*
-	 * Do not use list_concat() here, it would destructively modify the lists!
-	 */
-	foreach(le, allocatedReaderGangsN)
-	{
-		res = lappend(res, lfirst(le));
-	}
-	foreach(le, allocatedReaderGangs1)
-	{
-		res = lappend(res, lfirst(le));
-	}
-
-	return res;
-}
-
-static Gang *
-getAvailableGang(GangType type, int size, int content)
-{
-	Gang	   *retGang = NULL;
-
-	switch (type)
-	{
-		case GANGTYPE_SINGLETON_READER:
-		case GANGTYPE_ENTRYDB_READER:
-			if (availableReaderGangs1 != NULL)	/* There are gangs already
-												 * created */
-			{
-				ListCell   *cur_item = NULL;
-				ListCell   *prev_item = NULL;
-				ListCell   *next_item = NULL;
-
-				cur_item = list_head(availableReaderGangs1);
-
-				while (cur_item != NULL)
-				{
-					Gang	   *gang = (Gang *) lfirst(cur_item);
-
-					Assert(gang != NULL);
-					Assert(gang->size == size);
-
-					next_item = lnext(cur_item);
-
-					if (gang->db_descriptors[0].segindex == content)
-					{
-						availableReaderGangs1 = list_delete_cell(availableReaderGangs1, cur_item, prev_item);
-
-						/* sanity check */
-						if (!GangOK(gang))
-						{
-							/* connection is bad or segment is down */
-							DisconnectAndDestroyGang(gang);
-						}
-						else
-						{
-							ELOG_DISPATCHER_DEBUG("reusing an available reader 1-gang for seg%d", content);
-							retGang = gang;
-							break;
-						}
-						/* prev_item does not advance */
-					}
-					else
-					{
-						prev_item = cur_item;
-					}
-
-					cur_item = next_item;
-				}
-			}
-			break;
-
-		case GANGTYPE_PRIMARY_READER:
-			if (availableReaderGangsN != NULL)	/* There are gangs already
-												 * created */
-			{
-				ListCell   *cur_item = NULL;
-				ListCell   *prev_item = NULL;
-				ListCell   *next_item = NULL;
-
-				cur_item = list_head(availableReaderGangsN);
-
-				while (cur_item != NULL)
-				{
-					Gang	   *gang = (Gang *) lfirst(cur_item);
-
-					Assert(gang != NULL);
-					Assert(gang->size == size);
-					next_item = lnext(cur_item);
-
-					availableReaderGangsN = list_delete_cell(availableReaderGangsN, cur_item, prev_item);
-
-					/* sanity check */
-					if (!GangOK(gang))
-					{
-						/* connection is bad or segment is down */
-						DisconnectAndDestroyGang(gang);
-					}
-					else
-					{
-						ELOG_DISPATCHER_DEBUG("reusing an available reader N-gang");
-						retGang = gang;
-						break;
-					}
-					/* prev_item does not advance */
-					cur_item = next_item;
-				}
-			}
-			break;
-
-		default:
-			Assert(false);
-	}
-
-	return retGang;
-}
-
-static void
-addGangToAllocated(Gang *gp)
-{
-	Assert(CurrentMemoryContext == GangContext);
-
-	switch (gp->type)
-	{
-		case GANGTYPE_SINGLETON_READER:
-		case GANGTYPE_ENTRYDB_READER:
-			allocatedReaderGangs1 = lappend(allocatedReaderGangs1, gp);
-			break;
-
-		case GANGTYPE_PRIMARY_READER:
-			allocatedReaderGangsN = lappend(allocatedReaderGangsN, gp);
-			break;
-		default:
-			Assert(false);
-	}
 }
 
 struct SegmentDatabaseDescriptor *
@@ -952,8 +473,8 @@ getSegmentDescriptorFromGang(const Gang *gp, int seg)
 
 	for (i = 0; i < gp->size; i++)
 	{
-		if (gp->db_descriptors[i].segindex == seg)
-			return &(gp->db_descriptors[i]);
+		if (gp->db_descriptors[i]->segindex == seg)
+			return gp->db_descriptors[i];
 	}
 
 	return NULL;
@@ -995,51 +516,36 @@ makeCdbProcess(SegmentDatabaseDescriptor *segdbDesc)
  *
  * @directDispatch: might be null
  */
-List *
-getCdbProcessList(Gang *gang, int sliceIndex, DirectDispatchInfo *directDispatch)
+void
+setupCdbProcessList(Slice *slice)
 {
-	List	   *list = NULL;
 	int			i = 0;
+	Gang		*gang = slice->primaryGang;
 
 	ELOG_DISPATCHER_DEBUG("getCdbProcessList slice%d gangtype=%d gangsize=%d",
-						  sliceIndex, gang->type, gang->size);
-
+						  slice->sliceIndex, gang->type, gang->size);
+	Assert(gang);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-	Assert((gang->type == GANGTYPE_PRIMARY_WRITER && gang->size == getgpsegmentCount()) ||
-		   (gang->type == GANGTYPE_PRIMARY_READER && gang->size == getgpsegmentCount()) ||
+	Assert(gang->type == GANGTYPE_PRIMARY_WRITER ||
+		   gang->type == GANGTYPE_PRIMARY_READER ||
 		   (gang->type == GANGTYPE_ENTRYDB_READER && gang->size == 1) ||
 		   (gang->type == GANGTYPE_SINGLETON_READER && gang->size == 1));
 
 
-	if (directDispatch != NULL && directDispatch->isDirectDispatch)
+	for (i = 0; i < gang->size; i++)
 	{
-		/* Currently, direct dispatch is to one segment db. */
-		Assert(list_length(directDispatch->contentIds) == 1);
-
-		int			directDispatchContentId = linitial_int(directDispatch->contentIds);
-		SegmentDatabaseDescriptor *segdbDesc = &gang->db_descriptors[directDispatchContentId];
+		SegmentDatabaseDescriptor *segdbDesc = gang->db_descriptors[i];
+		Assert(segdbDesc->identifier > 0);
 		CdbProcess *process = makeCdbProcess(segdbDesc);
 
-		setQEIdentifier(segdbDesc, sliceIndex, gang->perGangContext);
-		list = lappend(list, (void*)process);
+		cdbconn_setQEIdentifier(segdbDesc, slice->sliceIndex);
+		slice->primaryProcesses = lappend(slice->primaryProcesses, process);
+		slice->processesMap = bms_add_member(slice->processesMap, segdbDesc->identifier);
+
+		ELOG_DISPATCHER_DEBUG("Gang assignment (gang_id %d): slice%d seg%d %s:%d pid=%d",
+							  gang->gang_id, slice->sliceIndex, process->contentid,
+							  process->listenerAddr, process->listenerPort, process->pid);
 	}
-	else
-	{
-		for (i = 0; i < gang->size; i++)
-		{
-			SegmentDatabaseDescriptor *segdbDesc = &gang->db_descriptors[i];
-			CdbProcess *process = makeCdbProcess(segdbDesc);
-
-			setQEIdentifier(segdbDesc, sliceIndex, gang->perGangContext);
-			list = lappend(list, process);
-
-			ELOG_DISPATCHER_DEBUG("Gang assignment (gang_id %d): slice%d seg%d %s:%d pid=%d",
-								  gang->gang_id, sliceIndex, process->contentid,
-								  process->listenerAddr, process->listenerPort, process->pid);
-		}
-	}
-
-	return list;
 }
 
 /*
@@ -1057,14 +563,13 @@ getCdbProcessesForQD(int isPrimary)
 	CdbProcess *proc;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-	Assert(cdb_component_dbs != NULL);
 
 	if (!isPrimary)
 	{
 		elog(FATAL, "getCdbProcessesForQD: unsupported request for master mirror process");
 	}
 
-	qdinfo = &(cdb_component_dbs->entry_db_info[0]);
+	qdinfo = cdbcomponent_getComponentInfo(-1);
 
 	Assert(qdinfo->segindex == -1);
 	Assert(SEGMENT_IS_ACTIVE_PRIMARY(qdinfo));
@@ -1111,7 +616,6 @@ DisconnectAndDestroyGang(Gang *gp)
 	if (gp == NULL)
 		return;
 
-	AssertImply(gp->type == GANGTYPE_PRIMARY_WRITER, !readerGangsExist());
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyGang entered: id = %d", gp->gang_id);
 
@@ -1125,63 +629,15 @@ DisconnectAndDestroyGang(Gang *gp)
 	 */
 	for (i = 0; i < gp->size; i++)
 	{
-		SegmentDatabaseDescriptor *segdbDesc = &(gp->db_descriptors[i]);
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
-		Assert(segdbDesc != NULL);
-		cdbconn_disconnect(segdbDesc);
-		cdbconn_termSegmentDescriptor(segdbDesc);
+		if (!segdbDesc)
+			continue;
+
+		cdbcomponent_destroyIdleSegdb(segdbDesc);
 	}
-
-	MemoryContextDelete(gp->perGangContext);
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyGang done");
-}
-
-/*
- * disconnectAndDestroyAllReaderGangs
- *
- * Here we destroy all reader gangs regardless of the portal they belong to.
- * TODO: This may need to be done more carefully when multiple cursors are
- * enabled.
- * If the parameter destroyAllocated is true, then destroy allocated as well as
- * available gangs.
- */
-static void
-disconnectAndDestroyAllReaderGangs(bool destroyAllocated)
-{
-	Gang	   *gp = NULL;
-	ListCell   *lc = NULL;
-
-	foreach(lc, availableReaderGangsN)
-	{
-		gp = (Gang *) lfirst(lc);
-		DisconnectAndDestroyGang(gp);
-	}
-	availableReaderGangsN = NULL;
-
-	foreach(lc, availableReaderGangs1)
-	{
-		gp = (Gang *) lfirst(lc);
-		DisconnectAndDestroyGang(gp);
-	}
-	availableReaderGangs1 = NULL;
-
-	if (destroyAllocated)
-	{
-		foreach(lc, allocatedReaderGangsN)
-		{
-			gp = (Gang *) lfirst(lc);
-			DisconnectAndDestroyGang(gp);
-		}
-		allocatedReaderGangsN = NULL;
-
-		foreach(lc, allocatedReaderGangs1)
-		{
-			gp = (Gang *) lfirst(lc);
-			DisconnectAndDestroyGang(gp);
-		}
-		allocatedReaderGangs1 = NULL;
-	}
 }
 
 void
@@ -1192,96 +648,58 @@ DisconnectAndDestroyAllGangs(bool resetSession)
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangs");
 
-	/* Destroy CurrentGangCreating before GangContext is reset */
-	if (CurrentGangCreating != NULL)
-	{
-		DisconnectAndDestroyGang(CurrentGangCreating);
-		CurrentGangCreating = NULL;
-	}
+	/* In here, clean up all active dispatcher state */
+	cdbdisp_cleanupAllDispatcherState();
 
-	/* for now, destroy all readers, regardless of the portal that owns them */
-	disconnectAndDestroyAllReaderGangs(true);
-
-	DisconnectAndDestroyGang(primaryWriterGang);
-	primaryWriterGang = NULL;
+	/*
+	 * Clean up cdb_component_dbs which will cleanup
+	 * all allocated segdbs.
+	 */
+	cdbcomponent_destroyCdbComponents();
 
 	if (resetSession)
 		resetSessionForPrimaryGangLoss();
-
-	/*
-	 * As all the reader and writer gangs are destroyed, reset the
-	 * corresponding GangContext to prevent leaks
-	 */
-	if (NULL != GangContext)
-	{
-		MemoryContextReset(GangContext);
-		cdb_component_dbs = NULL;
-	}
 
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyAllGangs done");
 }
 
 /*
- * Destroy all idle (i.e available) reader gangs.
- * It is always safe to get rid of the reader gangs.
- *
- * call only from an idle session.
- */
-void
-disconnectAndDestroyIdleReaderGangs(void)
-{
-	ELOG_DISPATCHER_DEBUG("disconnectAndDestroyIdleReaderGangs beginning");
-
-	disconnectAndDestroyAllReaderGangs(false);
-
-	ELOG_DISPATCHER_DEBUG("disconnectAndDestroyIdleReaderGangs done");
-
-	return;
-}
-
-/*
- * Destroy all idle (i.e available) reader gangs.
- * It is always safe to get rid of the reader gangs.
+ * Destroy all idle (i.e available) QEs.
+ * It is always safe to get rid of the reader QEs.
  *
  * If we are not in a transaction and we do not have a TempNamespace, destroy
- * writer gangs as well.
+ * writer QEs as well.
  *
  * call only from an idle session.
  */
-void DisconnectAndDestroyUnusedGangs(void)
+void DisconnectAndDestroyUnusedQEs(void)
 {
-	/*
-	 * Free gangs to free up resources on the segDBs.
-	 */
-	if (GangsExist())
+	if (IsTransactionOrTransactionBlock() || TempNamespaceOidIsValid())
 	{
-		if (IsTransactionOrTransactionBlock() || TempNamespaceOidIsValid())
-		{
-			/*
-			 * If we are in a transaction, we can't release the writer gang,
-			 * as this will abort the transaction.
-			 *
-			 * If we have a TempNameSpace, we can't release the writer gang, as this
-			 * would drop any temp tables we own.
-			 *
-			 * Since we are idle, any reader gangs will be available but not allocated.
-			 */
-			disconnectAndDestroyIdleReaderGangs();
-		}
-		else
-		{
-			/*
-			 * Get rid of ALL gangs... Readers and primary writer.
-			 * After this, we have no resources being consumed on the segDBs at all.
-			 *
-			 * Our session wasn't destroyed due to an fatal error or FTS action, so
-			 * we don't need to do anything special.  Specifically, we DON'T want
-			 * to act like we are now in a new session, since that would be confusing
-			 * in the log.
-			 *
-			 */
-			DisconnectAndDestroyAllGangs(false);
-		}
+		/*
+		 * If we are in a transaction, we can't release the writer gang,
+		 * as this will abort the transaction.
+		 *
+		 * If we have a TempNameSpace, we can't release the writer gang, as this
+		 * would drop any temp tables we own.
+		 *
+		 * Since we are idle, any reader gangs will be available but not allocated.
+		 */
+		cdbcomponent_cleanupIdleSegdbsList(false);
+	}
+	else
+	{
+		/*
+		 * Get rid of ALL gangs... Readers and primary writer.
+		 * After this, we have no resources being consumed on the segDBs at all.
+		 *
+		 * Our session wasn't destroyed due to an fatal error or FTS action, so
+		 * we don't need to do anything special.  Specifically, we DON'T want
+		 * to act like we are now in a new session, since that would be confusing
+		 * in the log.
+		 *
+		 */
+		cdbcomponent_cleanupIdleSegdbsList(true);
 	}
 }
 
@@ -1304,9 +722,6 @@ cleanupGang(Gang *gp)
 						  gp->gang_id, gp->type, gp->size,
 						  (gp->portal_name ? gp->portal_name : "(unnamed)"));
 
-	if (gp->noReuse)
-		return false;
-
 	if (gp->allocated)
 		ELOG_DISPATCHER_DEBUG("cleanupGang called on a gang that is allocated");
 
@@ -1324,7 +739,7 @@ cleanupGang(Gang *gp)
 	 */
 	for (i = 0; i < gp->size; i++)
 	{
-		SegmentDatabaseDescriptor *segdbDesc = &(gp->db_descriptors[i]);
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
 		Assert(segdbDesc != NULL);
 
@@ -1338,9 +753,6 @@ cleanupGang(Gang *gp)
 		/* Note, we cancel all "still running" queries */
 		if (!cdbconn_discardResults(segdbDesc, 20))
 			elog(FATAL, "cleanup called when a segworker is still busy");
-
-		/* QE is no longer associated with a slice. */
-		setQEIdentifier(segdbDesc, /* slice index */ -1, gp->perGangContext);
 	}
 
 	/* disassociate this gang with any portal that it may have belonged to */
@@ -1352,282 +764,31 @@ cleanupGang(Gang *gp)
 
 	gp->allocated = false;
 
+	/* check if current gang exceed max allowed cache memory */
+	if (getGangMaxVmem(gp) > gp_vmem_protect_gang_cache_limit)
+		return false;
+
 	ELOG_DISPATCHER_DEBUG("cleanupGang done");
 	return true;
 }
 
-/*
- * Get max maxVmemChunksTracked of a gang.
- *
- * return in MB.
- */
 static int
 getGangMaxVmem(Gang *gp)
 {
-	int64		maxmop = 0;
-	int			i = 0;
+       int64           maxmop = 0;
+       int                     i = 0;
 
-	for (i = 0; i < gp->size; ++i)
-	{
-		SegmentDatabaseDescriptor *segdbDesc = &(gp->db_descriptors[i]);
+       for (i = 0; i < gp->size; ++i)
+       {
+               SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
-		Assert(segdbDesc != NULL);
+               Assert(segdbDesc != NULL);
 
-		if (!cdbconn_isBadConnection(segdbDesc))
-			maxmop = Max(maxmop, segdbDesc->conn->mop_high_watermark);
-	}
+               if (!cdbconn_isBadConnection(segdbDesc))
+                       maxmop = Max(maxmop, segdbDesc->conn->mop_high_watermark);
+       }
 
-	return (maxmop >> 20);
-}
-
-/*
- * the gang is working for portal p1. we are only interested in gangs
- * from portal p2. if p1 and p2 are the same portal return true. false
- * otherwise.
- */
-static
-bool
-isTargetPortal(const char *p1, const char *p2)
-{
-	/* both are unnamed portals (represented as NULL) */
-	if (!p1 && !p2)
-		return true;
-
-	/* one is unnamed, the other is named */
-	if (!p1 || !p2)
-		return false;
-
-	/* both are the same named portal */
-	if (strcmp(p1, p2) == 0)
-		return true;
-
-	return false;
-}
-
-/*
- * remove elements from gang list when:
- * 1. list size > cachelimit
- * 2. max mop of this gang > gp_vmem_protect_gang_cache_limit
- */
-static List *
-cleanupPortalGangList(List *gplist, int cachelimit)
-{
-	ListCell   *cell = NULL;
-	ListCell   *prevcell = NULL;
-	int			nLeft = list_length(gplist);
-
-	if (gplist == NULL)
-		return NULL;
-
-	cell = list_head(gplist);
-	while (cell != NULL)
-	{
-		Gang	   *gang = (Gang *) lfirst(cell);
-
-		Assert(gang->type != GANGTYPE_PRIMARY_WRITER);
-
-		if (nLeft > cachelimit ||
-			getGangMaxVmem(gang) > gp_vmem_protect_gang_cache_limit)
-		{
-			DisconnectAndDestroyGang(gang);
-			gplist = list_delete_cell(gplist, cell, prevcell);
-			nLeft--;
-
-			if (prevcell != NULL)
-				cell = lnext(prevcell);
-			else
-				cell = list_head(gplist);
-		}
-		else
-		{
-			prevcell = cell;
-			cell = lnext(cell);
-		}
-	}
-
-	return gplist;
-}
-
-/*
- * Portal drop... Clean up what gangs we hold
- */
-void
-cleanupPortalGangs(Portal portal)
-{
-	MemoryContext oldContext;
-	const char *portal_name;
-
-	if (portal->name && strcmp(portal->name, "") != 0)
-	{
-		portal_name = portal->name;
-		ELOG_DISPATCHER_DEBUG("cleanupPortalGangs %s", portal_name);
-	}
-	else
-	{
-		portal_name = NULL;
-		ELOG_DISPATCHER_DEBUG("cleanupPortalGangs (unamed portal)");
-	}
-
-	if (GangContext)
-		oldContext = MemoryContextSwitchTo(GangContext);
-	else
-		oldContext = MemoryContextSwitchTo(TopMemoryContext);
-
-	availableReaderGangsN = cleanupPortalGangList(availableReaderGangsN, gp_cached_gang_threshold);
-	availableReaderGangs1 = cleanupPortalGangList(availableReaderGangs1, MAX_CACHED_1_GANGS);
-
-	ELOG_DISPATCHER_DEBUG("cleanupPortalGangs '%s'. Reader gang inventory: "
-						  "allocatedN=%d availableN=%d allocated1=%d available1=%d",
-						  (portal_name ? portal_name : "unnamed portal"),
-						  list_length(allocatedReaderGangsN),
-						  list_length(availableReaderGangsN),
-						  list_length(allocatedReaderGangs1),
-						  list_length(availableReaderGangs1));
-
-	MemoryContextSwitchTo(oldContext);
-}
-
-/*
- * freeGangsForPortal
- *
- * Free all gangs that were allocated for a specific portal
- * (could either be a cursor name or an unnamed portal)
- *
- * Be careful when moving gangs onto the available list, if
- * cleanupGang() tells us that the gang has a problem, the gang has
- * been free()ed and we should discard it -- otherwise it is good as
- * far as we can tell.
- */
-void
-freeGangsForPortal(char *portal_name)
-{
-	MemoryContext oldContext;
-	ListCell   *cur_item = NULL;
-	ListCell   *prev_item = NULL;
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-		return;
-
-	if (CurrentGangCreating != NULL)
-	{
-		GangType	type = CurrentGangCreating->type;
-
-		DisconnectAndDestroyGang(CurrentGangCreating);
-		CurrentGangCreating = NULL;
-
-		if (type == GANGTYPE_PRIMARY_WRITER)
-		{
-			DisconnectAndDestroyAllGangs(true);
-			CheckForResetSession();
-		}
-	}
-
-	/*
-	 * the primary writer gangs "belong" to the unnamed portal -- if we have
-	 * multiple active portals trying to release, we can't just release and
-	 * re-release the writers each time !
-	 */
-	if (portal_name == NULL &&
-		primaryWriterGang != NULL &&
-		!cleanupGang(primaryWriterGang))
-	{
-		DisconnectAndDestroyAllGangs(true);
-		return;
-	}
-
-	if (allocatedReaderGangsN == NULL && allocatedReaderGangs1 == NULL)
-		return;
-
-	/*
-	 * Now we iterate through the list of allocated reader gangs and we free
-	 * all the gangs that belong to the portal that was specified by our
-	 * caller.
-	 */
-	ELOG_DISPATCHER_DEBUG("freeGangsForPortal '%s'. Reader gang inventory: "
-						  "allocatedN=%d availableN=%d allocated1=%d available1=%d",
-						  (portal_name ? portal_name : "unnamed portal"),
-						  list_length(allocatedReaderGangsN),
-						  list_length(availableReaderGangsN),
-						  list_length(allocatedReaderGangs1),
-						  list_length(availableReaderGangs1));
-
-	Assert(GangContext != NULL);
-	oldContext = MemoryContextSwitchTo(GangContext);
-
-	cur_item = list_head(allocatedReaderGangsN);
-	while (cur_item != NULL)
-	{
-		Gang	   *gp = (Gang *) lfirst(cur_item);
-		ListCell   *next_item = lnext(cur_item);
-
-		if (isTargetPortal(gp->portal_name, portal_name))
-		{
-			ELOG_DISPATCHER_DEBUG("Returning a reader N-gang to the available list");
-
-			/* cur_item must be removed */
-			allocatedReaderGangsN = list_delete_cell(allocatedReaderGangsN,
-													 cur_item, prev_item);
-
-			/* we only return the gang to the available list if it is good */
-			if (cleanupGang(gp))
-				availableReaderGangsN = lappend(availableReaderGangsN, gp);
-			else
-				DisconnectAndDestroyGang(gp);
-
-			cur_item = next_item;
-		}
-		else
-		{
-			ELOG_DISPATCHER_DEBUG("Skipping the release of a reader N-gang. It is used by another portal");
-
-			/* cur_item must be preserved */
-			prev_item = cur_item;
-			cur_item = next_item;
-		}
-	}
-
-	prev_item = NULL;
-	cur_item = list_head(allocatedReaderGangs1);
-	while (cur_item != NULL)
-	{
-		Gang	   *gp = (Gang *) lfirst(cur_item);
-		ListCell   *next_item = lnext(cur_item);
-
-		if (isTargetPortal(gp->portal_name, portal_name))
-		{
-			ELOG_DISPATCHER_DEBUG("Returning a reader 1-gang to the available list");
-
-			/* cur_item must be removed */
-			allocatedReaderGangs1 = list_delete_cell(allocatedReaderGangs1,
-													 cur_item, prev_item);
-
-			/* we only return the gang to the available list if it is good */
-			if (cleanupGang(gp))
-				availableReaderGangs1 = lappend(availableReaderGangs1, gp);
-			else
-				DisconnectAndDestroyGang(gp);
-
-			cur_item = next_item;
-		}
-		else
-		{
-			ELOG_DISPATCHER_DEBUG("Skipping the release of a reader 1-gang. It is used by another portal");
-
-			/* cur_item must be preserved */
-			prev_item = cur_item;
-			cur_item = next_item;
-		}
-	}
-
-	MemoryContextSwitchTo(oldContext);
-
-	ELOG_DISPATCHER_DEBUG("Gangs released for portal '%s'. Reader gang inventory: "
-						  "allocatedN=%d availableN=%d allocated1=%d available1=%d",
-						  (portal_name ? portal_name : "unnamed portal"),
-						  list_length(allocatedReaderGangsN),
-						  list_length(availableReaderGangsN),
-						  list_length(allocatedReaderGangs1),
-						  list_length(availableReaderGangs1));
+       return (maxmop >> 20);
 }
 
 /*
@@ -1649,7 +810,7 @@ CheckForResetSession(void)
 	/* Do the session id change early. */
 
 	/* If we have gangs, we can't change our session ID. */
-	Assert(!GangsExist());
+	Assert(!cdbcomponent_segdbsExist());
 
 	oldSessionId = gp_session_id;
 	ProcNewMppSessionId(&newSessionId);
@@ -1826,19 +987,13 @@ GangOK(Gang *gp)
 	if (gp == NULL)
 		return false;
 
-	if (gp->gang_id < 1 ||
-		gp->gang_id > 100000000 ||
-		gp->type > GANGTYPE_PRIMARY_WRITER ||
-		(gp->size != getgpsegmentCount() && gp->size != 1))
-		return false;
-
 	/*
 	 * Gang is direct-connect (no agents).
 	 */
 
 	for (i = 0; i < gp->size; i++)
 	{
-		SegmentDatabaseDescriptor *segdbDesc = &(gp->db_descriptors[i]);
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
 		if (cdbconn_isBadConnection(segdbDesc))
 			return false;
@@ -1848,27 +1003,6 @@ GangOK(Gang *gp)
 
 	return true;
 }
-
-bool
-GangsExist(void)
-{
-	return (primaryWriterGang != NULL ||
-			allocatedReaderGangsN != NIL ||
-			availableReaderGangsN != NIL ||
-			allocatedReaderGangs1 != NIL ||
-			availableReaderGangs1 != NIL);
-}
-
-#ifdef USE_ASSERT_CHECKING
-static bool
-readerGangsExist(void)
-{
-	return (allocatedReaderGangsN != NIL ||
-			availableReaderGangsN != NIL ||
-			allocatedReaderGangs1 != NIL ||
-			availableReaderGangs1 != NIL);
-}
-#endif
 
 int
 largestGangsize(void)
@@ -1890,4 +1024,33 @@ cdbgang_setAsync(bool async)
 		pCreateGangFunc = pCreateGangFuncAsync;
 	else
 		pCreateGangFunc = pCreateGangFuncThreaded;
+}
+
+void
+RecycleGang(Gang *gp)
+{
+	int i;
+
+	if (!gp)
+		return;
+
+	if (gp->type == GANGTYPE_PRIMARY_WRITER)
+		primaryWriterGang = NULL;
+
+	if (!cleanupGang(gp))
+		return DisconnectAndDestroyGang(gp);
+
+	/*
+	 * Loop through the segment_database_descriptors array and, for each
+	 * SegmentDatabaseDescriptor: 1) discard the query results (if any), 2)
+	 * disconnect the session, and 3) discard any connection error message.
+	 */
+	for (i = 0; i < gp->size; i++)
+	{
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
+
+		Assert(segdbDesc != NULL);
+
+		cdbcomponent_recycleIdleSegdb(segdbDesc);
+	}
 }

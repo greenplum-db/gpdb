@@ -101,19 +101,16 @@ t
 (1 row)
 3:VACUUM crash_vacuum_in_appendonly_insert;
 ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.0.1:25432 pid=21369)
-ERROR:  could not connect to segment: initialization of segworker group failed
 1<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:25432 pid=21379: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
-ERROR:  could not connect to segment: initialization of segworker group failed
 2<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:25432 pid=21384: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
-ERROR:  could not connect to segment: initialization of segworker group failed
 
 -- wait for segment to complete recovering
 0U: SELECT 1;

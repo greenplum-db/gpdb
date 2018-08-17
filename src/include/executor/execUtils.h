@@ -18,6 +18,7 @@
 
 struct EState;
 struct QueryDesc;
+struct CdbDispatcherState;
 
 extern void InitSliceTable(struct EState *estate, int nMotions, int nSubplans);
 extern Slice *getCurrentSlice(struct EState *estate, int sliceIndex);
@@ -25,8 +26,7 @@ extern bool sliceRunsOnQD(Slice *slice);
 extern bool sliceRunsOnQE(Slice *slice);
 extern int sliceCalculateNumSendingProcesses(Slice *slice);
 
-extern void AssignGangs(QueryDesc *queryDesc);
-extern void ReleaseGangs(QueryDesc *queryDesc);
+extern void AssignGangs(struct CdbDispatcherState *ds, QueryDesc *queryDesc);
 
 extern Motion *findSenderMotion(PlannedStmt *plannedstmt, int sliceIndex);
 extern Bitmapset *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root);

@@ -89,8 +89,7 @@ static void cdbdisp_checkDispatchResult_async(struct CdbDispatcherState *ds,
 
 static void cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 							 struct Gang *gp,
-							 int sliceIndex,
-							 CdbDispatchDirectDesc *dispDirect);
+							 int sliceIndex);
 static void	cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
 
 static bool	cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
@@ -278,10 +277,10 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 static void
 cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 							 struct Gang *gp,
-							 int sliceIndex,
-							 CdbDispatchDirectDesc *dispDirect)
+							 int sliceIndex)
 {
 	int			i;
+
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
 
 	/*
@@ -291,17 +290,9 @@ cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 	{
 		CdbDispatchResult *qeResult;
 
-		SegmentDatabaseDescriptor *segdbDesc = &gp->db_descriptors[i];
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
 		Assert(segdbDesc != NULL);
-
-		if (dispDirect->directed_dispatch)
-		{
-			/* We can direct dispatch to one segment DB only */
-			Assert(dispDirect->count == 1);
-			if (dispDirect->content[0] != segdbDesc->segindex)
-				continue;
-		}
 
 		/*
 		 * Initialize the QE's CdbDispatchResult object.
@@ -309,12 +300,6 @@ cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 		qeResult = cdbdisp_makeResult(ds->primaryResults, segdbDesc, sliceIndex);
 		if (qeResult == NULL)
 		{
-			/*
-			 * writer_gang could be NULL if this is an extended query.
-			 */
-			if (ds->primaryResults->writer_gang)
-				ds->primaryResults->writer_gang->dispatcherActive = true;
-
 			elog(FATAL, "could not allocate resources for segworker communication");
 		}
 		pParms->dispatchResultPtrArray[pParms->dispatchCount++] = qeResult;
@@ -368,7 +353,7 @@ cdbdisp_checkDispatchResult_async(struct CdbDispatcherState *ds,
 static void *
 cdbdisp_makeDispatchParams_async(int maxSlices, char *queryText, int len)
 {
-	int			maxResults = maxSlices * getgpsegmentCount();
+	int			maxResults = maxSlices * largestGangsize();
 	int			size = 0;
 
 	CdbDispatchCmdAsync *pParms = palloc0(sizeof(CdbDispatchCmdAsync));

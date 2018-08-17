@@ -2469,6 +2469,7 @@ _readSlice(void)
 	READ_NODE_FIELD(directDispatch.contentIds); /* List of int index */
 	READ_DUMMY_FIELD(primaryGang, NULL);
 	READ_NODE_FIELD(primaryProcesses); /* List of (CDBProcess *) */
+	READ_BITMAPSET_FIELD(processesMap);
 
 	READ_DONE();
 }

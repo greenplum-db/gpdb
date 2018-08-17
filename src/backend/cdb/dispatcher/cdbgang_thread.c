@@ -63,7 +63,7 @@ static void checkConnectionStatus(Gang *gp,
 					  int *countInRecovery,
 					  int *countSuccessful,
 					  struct PQExpBufferData *errorMessage);
-static Gang *createGang_thread(GangType type, int gang_id, int size, int content);
+static Gang *createGang_thread(List *segments, SegmentType segmentType);
 
 CreateGangFunc pCreateGangFuncThreaded = createGang_thread;
 
@@ -74,7 +74,7 @@ CreateGangFunc pCreateGangFuncThreaded = createGang_thread;
  * elog ERROR or return a non-NULL gang.
  */
 static Gang *
-createGang_thread(GangType type, int gang_id, int size, int content)
+createGang_thread(List *segments, SegmentType segmentType)
 {
 	Gang	   *newGangDefinition = NULL;
 	SegmentDatabaseDescriptor *segdbDesc = NULL;
@@ -86,25 +86,17 @@ createGang_thread(GangType type, int gang_id, int size, int content)
 	int			create_gang_retry_counter = 0;
 	int			in_recovery_mode_count = 0;
 	int			successful_connections = 0;
+	int			size;
 
 	PQExpBufferData create_gang_error;
 
-	ELOG_DISPATCHER_DEBUG("createGang type = %d, gang_id = %d, size = %d, content = %d",
-						  type, gang_id, size, content);
+	size = list_length(segments);
+	ELOG_DISPATCHER_DEBUG("createGang :size %d", size);
 
 	/* check arguments */
-	Assert(size == 1 || size == getgpsegmentCount());
-	Assert(CurrentResourceOwner != NULL);
-	Assert(CurrentMemoryContext == GangContext);
 	Assert(gp_connections_per_thread > 0);
 
-	/* Writer gang is created before reader gangs. */
-	if (type == GANGTYPE_PRIMARY_WRITER)
-		Insist(!GangsExist());
-
 	initPQExpBuffer(&create_gang_error);
-
-	Assert(CurrentGangCreating == NULL);
 
 create_gang_retry:
 
@@ -119,13 +111,9 @@ create_gang_retry:
 	threadCount = 0;
 
 	/* allocate and initialize a gang structure */
-	newGangDefinition = buildGangDefinition(type, gang_id, size, content);
-	CurrentGangCreating = newGangDefinition;
+	newGangDefinition = buildGangDefinition(segments, segmentType);
 
 	Assert(newGangDefinition != NULL);
-	Assert(newGangDefinition->size == size);
-	Assert(newGangDefinition->perGangContext != NULL);
-	MemoryContextSwitchTo(newGangDefinition->perGangContext);
 
 	resetPQExpBuffer(&create_gang_error);
 
@@ -140,12 +128,12 @@ create_gang_retry:
 	Assert(threadCount > 0);
 
 	/* initialize connect parameters */
-	doConnectParmsAr = makeConnectParms(threadCount, type, gang_id);
+	doConnectParmsAr = makeConnectParms(threadCount, GANGTYPE_UNALLOCATED, -1);
 	for (i = 0; i < size; i++)
 	{
 		parmIndex = i / gp_connections_per_thread;
 		pParms = &doConnectParmsAr[parmIndex];
-		segdbDesc = &newGangDefinition->db_descriptors[i];
+		segdbDesc = newGangDefinition->db_descriptors[i];
 		pParms->segdbDescPtrArray[pParms->db_count++] = segdbDesc;
 	}
 
@@ -201,8 +189,6 @@ create_gang_retry:
 	destroyConnectParms(doConnectParmsAr, threadCount);
 	doConnectParmsAr = NULL;
 
-	SIMPLE_FAULT_INJECTOR(GangCreated);
-
 	/* find out the successful connections and the failed ones */
 	checkConnectionStatus(newGangDefinition, &in_recovery_mode_count,
 						  &successful_connections, &create_gang_error);
@@ -210,13 +196,10 @@ create_gang_retry:
 	ELOG_DISPATCHER_DEBUG("createGang: %d processes requested; %d successful connections %d in recovery",
 						  size, successful_connections, in_recovery_mode_count);
 
-	MemoryContextSwitchTo(GangContext);
-
 	if (size == successful_connections)
 	{
 		setLargestGangsize(size);
 		termPQExpBuffer(&create_gang_error);
-		CurrentGangCreating = NULL;
 
 		return newGangDefinition;
 	}
@@ -235,8 +218,7 @@ create_gang_retry:
 	if (successful_connections + in_recovery_mode_count == size)
 	{
 		if (gp_gang_creation_retry_count &&
-			create_gang_retry_counter++ < gp_gang_creation_retry_count &&
-			type == GANGTYPE_PRIMARY_WRITER)
+			create_gang_retry_counter++ < gp_gang_creation_retry_count)
 		{
 			/*
 			 * Retry for non-writer gangs is meaningless because writer gang
@@ -244,7 +226,6 @@ create_gang_retry:
 			 */
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
-			CurrentGangCreating = NULL;
 
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 
@@ -261,14 +242,6 @@ create_gang_retry:
 exit:
 	if (newGangDefinition != NULL)
 		DisconnectAndDestroyGang(newGangDefinition);
-
-	if (type == GANGTYPE_PRIMARY_WRITER)
-	{
-		DisconnectAndDestroyAllGangs(true);
-		CheckForResetSession();
-	}
-
-	CurrentGangCreating = NULL;
 
 	ereport(ERROR,
 			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -310,14 +283,18 @@ thread_DoConnect(void *arg)
 			continue;
 		}
 
+		/* if it's a cached QE, skip */
+		if (segdbDesc->conn != NULL)
+			continue;
+
 		/*
 		 * Build the connection string.  Writer-ness needs to be processed
 		 * early enough now some locks are taken before command line options
 		 * are recognized.
 		 */
 		ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
-								 pParms->type == GANGTYPE_PRIMARY_WRITER,
-								 pParms->gangId,
+						   		 segdbDesc->isWriter,
+								 segdbDesc->identifier,
 								 segdbDesc->segment_database_info->hostSegs);
 
 		if (!ret)
@@ -414,7 +391,7 @@ checkConnectionStatus(Gang *gp,
 	 */
 	for (i = 0; i < size; i++)
 	{
-		segdbDesc = &gp->db_descriptors[i];
+		segdbDesc = gp->db_descriptors[i];
 
 		/*
 		 * check connection established or not, if not, we may have to

@@ -23,6 +23,7 @@
 
 #include <math.h>
 #include "catalog/gp_segment_config.h"
+#include "nodes/pg_list.h"
 
 /* cdb_rand returns a random float value between 0 and 1 inclusive */
 #define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
@@ -30,6 +31,10 @@
 /* cdb_randint returns integer value between lower and upper inclusive */
 #define cdb_randint(upper,lower) \
 	( (int) floor( cdb_rand()*(((upper)-(lower))+0.999999) ) + (lower) )
+
+struct SegmentDatabaseDescriptor;
+
+extern MemoryContext CdbComponentsContext;
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for MPP 2.0 database information
@@ -64,6 +69,10 @@ typedef struct CdbComponentDatabaseInfo
 
 	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
 	int16		hostSegs;		/* number of primary segments on the same hosts */
+	List		*freelist;
+	int			numIdleQEs;
+	int			numActiveQEs;
+	bool		badWriter;
 } CdbComponentDatabaseInfo;
 
 #define SEGMENT_IS_ACTIVE_MIRROR(p) \
@@ -100,7 +109,19 @@ typedef struct CdbComponentDatabases
 	int			my_segindex;	/* the content of this database */
 	bool		my_isprimary;	/* the isprimary flag of this database */
 	uint8		fts_version;	/* the version of fts */
+	int			numActiveQEs;
+	int			numIdleQEs;
+	List		*componentList;
+	int			qeCounter;
 } CdbComponentDatabases;
+
+//
+typedef enum SegmentType
+{
+	SEGMENTTYPE_EXPLICT_WRITER = 1,
+	SEGMENTTYPE_EXPLICT_READER,
+	SEGMENTTYPE_ANY
+}SegmentType;
 
 /*
  * performs all necessary setup required for initializing Greenplum Database components.
@@ -120,7 +141,7 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
 
 
 /*
- * getCdbComponentDatabases() returns a pointer to a CdbComponentDatabases
+ * cdbcomponent_getCdbComponents() returns a pointer to a CdbComponentDatabases
  * structure. Both the segment_db_info array and the entry_db_info_array are ordered by segindex,
  * isprimary desc.
  *
@@ -128,28 +149,23 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
  * are contained in palloc'd storage allocated from the current storage context.
  * The same is true for pointer-based values in CdbComponentDatabaseInfo.  The caller is responsible
  * for setting the current storage context and releasing the storage occupied the returned values.
- *
- * The function freeCdbComponentDatabases() is used to release the structure
- * returned by getCdbComponentDatabases().
- *
  */
-extern CdbComponentDatabases *getCdbComponentDatabases(void);
+CdbComponentDatabases * cdbcomponent_getCdbComponents(bool DNSLookupAsError);
+void cdbcomponent_destroyCdbComponents(void);
+void cdbcomponent_cleanupIdleSegdbsList(bool includeWriter);
+List *cdbcomponent_getIdleSegdbsList(void);
 
-/*
- * freeCdbComponentDatabases() releases the palloc'd storage returned by
- * getCdbComponentDatabases().
- */
-extern void freeCdbComponentDatabases(CdbComponentDatabases *pDBs);
+CdbComponentDatabaseInfo * cdbcomponent_getComponentInfo(int contentId);
 
-// UNDONE: This was a private procedure... are there any issues in making it public???
-/*
- * getCdbComponentInfo
- *
- *
- * Storage for the SegmentInstances block and all subsidiary
- * structures are allocated from the caller's context.
- */
-extern CdbComponentDatabases *getCdbComponentInfo(bool DnsLookupFailureIsError);
+struct SegmentDatabaseDescriptor * cdbcomponent_allocateIdleSegdb(int contentId, SegmentType segmentType);
+void cdbcomponent_recycleIdleSegdb(struct SegmentDatabaseDescriptor *segdbDesc);
+void cdbcomponent_destroyIdleSegdb(struct SegmentDatabaseDescriptor *segdbDesc);
+
+bool cdbcomponent_segdbsExist(void);
+bool cdbcomponent_activeSegdbsExist(void);
+
+List *cdbcomponent_getCdbComponentsList(void);
+int cdbcomponent_getCdbComponentsSize(void);
 
 /*
  * Given total number of primary segment databases and a number of segments

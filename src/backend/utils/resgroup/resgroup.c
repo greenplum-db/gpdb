@@ -515,7 +515,6 @@ InitResGroups(void)
 	HeapTuple	tuple;
 	SysScanDesc	sscan;
 	int			numGroups;
-	CdbComponentDatabases *cdbComponentDBs;
 	CdbComponentDatabaseInfo *qdinfo;
 	ResGroupCaps		caps;
 	Relation			relResGroup;
@@ -541,8 +540,7 @@ InitResGroups(void)
 	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
 	{
 		Assert(IS_QUERY_DISPATCHER());
-		cdbComponentDBs = getCdbComponentDatabases();
-		qdinfo = &cdbComponentDBs->entry_db_info[0];
+		qdinfo = cdbcomponent_getComponentInfo(-1); 
 		pResGroupControl->segmentsOnMaster = qdinfo->hostSegs;
 		Assert(pResGroupControl->segmentsOnMaster > 0);
 	}

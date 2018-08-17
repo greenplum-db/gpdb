@@ -32,7 +32,7 @@ static enum
 static int
 get_idle_gang_timeout(void)
 {
-	if (IdleSessionGangTimeout <= 0 || !GangsExist())
+	if (IdleSessionGangTimeout <= 0 || !cdbcomponent_segdbsExist())
 		return IDLE_RESOURCES_NEVER_TIME_OUT;
 
 	return IdleSessionGangTimeout;
@@ -57,7 +57,7 @@ get_idle_session_timeout(void)
 static void
 idle_gang_timeout_action(void)
 {
-	DisconnectAndDestroyUnusedGangs();
+	DisconnectAndDestroyUnusedQEs();
 }
 
 /*

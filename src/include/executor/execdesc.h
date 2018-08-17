@@ -86,6 +86,9 @@ typedef struct Slice
 	 */
 	int			gangSize;
 
+	/* a list of segment id that this slice run on */
+	List		*segments;
+
 	/*
 	 * How many of the gang members will actually be used? This takes into
 	 * account directDispatch information.
@@ -108,6 +111,9 @@ typedef struct Slice
 	 * implemented.
 	 */
 	List	   *primaryProcesses;
+
+	/* A bitmap to identify which QE should execute this slice */
+	Bitmapset  *processesMap;
 } Slice;
 
 /*

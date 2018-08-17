@@ -32,6 +32,8 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 
+static int nonExtendedDispatcherStack = 0;
+
 typedef struct dispatcher_handle_t
 {
 	struct CdbDispatcherState *dispatcherState;
@@ -57,8 +59,6 @@ static void destroy_dispatcher_handle(dispatcher_handle_t *h);
  * default directed-dispatch parameters: don't direct anything.
  */
 CdbDispatchDirectDesc default_dispatch_direct_desc = {false, 0, {0}};
-
-static void cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds);
 
 static DispatcherInternalFuncs *pDispatchFuncs = NULL;
 
@@ -94,8 +94,7 @@ static DispatcherInternalFuncs *pDispatchFuncs = NULL;
 void
 cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
-					   int sliceIndex,
-					   CdbDispatchDirectDesc *disp_direct)
+					   int sliceIndex)
 {
 	struct CdbDispatchResults *dispatchResults = ds->primaryResults;
 
@@ -103,31 +102,18 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 	Assert(gp && gp->size > 0);
 	Assert(dispatchResults && dispatchResults->resultArray);
 
-	if (dispatchResults->writer_gang)
-	{
-		/*
-		 * Are we dispatching to the writer-gang when it is already busy ?
-		 */
-		if (gp == dispatchResults->writer_gang)
-		{
-			if (dispatchResults->writer_gang->dispatcherActive)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("query plan with multiple segworker groups is not supported"),
-						 errhint("likely caused by a function that reads or modifies data in a distributed table")));
-			}
-
-			dispatchResults->writer_gang->dispatcherActive = true;
-		}
-	}
-
 	/*
 	 * WIP: will use a function pointer for implementation later, currently
 	 * just use an internal function to move dispatch thread related code into
 	 * a separate file.
 	 */
-	(pDispatchFuncs->dispatchToGang) (ds, gp, sliceIndex, disp_direct);
+	(pDispatchFuncs->dispatchToGang) (ds, gp, sliceIndex);
+
+	/*
+	 * If dtmPreCommand says we need two phase commit, record those segments
+	 * who actually get involved in current global transaction
+	 */
+	addToGxactTwophaseSegments(gp);
 }
 
 /*
@@ -154,18 +140,7 @@ void
 cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds,
 					   DispatchWaitMode waitMode)
 {
-	PG_TRY();
-	{
-		(pDispatchFuncs->checkResults) (ds, waitMode);
-	}
-	PG_CATCH();
-	{
-		cdbdisp_clearGangActiveFlag(ds);
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	cdbdisp_clearGangActiveFlag(ds);
+	(pDispatchFuncs->checkResults) (ds, waitMode);
 
 	if (log_dispatch_stats)
 		ShowUsage("DISPATCH STATISTICS");
@@ -232,9 +207,6 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
  * to finish, and report QE errors if appropriate.
  * This function should be called only from PG_CATCH handlers.
  *
- * This function doesn't cleanup dispatcher state, dispatcher state
- * will be destroyed as part of the resource owner cleanup.
- *
  * On return, the caller is expected to finish its own cleanup and
  * exit via PG_RE_THROW().
  */
@@ -245,10 +217,7 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 	bool		useQeError = false;
 	ErrorData *error = NULL;
 
-	/*
-	 * If cdbdisp_dispatchToGang() wasn't called, don't wait.
-	 */
-	if (!ds || !ds->primaryResults)
+	if (!ds)
 		return;
 
 	/*
@@ -326,22 +295,52 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
  * Allocate memory and initialize CdbDispatcherState.
  *
  * Call cdbdisp_destroyDispatcherState to free it.
- *
- *	 maxSlices: max number of slices of the query/command.
  */
 CdbDispatcherState *
-cdbdisp_makeDispatcherState(void)
+cdbdisp_makeDispatcherState(bool isExtendedQuery)
 {
-	dispatcher_handle_t *handle = allocate_dispatcher_handle();
+	dispatcher_handle_t *handle;
+
+	if (!isExtendedQuery)
+	{
+		if (nonExtendedDispatcherStack == 1)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("query plan with multiple segworker groups is not supported"),
+					 errhint("likely caused by a function that reads or modifies data in a distributed table")));
+
+
+		}
+
+		nonExtendedDispatcherStack++;	
+	}
+
+	handle = allocate_dispatcher_handle();
+	handle->dispatcherState->recycleGang = true;
+	handle->dispatcherState->isExtendedQuery = isExtendedQuery;
+	handle->dispatcherState->allocatedGangs = NIL;
+
 	return handle->dispatcherState;
 }
 
-void *
-cdbdisp_makeDispatchParams(int maxSlices,
-						  char *queryText,
-						  int queryTextLen)
+void
+cdbdisp_makeDispatchParams(CdbDispatcherState *ds,
+							int maxSlices,
+							char *queryText,
+							int queryTextLen)
 {
-	return (pDispatchFuncs->makeDispatchParams) (maxSlices, queryText, queryTextLen);
+	MemoryContext oldContext;
+	void *dispatchParams;
+
+	Assert(DispatcherContext);
+	oldContext = MemoryContextSwitchTo(DispatcherContext);
+
+	dispatchParams = (pDispatchFuncs->makeDispatchParams) (maxSlices, queryText, queryTextLen);
+
+	ds->dispatchParams = dispatchParams;
+
+	MemoryContextSwitchTo(oldContext);
 }
 
 /*
@@ -352,11 +351,18 @@ cdbdisp_makeDispatchParams(int maxSlices,
 void
 cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 {
+	ListCell *lc;
+	CdbDispatchResults *results;
+	dispatcher_handle_t *h;
+
 	if (!ds)
 		return;
 
-	CdbDispatchResults *results = ds->primaryResults;
-	dispatcher_handle_t *h = find_dispatcher_handle(ds);
+	if (!ds->isExtendedQuery)
+		nonExtendedDispatcherStack--;	
+
+	results = ds->primaryResults;
+	h = find_dispatcher_handle(ds);
 
 	if (results != NULL && results->resultArray != NULL)
 	{
@@ -369,6 +375,18 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 		results->resultArray = NULL;
 	}
 
+	/* Recycle or destroy gang accordingly */
+	foreach(lc, ds->allocatedGangs)
+	{
+		Gang *gp = lfirst(lc);
+
+		if (ds->recycleGang)
+			RecycleGang(gp);
+		else
+			DisconnectAndDestroyGang(gp);
+	}
+
+	ds->allocatedGangs = NIL;
 	ds->dispatchParams = NULL;
 	ds->primaryResults = NULL;
 
@@ -380,19 +398,6 @@ void
 cdbdisp_cancelDispatch(CdbDispatcherState *ds)
 {
 	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_CANCEL);
-}
-
-/*
- * Clear our "active" flags; so that we know that the writer gangs are busy -- and don't stomp on
- * internal dispatcher structures.
- */
-static void
-cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds)
-{
-	if (ds && ds->primaryResults && ds->primaryResults->writer_gang)
-	{
-		ds->primaryResults->writer_gang->dispatcherActive = false;
-	}
 }
 
 bool
@@ -544,3 +549,46 @@ dispatcher_abort_callback(ResourceReleasePhase phase,
 		}
 	}
 }
+
+/*
+ * Called by CdbDispatchSetCommand(), SET command can not be dispatched
+ * to named portal (like CURSOR). On the one hand, it might be in a busy
+ * status, on the other hand, SET command should not affect running CURSOR
+ * like 'search_path' etc; 
+ *
+ * Meanwhile when a dispatcher state of named portal is destroyed, it's
+ * gang should not be recycled because it's guc was not set, so need to
+ * mark those gangs destroyed when dispatcher state is destroyed.
+ */
+void
+cdbdisp_markNamedPortalGangsDestroy(void)
+{
+	dispatcher_handle_t *head = open_dispatcher_handles;
+	while (head != NULL)
+	{
+		if (!head->dispatcherState->isExtendedQuery)
+			head->dispatcherState->recycleGang = false;
+		head = head->next;
+	}
+}
+
+/*
+ * Unlike dispatcher_abort_callback(), this function will
+ * force destroy active dispatcher states
+ */
+void
+cdbdisp_cleanupAllDispatcherState(void)
+{
+	dispatcher_handle_t *curr;
+	dispatcher_handle_t *next;
+
+	next = open_dispatcher_handles;
+	while (next)
+	{
+		curr = next;
+		next = curr->next;
+
+		cleanup_dispatcher_handle(curr);
+	}
+}
+

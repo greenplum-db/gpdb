@@ -30,6 +30,7 @@ static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
 #include "cdb/cdbconn.h"		/* me */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"
+#include "cdb/cdbgang.h"
 
 int			gp_segment_connect_timeout = 180;
 
@@ -235,12 +236,20 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 	pq_flush();
 }
 
-/* Initialize a QE connection descriptor in storage provided by the caller. */
-void
-cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
-							  struct CdbComponentDatabaseInfo *cdbinfo)
+/*
+ * Initialize a QE connection descriptor in storage provided by
+ * the caller.
+ */
+SegmentDatabaseDescriptor *
+cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int identifier, bool isWriter)
 {
-	MemSet(segdbDesc, 0, sizeof(*segdbDesc));
+	MemoryContext oldContext;
+	SegmentDatabaseDescriptor *segdbDesc = NULL;
+
+	Assert(CdbComponentsContext);
+	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
+
+	segdbDesc = (SegmentDatabaseDescriptor *)palloc0(sizeof(SegmentDatabaseDescriptor));
 
 	/* Segment db info */
 	segdbDesc->segment_database_info = cdbinfo;
@@ -253,16 +262,23 @@ cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
 
 	/* whoami */
 	segdbDesc->whoami = NULL;
+	segdbDesc->identifier = identifier;
+	segdbDesc->isWriter = isWriter;
 
 	/* Connection error info */
 	segdbDesc->errcode = 0;
 	initPQExpBuffer(&segdbDesc->error_message);
+
+	MemoryContextSwitchTo(oldContext);
+	return segdbDesc;
 }
 
 /* Free memory of segment descriptor. */
 void
 cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 {
+	Assert(CdbComponentsContext);
+
 	/* Free the error message buffer. */
 	segdbDesc->errcode = 0;
 	termPQExpBuffer(&segdbDesc->error_message);
@@ -640,12 +656,15 @@ cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
  * Don't call this function in threads.
  */
 void
-setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
-				int sliceIndex, MemoryContext mcxt)
+cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
+				int sliceIndex)
 {
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
-	MemoryContext oldContext = MemoryContextSwitchTo(mcxt);
 	StringInfoData string;
+	MemoryContext oldContext;
+
+	Assert(CdbComponentsContext);
+	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
 
 	initStringInfo(&string);
 
@@ -670,7 +689,9 @@ setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 
 	if (segdbDesc->whoami != NULL)
 		pfree(segdbDesc->whoami);
+
 	segdbDesc->whoami = string.data;
+
 	MemoryContextSwitchTo(oldContext);
 }
 

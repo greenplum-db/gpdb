@@ -51,7 +51,7 @@ extern int	FtsShmemSize(void);
 extern void FtsShmemInit(void);
 
 extern bool FtsIsSegmentUp(CdbComponentDatabaseInfo *dBInfo);
-extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *, int);
+extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor **, int);
 
 extern bool verifyFtsSyncCount(void);
 extern void ftsLock(void);

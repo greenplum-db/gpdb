@@ -2744,8 +2744,6 @@ CommitTransaction(void)
 	/* we're now in a consistent state to handle an interrupt. */
 	RESUME_INTERRUPTS();
 
-	freeGangsForPortal(NULL);
-
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
 		UnassignResGroup();
@@ -3218,13 +3216,11 @@ AbortTransaction(void)
 	 */
 	RESUME_INTERRUPTS();
 
-	freeGangsForPortal(NULL);
-
 	/* If a query was cancelled, then cleanup reader gangs. */
 	if (QueryCancelCleanup)
 	{
 		QueryCancelCleanup = false;
-		disconnectAndDestroyIdleReaderGangs();
+		cdbcomponent_cleanupIdleSegdbsList(false);
 	}
 
 	/*

@@ -29,6 +29,7 @@ struct QueryDesc;
 struct DirectDispatchInfo;
 struct EState;
 struct PQExpBufferData;
+struct CdbDispatcherState;
 
 /*
  * A gang represents a single group of workers on each connected segDB
@@ -51,19 +52,13 @@ typedef struct Gang
 	/*
 	 * Array of QEs/segDBs that make up this gang. Sorted by segment index.
 	 */
-	struct SegmentDatabaseDescriptor *db_descriptors;	
+	struct SegmentDatabaseDescriptor **db_descriptors;	
 
 	/* For debugging purposes only. These do not add any actual functionality. */
 	bool allocated;
-
-	/* should be destroyed if set */
-	bool noReuse;
-
-	/* memory context */
-	MemoryContext perGangContext;
 } Gang;
 
-extern int qe_gang_id;
+extern int qe_identifier;
 
 extern int host_segments;
 
@@ -72,11 +67,7 @@ extern Gang *CurrentGangCreating;
 
 extern const char *gangTypeToString(GangType type);
 
-extern Gang *AllocateReaderGang(GangType type, char *portal_name);
-
-extern Gang *AllocateWriterGang(void);
-
-extern List *getCdbProcessList(Gang *gang, int sliceIndex, struct DirectDispatchInfo *directDispatch);
+extern void setupCdbProcessList(Slice *slice);
 
 extern bool GangOK(Gang *gp);
 
@@ -84,31 +75,24 @@ extern List *getCdbProcessesForQD(int isPrimary);
 
 extern void freeGangsForPortal(char *portal_name);
 
+extern void RecycleGang(Gang *gp);
 extern void DisconnectAndDestroyGang(Gang *gp);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);
-extern void DisconnectAndDestroyUnusedGangs(void);
+extern void DisconnectAndDestroyUnusedQEs(void);
 
 extern void CheckForResetSession(void);
 
-extern List *getAllIdleReaderGangs(void);
-
-extern List *getAllAllocatedReaderGangs(void);
-
-extern CdbComponentDatabases *getComponentDatabases(void);
-
-extern bool GangsExist(void);
+extern List *getAllIdleReaderGangs(struct CdbDispatcherState *ds);
 
 extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang *gp, int seg);
 
-bool isPrimaryWriterGangAlive(void);
-
-Gang *buildGangDefinition(GangType type, int gang_id, int size, int content);
-bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int gangId, int hostSegs);
+Gang *buildGangDefinition(List *segments, SegmentType segmentType);
+bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int identifier, int hostSegs);
 char *makeOptions(void);
 extern bool segment_failure_due_to_recovery(const char *error_message);
 
 /*
- * disconnectAndDestroyIdleReaderGangs()
+ * DisconnectAndDestroyIdleQEs()
  *
  * This routine is used when a session has been idle for a while (waiting for the
  * client to send us SQL to execute). The idea is to consume less resources while sitting idle.
@@ -118,18 +102,14 @@ extern bool segment_failure_due_to_recovery(const char *error_message);
  * other end of the connection, and that person has walked away from their terminal, or just hasn't
  * decided what to do next. We could be idle for a very long time (many hours).
  *
- * Of course, freeing gangs means that the next time the user does send in an SQL statement,
- * we need to allocate gangs (at least the writer gang) to do anything. This entails extra work,
+ * Of course, freeing QEs means that the next time the user does send in an SQL statement,
+ * we need to allocate QEs (at least the writer QEs) to do anything. This entails extra work,
  * so we don't want to do this if we don't think the session has gone idle.
  *
  * Only call these routines from an idle session.
  *
  * This routine is also called from the sigalarm signal handler (hopefully that is safe to do).
  */
-extern void disconnectAndDestroyIdleReaderGangs(void);
-
-extern void cleanupPortalGangs(Portal portal);
-
 extern int largestGangsize(void);
 extern void setLargestGangsize(int size);
 
@@ -177,7 +157,7 @@ typedef struct CdbProcess
 	int contentid;
 } CdbProcess;
 
-typedef Gang *(*CreateGangFunc)(GangType type, int gang_id, int size, int content);
+typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);
 
 extern void cdbgang_setAsync(bool async);
 

@@ -25,7 +25,6 @@ For a query/plan, QD would build one `GANGTYPE_PRIMARY_WRITER` Gang, and several
 	* `DisconnectAndDestroyAllGangs`: tear down all existing Gangs of this session
 * Gang status check:
 	* `GangOK`: check if a created Gang is healthy
-	* `GangsExist`: check if any Gang exists for this session
 * Dispatch:
 	* `CdbDispatchPlan`: send PlannedStmt to Gangs specified in `queryDesc` argument. Once finishes work on QD, call `CdbCheckDispatchResult` to wait results or `CdbDispatchHandleError` to cancel query on error
 	* `CdbDispatchUtilityStatement`: send parsed utility statement to the writer Gang, and block to get results or error

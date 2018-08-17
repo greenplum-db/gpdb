@@ -433,7 +433,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		 */
 		if (ResourceCleanupIdleGangs)
 		{
-			disconnectAndDestroyIdleReaderGangs();
+			cdbcomponent_cleanupIdleSegdbsList(false);
 		}
 
 		/*

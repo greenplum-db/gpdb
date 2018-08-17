@@ -1589,7 +1589,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	}
 
 	/* get the total valid primary segdb count */
-	db_info = getCdbComponentDatabases();
+	db_info = cdbcomponent_getCdbComponents(true);
 	total_primaries = 0;
 	for (i = 0; i < db_info->total_segment_dbs; i++)
 	{
@@ -2160,8 +2160,6 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			filenames = lappend(filenames, n);
 		}
 	}
-
-	freeCdbComponentDatabases(db_info);
 
 	return filenames;
 }

@@ -44,7 +44,7 @@ test__StartIdleResourceCleanupTimersWhenIdleGangTimeoutIs0AndNoSessionTimeoutHoo
 	get_idle_session_timeout_hook = NULL;
 
 	/*
-	 * cmockery implicitly asserts that GangsExist and enable_sig_alarm are
+	 * cmockery implicitly asserts that cdbcomponent_segdbsExist and enable_sig_alarm are
 	 * not called
 	 */
 
@@ -58,7 +58,7 @@ test__StartIdleResourceCleanupTimersWhenNoGangsExistAndNoSessionTimeoutHook(
 	IdleSessionGangTimeout = 10000;
 	get_idle_session_timeout_hook = NULL;
 
-	will_return(GangsExist, false);
+	will_return(cdbcomponent_segdbsExist, false);
 	/* cmockery implicitly asserts that enable_sig_alarm is not called */
 
 	StartIdleResourceCleanupTimers();
@@ -73,7 +73,7 @@ test__StartIdleResourceCleanupTimersWhenGangsExistAndNoSessionTimeoutHook(
 
 	NextTimeoutAction = -1;
 
-	will_return(GangsExist, true);
+	will_return(cdbcomponent_segdbsExist, true);
 	expect_value(enable_sig_alarm, delayms, 10000);
 	expect_value(enable_sig_alarm, is_statement_timeout, false);
 	will_return(enable_sig_alarm, true);
@@ -91,7 +91,7 @@ test__StartIdleResourceCleanupTimersWhenGangsExistAndSessionTimeoutEnabled(
 	get_idle_session_timeout_hook = returns1000_stub;
 	NextTimeoutAction = -1;
 
-	will_return(GangsExist, true);
+	will_return(cdbcomponent_segdbsExist, true);
 	expect_value(enable_sig_alarm, delayms, 10000);
 	expect_value(enable_sig_alarm, is_statement_timeout, false);
 	will_return(enable_sig_alarm, true);
@@ -125,7 +125,7 @@ test__DoIdleResourceCleanup_HandlesGangTimeoutWhenSessionTimeoutIsLater(
 	IdleSessionTimeoutCached = 25000;
 	NextTimeoutAction = GANG_TIMEOUT;
 
-	will_be_called(DisconnectAndDestroyUnusedGangs);
+	will_be_called(DisconnectAndDestroyUnusedQEs);
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 	expect_value(enable_sig_alarm, delayms, 5000);
@@ -146,7 +146,7 @@ test__DoIdleResourceCleanup_HandlesSessionTimeoutWhenGangTimeoutIsLater(
 	IdleSessionTimeoutCached = 19000;
 	NextTimeoutAction = GANG_TIMEOUT;
 
-	will_be_called(DisconnectAndDestroyUnusedGangs);
+	will_be_called(DisconnectAndDestroyUnusedQEs);
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 	/* cmockery implicitly asserts that enable_sig_alarm is not called */
@@ -168,7 +168,7 @@ test__DoIdleResourceCleanup_HandlesSessionTimeoutWithSimultaneousGangTimeout(
 	IdleSessionTimeoutCached = 24000;
 	NextTimeoutAction = GANG_TIMEOUT;
 
-	will_be_called(DisconnectAndDestroyUnusedGangs);
+	will_be_called(DisconnectAndDestroyUnusedQEs);
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 
@@ -186,7 +186,7 @@ test__DoIdleResourceCleanup_HandlesSessionTimeoutWithSimultaneousGangTimeoutButN
 
 	idle_session_timeout_action_hook = NULL;
 
-	will_be_called(DisconnectAndDestroyUnusedGangs);
+	will_be_called(DisconnectAndDestroyUnusedQEs);
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 
@@ -202,7 +202,7 @@ test__DoIdleResourceCleanup_HandlesIdleSessionTimeoutAfterGangTimeout(void **sta
 	IdleSessionTimeoutCached = 15000;
 	NextTimeoutAction = IDLE_SESSION_TIMEOUT;
 
-	/* not called: DisconnectAndDestroyUnusedGangs, enable_sig_alarm; */
+	/* not called: DisconnectAndDestroyUnusedQEs, enable_sig_alarm; */
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 
@@ -221,7 +221,7 @@ test__DoIdleResourceCleanup_HandlesIdleSessionTimeoutAfterGangTimeoutWithNullAct
 
 	idle_session_timeout_action_hook = NULL;
 
-	/* not called: DisconnectAndDestroyUnusedGangs, enable_sig_alarm; */
+	/* not called: DisconnectAndDestroyUnusedQEs, enable_sig_alarm; */
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 
@@ -238,7 +238,7 @@ test__DoIdleResourceCleanup_HandlesGangTimeoutWhenSessionTimeoutDisabled(void **
 	NextTimeoutAction = GANG_TIMEOUT;
 
 	/* not called: enable_sig_alarm */
-	will_be_called(DisconnectAndDestroyUnusedGangs);
+	will_be_called(DisconnectAndDestroyUnusedQEs);
 	expect_value(disable_sig_alarm, is_statement_timeout, false);
 	will_return(disable_sig_alarm, true);
 

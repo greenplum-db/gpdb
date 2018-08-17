@@ -69,9 +69,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  PANIC for debug_dtm_action = 4, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1490)  (seg1 127.0.1.1:25433 pid=27784)
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 8 during statement block entry
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  PANIC for debug_dtm_action = 4, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1510)  (seg1 127.0.0.1:25433 pid=16911) (postgres.c:1510)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 9 during statement block entry
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?
@@ -98,9 +97,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  could not connect to segment: initialization of segworker group failed
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 18 during exception cleanup
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  transaction 1534266152-0000000465 at level 1 already processed (current level 0) (cdbtm.c:3206)  (seg0 127.0.0.1:25432 pid=16958) (cdbtm.c:3206)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 19 during exception cleanup
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?
@@ -127,9 +125,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  could not connect to segment: initialization of segworker group failed
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 18 during exception cleanup
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  transaction 1534266152-0000000474 at level 1 already processed (current level 0) (cdbtm.c:3206)  (seg0 127.0.0.1:25432 pid=16994) (cdbtm.c:3206)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 19 during exception cleanup
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?
@@ -156,9 +153,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  could not connect to segment: initialization of segworker group failed
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  transaction 1534266152-0000000483 at level 1 already processed (current level 0) (cdbtm.c:3206)  (seg1 127.0.0.1:25433 pid=17029) (cdbtm.c:3206)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 18 during exception cleanup
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?
@@ -185,9 +181,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  could not connect to segment: initialization of segworker group failed
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  transaction 1534266152-0000000492 at level 1 already processed (current level 0) (cdbtm.c:3206)  (seg2 127.0.0.1:25434 pid=17064) (cdbtm.c:3206)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 18 during exception cleanup
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?
@@ -214,9 +209,8 @@ SET
 DROP TABLE IF EXISTS employees;
 DROP
 select test_protocol_allseg(1, 2,'f');
-ERROR:  could not connect to segment: initialization of segworker group failed
-CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
-ERROR:  could not connect to segment: initialization of segworker group failed
+ERROR:  transaction 1534266152-0000000501 at level 1 already processed (current level 0) (cdbtm.c:3206)  (seg1 127.0.0.1:25433 pid=17096) (cdbtm.c:3206)
+CONTEXT:  PL/pgSQL function test_protocol_allseg(integer,integer,character) line 18 during exception cleanup
 -- make sure segment recovery is complete after panic.
 0U: select 1;
 ?column?

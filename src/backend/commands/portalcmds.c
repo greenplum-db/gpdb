@@ -327,32 +327,12 @@ PortalCleanup(Portal portal)
 			{
 				/* Ensure CurrentResourceOwner is restored on error */
 				CurrentResourceOwner = saveResourceOwner;
-
-				/*
-				 * If ExecutorEnd() threw an error, our gangs might be sitting
-				 * on the allocated-list without having been properly free()ed.
-				 *
-				 * For cursor-queries with large numbers of slices, this
-				 * can "leak" a lot of resources on the segments.
-				 */
-				if (Gp_role == GP_ROLE_DISPATCH)
-				{
-					freeGangsForPortal((char *) portal->name);
-					cleanupPortalGangs(portal);
-				}
-
 				PG_RE_THROW();
 			}
 			PG_END_TRY();
 			CurrentResourceOwner = saveResourceOwner;
 		}
 	}
-
-	/*
-	 * Terminate unneeded QE processes.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-		cleanupPortalGangs(portal);
 
 	/* 
 	 * If resource scheduling is enabled, release the resource lock. 

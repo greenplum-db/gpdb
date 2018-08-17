@@ -17,6 +17,8 @@
 #include "nodes/plannodes.h"
 #include "storage/s_lock.h"
 
+struct Gang;
+
 /**
  * DTX states, used to track the state of the distributed transaction
  *   from the QD's point of view.
@@ -230,8 +232,8 @@ typedef struct TMGXACT
 
 	bool						badPrepareGangs;
 
-	bool						directTransaction;
-	uint16						directTransactionContentId;
+	Bitmapset					*twophaseSegmentsMap;
+	List						*twophaseSegments;
 }	TMGXACT;
 
 typedef struct TMGXACTSTATUS
@@ -346,5 +348,9 @@ extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 
 extern bool doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType);
+
+extern void addToGxactTwophaseSegments(struct Gang* gp);
+
+extern List* getGxactTwophaseSegments(void);
 
 #endif   /* CDBTM_H */

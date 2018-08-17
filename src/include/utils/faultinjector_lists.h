@@ -208,8 +208,6 @@ FI_IDENT(BgBufferSyncDefaultLogic, "bg_buffer_sync_default_logic")
 FI_IDENT(FinishPreparedStartOfFunction, "finish_prepared_start_of_function")
 /* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
 FI_IDENT(FinishPreparedAfterRecordCommitPrepared, "finish_prepared_after_record_commit_prepared")
-/* inject fault to report ERROR just after creating Gang */
-FI_IDENT(GangCreated, "gang_created")
 /* inject fault to report ERROR just after resource group is assigned on master */
 FI_IDENT(ResGroupAssignedOnMaster, "resgroup_assigned_on_master")
 /* inject fault before reading command */

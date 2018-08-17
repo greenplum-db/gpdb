@@ -400,14 +400,12 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
-INFO:  Distributed transaction command 'Distributed Force Implied Writer' to ALL contents
 INFO:  Dispatch command to SINGLE content
 INFO:  Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
-INFO:  Distributed transaction command 'Distributed Force Implied Writer' to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents

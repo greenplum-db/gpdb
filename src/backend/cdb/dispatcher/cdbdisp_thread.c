@@ -154,8 +154,7 @@ static void CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 
 static void cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 								struct Gang *gp,
-								int sliceIndex,
-								CdbDispatchDirectDesc *dispDirect);
+								int sliceIndex);
 
 DispatcherInternalFuncs DispatcherSyncFuncs =
 {
@@ -176,8 +175,7 @@ DispatcherInternalFuncs DispatcherSyncFuncs =
 static int
 cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState *ds,
 								 struct Gang *gp,
-								 int sliceIndex,
-								 CdbDispatchDirectDesc *disp_direct)
+								 int sliceIndex)
 {
 	CdbDispatchCmdThreads *pThreads = NULL;
 	int			segdbsToDispatch = 0;
@@ -198,17 +196,9 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState *ds,
 		CdbDispatchResult *qeResult = NULL;
 		DispatchCommandParms *pParms = NULL;
 		int			parmsIndex = 0;
-		SegmentDatabaseDescriptor *segdbDesc = &gp->db_descriptors[i];
+		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
 
 		Assert(segdbDesc != NULL);
-
-		if (disp_direct->directed_dispatch)
-		{
-			/* currently we allow direct-to-one dispatch, only */
-			Assert(disp_direct->count == 1);
-			if (disp_direct->content[0] != segdbDesc->segindex)
-				continue;
-		}
 
 		/*
 		 * Initialize the QE's CdbDispatchResult object.
@@ -216,12 +206,6 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState *ds,
 		qeResult = cdbdisp_makeResult(ds->primaryResults, segdbDesc, sliceIndex);
 		if (qeResult == NULL)
 		{
-			/*
-			 * writer_gang could be NULL if this is an extended query.
-			 */
-			if (ds->primaryResults->writer_gang)
-				ds->primaryResults->writer_gang->dispatcherActive = true;
-
 			elog(FATAL, "could not allocate resources for segworker communication");
 		}
 
@@ -252,13 +236,12 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState *ds,
 void
 cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 								struct Gang *gp,
-								int sliceIndex,
-								CdbDispatchDirectDesc *disp_direct)
+								int sliceIndex)
 {
 	int			i = 0;
 	CdbDispatchCmdThreads *pThreads = (CdbDispatchCmdThreads *) ds->dispatchParams;
 	int			threadStartIndex = pThreads->threadCount;
-	int			newThreads = cdbdisp_initDispatchParmsForGang(ds, gp, sliceIndex, disp_direct);
+	int			newThreads = cdbdisp_initDispatchParmsForGang(ds, gp, sliceIndex);
 
 	/*
 	 * Create the threads. (which also starts the dispatching).

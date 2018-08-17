@@ -929,14 +929,23 @@ cdbdisp_checkResultsErrcode(struct CdbDispatchResults *meleeResults)
  * Will be freed in function cdbdisp_destroyDispatcherState by deleting the
  * memory context.
  */
-CdbDispatchResults *
-cdbdisp_makeDispatchResults(int sliceCapacity,
+void
+cdbdisp_makeDispatchResults(CdbDispatcherState *ds,
+							int sliceCapacity,
 							bool cancelOnError)
 {
-	CdbDispatchResults *results = palloc0(sizeof(*results));
-	int			resultCapacity = largestGangsize() * sliceCapacity;
-	int			nbytes = resultCapacity * sizeof(results->resultArray[0]);
+	CdbDispatchResults *results;
+	MemoryContext oldContext;
+	int	resultCapacity;
+	int nbytes;
 
+	Assert(DispatcherContext);
+	oldContext = MemoryContextSwitchTo(DispatcherContext);
+
+	resultCapacity = largestGangsize() * sliceCapacity;
+	nbytes = resultCapacity * sizeof(results->resultArray[0]);
+
+	results = palloc0(sizeof(*results));
 	results->resultArray = palloc0(nbytes);
 	results->resultCapacity = resultCapacity;
 	results->resultCount = 0;
@@ -952,7 +961,9 @@ cdbdisp_makeDispatchResults(int sliceCapacity,
 		results->sliceMap = palloc0(nbytes);
 	}
 
-	return results;
+	MemoryContextSwitchTo(oldContext);
+
+	ds->primaryResults = results;
 }
 
 void

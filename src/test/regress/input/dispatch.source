@@ -340,17 +340,6 @@ DROP FUNCTION numActiveMotionConns();
 DROP TABLE foo_test;
 
 --
--- Test dangling Gang would be destroyed if interrupted during the creation
---
-\c
-select gp_inject_fault('gang_created', 'reset', 1);
-select gp_inject_fault('gang_created', 'error', 1);
-select 1 from gp_dist_random('gp_id') limit 1;
--- if previous gang is not destroyed, snapshot collision would happen
-select 1 from gp_dist_random('gp_id') limit 1;
-select gp_inject_fault('gang_created', 'reset', 1);
-
---
 -- Test that an error happens after a big command is dispatched.
 --
 select gp_inject_fault('after_one_slice_dispatched', 'error', 1);

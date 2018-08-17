@@ -41,7 +41,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  ErrorData **qeError,
 							  int *resultCount,
 							  bool* badGangs,
-							  CdbDispatchDirectDesc *direct,
+							  List *twophaseSegments,
 							  char *argument, int argumentLength );
 
 

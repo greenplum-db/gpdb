@@ -162,11 +162,6 @@ typedef struct CdbDispatchResults
 	
 	/* num of slots in sliceMap */
 	int sliceCapacity;
-	
-	/*during dispatch, it is important to check to see that
-	 * the writer gang isn't already doing something -- this is an
-	 * important, missing sanity check */
-	struct Gang *writer_gang;
 } CdbDispatchResults;
 
 
@@ -331,12 +326,12 @@ cdbdisp_checkResultsErrcode(struct CdbDispatchResults *meeleResults);
 
 /*
  * cdbdisp_makeDispatchResults:
- * Allocates a CdbDispatchResults object in the current memory context.
  * Will be freed in function cdbdisp_destroyDispatcherState by deleting the
  * memory context.
  */
-CdbDispatchResults *
-cdbdisp_makeDispatchResults(int sliceCapacity,
+void
+cdbdisp_makeDispatchResults(struct CdbDispatcherState *ds,
+							int sliceCapacity,
 							bool cancelOnError);
 
 void

@@ -1036,7 +1036,6 @@ pg_plan_queries(List *querytrees, int cursorOptions, ParamListInfo boundParams)
  * serializedPlantree[len] -- PlannedStmt node, or (NULL,0) if query provided.
  * serializedParams[len] -- optional parameters
  * serializedQueryDispatchDesc[len] -- QueryDispatchDesc node, or (NULL,0) if query provided.
- * localSlice -- slice table index
  *
  * Caller may supply either a Query (representing utility command) or
  * a PlannedStmt (representing a planned DML command), but not both.
@@ -1046,8 +1045,7 @@ exec_mpp_query(const char *query_string,
 			   const char * serializedQuerytree, int serializedQuerytreelen,
 			   const char * serializedPlantree, int serializedPlantreelen,
 			   const char * serializedParams, int serializedParamslen,
-			   const char * serializedQueryDispatchDesc, int serializedQueryDispatchDesclen,
-			   int localSlice)
+			   const char * serializedQueryDispatchDesc, int serializedQueryDispatchDesclen)
 {
 	CommandDest dest = whereToSendOutput;
 	MemoryContext oldcontext;
@@ -1143,14 +1141,23 @@ exec_mpp_query(const char *query_string,
 
 		if (sliceTable)
 		{
+			ListCell *lc;
+
 			if (!IsA(sliceTable, SliceTable) ||
 				sliceTable->localSlice < 0 ||
 				sliceTable->localSlice >= list_length(sliceTable->slices))
-				elog(ERROR, "MPPEXEC: received invalid slice table: %d", localSlice);
+				elog(ERROR, "MPPEXEC: received invalid slice table: %d", sliceTable->localSlice);
 
-			sliceTable->localSlice = localSlice;
+			/* Identify slice to execute */
+			foreach(lc, sliceTable->slices)
+			{
+				slice = (Slice *)lfirst(lc);
+				if (bms_is_member(qe_identifier, slice->processesMap))
+					break;
+			}
 
-			slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
+			sliceTable->localSlice = slice->sliceIndex;
+
 			Assert(IsA(slice, Slice));
 
 			/* Set global sliceid variable for elog. */
@@ -5227,10 +5234,7 @@ PostgresMain(int argc, char *argv[],
 					int serializedParamslen = 0;
 					int serializedQueryDispatchDesclen = 0;
 					int resgroupInfoLen = 0;
-
-					int localSlice = -1, i;
 					int rootIdx;
-					int numSlices = 0;
 					TimestampTz statementStart;
 					Oid suid;
 					Oid ouid;
@@ -5293,24 +5297,6 @@ PostgresMain(int argc, char *argv[],
 					if (serializedQueryDispatchDesclen > 0)
 						serializedQueryDispatchDesc = pq_getmsgbytes(&input_message,serializedQueryDispatchDesclen);
 
-					numSlices = pq_getmsgint(&input_message, 4);
-
-					Assert(qe_gang_id > 0);
-					for (i = 0; i < numSlices; ++i)
-					{
-						if (qe_gang_id == pq_getmsgint(&input_message, 4))
-						{
-							localSlice = i;
-						}
-					}
-
-					if (localSlice == -1 && numSlices > 0)
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_PROTOCOL_VIOLATION),
-								 errmsg("QE cannot find slice to execute")));
-					}
-
 					resgroupInfoLen = pq_getmsgint(&input_message, 4);
 					if (resgroupInfoLen > 0)
 						resgroupInfoBuf = pq_getmsgbytes(&input_message, resgroupInfoLen);
@@ -5371,8 +5357,7 @@ PostgresMain(int argc, char *argv[],
 									   serializedQuerytree, serializedQuerytreelen,
 									   serializedPlantree, serializedPlantreelen,
 									   serializedParams, serializedParamslen,
-									   serializedQueryDispatchDesc, serializedQueryDispatchDesclen,
-									   localSlice);
+									   serializedQueryDispatchDesc, serializedQueryDispatchDesclen);
 
 					SetUserIdAndContext(GetOuterUserId(), false);
 

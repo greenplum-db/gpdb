@@ -142,13 +142,13 @@ FtsIsSegmentUp(CdbComponentDatabaseInfo *dBInfo)
  * returns true if any segment DB is down.
  */
 bool
-FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
+FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor **segdbDesc, int size)
 {
 	int			i = 0;
 
 	for (i = 0; i < size; i++)
 	{
-		CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
+		CdbComponentDatabaseInfo *segInfo = segdbDesc[i]->segment_database_info;
 
 		elog(DEBUG2, "FtsTestSegmentDBIsDown: looking for real fault on segment dbid %d", (int) segInfo->dbid);
 
