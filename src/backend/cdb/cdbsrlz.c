@@ -14,14 +14,11 @@
  */
 
 #include "postgres.h"
-#include "cdb/cdbplan.h"
-#include "cdb/cdbsrlz.h"
+
 #include <math.h>
-#include "miscadmin.h"
-#include "nodes/print.h"
-#include "optimizer/clauses.h"
-#include "regex/regex.h"
-#include "utils/guc.h"
+
+#include "cdb/cdbsrlz.h"
+#include "nodes/nodes.h"
 #include "utils/memaccounting.h"
 #include "utils/zlib_wrapper.h"
 

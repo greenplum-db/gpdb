@@ -27,7 +27,6 @@ qp_regexp.out
 resource_queue_function.out
 resource_queue_function_resgroup.out
 /security_label.out
-session_level_memory_consumption.out
 sreh.out
 table_functions.out
 table_functions_optimizer.out

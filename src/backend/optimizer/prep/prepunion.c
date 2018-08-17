@@ -19,7 +19,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -33,7 +33,6 @@
 
 #include "access/heapam.h"
 #include "access/sysattr.h"
-#include "catalog/namespace.h"
 #include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
@@ -43,12 +42,10 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
-#include "optimizer/paths.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
 #include "optimizer/tlist.h"
-#include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
@@ -59,19 +56,12 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsetop.h"
 
-/*
- * In PostgreSQL, adjust_appendrel_attrs_mutator() uses AppendRelInfo as the
- * 'context'. But in GPDB, we need the PlannerInfo as well, so we pass this
- * struct instead.
- * Struct to enable adjusting for partitioned tables.
- */
-typedef struct AppendRelInfoContext
+
+typedef struct
 {
 	PlannerInfo *root;
 	AppendRelInfo *appinfo;
-} AppendRelInfoContext;
-
-static Node *adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx);
+} adjust_appendrel_attrs_context;
 
 static Plan *recurse_set_operations(Node *setOp, PlannerInfo *root,
 					   double tuple_fraction,
@@ -122,6 +112,8 @@ static void make_inh_translation_list(Relation oldrelation,
 						  List **translated_vars);
 static Bitmapset *translate_col_privs(const Bitmapset *parent_privs,
 					List *translated_vars);
+static Node *adjust_appendrel_attrs_mutator(Node *node,
+							   adjust_appendrel_attrs_context *context);
 static Relids adjust_relid_set(Relids relids, Index oldrelid, Index newrelid);
 static List *adjust_inherited_tlist(List *tlist,
 					   AppendRelInfo *apprelinfo);
@@ -152,6 +144,7 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
 	Query	   *parse = root->parse;
 	SetOperationStmt *topop = (SetOperationStmt *) parse->setOperations;
 	Node	   *node;
+	RangeTblEntry *leftmostRTE;
 	Query	   *leftmostQuery;
 
 	Assert(topop && IsA(topop, SetOperationStmt));
@@ -165,6 +158,13 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
 	Assert(parse->distinctClause == NIL);
 
 	/*
+	 * We'll need to build RelOptInfos for each of the leaf subqueries, which
+	 * are RTE_SUBQUERY rangetable entries in this Query.  Prepare the index
+	 * arrays for that.
+	 */
+	setup_simple_rel_arrays(root);
+
+	/*
 	 * Find the leftmost component Query.  We need to use its column names for
 	 * all generated tlists (else SELECT INTO won't work right).
 	 */
@@ -172,8 +172,8 @@ plan_set_operations(PlannerInfo *root, double tuple_fraction,
 	while (node && IsA(node, SetOperationStmt))
 		node = ((SetOperationStmt *) node)->larg;
 	Assert(node && IsA(node, RangeTblRef));
-	leftmostQuery = rt_fetch(((RangeTblRef *) node)->rtindex,
-							 parse->rtable)->subquery;
+	leftmostRTE = root->simple_rte_array[((RangeTblRef *) node)->rtindex];
+	leftmostQuery = leftmostRTE->subquery;
 	Assert(leftmostQuery != NULL);
 
 	/*
@@ -228,13 +228,21 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 	if (IsA(setOp, RangeTblRef))
 	{
 		RangeTblRef *rtr = (RangeTblRef *) setOp;
-		RangeTblEntry *rte = rt_fetch(rtr->rtindex, root->parse->rtable);
+		RangeTblEntry *rte = root->simple_rte_array[rtr->rtindex];
 		Query	   *subquery = rte->subquery;
-		PlannerInfo *subroot = NULL;
+		RelOptInfo *rel;
+		PlannerInfo *subroot;
 		Plan	   *subplan,
 				   *plan;
 
 		Assert(subquery != NULL);
+
+		/*
+		 * We need to build a RelOptInfo for each leaf subquery.  This isn't
+		 * used for anything here, but it carries the subroot data structures
+		 * forward to setrefs.c processing.
+		 */
+		rel = build_simple_rel(root, rtr->rtindex, RELOPT_BASEREL);
 
 		/*
 		 * Generate plan for primitive subquery
@@ -247,6 +255,10 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 								   tuple_fraction,
 								   &subroot,
 								   config);
+
+		/* Save subroot and subplan in RelOptInfo for setrefs.c */
+		rel->subplan = subplan;
+		rel->subroot = subroot;
 
 		/*
 		 * Estimate number of groups if caller wants it.  If the subquery used
@@ -268,7 +280,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 		 * Add a SubqueryScan with the caller-requested targetlist
 		 */
 		plan = (Plan *)
-			make_subqueryscan(root, generate_setop_tlist(colTypes, colCollations,
+			make_subqueryscan(generate_setop_tlist(colTypes, colCollations,
 												   flag,
 												   rtr->rtindex,
 												   true,
@@ -276,9 +288,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 												   refnames_tlist),
 							  NIL,
 							  rtr->rtindex,
-							  subplan,
-							  subroot->parse->rtable,
-							  subroot->rowMarks);
+							  subplan);
 		mark_passthru_locus(plan, FALSE, FALSE); /* CDB: no hash/sort keys */
 
 		/*
@@ -326,7 +336,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 				make_result(root,
 							generate_setop_tlist(colTypes, colCollations,
 												 flag,
-												 OUTER,
+												 OUTER_VAR,
 												 false,
 												 plan->targetlist,
 												 refnames_tlist),
@@ -1179,7 +1189,7 @@ generate_append_tlist(List *colTypes, List *colCollations,
 
 		Assert(reftle->resno == resno);
 		Assert(!reftle->resjunk);
-		expr = (Node *) makeVar(OUTER,
+		expr = (Node *) makeVar(OUTER_VAR,
 								resno,
 								colType,
 								colTypmod,
@@ -1196,7 +1206,7 @@ generate_append_tlist(List *colTypes, List *colCollations,
 	{
 		/* Add a resjunk flag column */
 		/* flag value is shown as copied up from subplan */
-		expr = (Node *) makeVar(OUTER,
+		expr = (Node *) makeVar(OUTER_VAR,
 								resno,
 								INT4OID,
 								-1,
@@ -1702,9 +1712,10 @@ Node *
 adjust_appendrel_attrs(PlannerInfo *root, Node *node, AppendRelInfo *appinfo)
 {
 	Node	   *result;
-	AppendRelInfoContext ctx;
-	ctx.root = root;
-	ctx.appinfo = appinfo;
+	adjust_appendrel_attrs_context context;
+
+	context.root = root;
+	context.appinfo = appinfo;
 
 	/*
 	 * Must be prepared to start with a Query or a bare expression tree.
@@ -1715,7 +1726,7 @@ adjust_appendrel_attrs(PlannerInfo *root, Node *node, AppendRelInfo *appinfo)
 
 		newnode = query_tree_mutator((Query *) node,
 									 adjust_appendrel_attrs_mutator,
-									 (void *) &ctx,
+									 (void *) &context,
 									 QTW_IGNORE_RC_SUBQUERIES);
 		if (newnode->resultRelation == appinfo->parent_relid)
 		{
@@ -1729,7 +1740,7 @@ adjust_appendrel_attrs(PlannerInfo *root, Node *node, AppendRelInfo *appinfo)
 		result = (Node *) newnode;
 	}
 	else
-		result = adjust_appendrel_attrs_mutator(node, &ctx);
+		result = adjust_appendrel_attrs_mutator(node, &context);
 
 	return result;
 }
@@ -1739,11 +1750,10 @@ adjust_appendrel_attrs(PlannerInfo *root, Node *node, AppendRelInfo *appinfo)
  * for a child partition.
  */
 static Node *
-adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
+adjust_appendrel_attrs_mutator(Node *node,
+							   adjust_appendrel_attrs_context *context)
 {
-	Assert(ctx);
-	AppendRelInfo *appinfo = ctx->appinfo;
-	Assert(appinfo);
+	AppendRelInfo *appinfo = context->appinfo;
 
 	if (node == NULL)
 		return NULL;
@@ -1798,16 +1808,27 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 				{
 					/*
 					 * Build a RowExpr containing the translated variables.
+					 *
+					 * In practice var->vartype will always be RECORDOID here,
+					 * so we need to come up with some suitable column names.
+					 * We use the parent RTE's column names.
+					 *
+					 * Note: we can't get here for inheritance cases, so there
+					 * is no need to worry that translated_vars might contain
+					 * some dummy NULLs.
 					 */
 					RowExpr    *rowexpr;
 					List	   *fields;
+					RangeTblEntry *rte;
 
+					rte = rt_fetch(appinfo->parent_relid,
+								   context->root->parse->rtable);
 					fields = (List *) copyObject(appinfo->translated_vars);
 					rowexpr = makeNode(RowExpr);
 					rowexpr->args = fields;
 					rowexpr->row_typeid = var->vartype;
 					rowexpr->row_format = COERCE_IMPLICIT_CAST;
-					rowexpr->colnames = NIL;
+					rowexpr->colnames = copyObject(rte->eref->colnames);
 					rowexpr->location = -1;
 
 					return (Node *) rowexpr;
@@ -1840,7 +1861,7 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		j = (JoinExpr *) expression_tree_mutator(node,
 											  adjust_appendrel_attrs_mutator,
-												 (void *) ctx);
+												 (void *) context);
 		/* now fix JoinExpr's rtindex (probably never happens) */
 		if (j->rtindex == appinfo->parent_relid)
 			j->rtindex = appinfo->child_relid;
@@ -1853,7 +1874,7 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		phv = (PlaceHolderVar *) expression_tree_mutator(node,
 											  adjust_appendrel_attrs_mutator,
-														 (void *) ctx);
+														 (void *) context);
 		/* now fix PlaceHolderVar's relid sets */
 		if (phv->phlevelsup == 0)
 			phv->phrels = adjust_relid_set(phv->phrels,
@@ -1882,11 +1903,11 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		/* Recursively fix the clause itself */
 		newinfo->clause = (Expr *)
-				adjust_appendrel_attrs_mutator((Node *) oldinfo->clause, ctx);
+				adjust_appendrel_attrs_mutator((Node *) oldinfo->clause, context);
 
 		/* and the modified version, if an OR clause */
 		newinfo->orclause = (Expr *)
-				adjust_appendrel_attrs_mutator((Node *) oldinfo->orclause, ctx);
+				adjust_appendrel_attrs_mutator((Node *) oldinfo->orclause, context);
 
 		/* adjust relid sets too */
 		newinfo->clause_relids = adjust_relid_set(oldinfo->clause_relids,
@@ -1895,6 +1916,9 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 		newinfo->required_relids = adjust_relid_set(oldinfo->required_relids,
 													appinfo->parent_relid,
 													appinfo->child_relid);
+		newinfo->outer_relids = adjust_relid_set(oldinfo->outer_relids,
+												 appinfo->parent_relid,
+												 appinfo->child_relid);
 		newinfo->nullable_relids = adjust_relid_set(oldinfo->nullable_relids,
 													appinfo->parent_relid,
 													appinfo->child_relid);
@@ -1931,7 +1955,7 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 	Assert(!IsA(node, Query));
 
 	node = expression_tree_mutator(node, adjust_appendrel_attrs_mutator,
-								   (void *) ctx);
+								   (void *) context);
 
 	/*
 	 * In GPDB, if you have two SubPlans referring to the same initplan, we
@@ -1947,17 +1971,18 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 
 		if (!sp->is_initplan)
 		{
-			PlannerInfo *root = ctx->root;
+			PlannerInfo *root = context->root;
 			Plan *newsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, sp));
-			List *newrtable = (List *) copyObject(planner_subplan_get_rtable(root, sp));
-			List *newrowmarks = (List *) copyObject(planner_subplan_get_rowmarks(root, sp));
+			PlannerInfo *newsubroot = makeNode(PlannerInfo);
+
+			/* GPDB_92_MERGE_FIXME: Do we just need a reference or maybe deep copy instead? */
+			memcpy(newsubroot, planner_subplan_get_root(root, sp), sizeof(PlannerInfo));
 
 			/*
-			 * Add the subplan and its rtable to the global lists.
+			 * Add the subplan and its subroot to the global lists.
 			 */
 			root->glob->subplans = lappend(root->glob->subplans, newsubplan);
-			root->glob->subrtables = lappend(root->glob->subrtables, newrtable);
-			root->glob->subrowmarks = lappend(root->glob->subrowmarks, newrowmarks);
+			root->glob->subroots = lappend(root->glob->subroots, newsubroot);
 
 			/*
 			 * expression_tree_mutator made a copy of the SubPlan already, so

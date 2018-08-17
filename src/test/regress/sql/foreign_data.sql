@@ -84,6 +84,10 @@ ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6');         -- ERROR
 RESET ROLE;
 \dew+
 
+ALTER FOREIGN DATA WRAPPER foo RENAME TO foo1;
+\dew+
+ALTER FOREIGN DATA WRAPPER foo1 RENAME TO foo;
+
 -- DROP FOREIGN DATA WRAPPER
 DROP FOREIGN DATA WRAPPER nonexistent;                      -- ERROR
 DROP FOREIGN DATA WRAPPER IF EXISTS nonexistent;
@@ -91,10 +95,8 @@ DROP FOREIGN DATA WRAPPER IF EXISTS nonexistent;
 
 DROP ROLE regress_test_role_super;                          -- ERROR
 SET ROLE regress_test_role_super;
-DROP FOREIGN DATA WRAPPER foo;                              -- ERROR
-RESET ROLE;
-ALTER ROLE regress_test_role_super SUPERUSER;
 DROP FOREIGN DATA WRAPPER foo;
+RESET ROLE;
 DROP ROLE regress_test_role_super;
 \dew+
 
@@ -116,7 +118,7 @@ DROP FOREIGN DATA WRAPPER foo CASCADE;
 
 -- exercise CREATE SERVER
 CREATE SERVER s1 FOREIGN DATA WRAPPER foo;                  -- ERROR
-CREATE FOREIGN DATA WRAPPER foo OPTIONS (test_wrapper 'true');
+CREATE FOREIGN DATA WRAPPER foo OPTIONS ("test wrapper" 'true');
 CREATE SERVER s1 FOREIGN DATA WRAPPER foo;
 CREATE SERVER s1 FOREIGN DATA WRAPPER foo;                  -- ERROR
 CREATE SERVER s2 FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b');
@@ -154,7 +156,7 @@ ALTER SERVER s0;                                            -- ERROR
 ALTER SERVER s0 OPTIONS (a '1');                            -- ERROR
 ALTER SERVER s1 VERSION '1.0' OPTIONS (servername 's1');
 ALTER SERVER s2 VERSION '1.1';
-ALTER SERVER s3 OPTIONS (tnsname 'orcl', port '1521');
+ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521');
 GRANT USAGE ON FOREIGN SERVER s1 TO regress_test_role;
 GRANT USAGE ON FOREIGN SERVER s6 TO regress_test_role2 WITH GRANT OPTION;
 \des+
@@ -184,6 +186,10 @@ RESET ROLE;
 DROP ROLE regress_test_indirect;                            -- ERROR
 \des+
 
+ALTER SERVER s8 RENAME to s8new;
+\des+
+ALTER SERVER s8new RENAME to s8;
+
 -- DROP SERVER
 DROP SERVER nonexistent;                                    -- ERROR
 DROP SERVER IF EXISTS nonexistent;
@@ -210,7 +216,7 @@ CREATE USER MAPPING FOR regress_test_missing_role SERVER s1;  -- ERROR
 CREATE USER MAPPING FOR current_user SERVER s1;             -- ERROR
 CREATE USER MAPPING FOR current_user SERVER s4;
 CREATE USER MAPPING FOR user SERVER s4;                     -- ERROR duplicate
-CREATE USER MAPPING FOR public SERVER s4 OPTIONS (mapping 'is public');
+CREATE USER MAPPING FOR public SERVER s4 OPTIONS ("this mapping" 'is public');
 CREATE USER MAPPING FOR user SERVER s8 OPTIONS (username 'test', password 'secret');    -- ERROR
 CREATE USER MAPPING FOR user SERVER s8 OPTIONS (user 'test', password 'secret');
 ALTER SERVER s5 OWNER TO regress_test_role;
@@ -258,19 +264,16 @@ DROP SERVER s7;
 
 -- CREATE FOREIGN TABLE
 CREATE SCHEMA foreign_schema;
-CREATE SERVER sc FOREIGN DATA WRAPPER dummy;
+CREATE SERVER s0 FOREIGN DATA WRAPPER dummy;
 CREATE FOREIGN TABLE ft1 ();                                    -- ERROR
 CREATE FOREIGN TABLE ft1 () SERVER no_server;                   -- ERROR
--- GPDB_91_MERGE_FIXME: forien tables are disabled until foreign data
--- wrappers are correctly implemented in GPDB.
---start_ignore
 CREATE FOREIGN TABLE ft1 (c1 serial) SERVER sc;                 -- ERROR
-CREATE FOREIGN TABLE ft1 () SERVER sc WITH OIDS;                -- ERROR
+CREATE FOREIGN TABLE ft1 () SERVER s0 WITH OIDS;                -- ERROR
 CREATE FOREIGN TABLE ft1 (
-	c1 integer NOT NULL,
-	c2 text,
+	c1 integer OPTIONS ("param 1" 'val1') NOT NULL,
+	c2 text OPTIONS (param2 'val2', param3 'val3'),
 	c3 date
-) SERVER sc OPTIONS (delimiter ',', quote '"');
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value');
 COMMENT ON FOREIGN TABLE ft1 IS 'ft1';
 COMMENT ON COLUMN ft1.c1 IS 'ft1.c1';
 \d+ ft1
@@ -291,15 +294,23 @@ ALTER FOREIGN TABLE ft1 ADD COLUMN c6 integer;
 ALTER FOREIGN TABLE ft1 ADD COLUMN c7 integer NOT NULL;
 ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer;
 ALTER FOREIGN TABLE ft1 ADD COLUMN c9 integer;
-ALTER FOREIGN TABLE ft1 ADD COLUMN c10 integer;
+ALTER FOREIGN TABLE ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1');
 
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c4 SET DEFAULT 0;          -- ERROR
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c5 DROP DEFAULT;           -- ERROR
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c6 SET NOT NULL;
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 DROP NOT NULL;
-ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) using '0'; -- ERROR
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) USING '0'; -- ERROR
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10);
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE text;
+ALTER FOREIGN TABLE ft1 ALTER COLUMN xmin OPTIONS (ADD p1 'v1'); -- ERROR
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'),
+                        ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2');
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1);
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET STATISTICS 10000;
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET (n_distinct = 100);
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1;
+\d+ ft1
 -- can't change the column type if it's used elsewhere
 CREATE TABLE use_ft1_column_type (x ft1);
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE integer;	-- ERROR
@@ -320,6 +331,32 @@ ALTER FOREIGN TABLE foreign_schema.ft1 RENAME c1 TO foreign_column_1;
 ALTER FOREIGN TABLE foreign_schema.ft1 RENAME TO foreign_table_1;
 \d foreign_schema.foreign_table_1
 
+-- alter noexisting table
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c4 integer;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c6 integer;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c7 integer NOT NULL;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c8 integer;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c9 integer;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1');
+
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c6 SET NOT NULL;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 DROP NOT NULL;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 TYPE char(10);
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 SET DATA TYPE text;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'),
+                        ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2');
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1);
+
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT IF EXISTS no_const;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT ft1_c1_check;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OWNER TO regress_test_role;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@');
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN IF EXISTS no_column;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN c9;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 SET SCHEMA foreign_schema;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME c1 TO foreign_column_1;
+ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1;
+
 -- Information schema
 
 SELECT * FROM information_schema.foreign_data_wrappers ORDER BY 1, 2;
@@ -328,14 +365,14 @@ SELECT * FROM information_schema.foreign_servers ORDER BY 1, 2;
 SELECT * FROM information_schema.foreign_server_options ORDER BY 1, 2, 3;
 SELECT * FROM information_schema.user_mappings ORDER BY lower(authorization_identifier), 2, 3;
 SELECT * FROM information_schema.user_mapping_options ORDER BY lower(authorization_identifier), 2, 3, 4;
-SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' ORDER BY 1, 2, 3, 4, 5;
-SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' ORDER BY 1, 2, 3, 4, 5;
+SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
+SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
 SELECT * FROM information_schema.foreign_tables ORDER BY 1, 2, 3;
 SELECT * FROM information_schema.foreign_table_options ORDER BY 1, 2, 3, 4;
 SET ROLE regress_test_role;
 SELECT * FROM information_schema.user_mapping_options ORDER BY 1, 2, 3, 4;
-SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' ORDER BY 1, 2, 3, 4, 5;
-SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' ORDER BY 1, 2, 3, 4, 5;
+SELECT * FROM information_schema.usage_privileges WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
+SELECT * FROM information_schema.role_usage_grants WHERE object_type LIKE 'FOREIGN%' AND object_name IN ('s6', 'foo') ORDER BY 1, 2, 3, 4, 5;
 DROP USER MAPPING FOR current_user SERVER t1;
 SET ROLE regress_test_role2;
 SELECT * FROM information_schema.user_mapping_options ORDER BY 1, 2, 3, 4;
@@ -438,7 +475,6 @@ RESET ROLE;
 DROP FOREIGN TABLE no_table;                                    -- ERROR
 DROP FOREIGN TABLE IF EXISTS no_table;
 DROP FOREIGN TABLE foreign_schema.foreign_table_1;
---end_ignore
 
 -- Cleanup
 DROP SCHEMA foreign_schema CASCADE;
@@ -448,7 +484,7 @@ DROP SERVER t1 CASCADE;
 DROP SERVER t2;
 DROP USER MAPPING FOR regress_test_role SERVER s6;
 -- This test causes some order dependent cascade detail output,
--- so switch to terse mode for it. 
+-- so switch to terse mode for it.
 \set VERBOSITY terse
 DROP FOREIGN DATA WRAPPER foo CASCADE;
 \set VERBOSITY default

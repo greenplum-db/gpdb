@@ -3,7 +3,7 @@
  * globals.c
  *	  global variable declarations
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -103,7 +103,7 @@ bool		HasCTZSet = false;
 int			CTimeZone = 0;
 
 bool		enableFsync = true;
-int			allowSystemTableModsMask = ALLOW_SYSTEM_TABLE_MODS_NONE;
+bool		allowSystemTableMods = false;
 int			planner_work_mem = 32768;
 int			work_mem = 32768;
 int			statement_mem = 256000;
@@ -131,6 +131,10 @@ int			VacuumCostPageMiss = 10;
 int			VacuumCostPageDirty = 20;
 int			VacuumCostLimit = 200;
 int			VacuumCostDelay = 0;
+
+int			VacuumPageHit = 0;
+int			VacuumPageMiss = 0;
+int			VacuumPageDirty = 0;
 
 int			VacuumCostBalance = 0;		/* working state for vacuum */
 bool		VacuumCostActive = false;

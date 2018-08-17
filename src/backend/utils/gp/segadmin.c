@@ -326,7 +326,7 @@ remove_segment_config(int16 dbid)
 	}
 	systable_endscan(sscan);
 
-	Insist(numDel > 0);
+	Assert(numDel > 0);
 
 	heap_close(rel, NoLock);
 }

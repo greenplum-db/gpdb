@@ -10,7 +10,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -26,9 +26,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "access/transam.h"
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/transam.h"
 #include "access/xact.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
@@ -44,23 +44,20 @@
 #include "catalog/pg_tablespace.h"
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
+#include "commands/seclabel.h"
 #include "commands/tablespace.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
-#include "storage/bufmgr.h"
 #include "storage/copydir.h"
-#include "storage/fd.h"
 #include "storage/lmgr.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
-#include "storage/standby.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
 #include "utils/pg_locale.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
@@ -139,6 +136,7 @@ createdb(CreatedbStmt *stmt)
 	const char *dbtemplate = NULL;
 	char	   *dbcollate = NULL;
 	char	   *dbctype = NULL;
+	char	   *canonname;
 	int			encoding = -1;
 	int			dbconnlimit = -1;
 	int			notherbackends;
@@ -343,15 +341,17 @@ createdb(CreatedbStmt *stmt)
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("invalid server encoding %d", encoding)));
 
-	/* Check that the chosen locales are valid */
-	if (!check_locale(LC_COLLATE, dbcollate))
+	/* Check that the chosen locales are valid, and get canonical spellings */
+	if (!check_locale(LC_COLLATE, dbcollate, &canonname))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("invalid locale name %s", dbcollate)));
-	if (!check_locale(LC_CTYPE, dbctype))
+				 errmsg("invalid locale name: \"%s\"", dbcollate)));
+	dbcollate = canonname;
+	if (!check_locale(LC_CTYPE, dbctype, &canonname))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("invalid locale name %s", dbctype)));
+				 errmsg("invalid locale name: \"%s\"", dbctype)));
+	dbctype = canonname;
 
 	check_encoding_locale_matches(encoding, dbcollate, dbctype);
 
@@ -572,7 +572,8 @@ createdb(CreatedbStmt *stmt)
 	CHECK_FOR_INTERRUPTS();
 
 	/* Post creation hook for new database */
-	InvokeObjectAccessHook(OAT_POST_CREATE, DatabaseRelationId, dboid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   DatabaseRelationId, dboid, 0, NULL);
 
 	/*
 	 * Force a checkpoint before starting the copy. This will force dirty
@@ -771,11 +772,11 @@ check_encoding_locale_matches(int encoding, const char *collate, const char *cty
 		  (encoding == PG_SQL_ASCII && superuser())))
 		ereport(gp_encoding_check_locale_compatibility ? ERROR : WARNING,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("encoding %s does not match locale %s",
+				 errmsg("encoding \"%s\" does not match locale \"%s\"",
 						pg_encoding_to_char(encoding),
 						ctype),
-			   errdetail("The chosen LC_CTYPE setting requires encoding %s.",
-						 pg_encoding_to_char(ctype_encoding))));
+		   errdetail("The chosen LC_CTYPE setting requires encoding \"%s\".",
+					 pg_encoding_to_char(ctype_encoding))));
 
 	if (!(collate_encoding == encoding ||
 		  collate_encoding == PG_SQL_ASCII ||
@@ -786,11 +787,11 @@ check_encoding_locale_matches(int encoding, const char *collate, const char *cty
 		  (encoding == PG_SQL_ASCII && superuser())))
 		ereport(gp_encoding_check_locale_compatibility ? ERROR : WARNING,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("encoding %s does not match locale %s",
+				 errmsg("encoding \"%s\" does not match locale \"%s\"",
 						pg_encoding_to_char(encoding),
 						collate),
-			 errdetail("The chosen LC_COLLATE setting requires encoding %s.",
-					   pg_encoding_to_char(collate_encoding))));
+		 errdetail("The chosen LC_COLLATE setting requires encoding \"%s\".",
+				   pg_encoding_to_char(collate_encoding))));
 }
 
 /* Error cleanup callback for createdb */
@@ -878,6 +879,16 @@ dropdb(const char *dbname, bool missing_ok)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_DATABASE,
 					   dbname);
 
+	/* DROP hook for the database being removed */
+	if (object_access_hook)
+	{
+		ObjectAccessDrop drop_arg;
+
+		memset(&drop_arg, 0, sizeof(ObjectAccessDrop));
+		InvokeObjectAccessHook(OAT_DROP,
+							   DatabaseRelationId, db_id, 0, &drop_arg);
+	}
+
 	/*
 	 * Disallow dropping a DB that is marked istemplate.  This is just to
 	 * prevent people from accidentally dropping template0 or template1; they
@@ -942,9 +953,10 @@ dropdb(const char *dbname, bool missing_ok)
 	ReleaseSysCache(tup);
 
 	/*
-	 * Delete any comments associated with the database.
+	 * Delete any comments or security labels associated with the database.
 	 */
 	DeleteSharedComments(db_id, DatabaseRelationId);
+	DeleteSharedSecurityLabel(db_id, DatabaseRelationId);
 
 	/*
 	 * Remove settings associated with this database
@@ -971,18 +983,18 @@ dropdb(const char *dbname, bool missing_ok)
 	pgstat_drop_database(db_id);
 
 	/*
-	 * Tell bgwriter to forget any pending fsync and unlink requests for files
-	 * in the database; else the fsyncs will fail at next checkpoint, or
+	 * Tell checkpointer to forget any pending fsync and unlink requests for
+	 * files in the database; else the fsyncs will fail at next checkpoint, or
 	 * worse, it will delete files that belong to a newly created database
 	 * with the same OID.
 	 */
 	ForgetDatabaseFsyncRequests(db_id);
 
 	/*
-	 * Force a checkpoint to make sure the bgwriter has received the message
-	 * sent by ForgetDatabaseFsyncRequests. On Windows, this also ensures that
-	 * the bgwriter doesn't hold any open files, which would cause rmdir() to
-	 * fail.
+	 * Force a checkpoint to make sure the checkpointer has received the
+	 * message sent by ForgetDatabaseFsyncRequests. On Windows, this also
+	 * ensures that background procs don't hold any open files, which would
+	 * cause rmdir() to fail.
 	 */
 	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
@@ -1220,7 +1232,7 @@ movedb(const char *dbname, const char *tblspcname)
 	 * process any pending unlink requests. Otherwise, the check for existing
 	 * files in the target directory might fail unnecessarily, not to mention
 	 * that the copy might fail due to source files getting deleted under it.
-	 * On Windows, this also ensures that the bgwriter doesn't hold any open
+	 * On Windows, this also ensures that background procs don't hold any open
 	 * files, which would cause rmdir() to fail.
 	 */
 	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);

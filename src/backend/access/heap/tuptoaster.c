@@ -4,7 +4,7 @@
  *	  Support routines for external and compressed storage of
  *	  variable size attributes.
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -78,7 +78,10 @@ do { \
 #define SET_VARSIZE_C(PTR)			(((varattrib_1b *) (PTR))->va_header |= 0x40)
 
 static void toast_delete_datum(Relation rel, Datum value);
-static Datum toast_save_datum(Relation rel, Datum value, bool isFrozen, int options);
+static Datum toast_save_datum(Relation rel, Datum value,
+				 struct varlena * oldexternal, bool isFrozen, int options);
+static bool toastrel_valueid_exists(Relation toastrel, Oid valueid);
+static bool toastid_valueid_exists(Oid toastrelid, Oid valueid);
 static struct varlena *toast_fetch_datum(struct varlena * attr);
 static struct varlena *toast_fetch_datum_slice(struct varlena * attr,
 						int32 sliceoffset, int32 length);
@@ -594,6 +597,7 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 	bool		toast_oldisnull[MaxHeapAttributeNumber];
 	Datum		toast_values[MaxHeapAttributeNumber];
 	Datum		toast_oldvalues[MaxHeapAttributeNumber];
+	struct varlena *toast_oldexternal[MaxHeapAttributeNumber];
 	int32		toast_sizes[MaxHeapAttributeNumber];
 	bool		toast_free[MaxHeapAttributeNumber];
 	bool		toast_delold[MaxHeapAttributeNumber];
@@ -645,6 +649,7 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 	 * ----------
 	 */
 	memset(toast_action, ' ', numAttrs * sizeof(char));
+	memset(toast_oldexternal, 0, numAttrs * sizeof(struct varlena *));
 	memset(toast_free, 0, numAttrs * sizeof(bool));
 	memset(toast_delold, 0, numAttrs * sizeof(bool));
 
@@ -729,6 +734,7 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 			 */
 			if (VARATT_IS_EXTERNAL(new_value))
 			{
+				toast_oldexternal[i] = new_value;
 				if (att[i]->attstorage == 'p')
 					new_value = heap_tuple_untoast_attr(new_value);
 				else
@@ -862,7 +868,8 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 		{
 			old_value = toast_values[i];
 			toast_action[i] = 'p';
-			toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen, options);
+			toast_values[i] = toast_save_datum(rel, toast_values[i],
+											   toast_oldexternal[i], isFrozen, options);
 			if (toast_free[i])
 				pfree(DatumGetPointer(old_value));
 			toast_free[i] = true;
@@ -912,7 +919,8 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 		i = biggest_attno;
 		old_value = toast_values[i];
 		toast_action[i] = 'p';
-		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen, options);
+		toast_values[i] = toast_save_datum(rel, toast_values[i],
+										   toast_oldexternal[i], isFrozen, options);
 		if (toast_free[i])
 			pfree(DatumGetPointer(old_value));
 		toast_free[i] = true;
@@ -1033,7 +1041,8 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 		i = biggest_attno;
 		old_value = toast_values[i];
 		toast_action[i] = 'p';
-		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen, options);
+		toast_values[i] = toast_save_datum(rel, toast_values[i],
+										   toast_oldexternal[i], isFrozen, options);
 		if (toast_free[i])
 			pfree(DatumGetPointer(old_value));
 		toast_free[i] = true;
@@ -1252,7 +1261,6 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
 	return new_tuple;
 }
 
-
 /* ----------
  * toast_flatten_tuple_attribute -
  *
@@ -1456,10 +1464,16 @@ toast_compress_datum(Datum value)
  *
  *	Save one single datum into the secondary relation and return
  *	a Datum reference for it.
+ *
+ * rel: the main relation we're working with (not the toast rel!)
+ * value: datum to be pushed to toast storage
+ * oldexternal: if not NULL, toast pointer previously representing the datum
+ * options: options to be passed to heap_insert() for toast rows
  * ----------
  */
 static Datum
-toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
+toast_save_datum(Relation rel, Datum value,
+				 struct varlena * oldexternal, bool isFrozen, int options)
 {
 	Relation	toastrel;
 	Relation	toastidx;
@@ -1543,11 +1557,82 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 		toast_pointer.va_toastrelid = RelationGetRelid(toastrel);
 
 	/*
-	 * Choose an unused OID within the toast table for this toast value.
+	 * Choose an OID to use as the value ID for this toast value.
+	 *
+	 * Normally we just choose an unused OID within the toast table.  But
+	 * during table-rewriting operations where we are preserving an existing
+	 * toast table OID, we want to preserve toast value OIDs too.  So, if
+	 * rd_toastoid is set and we had a prior external value from that same
+	 * toast table, re-use its value ID.  If we didn't have a prior external
+	 * value (which is a corner case, but possible if the table's attstorage
+	 * options have been changed), we have to pick a value ID that doesn't
+	 * conflict with either new or existing toast value OIDs.
 	 */
-	toast_pointer.va_valueid = GetNewOidWithIndex(toastrel,
-												  RelationGetRelid(toastidx),
-												  (AttrNumber) 1);
+	if (!OidIsValid(rel->rd_toastoid))
+	{
+		/* normal case: just choose an unused OID */
+		toast_pointer.va_valueid =
+			GetNewOidWithIndex(toastrel,
+							   RelationGetRelid(toastidx),
+							   (AttrNumber) 1);
+	}
+	else
+	{
+		/* rewrite case: check to see if value was in old toast table */
+		toast_pointer.va_valueid = InvalidOid;
+		if (oldexternal != NULL)
+		{
+			struct varatt_external old_toast_pointer;
+
+			Assert(VARATT_IS_EXTERNAL(oldexternal));
+			/* Must copy to access aligned fields */
+			VARATT_EXTERNAL_GET_POINTER(old_toast_pointer, oldexternal);
+			if (old_toast_pointer.va_toastrelid == rel->rd_toastoid)
+			{
+				/* This value came from the old toast table; reuse its OID */
+				toast_pointer.va_valueid = old_toast_pointer.va_valueid;
+
+				/*
+				 * There is a corner case here: the table rewrite might have
+				 * to copy both live and recently-dead versions of a row, and
+				 * those versions could easily reference the same toast value.
+				 * When we copy the second or later version of such a row,
+				 * reusing the OID will mean we select an OID that's already
+				 * in the new toast table.	Check for that, and if so, just
+				 * fall through without writing the data again.
+				 *
+				 * While annoying and ugly-looking, this is a good thing
+				 * because it ensures that we wind up with only one copy of
+				 * the toast value when there is only one copy in the old
+				 * toast table.  Before we detected this case, we'd have made
+				 * multiple copies, wasting space; and what's worse, the
+				 * copies belonging to already-deleted heap tuples would not
+				 * be reclaimed by VACUUM.
+				 */
+				if (toastrel_valueid_exists(toastrel,
+											toast_pointer.va_valueid))
+				{
+					/* Match, so short-circuit the data storage loop below */
+					data_todo = 0;
+				}
+			}
+		}
+		if (toast_pointer.va_valueid == InvalidOid)
+		{
+			/*
+			 * new value; must choose an OID that doesn't conflict in either
+			 * old or new toast table
+			 */
+			do
+			{
+				toast_pointer.va_valueid =
+					GetNewOidWithIndex(toastrel,
+									   RelationGetRelid(toastidx),
+									   (AttrNumber) 1);
+			} while (toastid_valueid_exists(rel->rd_toastoid,
+											toast_pointer.va_valueid));
+		}
+	}
 
 #ifdef USE_ASSERT_CHECKING
 	Assert((VARATT_IS_COMPRESSED(value) || 0) == (VARATT_EXTERNAL_IS_COMPRESSED(toast_pointer) || 0));
@@ -1721,6 +1806,63 @@ toast_delete_datum(Relation rel __attribute__((unused)), Datum value)
 	systable_endscan_ordered(toastscan);
 	index_close(toastidx, RowExclusiveLock);
 	heap_close(toastrel, RowExclusiveLock);
+}
+
+
+/* ----------
+ * toastrel_valueid_exists -
+ *
+ *	Test whether a toast value with the given ID exists in the toast relation
+ * ----------
+ */
+static bool
+toastrel_valueid_exists(Relation toastrel, Oid valueid)
+{
+	bool		result = false;
+	ScanKeyData toastkey;
+	SysScanDesc toastscan;
+
+	/*
+	 * Setup a scan key to find chunks with matching va_valueid
+	 */
+	ScanKeyInit(&toastkey,
+				(AttrNumber) 1,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(valueid));
+
+	/*
+	 * Is there any such chunk?
+	 */
+	toastscan = systable_beginscan(toastrel, toastrel->rd_rel->reltoastidxid,
+								   true, SnapshotToast, 1, &toastkey);
+
+	if (systable_getnext(toastscan) != NULL)
+		result = true;
+
+	systable_endscan(toastscan);
+
+	return result;
+}
+
+/* ----------
+ * toastid_valueid_exists -
+ *
+ *	As above, but work from toast rel's OID not an open relation
+ * ----------
+ */
+static bool
+toastid_valueid_exists(Oid toastrelid, Oid valueid)
+{
+	bool		result;
+	Relation	toastrel;
+
+	toastrel = heap_open(toastrelid, AccessShareLock);
+
+	result = toastrel_valueid_exists(toastrel, valueid);
+
+	heap_close(toastrel, AccessShareLock);
+
+	return result;
 }
 
 

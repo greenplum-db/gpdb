@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  * src/bin/psql/help.c
  */
@@ -123,6 +123,10 @@ usage(void)
 	printf(_("  -t, --tuples-only        print rows only\n"));
 	printf(_("  -T, --table-attr=TEXT    set HTML table tag attributes (e.g., width, border)\n"));
 	printf(_("  -x, --expanded           turn on expanded table output\n"));
+	printf(_("  -z, --field-separator-zero\n"
+		   "                           set field separator to zero byte\n"));
+	printf(_("  -0, --record-separator-zero\n"
+		  "                           set record separator to zero byte\n"));
 
 	printf(_("\nConnection options:\n"));
 	/* Display default host */
@@ -163,7 +167,7 @@ slashUsage(unsigned short int pager)
 	if (currdb == NULL)
 		currdb = "";
 
-	output = PageOutput(92, pager);
+	output = PageOutput(94, pager);
 
 	/* if you add/remove a line here, change the row count above */
 
@@ -189,6 +193,7 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\copy ...              perform SQL COPY with data stream to the client host\n"));
 	fprintf(output, _("  \\echo [STRING]         write string to standard output\n"));
 	fprintf(output, _("  \\i FILE                execute commands from file\n"));
+	fprintf(output, _("  \\ir FILE               as \\i, but relative to location of current script\n"));
 	fprintf(output, _("  \\o [FILE]              send all query results to file or |pipe\n"));
 	fprintf(output, _("  \\qecho [STRING]        write string to query output stream (see \\o)\n"));
 	fprintf(output, "\n");
@@ -199,11 +204,11 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\d[S+]  NAME           describe table, view, sequence, or index\n"));
 	fprintf(output, _("  \\da[S]  [PATTERN]      list aggregates\n"));
 	fprintf(output, _("  \\db[+]  [PATTERN]      list tablespaces\n"));
-	fprintf(output, _("  \\dc[S]  [PATTERN]      list conversions\n"));
-	fprintf(output, _("  \\dC     [PATTERN]      list casts\n"));
-	fprintf(output, _("  \\dd[S]  [PATTERN]      show comments on objects\n"));
+	fprintf(output, _("  \\dc[S+] [PATTERN]      list conversions\n"));
+	fprintf(output, _("  \\dC[+]  [PATTERN]      list casts\n"));
+	fprintf(output, _("  \\dd[S]  [PATTERN]      show object descriptions not displayed elsewhere\n"));
 	fprintf(output, _("  \\ddp    [PATTERN]      list default privileges\n"));
-	fprintf(output, _("  \\dD[S]  [PATTERN]      list domains\n"));
+	fprintf(output, _("  \\dD[S+] [PATTERN]      list domains\n"));
 	fprintf(output, _("  \\det[+] [PATTERN]      list foreign tables\n"));
 	fprintf(output, _("  \\des[+] [PATTERN]      list foreign servers\n"));
 	fprintf(output, _("  \\deu[+] [PATTERN]      list user mappings\n"));
@@ -244,13 +249,13 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\H                     toggle HTML output mode (currently %s)\n"),
 			ON(pset.popt.topt.format == PRINT_HTML));
 	fprintf(output, _("  \\pset NAME [VALUE]     set table output option\n"
-					  "                         (NAME := {format|border|expanded|fieldsep|footer|null|\n"
-					  "                         numericlocale|recordsep|tuples_only|title|tableattr|pager})\n"));
+					  "                         (NAME := {format|border|expanded|fieldsep|fieldsep_zero|footer|null|\n"
+					  "                         numericlocale|recordsep|recordsep_zero|tuples_only|title|tableattr|pager})\n"));
 	fprintf(output, _("  \\t [on|off]            show only rows (currently %s)\n"),
 			ON(pset.popt.topt.tuples_only));
 	fprintf(output, _("  \\T [STRING]            set HTML <table> tag attributes, or unset if none\n"));
-	fprintf(output, _("  \\x [on|off]            toggle expanded output (currently %s)\n"),
-			ON(pset.popt.topt.expanded));
+	fprintf(output, _("  \\x [on|off|auto]       toggle expanded output (currently %s)\n"),
+		pset.popt.topt.expanded == 2 ? "auto" : ON(pset.popt.topt.expanded));
 	fprintf(output, "\n");
 
 	fprintf(output, _("Connection\n"));
@@ -264,6 +269,7 @@ slashUsage(unsigned short int pager)
 
 	fprintf(output, _("Operating System\n"));
 	fprintf(output, _("  \\cd [DIR]              change the current working directory\n"));
+	fprintf(output, _("  \\setenv NAME [VALUE]   set or unset environment variable\n"));
 	fprintf(output, _("  \\timing [on|off]       toggle timing of commands (currently %s)\n"),
 			ON(pset.timing));
 	fprintf(output, _("  \\! [COMMAND]           execute command in shell or start interactive shell\n"));

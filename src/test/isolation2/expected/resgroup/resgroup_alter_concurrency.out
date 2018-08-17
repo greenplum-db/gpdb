@@ -12,9 +12,9 @@ CREATE
 
 -- After a 'q' command the client connection is disconnected but the
 -- QD may still be alive, if we then query pg_stat_activity quick enough
--- we might still see this session with current_query '<IDLE>'.
+-- we might still see this session with query '<IDLE>'.
 -- A filter is put to filter out this kind of quitted sessions.
-CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, current_query FROM pg_stat_activity WHERE rsgname='rg_concurrency_test' AND current_query <> '<IDLE>';
+CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, state, query FROM pg_stat_activity WHERE rsgname='rg_concurrency_test' AND query <> '<IDLE>';
 CREATE
 
 --
@@ -40,11 +40,11 @@ ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 ALTER
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -56,10 +56,10 @@ BEGIN
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -70,8 +70,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -97,11 +97,11 @@ SET
 22&:BEGIN;  <waiting ...>
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -113,10 +113,10 @@ BEGIN
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -127,8 +127,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -156,11 +156,11 @@ ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
 ALTER
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
@@ -170,11 +170,11 @@ ALTER
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -184,10 +184,10 @@ END
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -198,8 +198,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -230,11 +230,11 @@ BEGIN
 22&:BEGIN;  <waiting ...>
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -244,10 +244,10 @@ END
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -258,8 +258,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -291,11 +291,11 @@ ALTER
 -- now a new query needs a quota of 30/2=15 to run,
 -- there is no free quota at the moment, so 21 & 22 are still pending
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
@@ -303,11 +303,11 @@ ALTER
 -- now a new query needs a quota of 50/2=25 to run,
 -- but there is only 50-30=20 free quota, so 21 & 22 are still pending
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
@@ -319,11 +319,11 @@ ALTER
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -335,10 +335,10 @@ END
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -349,8 +349,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -375,9 +375,9 @@ ALTER
 -- now a new query needs a quota of 30/2=15 to run,
 -- there is no free quota at the moment
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
@@ -397,11 +397,11 @@ BEGIN
 22&:BEGIN;  <waiting ...>
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 11:END;
@@ -413,10 +413,10 @@ END
 BEGIN
 
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 21:END;
@@ -427,8 +427,8 @@ END
 22q: ... <quitting>
 
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -490,9 +490,9 @@ CREATE
 SET
 11&:BEGIN;  <waiting ...>
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query
--------------------+--------------+-------------
-rg_concurrency_test|resgroup      |BEGIN;       
+rsgname            |waiting_reason|state |query 
+-------------------+--------------+------+------
+rg_concurrency_test|resgroup      |active|BEGIN;
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -501,9 +501,9 @@ ALTER
 11<:  <... completed>
 BEGIN
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (1 row)
 
 11:END;
@@ -519,15 +519,15 @@ END
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 --
@@ -539,8 +539,8 @@ rsgname|waiting_reason|current_query
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 11:SET ROLE role_concurrency_test;
@@ -548,17 +548,17 @@ SET
 11:BEGIN;
 BEGIN
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (1 row)
 
 11:END;
@@ -574,8 +574,8 @@ END
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 11:SET ROLE role_concurrency_test;
@@ -586,31 +586,31 @@ BEGIN
 SET
 12&:BEGIN;  <waiting ...>
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
 ALTER
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query        
--------------------+--------------+---------------------
-rg_concurrency_test|              |<IDLE> in transaction
-rg_concurrency_test|resgroup      |BEGIN;               
+rsgname            |waiting_reason|state              |query 
+-------------------+--------------+-------------------+------
+rg_concurrency_test|resgroup      |active             |BEGIN;
+rg_concurrency_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 11:END;
 END
 11q: ... <quitting>
 SELECT * FROM rg_activity_status;
-rsgname            |waiting_reason|current_query
--------------------+--------------+-------------
-rg_concurrency_test|resgroup      |BEGIN;       
+rsgname            |waiting_reason|state |query 
+-------------------+--------------+------+------
+rg_concurrency_test|resgroup      |active|BEGIN;
 (1 row)
 
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 pg_cancel_backend
 -----------------
 t                
@@ -619,8 +619,8 @@ t
 ERROR:  canceling statement due to user request
 12q: ... <quitting>
 SELECT * FROM rg_activity_status;
-rsgname|waiting_reason|current_query
--------+--------------+-------------
+rsgname|waiting_reason|state|query
+-------+--------------+-----+-----
 (0 rows)
 
 -- 10: drop a resgroup with concurrency=0 and pending queries

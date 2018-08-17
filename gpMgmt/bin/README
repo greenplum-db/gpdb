@@ -67,7 +67,6 @@ sbin/gpfaultinjector.py -  Helper script for gpfaultinjector
 sbin/gpsegcopy          -  Helper script for gpexpand
 sbin/gpsegstart.py      -  Helper script for gpstart
 sbin/gpsegstop.py       -  Helper script for gpstop
-sbin/gpsegtoprimaryormirror.py  - Helper script for failover
 
 
 Overview of gppylib

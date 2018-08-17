@@ -3,7 +3,7 @@
  * parse_target.c
  *	  handle target lists
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -30,6 +30,7 @@
 #include "parser/parse_cte.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/typcache.h"
 
 
@@ -1641,6 +1642,50 @@ FigureColnameInternal(Node *node, char **name)
 			break;
 		case T_CollateClause:
 			return FigureColnameInternal(((CollateClause *) node)->arg, name);
+		case T_SubLink:
+			switch (((SubLink *) node)->subLinkType)
+			{
+				case EXISTS_SUBLINK:
+					*name = "exists";
+					return 2;
+				case ARRAY_SUBLINK:
+					*name = "array";
+					return 2;
+				case EXPR_SUBLINK:
+					{
+						/* Get column name of the subquery's single target */
+						SubLink    *sublink = (SubLink *) node;
+						Query	   *query = (Query *) sublink->subselect;
+
+						/*
+						 * The subquery has probably already been transformed,
+						 * but let's be careful and check that.  (The reason
+						 * we can see a transformed subquery here is that
+						 * transformSubLink is lazy and modifies the SubLink
+						 * node in-place.)
+						 */
+						if (IsA(query, Query))
+						{
+							TargetEntry *te = (TargetEntry *) linitial(query->targetList);
+
+							if (te->resname)
+							{
+								*name = te->resname;
+								return 2;
+							}
+						}
+					}
+					break;
+
+					/* As with other operator-like nodes, these have no names */
+				case ALL_SUBLINK:
+				case ANY_SUBLINK:
+				case ROWCOMPARE_SUBLINK:
+				case CTE_SUBLINK:
+				case NOT_EXISTS_SUBLINK:
+					break;
+			}
+			break;
 		case T_CaseExpr:
 			strength = FigureColnameInternal((Node *) ((CaseExpr *) node)->defresult,
 											 name);

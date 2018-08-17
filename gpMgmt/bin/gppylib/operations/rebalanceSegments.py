@@ -2,7 +2,7 @@ import sys
 import signal
 from gppylib.gparray import GpArray
 from gppylib.db import dbconn
-from gppylib.commands.gp import GpSegStopCmd, GpRecoverseg
+from gppylib.commands.gp import GpSegStopCmd
 from gppylib.commands import base
 from gppylib import gplog
 

@@ -4,7 +4,7 @@
  *
  *	  Routines for opclass (and opfamily) manipulation commands
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -19,6 +19,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/nbtree.h"
 #include "access/sysattr.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
@@ -38,7 +39,6 @@
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_type.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
@@ -318,7 +318,7 @@ CreateOpFamily(char *amname, char *opfname, Oid namespaceoid, Oid amoid)
 
 	/* Post creation hook for new operator family */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   OperatorFamilyRelationId, opfamilyoid, 0);
+						   OperatorFamilyRelationId, opfamilyoid, 0, NULL);
 
 	heap_close(rel, RowExclusiveLock);
 
@@ -721,7 +721,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
 	/* Post creation hook for new operator class */
 	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   OperatorClassRelationId, opclassoid, 0);
+						   OperatorClassRelationId, opclassoid, 0, NULL);
 
 	heap_close(rel, RowExclusiveLock);
 	
@@ -1184,27 +1184,48 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 	procform = (Form_pg_proc) GETSTRUCT(proctup);
 
 	/*
-	 * btree support procs must be 2-arg procs returning int4; hash support
-	 * procs must be 1-arg procs returning int4; otherwise we don't know.
+	 * btree comparison procs must be 2-arg procs returning int4, while btree
+	 * sortsupport procs must take internal and return void.  hash support
+	 * procs must be 1-arg procs returning int4.  Otherwise we don't know.
 	 */
 	if (amoid == BTREE_AM_OID)
 	{
-		if (procform->pronargs != 2)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("btree procedures must have two arguments")));
-		if (procform->prorettype != INT4OID)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("btree procedures must return integer")));
+		if (member->number == BTORDER_PROC)
+		{
+			if (procform->pronargs != 2)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("btree comparison procedures must have two arguments")));
+			if (procform->prorettype != INT4OID)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("btree comparison procedures must return integer")));
 
-		/*
-		 * If lefttype/righttype isn't specified, use the proc's input types
-		 */
-		if (!OidIsValid(member->lefttype))
-			member->lefttype = procform->proargtypes.values[0];
-		if (!OidIsValid(member->righttype))
-			member->righttype = procform->proargtypes.values[1];
+			/*
+			 * If lefttype/righttype isn't specified, use the proc's input
+			 * types
+			 */
+			if (!OidIsValid(member->lefttype))
+				member->lefttype = procform->proargtypes.values[0];
+			if (!OidIsValid(member->righttype))
+				member->righttype = procform->proargtypes.values[1];
+		}
+		else if (member->number == BTSORTSUPPORT_PROC)
+		{
+			if (procform->pronargs != 1 ||
+				procform->proargtypes.values[0] != INTERNALOID)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("btree sort support procedures must accept type \"internal\"")));
+			if (procform->prorettype != VOIDOID)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				  errmsg("btree sort support procedures must return void")));
+
+			/*
+			 * Can't infer lefttype/righttype from proc, so use default rule
+			 */
+		}
 	}
 	else if (amoid == HASH_AM_OID)
 	{
@@ -1225,23 +1246,21 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 		if (!OidIsValid(member->righttype))
 			member->righttype = procform->proargtypes.values[0];
 	}
-	else
-	{
-		/*
-		 * The default for GiST and GIN in CREATE OPERATOR CLASS is to use the
-		 * class' opcintype as lefttype and righttype.  In CREATE or ALTER
-		 * OPERATOR FAMILY, opcintype isn't available, so make the user
-		 * specify the types.
-		 */
-		if (!OidIsValid(member->lefttype))
-			member->lefttype = typeoid;
-		if (!OidIsValid(member->righttype))
-			member->righttype = typeoid;
-		if (!OidIsValid(member->lefttype) || !OidIsValid(member->righttype))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("associated data types must be specified for index support procedure")));
-	}
+
+	/*
+	 * The default in CREATE OPERATOR CLASS is to use the class' opcintype as
+	 * lefttype and righttype.	In CREATE or ALTER OPERATOR FAMILY, opcintype
+	 * isn't available, so make the user specify the types.
+	 */
+	if (!OidIsValid(member->lefttype))
+		member->lefttype = typeoid;
+	if (!OidIsValid(member->righttype))
+		member->righttype = typeoid;
+
+	if (!OidIsValid(member->lefttype) || !OidIsValid(member->righttype))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("associated data types must be specified for index support procedure")));
 
 	ReleaseSysCache(proctup);
 }
@@ -1532,7 +1551,7 @@ dropOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid,
 		object.objectId = amopid;
 		object.objectSubId = 0;
 
-		performDeletion(&object, DROP_RESTRICT);
+		performDeletion(&object, DROP_RESTRICT, 0);
 	}
 }
 
@@ -1572,126 +1591,9 @@ dropProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid,
 		object.objectId = amprocid;
 		object.objectSubId = 0;
 
-		performDeletion(&object, DROP_RESTRICT);
+		performDeletion(&object, DROP_RESTRICT, 0);
 	}
 }
-
-
-/*
- * RemoveOpClass
- *		Deletes an opclass.
- */
-void
-RemoveOpClass(RemoveOpClassStmt *stmt)
-{
-	Oid			amID,
-				opcID;
-	HeapTuple	tuple;
-	ObjectAddress object;
-
-	/* Get the access method's OID. */
-	amID = get_am_oid(stmt->amname, false);
-
-	/* Look up the opclass. */
-	tuple = OpClassCacheLookup(amID, stmt->opclassname, stmt->missing_ok);
-	if (!HeapTupleIsValid(tuple))
-	{
-		ereport(NOTICE,
-				(errmsg("operator class \"%s\" does not exist for access method \"%s\"",
-						NameListToString(stmt->opclassname), stmt->amname)));
-		return;
-	}
-
-	opcID = HeapTupleGetOid(tuple);
-
-	/* Permission check: must own opclass or its namespace */
-	if (!pg_opclass_ownercheck(opcID, GetUserId()) &&
-		!pg_namespace_ownercheck(((Form_pg_opclass) GETSTRUCT(tuple))->opcnamespace,
-								 GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_OPCLASS,
-					   NameListToString(stmt->opclassname));
-
-	ReleaseSysCache(tuple);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = OperatorClassRelationId;
-	object.objectId = opcID;
-	object.objectSubId = 0;
-
-	performDeletion(&object, stmt->behavior);
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
-									NULL);
-	}
-}
-
-/*
- * RemoveOpFamily
- *		Deletes an opfamily.
- */
-void
-RemoveOpFamily(RemoveOpFamilyStmt *stmt)
-{
-	Oid			amID,
-				opfID;
-	HeapTuple	tuple;
-	ObjectAddress object;
-
-	/*
-	 * Get the access method's OID.
-	 */
-	amID = get_am_oid(stmt->amname, false);
-
-	/*
-	 * Look up the opfamily.
-	 */
-	tuple = OpFamilyCacheLookup(amID, stmt->opfamilyname, stmt->missing_ok);
-	if (!HeapTupleIsValid(tuple))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("operator family \"%s\" does not exist for access method \"%s\"",
-						NameListToString(stmt->opfamilyname), stmt->amname)));
-		return;
-	}
-
-	opfID = HeapTupleGetOid(tuple);
-
-	/* Permission check: must own opfamily or its namespace */
-	if (!pg_opfamily_ownercheck(opfID, GetUserId()) &&
-		!pg_namespace_ownercheck(((Form_pg_opfamily) GETSTRUCT(tuple))->opfnamespace,
-								 GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_OPFAMILY,
-					   NameListToString(stmt->opfamilyname));
-
-	ReleaseSysCache(tuple);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = OperatorFamilyRelationId;
-	object.objectId = opfID;
-	object.objectSubId = 0;
-
-	performDeletion(&object, stmt->behavior);
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
-									NULL);
-}
-
 
 /*
  * Deletion subroutines for use by dependency.c.

@@ -1,0 +1,317 @@
+-- Tests FTS can handle DNS error.
+create extension if not exists gp_inject_fault;
+CREATE
+
+-- to make test deterministic and fast
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+20180815:04:37:38:022354 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
+
+-- end_ignore
+(exited with code 0)
+
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery. Approximately we want to wait 30 seconds.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
+-- start_ignore
+20180815:04:37:38:022446 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
+-- start_ignore
+20180815:04:37:39:022532 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Starting gpstop with args: -u
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Gathering information and validating the environment...
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+. 
+
+-- end_ignore
+(exited with code 0)
+
+-- skip FTS probes firstly
+select gp_inject_fault_infinite('fts_probe', 'skip', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+
+-- no down segment in the beginning
+select count(*) from gp_segment_configuration where status = 'd';
+count
+-----
+0    
+(1 row)
+
+-- inject dns error
+select gp_inject_fault_infinite('get_dns_cached_address', 'skip', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+-- specify database name, so gdd backend will not be affected
+SELECT gp_inject_fault('before_fts_notify', 'suspend', '', 'isolation2test', '', 1, -1, 1, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+
+-- trigger a DNS error in segment 0 in session 0,
+-- Before error out,QD will notify the FTS to do
+-- a probe, fts probe is currently skipped, so this
+-- query will get stuck
+0&: create table fts_dns_error_test (c1 int, c2 int);  <waiting ...>
+
+select gp_wait_until_triggered_fault('before_fts_notify', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+
+-- enable fts probe
+select gp_inject_fault_infinite('fts_probe', 'reset', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+
+-- resume fts notify for session 0 to notify fts to probe
+select gp_inject_fault_infinite('before_fts_notify', 'resume', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+select gp_inject_fault_infinite('before_fts_notify', 'reset', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+
+-- wait until fts done the probe and this query will fail
+0<:  <... completed>
+ERROR:  Cannot resolve network address for dbid=2 (cdbutil.c:269)
+
+-- verify a fts failover happens
+select count(*) from gp_segment_configuration where status = 'd';
+count
+-----
+1    
+(1 row)
+
+-- fts failover happens, so the following query will success.
+0: create table fts_dns_error_test (c1 int, c2 int);
+CREATE
+
+-- reset dns fault so segment can be recovered
+select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+
+-- fully recover the failed primary as new mirror
+!\retcode gprecoverseg -aF;
+-- start_ignore
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting gprecoverseg with args: -aF
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Standard
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery 1 of 1
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Synchronization mode                 = Full
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance host                 = gpdbvm
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance address              = gpdbvm
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance port                 = 25432
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance host        = gpdbvm
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance address     = gpdbvm
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance port        = 25435
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Target                      = in-place
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-1 segment(s) to recover
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
+20180815:04:37:45:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-20031: /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+. 
+20180815:04:37:46:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
+20180815:04:37:47:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Validating remote directories
+. 
+20180815:04:37:48:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Configuring new segments
+. 
+20180815:04:37:49:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Updating mirrors
+. 
+20180815:04:37:50:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting mirrors
+20180815:04:37:50:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-era is e0110b50959363aa_180815043625
+20180815:04:37:50:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
+. 
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Process results...
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Triggering FTS probe
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Updating segments for streaming is completed.
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
+20180815:04:37:51:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+!\retcode gprecoverseg -ar;
+-- start_ignore
+20180815:04:37:51:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting gprecoverseg with args: -ar
+20180815:04:37:51:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Rebalance
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Unbalanced segment 1 of 2
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance host        = gpdbvm
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance address     = gpdbvm
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance port        = 25435
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Balanced role                   = Mirror
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Current role                    = Primary
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Unbalanced segment 2 of 2
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance host        = gpdbvm
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance address     = gpdbvm
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Unbalanced instance port        = 25432
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Balanced role                   = Primary
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Current role                    = Mirror
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Getting unbalanced segments
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Stopping unbalanced primary segments...
+. 
+20180815:04:37:53:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Triggering segment reconfiguration
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting segment synchronization
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-=============================START ANOTHER RECOVER=========================================
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Standard
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery 1 of 1
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Synchronization mode                 = Full
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance host                 = gpdbvm
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance address              = gpdbvm
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance directory            = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Failed instance port                 = 25435
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance host        = gpdbvm
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance address     = gpdbvm
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance directory   = /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Source instance port        = 25432
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-   Recovery Target                      = in-place
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-1 segment(s) to recover
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Ensuring 1 failed segment(s) are stopped
+ 
+20180815:04:37:56:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Ensuring that shared memory is cleaned up for stopped segments
+20180815:04:37:56:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Validating remote directories
+. 
+20180815:04:37:57:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Configuring new segments
+. 
+20180815:04:37:59:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Updating mirrors
+. 
+20180815:04:38:00:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting mirrors
+20180815:04:38:00:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-era is e0110b50959363aa_180815043625
+20180815:04:38:00:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
+. 
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Process results...
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Triggering FTS probe
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Updating segments for streaming is completed.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-For segments updated successfully, streaming will continue in the background.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Use  gpstate -s  to check the streaming progress.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-==============================END ANOTHER RECOVER==========================================
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-The rebalance operation has completed successfully.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-There is a resynchronization running in the background to bring all
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-segments in sync.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Use gpstate -e to check the resynchronization progress.
+20180815:04:38:01:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-******************************************************************
+
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select mode = 's' from gp_segment_configuration where content = 0 limit 1) then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+-- verify no segment is down after recovery
+select count(*) from gp_segment_configuration where status = 'd';
+count
+-----
+0    
+(1 row)
+
+!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+-- start_ignore
+20180815:04:38:01:023620 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_fts_probe_retries --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+-- start_ignore
+20180815:04:38:02:023710 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_count --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+-- start_ignore
+20180815:04:38:03:023794 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_timer --skipvalidation --masteronly'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Starting gpstop with args: -u
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Gathering information and validating the environment...
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Signalling all postmaster processes to reload
+. 
+
+-- end_ignore
+(exited with code 0)
+
+

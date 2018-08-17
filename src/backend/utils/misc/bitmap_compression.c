@@ -150,7 +150,7 @@ BitmapDecompress_Decompress(
 						bitmap[i] = lastBlockData;
 						break;
 					default:
-						Insist(0);
+						elog(ERROR, "Invalid compression flag");
 				}
 				lastBlockData = bitmap[i];
 			}

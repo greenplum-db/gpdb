@@ -510,7 +510,7 @@ SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
-SET allow_system_table_mods = 'DML';
+SET allow_system_table_mods=true;
 UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass and ATTNAME in ('a','b','c');
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;

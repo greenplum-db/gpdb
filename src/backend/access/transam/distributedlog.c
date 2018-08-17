@@ -872,10 +872,8 @@ DistributedLog_Truncate(TransactionId oldestXmin)
 		 oldestXmin, cutoffPage);
 
 	/* Check to see if there's any files that could be removed */
-	if (!SlruScanDirectory(DistributedLogCtl, cutoffPage, false))
-	{
+	if (!SlruScanDirectory(DistributedLogCtl, SlruScanDirCbReportPresence, &cutoffPage))
 		return;					/* nothing to remove */
-	}
 
 	/* Write XLOG record and flush XLOG to disk */
 	DistributedLog_WriteTruncateXlogRec(cutoffPage);

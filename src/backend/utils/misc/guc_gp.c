@@ -902,17 +902,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_dev_notice_agg_cost", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Trace aggregate costing decisions as NOTICEs."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_dev_notice_agg_cost,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_explain_allstat", PGC_USERSET, CLIENT_CONN_OTHER,
 			gettext_noop("Experimental feature: dump stats for all segments in EXPLAIN ANALYZE."),
 			NULL,
@@ -3655,7 +3644,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_connections_per_thread,
 		0, 0, INT_MAX,
-		NULL, assign_gp_connections_per_thread, show_gp_connections_per_thread
+		NULL, assign_gp_connections_per_thread, NULL
 	},
 
 	{
@@ -4317,7 +4306,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"repl_catchup_within_range", PGC_SUSET, WAL_REPLICATION,
+		{"repl_catchup_within_range", PGC_SUSET, REPLICATION_STANDBY,
 			gettext_noop("Sets the maximum number of xlog segments allowed to lag"
 					  " when the backends can start blocking despite the WAL"
 					   " sender being in catchup phase. (Master Mirroring)"),
@@ -5781,7 +5770,7 @@ set_gp_replication_config(const char *name, const char *value)
 					               GpReplicationConfigFilename)));
 
 		/* parse it */
-		if (!ParseConfigFile(GpReplicationConfigFilename, 0, PGC_SUSET, LOG, &head, &tail))
+		if (!ParseConfigFile(GpReplicationConfigFilename, 0, true, PGC_SUSET, LOG, &head, &tail))
 			ereport(ERROR,
 			        (errcode(ERRCODE_CONFIG_FILE_ERROR),
 					        errmsg("could not parse contents of file \"%s\"",

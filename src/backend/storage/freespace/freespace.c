@@ -4,7 +4,7 @@
  *	  POSTGRES free space map for quickly finding free space in relations
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -26,14 +26,10 @@
 #include "access/htup.h"
 #include "access/xlogutils.h"
 #include "miscadmin.h"
-#include "storage/bufmgr.h"
-#include "storage/bufpage.h"
 #include "storage/freespace.h"
 #include "storage/fsm_internals.h"
 #include "storage/lmgr.h"
-#include "storage/lwlock.h"
 #include "storage/smgr.h"
-#include "utils/rel.h"
 
 
 /*

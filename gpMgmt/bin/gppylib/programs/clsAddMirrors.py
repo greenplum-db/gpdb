@@ -455,7 +455,7 @@ class GpAddMirrorsProgram:
         """
 
         maxAllowedPort = 61000
-        minAllowedPort = 7000
+        minAllowedPort = 6432
 
         minPort = min([seg.getSegmentPort() for seg in gpArray.getDbList()])
         maxPort = max([seg.getSegmentPort() for seg in gpArray.getDbList()])
@@ -539,6 +539,8 @@ class GpAddMirrorsProgram:
         # check that heap_checksums is consistent across cluster, fail immediately if not
         self.validate_heap_checksums(gpArray)
 
+        self.checkMirrorOffset(gpArray)
+        
         # check that we actually have mirrors
         if gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded( \

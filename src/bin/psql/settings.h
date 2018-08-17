@@ -1,14 +1,13 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  * src/bin/psql/settings.h
  */
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include "libpq-fe.h"
 
 #include "variables.h"
 #include "print.h"
@@ -18,8 +17,10 @@
 
 #if defined(WIN32) || defined(__CYGWIN__)
 #define DEFAULT_EDITOR	"notepad.exe"
+/* no DEFAULT_EDITOR_LINENUMBER_ARG for Notepad */
 #else
 #define DEFAULT_EDITOR	"vi"
+#define DEFAULT_EDITOR_LINENUMBER_ARG "+"
 #endif
 
 #define DEFAULT_PROMPT1 "%/%R%# "
@@ -81,7 +82,7 @@ typedef struct _psqlSettings
 	bool		cur_cmd_interactive;
 	int			sversion;		/* backend server version */
 	const char *progname;		/* in case you renamed psql */
-	char	   *inputfile;		/* for error reporting */
+	char	   *inputfile;		/* file being currently processed, if any */
 	char	   *dirname;		/* current directory for \s display */
 
 	uint64		lineno;			/* also for error reporting */

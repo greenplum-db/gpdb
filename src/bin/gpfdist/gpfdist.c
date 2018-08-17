@@ -312,12 +312,18 @@ static int ggetpid();
 static void log_gpfdist_status();
 static void log_request_header(const request_t *r);
 
-static void gprint(const request_t *r, const char* fmt, ...);
-static void gprintln(const request_t *r, const char* fmt, ...);
-static void gprintlnif(const request_t *r, const char* fmt, ...);
-static void gfatal(const request_t *r, const char* fmt, ...);
-static void gwarning(const request_t *r, const char* fmt, ...);
-static void gdebug(const request_t *r, const char* fmt, ...);
+static void gprint(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+static void gprintln(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+static void gprintlnif(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+static void gfatal(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+static void gwarning(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+static void gdebug(const request_t *r, const char* fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 /* send gp-proto==1 ctl info */
 static void gp1_send_eof(request_t* r);
@@ -363,8 +369,10 @@ static int local_send(request_t *r, const char* buf, int buflen);
 
 static int get_unsent_bytes(request_t* r);
 
-static void * palloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...);
-static void * pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...);
+static void * palloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 4, 5)));
+static void * pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 4, 5)));
 
 static void process_term_signal(int sig,short event,void* arg);
 int gpfdist_init(int argc, const char* const argv[]);
@@ -440,7 +448,7 @@ static void block_fill_header(const request_t *r, block_t* b,
 	h->htop = p - h->hbyte;
 	if (h->htop > sizeof(h->hbyte))
 		gfatal(NULL, "assert failed, h->htop = %d, max = %d", h->htop,
-				sizeof(h->hbyte));
+				(int) sizeof(h->hbyte));
 	gdebug(r, "header size: %d",h->htop-h->hbot);
 }
 
@@ -1723,7 +1731,8 @@ static int session_active_segs_isempty(session_t* session)
  *
  * Callback when the socket is ready to be written
  */
-void gfile_printf_then_putc_newline(const char *format, ...);
+void gfile_printf_then_putc_newline(const char *format, ...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 static void do_write(int fd, short event, void* arg)
 {
@@ -2135,7 +2144,7 @@ static void do_accept(int fd, short event, void* arg)
 		gfatal(NULL, "out of memory in do_accept");
 
 	/* create the request in pool */
-	r = pcalloc_safe(NULL, pool, sizeof(request_t), "failed to allocated request_t: %d bytes", sizeof(request_t));
+	r = pcalloc_safe(NULL, pool, sizeof(request_t), "failed to allocated request_t: %d bytes", (int) sizeof(request_t));
 
 	r->port = ntohs(get_client_port((address_t *)&a));
 	r->id = ++REQUEST_SEQ;
@@ -2720,6 +2729,9 @@ static int ggetpid()
 
 	return pid;
 }
+
+static void _gprint(const request_t *r, const char *level, const char *fmt, va_list args)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 0)));
 
 static void _gprint(const request_t *r, const char *level, const char *fmt, va_list args)
 {

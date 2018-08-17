@@ -3,7 +3,7 @@
  * pg_conversion.c
  *	  routines to support manipulation of the pg_conversion relation
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -24,8 +24,6 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_proc.h"
 #include "mb/pg_wchar.h"
-#include "miscadmin.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/rel.h"
@@ -135,8 +133,8 @@ ConversionCreate(const char *conname, Oid connamespace,
 	recordDependencyOnCurrentExtension(&myself, false);
 
 	/* Post creation hook for new conversion */
-	InvokeObjectAccessHook(OAT_POST_CREATE,
-						   ConversionRelationId, HeapTupleGetOid(tup), 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE, ConversionRelationId,
+						   HeapTupleGetOid(tup), 0, NULL);
 
 	heap_freetuple(tup);
 	heap_close(rel, RowExclusiveLock);

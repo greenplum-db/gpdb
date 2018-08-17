@@ -3020,172 +3020,172 @@ select
 ( select max(CNT) from (select count(*) CNT,o1.name from official_languages o1, official_languages o2
   where o1.code = o2.code group by o1.name) FOO
 ),* from official_languages;
- ?column? | code |          name          |     language     
-----------+------+------------------------+------------------
-       16 | AFG  | Afghanistan            | Dari
-       16 | AFG  | Afghanistan            | Pashto
-       16 | ARM  | Armenia                | Armenian
-       16 | BIH  | Bosnia and Herzegovina | Serbo-Croatian
-       16 | BRA  | Brazil                 | Portuguese
-       16 | SLV  | El Salvador            | Spanish
-       16 | PHL  | Philippines            | Pilipino
-       16 | GLP  | Guadeloupe             | French
-       16 | HKG  | Hong Kong              | English
-       16 | IRN  | Iran                   | Persian
-       16 | ISL  | Iceland                | Icelandic
-       16 | AUT  | Austria                | German
-       16 | JOR  | Jordan                 | Arabic
-       16 | CHN  | China                  | Chinese
-       16 | COM  | Comoros                | Comorian
-       16 | CYP  | Cyprus                 | Turkish
-       16 | CYP  | Cyprus                 | Greek
-       16 | LVA  | Latvia                 | Latvian
-       16 | LBY  | Libyan Arab Jamahiriya | Arabic
-       16 | LIE  | Liechtenstein          | German
-       16 | MDG  | Madagascar             | French
-       16 | MDG  | Madagascar             | Malagasy
-       16 | MKD  | Macedonia              | Macedonian
-       16 | MWI  | Malawi                 | Chichewa
-       16 | MYS  | Malaysia               | Malay
-       16 | MLT  | Malta                  | English
-       16 | MLT  | Malta                  | Maltese
-       16 | MTQ  | Martinique             | French
-       16 | MEX  | Mexico                 | Spanish
-       16 | MDA  | Moldova                | Romanian
-       16 | MMR  | Myanmar                | Burmese
-       16 | FRA  | France                 | French
-       16 | SEN  | Senegal                | Wolof
-       16 | SGP  | Singapore              | Tamil
-       16 | SGP  | Singapore              | Malay
-       16 | SGP  | Singapore              | Chinese
-       16 | SVN  | Slovenia               | Slovene
-       16 | CHE  | Switzerland            | Romansh
-       16 | CHE  | Switzerland            | German
-       16 | CHE  | Switzerland            | Italian
-       16 | CHE  | Switzerland            | French
-       16 | TGO  | Togo                   | Kabye
-       16 | TGO  | Togo                   | Ewe
-       16 | TCD  | Chad                   | Arabic
-       16 | TUR  | Turkey                 | Turkish
-       16 | TKM  | Turkmenistan           | Turkmenian
-       16 | HUN  | Hungary                | Hungarian
-       16 | NCL  | New Caledonia          | French
-       16 | UZB  | Uzbekistan             | Uzbek
-       16 | VEN  | Venezuela              | Spanish
-       16 | RUS  | Russian Federation     | Russian
-       16 | NLD  | Netherlands            | Dutch
-       16 | ANT  | Netherlands Antilles   | Dutch
-       16 | ANT  | Netherlands Antilles   | Papiamento
-       16 | ALB  | Albania                | Albaniana
-       16 | ARG  | Argentina              | Spanish
-       16 | AZE  | Azerbaijan             | Azerbaijani
-       16 | BMU  | Bermuda                | English
-       16 | BOL  | Bolivia                | Ketdua
-       16 | BOL  | Bolivia                | Aimara
-       16 | BOL  | Bolivia                | Spanish
-       16 | BGR  | Bulgaria               | Bulgariana
-       16 | CYM  | Cayman Islands         | English
-       16 | CHL  | Chile                  | Spanish
-       16 | DOM  | Dominican Republic     | Spanish
-       16 | ECU  | Ecuador                | Spanish
-       16 | EGY  | Egypt                  | Arabic
-       16 | ZAF  | South Africa           | Afrikaans
-       16 | ZAF  | South Africa           | Xhosa
-       16 | ZAF  | South Africa           | English
-       16 | ZAF  | South Africa           | Zulu
-       16 | GUM  | Guam                   | Chamorro
-       16 | GUM  | Guam                   | English
-       16 | GTM  | Guatemala              | Spanish
-       16 | HTI  | Haiti                  | French
-       16 | IDN  | Indonesia              | Malay
-       16 | IRQ  | Iraq                   | Arabic
-       16 | IRL  | Ireland                | Irish
-       16 | IRL  | Ireland                | English
-       16 | KHM  | Cambodia               | Khmer
-       16 | KGZ  | Kyrgyzstan             | Kirgiz
-       16 | KGZ  | Kyrgyzstan             | Russian
-       16 | COL  | Colombia               | Spanish
-       16 | KOR  | South Korea            | Korean
-       16 | CUB  | Cuba                   | Spanish
-       16 | KWT  | Kuwait                 | Arabic
-       16 | LAO  | Laos                   | Lao
-       16 | LUX  | Luxembourg             | German
-       16 | LUX  | Luxembourg             | French
-       16 | LUX  | Luxembourg             | Luxembourgish
-       16 | NIC  | Nicaragua              | Spanish
-       16 | NOR  | Norway                 | Norwegian
-       16 | PAK  | Pakistan               | Urdu
-       16 | PER  | Peru                   | Spanish
-       16 | PER  | Peru                   | Aimara
-       16 | PER  | Peru                   | Ketdua
-       16 | PRT  | Portugal               | Portuguese
-       16 | LKA  | Sri Lanka              | Tamil
-       16 | LKA  | Sri Lanka              | Singali
-       16 | SYR  | Syria                  | Arabic
-       16 | TZA  | Tanzania               | Swahili
-       16 | CZE  | Czech Republic         | Czech
-       16 | URY  | Uruguay                | Spanish
-       16 | VNM  | Vietnam                | Vietnamese
-       16 | EST  | Estonia                | Estonian
-       16 | USA  | United States          | English
-       16 | DZA  | Algeria                | Arabic
-       16 | AND  | Andorra                | Catalan
-       16 | ARE  | United Arab Emirates   | Arabic
-       16 | AUS  | Australia              | English
-       16 | BHR  | Bahrain                | Arabic
-       16 | BGD  | Bangladesh             | Bengali
-       16 | BRB  | Barbados               | English
-       16 | BEL  | Belgium                | German
-       16 | BEL  | Belgium                | Dutch
-       16 | BEL  | Belgium                | French
-       16 | GBR  | United Kingdom         | English
-       16 | CRI  | Costa Rica             | Spanish
-       16 | ESP  | Spain                  | Spanish
-       16 | FJI  | Fiji Islands           | Fijian
-       16 | GEO  | Georgia                | Georgiana
-       16 | HND  | Honduras               | Spanish
-       16 | IND  | India                  | Hindi
-       16 | ISR  | Israel                 | Arabic
-       16 | ISR  | Israel                 | Hebrew
-       16 | ITA  | Italy                  | Italian
-       16 | JPN  | Japan                  | Japanese
-       16 | YEM  | Yemen                  | Arabic
-       16 | YUG  | Yugoslavia             | Serbo-Croatian
-       16 | CAN  | Canada                 | French
-       16 | CAN  | Canada                 | English
-       16 | KAZ  | Kazakstan              | Kazakh
-       16 | PRK  | North Korea            | Korean
-       16 | GRC  | Greece                 | Greek
-       16 | HRV  | Croatia                | Serbo-Croatian
-       16 | LBN  | Lebanon                | Arabic
-       16 | LTU  | Lithuania              | Lithuanian
-       16 | MAC  | Macao                  | Portuguese
-       16 | MAR  | Morocco                | Arabic
-       16 | NPL  | Nepal                  | Nepali
-       16 | PAN  | Panama                 | Spanish
-       16 | PRY  | Paraguay               | Guarani
-       16 | PRY  | Paraguay               | Spanish
-       16 | POL  | Poland                 | Polish
-       16 | ROM  | Romania                | Romani
-       16 | ROM  | Romania                | Romanian
-       16 | RWA  | Rwanda                 | French
-       16 | RWA  | Rwanda                 | Rwanda
-       16 | SWE  | Sweden                 | Swedish
-       16 | DEU  | Germany                | German
-       16 | SVK  | Slovakia               | Slovak
-       16 | SDN  | Sudan                  | Arabic
-       16 | FIN  | Finland                | Finnish
-       16 | FIN  | Finland                | Swedish
-       16 | TJK  | Tajikistan             | Tadzhik
-       16 | TWN  | Taiwan                 | Mandarin Chinese
-       16 | DNK  | Denmark                | Danish
-       16 | THA  | Thailand               | Thai
-       16 | TUN  | Tunisia                | Arabic
-       16 | UKR  | Ukraine                | Ukrainian
-       16 | NZL  | New Zealand            | English
-       16 | BLR  | Belarus                | Russian
-       16 | BLR  | Belarus                | Belorussian
-       16 | ZWE  | Zimbabwe               | English
+ max | code |          name          |     language     
+-----+------+------------------------+------------------
+  16 | AFG  | Afghanistan            | Dari
+  16 | ARM  | Armenia                | Armenian
+  16 | AUT  | Austria                | German
+  16 | BMU  | Bermuda                | English
+  16 | BRB  | Barbados               | English
+  16 | CHE  | Switzerland            | Romansh
+  16 | CHE  | Switzerland            | German
+  16 | COL  | Colombia               | Spanish
+  16 | CRI  | Costa Rica             | Spanish
+  16 | CZE  | Czech Republic         | Czech
+  16 | ECU  | Ecuador                | Spanish
+  16 | EGY  | Egypt                  | Arabic
+  16 | FIN  | Finland                | Finnish
+  16 | GTM  | Guatemala              | Spanish
+  16 | GUM  | Guam                   | Chamorro
+  16 | HND  | Honduras               | Spanish
+  16 | HRV  | Croatia                | Serbo-Croatian
+  16 | IDN  | Indonesia              | Malay
+  16 | IND  | India                  | Hindi
+  16 | IRQ  | Iraq                   | Arabic
+  16 | ISR  | Israel                 | Arabic
+  16 | KAZ  | Kazakstan              | Kazakh
+  16 | KOR  | South Korea            | Korean
+  16 | LIE  | Liechtenstein          | German
+  16 | LKA  | Sri Lanka              | Tamil
+  16 | LTU  | Lithuania              | Lithuanian
+  16 | MDG  | Madagascar             | French
+  16 | MKD  | Macedonia              | Macedonian
+  16 | MLT  | Malta                  | English
+  16 | MTQ  | Martinique             | French
+  16 | NCL  | New Caledonia          | French
+  16 | NIC  | Nicaragua              | Spanish
+  16 | PAN  | Panama                 | Spanish
+  16 | PHL  | Philippines            | Pilipino
+  16 | PRY  | Paraguay               | Guarani
+  16 | ROM  | Romania                | Romanian
+  16 | ROM  | Romania                | Romani
+  16 | RWA  | Rwanda                 | French
+  16 | SDN  | Sudan                  | Arabic
+  16 | SEN  | Senegal                | Wolof
+  16 | SGP  | Singapore              | Tamil
+  16 | SVK  | Slovakia               | Slovak
+  16 | SYR  | Syria                  | Arabic
+  16 | TUR  | Turkey                 | Turkish
+  16 | TWN  | Taiwan                 | Mandarin Chinese
+  16 | TZA  | Tanzania               | Swahili
+  16 | URY  | Uruguay                | Spanish
+  16 | VNM  | Vietnam                | Vietnamese
+  16 | ZAF  | South Africa           | Afrikaans
+  16 | ANT  | Netherlands Antilles   | Papiamento
+  16 | ARE  | United Arab Emirates   | Arabic
+  16 | AZE  | Azerbaijan             | Azerbaijani
+  16 | BEL  | Belgium                | French
+  16 | BIH  | Bosnia and Herzegovina | Serbo-Croatian
+  16 | BLR  | Belarus                | Belorussian
+  16 | BLR  | Belarus                | Russian
+  16 | BOL  | Bolivia                | Spanish
+  16 | BOL  | Bolivia                | Aimara
+  16 | BRA  | Brazil                 | Portuguese
+  16 | CAN  | Canada                 | French
+  16 | CAN  | Canada                 | English
+  16 | CHE  | Switzerland            | French
+  16 | CHL  | Chile                  | Spanish
+  16 | COM  | Comoros                | Comorian
+  16 | CYP  | Cyprus                 | Greek
+  16 | DEU  | Germany                | German
+  16 | DOM  | Dominican Republic     | Spanish
+  16 | DZA  | Algeria                | Arabic
+  16 | ESP  | Spain                  | Spanish
+  16 | HKG  | Hong Kong              | English
+  16 | HTI  | Haiti                  | French
+  16 | HUN  | Hungary                | Hungarian
+  16 | IRL  | Ireland                | English
+  16 | IRL  | Ireland                | Irish
+  16 | IRN  | Iran                   | Persian
+  16 | ISL  | Iceland                | Icelandic
+  16 | ITA  | Italy                  | Italian
+  16 | JOR  | Jordan                 | Arabic
+  16 | JPN  | Japan                  | Japanese
+  16 | KGZ  | Kyrgyzstan             | Russian
+  16 | LBY  | Libyan Arab Jamahiriya | Arabic
+  16 | LUX  | Luxembourg             | Luxembourgish
+  16 | LUX  | Luxembourg             | German
+  16 | LUX  | Luxembourg             | French
+  16 | MAR  | Morocco                | Arabic
+  16 | MDG  | Madagascar             | Malagasy
+  16 | MWI  | Malawi                 | Chichewa
+  16 | MYS  | Malaysia               | Malay
+  16 | NLD  | Netherlands            | Dutch
+  16 | NZL  | New Zealand            | English
+  16 | PER  | Peru                   | Ketdua
+  16 | PER  | Peru                   | Aimara
+  16 | PRT  | Portugal               | Portuguese
+  16 | PRY  | Paraguay               | Spanish
+  16 | RUS  | Russian Federation     | Russian
+  16 | RWA  | Rwanda                 | Rwanda
+  16 | SGP  | Singapore              | Malay
+  16 | SGP  | Singapore              | Chinese
+  16 | SLV  | El Salvador            | Spanish
+  16 | SWE  | Sweden                 | Swedish
+  16 | TCD  | Chad                   | Arabic
+  16 | TGO  | Togo                   | Kabye
+  16 | TGO  | Togo                   | Ewe
+  16 | TUN  | Tunisia                | Arabic
+  16 | USA  | United States          | English
+  16 | UZB  | Uzbekistan             | Uzbek
+  16 | ZAF  | South Africa           | English
+  16 | ZAF  | South Africa           | Zulu
+  16 | AFG  | Afghanistan            | Pashto
+  16 | ALB  | Albania                | Albaniana
+  16 | AND  | Andorra                | Catalan
+  16 | ANT  | Netherlands Antilles   | Dutch
+  16 | ARG  | Argentina              | Spanish
+  16 | AUS  | Australia              | English
+  16 | BEL  | Belgium                | German
+  16 | BEL  | Belgium                | Dutch
+  16 | BGD  | Bangladesh             | Bengali
+  16 | BGR  | Bulgaria               | Bulgariana
+  16 | BHR  | Bahrain                | Arabic
+  16 | BOL  | Bolivia                | Ketdua
+  16 | CHE  | Switzerland            | Italian
+  16 | CHN  | China                  | Chinese
+  16 | CUB  | Cuba                   | Spanish
+  16 | CYM  | Cayman Islands         | English
+  16 | CYP  | Cyprus                 | Turkish
+  16 | DNK  | Denmark                | Danish
+  16 | EST  | Estonia                | Estonian
+  16 | FIN  | Finland                | Swedish
+  16 | FJI  | Fiji Islands           | Fijian
+  16 | FRA  | France                 | French
+  16 | GBR  | United Kingdom         | English
+  16 | GEO  | Georgia                | Georgiana
+  16 | GLP  | Guadeloupe             | French
+  16 | GRC  | Greece                 | Greek
+  16 | GUM  | Guam                   | English
+  16 | ISR  | Israel                 | Hebrew
+  16 | KGZ  | Kyrgyzstan             | Kirgiz
+  16 | KHM  | Cambodia               | Khmer
+  16 | KWT  | Kuwait                 | Arabic
+  16 | LAO  | Laos                   | Lao
+  16 | LBN  | Lebanon                | Arabic
+  16 | LKA  | Sri Lanka              | Singali
+  16 | LVA  | Latvia                 | Latvian
+  16 | MAC  | Macao                  | Portuguese
+  16 | MDA  | Moldova                | Romanian
+  16 | MEX  | Mexico                 | Spanish
+  16 | MLT  | Malta                  | Maltese
+  16 | MMR  | Myanmar                | Burmese
+  16 | NOR  | Norway                 | Norwegian
+  16 | NPL  | Nepal                  | Nepali
+  16 | PAK  | Pakistan               | Urdu
+  16 | PER  | Peru                   | Spanish
+  16 | POL  | Poland                 | Polish
+  16 | PRK  | North Korea            | Korean
+  16 | SVN  | Slovenia               | Slovene
+  16 | THA  | Thailand               | Thai
+  16 | TJK  | Tajikistan             | Tadzhik
+  16 | TKM  | Turkmenistan           | Turkmenian
+  16 | UKR  | Ukraine                | Ukrainian
+  16 | VEN  | Venezuela              | Spanish
+  16 | YEM  | Yemen                  | Arabic
+  16 | YUG  | Yugoslavia             | Serbo-Croatian
+  16 | ZAF  | South Africa           | Xhosa
+  16 | ZWE  | Zimbabwe               | English
 (164 rows)
 
 --query 6 Use CTE in the main query and subqueries within the main query
@@ -3326,246 +3326,246 @@ select
 ( select max(CNT) from (select count(*) CNT from official_languages) FOO	
 )
 ,* from official_languages order by official_languages.code,official_languages.language;
- ?column? | code |                 name                 |     language     
-----------+------+--------------------------------------+------------------
-      238 | ABW  | Aruba                                | Dutch
-      238 | AFG  | Afghanistan                          | Dari
-      238 | AFG  | Afghanistan                          | Pashto
-      238 | AIA  | Anguilla                             | English
-      238 | ALB  | Albania                              | Albaniana
-      238 | AND  | Andorra                              | Catalan
-      238 | ANT  | Netherlands Antilles                 | Dutch
-      238 | ANT  | Netherlands Antilles                 | Papiamento
-      238 | ARE  | United Arab Emirates                 | Arabic
-      238 | ARG  | Argentina                            | Spanish
-      238 | ARM  | Armenia                              | Armenian
-      238 | ASM  | American Samoa                       | English
-      238 | ASM  | American Samoa                       | Samoan
-      238 | ATG  | Antigua and Barbuda                  | English
-      238 | AUS  | Australia                            | English
-      238 | AUT  | Austria                              | German
-      238 | AZE  | Azerbaijan                           | Azerbaijani
-      238 | BDI  | Burundi                              | French
-      238 | BDI  | Burundi                              | Kirundi
-      238 | BEL  | Belgium                              | Dutch
-      238 | BEL  | Belgium                              | French
-      238 | BEL  | Belgium                              | German
-      238 | BGD  | Bangladesh                           | Bengali
-      238 | BGR  | Bulgaria                             | Bulgariana
-      238 | BHR  | Bahrain                              | Arabic
-      238 | BIH  | Bosnia and Herzegovina               | Serbo-Croatian
-      238 | BLR  | Belarus                              | Belorussian
-      238 | BLR  | Belarus                              | Russian
-      238 | BLZ  | Belize                               | English
-      238 | BMU  | Bermuda                              | English
-      238 | BOL  | Bolivia                              | Aimara
-      238 | BOL  | Bolivia                              | Ketdua
-      238 | BOL  | Bolivia                              | Spanish
-      238 | BRA  | Brazil                               | Portuguese
-      238 | BRB  | Barbados                             | English
-      238 | BRN  | Brunei                               | Malay
-      238 | BTN  | Bhutan                               | Dzongkha
-      238 | CAN  | Canada                               | English
-      238 | CAN  | Canada                               | French
-      238 | CCK  | Cocos (Keeling) Islands              | English
-      238 | CHE  | Switzerland                          | French
-      238 | CHE  | Switzerland                          | German
-      238 | CHE  | Switzerland                          | Italian
-      238 | CHE  | Switzerland                          | Romansh
-      238 | CHL  | Chile                                | Spanish
-      238 | CHN  | China                                | Chinese
-      238 | COK  | Cook Islands                         | Maori
-      238 | COL  | Colombia                             | Spanish
-      238 | COM  | Comoros                              | Comorian
-      238 | CPV  | Cape Verde                           | Portuguese
-      238 | CRI  | Costa Rica                           | Spanish
-      238 | CUB  | Cuba                                 | Spanish
-      238 | CXR  | Christmas Island                     | English
-      238 | CYM  | Cayman Islands                       | English
-      238 | CYP  | Cyprus                               | Greek
-      238 | CYP  | Cyprus                               | Turkish
-      238 | CZE  | Czech Republic                       | Czech
-      238 | DEU  | Germany                              | German
-      238 | DJI  | Djibouti                             | Arabic
-      238 | DNK  | Denmark                              | Danish
-      238 | DOM  | Dominican Republic                   | Spanish
-      238 | DZA  | Algeria                              | Arabic
-      238 | ECU  | Ecuador                              | Spanish
-      238 | EGY  | Egypt                                | Arabic
-      238 | ERI  | Eritrea                              | Tigrinja
-      238 | ESH  | Western Sahara                       | Arabic
-      238 | ESP  | Spain                                | Spanish
-      238 | EST  | Estonia                              | Estonian
-      238 | FIN  | Finland                              | Finnish
-      238 | FIN  | Finland                              | Swedish
-      238 | FJI  | Fiji Islands                         | Fijian
-      238 | FLK  | Falkland Islands                     | English
-      238 | FRA  | France                               | French
-      238 | FRO  | Faroe Islands                        | Danish
-      238 | FRO  | Faroe Islands                        | Faroese
-      238 | GBR  | United Kingdom                       | English
-      238 | GEO  | Georgia                              | Georgiana
-      238 | GIB  | Gibraltar                            | English
-      238 | GLP  | Guadeloupe                           | French
-      238 | GNB  | Guinea-Bissau                        | Portuguese
-      238 | GRC  | Greece                               | Greek
-      238 | GRL  | Greenland                            | Danish
-      238 | GRL  | Greenland                            | Greenlandic
-      238 | GTM  | Guatemala                            | Spanish
-      238 | GUM  | Guam                                 | Chamorro
-      238 | GUM  | Guam                                 | English
-      238 | HKG  | Hong Kong                            | English
-      238 | HND  | Honduras                             | Spanish
-      238 | HRV  | Croatia                              | Serbo-Croatian
-      238 | HTI  | Haiti                                | French
-      238 | HUN  | Hungary                              | Hungarian
-      238 | IDN  | Indonesia                            | Malay
-      238 | IND  | India                                | Hindi
-      238 | IRL  | Ireland                              | English
-      238 | IRL  | Ireland                              | Irish
-      238 | IRN  | Iran                                 | Persian
-      238 | IRQ  | Iraq                                 | Arabic
-      238 | ISL  | Iceland                              | Icelandic
-      238 | ISR  | Israel                               | Arabic
-      238 | ISR  | Israel                               | Hebrew
-      238 | ITA  | Italy                                | Italian
-      238 | JOR  | Jordan                               | Arabic
-      238 | JPN  | Japan                                | Japanese
-      238 | KAZ  | Kazakstan                            | Kazakh
-      238 | KGZ  | Kyrgyzstan                           | Kirgiz
-      238 | KGZ  | Kyrgyzstan                           | Russian
-      238 | KHM  | Cambodia                             | Khmer
-      238 | KIR  | Kiribati                             | Kiribati
-      238 | KNA  | Saint Kitts and Nevis                | English
-      238 | KOR  | South Korea                          | Korean
-      238 | KWT  | Kuwait                               | Arabic
-      238 | LAO  | Laos                                 | Lao
-      238 | LBN  | Lebanon                              | Arabic
-      238 | LBY  | Libyan Arab Jamahiriya               | Arabic
-      238 | LCA  | Saint Lucia                          | English
-      238 | LIE  | Liechtenstein                        | German
-      238 | LKA  | Sri Lanka                            | Singali
-      238 | LKA  | Sri Lanka                            | Tamil
-      238 | LSO  | Lesotho                              | English
-      238 | LSO  | Lesotho                              | Sotho
-      238 | LTU  | Lithuania                            | Lithuanian
-      238 | LUX  | Luxembourg                           | French
-      238 | LUX  | Luxembourg                           | German
-      238 | LUX  | Luxembourg                           | Luxembourgish
-      238 | LVA  | Latvia                               | Latvian
-      238 | MAC  | Macao                                | Portuguese
-      238 | MAR  | Morocco                              | Arabic
-      238 | MCO  | Monaco                               | French
-      238 | MDA  | Moldova                              | Romanian
-      238 | MDG  | Madagascar                           | French
-      238 | MDG  | Madagascar                           | Malagasy
-      238 | MDV  | Maldives                             | Dhivehi
-      238 | MEX  | Mexico                               | Spanish
-      238 | MHL  | Marshall Islands                     | English
-      238 | MHL  | Marshall Islands                     | Marshallese
-      238 | MKD  | Macedonia                            | Macedonian
-      238 | MLT  | Malta                                | English
-      238 | MLT  | Malta                                | Maltese
-      238 | MMR  | Myanmar                              | Burmese
-      238 | MNG  | Mongolia                             | Mongolian
-      238 | MNP  | Northern Mariana Islands             | English
-      238 | MSR  | Montserrat                           | English
-      238 | MTQ  | Martinique                           | French
-      238 | MWI  | Malawi                               | Chichewa
-      238 | MYS  | Malaysia                             | Malay
-      238 | MYT  | Mayotte                              | French
-      238 | NCL  | New Caledonia                        | French
-      238 | NFK  | Norfolk Island                       | English
-      238 | NIC  | Nicaragua                            | Spanish
-      238 | NIU  | Niue                                 | English
-      238 | NLD  | Netherlands                          | Dutch
-      238 | NOR  | Norway                               | Norwegian
-      238 | NPL  | Nepal                                | Nepali
-      238 | NRU  | Nauru                                | English
-      238 | NRU  | Nauru                                | Nauru
-      238 | NZL  | New Zealand                          | English
-      238 | OMN  | Oman                                 | Arabic
-      238 | PAK  | Pakistan                             | Urdu
-      238 | PAN  | Panama                               | Spanish
-      238 | PER  | Peru                                 | Aimara
-      238 | PER  | Peru                                 | Ketdua
-      238 | PER  | Peru                                 | Spanish
-      238 | PHL  | Philippines                          | Pilipino
-      238 | PLW  | Palau                                | English
-      238 | PLW  | Palau                                | Palau
-      238 | POL  | Poland                               | Polish
-      238 | PRI  | Puerto Rico                          | Spanish
-      238 | PRK  | North Korea                          | Korean
-      238 | PRT  | Portugal                             | Portuguese
-      238 | PRY  | Paraguay                             | Guarani
-      238 | PRY  | Paraguay                             | Spanish
-      238 | PYF  | French Polynesia                     | French
-      238 | QAT  | Qatar                                | Arabic
-      238 | ROM  | Romania                              | Romani
-      238 | ROM  | Romania                              | Romanian
-      238 | RUS  | Russian Federation                   | Russian
-      238 | RWA  | Rwanda                               | French
-      238 | RWA  | Rwanda                               | Rwanda
-      238 | SAU  | Saudi Arabia                         | Arabic
-      238 | SDN  | Sudan                                | Arabic
-      238 | SEN  | Senegal                              | Wolof
-      238 | SGP  | Singapore                            | Chinese
-      238 | SGP  | Singapore                            | Malay
-      238 | SGP  | Singapore                            | Tamil
-      238 | SHN  | Saint Helena                         | English
-      238 | SJM  | Svalbard and Jan Mayen               | Norwegian
-      238 | SLV  | El Salvador                          | Spanish
-      238 | SMR  | San Marino                           | Italian
-      238 | SOM  | Somalia                              | Arabic
-      238 | SOM  | Somalia                              | Somali
-      238 | SPM  | Saint Pierre and Miquelon            | French
-      238 | SVK  | Slovakia                             | Slovak
-      238 | SVN  | Slovenia                             | Slovene
-      238 | SWE  | Sweden                               | Swedish
-      238 | SWZ  | Swaziland                            | Swazi
-      238 | SYC  | Seychelles                           | English
-      238 | SYC  | Seychelles                           | French
-      238 | SYR  | Syria                                | Arabic
-      238 | TCA  | Turks and Caicos Islands             | English
-      238 | TCD  | Chad                                 | Arabic
-      238 | TGO  | Togo                                 | Ewe
-      238 | TGO  | Togo                                 | Kabye
-      238 | THA  | Thailand                             | Thai
-      238 | TJK  | Tajikistan                           | Tadzhik
-      238 | TKL  | Tokelau                              | English
-      238 | TKM  | Turkmenistan                         | Turkmenian
-      238 | TMP  | East Timor                           | Portuguese
-      238 | TON  | Tonga                                | English
-      238 | TON  | Tonga                                | Tongan
-      238 | TUN  | Tunisia                              | Arabic
-      238 | TUR  | Turkey                               | Turkish
-      238 | TUV  | Tuvalu                               | English
-      238 | TUV  | Tuvalu                               | Tuvalu
-      238 | TWN  | Taiwan                               | Mandarin Chinese
-      238 | TZA  | Tanzania                             | Swahili
-      238 | UKR  | Ukraine                              | Ukrainian
-      238 | UMI  | United States Minor Outlying Islands | English
-      238 | URY  | Uruguay                              | Spanish
-      238 | USA  | United States                        | English
-      238 | UZB  | Uzbekistan                           | Uzbek
-      238 | VAT  | Holy See (Vatican City State)        | Italian
-      238 | VCT  | Saint Vincent and the Grenadines     | English
-      238 | VEN  | Venezuela                            | Spanish
-      238 | VGB  | Virgin Islands, British              | English
-      238 | VIR  | Virgin Islands, U.S.                 | English
-      238 | VNM  | Vietnam                              | Vietnamese
-      238 | VUT  | Vanuatu                              | Bislama
-      238 | VUT  | Vanuatu                              | English
-      238 | VUT  | Vanuatu                              | French
-      238 | WSM  | Samoa                                | English
-      238 | WSM  | Samoa                                | Samoan
-      238 | YEM  | Yemen                                | Arabic
-      238 | YUG  | Yugoslavia                           | Serbo-Croatian
-      238 | ZAF  | South Africa                         | Afrikaans
-      238 | ZAF  | South Africa                         | English
-      238 | ZAF  | South Africa                         | Xhosa
-      238 | ZAF  | South Africa                         | Zulu
-      238 | ZWE  | Zimbabwe                             | English
+ max | code |                 name                 |     language     
+-----+------+--------------------------------------+------------------
+ 238 | ABW  | Aruba                                | Dutch
+ 238 | AFG  | Afghanistan                          | Dari
+ 238 | AFG  | Afghanistan                          | Pashto
+ 238 | AIA  | Anguilla                             | English
+ 238 | ALB  | Albania                              | Albaniana
+ 238 | AND  | Andorra                              | Catalan
+ 238 | ANT  | Netherlands Antilles                 | Dutch
+ 238 | ANT  | Netherlands Antilles                 | Papiamento
+ 238 | ARE  | United Arab Emirates                 | Arabic
+ 238 | ARG  | Argentina                            | Spanish
+ 238 | ARM  | Armenia                              | Armenian
+ 238 | ASM  | American Samoa                       | English
+ 238 | ASM  | American Samoa                       | Samoan
+ 238 | ATG  | Antigua and Barbuda                  | English
+ 238 | AUS  | Australia                            | English
+ 238 | AUT  | Austria                              | German
+ 238 | AZE  | Azerbaijan                           | Azerbaijani
+ 238 | BDI  | Burundi                              | French
+ 238 | BDI  | Burundi                              | Kirundi
+ 238 | BEL  | Belgium                              | Dutch
+ 238 | BEL  | Belgium                              | French
+ 238 | BEL  | Belgium                              | German
+ 238 | BGD  | Bangladesh                           | Bengali
+ 238 | BGR  | Bulgaria                             | Bulgariana
+ 238 | BHR  | Bahrain                              | Arabic
+ 238 | BIH  | Bosnia and Herzegovina               | Serbo-Croatian
+ 238 | BLR  | Belarus                              | Belorussian
+ 238 | BLR  | Belarus                              | Russian
+ 238 | BLZ  | Belize                               | English
+ 238 | BMU  | Bermuda                              | English
+ 238 | BOL  | Bolivia                              | Aimara
+ 238 | BOL  | Bolivia                              | Ketdua
+ 238 | BOL  | Bolivia                              | Spanish
+ 238 | BRA  | Brazil                               | Portuguese
+ 238 | BRB  | Barbados                             | English
+ 238 | BRN  | Brunei                               | Malay
+ 238 | BTN  | Bhutan                               | Dzongkha
+ 238 | CAN  | Canada                               | English
+ 238 | CAN  | Canada                               | French
+ 238 | CCK  | Cocos (Keeling) Islands              | English
+ 238 | CHE  | Switzerland                          | French
+ 238 | CHE  | Switzerland                          | German
+ 238 | CHE  | Switzerland                          | Italian
+ 238 | CHE  | Switzerland                          | Romansh
+ 238 | CHL  | Chile                                | Spanish
+ 238 | CHN  | China                                | Chinese
+ 238 | COK  | Cook Islands                         | Maori
+ 238 | COL  | Colombia                             | Spanish
+ 238 | COM  | Comoros                              | Comorian
+ 238 | CPV  | Cape Verde                           | Portuguese
+ 238 | CRI  | Costa Rica                           | Spanish
+ 238 | CUB  | Cuba                                 | Spanish
+ 238 | CXR  | Christmas Island                     | English
+ 238 | CYM  | Cayman Islands                       | English
+ 238 | CYP  | Cyprus                               | Greek
+ 238 | CYP  | Cyprus                               | Turkish
+ 238 | CZE  | Czech Republic                       | Czech
+ 238 | DEU  | Germany                              | German
+ 238 | DJI  | Djibouti                             | Arabic
+ 238 | DNK  | Denmark                              | Danish
+ 238 | DOM  | Dominican Republic                   | Spanish
+ 238 | DZA  | Algeria                              | Arabic
+ 238 | ECU  | Ecuador                              | Spanish
+ 238 | EGY  | Egypt                                | Arabic
+ 238 | ERI  | Eritrea                              | Tigrinja
+ 238 | ESH  | Western Sahara                       | Arabic
+ 238 | ESP  | Spain                                | Spanish
+ 238 | EST  | Estonia                              | Estonian
+ 238 | FIN  | Finland                              | Finnish
+ 238 | FIN  | Finland                              | Swedish
+ 238 | FJI  | Fiji Islands                         | Fijian
+ 238 | FLK  | Falkland Islands                     | English
+ 238 | FRA  | France                               | French
+ 238 | FRO  | Faroe Islands                        | Danish
+ 238 | FRO  | Faroe Islands                        | Faroese
+ 238 | GBR  | United Kingdom                       | English
+ 238 | GEO  | Georgia                              | Georgiana
+ 238 | GIB  | Gibraltar                            | English
+ 238 | GLP  | Guadeloupe                           | French
+ 238 | GNB  | Guinea-Bissau                        | Portuguese
+ 238 | GRC  | Greece                               | Greek
+ 238 | GRL  | Greenland                            | Danish
+ 238 | GRL  | Greenland                            | Greenlandic
+ 238 | GTM  | Guatemala                            | Spanish
+ 238 | GUM  | Guam                                 | Chamorro
+ 238 | GUM  | Guam                                 | English
+ 238 | HKG  | Hong Kong                            | English
+ 238 | HND  | Honduras                             | Spanish
+ 238 | HRV  | Croatia                              | Serbo-Croatian
+ 238 | HTI  | Haiti                                | French
+ 238 | HUN  | Hungary                              | Hungarian
+ 238 | IDN  | Indonesia                            | Malay
+ 238 | IND  | India                                | Hindi
+ 238 | IRL  | Ireland                              | English
+ 238 | IRL  | Ireland                              | Irish
+ 238 | IRN  | Iran                                 | Persian
+ 238 | IRQ  | Iraq                                 | Arabic
+ 238 | ISL  | Iceland                              | Icelandic
+ 238 | ISR  | Israel                               | Arabic
+ 238 | ISR  | Israel                               | Hebrew
+ 238 | ITA  | Italy                                | Italian
+ 238 | JOR  | Jordan                               | Arabic
+ 238 | JPN  | Japan                                | Japanese
+ 238 | KAZ  | Kazakstan                            | Kazakh
+ 238 | KGZ  | Kyrgyzstan                           | Kirgiz
+ 238 | KGZ  | Kyrgyzstan                           | Russian
+ 238 | KHM  | Cambodia                             | Khmer
+ 238 | KIR  | Kiribati                             | Kiribati
+ 238 | KNA  | Saint Kitts and Nevis                | English
+ 238 | KOR  | South Korea                          | Korean
+ 238 | KWT  | Kuwait                               | Arabic
+ 238 | LAO  | Laos                                 | Lao
+ 238 | LBN  | Lebanon                              | Arabic
+ 238 | LBY  | Libyan Arab Jamahiriya               | Arabic
+ 238 | LCA  | Saint Lucia                          | English
+ 238 | LIE  | Liechtenstein                        | German
+ 238 | LKA  | Sri Lanka                            | Singali
+ 238 | LKA  | Sri Lanka                            | Tamil
+ 238 | LSO  | Lesotho                              | English
+ 238 | LSO  | Lesotho                              | Sotho
+ 238 | LTU  | Lithuania                            | Lithuanian
+ 238 | LUX  | Luxembourg                           | French
+ 238 | LUX  | Luxembourg                           | German
+ 238 | LUX  | Luxembourg                           | Luxembourgish
+ 238 | LVA  | Latvia                               | Latvian
+ 238 | MAC  | Macao                                | Portuguese
+ 238 | MAR  | Morocco                              | Arabic
+ 238 | MCO  | Monaco                               | French
+ 238 | MDA  | Moldova                              | Romanian
+ 238 | MDG  | Madagascar                           | French
+ 238 | MDG  | Madagascar                           | Malagasy
+ 238 | MDV  | Maldives                             | Dhivehi
+ 238 | MEX  | Mexico                               | Spanish
+ 238 | MHL  | Marshall Islands                     | English
+ 238 | MHL  | Marshall Islands                     | Marshallese
+ 238 | MKD  | Macedonia                            | Macedonian
+ 238 | MLT  | Malta                                | English
+ 238 | MLT  | Malta                                | Maltese
+ 238 | MMR  | Myanmar                              | Burmese
+ 238 | MNG  | Mongolia                             | Mongolian
+ 238 | MNP  | Northern Mariana Islands             | English
+ 238 | MSR  | Montserrat                           | English
+ 238 | MTQ  | Martinique                           | French
+ 238 | MWI  | Malawi                               | Chichewa
+ 238 | MYS  | Malaysia                             | Malay
+ 238 | MYT  | Mayotte                              | French
+ 238 | NCL  | New Caledonia                        | French
+ 238 | NFK  | Norfolk Island                       | English
+ 238 | NIC  | Nicaragua                            | Spanish
+ 238 | NIU  | Niue                                 | English
+ 238 | NLD  | Netherlands                          | Dutch
+ 238 | NOR  | Norway                               | Norwegian
+ 238 | NPL  | Nepal                                | Nepali
+ 238 | NRU  | Nauru                                | English
+ 238 | NRU  | Nauru                                | Nauru
+ 238 | NZL  | New Zealand                          | English
+ 238 | OMN  | Oman                                 | Arabic
+ 238 | PAK  | Pakistan                             | Urdu
+ 238 | PAN  | Panama                               | Spanish
+ 238 | PER  | Peru                                 | Aimara
+ 238 | PER  | Peru                                 | Ketdua
+ 238 | PER  | Peru                                 | Spanish
+ 238 | PHL  | Philippines                          | Pilipino
+ 238 | PLW  | Palau                                | English
+ 238 | PLW  | Palau                                | Palau
+ 238 | POL  | Poland                               | Polish
+ 238 | PRI  | Puerto Rico                          | Spanish
+ 238 | PRK  | North Korea                          | Korean
+ 238 | PRT  | Portugal                             | Portuguese
+ 238 | PRY  | Paraguay                             | Guarani
+ 238 | PRY  | Paraguay                             | Spanish
+ 238 | PYF  | French Polynesia                     | French
+ 238 | QAT  | Qatar                                | Arabic
+ 238 | ROM  | Romania                              | Romani
+ 238 | ROM  | Romania                              | Romanian
+ 238 | RUS  | Russian Federation                   | Russian
+ 238 | RWA  | Rwanda                               | French
+ 238 | RWA  | Rwanda                               | Rwanda
+ 238 | SAU  | Saudi Arabia                         | Arabic
+ 238 | SDN  | Sudan                                | Arabic
+ 238 | SEN  | Senegal                              | Wolof
+ 238 | SGP  | Singapore                            | Chinese
+ 238 | SGP  | Singapore                            | Malay
+ 238 | SGP  | Singapore                            | Tamil
+ 238 | SHN  | Saint Helena                         | English
+ 238 | SJM  | Svalbard and Jan Mayen               | Norwegian
+ 238 | SLV  | El Salvador                          | Spanish
+ 238 | SMR  | San Marino                           | Italian
+ 238 | SOM  | Somalia                              | Arabic
+ 238 | SOM  | Somalia                              | Somali
+ 238 | SPM  | Saint Pierre and Miquelon            | French
+ 238 | SVK  | Slovakia                             | Slovak
+ 238 | SVN  | Slovenia                             | Slovene
+ 238 | SWE  | Sweden                               | Swedish
+ 238 | SWZ  | Swaziland                            | Swazi
+ 238 | SYC  | Seychelles                           | English
+ 238 | SYC  | Seychelles                           | French
+ 238 | SYR  | Syria                                | Arabic
+ 238 | TCA  | Turks and Caicos Islands             | English
+ 238 | TCD  | Chad                                 | Arabic
+ 238 | TGO  | Togo                                 | Ewe
+ 238 | TGO  | Togo                                 | Kabye
+ 238 | THA  | Thailand                             | Thai
+ 238 | TJK  | Tajikistan                           | Tadzhik
+ 238 | TKL  | Tokelau                              | English
+ 238 | TKM  | Turkmenistan                         | Turkmenian
+ 238 | TMP  | East Timor                           | Portuguese
+ 238 | TON  | Tonga                                | English
+ 238 | TON  | Tonga                                | Tongan
+ 238 | TUN  | Tunisia                              | Arabic
+ 238 | TUR  | Turkey                               | Turkish
+ 238 | TUV  | Tuvalu                               | English
+ 238 | TUV  | Tuvalu                               | Tuvalu
+ 238 | TWN  | Taiwan                               | Mandarin Chinese
+ 238 | TZA  | Tanzania                             | Swahili
+ 238 | UKR  | Ukraine                              | Ukrainian
+ 238 | UMI  | United States Minor Outlying Islands | English
+ 238 | URY  | Uruguay                              | Spanish
+ 238 | USA  | United States                        | English
+ 238 | UZB  | Uzbekistan                           | Uzbek
+ 238 | VAT  | Holy See (Vatican City State)        | Italian
+ 238 | VCT  | Saint Vincent and the Grenadines     | English
+ 238 | VEN  | Venezuela                            | Spanish
+ 238 | VGB  | Virgin Islands, British              | English
+ 238 | VIR  | Virgin Islands, U.S.                 | English
+ 238 | VNM  | Vietnam                              | Vietnamese
+ 238 | VUT  | Vanuatu                              | Bislama
+ 238 | VUT  | Vanuatu                              | English
+ 238 | VUT  | Vanuatu                              | French
+ 238 | WSM  | Samoa                                | English
+ 238 | WSM  | Samoa                                | Samoan
+ 238 | YEM  | Yemen                                | Arabic
+ 238 | YUG  | Yugoslavia                           | Serbo-Croatian
+ 238 | ZAF  | South Africa                         | Afrikaans
+ 238 | ZAF  | South Africa                         | English
+ 238 | ZAF  | South Africa                         | Xhosa
+ 238 | ZAF  | South Africa                         | Zulu
+ 238 | ZWE  | Zimbabwe                             | English
 (238 rows)
 
 -- queries with CTEs using index scans 
@@ -9206,35 +9206,59 @@ and country.indepyear > 1900
  region              | text             |           | extended | 
 View definition:
  WITH longlivingregions AS (
-         SELECT foo."REGION_POP", foo."REGION_GNP", foo."REGION_LIFETIME", foo.region, count(DISTINCT countrylanguage.language) AS lang_count
-           FROM ( SELECT sum(country.population) AS "REGION_POP", sum(country.gnp) AS "REGION_GNP", avg(country.lifeexpectancy) AS "REGION_LIFETIME", country.region
+         SELECT foo."REGION_POP", foo."REGION_GNP", foo."REGION_LIFETIME", 
+            foo.region, count(DISTINCT countrylanguage.language) AS lang_count
+           FROM ( SELECT sum(country.population) AS "REGION_POP", 
+                    sum(country.gnp) AS "REGION_GNP", 
+                    avg(country.lifeexpectancy) AS "REGION_LIFETIME", 
+                    country.region
                    FROM country
                   GROUP BY country.region) foo, countrylanguage, country
           WHERE country.code = countrylanguage.countrycode AND foo.region = country.region
           GROUP BY foo.region, foo."REGION_POP", foo."REGION_GNP", foo."REGION_LIFETIME"
         ), denseregions AS (
-         SELECT foo."REGION_POP", foo."REGION_GNP", foo.region, count(DISTINCT countrylanguage.language) AS lang_count, sum(country.surfacearea) AS "REGION_SURFACE_AREA"
-           FROM ( SELECT sum(country.population) AS "REGION_POP", sum(country.gnp) AS "REGION_GNP", country.region
+         SELECT foo."REGION_POP", foo."REGION_GNP", foo.region, 
+            count(DISTINCT countrylanguage.language) AS lang_count, 
+            sum(country.surfacearea) AS "REGION_SURFACE_AREA"
+           FROM ( SELECT sum(country.population) AS "REGION_POP", 
+                    sum(country.gnp) AS "REGION_GNP", country.region
                    FROM country
                   GROUP BY country.region) foo, countrylanguage, country
           WHERE country.code = countrylanguage.countrycode AND foo.region = country.region AND foo."REGION_POP" <> 0
           GROUP BY foo.region, foo."REGION_POP", foo."REGION_GNP"
           ORDER BY sum(country.surfacearea) / foo."REGION_POP"::numeric DESC
         ), allcountrystats AS (
-         SELECT country.code, country.name, count(DISTINCT city.id) AS city_cnt, count(DISTINCT countrylanguage.language) AS lang_cnt
+         SELECT country.code, country.name, count(DISTINCT city.id) AS city_cnt, 
+            count(DISTINCT countrylanguage.language) AS lang_cnt
            FROM country, city, countrylanguage
           WHERE country.code = city.countrycode AND country.code = countrylanguage.countrycode
           GROUP BY country.code, country.name
         )
-        (         SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, allcountrystats.name, denseregions."REGION_SURFACE_AREA", longlivingregions."REGION_LIFETIME", longlivingregions."REGION_POP", longlivingregions.lang_count, longlivingregions."REGION_GNP", longlivingregions.region
-                   FROM longlivingregions, denseregions, allcountrystats, country
+        (         SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, 
+                    allcountrystats.name, denseregions."REGION_SURFACE_AREA", 
+                    longlivingregions."REGION_LIFETIME", 
+                    longlivingregions."REGION_POP", 
+                    longlivingregions.lang_count, 
+                    longlivingregions."REGION_GNP", longlivingregions.region
+                   FROM longlivingregions, denseregions, allcountrystats, 
+                    country
                   WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1800 AND country.indepyear <= 1850
         UNION ALL 
-                 SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, allcountrystats.name, denseregions."REGION_SURFACE_AREA", longlivingregions."REGION_LIFETIME", longlivingregions."REGION_POP", longlivingregions.lang_count, longlivingregions."REGION_GNP", longlivingregions.region
-                   FROM longlivingregions, denseregions, allcountrystats, country
+                 SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, 
+                    allcountrystats.name, denseregions."REGION_SURFACE_AREA", 
+                    longlivingregions."REGION_LIFETIME", 
+                    longlivingregions."REGION_POP", 
+                    longlivingregions.lang_count, 
+                    longlivingregions."REGION_GNP", longlivingregions.region
+                   FROM longlivingregions, denseregions, allcountrystats, 
+                    country
                   WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1850 AND country.indepyear <= 1900)
 UNION ALL 
-         SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, allcountrystats.name, denseregions."REGION_SURFACE_AREA", longlivingregions."REGION_LIFETIME", longlivingregions."REGION_POP", longlivingregions.lang_count, longlivingregions."REGION_GNP", longlivingregions.region
+         SELECT allcountrystats.city_cnt, allcountrystats.lang_cnt, 
+            allcountrystats.name, denseregions."REGION_SURFACE_AREA", 
+            longlivingregions."REGION_LIFETIME", longlivingregions."REGION_POP", 
+            longlivingregions.lang_count, longlivingregions."REGION_GNP", 
+            longlivingregions.region
            FROM longlivingregions, denseregions, allcountrystats, country
           WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear > 1900;
 

@@ -27,6 +27,7 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstop \
 	bin/gpsys1 \
 	bin/gpcheckcat \
+	bin/gptransfer \
 	sbin/gpaddconfig.py \
 	sbin/gpchangeuserpassword \
 	sbin/gpcleansegmentdir.py \
@@ -34,7 +35,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpgetstatususingtransition.py \
 	sbin/gpsegstart.py \
 	sbin/gpsegstop.py \
-	sbin/gpsegtoprimaryormirror.py \
 	sbin/gpsetdbid.py \
 	sbin/gpupgrademirror.py \
 	lib/python/gppylib/programs/clsAddMirrors.py \

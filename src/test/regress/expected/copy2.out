@@ -26,19 +26,19 @@ FOR EACH ROW EXECUTE PROCEDURE fn_x_before();
 COPY x (a, b, c, d, e) from stdin;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 COPY x (b, d) from stdin;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 COPY x (b, d) from stdin;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 COPY x (a, b, c, d, e) from stdin;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 -- non-existent column in column list: should fail
 COPY x (xyz) from stdin;
 ERROR:  column "xyz" of relation "x" does not exist
@@ -63,15 +63,15 @@ CONTEXT:  COPY x, line 1: "2002	232	40	50	60	70	80"
 COPY x (b, c, d, e) from stdin with oids delimiter ',' null 'x';
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 COPY x from stdin WITH DELIMITER AS ';' NULL AS '';
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 COPY x from stdin WITH DELIMITER AS ':' NULL AS E'\\X' ENCODING 'sql_ascii';
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
-PL/pgSQL function "fn_x_after" line 3 at SQL statement
+PL/pgSQL function fn_x_after() line 3 at SQL statement
 -- check results of copy in
 SELECT * FROM x;
  a | b | c | d | e 
@@ -161,6 +161,22 @@ a\.
 \.b
 c\.d
 "\."
+-- test handling of nonstandard null marker that violates escaping rules
+CREATE TEMP TABLE testnull(a int, b text);
+INSERT INTO testnull VALUES (1, E'\\0'), (NULL, NULL);
+COPY testnull TO stdout WITH NULL AS E'\\0';
+1	\\0
+\0	\0
+COPY testnull FROM stdin WITH NULL AS E'\\0';
+SELECT * FROM testnull;
+ a  | b  
+----+----
+  1 | \0
+    | 
+ 42 | \0
+    | 
+(4 rows)
+
 DROP TABLE x, y;
 DROP FUNCTION fn_x_before();
 DROP FUNCTION fn_x_after();

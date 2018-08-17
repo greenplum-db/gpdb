@@ -11,7 +11,7 @@
         <p>where <varname>action</varname> is one of:</p>
         <codeblock>  ADD [COLUMN] <varname>new_column</varname> <varname>type</varname>
   DROP [COLUMN] <varname>column</varname> [RESTRICT|CASCADE]
-  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname> [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname>
   OWNER TO <varname>new_owner</varname></codeblock>
       </sectiondiv></section>
     <section id="section3">
@@ -62,12 +62,6 @@
           <pd>Name of a new column.</pd>
         </plentry>
         <plentry>
-          <pt>USING <varname>expression</varname></pt>
-          <pd>Optional if an implicit or assignment cast exists from the old column data type to new
-            data type. The clause is required if there is no implicit or assignment cast. </pd>
-          <pd>The <codeph>USING</codeph> clause does not affect the external data.</pd>
-        </plentry>
-        <plentry>
           <pt><varname>type</varname></pt>
           <pd>Data type of the new column, or new data type for an existing column.</pd>
         </plentry>
@@ -90,10 +84,8 @@
         definition:</p><codeblock>ALTER EXTERNAL TABLE ext_expenses ADD COLUMN manager text;</codeblock><p>Change
         the owner of an external
         table:</p><codeblock>ALTER EXTERNAL TABLE ext_data OWNER TO jojo;</codeblock><p>Change the
-        data type of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer USING acct_code::integer</codeblock>
-      <p>When altering the column data type from <codeph>text</codeph> to <codeph>integer</codeph>,
-        the <codeph>USING</codeph> clause is required but does not affect the external data.
-      </p></section>
+        data type of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer</codeblock>
+      </section>
     <section id="section6"><title>Compatibility</title><p><codeph>ALTER EXTERNAL TABLE</codeph> is a
         Greenplum Database extension. There is no <codeph>ALTER EXTERNAL TABLE</codeph> statement in
         the SQL standard or regular PostgreSQL. </p></section>

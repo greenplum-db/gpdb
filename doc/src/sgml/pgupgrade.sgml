@@ -1,11 +1,38 @@
 <!-- doc/src/sgml/pgupgrade.sgml -->
 
-<sect1 id="pgupgrade" xreflabel="pg_upgrade">
- <title>pg_upgrade</title>
+<refentry id="pgupgrade">
+ <refmeta>
+  <refentrytitle><application>pg_upgrade</application></refentrytitle>
+  <manvolnum>1</manvolnum>
+  <refmiscinfo>Application</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>pg_upgrade</refname>
+  <refpurpose>upgrade a <productname>PostgreSQL</productname> server instance</refpurpose>
+ </refnamediv>
 
  <indexterm zone="pgupgrade">
   <primary>pg_upgrade</primary>
  </indexterm>
+
+ <refsynopsisdiv>
+  <cmdsynopsis>
+   <command>pg_upgrade</command>
+   <arg choice="plain"><option>-b</option></arg>
+   <arg choice="plain"><replaceable>oldbindir</replaceable></arg>
+   <arg choice="plain"><option>-B</option></arg>
+   <arg choice="plain"><replaceable>newbindir</replaceable></arg>
+   <arg choice="plain"><option>-d</option></arg>
+   <arg choice="plain"><replaceable>olddatadir</replaceable></arg>
+   <arg choice="plain"><option>-D</option></arg>
+   <arg choice="plain"><replaceable>newdatadir</replaceable></arg>
+   <arg rep="repeat"><replaceable>option</replaceable></arg>
+  </cmdsynopsis>
+ </refsynopsisdiv>
+
+ <refsect1>
+  <title>Description</title>
 
  <para>
   <application>pg_upgrade</> (formerly called <application>pg_migrator</>) allows data
@@ -37,19 +64,14 @@
   be checked by <application>pg_upgrade</>.
  </para>
 
- <sect2>
-  <title>Supported Versions</title>
-
   <para>
    pg_upgrade supports upgrades from 8.3.X and later to the current
    major release of <productname>PostgreSQL</>, including snapshot and alpha releases.
-
   </para>
+ </refsect1>
 
- </sect2>
-
- <sect2>
-  <title><application>pg_upgrade</> Options</title>
+ <refsect1>
+  <title>Options</title>
 
    <para>
     <application>pg_upgrade</application> accepts the following command-line arguments:
@@ -60,14 +82,14 @@
       <term><option>-b</option> <replaceable>old_bindir</></term>
       <term><option>--old-bindir=</option><replaceable>old_bindir</></term>
       <listitem><para>the old cluster executable directory;
-      environment variable <envar>OLDBINDIR</></para></listitem>
+      environment variable <envar>PGBINOLD</></para></listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option>-B</option> <replaceable>new_bindir</></term>
       <term><option>--new-bindir=</option><replaceable>new_bindir</></term>
       <listitem><para>the new cluster executable directory;
-      environment variable <envar>NEWBINDIR</></para></listitem>
+      environment variable <envar>PGBINNEW</></para></listitem>
      </varlistentry>
 
      <varlistentry>
@@ -80,52 +102,55 @@
       <term><option>-d</option> <replaceable>old_datadir</></term>
       <term><option>--old-datadir=</option><replaceable>old_datadir</></term>
       <listitem><para>the old cluster data directory; environment
-      variable <envar>OLDDATADIR</></para></listitem>
+      variable <envar>PGDATAOLD</></para></listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option>-D</option> <replaceable>new_datadir</></term>
       <term><option>--new-datadir=</option><replaceable>new_datadir</></term>
       <listitem><para>the new cluster data directory; environment
-      variable <envar>NEWDATADIR</></para></listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-g</option></term>
-      <term><option>--debug</option></term>
-      <listitem><para>enable debugging</para></listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-G</option> <replaceable>debug_filename</></term>
-      <term><option>--debugfile=</option><replaceable>debug_filename</></term>
-      <listitem><para>output debugging activity to file</para></listitem>
+      variable <envar>PGDATANEW</></para></listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option>-k</option></term>
       <term><option>--link</option></term>
-      <listitem><para>link instead of copying files to new cluster</para></listitem>
+      <listitem><para>use hard links instead of copying files to the new cluster</para></listitem>
      </varlistentry>
 
      <varlistentry>
-      <term><option>-l</option> <replaceable>log_filename</></term>
-      <term><option>--logfile=</option><replaceable>log_filename</></term>
-      <listitem><para>log session activity to file</para></listitem>
+      <term><option>-o</option> <replaceable class="parameter">options</replaceable></term>
+      <term><option>--old-options</option> <replaceable class="parameter">options</replaceable></term>
+      <listitem><para>options to be passed directly to the
+      old <command>postgres</command> command</para></listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-O</option> <replaceable class="parameter">options</replaceable></term>
+      <term><option>--new-options</option> <replaceable class="parameter">options</replaceable></term>
+      <listitem><para>options to be passed directly to the
+      new <command>postgres</command> command</para></listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option>-p</option> <replaceable>old_port_number</></term>
       <term><option>--old-port=</option><replaceable>old_portnum</></term>
       <listitem><para>the old cluster port number; environment
-      variable <envar>PGPORT</></para></listitem>
+      variable <envar>PGPORTOLD</></para></listitem>
      </varlistentry>
 
      <varlistentry>
       <term><option>-P</option> <replaceable>new_port_number</></term>
       <term><option>--new-port=</option><replaceable>new_portnum</></term>
       <listitem><para>the new cluster port number; environment
-      variable <envar>PGPORT</></para></listitem>
+      variable <envar>PGPORTNEW</></para></listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-r</option></term>
+      <term><option>--retain</option></term>
+      <listitem><para>retain SQL and log files even after successful completion
+      </para></listitem>
      </varlistentry>
 
      <varlistentry>
@@ -138,7 +163,7 @@
      <varlistentry>
       <term><option>-v</option></term>
       <term><option>--verbose</option></term>
-      <listitem><para>enable verbose output</para></listitem>
+      <listitem><para>enable verbose internal logging</para></listitem>
      </varlistentry>
 
      <varlistentry>
@@ -157,10 +182,15 @@
     </variablelist>
    </para>
 
- </sect2>
+ </refsect1>
 
- <sect2>
-  <title>Upgrade Steps</title>
+ <refsect1>
+  <title>Usage</title>
+
+  <para>
+   These are the steps to perform an upgrade
+   with <application>pg_upgrade</application>:
+  </para>
 
   <procedure>
    <step performance="optional">
@@ -168,7 +198,7 @@
 
     <para>
      If you are using a version-specific installation directory, e.g.
-     <filename>/opt/PostgreSQL/8.4</>, you do not need to move the old cluster. The
+     <filename>/opt/PostgreSQL/9.1</>, you do not need to move the old cluster. The
      one-click installers all use version-specific installation directories.
     </para>
 
@@ -201,9 +231,7 @@ mv /usr/local/pgsql /usr/local/pgsql.old
     <title>Install the new PostgreSQL binaries</title>
 
     <para>
-     Install the new server's binaries and support files. You can use the
-     same port numbers for both clusters, typically 5432, because the old and
-     new clusters will not be running at the same time.
+     Install the new server's binaries and support files.
     </para>
 
     <para>
@@ -212,8 +240,7 @@ mv /usr/local/pgsql /usr/local/pgsql.old
 
 <programlisting>
 gmake prefix=/usr/local/pgsql.new install
-</programlisting>
-    </para>
+</programlisting></para>
    </step>
 
    <step>
@@ -242,7 +269,8 @@ gmake prefix=/usr/local/pgsql.new install
 
     <para>
      Install any custom shared object files (or DLLs) used by the old cluster
-     into the new cluster, e.g. <filename>pgcrypto.so</filename>, whether they are from <filename>contrib</filename>
+     into the new cluster, e.g. <filename>pgcrypto.so</filename>,
+     whether they are from <filename>contrib</filename>
      or some other source. Do not install the schema definitions, e.g.
      <filename>pgcrypto.sql</>, because these will be upgraded from the old cluster.
     </para>
@@ -282,8 +310,7 @@ NET STOP postgresql-9.0
 
 <programlisting>
 NET STOP pgsql-8.3  (<productname>PostgreSQL</> 8.3 and older used a different service name)
-</programlisting>
-    </para>
+</programlisting></para>
    </step>
 
    <step>
@@ -292,13 +319,22 @@ NET STOP pgsql-8.3  (<productname>PostgreSQL</> 8.3 and older used a different s
     <para>
      Always run the <application>pg_upgrade</> binary of the new server, not the old one.
      <application>pg_upgrade</> requires the specification of the old and new cluster's
-     data and executable (<filename>bin</>) directories. You can also specify separate
+     data and executable (<filename>bin</>) directories. You can also specify
      user and port values, and whether you want the data linked instead of
-     copied (the default). If you use linking, the upgrade will be much
-     faster (no data copying), but you will no longer be able to access your
-     old cluster once you start the new cluster after the upgrade. See
-     <literal>pg_upgrade --help</> for a full list of options.
+     copied (the default).
     </para>
+
+    <para>
+     If you use link mode, the upgrade will be much faster (no file
+     copying), but you will not be able to access your old cluster
+     once you start the new cluster after the upgrade.  Link mode also
+     requires that the old and new cluster data directories be in the
+     same file system.  See <literal>pg_upgrade --help</> for a full
+     list of options.
+   </para>
+
+   <para>
+   </para>
 
     <para>
      For Windows users, you must be logged into an administrative account, and
@@ -328,7 +364,11 @@ pg_upgrade.exe
     </para>
 
     <para>
-     Obviously, no one should be accessing the clusters during the upgrade.
+     Obviously, no one should be accessing the clusters during the
+     upgrade.  <application>pg_upgrade</> defaults to running servers
+     on port 50432 to avoid unintended client connections.
+     You can use the same port numbers for both clusters because the
+     old and new clusters will not be running at the same time.
     </para>
 
     <para>
@@ -429,18 +469,14 @@ psql --username postgres --file script.sql postgres
 
       <listitem>
        <para>
-        If you
-        ran <command>pg_upgrade</command> <emphasis>without</> <option>--link</>
-        or did not start the new server, the old cluster was not
-        modified except that an <literal>.old</> suffix was appended
-        to <filename>$PGDATA/global/pg_control</> and perhaps
-        tablespace directories. To reuse the old cluster, remove
-        the <filename>.old</> suffix
-        from <filename>$PGDATA/global/pg_control</>. and, if upgrading
-        to 8.4 or earlier, remove the tablespace directories created
-        by the upgrade and remove the <filename>.old</> suffix from
-        the tablespace directory names; then you can restart the old
-        cluster.
+        If you ran <command>pg_upgrade</command> <emphasis>without</>
+        <option>--link</> or did not start the new server, the
+        old cluster was not modified except that, if linking
+        started, a <literal>.old</> suffix was appended to
+        <filename>$PGDATA/global/pg_control</>.  To reuse the old
+        cluster, possibly remove the <filename>.old</> suffix from
+        <filename>$PGDATA/global/pg_control</>; you can then restart the
+        old cluster.
        </para>
       </listitem>
      </itemizedlist>
@@ -448,13 +484,54 @@ psql --username postgres --file script.sql postgres
    </step>
   </procedure>
 
- </sect2>
+ </refsect1>
 
- <sect2>
-  <title>Limitations in Upgrading <emphasis>from</> PostgreSQL 8.3</title>
+ <refsect1>
+  <title>Notes</title>
 
   <para>
-   Upgrading from PostgreSQL 8.3 has additional restrictions not present
+   <application>pg_upgrade</> does not support upgrading of databases
+   containing these <type>reg*</> OID-referencing system data types:
+   <type>regproc</>, <type>regprocedure</>, <type>regoper</>,
+   <type>regoperator</>, <type>regconfig</>, and
+   <type>regdictionary</>.  (<type>regtype</> can be upgraded.)
+  </para>
+
+  <para>
+   All failure, rebuild, and reindex cases will be reported by
+   <application>pg_upgrade</> if they affect your installation;
+   post-upgrade scripts to rebuild tables and indexes will be
+   generated automatically.
+  </para>
+
+  <para>
+   For deployment testing, create a schema-only copy of the old cluster,
+   insert dummy data, and upgrade that.
+  </para>
+
+  <para>
+   If you are upgrading a pre-<productname>PostgreSQL</> 9.2 cluster
+   that uses a configuration-file-only directory, you must pass the
+   real data directory location to <application>pg_upgrade</>, and
+   pass the configuration directory location to the server, e.g.
+   <literal>-d /real-data-directory -o '-D /configuration-directory'</>.
+  </para>
+
+  <para>
+   If you want to use link mode and you do not want your old cluster
+   to be modified when the new cluster is started, make a copy of the
+   old cluster and upgrade that in link mode. To make a valid copy
+   of the old cluster, use <command>rsync</> to create a dirty
+   copy of the old cluster while the server is running, then shut down
+   the old server and run <command>rsync</> again to update the copy with any
+   changes to make it consistent.
+  </para>
+
+ <refsect2>
+  <title>Limitations in Upgrading from PostgreSQL 8.3</title>
+
+  <para>
+   Upgrading <emphasis>from</emphasis> PostgreSQL 8.3 has additional restrictions not present
    when upgrading from later PostgreSQL releases.  For example,
    pg_upgrade will not work for upgrading from 8.3 if a user column
    is defined as:
@@ -474,6 +551,11 @@ psql --username postgres --file script.sql postgres
 
   <para>
    You must drop any such columns and upgrade them manually.
+  </para>
+
+  <para>
+   pg_upgrade will not work if the <filename>ltree</>
+   contrib module is installed in a database.
   </para>
 
   <para>
@@ -518,41 +600,18 @@ psql --username postgres --file script.sql postgres
    possible to upgrade from the MSI installer to the one-click installer.
   </para>
 
- </sect2>
+ </refsect2>
 
- <sect2>
-  <title>Notes</title>
+ </refsect1>
 
-  <para>
-   <application>pg_upgrade</> does not support upgrading of databases
-   containing these <type>reg*</> OID-referencing system data types:
-   <type>regproc</>, <type>regprocedure</>, <type>regoper</>,
-   <type>regoperator</>, <type>regclass</>, <type>regconfig</>, and
-   <type>regdictionary</>.  (<type>regtype</> can be upgraded.)
-  </para>
+ <refsect1>
+  <title>See Also</title>
 
-  <para>
-   All failure, rebuild, and reindex cases will be reported by
-   <application>pg_upgrade</> if they affect your installation;
-   post-upgrade scripts to rebuild tables and indexes will be
-   generated automatically.
-  </para>
-
-  <para>
-   For deployment testing, create a schema-only copy of the old cluster,
-   insert dummy data, and upgrade that.
-  </para>
-
-  <para>
-   If you want to use link mode and you don't want your old cluster
-   to be modified when the new cluster is started, make a copy of the
-   old cluster and upgrade that with link mode. To make a valid copy
-   of the old cluster, use <command>rsync</> to create a dirty
-   copy of the old cluster while the server is running, then shut down
-   the old server and run <command>rsync</> again to update the copy with any
-   changes to make it consistent.
-  </para>
-
- </sect2>
-
-</sect1>
+  <simplelist type="inline">
+   <member><xref linkend="app-initdb"></member>
+   <member><xref linkend="app-pg-ctl"></member>
+   <member><xref linkend="app-pgdump"></member>
+   <member><xref linkend="app-postgres"></member>
+  </simplelist>
+ </refsect1>
+</refentry>

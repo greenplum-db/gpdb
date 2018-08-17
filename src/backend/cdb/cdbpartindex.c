@@ -586,19 +586,20 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		 */
 		indRel = index_open(indexoid, NoLock);
 
-		/*
-		 * for AO and AOCO tables we assume the index is bitmap, for heap
-		 * partitions look up the access method from the catalog
-		 */
-		if (RELSTORAGE_HEAP == relstorage)
+		if (GIST_AM_OID == indRel->rd_rel->relam)
 		{
-			if (BTREE_AM_OID == indRel->rd_rel->relam)
-			{
-				indType = INDTYPE_BTREE;
-			}
+			indType = INDTYPE_GIST;
+		}
+		else if (RELSTORAGE_HEAP == relstorage && BTREE_AM_OID == indRel->rd_rel->relam)
+		{
+			/*
+			 * we only send btree indexes as type btree if it is a normal heap table,
+			 * AO and AOCO tables with btree indexes are sent as type bitmap
+			 */
+			indType = INDTYPE_BTREE;
 		}
 
-		/*
+		/* 
 		 * when constructing hash key, we need to map attnums in part indexes
 		 * to root attnums. Get the attMap needed for mapping.
 		 */
@@ -1556,12 +1557,13 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 	}
 
 	plogicalIndexInfo->indType = INDTYPE_BITMAP;
-	if (RELSTORAGE_HEAP == relstorage)
+	if (GIST_AM_OID == indRel->rd_rel->relam)
 	{
-		if (BTREE_AM_OID == indRel->rd_rel->relam)
-		{
-			plogicalIndexInfo->indType = INDTYPE_BTREE;
-		}
+		plogicalIndexInfo->indType = INDTYPE_GIST;
+	}
+	else if (RELSTORAGE_HEAP == relstorage && BTREE_AM_OID == indRel->rd_rel->relam)
+	{
+		plogicalIndexInfo->indType = INDTYPE_BTREE;
 	}
 
 	index_close(indRel, AccessShareLock);

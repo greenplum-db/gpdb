@@ -123,7 +123,6 @@ preprocess_initplans(QueryDesc *queryDesc)
 			if (subplan->qDispSliceId > 0)
 			{
 				sps->planstate->plan->nMotionNodes = queryDesc->plannedstmt->nMotionNodes;
-				sps->planstate->plan->dispatch = DISPATCH_PARALLEL;
 
 				/*
 				 * Adjust for the slice to execute on the QD.

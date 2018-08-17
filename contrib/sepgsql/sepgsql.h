@@ -4,7 +4,7 @@
  *
  * Definitions corresponding to SE-PostgreSQL
  *
- * Copyright (c) 2010-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2012, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 #include "fmgr.h"
 
 #include <selinux/selinux.h>
+#include <selinux/avc.h>
 
 /*
  * SE-PostgreSQL Label Tag
@@ -56,6 +57,8 @@
  * Internally used code of access vectors
  */
 #define SEPG_PROCESS__TRANSITION			(1<<0)
+#define SEPG_PROCESS__DYNTRANSITION			(1<<1)
+#define SEPG_PROCESS__SETCURRENT			(1<<2)
 
 #define SEPG_FILE__READ						(1<<0)
 #define SEPG_FILE__WRITE					(1<<1)
@@ -247,16 +250,34 @@ extern bool sepgsql_check_perms(const char *scontext,
 					bool abort);
 
 /*
+ * uavc.c
+ */
+#define SEPGSQL_AVC_NOAUDIT			((void *)(-1))
+extern bool sepgsql_avc_check_perms_label(const char *tcontext,
+							  uint16 tclass,
+							  uint32 required,
+							  const char *audit_name,
+							  bool abort);
+extern bool sepgsql_avc_check_perms(const ObjectAddress *tobject,
+						uint16 tclass,
+						uint32 required,
+						const char *audit_name,
+						bool abort);
+extern char *sepgsql_avc_trusted_proc(Oid functionId);
+extern void sepgsql_avc_init(void);
+
+/*
  * label.c
  */
 extern char *sepgsql_get_client_label(void);
-extern char *sepgsql_set_client_label(char *new_label);
+extern void sepgsql_init_client_label(void);
 extern char *sepgsql_get_label(Oid relOid, Oid objOid, int32 subId);
 
 extern void sepgsql_object_relabel(const ObjectAddress *object,
 					   const char *seclabel);
 
 extern Datum sepgsql_getcon(PG_FUNCTION_ARGS);
+extern Datum sepgsql_setcon(PG_FUNCTION_ARGS);
 extern Datum sepgsql_mcstrans_in(PG_FUNCTION_ARGS);
 extern Datum sepgsql_mcstrans_out(PG_FUNCTION_ARGS);
 extern Datum sepgsql_restorecon(PG_FUNCTION_ARGS);
@@ -267,25 +288,36 @@ extern Datum sepgsql_restorecon(PG_FUNCTION_ARGS);
 extern bool sepgsql_dml_privileges(List *rangeTabls, bool abort);
 
 /*
+ * database.c
+ */
+extern void sepgsql_database_post_create(Oid databaseId,
+							 const char *dtemplate);
+extern void sepgsql_database_drop(Oid databaseId);
+extern void sepgsql_database_relabel(Oid databaseId, const char *seclabel);
+
+/*
  * schema.c
  */
 extern void sepgsql_schema_post_create(Oid namespaceId);
+extern void sepgsql_schema_drop(Oid namespaceId);
 extern void sepgsql_schema_relabel(Oid namespaceId, const char *seclabel);
 
 /*
  * relation.c
  */
 extern void sepgsql_attribute_post_create(Oid relOid, AttrNumber attnum);
+extern void sepgsql_attribute_drop(Oid relOid, AttrNumber attnum);
 extern void sepgsql_attribute_relabel(Oid relOid, AttrNumber attnum,
 						  const char *seclabel);
 extern void sepgsql_relation_post_create(Oid relOid);
+extern void sepgsql_relation_drop(Oid relOid);
 extern void sepgsql_relation_relabel(Oid relOid, const char *seclabel);
 
 /*
  * proc.c
  */
 extern void sepgsql_proc_post_create(Oid functionId);
+extern void sepgsql_proc_drop(Oid functionId);
 extern void sepgsql_proc_relabel(Oid functionId, const char *seclabel);
-extern char *sepgsql_proc_get_domtrans(Oid functionId);
 
 #endif   /* SEPGSQL_H */

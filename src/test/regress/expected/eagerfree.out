@@ -1914,6 +1914,25 @@ and smallt.d = '2011-01-04'::date;
  Total runtime: 1.021 ms
 (13 rows)
 
+-- IndexOnlyScan
+explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as dummy from pg_class c;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_class c  (cost=10000000000.00..10000003559.39 rows=429 width=204) (actual time=1.351..2.152 rows=440 loops=1)
+   SubPlan 1
+     ->  Index Only Scan using pg_class_oid_index on pg_class  (cost=0.00..8.27 rows=1 width=0) (never executed)
+           Index Cond: oid = c.oid
+           Heap Fetches: 0
+   SubPlan 2
+     ->  Materialize  (cost=0.00..48.83 rows=429 width=4) (actual time=0.872..0.958 rows=440 loops=1)
+           ->  Index Only Scan using pg_class_oid_index on pg_class  (cost=0.00..46.69 rows=429 width=4) (actual time=0.130..0.581 rows=440 loops=1)
+                 Heap Fetches: 440
+   (slice0)    Executor memory: 338K bytes.
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 2.672 ms
+(13 rows)
+
 -- BitmapScan
 -- start_ignore
 -- Known_opt_diff: This test is only here for the planner. It doesn't exercise eagerfree in ORCA plans

@@ -174,9 +174,9 @@ ERROR:  relation "errorhandlingtmptable" does not exist
 LINE 1: INSERT INTO  errorhandlingtmpTABLE VALUES ('fjdk')
                      ^
 QUERY:  INSERT INTO  errorhandlingtmpTABLE VALUES ('fjdk')
-CONTEXT:  PL/pgSQL function "insert_wrong" line 3 at SQL statement
+CONTEXT:  PL/pgSQL function insert_wrong() line 3 at SQL statement
 SQL statement "SELECT insert_wrong()"
-PL/pgSQL function "dml_plperl_fn2" line 7 at PERFORM
+PL/pgSQL function dml_plperl_fn2(integer,integer) line 7 at PERFORM
 SELECT COUNT(*) FROM dml_plperl_t2;
  count 
 -------
@@ -216,34 +216,34 @@ CREATE TABLE dml_plpgsql_t1(a char) distributed by (a);
 SELECT dml_indata(1,10);
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
 NOTICE:  Error in data
 CONTEXT:  SQL statement "SELECT dml_insertvalue(100)"
-PL/pgSQL function "dml_indata" line 7 at PERFORM
+PL/pgSQL function dml_indata(integer,integer) line 7 at PERFORM
  dml_indata 
 ------------
  
@@ -299,7 +299,7 @@ $$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 INSERT INTO volatilefn_dml_int8(col1,col3) SELECT col2,dml_in_udf_func(14) FROM volatilefn_dml_int8_candidate;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 rh55-qavm52:34533 pid=31563)
 CONTEXT:  SQL statement "DROP TABLE IF EXISTS udftest_foo"
-PL/pgSQL function "dml_in_udf_func" line 3 at SQL statement
+PL/pgSQL function dml_in_udf_func(integer) line 3 at SQL statement
 SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
  col1 | col2 | col3 | col4 
 ------+------+------+------
@@ -308,10 +308,10 @@ SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
 UPDATE volatilefn_dml_int8 SET col3 = (SELECT dml_in_udf_func(1));
 NOTICE:  table "udftest_foo" does not exist, skipping
 CONTEXT:  SQL statement "DROP TABLE IF EXISTS udftest_foo"
-PL/pgSQL function "dml_in_udf_func" line 3 at SQL statement
+PL/pgSQL function dml_in_udf_func(integer) line 3 at SQL statement
 NOTICE:  table "udftest_bar" does not exist, skipping
 CONTEXT:  SQL statement "DROP TABLE IF EXISTS udftest_bar"
-PL/pgSQL function "dml_in_udf_func" line 7 at SQL statement
+PL/pgSQL function dml_in_udf_func(integer) line 7 at SQL statement
 SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
  col1 | col2 | col3 | col4 
 ------+------+------+------

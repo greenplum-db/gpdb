@@ -309,6 +309,7 @@ order by 1,2,3
 limit 60; --order 1,2,3
 --end_equivalent
 
+drop table if exists d;
 drop table if exists b;
 create table with_b (i integer);
 insert into with_b values(1);

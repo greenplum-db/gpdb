@@ -23,6 +23,8 @@
 
 #define COPYOUT_CHUNK_SIZE 16 * 1024
 
+struct CdbDispatcherState;
+
 typedef enum SegDbState
 {
 	/*
@@ -37,7 +39,6 @@ typedef enum SegDbState
 
 typedef struct CdbCopy
 {
-	Gang	   *primary_writer;
 	int			total_segs;		/* total number of segments in cdb */
 	int		   *mirror_map;		/* indicates how many db's each segment has */
 	bool		copy_in;		/* direction: true for COPY FROM false for COPY TO */
@@ -58,6 +59,7 @@ typedef struct CdbCopy
 	List		  *ao_segnos;
 	HTAB		  *aotupcounts; /* hash of ao relation id to processed tuple count */
 	bool		hasReplicatedTable;
+	struct CdbDispatcherState *dispatcherState;
 } CdbCopy;
 
 
@@ -68,7 +70,6 @@ extern void cdbCopyStart(CdbCopy *cdbCopy, CopyStmt *stmt, struct GpPolicy *poli
 extern void cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
 extern void cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
 extern bool cdbCopyGetData(CdbCopy *c, bool cancel, uint64 *rows_processed);
-extern int cdbCopyEnd(CdbCopy *c);
 extern int cdbCopyAbort(CdbCopy *c);
 /*
  * GPDB_91_MERGE_FIXME: let's consistently use uint64 as type for counting rows

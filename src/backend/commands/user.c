@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/commands/user.c
@@ -27,6 +27,7 @@
 #include "catalog/pg_db_role_setting.h"
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
+#include "commands/seclabel.h"
 #include "commands/user.h"
 #include "libpq/auth.h"
 #include "libpq/password_hash.h"
@@ -38,8 +39,8 @@
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/timestamp.h"
 #include "utils/tqual.h"
 
 #include "catalog/oid_dispatch.h"
@@ -330,16 +331,7 @@ CreateRole(CreateRoleStmt *stmt)
 	if (dpassword && dpassword->arg)
 		password = strVal(dpassword->arg);
 	if (dissuper)
-	{
 		issuper = intVal(dissuper->arg) != 0;
-
-		/*
-		 * Superusers get replication by default, but only if NOREPLICATION
-		 * wasn't explicitly mentioned
-		 */
-		if (issuper && !(disreplication && intVal(disreplication->arg) == 0))
-			isreplication = 1;
-	}
 	if (dinherit)
 		inherit = intVal(dinherit->arg) != 0;
 	if (dcreaterole)
@@ -624,7 +616,8 @@ CreateRole(CreateRoleStmt *stmt)
 				GetUserId(), false);
 
 	/* Post creation hook for new role */
-	InvokeObjectAccessHook(OAT_POST_CREATE, AuthIdRelationId, roleid, 0);
+	InvokeObjectAccessHook(OAT_POST_CREATE,
+						   AuthIdRelationId, roleid, 0, NULL);
 
 	/*
 	 * Populate pg_auth_time_constraint with intervals for which this
@@ -1468,6 +1461,16 @@ DropRole(DropRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("must be superuser to drop superusers")));
 
+		/* DROP hook for the role being removed */
+		if (object_access_hook)
+		{
+			ObjectAccessDrop drop_arg;
+
+			memset(&drop_arg, 0, sizeof(ObjectAccessDrop));
+			InvokeObjectAccessHook(OAT_DROP,
+								   AuthIdRelationId, roleid, 0, &drop_arg);
+		}
+
 		/*
 		 * Lock the role, so nobody can add dependencies to her while we drop
 		 * her.  We keep the lock until the end of transaction.
@@ -1481,7 +1484,7 @@ DropRole(DropRoleStmt *stmt)
 					(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
 					 errmsg("role \"%s\" cannot be dropped because some objects depend on it",
 							role),
-					 errdetail("%s", detail),
+					 errdetail_internal("%s", detail),
 					 errdetail_log("%s", detail_log)));
 
 		/*
@@ -1533,9 +1536,10 @@ DropRole(DropRoleStmt *stmt)
 		DelRoleDenials(role, roleid, NIL);
 
 		/*
-		 * Remove any comments on this role.
+		 * Remove any comments or security labels on this role.
 		 */
 		DeleteSharedComments(roleid, AuthIdRelationId);
+		DeleteSharedSecurityLabel(roleid, AuthIdRelationId);
 
 		/* MPP-6929: metadata tracking */
 		if (Gp_role == GP_ROLE_DISPATCH)

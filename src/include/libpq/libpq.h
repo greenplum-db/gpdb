@@ -4,7 +4,7 @@
  *	  POSTGRES LIBPQ buffer structure definitions.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/libpq.h
@@ -20,22 +20,6 @@
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
 
-/* ----------------
- * PQArgBlock
- *		Information (pointer to array of this structure) required
- *		for the PQfn() call.  (This probably ought to go somewhere else...)
- * ----------------
- */
-typedef struct
-{
-	int			len;
-	int			isint;
-	union
-	{
-		int		   *ptr;		/* can't use void (dec compiler barfs)	 */
-		int			integer;
-	}			u;
-} PQArgBlock;
 
 /*
  * External functions.
@@ -72,6 +56,11 @@ extern bool pq_waitForDataUsingSelect(void);                /* GPDB only */
 /*
  * prototypes for functions in be-secure.c
  */
+extern char *ssl_cert_file;
+extern char *ssl_key_file;
+extern char *ssl_ca_file;
+extern char *ssl_crl_file;
+
 extern int	secure_initialize(void);
 extern bool secure_loaded_verify_locations(void);
 extern void secure_destroy(void);

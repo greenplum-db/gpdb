@@ -520,9 +520,10 @@ class GpExpandStatus():
     def _sync_status_file(self):
         """Syncs the gpexpand status file with the master mirror"""
         if self._master_mirror:
-            cpCmd = RemoteCopy('gpexpand copying status file to master mirror',
-                               self._status_standby_filename, self._master_mirror.getSegmentHostName(),
-                               self._status_filename)
+            cpCmd = Scp('gpexpand copying status file to master mirror',
+                        srcFile=self._status_standby_filename,
+                        dstFile=self._status_filename,
+                        dstHost=self._master_mirror.getSegmentHostName())
             cpCmd.run(validateAfter=True)
 
     def set_status(self, status, status_info=None):
@@ -751,7 +752,10 @@ class SegmentTemplate:
         """Distributes template tar file to hosts"""
         for host in self.hosts:
             logger.debug('Copying tar file to %s' % host)
-            cpCmd = RemoteCopy('gpexpand distribute tar file to new hosts', self.schema_tar_file, host, self.segTarDir)
+            cpCmd = Scp(name='gpexpand distribute tar file to new hosts',
+                        srcFile=self.schema_tar_file,
+                        dstFile=self.segTarDir,
+                        dstHost=host)
             self.pool.addCommand(cpCmd)
 
         self.pool.join()
@@ -848,16 +852,19 @@ class SegmentTemplate:
         self.logger.info('Copying postgresql.conf from existing segment into template')
 
         localHostname = self.gparray.master.getSegmentHostName()
-        cpCmd = RemoteCopy(
-            'gpexpand copying postgresql.conf to %s:%s/postgresql.conf' % (self.srcSegHostname, self.srcSegDataDir),
-            self.srcSegDataDir + '/postgresql.conf', localHostname,
-            self.tempDir, ctxt=REMOTE, remoteHost=self.srcSegHostname)
+        cmdName = 'gpexpand copying postgresql.conf to %s:%s/postgresql.conf' \
+                  % (self.srcSegHostname, self.srcSegDataDir)
+        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
+            dstFile=self.tempDir, dstHost=localHostname, ctxt=REMOTE,
+            remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
 
         self.logger.info('Copying pg_hba.conf from existing segment into template')
-        cpCmd = RemoteCopy('gpexpand copy pg_hba.conf to %s:%s/pg_hba.conf' % (self.srcSegHostname, self.srcSegDataDir),
-                           self.srcSegDataDir + '/pg_hba.conf', localHostname,
-                           self.tempDir, ctxt=REMOTE, remoteHost=self.srcSegHostname)
+        cmdName = 'gpexpand copy pg_hba.conf to %s:%s/pg_hba.conf' \
+                  % (self.srcSegHostname, self.srcSegDataDir)
+        cpCmd = Scp(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
+                    dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
+                    remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
 
         # Don't need log files and gpperfmon files in template.
@@ -976,7 +983,7 @@ class gpexpand:
         self.numworkers = parallel
         self.gparray = gparray
         self.unique_index_tables = {}
-        self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+        self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
         self.old_segments = self.gparray.getSegDbList()
         if dburl.pgdb == 'template0' or dburl.pgdb == 'template1' or dburl.pgdb == 'postgres':
             raise ExpansionError("Invalid database '%s' specified.  Cannot use a template database.\n"
@@ -1266,7 +1273,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         if cleanSchema:
             GpStart.local('gpexpand rollback start database restricted', restricted=True)
             self.logger.info('Dropping expansion expansion schema')
-            schema_conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods='dml')
+            schema_conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods=True)
             try:
                 dbconn.execSQL(schema_conn, drop_schema_sql)
                 schema_conn.commit()
@@ -1411,8 +1418,9 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
             srcFile = datadir + '/pg_hba.conf'
             dstFile = datadir + '/pg_hba.gpexpand.bak'
-            cpCmd = RemoteCopy('gpexpand back up pg_hba.conf file on original segments',
-                               srcFile, hostname, dstFile, ctxt=REMOTE, remoteHost=hostname)
+            cpCmd = Scp(name='gpexpand back up pg_hba.conf file on original segments',
+                        srcFile=srcFile, dstFile=dstFile, dstHost=hostname, ctxt=REMOTE,
+                        remoteHost=hostname)
 
             self.pool.addCommand(cpCmd)
 
@@ -1432,8 +1440,9 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             hostname = seg.getSegmentHostName()
             datadir = seg.getSegmentDataDirectory()
 
-            cpCmd = RemoteCopy('gpexpand copy new pg_hba.conf file to original segments',
-                               self.tempDir + '/pg_hba.conf', hostname, datadir)
+            cpCmd = Scp(name='gpexpand copy new pg_hba.conf file to original segments',
+                        srcFile=self.tempDir + '/pg_hba.conf', dstFile=datadir,
+                        dstHost=hostname)
 
             self.pool.addCommand(cpCmd)
 
@@ -1478,9 +1487,9 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
             srcFile = datadir + '/pg_hba.gpexpand.bak'
             dstFile = datadir + '/pg_hba.conf'
-            cpCmd = RemoteCopy('gpexpand restore of pg_hba.conf file on original segments',
-                               srcFile, hostname, dstFile, ctxt=REMOTE,
-                               remoteHost=hostname)
+            cpCmd = Scp(name='gpexpand restore of pg_hba.conf file on original segments',
+                        srcFile=srcFile, dstFile=dstFile, dstHost=hostname, ctxt=REMOTE,
+                        remoteHost=hostname)
 
             self.pool.addCommand(cpCmd)
 
@@ -1688,7 +1697,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             # Update the catalog with the contents of the backup
             restore_conn = None
             try:
-                restore_conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+                restore_conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
 
                 # Get a list of all the expand primary segments
                 sqlStr = "select dbid from pg_catalog.gp_segment_configuration where dbid not in (%s) and role = 'p'" % str(
@@ -1775,7 +1784,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.statusLogger.set_status('PREPARE_EXPANSION_SCHEMA_STARTED')
 
         if not self.conn:
-            self.conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods='dml')
+            self.conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods=True)
             self.gparray = GpArray.initFromCatalog(self.dburl)
 
         nowStr = datetime.datetime.now()
@@ -2211,7 +2220,7 @@ UPDATE gp_distribution_policy
     def connect_database(self, dbname):
         test_url = copy.deepcopy(self.dburl)
         test_url.pgdb = dbname
-        c = dbconn.connect(test_url, encoding='UTF8', allowSystemTableMods='dml')
+        c = dbconn.connect(test_url, encoding='UTF8', allowSystemTableMods=True)
         return c
 
     def sync_packages(self):
@@ -2425,7 +2434,7 @@ class ExecuteSQLStatementsCommand(SQLCommand):
                                      )
 
         try:
-            self.conn = dbconn.connect(self.url, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+            self.conn = dbconn.connect(self.url, utility=True, encoding='UTF8', allowSystemTableMods=True)
             for statement in self.sqlCommandList:
                 dbconn.execSQL(self.conn, statement)
             self.conn.commit()

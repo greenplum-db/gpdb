@@ -6,6 +6,10 @@
 -- therefore roll back implicitly anyway). The purpose of these tests is to
 -- exercise planner, so it doesn't matter that the changes are rolled back
 -- afterwards.
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
 begin;
 CREATE TABLE dml_union_r (
         a int CONSTRAINT r_check_a CHECK(a <> -1),
@@ -615,6 +619,7 @@ SELECT COUNT(*) FROM ( SELECT * FROM (SELECT * FROM dml_union_r EXCEPT SELECT * 
 
 INSERT INTO dml_union_s SELECT * FROM (SELECT * FROM dml_union_r EXCEPT SELECT * FROM dml_union_s) foo WHERE c='text';
 ERROR:  null value in column "b" violates not-null constraint
+DETAIL:  Failing row contains (null, null, text, null).
 --SELECT COUNT(*) FROM dml_union_r;
 -- @description union_test28: Negative tests MORE THAN ONE ROW RETURNED
 SELECT COUNT(*) FROM dml_union_r;
@@ -1693,6 +1698,7 @@ SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 
 UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
 ERROR:  null value in column "b" violates not-null constraint
+DETAIL:  Failing row contains (3, null, s, 3).
 --SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 --SELECT DISTINCT(b) FROM dml_union_s;
 -- @description union_update_test30: Negative Tests  more than one row returned by a sub-query used as an expression

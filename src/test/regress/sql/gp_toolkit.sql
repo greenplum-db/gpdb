@@ -143,7 +143,7 @@ select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass
 -- integer overflow error, before the view was fixed to use numerics for all the
 -- calculations.)
 create table wide_width_test as select * from pg_attribute;
-set allow_system_table_mods=dml ;
+set allow_system_table_mods=true ;
 update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
 
 select * from gp_toolkit.gp_bloat_diag WHERE bdinspname <> 'pg_catalog';

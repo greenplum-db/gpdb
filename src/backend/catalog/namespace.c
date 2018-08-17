@@ -9,7 +9,7 @@
  * and implementing search-path-controlled searches.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -46,7 +46,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
-#include "storage/backendid.h"
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
 #include "storage/sinval.h"
@@ -57,7 +56,6 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
 #include "tcop/utility.h"
@@ -200,7 +198,7 @@ char	   *namespace_search_path = NULL;
 static void recomputeNamespacePath(void);
 static void RemoveTempRelations(Oid tempNamespaceId);
 static void RemoveTempRelationsCallback(int code, Datum arg);
-static void NamespaceCallback(Datum arg, int cacheid, ItemPointer tuplePtr);
+static void NamespaceCallback(Datum arg, int cacheid, uint32 hashvalue);
 static bool MatchNamedCall(HeapTuple proctup, int nargs, List *argnames,
 			   int **argnumbers);
 static bool TempNamespaceValid(bool error_if_removed);
@@ -211,6 +209,7 @@ Datum		pg_type_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_function_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_operator_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_opclass_is_visible(PG_FUNCTION_ARGS);
+Datum		pg_opfamily_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_collation_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_conversion_is_visible(PG_FUNCTION_ARGS);
 Datum		pg_ts_parser_is_visible(PG_FUNCTION_ARGS);
@@ -227,83 +226,8 @@ Datum       pg_objname_to_oid(PG_FUNCTION_ARGS);
  *		Given a RangeVar describing an existing relation,
  *		select the proper namespace and look up the relation OID.
  *
- * If the relation is not found, return InvalidOid if failOK = true,
+ * If the relation is not found, return InvalidOid if missing_ok = true,
  * otherwise raise an error.
- */
-Oid
-RangeVarGetRelid(const RangeVar *relation, bool failOK)
-{
-	Oid			namespaceId;
-	Oid			relId;
-
-	/*
-	 * We check the catalog name and then ignore it.
-	 */
-	if (relation->catalogname)
-	{
-		if (strcmp(relation->catalogname, get_database_name(MyDatabaseId)) != 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cross-database references are not implemented: \"%s.%s.%s\"",
-							relation->catalogname, relation->schemaname,
-							relation->relname)));
-	}
-
-	/*
-	 * Some non-default relpersistence value may have been specified.  The
-	 * parser never generates such a RangeVar in simple DML, but it can happen
-	 * in contexts such as "CREATE TEMP TABLE foo (f1 int PRIMARY KEY)".  Such
-	 * a command will generate an added CREATE INDEX operation, which must be
-	 * careful to find the temp table, even when pg_temp is not first in the
-	 * search path.
-	 */
-	if (relation->relpersistence == RELPERSISTENCE_TEMP)
-	{
-		if (relation->schemaname &&
-			(!TempNamespaceValid(false) || strcmp(relation->schemaname, get_namespace_name(myTempNamespace)) != 0))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				   errmsg("temporary tables cannot specify a schema name")));
-		if (OidIsValid(myTempNamespace))
-			relId = get_relname_relid(relation->relname, myTempNamespace);
-		else	/* this probably can't happen? */
-			relId = InvalidOid;
-	}
-	else if (relation->schemaname)
-	{
-		/* use exact schema given */
-		namespaceId = LookupExplicitNamespace(relation->schemaname);
-		relId = get_relname_relid(relation->relname, namespaceId);
-	}
-	else
-	{
-		/* search the namespace path */
-		relId = RelnameGetRelid(relation->relname);
-	}
-
-	if (!OidIsValid(relId) && !failOK)
-	{
-		if (relation->schemaname)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_TABLE),
-					 errmsg("relation \"%s.%s\" does not exist",
-							relation->schemaname, relation->relname)));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_TABLE),
-					 errmsg("relation \"%s\" does not exist",
-							relation->relname)));
-	}
-	return relId;
-}
-
-/*
- * RangeVarGetRelid
- *		Given a RangeVar describing an existing relation,
- *		select the proper namespace and look up the relation OID.
- *
- * If the schema or relation is not found, return InvalidOid if missing_ok
- * = true, otherwise raise an error.
  *
  * If nowait = true, throw an error if we'd have to wait for a lock.
  *
@@ -334,7 +258,7 @@ RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
 	}
 
 	/*
-	 * DDL operations can change the results of a name lookup.  Since all such
+	 * DDL operations can change the results of a name lookup.	Since all such
 	 * operations will generate invalidation messages, we keep track of
 	 * whether any such messages show up while we're performing the operation,
 	 * and retry until either (1) no more invalidation messages show up or (2)
@@ -343,7 +267,7 @@ RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
 	 * But if lockmode = NoLock, then we assume that either the caller is OK
 	 * with the answer changing under them, or that they already hold some
 	 * appropriate lock, and therefore return the first answer we get without
-	 * checking for invalidation messages.  Also, if the requested lock is
+	 * checking for invalidation messages.	Also, if the requested lock is
 	 * already held, no LockRelationOid will not AcceptInvalidationMessages,
 	 * so we may fail to notice a change.  We could protect against that case
 	 * by calling AcceptInvalidationMessages() before beginning this loop, but
@@ -358,16 +282,41 @@ RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
 		 */
 		inval_count = SharedInvalidMessageCounter;
 
-		if (relation->schemaname)
+		/*
+		 * Some non-default relpersistence value may have been specified.  The
+		 * parser never generates such a RangeVar in simple DML, but it can
+		 * happen in contexts such as "CREATE TEMP TABLE foo (f1 int PRIMARY
+		 * KEY)".  Such a command will generate an added CREATE INDEX
+		 * operation, which must be careful to find the temp table, even when
+		 * pg_temp is not first in the search path.
+		 */
+		if (relation->relpersistence == RELPERSISTENCE_TEMP)
+		{
+			if (!OidIsValid(myTempNamespace))
+				relId = InvalidOid;		/* this probably can't happen? */
+			else
+			{
+				if (relation->schemaname)
+				{
+					Oid			namespaceId;
+
+					namespaceId = LookupExplicitNamespace(relation->schemaname);
+					if (namespaceId != myTempNamespace)
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								 errmsg("temporary tables cannot specify a schema name")));
+				}
+
+				relId = get_relname_relid(relation->relname, myTempNamespace);
+			}
+		}
+		else if (relation->schemaname)
 		{
 			Oid			namespaceId;
 
 			/* use exact schema given */
 			namespaceId = LookupExplicitNamespace(relation->schemaname);
-			if (missing_ok && !OidIsValid(namespaceId))
-				relId = InvalidOid;
-			else
-				relId = get_relname_relid(relation->relname, namespaceId);
+			relId = get_relname_relid(relation->relname, namespaceId);
 		}
 		else
 		{
@@ -447,7 +396,7 @@ RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
 			break;
 
 		/*
-		 * Something may have changed.  Let's repeat the name lookup, to make
+		 * Something may have changed.	Let's repeat the name lookup, to make
 		 * sure this name still references the same relation it did
 		 * previously.
 		 */
@@ -498,24 +447,6 @@ RangeVarGetCreationNamespace(const RangeVar *newRelation)
 							newRelation->relname)));
 	}
 
-	if (newRelation->relpersistence == RELPERSISTENCE_TEMP)
-	{
-		/* TEMP tables are created in our backend-local temp namespace */
-		if (Gp_role != GP_ROLE_EXECUTE && newRelation->schemaname)
-		{
-			char		namespaceName[NAMEDATALEN];
-			snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", gp_session_id);
-			if (strcmp(newRelation->schemaname,namespaceName)!=0)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				   errmsg("temporary tables cannot specify a schema name")));
-		}
-		/* Initialize temp namespace if first time through */
-		if (!TempNamespaceValid(false))
-			InitTempTableNamespace();
-		return myTempNamespace;
-	}
-
 	if (newRelation->schemaname)
 	{
 		/* check for pg_temp alias */
@@ -529,6 +460,13 @@ RangeVarGetCreationNamespace(const RangeVar *newRelation)
 		/* use exact schema given */
 		namespaceId = get_namespace_oid(newRelation->schemaname, false);
 		/* we do not check for USAGE rights here! */
+	}
+	else if (newRelation->relpersistence == RELPERSISTENCE_TEMP)
+	{
+		/* Initialize temp namespace if first time through */
+		if (!OidIsValid(myTempNamespace))
+			InitTempTableNamespace();
+		return myTempNamespace;
 	}
 	else
 	{
@@ -554,31 +492,169 @@ RangeVarGetCreationNamespace(const RangeVar *newRelation)
 
 /*
  * RangeVarGetAndCheckCreationNamespace
- *		As RangeVarGetCreationNamespace, but with a permissions check.
+ *
+ * This function returns the OID of the namespace in which a new relation
+ * with a given name should be created.  If the user does not have CREATE
+ * permission on the target namespace, this function will instead signal
+ * an ERROR.
+ *
+ * If non-NULL, *existing_oid is set to the OID of any existing relation with
+ * the same name which already exists in that namespace, or to InvalidOid if
+ * no such relation exists.
+ *
+ * If lockmode != NoLock, the specified lock mode is acquire on the existing
+ * relation, if any, provided that the current user owns the target relation.
+ * However, if lockmode != NoLock and the user does not own the target
+ * relation, we throw an ERROR, as we must not try to lock relations the
+ * user does not have permissions on.
+ *
+ * As a side effect, this function acquires AccessShareLock on the target
+ * namespace.  Without this, the namespace could be dropped before our
+ * transaction commits, leaving behind relations with relnamespace pointing
+ * to a no-longer-exstant namespace.
+ *
+ * As a further side-effect, if the select namespace is a temporary namespace,
+ * we mark the RangeVar as RELPERSISTENCE_TEMP.
  */
 Oid
-RangeVarGetAndCheckCreationNamespace(const RangeVar *newRelation)
+RangeVarGetAndCheckCreationNamespace(RangeVar *relation,
+									 LOCKMODE lockmode,
+									 Oid *existing_relation_id)
 {
-	Oid			namespaceId;
-
-	namespaceId = RangeVarGetCreationNamespace(newRelation);
+	uint64		inval_count;
+	Oid			relid;
+	Oid			oldrelid = InvalidOid;
+	Oid			nspid;
+	Oid			oldnspid = InvalidOid;
+	bool		retry = false;
 
 	/*
-	 * Check we have permission to create there. Skip check if bootstrapping,
-	 * since permissions machinery may not be working yet.
+	 * We check the catalog name and then ignore it.
 	 */
-	if (!IsBootstrapProcessingMode())
+	if (relation->catalogname)
+	{
+		if (strcmp(relation->catalogname, get_database_name(MyDatabaseId)) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cross-database references are not implemented: \"%s.%s.%s\"",
+							relation->catalogname, relation->schemaname,
+							relation->relname)));
+	}
+
+	/*
+	 * As in RangeVarGetRelidExtended(), we guard against concurrent DDL
+	 * operations by tracking whether any invalidation messages are processed
+	 * while we're doing the name lookups and acquiring locks.  See comments
+	 * in that function for a more detailed explanation of this logic.
+	 */
+	for (;;)
 	{
 		AclResult	aclresult;
 
-		aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(),
-										  ACL_CREATE);
+		inval_count = SharedInvalidMessageCounter;
+
+		/* Look up creation namespace and check for existing relation. */
+		nspid = RangeVarGetCreationNamespace(relation);
+		Assert(OidIsValid(nspid));
+		if (existing_relation_id != NULL)
+			relid = get_relname_relid(relation->relname, nspid);
+		else
+			relid = InvalidOid;
+
+		/*
+		 * In bootstrap processing mode, we don't bother with permissions or
+		 * locking.  Permissions might not be working yet, and locking is
+		 * unnecessary.
+		 */
+		if (IsBootstrapProcessingMode())
+			break;
+
+		/* Check namespace permissions. */
+		aclresult = pg_namespace_aclcheck(nspid, GetUserId(), ACL_CREATE);
 		if (aclresult != ACLCHECK_OK)
 			aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
-						   get_namespace_name(namespaceId));
+						   get_namespace_name(nspid));
+
+		if (retry)
+		{
+			/* If nothing changed, we're done. */
+			if (relid == oldrelid && nspid == oldnspid)
+				break;
+			/* If creation namespace has changed, give up old lock. */
+			if (nspid != oldnspid)
+				UnlockDatabaseObject(NamespaceRelationId, oldnspid, 0,
+									 AccessShareLock);
+			/* If name points to something different, give up old lock. */
+			if (relid != oldrelid && OidIsValid(oldrelid) && lockmode != NoLock)
+				UnlockRelationOid(oldrelid, lockmode);
+		}
+
+		/* Lock namespace. */
+		if (nspid != oldnspid)
+			LockDatabaseObject(NamespaceRelationId, nspid, 0, AccessShareLock);
+
+		/* Lock relation, if required if and we have permission. */
+		if (lockmode != NoLock && OidIsValid(relid))
+		{
+			if (!pg_class_ownercheck(relid, GetUserId()))
+				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
+							   relation->relname);
+			if (relid != oldrelid)
+				LockRelationOid(relid, lockmode);
+		}
+
+		/* If no invalidation message were processed, we're done! */
+		if (inval_count == SharedInvalidMessageCounter)
+			break;
+
+		/* Something may have changed, so recheck our work. */
+		retry = true;
+		oldrelid = relid;
+		oldnspid = nspid;
 	}
 
-	return namespaceId;
+	RangeVarAdjustRelationPersistence(relation, nspid);
+	if (existing_relation_id != NULL)
+		*existing_relation_id = relid;
+	return nspid;
+}
+
+/*
+ * Adjust the relpersistence for an about-to-be-created relation based on the
+ * creation namespace, and throw an error for invalid combinations.
+ */
+void
+RangeVarAdjustRelationPersistence(RangeVar *newRelation, Oid nspid)
+{
+	switch (newRelation->relpersistence)
+	{
+		case RELPERSISTENCE_TEMP:
+			if (!isTempOrToastNamespace(nspid))
+			{
+				if (isAnyTempNamespace(nspid))
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							 errmsg("cannot create relations in temporary schemas of other sessions")));
+				else
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							 errmsg("cannot create temporary relation in non-temporary schema")));
+			}
+			break;
+		case RELPERSISTENCE_PERMANENT:
+			if (isTempOrToastNamespace(nspid))
+				newRelation->relpersistence = RELPERSISTENCE_TEMP;
+			else if (isAnyTempNamespace(nspid))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("cannot create relations in temporary schemas of other sessions")));
+			break;
+		default:
+			if (isAnyTempNamespace(nspid))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("only temporary relations may be created in temporary schemas")));
+	}
 }
 
 /*
@@ -3053,6 +3129,24 @@ GetOverrideSearchPath(MemoryContext context)
 }
 
 /*
+ * CopyOverrideSearchPath - copy the specified OverrideSearchPath.
+ *
+ * The result structure is allocated in CurrentMemoryContext.
+ */
+OverrideSearchPath *
+CopyOverrideSearchPath(OverrideSearchPath *path)
+{
+	OverrideSearchPath *result;
+
+	result = (OverrideSearchPath *) palloc(sizeof(OverrideSearchPath));
+	result->schemas = list_copy(path->schemas);
+	result->addCatalog = path->addCatalog;
+	result->addTemp = path->addTemp;
+
+	return result;
+}
+
+/*
  * PushOverrideSearchPath - temporarily override the search path
  *
  * We allow nested overrides, hence the push/pop terminology.  The GUC
@@ -3908,14 +4002,12 @@ ResetTempTableNamespace(void)
  * Routines for handling the GUC variable 'search_path'.
  */
 
-/* check_hook: validate new search_path, if possible */
+/* check_hook: validate new search_path value */
 bool
 check_search_path(char **newval, void **extra, GucSource source)
 {
-	bool		result = true;
 	char	   *rawname;
 	List	   *namelist;
-	ListCell   *l;
 
 	/* Need a modifiable copy of string */
 	rawname = pstrdup(*newval);
@@ -3931,55 +4023,16 @@ check_search_path(char **newval, void **extra, GucSource source)
 	}
 
 	/*
-	 * If we aren't inside a transaction, we cannot do database access so
-	 * cannot verify the individual names.	Must accept the list on faith.
+	 * We used to try to check that the named schemas exist, but there are
+	 * many valid use-cases for having search_path settings that include
+	 * schemas that don't exist; and often, we are not inside a transaction
+	 * here and so can't consult the system catalogs anyway.  So now, the only
+	 * requirement is syntactic validity of the identifier list.
 	 */
-	if (IsTransactionState())
-	{
-		/*
-		 * Verify that all the names are either valid namespace names or
-		 * "$user" or "pg_temp".  We do not require $user to correspond to a
-		 * valid namespace, and pg_temp might not exist yet.  We do not check
-		 * for USAGE rights, either; should we?
-		 *
-		 * When source == PGC_S_TEST, we are checking the argument of an ALTER
-		 * DATABASE SET or ALTER USER SET command.	It could be that the
-		 * intended use of the search path is for some other database, so we
-		 * should not error out if it mentions schemas not present in the
-		 * current database.  We issue a NOTICE instead.
-		 */
-		foreach(l, namelist)
-		{
-			char	   *curname = (char *) lfirst(l);
-
-			if (strcmp(curname, "$user") == 0)
-				continue;
-			if (strcmp(curname, "pg_temp") == 0)
-				continue;
-			if (!SearchSysCacheExists1(NAMESPACENAME,
-									   CStringGetDatum(curname)))
-			{
-			  if (Gp_role != GP_ROLE_EXECUTE)
-			  {
-				if (source == PGC_S_TEST)
-					ereport(NOTICE,
-							(errcode(ERRCODE_UNDEFINED_SCHEMA),
-						   errmsg("schema \"%s\" does not exist", curname)));
-				else
-				{
-					GUC_check_errdetail("schema \"%s\" does not exist", curname);
-					result = false;
-					break;
-				}
-			  }
-			}
-		}
-	}
-
 	pfree(rawname);
 	list_free(namelist);
 
-	return result;
+	return true;
 }
 
 /* assign_hook: do extra actions as needed */
@@ -4040,7 +4093,7 @@ InitializeSearchPath(void)
  *		Syscache inval callback function
  */
 static void
-NamespaceCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
+NamespaceCallback(Datum arg, int cacheid, uint32 hashvalue)
 {
 	/* Force search path to be recomputed on next use */
 	baseSearchPathValid = false;
@@ -4235,6 +4288,17 @@ pg_opclass_is_visible(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_opfamily_is_visible(PG_FUNCTION_ARGS)
+{
+	Oid			oid = PG_GETARG_OID(0);
+
+	if (!SearchSysCacheExists1(OPFAMILYOID, ObjectIdGetDatum(oid)))
+		PG_RETURN_NULL();
+
+	PG_RETURN_BOOL(OpfamilyIsVisible(oid));
+}
+
+Datum
 pg_collation_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
@@ -4319,7 +4383,7 @@ pg_objname_to_oid(PG_FUNCTION_ARGS)
 {
     text *s = PG_GETARG_TEXT_P(0); 
     RangeVar *rv = makeRangeVarFromNameList(textToQualifiedNameList(s));
-    Oid relid = RangeVarGetRelid(rv, true);
+    Oid relid = RangeVarGetRelid(rv, NoLock, true);
 
     PG_RETURN_OID(relid);
 }

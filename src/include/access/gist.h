@@ -6,7 +6,7 @@
  *	  changes should be made with care.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/gist.h
@@ -89,7 +89,7 @@ typedef GISTPageOpaqueData *GISTPageOpaque;
  * that corresponding spl_(r|l)datum already defined and
  * PickSplit should use that value. PickSplit should always set
  * spl_(r|l)datum_exists to false: GiST will check value to
- * control supportng this feature by PickSplit...
+ * control supporting this feature by PickSplit...
  */
 typedef struct GIST_SPLITVEC
 {
@@ -144,7 +144,7 @@ typedef struct GISTENTRY
 typedef struct
 {
 	int32		n;				/* number of elements */
-	GISTENTRY	vector[1];		/* variable-length array */
+	GISTENTRY	vector[FLEXIBLE_ARRAY_MEMBER];
 } GistEntryVector;
 
 #define GEVHDRSZ	(offsetof(GistEntryVector, vector))

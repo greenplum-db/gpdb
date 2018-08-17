@@ -63,7 +63,8 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ ( <re
     <listitem>
      <para>
       The name (possibly schema-qualified) of a specific table to
-      analyze. Defaults to all tables in the current database.
+      analyze.  If omitted, all regular tables (but not foreign tables)
+      in the current database are analyzed.
      </para>
     </listitem>
    </varlistentry>
@@ -93,6 +94,13 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ ( <re
   <title>Notes</title>
 
   <para>
+   Foreign tables are analyzed only when explicitly selected.  Not all
+   foreign data wrappers support <command>ANALYZE</>.  If the table's
+   wrapper does not support <command>ANALYZE</>, the command prints a
+   warning and does nothing.
+  </para>
+
+  <para>
    In the default <productname>PostgreSQL</productname> configuration,
    the autovacuum daemon (see <xref linkend="autovacuum">)
    takes care of automatic analyzing of tables when they are first loaded
@@ -102,8 +110,9 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ ( <re
    just after making major changes in the contents of a table.  Accurate
    statistics will help the planner to choose the most appropriate query
    plan, and thereby improve the speed of query processing.  A common
-   strategy is to run <xref linkend="sql-vacuum">
+   strategy for read-mostly databases is to run <xref linkend="sql-vacuum">
    and <command>ANALYZE</command> once a day during a low-usage time of day.
+   (This will not be sufficient if there is heavy update activity.)
   </para>
 
   <para>
@@ -181,11 +190,19 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ ( <re
     If the table being analyzed has one or more children,
     <command>ANALYZE</command> will gather statistics twice: once on the
     rows of the parent table only, and a second time on the rows of the
-    parent table with all of its children.  The autovacuum daemon, however,
-    will only consider inserts or updates on the parent table when deciding
-    whether to trigger an automatic analyze.  If that table is rarely
-    inserted into or updated, the inheritance statistics will not be up to date
-    unless you run <command>ANALYZE</command> manually.
+    parent table with all of its children.  This second set of statistics
+    is needed when planning queries that traverse the entire inheritance
+    tree.  The autovacuum daemon, however, will only consider inserts or
+    updates on the parent table itself when deciding whether to trigger an
+    automatic analyze for that table.  If that table is rarely inserted into
+    or updated, the inheritance statistics will not be up to date unless you
+    run <command>ANALYZE</command> manually.
+  </para>
+
+  <para>
+    If the table being analyzed is completely empty, <command>ANALYZE</command>
+    will not record new statistics for that table.  Any existing statistics
+    will be retained.
   </para>
  </refsect1>
 

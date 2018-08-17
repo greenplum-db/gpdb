@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress.c
@@ -324,7 +324,7 @@ stop_postmaster(void)
 		{
 			fprintf(stderr, _("\n%s: could not stop postmaster: exit code was %d\n"),
 					progname, r);
-			exit(2);			/* not exit_nicely(), that would be recursive */
+			_exit(2);			/* not exit(), that could be recursive */
 		}
 
 		postmaster_running = false;
@@ -416,7 +416,7 @@ string_matches_pattern(const char *str, const char *pattern)
 }
 
 /*
- * Replace all occurances of a string in a string with a different string.
+ * Replace all occurrences of a string in a string with a different string.
  * NOTE: Assumes there is enough room in the target buffer!
  */
 void
@@ -681,7 +681,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	names = pgfnames(indir);
 	if (!names)
 		/* Error logged in pgfnames */
-		exit_nicely(2);
+		exit(2);
 
 	/* also create the output directory if not present */
 	if (!directory_exists(dest_subdir))
@@ -760,21 +760,22 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 		/* build the full actual paths to open */
 		snprintf(prefix, strlen(*name) - 6, "%s", *name);
 		snprintf(srcfile, MAXPGPATH, "%s/%s", indir, *name);
-		snprintf(destfile, MAXPGPATH, "%s/%s.%s", dest_subdir, prefix, suffix);
+		snprintf(destfile, MAXPGPATH, "%s/%s/%s.%s", dest_dir, dest_subdir,
+				 prefix, suffix);
 
 		infile = fopen(srcfile, "r");
 		if (!infile)
 		{
 			fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
 					progname, srcfile, strerror(errno));
-			exit_nicely(2);
+			exit(2);
 		}
 		outfile = fopen(destfile, "w");
 		if (!outfile)
 		{
 			fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
 					progname, destfile, strerror(errno));
-			exit_nicely(2);
+			exit(2);
 		}
 		while (fgets(line, sizeof(line), infile))
 		{
@@ -813,7 +814,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	{
 		fprintf(stderr, _("%s: no *.source files found in \"%s\"\n"),
 				progname, indir);
-		exit_nicely(2);
+		exit(2);
 	}
 
 	pgfnames_cleanup(names);
@@ -860,7 +861,7 @@ load_resultmap(void)
 			return;
 		fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
 				progname, buf, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 
 	while (fgets(buf, sizeof(buf), f))
@@ -881,7 +882,7 @@ load_resultmap(void)
 		{
 			fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"),
 					buf);
-			exit_nicely(2);
+			exit(2);
 		}
 		*file_type++ = '\0';
 
@@ -890,7 +891,7 @@ load_resultmap(void)
 		{
 			fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"),
 					buf);
-			exit_nicely(2);
+			exit(2);
 		}
 		*platform++ = '\0';
 		expected = strchr(platform, '=');
@@ -898,7 +899,7 @@ load_resultmap(void)
 		{
 			fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"),
 					buf);
-			exit_nicely(2);
+			exit(2);
 		}
 		*expected++ = '\0';
 
@@ -995,6 +996,8 @@ static void
 initialize_environment(void)
 {
 	char	   *tmp;
+
+	putenv("PGAPPNAME=pg_regress");
 
 	if (nolocale)
 	{
@@ -1223,7 +1226,7 @@ psql_command(const char *database, const char *query,...)
 	{
 		/* psql probably already reported the error */
 		fprintf(stderr, _("command failed: %s\n"), psql_cmd);
-		exit_nicely(2);
+		exit(2);
 	}
 }
 
@@ -1252,7 +1255,7 @@ spawn_process(const char *cmdline)
 	{
 		fprintf(stderr, _("%s: could not fork: %s\n"),
 				progname, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 	if (pid == 0)
 	{
@@ -1269,7 +1272,7 @@ spawn_process(const char *cmdline)
 		execl(shellprog, shellprog, "-c", cmdline2, (char *) NULL);
 		fprintf(stderr, _("%s: could not exec \"%s\": %s\n"),
 				progname, shellprog, strerror(errno));
-		exit(1);				/* not exit_nicely here... */
+		_exit(1);				/* not exit() here... */
 	}
 	/* in parent */
 	return pid;
@@ -1300,15 +1303,15 @@ spawn_process(const char *cmdline)
 			FreeLibrary(Advapi32Handle);
 		fprintf(stderr, _("%s: cannot create restricted tokens on this platform\n"),
 				progname);
-		exit_nicely(2);
+		exit(2);
 	}
 
 	/* Open the current token to use as base for the restricted one */
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
 	{
-		fprintf(stderr, _("could not open process token: %lu\n"),
+		fprintf(stderr, _("could not open process token: error code %lu\n"),
 				GetLastError());
-		exit_nicely(2);
+		exit(2);
 	}
 
 	/* Allocate list of SIDs to remove */
@@ -1318,8 +1321,8 @@ spawn_process(const char *cmdline)
 		!AllocateAndInitializeSid(&NtAuthority, 2,
 								  SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid))
 	{
-		fprintf(stderr, _("could not allocate SIDs: %lu\n"), GetLastError());
-		exit_nicely(2);
+		fprintf(stderr, _("could not allocate SIDs: error code %lu\n"), GetLastError());
+		exit(2);
 	}
 
 	b = _CreateRestrictedToken(origToken,
@@ -1337,9 +1340,9 @@ spawn_process(const char *cmdline)
 
 	if (!b)
 	{
-		fprintf(stderr, _("could not create restricted token: %lu\n"),
+		fprintf(stderr, _("could not create restricted token: error code %lu\n"),
 				GetLastError());
-		exit_nicely(2);
+		exit(2);
 	}
 
 	cmdline2 = malloc(strlen(cmdline) + 8);
@@ -1361,9 +1364,9 @@ spawn_process(const char *cmdline)
 							 &si,
 							 &pi))
 	{
-		fprintf(stderr, _("could not start process for \"%s\": %lu\n"),
+		fprintf(stderr, _("could not start process for \"%s\": error code %lu\n"),
 				cmdline2, GetLastError());
-		exit_nicely(2);
+		exit(2);
 	}
 
 	free(cmdline2);
@@ -1451,7 +1454,7 @@ make_directory(const char *dir)
 	{
 		fprintf(stderr, _("%s: could not create directory \"%s\": %s\n"),
 				progname, dir, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 }
 
@@ -1492,7 +1495,7 @@ run_diff(const char *cmd, const char *filename)
 	if (!WIFEXITED(r) || WEXITSTATUS(r) > 1)
 	{
 		fprintf(stderr, _("diff command failed with status %d: %s\n"), r, cmd);
-		exit_nicely(2);
+		exit(2);
 	}
 #ifdef WIN32
 
@@ -1503,7 +1506,7 @@ run_diff(const char *cmd, const char *filename)
 	if (WEXITSTATUS(r) == 1 && file_size(filename) <= 0)
 	{
 		fprintf(stderr, _("diff command not found: %s\n"), cmd);
-		exit_nicely(2);
+		exit(2);
 	}
 #else
 	UnusedArg(filename);
@@ -1700,7 +1703,7 @@ wait_for_tests(PID_TYPE *pids, int *statuses, char **names, struct timeval *end_
 		{
 			fprintf(stderr, _("failed to wait for subprocesses: %s\n"),
 					strerror(errno));
-			exit_nicely(2);
+			exit(2);
 		}
 #else
 		DWORD		exit_status;
@@ -1709,9 +1712,9 @@ wait_for_tests(PID_TYPE *pids, int *statuses, char **names, struct timeval *end_
 		r = WaitForMultipleObjects(tests_left, active_pids, FALSE, INFINITE);
 		if (r < WAIT_OBJECT_0 || r >= WAIT_OBJECT_0 + tests_left)
 		{
-			fprintf(stderr, _("failed to wait for subprocesses: %lu\n"),
+			fprintf(stderr, _("failed to wait for subprocesses: error code %lu\n"),
 					GetLastError());
-			exit_nicely(2);
+			exit(2);
 		}
 		p = active_pids[r - WAIT_OBJECT_0];
 		/* compact the active_pids array */
@@ -1801,7 +1804,7 @@ run_schedule(const char *schedule, test_function tfunc)
 	{
 		fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
 				progname, schedule, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 
 	while (fgets(scbuf, sizeof(scbuf), scf))
@@ -1851,7 +1854,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		{
 			fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"),
 					schedule, line_num, scbuf);
-			exit_nicely(2);
+			exit(2);
 		}
 
 		num_tests = 0;
@@ -1870,7 +1873,7 @@ run_schedule(const char *schedule, test_function tfunc)
 					/* can't print scbuf here, it's already been trashed */
 					fprintf(stderr, _("too many parallel tests in schedule file \"%s\", line %d\n"),
 							schedule, line_num);
-					exit_nicely(2);
+					exit(2);
 				}
 
 				if (num_tests - 1 >= 0 && should_exclude_test(tests[num_tests - 1]))
@@ -1896,7 +1899,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		{
 			fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"),
 					schedule, line_num, scbuf);
-			exit_nicely(2);
+			exit(2);
 		}
 
 		gettimeofday(&start_time, NULL);
@@ -2141,7 +2144,7 @@ open_result_files(void)
 	{
 		fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
 				progname, logfilename, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 
 	/* create the diffs file as empty */
@@ -2152,7 +2155,7 @@ open_result_files(void)
 	{
 		fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
 				progname, difffilename, strerror(errno));
-		exit_nicely(2);
+		exit(2);
 	}
 	/* we don't keep the diffs file open continuously */
 	fclose(difffile);
@@ -2249,7 +2252,7 @@ make_absolute_path(const char *in)
 			if (!getcwd(cwdbuf, sizeof(cwdbuf)))
 			{
 				fprintf(stderr, _("could not get current working directory: %s\n"), strerror(errno));
-				exit_nicely(2);
+				exit(2);
 			}
 		}
 
@@ -2371,45 +2374,46 @@ help(void)
 {
 	printf(_("PostgreSQL regression test driver\n"));
 	printf(_("\n"));
-	printf(_("Usage: %s [options...] [extra tests...]\n"), progname);
+	printf(_("Usage:\n  %s [OPTION]... [EXTRA-TEST]...\n"), progname);
 	printf(_("\n"));
 	printf(_("Options:\n"));
+	printf(_("  --create-role=ROLE        create the specified role before testing\n"));
 	printf(_("  --dbname=DB               use database DB (default \"regression\")\n"));
 	printf(_("  --debug                   turn on debug mode in programs that are run\n"));
-	printf(_("  --inputdir=DIR            take input files from DIR (default \".\")\n"));
-	printf(_("  --load-language=lang      load the named language before running the\n"));
-	printf(_("                            tests; can appear multiple times\n"));
-	printf(_("  --load-extension=ext      load the named extension before running the\n"));
-	printf(_("                            tests; can appear multiple times\n"));
-	printf(_("  --create-role=ROLE        create the specified role before testing\n"));
-	printf(_("  --max-connections=N       maximum number of concurrent connections\n"));
-	printf(_("                            (default is 0 meaning unlimited)\n"));
+	printf(_("  --dlpath=DIR              look for dynamic libraries in DIR\n"));
 	printf(_("  --encoding=ENCODING       use ENCODING as the encoding\n"));
+	printf(_("  --inputdir=DIR            take input files from DIR (default \".\")\n"));
+	printf(_("  --launcher=CMD            use CMD as launcher of psql\n"));
+	printf(_("  --load-extension=EXT      load the named extension before running the\n"));
+	printf(_("                            tests; can appear multiple times\n"));
+	printf(_("  --load-language=LANG      load the named language before running the\n"));
+	printf(_("                            tests; can appear multiple times\n"));
+	printf(_("  --max-connections=N       maximum number of concurrent connections\n"));
+	printf(_("                            (default is 0, meaning unlimited)\n"));
 	printf(_("  --outputdir=DIR           place output files in DIR (default \".\")\n"));
 	printf(_("  --schedule=FILE           use test ordering schedule from FILE\n"));
 	printf(_("                            (can be used multiple times to concatenate)\n"));
-	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
-	printf(_("  --dlpath=DIR              look for dynamic libraries in DIR\n"));
 	printf(_("  --temp-install=DIR        create a temporary installation in DIR\n"));
 	printf(_("  --use-existing            use an existing installation\n"));
-	printf(_("  --launcher=CMD            use CMD as launcher of psql\n"));
+	/* Please put GPDB speicifc options at the end. */
+	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
 	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
 	printf(_("                            UAO row and column tests\n"));
 	printf(_("  --resgroup-dir=DIR        directory name prefix containing resgroup tests\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-install\" mode:\n"));
+	printf(_("  --extra-install=DIR       additional directory to install (e.g., contrib)\n"));
 	printf(_("  --no-locale               use C locale\n"));
-	printf(_("  --top-builddir=DIR        (relative) path to top level build directory\n"));
 	printf(_("  --port=PORT               start postmaster on PORT\n"));
-	printf(_("  --temp-config=PATH        append contents of PATH to temporary config\n"));
-	printf(_("  --extra-install=DIR       additional directory to install (e.g., contrib\n"));
+	printf(_("  --temp-config=FILE        append contents of FILE to temporary config\n"));
+	printf(_("  --top-builddir=DIR        (relative) path to top level build directory\n"));
 	printf(_("\n"));
 	printf(_("Options for using an existing installation:\n"));
 	printf(_("  --host=HOST               use postmaster running on HOST\n"));
 	printf(_("  --port=PORT               use postmaster running at PORT\n"));
 	printf(_("  --user=USER               connect as USER\n"));
-	printf(_("  --psqldir=DIR             use psql in DIR (default: find in PATH)\n"));
+	printf(_("  --psqldir=DIR             use psql in DIR (default: configured bindir)\n"));
 	printf(_("\n"));
 	printf(_("The exit status is 0 if all tests passed, 1 if some tests failed, and 2\n"));
 	printf(_("if the tests could not be run for some reason.\n"));
@@ -2462,6 +2466,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	progname = get_progname(argv[0]);
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_regress"));
 
+	atexit(stop_postmaster);
+
 #ifndef HAVE_UNIX_SOCKETS
 	/* no unix domain sockets available, so change default */
 	hostname = "localhost";
@@ -2479,10 +2485,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{
 			case 'h':
 				help();
-				exit_nicely(0);
+				exit(0);
 			case 'V':
 				puts("pg_regress (PostgreSQL) " PG_VERSION);
-				exit_nicely(0);
+				exit(0);
 			case 1:
 
 				/*
@@ -2574,7 +2580,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				/* getopt_long already emitted a complaint */
 				fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"),
 						progname);
-				exit_nicely(2);
+				exit(2);
 		}
 	}
 
@@ -2623,7 +2629,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		if (!top_builddir)
 		{
 			fprintf(stderr, _("--top-builddir must be specified when using --temp-install\n"));
-			exit_nicely(2);
+			exit(2);
 		}
 
 		if (directory_exists(temp_install))
@@ -2655,7 +2661,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		if (system(buf))
 		{
 			fprintf(stderr, _("\n%s: installation failed\nExamine %s/log/install.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
-			exit_nicely(2);
+			exit(2);
 		}
 
 		for (sl = extra_install; sl != NULL; sl = sl->next)
@@ -2666,13 +2672,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				   makeprog, top_builddir, sl->str, temp_install, outputdir);
 #else
 			fprintf(stderr, _("\n%s: --extra-install option not supported on this platform\n"), progname);
-			exit_nicely(2);
+			exit(2);
 #endif
 
 			if (system(buf))
 			{
 				fprintf(stderr, _("\n%s: installation failed\nExamine %s/log/install.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
-				exit_nicely(2);
+				exit(2);
 			}
 		}
 
@@ -2687,7 +2693,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		if (system(buf))
 		{
 			fprintf(stderr, _("\n%s: initdb failed\nExamine %s/log/initdb.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
-			exit_nicely(2);
+			exit(2);
 		}
 
 		/*
@@ -2703,7 +2709,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		if (pg_conf == NULL)
 		{
 			fprintf(stderr, _("\n%s: could not open \"%s\" for adding extra config: %s\n"), progname, buf, strerror(errno));
-			exit_nicely(2);
+			exit(2);
 		}
 		fputs("\n# Configuration added by pg_regress\n\n", pg_conf);
 		fputs("max_prepared_transactions = 2\n", pg_conf);
@@ -2717,7 +2723,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			if (extra_conf == NULL)
 			{
 				fprintf(stderr, _("\n%s: could not open \"%s\" to read extra config: %s\n"), progname, temp_config, strerror(errno));
-				exit_nicely(2);
+				exit(2);
 			}
 			while (fgets(line_buf, sizeof(line_buf), extra_conf) != NULL)
 				fputs(line_buf, pg_conf);
@@ -2745,7 +2751,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 					if (!port_specified_by_user)
 						fprintf(stderr, _("%s: could not determine an available port\n"), progname);
 					fprintf(stderr, _("Specify an unused port using the --port option or shut down any conflicting PostgreSQL servers.\n"));
-					exit_nicely(2);
+					exit(2);
 				}
 
 				fprintf(stderr, _("port %d apparently in use, trying %d\n"), port, port + 1);
@@ -2772,7 +2778,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{
 			fprintf(stderr, _("\n%s: could not spawn postmaster: %s\n"),
 					progname, strerror(errno));
-			exit_nicely(2);
+			exit(2);
 		}
 
 		/*
@@ -2796,7 +2802,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 #endif
 			{
 				fprintf(stderr, _("\n%s: postmaster failed\nExamine %s/log/postmaster.log for the reason\n"), progname, outputdir);
-				exit_nicely(2);
+				exit(2);
 			}
 
 			pg_usleep(1000000L);
@@ -2818,11 +2824,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 						progname, strerror(errno));
 #else
 			if (TerminateProcess(postmaster_pid, 255) == 0)
-				fprintf(stderr, _("\n%s: could not kill failed postmaster: %lu\n"),
+				fprintf(stderr, _("\n%s: could not kill failed postmaster: error code %lu\n"),
 						progname, GetLastError());
 #endif
 
-			exit_nicely(2);
+			exit(2);
 		}
 
 		postmaster_running = true;
@@ -2833,7 +2839,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 #else
 #define ULONGPID(x) (unsigned long) (x)
 #endif
-		printf(_("running on port %d with pid %lu\n"),
+		printf(_("running on port %d with PID %lu\n"),
 			   port, ULONGPID(postmaster_pid));
 	}
 	else
@@ -2951,7 +2957,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	}
 
 	if (fail_count != 0)
-		exit_nicely(1);
+		exit(1);
 
 	return 0;
 }

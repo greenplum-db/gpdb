@@ -71,7 +71,7 @@
  * care that all calls for a single LogicalTapeSet are made in the same
  * palloc context.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -413,7 +413,10 @@ LogicalTapeSet *LogicalTapeSetCreate(int ntapes, bool del_on_close)
 	char tmpprefix[MAXPGPATH];
 	int len = snprintf(tmpprefix, MAXPGPATH, "slice%d_sort",
 			currentSliceId);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
+
+	if (len >= MAXPGPATH)
+		elog(ERROR, "could not generate temporary file name");
+
 	StringInfo uniquename = ExecWorkFile_AddUniqueSuffix(tmpprefix);
 
 	LogicalTapeSet *lts = LogicalTapeSetCreate_Named(uniquename->data, ntapes, del_on_close);

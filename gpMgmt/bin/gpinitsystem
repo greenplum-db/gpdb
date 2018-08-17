@@ -236,7 +236,7 @@ CHK_PARAMS () {
 		    $TR -d '\r' < $CLUSTER_CONFIG > $TMP_FILE
 		    $MV $TMP_FILE $CLUSTER_CONFIG
 		    LOG_MSG "[INFO]:-Dumping $CLUSTER_CONFIG to logfile for reference"
-		    $CAT $CLUSTER_CONFIG|$GREP -v "^#" >> $LOG_FILE
+		    $CAT $CLUSTER_CONFIG|$GREP -v "^\s*\(#.*\)\?$" >> $LOG_FILE
 		    LOG_MSG "[INFO]:-Completed $CLUSTER_CONFIG dump to logfile"
 		    # Source the cluster configuration file
 		    LOG_MSG "[INFO]:-Reading Greenplum configuration file $CLUSTER_CONFIG" 1
@@ -1714,7 +1714,7 @@ READ_INPUT_CONFIG () {
     $TR -d '\r' < $INPUT_CONFIG > $TMP_FILE
     $MV $TMP_FILE $INPUT_CONFIG
     LOG_MSG "[INFO]:-Dumping $INPUT_CONFIG to logfile for reference"
-    $CAT $INPUT_CONFIG|$GREP -v "^#" >> $LOG_FILE
+    $CAT $INPUT_CONFIG|$GREP -v "^\s*\(#.*\)\?$" >> $LOG_FILE
     LOG_MSG "[INFO]:-Completed $INPUT_CONFIG dump to logfile"
     # Source the cluster configuration file
     LOG_MSG "[INFO]:-Reading Greenplum configuration file $INPUT_CONFIG"

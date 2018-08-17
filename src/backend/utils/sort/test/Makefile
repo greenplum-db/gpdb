@@ -1,4 +1,4 @@
-subdir=src/backend/utils/sort/test
+subdir=src/backend/utils/sort
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 

@@ -4,7 +4,7 @@
  * specparse.y
  *	  bison grammar for the isolation test file format
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *-------------------------------------------------------------------------
@@ -123,6 +123,7 @@ step:
 				$$ = malloc(sizeof(Step));
 				$$->name = $2;
 				$$->sql = $3;
+				$$->errormsg = NULL;
 			}
 		;
 

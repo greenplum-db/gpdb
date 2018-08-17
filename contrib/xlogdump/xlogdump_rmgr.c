@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "postgres.h"
+#include "access/bitmap.h"
 #include "access/clog.h"
 #include "access/gist_private.h"
 #include "access/htup.h"
@@ -58,8 +59,9 @@ const char * const RM_names[RM_MAX_ID+1] = {
 #else
 	"Reserved 16",
 #endif	/* PG_VERSION_NUM >=90200 */
-	"DistributedLog",			/* 17 */
-	"Appendonly"				/* 18 */
+	"Bitmap",					/* 17 */
+	"DistributedLog",			/* 18 */
+	"Appendonly"				/* 19 */
 };
 
 /* copy from utils/timestamp.h */
@@ -1425,6 +1427,89 @@ print_rmgr_seq(XLogRecPtr cur, XLogRecord *record, uint8 info)
 {
 	/* FIXME: need to be implemented. */
 	print_rmgr_record(cur, record, "seq");
+}
+
+
+void
+print_rmgr_bitmap(XLogRecPtr cur, XLogRecord *record, uint8 info)
+{
+	char buf[1024];
+	switch (info)
+	{
+		case XLOG_BITMAP_INSERT_NEWLOV:
+		{
+			xl_bm_newpage	*xlrec = (xl_bm_newpage *) XLogRecGetData(record);
+			snprintf(buf, sizeof(buf),
+				"bitmap new page: s/d/r:%u/%u/%u block:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode, xlrec->bm_new_blkno);
+			break;
+		}
+
+		case XLOG_BITMAP_INSERT_LOVITEM:
+		{
+			xl_bm_lovitem	*xlrec = (xl_bm_lovitem *) XLogRecGetData(record);
+			snprintf(buf, sizeof(buf),
+				"bitmap insert lov item: s/d/r:%u/%u/%u lov_block:%u, lov_off:%u, lov_isnew:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				xlrec->bm_lov_blkno, xlrec->bm_lov_offset, xlrec->bm_is_new_lov_blkno);
+			break;
+		}
+
+		case XLOG_BITMAP_INSERT_META:
+		{
+			xl_bm_metapage	*xlrec = (xl_bm_metapage *) XLogRecGetData(record);
+			snprintf(buf, sizeof(buf),
+				"bitmap insert meta: s/d/r:%u/%u/%u heap:%u, index:%u, last_lov:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				xlrec->bm_lov_heapId, xlrec->bm_lov_indexId, xlrec->bm_lov_lastpage);
+			break;
+		}
+
+		case XLOG_BITMAP_INSERT_BITMAP_LASTWORDS:
+		{
+			xl_bm_bitmap_lastwords *xlrec = (xl_bm_bitmap_lastwords *) XLogRecGetData(record);
+
+			snprintf(buf, sizeof(buf),
+				"bitmap insert last words: s/d/r:%u/%u/%u lov_block:%u, lov_off:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				xlrec->bm_lov_blkno, xlrec->bm_lov_offset);
+			break;
+		}
+
+		case XLOG_BITMAP_INSERT_WORDS:
+		{
+			xl_bm_bitmapwords *xlrec = (xl_bm_bitmapwords *) XLogRecGetData(record);
+
+			snprintf(buf, sizeof(buf),
+				"bitmap insert words: s/d/r:%u/%u/%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode);
+			break;
+		}
+
+		case XLOG_BITMAP_UPDATEWORD:
+		{
+			xl_bm_updateword *xlrec = (xl_bm_updateword *) XLogRecGetData(record);
+
+			snprintf(buf, sizeof(buf),
+				"bitmap update word: s/d/r:%u/%u/%u bm_block:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				xlrec->bm_blkno);
+			break;
+		}
+		case XLOG_BITMAP_UPDATEWORDS:
+		{
+			xl_bm_updatewords *xlrec = (xl_bm_updatewords *) XLogRecGetData(record);
+
+			snprintf(buf, sizeof(buf),
+				"bitmap update words: s/d/r:%u/%u/%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode);
+			break;
+		}
+		default:
+			snprintf(buf, sizeof(buf), "unknown bitmap ops:%u", info);
+	}
+
+	print_rmgr_record(cur, record, buf);
 }
 
 void

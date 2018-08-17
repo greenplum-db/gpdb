@@ -21,53 +21,18 @@
 #include "storage/gp_compress.h"
 #include "utils/guc.h"
 
-static void gp_trycompress_generic(uint8 *sourceData, int32 sourceLen,
-								   uint8 *compressedBuffer,
-								   int32 compressedBufferLen,
-								   int32 *compressedLen,
-								   PGFunction compressor,
-								   CompressionState *compressionState);
-
-static void gp_decompress_generic(uint8 *compressed, int32 compressedLen,
-								  uint8 *uncompressed, int32 uncompressedLen,
-								  PGFunction decompressor,
-								  CompressionState *compressionState,
-								  int64 bufferCount);
-
-
-int gp_trycompress_new(
-	 uint8		*sourceData,
-	 int32		sourceLen,
-	 uint8		*compressedBuffer,
-	 int32		compressedBufferWithOverrrunLen,
-	 int32		maxCompressedLen,	// The largest compressed result we would like to see.
-	 int32		*compressedLen,
-	 int		compressLevel,
-	 PGFunction     compressor,
-	 CompressionState *compressionState)
-{
-	Insist(PointerIsValid(compressor));
-
-	gp_trycompress_generic(sourceData, sourceLen, compressedBuffer,
-						   compressedBufferWithOverrrunLen, compressedLen,
-						   compressor, compressionState);
-
-	/* XXX: this interface is AWFUL! */
-	return Z_OK;
-}
-
-/*---------------------------------------------------------------------------*/
-static void
-gp_trycompress_generic( uint8			*sourceData
-						  , int32			 sourceLen
-						  , uint8			*compressedBuffer
-						  , int32			 compressedBufferLen
-						  , int32			*compressedLen
-						  , PGFunction		compressor
-						  , CompressionState *compressionState
-						  )
+/*
+ * Using the provided compression function this method will try to compress the data.
+ * In case an issue occur during the compression it will abort the execution.
+ */
+void
+gp_trycompress(uint8 *sourceData, int32 sourceLen, uint8 *compressedBuffer, int32 compressedBufferLen,
+			   int32 *compressedLen, PGFunction compressor, CompressionState *compressionState
+)
 
 {
+	Assert(PointerIsValid(compressor));
+	
 	callCompressionActuator( compressor
 						   , (const void *)sourceData
 						   , (size_t)sourceLen
@@ -111,14 +76,14 @@ static void gp_decompress_generic(
 }  /* end gp_decompress_generic */
 
 /*---------------------------------------------------------------------------*/
-void gp_decompress_new(
-			uint8			*compressed,
-			int32			compressedLen,
-			uint8			*uncompressed,
-			int32			uncompressedLen,
-			PGFunction     decompressor,
-			CompressionState *compressionState,
-			int64			bufferCount)
+void gp_decompress(
+		uint8 *compressed,
+		int32 compressedLen,
+		uint8 *uncompressed,
+		int32 uncompressedLen,
+		PGFunction decompressor,
+		CompressionState *compressionState,
+		int64 bufferCount)
 {
 	unsigned long uncompressedSize;
 

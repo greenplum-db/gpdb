@@ -70,6 +70,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
 
 INSERT INTO dml_heap_check_r VALUES(DEFAULT,DEFAULT,'rn',0);
 ERROR:  new row for relation "dml_heap_check_r" violates check constraint "rcheck_b"
+DETAIL:  Failing row contains (100, null, rn, 0).
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 
 -----+-----
@@ -84,6 +85,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
 
 INSERT INTO dml_heap_check_r VALUES(110,NULL,'rn',0);
 ERROR:  new row for relation "dml_heap_check_r" violates check constraint "rcheck_b"
+DETAIL:  Failing row contains (110, null, rn, 0).
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 
 -----+-----
@@ -106,6 +108,7 @@ DROP TABLE IF EXISTS tempoid;
 CREATE TABLE tempoid as SELECT oid,a FROM dml_heap_check_r DISTRIBUTED BY (a);
 UPDATE dml_heap_check_r set a = 110;
 ERROR:  new row for relation "dml_heap_check_r" violates check constraint "dml_heap_check_r_a_check"
+DETAIL:  Failing row contains (110, 1, r, 1).
 SELECT SUM(a) FROM dml_heap_check_r;
  sum 
 -----

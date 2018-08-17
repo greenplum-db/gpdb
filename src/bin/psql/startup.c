@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2012, PostgreSQL Global Development Group
  *
  * src/bin/psql/startup.c
  */
@@ -129,7 +129,7 @@ main(int argc, char *argv[])
 	pset.popt.topt.pager = 1;
 	pset.popt.topt.start_table = true;
 	pset.popt.topt.stop_table = true;
-	pset.popt.default_footer = true;
+	pset.popt.topt.default_footer = true;
 	/* We must get COLUMNS here before readline() sets it */
 	pset.popt.topt.env_columns = getenv("COLUMNS") ? atoi(getenv("COLUMNS")) : 0;
 
@@ -150,10 +150,18 @@ main(int argc, char *argv[])
 
 	parse_psql_options(argc, argv, &options);
 
-	if (!pset.popt.topt.fieldSep)
-		pset.popt.topt.fieldSep = pg_strdup(DEFAULT_FIELD_SEP);
-	if (!pset.popt.topt.recordSep)
-		pset.popt.topt.recordSep = pg_strdup(DEFAULT_RECORD_SEP);
+	if (!pset.popt.topt.fieldSep.separator &&
+		!pset.popt.topt.fieldSep.separator_zero)
+	{
+		pset.popt.topt.fieldSep.separator = pg_strdup(DEFAULT_FIELD_SEP);
+		pset.popt.topt.fieldSep.separator_zero = false;
+	}
+	if (!pset.popt.topt.recordSep.separator &&
+		!pset.popt.topt.recordSep.separator_zero)
+	{
+		pset.popt.topt.recordSep.separator = pg_strdup(DEFAULT_RECORD_SEP);
+		pset.popt.topt.recordSep.separator_zero = false;
+	}
 
 	if (options.username == NULL)
 		password_prompt = pg_strdup(_("Password: "));
@@ -256,7 +264,7 @@ main(int argc, char *argv[])
 		if (!options.no_psqlrc)
 			process_psqlrc(argv[0]);
 
-		successResult = process_file(options.action_string, options.single_txn);
+		successResult = process_file(options.action_string, options.single_txn, false);
 	}
 
 	/*
@@ -305,8 +313,6 @@ main(int argc, char *argv[])
 			printf(_("Type \"help\" for help.\n\n"));
 		if (!pset.notty)
 			initializeInput(options.no_readline ? 0 : 1);
-		if (options.action_string)		/* -f - was used */
-			pset.inputfile = "<stdin>";
 
 		successResult = MainLoop(stdin);
 	}
@@ -338,6 +344,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 		{"echo-hidden", no_argument, NULL, 'E'},
 		{"file", required_argument, NULL, 'f'},
 		{"field-separator", required_argument, NULL, 'F'},
+		{"field-separator-zero", no_argument, NULL, 'z'},
 		{"host", required_argument, NULL, 'h'},
 		{"html", no_argument, NULL, 'H'},
 		{"list", no_argument, NULL, 'l'},
@@ -349,6 +356,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 		{"pset", required_argument, NULL, 'P'},
 		{"quiet", no_argument, NULL, 'q'},
 		{"record-separator", required_argument, NULL, 'R'},
+		{"record-separator-zero", no_argument, NULL, '0'},
 		{"single-step", no_argument, NULL, 's'},
 		{"single-line", no_argument, NULL, 'S'},
 		{"tuples-only", no_argument, NULL, 't'},
@@ -372,7 +380,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 
 	memset(options, 0, sizeof *options);
 
-	while ((c = getopt_long(argc, argv, "aAc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxX?1",
+	while ((c = getopt_long(argc, argv, "aAc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxXz?01",
 							long_options, &optindex)) != -1)
 	{
 		switch (c)
@@ -407,7 +415,8 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 				options->action_string = optarg;
 				break;
 			case 'F':
-				pset.popt.topt.fieldSep = pg_strdup(optarg);
+				pset.popt.topt.fieldSep.separator = pg_strdup(optarg);
+				pset.popt.topt.fieldSep.separator_zero = false;
 				break;
 			case 'h':
 				options->host = optarg;
@@ -459,7 +468,8 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 				SetVariableBool(pset.vars, "QUIET");
 				break;
 			case 'R':
-				pset.popt.topt.recordSep = pg_strdup(optarg);
+				pset.popt.topt.recordSep.separator = pg_strdup(optarg);
+				pset.popt.topt.recordSep.separator_zero = false;
 				break;
 			case 's':
 				SetVariableBool(pset.vars, "SINGLESTEP");
@@ -521,6 +531,12 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 			case 'X':
 				options->no_psqlrc = true;
 				break;
+			case 'z':
+				pset.popt.topt.fieldSep.separator_zero = true;
+				break;
+			case '0':
+				pset.popt.topt.recordSep.separator_zero = true;
+				break;
 			case '1':
 				options->single_txn = true;
 				break;
@@ -575,6 +591,7 @@ process_psqlrc(char *argv0)
 	char		rc_file[MAXPGPATH];
 	char		my_exec_path[MAXPGPATH];
 	char		etc_path[MAXPGPATH];
+	char	   *envrc;
 
 	find_my_exec(argv0, my_exec_path);
 	get_etc_path(my_exec_path, etc_path);
@@ -582,7 +599,14 @@ process_psqlrc(char *argv0)
 	snprintf(rc_file, MAXPGPATH, "%s/%s", etc_path, SYSPSQLRC);
 	process_psqlrc_file(rc_file);
 
-	if (get_home_path(home))
+	envrc = getenv("PSQLRC");
+
+	if (envrc != NULL && strlen(envrc) > 0)
+	{
+		expand_tilde(&envrc);
+		process_psqlrc_file(envrc);
+	}
+	else if (get_home_path(home))
 	{
 		snprintf(rc_file, MAXPGPATH, "%s/%s", home, PSQLRC);
 		process_psqlrc_file(rc_file);
@@ -594,20 +618,28 @@ process_psqlrc(char *argv0)
 static void
 process_psqlrc_file(char *filename)
 {
-	char	   *psqlrc;
+	char	   *psqlrc_minor,
+			   *psqlrc_major;
 
 #if defined(WIN32) && (!defined(__MINGW32__))
 #define R_OK 4
 #endif
 
-	psqlrc = pg_malloc(strlen(filename) + 1 + strlen(PG_VERSION) + 1);
-	sprintf(psqlrc, "%s-%s", filename, PG_VERSION);
+	psqlrc_minor = pg_malloc(strlen(filename) + 1 + strlen(PG_VERSION) + 1);
+	sprintf(psqlrc_minor, "%s-%s", filename, PG_VERSION);
+	psqlrc_major = pg_malloc(strlen(filename) + 1 + strlen(PG_MAJORVERSION) + 1);
+	sprintf(psqlrc_major, "%s-%s", filename, PG_MAJORVERSION);
 
-	if (access(psqlrc, R_OK) == 0)
-		(void) process_file(psqlrc, false);
+	/* check for minor version first, then major, then no version */
+	if (access(psqlrc_minor, R_OK) == 0)
+		(void) process_file(psqlrc_minor, false, false);
+	else if (access(psqlrc_major, R_OK) == 0)
+		(void) process_file(psqlrc_major, false, false);
 	else if (access(filename, R_OK) == 0)
-		(void) process_file(filename, false);
-	free(psqlrc);
+		(void) process_file(filename, false, false);
+
+	free(psqlrc_minor);
+	free(psqlrc_major);
 }
 
 
@@ -620,10 +652,6 @@ static void
 showVersion(void)
 {
 	puts("psql (PostgreSQL) " PG_VERSION);
-
-#if defined(USE_READLINE)
-	puts(_("contains support for command-line editing"));
-#endif
 }
 
 

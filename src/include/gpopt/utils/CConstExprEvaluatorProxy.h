@@ -57,10 +57,10 @@ namespace gpdxl
 					explicit
 					CEmptyMappingColIdVar
 						(
-						IMemoryPool *pmp
+						IMemoryPool *mp
 						)
 						:
-						CMappingColIdVar(pmp)
+						CMappingColIdVar(mp)
 					{
 					}
 
@@ -70,34 +70,34 @@ namespace gpdxl
 					}
 
 					virtual
-					Var *PvarFromDXLNodeScId(const CDXLScalarIdent *pdxlop);
+					Var *VarFromDXLNodeScId(const CDXLScalarIdent *scalar_ident);
 
 			};
 
 			// memory pool, not owned
-			IMemoryPool *m_pmp;
+			IMemoryPool *m_mp;
 
 			// empty mapping needed for the translator
 			CEmptyMappingColIdVar m_emptymapcidvar;
 
 			// pointer to metadata cache accessor
-			CMDAccessor *m_pmda;
+			CMDAccessor *m_md_accessor;
 
 			// translator for the DXL input -> GPDB Expr
-			CTranslatorDXLToScalar m_trdxl2scalar;
+			CTranslatorDXLToScalar m_dxl2scalar_translator;
 
 		public:
 			// ctor
 			CConstExprEvaluatorProxy
 				(
-				IMemoryPool *pmp,
-				CMDAccessor *pmda
+				IMemoryPool *mp,
+				CMDAccessor *md_accessor
 				)
 				:
-				m_pmp(pmp),
-				m_emptymapcidvar(m_pmp),
-				m_pmda(pmda),
-				m_trdxl2scalar(m_pmp, m_pmda, 0)
+				m_mp(mp),
+				m_emptymapcidvar(m_mp),
+				m_md_accessor(md_accessor),
+				m_dxl2scalar_translator(m_mp, m_md_accessor, 0)
 			{
 			}
 
@@ -109,9 +109,9 @@ namespace gpdxl
 
 			// evaluate given constant expressionand return the DXL representation of the result.
 			// if the expression has variables, an error is thrown.
-			// caller keeps ownership of 'pdxlnExpr' and takes ownership of the returned pointer
+			// caller keeps ownership of 'expr_dxlnode' and takes ownership of the returned pointer
 			virtual
-			CDXLNode *PdxlnEvaluateExpr(const CDXLNode *pdxlnExpr);
+			CDXLNode *EvaluateExpr(const CDXLNode *expr);
 
 			// returns true iff the evaluator can evaluate constant expressions without subqueries
 			virtual

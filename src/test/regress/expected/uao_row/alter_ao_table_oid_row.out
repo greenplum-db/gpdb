@@ -6,11 +6,11 @@ create table sto_alt_uao2_oid (i int, j char(10)) with
 (appendonly=true, oids=true) DISTRIBUTED RANDOMLY;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 \d+ sto_alt_uao2_oid
- Append-Only Table "alter_ao_table_oid_row.sto_alt_uao2_oid"
- Column |     Type      | Modifiers | Storage  | Description 
---------+---------------+-----------+----------+-------------
- i      | integer       |           | plain    | 
- j      | character(10) |           | extended | 
+        Append-Only Table "alter_ao_table_oid_row.sto_alt_uao2_oid"
+ Column |     Type      | Modifiers | Storage  | Stats target | Description 
+--------+---------------+-----------+----------+--------------+-------------
+ i      | integer       |           | plain    |              | 
+ j      | character(10) |           | extended |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768
@@ -66,11 +66,11 @@ SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
 (1 row)
 
 \d+ sto_alt_uao2_oid
- Append-Only Table "alter_ao_table_oid_row.sto_alt_uao2_oid"
- Column |     Type      | Modifiers | Storage  | Description 
---------+---------------+-----------+----------+-------------
- i      | integer       |           | plain    | 
- j      | character(10) |           | extended | 
+        Append-Only Table "alter_ao_table_oid_row.sto_alt_uao2_oid"
+ Column |     Type      | Modifiers | Storage  | Stats target | Description 
+--------+---------------+-----------+----------+--------------+-------------
+ i      | integer       |           | plain    |              | 
+ j      | character(10) |           | extended |              | 
 Compression Type: None
 Compression Level: 0
 Block Size: 32768

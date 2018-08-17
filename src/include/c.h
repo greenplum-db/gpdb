@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2006-2011, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/c.h
@@ -64,7 +64,7 @@ extern "C" {
 #endif
 #include "postgres_ext.h"
 
-#if _MSC_VER >= 1400 || defined(WIN64)
+#if _MSC_VER >= 1400 || defined(HAVE_CRTDEFS_H)
 #define errcode __msvc_errcode
 #include <crtdefs.h>
 #undef errcode
@@ -86,9 +86,6 @@ extern "C" {
 #include <errno.h>
 #if defined(WIN32) || defined(__CYGWIN__)
 #include <fcntl.h>				/* ensure O_BINARY is available */
-#endif
-#ifdef HAVE_SUPPORTDEFS_H
-#include <SupportDefs.h>
 #endif
 
 #if defined(WIN32) || defined(__CYGWIN__)
@@ -523,7 +520,7 @@ typedef NameData *Name;
  * PointerIsValid
  *		True iff pointer is valid.
  */
-#define PointerIsValid(pointer) ((void*)(pointer) != NULL)
+#define PointerIsValid(pointer) ((const void*)(pointer) != NULL)
 
 /*
  * PointerIsAligned

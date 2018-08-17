@@ -1338,7 +1338,7 @@ insert into qp_misc_jiras.tbl7404_t1 select ('foo'|| i::text) from generate_seri
 insert into qp_misc_jiras.tbl7404_t2 select x from qp_misc_jiras.tbl7404_t1;
 
 --Setting to modify system catalog
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 
 --
 -- Case 1: make t1 and t2 appear really big

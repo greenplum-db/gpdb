@@ -3,7 +3,7 @@
  * tsgistidx.c
  *	  GiST support functions for tsvector_ops
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -16,9 +16,7 @@
 
 #include "access/gist.h"
 #include "access/tuptoaster.h"
-#include "tsearch/ts_type.h"
 #include "tsearch/ts_utils.h"
-#include "utils/pg_crc.h"
 
 
 #define SIGLENINT  31			/* >121 => key will toast, so it will not work
@@ -133,8 +131,8 @@ gtsvectorout(PG_FUNCTION_ARGS)
 static int
 compareint(const void *va, const void *vb)
 {
-	int4		a = *((int4 *) va);
-	int4		b = *((int4 *) vb);
+	int4		a = *((const int4 *) va);
+	int4		b = *((const int4 *) vb);
 
 	if (a == b)
 		return 0;
@@ -595,8 +593,8 @@ typedef struct
 static int
 comparecost(const void *va, const void *vb)
 {
-	SPLITCOST  *a = (SPLITCOST *) va;
-	SPLITCOST  *b = (SPLITCOST *) vb;
+	const SPLITCOST *a = (const SPLITCOST *) va;
+	const SPLITCOST *b = (const SPLITCOST *) vb;
 
 	if (a->cost == b->cost)
 		return 0;

@@ -75,8 +75,14 @@ if 'relid' in TD:
 skeys = list(TD.keys())
 skeys.sort()
 for key in skeys:
-	val = TD[key]
-	plpy.notice("TD[" + key + "] => " + str(val))
+    val = TD[key]
+    if not isinstance(val, dict):
+        plpy.notice("TD[" + key + "] => " + str(val))
+    else:
+        # print dicts the hard way because otherwise the order is implementation-dependent
+        valkeys = list(val.keys())
+        valkeys.sort()
+        plpy.notice("TD[" + key + "] => " + '{' + ', '.join([repr(k) + ': ' + repr(val[k]) for k in valkeys]) + '}')
 
 return None
 
@@ -350,3 +356,39 @@ CREATE TRIGGER composite_trigger BEFORE INSERT ON composite_trigger_test
 
 INSERT INTO composite_trigger_test VALUES (NULL, NULL);
 SELECT * FROM composite_trigger_test;
+
+
+-- triggers with composite type columns (bug #6559)
+
+CREATE TABLE composite_trigger_noop_test (f1 comp1, f2 comp2);
+
+CREATE FUNCTION composite_trigger_noop_f() RETURNS trigger AS $$
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+
+CREATE TRIGGER composite_trigger_noop BEFORE INSERT ON composite_trigger_noop_test
+  FOR EACH ROW EXECUTE PROCEDURE composite_trigger_noop_f();
+
+INSERT INTO composite_trigger_noop_test VALUES (NULL, NULL);
+INSERT INTO composite_trigger_noop_test VALUES (ROW(1, 'f'), NULL);
+INSERT INTO composite_trigger_noop_test VALUES (ROW(NULL, 't'), ROW(1, 'f'));
+SELECT * FROM composite_trigger_noop_test;
+
+
+-- nested composite types
+
+CREATE TYPE comp3 AS (c1 comp1, c2 comp2, m integer);
+
+CREATE TABLE composite_trigger_nested_test(c comp3);
+
+CREATE FUNCTION composite_trigger_nested_f() RETURNS trigger AS $$
+    return 'MODIFY'
+$$ LANGUAGE plpythonu;
+
+CREATE TRIGGER composite_trigger_nested BEFORE INSERT ON composite_trigger_nested_test
+  FOR EACH ROW EXECUTE PROCEDURE composite_trigger_nested_f();
+
+INSERT INTO composite_trigger_nested_test VALUES (NULL);
+INSERT INTO composite_trigger_nested_test VALUES (ROW(ROW(1, 'f'), NULL, 3));
+INSERT INTO composite_trigger_nested_test VALUES (ROW(ROW(NULL, 't'), ROW(1, 'f'), NULL));
+SELECT * FROM composite_trigger_nested_test;

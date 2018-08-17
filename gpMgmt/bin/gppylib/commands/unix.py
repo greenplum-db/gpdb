@@ -526,23 +526,6 @@ class MakeDirectory(Command):
         mkdirCmd.run(validateAfter=True)
 
 
-# -------------mv------------------
-class MoveDirectory(Command):
-    def __init__(self, name, srcDirectory, dstDirectory, ctxt=LOCAL, remoteHost=None):
-        self.srcDirectory = srcDirectory
-        self.dstDirectory = dstDirectory
-        cmdStr = "%s -f %s %s" % (findCmdInPath('mv'), srcDirectory, dstDirectory)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-        # -------------append------------------
-
-
-class AppendTextToFile(Command):
-    def __init__(self, name, file, text, ctxt=LOCAL, remoteHost=None):
-        cmdStr = "echo '%s' >> %s" % (text, file)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-
 # -------------inline perl replace------
 class InlinePerlReplace(Command):
     def __init__(self, name, fromStr, toStr, file, ctxt=LOCAL, remoteHost=None):
@@ -644,25 +627,6 @@ class RemoveGlob(Command):
         rm_cmd.run(validateAfter=True)
 
 
-# -------------file and dir existence -------------
-class PathIsDirectory(Command):
-    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-
-        cmdStr = """python -c "import os; print os.path.isdir('%s')" """ % directory
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, remote_host, directory):
-        cmd = PathIsDirectory(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-        return cmd.isDir()
-
-    def isDir(self):
-        return bool(self.results.stdout.strip())
-
-
-# --------------------------
 
 
 class FileDirExists(Command):
@@ -725,16 +689,6 @@ def canonicalize(addr):
     if ':' not in addr: return addr
     if '[' in addr: return addr
     return '[' + addr + ']'
-
-
-class RemoteCopy(Command):
-    def __init__(self, name, srcDirectory, dstHost, dstDirectory, ctxt=LOCAL, remoteHost=None):
-        self.srcDirectory = srcDirectory
-        self.dstHost = dstHost
-        self.dstDirectory = dstDirectory
-        cmdStr = "%s -o 'StrictHostKeyChecking no' -r %s %s:%s" % (
-            findCmdInPath('scp'), srcDirectory, canonicalize(dstHost), dstDirectory)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
 class Scp(Command):
@@ -819,54 +773,6 @@ class Kill(Command):
         cmd = Kill(name, pid, signal, ctxt=REMOTE, remoteHost=remote_host)
         cmd.run(validateAfter=True)
 
-        # --------------kill children--------------
-
-
-class KillChildren(Command):
-    def __init__(self, name, pid, signal, ctxt=LOCAL, remoteHost=None):
-        self.pid = pid
-        self.signal = signal
-        cmdStr = "%s -%s -P %s" % (findCmdInPath('pkill'), signal, pid)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name, pid, signal):
-        cmd = KillChildren(name, pid, signal)
-        cmd.run(validateAfter=True)
-
-    @staticmethod
-    def remote(name, pid, signal, remote_host):
-        cmd = KillChildren(name, pid, signal, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-
-        # --------------pkill----------------------
-
-
-class Pkill(Command):
-    def __init__(self, name, processname, signal=signal.SIGTERM, ctxt=LOCAL, remoteHost=None):
-        cmdStr = "%s -%s %s" % (findCmdInPath('pkill'), signal, processname)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-
-# --------------sadc-----------------------
-class Sadc(Command):
-    def __init__(self, name, outfilename, interval=5, background=False, ctxt=LOCAL, remoteHost=None):
-        cmdStr = SYSTEM.getSadcCmd(interval, outfilename)
-        if background:
-            cmdStr = "rm " + outfilename + "; nohup " + cmdStr + " < /dev/null > /dev/null 2>&1 &"
-
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name, outfilename, interval, background):
-        cmd = Sadc(name, outfilename, interval, background)
-        cmd.run(validateAfter=True)
-
-    @staticmethod
-    def remote(name, outfilename, interval, background, remote_host):
-        cmd = Sadc(name, outfilename, interval, background, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-
         # --------------hostname ----------------------
 
 
@@ -903,23 +809,6 @@ class InterfaceAddrs(Command):
         cmd = InterfaceAddrs(name, ctxt=REMOTE, remoteHost=remoteHost)
         cmd.run(validateAfter=True)
         return cmd.get_results().stdout.split()
-
-
-class FileContainsTerm(Command):
-    def __init__(self, name, search_term, file, ctxt=LOCAL, remoteHost=None):
-        self.search_term = search_term
-        self.file = file
-        cmdStr = "%s -c %s %s" % (findCmdInPath('grep'), search_term, file)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    def contains_term(self):
-        if not self.results:
-            raise Exception, 'Command not yet executed'
-        count = int(self.results.stdout.strip())
-        if count == 0:
-            return False
-        else:
-            return True
 
 
 # --------------tcp port is active -----------------------

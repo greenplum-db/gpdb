@@ -117,6 +117,9 @@ groups:
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
+{% if "centos6" in os_types or "centos7" in os_types%}
+  - madlib_build_gppkg
+{% endif %}
 {% if "centos6" in os_types %}
   - MADlib_Test_orca_centos6
   - MADlib_Test_planner_centos6
@@ -287,6 +290,9 @@ groups:
 - name: AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
+{% if "centos6" in os_types or "centos7" in os_types%}
+  - madlib_build_gppkg
+{% endif %}
 {% if "centos6" in os_types %}
   - MADlib_Test_orca_centos6
   - MADlib_Test_planner_centos6
@@ -641,6 +647,13 @@ resources:
 
 {% endif %}
 {% if "AA" in test_sections %}
+- name: madlib_src
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/apache/madlib.git
+    tag_filter: rel/*
+
 - name: madlib_ci
   type: git
   source:
@@ -652,11 +665,46 @@ resources:
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
-    bucket: {{madlib-gppkg-bucket}}
-    region_name: {{aws-region}}
+    bucket: {{madlib-bucket-name}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: {{madlib-gpdb6-centos6-gppkg}}
+    versioned_file:  {{madlib-gppkg-versioned-file}}
+    region_name: {{madlib-s3-region}}
 
+- name: cmake_tar
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-cmake-versioned-file}}
+
+- name: pyxb
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-pyxb-versioned-file}}
+
+- name: eigen
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-eigen-versioned-file}}
+
+- name: boost
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{madlib-s3-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-boost-versioned-file}}
 {% endif %}
 
 - name: reduced-frequency-trigger
@@ -2276,19 +2324,53 @@ jobs:
       - compile_gpdb_centos7
 {% endif %}
 
-{% if "centos6" in os_types %}
-- name: MADlib_Test_planner_centos6
+{% if "centos6" in os_types or "centos7" in os_types%}
+- name: madlib_build_gppkg
   plan:
   - aggregate:
+    - get: madlib_src
     - get: madlib_ci
+    - get: cmake_tar
+    - get: pyxb
+    - get: eigen
+    - get: boost
     - get: gpdb_src
       passed: [gate_advanced_analytics_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
       passed: [gate_advanced_analytics_start]
+    - get: bin_gpdb_centos7
+      passed: [gate_advanced_analytics_start]
+    - get: centos-gpdb-dev-6
+  - task: build_madlib_gppkg_from_source
+    file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos6
+      DB_TYPE: gpdb6
+      CMAKE_BUILD_TYPE: Release
+      GCC_VERSION: "gcc4"
+  - aggregate:
+    - put: madlib_gppkg
+      params:
+        file: madlib_master_artifacts/madlib-*.gppkg
+{% endif %}
+
+{% if "centos6" in os_types %}
+- name: MADlib_Test_planner_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: gpdb_src
+      passed: [madlib_build_gppkg]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [madlib_build_gppkg]
     - get: centos-gpdb-dev-6
     - get: madlib_gppkg
+      passed: [madlib_build_gppkg]
+      trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: centos-gpdb-dev-6
@@ -2302,13 +2384,14 @@ jobs:
   - aggregate:
     - get: madlib_ci
     - get: gpdb_src
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      trigger: [[ test_trigger ]]
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: centos-gpdb-dev-6
     - get: madlib_gppkg
+      passed: [madlib_build_gppkg]
+      trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: centos-gpdb-dev-6
@@ -2324,13 +2407,14 @@ jobs:
   - aggregate:
     - get: madlib_ci
     - get: gpdb_src
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
-      trigger: [[ test_trigger ]]
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: centos-gpdb-test-7
     - get: madlib_gppkg
+      passed: [madlib_build_gppkg]
+      trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: centos-gpdb-test-7
@@ -2344,13 +2428,14 @@ jobs:
   - aggregate:
     - get: madlib_ci
     - get: gpdb_src
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
-      trigger: [[ test_trigger ]]
-      passed: [gate_advanced_analytics_start]
+      passed: [madlib_build_gppkg]
     - get: centos-gpdb-test-7
     - get: madlib_gppkg
+      passed: [madlib_build_gppkg]
+      trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: centos-gpdb-test-7
@@ -2410,6 +2495,7 @@ jobs:
                     CLI_gpexpand_suites %}
       - [[ test_name ]]
 {% endfor %}
+      - madlib_build_gppkg
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
       - MADlib_Test_orca_centos7

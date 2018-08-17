@@ -50,18 +50,61 @@ PostgreSQL documentation
 
   <para>
    The backup is made over a regular <productname>PostgreSQL</productname>
-   connection, and uses the replication protocol. The connection must be
-   made with a user having <literal>REPLICATION</literal> permissions (see
-   <xref linkend="role-attributes">), and the user must be granted explicit
-   permissions in <filename>pg_hba.conf</filename>. The server must also
-   be configured with <xref linkend="guc-max-wal-senders"> set high enough
-   to leave at least one session available for the backup.
+   connection, and uses the replication protocol. The connection must be made
+   with a superuser or a user having <literal>REPLICATION</literal>
+   permissions (see <xref linkend="role-attributes">),
+   and <filename>pg_hba.conf</filename> must explicitly permit the replication
+   connection. The server must also be configured
+   with <xref linkend="guc-max-wal-senders"> set high enough to leave at least
+   one session available for the backup.
   </para>
 
   <para>
    There can be multiple <command>pg_basebackup</command>s running at the same time, but it is
    better from a performance point of view to take only one backup, and copy
    the result.
+  </para>
+
+  <para>
+   <application>pg_basebackup</application> can make a base backup from
+   not only the master but also the standby. To take a backup from the standby,
+   set up the standby so that it can accept replication connections (that is, set
+   <varname>max_wal_senders</> and <xref linkend="guc-hot-standby">,
+   and configure <link linkend="auth-pg-hba-conf">host-based authentication</link>).
+   You will also need to enable <xref linkend="guc-full-page-writes"> on the master.
+  </para>
+
+  <para>
+   Note that there are some limitations in an online backup from the standby:
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      The backup history file is not created in the database cluster backed up.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      There is no guarantee that all WAL files required for the backup are archived
+      at the end of backup. If you are planning to use the backup for an archive
+      recovery and want to ensure that all required files are available at that moment,
+      you need to include them into the backup by using <literal>-x</> option.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      If the standby is promoted to the master during online backup, the backup fails.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      All WAL records required for the backup must contain sufficient full-page writes,
+      which requires you to enable <varname>full_page_writes</> on the master and
+      not to use the tool like <application>pg_compresslog</> as
+      <varname>archive_command</> to remove full-page writes from WAL files.
+     </para>
+    </listitem>
+   </itemizedlist>
   </para>
  </refsect1>
 
@@ -86,7 +129,7 @@ PostgreSQL documentation
         <literal>stdout</literal>.
        </para>
        <para>
-        This parameter is required.
+        This option is required.
        </para>
       </listitem>
      </varlistentry>
@@ -138,6 +181,57 @@ PostgreSQL documentation
            </para>
            </listitem>
          </varlistentry>
+        </variablelist></para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-X <replaceable class="parameter">method</replaceable></option></term>
+      <term><option>--xlog-method=<replaceable class="parameter">method</replaceable></option></term>
+      <listitem>
+       <para>
+        Includes the required transaction log files (WAL files) in the
+        backup. This will include all transaction logs generated during
+        the backup. If this option is specified, it is possible to start
+        a postmaster directly in the extracted directory without the need
+        to consult the log archive, thus making this a completely standalone
+        backup.
+       </para>
+       <para>
+        The following methods for collecting the transaction logs are
+        supported:
+
+        <variablelist>
+         <varlistentry>
+          <term><literal>f</literal></term>
+          <term><literal>fetch</literal></term>
+          <listitem>
+           <para>
+            The transaction log files are collected at the end of the backup.
+            Therefore, it is necessary for the
+            <xref linkend="guc-wal-keep-segments"> parameter to be set high
+             enough that the log is not removed before the end of the backup.
+             If the log has been rotated when it's time to transfer it, the
+             backup will fail and be unusable.
+           </para>
+          </listitem>
+         </varlistentry>
+
+         <varlistentry>
+          <term><literal>s</literal></term>
+          <term><literal>stream</literal></term>
+          <listitem>
+           <para>
+            Stream the transaction log while the backup is created. This will
+            open a second connection to the server and start streaming the
+            transaction log in parallel while running the backup. Therefore,
+            it will use up two slots configured by the
+            <xref linkend="guc-max-wal-senders"> parameter. As long as the
+             client can keep up with transaction log received, using this mode
+             requires no extra transaction logs to be saved on the master.
+           </para>
+          </listitem>
+         </varlistentry>
         </variablelist>
        </para>
       </listitem>
@@ -148,23 +242,9 @@ PostgreSQL documentation
       <term><option>--xlog</option></term>
       <listitem>
        <para>
-        Includes the required transaction log files (WAL files) in the
-        backup. This will include all transaction logs generated during
-        the backup. If this option is specified, it is possible to start
-        a postmaster directly in the extracted directory without the need
-        to consult the log archive, thus making this a completely standalone
-        backup.
+        Using this option is equivalent of using <literal>-X</literal> with
+        method <literal>fetch</literal>.
        </para>
-       <note>
-        <para>
-         The transaction log files are collected at the end of the backup.
-         Therefore, it is necessary for the
-         <xref linkend="guc-wal-keep-segments"> parameter to be set high
-         enough that the log is not removed before the end of the backup.
-         If the log has been rotated when it's time to transfer it, the
-         backup will fail and be unusable.
-        </para>
-       </note>
       </listitem>
      </varlistentry>
 
@@ -215,7 +295,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Sets the label for the backup. If none is specified, a default value of
-        <literal>pg_basebackup base backup</literal> will be used.
+        <quote><literal>pg_basebackup base backup</literal></quote> will be used.
        </para>
       </listitem>
      </varlistentry>
@@ -230,8 +310,8 @@ PostgreSQL documentation
         the backup, this is only an approximation and may not end at exactly
         <literal>100%</literal>. In particular, when WAL log is included in the
         backup, the total amount of data cannot be estimated in advance, and
-        in this case the progress report will only count towards the total
-        amount of data without WAL.
+        in this case the estimated target size will increase once it passes the
+        total estimate without WAL.
        </para>
        <para>
         When this is enabled, the backup will start by enumerating the size of
@@ -261,6 +341,20 @@ PostgreSQL documentation
     The following command-line options control the database connection parameters.
 
     <variablelist>
+     <varlistentry>
+      <term><option>-s <replaceable class="parameter">interval</replaceable></option></term>
+      <term><option>--statusint=<replaceable class="parameter">interval</replaceable></option></term>
+      <listitem>
+       <para>
+        Specifies the number of seconds between status packets sent back to the
+        server. This is required when streaming the transaction log (using
+        <literal>--xlog=stream</literal>) if replication timeout is configured
+        on the server, and allows for easier monitoring. A value of zero disables
+        the status updates completely. The default value is 10 seconds.
+       </para>
+      </listitem>
+     </varlistentry>
+
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></option></term>
       <term><option>--host=<replaceable class="parameter">host</replaceable></option></term>
@@ -324,7 +418,7 @@ PostgreSQL documentation
 
        <para>
         This option is never essential, since
-        <application>pg_bsaebackup</application> will automatically prompt
+        <application>pg_basebackup</application> will automatically prompt
         for a password if the server demands password authentication.
         However, <application>pg_basebackup</application> will waste a
         connection attempt finding out that the server wants a password.
@@ -337,7 +431,7 @@ PostgreSQL documentation
    </para>
 
    <para>
-    Other, less commonly used, parameters are also available:
+    Other, less commonly used, options are also available:
 
     <variablelist>
      <varlistentry>

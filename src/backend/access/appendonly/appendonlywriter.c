@@ -72,7 +72,7 @@ AppendOnlyWriterShmemSize(void)
 {
 	Size		size;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* The hash of append only relations */
 	size = hash_estimate_size((Size) MaxAppendOnlyTables,
@@ -98,7 +98,7 @@ InitAppendOnlyWriter(void)
 	bool		found;
 	bool		ok;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* Create the writer structure. */
 	AppendOnlyWriter = (AppendOnlyWriterData *)
@@ -136,7 +136,7 @@ AOHashTableInit(void)
 	HASHCTL		info;
 	int			hash_flags;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -181,7 +181,7 @@ AORelCreateHashEntry(Oid relid)
 	Relation	aorel;
 	bool	   *awaiting_drop = NULL;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/*
 	 * Momentarily release the AOSegFileLock so we can safely access the
@@ -250,7 +250,7 @@ AORelCreateHashEntry(Oid relid)
 	}
 
 
-	Insist(aoHashEntry->relid == relid);
+	Assert(aoHashEntry->relid == relid);
 	aoHashEntry->txns_using_rel = 0;
 
 	/*
@@ -341,7 +341,7 @@ AORelRemoveHashEntry(Oid relid)
 	bool		found;
 	void	   *aoentry;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	aoentry = hash_search(AppendOnlyHash,
 						  (void *) &relid,
@@ -372,7 +372,7 @@ AORelLookupHashEntry(Oid relid)
 	bool		found;
 	AORelHashEntryData *aoentry;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	aoentry = (AORelHashEntryData *) hash_search(AppendOnlyHash,
 												 (void *) &relid,
@@ -459,7 +459,7 @@ AppendOnlyRelHashNew(Oid relid, bool *exists)
 {
 	AORelHashEntryData *aorelentry = NULL;
 
-	Insist(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/*
 	 * We do not want to exceed the max number of allowed entries since we
@@ -516,7 +516,11 @@ AppendOnlyRelHashNew(Oid relid, bool *exists)
 																	HASH_ENTER_NULL,
 																	exists);
 
-					Insist(aorelentry);
+					if (aorelentry == NULL)
+						ereport(ERROR,
+								(errmsg("cannot create new hash entry for AO relid = %d",
+										relid)));
+
 					return (AORelHashEntry) aorelentry;
 				}
 
@@ -976,7 +980,7 @@ SetSegnoForCompactionInsert(Relation rel,
 							List *insertedSegmentFileList)
 {
 	int			i,
-				usesegno = -1;
+				usesegno = RESERVED_SEGNO;
 	bool		segno_chosen = false;
 	AORelHashEntryData *aoentry = NULL;
 	TransactionId CurrentXid = GetTopTransactionId();
@@ -1005,7 +1009,6 @@ SetSegnoForCompactionInsert(Relation rel,
 					  RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 	min_tupcount = INT64_MAX;
-	usesegno = 0;
 
 	/*
 	 * Never use segno 0 for inserts (unless in utility mode)
@@ -1053,7 +1056,6 @@ SetSegnoForCompactionInsert(Relation rel,
 							   RelationGetRelationName(rel), RelationGetRelid(rel))));
 	}
 
-	Insist(usesegno != RESERVED_SEGNO);
 
 	/* mark this segno as in use */
 	aoentry->relsegfiles[usesegno].state = INSERT_USE;
@@ -1111,7 +1113,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 {
 	/* these vars are used in GP_ROLE_DISPATCH only */
 	int			i,
-				usesegno = -1;
+				usesegno = RESERVED_SEGNO;
 	bool		segno_chosen = false;
 	AORelHashEntryData *aoentry = NULL;
 	TransactionId CurrentXid = GetTopTransactionId();
@@ -1212,8 +1214,6 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 									   "inserting into relation %s (%d).",
 									   RelationGetRelationName(rel), RelationGetRelid(rel))));
 			}
-
-			Insist(usesegno != RESERVED_SEGNO);
 
 			/* mark this segno as in use */
 			aoentry->relsegfiles[usesegno].state = INSERT_USE;

@@ -20,9 +20,9 @@ CREATE
 
 -- After a 'q' command the client connection is disconnected but the
 -- QD may still be alive, if we then query pg_stat_activity quick enough
--- we might still see this session with current_query '<IDLE>'.
+-- we might still see this session with query '<IDLE>'.
 -- A filter is put to filter out this kind of quitted sessions.
-CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, current_query FROM pg_stat_activity WHERE rsgname in ('rg1_memory_test', 'rg2_memory_test') AND current_query <> '<IDLE>' ORDER BY sess_id;
+CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, state, query FROM pg_stat_activity WHERE rsgname in ('rg1_memory_test', 'rg2_memory_test') AND query <> '<IDLE>' ORDER BY sess_id;
 CREATE
 
 CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
@@ -156,12 +156,12 @@ groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_
 rg1_memory_test|40          |40                   |70                 |70                          
 (1 row)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|resgroup      |active             |BEGIN;
 (4 rows)
 
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 40;
@@ -178,12 +178,12 @@ groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_
 rg1_memory_test|40          |40                   |40                 |40                          
 (1 row)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
 (4 rows)
 
 1q: ... <quitting>
@@ -417,12 +417,12 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (4 rows)
 
 11q: ... <quitting>
@@ -438,10 +438,10 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (2 rows)
 
 -- now rg2 shall be able to get 10% free quota from sys
@@ -458,11 +458,11 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 13q: ... <quitting>
@@ -543,13 +543,13 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|resgroup      |active             |BEGIN;
 (5 rows)
 
 11: END;
@@ -564,12 +564,12 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|resgroup      |active             |BEGIN;
 (4 rows)
 
 12: END;
@@ -588,11 +588,11 @@ rg1_memory_test|15          |15                   |0                  |0
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (3 rows)
 
 13q: ... <quitting>
@@ -673,13 +673,13 @@ rg1_memory_test|20          |20                   |60                 |60
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|resgroup      |active             |BEGIN;
 (5 rows)
 
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 30;
@@ -699,13 +699,13 @@ rg1_memory_test|20          |20                   |30                 |30
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg1_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (5 rows)
 
 11q: ... <quitting>
@@ -797,13 +797,13 @@ rg1_memory_test|20          |20                   |90                 |90
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query                                 
+---------------+--------------+-------------------+--------------------------------------
+rg1_memory_test|              |idle in transaction|SELECT hold_memory_by_percent(1,0.90);
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|resgroup      |active             |BEGIN;                                
 (5 rows)
 
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 30;
@@ -817,13 +817,13 @@ rg1_memory_test|20          |20                   |30                 |30
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg1_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|resgroup      |BEGIN;               
+rsgname        |waiting_reason|state              |query                                 
+---------------+--------------+-------------------+--------------------------------------
+rg1_memory_test|              |idle in transaction|SELECT hold_memory_by_percent(1,0.90);
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|              |idle in transaction|BEGIN;                                
+rg2_memory_test|resgroup      |active             |BEGIN;                                
 (5 rows)
 
 11q: ... <quitting>
@@ -841,12 +841,12 @@ rg1_memory_test|20          |20                   |30                 |30
 rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
-rsgname        |waiting_reason|current_query        
----------------+--------------+---------------------
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
-rg2_memory_test|              |<IDLE> in transaction
+rsgname        |waiting_reason|state              |query 
+---------------+--------------+-------------------+------
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
+rg2_memory_test|              |idle in transaction|BEGIN;
 (4 rows)
 
 21q: ... <quitting>

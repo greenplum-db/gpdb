@@ -10,6 +10,8 @@ COMMENT ON TABLE tmp_wrong IS 'table comment';
 COMMENT ON TABLE tmp IS 'table comment';
 COMMENT ON TABLE tmp IS NULL;
 
+ALTER TABLE tmp ADD COLUMN xmin integer; -- fails
+
 ALTER TABLE tmp ADD COLUMN a int4 default 3;
 
 ALTER TABLE tmp ADD COLUMN b name;
@@ -166,6 +168,9 @@ DROP TABLE tmp_new2;
 
 -- ALTER TABLE ... RENAME on non-table relations
 -- renaming indexes (FIXME: this should probably test the index's functionality)
+ALTER INDEX IF EXISTS __onek_unique1 RENAME TO tmp_onek_unique1;
+ALTER INDEX IF EXISTS __tmp_onek_unique1 RENAME TO onek_unique1;
+
 ALTER INDEX onek_unique1 RENAME TO tmp_onek_unique1;
 ALTER INDEX tmp_onek_unique1 RENAME TO onek_unique1;
 -- renaming views
@@ -185,6 +190,46 @@ DROP VIEW tmp_view_new;
 -- toast-like relation name
 alter table stud_emp rename to pg_toast_stud_emp;
 alter table pg_toast_stud_emp rename to stud_emp;
+
+-- renaming index should rename constraint as well
+ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
+ALTER INDEX onek_unique1_key RENAME TO onek_unique1_constraint_foo;
+ALTER TABLE onek DROP CONSTRAINT onek_unique1_constraint_foo;
+
+-- renaming constraint
+ALTER TABLE onek ADD CONSTRAINT onek_check_constraint CHECK (unique1 >= 0);
+ALTER TABLE onek RENAME CONSTRAINT onek_check_constraint TO onek_check_constraint_foo;
+ALTER TABLE onek DROP CONSTRAINT onek_check_constraint_foo;
+
+-- renaming constraint should rename index as well
+ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
+DROP INDEX onek_unique1_key;  -- to see whether it's there
+ALTER TABLE onek RENAME CONSTRAINT onek_unique1_constraint TO onek_unique1_constraint_foo;
+DROP INDEX onek_unique1_constraint_foo;  -- to see whether it's there
+ALTER TABLE onek DROP CONSTRAINT onek_unique1_constraint_foo;
+
+-- renaming constraints vs. inheritance
+CREATE TABLE constraint_rename_test (a int CONSTRAINT con1 CHECK (a > 0), b int, c int);
+\d constraint_rename_test
+CREATE TABLE constraint_rename_test2 (a int CONSTRAINT con1 CHECK (a > 0), d int) INHERITS (constraint_rename_test);
+\d constraint_rename_test2
+ALTER TABLE constraint_rename_test2 RENAME CONSTRAINT con1 TO con1foo; -- fail
+ALTER TABLE ONLY constraint_rename_test RENAME CONSTRAINT con1 TO con1foo; -- fail
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con1 TO con1foo; -- ok
+\d constraint_rename_test
+\d constraint_rename_test2
+ALTER TABLE constraint_rename_test ADD CONSTRAINT con2 CHECK NO INHERIT (b > 0);
+ALTER TABLE ONLY constraint_rename_test RENAME CONSTRAINT con2 TO con2foo; -- ok
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con2foo TO con2bar; -- ok
+\d constraint_rename_test
+\d constraint_rename_test2
+ALTER TABLE constraint_rename_test ADD CONSTRAINT con3 PRIMARY KEY (a);
+ALTER TABLE constraint_rename_test RENAME CONSTRAINT con3 TO con3foo; -- ok
+\d constraint_rename_test
+\d constraint_rename_test2
+DROP TABLE constraint_rename_test2;
+DROP TABLE constraint_rename_test;
+ALTER TABLE IF EXISTS constraint_rename_test ADD CONSTRAINT con4 UNIQUE (a);
 
 -- FOREIGN KEY CONSTRAINT adding TEST
 
@@ -239,10 +284,40 @@ ALTER TABLE tmp3 validate constraint tmpconstr;
 ALTER TABLE tmp3 validate constraint tmpconstr;
 --end_ignore
 
+-- Try a non-verified CHECK constraint
+ALTER TABLE tmp3 ADD CONSTRAINT b_greater_than_ten CHECK (b > 10); -- fail
+ALTER TABLE tmp3 ADD CONSTRAINT b_greater_than_ten CHECK (b > 10) NOT VALID; -- succeeds
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- fails
+DELETE FROM tmp3 WHERE NOT b > 10;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- succeeds
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_greater_than_ten; -- succeeds
+
+-- Test inherited NOT VALID CHECK constraints
+select * from tmp3;
+CREATE TABLE tmp6 () INHERITS (tmp3);
+CREATE TABLE tmp7 () INHERITS (tmp3);
+
+INSERT INTO tmp6 VALUES (6, 30), (1, 16);
+ALTER TABLE tmp3 ADD CONSTRAINT b_le_20 CHECK (b <= 20) NOT VALID;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_le_20;	-- fails
+DELETE FROM tmp6 WHERE b > 20;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT b_le_20;	-- succeeds
+
+-- An already validated constraint must not be revalidated
+CREATE FUNCTION boo(int) RETURNS int IMMUTABLE STRICT LANGUAGE plpgsql AS $$ BEGIN RAISE NOTICE 'boo: %', $1; RETURN $1; END; $$;
+INSERT INTO tmp7 VALUES (1, 18);
+ALTER TABLE tmp7 ADD CONSTRAINT identity CHECK (b = boo(b));
+ALTER TABLE tmp3 ADD CONSTRAINT IDENTITY check (b = boo(b)) NOT VALID;
+ALTER TABLE tmp3 VALIDATE CONSTRAINT identity;
+
 -- Try (and fail) to create constraint from tmp5(a) to tmp4(a) - unique constraint on
 -- tmp4 is a,b
 
 ALTER TABLE tmp5 add constraint tmpconstr foreign key(a) references tmp4(a) match full;
+
+DROP TABLE tmp7;
+
+DROP TABLE tmp6;
 
 DROP TABLE tmp5;
 
@@ -251,6 +326,23 @@ DROP TABLE tmp4;
 DROP TABLE tmp3;
 
 DROP TABLE tmp2;
+
+-- NOT VALID with plan invalidation -- ensure we don't use a constraint for
+-- exclusion until validated
+set constraint_exclusion TO 'partition';
+create table nv_parent (d date);
+create table nv_child_2010 () inherits (nv_parent);
+create table nv_child_2011 () inherits (nv_parent);
+alter table nv_child_2010 add check (d between '2010-01-01'::date and '2010-12-31'::date) not valid;
+alter table nv_child_2011 add check (d between '2011-01-01'::date and '2011-12-31'::date) not valid;
+explain (costs off) select * from nv_parent where d between '2011-08-01' and '2011-08-31';
+create table nv_child_2009 (check (d between '2009-01-01'::date and '2009-12-31'::date)) inherits (nv_parent);
+explain (costs off) select * from nv_parent where d between '2011-08-01'::date and '2011-08-31'::date;
+explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
+-- after validation, the constraint should be used
+alter table nv_child_2011 VALIDATE CONSTRAINT nv_child_2011_d_check;
+explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
+
 
 -- Foreign key adding test with mixed types
 
@@ -410,20 +502,19 @@ select test2 from atacc2;
 drop table atacc2 cascade;
 drop table atacc1;
 
--- adding only to a parent is disallowed as of 8.4
+-- adding only to a parent is allowed as of 9.2
 
 create table atacc1 (test int);
 create table atacc2 (test2 int) inherits (atacc1);
--- fail:
-alter table only atacc1 add constraint foo check (test>0);
 -- ok:
-alter table only atacc2 add constraint foo check (test>0);
--- check constraint not there on parent
+alter table atacc1 add constraint foo check no inherit (test>0);
+-- check constraint is not there on child
+insert into atacc2 (test) values (-3);
+-- check constraint is there on parent
 insert into atacc1 (test) values (-3);
 insert into atacc1 (test) values (3);
--- check constraint is there on child
-insert into atacc2 (test) values (-3);
-insert into atacc2 (test) values (3);
+-- fail, violating row:
+alter table atacc2 add constraint foo check no inherit (test>0);
 drop table atacc2;
 drop table atacc1;
 
@@ -863,6 +954,10 @@ alter table only renameColumn rename column a to d;
 alter table renameColumn rename column a to d;
 alter table renameColumnChild rename column b to a;
 
+-- these should work
+alter table if exists doesnt_exist_tab rename column a to d;
+alter table if exists doesnt_exist_tab rename column b to a;
+
 -- this should work
 alter table renameColumn add column w int;
 
@@ -1186,7 +1281,6 @@ group by c.relname;
 
 create table alterlock (f1 int primary key, f2 text);
 
--- share update exclusive
 begin; alter table alterlock alter column f2 set statistics 150;
 select * from my_locks order by 1;
 rollback;
@@ -1223,7 +1317,6 @@ begin; alter table alterlock alter column f2 set storage extended;
 select * from my_locks order by 1;
 rollback;
 
--- share row exclusive
 begin; alter table alterlock alter column f2 set default 'x';
 select * from my_locks order by 1;
 rollback;
@@ -1267,7 +1360,7 @@ create domain alter1.posint integer check (value > 0);
 
 create type alter1.ctype as (f1 int, f2 text);
 
-create function alter1.same(alter1.ctype, alter1.ctype) returns boolean language sql 
+create function alter1.same(alter1.ctype, alter1.ctype) returns boolean language sql
 as 'select $1.f1 is not distinct from $2.f1 and $1.f2 is not distinct from $2.f2';
 
 create operator alter1.=(procedure = alter1.same, leftarg  = alter1.ctype, rightarg = alter1.ctype);
@@ -1423,6 +1516,39 @@ CREATE TYPE tt_t1 AS (x int, y numeric(8,2));
 ALTER TABLE tt7 OF tt_t1;			-- reassign an already-typed table
 ALTER TABLE tt7 NOT OF;
 \d tt7
+
+-- make sure we can drop a constraint on the parent but it remains on the child
+CREATE TABLE test_drop_constr_parent (c text CHECK (c IS NOT NULL));
+CREATE TABLE test_drop_constr_child () INHERITS (test_drop_constr_parent);
+ALTER TABLE ONLY test_drop_constr_parent DROP CONSTRAINT "test_drop_constr_parent_c_check";
+-- should fail
+INSERT INTO test_drop_constr_child (c) VALUES (NULL);
+DROP TABLE test_drop_constr_parent CASCADE;
+
+--
+-- IF EXISTS test
+--
+ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
+ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
+ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
+ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;
+ALTER TABLE IF EXISTS tt8 SET SCHEMA alter2;
+
+CREATE TABLE tt8(a int);
+CREATE SCHEMA alter2;
+
+ALTER TABLE IF EXISTS tt8 ADD COLUMN f int;
+ALTER TABLE IF EXISTS tt8 ADD CONSTRAINT xxx PRIMARY KEY(f);
+ALTER TABLE IF EXISTS tt8 ADD CHECK (f BETWEEN 0 AND 10);
+ALTER TABLE IF EXISTS tt8 ALTER COLUMN f SET DEFAULT 0;
+ALTER TABLE IF EXISTS tt8 RENAME COLUMN f TO f1;
+ALTER TABLE IF EXISTS tt8 SET SCHEMA alter2;
+
+\d alter2.tt8
+
+DROP TABLE alter2.tt8;
+DROP SCHEMA alter2;
 
 --
 -- Test for splitting after dropping a column

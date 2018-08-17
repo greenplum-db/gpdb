@@ -3,7 +3,7 @@
  * functions.c
  *	  Execution of SQL-language functions
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,7 +18,6 @@
 #include "catalog/catalog.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
-#include "commands/trigger.h"
 #include "executor/executor.h"          /* ExecutorStart, ExecutorRun, etc */
 #include "executor/functions.h"
 #include "funcapi.h"
@@ -26,7 +25,7 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/parse_coerce.h"
-#include "tcop/tcopprot.h"
+#include "parser/parse_func.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
@@ -128,14 +127,23 @@ typedef SQLFunctionCache *SQLFunctionCachePtr;
  */
 typedef struct SQLFunctionParseInfo
 {
-	Oid		   *argtypes;		/* resolved types of input arguments */
+	char	   *fname;			/* function's name */
 	int			nargs;			/* number of input arguments */
+	Oid		   *argtypes;		/* resolved types of input arguments */
+	char	  **argnames;		/* names of input arguments; NULL if none */
+	/* Note that argnames[i] can be NULL, if some args are unnamed */
 	Oid			collation;		/* function's input collation, if known */
 }	SQLFunctionParseInfo;
 
 
 /* non-export function prototypes */
 static Node *sql_fn_param_ref(ParseState *pstate, ParamRef *pref);
+static Node *sql_fn_post_column_ref(ParseState *pstate,
+					   ColumnRef *cref, Node *var);
+static Node *sql_fn_make_param(SQLFunctionParseInfoPtr pinfo,
+				  int paramno, int location);
+static Node *sql_fn_resolve_param_name(SQLFunctionParseInfoPtr pinfo,
+						  const char *paramname, int location);
 static List *init_execution_state(List *queryTree_list,
 					 SQLFunctionCachePtr fcache,
 					 bool lazyEvalOK);
@@ -178,7 +186,8 @@ querytree_safe_for_qe_walker(Node *expr, void *context)
 				
 				if (!allow_segment_DML &&
 					(q->commandType != CMD_SELECT
-					 || q->intoClause != NULL
+					 || (q->utilityStmt != NULL &&
+					     IsA(q->utilityStmt, CreateTableAsStmt))
 					 || q->resultRelation > 0))
 				{
 					ereport(ERROR,
@@ -256,6 +265,9 @@ prepare_sql_fn_parse_info(HeapTuple procedureTuple,
 
 	pinfo = (SQLFunctionParseInfoPtr) palloc0(sizeof(SQLFunctionParseInfo));
 
+	/* Function's name (only) can be used to qualify argument names */
+	pinfo->fname = pstrdup(NameStr(procedureStruct->proname));
+
 	/* Save the function's input collation */
 	pinfo->collation = inputCollation;
 
@@ -293,6 +305,38 @@ prepare_sql_fn_parse_info(HeapTuple procedureTuple,
 		pinfo->argtypes = argOidVect;
 	}
 
+	/*
+	 * Collect names of arguments, too, if any
+	 */
+	if (nargs > 0)
+	{
+		Datum		proargnames;
+		Datum		proargmodes;
+		int			n_arg_names;
+		bool		isNull;
+
+		proargnames = SysCacheGetAttr(PROCNAMEARGSNSP, procedureTuple,
+									  Anum_pg_proc_proargnames,
+									  &isNull);
+		if (isNull)
+			proargnames = PointerGetDatum(NULL);		/* just to be sure */
+
+		proargmodes = SysCacheGetAttr(PROCNAMEARGSNSP, procedureTuple,
+									  Anum_pg_proc_proargmodes,
+									  &isNull);
+		if (isNull)
+			proargmodes = PointerGetDatum(NULL);		/* just to be sure */
+
+		n_arg_names = get_func_input_arg_names(proargnames, proargmodes,
+											   &pinfo->argnames);
+
+		/* Paranoia: ignore the result if too few array entries */
+		if (n_arg_names < nargs)
+			pinfo->argnames = NULL;
+	}
+	else
+		pinfo->argnames = NULL;
+
 	return pinfo;
 }
 
@@ -302,12 +346,118 @@ prepare_sql_fn_parse_info(HeapTuple procedureTuple,
 void
 sql_fn_parser_setup(struct ParseState *pstate, SQLFunctionParseInfoPtr pinfo)
 {
-	/* Later we might use these hooks to support parameter names */
 	pstate->p_pre_columnref_hook = NULL;
-	pstate->p_post_columnref_hook = NULL;
+	pstate->p_post_columnref_hook = sql_fn_post_column_ref;
 	pstate->p_paramref_hook = sql_fn_param_ref;
 	/* no need to use p_coerce_param_hook */
 	pstate->p_ref_hook_state = (void *) pinfo;
+}
+
+/*
+ * sql_fn_post_column_ref		parser callback for ColumnRefs
+ */
+static Node *
+sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
+{
+	SQLFunctionParseInfoPtr pinfo = (SQLFunctionParseInfoPtr) pstate->p_ref_hook_state;
+	int			nnames;
+	Node	   *field1;
+	Node	   *subfield = NULL;
+	const char *name1;
+	const char *name2 = NULL;
+	Node	   *param;
+
+	/*
+	 * Never override a table-column reference.  This corresponds to
+	 * considering the parameter names to appear in a scope outside the
+	 * individual SQL commands, which is what we want.
+	 */
+	if (var != NULL)
+		return NULL;
+
+	/*----------
+	 * The allowed syntaxes are:
+	 *
+	 * A		A = parameter name
+	 * A.B		A = function name, B = parameter name
+	 *			OR: A = record-typed parameter name, B = field name
+	 *			(the first possibility takes precedence)
+	 * A.B.C	A = function name, B = record-typed parameter name,
+	 *			C = field name
+	 *----------
+	 */
+	nnames = list_length(cref->fields);
+
+	if (nnames > 3)
+		return NULL;
+
+	field1 = (Node *) linitial(cref->fields);
+	Assert(IsA(field1, String));
+	name1 = strVal(field1);
+	if (nnames > 1)
+	{
+		subfield = (Node *) lsecond(cref->fields);
+		Assert(IsA(subfield, String));
+		name2 = strVal(subfield);
+	}
+
+	if (nnames == 3)
+	{
+		/*
+		 * Three-part name: if the first part doesn't match the function name,
+		 * we can fail immediately. Otherwise, look up the second part, and
+		 * take the third part to be a field reference.
+		 */
+		if (strcmp(name1, pinfo->fname) != 0)
+			return NULL;
+
+		param = sql_fn_resolve_param_name(pinfo, name2, cref->location);
+
+		subfield = (Node *) lthird(cref->fields);
+		Assert(IsA(subfield, String));
+	}
+	else if (nnames == 2 && strcmp(name1, pinfo->fname) == 0)
+	{
+		/*
+		 * Two-part name with first part matching function name: first see if
+		 * second part matches any parameter name.
+		 */
+		param = sql_fn_resolve_param_name(pinfo, name2, cref->location);
+
+		if (param)
+		{
+			/* Yes, so this is a parameter reference, no subfield */
+			subfield = NULL;
+		}
+		else
+		{
+			/* No, so try to match as parameter name and subfield */
+			param = sql_fn_resolve_param_name(pinfo, name1, cref->location);
+		}
+	}
+	else
+	{
+		/* Single name, or parameter name followed by subfield */
+		param = sql_fn_resolve_param_name(pinfo, name1, cref->location);
+	}
+
+	if (!param)
+		return NULL;			/* No match */
+
+	if (subfield)
+	{
+		/*
+		 * Must be a reference to a field of a composite parameter; otherwise
+		 * ParseFuncOrColumn will return NULL, and we'll fail back at the
+		 * caller.
+		 */
+		param = ParseFuncOrColumn(pstate,
+								  list_make1(subfield),
+								  list_make1(param),
+								  NULL, cref->location);
+	}
+
+	return param;
 }
 
 /*
@@ -318,11 +468,22 @@ sql_fn_param_ref(ParseState *pstate, ParamRef *pref)
 {
 	SQLFunctionParseInfoPtr pinfo = (SQLFunctionParseInfoPtr) pstate->p_ref_hook_state;
 	int			paramno = pref->number;
-	Param	   *param;
 
 	/* Check parameter number is valid */
 	if (paramno <= 0 || paramno > pinfo->nargs)
 		return NULL;			/* unknown parameter number */
+
+	return sql_fn_make_param(pinfo, paramno, pref->location);
+}
+
+/*
+ * sql_fn_make_param		construct a Param node for the given paramno
+ */
+static Node *
+sql_fn_make_param(SQLFunctionParseInfoPtr pinfo,
+				  int paramno, int location)
+{
+	Param	   *param;
 
 	param = makeNode(Param);
 	param->paramkind = PARAM_EXTERN;
@@ -330,7 +491,7 @@ sql_fn_param_ref(ParseState *pstate, ParamRef *pref)
 	param->paramtype = pinfo->argtypes[paramno - 1];
 	param->paramtypmod = -1;
 	param->paramcollid = get_typcollation(param->paramtype);
-	param->location = pref->location;
+	param->location = location;
 
 	/*
 	 * If we have a function input collation, allow it to override the
@@ -341,6 +502,29 @@ sql_fn_param_ref(ParseState *pstate, ParamRef *pref)
 		param->paramcollid = pinfo->collation;
 
 	return (Node *) param;
+}
+
+/*
+ * Search for a function parameter of the given name; if there is one,
+ * construct and return a Param node for it.  If not, return NULL.
+ * Helper function for sql_fn_post_column_ref.
+ */
+static Node *
+sql_fn_resolve_param_name(SQLFunctionParseInfoPtr pinfo,
+						  const char *paramname, int location)
+{
+	int			i;
+
+	if (pinfo->argnames == NULL)
+		return NULL;
+
+	for (i = 0; i < pinfo->nargs; i++)
+	{
+		if (pinfo->argnames[i] && strcmp(pinfo->argnames[i], paramname) == 0)
+			return sql_fn_make_param(pinfo, i + 1, location);
+	}
+
+	return NULL;
 }
 
 /*
@@ -442,7 +626,6 @@ init_execution_state(List *queryTree_list,
 
 			if (ps->commandType == CMD_SELECT &&
 				ps->utilityStmt == NULL &&
-				ps->intoClause == NULL &&
 				!ps->hasModifyingCTE)
 				fcache->lazyEval = lasttages->lazyEval = true;
 		}
@@ -1487,8 +1670,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 	 */
 	if (parse &&
 		parse->commandType == CMD_SELECT &&
-		parse->utilityStmt == NULL &&
-		parse->intoClause == NULL)
+		parse->utilityStmt == NULL)
 	{
 		tlist_ptr = &parse->targetList;
 		tlist = parse->targetList;
@@ -1532,6 +1714,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 	if (fn_typtype == TYPTYPE_BASE ||
 		fn_typtype == TYPTYPE_DOMAIN ||
 		fn_typtype == TYPTYPE_ENUM ||
+		fn_typtype == TYPTYPE_RANGE ||
 		rettype == VOIDOID)
 	{
 		/*

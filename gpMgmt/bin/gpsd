@@ -98,10 +98,13 @@ def dumpStats(cur):
              'smallint',
              'smallint',
              'smallint',
+             'smallint',
              'oid',
              'oid',
              'oid',
              'oid',
+             'oid',
+             'real[]',
              'real[]',
              'real[]',
              'real[]',
@@ -116,13 +119,13 @@ def dumpStats(cur):
         i = 0
         hll = False
         if vals[3][0] == '_':
-            rowTypes = types + [vals[3]] * 4
+            rowTypes = types + [vals[3]] * 5
         else:
-            rowTypes = types + [vals[3] + '[]'] * 4
+            rowTypes = types + [vals[3] + '[]'] * 5
         for val, typ in zip(vals[5:], rowTypes):
             i = i + 1
             str_val = "'%s'" % val
-            if i == 9 and (val == 98 or val == 99):
+            if i == 10 and (val == 98 or val == 99):
                 hll = True
 
             if val is None:
@@ -130,7 +133,7 @@ def dumpStats(cur):
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = val.replace("'", "''").replace('\\', '\\\\')
                 val = "E'" + val + "'"
-            if i == 21 and hll == True:
+            if i == 25 and hll == True:
                 rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}::{1}'.format(val, typ))
@@ -219,7 +222,7 @@ def main():
     sys.stdout.writelines(['\n-- ',
                            '\n-- Allow system table modifications',
                            '\n-- ',
-                           '\nset allow_system_table_mods="DML";\n\n'])
+                           '\nset allow_system_table_mods=true;\n\n'])
     sys.stdout.flush()
 
     try:

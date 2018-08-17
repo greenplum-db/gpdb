@@ -78,7 +78,7 @@ static DispatcherInternalFuncs *pDispatchFuncs = NULL;
  * assign one resultArray slot per QE of the Gang, paralleling the Gang's
  * db_descriptors array. Success or failure of each QE will be noted in
  * the QE's CdbDispatchResult entry; but before examining the results, the
- * caller must wait for execution to end by calling CdbCheckDispatchResult().
+ * caller must wait for execution to end by calling cdbdisp_checkDispatchResult().
  *
  * The CdbDispatchResults object owns some malloc'ed storage, so the caller
  * must make certain to free it by calling cdbdisp_destroyDispatcherState().
@@ -143,7 +143,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
 }
 
 /*
- * CdbCheckDispatchResult:
+ * cdbdisp_checkDispatchResult:
  *
  * Waits for completion of threads launched by cdbdisp_dispatchToGang().
  *
@@ -151,7 +151,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
  * will be canceled/finished according to waitMode.
  */
 void
-CdbCheckDispatchResult(struct CdbDispatcherState *ds,
+cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds,
 					   DispatchWaitMode waitMode)
 {
 	PG_TRY();
@@ -212,9 +212,6 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
 		return NULL;
 	}
 
-	/* wait QEs to return results or report errors */
-	CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
-
 	/* check if any error reported */
 	errorcode = ds->primaryResults->errcode;
 
@@ -225,71 +222,6 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
 	}
 
 	return ds->primaryResults;
-}
-
-/*
- * Wait for all QEs to finish, then report any errors from the given
- * CdbDispatchResults objects and free them. If not all QEs in the
- * associated gang(s) executed the command successfully, throws an
- * error and does not return. No-op if both CdbDispatchResults ptrs are NULL.
- * This is a convenience function; callers with unusual requirements may
- * instead call CdbCheckDispatchResult(), etc., directly.
- */
-void
-cdbdisp_finishCommand(struct CdbDispatcherState *ds,
-					 ErrorData **qeError,
-					 CdbPgResults *cdb_pgresults,
-					 bool throwError)
-{
-	CdbDispatchResults *pr;
-	ErrorData *error;
-
-	/*
-	 * If cdbdisp_dispatchToGang() wasn't called, don't wait.
-	 */
-	if (!ds || !ds->primaryResults)
-		return;
-
-	/*
-	 * If we are called in the dying sequence, don't touch QE connections.
-	 * Anything below could cause ERROR in which case we would miss a chance
-	 * to clean up shared memory as this is from AbortTransaction. QE may stay
-	 * a bit longer, but since we can consider QD as libpq client to QE, they
-	 * will notice that we as a client do not appear anymore and will finish
-	 * soon. Also ERROR report doesn't go to the client anyway since we are in
-	 * proc_exit.
-	 */
-	if (proc_exit_inprogress)
-		return;
-
-	pr = cdbdisp_getDispatchResults(ds, &error);
-	if (pr == NULL)
-	{
-		if (!throwError)
-		{
-			if (qeError != NULL)
-				*qeError = error;
-			cdbdisp_destroyDispatcherState(ds);
-			return;
-		}
-
-		if (error == NULL)
-			elog(ERROR, "dispatch failed with no error message");
-
-		ReThrowError(error);
-
-		/*
-		 * Assuming the error was really an error, and not e.g. a warning,
-		 * we should not get here. But just in case..
-		 */
-		elog(ERROR, "dispatch failed");
-	}
-	else if (cdb_pgresults != NULL)
-	{
-		cdbdisp_returnResults(pr, cdb_pgresults);
-	}
-
-	cdbdisp_destroyDispatcherState(ds);
 }
 
 /*
@@ -311,7 +243,7 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 {
 	int		qderrcode;
 	bool		useQeError = false;
-	ErrorData *error;
+	ErrorData *error = NULL;
 
 	/*
 	 * If cdbdisp_dispatchToGang() wasn't called, don't wait.
@@ -384,6 +316,8 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 
 		MemoryContextSwitchTo(oldcontext);
 	}
+
+	cdbdisp_destroyDispatcherState(ds);
 }
 
 
@@ -445,7 +379,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 void
 cdbdisp_cancelDispatch(CdbDispatcherState *ds)
 {
-	CdbCheckDispatchResult(ds, DISPATCH_WAIT_CANCEL);
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_CANCEL);
 }
 
 /*

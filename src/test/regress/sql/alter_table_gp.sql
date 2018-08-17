@@ -1,5 +1,5 @@
 -- ALTER TABLE ... RENAME on corrupted relations
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods = true;
 SET gp_allow_rename_relation_without_lock = ON;
 -- missing entry
 CREATE TABLE cor (a int, b float);
@@ -14,13 +14,6 @@ CREATE TABLE cor (a int, b float, c text);
 UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
 ALTER TABLE cor RENAME TO newcor2;
 ALTER TABLE newcor2 RENAME TO cor;
-DROP TABLE cor;
-
--- relname is out of sync
-CREATE TABLE cor (a int, b int);
-UPDATE pg_class SET relname='othercor' WHERE relname='cor';
-ALTER TABLE othercor RENAME TO tmpcor;
-ALTER TABLE tmpcor RENAME TO cor;
 DROP TABLE cor;
 
 RESET allow_system_table_mods;

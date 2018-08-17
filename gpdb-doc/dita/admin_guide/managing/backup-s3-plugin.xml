@@ -3,10 +3,6 @@
 <topic id="topic_ur2_fsn_ndb">
   <title>Using the S3 Storage Plugin with gpbackup and gprestore</title>
   <body>
-    <note type="warning">The S3 storage plugin for <codeph>gpbackup</codeph> and
-        <codeph>gprestore</codeph> is an experimental feature and is not intended for use in a
-      production environment. Experimental features are subject to change without notice in future
-      releases.</note>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)
       location to store and retrieve backups when you run <codeph><xref
           href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref></codeph> and
@@ -119,7 +115,7 @@ options:
   folder: test/backup3</codeblock>
       <p>This <codeph>gpbackup</codeph> example backs up the database demo using the S3 storage
         plugin. The absolute path to the S3 storage plugin configuration file is
-          <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --single-data-file --plugin-config /home/gpadmin/s3-test-config.yaml</codeblock></p>
+          <codeph>/home/gpadmin/s3-test</codeph>.<codeblock>gpbackup --dbname demo --plugin-config /home/gpadmin/s3-test-config.yaml</codeblock></p>
       <p>The S3 storage plugin writes the backup files to this S3 location in the AWS region
         us-west-2. </p>
       <p>
@@ -130,9 +126,6 @@ options:
       <title>Notes</title>
       <p>The S3 storage plugin application must be in the same location on every Greenplum Database
         host. The configuration file is required only on the master host.</p>
-      <p>When running <codeph>gpbackup</codeph>, the <codeph>--plugin-config</codeph> option is
-        supported only with <codeph>--single-data-file</codeph> or
-        <codeph>--metadata-only</codeph>.</p>
       <p>When you perform a backup with the S3 storage plugin, the plugin stores the backup files in
         this location in the S3 bucket. </p>
       <codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>

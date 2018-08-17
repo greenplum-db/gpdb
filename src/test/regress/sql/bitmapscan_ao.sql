@@ -25,7 +25,7 @@ CREATE TABLE outer_table (
 WITH (appendonly=true, orientation=column, compresstype=None) DISTRIBUTED BY (flex_value_id);
 
 
-set allow_system_table_mods="DML";
+set allow_system_table_mods=true;
 UPDATE pg_class
 SET
 	relpages = 1::int,

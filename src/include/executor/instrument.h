@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2001-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2012, PostgreSQL Global Development Group
  *
  * src/include/executor/instrument.h
  *
@@ -15,10 +15,10 @@
 #ifndef INSTRUMENT_H
 #define INSTRUMENT_H
 
-#include "executor/executor.h"
 #include "nodes/plannodes.h"
 #include "portability/instr_time.h"
 #include "utils/resowner.h"
+#include "storage/s_lock.h"
 
 struct CdbExplain_NodeSummary;          /* private def in cdb/cdbexplain.c */
 
@@ -26,12 +26,16 @@ typedef struct BufferUsage
 {
 	long		shared_blks_hit;	/* # of shared buffer hits */
 	long		shared_blks_read;		/* # of shared disk blocks read */
+	long		shared_blks_dirtied;	/* # of shared blocks dirtied */
 	long		shared_blks_written;	/* # of shared disk blocks written */
 	long		local_blks_hit; /* # of local buffer hits */
 	long		local_blks_read;	/* # of local disk blocks read */
+	long		local_blks_dirtied;		/* # of shared blocks dirtied */
 	long		local_blks_written;		/* # of local disk blocks written */
 	long		temp_blks_read; /* # of temp blocks read */
 	long		temp_blks_written;		/* # of temp blocks written */
+	instr_time	blk_read_time;	/* time spent reading */
+	instr_time	blk_write_time; /* time spent writing */
 } BufferUsage;
 
 /* Flag bits included in InstrAlloc's instrument_options bitmask */
@@ -50,10 +54,9 @@ typedef struct Instrumentation
 	/* Parameters set at node creation: */
 	bool		need_timer;		/* TRUE if we need timer data */
 	bool		need_cdb;		/* TRUE if we need cdb statistics */
-
+	bool		need_bufusage;	/* TRUE if we need buffer usage data */
 	/* Info about current plan cycle: */
 	bool		running;		/* TRUE if we've completed first tuple */
-	bool		needs_bufusage; /* TRUE if we need buffer usage */
 	instr_time	starttime;		/* Start time of current iteration of node */
 	instr_time	counter;		/* Accumulated runtime for this node */
 	double		firsttuple;		/* Time for first tuple of this cycle */
@@ -64,6 +67,8 @@ typedef struct Instrumentation
 	double		total;			/* Total total time (in seconds) */
 	uint64		ntuples;		/* Total tuples produced */
 	uint64		nloops;			/* # of run cycles for this node */
+	double		nfiltered1;		/* # tuples removed by scanqual or joinqual */
+	double		nfiltered2;		/* # tuples removed by "other" quals */
 	BufferUsage	bufusage;		/* Total buffer usage */
 
 	double		execmemused;	/* CDB: executor memory used (bytes) */

@@ -29,7 +29,7 @@ SET
 set enable_indexscan=on;
 SET
 --allow catalog modification
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 SET
 update pg_class set reltuples=1 where relname='tt2';
 UPDATE 1

@@ -20,7 +20,7 @@
       <p>These are unsupported features when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
-          <li>GIN and GIST indexing methods. GPORCA supports only B-tree and bitmap indexes. GPORCA
+          <li>GIN indexing method. GPORCA supports only B-tree, bitmap, and GiST indexes. GPORCA
             ignores indexes created with unsupported methods.</li>
           <li><cmdname>PERCENTILE</cmdname> window function</li>
           <li>External parameters</li>

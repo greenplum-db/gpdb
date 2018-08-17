@@ -10,7 +10,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2002-2011, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2012, PostgreSQL Global Development Group
  *
  * src/include/catalog/pg_cast.h
  *
@@ -374,7 +374,7 @@ DATA(insert (23   7198 3587 i f));
 DATA(insert (21   7198 3588 i f));
 DATA(insert (600  7198 0 e b));
 DATA(insert (7198  600 0 e b));
-DATA(insert (1700 7198 3592 i f));
+DATA(insert (1700 7198 7597 i f));
 
 /*
  * CDB: Allow explicit cast from tid to int8

@@ -3,7 +3,7 @@
  * timestamp.c
  *	  Functions for the built-in SQL92 types "timestamp" and "interval".
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -27,6 +27,7 @@
 #include "funcapi.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/scansup.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
@@ -227,13 +228,12 @@ timestamp_out(PG_FUNCTION_ARGS)
 	struct pg_tm tt,
 			   *tm = &tt;
 	fsec_t		fsec;
-	char	   *tzn = NULL;
 	char		buf[MAXDATELEN + 1];
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		EncodeSpecialTimestamp(timestamp, buf);
 	else if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) == 0)
-		EncodeDateTime(tm, fsec, NULL, &tzn, DateStyle, buf);
+		EncodeDateTime(tm, fsec, false, 0, NULL, DateStyle, buf);
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
@@ -664,6 +664,17 @@ timestamptz_interval_bound_shift_reg(PG_FUNCTION_ARGS)
 				val, width, shift, reg));
 }
 
+/* timestamp_transform()
+ * Flatten calls to timestamp_scale() and timestamptz_scale() that solely
+ * represent increases in allowed precision.
+ */
+Datum
+timestamp_transform(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_POINTER(TemporalTransform(MAX_TIMESTAMP_PRECISION,
+										(Node *) PG_GETARG_POINTER(0)));
+}
+
 /* timestamp_scale()
  * Adjust time type for specified scale factor.
  * Used by PostgreSQL type system to stuff columns.
@@ -834,13 +845,13 @@ timestamptz_out(PG_FUNCTION_ARGS)
 	struct pg_tm tt,
 			   *tm = &tt;
 	fsec_t		fsec;
-	char	   *tzn;
+	const char *tzn;
 	char		buf[MAXDATELEN + 1];
 
 	if (TIMESTAMP_NOT_FINITE(dt))
 		EncodeSpecialTimestamp(dt, buf);
 	else if (timestamp2tm(dt, &tz, tm, &fsec, &tzn, NULL) == 0)
-		EncodeDateTime(tm, fsec, &tz, &tzn, DateStyle, buf);
+		EncodeDateTime(tm, fsec, true, tz, tzn, DateStyle, buf);
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
@@ -870,7 +881,6 @@ timestamptz_recv(PG_FUNCTION_ARGS)
 	struct pg_tm tt,
 			   *tm = &tt;
 	fsec_t		fsec;
-	char	   *tzn;
 
 #ifdef HAVE_INT64_TIMESTAMP
 	timestamp = (TimestampTz) pq_getmsgint64(buf);
@@ -881,7 +891,7 @@ timestamptz_recv(PG_FUNCTION_ARGS)
 	/* rangecheck: see if timestamptz_out would like it */
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		 /* ok */ ;
-	else if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+	else if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("timestamp out of range")));
@@ -1101,6 +1111,18 @@ interval_send(PG_FUNCTION_ARGS)
 	PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
+/*
+ * The interval typmod stores a "range" in its high 16 bits and a "precision"
+ * in its low 16 bits.	Both contribute to defining the resolution of the
+ * type.  Range addresses resolution granules larger than one second, and
+ * precision specifies resolution below one second.  This representation can
+ * express all SQL standard resolutions, but we implement them all in terms of
+ * truncating rightward from some position.  Range is a bitmap of permitted
+ * fields, but only the temporally-smallest such field is significant to our
+ * calculations.  Precision is a count of sub-second decimal places to retain.
+ * Setting all bits (INTERVAL_FULL_PRECISION) gives the same truncation
+ * semantics as choosing MAX_INTERVAL_PRECISION.
+ */
 Datum
 intervaltypmodin(PG_FUNCTION_ARGS)
 {
@@ -1257,6 +1279,65 @@ intervaltypmodout(PG_FUNCTION_ARGS)
 }
 
 
+/* interval_transform()
+ * Flatten superfluous calls to interval_scale().  The interval typmod is
+ * complex to permit accepting and regurgitating all SQL standard variations.
+ * For truncation purposes, it boils down to a single, simple granularity.
+ */
+Datum
+interval_transform(PG_FUNCTION_ARGS)
+{
+	FuncExpr   *expr = (FuncExpr *) PG_GETARG_POINTER(0);
+	Node	   *ret = NULL;
+	Node	   *typmod;
+
+	Assert(IsA(expr, FuncExpr));
+	Assert(list_length(expr->args) >= 2);
+
+	typmod = (Node *) lsecond(expr->args);
+
+	if (IsA(typmod, Const) &&!((Const *) typmod)->constisnull)
+	{
+		Node	   *source = (Node *) linitial(expr->args);
+		int32		old_typmod = exprTypmod(source);
+		int32		new_typmod = DatumGetInt32(((Const *) typmod)->constvalue);
+		int			old_range;
+		int			old_precis;
+		int			new_range = INTERVAL_RANGE(new_typmod);
+		int			new_precis = INTERVAL_PRECISION(new_typmod);
+		int			new_range_fls;
+		int			old_range_fls;
+
+		if (old_typmod < 0)
+		{
+			old_range = INTERVAL_FULL_RANGE;
+			old_precis = INTERVAL_FULL_PRECISION;
+		}
+		else
+		{
+			old_range = INTERVAL_RANGE(old_typmod);
+			old_precis = INTERVAL_PRECISION(old_typmod);
+		}
+
+		/*
+		 * Temporally-smaller fields occupy higher positions in the range
+		 * bitmap.	Since only the temporally-smallest bit matters for length
+		 * coercion purposes, we compare the last-set bits in the ranges.
+		 * Precision, which is to say, sub-second precision, only affects
+		 * ranges that include SECOND.
+		 */
+		new_range_fls = fls(new_range);
+		old_range_fls = fls(old_range);
+		if (new_typmod < 0 ||
+			((new_range_fls >= SECOND || new_range_fls >= old_range_fls) &&
+		   (old_range_fls < SECOND || new_precis >= MAX_INTERVAL_PRECISION ||
+			new_precis >= old_precis)))
+			ret = relabel_to_typmod(source, new_typmod);
+	}
+
+	PG_RETURN_POINTER(ret);
+}
+
 /* interval_scale()
  * Adjust interval type for specified fields.
  * Used by PostgreSQL type system to stuff columns.
@@ -1334,7 +1415,8 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 		 * nonzero "month" field.  However that seems a bit pointless when we
 		 * can't do it consistently.  (We cannot enforce a range limit on the
 		 * highest expected field, since we do not have any equivalent of
-		 * SQL's <interval leading field precision>.)
+		 * SQL's <interval leading field precision>.)  If we ever decide to
+		 * revisit this, interval_transform will likely require adjusting.
 		 *
 		 * Note: before PG 8.4 we interpreted a limited set of fields as
 		 * actually causing a "modulo" operation on a given value, potentially
@@ -1681,12 +1763,12 @@ timestamptz_to_str(TimestampTz t)
 	struct pg_tm tt,
 			   *tm = &tt;
 	fsec_t		fsec;
-	char	   *tzn;
+	const char *tzn;
 
 	if (TIMESTAMP_NOT_FINITE(t))
 		EncodeSpecialTimestamp(t, buf);
 	else if (timestamp2tm(t, &tz, tm, &fsec, &tzn, NULL) == 0)
-		EncodeDateTime(tm, fsec, &tz, &tzn, USE_ISO_DATES, buf);
+		EncodeDateTime(tm, fsec, true, tz, tzn, USE_ISO_DATES, buf);
 	else
 		strlcpy(buf, "(timestamp out of range)", sizeof(buf));
 
@@ -1732,7 +1814,7 @@ dt2time(Timestamp jd, int *hour, int *min, int *sec, fsec_t *fsec)
  * timezone) will be used.
  */
 int
-timestamp2tm(Timestamp dt, int *tzp, struct pg_tm * tm, fsec_t *fsec, char **tzn, pg_tz *attimezone)
+timestamp2tm(Timestamp dt, int *tzp, struct pg_tm * tm, fsec_t *fsec, const char **tzn, pg_tz *attimezone)
 {
 	Timestamp	date;
 	Timestamp	time;
@@ -1868,7 +1950,7 @@ recalc_t:
 		tm->tm_zone = tx->tm_zone;
 		*tzp = -tm->tm_gmtoff;
 		if (tzn != NULL)
-			*tzn = (char *) tm->tm_zone;
+			*tzn = tm->tm_zone;
 	}
 	else
 	{
@@ -2184,6 +2266,25 @@ timestamp_cmp(PG_FUNCTION_ARGS)
 	Timestamp	dt2 = PG_GETARG_TIMESTAMP(1);
 
 	PG_RETURN_INT32(timestamp_cmp_internal(dt1, dt2));
+}
+
+/* note: this is used for timestamptz also */
+static int
+timestamp_fastcmp(Datum x, Datum y, SortSupport ssup)
+{
+	Timestamp	a = DatumGetTimestamp(x);
+	Timestamp	b = DatumGetTimestamp(y);
+
+	return timestamp_cmp_internal(a, b);
+}
+
+Datum
+timestamp_sortsupport(PG_FUNCTION_ARGS)
+{
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
+
+	ssup->comparator = timestamp_fastcmp;
+	PG_RETURN_VOID();
 }
 
 Datum
@@ -2553,7 +2654,6 @@ static inline TimestampTz
 timestamptz_offset_internal(TimestampTz timestamp, Interval *span)
 {
 	int			tz;
-	char	   *tzn;
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		return timestamp;
@@ -2564,7 +2664,7 @@ timestamptz_offset_internal(TimestampTz timestamp, Interval *span)
 		*tm = &tt;
 		fsec_t		fsec = 0;
 
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));
@@ -2600,7 +2700,7 @@ timestamptz_offset_internal(TimestampTz timestamp, Interval *span)
 		fsec_t		fsec = 0;
 		int			julian;
 
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));
@@ -3742,12 +3842,11 @@ timestamptz_age(PG_FUNCTION_ARGS)
 			   *tm2 = &tt2;
 	int			tz1;
 	int			tz2;
-	char	   *tzn;
 
 	result = (Interval *) palloc(sizeof(Interval));
 
-	if (timestamp2tm(dt1, &tz1, tm1, &fsec1, &tzn, NULL) == 0 &&
-		timestamp2tm(dt2, &tz2, tm2, &fsec2, &tzn, NULL) == 0)
+	if (timestamp2tm(dt1, &tz1, tm1, &fsec1, NULL, NULL) == 0 &&
+		timestamp2tm(dt2, &tz2, tm2, &fsec2, NULL, NULL) == 0)
 	{
 		/* form the symbolic difference */
 		fsec = fsec1 - fsec2;
@@ -4102,8 +4201,7 @@ timestamptz_trunc(PG_FUNCTION_ARGS)
 				val;
 	bool		redotz = false;
 	char	   *lowunits;
-	fsec_t		fsec = 0;
-	char	   *tzn;
+	fsec_t		fsec;
 	struct pg_tm tt,
 			   *tm = &tt;
 
@@ -4118,7 +4216,7 @@ timestamptz_trunc(PG_FUNCTION_ARGS)
 
 	if (type == UNITS)
 	{
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));
@@ -4672,32 +4770,13 @@ timestamp_part(PG_FUNCTION_ARGS)
 		switch (val)
 		{
 			case DTK_EPOCH:
-				{
-					int			tz;
-					TimestampTz timestamptz;
-
-					/*
-					 * convert to timestamptz to produce consistent results
-					 */
-					if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
-						ereport(ERROR,
-								(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-								 errmsg("timestamp out of range")));
-
-					tz = DetermineTimeZoneOffset(tm, session_timezone);
-
-					if (tm2timestamp(tm, fsec, &tz, &timestamptz) != 0)
-						ereport(ERROR,
-								(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-								 errmsg("timestamp out of range")));
-
 #ifdef HAVE_INT64_TIMESTAMP
-					result = (timestamptz - SetEpochTimestamp()) / 1000000.0;
+				result = (timestamp - SetEpochTimestamp()) / 1000000.0;
 #else
-					result = timestamptz - SetEpochTimestamp();
+				result = timestamp - SetEpochTimestamp();
 #endif
-					break;
-				}
+				break;
+
 			case DTK_DOW:
 			case DTK_ISODOW:
 				if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
@@ -4752,8 +4831,7 @@ timestamptz_part(PG_FUNCTION_ARGS)
 				val;
 	char	   *lowunits;
 	double		dummy;
-	fsec_t		fsec = 0;
-	char	   *tzn;
+	fsec_t		fsec;
 	struct pg_tm tt,
 			   *tm = &tt;
 
@@ -4773,7 +4851,7 @@ timestamptz_part(PG_FUNCTION_ARGS)
 
 	if (type == UNITS)
 	{
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));
@@ -4913,7 +4991,7 @@ timestamptz_part(PG_FUNCTION_ARGS)
 
 			case DTK_DOW:
 			case DTK_ISODOW:
-				if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 							 errmsg("timestamp out of range")));
@@ -4923,7 +5001,7 @@ timestamptz_part(PG_FUNCTION_ARGS)
 				break;
 
 			case DTK_DOY:
-				if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 							 errmsg("timestamp out of range")));
@@ -5243,15 +5321,14 @@ timestamptz_timestamp(PG_FUNCTION_ARGS)
 	Timestamp	result;
 	struct pg_tm tt,
 			   *tm = &tt;
-	fsec_t		fsec = 0;
-	char	   *tzn;
+	fsec_t		fsec;
 	int			tz;
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		result = timestamp;
 	else
 	{
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));

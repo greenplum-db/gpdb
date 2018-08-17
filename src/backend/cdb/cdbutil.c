@@ -41,6 +41,7 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "libpq/ip.h"
+#include "cdb/cdbfts.h"
 
 /*
  * Helper Functions
@@ -256,6 +257,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		Assert(!isNull);
 		pRow->port = DatumGetInt32(attr);
 
+		pRow->hostip = NULL;
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
 
 		/*
@@ -264,12 +266,13 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		 */
 		if (pRow->hostaddrs[0] == NULL &&
 			pRow->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
-			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
+			elog(DNSLookupAsError ? ERROR : LOG, "Cannot resolve network address for dbid=%d", dbid);
+
 		if (pRow->hostaddrs[0] != NULL)
 			pRow->hostip = pstrdup(pRow->hostaddrs[0]);
-		Assert(strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
+		AssertImply(pRow->hostip, strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
 
-		if (pRow->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		if (pRow->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || pRow->hostip == NULL)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, pRow->hostip, HASH_ENTER, &found);
@@ -396,7 +399,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->hostip == NULL)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
@@ -408,7 +411,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->hostip == NULL)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
@@ -431,7 +434,30 @@ getCdbComponentInfo(bool DNSLookupAsError)
 CdbComponentDatabases *
 getCdbComponentDatabases(void)
 {
-	return getCdbComponentInfo(true);
+	CdbComponentDatabases *cdbs;
+
+	PG_TRY();
+	{
+		cdbs = getCdbComponentInfo(true);
+	}
+	PG_CATCH();
+	{
+#ifdef FAULT_INJECTOR
+		const char *dbname = NULL;
+		if (MyProcPort)
+			dbname = MyProcPort->database_name;
+
+		FaultInjector_InjectFaultIfSet(BeforeFtsNotify, DDLNotSpecified,
+								   dbname?dbname: "", "");
+#endif
+
+		FtsNotifyProber();
+
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	return cdbs;
 }
 
 
@@ -448,6 +474,9 @@ freeCdbComponentDatabases(CdbComponentDatabases *pDBs)
 
 	if (pDBs == NULL)
 		return;
+
+	hash_destroy(segment_ip_cache_htab);
+	segment_ip_cache_htab = NULL;
 
 	if (pDBs->segment_db_info != NULL)
 	{
@@ -846,6 +875,19 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 
 	/* Use hostname */
 	memset(c->hostaddrs, 0, COMPONENT_DBS_MAX_ADDRS * sizeof(char *));
+
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR(GetDnsCachedAddress) == FaultInjectorTypeSkip)
+	{
+		/* inject a dns error for primary of segment 0 */
+		if (c->segindex == 0 &&
+				c->preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		{
+			c->address = pstrdup("dnserrordummyaddress"); 
+			c->hostname = pstrdup("dnserrordummyaddress"); 
+		}
+	}
+#endif
 
 	/*
 	 * add an entry, using the first the "address" and then the "hostname" as

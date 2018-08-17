@@ -36,7 +36,7 @@
  *		ss_report_location	- update current scan location
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -48,8 +48,6 @@
 
 #include "access/heapam.h"
 #include "miscadmin.h"
-#include "storage/block.h"
-#include "storage/relfilenode.h"
 #include "utils/rel.h"
 
 

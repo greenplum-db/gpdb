@@ -30,7 +30,8 @@ DROP TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable> [, ..
 
   <para>
    <command>DROP TABLE</command> removes tables from the database.
-   Only its owner can drop a table.  To empty a table of rows
+   Only the table owner, the schema owner, and superuser can drop a
+   table.  To empty a table of rows
    without destroying the table, use <xref linkend="sql-delete">
    or <xref linkend="sql-truncate">.
   </para>
@@ -100,8 +101,7 @@ DROP TABLE [ IF EXISTS ] <replaceable class="PARAMETER">name</replaceable> [, ..
 
 <programlisting>
 DROP TABLE films, distributors;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1>

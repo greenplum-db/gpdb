@@ -303,7 +303,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'bar' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_other' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_2' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
@@ -392,7 +392,7 @@ select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t 
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'b' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname like 'abbp%' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 select abbp.b, abbp.t from abbp join (select abbp.* from b, abbp where abbp.a = b.k and abbp.a = '6SOME NUMBER') FOO on abbp.a = FOO.a  where abbp.t is not null order by 1, 2 desc limit 10;

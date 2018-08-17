@@ -2,7 +2,7 @@
  *
  * createlang
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/createlang.c
@@ -91,14 +91,23 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/*
+	 * We set dbname from positional arguments if it is not already set by
+	 * option arguments -d. If not doing listlangs, positional dbname must
+	 * follow positional langname.
+	 */
+
 	if (argc - optind > 0)
 	{
 		if (listlangs)
-			dbname = argv[optind++];
+		{
+			if (dbname == NULL)
+				dbname = argv[optind++];
+		}
 		else
 		{
 			langname = argv[optind++];
-			if (argc - optind > 0)
+			if (argc - optind > 0 && dbname == NULL)
 				dbname = argv[optind++];
 		}
 	}
@@ -132,7 +141,7 @@ main(int argc, char *argv[])
 		static const bool translate_columns[] = {false, true};
 
 		conn = connectDatabase(dbname, host, port, username, prompt_password,
-							   progname);
+							   progname, false);
 
 		printfPQExpBuffer(&sql, "SELECT lanname as \"%s\", "
 				"(CASE WHEN lanpltrusted THEN '%s' ELSE '%s' END) as \"%s\" "
@@ -164,11 +173,13 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+	/* lower case language name */
 	for (p = langname; *p; p++)
 		if (*p >= 'A' && *p <= 'Z')
 			*p += ('a' - 'A');
 
-	conn = connectDatabase(dbname, host, port, username, prompt_password, progname);
+	conn = connectDatabase(dbname, host, port, username, prompt_password,
+						   progname, false);
 
 	/*
 	 * Make sure the language isn't already installed

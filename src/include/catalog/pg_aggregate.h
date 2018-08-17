@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_aggregate.h
@@ -57,7 +57,10 @@ CATALOG(pg_aggregate,2600) BKI_WITHOUT_OIDS
 	bool		aggfinalextra;
 	Oid			aggsortop;
 	Oid			aggtranstype;
-	text		agginitval;		/* VARIABLE LENGTH FIELD */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
+	text		agginitval;
+#endif
 } FormData_pg_aggregate;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -253,9 +256,9 @@ DATA(insert ( 2828	n 0 float8_regr_accum		- float8_regr_amalg	- float8_covar_sam
 DATA(insert ( 2829	n 0 float8_regr_accum		- float8_regr_amalg	- float8_corr				f 0	1022	"{0,0,0,0,0,0}"));
 
 /* boolean-and and boolean-or */
-DATA(insert ( 2517	n 0 booland_statefunc	- booland_statefunc	- -			f 0	16		_null_));
-DATA(insert ( 2518	n 0 boolor_statefunc	- boolor_statefunc	- -			f 0	16		_null_));
-DATA(insert ( 2519	n 0 booland_statefunc	- booland_statefunc	- -			f 0	16		_null_));
+DATA(insert ( 2517	n 0 booland_statefunc	- booland_statefunc	- -			f 58	16		_null_));
+DATA(insert ( 2518	n 0 boolor_statefunc	- boolor_statefunc	- -			f 59	16		_null_));
+DATA(insert ( 2519	n 0 booland_statefunc	- booland_statefunc	- -			f 58	16		_null_));
 
 /* bitwise integer */
 DATA(insert ( 2236 n 0 int2and		  - int2and		  - -					f 0	21		_null_));
@@ -314,6 +317,9 @@ DATA(insert ( 6130	o 1 ordered_set_transition	- - -		percentile_cont_timestamptz
 
 /* text */
 DATA(insert ( 3538	n 0 string_agg_transfn - - - string_agg_finalfn f 0 2281 _null_));
+
+/* bytea */
+DATA(insert ( 3545	n 0 bytea_string_agg_transfn - - - 	bytea_string_agg_finalfn	f	0	2281	_null_ ));
 
 /* hyperloglog */
 DATA(insert ( 7164	n 0 hyperloglog_add_item_agg_default	- hyperloglog_merge - hyperloglog_comp	f 0 7157	_null_));

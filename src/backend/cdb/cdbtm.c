@@ -2180,7 +2180,7 @@ setCurrentGxact(void)
 	DistributedTransactionId gxid = generateGID();
 	Assert(gxid != InvalidDistributedTransactionId);
 
-	currentGxact = &MyProc->gxact;
+	currentGxact = MyTmGxact;
 
 	Assert(*shmDistribTimeStamp != 0);
 	sprintf(currentGxact->gid, "%u-%.10u", *shmDistribTimeStamp, gxid);

@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/rel.h
@@ -27,6 +27,7 @@
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"
+#include "utils/reltrigger.h"
 
 
 /*
@@ -47,60 +48,6 @@ typedef struct LockInfoData
 
 typedef LockInfoData *LockInfo;
 
-/*
- * Likewise, this struct really belongs to trigger.h, but for convenience
- * we put it here.
- */
-typedef struct Trigger
-{
-	Oid			tgoid;			/* OID of trigger (pg_trigger row) */
-	/* Remaining fields are copied from pg_trigger, see pg_trigger.h */
-	char	   *tgname;
-	Oid			tgfoid;
-	int16		tgtype;
-	char		tgenabled;
-	bool		tgisinternal;
-	Oid			tgconstrrelid;
-	Oid			tgconstrindid;
-	Oid			tgconstraint;
-	bool		tgdeferrable;
-	bool		tginitdeferred;
-	int16		tgnargs;
-	int16		tgnattr;
-	int16	   *tgattr;
-	char	  **tgargs;
-	char	   *tgqual;
-} Trigger;
-
-typedef struct TriggerDesc
-{
-	Trigger    *triggers;		/* array of Trigger structs */
-	int			numtriggers;	/* number of array entries */
-
-	/*
-	 * These flags indicate whether the array contains at least one of each
-	 * type of trigger.  We use these to skip searching the array if not.
-	 */
-	bool		trig_insert_before_row;
-	bool		trig_insert_after_row;
-	bool		trig_insert_instead_row;
-	bool		trig_insert_before_statement;
-	bool		trig_insert_after_statement;
-	bool		trig_update_before_row;
-	bool		trig_update_after_row;
-	bool		trig_update_instead_row;
-	bool		trig_update_before_statement;
-	bool		trig_update_after_statement;
-	bool		trig_delete_before_row;
-	bool		trig_delete_after_row;
-	bool		trig_delete_instead_row;
-	bool		trig_delete_before_statement;
-	bool		trig_delete_after_statement;
-	/* there are no row-level truncate triggers */
-	bool		trig_truncate_before_statement;
-	bool		trig_truncate_after_statement;
-} TriggerDesc;
-
 
 /*
  * Cached lookup information for the index access method functions defined
@@ -120,6 +67,7 @@ typedef struct RelationAmInfo
 	FmgrInfo	ambuildempty;
 	FmgrInfo	ambulkdelete;
 	FmgrInfo	amvacuumcleanup;
+	FmgrInfo	amcanreturn;
 	FmgrInfo	amcostestimate;
 	FmgrInfo	amoptions;
 } RelationAmInfo;
@@ -216,7 +164,8 @@ typedef struct RelationData
 	 * have the existing toast table's OID, not the OID of the transient toast
 	 * table.  If rd_toastoid isn't InvalidOid, it is the OID to place in
 	 * toast pointers inserted into this rel.  (Note it's set on the new
-	 * version of the main heap, not the toast table itself.)
+	 * version of the main heap, not the toast table itself.)  This also
+	 * causes toast_save_datum() to try to preserve toast value OIDs.
 	 */
 	Oid			rd_toastoid;	/* Real TOAST table's OID, or InvalidOid */
 
@@ -266,6 +215,7 @@ typedef struct StdRdOptions
 	bool		checksum;		/* checksum (AO rels only) */
 	bool 		columnstore;	/* columnstore (AO only) */
 	char		orientation[NAMEDATALEN]; /* orientation (AO only) */
+	bool		security_barrier;		/* for views */
 } StdRdOptions;
 
 #define HEAP_MIN_FILLFACTOR			10
@@ -292,6 +242,14 @@ typedef struct StdRdOptions
  */
 #define RelationGetTargetPageFreeSpace(relation, defaultff) \
 	(BLCKSZ * (100 - RelationGetFillFactor(relation, defaultff)) / 100)
+
+/*
+ * RelationIsSecurityView
+ *		Returns whether the relation is security view, or not
+ */
+#define RelationIsSecurityView(relation)	\
+	((relation)->rd_options ?				\
+	 ((StdRdOptions *) (relation)->rd_options)->security_barrier : false)
 
 /*
  * RelationIsValid

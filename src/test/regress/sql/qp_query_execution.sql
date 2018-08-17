@@ -183,7 +183,7 @@ insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 f
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'bar' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_other' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_2' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
@@ -222,7 +222,7 @@ insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 f
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'b' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 update pg_class set reltuples = 1, relpages = 1 where relname like 'abbp%' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 

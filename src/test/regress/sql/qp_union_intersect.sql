@@ -6,6 +6,11 @@
 -- therefore roll back implicitly anyway). The purpose of these tests is to
 -- exercise planner, so it doesn't matter that the changes are rolled back
 -- afterwards.
+
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
 begin;
 CREATE TABLE dml_union_r (
         a int CONSTRAINT r_check_a CHECK(a <> -1),

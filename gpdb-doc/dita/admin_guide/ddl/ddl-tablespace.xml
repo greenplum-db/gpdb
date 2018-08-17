@@ -10,28 +10,26 @@
       performance on certain database objects. For example, place frequently-used tables on file
       systems that use high performance solid-state drives (SSD), and place other tables on standard
       hard drives.</p>
-    <p>A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment (primary and mirror) require a distinct
-      storage location. The collection of file system locations for all components in a Greenplum system is a <i>filespace</i>. Filespaces can be used by one or
-      more tablespaces.</p>
+    <p>A tablespace requires a file system location to store its database files. In Greenplum
+      Database, the master and each segment (primary and mirror) require a distinct storage
+      location. The collection of file system locations for all components in a Greenplum system is
+      a <i>filespace</i>. Filespaces can be used by one or more tablespaces.</p>
   </body>
   <topic id="topic10" xml:lang="en">
     <title id="im199401">Creating a Filespace</title>
     <body>
-      <p>A filespace sets aside storage for your Greenplum system. A
-        filespace is a symbolic storage identifier that maps onto a set of locations in your
-          Greenplum hosts' file systems. To create a filespace, prepare
-        the logical file systems on all of your Greenplum hosts, then
+      <p>A filespace sets aside storage for your Greenplum system. A filespace is a symbolic storage
+        identifier that maps onto a set of locations in your Greenplum hosts' file systems. To
+        create a filespace, prepare the logical file systems on all of your Greenplum hosts, then
         use the <codeph>gpfilespace</codeph> utility to define the filespace. You must be a database
         superuser to create a filespace.</p>
-      <note type="note">Greenplum Database is not directly aware of the file system
-        boundaries on your underlying systems. It stores files in the directories that you tell it
-        to use. You cannot control the location on disk of individual files within a logical file
-        system.</note>
+      <note type="note">Greenplum Database is not directly aware of the file system boundaries on
+        your underlying systems. It stores files in the directories that you tell it to use. You
+        cannot control the location on disk of individual files within a logical file system.</note>
       <section id="im178954">
         <title>To create a filespace using gpfilespace</title>
         <ol id="ol_ojl_hvy_sp">
-          <li id="im178990">Log in to the Greenplum Database master as the
-              <codeph>gpadmin</codeph>
+          <li id="im178990">Log in to the Greenplum Database master as the <codeph>gpadmin</codeph>
             user.<codeblock>$ su - <codeph>gpadmin</codeph></codeblock></li>
           <li id="im178959">Create a filespace configuration
             file:<codeblock>$ gpfilespace -o gpfilespace_config</codeblock></li>
@@ -87,25 +85,27 @@ primary location 1&gt; <i>/gpfs1/seg1
           <ol id="ol_bll_hvy_sp">
             <li id="im198894">Check that the filespace exists and is different from the filespace
               used to store all other user data.</li>
-            <li id="im198895">Issue smart shutdown to bring the Greenplum Database
-                offline.<p>If any connections are still in progess,the gpfilespace --movetempfiles
-                utility will fail.</p></li>
-            <li id="im198897">Bring Greenplum Database online with no active session
-              and run the following command:<p>
+            <li id="im198895">Issue smart shutdown to bring the Greenplum Database offline.<p>If any
+                connections are still in progess,the gpfilespace --movetempfiles utility will
+                fail.</p></li>
+            <li id="im198897">Bring Greenplum Database online with no active session and run the
+              following command:<p>
                 <codeblock>gpfilespace --movetempfilespace filespace_name</codeblock>
               </p><p>The location of the temporary files is stored in the segment configuration
                 shared memory (PMModuleState) and used whenever temporary files are created, opened,
                 or dropped.</p></li>
           </ol>
+        </section>
+        <section>
           <title>To move transaction files using gpfilespace</title>
           <ol id="ol_vll_hvy_sp">
             <li id="im198901">Check that the filespace exists and is different from the filespace
               used to store all other user data.</li>
-            <li id="im198902">Issue smart shutdown to bring the Greenplum Database
-                offline.<p>If any connections are still in progess,the <codeph>gpfilespace
-                  --movetransfiles</codeph> utility will fail.</p></li>
-            <li id="im198904">Bring Greenplum Database online with no active session
-              and run the following command:<p>
+            <li id="im198902">Issue smart shutdown to bring the Greenplum Database offline.<p>If any
+                connections are still in progess, the <codeph>gpfilespace --movetransfiles</codeph>
+                utility will fail.</p></li>
+            <li id="im198904">Bring Greenplum Database online with no active session and run the
+              following command:<p>
                 <codeblock>gpfilespace --movetransfilespace filespace_name</codeblock>
               </p><p>The location of the transaction files is stored in the segment configuration
                 shared memory (PMModuleState) and used whenever transaction files are created,
@@ -198,8 +198,8 @@ CREATE TABLE foo(i int);
         using that filespace are removed.</p>
       <p>The <codeph>DROP TABLESPACE</codeph> command removes an empty tablespace.</p>
       <p>The <codeph>DROP FILESPACE</codeph> command removes an empty filespace.</p>
-      <note type="note">You cannot drop a filespace if it stores temporary or
-        transaction files.</note>
+      <note type="note">You cannot drop a filespace if it stores temporary or transaction
+        files.</note>
     </body>
   </topic>
 </topic>

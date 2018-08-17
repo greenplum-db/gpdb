@@ -2,7 +2,7 @@
  *
  * dropdb
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/dropdb.c
@@ -21,6 +21,8 @@ static void help(const char *progname);
 int
 main(int argc, char *argv[])
 {
+	static int	if_exists = 0;
+
 	static struct option long_options[] = {
 		{"host", required_argument, NULL, 'h'},
 		{"port", required_argument, NULL, 'p'},
@@ -29,6 +31,8 @@ main(int argc, char *argv[])
 		{"password", no_argument, NULL, 'W'},
 		{"echo", no_argument, NULL, 'e'},
 		{"interactive", no_argument, NULL, 'i'},
+		{"if-exists", no_argument, &if_exists, 1},
+		{"maintenance-db", required_argument, NULL, 2},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -37,6 +41,7 @@ main(int argc, char *argv[])
 	int			c;
 
 	char	   *dbname = NULL;
+	char	   *maintenance_db = NULL;
 	char	   *host = NULL;
 	char	   *port = NULL;
 	char	   *username = NULL;
@@ -79,6 +84,12 @@ main(int argc, char *argv[])
 			case 'i':
 				interactive = true;
 				break;
+			case 0:
+				/* this covers the long options */
+				break;
+			case 2:
+				maintenance_db = optarg;
+				break;
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
@@ -110,15 +121,15 @@ main(int argc, char *argv[])
 
 	initPQExpBuffer(&sql);
 
-	appendPQExpBuffer(&sql, "DROP DATABASE %s;\n",
-					  fmtId(dbname));
+	appendPQExpBuffer(&sql, "DROP DATABASE %s%s;\n",
+					  (if_exists ? "IF EXISTS " : ""), fmtId(dbname));
 
-	/*
-	 * Connect to the 'postgres' database by default, except have the
-	 * 'postgres' user use 'template1' so he can drop the 'postgres' database.
-	 */
-	conn = connectDatabase(strcmp(dbname, "postgres") == 0 ? "template1" : "postgres",
-						   host, port, username, prompt_password, progname);
+	/* Avoid trying to drop postgres db while we are connected to it. */
+	if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0)
+		maintenance_db = "template1";
+
+	conn = connectMaintenanceDatabase(maintenance_db,
+							host, port, username, prompt_password, progname);
 
 	if (echo)
 		printf("%s", sql.data);
@@ -146,6 +157,7 @@ help(const char *progname)
 	printf(_("\nOptions:\n"));
 	printf(_("  -e, --echo                show the commands being sent to the server\n"));
 	printf(_("  -i, --interactive         prompt before deleting anything\n"));
+	printf(_("  --if-exists               don't report error if database doesn't exist\n"));
 	printf(_("  --help                    show this help, then exit\n"));
 	printf(_("  --version                 output version information, then exit\n"));
 	printf(_("\nConnection options:\n"));
@@ -154,5 +166,6 @@ help(const char *progname)
 	printf(_("  -U, --username=USERNAME   user name to connect as\n"));
 	printf(_("  -w, --no-password         never prompt for password\n"));
 	printf(_("  -W, --password            force password prompt\n"));
+	printf(_("  --maintenance-db=DBNAME   alternate maintenance database\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }

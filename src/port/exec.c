@@ -4,7 +4,7 @@
  *		Functions for finding and validating executable files
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -511,6 +511,9 @@ pipe_read_line(char *cmd, char *line, int maxsize)
 
 /*
  * pclose() plus useful error reporting
+ * Is this necessary?  bjm 2004-05-11
+ * Originaally this was stated to be here because pipe.c had backend linkage.
+ * Perhaps that's no longer so now we have got rid of pipe.c amd 2012-03-28
  */
 int
 pclose_check(FILE *stream)
@@ -646,13 +649,13 @@ AddUserToTokenDacl(HANDLE hToken)
 
 			if (!GetTokenInformation(hToken, tic, (LPVOID) ptdd, dwSize, &dwSize))
 			{
-				log_error("could not get token information: %lu", GetLastError());
+				log_error("could not get token information: error code %lu", GetLastError());
 				goto cleanup;
 			}
 		}
 		else
 		{
-			log_error("could not get token information buffer size: %lu", GetLastError());
+			log_error("could not get token information buffer size: error code %lu", GetLastError());
 			goto cleanup;
 		}
 	}
@@ -662,7 +665,7 @@ AddUserToTokenDacl(HANDLE hToken)
 						   (DWORD) sizeof(ACL_SIZE_INFORMATION),
 						   AclSizeInformation))
 	{
-		log_error("could not get ACL information: %lu", GetLastError());
+		log_error("could not get ACL information: error code %lu", GetLastError());
 		goto cleanup;
 	}
 
@@ -672,7 +675,7 @@ AddUserToTokenDacl(HANDLE hToken)
 	 */
 	if (!GetTokenUser(hToken, &pTokenUser))
 	{
-		log_error("could not get user token: %lu", GetLastError());
+		log_error("could not get user token: error code %lu", GetLastError());
 		goto cleanup;
 	}
 
@@ -690,7 +693,7 @@ AddUserToTokenDacl(HANDLE hToken)
 
 	if (!InitializeAcl(pacl, dwNewAclSize, ACL_REVISION))
 	{
-		log_error("could not initialize ACL: %lu", GetLastError());
+		log_error("could not initialize ACL: error code %lu", GetLastError());
 		goto cleanup;
 	}
 
@@ -699,13 +702,13 @@ AddUserToTokenDacl(HANDLE hToken)
 	{
 		if (!GetAce(ptdd->DefaultDacl, i, (LPVOID *) &pace))
 		{
-			log_error("could not get ACE: %lu", GetLastError());
+			log_error("could not get ACE: error code %lu", GetLastError());
 			goto cleanup;
 		}
 
 		if (!AddAce(pacl, ACL_REVISION, MAXDWORD, pace, ((PACE_HEADER) pace)->AceSize))
 		{
-			log_error("could not add ACE: %lu", GetLastError());
+			log_error("could not add ACE: error code %lu", GetLastError());
 			goto cleanup;
 		}
 	}
@@ -713,7 +716,7 @@ AddUserToTokenDacl(HANDLE hToken)
 	/* Add the new ACE for the current user */
 	if (!AddAccessAllowedAceEx(pacl, ACL_REVISION, OBJECT_INHERIT_ACE, GENERIC_ALL, pTokenUser->User.Sid))
 	{
-		log_error("could not add access allowed ACE: %lu", GetLastError());
+		log_error("could not add access allowed ACE: error code %lu", GetLastError());
 		goto cleanup;
 	}
 
@@ -722,7 +725,7 @@ AddUserToTokenDacl(HANDLE hToken)
 
 	if (!SetTokenInformation(hToken, tic, (LPVOID) &tddNew, dwNewAclSize))
 	{
-		log_error("could not set token information: %lu", GetLastError());
+		log_error("could not set token information: error code %lu", GetLastError());
 		goto cleanup;
 	}
 
@@ -774,7 +777,7 @@ GetTokenUser(HANDLE hToken, PTOKEN_USER *ppTokenUser)
 		}
 		else
 		{
-			log_error("could not get token information buffer size: %lu", GetLastError());
+			log_error("could not get token information buffer size: error code %lu", GetLastError());
 			return FALSE;
 		}
 	}
@@ -788,7 +791,7 @@ GetTokenUser(HANDLE hToken, PTOKEN_USER *ppTokenUser)
 		LocalFree(*ppTokenUser);
 		*ppTokenUser = NULL;
 
-		log_error("could not get token information: %lu", GetLastError());
+		log_error("could not get token information: error code %lu", GetLastError());
 		return FALSE;
 	}
 

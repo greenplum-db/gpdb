@@ -3,7 +3,7 @@
  * pg_shdepend.c
  *	  routines to support manipulation of the pg_shdepend relation
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,6 +25,8 @@
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_default_acl.h"
+#include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
@@ -390,7 +392,7 @@ getOidListDiff(Oid *list1, int *nlist1, Oid *list2, int *nlist2)
  * nnewmembers, newmembers: array of roleids appearing in new ACL
  *
  * We calculate the differences between the new and old lists of roles,
- * and then insert or delete from pg_shdepend as appropiate.
+ * and then insert or delete from pg_shdepend as appropriate.
  *
  * Note that we can't just insert all referenced roles blindly during GRANT,
  * because we would end up with duplicate registered dependencies.	We could
@@ -1247,7 +1249,7 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 	}
 
 	/* the dependency mechanism does the actual work */
-	performMultipleDeletions(deleteobjs, behavior);
+	performMultipleDeletions(deleteobjs, behavior, 0);
 
 	heap_close(sdepRel, RowExclusiveLock);
 
@@ -1292,7 +1294,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
 			ereport(ERROR,
 					(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
 					 errmsg("cannot reassign ownership of objects owned by %s because they are required by the database system",
-						  getObjectDescription(&obj))));
+							getObjectDescription(&obj))));
 
 			/*
 			 * There's no need to tell the whole truth, which is that we
@@ -1387,6 +1389,14 @@ shdepReassignOwned(List *roleids, Oid newrole)
 
 				case OperatorFamilyRelationId:
 					AlterOpFamilyOwner_oid(sdepForm->objid, newrole);
+					break;
+
+				case ForeignServerRelationId:
+					AlterForeignServerOwner_oid(sdepForm->objid, newrole);
+					break;
+
+				case ForeignDataWrapperRelationId:
+					AlterForeignDataWrapperOwner_oid(sdepForm->objid, newrole);
 					break;
 
 				default:

@@ -150,21 +150,6 @@ class StartSegmentsOperation:
         assert totalToAttempt == len(result.getFailedSegmentObjs()) + len(result.getSuccessfulSegments())
         return result
 
-    def transitionSegments(self, gpArray, segments, convertUsingFullResync, mirrorMode):
-        """
-        gpArray: the system to which the segments to start belong
-        segments: the list of segments to be transitioned
-        convertUsingFullResync: in parallel with segments, gives true/false for whether fullResync flag should be passed
-        mirrorMode: should be one of the MIRROR_MODE_* constant values
-
-        """
-
-        result = StartSegmentsResult()
-        self.__sendPrimaryMirrorTransition(mirrorMode, segments, convertUsingFullResync, gpArray, result)
-        
-        assert len(segments) == len(result.getFailedSegmentObjs()) + len(result.getSuccessfulSegments())
-        return result
-
     def __runStartCommand(self, segments, startMethod, numContentsInCluster, resultOut, gpArray, era):
         """
         Putt results into the resultOut object
@@ -291,49 +276,4 @@ class StartSegmentsOperation:
             hostData["dbsByPort"][db.getSegmentPort()] = dbData
 
         return base64.urlsafe_b64encode(pickle.dumps(hostData))
-
-    def __sendPrimaryMirrorTransition(self, targetMode, segments, convertUsingFullResync, gpArray, resultOut):
-        """
-            @param segments the segments to convert
-            @param convertUsingFullResync in parallel with segments, may be None, gives true/false for whether fullResync
-                                          flag should be passed to the transition
-        """
-
-        if len(segments) == 0:
-            logger.debug("%s conversion of zero segments...skipping" % targetMode)
-            return
-
-        logger.info("Commencing parallel %s conversion of %s segments, please wait..." % (targetMode, len(segments)))
-
-        ###############################################
-        # for each host, create + transfer the transition arguments file
-        dispatchCount=0
-
-        dbIdToPeerMap = gpArray.getDbIdToPeerMap()
-        segmentsByHostName = GpArray.getSegmentsByHostName(segments)
-        for hostName, segments in segmentsByHostName.iteritems():
-            assert len(segments) > 0
-
-            logger.debug("Dispatching command to convert segments on host: %s " % (hostName))
-
-            targetModePerSegment = [targetMode for seg in segments]
-            pickledParams = self.__createPickledTransitionParameters(segments, targetModePerSegment,
-                                        convertUsingFullResync, dbIdToPeerMap)
-
-            address = segments[0].getSegmentAddress()
-            cmd=gp.GpSegChangeMirrorModeCmd(
-                    "remote segment mirror mode conversion on host '%s' using address '%s'" % (hostName, address),
-                    self.__gpHome, self.__gpVersion,
-                    segments, targetMode, pickledParams, verbose=logging_is_verbose(),
-                    ctxt=base.REMOTE,
-                    remoteHost=address)
-            self.__workerPool.addCommand(cmd)
-            dispatchCount+=1
-        self.__workerPool.wait_and_printdots(dispatchCount,self.__quiet)
-
-        # process results
-        self.__processStartOrConvertCommands(resultOut)
-        self.__workerPool.empty_completed_items()
-
-
 

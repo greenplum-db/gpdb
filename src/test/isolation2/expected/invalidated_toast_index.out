@@ -26,7 +26,7 @@ INSERT 1
 --
 -- This is done in an ignore block so it can run correctly with any number of
 -- segments.
-*U: SET allow_system_table_mods = 'DML';
+*U: SET allow_system_table_mods = true;
 SET
 
 SET

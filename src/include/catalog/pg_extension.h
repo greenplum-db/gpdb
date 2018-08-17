@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_extension.h
@@ -35,14 +35,12 @@ CATALOG(pg_extension,3079)
 	Oid			extnamespace;	/* namespace of contained objects */
 	bool		extrelocatable; /* if true, allow ALTER EXTENSION SET SCHEMA */
 
-	/*
-	 * VARIABLE LENGTH FIELDS start here.
-	 *
-	 * extversion should never be null, but the others can be.
-	 */
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
+	/* extversion should never be null, but the others can be. */
 	text		extversion;		/* extension version name */
 	Oid			extconfig[1];	/* dumpable configuration tables */
 	text		extcondition[1];	/* WHERE clauses for config tables */
+#endif
 } FormData_pg_extension;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

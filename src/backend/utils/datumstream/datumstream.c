@@ -479,7 +479,7 @@ determine_datumstream_compression_overflow(
 		 */
 		desiredOverflowBytes =
 			(int) (desiredCompSizeFunc) (maxAoBlockSize) - maxAoBlockSize;
-		Insist(desiredOverflowBytes >= 0);
+		Assert(desiredOverflowBytes >= 0);
 	}
 	ao_attr->overflowSize = desiredOverflowBytes;
 }

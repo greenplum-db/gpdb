@@ -3,7 +3,7 @@
  * parse_cte.c
  *	  handle CTEs (common table expressions) in parser
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -254,13 +254,6 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 		elog(ERROR, "unexpected non-Query statement in WITH");
 	if (query->utilityStmt != NULL)
 		elog(ERROR, "unexpected utility statement in WITH");
-
-	if (query->intoClause)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("subquery in WITH cannot have SELECT INTO"),
-				 parser_errposition(pstate,
-								 exprLocation((Node *) query->intoClause))));
 
 	/*
 	 * We disallow data-modifying WITH except at the top level of a query,

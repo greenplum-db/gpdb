@@ -43,6 +43,14 @@
       <li><codeph>optimizer_sort_factor</codeph> controls the cost factor that GPORCA applies to
         sorting operations during query optimization. The cost factor can be adjusted for queries
         when data skew is present. </li>
+      <li><codeph>gp_enable_relsize_collection</codeph> controls how GPORCA (and the legacy query
+        optimizer) handle a table without statistics. By default, GPORCA uses a default value to
+        estimate the number of rows if statistics are not available. When this value is
+          <codeph>on</codeph>, GPORCA uses the estimated size of a table if there are no statistics
+        for the table. <p>This parameter is ignored for a root partition of a partitioned table. If
+          the root partition does not have statistics, GPORCA always uses the default value. You can
+          use <codeph>ANALZYE ROOTPARTITION</codeph> to collect statistics on the root partition.
+          See <codeph><xref href="../../../ref_guide/sql_commands/ANALYZE.xml"/></codeph>.</p></li>
     </ul>
     <p>These server configuration parameters control the display and logging of information.</p>
     <ul id="ul_t3j_fhw_xz">
@@ -54,8 +62,7 @@
     <p> For information about the parameters, see the <cite>Greenplum Database Reference
         Guide</cite>.</p>
     <p>GPORCA generates minidumps to describe the optimization context for a given query. <ph
-        otherprops="pivotal"
-        >The minidump files are used by Pivotal support to analyze Greenplum
+        otherprops="pivotal">The minidump files are used by Pivotal support to analyze Greenplum
         Database issues. </ph>The information in the file is not in a format that can be easily used
       for debugging or troubleshooting. The minidump file is located under the master data directory
       and uses the following naming format:</p>

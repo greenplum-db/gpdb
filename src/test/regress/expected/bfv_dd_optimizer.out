@@ -1050,9 +1050,9 @@ select t1.a, t1.b, (select sum(t2.a+t2.b) from dd_singlecol_2 t2 where t2.b=1) f
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
- a | b | ?column? 
----+---+----------
- 1 | 1 |      470
+ a | b | sum 
+---+---+-----
+ 1 | 1 | 470
 (1 row)
 
 -- joins with function scans

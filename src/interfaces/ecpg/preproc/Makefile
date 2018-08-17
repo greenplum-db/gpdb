@@ -2,7 +2,7 @@
 #
 # Makefile for src/interfaces/ecpg/preproc
 #
-# Copyright (c) 1998-2011, PostgreSQL Global Development Group
+# Copyright (c) 1998-2012, PostgreSQL Global Development Group
 #
 # src/interfaces/ecpg/preproc/Makefile
 #
@@ -16,7 +16,7 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 MAJOR_VERSION= 4
-MINOR_VERSION= 7
+MINOR_VERSION= 8
 PATCHLEVEL=0
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
@@ -62,8 +62,8 @@ else
 	@$(missing) flex $< $@
 endif
 
-preproc.y: ../../../backend/parser/gram.y parse2.pl ecpg.addons ecpg.header ecpg.tokens ecpg.trailer ecpg.type
-	$(PERL) $(srcdir)/parse2.pl $(srcdir) < $< > $@
+preproc.y: ../../../backend/parser/gram.y parse.pl ecpg.addons ecpg.header ecpg.tokens ecpg.trailer ecpg.type
+	$(PERL) $(srcdir)/parse.pl $(srcdir) < $< > $@
 	$(PERL) $(srcdir)/check_rules.pl $(srcdir) $<
 
 ecpg_keywords.o c_keywords.o keywords.o preproc.o pgc.o parser.o: preproc.h

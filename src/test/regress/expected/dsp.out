@@ -43,11 +43,11 @@ show gp_default_storage_options;
 
 create table t1 (a int, b int) distributed by (a);
 \d+ t1
-                                  Append-Only Columnar Table "public.t1"
- Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+---------+-----------+---------+------------------+-------------------+------------+-------------
- a      | integer |           | plain   | none             | 0                 | 32768      | 
- b      | integer |           | plain   | none             | 0                 | 32768      | 
+                                         Append-Only Columnar Table "public.t1"
+ Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer |           | plain   |              | none             | 0                 | 32768      | 
+ b      | integer |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Has OIDs: no
 Options: appendonly=true, orientation=column
@@ -65,12 +65,12 @@ show gp_default_storage_options;
 
 create table t2 (a int, b varchar, c text) distributed by (a);
 \d+ t2
-                                       Append-Only Columnar Table "public.t2"
- Column |       Type        | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-------------------+-----------+----------+------------------+-------------------+------------+-------------
- a      | integer           |           | plain    | none             | 0                 | 8192       | 
- b      | character varying |           | extended | none             | 0                 | 8192       | 
- c      | text              |           | extended | none             | 0                 | 8192       | 
+                                               Append-Only Columnar Table "public.t2"
+ Column |       Type        | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+-------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a      | integer           |           | plain    |              | none             | 0                 | 8192       | 
+ b      | character varying |           | extended |              | none             | 0                 | 8192       | 
+ c      | text              |           | extended |              | none             | 0                 | 8192       | 
 Checksum: t
 Has OIDs: no
 Options: appendonly=true, blocksize=8192, orientation=column
@@ -79,11 +79,11 @@ Distributed by: (a)
 create table t3 (a int, b float) with (appendonly=false)
 	distributed by (a);
 \d+ t3
-                       Table "public.t3"
- Column |       Type       | Modifiers | Storage | Description 
---------+------------------+-----------+---------+-------------
- a      | integer          |           | plain   | 
- b      | double precision |           | plain   | 
+                              Table "public.t3"
+ Column |       Type       | Modifiers | Storage | Stats target | Description 
+--------+------------------+-----------+---------+--------------+-------------
+ a      | integer          |           | plain   |              | 
+ b      | double precision |           | plain   |              | 
 Has OIDs: no
 Options: appendonly=false
 Distributed by: (a)
@@ -148,11 +148,11 @@ show gp_default_storage_options;
 
 create table t1 (a int, b int) distributed by (a);
 \d+ t1
-            Append-Only Table "public.t1"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- a      | integer |           | plain   | 
- b      | integer |           | plain   | 
+                    Append-Only Table "public.t1"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ a      | integer |           | plain   |              | 
+ b      | integer |           | plain   |              | 
 Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
@@ -177,13 +177,13 @@ create table t2 (
 	d text
 ) with (orientation=column) distributed by (a);
 \d+ t2
-                                       Append-Only Columnar Table "public.t2"
- Column |       Type       | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+----------+------------------+-------------------+------------+-------------
- a      | integer          |           | plain    | zlib             | 2                 | 65536      | 
- b      | double precision |           | plain    | zlib             | 2                 | 32768      | 
- c      | integer          |           | plain    | rle_type         | 2                 | 32768      | 
- d      | text             |           | extended | zlib             | 2                 | 32768      | 
+                                              Append-Only Columnar Table "public.t2"
+ Column |       Type       | Modifiers | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+----------+--------------+------------------+-------------------+------------+-------------
+ a      | integer          |           | plain    |              | zlib             | 2                 | 65536      | 
+ b      | double precision |           | plain    |              | zlib             | 2                 | 32768      | 
+ c      | integer          |           | plain    |              | rle_type         | 2                 | 32768      | 
+ d      | text             |           | extended |              | zlib             | 2                 | 32768      | 
 Checksum: t
 Has OIDs: no
 Options: orientation=column, appendonly=true, compresslevel=2
@@ -569,11 +569,11 @@ show gp_default_storage_options;
 
 create table co8 (a int, b float) distributed by (a);
 \d+ co8
-                                      Append-Only Columnar Table "public.co8"
- Column |       Type       | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+---------+------------------+-------------------+------------+-------------
- a      | integer          |           | plain   | none             | 0                 | 32768      | 
- b      | double precision |           | plain   | none             | 0                 | 32768      | 
+                                             Append-Only Columnar Table "public.co8"
+ Column |       Type       | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ a      | integer          |           | plain   |              | none             | 0                 | 32768      | 
+ b      | double precision |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Has OIDs: no
 Options: appendonly=true, orientation=column
@@ -604,11 +604,11 @@ show gp_default_storage_options;
 
 create table ao1 (a int, b int) with (appendonly=true) distributed by (a);
 \d+ ao1;
-            Append-Only Table "public.ao1"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- a      | integer |           | plain   | 
- b      | integer |           | plain   | 
+                   Append-Only Table "public.ao1"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ a      | integer |           | plain   |              | 
+ b      | integer |           | plain   |              | 
 Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
@@ -635,11 +635,11 @@ show gp_default_storage_options;
 -- verify reset happendon on segments by create, insert, select.
 create table co9 (x int, y float) distributed by (x);
 \d+ co9
-                                      Append-Only Columnar Table "public.co9"
- Column |       Type       | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
---------+------------------+-----------+---------+------------------+-------------------+------------+-------------
- x      | integer          |           | plain   | none             | 0                 | 32768      | 
- y      | double precision |           | plain   | none             | 0                 | 32768      | 
+                                             Append-Only Columnar Table "public.co9"
+ Column |       Type       | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+------------------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ x      | integer          |           | plain   |              | none             | 0                 | 32768      | 
+ y      | double precision |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
 Has OIDs: no
 Options: appendonly=true, orientation=column
@@ -861,11 +861,11 @@ set gp_default_storage_options='appendonly=true';
 create external table ext_t1 (a int, b int)
     location ('file:///tmp/test.txt') format 'text';
 \d+ ext_t1
-            External table "public.ext_t1"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- a      | integer |           | plain   | 
- b      | integer |           | plain   | 
+                   External table "public.ext_t1"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ a      | integer |           | plain   |              | 
+ b      | integer |           | plain   |              | 
 Type: readable
 Encoding: UTF8
 Format type: text
@@ -879,11 +879,11 @@ create external table ext_error_logging_off (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     segment reject limit 100;
 \d+ ext_error_logging_off
-    External table "public.ext_error_logging_off"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- a      | integer |           | plain   | 
- b      | integer |           | plain   | 
+            External table "public.ext_error_logging_off"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ a      | integer |           | plain   |              | 
+ b      | integer |           | plain   |              | 
 Type: readable
 Encoding: UTF8
 Format type: text
@@ -898,11 +898,11 @@ create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
     log errors segment reject limit 100;
 \d+ ext_t2
-            External table "public.ext_t2"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- a      | integer |           | plain   | 
- b      | integer |           | plain   | 
+                   External table "public.ext_t2"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ a      | integer |           | plain   |              | 
+ b      | integer |           | plain   |              | 
 Type: readable
 Encoding: UTF8
 Format type: text

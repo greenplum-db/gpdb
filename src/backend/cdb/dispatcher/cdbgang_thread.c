@@ -299,6 +299,7 @@ thread_DoConnect(void *arg)
 	 */
 	for (i = 0; i < db_count; i++)
 	{
+		bool		ret;
 		char		gpqeid[100];
 
 		segdbDesc = segdbDescPtrArray[i];
@@ -314,10 +315,19 @@ thread_DoConnect(void *arg)
 		 * early enough now some locks are taken before command line options
 		 * are recognized.
 		 */
-		build_gpqeid_param(gpqeid, sizeof(gpqeid),
-						   pParms->type == GANGTYPE_PRIMARY_WRITER,
-						   pParms->gangId,
-						   segdbDesc->segment_database_info->hostSegs);
+		ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
+								 pParms->type == GANGTYPE_PRIMARY_WRITER,
+								 pParms->gangId,
+								 segdbDesc->segment_database_info->hostSegs);
+
+		if (!ret)
+		{
+			segdbDesc->errcode = ERRCODE_INTERNAL_ERROR;
+			appendPQExpBuffer(&segdbDesc->error_message,
+							  "Internal error: unable to construct connection string");
+			write_log("thread_DoConnect: unable to construct connection string for segdb %i", i);
+			continue;
+		}
 
 		/* check the result in createGang */
 		cdbconn_doConnect(segdbDesc, gpqeid, pParms->connectOptions);

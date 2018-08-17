@@ -3,7 +3,7 @@
  * dict_thesaurus.c
  *		Thesaurus dictionary: phrase to phrase substitution
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -17,7 +17,6 @@
 #include "commands/defrem.h"
 #include "tsearch/ts_cache.h"
 #include "tsearch/ts_locale.h"
-#include "tsearch/ts_public.h"
 #include "tsearch/ts_utils.h"
 #include "utils/builtins.h"
 
@@ -349,7 +348,7 @@ cmpLexemeInfo(LexemeInfo *a, LexemeInfo *b)
 }
 
 static int
-cmpLexeme(TheLexeme *a, TheLexeme *b)
+cmpLexeme(const TheLexeme *a, const TheLexeme *b)
 {
 	if (a->lexeme == NULL)
 	{
@@ -367,14 +366,14 @@ cmpLexeme(TheLexeme *a, TheLexeme *b)
 static int
 cmpLexemeQ(const void *a, const void *b)
 {
-	return cmpLexeme((TheLexeme *) a, (TheLexeme *) b);
+	return cmpLexeme((const TheLexeme *) a, (const TheLexeme *) b);
 }
 
 static int
 cmpTheLexeme(const void *a, const void *b)
 {
-	TheLexeme  *la = (TheLexeme *) a;
-	TheLexeme  *lb = (TheLexeme *) b;
+	const TheLexeme *la = (const TheLexeme *) a;
+	const TheLexeme *lb = (const TheLexeme *) b;
 	int			res;
 
 	if ((res = cmpLexeme(la, lb)) != 0)

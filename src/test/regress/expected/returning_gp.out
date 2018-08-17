@@ -1,0 +1,100 @@
+--
+-- Extra GPDB tests on INSERT/UPDATE/DELETE RETURNING
+--
+CREATE TABLE returning_parttab (distkey int4, partkey int4, i int, t text)
+DISTRIBUTED BY (distkey)
+PARTITION BY RANGE (partkey) (START (1) END (10));
+NOTICE:  CREATE TABLE will create partition "returning_parttab_1_prt_1" for table "returning_parttab"
+--
+-- Test INSERT RETURNING with partitioning
+--
+insert into returning_parttab values (1, 1, 1, 'single insert') returning *;
+ distkey | partkey | i |       t       
+---------+---------+---+---------------
+       1 |       1 | 1 | single insert
+(1 row)
+
+insert into returning_parttab
+select 1, g, g, 'multi ' || g from generate_series(1, 5) g
+returning distkey, partkey, i, t;
+ distkey | partkey | i |    t    
+---------+---------+---+---------
+       1 |       1 | 1 | multi 1
+       1 |       2 | 2 | multi 2
+       1 |       3 | 3 | multi 3
+       1 |       4 | 4 | multi 4
+       1 |       5 | 5 | multi 5
+(5 rows)
+
+-- Drop a column, and create a new partition. The new partition will not have
+-- the dropped column, while in the old partition, it's still physically there,
+-- just marked as dropped. Make sure the executor maps the columns correctly.
+ALTER TABLE returning_parttab DROP COLUMN i;
+alter table returning_parttab add partition newpart start (10) end (20);
+NOTICE:  CREATE TABLE will create partition "returning_parttab_1_prt_newpart" for table "returning_parttab"
+insert into returning_parttab values (1, 10, 'single2 insert') returning *;
+ distkey | partkey |       t        
+---------+---------+----------------
+       1 |      10 | single2 insert
+(1 row)
+
+insert into returning_parttab select 2, g + 10, 'multi2 ' || g from generate_series(1, 5) g
+returning distkey, partkey, t;
+ distkey | partkey |    t     
+---------+---------+----------
+       2 |      11 | multi2 1
+       2 |      12 | multi2 2
+       2 |      13 | multi2 3
+       2 |      14 | multi2 4
+       2 |      15 | multi2 5
+(5 rows)
+
+--
+-- Test UPDATE/DELETE RETURNING with partitioning
+--
+update returning_parttab set partkey = 9 where partkey = 3 returning *;
+ distkey | partkey |    t    
+---------+---------+---------
+       1 |       9 | multi 3
+(1 row)
+
+update returning_parttab set partkey = 19 where partkey = 13 returning *;
+ distkey | partkey |    t     
+---------+---------+----------
+       2 |      19 | multi2 3
+(1 row)
+
+-- update that moves the tuple across partitions (not supported)
+update returning_parttab set partkey = 18 where partkey = 4 returning *;
+ERROR:  moving tuple from partition "returning_parttab_1_prt_1" to partition "returning_parttab_1_prt_newpart" not supported  (seg0 slice1 127.0.0.1:40000 pid=5753)
+-- delete
+delete from returning_parttab where partkey = 14 returning *;
+ distkey | partkey |    t     
+---------+---------+----------
+       2 |      14 | multi2 4
+(1 row)
+
+-- Check table contents, to be sure that all the commands did what they claimed.
+select * from returning_parttab;
+ distkey | partkey |       t        
+---------+---------+----------------
+       1 |       1 | single insert
+       1 |       1 | multi 1
+       1 |       2 | multi 2
+       1 |       4 | multi 4
+       1 |       5 | multi 5
+       1 |       9 | multi 3
+       1 |      10 | single2 insert
+       2 |      11 | multi2 1
+       2 |      12 | multi2 2
+       2 |      15 | multi2 5
+       2 |      19 | multi2 3
+(11 rows)
+
+--
+-- DELETE RETURNING is currently not supported on AO tables.
+--
+CREATE TEMP TABLE returning_aotab (id int4) WITH (appendonly=true);
+INSERT INTO returning_aotab VALUES (1);
+DELETE FROM returning_aotab RETURNING *;
+ERROR:  DELETE RETURNING is not supported on appendonly tables

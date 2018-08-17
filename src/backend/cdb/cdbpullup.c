@@ -144,7 +144,7 @@ cdbpullup_colIdx(struct Plan *plan,
  * the result of the projection.
  *
  * When calling this function on an expr which HAS been transformed by
- * set_plan_references(), newvarno should usually be OUTER; or 0 if the
+ * set_plan_references(), newvarno should usually be OUTER_VAR; or 0 if the
  * expr is to be used in the targetlist of an Agg or Group node.
  *
  * At present this function doesn't support pull-up from a subquery into a
@@ -191,8 +191,8 @@ pullUpExpr_mutator(Node *node, void *context)
 		{
 
 			/* After set_plan_references(), search on varattno only. */
-			if (var->varno == OUTER ||
-				var->varno == INNER ||
+			if (var->varno == OUTER_VAR ||
+				var->varno == INNER_VAR ||
 				var->varno == 0)
 				tle = cdbpullup_findSubplanRefInTargetList(var->varattno,
 														   ctx->targetlist);
@@ -321,7 +321,7 @@ cdbpullup_expr(Expr *expr, List *targetlist, List *newvarlist, Index newvarno)
  *
  * Note that a Var node that belongs to a Scan operator and refers to the
  * Scan's source relation or index, doesn't have its varno changed by
- * set_plan_references() to OUTER/INNER/0.  Think twice about using this
+ * set_plan_references() to OUTER_VAR/INNER_VAR/0.  Think twice about using this
  * unless you know that the expr comes from an upper Plan node.
  */
 
@@ -347,8 +347,8 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
 	if (!findAnyVar_walker((Node *) expr, &var))
 		return false;
 
-	return var->varno == OUTER ||
-		var->varno == INNER ||
+	return var->varno == OUTER_VAR ||
+		var->varno == INNER_VAR ||
 		var->varno == 0;
 }								/* cdbpullup_exprHasSubplanRef */
 
@@ -466,7 +466,7 @@ cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist)
  *
  * Given a targetlist, returns ptr to first TargetEntry whose expr is a
  * Var node having the specified varattno, and having its varno in executor
- * format (varno is OUTER, INNER, or 0) as set by set_plan_references().
+ * format (varno is OUTER_VAR, INNER_VAR, or 0) as set by set_plan_references().
  * Returns NULL if no such TargetEntry is found.
  */
 TargetEntry *
@@ -484,8 +484,8 @@ cdbpullup_findSubplanRefInTargetList(AttrNumber varattno, List *targetlist)
 			var = (Var *) tle->expr;
 			if (var->varattno == varattno)
 			{
-				if (var->varno == OUTER ||
-					var->varno == INNER ||
+				if (var->varno == OUTER_VAR ||
+					var->varno == INNER_VAR ||
 					var->varno == 0)
 					return tle;
 			}
@@ -657,7 +657,7 @@ cdbpullup_missingVarWalker(Node *node, void *targetlist)
  *      subplan_targetentry is an item in the targetlist of the subplan S.
  *      newresno is the attribute number of the new TargetEntry (its
  *          position in P's targetlist).
- *      newvarno should be OUTER; except it should be 0 if P is an Agg or
+ *      newvarno should be OUTER_VAR; except it should be 0 if P is an Agg or
  *          Group node.  It is ignored if useExecutorVarFormat is false.
  *      useExecutorVarFormat must be true if called after optimization,
  *          when set_plan_references() has been called and Var nodes have
@@ -714,7 +714,7 @@ cdbpullup_targetlist(struct Plan *subplan, bool useExecutorVarFormat)
 		TargetEntry *kidtle = (TargetEntry *) lfirst(cell);
 		TargetEntry *newtle = cdbpullup_targetentry(kidtle,
 													resno++,
-													OUTER,
+													OUTER_VAR,
 													useExecutorVarFormat);
 
 		targetlist = lappend(targetlist, newtle);

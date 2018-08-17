@@ -372,10 +372,10 @@ insert into nation_hybrid_part (  N_NATIONKEY ,N_REGIONKEY ) select N_NATIONKEY,
 INSERT 0 25
 \d+ nation_hybrid_part
              Table "public.nation_hybrid_part"
-   Column    |  Type   | Modifiers | Storage | Description 
--------------+---------+-----------+---------+-------------
- n_nationkey | integer |           | plain   | 
- n_regionkey | integer |           | plain   | 
+   Column    |  Type   | Modifiers | Storage | Stats target | Description
+-------------+---------+-----------+---------+--------------+-------------
+ n_nationkey | integer |           | plain   |              |
+ n_regionkey | integer |           | plain   |              |
 Child tables: nation_hybrid_part_1_prt_p1,
               nation_hybrid_part_1_prt_p2,
               nation_hybrid_part_1_prt_p3,
@@ -390,10 +390,10 @@ insert into region_hybrid_part ( R_REGIONKEY ,R_NAME   ) select  R_REGIONKEY,R_N
 INSERT 0 5
 \d+ region_hybrid_part 
                 Table "public.region_hybrid_part"
-   Column    |     Type      | Modifiers | Storage  | Description 
--------------+---------------+-----------+----------+-------------
- r_regionkey | integer       |           | plain    | 
- r_name      | character(25) |           | extended | 
+   Column    |     Type      | Modifiers | Storage  | Stats target | Description
+-------------+---------------+-----------+----------+--------------+-------------
+ r_regionkey | integer       |           | plain    |              |
+ r_name      | character(25) |           | extended |              |
 Child tables: region_hybrid_part_1_prt_p1_1,
               region_hybrid_part_1_prt_p1_2,
               region_hybrid_part_1_prt_p1_3,
@@ -445,9 +445,9 @@ insert into part_hybrid_part  (P_SIZE) select   P_SIZE  from part LIMIT 10000;
 INSERT 0 199
 \d+ part_hybrid_part
            Table "public.part_hybrid_part"
- Column |  Type   | Modifiers | Storage | Description 
---------+---------+-----------+---------+-------------
- p_size | integer |           | plain   | 
+ Column |  Type   | Modifiers | Storage | Stats target | Description
+--------+---------+-----------+---------+--------------+-------------
+ p_size | integer |           | plain   |              |
 Child tables: part_hybrid_part_1_prt_p1,
               part_hybrid_part_1_prt_p2,
               part_hybrid_part_1_prt_p3,
@@ -479,10 +479,10 @@ insert into supplier_hybrid_part ( S_NATIONKEY,S_SUPPKEY ) select S_NATIONKEY, S
 INSERT 0 100
 \d+ supplier_hybrid_part
             Table "public.supplier_hybrid_part"
-   Column    |  Type   | Modifiers | Storage | Description 
--------------+---------+-----------+---------+-------------
- s_suppkey   | integer |           | plain   | 
- s_nationkey | integer |           | plain   | 
+   Column    |  Type   | Modifiers | Storage | Stats target | Description
+-------------+---------+-----------+---------+--------------+-------------
+ s_suppkey   | integer |           | plain   |              |
+ s_nationkey | integer |           | plain   |              |
 Child tables: supplier_hybrid_part_1_prt_p1
 Has OIDs: no
 Distributed by: (s_suppkey)
@@ -500,11 +500,11 @@ PS_PARTKEY ,PS_SUPPKEY ,PS_SUPPLYCOST from partsupp LIMIT 10000;
 INSERT 0 799
 \d+ partsupp_hybrid_part
              Table "public.partsupp_hybrid_part"
-    Column     |  Type   | Modifiers | Storage | Description 
----------------+---------+-----------+---------+-------------
- ps_partkey    | integer |           | plain   | 
- ps_suppkey    | integer |           | plain   | 
- ps_supplycost | numeric |           | main    | 
+    Column     |  Type   | Modifiers | Storage | Stats target | Description
+---------------+---------+-----------+---------+--------------+-------------
+ ps_partkey    | integer |           | plain   |              |
+ ps_suppkey    | integer |           | plain   |              |
+ ps_supplycost | numeric |           | main    |              |
 Child tables: partsupp_hybrid_part_1_prt_p1,
               partsupp_hybrid_part_1_prt_p2
 Has OIDs: no
@@ -574,11 +574,11 @@ insert into customer_hybrid_part ( C_NATIONKEY,C_ACCTBAL,C_MKTSEGMENT) select C_
 INSERT 0 149
 \d+ customer_hybrid_part
                 Table "public.customer_hybrid_part"
-    Column    |     Type      | Modifiers | Storage  | Description 
---------------+---------------+-----------+----------+-------------
- c_nationkey  | integer       |           | plain    | 
- c_acctbal    | numeric       |           | main     | 
- c_mktsegment | character(10) |           | extended | 
+    Column    |     Type      | Modifiers | Storage  | Stats target | Description
+--------------+---------------+-----------+----------+--------------+-------------
+ c_nationkey  | integer       |           | plain    |              |
+ c_acctbal    | numeric       |           | main     |              |
+ c_mktsegment | character(10) |           | extended |              |
 Child tables: customer_hybrid_part_1_prt_p1,
               customer_hybrid_part_1_prt_p2,
               customer_hybrid_part_1_prt_p3
@@ -645,11 +645,11 @@ insert into orders_hybrid_part ( O_ORDERSTATUS ,O_ORDERPRIORITY ,O_SHIPPRIORITY)
 INSERT 0 1499
 \d+ ORDERS_hybrid_part
                   Table "public.orders_hybrid_part"
-     Column      |     Type      | Modifiers | Storage  | Description 
------------------+---------------+-----------+----------+-------------
- o_orderstatus   | character(1)  |           | extended | 
- o_orderpriority | character(15) |           | extended | 
- o_shippriority  | integer       |           | plain    | 
+     Column      |     Type      | Modifiers | Storage  | Stats target | Description
+-----------------+---------------+-----------+----------+--------------+-------------
+ o_orderstatus   | character(1)  |           | extended |              |
+ o_orderpriority | character(15) |           | extended |              |
+ o_shippriority  | integer       |           | plain    |              |
 Child tables: orders_hybrid_part_1_prt_p1,
               orders_hybrid_part_1_prt_p2
 Has OIDs: no
@@ -717,11 +717,11 @@ insert into lineitem_hybrid_part ( L_LINENUMBER   , L_DISCOUNT ,L_RECEIPTDATE  )
 INSERT 0 2999
 \d+ lineitem_hybrid_part
              Table "public.lineitem_hybrid_part"
-    Column     |  Type   | Modifiers | Storage | Description 
----------------+---------+-----------+---------+-------------
- l_linenumber  | integer |           | plain   | 
- l_discount    | numeric |           | main    | 
- l_receiptdate | date    |           | plain   | 
+    Column     |  Type   | Modifiers | Storage | Stats target | Description
+---------------+---------+-----------+---------+--------------+-------------
+ l_linenumber  | integer |           | plain   |              |
+ l_discount    | numeric |           | main    |              |
+ l_receiptdate | date    |           | plain   |              |
 Child tables: lineitem_hybrid_part_1_prt_p1
 Has OIDs: no
 Distributed randomly
@@ -733,12 +733,12 @@ ALTER TABLE NATION_HYBRID_PART ADD COLUMN  N_COMMENT    VARCHAR(152) DEFAULT 're
 ALTER TABLE
 \d+ NATION_HYBRID_PART
                                   Table "public.nation_hybrid_part"
-   Column    |          Type          |              Modifiers               | Storage  | Description 
--------------+------------------------+--------------------------------------+----------+-------------
- n_nationkey | integer                |                                      | plain    | 
- n_regionkey | integer                |                                      | plain    | 
- n_name      | character(25)          | default 'ARGENTINA'::bpchar          | extended | 
- n_comment   | character varying(152) | default 'regular'::character varying | extended | 
+   Column    |          Type          |              Modifiers               | Storage  | Stats target | Description
+-------------+------------------------+--------------------------------------+----------+--------------+-------------
+ n_nationkey | integer                |                                      | plain    |              |
+ n_regionkey | integer                |                                      | plain    |              |
+ n_name      | character(25)          | default 'ARGENTINA'::bpchar          | extended |              |
+ n_comment   | character varying(152) | default 'regular'::character varying | extended |              |
 Child tables: nation_hybrid_part_1_prt_p1,
               nation_hybrid_part_1_prt_p2,
               nation_hybrid_part_1_prt_p3,
@@ -751,11 +751,11 @@ ALTER TABLE REGION_HYBRID_PART ADD COLUMN  R_COMMENT    VARCHAR(152)  DEFAULT 'r
 ALTER TABLE
 \d+ REGION_HYBRID_PART
                                   Table "public.region_hybrid_part"
-   Column    |          Type          |              Modifiers               | Storage  | Description 
--------------+------------------------+--------------------------------------+----------+-------------
- r_regionkey | integer                |                                      | plain    | 
- r_name      | character(25)          |                                      | extended | 
- r_comment   | character varying(152) | default 'regular'::character varying | extended | 
+   Column    |          Type          |              Modifiers               | Storage  | Stats target | Description
+-------------+------------------------+--------------------------------------+----------+--------------+-------------
+ r_regionkey | integer                |                                      | plain    |              |
+ r_name      | character(25)          |                                      | extended |              |
+ r_comment   | character varying(152) | default 'regular'::character varying | extended |              |
 Child tables: region_hybrid_part_1_prt_p1_1,
               region_hybrid_part_1_prt_p1_2,
               region_hybrid_part_1_prt_p1_3,
@@ -783,17 +783,17 @@ ALTER TABLE PART_HYBRID_PART ADD COLUMN    P_COMMENT VARCHAR(23) DEFAULT 'defaul
 ALTER TABLE
 \d+ PART_HYBRID_PART
                                            Table "public.part_hybrid_part"
-    Column     |         Type          |                      Modifiers                      | Storage  | Description 
----------------+-----------------------+-----------------------------------------------------+----------+-------------
- p_size        | integer               |                                                     | plain    | 
- p_partkey     | integer               | default 100                                         | plain    | 
- p_name        | character varying(55) | default 'goldenlace'::character varying             | extended | 
- p_mfgr        | character(25)         | default 'Manufacturer#1'::bpchar                    | extended | 
- p_brand       | character(10)         | default 'Brand#13'::bpchar                          | extended | 
- p_type        | character varying(25) | default 'PROMO BURNISHED COPPER'::character varying | extended | 
- p_container   | character(10)         | default 'JUMBO PKG'::bpchar                         | extended | 
- p_retailprice | numeric(15,2)         | default 100.00                                      | main     | 
- p_comment     | character varying(23) | default 'default'::character varying                | extended | 
+    Column     |         Type          |                      Modifiers                      | Storage  | Stats target | Description
+---------------+-----------------------+-----------------------------------------------------+----------+--------------+-------------
+ p_size        | integer               |                                                     | plain    |              |
+ p_partkey     | integer               | default 100                                         | plain    |              |
+ p_name        | character varying(55) | default 'goldenlace'::character varying             | extended |              |
+ p_mfgr        | character(25)         | default 'Manufacturer#1'::bpchar                    | extended |              |
+ p_brand       | character(10)         | default 'Brand#13'::bpchar                          | extended |              |
+ p_type        | character varying(25) | default 'PROMO BURNISHED COPPER'::character varying | extended |              |
+ p_container   | character(10)         | default 'JUMBO PKG'::bpchar                         | extended |              |
+ p_retailprice | numeric(15,2)         | default 100.00                                      | main     |              |
+ p_comment     | character varying(23) | default 'default'::character varying                | extended |              |
 Child tables: part_hybrid_part_1_prt_p1,
               part_hybrid_part_1_prt_p2,
               part_hybrid_part_1_prt_p3,
@@ -815,15 +815,15 @@ ALTER TABLE SUPPLIER_HYBRID_PART ADD COLUMN   S_COMMENT  VARCHAR(101) DEFAULT 'd
 ALTER TABLE
 \d+ SUPPLIER_HYBRID_PART
                                                Table "public.supplier_hybrid_part"
-   Column    |          Type          |                            Modifiers                            | Storage  | Description 
--------------+------------------------+-----------------------------------------------------------------+----------+-------------
- s_suppkey   | integer                |                                                                 | plain    | 
- s_nationkey | integer                |                                                                 | plain    | 
- s_name      | character(25)          | default 'Supplier#000000001'::bpchar                            | extended | 
- s_address   | character varying(40)  | default 'N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ'::character varying | extended | 
- s_phone     | character(15)          | default '27-918-335-1736'::bpchar                               | extended | 
- s_acctbal   | numeric(15,2)          | default 100.00                                                  | main     | 
- s_comment   | character varying(101) | default 'default'::character varying                            | extended | 
+   Column    |          Type          |                            Modifiers                            | Storage  | Stats target | Description
+-------------+------------------------+-----------------------------------------------------------------+----------+--------------+-------------
+ s_suppkey   | integer                |                                                                 | plain    |              |
+ s_nationkey | integer                |                                                                 | plain    |              |
+ s_name      | character(25)          | default 'Supplier#000000001'::bpchar                            | extended |              |
+ s_address   | character varying(40)  | default 'N kD4on9OM Ipw3,gf0JBoQDd7tgrzrddZ'::character varying | extended |              |
+ s_phone     | character(15)          | default '27-918-335-1736'::bpchar                               | extended |              |
+ s_acctbal   | numeric(15,2)          | default 100.00                                                  | main     |              |
+ s_comment   | character varying(101) | default 'default'::character varying                            | extended |              |
 Child tables: supplier_hybrid_part_1_prt_p1
 Has OIDs: no
 Distributed by: (s_suppkey)
@@ -835,13 +835,13 @@ ALTER TABLE PARTSUPP_HYBRID_PART ADD COLUMN   PS_COMMENT     VARCHAR(199) DEFAUL
 ALTER TABLE
 \d+ PARTSUPP_HYBRID_PART
                                   Table "public.partsupp_hybrid_part"
-    Column     |          Type          |              Modifiers               | Storage  | Description 
----------------+------------------------+--------------------------------------+----------+-------------
- ps_partkey    | integer                |                                      | plain    | 
- ps_suppkey    | integer                |                                      | plain    | 
- ps_supplycost | numeric                |                                      | main     | 
- ps_availqty   | integer                | default 100.00                       | plain    | 
- ps_comment    | character varying(199) | default 'default'::character varying | extended | 
+    Column     |          Type          |              Modifiers               | Storage  | Stats target | Description
+---------------+------------------------+--------------------------------------+----------+--------------+-------------
+ ps_partkey    | integer                |                                      | plain    |              |
+ ps_suppkey    | integer                |                                      | plain    |              |
+ ps_supplycost | numeric                |                                      | main     |              |
+ ps_availqty   | integer                | default 100.00                       | plain    |              |
+ ps_comment    | character varying(199) | default 'default'::character varying | extended |              |
 Child tables: partsupp_hybrid_part_1_prt_p1,
               partsupp_hybrid_part_1_prt_p2
 Has OIDs: no
@@ -860,16 +860,16 @@ ALTER TABLE CUSTOMER_HYBRID_PART ADD COLUMN   C_COMMENT VARCHAR(117) DEFAULT 'de
 ALTER TABLE
 \d+ CUSTOMER_HYBRID_PART
                                        Table "public.customer_hybrid_part"
-    Column    |          Type          |                    Modifiers                    | Storage  | Description 
---------------+------------------------+-------------------------------------------------+----------+-------------
- c_nationkey  | integer                |                                                 | plain    | 
- c_acctbal    | numeric                |                                                 | main     | 
- c_mktsegment | character(10)          |                                                 | extended | 
- c_custkey    | integer                | default 100                                     | plain    | 
- c_name       | character varying(25)  | default 'Customer#000000001'::character varying | extended | 
- c_address    | character varying(40)  | default 'IVhzIApeRb ot,c,E'::character varying  | extended | 
- c_phone      | character(15)          | default '5-989-741-2988'::bpchar                | extended | 
- c_comment    | character varying(117) | default 'default'::character varying            | extended | 
+    Column    |          Type          |                    Modifiers                    | Storage  | Stats target | Description
+--------------+------------------------+-------------------------------------------------+----------+--------------+-------------
+ c_nationkey  | integer                |                                                 | plain    |              |
+ c_acctbal    | numeric                |                                                 | main     |              |
+ c_mktsegment | character(10)          |                                                 | extended |              |
+ c_custkey    | integer                | default 100                                     | plain    |              |
+ c_name       | character varying(25)  | default 'Customer#000000001'::character varying | extended |              |
+ c_address    | character varying(40)  | default 'IVhzIApeRb ot,c,E'::character varying  | extended |              |
+ c_phone      | character(15)          | default '5-989-741-2988'::bpchar                | extended |              |
+ c_comment    | character varying(117) | default 'default'::character varying            | extended |              |
 Child tables: customer_hybrid_part_1_prt_p1,
               customer_hybrid_part_1_prt_p2,
               customer_hybrid_part_1_prt_p3
@@ -891,17 +891,17 @@ ALTER TABLE ORDERS_HYBRID_PART ADD COLUMN  O_COMMENT        VARCHAR(79)  DEFAULT
 ALTER TABLE
 \d+ ORDERS_HYBRID_PART
                                    Table "public.orders_hybrid_part"
-     Column      |         Type          |             Modifiers              | Storage  | Description 
------------------+-----------------------+------------------------------------+----------+-------------
- o_orderstatus   | character(1)          |                                    | extended | 
- o_orderpriority | character(15)         |                                    | extended | 
- o_shippriority  | integer               |                                    | plain    | 
- o_orderkey      | integer               | default 100                        | plain    | 
- o_custkey       | integer               | default 100                        | plain    | 
- o_totalprice    | numeric(15,2)         | default 56789.90                   | main     | 
- o_orderdate     | date                  | default '1996-12-01'::date         | plain    | 
- o_clerk         | character(15)         | default 'Clerk#000000880'::bpchar  | extended | 
- o_comment       | character varying(79) | default 'faxes'::character varying | extended | 
+     Column      |         Type          |             Modifiers              | Storage  | Stats target | Description
+-----------------+-----------------------+------------------------------------+----------+--------------+-------------
+ o_orderstatus   | character(1)          |                                    | extended |              |
+ o_orderpriority | character(15)         |                                    | extended |              |
+ o_shippriority  | integer               |                                    | plain    |              |
+ o_orderkey      | integer               | default 100                        | plain    |              |
+ o_custkey       | integer               | default 100                        | plain    |              |
+ o_totalprice    | numeric(15,2)         | default 56789.90                   | main     |              |
+ o_orderdate     | date                  | default '1996-12-01'::date         | plain    |              |
+ o_clerk         | character(15)         | default 'Clerk#000000880'::bpchar  | extended |              |
+ o_comment       | character varying(79) | default 'faxes'::character varying | extended |              |
 Child tables: orders_hybrid_part_1_prt_p1,
               orders_hybrid_part_1_prt_p2
 Has OIDs: no
@@ -936,24 +936,24 @@ ALTER TABLE LINEITEM_HYBRID_PART ADD COLUMN    L_COMMENT      VARCHAR(44) DEFAUL
 ALTER TABLE
 \d+ LINEITEM_HYBRID_PART
                                    Table "public.lineitem_hybrid_part"
-     Column      |         Type          |              Modifiers               | Storage  | Description 
------------------+-----------------------+--------------------------------------+----------+-------------
- l_linenumber    | integer               |                                      | plain    | 
- l_discount      | numeric               |                                      | main     | 
- l_receiptdate   | date                  |                                      | plain    | 
- l_orderkey      | integer               | default 100                          | plain    | 
- l_partkey       | integer               | default 100                          | plain    | 
- l_suppkey       | integer               | default 100                          | plain    | 
- l_quantity      | numeric(15,2)         | default 100.00                       | main     | 
- l_extendedprice | numeric(15,2)         | default 100.00                       | main     | 
- l_tax           | numeric(15,2)         | default 100.00                       | main     | 
- l_returnflag    | character(1)          | default 'N'::bpchar                  | extended | 
- l_linestatus    | character(1)          | default 'O'::bpchar                  | extended | 
- l_shipdate      | date                  | default '1996-03-13'::date           | plain    | 
- l_commitdate    | date                  | default '1996-03-13'::date           | plain    | 
- l_shipinstruct  | character(25)         | default 'DELIVER IN PERSON'::bpchar  | extended | 
- l_shipmode      | character(10)         | default 'TRUCK'::bpchar              | extended | 
- l_comment       | character varying(44) | default 'regular'::character varying | extended | 
+     Column      |         Type          |              Modifiers               | Storage  | Stats target | Description
+-----------------+-----------------------+--------------------------------------+----------+--------------+-------------
+ l_linenumber    | integer               |                                      | plain    |              |
+ l_discount      | numeric               |                                      | main     |              |
+ l_receiptdate   | date                  |                                      | plain    |              |
+ l_orderkey      | integer               | default 100                          | plain    |              |
+ l_partkey       | integer               | default 100                          | plain    |              |
+ l_suppkey       | integer               | default 100                          | plain    |              |
+ l_quantity      | numeric(15,2)         | default 100.00                       | main     |              |
+ l_extendedprice | numeric(15,2)         | default 100.00                       | main     |              |
+ l_tax           | numeric(15,2)         | default 100.00                       | main     |              |
+ l_returnflag    | character(1)          | default 'N'::bpchar                  | extended |              |
+ l_linestatus    | character(1)          | default 'O'::bpchar                  | extended |              |
+ l_shipdate      | date                  | default '1996-03-13'::date           | plain    |              |
+ l_commitdate    | date                  | default '1996-03-13'::date           | plain    |              |
+ l_shipinstruct  | character(25)         | default 'DELIVER IN PERSON'::bpchar  | extended |              |
+ l_shipmode      | character(10)         | default 'TRUCK'::bpchar              | extended |              |
+ l_comment       | character varying(44) | default 'regular'::character varying | extended |              |
 Child tables: lineitem_hybrid_part_1_prt_p1
 Has OIDs: no
 Distributed randomly

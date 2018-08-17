@@ -3,7 +3,7 @@
  * snapmgr.h
  *	  POSTGRES snapshot manager
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/snapmgr.h
@@ -14,7 +14,6 @@
 #define SNAPMGR_H
 
 #include "utils/resowner.h"
-#include "utils/snapshot.h"
 
 
 extern bool FirstSnapshotSet;
@@ -41,10 +40,14 @@ extern void UnregisterSnapshotFromOwner(Snapshot snapshot, ResourceOwner owner);
 
 extern void AtSubCommit_Snapshot(int level);
 extern void AtSubAbort_Snapshot(int level);
-extern void AtEarlyCommit_Snapshot(void);
 extern void AtEOXact_Snapshot(bool isCommit);
 
 extern void LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix);
 extern DistributedSnapshotWithLocalMapping *GetCurrentDistributedSnapshotWithLocalMapping(void);
+
+extern Datum pg_export_snapshot(PG_FUNCTION_ARGS);
+extern void ImportSnapshot(const char *idstr);
+extern bool XactHasExportedSnapshots(void);
+extern void DeleteAllExportedSnapshotFiles(void);
 
 #endif   /* SNAPMGR_H */

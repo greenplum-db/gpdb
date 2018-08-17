@@ -2,7 +2,7 @@
  * pg_db_role_setting.c
  *		Routines to support manipulation of the pg_db_role_setting relation
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -12,8 +12,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/htup.h"
-#include "access/skey.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_db_role_setting.h"
 #include "utils/fmgroids.h"

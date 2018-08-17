@@ -21,14 +21,14 @@ dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
 AC_INIT([Greenplum Database], [6.0.0-alpha.0], [support@greenplum.org])
-[PG_PACKAGE_VERSION=9.1beta2]
+[PG_PACKAGE_VERSION=9.2beta2]
 AC_SUBST(PG_PACKAGE_VERSION)
 
-dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.63], [], [m4_fatal([Autoconf version 2.63 is required.
+dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.69], [], [m4_fatal([Autoconf version 2.69 is required.
 dnl Untested combinations of 'autoconf' and PostgreSQL versions are not
 dnl recommended.  You can remove the check from 'configure.in' but it is then
 dnl your responsibility whether the result works or not.])])
-AC_COPYRIGHT([Copyright (c) 1996-2011, PostgreSQL Global Development Group])
+AC_COPYRIGHT([Copyright (c) 1996-2012, PostgreSQL Global Development Group])
 AC_CONFIG_SRCDIR([src/backend/access/common/heaptuple.c])
 AC_CONFIG_AUX_DIR(config)
 AC_PREFIX_DEFAULT(/usr/local/gpdb)
@@ -64,11 +64,9 @@ PGAC_ARG_REQ(with, template, [NAME], [override operating system template],
 
 case $host_os in
      aix*) template=aix ;;
-    bsdi*) template=bsdi ;;
   cygwin*) template=cygwin ;;
   darwin*) template=darwin ;;
 dragonfly*) template=netbsd ;;
-    dgux*) template=dgux ;;
  freebsd*) template=freebsd ;;
     hpux*) template=hpux ;;
     irix*) template=irix ;;
@@ -76,19 +74,11 @@ dragonfly*) template=netbsd ;;
            template=linux ;;
    mingw*) template=win32 ;;
   netbsd*) template=netbsd ;;
-nextstep*) template=nextstep ;;
  openbsd*) template=openbsd ;;
      osf*) template=osf ;;
      sco*) template=sco ;;
  solaris*) template=solaris ;;
-   sunos*) template=sunos4 ;;
- sysv4.2*)
-        case $host_vendor in
-          univel) template=univel ;;
-        esac ;;
-   sysv4*) template=svr4 ;;
    sysv5*) template=unixware ;;
-  ultrix*) template=ultrix4 ;;
 esac
 
   if test x"$template" = x"" ; then
@@ -256,7 +246,6 @@ AC_SUBST(enable_debug)
 #
 PGAC_ARG_BOOL(enable, profiling, no,
               [build with profiling enabled ])
-AC_SUBST(enable_profiling)
 
 #
 # --enable-coverage enables generation of code coverage metrics with gcov
@@ -282,9 +271,7 @@ AC_SUBST(enable_coverage)
 #
 PGAC_ARG_BOOL(enable, dtrace, no,
               [build with DTrace support],
-[AC_DEFINE([ENABLE_DTRACE], 1,
-           [Define to 1 to enable DTrace support. (--enable-dtrace)])
-AC_CHECK_PROGS(DTRACE, dtrace)
+[AC_CHECK_PROGS(DTRACE, dtrace)
 if test -z "$DTRACE"; then
   AC_MSG_ERROR([dtrace not found])
 fi
@@ -608,6 +595,7 @@ if test "$GCC" = yes -a "$ICC" = no; then
   # GPDB code is full of declarations after statement.
   #PGAC_PROG_CC_CFLAGS_OPT([-Wdeclaration-after-statement])
   PGAC_PROG_CC_CFLAGS_OPT([-Wendif-labels])
+  PGAC_PROG_CC_CFLAGS_OPT([-Wmissing-format-attribute])
   # This was included in -Wall/-Wformat in older GCC versions
   PGAC_PROG_CC_CFLAGS_OPT([-Wformat-security])
   # Disable strict-aliasing rules; needed for gcc 3.3+
@@ -897,7 +885,6 @@ PGAC_ARG_BOOL(with, gssapi, no, [build with GSSAPI support],
   krb_srvtab="FILE:\$(sysconfdir)/krb5.keytab"
 ])
 AC_MSG_RESULT([$with_gssapi])
-AC_SUBST(with_gssapi)
 
 #
 # Kerberos 5
@@ -909,7 +896,6 @@ PGAC_ARG_BOOL(with, krb5, no, [build with Kerberos 5 support],
   krb_srvtab="FILE:\$(sysconfdir)/krb5.keytab"
 ])
 AC_MSG_RESULT([$with_krb5])
-AC_SUBST(with_krb5)
 
 
 AC_SUBST(krb_srvtab)
@@ -934,7 +920,6 @@ PGAC_ARG_BOOL(with, pam, no,
               [build with PAM support],
               [AC_DEFINE([USE_PAM], 1, [Define to 1 to build with PAM support. (--with-pam)])])
 AC_MSG_RESULT([$with_pam])
-AC_SUBST(with_pam)
 
 
 #
@@ -945,7 +930,6 @@ PGAC_ARG_BOOL(with, ldap, no,
               [build with LDAP support],
               [AC_DEFINE([USE_LDAP], 1, [Define to 1 to build with LDAP support. (--with-ldap)])])
 AC_MSG_RESULT([$with_ldap])
-AC_SUBST(with_ldap)
 
 
 #
@@ -956,7 +940,6 @@ PGAC_ARG_BOOL(with, bonjour, no,
               [build with Bonjour support],
               [AC_DEFINE([USE_BONJOUR], 1, [Define to 1 to build with Bonjour support. (--with-bonjour)])])
 AC_MSG_RESULT([$with_bonjour])
-AC_SUBST(with_bonjour)
 
 
 #
@@ -1332,8 +1315,8 @@ if test "$with_openssl" = yes ; then
      AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'crypto' is required for OpenSSL])])
      AC_CHECK_LIB(ssl,    SSL_library_init, [], [AC_MSG_ERROR([library 'ssl' is required for OpenSSL])])
   else
-     AC_CHECK_LIB(eay32, CRYPTO_new_ex_data, [], [AC_MSG_ERROR([library 'eay32' is required for OpenSSL])])
-     AC_CHECK_LIB(ssleay32,    SSL_library_init, [], [AC_MSG_ERROR([library 'ssleay32' is required for OpenSSL])])
+     AC_SEARCH_LIBS(CRYPTO_new_ex_data, eay32 crypto, [], [AC_MSG_ERROR([library 'eay32' or 'crypto' is required for OpenSSL])])
+     AC_SEARCH_LIBS(SSL_library_init, ssleay32 ssl, [], [AC_MSG_ERROR([library 'ssleay32' or 'ssl' is required for OpenSSL])])
   fi
 fi
 
@@ -1377,8 +1360,8 @@ fi
 
 # for contrib/sepgsql
 if test "$with_selinux" = yes; then
-  AC_CHECK_LIB(selinux, selinux_sepgsql_context_path, [],
-               [AC_MSG_ERROR([library 'libselinux', version 2.0.93 or newer, is required for SELinux support])])
+  AC_CHECK_LIB(selinux, selinux_status_open, [],
+               [AC_MSG_ERROR([library 'libselinux', version 2.0.99 or newer, is required for SELinux support])])
 fi
 
 # for contrib/uuid-ossp
@@ -1407,7 +1390,7 @@ fi
 ##
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
-AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/ucred.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
+AC_CHECK_HEADERS([atomic.h crypt.h dld.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/ucred.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h ])
 
 # On BSD, cpp test for net/if.h will fail unless sys/socket.h
 # is included first.
@@ -1510,7 +1493,6 @@ fi
 if test "$with_openssl" = yes ; then
   AC_CHECK_HEADER(openssl/ssl.h, [], [AC_MSG_ERROR([header file <openssl/ssl.h> is required for OpenSSL])])
   AC_CHECK_HEADER(openssl/err.h, [], [AC_MSG_ERROR([header file <openssl/err.h> is required for OpenSSL])])
-  AC_CHECK_FUNCS([ERR_set_mark])
 fi
 
 if test "$with_pam" = yes ; then
@@ -1542,6 +1524,13 @@ fi
 
 if test "$with_bonjour" = yes ; then
   AC_CHECK_HEADER(dns_sd.h, [], [AC_MSG_ERROR([header file <dns_sd.h> is required for Bonjour])])
+fi
+
+# for contrib/uuid-ossp
+if test "$with_ossp_uuid" = yes ; then
+  AC_CHECK_HEADERS(ossp/uuid.h, [], [
+    AC_CHECK_HEADERS(uuid.h, [],
+      [AC_MSG_ERROR([header file <ossp/uuid.h> or <uuid.h> is required for OSSP-UUID])])])
 fi
 
 # For processor affinity support in Linux on NUMA platforms such as
@@ -1581,6 +1570,10 @@ if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_VERSION
 fi
 
+if test "$PORTNAME" = "win32" ; then
+   AC_CHECK_HEADERS(crtdefs.h)
+fi 
+
 # OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
 if test "$PORTNAME" = "openbsd"; then
   AC_CHECK_HEADERS([execinfo.h], [], [AC_MSG_ERROR([header file <execinfo.h> is required for backtrace support])])
@@ -1596,6 +1589,7 @@ PGAC_C_INLINE
 PGAC_PRINTF_ARCHETYPE
 AC_C_CONST
 AC_C_STRINGIZE
+AC_C_FLEXIBLE_ARRAY_MEMBER
 PGAC_C_SIGNED
 AC_C_VOLATILE
 PGAC_C_FUNCNAME_SUPPORT
@@ -1654,16 +1648,34 @@ if test "$with_krb5" = yes; then
   AC_MSG_CHECKING(for krb5_free_unparsed_name)
   AC_TRY_LINK([#include <krb5.h>],
               [krb5_free_unparsed_name(NULL,NULL);],
-              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name])
+              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name.])
 AC_MSG_RESULT(yes)],
               [AC_MSG_RESULT(no)])
 fi
+
+# On PPC, check if assembler supports LWARX instruction's mutex hint bit
+case $host_cpu in
+  ppc*|powerpc*)
+    AC_MSG_CHECKING([whether assembler supports lwarx hint bit])
+    AC_TRY_COMPILE([],
+	[int a = 0; int *p = &a; int r;
+	 __asm__ __volatile__ (" lwarx %0,0,%1,1\n" : "=&r"(r) : "r"(p));],
+	[pgac_cv_have_ppc_mutex_hint=yes],
+	[pgac_cv_have_ppc_mutex_hint=no])
+    AC_MSG_RESULT([$pgac_cv_have_ppc_mutex_hint])
+    if test x"$pgac_cv_have_ppc_mutex_hint" = xyes ; then
+	AC_DEFINE(HAVE_PPC_LWARX_MUTEX_HINT, 1, [Define to 1 if the assembler supports PPC's LWARX mutex hint bit.])
+    fi
+  ;;
+esac
 
 # Check largefile support.  You might think this is a system service not a
 # compiler characteristic, but you'd be wrong.  We must check this before
 # probing existence of related functions such as fseeko, since the largefile
 # defines can affect what is generated for that.
-AC_SYS_LARGEFILE
+if test "$PORTNAME" != "win32"; then
+   AC_SYS_LARGEFILE
+fi
 
 # Check for largefile support (must be after AC_SYS_LARGEFILE)
 AC_CHECK_SIZEOF([off_t])
@@ -1692,13 +1704,13 @@ LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 # net-snmp has the same problem..
 LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
-AC_CHECK_FUNCS([cbrt dlopen fcvt fdatasync getifaddrs getpeerucred getrlimit memmove poll pstat readlink scandir setproctitle setsid sigprocmask symlink sysconf towlower utime utimes waitpid wcstombs wcstombs_l])
+AC_CHECK_FUNCS([cbrt dlopen fcvt fdatasync getifaddrs getpeerucred getrlimit memmove poll pstat readlink setproctitle setsid sigprocmask symlink towlower utime utimes waitpid wcstombs wcstombs_l])
 
 AC_REPLACE_FUNCS(fseeko)
 case $host_os in
-	# BSD/OS & NetBSD use a custom fseeko/ftello built on fsetpos/fgetpos
+	# NetBSD uses a custom fseeko/ftello built on fsetpos/fgetpos
 	# Mingw uses macros to access Win32 API calls
-	bsdi*|netbsd*|mingw*)
+	netbsd*|mingw*)
 		AC_DEFINE(HAVE_FSEEKO, 1, [Define to 1 because replacement version used.])
 		ac_cv_func_fseeko=yes;;
 	*)
@@ -1806,16 +1818,20 @@ else
   AC_CHECK_FUNCS([fpclass fp_class fp_class_d class], [break])
 fi
 
-AC_REPLACE_FUNCS([crypt erand48 getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul])
+AC_REPLACE_FUNCS([crypt fls getopt getrusage inet_aton random rint srandom strerror strlcat strlcpy])
 
 case $host_os in
 
         # Windows uses a specialised env handler
+        # and doesn't need a replacement getpeereid because it doesn't use
+        # Unix sockets.
         mingw*)
                 AC_DEFINE(HAVE_UNSETENV, 1, [Define to 1 because replacement version used.])
-                ac_cv_func_unsetenv=yes;;
+                AC_DEFINE(HAVE_GETPEEREID, 1, [Define to 1 because function not required.])
+                ac_cv_func_unsetenv=yes
+                ac_cv_func_getpeereid=yes;;
         *)
-                AC_REPLACE_FUNCS([unsetenv])
+                AC_REPLACE_FUNCS([unsetenv getpeereid])
 		;;
 esac
 
@@ -1850,12 +1866,6 @@ if test "$PORTNAME" = "win32"; then
   AC_LIBOBJ(getopt_long)
 fi
 
-# Cygwin's erand48() is broken (always returns zero) in some releases,
-# so force use of ours.
-if test "$PORTNAME" = "cygwin"; then
-  AC_LIBOBJ(erand48)
-fi
-
 # Win32 support
 if test "$PORTNAME" = "win32"; then
   AC_REPLACE_FUNCS(gettimeofday)
@@ -1863,6 +1873,7 @@ if test "$PORTNAME" = "win32"; then
   AC_LIBOBJ(open)
   AC_LIBOBJ(win32env)
   AC_LIBOBJ(win32error)
+  AC_LIBOBJ(win32setlocale)
   AC_DEFINE([HAVE_SYMLINK], 1,
             [Define to 1 if you have the `symlink' function.])
   AC_CHECK_TYPES(MINIDUMP_TYPE, [pgac_minidump_type=yes], [pgac_minidump_type=no], [
@@ -1916,10 +1927,16 @@ fi
 AC_CHECK_FUNCS([strtoll strtoq], [break])
 AC_CHECK_FUNCS([strtoull strtouq], [break])
 
-# Check for one of atexit() or on_exit()
-AC_CHECK_FUNCS(atexit, [],
-               [AC_CHECK_FUNCS(on_exit, [],
-               [AC_MSG_ERROR([neither atexit() nor on_exit() found])])])
+AC_CACHE_CHECK([for builtin locking functions], pgac_cv_gcc_int_atomics,
+[AC_TRY_LINK([],
+  [int lock = 0;
+   __sync_lock_test_and_set(&lock, 1);
+   __sync_lock_release(&lock);],
+  [pgac_cv_gcc_int_atomics="yes"],
+  [pgac_cv_gcc_int_atomics="no"])])
+if test x"$pgac_cv_gcc_int_atomics" = x"yes"; then
+  AC_DEFINE(HAVE_GCC_INT_ATOMICS, 1, [Define to 1 if you have __sync_lock_test_and_set(int *) and friends.])
+fi
 
 
 AC_CACHE_CHECK([for builtin locking functions], pgac_cv_gcc_int_atomics,
@@ -2023,6 +2040,23 @@ if test "$with_ldap" = yes ; then
 fi
 AC_SUBST(LDAP_LIBS_FE)
 AC_SUBST(LDAP_LIBS_BE)
+
+
+# Older versions of libxml2 lack the xmlStructuredErrorContext variable
+# (which could be a macro referring to a function, if threading is enabled)
+if test "$with_libxml" = yes ; then
+  AC_CACHE_CHECK([for xmlStructuredErrorContext], pgac_cv_libxml_structerrctx,
+  [AC_TRY_LINK([#include <libxml/globals.h>
+                void *globptr;],
+               [globptr = xmlStructuredErrorContext],
+               [pgac_cv_libxml_structerrctx=yes],
+               [pgac_cv_libxml_structerrctx=no])])
+  if test x"$pgac_cv_libxml_structerrctx" = x"yes"; then
+    AC_DEFINE(HAVE_XMLSTRUCTUREDERRORCONTEXT,
+             1,
+             [Define to 1 if your libxml has xmlStructuredErrorContext.])
+  fi
+fi
 
 
 # This test makes sure that run tests work at all.  Sometimes a shared
@@ -2181,10 +2215,7 @@ AC_DEFINE_UNQUOTED(MAXIMUM_ALIGNOF, $MAX_ALIGNOF, [Define as the maximum alignme
 # Some platforms predefine the types int8, int16, etc.  Only check
 # a (hopefully) representative subset.
 AC_CHECK_TYPES([int8, uint8, int64, uint64], [], [],
-[#include <stdio.h>
-#ifdef HAVE_SUPPORTDEFS_H
-#include <SupportDefs.h>
-#endif])
+[#include <stdio.h>])
 
 # We also check for sig_atomic_t, which *should* be defined per ANSI
 # C, but is missing on some old platforms.
@@ -2468,6 +2499,13 @@ tr '.' '	' |
 $AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
 AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
+
+# Begin output steps
+
+AC_MSG_NOTICE([using compiler=$cc_string])
+AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
+AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
+AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.

@@ -33,6 +33,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 
@@ -129,7 +130,7 @@ typedef struct pltcl_proc_desc
 typedef struct pltcl_query_desc
 {
 	char		qname[20];
-	void	   *plan;
+	SPIPlanPtr	plan;
 	int			nargs;
 	Oid		   *argtypes;
 	FmgrInfo   *arginfuncs;
@@ -476,7 +477,6 @@ pltcl_fetch_interp(bool pltrusted)
 static void
 pltcl_init_load_unknown(Tcl_Interp *interp)
 {
-	Oid			relOid;
 	Relation	pmrel;
 	char	   *pmrelname,
 			   *nspname;
@@ -499,20 +499,7 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 	 * this next bit of code is the same as try_relation_openrv(),
 	 * which only exists in 8.4 and up.
 	 ************************************************************/
-
-	/* Check for shared-cache-inval messages */
-	AcceptInvalidationMessages();
-
-	/* Look up the appropriate relation using namespace search */
-	relOid = RangeVarGetRelid(makeRangeVar(NULL, "pltcl_modules", -1), true);
-
-	/* Drop out on not-found */
-	if (!OidIsValid(relOid))
-		return;
-
-	/* Let relation_open do the rest */
-	pmrel = relation_open(relOid, AccessShareLock);
-
+	pmrel = relation_openrv_extended(makeRangeVar(NULL, "pltcl_modules", -1), AccessShareLock, true, true);
 	if (pmrel == NULL)
 		return;
 	/* must be table or view, else ignore */
@@ -2041,7 +2028,7 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
  * pltcl_SPI_prepare()		- Builtin support for prepared plans
  *				  The Tcl command SPI_prepare
  *				  always saves the plan using
- *				  SPI_saveplan and returns a key for
+ *				  SPI_keepplan and returns a key for
  *				  access. There is no chance to prepare
  *				  and not save the plan currently.
  **********************************************************************/
@@ -2052,7 +2039,6 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 	int			nargs;
 	CONST84 char **args;
 	pltcl_query_desc *qdesc;
-	void	   *plan;
 	int			i;
 	Tcl_HashEntry *hashent;
 	int			hashnew;
@@ -2120,22 +2106,18 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 		 * Prepare the plan and check for errors
 		 ************************************************************/
 		UTF_BEGIN;
-		plan = SPI_prepare(UTF_U2E(argv[1]), nargs, qdesc->argtypes);
+		qdesc->plan = SPI_prepare(UTF_U2E(argv[1]), nargs, qdesc->argtypes);
 		UTF_END;
 
-		if (plan == NULL)
+		if (qdesc->plan == NULL)
 			elog(ERROR, "SPI_prepare() failed");
 
 		/************************************************************
 		 * Save the plan into permanent memory (right now it's in the
 		 * SPI procCxt, which will go away at function end).
 		 ************************************************************/
-		qdesc->plan = SPI_saveplan(plan);
-		if (qdesc->plan == NULL)
-			elog(ERROR, "SPI_saveplan() failed");
-
-		/* Release the procCxt copy to avoid within-function memory leak */
-		SPI_freeplan(plan);
+		if (SPI_keepplan(qdesc->plan))
+			elog(ERROR, "SPI_keepplan() failed");
 
 		pltcl_subtrans_commit(oldcontext, oldowner);
 	}

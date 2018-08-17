@@ -20,12 +20,12 @@ test: instr_in_shmem_setup
 # run separately - because slot counter may influenced by other parallel queries
 test: instr_in_shmem
 
-test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan update_gp
+test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp
 test: spi_processed64bit
 test: python_processed64bit
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
-test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain
+test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain distributed_transactions
 
 test: bitmap_index gp_dump_query_oids analyze gp_owner_permission incremental_analyze
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
@@ -61,7 +61,9 @@ test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxsca
 # at the 2nd phase of 2PC.
 test: dtm_retry
 
-test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 gp_transactions distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
+# The appendonly test cannot be run concurrently with tests that have
+# serializable transactions (may conflict with AO vacuum operations).
+test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
@@ -138,7 +140,7 @@ test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
 test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 
-test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption qp_dropped_cols
+test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 

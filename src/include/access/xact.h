@@ -4,7 +4,7 @@
  *	  postgres transaction system definitions
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xact.h
@@ -17,7 +17,6 @@
 #include "access/xlog.h"
 #include "nodes/pg_list.h"
 #include "storage/relfilenode.h"
-#include "utils/timestamp.h"
 
 #include "cdb/cdbpublic.h"
 
@@ -57,6 +56,8 @@ typedef enum
 {
 	SYNCHRONOUS_COMMIT_OFF,		/* asynchronous commit */
 	SYNCHRONOUS_COMMIT_LOCAL_FLUSH,		/* wait for local flush only */
+	SYNCHRONOUS_COMMIT_REMOTE_WRITE,	/* wait for local flush and remote
+										 * write */
 	SYNCHRONOUS_COMMIT_REMOTE_FLUSH		/* wait for local and remote flush */
 }	SyncCommitLevel;
 
@@ -110,8 +111,9 @@ typedef void (*SubXactCallback) (SubXactEvent event, SubTransactionId mySubid,
 #define XLOG_XACT_COMMIT_PREPARED	0x30
 #define XLOG_XACT_ABORT_PREPARED	0x40
 #define XLOG_XACT_ASSIGNMENT		0x50
-#define XLOG_XACT_DISTRIBUTED_COMMIT 0x60
-#define XLOG_XACT_DISTRIBUTED_FORGET 0x70
+#define XLOG_XACT_COMMIT_COMPACT	0x60
+#define XLOG_XACT_DISTRIBUTED_COMMIT 0x70
+#define XLOG_XACT_DISTRIBUTED_FORGET 0x80
 
 typedef struct xl_xact_assignment
 {
@@ -121,6 +123,16 @@ typedef struct xl_xact_assignment
 } xl_xact_assignment;
 
 #define MinSizeOfXactAssignment offsetof(xl_xact_assignment, xsub)
+
+typedef struct xl_xact_commit_compact
+{
+	TimestampTz xact_time;		/* time of commit */
+	int			nsubxacts;		/* number of subtransaction XIDs */
+	/* ARRAY OF COMMITTED SUBTRANSACTION XIDs FOLLOWS */
+	TransactionId subxacts[1];	/* VARIABLE LENGTH ARRAY */
+} xl_xact_commit_compact;
+
+#define MinSizeOfXactCommitCompact offsetof(xl_xact_commit_compact, subxacts)
 
 typedef struct xl_xact_commit
 {
@@ -153,8 +165,8 @@ typedef struct xl_xact_commit
 #define XACT_COMPLETION_FORCE_SYNC_COMMIT		0x02
 
 /* Access macros for above flags */
-#define XactCompletionRelcacheInitFileInval(xlrec)	((xlrec)->xinfo & XACT_COMPLETION_UPDATE_RELCACHE_FILE)
-#define XactCompletionForceSyncCommit(xlrec)		((xlrec)->xinfo & XACT_COMPLETION_FORCE_SYNC_COMMIT)
+#define XactCompletionRelcacheInitFileInval(xinfo)	(xinfo & XACT_COMPLETION_UPDATE_RELCACHE_FILE)
+#define XactCompletionForceSyncCommit(xinfo)		(xinfo & XACT_COMPLETION_FORCE_SYNC_COMMIT)
 
 typedef struct xl_xact_abort
 {
@@ -226,6 +238,7 @@ extern TransactionId GetTopTransactionId(void);
 extern TransactionId GetTopTransactionIdIfAny(void);
 extern TransactionId GetCurrentTransactionId(void);
 extern TransactionId GetCurrentTransactionIdIfAny(void);
+extern TransactionId GetStableLatestTransactionId(void);
 extern SubTransactionId GetCurrentSubTransactionId(void);
 extern CommandId GetCurrentCommandId(bool used);
 extern TimestampTz GetCurrentTransactionStartTimestamp(void);

@@ -25,6 +25,7 @@
 #define Anum_pg_aoblkdir_firstrownum   3
 #define Anum_pg_aoblkdir_minipage      4
 
-extern void AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child);
+extern void AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child,
+										  bool is_part_parent);
 
 #endif

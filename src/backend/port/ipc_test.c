@@ -16,7 +16,7 @@
  *	   the parallel regression tests for a more complete test.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -303,7 +303,7 @@ main(int argc, char **argv)
 		proc_exit(1);
 	}
 
-	printf("forked child pid %d OK\n", cpid);
+	printf("forked child PID %d OK\n", cpid);
 
 	if (storage->flag != 1234)
 		printf("Wrong value found in shared memory!\n");

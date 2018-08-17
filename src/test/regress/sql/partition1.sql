@@ -1,5 +1,10 @@
 set enable_partition_rules = false;
 
+drop table if exists d;
+drop table if exists c;
+drop table if exists b;
+drop table if exists a;
+
 --ERROR: Missing boundary specification in partition 'aa' of type LIST
 create table fff (a char(1), b char(2), d char(3)) distributed by
 (a) partition by list (b) (partition aa );

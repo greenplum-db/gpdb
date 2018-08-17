@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_class.h
@@ -46,6 +46,8 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83) BKI_SCHEMA_MACRO
 	Oid			reltablespace;	/* identifier of table space for relation */
 	int4		relpages;		/* # of blocks (not always up-to-date) */
 	float4		reltuples;		/* # of tuples (not always up-to-date) */
+	int4		relallvisible;	/* # of all-visible blocks (not always
+								 * up-to-date) */
 	Oid			reltoastrelid;	/* OID of toast table; 0 if none */
 	Oid			reltoastidxid;	/* if toast table, OID of chunk_id index */
 	bool		relhasindex;	/* T if has (or has had) any indexes */
@@ -68,14 +70,11 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83) BKI_SCHEMA_MACRO
 	bool		relhassubclass; /* has (or has had) derived classes */
 	TransactionId relfrozenxid; /* all Xids < this are frozen in this rel */
 
-	/*
-	 * VARIABLE LENGTH FIELDS start here.  These fields may be NULL, too.
-	 *
-	 * NOTE: these fields are not present in a relcache entry's rd_rel field.
-	 */
-
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
+	/* NOTE: These fields are not present in a relcache entry's rd_rel field. */
 	aclitem		relacl[1];		/* access permissions */
 	text		reloptions[1];	/* access-method-specific options */
+#endif
 } FormData_pg_class;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -103,7 +102,7 @@ typedef FormData_pg_class *Form_pg_class;
  * ----------------
  */
 
-#define Natts_pg_class					27
+#define Natts_pg_class					28
 #define Anum_pg_class_relname			1
 #define Anum_pg_class_relnamespace		2
 #define Anum_pg_class_reltype			3
@@ -114,23 +113,24 @@ typedef FormData_pg_class *Form_pg_class;
 #define Anum_pg_class_reltablespace		8
 #define Anum_pg_class_relpages			9
 #define Anum_pg_class_reltuples			10
-#define Anum_pg_class_reltoastrelid		11
-#define Anum_pg_class_reltoastidxid		12
-#define Anum_pg_class_relhasindex		13
-#define Anum_pg_class_relisshared		14
-#define Anum_pg_class_relpersistence	15
-#define Anum_pg_class_relkind			16
-#define Anum_pg_class_relstorage		17
-#define Anum_pg_class_relnatts			18
-#define Anum_pg_class_relchecks			19
-#define Anum_pg_class_relhasoids		20
-#define Anum_pg_class_relhaspkey		21
-#define Anum_pg_class_relhasrules		22
-#define Anum_pg_class_relhastriggers	23
-#define Anum_pg_class_relhassubclass	24
-#define Anum_pg_class_relfrozenxid		25
-#define Anum_pg_class_relacl			26
-#define Anum_pg_class_reloptions		27
+#define Anum_pg_class_relallvisible		11
+#define Anum_pg_class_reltoastrelid		12
+#define Anum_pg_class_reltoastidxid		13
+#define Anum_pg_class_relhasindex		14
+#define Anum_pg_class_relisshared		15
+#define Anum_pg_class_relpersistence	16
+#define Anum_pg_class_relkind			17
+#define Anum_pg_class_relstorage		18 /* GPDB specific */
+#define Anum_pg_class_relnatts			19
+#define Anum_pg_class_relchecks			20
+#define Anum_pg_class_relhasoids		21
+#define Anum_pg_class_relhaspkey		22
+#define Anum_pg_class_relhasrules		23
+#define Anum_pg_class_relhastriggers	24
+#define Anum_pg_class_relhassubclass	25
+#define Anum_pg_class_relfrozenxid		26
+#define Anum_pg_class_relacl			27
+#define Anum_pg_class_reloptions		28
 
 /* ----------------
  *		initial contents of pg_class
@@ -142,13 +142,13 @@ typedef FormData_pg_class *Form_pg_class;
  */
 
 /* Note: "3" in the relfrozenxid column stands for FirstNormalTransactionId */
-DATA(insert OID = 1247 (  pg_type		PGNSP 71 0 PGUID 0 0 0 0 0 0 0 f f p r h 29 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1247 (  pg_type		PGNSP 71 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 30 0 t f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 0 PGUID 0 0 0 0 0 0 0 f f p r h 20 0 f f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 21 0 f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1255 (  pg_proc		PGNSP 81 0 PGUID 0 0 0 0 0 0 0 f f p r h 27 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1255 (  pg_proc		PGNSP 81 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 29 0 t f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1259 (  pg_class		PGNSP 83 0 PGUID 0 0 0 0 0 0 0 f f p r h 27 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1259 (  pg_class		PGNSP 83 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 28 0 t f f f f 3 _null_ _null_ ));
 DESCR("");
 
 

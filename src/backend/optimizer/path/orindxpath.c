@@ -3,7 +3,7 @@
  * orindxpath.c
  *	  Routines to find index paths that match a set of OR clauses
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -67,7 +67,7 @@
  * Path for a given relation generates the same number of rows.  Without
  * this assumption we'd not be able to optimize solely on the cost of Paths,
  * but would have to take number of output rows into account as well.
- * (Perhaps someday that'd be worth doing, but it's a pretty big change...)
+ * (The parameterized-paths stuff almost fixes this, but not quite...)
  *
  * 'rel' is the relation entry for which quals are to be created
  *
@@ -88,34 +88,29 @@ create_or_index_quals(PlannerInfo *root, RelOptInfo *rel)
 				orig_selec;
 	ListCell   *i;
 
+	/* Skip the whole mess if no indexes */
+	if (rel->indexlist == NIL)
+		return false;
+
 	/*
-	 * Find potentially interesting OR joinclauses.
-	 *
-	 * We must ignore clauses for which the target rel is in nullable_relids;
-	 * that means there's an outer join below the clause and so it can't be
-	 * enforced at the relation scan level.
-	 *
-	 * We must also ignore clauses that are marked !is_pushed_down (ie they
-	 * are themselves outer-join clauses).	It would be safe to extract an
-	 * index condition from such a clause if we are within the nullable rather
-	 * than the non-nullable side of its join, but we haven't got enough
-	 * context here to tell which applies.	OR clauses in outer-join quals
-	 * aren't exactly common, so we'll let that case go unoptimized for now.
+	 * Find potentially interesting OR joinclauses.  We can use any joinclause
+	 * that is considered safe to move to this rel by the parameterized-path
+	 * machinery, even though what we are going to do with it is not exactly a
+	 * parameterized path.
 	 */
 	foreach(i, rel->joininfo)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(i);
 
 		if (restriction_is_or_clause(rinfo) &&
-			rinfo->is_pushed_down &&
-			!bms_is_member(rel->relid, rinfo->nullable_relids))
+			join_clause_is_movable_to(rinfo, rel->relid))
 		{
 			/*
 			 * Use the generate_bitmap_or_paths() machinery to estimate the
 			 * value of each OR clause.  We can use regular restriction
 			 * clauses along with the OR clause contents to generate
-			 * indexquals.	We pass outer_rel = NULL so that sub-clauses that
-			 * are actually joins will be ignored.
+			 * indexquals.	We pass restriction_only = true so that any
+			 * sub-clauses that are actually joins will be ignored.
 			 */
 			List	   *orpaths;
 			ListCell   *k;
@@ -123,7 +118,7 @@ create_or_index_quals(PlannerInfo *root, RelOptInfo *rel)
 			orpaths = generate_bitmap_or_paths(root, rel,
 											   list_make1(rinfo),
 											   rel->baserestrictinfo,
-											   NULL);
+											   true);
 
 			/* Locate the cheapest OR path */
 			foreach(k, orpaths)

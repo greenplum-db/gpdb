@@ -38,21 +38,21 @@ namespace gpdxl
 		private:
 
 			// query level number
-			ULONG m_ulQueryLevel;
+			ULONG m_query_level;
 
 			// varno in the rtable
-			ULONG m_ulVarNo;
+			ULONG m_varno;
 
 			// attno
-			INT	m_iAttNo;
+			INT	m_attno;
 
 			// copy c'tor
 			CGPDBAttInfo(const CGPDBAttInfo&);
 
 		public:
 			// ctor
-			CGPDBAttInfo(ULONG ulQueryLevel, ULONG ulVarNo, INT iAttNo)
-				: m_ulQueryLevel(ulQueryLevel), m_ulVarNo(ulVarNo), m_iAttNo(iAttNo)
+			CGPDBAttInfo(ULONG query_level, ULONG var_no, INT attrnum)
+				: m_query_level(query_level), m_varno(var_no), m_attno(attrnum)
 			{}
 
 			// d'tor
@@ -60,60 +60,60 @@ namespace gpdxl
 			~CGPDBAttInfo() {}
 
 			// accessor
-			ULONG UlQueryLevel() const
+			ULONG GetQueryLevel() const
 			{
-				return m_ulQueryLevel;
+				return m_query_level;
 			}
 
 			// accessor
-			ULONG UlVarNo() const
+			ULONG GetVarNo() const
 			{
-				return m_ulVarNo;
+				return m_varno;
 			}
 
 			// accessor
-			INT IAttNo() const
+			INT GetAttNo() const
 			{
-				return m_iAttNo;
+				return m_attno;
 			}
 
 			// equality check
-			BOOL FEquals(const CGPDBAttInfo& gpdbattinfo) const
+			BOOL Equals(const CGPDBAttInfo& gpdb_att_info) const
 			{
-				return m_ulQueryLevel == gpdbattinfo.m_ulQueryLevel
-						&& m_ulVarNo == gpdbattinfo.m_ulVarNo
-						&& m_iAttNo == gpdbattinfo.m_iAttNo;
+				return m_query_level == gpdb_att_info.m_query_level
+						&& m_varno == gpdb_att_info.m_varno
+						&& m_attno == gpdb_att_info.m_attno;
 			}
 
 			// hash value
-			ULONG UlHash() const
+			ULONG HashValue() const
 			{
-				return gpos::UlCombineHashes(
-						gpos::UlHash(&m_ulQueryLevel),
-						gpos::UlCombineHashes(gpos::UlHash(&m_ulVarNo),
-								gpos::UlHash(&m_iAttNo)));
+				return gpos::CombineHashes(
+						gpos::HashValue(&m_query_level),
+						gpos::CombineHashes(gpos::HashValue(&m_varno),
+								gpos::HashValue(&m_attno)));
 			}
 	};
 
 	// hash function
-	inline ULONG UlHashGPDBAttInfo
+	inline ULONG HashGPDBAttInfo
 		(
-		const CGPDBAttInfo *pgpdbattinfo
+		const CGPDBAttInfo *gpdb_att_info
 		)
 	{
-		GPOS_ASSERT(NULL != pgpdbattinfo);
-		return pgpdbattinfo->UlHash();
+		GPOS_ASSERT(NULL != gpdb_att_info);
+		return gpdb_att_info->HashValue();
 	}
 
 	// equality function
-	inline BOOL FEqualGPDBAttInfo
+	inline BOOL EqualGPDBAttInfo
 		(
-		const CGPDBAttInfo *pgpdbattinfoA,
-		const CGPDBAttInfo *pgpdbattinfoB
+		const CGPDBAttInfo *gpdb_att_info_a,
+		const CGPDBAttInfo *gpdb_att_info_b
 		)
 	{
-		GPOS_ASSERT(NULL != pgpdbattinfoA && NULL != pgpdbattinfoB);
-		return pgpdbattinfoA->FEquals(*pgpdbattinfoB);
+		GPOS_ASSERT(NULL != gpdb_att_info_a && NULL != gpdb_att_info_b);
+		return gpdb_att_info_a->Equals(*gpdb_att_info_b);
 	}
 
 }

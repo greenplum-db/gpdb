@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/pg_ctl
 #
-# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/pg_ctl/Makefile
@@ -21,9 +21,7 @@ LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 # This program isn't interactive, so doesn't need these
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lcrypto -lz, $(LIBS))
 
-
-
-override CPPFLAGS := -DDEF_PGPORT=$(DEF_PGPORT) -I$(libpq_srcdir) $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 ifeq ($(PORTNAME),openbsd)
 override CFLAGS += -pthread
@@ -47,7 +45,3 @@ uninstall:
 
 clean distclean maintainer-clean:
 	rm -f pg_ctl$(X) $(OBJS)
-
-
-# ensure that changes in DEF_PGPORT propagate into object file
-pg_ctl.o: pg_ctl.c $(top_builddir)/src/Makefile.global

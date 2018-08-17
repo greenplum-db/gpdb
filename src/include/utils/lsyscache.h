@@ -3,7 +3,7 @@
  * lsyscache.h
  *	  Convenience routines for common queries in the system catalog cache.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/lsyscache.h
@@ -13,12 +13,20 @@
 #ifndef LSYSCACHE_H
 #define LSYSCACHE_H
 
-#include "access/attnum.h"
 #include "access/htup.h"
 #include "catalog/gp_policy.h"
 #include "nodes/pg_list.h"
 #include "utils/relcache.h"
 #include "parser/parse_coerce.h"
+
+/* Result list element for get_op_btree_interpretation */
+typedef struct OpBtreeInterpretation
+{
+	Oid			opfamily_id;	/* btree opfamily containing operator */
+	int			strategy;		/* its strategy number */
+	Oid			oplefttype;		/* declared left input datatype */
+	Oid			oprighttype;	/* declared right input datatype */
+} OpBtreeInterpretation;
 
 /* I/O function selector for get_type_io_data */
 typedef enum IOFuncSelector
@@ -79,7 +87,9 @@ extern Oid get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
 extern bool get_ordering_op_properties(Oid opno,
 						   Oid *opfamily, Oid *opcintype, int16 *strategy);
 extern bool get_compare_function_for_ordering_op(Oid opno,
-									 Oid *cmpfunc, bool *reverse);
+												 Oid *cmpfunc, bool *reverse);
+extern bool get_sort_function_for_ordering_op(Oid opno, Oid *sortfunc,
+								  bool *issupport, bool *reverse);
 extern Oid	get_equality_op_for_ordering_op(Oid opno, bool *reverse);
 extern Oid	get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type);
 extern List *get_mergejoin_opfamilies(Oid opno);
@@ -87,8 +97,7 @@ extern bool get_compatible_hash_operators(Oid opno,
 							  Oid *lhs_opno, Oid *rhs_opno);
 extern bool get_op_hash_functions(Oid opno,
 					  RegProcedure *lhs_procno, RegProcedure *rhs_procno);
-extern void get_op_btree_interpretation(Oid opno,
-							List **opfamilies, List **opstrats);
+extern List *get_op_btree_interpretation(Oid opno);
 extern bool equality_ops_are_compatible(Oid opno1, Oid opno2);
 extern Oid get_opfamily_proc(Oid opfamily, Oid lefttype, Oid righttype,
 				  int16 procnum);
@@ -137,6 +146,7 @@ extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
 extern bool has_agg_prelimfunc(Oid aggid);
 extern bool agg_has_prelim_or_invprelim_func(Oid aggid);
+extern bool get_func_leakproof(Oid funcid);
 extern float4 get_func_cost(Oid funcid);
 extern float4 get_func_rows(Oid funcid);
 extern Oid	get_relname_relid(const char *relname, Oid relnamespace);
@@ -168,6 +178,7 @@ extern Node *get_typdefault(Oid typid);
 extern char get_typtype(Oid typid);
 extern bool type_is_rowtype(Oid typid);
 extern bool type_is_enum(Oid typid);
+extern bool type_is_range(Oid typid);
 extern void get_type_category_preferred(Oid typid,
 							char *typcategory,
 							bool *typispreferred);
@@ -192,6 +203,7 @@ extern bool get_attstatsslot(AttStatsSlot *sslot, HeapTuple statstuple,
 				 int reqkind, Oid reqop, int flags);
 extern void free_attstatsslot(AttStatsSlot *sslot);
 extern char *get_namespace_name(Oid nspid);
+extern Oid	get_range_subtype(Oid rangeOid);
 
 extern List *relation_oids(void);
 extern List *operator_oids(void);

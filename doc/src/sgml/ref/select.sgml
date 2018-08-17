@@ -89,7 +89,7 @@ where <replaceable class="parameter">group_elem</replaceable> can be one of:
 
 and <replaceable class="parameter">with_query</replaceable> is:
 
-    <replaceable class="parameter">with_query_name</replaceable> [ ( <replaceable class="parameter">column_name</replaceable> [, ...] ) ] AS ( <replaceable class="parameter">select</replaceable> | <replaceable class="parameter">insert</replaceable> | <replaceable class="parameter">update</replaceable> | <replaceable class="parameter">delete</replaceable> )
+    <replaceable class="parameter">with_query_name</replaceable> [ ( <replaceable class="parameter">column_name</replaceable> [, ...] ) ] AS ( <replaceable class="parameter">select</replaceable> | <replaceable class="parameter">values</replaceable> | <replaceable class="parameter">insert</replaceable> | <replaceable class="parameter">update</replaceable> | <replaceable class="parameter">delete</replaceable> )
 
 TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
 </synopsis>
@@ -156,8 +156,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
     </listitem>
 
     <listitem>
-     <para>
-      <literal>SELECT DISTINCT</literal> eliminates duplicate rows from the
+     <para><literal>SELECT DISTINCT</literal> eliminates duplicate rows from the
       result.  <literal>SELECT DISTINCT ON</literal> eliminates rows that
       match on all the specified expressions.  <literal>SELECT ALL</literal>
       (the default) will return all candidate rows, including
@@ -240,7 +239,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
     subqueries that can be referenced by name in the primary query.
     The subqueries effectively act as temporary tables or views
     for the duration of the primary query.
-    Each subquery can be a <command>SELECT</command>,
+    Each subquery can be a <command>SELECT</command>, <command>VALUES</command>,
     <command>INSERT</command>, <command>UPDATE</command> or
     <command>DELETE</command> statement.
     When writing a data-modifying statement (<command>INSERT</command>,
@@ -456,8 +455,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
         separating <literal>FROM</> items.
        </para>
 
-       <para>
-        <literal>CROSS JOIN</> and <literal>INNER JOIN</literal>
+       <para><literal>CROSS JOIN</> and <literal>INNER JOIN</literal>
         produce a simple Cartesian product, the same result as you get from
         listing the two items at the top level of <literal>FROM</>,
         but restricted by the join condition (if any).
@@ -468,8 +466,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
         <literal>WHERE</>.
        </para>
 
-       <para>
-        <literal>LEFT OUTER JOIN</> returns all rows in the qualified
+       <para><literal>LEFT OUTER JOIN</> returns all rows in the qualified
         Cartesian product (i.e., all combined rows that pass its join
         condition), plus one copy of each row in the left-hand table
         for which there was no right-hand row that passed the join
@@ -488,8 +485,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
         OUTER JOIN</> by switching the left and right inputs.
        </para>
 
-       <para>
-        <literal>FULL OUTER JOIN</> returns all the joined rows, plus
+       <para><literal>FULL OUTER JOIN</> returns all the joined rows, plus
         one row for each unmatched left-hand row (extended with nulls
         on the right), plus one row for each unmatched right-hand row
         (extended with nulls on the left).
@@ -500,8 +496,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
      <varlistentry>
       <term><literal>ON <replaceable class="parameter">join_condition</replaceable></literal></term>
       <listitem>
-       <para>
-        <replaceable class="parameter">join_condition</replaceable> is
+       <para><replaceable class="parameter">join_condition</replaceable> is
         an expression resulting in a value of type
         <type>boolean</type> (similar to a <literal>WHERE</literal>
         clause) that specifies which rows in a join are considered to
@@ -527,8 +522,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
      <varlistentry>
       <term><literal>NATURAL</literal></term>
       <listitem>
-       <para>
-        <literal>NATURAL</literal> is shorthand for a
+       <para><literal>NATURAL</literal> is shorthand for a
         <literal>USING</> list that mentions all columns in the two
         tables that have the same names.
        </para>
@@ -802,8 +796,9 @@ UNBOUNDED FOLLOWING
     If you do not specify a column name, a name is chosen automatically
     by <productname>PostgreSQL</productname>.  If the column's expression
     is a simple column reference then the chosen name is the same as that
-    column's name; in more complex cases a generated name looking like
-    <literal>?column<replaceable>N</>?</literal> is usually chosen.
+    column's name.  In more complex cases a function or type name may be
+    used, or the system may fall back on a generated name such as
+    <literal>?column?</literal>.
    </para>
 
    <para>
@@ -870,8 +865,7 @@ SELECT DISTINCT ON (location) location, time, report
     The <literal>UNION</literal> clause has this general form:
 <synopsis>
 <replaceable class="parameter">select_statement</replaceable> UNION [ ALL | DISTINCT ] <replaceable class="parameter">select_statement</replaceable>
-</synopsis>
-    <replaceable class="parameter">select_statement</replaceable> is
+</synopsis><replaceable class="parameter">select_statement</replaceable> is
     any <command>SELECT</command> statement without an <literal>ORDER
     BY</>, <literal>LIMIT</>, <literal>FOR UPDATE</literal>, or
     <literal>FOR SHARE</literal> clause.
@@ -923,8 +917,7 @@ SELECT DISTINCT ON (location) location, time, report
     The <literal>INTERSECT</literal> clause has this general form:
 <synopsis>
 <replaceable class="parameter">select_statement</replaceable> INTERSECT [ ALL | DISTINCT ] <replaceable class="parameter">select_statement</replaceable>
-</synopsis>
-    <replaceable class="parameter">select_statement</replaceable> is
+</synopsis><replaceable class="parameter">select_statement</replaceable> is
     any <command>SELECT</command> statement without an <literal>ORDER
     BY</>, <literal>LIMIT</>, <literal>FOR UPDATE</literal>, or
     <literal>FOR SHARE</literal> clause.
@@ -971,8 +964,7 @@ SELECT DISTINCT ON (location) location, time, report
     The <literal>EXCEPT</literal> clause has this general form:
 <synopsis>
 <replaceable class="parameter">select_statement</replaceable> EXCEPT [ ALL | DISTINCT ] <replaceable class="parameter">select_statement</replaceable>
-</synopsis>
-    <replaceable class="parameter">select_statement</replaceable> is
+</synopsis><replaceable class="parameter">select_statement</replaceable> is
     any <command>SELECT</command> statement without an <literal>ORDER
     BY</>, <literal>LIMIT</>, <literal>FOR UPDATE</literal>, or
     <literal>FOR SHARE</literal> clause.
@@ -1096,8 +1088,13 @@ SELECT name FROM distributors ORDER BY code;
    </para>
 
    <para>
-    Character-string data is sorted according to the locale-specific
-    collation order that was established when the database was created.
+    Character-string data is sorted according to the collation that applies
+    to the column being sorted.  That can be overridden at need by including
+    a <literal>COLLATE</> clause in the
+    <replaceable class="parameter">expression</replaceable>, for example
+    <literal>ORDER BY mycolumn COLLATE "en_US"</>.
+    For more information see <xref linkend="sql-syntax-collate-exprs"> and
+    <xref linkend="collation">.
    </para>
   </refsect2>
 
@@ -1134,17 +1131,19 @@ OFFSET <replaceable class="parameter">start</replaceable>
 OFFSET <replaceable class="parameter">start</replaceable> { ROW | ROWS }
 FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { ROW | ROWS } ONLY
 </synopsis>
-    According to the standard, the <literal>OFFSET</literal> clause must come
-    before the <literal>FETCH</literal> clause if both are present; but
-    <productname>PostgreSQL</> is laxer and allows either order.
+    In this syntax, to write anything except a simple integer constant for
+    <replaceable class="parameter">start</> or <replaceable
+    class="parameter">count</replaceable>, you must write parentheses
+    around it.
+    If <replaceable class="parameter">count</> is
+    omitted in a <literal>FETCH</> clause, it defaults to 1.
     <literal>ROW</literal>
     and <literal>ROWS</literal> as well as <literal>FIRST</literal>
     and <literal>NEXT</literal> are noise words that don't influence
-    the effects of these clauses.  In this syntax, when using expressions
-    other than simple constants for <replaceable class="parameter">start</>
-    or <replaceable class="parameter">count</replaceable>, parentheses will be
-    necessary in most cases.  If <replaceable class="parameter">count</> is
-    omitted in <literal>FETCH</>, it defaults to 1.
+    the effects of these clauses.
+    According to the standard, the <literal>OFFSET</literal> clause must come
+    before the <literal>FETCH</literal> clause if both are present; but
+    <productname>PostgreSQL</> is laxer and allows either order.
    </para>
 
    <para>
@@ -1328,7 +1327,8 @@ ROLLBACK TO s;
 
   <caution>
    <para>
-    It is possible for a <command>SELECT</> command using <literal>ORDER
+    It is possible for a <command>SELECT</> command running at the <literal>READ
+    COMMITTED</literal> transaction isolation level and using <literal>ORDER
     BY</literal> and <literal>FOR UPDATE/SHARE</literal> to return rows out of
     order.  This is because <literal>ORDER BY</> is applied first.
     The command sorts the result, but might then block trying to obtain a lock
@@ -1348,6 +1348,13 @@ SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss ORDER BY column1;
     <literal>LIMIT</> or other restrictions.  So this technique is recommended
     only if concurrent updates of the ordering columns are expected and a
     strictly sorted result is required.
+   </para>
+
+   <para>
+    At the <literal>REPEATABLE READ</literal> or <literal>SERIALIZABLE</literal>
+    transaction isolation level this would cause a serialization failure (with
+    a <literal>SQLSTATE</literal> of <literal>'40001'</literal>), so there is
+    no possibility of receiving rows out of order under these isolation levels.
    </para>
   </caution>
   </refsect2>
@@ -1599,8 +1606,7 @@ SELECT 2+2;
     following query is invalid:
 <programlisting>
 SELECT distributors.* WHERE distributors.name = 'Westward';
-</programlisting>
-    <productname>PostgreSQL</productname> releases prior to
+</programlisting><productname>PostgreSQL</productname> releases prior to
     8.1 would accept queries of this form, and add an implicit entry
     to the query's <literal>FROM</literal> clause for each table
     referenced by the query. This is no longer allowed.

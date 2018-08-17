@@ -52,6 +52,12 @@ REVOKE [ GRANT OPTION FOR ]
 
 REVOKE [ GRANT OPTION FOR ]
     { USAGE | ALL [ PRIVILEGES ] }
+    ON DOMAIN <replaceable>domain_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
     ON FOREIGN DATA WRAPPER <replaceable>fdw_name</replaceable> [, ...]
     FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
@@ -90,6 +96,12 @@ REVOKE [ GRANT OPTION FOR ]
 REVOKE [ GRANT OPTION FOR ]
     { CREATE | ALL [ PRIVILEGES ] }
     ON TABLESPACE <replaceable>tablespace_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { USAGE | ALL [ PRIVILEGES ] }
+    ON TYPE <replaceable>type_name</replaceable> [, ...]
     FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
@@ -150,6 +162,8 @@ REVOKE [ ADMIN OPTION FOR ]
   <para>
    When revoking privileges on a table, the corresponding column privileges
    (if any) are automatically revoked on each column of the table, as well.
+   On the other hand, if a role has been granted privileges on a table, then
+   revoking the same privileges from individual columns will have no effect.
   </para>
 
   <para>
@@ -261,8 +275,7 @@ REVOKE ALL PRIVILEGES ON kinds FROM manuel;
 
 <programlisting>
 REVOKE admins FROM joe;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1 id="SQL-REVOKE-compatibility">

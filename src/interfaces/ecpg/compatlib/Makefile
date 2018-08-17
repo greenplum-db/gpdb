@@ -2,7 +2,7 @@
 #
 # Makefile for ecpg compatibility library
 #
-# Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/interfaces/ecpg/compatlib/Makefile
@@ -20,7 +20,7 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 NAME= ecpg_compat
 SO_MAJOR_VERSION= 3
-SO_MINOR_VERSION= 3
+SO_MINOR_VERSION= 4
 
 override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
 	-I$(libpq_srcdir) -I$(top_srcdir)/src/include/utils $(CPPFLAGS)

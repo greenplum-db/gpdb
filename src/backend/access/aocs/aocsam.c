@@ -896,7 +896,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 
 	if (rel->rd_rel->relhasoids)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("append-only column-oriented tables do not support rows with OIDs")));
 
 #ifdef FAULT_INJECTOR

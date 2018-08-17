@@ -22,7 +22,7 @@ set enable_bitmapscan=off;
 set enable_indexscan=on;
 
 --allow catalog modification
-set allow_system_table_mods=dml;
+set allow_system_table_mods=true;
 update pg_class set reltuples=1 where relname='tt2';
 
 select tt1.x from tt2 full outer join tt1 on (tt1.x=tt2.z) where tt2.z=2;

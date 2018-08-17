@@ -38,10 +38,10 @@ extern Motion *make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool
 void 
 cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *rel);
 
-extern Plan *apply_shareinput_dag_to_tree(PlannerGlobal *glob, Plan *plan, List *rtable);
-extern void collect_shareinput_producers(PlannerGlobal *glob, Plan *plan, List *rtable);
-extern Plan *replace_shareinput_targetlists(PlannerGlobal *glob, Plan *plan, List *rtable);
-extern Plan *apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob);
+extern Plan *apply_shareinput_dag_to_tree(PlannerInfo *root, Plan *plan);
+extern void collect_shareinput_producers(PlannerInfo *root, Plan *plan);
+extern Plan *replace_shareinput_targetlists(PlannerInfo *root, Plan *plan);
+extern Plan *apply_shareinput_xslice(Plan *plan, PlannerInfo *root);
 extern void assign_plannode_id(PlannedStmt *stmt);
 
 extern bool isAnyColChangedByUpdate(Index targetvarno,

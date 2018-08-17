@@ -1,10 +1,13 @@
 /*
  * contrib/btree_gist/btree_utils_num.c
  */
+#include "postgres.h"
+
 #include "btree_gist.h"
 #include "btree_utils_num.h"
 #include "utils/cash.h"
 #include "utils/date.h"
+#include "utils/timestamp.h"
 
 
 GISTENTRY *

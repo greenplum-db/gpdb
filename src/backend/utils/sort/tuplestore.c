@@ -45,7 +45,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -629,7 +629,7 @@ tuplestore_puttuple(Tuplestorestate *state, HeapTuple tuple)
 	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
 
 	/*
-	 * Copy the tuple.  (Must do this even in WRITEFILE case.  Note that
+	 * Copy the tuple.	(Must do this even in WRITEFILE case.  Note that
 	 * COPYTUP includes USEMEM, so we needn't do that here.)
 	 */
 	tuple = COPYTUP(state, tuple);
@@ -925,8 +925,8 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 			 * word. If seek fails, assume we are at start of file.
 			 */
 
-			insist_log(false, "Backward scanning of tuplestores are not supported at this time");
-
+			ereport(ERROR, (errmsg("Backward scanning of tuplestores are not supported at this time")));
+#if 0
 			if (BufFileSeek(state->myfile, readptr->file, -(long) sizeof(unsigned int),
 							SEEK_CUR) != 0)
 			{
@@ -978,7 +978,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 				elog(ERROR, "bogus tuple length in backward scan");
 			tup = READTUP(state, tuplen);
 			return tup;
-
+#endif
 		default:
 			elog(ERROR, "invalid tuplestore state");
 			return NULL;		/* keep compiler quiet */
@@ -1407,9 +1407,7 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 		if (BufFileRead(state->myfile, (void *) ((char *) tup + sizeof(uint32)),
 					tuplen - sizeof(uint32))
 				!= (size_t) (tuplen - sizeof(uint32)))
-		{
-			insist_log(false, "unexpected end of data");
-		}
+			elog(ERROR, "unexpected end of data");
 	}
 	else
 	{
@@ -1419,9 +1417,8 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 		if (BufFileRead(state->myfile, (void *) ((char *) tup + sizeof(uint32)),
 					tuplen - sizeof(uint32))
 				!= (size_t) (tuplen - sizeof(uint32)))
-		{
-			insist_log(false, "unexpected end of data");
-		}
+			elog(ERROR, "unexpected end of data");
+
 		htup->t_data = (HeapTupleHeader ) ((char *) tup + HEAPTUPLESIZE);
 	}
 
@@ -1430,7 +1427,7 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 		if (BufFileRead(state->myfile, (void *) &tuplen,
 						sizeof(tuplen)) != sizeof(tuplen))
 		{
-			insist_log(false, "unexpected end of data");
+			elog(ERROR, "unexpected end of data");
 		}
 	}
 

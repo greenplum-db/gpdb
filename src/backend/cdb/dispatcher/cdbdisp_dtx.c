@@ -80,6 +80,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  int serializedDtxContextInfoLen)
 {
 	CdbDispatcherState *ds;
+	CdbDispatchResults *pr;
 	MemoryContext oldContext;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
@@ -138,14 +139,27 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 
 	cdbdisp_waitDispatchFinish(ds);
 
-	cdbdisp_finishCommand(ds, qeError, &cdb_pgresults, false);
-	if (!GangOK(primaryGang))
+	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
+
+	pr = cdbdisp_getDispatchResults(ds, qeError);
+
+	if (!pr)
 	{
-		*badGangs = true;
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-			 dtxProtocolCommandLoggingStr, gid);
+		if (!GangOK(primaryGang))
+		{
+			*badGangs = true;
+			elog((Debug_print_full_dtm ? LOG : DEBUG5),
+				 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
+				 dtxProtocolCommandLoggingStr, gid);
+		}
+
+		cdbdisp_destroyDispatcherState(ds);
+		return false;
 	}
+
+	cdbdisp_returnResults(pr, &cdb_pgresults);
+
+	cdbdisp_destroyDispatcherState(ds);
 
 	*numresults = cdb_pgresults.numResults;
 	return cdb_pgresults.pg_results;

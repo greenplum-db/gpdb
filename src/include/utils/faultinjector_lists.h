@@ -243,6 +243,10 @@ FI_IDENT(CollateLocaleOsLookup, "collate_locale_os_lookup")
 FI_IDENT(CreateResourceGroupFail, "create_resource_group_fail")
 /* inject fault before auto vacuum worker calls do_autovacuum */
 FI_IDENT(AutoVacWorkerBeforeDoAutovacuum, "auto_vac_worker_before_do_autovacuum")
+/* inject fault when search DNS cache */
+FI_IDENT(GetDnsCachedAddress, "get_dns_cached_address")
+/* inject fault before notify fts probe */
+FI_IDENT(BeforeFtsNotify, "before_fts_notify")
 #endif
 
 /*

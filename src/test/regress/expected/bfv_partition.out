@@ -357,13 +357,13 @@ Inherits: t26002_t1_1_prt_2
 Distributed by: (empid)
 
 \d+ T26002_T1;
-                      Table "bfv_partition.t26002_t1"
-    Column    |         Type          | Modifiers | Storage  | Description 
---------------+-----------------------+-----------+----------+-------------
- empid        | integer               |           | plain    | 
- departmentid | integer               |           | plain    | 
- year         | integer               |           | plain    | 
- region       | character varying(20) |           | extended | 
+                             Table "bfv_partition.t26002_t1"
+    Column    |         Type          | Modifiers | Storage  | Stats target | Description 
+--------------+-----------------------+-----------+----------+--------------+-------------
+ empid        | integer               |           | plain    |              | 
+ departmentid | integer               |           | plain    |              | 
+ year         | integer               |           | plain    |              | 
+ region       | character varying(20) |           | extended |              | 
 Child tables: t26002_t1_1_prt_2,
               t26002_t1_1_prt_outlying_years
 Has OIDs: no
@@ -371,13 +371,13 @@ Distributed by: (empid)
 Partition by: (year)
 
 \d+ t26002_t1_1_prt_2;
-                  Table "bfv_partition.t26002_t1_1_prt_2"
-    Column    |         Type          | Modifiers | Storage  | Description 
---------------+-----------------------+-----------+----------+-------------
- empid        | integer               |           | plain    | 
- departmentid | integer               |           | plain    | 
- year         | integer               |           | plain    | 
- region       | character varying(20) |           | extended | 
+                         Table "bfv_partition.t26002_t1_1_prt_2"
+    Column    |         Type          | Modifiers | Storage  | Stats target | Description 
+--------------+-----------------------+-----------+----------+--------------+-------------
+ empid        | integer               |           | plain    |              | 
+ departmentid | integer               |           | plain    |              | 
+ year         | integer               |           | plain    |              | 
+ region       | character varying(20) |           | extended |              | 
 Check constraints:
     "t26002_t1_1_prt_2_check" CHECK (year >= 2012 AND year < 2015)
 Inherits: t26002_t1
@@ -390,13 +390,13 @@ Distributed by: (empid)
 Partition by: (region, departmentid)
 
 \d+ t26002_t1_1_prt_2_2_prt_asia;
-            Table "bfv_partition.t26002_t1_1_prt_2_2_prt_asia"
-    Column    |         Type          | Modifiers | Storage  | Description 
---------------+-----------------------+-----------+----------+-------------
- empid        | integer               |           | plain    | 
- departmentid | integer               |           | plain    | 
- year         | integer               |           | plain    | 
- region       | character varying(20) |           | extended | 
+                    Table "bfv_partition.t26002_t1_1_prt_2_2_prt_asia"
+    Column    |         Type          | Modifiers | Storage  | Stats target | Description 
+--------------+-----------------------+-----------+----------+--------------+-------------
+ empid        | integer               |           | plain    |              | 
+ departmentid | integer               |           | plain    |              | 
+ year         | integer               |           | plain    |              | 
+ region       | character varying(20) |           | extended |              | 
 Check constraints:
     "t26002_t1_1_prt_2_2_prt_asia_check" CHECK (region::text = 'asia'::text AND departmentid = 3)
     "t26002_t1_1_prt_2_check" CHECK (year >= 2012 AND year < 2015)
@@ -423,13 +423,13 @@ DISTRIBUTED BY (empid);
 Distributed by: (empid)
 
 \d+ T26002_T2;
-                      Table "bfv_partition.t26002_t2"
-    Column    |         Type          | Modifiers | Storage  | Description 
---------------+-----------------------+-----------+----------+-------------
- empid        | integer               |           | plain    | 
- departmentid | integer               |           | plain    | 
- year         | integer               |           | plain    | 
- region       | character varying(20) |           | extended | 
+                             Table "bfv_partition.t26002_t2"
+    Column    |         Type          | Modifiers | Storage  | Stats target | Description 
+--------------+-----------------------+-----------+----------+--------------+-------------
+ empid        | integer               |           | plain    |              | 
+ departmentid | integer               |           | plain    |              | 
+ year         | integer               |           | plain    |              | 
+ region       | character varying(20) |           | extended |              | 
 Has OIDs: no
 Distributed by: (empid)
 
@@ -4712,20 +4712,20 @@ NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_99" for table "mpp542
 NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_100" for table "mpp5427"
 insert into mpp5427 select i from generate_series(1, 100) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 100000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 1000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 truncate table mpp5427;
@@ -4733,26 +4733,26 @@ alter table mpp5427 add default partition default_part;
 NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_default_part" for table "mpp5427"
 insert into mpp5427 select i from generate_series(1, 100) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 100000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 1000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(10000000, 15000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
 (0 rows)
 
 drop table mpp5427;
@@ -4962,7 +4962,7 @@ $$ LANGUAGE 'plpgsql';
 select mpp5431_f1();
 NOTICE:  CREATE TABLE will create partition "mpp5431_1_prt_p20090403" for table "mpp5431"
 CONTEXT:  SQL statement "alter table mpp5431 add partition p20090403 start('2009-04-03 00:00:00'::timestamp) inclusive end ('2009-04-04 00:00:00'::timestamp) exclusive"
-PL/pgSQL function "mpp5431_f1" line 3 at SQL statement
+PL/pgSQL function mpp5431_f1() line 3 at SQL statement
  mpp5431_f1 
 ------------
  

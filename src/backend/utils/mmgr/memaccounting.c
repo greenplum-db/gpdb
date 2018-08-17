@@ -1114,6 +1114,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_DynamicTableScan";
 	case MEMORY_OWNER_TYPE_Exec_IndexScan:
 		return "X_IndexScan";
+	case MEMORY_OWNER_TYPE_Exec_IndexOnlyScan:
+		return "X_IndexOnlyScan";
 	case MEMORY_OWNER_TYPE_Exec_DynamicIndexScan:
 		return "X_DynamicIndexScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapIndexScan:
@@ -1184,6 +1186,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_CteScan";
 	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
 		return "X_WorkTableScan";
+	case MEMORY_OWNER_TYPE_Exec_ForeignScan:
+		return "X_ForeignScan";
 	default:
 		Assert(false);
 		break;
@@ -1459,16 +1463,12 @@ SaveMemoryBufToDisk(struct StringInfoData *memoryBuf, char *prefix)
 	FILE *file = fopen(fileName, "w");
 
 	if (file == NULL)
-	{
 		elog(ERROR, "Could not write memory usage information. Failed to open file: %s", fileName);
-	}
 
 	uint64 bytes = fwrite(memoryBuf->data, 1, memoryBuf->len, file);
 
 	if (bytes != memoryBuf->len)
-	{
-		insist_log(false, "Could not write memory usage information. Attempted to write %d", memoryBuf->len);
-	}
+		elog(ERROR, "Could not write memory usage information. Attempted to write %d", memoryBuf->len);
 
 	fclose(file);
 }

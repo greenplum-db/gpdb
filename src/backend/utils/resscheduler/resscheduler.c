@@ -1081,7 +1081,7 @@ AtAbort_ResScheduler(void)
 void
 ResHandleUtilityStmt(Portal portal, Node *stmt)
 {
-	if (!IsA(stmt, CopyStmt))
+	if (!IsA(stmt, CopyStmt) && !IsA(stmt, CreateTableAsStmt))
 	{
 		return;
 	}

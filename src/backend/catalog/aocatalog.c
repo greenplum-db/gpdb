@@ -43,7 +43,8 @@ CreateAOAuxiliaryTable(
 		IndexInfo  *indexInfo,
 		List *indexColNames,
 		Oid	*classObjectId,
-		int16 *coloptions)
+		int16 *coloptions,
+		bool is_part_parent)
 {
 	char aoauxiliary_relname[NAMEDATALEN];
 	char aoauxiliary_idxname[NAMEDATALEN];
@@ -150,7 +151,7 @@ CreateAOAuxiliaryTable(
 											     true,
 												 /* valid_opts */ false,
 												 /* is_part_child */ false,
-												 /* is_part_parent */ false);
+												 is_part_parent);
 
 	/* Make this table visible, else index creation will fail */
 	CommandCounterIncrement();
@@ -168,6 +169,7 @@ CreateAOAuxiliaryTable(
 
 		aoauxiliary_idxid = index_create(aoauxiliary_rel,
 										 aoauxiliary_idxname,
+										 InvalidOid,
 										 InvalidOid,
 										 indexInfo,
 										 indexColNames,

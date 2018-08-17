@@ -40,7 +40,7 @@ namespace gpopt
 	class CMDAccessor;
 
 	// dynamic array of bitsets
-	typedef CDynamicPtrArray<CBitSet, CleanupRelease> DrgPbs;
+	typedef CDynamicPtrArray<CBitSet, CleanupRelease> CBitSetArray;
 }
 
 namespace gpdxl
@@ -67,351 +67,350 @@ namespace gpdxl
 
 			// construct a set of column attnos corresponding to a single grouping set
 			static
-			CBitSet *PbsGroupingSet(IMemoryPool *pmp, List *plGroupElems, ULONG ulCols, HMUlUl *phmululGrpColPos, CBitSet *pbsGrpCols);
+			CBitSet *CreateAttnoSetForGroupingSet(IMemoryPool *mp, List *group_elems, ULONG num_cols, UlongToUlongMap *group_col_pos, CBitSet *group_cols);
 
 			// create a set of grouping sets for a rollup
 			static
-			DrgPbs *PdrgpbsRollup(IMemoryPool *pmp, GroupingClause *pgrcl, ULONG ulCols, HMUlUl *phmululGrpColPos, CBitSet *pbsGrpCols);
+			CBitSetArray *CreateGroupingSetsForRollup(IMemoryPool *mp, GroupingClause *grouping_clause, ULONG num_cols, UlongToUlongMap *grouping_col_to_pos_map, CBitSet *group_cols);
 
 			// check if the given mdid array contains any of the polymorphic
 			// types (ANYELEMENT, ANYARRAY)
 			static
-			BOOL FContainsPolymorphicTypes(DrgPmdid *pdrgpmdidTypes);
+			BOOL ContainsPolymorphicTypes(IMdIdArray *mdid_array);
 
 			// resolve polymorphic types in the given array of type ids, replacing
 			// them with the actual types obtained from the query
 			static
-			DrgPmdid *PdrgpmdidResolvePolymorphicTypes
+			IMdIdArray *ResolvePolymorphicTypes
 						(
-						IMemoryPool *pmp,
-						DrgPmdid *pdrgpmdidTypes,
-						List *plArgTypes,
-						FuncExpr *pfuncexpr
+						IMemoryPool *mp,
+						IMdIdArray *mdid_array,
+						List *arg_types,
+						FuncExpr *func_expr
 						);
 			
 			// update grouping col position mappings
 			static
-			void UpdateGrpColMapping(IMemoryPool *pmp, HMUlUl *phmululGrpColPos, CBitSet *pbsGrpCols, ULONG ulSortGrpRef);
+			void UpdateGrpColMapping(IMemoryPool *mp, UlongToUlongMap *grouping_col_to_pos_map, CBitSet *group_cols, ULONG sort_group_ref);
 
 		public:
 
 			struct SCmptypeStrategy
 			{
-				IMDType::ECmpType ecomptype;
-				StrategyNumber sn;
+				IMDType::ECmpType comptype;
+				StrategyNumber strategy_no;
 
 			};
 
 			// get the GPDB scan direction from its corresponding DXL representation
 			static
-			ScanDirection Scandirection(EdxlIndexScanDirection edxlisd);
+			ScanDirection GetScanDirection(EdxlIndexScanDirection idx_scan_direction);
 
 			// get the oid of comparison operator
 			static
-			OID OidCmpOperator(Expr* pexpr);
+			OID OidCmpOperator(Expr* expr);
 
 			// get the opfamily for index key
 			static
-			OID OidIndexQualOpFamily(INT iAttno, OID oidIndex);
+			OID GetOpFamilyForIndexQual(INT attno, OID oid_index);
 			
 			// return the type for the system column with the given number
 			static
-			CMDIdGPDB *PmdidSystemColType(IMemoryPool *pmp, AttrNumber attno);
+			CMDIdGPDB *GetSystemColType(IMemoryPool *mp, AttrNumber attno);
 
 			// find the n-th column descriptor in the table descriptor
 			static
-			const CDXLColDescr *Pdxlcd(const CDXLTableDescr *pdxltabdesc, ULONG ulPos);
+			const CDXLColDescr *GetColumnDescrAt(const CDXLTableDescr *table_descr, ULONG pos);
 
 			// return the name for the system column with given number
 			static
-			const CWStringConst *PstrSystemColName(AttrNumber attno);
+			const CWStringConst *GetSystemColName(AttrNumber attno);
 
 			// returns the length for the system column with given attno number
 			static
-			const ULONG UlSystemColLength(AttrNumber attno);
+			const ULONG GetSystemColLength(AttrNumber attno);
 
 			// translate the join type from its GPDB representation into the DXL one
 			static
-			EdxlJoinType EdxljtFromJoinType(JoinType jt);
+			EdxlJoinType ConvertToDXLJoinType(JoinType jt);
 
 			// translate the index scan direction from its GPDB representation into the DXL one
 			static
-			EdxlIndexScanDirection EdxlIndexDirection(ScanDirection sd);
+			EdxlIndexScanDirection ConvertToDXLIndexScanDirection(ScanDirection sd);
 
 			// create a DXL index descriptor from an index MD id
 			static
-			CDXLIndexDescr *Pdxlid(IMemoryPool *pmp, CMDAccessor *pmda, IMDId *pmdid);
+			CDXLIndexDescr *GetIndexDescr(IMemoryPool *mp, CMDAccessor *md_accessor, IMDId *mdid);
 
 			// translate a RangeTableEntry into a CDXLTableDescr
 			static
-			CDXLTableDescr *Pdxltabdesc
+			CDXLTableDescr *GetTableDescr
 								(
-								IMemoryPool *pmp,
-								CMDAccessor *pmda,
-								CIdGenerator *pidgtor,
-								const RangeTblEntry *prte,
-								BOOL *pfDistributedTable = NULL
+								IMemoryPool *mp,
+								CMDAccessor *md_accessor,
+								CIdGenerator *id_generator,
+								const RangeTblEntry *rte,
+								BOOL *is_distributed_table = NULL
 								);
 
 			// translate a RangeTableEntry into a CDXLLogicalTVF
 			static
-			CDXLLogicalTVF *Pdxltvf
+			CDXLLogicalTVF *ConvertToCDXLLogicalTVF
 								(
-								IMemoryPool *pmp,
-								CMDAccessor *pmda,
-								CIdGenerator *pidgtor,
-								const RangeTblEntry *prte
+								IMemoryPool *mp,
+								CMDAccessor *md_accessor,
+								CIdGenerator *id_generator,
+								const RangeTblEntry *rte
 								);
 
 			// get column descriptors from a record type
 			static
-			DrgPdxlcd *PdrgdxlcdRecord
+			CDXLColDescrArray *GetColumnDescriptorsFromRecord
 						(
-						IMemoryPool *pmp,
-						CIdGenerator *pidgtor,
-						List *plColNames,
-						List *plColTypes,
-						List *plColTypeModifiers
+						IMemoryPool *mp,
+						CIdGenerator *id_generator,
+						List *col_names,
+						List *col_types,
+						List *col_type_modifiers
 						);
 
 			// get column descriptors from a record type
 			static
-			DrgPdxlcd *PdrgdxlcdRecord
+			CDXLColDescrArray *GetColumnDescriptorsFromRecord
 						(
-						IMemoryPool *pmp,
-						CIdGenerator *pidgtor,
-						List *plColNames,
-						DrgPmdid *pdrgpmdidOutArgTypes
+						IMemoryPool *mp,
+						CIdGenerator *id_generator,
+						List *col_names,
+						IMdIdArray *out_arg_types
 						);
 
 			// get column descriptor from a base type
 			static
-			DrgPdxlcd *PdrgdxlcdBase
+			CDXLColDescrArray *GetColumnDescriptorsFromBase
 						(
-						IMemoryPool *pmp,
-						CIdGenerator *pidgtor,
-						IMDId *pmdidRetType,
-						INT iTypeModifier,
-						CMDName *pmdName
+						IMemoryPool *mp,
+						CIdGenerator *id_generator,
+						IMDId *mdid_return_type,
+						INT type_modifier,
+						CMDName *md_name
 						);
 
 			// get column descriptors from a composite type
 			static
-			DrgPdxlcd *PdrgdxlcdComposite
+			CDXLColDescrArray *GetColumnDescriptorsFromComposite
 						(
-						IMemoryPool *pmp,
-						CMDAccessor *pmda,
-						CIdGenerator *pidgtor,
-						const IMDType *pmdType
+						IMemoryPool *mp,
+						CMDAccessor *md_accessor,
+						CIdGenerator *id_generator,
+						const IMDType *md_type
 						);
 
 			// expand a composite type into an array of IMDColumns
 			static
-			DrgPmdcol *ExpandCompositeType
+			CMDColumnArray *ExpandCompositeType
 						(
-						IMemoryPool *pmp,
-						CMDAccessor *pmda,
-						const IMDType *pmdType
+						IMemoryPool *mp,
+						CMDAccessor *md_accessor,
+						const IMDType *md_type
 						);
 
 			// return the dxl representation of the set operation
 			static
-			EdxlSetOpType Edxlsetop(SetOperation setop, BOOL fAll);
+			EdxlSetOpType GetSetOpType(SetOperation setop, BOOL is_all);
 
 			// construct a dynamic array of sets of column attnos corresponding
 			// to the group by clause
 			static
-			DrgPbs *PdrgpbsGroupBy(IMemoryPool *pmp, List *plGroupClause, ULONG ulCols, HMUlUl *phmululGrpColPos, CBitSet *pbsGrpCols);
+			CBitSetArray *GetColumnAttnosForGroupBy(IMemoryPool *mp, List *group_clause, ULONG num_cols, UlongToUlongMap *group_col_pos, CBitSet *group_cold);
 
 			// return a copy of the query with constant of unknown type being coerced
 			// to the common data type of the output target list
 			static
-			Query *PqueryFixUnknownTypeConstant(Query *pquery, List *plTargetList);
+			Query *FixUnknownTypeConstant(Query *query, List *target_list);
 
 			// return the type of the nth non-resjunked target list entry
-			static OID OidTargetListReturnType(List *plTargetList, ULONG ulColPos);
+			static OID GetTargetListReturnTypeOid(List *target_list, ULONG col_pos);
 
 			// construct an array of DXL column identifiers for a target list
 			static
-			DrgPul *PdrgpulGenerateColIds
+			ULongPtrArray *GenerateColIds
 					(
-					IMemoryPool *pmp,
-					List *plTargetList,
-					DrgPmdid *pdrgpmdidInput,
-					DrgPul *pdrgpulInput,
-					BOOL *pfOuterRef,
-					CIdGenerator *pidgtorColId
+					IMemoryPool *mp,
+					List *target_list,
+					IMdIdArray *input_mdids,
+					ULongPtrArray *input_nums,
+					BOOL *is_outer_ref,
+					CIdGenerator *colid_generator
 					);
 
 			// construct an array of DXL column descriptors for a target list
 			// using the column ids in the given array
 			static
-			DrgPdxlcd *Pdrgpdxlcd(IMemoryPool *pmp, List *plTargetList, DrgPul *pdrgpulColIds, BOOL fKeepResjunked);
+			CDXLColDescrArray *GetDXLColumnDescrArray(IMemoryPool *mp, List *target_list, ULongPtrArray *colids, BOOL keep_res_junked);
 
 			// return the positions of the target list entries included in the output
 			static
-			DrgPul *PdrgpulPosInTargetList(IMemoryPool *pmp, List *plTargetList, BOOL fKeepResjunked);
+			ULongPtrArray *GetPosInTargetList(IMemoryPool *mp, List *target_list, BOOL keep_res_junked);
 
 			// construct a column descriptor from the given target entry, column identifier and position in the output
 			static
-			CDXLColDescr *Pdxlcd(IMemoryPool *pmp, TargetEntry *pte, ULONG ulColId, ULONG ulPos);
+			CDXLColDescr *GetColumnDescrAt(IMemoryPool *mp, TargetEntry *target_entry, ULONG colid, ULONG pos);
 
 			// create a dummy project element to rename the input column identifier
 			static
-			CDXLNode *PdxlnDummyPrElem(IMemoryPool *pmp, ULONG ulColIdInput, ULONG ulColIdOutput, CDXLColDescr *pdxlcd);
+			CDXLNode *CreateDummyProjectElem(IMemoryPool *mp, ULONG colid_input, ULONG colid_output, CDXLColDescr *dxl_col_descr);
 
 			// construct a list of colids corresponding to the given target list
 			// using the given attno->colid map
 			static
-			DrgPul *PdrgpulColIds(IMemoryPool *pmp, List *plTargetList, HMIUl *phmiulAttnoColId);
+			ULongPtrArray *GetOutputColIdsArray(IMemoryPool *mp, List *target_list, IntToUlongMap *attno_to_colid_map);
 
 			// construct an array of column ids for the given group by set
 			static
-			DrgPul *PdrgpulGroupingCols(IMemoryPool *pmp, CBitSet *pbsGroupByCols, HMIUl *phmiulSortGrpColsColId);
+			ULongPtrArray *GetGroupingColidArray(IMemoryPool *mp, CBitSet *group_by_cols, IntToUlongMap *sort_group_cols_to_colid_map);
 
 			// return the Colid of column with given index
 			static
-			ULONG UlColId(INT iIndex, HMIUl *phmiul);
+			ULONG GetColId(INT index, IntToUlongMap *index_to_colid_map);
 
 			// return the corresponding ColId for the given varno, varattno and querylevel
 			static
-			ULONG UlColId(ULONG ulQueryLevel, INT iVarno, INT iVarAttno, IMDId *pmdid, CMappingVarColId *pmapvarcolid);
+			ULONG GetColId(ULONG query_level, INT varno, INT var_attno, IMDId *mdid, CMappingVarColId *var_colid_mapping);
 
 			// check to see if the target list entry is a sorting column
 			static
-			BOOL FSortingColumn(const TargetEntry *pte, List *plSortCl);
-
+			BOOL IsSortingColumn(const TargetEntry *target_entry, List *sort_clause_list); 
 			// check to see if the target list entry is used in the window reference
 			static
-			BOOL FWindowSpec(const TargetEntry *pte, List *plWindowClause);
+			BOOL IsWindowSpec(const TargetEntry *target_entry, List *window_clause_list);
 
 			// extract a matching target entry that is a window spec
 			static
-			TargetEntry *PteWindowSpec(Node *pnode, List *plWindowClause, List *plTargetList);
+			TargetEntry *GetWindowSpecTargetEntry(Node *node, List *window_clause_list, List *target_list);
 
 			// check if the expression has a matching target entry that is a window spec
 			static
-			BOOL FWindowSpec(Node *pnode, List *plWindowClause, List *plTargetList);
+			BOOL IsWindowSpec(Node *node, List *window_clause_list, List *target_list);
 
 			// create a scalar const value expression for the given int8 value
 			static
-			CDXLNode *PdxlnInt8Const(IMemoryPool *pmp, CMDAccessor *pmda, INT iVal);
+			CDXLNode *CreateDXLProjElemFromInt8Const(IMemoryPool *mp, CMDAccessor *md_accessor, INT val);
 
 			// check to see if the target list entry is a grouping column
 			static
-			BOOL FGroupingColumn(const TargetEntry *pte, List *plGrpCl);
+			BOOL IsGroupingColumn(const TargetEntry *target_entry, List *group_clause_list);
 
 			// check to see if the target list entry is a grouping column
 			static
-			BOOL FGroupingColumn(const TargetEntry *pte, const SortGroupClause *pgrcl);
+			BOOL IsGroupingColumn(const TargetEntry *target_entry, const SortGroupClause *sort_group_clause);
 
 			// check to see if the sorting column entry is a grouping column
 			static
-			BOOL FGroupingColumn(const SortGroupClause *psortcl, List *plGrpCl);
+			BOOL IsGroupingColumn(const SortGroupClause *sort_group_clause, List *group_clause_list);
 
 			// check if the expression has a matching target entry that is a grouping column
 			static
-			BOOL FGroupingColumn(Node *pnode, List *plGrpCl, List *plTargetList);
+			BOOL IsGroupingColumn(Node *node, List *group_clause_list, List *target_list);
 
 			// extract a matching target entry that is a grouping column
 			static
-			TargetEntry *PteGroupingColumn(Node *pnode, List *plGrpCl, List *plTargetList);
+			TargetEntry *GetGroupingColumnTargetEntry(Node *node, List *group_clause_list, List *target_list);
 
 			// convert a list of column ids to a list of attribute numbers using
 			// the provided context with mappings
 			static
-			List *PlAttnosFromColids(DrgPul *pdrgpul, CDXLTranslateContext *pdxltrctx);
+			List *ConvertColidToAttnos(ULongPtrArray *pdrgpul, CDXLTranslateContext *dxl_translate_ctxt);
 			
 			// parse string value into a Long Integer
 			static
-			LINT LFromStr(const CWStringBase *pstr);
+			LINT GetLongFromStr(const CWStringBase *wcstr);
 
 			// parse string value into an Integer
 			static
-			INT IFromStr(const CWStringBase *pstr);
+			INT GetIntFromStr(const CWStringBase *wcstr);
 
 			// check whether the given project list has a project element of the given
 			// operator type
 			static
-			BOOL FHasProjElem(CDXLNode *pdxlnPrL, Edxlopid edxlopid);
+			BOOL HasProjElem(CDXLNode *project_list_dxlnode, Edxlopid dxl_op_id);
 
 			// create a multi-byte character string from a wide character string
 			static
-			CHAR *SzFromWsz(const WCHAR *wsz);
+			CHAR *CreateMultiByteCharStringFromWCString(const WCHAR *wcstr);
 			
 			static 
-			HMUlUl *PhmululMap(IMemoryPool *pmp, DrgPul *pdrgpulOld, DrgPul *pdrgpulNew);
+			UlongToUlongMap *MakeNewToOldColMapping(IMemoryPool *mp, ULongPtrArray *old_colids, ULongPtrArray *new_colids);
 
 			// check if the given tree contains a subquery
 			static
-			BOOL FHasSubquery(Node *pnode);
+			BOOL HasSubquery(Node *node);
 
 			// check if the given function is a SIRV (single row volatile) that reads
 			// or modifies SQL data
 			static
-			BOOL FSirvFunc(IMemoryPool *pmp, CMDAccessor *pmda, OID oidFunc);
+			BOOL IsSirvFunc(IMemoryPool *mp, CMDAccessor *md_accessor, OID func_oid);
 			
 			// is this a motion sensitive to duplicates
 			static
-			BOOL FDuplicateSensitiveMotion(CDXLPhysicalMotion *pdxlopMotion);
+			BOOL IsDuplicateSensitiveMotion(CDXLPhysicalMotion *dxl_motion);
 
 			// construct a project element with a const NULL expression
 			static
-			CDXLNode *PdxlnPrElNull(IMemoryPool *pmp, CMDAccessor *pmda, IMDId *pmdid, ULONG ulColId, const WCHAR *wszColName);
+			CDXLNode *CreateDXLProjElemConstNULL(IMemoryPool *mp, CMDAccessor *md_accessor, IMDId *mdid, ULONG colid, const WCHAR *col_name);
 
 			// construct a project element with a const NULL expression
 			static
-			CDXLNode *PdxlnPrElNull(IMemoryPool *pmp, CMDAccessor *pmda, IMDId *pmdid, ULONG ulColId, CHAR *szAliasName);
+			CDXLNode *CreateDXLProjElemConstNULL(IMemoryPool *mp, CMDAccessor *md_accessor, IMDId *mdid, ULONG colid, CHAR *alias_name);
 
 			// create a DXL project element node with a Const NULL of type provided
 			// by the column descriptor
 			static
-			CDXLNode *PdxlnPrElNull(IMemoryPool *pmp, CMDAccessor *pmda, CIdGenerator *pidgtorCol, const IMDColumn *pmdcol);
+			CDXLNode *CreateDXLProjElemConstNULL(IMemoryPool *mp, CMDAccessor *md_accessor, CIdGenerator *colid_generator, const IMDColumn *col);
 
 			// check required permissions for the range table
 			static 
-			void CheckRTEPermissions(List *plRangeTable);
+			void CheckRTEPermissions(List *range_table_list);
 
 			// check if an aggregate window function has either prelim or inverse prelim func
 			static
-			void CheckAggregateWindowFn(Node *pnode);
+			void CheckAggregateWindowFn(Node *node);
 
 			// check if given column ids are outer references in the tree rooted by given node
                         static
-			void MarkOuterRefs(ULONG *pulColId, BOOL *pfOuterRef, ULONG ulColumns, CDXLNode *pdxlnode);
+			void MarkOuterRefs(ULONG *colid, BOOL *is_outer_ref, ULONG num_columns, CDXLNode *node);
 
 			// map DXL Subplan type to GPDB SubLinkType
 			static
-			SubLinkType Slink(EdxlSubPlanType edxlsubplantype);
+			SubLinkType MapDXLSubplanToSublinkType(EdxlSubPlanType dxl_subplan_type);
 
 			// map GPDB SubLinkType to DXL Subplan type
 			static
-			EdxlSubPlanType Edxlsubplantype(SubLinkType slink);
+			EdxlSubPlanType MapSublinkTypeToDXLSubplan(SubLinkType slink);
 
 			// check whether there are triggers for the given operation on
 			// the given relation
 			static
-			BOOL FRelHasTriggers(IMemoryPool *pmp, CMDAccessor *pmda, const IMDRelation *pmdrel, const EdxlDmlType edxldmltype);
+			BOOL RelHasTriggers(IMemoryPool *mp, CMDAccessor *md_accessor, const IMDRelation *mdrel, const EdxlDmlType dml_type_dxl);
 
 			// check whether the given trigger is applicable to the given DML operation
 			static
-			BOOL FApplicableTrigger(CMDAccessor *pmda, IMDId *pmdidTrigger, const EdxlDmlType edxldmltype);
+			BOOL IsApplicableTrigger(CMDAccessor *md_accessor, IMDId *trigger_mdid, const EdxlDmlType dml_type_dxl);
 						
 			// check whether there are NOT NULL or CHECK constraints for the given relation
 			static
-			BOOL FRelHasConstraints(const IMDRelation *pmdrel);
+			BOOL RelHasConstraints(const IMDRelation *rel);
 
 			// translate the list of error messages from an assert constraint list
 			static 
-			List *PlAssertErrorMsgs(CDXLNode *pdxlnAssertConstraintList);
+			List *GetAssertErrorMsgs(CDXLNode *assert_constraint_list);
 
 			// return the count of non-system columns in the relation
 			static
-			ULONG UlNonSystemColumns(const IMDRelation *pmdrel);
+			ULONG GetNumNonSystemColumns(const IMDRelation *mdrel);
 
 			// check if we need to create stats buckets in DXL for the column attribute
 			static
-			BOOL FCreateStatsBucket(OID oidAttType);
+			BOOL ShouldCreateStatsBucket(OID att_type_oid);
 	};
 }
 

@@ -8,7 +8,7 @@
  * be a measurable performance gain from doing this, but that might change
  * in the future as we add more options.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -23,7 +23,6 @@
 #include "commands/tablespace.h"
 #include "miscadmin.h"
 #include "optimizer/cost.h"
-#include "utils/catcache.h"
 #include "utils/hsearch.h"
 #include "utils/inval.h"
 #include "utils/spccache.h"
@@ -50,7 +49,7 @@ typedef struct
  * tablespaces, nor do we expect them to be frequently modified.
  */
 static void
-InvalidateTableSpaceCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
+InvalidateTableSpaceCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
 {
 	HASH_SEQ_STATUS status;
 	TableSpaceCacheEntry *spc;

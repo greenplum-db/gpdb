@@ -577,10 +577,10 @@ Distributed by: (sale_id)
         <title>Creating the session_level_memory_consumption View</title>
         <body>
           <p>To create the <i>session_level_memory_consumption</i> view in a Greenplum Database, run
-            the script <codeph>$GPHOME/share/postgresql/contrib/gp_session_state.sql</codeph> once
+            the script <codeph>CREATE EXTENSION gp_internal_tools;</codeph> once
             for each database. For example, to install the view in the database
               <codeph>testdb</codeph>, use this
-            command:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/gp_session_state.sql</codeblock></p>
+            command:<codeblock>$ psql -d testdb -c "CREATE EXTENSION gp_internal_tools;"</codeblock></p>
         </body>
       </topic>
       <topic id="topic7" xml:lang="en">

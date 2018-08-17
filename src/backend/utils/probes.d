@@ -1,7 +1,7 @@
 /* ----------
  *	DTrace probes for PostgreSQL backend
  *
- *	Copyright (c) 2006-2011, PostgreSQL Global Development Group
+ *	Copyright (c) 2006-2012, PostgreSQL Global Development Group
  *
  *	src/backend/utils/probes.d
  * ----------
@@ -48,6 +48,8 @@ provider postgresql {
 	probe lwlock__wait__done(LWLockId, LWLockMode);
 	probe lwlock__condacquire(LWLockId, LWLockMode);
 	probe lwlock__condacquire__fail(LWLockId, LWLockMode);
+	probe lwlock__wait__until__free(LWLockId, LWLockMode);
+	probe lwlock__wait__until__free__fail(LWLockId, LWLockMode);
 
 	probe lock__wait__start(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);
 	probe lock__wait__done(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);

@@ -3,7 +3,7 @@
  * float.c
  *	  Functions for the built-in floating-point types.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -24,6 +24,7 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/float_utils.h"
+#include "utils/sortsupport.h"
 
 
 #ifndef M_PI
@@ -202,6 +203,8 @@ float4in(PG_FUNCTION_ARGS)
 	/* did we not see anything that looks like a double? */
 	if (endptr == num || errno != 0)
 	{
+		int			save_errno = errno;
+
 		/*
 		 * C99 requires that strtod() accept NaN and [-]Infinity, but not all
 		 * platforms support that yet (and some accept them but set ERANGE
@@ -222,11 +225,21 @@ float4in(PG_FUNCTION_ARGS)
 			val = -get_float4_infinity();
 			endptr = num + 9;
 		}
-		else if (errno == ERANGE)
-			ereport(ERROR,
-					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-					 errmsg("\"%s\" is out of range for type real",
-							orig_num)));
+		else if (save_errno == ERANGE)
+		{
+			/*
+			 * Some platforms return ERANGE for denormalized numbers (those
+			 * that are not zero, but are too close to zero to have full
+			 * precision).	We'd prefer not to throw error for that, so try to
+			 * detect whether it's a "real" out-of-range condition by checking
+			 * to see if the result is zero or huge.
+			 */
+			if (val == 0.0 || val >= HUGE_VAL || val <= -HUGE_VAL)
+				ereport(ERROR,
+						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+						 errmsg("\"%s\" is out of range for type real",
+								orig_num)));
+		}
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
@@ -396,6 +409,8 @@ float8in(PG_FUNCTION_ARGS)
 	/* did we not see anything that looks like a double? */
 	if (endptr == num || errno != 0)
 	{
+		int			save_errno = errno;
+
 		/*
 		 * C99 requires that strtod() accept NaN and [-]Infinity, but not all
 		 * platforms support that yet (and some accept them but set ERANGE
@@ -416,11 +431,21 @@ float8in(PG_FUNCTION_ARGS)
 			val = -get_float8_infinity();
 			endptr = num + 9;
 		}
-		else if (errno == ERANGE)
-			ereport(ERROR,
-					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+		else if (save_errno == ERANGE)
+		{
+			/*
+			 * Some platforms return ERANGE for denormalized numbers (those
+			 * that are not zero, but are too close to zero to have full
+			 * precision).	We'd prefer not to throw error for that, so try to
+			 * detect whether it's a "real" out-of-range condition by checking
+			 * to see if the result is zero or huge.
+			 */
+			if (val == 0.0 || val >= HUGE_VAL || val <= -HUGE_VAL)
+				ereport(ERROR,
+						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 				   errmsg("\"%s\" is out of range for type double precision",
 						  orig_num)));
+		}
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
@@ -946,6 +971,24 @@ btfloat4cmp(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(float4_cmp_internal(arg1, arg2));
 }
 
+static int
+btfloat4fastcmp(Datum x, Datum y, SortSupport ssup)
+{
+	float4		arg1 = DatumGetFloat4(x);
+	float4		arg2 = DatumGetFloat4(y);
+
+	return float4_cmp_internal(arg1, arg2);
+}
+
+Datum
+btfloat4sortsupport(PG_FUNCTION_ARGS)
+{
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
+
+	ssup->comparator = btfloat4fastcmp;
+	PG_RETURN_VOID();
+}
+
 /*
  *		float8{eq,ne,lt,le,gt,ge}		- float8/float8 comparison operations
  */
@@ -1040,6 +1083,24 @@ btfloat8cmp(PG_FUNCTION_ARGS)
 	float8		arg2 = PG_GETARG_FLOAT8(1);
 
 	PG_RETURN_INT32(float8_cmp_internal(arg1, arg2));
+}
+
+static int
+btfloat8fastcmp(Datum x, Datum y, SortSupport ssup)
+{
+	float8		arg1 = DatumGetFloat8(x);
+	float8		arg2 = DatumGetFloat8(y);
+
+	return float8_cmp_internal(arg1, arg2);
+}
+
+Datum
+btfloat8sortsupport(PG_FUNCTION_ARGS)
+{
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
+
+	ssup->comparator = btfloat8fastcmp;
+	PG_RETURN_VOID();
 }
 
 Datum
@@ -2806,7 +2867,7 @@ width_bucket_float8(PG_FUNCTION_ARGS)
 	if (isnan(operand) || isnan(bound1) || isnan(bound2))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION),
-			  errmsg("operand, lower bound and upper bound cannot be NaN")));
+			 errmsg("operand, lower bound, and upper bound cannot be NaN")));
 
 	/* Note that we allow "operand" to be infinite */
 	if (isinf(bound1) || isinf(bound2))

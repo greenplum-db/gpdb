@@ -17,6 +17,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/nabstime.h"
+#include "utils/rel.h"
 
 PG_MODULE_MAGIC;
 
@@ -344,11 +345,10 @@ timetravel(PG_FUNCTION_ARGS)
 
 		/*
 		 * Remember that SPI_prepare places plan in current memory context -
-		 * so, we have to save plan in Top memory context for latter use.
+		 * so, we have to save plan in Top memory context for later use.
 		 */
-		pplan = SPI_saveplan(pplan);
-		if (pplan == NULL)
-			elog(ERROR, "timetravel (%s): SPI_saveplan returned %d", relname, SPI_result);
+		if (SPI_keepplan(pplan))
+			elog(ERROR, "timetravel (%s): SPI_keepplan failed", relname);
 
 		plan->splan = pplan;
 	}

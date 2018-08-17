@@ -106,11 +106,11 @@ drop_descriptor(char *name, char *connection)
 
 	for (i = descriptors; i; lastptr = &i->next, i = i->next)
 	{
-		if (!strcmp(name, i->name))
+		if (strcmp(name, i->name) == 0)
 		{
 			if ((!connection && !i->connection)
 				|| (connection && i->connection
-					&& !strcmp(connection, i->connection)))
+					&& strcmp(connection, i->connection) == 0))
 			{
 				*lastptr = i->next;
 				if (i->connection)
@@ -135,11 +135,11 @@ lookup_descriptor(char *name, char *connection)
 
 	for (i = descriptors; i; i = i->next)
 	{
-		if (!strcmp(name, i->name))
+		if (strcmp(name, i->name) == 0)
 		{
 			if ((!connection && !i->connection)
 				|| (connection && i->connection
-					&& !strcmp(connection, i->connection)))
+					&& strcmp(connection, i->connection) == 0))
 				return i;
 		}
 	}
@@ -317,14 +317,14 @@ struct variable *
 descriptor_variable(const char *name, int input)
 {
 	static char descriptor_names[2][MAX_DESCRIPTOR_NAMELEN];
-	static const struct ECPGtype descriptor_type = {ECPGt_descriptor, NULL, NULL, NULL, {NULL}, 0};
-	static const struct variable varspace[2] = {
-		{descriptor_names[0], (struct ECPGtype *) & descriptor_type, 0, NULL},
-		{descriptor_names[1], (struct ECPGtype *) & descriptor_type, 0, NULL}
+	static struct ECPGtype descriptor_type = {ECPGt_descriptor, NULL, NULL, NULL, {NULL}, 0};
+	static struct variable varspace[2] = {
+		{descriptor_names[0], &descriptor_type, 0, NULL},
+		{descriptor_names[1], &descriptor_type, 0, NULL}
 	};
 
 	strlcpy(descriptor_names[input], name, sizeof(descriptor_names[input]));
-	return (struct variable *) & varspace[input];
+	return &varspace[input];
 }
 
 struct variable *

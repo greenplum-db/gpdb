@@ -136,25 +136,24 @@ SELECT id, property AS "ProperTee" FROM GistTable3
 
 -- Encourage the optimizer to use indexes rather than sequential table scans.
 SET enable_seqscan=False;
+SET optimizer_enable_tablescan=False;
 
 -- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
 -- The "~=" operator means that the coordinate values, not just the area,
 -- are the same.
 SELECT id, property AS "Property" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- start_ignore
+
 EXPLAIN SELECT id, property AS "Property" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- end_ignore
 
 VACUUM ANALYZE GistTable3;
 
 SELECT id, property AS "ProperTee" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- start_ignore
+
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test07Reindex.sql
@@ -173,6 +172,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable3
 
 -- Encourage the optimizer to use indexes rather than sequential table scans.
 SET enable_seqscan=False;
+SET optimizer_enable_tablescan=False;
 
 REINDEX INDEX GistIndex3a;
 REINDEX TABLE GistTable3;
@@ -182,10 +182,9 @@ REINDEX TABLE GistTable3;
 -- are the same.
 SELECT id, property AS "Property" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- start_ignore
+
 EXPLAIN SELECT id, property AS "Property" FROM GistTable3
  WHERE property ~= '( (999,999), (998,998) )';
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test08UniqueAndPKey.sql

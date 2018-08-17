@@ -33,7 +33,7 @@ ALTER FUNCTION <replaceable>name</replaceable> ( [ [ <replaceable class="paramet
 <phrase>where <replaceable class="PARAMETER">action</replaceable> is one of:</phrase>
 
     CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    IMMUTABLE | STABLE | VOLATILE
+    IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF
     [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
     COST <replaceable class="parameter">execution_cost</replaceable>
@@ -154,8 +154,7 @@ ALTER FUNCTION <replaceable>name</replaceable> ( [ [ <replaceable class="paramet
      <term><literal>STRICT</literal></term>
 
      <listitem>
-      <para>
-       <literal>CALLED ON NULL INPUT</literal> changes the function so
+      <para><literal>CALLED ON NULL INPUT</literal> changes the function so
        that it will be invoked when some or all of its arguments are
        null. <literal>RETURNS NULL ON NULL INPUT</literal> or
        <literal>STRICT</literal> changes the function so that it is not
@@ -194,6 +193,17 @@ ALTER FUNCTION <replaceable>name</replaceable> ( [ [ <replaceable class="paramet
    </varlistentry>
 
    <varlistentry>
+    <term><literal>LEAKPROOF</literal></term>
+    <listitem>
+     <para>
+      Change whether the function is considered leakproof or not.
+      See <xref linkend="sql-createfunction"> for more information about
+      this capability.
+     </para>
+    </listitem>
+   </varlistentry>
+
+    <varlistentry>
      <term><literal>COST</literal> <replaceable class="parameter">execution_cost</replaceable></term>
 
      <listitem>

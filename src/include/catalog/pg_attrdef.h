@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_attrdef.h
@@ -32,8 +32,11 @@ CATALOG(pg_attrdef,2604)
 {
 	Oid			adrelid;		/* OID of table containing attribute */
 	int2		adnum;			/* attnum of attribute */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	pg_node_tree adbin;			/* nodeToString representation of default */
 	text		adsrc;			/* human-readable representation of default */
+#endif
 } FormData_pg_attrdef;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

@@ -8,7 +8,7 @@
  * exit-time cleanup for either a postmaster or a backend.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -42,7 +42,7 @@
 bool		proc_exit_inprogress = false;
 
 /*
- * This flag tracks whether we've called atexit(2) in the current process
+ * This flag tracks whether we've called atexit() in the current process
  * (or in the parent postmaster).
  */
 static bool atexit_callback_setup = false;
@@ -51,7 +51,7 @@ static bool atexit_callback_setup = false;
 /* ----------------------------------------------------------------
  *						exit() handling stuff
  *
- * These functions are in generally the same spirit as atexit(2),
+ * These functions are in generally the same spirit as atexit(),
  * but provide some additional features we need --- in particular,
  * we want to register callbacks to invoke when we are disconnecting
  * from a broken shared-memory context but not exiting the postmaster.
@@ -275,8 +275,6 @@ shmem_exit(int code)
  * postmaster treat it as a crash --- see pmsignal.c.
  * ----------------------------------------------------------------
  */
-#ifdef HAVE_ATEXIT
-
 static void
 atexit_callback(void)
 {
@@ -284,15 +282,6 @@ atexit_callback(void)
 	/* ... too bad we don't know the real exit code ... */
 	proc_exit_prepare(-1);
 }
-#else							/* assume we have on_exit instead */
-
-static void
-atexit_callback(int exitstatus, void *arg)
-{
-	/* Clean up everything that must be cleaned up */
-	proc_exit_prepare(exitstatus);
-}
-#endif   /* HAVE_ATEXIT */
 
 /* ----------------------------------------------------------------
  *		on_proc_exit
@@ -316,11 +305,7 @@ on_proc_exit(pg_on_exit_callback function, Datum arg)
 
 	if (!atexit_callback_setup)
 	{
-#ifdef HAVE_ATEXIT
 		atexit(atexit_callback);
-#else
-		on_exit(atexit_callback, NULL);
-#endif
 		atexit_callback_setup = true;
 	}
 }
@@ -347,11 +332,7 @@ on_shmem_exit(pg_on_exit_callback function, Datum arg)
 
 	if (!atexit_callback_setup)
 	{
-#ifdef HAVE_ATEXIT
 		atexit(atexit_callback);
-#else
-		on_exit(atexit_callback, NULL);
-#endif
 		atexit_callback_setup = true;
 	}
 }

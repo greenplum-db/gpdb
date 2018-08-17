@@ -4,7 +4,7 @@
  *	  port-specific prototypes for Irix
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/port/dynloader/irix.h
@@ -15,10 +15,10 @@
 #define PORT_PROTOS_H
 
 #include <dlfcn.h>
-#include "utils/dynamic_loader.h"
+#include "utils/dynamic_loader.h"		/* pgrminclude ignore */
 
 /*
- * Dynamic Loader on SunOS 4.
+ * Dynamic Loader on Irix.
  *
  * this dynamic loader uses the system dynamic loading interface for shared
  * libraries (ie. dlopen/dlsym/dlclose). The user must specify a shared

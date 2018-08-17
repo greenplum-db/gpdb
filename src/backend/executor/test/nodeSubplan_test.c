@@ -86,7 +86,7 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	queryDesc->estate->es_sliceTable = (SliceTable *) palloc(sizeof(SliceTable));
 	
 	Gp_role = GP_ROLE_DISPATCH;
-	plan->planstate->plan->dispatch=DISPATCH_PARALLEL;
+	((SubPlan*)(plan->xprstate.expr))->initPlanParallel = true;
 
 	will_be_called(isCurrentDtxTwoPhase);
 

@@ -435,6 +435,22 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_IndexOnlyScan:
+			{
+				IndexOnlyScan  *idxonlyscan = (IndexOnlyScan *) node;
+				IndexOnlyScan  *newidxonlyscan;
+
+				FLATCOPY(newidxonlyscan, idxonlyscan, IndexOnlyScan);
+				SCANMUTATE(newidxonlyscan, idxonlyscan);
+				newidxonlyscan->indexid = idxonlyscan->indexid;
+				/* MUTATE(newidxonlyscan->indexid, idxonlyscan->indexid, List *); */
+				MUTATE(newidxonlyscan->indexqual, idxonlyscan->indexqual, List *);
+				MUTATE(newidxonlyscan->indextlist, idxonlyscan->indextlist, List *);
+				/* indxorderdir  is  scalar */
+				return (Node *) newidxonlyscan;
+			}
+			break;
+
 		case T_BitmapIndexScan:
 		case T_DynamicBitmapIndexScan:
 			{
@@ -872,6 +888,22 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_ForeignScan:
+			{
+				ForeignScan *fdwscan = (ForeignScan *) node;
+				ForeignScan *newfdwscan;
+
+				FLATCOPY(newfdwscan, fdwscan, ForeignScan);
+				SCANMUTATE(newfdwscan, fdwscan);
+
+				MUTATE(newfdwscan->fdw_exprs, fdwscan->fdw_exprs, List *);
+				MUTATE(newfdwscan->fdw_private, fdwscan->fdw_private, List *);
+				newfdwscan->fsSystemCol = fdwscan->fsSystemCol;
+
+				return (Node *) newfdwscan;
+			}
+			break;
+
 		case T_SplitUpdate:
 			{
 				SplitUpdate	*splitUpdate = (SplitUpdate *) node;
@@ -882,7 +914,6 @@ plan_tree_mutator(Node *node,
 				return (Node *) newSplitUpdate;
 			}
 			break;
-
 
 			/*
 			 * The following cases are handled by expression_tree_mutator.	In
@@ -1030,7 +1061,6 @@ package_plan_as_rte(Query *query, Plan *plan, Alias *eref, List *pathkeys)
 	subquery->querySource = QSRC_PLANNER;
 	subquery->canSetTag = false;
 	subquery->resultRelation = 0;
-	subquery->intoClause = NULL;
 	
 	subquery->rtable = copyObject(subquery->rtable);
 

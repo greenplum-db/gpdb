@@ -14,11 +14,13 @@ if [ ! -d results ];then
     mkdir results
 fi
 
-dropdb utf8
-createdb -T template0 -l C -E UTF8 utf8
+dropdb --if-exists utf8
+createdb -T template0 -l C -E UTF8 utf8 || exit 1
 
 PSQL="psql -n -e -q"
 tests="euc_jp sjis euc_kr euc_cn euc_tw big5 utf8 mule_internal"
+EXITCODE=0
+
 unset PGCLIENTENCODING
 for i in $tests
 do
@@ -47,14 +49,17 @@ do
 		EXPECTED="expected/${i}.out"
 	fi
 
-	if [ `diff ${EXPECTED} results/${i}.out | wc -l` -ne 0 ]
+	if [ `gpdiff.pl ${EXPECTED} results/${i}.out | wc -l` -ne 0 ]
 	then
 		( diff -C3 ${EXPECTED} results/${i}.out; \
 		echo "";  \
 		echo "----------------------"; \
 		echo "" ) >> regression.diffs
 		echo failed
+		EXITCODE=1
 	else
 		echo ok
 	fi
 done
+
+exit $EXITCODE

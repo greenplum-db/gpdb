@@ -1,0 +1,3 @@
+comment = 'Different internal tools for Greenplum'
+default_version = '1.0.0'
+relocatable = true

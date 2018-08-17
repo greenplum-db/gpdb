@@ -829,7 +829,8 @@ describe(PG_FUNCTION_ARGS)
 		elog(ERROR, "invalid invocation of describe");
 
 	fexpr = (FuncExpr*) PG_GETARG_POINTER(0);
-	Insist(IsA(fexpr, FuncExpr));   /* Assert we got what we expected */
+	if (!IsA(fexpr, FuncExpr))
+		ereport(ERROR, (errmsg("invalid parameters for describe")));
 
 	/* Build a result tuple descriptor */
 	tupdesc = CreateTemplateTupleDesc(3, false);
@@ -878,9 +879,12 @@ project(PG_FUNCTION_ARGS)
 	tuple       = AnyTable_GetNextTuple(scan);
 
 	/* Based on what the describe callback should have setup */
-	Insist(position > 0 && position <= in_tupdesc->natts);
-	Insist(out_tupdesc->natts == 1);
-	Insist(out_tupdesc->attrs[0]->atttypid == in_tupdesc->attrs[position-1]->atttypid);
+	if (position <= 0 || position > in_tupdesc->natts)
+		ereport(ERROR, (errmsg("invalid position provided")));
+	if (out_tupdesc->natts != 1)
+		ereport(ERROR, (errmsg("only one expected tuple is allowed")));
+	if (out_tupdesc->attrs[0]->atttypid != in_tupdesc->attrs[position-1]->atttypid)
+		ereport(ERROR, (errmsg("input and output types do not match")));
 
 	/* check for end of scan */
 	if (tuple == NULL)
@@ -933,7 +937,8 @@ project_describe(PG_FUNCTION_ARGS)
 		elog(ERROR, "invalid invocation of project_describe");
 
 	fexpr = (FuncExpr*) PG_GETARG_POINTER(0);
-	Insist(IsA(fexpr, FuncExpr));   /* Assert we got what we expected */
+	if (!IsA(fexpr, FuncExpr))
+		ereport(ERROR, (errmsg("invalid parameters for project_describe")));
 
 	/*
 	 * We should know the type information of the arguments of our calling
@@ -958,16 +963,22 @@ project_describe(PG_FUNCTION_ARGS)
 	 *   - second argument "text"
 	 * --------
 	 */
-	Insist(numargs == 2);
-	Insist(argtypes[0] == ANYTABLEOID);
-	Insist(argtypes[1] == INT4OID);
+	if (numargs != 2)
+		ereport(ERROR, (errmsg("invalid argument number"),
+				errdetail("Two arguments need to be provided to the function")));
+	if (argtypes[0] != ANYTABLEOID)
+		ereport(ERROR, (errmsg("first argument is not a table OID")));
+	if (argtypes[1] != INT4OID)
+		ereport(ERROR, (errmsg("second argument is not a integer OID")));
 
 	/* Now get the tuple descriptor for the ANYTABLE we received */
 	texpr = (TableValueExpr*) linitial(fargs);
-	Insist(IsA(texpr, TableValueExpr));  /* double check that cast */
+	if (!IsA(texpr, TableValueExpr))
+		ereport(ERROR, (errmsg("function argument is not a table")));
 
 	qexpr = (Query*) texpr->subquery;
-	Insist(IsA(qexpr, Query));
+	if (!IsA(qexpr, Query))
+		ereport(ERROR, (errmsg("subquery is not a Query object")));
 
 	tdesc = ExecCleanTypeFromTL(qexpr->targetList, false);
 
@@ -1072,7 +1083,8 @@ userdata_describe(PG_FUNCTION_ARGS)
 		elog(ERROR, "invalid invocation of userdata_describe");
 
 	fexpr = (FuncExpr*) PG_GETARG_POINTER(0);
-	Insist(IsA(fexpr, FuncExpr));   /* Assert we got what we expected */
+	if (!IsA(fexpr, FuncExpr))
+		ereport(ERROR, (errmsg("invalid parameters for userdata_describe")));
 
 	/* Build a result tuple descriptor */
 	tupdesc = CreateTemplateTupleDesc(1, false);

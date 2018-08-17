@@ -3,7 +3,7 @@
  * datetime.c
  *	  Support functions for date/time types.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -23,6 +23,7 @@
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datetime.h"
@@ -862,6 +863,7 @@ DecodeDateTime(char **field, int *ftype, int nf,
 	bool		is2digits = FALSE;
 	bool		bc = FALSE;
 	pg_tz	   *namedTz = NULL;
+	struct pg_tm cur_tm;
 
 	/*
 	 * We'll insist on at least all of the date fields, but initialize the
@@ -1263,32 +1265,26 @@ DecodeDateTime(char **field, int *ftype, int nf,
 							case DTK_YESTERDAY:
 								tmask = DTK_DATE_M;
 								*dtype = DTK_DATE;
-								GetCurrentDateTime(tm);
-								j2date(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - 1,
+								GetCurrentDateTime(&cur_tm);
+								j2date(date2j(cur_tm.tm_year, cur_tm.tm_mon, cur_tm.tm_mday) - 1,
 									&tm->tm_year, &tm->tm_mon, &tm->tm_mday);
-								tm->tm_hour = 0;
-								tm->tm_min = 0;
-								tm->tm_sec = 0;
 								break;
 
 							case DTK_TODAY:
 								tmask = DTK_DATE_M;
 								*dtype = DTK_DATE;
-								GetCurrentDateTime(tm);
-								tm->tm_hour = 0;
-								tm->tm_min = 0;
-								tm->tm_sec = 0;
+								GetCurrentDateTime(&cur_tm);
+								tm->tm_year = cur_tm.tm_year;
+								tm->tm_mon = cur_tm.tm_mon;
+								tm->tm_mday = cur_tm.tm_mday;
 								break;
 
 							case DTK_TOMORROW:
 								tmask = DTK_DATE_M;
 								*dtype = DTK_DATE;
-								GetCurrentDateTime(tm);
-								j2date(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) + 1,
+								GetCurrentDateTime(&cur_tm);
+								j2date(date2j(cur_tm.tm_year, cur_tm.tm_mon, cur_tm.tm_mday) + 1,
 									&tm->tm_year, &tm->tm_mon, &tm->tm_mday);
-								tm->tm_hour = 0;
-								tm->tm_min = 0;
-								tm->tm_sec = 0;
 								break;
 
 							case DTK_ZULU:
@@ -2843,7 +2839,7 @@ DecodeTimezone(char *str, int *tzp)
 	else
 		min = 0;
 
-	/* Range-check the values; see notes in utils/timestamp.h */
+	/* Range-check the values; see notes in datatype/timestamp.h */
 	if (hr < 0 || hr > MAX_TZDISP_HOUR)
 		return DTERR_TZDISP_OVERFLOW;
 	if (min < 0 || min >= MINS_PER_HOUR)
@@ -3820,9 +3816,14 @@ EncodeDateOnly(struct pg_tm * tm, int style, char *str)
 
 /* EncodeTimeOnly()
  * Encode time fields only.
+ *
+ * tm and fsec are the value to encode, print_tz determines whether to include
+ * a time zone (the difference between time and timetz types), tz is the
+ * numeric time zone offset, style is the date style, str is where to write the
+ * output.
  */
 void
-EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, int *tzp, int style, char *str)
+EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, int style, char *str)
 {
 	str[0] = tm->tm_hour/10 + '0';
 	str[1] = tm->tm_hour % 10 + '0';
@@ -3835,29 +3836,39 @@ EncodeTimeOnly(struct pg_tm * tm, fsec_t fsec, int *tzp, int style, char *str)
 
 	AppendSeconds(str, tm->tm_sec, fsec, MAX_TIME_PRECISION, true);
 
-	if (tzp != NULL)
-		EncodeTimezone(str, *tzp, style);
+	if (print_tz)
+		EncodeTimezone(str, tz, style);
 }
 
 
 /* EncodeDateTime()
  * Encode date and time interpreted as local time.
- * Support several date styles:
+ *
+ * tm and fsec are the value to encode, print_tz determines whether to include
+ * a time zone (the difference between timestamp and timestamptz types), tz is
+ * the numeric time zone offset, tzn is the textual time zone, which if
+ * specified will be used instead of tz by some styles, style is the date
+ * style, str is where to write the output.
+ *
+ * Supported date styles:
  *	Postgres - day mon hh:mm:ss yyyy tz
  *	SQL - mm/dd/yyyy hh:mm:ss.ss tz
  *	ISO - yyyy-mm-dd hh:mm:ss+/-tz
  *	German - dd.mm.yyyy hh:mm:ss tz
  *	XSD - yyyy-mm-ddThh:mm:ss.ss+/-tz
- * Variants (affects order of month and day for Postgres and SQL styles):
- *	US - mm/dd/yyyy
- *	European - dd/mm/yyyy
  */
 void
-EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, char *str)
+EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char *tzn, int style, char *str)
 {
 	int			day;
 
 	Assert(tm->tm_mon >= 1 && tm->tm_mon <= MONTHS_PER_YEAR);
+
+	/*
+	 * Negative tm_isdst means we have no valid time zone translation.
+	 */
+	if (tm->tm_isdst < 0)
+		print_tz = false;
 
 	switch (style)
 	{
@@ -3890,14 +3901,8 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 
 			AppendTimestampSeconds(str + strlen(str), tm, fsec);
 
-			/*
-			 * tzp == NULL indicates that we don't want *any* time zone info
-			 * in the output string. *tzn != NULL indicates that we have alpha
-			 * time zone info available. tm_isdst != -1 indicates that we have
-			 * a valid time zone translation.
-			 */
-			if (tzp != NULL && tm->tm_isdst >= 0)
-				EncodeTimezone(str, *tzp, style);
+			if (print_tz)
+				EncodeTimezone(str, tz, style);
 
 			if (tm->tm_year <= 0)
 				sprintf(str + strlen(str), " BC");
@@ -3923,12 +3928,12 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 			 * TZ abbreviations in the Olson database are plain ASCII.
 			 */
 
-			if (tzp != NULL && tm->tm_isdst >= 0)
+			if (print_tz)
 			{
-				if (*tzn != NULL)
-					sprintf(str + strlen(str), " %.*s", MAXTZLEN, *tzn);
+				if (tzn)
+					sprintf(str + strlen(str), " %.*s", MAXTZLEN, tzn);
 				else
-					EncodeTimezone(str, *tzp, style);
+					EncodeTimezone(str, tz, style);
 			}
 
 			if (tm->tm_year <= 0)
@@ -3946,12 +3951,12 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 
 			AppendTimestampSeconds(str + strlen(str), tm, fsec);
 
-			if (tzp != NULL && tm->tm_isdst >= 0)
+			if (print_tz)
 			{
-				if (*tzn != NULL)
-					sprintf(str + strlen(str), " %.*s", MAXTZLEN, *tzn);
+				if (tzn)
+					sprintf(str + strlen(str), " %.*s", MAXTZLEN, tzn);
 				else
-					EncodeTimezone(str, *tzp, style);
+					EncodeTimezone(str, tz, style);
 			}
 
 			if (tm->tm_year <= 0)
@@ -3980,10 +3985,10 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 			sprintf(str + strlen(str), " %04d",
 					(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1));
 
-			if (tzp != NULL && tm->tm_isdst >= 0)
+			if (print_tz)
 			{
-				if (*tzn != NULL)
-					sprintf(str + strlen(str), " %.*s", MAXTZLEN, *tzn);
+				if (tzn)
+					sprintf(str + strlen(str), " %.*s", MAXTZLEN, tzn);
 				else
 				{
 					/*
@@ -3993,7 +3998,7 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 					 * the date/time parser later. - thomas 2001-10-19
 					 */
 					sprintf(str + strlen(str), " ");
-					EncodeTimezone(str, *tzp, style);
+					EncodeTimezone(str, tz, style);
 				}
 			}
 
@@ -4304,6 +4309,41 @@ CheckDateTokenTables(void)
 }
 
 /*
+ * Common code for temporal protransform functions.  Types time, timetz,
+ * timestamp and timestamptz each have a range of allowed precisions.  An
+ * unspecified precision is rigorously equivalent to the highest specifiable
+ * precision.
+ *
+ * Note: timestamp_scale throws an error when the typmod is out of range, but
+ * we can't get there from a cast: our typmodin will have caught it already.
+ */
+Node *
+TemporalTransform(int32 max_precis, Node *node)
+{
+	FuncExpr   *expr = (FuncExpr *) node;
+	Node	   *ret = NULL;
+	Node	   *typmod;
+
+	Assert(IsA(expr, FuncExpr));
+	Assert(list_length(expr->args) >= 2);
+
+	typmod = (Node *) lsecond(expr->args);
+
+	if (IsA(typmod, Const) &&!((Const *) typmod)->constisnull)
+	{
+		Node	   *source = (Node *) linitial(expr->args);
+		int32		old_precis = exprTypmod(source);
+		int32		new_precis = DatumGetInt32(((Const *) typmod)->constvalue);
+
+		if (new_precis < 0 || new_precis == max_precis ||
+			(old_precis >= 0 && new_precis >= old_precis))
+			ret = relabel_to_typmod(source, new_precis);
+	}
+
+	return ret;
+}
+
+/*
  * This function gets called during timezone config file load or reload
  * to create the final array of timezone tokens.  The argument array
  * is already sorted in name order.  The data is converted to datetkn
@@ -4456,7 +4496,7 @@ pg_timezone_names(PG_FUNCTION_ARGS)
 	int			tzoff;
 	struct pg_tm tm;
 	fsec_t		fsec;
-	char	   *tzn;
+	const char *tzn;
 	Interval   *resInterval;
 	struct pg_tm itm;
 

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -56,7 +56,6 @@
 #include "parser/parsetree.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
-#include "utils/relcache.h"
 #include "utils/tqual.h"
 
 #include "nodes/primnodes.h"
@@ -155,6 +154,7 @@ CreateExecutorState(void)
 	estate->es_trig_target_relations = NIL;
 	estate->es_trig_tuple_slot = NULL;
 	estate->es_trig_oldtup_slot = NULL;
+	estate->es_trig_newtup_slot = NULL;
 
 	estate->es_param_list_info = NULL;
 	estate->es_param_exec_vals = NULL;
@@ -170,8 +170,6 @@ CreateExecutorState(void)
 
 	estate->es_top_eflags = 0;
 	estate->es_instrument = 0;
-	estate->es_select_into = false;
-	estate->es_into_oids = false;
 	estate->es_finished = false;
 
 	estate->es_exprcontexts = NIL;
@@ -652,19 +650,21 @@ ExecBuildProjectionInfo(List *targetList,
 
 			switch (variable->varno)
 			{
-				case INNER:
+				case INNER_VAR:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
 															 ecxt_innertuple);
 					if (projInfo->pi_lastInnerVar < attnum)
 						projInfo->pi_lastInnerVar = attnum;
 					break;
 
-				case OUTER:
+				case OUTER_VAR:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
 															 ecxt_outertuple);
 					if (projInfo->pi_lastOuterVar < attnum)
 						projInfo->pi_lastOuterVar = attnum;
 					break;
+
+					/* INDEX_VAR is handled by default case */
 
 				default:
 					varSlotOffsets[numSimpleVars] = offsetof(ExprContext,
@@ -714,15 +714,17 @@ get_last_attnums(Node *node, ProjectionInfo *projInfo)
 
 		switch (variable->varno)
 		{
-			case INNER:
+			case INNER_VAR:
 				if (projInfo->pi_lastInnerVar < attnum)
 					projInfo->pi_lastInnerVar = attnum;
 				break;
 
-			case OUTER:
+			case OUTER_VAR:
 				if (projInfo->pi_lastOuterVar < attnum)
 					projInfo->pi_lastOuterVar = attnum;
 				break;
+
+				/* INDEX_VAR is handled by default case */
 
 			default:
 				if (projInfo->pi_lastScanVar < attnum)
@@ -2250,9 +2252,11 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	 */
 	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
 	{
-		CdbDispatchResults *pr = estate->dispatcherState->primaryResults;
-		HTAB 			   *aopartcounts = NULL;
-		DispatchWaitMode	waitMode = DISPATCH_WAIT_NONE;
+		CdbDispatchResults *pr = NULL;
+		CdbDispatcherState *ds = estate->dispatcherState;
+		DispatchWaitMode waitMode = DISPATCH_WAIT_NONE;
+		ErrorData *qeError = NULL;
+		HTAB *aopartcounts = NULL;
 
 		/*
 		 * If we are finishing a query before all the tuples of the query
@@ -2272,7 +2276,17 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		 */
 		if (estate->cancelUnfinished)
 			waitMode = DISPATCH_WAIT_FINISH;
-		CdbCheckDispatchResult(estate->dispatcherState, waitMode);
+
+		cdbdisp_checkDispatchResult(ds, waitMode);
+
+		pr = cdbdisp_getDispatchResults(ds, &qeError);		
+
+		if (qeError)
+		{
+			estate->dispatcherState = NULL;
+			cdbdisp_destroyDispatcherState(ds);
+			ReThrowError(qeError);
+		}
 
 		/* If top slice was delegated to QEs, get num of rows processed. */
 		int primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
@@ -2346,7 +2360,8 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		 * error, report it and exit to our error handler via PG_THROW.
 		 * NB: This call doesn't wait, because we already waited above.
 		 */
-		cdbdisp_finishCommand(estate->dispatcherState, NULL, NULL, true);
+		estate->dispatcherState = NULL;
+		cdbdisp_destroyDispatcherState(ds);
 	}
 
 	/* Teardown the Interconnect */
@@ -2371,10 +2386,12 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
  */
 void mppExecutorCleanup(QueryDesc *queryDesc)
 {
+	CdbDispatcherState *ds;
 	EState	   *estate;
 
 	/* caller must have switched into per-query memory context already */
 	estate = queryDesc->estate;
+	ds = estate->dispatcherState;
 
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook && QueryCancelCleanup)
@@ -2414,7 +2431,7 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	 * Wait for them to finish and clean up the dispatching structures.
 	 * Replace current error info with QE error info if more interesting.
 	 */
-	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
+	if (ds && ds->primaryResults)
 	{
 		/*
 		 * If we are finishing a query before all the tuples of the query
@@ -2425,7 +2442,8 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 		if (estate->es_interconnect_is_setup && !estate->es_got_eos)
 			ExecSquelchNode(queryDesc->planstate);
 
-		CdbDispatchHandleError(estate->dispatcherState);
+		estate->dispatcherState = NULL;
+		CdbDispatchHandleError(ds);
 	}
 
 	/* Clean up the interconnect. */

@@ -27,6 +27,7 @@ extern bool CreateAOAuxiliaryTable(
 		IndexInfo  *indexInfo,
 		List *indexColNames,
 		Oid	*classObjectId,
-		int16 *coloptions);
+		int16 *coloptions,
+		bool is_part_parent);
 
 #endif   /* AOCATALOG_H */

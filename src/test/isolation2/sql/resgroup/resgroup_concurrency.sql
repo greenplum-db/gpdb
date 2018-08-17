@@ -19,7 +19,7 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 
 -- new transaction will be blocked when the concurrency limit of the resource group is reached.
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-SELECT waiting_reason, rsgqueueduration > '0'::interval as time from pg_stat_activity where current_query = 'BEGIN;' and rsgname = 'rg_concurrency_test';
+SELECT waiting_reason, rsgqueueduration > '0'::interval as time from pg_stat_activity where query = 'BEGIN;' and state = 'active' and rsgname = 'rg_concurrency_test';
 2:END;
 3:END;
 4<:
@@ -139,10 +139,10 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 51:BEGIN;
 52:SET ROLE role_concurrency_test;
 52&:BEGIN;
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 52<:
 52&:BEGIN;
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 52<:
 51q:
 52q:
@@ -180,7 +180,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:BEGIN;
 62:SET ROLE role_concurrency_test;
 62&:BEGIN;
-SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 62<:
 61q:
 62q:
@@ -197,7 +197,7 @@ CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61&:BEGIN;
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 61<:
 61q:
 DROP ROLE role_concurrency_test;

@@ -400,7 +400,7 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 		if(result->ao_xlog_record_type == XLOG_APPENDONLY_INSERT)
 			values[1] = CStringGetTextDatum("XLOG_APPENDONLY_INSERT");
 		if(result->ao_xlog_record_type == XLOG_APPENDONLY_TRUNCATE)
-			values[1] = CStringGetTextDatum("XLOG_AYPENDONLY_TRUNCATE");
+			values[1] = CStringGetTextDatum("XLOG_APPENDONLY_TRUNCATE");
 
 		values[2] = Int32GetDatum(result->len);
 		values[3] = ObjectIdGetDatum(result->target.node.spcNode);
@@ -489,22 +489,51 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 			CheckAoRecordResult *aorecordresult = &aorecordresults[num_found];
 			aorecordresult->xrecoff = xrecoff + i;
 
-			xl_ao_target *xlaorecord = (xl_ao_target*) XLogRecGetData(xlrec);
-
 			if (xlrec->xl_tot_len > avail_in_block)
 			{
-				/*
-				 * The AO record is split across two pages, skip to the next page
-				 */
 				Assert(avail_in_block >= sizeof(xl_ao_target));
+
+				/*
+				 * The AO record has been split across two pages. Create a
+				 * temporary buffer to combine the split record back.
+				 */
+				char *tmpbuffer = (char *) palloc(xlrec->xl_tot_len);
+				memcpy(tmpbuffer, buf + i, avail_in_block);
+
+				/* Move on to the continuation record on the next page */
 				i += avail_in_block;
 				elog(DEBUG1, "AO record split found, i: %u, avail_in_block: %u", i, avail_in_block);
+
+				/* Construct the continuation record to get the remaining length */
+				XLogPageHeaderData *hdr_cont = (XLogPageHeaderData *)(buf + i);
+				contrecord = (XLogContRecord *)((char *)hdr_cont + XLogPageHeaderSize(hdr_cont));
+				elog(DEBUG1, "combining AO record split with XLogContRecord xl_rem_len %u", contrecord->xl_rem_len);
+
+				/*
+				 * Move on to the second part of the split AO record and copy
+				 * the second part into the temporary buffer. The second part
+				 * does not contain a header and is directly after the
+				 * continuation record (no MAXALIGN padding).
+				 */
+				i += XLogPageHeaderSize(hdr_cont) + SizeOfXLogContRecord;
+				memcpy(tmpbuffer + avail_in_block,
+					   buf + i,
+					   contrecord->xl_rem_len);
+
+				/*
+				 * Our split AO record is now combined back. Set the i to the
+				 * next XLog record (may need MAXALIGN padding).
+				 */
+				xlrec = (XLogRecord *) tmpbuffer;
+				i = MAXALIGN(i + contrecord->xl_rem_len);
 			}
 			else
 			{
 				i += MAXALIGN(xlrec->xl_tot_len);
-				elog(DEBUG1, "RM_APPEND_ONLY_DI, else, i: %u", i);
+				elog(DEBUG1, "RM_APPEND_ONLY_ID, else, i: %u", i);
 			}
+
+			xl_ao_target *xlaorecord = (xl_ao_target*) XLogRecGetData(xlrec);
 
 			aorecordresult->target.node.spcNode = xlaorecord->node.spcNode;
 			aorecordresult->target.node.dbNode = xlaorecord->node.dbNode;

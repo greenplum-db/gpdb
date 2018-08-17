@@ -198,7 +198,7 @@ create unique index ijk_ijk on ijk(i,j,k);
 set gp_enable_mk_sort=off;
 drop table ijk;
 
----------
+--
 -- test bitmaps with NULL and non-NULL values (MPP-8461)
 --
 create table bmap_test (x int, y int, z int);
@@ -217,3 +217,21 @@ analyze bmap_test;
 select * from bmap_test where x = 1 order by x,y,z;
 
 drop table bmap_test;
+
+--
+-- Test over-sized values
+--
+create table oversize_test (c1 text);
+CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);
+insert into oversize_test values ('a');
+select * from oversize_test;
+-- this fails, because the value is too large
+insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
+set enable_seqscan=off;
+select * from oversize_test where c1 < 'z';
+
+-- Drop the index, insert the row, and then try creating the index again. This is essentially
+-- the same test, but now the failure happens during CREATE INDEX rather than INSERT.
+drop index oversize_test_idx;
+insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
+CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);

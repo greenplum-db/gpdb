@@ -28,7 +28,7 @@
  * all these files commit in a single map file update rather than being tied
  * to transaction commit.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -51,7 +51,6 @@
 #include "storage/fd.h"
 #include "storage/lwlock.h"
 #include "utils/inval.h"
-#include "utils/pg_crc.h"
 #include "utils/relmapper.h"
 
 
@@ -792,7 +791,7 @@ write_relmap_file(bool shared, RelMapFile *newmap,
 			rnode.spcNode = tsid;
 			rnode.dbNode = dbid;
 			rnode.relNode = newmap->mappings[i].mapfilenode;
-			RelationPreserveStorage(rnode);
+			RelationPreserveStorage(rnode, false);
 		}
 	}
 
@@ -838,7 +837,10 @@ perform_relmap_update(bool shared, const RelMapFile *updates)
 	else
 		memcpy(&newmap, &local_map, sizeof(RelMapFile));
 
-	/* Apply the updates to newmap.  No new mappings should appear. */
+	/*
+	 * Apply the updates to newmap.  No new mappings should appear, unless
+	 * somebody is adding indexes to system catalogs.
+	 */
 	merge_map_updates(&newmap, updates, false);
 
 	/* Write out the updated map and do other necessary tasks */

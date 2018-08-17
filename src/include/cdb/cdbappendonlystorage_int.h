@@ -497,6 +497,3 @@ typedef struct AOBulkDenseContentHeaderExt
 #define AOBulkDenseContentHeaderExtInit_largeRowCount(h,e)  {(h)->bulkdensecontent_ext_bytes_4_7|=(0x3FFFFFFF&(e));}
 
 #endif   /* CDBAPPENDONLYSTORAGE_INT_H */
-
-
-

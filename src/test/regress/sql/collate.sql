@@ -99,7 +99,7 @@ SELECT table_name, view_definition FROM information_schema.views
   WHERE table_name LIKE 'collview%' ORDER BY 1;
 
 
--- collation propagation in various expression type
+-- collation propagation in various expression types
 
 SELECT a, coalesce(b, 'foo') FROM collate_test1 ORDER BY 2;
 SELECT a, coalesce(b, 'foo') FROM collate_test2 ORDER BY 2;
@@ -215,6 +215,18 @@ ALTER TABLE collate_test22 ADD FOREIGN KEY (f2) REFERENCES collate_test20;
 RESET enable_seqscan;
 RESET enable_hashjoin;
 RESET enable_nestloop;
+
+-- 9.1 bug with useless COLLATE in an expression subject to length coercion
+
+CREATE TEMP TABLE vctable (f1 varchar(25));
+INSERT INTO vctable VALUES ('foo' COLLATE "C");
+
+
+SELECT collation for ('foo'); -- unknown type - null
+SELECT collation for ('foo'::text);
+SELECT collation for ((SELECT a FROM collate_test1 LIMIT 1)); -- non-collatable type - error
+SELECT collation for ((SELECT b FROM collate_test1 LIMIT 1));
+
 
 --
 -- Clean up.  Many of these table names will be re-used if the user is

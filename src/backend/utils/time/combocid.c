@@ -30,7 +30,7 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -396,10 +396,7 @@ GetRealCmin(TransactionId xmin, CommandId combocid)
 	if (combocid >= usedComboCids)
 	{
 		if (Gp_is_writer)
-		{
-			elog(LOG, "writer segworker group unable to resolve visibility %u/%u", combocid, usedComboCids);
-			Insist(false);
-		}
+			ereport(ERROR, (errmsg("writer segworker group unable to resolve visibility %u/%u", combocid, usedComboCids)));
 
 		/* We're a reader */
 		return getSharedComboCidEntry(xmin, combocid, CMIN);
@@ -414,8 +411,8 @@ GetRealCmax(TransactionId xmin, CommandId combocid)
 {
 	if (combocid >= usedComboCids)
 	{
-		insist_log(!Gp_is_writer,
-				"writer segworker group unable to resolve visibility %u/%u", combocid, usedComboCids);
+		if (Gp_is_writer)
+			ereport(ERROR, (errmsg("writer segworker group unable to resolve visibility %u/%u", combocid, usedComboCids)));
 
 		/* We're a reader */
 		return getSharedComboCidEntry(xmin, combocid, CMAX);

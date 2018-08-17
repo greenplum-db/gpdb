@@ -2,24 +2,30 @@ The PostgreSQL contrib tree
 ---------------------------
 
 This subtree contains porting tools, analysis utilities, and plug-in
-features that are not part of the core PostgreSQL system, mainly because
-they address a limited audience or are too experimental to be part of
-the main source tree.  This does not preclude their usefulness.
+features that are not part of the core PostgreSQL system, mainly
+because they address a limited audience or are too experimental to be
+part of the main source tree.  This does not preclude their
+usefulness.
 
-User documentation for each module appears in the main SGML documentation.
+User documentation for each module appears in the main SGML
+documentation.
 
-Most items can be built with `gmake all' and installed with
-`gmake install' in the usual fashion, after you have run the `configure'
-script in the top-level directory.  Some directories supply new
-user-defined functions, operators, or types.  In these cases, after you have
-installed the files you need to register the new entities in the database
-system by running the commands in the supplied .sql file.  For example,
+When building from the source distribution, these modules are not
+built automatically, unless you build the "world" target.  You can
+also build and install them all by running "gmake all" and "gmake
+install" in this directory; or to build and install just one selected
+module, do the same in that module's subdirectory.
 
-	$ psql -d dbname -f module.sql
+Some directories supply new user-defined functions, operators, or
+types.  To make use of one of these modules, after you have installed
+the code you need to register the new SQL objects in the database
+system by executing a CREATE EXTENSION command.  In a fresh database,
+you can simply do
+
+    CREATE EXTENSION module_name;
 
 See the PostgreSQL documentation for more information about this
 procedure.
-
 
 Index:
 ------

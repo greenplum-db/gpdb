@@ -1,5 +1,8 @@
 /* contrib/citext/citext--1.0.sql */
 
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION citext" to load this file. \quit
+
 --
 --  PostgreSQL code for CITEXT.
 --
@@ -229,12 +232,12 @@ DEFAULT FOR TYPE citext USING hash AS
 CREATE FUNCTION citext_smaller(citext, citext)
 RETURNS citext
 AS 'MODULE_PATHNAME'
-LANGUAGE 'C' IMMUTABLE STRICT;
+LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION citext_larger(citext, citext)
 RETURNS citext
 AS 'MODULE_PATHNAME'
-LANGUAGE 'C' IMMUTABLE STRICT;
+LANGUAGE C IMMUTABLE STRICT;
 
 CREATE AGGREGATE min(citext)  (
     SFUNC = citext_smaller,

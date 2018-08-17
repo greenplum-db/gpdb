@@ -517,7 +517,7 @@ subprocess_open_failed(int* response_code, const char** response_string, char* r
 {
 	*response_code   = 500;
 	*response_string = reason;
-	gfile_printf_then_putc_newline(*response_string);
+	gfile_printf_then_putc_newline("%s", *response_string);
 	return 1;
 }
 

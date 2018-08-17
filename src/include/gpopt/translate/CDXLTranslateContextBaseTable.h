@@ -44,47 +44,47 @@ namespace gpdxl
 	class CDXLTranslateContextBaseTable
 	{
 		// hash maps mapping ULONG -> INT
-		typedef CHashMap<ULONG, INT, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
-			CleanupDelete<ULONG>, CleanupDelete<INT> > HMUlI;
+		typedef CHashMap<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			CleanupDelete<ULONG>, CleanupDelete<INT> > UlongToIntMap;
 
 
 		private:
-			IMemoryPool *m_pmp;
+			IMemoryPool *m_mp;
 
 			// oid of the base table
 			OID m_oid;
 
 			// index of the relation in the rtable
-			Index m_iRel;
+			Index m_rel_index;
 
 			// maps a colid of a column to the attribute number of that column in the schema of the underlying relation
-			HMUlI *m_phmuli;
+			UlongToIntMap *m_colid_to_attno_map;
 
 			// private copy ctor
 			CDXLTranslateContextBaseTable(const CDXLTranslateContextBaseTable&);
 
 		public:
 			// ctor/dtor
-			explicit CDXLTranslateContextBaseTable(IMemoryPool *pmp);
+			explicit CDXLTranslateContextBaseTable(IMemoryPool *mp);
 
 
 			~CDXLTranslateContextBaseTable();
 
 			// accessors
-			OID OidRel() const;
+			OID GetOid() const;
 
-			Index IRel() const;
+			Index GetRelIndex() const;
 
 			// return the index of the column in the base relation for the given DXL ColId
-			INT IAttnoForColId(ULONG ulDXLColId) const;
+			INT GetAttnoForColId(ULONG dxl_colid) const;
 
 			// setters
 			void SetOID(OID oid);
 
-			void SetIdx(Index iRel);
+			void SetRelIndex(Index rel_index);
 
 			// store the mapping of the given DXL column id and index in the base relation schema
-			BOOL FInsertMapping(ULONG ulDXLColId, INT iAttno);
+			BOOL InsertMapping(ULONG dxl_colid, INT att_no);
 
 	};
 }

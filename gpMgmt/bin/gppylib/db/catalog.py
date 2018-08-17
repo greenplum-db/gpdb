@@ -38,7 +38,7 @@ def getDatabaseList(conn):
 
 def getUserPIDs(conn):
     """dont count ourselves"""
-    sql = """SELECT procpid FROM pg_stat_activity WHERE procpid != pg_backend_pid()"""
+    sql = """SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid()"""
     return basicSQLExec(conn,sql)
 
 def doesSchemaExist(conn,schemaname):
@@ -74,17 +74,3 @@ def dropSchemaIfExist(conn,schemaname):
         if cursor:
             cursor.close()
         conn.commit()
-
-def get_catalogtable_list(conn):
-    sql = """SELECT schemaname || '.' ||  tablename 
-             FROM pg_tables 
-             WHERE schemaname = 'pg_catalog'
-          """
-    cursor=None
-    try:
-        cursor=dbconn.execSQL(conn,sql)
-        
-        return cursor.fetchall()
-    finally:
-        if cursor:
-            cursor.close()

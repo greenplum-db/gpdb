@@ -871,21 +871,6 @@ extern bool	log_autostats;
 
 
 /* --------------------------------------------------------------------------------------------------
- * Miscellaneous developer use
- */
-
-/*
- * gp_dev_notice_agg_cost (bool)
- *
- * Issue aggregation optimizer cost estimates as NOTICE level messages
- * during GPDB aggregation planning.  This is intended to facilitate
- * tuning the cost algorithm.  The presence of this switch should not
- * be published.  The name is intended to suggest that it is for developer
- * use only.
- */
-extern bool  gp_dev_notice_agg_cost;
-
-/* --------------------------------------------------------------------------------------------------
  * Server debugging
  */
 

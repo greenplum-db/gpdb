@@ -9,7 +9,7 @@
  * into a lot of low-level code.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/reloptions.h
@@ -57,7 +57,9 @@ typedef enum relopt_kind
 	RELOPT_KIND_GIST = (1 << 5),
 	RELOPT_KIND_ATTRIBUTE = (1 << 6),
 	RELOPT_KIND_TABLESPACE = (1 << 7),
-	RELOPT_KIND_BITMAP = (1 << 8),
+	RELOPT_KIND_SPGIST = (1 << 8),
+	RELOPT_KIND_VIEW = (1 << 9),
+	RELOPT_KIND_BITMAP = (1 << 10),
 	/* if you add a new kind, make sure you update "last_default" too */
 	RELOPT_KIND_LAST_DEFAULT = RELOPT_KIND_BITMAP,
 	/* some compilers treat enums as signed ints, so we can't use 1 << 31 */
@@ -124,7 +126,7 @@ typedef struct relopt_string
 	int			default_len;
 	bool		default_isnull;
 	validate_string_relopt validate_cb;
-	char		default_val[1]; /* variable length, zero-terminated */
+	char	   *default_val;
 } relopt_string;
 
 /* This is the table datatype for fillRelOptions */

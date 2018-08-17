@@ -20,6 +20,7 @@
 /*
  * aoseg.c prototypes
  */
-extern void AlterTableCreateAoSegTable(Oid relOid, bool is_part_child);
+extern void AlterTableCreateAoSegTable(Oid relOid, bool is_part_child,
+									   bool is_part_parent);
 
 #endif   /* AOSEG_H */

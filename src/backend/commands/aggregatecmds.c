@@ -4,7 +4,7 @@
  *
  *	  Routines for aggregate-manipulation commands
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -296,69 +296,6 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
 									GetAssignedOidsForDispatch(),
-									NULL);
-	}
-}
-
-
-/*
- * RemoveAggregate
- *		Deletes an aggregate.
- */
-void
-RemoveAggregate(RemoveFuncStmt *stmt)
-{
-	List	   *aggName = stmt->name;
-	List	   *aggArgs = stmt->args;
-	Oid			procOid;
-	HeapTuple	tup;
-	ObjectAddress object;
-
-	/* Look up function and make sure it's an aggregate */
-	procOid = LookupAggNameTypeNames(aggName, aggArgs, stmt->missing_ok);
-
-	if (!OidIsValid(procOid))
-	{
-		/* we only get here if stmt->missing_ok is true */
-		ereport(NOTICE,
-				(errmsg("aggregate %s(%s) does not exist, skipping",
-						NameListToString(aggName),
-						TypeNameListToString(aggArgs))));
-		return;
-	}
-
-	/*
-	 * Find the function tuple, do permissions and validity checks
-	 */
-	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procOid));
-	if (!HeapTupleIsValid(tup)) /* should not happen */
-		elog(ERROR, "cache lookup failed for function %u", procOid);
-
-	/* Permission check: must own agg or its namespace */
-	if (!pg_proc_ownercheck(procOid, GetUserId()) &&
-	  !pg_namespace_ownercheck(((Form_pg_proc) GETSTRUCT(tup))->pronamespace,
-							   GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
-					   NameListToString(aggName));
-
-	ReleaseSysCache(tup);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = ProcedureRelationId;
-	object.objectId = procOid;
-	object.objectSubId = 0;
-
-	performDeletion(&object, stmt->behavior);
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
 									NULL);
 	}
 }

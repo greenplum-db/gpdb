@@ -2,41 +2,73 @@
 CREATE TABLE zstdtest (id int4, t text) WITH (appendonly=true, compresstype=zstd, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Zstandard library is not supported by this build
+HINT:  Compile with --with-zstd to use Zstandard compression.
 INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
-ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+ERROR:  relation "zstdtest" does not exist
+LINE 1: INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_seri...
+                    ^
 INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;
-ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+ERROR:  relation "zstdtest" does not exist
+LINE 1: INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_seri...
+                    ^
 -- Check contents, at the beginning of the table and at the end.
 SELECT * FROM zstdtest ORDER BY id LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest" does not exist
+LINE 1: SELECT * FROM zstdtest ORDER BY id LIMIT 5;
+                      ^
 SELECT * FROM zstdtest ORDER BY id DESC LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest" does not exist
+LINE 1: SELECT * FROM zstdtest ORDER BY id DESC LIMIT 5;
+                      ^
 -- Test different compression levels:
 CREATE TABLE zstdtest_1 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=1);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Zstandard library is not supported by this build
+HINT:  Compile with --with-zstd to use Zstandard compression.
 CREATE TABLE zstdtest_10 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=10);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Zstandard library is not supported by this build
+HINT:  Compile with --with-zstd to use Zstandard compression.
 CREATE TABLE zstdtest_19 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=19);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Zstandard library is not supported by this build
+HINT:  Compile with --with-zstd to use Zstandard compression.
 INSERT INTO zstdtest_1 SELECT g, 'foo' || g FROM generate_series(1, 10000) g;
-ERROR:  Zstandard library is not supported by this build  (seg0 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_1" does not exist
+LINE 1: INSERT INTO zstdtest_1 SELECT g, 'foo' || g FROM generate_se...
+                    ^
 INSERT INTO zstdtest_1 SELECT g, 'bar' || g FROM generate_series(1, 10000) g;
-ERROR:  Zstandard library is not supported by this build  (seg0 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_1" does not exist
+LINE 1: INSERT INTO zstdtest_1 SELECT g, 'bar' || g FROM generate_se...
+                    ^
 SELECT * FROM zstdtest_1 ORDER BY id LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_1" does not exist
+LINE 1: SELECT * FROM zstdtest_1 ORDER BY id LIMIT 5;
+                      ^
 SELECT * FROM zstdtest_1 ORDER BY id DESC LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_1" does not exist
+LINE 1: SELECT * FROM zstdtest_1 ORDER BY id DESC LIMIT 5;
+                      ^
 INSERT INTO zstdtest_19 SELECT g, 'foo' || g FROM generate_series(1, 10000) g;
-ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+ERROR:  relation "zstdtest_19" does not exist
+LINE 1: INSERT INTO zstdtest_19 SELECT g, 'foo' || g FROM generate_s...
+                    ^
 INSERT INTO zstdtest_19 SELECT g, 'bar' || g FROM generate_series(1, 10000) g;
-ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+ERROR:  relation "zstdtest_19" does not exist
+LINE 1: INSERT INTO zstdtest_19 SELECT g, 'bar' || g FROM generate_s...
+                    ^
 SELECT * FROM zstdtest_19 ORDER BY id LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_19" does not exist
+LINE 1: SELECT * FROM zstdtest_19 ORDER BY id LIMIT 5;
+                      ^
 SELECT * FROM zstdtest_19 ORDER BY id DESC LIMIT 5;
-ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+ERROR:  relation "zstdtest_19" does not exist
+LINE 1: SELECT * FROM zstdtest_19 ORDER BY id DESC LIMIT 5;
+                      ^
 -- Test the bounds of compresslevel. None of these are allowed.
 CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=-1);
 ERROR:  value -1 out of bounds for option "compresslevel"

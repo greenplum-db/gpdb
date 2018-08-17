@@ -52,11 +52,20 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	double		recvrows;
 	double		sendrows;
 
+	if (! IsA(subpath, BitmapHeapPath) &&
+		! IsA(subpath, BitmapAppendOnlyPath) && 
+		! IsA(subpath, IndexPath) && 
+		! IsA(subpath, UniquePath) &&
+		CdbPathLocus_IsReplicated(motionpath->path.locus))
+		motionpath->path.rows = subpath->rows * root->config->cdbpath_segments;
+	else
+		motionpath->path.rows = subpath->rows;
+
 	cost_per_row = (gp_motion_cost_per_row > 0.0)
 		? gp_motion_cost_per_row
 		: 2.0 * cpu_tuple_cost;
-	sendrows = cdbpath_rows(root, subpath);
-	recvrows = cdbpath_rows(root, (Path *) motionpath);
+	sendrows = subpath->rows;
+	recvrows = motionpath->path.rows;
 	motioncost = cost_per_row * 0.5 * (sendrows + recvrows);
 
 	motionpath->path.total_cost = motioncost + subpath->total_cost;
@@ -122,6 +131,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.pathtype = T_Motion;
 			pathnode->path.parent = subpath->parent;
 			pathnode->path.locus = locus;
+			pathnode->path.rows = subpath->rows;
 			pathnode->path.pathkeys = pathkeys;
 			pathnode->subpath = subpath;
 
@@ -149,6 +159,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.pathtype = T_Motion;
 			pathnode->path.parent = subpath->parent;
 			pathnode->path.locus = locus;
+			pathnode->path.rows = subpath->rows;
 			pathnode->path.pathkeys = pathkeys;
 			pathnode->subpath = subpath;
 
@@ -276,6 +287,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	pathnode->path.pathtype = T_Motion;
 	pathnode->path.parent = subpath->parent;
 	pathnode->path.locus = locus;
+	pathnode->path.rows = subpath->rows;
 	pathnode->path.pathkeys = pathkeys;
 	pathnode->subpath = subpath;
 
@@ -888,8 +900,8 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	}
 
 	/* Get rel sizes. */
-	outer.bytes = cdbpath_rows(root, outer.path) * outer.path->parent->width;
-	inner.bytes = cdbpath_rows(root, inner.path) * inner.path->parent->width;
+	outer.bytes = outer.path->rows * outer.path->parent->width;
+	inner.bytes = inner.path->rows * inner.path->parent->width;
 
 	/*
 	 * Motion not needed if either source is everywhere (e.g. a constant).
@@ -1477,7 +1489,7 @@ cdbpath_dedup_fixup_baserel(Path *path, CdbpathDedupFixupContext *ctx)
 	}
 
 	/* Add these vars to the rel's list of result columns. */
-	add_vars_to_targetlist(ctx->root, rowid_vars, ctx->distinct_on_rowid_relids);
+	add_vars_to_targetlist(ctx->root, rowid_vars, ctx->distinct_on_rowid_relids, false);
 
 	/* Recalculate width of the rel's result rows. */
 	set_rel_width(ctx->root, rel);
@@ -1516,7 +1528,7 @@ cdbpath_dedup_fixup_joinrel(JoinPath *joinpath, CdbpathDedupFixupContext *ctx)
 		/* Which rel has more rows?  Put its row id vars in front. */
 		if (outer_rowid_vars &&
 			ctx->rowid_vars &&
-			cdbpath_rows(ctx->root, joinpath->outerjoinpath) >= cdbpath_rows(ctx->root, joinpath->innerjoinpath))
+			joinpath->outerjoinpath->rows >= joinpath->innerjoinpath->rows)
 			ctx->rowid_vars = list_concat(outer_rowid_vars, ctx->rowid_vars);
 		else
 			ctx->rowid_vars = list_concat(ctx->rowid_vars, outer_rowid_vars);
@@ -1670,6 +1682,7 @@ cdbpath_dedup_fixup_walker(Path *path, void *context)
 		case T_FunctionScan:
 		case T_ValuesScan:
 		case T_CteScan:
+		case T_ForeignScan:
 			cdbpath_dedup_fixup_baserel(path, ctx);
 			break;
 

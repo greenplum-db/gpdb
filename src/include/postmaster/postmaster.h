@@ -3,7 +3,7 @@
  * postmaster.h
  *	  Exports from postmaster/postmaster.c.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/postmaster/postmaster.h
@@ -15,7 +15,6 @@
 
 /* GUC options */
 extern bool EnableSSL;
-extern bool SilentMode;
 extern int	ReservedBackends;
 extern int	PostPortNumber;
 extern int	Unix_socket_permissions;
@@ -51,9 +50,6 @@ extern int	postmaster_alive_fds[2];
 #define POSTMASTER_IN_RECOVERY_DETAIL_MSG "last replayed record at"
 
 extern const char *progname;
-
-/* stack base pointer, defined in postgres.c */
-extern char *stack_base_ptr;
 
 extern int	PostmasterMain(int argc, char *argv[]);
 extern void ClosePostmasterPorts(bool am_syslogger);

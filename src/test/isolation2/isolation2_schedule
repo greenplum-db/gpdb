@@ -1,10 +1,11 @@
 test: select_for_update
-#test for global distributed deadlock detector
+# test for global distributed deadlock detector
 test: gdd/prepare
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/local-deadlock-03 gdd/non-lock-105 gdd/non-lock-107
 test: gdd/avoid-qd-deadlock
 
-test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+test: pg_terminate_backend deadlock_under_entry_db_singleton pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+#test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 
 test: reindex
 test: reindex_gpfastsequence
@@ -111,6 +112,7 @@ test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
 # Tests for FTS
+test: fts_dns_error
 test: segwalrep/commit_blocking
 test: segwalrep/fts_unblock_primary
 test: segwalrep/mirror_promotion

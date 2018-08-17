@@ -3,7 +3,7 @@
  * seclabel.c
  *	  routines to support security label feature.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * -------------------------------------------------------------------------
@@ -14,15 +14,14 @@
 #include "access/heapam.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
-#include "catalog/namespace.h"
 #include "catalog/pg_seclabel.h"
+#include "catalog/pg_shseclabel.h"
 #include "commands/seclabel.h"
 #include "miscadmin.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 typedef struct
@@ -88,7 +87,7 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
 	 * guard against concurrent modifications.
 	 */
 	address = get_object_address(stmt->objtype, stmt->objname, stmt->objargs,
-								 &relation, ShareUpdateExclusiveLock);
+								 &relation, ShareUpdateExclusiveLock, false);
 
 	/* Require ownership of the target object. */
 	check_object_ownership(GetUserId(), stmt->objtype, address,
@@ -134,8 +133,56 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
 }
 
 /*
- * GetSecurityLabel returns the security label for a database object for a
- * given provider, or NULL if there is no such label.
+ * GetSharedSecurityLabel returns the security label for a shared object for
+ * a given provider, or NULL if there is no such label.
+ */
+static char *
+GetSharedSecurityLabel(const ObjectAddress *object, const char *provider)
+{
+	Relation	pg_shseclabel;
+	ScanKeyData keys[3];
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Datum		datum;
+	bool		isnull;
+	char	   *seclabel = NULL;
+
+	ScanKeyInit(&keys[0],
+				Anum_pg_shseclabel_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(object->objectId));
+	ScanKeyInit(&keys[1],
+				Anum_pg_shseclabel_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(object->classId));
+	ScanKeyInit(&keys[2],
+				Anum_pg_shseclabel_provider,
+				BTEqualStrategyNumber, F_TEXTEQ,
+				CStringGetTextDatum(provider));
+
+	pg_shseclabel = heap_open(SharedSecLabelRelationId, AccessShareLock);
+
+	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
+							  SnapshotNow, 3, keys);
+
+	tuple = systable_getnext(scan);
+	if (HeapTupleIsValid(tuple))
+	{
+		datum = heap_getattr(tuple, Anum_pg_shseclabel_label,
+							 RelationGetDescr(pg_shseclabel), &isnull);
+		if (!isnull)
+			seclabel = TextDatumGetCString(datum);
+	}
+	systable_endscan(scan);
+
+	heap_close(pg_shseclabel, AccessShareLock);
+
+	return seclabel;
+}
+
+/*
+ * GetSecurityLabel returns the security label for a shared or database object
+ * for a given provider, or NULL if there is no such label.
  */
 char *
 GetSecurityLabel(const ObjectAddress *object, const char *provider)
@@ -148,8 +195,11 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
 	bool		isnull;
 	char	   *seclabel = NULL;
 
-	Assert(!IsSharedRelation(object->classId));
+	/* Shared objects have their own security label catalog. */
+	if (IsSharedRelation(object->classId))
+		return GetSharedSecurityLabel(object, provider);
 
+	/* Must be an unshared object, so examine pg_seclabel. */
 	ScanKeyInit(&keys[0],
 				Anum_pg_seclabel_objoid,
 				BTEqualStrategyNumber, F_OIDEQ,
@@ -188,6 +238,84 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
 }
 
 /*
+ * SetSharedSecurityLabel is a helper function of SetSecurityLabel to
+ * handle shared database objects.
+ */
+static void
+SetSharedSecurityLabel(const ObjectAddress *object,
+					   const char *provider, const char *label)
+{
+	Relation	pg_shseclabel;
+	ScanKeyData keys[4];
+	SysScanDesc scan;
+	HeapTuple	oldtup;
+	HeapTuple	newtup = NULL;
+	Datum		values[Natts_pg_shseclabel];
+	bool		nulls[Natts_pg_shseclabel];
+	bool		replaces[Natts_pg_shseclabel];
+
+	/* Prepare to form or update a tuple, if necessary. */
+	memset(nulls, false, sizeof(nulls));
+	memset(replaces, false, sizeof(replaces));
+	values[Anum_pg_shseclabel_objoid - 1] = ObjectIdGetDatum(object->objectId);
+	values[Anum_pg_shseclabel_classoid - 1] = ObjectIdGetDatum(object->classId);
+	values[Anum_pg_shseclabel_provider - 1] = CStringGetTextDatum(provider);
+	if (label != NULL)
+		values[Anum_pg_shseclabel_label - 1] = CStringGetTextDatum(label);
+
+	/* Use the index to search for a matching old tuple */
+	ScanKeyInit(&keys[0],
+				Anum_pg_shseclabel_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(object->objectId));
+	ScanKeyInit(&keys[1],
+				Anum_pg_shseclabel_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(object->classId));
+	ScanKeyInit(&keys[2],
+				Anum_pg_shseclabel_provider,
+				BTEqualStrategyNumber, F_TEXTEQ,
+				CStringGetTextDatum(provider));
+
+	pg_shseclabel = heap_open(SharedSecLabelRelationId, RowExclusiveLock);
+
+	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
+							  SnapshotNow, 3, keys);
+
+	oldtup = systable_getnext(scan);
+	if (HeapTupleIsValid(oldtup))
+	{
+		if (label == NULL)
+			simple_heap_delete(pg_shseclabel, &oldtup->t_self);
+		else
+		{
+			replaces[Anum_pg_shseclabel_label - 1] = true;
+			newtup = heap_modify_tuple(oldtup, RelationGetDescr(pg_shseclabel),
+									   values, nulls, replaces);
+			simple_heap_update(pg_shseclabel, &oldtup->t_self, newtup);
+		}
+	}
+	systable_endscan(scan);
+
+	/* If we didn't find an old tuple, insert a new one */
+	if (newtup == NULL && label != NULL)
+	{
+		newtup = heap_form_tuple(RelationGetDescr(pg_shseclabel),
+								 values, nulls);
+		simple_heap_insert(pg_shseclabel, newtup);
+	}
+
+	/* Update indexes, if necessary */
+	if (newtup != NULL)
+	{
+		CatalogUpdateIndexes(pg_shseclabel, newtup);
+		heap_freetuple(newtup);
+	}
+
+	heap_close(pg_shseclabel, RowExclusiveLock);
+}
+
+/*
  * SetSecurityLabel attempts to set the security label for the specified
  * provider on the specified object to the given value.  NULL means that any
  * any existing label should be deleted.
@@ -205,8 +333,12 @@ SetSecurityLabel(const ObjectAddress *object,
 	bool		nulls[Natts_pg_seclabel];
 	bool		replaces[Natts_pg_seclabel];
 
-	/* Security labels on shared objects are not supported. */
-	Assert(!IsSharedRelation(object->classId));
+	/* Shared objects have their own security label catalog. */
+	if (IsSharedRelation(object->classId))
+	{
+		SetSharedSecurityLabel(object, provider, label);
+		return;
+	}
 
 	/* Prepare to form or update a tuple, if necessary. */
 	memset(nulls, false, sizeof(nulls));
@@ -275,6 +407,38 @@ SetSecurityLabel(const ObjectAddress *object,
 }
 
 /*
+ * DeleteSharedSecurityLabel is a helper function of DeleteSecurityLabel
+ * to handle shared database objects.
+ */
+void
+DeleteSharedSecurityLabel(Oid objectId, Oid classId)
+{
+	Relation	pg_shseclabel;
+	ScanKeyData skey[2];
+	SysScanDesc scan;
+	HeapTuple	oldtup;
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_shseclabel_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objectId));
+	ScanKeyInit(&skey[1],
+				Anum_pg_shseclabel_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classId));
+
+	pg_shseclabel = heap_open(SharedSecLabelRelationId, RowExclusiveLock);
+
+	scan = systable_beginscan(pg_shseclabel, SharedSecLabelObjectIndexId, true,
+							  SnapshotNow, 2, skey);
+	while (HeapTupleIsValid(oldtup = systable_getnext(scan)))
+		simple_heap_delete(pg_shseclabel, &oldtup->t_self);
+	systable_endscan(scan);
+
+	heap_close(pg_shseclabel, RowExclusiveLock);
+}
+
+/*
  * DeleteSecurityLabel removes all security labels for an object (and any
  * sub-objects, if applicable).
  */
@@ -287,9 +451,13 @@ DeleteSecurityLabel(const ObjectAddress *object)
 	HeapTuple	oldtup;
 	int			nkeys;
 
-	/* Security labels on shared objects are not supported. */
+	/* Shared objects have their own security label catalog. */
 	if (IsSharedRelation(object->classId))
+	{
+		Assert(object->objectSubId == 0);
+		DeleteSharedSecurityLabel(object->objectId, object->classId);
 		return;
+	}
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_seclabel_objoid,

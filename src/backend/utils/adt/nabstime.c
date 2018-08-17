@@ -5,7 +5,7 @@
  *	  Functions for the built-in type "RelativeTime".
  *	  Functions for the built-in type "TimeInterval".
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,6 +25,7 @@
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "utils/datetime.h"
 #include "utils/nabstime.h"
 
 #define MIN_DAYNUM (-24856)		/* December 13, 1901 */
@@ -310,7 +311,7 @@ abstimeout(PG_FUNCTION_ARGS)
 			break;
 		default:
 			abstime2tm(time, &tz, tm, &tzn);
-			EncodeDateTime(tm, fsec, &tz, &tzn, DateStyle, buf);
+			EncodeDateTime(tm, fsec, true, tz, tzn, DateStyle, buf);
 			break;
 	}
 

@@ -924,7 +924,7 @@ $$
 create table sirv_test7_result2 as select * from sirv_test7_fun3(sirv_test7_fun2(2,1000,1000),3,2000,2000) as field1 distributed by (field1);
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
 CONTEXT:  SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test7_fun3" line 8 at EXECUTE statement
+PL/pgSQL function sirv_test7_fun3(text,integer,double precision,double precision) line 8 at EXECUTE statement
 select * from sirv_test7_result2;
 ERROR:  relation "sirv_test7_result2" does not exist
 LINE 1: select * from sirv_test7_result2;
@@ -1095,7 +1095,7 @@ create table sirv_test8_result2 (field1 text, field2 int) distributed by (field2
 insert into sirv_test8_result2 select * from sirv_test8_fun3(sirv_test8_fun2(2,1000,1000),3,2000,2000),(select 1) FOO;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
 CONTEXT:  SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test8_fun3" line 8 at EXECUTE statement
+PL/pgSQL function sirv_test8_fun3(text,integer,double precision,double precision) line 8 at EXECUTE statement
 select * from sirv_test8_result2 order by field2;
  field1 | field2 
 --------+--------

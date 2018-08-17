@@ -21,13 +21,15 @@ void setup(TmControlBlock *controlBlock)
 	*shmDistribTimeStamp = time(NULL);
 	*shmNumCommittedGxacts = 0;
 
-	procArray = malloc(sizeof(ProcArrayStruct) + sizeof(PGPROC *) * (MAX_PROCS - 1));
-	tmp_proc = (PGPROC *)malloc(5 * sizeof(PGPROC));
-	procArray->procs[0] = tmp_proc++;
-	procArray->procs[1] = tmp_proc++;
-	procArray->procs[2] = tmp_proc++;
-	procArray->procs[3] = tmp_proc++;
-	procArray->procs[4] = tmp_proc++;
+	allTmGxact = malloc(sizeof(TMGXACT)*MAX_PROCS);
+
+
+	procArray = malloc(sizeof(ProcArrayStruct) + sizeof(int) * (MAX_PROCS - 1));
+	procArray->pgprocnos[0] = 0;
+	procArray->pgprocnos[1] = 1;
+	procArray->pgprocnos[2] = 2;
+	procArray->pgprocnos[3] = 3;
+	procArray->pgprocnos[4] = 4;
 
 	procArray->maxProcs = MAX_PROCS;
 }
@@ -57,12 +59,13 @@ test__CreateDistributedSnapshot(void **state)
 	will_return_count(getMaxDistributedXid, 25, -1);
 
 	/* This is going to act as our gxact */
-	procArray->procs[0]->gxact.gxid = 20;
-	procArray->procs[0]->gxact.state = DTX_STATE_ACTIVE_DISTRIBUTED;
-	procArray->procs[0]->gxact.xminDistributedSnapshot = 20;
+	allTmGxact[procArray->pgprocnos[0]].gxid = 20;
+	allTmGxact[procArray->pgprocnos[0]].state = DTX_STATE_ACTIVE_DISTRIBUTED;
+	allTmGxact[procArray->pgprocnos[0]].xminDistributedSnapshot = 20;
+
 	procArray->numProcs = 1;
 
-	MyProc = procArray->procs[0];
+	MyTmGxact = &allTmGxact[procArray->pgprocnos[0]];
 
 	/********************************************************
 	 * Basic case, no other in progress transaction in system
@@ -75,7 +78,7 @@ test__CreateDistributedSnapshot(void **state)
 	assert_true(ds->xmin == 20);
 	assert_true(ds->xmax == 25);
 	assert_true(ds->count == 0);
-	assert_true(MyProc->gxact.xminDistributedSnapshot == 20);
+	assert_true(MyTmGxact->xminDistributedSnapshot == 20);
 
 	/*************************************************************************
 	 * Case where there exist in-progress having taken snpashot with lower
@@ -83,13 +86,14 @@ test__CreateDistributedSnapshot(void **state)
 	 * differ from xminAllDistributedSnapshots. Also, validates xmin and xmax
 	 * get adjusted correctly based on in-progress.
 	 */
-	procArray->procs[1]->gxact.gxid = 10;
-	procArray->procs[1]->gxact.state = DTX_STATE_ACTIVE_DISTRIBUTED;
-	procArray->procs[1]->gxact.xminDistributedSnapshot = 5;
+	allTmGxact[procArray->pgprocnos[1]].gxid = 10;
+	allTmGxact[procArray->pgprocnos[1]].state = DTX_STATE_ACTIVE_DISTRIBUTED;
+	allTmGxact[procArray->pgprocnos[1]].xminDistributedSnapshot = 5;
 
-	procArray->procs[2]->gxact.gxid = 30;
-	procArray->procs[2]->gxact.state = DTX_STATE_ACTIVE_DISTRIBUTED;
-	procArray->procs[2]->gxact.xminDistributedSnapshot = 20;
+	allTmGxact[procArray->pgprocnos[2]].gxid = 30;
+	allTmGxact[procArray->pgprocnos[2]].state = DTX_STATE_ACTIVE_DISTRIBUTED;
+	allTmGxact[procArray->pgprocnos[2]].xminDistributedSnapshot = 20;
+
 	procArray->numProcs = 3;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
@@ -100,19 +104,20 @@ test__CreateDistributedSnapshot(void **state)
 	assert_true(ds->xmin == 10);
 	assert_true(ds->xmax == 30);
 	assert_true(ds->count == 2);
-	assert_true(MyProc->gxact.xminDistributedSnapshot == 10);
+	assert_true(MyTmGxact->xminDistributedSnapshot == 10);
 
 	/*************************************************************************
 	 * Add more elemnets, just to have validation that in-progress array is in
 	 * ascending sorted order with distributed transactions.
 	 */
-	procArray->procs[3]->gxact.gxid = 15;
-	procArray->procs[3]->gxact.state = DTX_STATE_ACTIVE_DISTRIBUTED;
-	procArray->procs[3]->gxact.xminDistributedSnapshot = 12;
+	allTmGxact[procArray->pgprocnos[3]].gxid = 15;
+	allTmGxact[procArray->pgprocnos[3]].state = DTX_STATE_ACTIVE_DISTRIBUTED;
+	allTmGxact[procArray->pgprocnos[3]].xminDistributedSnapshot = 12;
 
-	procArray->procs[4]->gxact.gxid = 7;
-	procArray->procs[4]->gxact.state = DTX_STATE_ACTIVE_DISTRIBUTED;
-	procArray->procs[4]->gxact.xminDistributedSnapshot = 7;
+	allTmGxact[procArray->pgprocnos[4]].gxid = 7;
+	allTmGxact[procArray->pgprocnos[4]].state = DTX_STATE_ACTIVE_DISTRIBUTED;
+	allTmGxact[procArray->pgprocnos[4]].xminDistributedSnapshot = 7;
+
 	procArray->numProcs = 5;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
@@ -123,7 +128,7 @@ test__CreateDistributedSnapshot(void **state)
 	assert_true(ds->xmin == 7);
 	assert_true(ds->xmax == 30);
 	assert_true(ds->count == 4);
-	assert_true(MyProc->gxact.xminDistributedSnapshot == 7);
+	assert_true(MyTmGxact->xminDistributedSnapshot == 7);
 	assert_true(ds->inProgressXidArray[0] == 7);
 	assert_true(ds->inProgressXidArray[1] == 10);
 	assert_true(ds->inProgressXidArray[2] == 15);
@@ -131,7 +136,7 @@ test__CreateDistributedSnapshot(void **state)
 
 	free(distribSnapshotWithLocalMapping.inProgressMappedLocalXids);
 	free(ds->inProgressXidArray);
-	free(procArray->procs[0]);
+	free(allTmGxact);
 	free(procArray);
 }
 

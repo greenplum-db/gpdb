@@ -4,7 +4,7 @@
  *	  header file for postgres hash access method implementation
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/hash.h
@@ -22,6 +22,7 @@
 #include "access/sdir.h"
 #include "access/xlog.h"
 #include "fmgr.h"
+#include "storage/bufmgr.h"
 #include "storage/lock.h"
 #include "utils/relcache.h"
 

@@ -1,0 +1,339 @@
+# LANGUAGE message translation file for pg_basebackup
+# Copyright (C) 2011 PostgreSQL Global Development Group
+# This file is distributed under the same license as the PostgreSQL package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PostgreSQL 9.1\n"
+"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"POT-Creation-Date: 2011-06-14 20:11+0900\n"
+"PO-Revision-Date: 2011-06-14 20:59+0900\n"
+"Last-Translator: honda@postgresql.jp\n"
+"Language-Team: Japan Postgresql User Group\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: pg_basebackup.c:96 pg_basebackup.c:110
+#, c-format
+msgid "%s: out of memory\n"
+msgstr "%s: メモリ不足です\n"
+
+#: pg_basebackup.c:121
+#, c-format
+msgid ""
+"%s takes a base backup of a running PostgreSQL server.\n"
+"\n"
+msgstr "%sは実行中のPostgreSQLサーバのベースバックアップを取得します。\n"
+
+#: pg_basebackup.c:123
+#, c-format
+msgid "Usage:\n"
+msgstr "使用方法:\n"
+
+#: pg_basebackup.c:124
+#, c-format
+msgid "  %s [OPTION]...\n"
+msgstr "  %s [OPTION]...\n"
+
+#: pg_basebackup.c:125
+#, c-format
+msgid ""
+"\n"
+"Options controlling the output:\n"
+msgstr "\n出力を制御するオプション:\n"
+
+#: pg_basebackup.c:126
+#, c-format
+msgid "  -D, --pgdata=DIRECTORY   receive base backup into directory\n"
+msgstr "  -D, --pgdata=DIRECTORY   ディレクトリ内にベースバックアップを格納します\n"
+
+#: pg_basebackup.c:127
+#, c-format
+msgid "  -F, --format=p|t         output format (plain, tar)\n"
+msgstr "  -F, --format=p|t         出力フォーマット（プレインまたはtar）\n"
+
+#: pg_basebackup.c:128
+#, c-format
+msgid "  -x, --xlog               include required WAL files in backup\n"
+msgstr "  -x, --xlog               必要なWALファイルをバックアップ内に含めます\n"
+
+#: pg_basebackup.c:129
+#, c-format
+msgid "  -z, --gzip               compress tar output\n"
+msgstr "  -z, --gzip               tar出力を圧縮します\n"
+
+#: pg_basebackup.c:130
+#, c-format
+msgid ""
+"  -Z, --compress=0-9       compress tar output with given compression level\n"
+msgstr "  -Z, --compress=0-9       指定した圧縮レベルでtar出力を圧縮します\n"
+
+#: pg_basebackup.c:131
+#, c-format
+msgid ""
+"\n"
+"General options:\n"
+msgstr "\n汎用のオプション:\n"
+
+#: pg_basebackup.c:132
+#, c-format
+msgid ""
+"  -c, --checkpoint=fast|spread\n"
+"                           set fast or spread checkpointing\n"
+msgstr ""
+"  -c, --checkpoint=fast|spread\n"
+"                           高速チェックポイント処理または分散チェックポイント処理\n"
+
+#: pg_basebackup.c:134
+#, c-format
+msgid "  -l, --label=LABEL        set backup label\n"
+msgstr "  -l, --label=LABEL        バックアップラベルの設定\n"
+
+#: pg_basebackup.c:135
+#, c-format
+msgid "  -P, --progress           show progress information\n"
+msgstr "  -P, --progress           進行状況の表示\n"
+
+#: pg_basebackup.c:136
+#, c-format
+msgid "  -v, --verbose            output verbose messages\n"
+msgstr "  -v, --verbose            冗長メッセージの出力\n"
+
+#: pg_basebackup.c:137
+#, c-format
+msgid "  --help                   show this help, then exit\n"
+msgstr "  --help                   このヘルプを表示し終了します\n"
+
+#: pg_basebackup.c:138
+#, c-format
+msgid "  --version                output version information, then exit\n"
+msgstr "  --version                バージョン情報を出力し終了します\n"
+
+#: pg_basebackup.c:139
+#, c-format
+msgid ""
+"\n"
+"Connection options:\n"
+msgstr "\n接続オプション:\n"
+
+#: pg_basebackup.c:140
+#, c-format
+msgid "  -h, --host=HOSTNAME      database server host or socket directory\n"
+msgstr "  -h, --host=HOSTNAME      データベースサーバホストまたはソケットディレクトリ\n"
+
+#: pg_basebackup.c:141
+#, c-format
+msgid "  -p, --port=PORT          database server port number\n"
+msgstr "  -p, --port=PORT          データベースサーバのポート番号\n"
+
+#: pg_basebackup.c:142
+#, c-format
+msgid "  -U, --username=NAME      connect as specified database user\n"
+msgstr "  -U, --username=NAME      指定したデータベースユーザで接続\n"
+
+#: pg_basebackup.c:143
+#, c-format
+msgid "  -w, --no-password        never prompt for password\n"
+msgstr "  -w, --no-password        パスワード入力を促さない\n"
+
+#: pg_basebackup.c:144
+#, c-format
+msgid ""
+"  -W, --password           force password prompt (should happen "
+"automatically)\n"
+msgstr " -W, --password           強制的にパスワード入力を促す（自動的に行われるはずです）\n"
+
+#: pg_basebackup.c:145
+#, c-format
+msgid ""
+"\n"
+"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+msgstr "\n不具合は<pgsql-bugs@postgresql.org>まで報告ください\n"
+
+#: pg_basebackup.c:167 pg_basebackup.c:581
+#, c-format
+msgid "%s: could not create directory \"%s\": %s\n"
+msgstr "%s: \"%s\"ディレクトリを作成することができませんでした: %s\n"
+
+#: pg_basebackup.c:184
+#, c-format
+msgid "%s: directory \"%s\" exists but is not empty\n"
+msgstr "%s: \"%s\"ディレクトリは存在しますが空ではありません\n"
+
+#: pg_basebackup.c:192
+#, c-format
+msgid "%s: could not access directory \"%s\": %s\n"
+msgstr "%s: \"%s\"ディレクトリにアクセスできませんでした: %s\n"
+
+#: pg_basebackup.c:272 pg_basebackup.c:290 pg_basebackup.c:314
+#, c-format
+msgid "%s: could not set compression level %i: %s\n"
+msgstr "%s: 圧縮レベルを%iに設定することができませんでした: %s\n"
+
+#: pg_basebackup.c:333
+#, c-format
+msgid "%s: could not create compressed file \"%s\": %s\n"
+msgstr "%s: \"%s\"圧縮ファイルを作成することができませんでした: %s\n"
+
+#: pg_basebackup.c:344 pg_basebackup.c:620
+#, c-format
+msgid "%s: could not create file \"%s\": %s\n"
+msgstr "%s: \"%s\"ファイルを作成することができませんでした: %s\n"
+
+#: pg_basebackup.c:356 pg_basebackup.c:493
+#, c-format
+msgid "%s: could not get COPY data stream: %s"
+msgstr "%s: COPYデータストリームを入手できませんでした: %s"
+
+#: pg_basebackup.c:388 pg_basebackup.c:434
+#, c-format
+msgid "%s: could not write to compressed file \"%s\": %s\n"
+msgstr "%s: \"%s\"圧縮ファイルに書き出すことができませんでした: %s\n"
+
+#: pg_basebackup.c:397 pg_basebackup.c:443 pg_basebackup.c:660
+#, c-format
+msgid "%s: could not write to file \"%s\": %s\n"
+msgstr "%s: \"%s\"ファイルに書き出すことができませんでした: %s\n"
+
+#: pg_basebackup.c:424 pg_basebackup.c:522
+#, c-format
+msgid "%s: could not read COPY data: %s"
+msgstr "%s: COPYデータを読み取ることができませんでした: %s"
+
+#: pg_basebackup.c:536
+#, c-format
+msgid "%s: invalid tar block header size: %i\n"
+msgstr "%s: 無効なtarブロックヘッダサイズ: %i\n"
+
+#: pg_basebackup.c:544
+#, c-format
+msgid "%s: could not parse file size\n"
+msgstr "%s: ファイルサイズの解析ができませんでした\n"
+
+#: pg_basebackup.c:552
+#, c-format
+msgid "%s: could not parse file mode\n"
+msgstr "%s: ファイルモードの解析ができませんでした\n"
+
+#: pg_basebackup.c:587
+#, c-format
+msgid "%s: could not set permissions on directory \"%s\": %s\n"
+msgstr "%s: \"%s\"ディレクトリの権限を設定することができませんでした: %s\n"
+
+#: pg_basebackup.c:600
+#, c-format
+msgid "%s: could not create symbolic link from \"%s\" to \"%s\": %s\n"
+msgstr "%s: \"%s\"から\"%s\"へのシンボリックリンクを作成できませんでした: %s\n"
+
+#: pg_basebackup.c:607
+#, c-format
+msgid "%s: unrecognized link indicator \"%c\"\n"
+msgstr "%s: 未知のリンク指示子\"%c\"\n"
+
+#: pg_basebackup.c:627
+#, c-format
+msgid "%s: could not set permissions on file \"%s\": %s\n"
+msgstr "%s: \"%s\"ファイルの権限を設定できませんでした: %s\n"
+
+#: pg_basebackup.c:685
+#, c-format
+msgid "%s: COPY stream ended before last file was finished\n"
+msgstr "%s: 最後のファイルが終わる前にCOPYストリームが完了しました\n"
+
+#: pg_basebackup.c:746
+msgid "Password: "
+msgstr "パスワード: "
+
+#: pg_basebackup.c:766
+#, c-format
+msgid "%s: could not connect to server: %s"
+msgstr "%s: サーバに接続できませんでした: %s"
+
+#: pg_basebackup.c:806
+#, c-format
+msgid "%s: could not send base backup command: %s"
+msgstr "%s: ベースバックアップコマンドを送信できませんでした: %s"
+
+#: pg_basebackup.c:817
+#, c-format
+msgid "%s: could not initiate base backup: %s"
+msgstr "%s: ベースバックアップを初期化できませんでした: %s"
+
+#: pg_basebackup.c:823
+#, c-format
+msgid "%s: no start point returned from server\n"
+msgstr "%s: サーバからスタートポイントが返りませんでした\n"
+
+#: pg_basebackup.c:839
+#, c-format
+msgid "%s: could not get backup header: %s"
+msgstr "%s: バックアップヘッダを入手できませんでした: %s"
+
+#: pg_basebackup.c:845
+#, c-format
+msgid "%s: no data returned from server\n"
+msgstr "%s: サーバから返されるデータがありません\n"
+
+#: pg_basebackup.c:873
+#, c-format
+msgid "%s: can only write single tablespace to stdout, database has %i\n"
+msgstr "%s: データベースには%iありましたが、１つのテーブル空間のみ標準出力に書き出されました\n"
+
+#: pg_basebackup.c:902
+#, c-format
+msgid "%s: could not get WAL end position from server\n"
+msgstr "%s: サーバからWAL終了位置を入手できませんでした\n"
+
+#: pg_basebackup.c:908
+#, c-format
+msgid "%s: no WAL end position returned from server\n"
+msgstr "%s: サーバからWAL終了位置が返されませんでした\n"
+
+#: pg_basebackup.c:920
+#, c-format
+msgid "%s: final receive failed: %s"
+msgstr "%s: 最終受信に失敗しました: %s"
+
+#: pg_basebackup.c:994
+#, c-format
+msgid "%s: invalid output format \"%s\", must be \"plain\" or \"tar\"\n"
+msgstr "%s: \"%s\"出力フォーマットは無効です。\"plain\"か\"tar\"でなければなりません\n"
+
+#: pg_basebackup.c:1016
+#, c-format
+msgid "%s: invalid compression level \"%s\"\n"
+msgstr "%s: \"%s\"圧縮レベルは無効です\n"
+
+#: pg_basebackup.c:1028
+#, c-format
+msgid ""
+"%s: invalid checkpoint argument \"%s\", must be \"fast\" or \"spread\"\n"
+msgstr "%s: \"%s\"チェックポイント引数は無効です。\"fast\"または\"spreadでなければなりません\n"
+
+#: pg_basebackup.c:1059 pg_basebackup.c:1073 pg_basebackup.c:1084
+#: pg_basebackup.c:1097
+#, c-format
+msgid "Try \"%s --help\" for more information.\n"
+msgstr "詳細については\"%s --help\"を実行してください。\n"
+
+#: pg_basebackup.c:1071
+#, c-format
+msgid "%s: too many command-line arguments (first is \"%s\")\n"
+msgstr "%s: コマンドライン引数が多過ぎます(最初は\"%s\"です)\n"
+
+#: pg_basebackup.c:1083
+#, c-format
+msgid "%s: no target directory specified\n"
+msgstr "%s: 対象ディレクトリが指定されていません\n"
+
+#: pg_basebackup.c:1095
+#, c-format
+msgid "%s: only tar mode backups can be compressed\n"
+msgstr "%s: tarモードのバックアップのみ圧縮することができます\n"
+
+#: pg_basebackup.c:1106
+#, c-format
+msgid "%s: this build does not support compression\n"
+msgstr "%s: この構築では圧縮をサポートしていません\n"

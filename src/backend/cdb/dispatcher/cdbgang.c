@@ -30,6 +30,7 @@
 #include "nodes/execnodes.h"	/* CdbProcess, Slice, SliceTable */
 #include "postmaster/postmaster.h"
 #include "tcop/tcopprot.h"
+#include "utils/int8.h"
 #include "utils/portal.h"
 #include "utils/sharedsnapshot.h"
 #include "tcop/pquery.h"
@@ -669,10 +670,11 @@ makeOptions(void)
  * to be passed to a qExec that is being started.  NB: Can be called in a
  * thread, so mustn't use palloc/elog/ereport/etc.
  */
-void
+bool
 build_gpqeid_param(char *buf, int bufsz,
 				   bool is_writer, int gangId, int hostSegs)
 {
+	int		len;
 #ifdef HAVE_INT64_TIMESTAMP
 #define TIMESTAMP_FORMAT INT64_FORMAT
 #else
@@ -683,9 +685,11 @@ build_gpqeid_param(char *buf, int bufsz,
 #endif
 #endif
 
-	snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
-			 gp_session_id, PgStartTime,
-			 (is_writer ? "true" : "false"), gangId, hostSegs);
+	len = snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
+				   gp_session_id, PgStartTime,
+				   (is_writer ? "true" : "false"), gangId, hostSegs);
+
+	return (len > 0 && len < bufsz);
 }
 
 static bool

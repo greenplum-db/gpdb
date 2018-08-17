@@ -3,7 +3,7 @@
  * date.c
  *	  implements DATE and TIME data types specified in SQL-92 standard
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  *
@@ -27,7 +27,9 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
+#include "utils/datetime.h"
 #include "utils/nabstime.h"
+#include "utils/sortsupport.h"
 
 /*
  * gcc's -ffast-math switch breaks routines that expect exact results from
@@ -317,6 +319,28 @@ date_cmp(PG_FUNCTION_ARGS)
 	else if (dateVal1 > dateVal2)
 		PG_RETURN_INT32(1);
 	PG_RETURN_INT32(0);
+}
+
+static int
+date_fastcmp(Datum x, Datum y, SortSupport ssup)
+{
+	DateADT		a = DatumGetDateADT(x);
+	DateADT		b = DatumGetDateADT(y);
+
+	if (a < b)
+		return -1;
+	else if (a > b)
+		return 1;
+	return 0;
+}
+
+Datum
+date_sortsupport(PG_FUNCTION_ARGS)
+{
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
+
+	ssup->comparator = date_fastcmp;
+	PG_RETURN_VOID();
 }
 
 Datum
@@ -888,7 +912,6 @@ date_timestamp(PG_FUNCTION_ARGS)
 	PG_RETURN_TIMESTAMP(result);
 }
 
-
 /* timestamp_date()
  * Convert timestamp to date data type.
  */
@@ -946,7 +969,6 @@ timestamptz_date(PG_FUNCTION_ARGS)
 			   *tm = &tt;
 	fsec_t		fsec;
 	int			tz;
-	char	   *tzn;
 
 	if (TIMESTAMP_IS_NOBEGIN(timestamp))
 		DATE_NOBEGIN(result);
@@ -954,7 +976,7 @@ timestamptz_date(PG_FUNCTION_ARGS)
 		DATE_NOEND(result);
 	else
 	{
-		if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+		if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 					 errmsg("timestamp out of range")));
@@ -1108,7 +1130,7 @@ time_out(PG_FUNCTION_ARGS)
 	char		buf[MAXDATELEN + 1];
 
 	time2tm(time, tm, &fsec);
-	EncodeTimeOnly(tm, fsec, NULL, DateStyle, buf);
+	EncodeTimeOnly(tm, fsec, false, 0, DateStyle, buf);
 
 	result = pstrdup(buf);
 	PG_RETURN_CSTRING(result);
@@ -1186,6 +1208,17 @@ timetypmodout(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(anytime_typmodout(false, typmod));
 }
 
+
+/* time_transform()
+ * Flatten calls to time_scale() and timetz_scale() that solely represent
+ * increases in allowed precision.
+ */
+Datum
+time_transform(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_POINTER(TemporalTransform(MAX_TIME_PRECISION,
+										(Node *) PG_GETARG_POINTER(0)));
+}
 
 /* time_scale()
  * Adjust time type for specified scale factor.
@@ -1542,12 +1575,11 @@ timestamptz_time(PG_FUNCTION_ARGS)
 			   *tm = &tt;
 	int			tz;
 	fsec_t		fsec;
-	char	   *tzn;
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		PG_RETURN_NULL();
 
-	if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+	if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("timestamp out of range")));
@@ -1958,7 +1990,7 @@ timetz_out(PG_FUNCTION_ARGS)
 	char		buf[MAXDATELEN + 1];
 
 	timetz2tm(time, tm, &fsec, &tz);
-	EncodeTimeOnly(tm, fsec, &tz, DateStyle, buf);
+	EncodeTimeOnly(tm, fsec, true, tz, DateStyle, buf);
 
 	result = pstrdup(buf);
 	PG_RETURN_CSTRING(result);
@@ -1998,9 +2030,8 @@ timetz_recv(PG_FUNCTION_ARGS)
 
 	result->zone = pq_getmsgint(buf, sizeof(result->zone));
 
-	/* we allow GMT displacements up to 14:59:59, cf DecodeTimezone() */
-	if (result->zone <= -15 * SECS_PER_HOUR ||
-		result->zone >= 15 * SECS_PER_HOUR)
+	/* Check for sane GMT displacement; see notes in datatype/timestamp.h */
+	if (result->zone <= -TZDISP_LIMIT || result->zone >= TZDISP_LIMIT)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TIME_ZONE_DISPLACEMENT_VALUE),
 				 errmsg("time zone displacement out of range")));
@@ -2490,12 +2521,11 @@ timestamptz_timetz(PG_FUNCTION_ARGS)
 			   *tm = &tt;
 	int			tz;
 	fsec_t		fsec;
-	char	   *tzn;
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		PG_RETURN_NULL();
 
-	if (timestamp2tm(timestamp, &tz, tm, &fsec, &tzn, NULL) != 0)
+	if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("timestamp out of range")));

@@ -4,7 +4,7 @@
  *	  POSTGRES low-level lock mechanism
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/lock.h
@@ -96,14 +96,11 @@ typedef int LOCKMODE;
 /*
  * This data structure defines the locking semantics associated with a
  * "lock method".  The semantics specify the meaning of each lock mode
- * (by defining which lock modes it conflicts with), and also whether locks
- * of this method are transactional (ie, are released at transaction end).
+ * (by defining which lock modes it conflicts with).
  * All of this data is constant and is kept in const tables.
  *
  * numLockModes -- number of lock modes (READ,WRITE,etc) that
  *		are defined in this lock method.  Must be less than MAX_LOCKMODES.
- *
- * transactional -- TRUE if locks are released automatically at xact end.
  *
  * conflictTab -- this is an array of bitmasks showing lock
  *		mode conflicts.  conflictTab[i] is a mask with the j-th bit
@@ -112,12 +109,13 @@ typedef int LOCKMODE;
  *
  * lockModeNames -- ID strings for debug printouts.
  *
- * trace_flag -- pointer to GUC trace flag for this lock method.
+ * trace_flag -- pointer to GUC trace flag for this lock method.  (The
+ * GUC variable is not constant, but we use "const" here to denote that
+ * it can't be changed through this reference.)
  */
 typedef struct LockMethodData
 {
 	int			numLockModes;
-	bool		transactional;
 	const LOCKMASK *conflictTab;
 	const char *const * lockModeNames;
 	const bool *trace_flag;
@@ -452,6 +450,7 @@ typedef struct LOCALLOCK
 	int64		nLocks;			/* total number of times lock is held */
 	int			numLockOwners;	/* # of relevant ResourceOwners */
 	int			maxLockOwners;	/* allocated size of array */
+	bool		holdsStrongLockCount;	/* bumped FastPathStrongRelatonLocks? */
 	LOCALLOCKOWNER *lockOwners; /* dynamically resizable array */
 } LOCALLOCK;
 
@@ -462,19 +461,30 @@ extern LOCALLOCK *awaitedLock;
 extern struct ResourceOwnerData *awaitedOwner;
 
 /*
- * This struct holds information passed from lmgr internals to the lock
- * listing user-level functions (in lockfuncs.c).	For each PROCLOCK in
- * the system, copies of the PROCLOCK object and associated PGPROC and
- * LOCK objects are stored.  Note there will often be multiple copies
- * of the same PGPROC or LOCK --- to detect whether two are the same,
- * compare the PROCLOCK tag fields.
+ * These structures hold information passed from lmgr internals to the lock
+ * listing user-level functions (in lockfuncs.c).
  */
+
+typedef struct LockInstanceData
+{
+	LOCKTAG		locktag;		/* locked object */
+	LOCKMASK	holdMask;		/* locks held by this PGPROC */
+	LOCKMODE	waitLockMode;	/* lock awaited by this PGPROC, if any */
+	BackendId	backend;		/* backend ID of this PGPROC */
+	LocalTransactionId lxid;	/* local transaction ID of this PGPROC */
+	int			pid;			/* pid of this PGPROC */
+	bool		fastpath;		/* taken via fastpath? */
+	Oid			databaseId;		/* OID of database this backend is using */
+	int         mppSessionId;   /* serial num of the qDisp process */
+	bool		mppIsWriter;	/* The writer gang member, holder of locks */
+	DistributedTransactionId 		distribXid;
+	bool		holdTillEndXact;     /* flag for global deadlock detector */
+} LockInstanceData;
+
 typedef struct LockData
 {
-	int			nelements;		/* The length of each of the arrays */
-	PROCLOCK   *proclocks;
-	PGPROC	   *procs;
-	LOCK	   *locks;
+	int			nelements;		/* The length of the array */
+	LockInstanceData *locks;
 } LockData;
 
 
@@ -545,12 +555,12 @@ extern LockAcquireResult LockAcquireExtended(const LOCKTAG *locktag,
 					bool sessionLock,
 					bool dontWait,
 					bool report_memory_error);
+extern void AbortStrongLockAcquire(void);
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
-extern void LockReleaseSession(LOCKMETHODID lockmethodid);
 extern void LockSetHoldTillEndXact(const LOCKTAG *locktag);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
-// TODO why are we missing extern void LockReleaseSession(LOCKMETHODID lockmethodid); ?
+extern void LockReleaseSession(LOCKMETHODID lockmethodid);
 extern void LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks);
 extern void LockReassignCurrentOwner(LOCALLOCK **locallocks, int nlocks);
 extern VirtualTransactionId *GetLockConflicts(const LOCKTAG *locktag,
@@ -601,5 +611,9 @@ extern void InitDeadLockChecking(void);
 extern void DumpLocks(PGPROC *proc);
 extern void DumpAllLocks(void);
 #endif
+
+/* Lock a VXID (used to wait for a transaction to finish) */
+extern void VirtualXactLockTableInsert(VirtualTransactionId vxid);
+extern bool VirtualXactLock(VirtualTransactionId vxid, bool wait);
 
 #endif   /* LOCK_H */

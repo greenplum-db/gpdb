@@ -3,7 +3,7 @@
  * mingwcompat.c
  *	  MinGW compatibility functions
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32/mingwcompat.c
@@ -49,8 +49,8 @@ LoadKernel32()
 	kernel32 = LoadLibraryEx("kernel32.dll", NULL, 0);
 	if (kernel32 == NULL)
 		ereport(FATAL,
-				(errmsg_internal("could not load kernel32.dll: %d",
-								 (int) GetLastError())));
+			  (errmsg_internal("could not load kernel32.dll: error code %lu",
+							   GetLastError())));
 }
 
 
@@ -80,8 +80,8 @@ RegisterWaitForSingleObject(PHANDLE phNewWaitObject,
 
 		if (_RegisterWaitForSingleObject == NULL)
 			ereport(FATAL,
-					(errmsg_internal("could not locate RegisterWaitForSingleObject in kernel32.dll: %d",
-									 (int) GetLastError())));
+					(errmsg_internal("could not locate RegisterWaitForSingleObject in kernel32.dll: error code %lu",
+									 GetLastError())));
 	}
 
 	return (_RegisterWaitForSingleObject)

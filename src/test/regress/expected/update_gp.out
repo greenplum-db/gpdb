@@ -84,7 +84,7 @@ INSERT INTO keo3 VALUES ('1', '1');
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
-EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
         ON b.projects_pk=a.user_vie_project_code_pk
         WHERE a.user_vie_fiscal_year_period_sk =
@@ -93,36 +93,36 @@ EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
                 (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
     ) t1
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
-                                                         QUERY PLAN                                                          
------------------------------------------------------------------------------------------------------------------------------
- Update on keo1  (cost=1931.96..5142.85 rows=2325 width=142)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Update on keo1
    InitPlan 3 (returns $2)  (slice9)
-     ->  Aggregate  (cost=1278.76..1278.77 rows=1 width=32)
+     ->  Aggregate
            InitPlan 2 (returns $1)  (slice8)
-             ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=496.08..926.09 rows=27 width=28)
-                   ->  Seq Scan on keo4  (cost=496.08..926.09 rows=9 width=28)
+             ->  Gather Motion 3:1  (slice3; segments: 3)
+                   ->  Seq Scan on keo4
                          Filter: keo_para_budget_date::text = $0
                          InitPlan 1 (returns $0)  (slice7)
-                           ->  Aggregate  (cost=496.07..496.08 rows=1 width=32)
-                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=496.00..496.06 rows=1 width=32)
-                                       ->  Aggregate  (cost=496.00..496.01 rows=1 width=32)
-                                             ->  Seq Scan on keo4  (cost=0.00..364.00 rows=8800 width=66)
-           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=352.61..352.66 rows=1 width=32)
-                 ->  Aggregate  (cost=352.61..352.62 rows=1 width=32)
-                       ->  Seq Scan on keo3  (cost=0.00..352.50 rows=7 width=66)
+                           ->  Aggregate
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                                       ->  Aggregate
+                                             ->  Seq Scan on keo4
+           ->  Gather Motion 3:1  (slice1; segments: 3)
+                 ->  Aggregate
+                       ->  Seq Scan on keo3
                              Filter: bky_per::text = $1::text
-   ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)  (cost=653.18..3864.08 rows=2325 width=142)
-         ->  Hash Join  (cost=653.18..3864.08 rows=2325 width=142)
+   ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)
+         ->  Hash Join
                Hash Cond: b.projects_pk::text = a.user_vie_project_code_pk::text
-               ->  Seq Scan on keo2 b  (cost=0.00..441.00 rows=11367 width=66)
-               ->  Hash  (cost=645.52..645.52 rows=205 width=208)
-                     ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=279.86..645.52 rows=205 width=208)
-                           ->  Hash Join  (cost=279.86..637.34 rows=69 width=208)
+               ->  Seq Scan on keo2 b
+               ->  Hash
+                     ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                           ->  Hash Join
                                  Hash Cond: keo1.user_vie_project_code_pk::text = a.user_vie_project_code_pk::text
-                                 ->  Seq Scan on keo1  (cost=0.00..243.00 rows=4767 width=142)
-                                 ->  Hash  (cost=279.32..279.32 rows=15 width=66)
-                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..279.32 rows=15 width=66)
-                                             ->  Seq Scan on keo1 a  (cost=0.00..278.75 rows=5 width=66)
+                                 ->  Seq Scan on keo1
+                                 ->  Hash
+                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                             ->  Seq Scan on keo1 a
                                                    Filter: user_vie_fiscal_year_period_sk::text = $2
  Optimizer: legacy query optimizer
 (30 rows)
@@ -145,25 +145,25 @@ SELECT user_vie_act_cntr_marg_cum FROM keo1;
 -- Explicit Redistribution motion should not be added in case of GPDB Planner (test case not applicable to ORCA)
 CREATE TABLE keo5 (x int, y int) DISTRIBUTED BY (x);
 INSERT INTO keo5 VALUES (1,1);
-EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Delete on keo5  (cost=1198.81..3343.69 rows=28700 width=10)
+EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Delete on keo5
    InitPlan 1 (returns $0)  (slice2)
-     ->  Limit  (cost=0.00..0.06 rows=1 width=0)
-           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=0)
-                 ->  Limit  (cost=0.00..0.04 rows=1 width=0)
-                       ->  Seq Scan on keo5  (cost=0.00..1176.25 rows=9567 width=0)
+     ->  Limit
+           ->  Gather Motion 3:1  (slice1; segments: 3)
+                 ->  Limit
+                       ->  Seq Scan on keo5
                              Filter: x < 2
-   ->  Result  (cost=1198.75..3343.62 rows=28700 width=10)
+   ->  Result
          One-Time Filter: $0
-         ->  Hash Join  (cost=1198.75..3343.62 rows=28700 width=10)
+         ->  Hash Join
                Hash Cond: public.keo5.x = public.keo5.x
-               ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=14)
-               ->  Hash  (cost=1186.25..1186.25 rows=334 width=4)
-                     ->  HashAggregate  (cost=1176.25..1186.25 rows=334 width=4)
+               ->  Seq Scan on keo5
+               ->  Hash
+                     ->  HashAggregate
                            Group Key: public.keo5.x
-                           ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=4)
+                           ->  Seq Scan on keo5
  Optimizer: legacy query optimizer
 (17 rows)
 

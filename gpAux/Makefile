@@ -857,7 +857,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpgetstatususingtransition.py \
 	sbin/gpsegstart.py \
 	sbin/gpsegstop.py \
-	sbin/gpsegtoprimaryormirror.py \
 	sbin/gpsetdbid.py \
 	sbin/gpupgrademirror.py \
 	lib/python/gppylib/programs/clsAddMirrors.py \

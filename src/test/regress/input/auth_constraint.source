@@ -278,7 +278,7 @@ DROP ROLE abc;
 --
 -- Exercise catalog DML and pg_auth_time_constraint trigger
 --
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods=true;
 CREATE ROLE abc;
 insert into pg_auth_time_constraint (select oid, 2, '12:00:00', 3, '12:00:00' from pg_authid where rolname = 'abc');
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
@@ -323,7 +323,7 @@ SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
 drop role abc;
 
 create role abc superuser;
-SET allow_system_table_mods = dml;
+SET allow_system_table_mods=true;
 insert into pg_auth_time_constraint (select oid, 1, '00:00:00', 1, '24:00:00' from pg_authid where rolname = 'abc');
 SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
 DROP ROLE abc;

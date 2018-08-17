@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -29,11 +29,8 @@
 #include "funcapi.h"
 #include "optimizer/var.h"              /* CDB: contain_ctid_var_reference() */
 #include "nodes/nodeFuncs.h"
-#include "utils/builtins.h"
-#include "utils/lsyscache.h"
 #include "cdb/memquota.h"
 #include "executor/spi.h"
-#include "executor/instrument.h"
 
 
 static TupleTableSlot *FunctionNext(FunctionScanState *node);

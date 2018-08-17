@@ -114,6 +114,7 @@ typedef enum MemoryOwnerType
 	MEMORY_OWNER_TYPE_Exec_TableScan,
 	MEMORY_OWNER_TYPE_Exec_DynamicTableScan,
 	MEMORY_OWNER_TYPE_Exec_IndexScan,
+	MEMORY_OWNER_TYPE_Exec_IndexOnlyScan,
 	MEMORY_OWNER_TYPE_Exec_DynamicIndexScan,
 	MEMORY_OWNER_TYPE_Exec_BitmapIndexScan,
 	MEMORY_OWNER_TYPE_Exec_DynamicBitmapIndexScan,
@@ -149,7 +150,8 @@ typedef enum MemoryOwnerType
 	MEMORY_OWNER_TYPE_Exec_RecursiveUnion,
 	MEMORY_OWNER_TYPE_Exec_CteScan,
 	MEMORY_OWNER_TYPE_Exec_WorkTableScan,
-	MEMORY_OWNER_TYPE_EXECUTOR_END = MEMORY_OWNER_TYPE_Exec_WorkTableScan,
+	MEMORY_OWNER_TYPE_Exec_ForeignScan,
+	MEMORY_OWNER_TYPE_EXECUTOR_END = MEMORY_OWNER_TYPE_Exec_ForeignScan,
 	MEMORY_OWNER_TYPE_END_SHORT_LIVING = MEMORY_OWNER_TYPE_EXECUTOR_END
 } MemoryOwnerType;
 

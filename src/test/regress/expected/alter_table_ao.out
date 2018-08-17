@@ -148,7 +148,8 @@ create table ao1(col1 varchar(2), col2 int) WITH (APPENDONLY=TRUE) distributed r
 alter table ao1 add column col3 char(1) not null default NULL; 
 -- this should fail (same behavior as heap tables)
 insert into ao1(col1, col2) values('a', 10);
-ERROR:  null value in column "col3" violates not-null constraint  (seg2 rh55-qavm63:18508 pid=26649)
+ERROR:  null value in column "col3" violates not-null constraint  (seg1 127.0.0.1:25433 pid=17664)
+DETAIL:  Failing row contains (a, 10, null).
 ---
 --- alter add with no default should continue to fail
 ---
@@ -281,7 +282,8 @@ WITH (APPENDONLY=TRUE, ORIENTATION=column) distributed randomly;
 alter table aoco1 add column col3 char(1) not null default NULL; 
 -- this should fail (same behavior as heap tables)
 insert into aoco1 (col1, col2) values('a', 10);
-ERROR:  null value in column "col3" violates not-null constraint  (seg0 usxxreddyr3mbp1.corp.emc.com:40000 pid=87838)
+ERROR:  null value in column "col3" violates not-null constraint  (seg1 127.0.0.1:25433 pid=17664)
+DETAIL:  Failing row contains (a, 10, null).
 drop table if exists aoco1;
 create table aoco1(col1 varchar(2), col2 int not null)
 WITH (APPENDONLY=TRUE, ORIENTATION=column) distributed randomly;

@@ -119,9 +119,6 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into mpp23195_t1 values (generate_series(1,19));
 insert into mpp23195_t2 values (1);
 -- TEST
--- start_ignore
--- GPDB_91_MERGE_FIXME GPORCA will no longer generate IndexedNLJ
--- end_ignore
 select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
  find_operator 
 ---------------
@@ -1206,37 +1203,23 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
    Rows out:  0 rows at destination with 1.011 ms to end, start offset by 0.365 ms.
    ->  Hash Join  (cost=6799.00..1021796.00 rows=26961120 width=16)
          Hash Cond: a.oid = b.oid
-         Rows out:  0 rows (seg0) with 0.051 ms to end, start offset by 1.246 ms.
-         ->  Append  (cost=0.00..3244.00 rows=94800 width=16)
-               Rows out:  0 rows (seg0) with 0.051 ms to end, start offset by 1.246 ms.
-               ->  Seq Scan on mpp8031_1_prt_foo a  (cost=0.00..811.00 rows=23700 width=16)
-                     Rows out:  0 rows (seg0) with 0.022 ms to end, start offset by 1.247 ms.
-               ->  Seq Scan on mpp8031_1_prt_2 a  (cost=0.00..811.00 rows=23700 width=16)
-                     Rows out:  0 rows (seg0) with 0.009 ms to end, start offset by 1.270 ms.
-               ->  Seq Scan on mpp8031_1_prt_3 a  (cost=0.00..811.00 rows=23700 width=16)
-                     Rows out:  0 rows (seg0) with 0.009 ms to end, start offset by 1.279 ms.
-               ->  Seq Scan on mpp8031_1_prt_4 a  (cost=0.00..811.00 rows=23700 width=16)
-                     Rows out:  0 rows (seg0) with 0.008 ms to end, start offset by 1.288 ms.
-         ->  Hash  (cost=3244.00..3244.00 rows=94800 width=4)
-               Rows in:  (No row requested) 0 rows (seg0) with 0 ms to end.
-               ->  Append  (cost=0.00..3244.00 rows=94800 width=4)
-                     Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
-                     ->  Seq Scan on mpp8031_1_prt_foo b  (cost=0.00..811.00 rows=23700 width=4)
-                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
-                     ->  Seq Scan on mpp8031_1_prt_2 b  (cost=0.00..811.00 rows=23700 width=4)
-                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
-                     ->  Seq Scan on mpp8031_1_prt_3 b  (cost=0.00..811.00 rows=23700 width=4)
-                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
-                     ->  Seq Scan on mpp8031_1_prt_4 b  (cost=0.00..811.00 rows=23700 width=4)
-                           Rows out:  (No row requested) 0 rows (seg0) with 0 ms to end.
- Slice statistics:
-   (slice0)    Executor memory: 382K bytes.
-   (slice1)    Executor memory: 146K bytes avg x 3 workers, 146K bytes max (seg0).
- Statement statistics:
-   Memory used: 128000K bytes
- Optimizer status: legacy query optimizer
- Total runtime: 2.045 ms
-(34 rows)
+         ->  Append  (cost=0.00..3244.00 rows=94800 width=16) (never executed)
+               ->  Seq Scan on mpp8031_1_prt_foo a  (cost=0.00..811.00 rows=23700 width=16) (never executed)
+               ->  Seq Scan on mpp8031_1_prt_2 a  (cost=0.00..811.00 rows=23700 width=16) (never executed)
+               ->  Seq Scan on mpp8031_1_prt_3 a  (cost=0.00..811.00 rows=23700 width=16) (never executed)
+               ->  Seq Scan on mpp8031_1_prt_4 a  (cost=0.00..811.00 rows=23700 width=16) (never executed)
+         ->  Hash  (cost=3244.00..3244.00 rows=94800 width=4) (never executed)
+               ->  Append  (cost=0.00..3244.00 rows=94800 width=4) (never executed)
+                     ->  Seq Scan on mpp8031_1_prt_foo b  (cost=0.00..811.00 rows=23700 width=4) (never executed)
+                     ->  Seq Scan on mpp8031_1_prt_2 b  (cost=0.00..811.00 rows=23700 width=4) (never executed)
+                     ->  Seq Scan on mpp8031_1_prt_3 b  (cost=0.00..811.00 rows=23700 width=4) (never executed)
+                     ->  Seq Scan on mpp8031_1_prt_4 b  (cost=0.00..811.00 rows=23700 width=4) (never executed)
+   (slice0)    Executor memory: 514K bytes.
+   (slice1)    Executor memory: 142K bytes avg x 3 workers, 142K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 2.034 ms
+(19 rows)
 
 drop table mpp8031;
 -- Partitioned tables with default partitions and indexes on all parts,
@@ -1344,25 +1327,24 @@ analyze r_part;
 explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate partitions in the r1 copy of r_part
                                            QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=1.06..10.63 rows=9 width=16)
-   ->  Nested Loop  (cost=1.06..10.63 rows=3 width=16)
-         ->  Append  (cost=0.00..9.03 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_1 r2  (cost=0.00..1.01 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_2 r2  (cost=0.00..1.01 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_3 r2  (cost=0.00..1.01 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_4 r2  (cost=0.00..1.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_5 r2  (cost=0.00..1.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_6 r2  (cost=0.00..1.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_7 r2  (cost=0.00..1.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_8 r2  (cost=0.00..1.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_9 r2  (cost=0.00..1.00 rows=1 width=8)
-         ->  Materialize  (cost=1.06..1.09 rows=1 width=8)
-               ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=0.00..1.05 rows=3 width=8)
-                     ->  Append  (cost=0.00..1.01 rows=1 width=8)
-                           ->  Seq Scan on r_part_1_prt_1 r1  (cost=0.00..1.01 rows=1 width=8)
-                                 Filter: a = 1
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000010.44 rows=9 width=16)
+   ->  Nested Loop  (cost=10000000000.00..10000000010.44 rows=3 width=16)
+         ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=0.00..1.05 rows=3 width=8)
+               ->  Append  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_1 r1  (cost=0.00..1.01 rows=1 width=8)
+                           Filter: a = 1
+         ->  Materialize  (cost=0.00..9.08 rows=3 width=8)
+               ->  Append  (cost=0.00..9.03 rows=3 width=8)
+                     ->  Seq Scan on r_part_1_prt_1 r2  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_2 r2  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_3 r2  (cost=0.00..1.01 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_4 r2  (cost=0.00..1.00 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_5 r2  (cost=0.00..1.00 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_6 r2  (cost=0.00..1.00 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_7 r2  (cost=0.00..1.00 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_8 r2  (cost=0.00..1.00 rows=1 width=8)
+                     ->  Seq Scan on r_part_1_prt_9 r2  (cost=0.00..1.00 rows=1 width=8)
+ Optimizer: legacy query optimizer
 (19 rows)
 
 explain select * from r_part where a in (1,2); -- should eliminate partitions

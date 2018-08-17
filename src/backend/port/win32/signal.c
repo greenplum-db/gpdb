@@ -3,7 +3,7 @@
  * signal.c
  *	  Microsoft Windows Win32 Signal Emulation Functions
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32/signal.c
@@ -83,18 +83,18 @@ pgwin32_signal_initialize(void)
 	pgwin32_signal_event = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (pgwin32_signal_event == NULL)
 		ereport(FATAL,
-				(errmsg_internal("failed to create signal event: %d", (int) GetLastError())));
+				(errmsg_internal("could not create signal event: error code %lu", GetLastError())));
 
 	/* Create thread for handling signals */
 	signal_thread_handle = CreateThread(NULL, 0, pg_signal_thread, NULL, 0, NULL);
 	if (signal_thread_handle == NULL)
 		ereport(FATAL,
-				(errmsg_internal("failed to create signal handler thread")));
+				(errmsg_internal("could not create signal handler thread")));
 
 	/* Create console control handle to pick up Ctrl-C etc */
 	if (!SetConsoleCtrlHandler(pg_console_handler, TRUE))
 		ereport(FATAL,
-				(errmsg_internal("failed to set console control handler")));
+				(errmsg_internal("could not set console control handler")));
 }
 
 /*
@@ -171,7 +171,7 @@ pqsignal(int signum, pqsigfunc handler)
 	return prevfunc;
 }
 
-/* Create the signal listener pipe for specified pid */
+/* Create the signal listener pipe for specified PID */
 HANDLE
 pgwin32_create_signal_listener(pid_t pid)
 {
@@ -186,8 +186,8 @@ pgwin32_create_signal_listener(pid_t pid)
 
 	if (pipe == INVALID_HANDLE_VALUE)
 		ereport(ERROR,
-				(errmsg("could not create signal listener pipe for pid %d: error code %d",
-						(int) pid, (int) GetLastError())));
+				(errmsg("could not create signal listener pipe for PID %d: error code %lu",
+						(int) pid, GetLastError())));
 
 	return pipe;
 }
@@ -266,7 +266,7 @@ pg_signal_thread(LPVOID param)
 
 			if (pipe == INVALID_HANDLE_VALUE)
 			{
-				write_stderr("could not create signal listener pipe: error code %d; retrying\n", (int) GetLastError());
+				write_stderr("could not create signal listener pipe: error code %lu; retrying\n", GetLastError());
 				SleepEx(500, FALSE);
 				continue;
 			}
@@ -296,7 +296,8 @@ pg_signal_thread(LPVOID param)
 				 * a small race window in that case. There is nothing else we can do other than
 				 * abort the whole process which will be even worse.
 				 */
-				write_stderr("could not create signal listener pipe: error code %d; retrying\n", (int) GetLastError());
+				write_stderr("could not create signal listener pipe: error code %lu; retrying\n", GetLastError());
+
 				/*
 				 * Keep going so we at least dispatch this signal. Hopefully, the call will succeed
 				 * when retried in the loop soon after.
@@ -306,8 +307,8 @@ pg_signal_thread(LPVOID param)
 						  (LPTHREAD_START_ROUTINE) pg_signal_dispatch_thread,
 								   (LPVOID) pipe, 0, NULL);
 			if (hThread == INVALID_HANDLE_VALUE)
-				write_stderr("could not create signal dispatch thread: error code %d\n",
-							 (int) GetLastError());
+				write_stderr("could not create signal dispatch thread: error code %lu\n",
+							 GetLastError());
 			else
 				CloseHandle(hThread);
 

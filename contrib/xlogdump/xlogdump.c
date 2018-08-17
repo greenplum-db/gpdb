@@ -542,7 +542,9 @@ dumpXLogRecord(XLogRecord *record, bool header_only)
 		case RM_SEQ_ID:
 			print_rmgr_seq(curRecPtr, record, info);
 			break;
-
+		case RM_BITMAP_ID:
+			print_rmgr_bitmap(curRecPtr, record, info);
+			break;
 		case RM_APPEND_ONLY_ID:
 			print_rmgr_ao(curRecPtr, record, info);
 			break;

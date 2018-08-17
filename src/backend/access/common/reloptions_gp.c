@@ -883,7 +883,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option 'blocksize' for base relation. "
 							"Only valid for Append Only relations")));
 
@@ -915,7 +915,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option \"compresstype\" for base relation."
 							" Only valid for Append Only relations")));
 
@@ -940,7 +940,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option 'compresslevel' for base "
 							"relation. Only valid for Append Only relations")));
 
@@ -988,17 +988,25 @@ validate_and_adjust_options(StdRdOptions *result,
 		}
 
 		if (result->compresstype[0] &&
-			(pg_strcasecmp(result->compresstype, "zstd") == 0) &&
-			(result->compresslevel > 19))
+			(pg_strcasecmp(result->compresstype, "zstd") == 0))
 		{
-			if (validate)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for zstd "
-								"(should be in the range 1 to 19)",
-								result->compresslevel)));
+#ifndef HAVE_LIBZSTD
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("Zstandard library is not supported by this build"),
+					 errhint("Compile with --with-zstd to use Zstandard compression.")));
+#endif
+			if (result->compresslevel > 19)
+			{
+				if (validate)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("compresslevel=%d is out of range for zstd "
+									"(should be in the range 1 to 19)",
+									result->compresslevel)));
 
-			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
+				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
+			}
 		}
 
 		if (result->compresstype[0] &&
@@ -1042,7 +1050,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option \"checksum\" for base relation. "
 							"Only valid for Append Only relations")));
 		result->checksum = checksum_opt->values.bool_val;
@@ -1063,7 +1071,7 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option \"orientation\" for base relation. "
 							"Only valid for Append Only relations")));
 
@@ -1163,17 +1171,17 @@ validateAppendOnlyRelOptions(bool ao,
 	{
 		if (ao)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("appendonly may only be specified for base relations")));
 
 		if (checksum)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("checksum may only be specified for base relations")));
 
 		if (comptype)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("compresstype may only be specified for base relations")));
 	}
 
@@ -1212,13 +1220,19 @@ validateAppendOnlyRelOptions(bool ao,
 							complevel)));
 		}
 
-		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0) &&
-			(complevel < 0 || complevel > 19))
+		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0))
 		{
+#ifndef HAVE_LIBZSTD
 			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresslevel=%d is out of range for zstd "
-							"(should be in the range 1 to 19)", complevel)));
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("Zstandard library is not supported by this build"),
+					 errhint("Compile with --with-zstd to use Zstandard compression.")));
+#endif
+			if (complevel < 0 || complevel > 19)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("compresslevel=%d is out of range for zstd "
+								"(should be in the range 1 to 19)", complevel)));
 		}
 
 		if (comptype && (pg_strcasecmp(comptype, "quicklz") == 0) &&

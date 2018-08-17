@@ -59,7 +59,7 @@ create table bar (x int, y int) distributed randomly;
 -- success
 create unique index foo_idx on foo (y);
 -- should fail
-create unique index bar_idx on foo (y);
+create unique index bar_idx on bar (y);
 
 drop table if exists foo;
 drop table if exists bar;

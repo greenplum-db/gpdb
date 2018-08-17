@@ -569,6 +569,7 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 ErrorData *
 cdbdisp_get_PQerror(PGresult *pgresult)
 {
+	MemoryContext oldcontext;
 	ExecStatusType resultStatus = PQresultStatus(pgresult);
 
 	/*
@@ -596,9 +597,14 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 	char	   *whoami;
 	char	   *fld;
 
+	/*
+	 * errstart need a const filename and funcname, make sure they
+	 * are at least const in this transaction.
+	 */
+	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
 	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FILE);
 	if (fld)
-		filename = fld;
+		filename = pstrdup(fld);
 
 	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_LINE);
 	if (fld)
@@ -606,7 +612,8 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 
 	fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FUNCTION);
 	if (fld)
-		funcname = fld;
+		funcname = pstrdup(fld);
+	MemoryContextSwitchTo(oldcontext);
 
 	/*
 	 * We should only get errors with ERROR level or above, if the
@@ -643,7 +650,7 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 		errcontext("%s", fld);
 
 	Assert(TopTransactionContext);
-	MemoryContext oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
 	ErrorData *edata = errfinish_and_return(0);
 	MemoryContextSwitchTo(oldcontext);
 	return edata;

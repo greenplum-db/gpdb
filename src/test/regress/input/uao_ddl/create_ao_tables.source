@@ -1,4 +1,8 @@
 create schema create_ao_tables_@orientation@;
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
 set search_path="$user",create_ao_tables_@orientation@,public;
 SET gp_default_storage_options='orientation=@orientation@';
 -- Create Updatable AO tables , with indexes, with and without compression

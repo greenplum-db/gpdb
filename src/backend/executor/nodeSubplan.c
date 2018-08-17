@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -959,7 +959,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 	if (Gp_role == GP_ROLE_DISPATCH &&
 		planstate != NULL &&
 		planstate->plan != NULL &&
-		planstate->plan->dispatch == DISPATCH_PARALLEL)
+		subplan->initPlanParallel)
 		shouldDispatch = true;
 
 	planstate->state->currentSubplanLevel++;
@@ -972,7 +972,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 
 	/*
 	 * Need a try/catch block here so that if an ereport is called from
-	 * within ExecutePlan, we can clean up by calling CdbCheckDispatchResult.
+	 * within ExecutePlan, we can clean up by calling cdbdisp_checkDispatchResult.
 	 * This cleans up the asynchronous commands running through the threads launched from
 	 * CdbDispatchCommand.
 	 */
@@ -1156,27 +1156,24 @@ PG_TRY();
 		queryDesc->estate->dispatcherState &&
 		queryDesc->estate->dispatcherState->primaryResults)
 	{
+		CdbDispatcherState *ds = queryDesc->estate->dispatcherState;
+
+		/* Wait for all gangs to finish. */
+		cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
+
 		/* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
 		if (planstate->instrument && planstate->instrument->need_cdb)
 		{
-			/* Wait for all gangs to finish. */
-			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
-								   DISPATCH_WAIT_NONE);
-
 			/* Jam stats into subplan's Instrumentation nodes. */
 			explainRecvStats = true;
-			cdbexplain_recvExecStats(planstate,
-									 queryDesc->estate->dispatcherState->primaryResults,
+			cdbexplain_recvExecStats(planstate, ds->primaryResults,
 									 LocallyExecutingSliceIndex(queryDesc->estate),
 									 econtext->ecxt_estate->showstatctx);
 		}
 
-		/*
-		 * Wait for all gangs to finish.  Check and free the results.
-		 * If the dispatcher or any QE had an error, report it and
-		 * exit to our error handler (below) via PG_THROW.
-		 */
-		cdbdisp_finishCommand(queryDesc->estate->dispatcherState, NULL, NULL, true);
+		/* Main plan use same estate, must reset dispatcherState  */
+		queryDesc->estate->dispatcherState = NULL;
+		cdbdisp_destroyDispatcherState(ds);
 	}
 
 	/* Clean up the interconnect. */
@@ -1219,7 +1216,9 @@ PG_CATCH();
 	if (shouldDispatch && queryDesc && queryDesc->estate &&
 		queryDesc->estate->dispatcherState)
 	{
-		CdbDispatchHandleError(queryDesc->estate->dispatcherState);
+		CdbDispatcherState *ds = queryDesc->estate->dispatcherState;
+		queryDesc->estate->dispatcherState = NULL;
+		CdbDispatchHandleError(ds);
 	}
 
 	/*

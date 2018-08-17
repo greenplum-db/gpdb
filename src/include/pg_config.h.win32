@@ -83,6 +83,15 @@
 /* Define to the default TCP port number as a string constant. */
 #define DEF_PGPORT_STR "5432"
 
+/* Define to nothing if C supports flexible array members, and to 1 if it does
+   not. That way, with a declaration like `struct s { int n; double
+   d[FLEXIBLE_ARRAY_MEMBER]; };', the struct hack can be used with pre-C99
+   compilers. When computing the size of such an object, don't use 'sizeof
+   (struct s)' as it overestimates the size. Use 'offsetof (struct s, d)'
+   instead. Don't use 'offsetof (struct s, d[0])', as this doesn't work with
+   MSVC and with C++ compilers. */
+#define FLEXIBLE_ARRAY_MEMBER
+
 /* Define to 1 if you want National Language Support. (--enable-nls) */
 /* #undef ENABLE_NLS */
 
@@ -99,9 +108,6 @@
 #ifdef GETTIMEOFDAY_1ARG
 # define gettimeofday(a,b) gettimeofday(a)
 #endif
-
-/* Define to 1 if you have the `atexit' function. */
-#define HAVE_ATEXIT 1
 
 /* Define to 1 if you have the `cbrt' function. */
 //#define HAVE_CBRT 1
@@ -213,7 +219,7 @@
 /* #undef HAVE_INT8 */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#define HAVE_INTTYPES_H 1
+//#define HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the global variable 'int timezone'. */
 #define HAVE_INT_TIMEZONE
@@ -223,12 +229,6 @@
 
 /* Define to 1 if you have isinf(). */
 #define HAVE_ISINF 1
-
-/* Define to 1 if you have the <kernel/image.h> header file. */
-/* #undef HAVE_KERNEL_IMAGE_H */
-
-/* Define to 1 if you have the <kernel/OS.h> header file. */
-/* #undef HAVE_KERNEL_OS_H */
 
 /* Define to 1 if `e_data' is member of `krb5_error'. */
 /* #undef HAVE_KRB5_ERROR_E_DATA */
@@ -251,9 +251,6 @@
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 /* #undef HAVE_LIBCRYPTO */
 
-/* Define to 1 if you have the `eay32' library (-leay32). */
-/* #undef HAVE_LIBEAY32 */
-
 /* Define to 1 if you have the `ldap' library (-lldap). */
 /* #undef HAVE_LIBLDAP */
 
@@ -265,9 +262,6 @@
 
 /* Define to 1 if you have the `ssl' library (-lssl). */
 /* #undef HAVE_LIBSSL */
-
-/* Define to 1 if you have the `ssleay32' library (-lssleay32). */
-/* #undef HAVE_LIBSSLEAY32 */
 
 /* Define to 1 if you have the `wldap32' library (-lwldap32). */
 /* #undef HAVE_LIBWLDAP32 */
@@ -306,9 +300,6 @@
 
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 /* #undef HAVE_NETINET_TCP_H */
-
-/* Define to 1 if you have the `on_exit' function. */
-/* #undef HAVE_ON_EXIT */
 
 /* Define to 1 if you have the <pam/pam_appl.h> header file. */
 /* #undef HAVE_PAM_PAM_APPL_H */
@@ -398,9 +389,6 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
 
-/* Define to 1 if you have the `strdup' function. */
-#define HAVE_STRDUP 1
-
 /* Define to 1 if you have the `strerror' function. */
 #ifndef HAVE_STRERROR
 #define HAVE_STRERROR 1
@@ -418,17 +406,11 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
-/* Define to 1 if you have the `strtol' function. */
-#define HAVE_STRTOL 1
-
 /* Define to 1 if you have the `strtoll' function. */
 //#define HAVE_STRTOLL 1
 
 /* Define to 1 if you have the `strtoq' function. */
 /* #undef HAVE_STRTOQ */
-
-/* Define to 1 if you have the `strtoul' function. */
-#define HAVE_STRTOUL 1
 
 /* Define to 1 if you have the `strtoull' function. */
 //#define HAVE_STRTOULL 1
@@ -474,9 +456,6 @@
 
 /* Define to 1 if `tm_zone' is member of `struct tm'. */
 /* #undef HAVE_STRUCT_TM_TM_ZONE */
-
-/* Define to 1 if you have the <SupportDefs.h> header file. */
-/* #undef HAVE_SUPPORTDEFS_H */
 
 /* Define to 1 if you have the `symlink' function. */
 #define HAVE_SYMLINK 1
@@ -633,13 +612,13 @@
 #define PACKAGE_STRING "Greenplum Database 6.0.0-alpha"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "9.1beta2"
+#define PACKAGE_VERSION "9.2beta2"
 
 /* PostgreSQL version as a string */
-#define PG_VERSION "9.1beta2"
+#define PG_VERSION "9.2beta2"
 
 /* PostgreSQL version as a number */
-#define PG_VERSION_NUM 90100
+#define PG_VERSION_NUM 90200
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "greenplum"

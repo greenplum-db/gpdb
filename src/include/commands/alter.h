@@ -4,7 +4,7 @@
  *	  prototypes for commands/alter.c
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/alter.h
@@ -15,7 +15,6 @@
 #define ALTER_H
 
 #include "catalog/dependency.h"
-#include "nodes/parsenodes.h"
 #include "utils/acl.h"
 #include "utils/relcache.h"
 

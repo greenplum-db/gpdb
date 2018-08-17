@@ -4,7 +4,7 @@
  *	  page utilities routines for the postgres inverted index access method.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,7 +15,6 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
-#include "storage/bufmgr.h"
 #include "utils/rel.h"
 
 /*
@@ -448,9 +447,9 @@ entryIsEnoughSpace(GinBtree btree, Buffer buf, OffsetNumber off)
 }
 
 /*
- * Delete tuple on leaf page if tuples was existed and we
+ * Delete tuple on leaf page if tuples existed and we
  * should update it, update old child blkno to new right page
- * if child split is occured
+ * if child split occurred
  */
 static BlockNumber
 entryPreparePage(GinBtree btree, Page page, OffsetNumber off)

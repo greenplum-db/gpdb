@@ -68,12 +68,7 @@ ORDER BY 1 asc ;
  201011261320 |     3
 (8 rows)
 
-select disable_xform('CXformInnerJoin2HashJoin');
-             disable_xform             
----------------------------------------
- Server has been compiled without ORCA
-(1 row)
-
+set optimizer_enable_hashjoin = off;
 set enable_hashjoin=off;
 set enable_seqscan=off;
 set enable_mergejoin=off;
@@ -135,9 +130,4 @@ ORDER BY 1 asc ;
  201011261320 |     3
 (8 rows)
 
-select enable_xform('CXformInnerJoin2HashJoin');  
-             enable_xform              
----------------------------------------
- Server has been compiled without ORCA
-(1 row)
-
+set optimizer_enable_hashjoin = on;

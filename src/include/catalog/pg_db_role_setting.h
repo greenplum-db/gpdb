@@ -4,7 +4,7 @@
  *	definition of configuration settings
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_db_role_setting.h
@@ -21,8 +21,6 @@
 #ifndef PG_DB_ROLE_SETTING_H
 #define PG_DB_ROLE_SETTING_H
 
-#include "catalog/genbki.h"
-#include "nodes/parsenodes.h"
 #include "utils/guc.h"
 #include "utils/relcache.h"
 
@@ -37,7 +35,10 @@ CATALOG(pg_db_role_setting,2964) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
 	Oid			setdatabase;	/* database */
 	Oid			setrole;		/* role */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text		setconfig[1];	/* GUC settings to apply at login */
+#endif
 } FormData_pg_db_role_setting;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

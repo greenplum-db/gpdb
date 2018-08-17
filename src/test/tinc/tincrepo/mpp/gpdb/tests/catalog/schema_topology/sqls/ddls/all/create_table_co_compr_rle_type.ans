@@ -142,51 +142,51 @@ INSERT 0 78
 --
 \d+ co_compr_rle_type_crtb
                                                                Append-Only Columnar Table "public.co_compr_rle_type_crtb"
- Column |            Type             |                              Modifiers                              | Storage  | Compression Type | Compression Level | Block Size | Description 
---------+-----------------------------+---------------------------------------------------------------------+----------+------------------+-------------------+------------+-------------
- id     | integer                     | not null default nextval('co_compr_rle_type_crtb_id_seq'::regclass) | plain    | none             | 0                 | 32768      | 
- a1     | integer                     |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a2     | character(5)                |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a3     | numeric                     |                                                                     | main     | rle_type         | 1                 | 32768      | 
- a4     | boolean                     | default false                                                       | plain    | rle_type         | 1                 | 32768      | 
- a5     | character(1)                | default 'd'::bpchar                                                 | extended | rle_type         | 2                 | 32768      | 
- a6     | text                        |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a7     | timestamp without time zone |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a8     | character varying(705)      |                                                                     | extended | rle_type         | 3                 | 32768      | 
- a9     | bigint                      |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a10    | date                        |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a11    | character varying(600)      |                                                                     | extended | rle_type         | 4                 | 32768      | 
- a12    | text                        |                                                                     | extended | rle_type         | 2                 | 32768      | 
- a13    | numeric                     |                                                                     | main     | rle_type         | 1                 | 32768      | 
- a14    | real                        |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a15    | bigint                      |                                                                     | plain    | rle_type         | 2                 | 32768      | 
- a16    | integer                     |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a17    | bytea                       |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a18    | timestamp with time zone    |                                                                     | plain    | rle_type         | 3                 | 32768      | 
- a19    | time with time zone         |                                                                     | plain    | rle_type         | 4                 | 32768      | 
- a20    | path                        |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a21    | box                         |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a22    | macaddr                     |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a23    | interval                    |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a24    | character varying(800)      |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a25    | lseg                        |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a26    | point                       |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a27    | double precision            |                                                                     | plain    | rle_type         | 3                 | 32768      | 
- a28    | circle                      |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a29    | integer                     |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a30    | numeric(8,0)                |                                                                     | main     | rle_type         | 2                 | 32768      | 
- a31    | polygon                     |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a32    | date                        |                                                                     | plain    | rle_type         | 3                 | 32768      | 
- a33    | real                        |                                                                     | plain    | rle_type         | 4                 | 32768      | 
- a34    | money                       |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a35    | cidr                        |                                                                     | main     | rle_type         | 1                 | 32768      | 
- a36    | inet                        |                                                                     | main     | rle_type         | 1                 | 32768      | 
- a37    | time without time zone      |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a38    | text                        |                                                                     | extended | rle_type         | 3                 | 32768      | 
- a39    | bit(1)                      |                                                                     | extended | rle_type         | 1                 | 32768      | 
- a40    | bit varying(5)              |                                                                     | extended | rle_type         | 3                 | 32768      | 
- a41    | smallint                    |                                                                     | plain    | rle_type         | 1                 | 32768      | 
- a42    | integer                     |                                                                     | plain    | rle_type         | 4                 | 32768      | 
+ Column |            Type             |                              Modifiers                              | Storage  | Stats target | Compression Type | Compression Level | Block Size | Description
+--------+-----------------------------+---------------------------------------------------------------------+----------+--------------+------------------+-------------------+------------+-------------
+ id     | integer                     | not null default nextval('co_compr_rle_type_crtb_id_seq'::regclass) | plain    |              | none             | 0                 | 32768      |
+ a1     | integer                     |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a2     | character(5)                |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a3     | numeric                     |                                                                     | main     |              | rle_type         | 1                 | 32768      |
+ a4     | boolean                     | default false                                                       | plain    |              | rle_type         | 1                 | 32768      |
+ a5     | character(1)                | default 'd'::bpchar                                                 | extended |              | rle_type         | 2                 | 32768      |
+ a6     | text                        |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a7     | timestamp without time zone |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a8     | character varying(705)      |                                                                     | extended |              | rle_type         | 3                 | 32768      |
+ a9     | bigint                      |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a10    | date                        |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a11    | character varying(600)      |                                                                     | extended |              | rle_type         | 4                 | 32768      |
+ a12    | text                        |                                                                     | extended |              | rle_type         | 2                 | 32768      |
+ a13    | numeric                     |                                                                     | main     |              | rle_type         | 1                 | 32768      |
+ a14    | real                        |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a15    | bigint                      |                                                                     | plain    |              | rle_type         | 2                 | 32768      |
+ a16    | integer                     |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a17    | bytea                       |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a18    | timestamp with time zone    |                                                                     | plain    |              | rle_type         | 3                 | 32768      |
+ a19    | time with time zone         |                                                                     | plain    |              | rle_type         | 4                 | 32768      |
+ a20    | path                        |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a21    | box                         |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a22    | macaddr                     |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a23    | interval                    |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a24    | character varying(800)      |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a25    | lseg                        |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a26    | point                       |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a27    | double precision            |                                                                     | plain    |              | rle_type         | 3                 | 32768      |
+ a28    | circle                      |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a29    | integer                     |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a30    | numeric(8,0)                |                                                                     | main     |              | rle_type         | 2                 | 32768      |
+ a31    | polygon                     |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a32    | date                        |                                                                     | plain    |              | rle_type         | 3                 | 32768      |
+ a33    | real                        |                                                                     | plain    |              | rle_type         | 4                 | 32768      |
+ a34    | money                       |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a35    | cidr                        |                                                                     | main     |              | rle_type         | 1                 | 32768      |
+ a36    | inet                        |                                                                     | main     |              | rle_type         | 1                 | 32768      |
+ a37    | time without time zone      |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a38    | text                        |                                                                     | extended |              | rle_type         | 3                 | 32768      |
+ a39    | bit(1)                      |                                                                     | extended |              | rle_type         | 1                 | 32768      |
+ a40    | bit varying(5)              |                                                                     | extended |              | rle_type         | 3                 | 32768      |
+ a41    | smallint                    |                                                                     | plain    |              | rle_type         | 1                 | 32768      |
+ a42    | integer                     |                                                                     | plain    |              | rle_type         | 4                 | 32768      |
 Checksum: f
 Indexes:
     "co_compr_rle_type_crtb_idx_bitmap" bitmap (a1)

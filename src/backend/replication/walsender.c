@@ -44,6 +44,7 @@
 #include "access/transam.h"
 #include "access/xlog_internal.h"
 #include "access/transam.h"
+#include "access/xlog_internal.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "libpq/libpq.h"
@@ -52,7 +53,6 @@
 #include "miscadmin.h"
 #include "nodes/replnodes.h"
 #include "replication/basebackup.h"
-#include "replication/replnodes.h"
 #include "replication/syncrep.h"
 #include "replication/walprotocol.h"
 #include "replication/walreceiver.h"
@@ -82,17 +82,16 @@ WalSnd	   *MyWalSnd = NULL;
 
 /* Global state */
 bool		am_walsender = false;		/* Am I a walsender process ? */
-int			max_wal_senders = 0;	/* the maximum number of concurrent walsenders */
+bool		am_cascading_walsender = false;		/* Am I cascading WAL to
+												 * another standby ? */
 
 /* User-settable parameters for walsender */
-int			WalSndDelay = 1000; /* max sleep time between some actions */
+int			max_wal_senders = 0;	/* the maximum number of concurrent walsenders */
 int			replication_timeout = 60 * 1000;	/* maximum time to send one
 												 * WAL data message */
 int			repl_catchup_within_range = XLogSegsPerFile;
 
 static bool replication_started = false; 	/* Started streaming yet? */
-
-const XLogRecPtr InvalidXLogRecPtr = {0, 0};
 
 /*
  * These variables are used similarly to openLogFile/Id/Seg/Off,
@@ -206,7 +205,7 @@ IdentifySystem(void)
 			 GetSystemIdentifier());
 	snprintf(tli, sizeof(tli), "%u", ThisTimeLineID);
 
-	logptr = GetInsertRecPtr();
+	logptr = am_cascading_walsender ? GetStandbyFlushRecPtr(NULL) : GetInsertRecPtr();
 
 	snprintf(xpos, sizeof(xpos), "%X/%X",
 			 logptr.xlogid, logptr.xrecoff);
@@ -557,76 +556,67 @@ static void
 ProcessStandbyHSFeedbackMessage(void)
 {
 	StandbyHSFeedbackMessage reply;
-	TransactionId newxmin = InvalidTransactionId;
+	TransactionId nextXid;
+	uint32		nextEpoch;
 
-	pq_copymsgbytes(&reply_message, (char *) &reply, sizeof(StandbyHSFeedbackMessage));
+	/* Decipher the reply message */
+	pq_copymsgbytes(&reply_message, (char *) &reply,
+					sizeof(StandbyHSFeedbackMessage));
 
 	elog(DEBUG2, "hot standby feedback xmin %u epoch %u",
 		 reply.xmin,
 		 reply.epoch);
 
-	/*
-	 * Update the WalSender's proc xmin to allow it to be visible to
-	 * snapshots. This will hold back the removal of dead rows and thereby
-	 * prevent the generation of cleanup conflicts on the standby server.
-	 */
-	if (TransactionIdIsValid(reply.xmin))
-	{
-		TransactionId nextXid;
-		uint32		nextEpoch;
-		bool		epochOK = false;
-
-		GetNextXidAndEpoch(&nextXid, &nextEpoch);
-
-		/*
-		 * Epoch of oldestXmin should be same as standby or if the counter has
-		 * wrapped, then one less than reply.
-		 */
-		if (reply.xmin <= nextXid)
-		{
-			if (reply.epoch == nextEpoch)
-				epochOK = true;
-		}
-		else
-		{
-			if (nextEpoch > 0 && reply.epoch == nextEpoch - 1)
-				epochOK = true;
-		}
-
-		/*
-		 * Feedback from standby must not go backwards, nor should it go
-		 * forwards further than our most recent xid.
-		 */
-		if (epochOK && TransactionIdPrecedesOrEquals(reply.xmin, nextXid))
-		{
-			if (!TransactionIdIsValid(MyProc->xmin))
-			{
-				TransactionId oldestXmin = GetOldestXmin(true, true);
-
-				if (TransactionIdPrecedes(oldestXmin, reply.xmin))
-					newxmin = reply.xmin;
-				else
-					newxmin = oldestXmin;
-			}
-			else
-			{
-				if (TransactionIdPrecedes(MyProc->xmin, reply.xmin))
-					newxmin = reply.xmin;
-				else
-					newxmin = MyProc->xmin;		/* stay the same */
-			}
-		}
-	}
+	/* Ignore invalid xmin (can't actually happen with current walreceiver) */
+	if (!TransactionIdIsNormal(reply.xmin))
+		return;
 
 	/*
-	 * Grab the ProcArrayLock to set xmin, or invalidate for bad reply
+	 * Check that the provided xmin/epoch are sane, that is, not in the future
+	 * and not so far back as to be already wrapped around.  Ignore if not.
+	 *
+	 * Epoch of nextXid should be same as standby, or if the counter has
+	 * wrapped, then one greater than standby.
 	 */
-	if (MyProc->xmin != newxmin)
+	GetNextXidAndEpoch(&nextXid, &nextEpoch);
+
+	if (reply.xmin <= nextXid)
 	{
-		LWLockAcquire(ProcArrayLock, LW_SHARED);
-		MyProc->xmin = newxmin;
-		LWLockRelease(ProcArrayLock);
+		if (reply.epoch != nextEpoch)
+			return;
 	}
+	else
+	{
+		if (reply.epoch + 1 != nextEpoch)
+			return;
+	}
+
+	if (!TransactionIdPrecedesOrEquals(reply.xmin, nextXid))
+		return;					/* epoch OK, but it's wrapped around */
+
+	/*
+	 * Set the WalSender's xmin equal to the standby's requested xmin, so that
+	 * the xmin will be taken into account by GetOldestXmin.  This will hold
+	 * back the removal of dead rows and thereby prevent the generation of
+	 * cleanup conflicts on the standby server.
+	 *
+	 * There is a small window for a race condition here: although we just
+	 * checked that reply.xmin precedes nextXid, the nextXid could have gotten
+	 * advanced between our fetching it and applying the xmin below, perhaps
+	 * far enough to make reply.xmin wrap around.  In that case the xmin we
+	 * set here would be "in the future" and have no effect.  No point in
+	 * worrying about this since it's too late to save the desired data
+	 * anyway.	Assuming that the standby sends us an increasing sequence of
+	 * xmins, this could only happen during the first reply cycle, else our
+	 * own xmin would prevent nextXid from advancing so far.
+	 *
+	 * We don't bother taking the ProcArrayLock here.  Setting the xmin field
+	 * is assumed atomic, and there's no real need to prevent a concurrent
+	 * GetOldestXmin.  (If we're moving our xmin forward, this is obviously
+	 * safe, and if we're moving it backwards, well, the data is at risk
+	 * already since a VACUUM could have just finished calling GetOldestXmin.)
+	 */
+	MyPgXact->xmin = reply.xmin;
 }
 
 /* Main loop of walsender process that streams the WAL over Copy messages. */
@@ -665,7 +655,7 @@ WalSndLoop(void)
 		 * Emergency bailout if postmaster has died.  This is to avoid the
 		 * necessity for manual cleanup of all postmaster children.
 		 */
-		if (!PostmasterIsAlive(true))
+		if (!PostmasterIsAlive())
 			exit(1);
 
 		/* Process any requests or signals received recently */
@@ -718,15 +708,15 @@ WalSndLoop(void)
 			 */
 			if (MyWalSnd->state == WALSNDSTATE_CATCHUP)
 			{
-				ereport(LOG,
-					 (errmsg("standby has now caught up with primary")));
+				ereport(DEBUG1,
+					 (errmsg("standby \"%s\" has now caught up with primary",
+							 application_name)));
 				WalSndSetState(WALSNDSTATE_STREAMING);
 			}
 
 			/*
 			 * When SIGUSR2 arrives, we send any outstanding logs up to the
-			 * shutdown checkpoint record (i.e., the latest record), wait
-			 * for them to be replicated to the standby, and exit.
+			 * shutdown checkpoint record (i.e., the latest record) and exit.
 			 * This may be a normal termination at shutdown, or a promotion,
 			 * the walsender is not sure which.
 			 */
@@ -1239,6 +1229,28 @@ XLogSend(char *msgbuf, bool *caughtup, bool *caughtup_within_range)
 			caughtup ? "true" : "false");
 
 	return;
+}
+
+/*
+ * Request walsenders to reload the currently-open WAL file
+ */
+void
+WalSndRqstFileReload(void)
+{
+	int			i;
+
+	for (i = 0; i < max_wal_senders; i++)
+	{
+		/* use volatile pointer to prevent code rearrangement */
+		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
+
+		if (walsnd->pid == 0)
+			continue;
+
+		SpinLockAcquire(&walsnd->mutex);
+		walsnd->needreload = true;
+		SpinLockRelease(&walsnd->mutex);
+	}
 }
 
 /* SIGHUP: set flag to re-read config file at next convenient time */

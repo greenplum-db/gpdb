@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress_main.c
@@ -137,7 +137,7 @@ psql_start_test(const char *testname,
 	{
 		fprintf(stderr, _("could not start process for test %s\n"),
 				testname);
-		exit_nicely(2);
+		exit(2);
 	}
 
 	return pid;

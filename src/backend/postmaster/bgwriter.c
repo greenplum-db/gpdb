@@ -10,14 +10,12 @@
  * still empowered to issue writes if the bgwriter fails to maintain enough
  * clean shared buffers.
  *
- * Previously, the background writer use to do this duty.  But we ended up with
- * a deadlock with the new FileRep functionality, so this functionality was split out into its
- * own server.
+ * As of Postgres 9.2 the bgwriter no longer handles checkpoints.
  *
  * The bgwriter is started by the postmaster as soon as the startup subprocess
  * finishes, or as soon as recovery begins if we are doing archive recovery.
  * It remains alive until the postmaster commands it to terminate.
- * Normal termination is by SIGUSR2, which instructs the bgwriter to exit(0).
+ * Normal termination is by SIGTERM, which instructs the bgwriter to exit(0).
  * Emergency termination is by SIGQUIT; like any backend, the bgwriter will
  * simply abort and exit on SIGQUIT.
  *
@@ -26,7 +24,7 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -42,21 +40,18 @@
 #include <unistd.h>
 
 #include "access/xlog_internal.h"
-#include "catalog/pg_control.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
-#include "replication/syncrep.h"
 #include "storage/bufmgr.h"
-#include "storage/fd.h"
+#include "storage/buf_internals.h"
 #include "storage/ipc.h"
 #include "storage/lwlock.h"
-#include "storage/pmsignal.h"
+#include "storage/proc.h"
 #include "storage/shmem.h"
 #include "storage/smgr.h"
 #include "storage/spin.h"
-#include "tcop/tcopprot.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
@@ -70,19 +65,27 @@
 int			BgWriterDelay = 200;
 
 /*
+ * Multiplier to apply to BgWriterDelay when we decide to hibernate.
+ * (Perhaps this needs to be configurable?)
+ */
+#define HIBERNATE_FACTOR			50
+
+/*
  * Flags set by interrupt handlers for later service in the main loop.
  */
 static volatile sig_atomic_t got_SIGHUP = false;
 static volatile sig_atomic_t shutdown_requested = false;
 
-/* Prototypes for private functions */
-
-static void BgWriterNap(void);
+/*
+ * Private state
+ */
+static bool am_bg_writer = false;
 
 /* Signal handlers */
 
 static void BgSigHupHandler(SIGNAL_ARGS);
 static void ReqShutdownHandler(SIGNAL_ARGS);
+static void bgwriter_sigusr1_handler(SIGNAL_ARGS);
 
 /*
  * Main entry point for bgwriter process
@@ -95,6 +98,9 @@ BackgroundWriterMain(void)
 {
 	sigjmp_buf	local_sigjmp_buf;
 	MemoryContext bgwriter_context;
+	bool		prev_hibernate;
+
+	am_bg_writer = true;
 
 	/*
 	 * If possible, make this process a group leader, so that the postmaster
@@ -110,13 +116,8 @@ BackgroundWriterMain(void)
 	/*
 	 * Properly accept or ignore signals the postmaster might send us.
 	 *
-	 * Note: we deliberately ignore SIGTERM, because during a standard Unix
-	 * system shutdown cycle, init will SIGTERM all processes at once.	We
-	 * want to wait for the backends to exit, whereupon the postmaster will
-	 * tell us it's okay to shut down (via SIGUSR2).
-	 *
-	 * SIGUSR1 is presently unused; keep it spare in case someday we want this
-	 * process to participate in ProcSignal signalling.
+	 * bgwriter doesn't participate in ProcSignal signalling, but a SIGUSR1
+	 * handler is still needed for latch wakeups.
 	 */
 	pqsignal(SIGHUP, BgSigHupHandler);	/* set flag to read config file */
 	pqsignal(SIGINT, SIG_IGN);
@@ -124,7 +125,7 @@ BackgroundWriterMain(void)
 	pqsignal(SIGQUIT, quickdie);		/* hard crash time: nothing bg-writer specific, just use the standard */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
-	pqsignal(SIGUSR1, SIG_IGN); /* reserve for ProcSignal */
+	pqsignal(SIGUSR1, bgwriter_sigusr1_handler);
 	pqsignal(SIGUSR2, SIG_IGN);
 
 	/*
@@ -233,30 +234,30 @@ BackgroundWriterMain(void)
 	if (RecoveryInProgress())
 		ThisTimeLineID = GetRecoveryTargetTLI();
 
-	/* Do this once before starting the loop, then just at SIGHUP time. */
-	SyncRepUpdateSyncStandbysDefined();
+	/*
+	 * Reset hibernation state after any error.
+	 */
+	prev_hibernate = false;
 
 	/*
 	 * Loop forever
 	 */
 	for (;;)
 	{
-		/*
-		 * Emergency bailout if postmaster has died.  This is to avoid the
-		 * necessity for manual cleanup of all postmaster children.
-		 */
-		if (!PostmasterIsAlive(true))
-			exit(1);
+		bool		can_hibernate;
+		int			rc;
 
 #ifdef USE_ASSERT_CHECKING
 		SIMPLE_FAULT_INJECTOR(FaultInBackgroundWriterMain);
 #endif
+
+		/* Clear any already-pending wakeups */
+		ResetLatch(&MyProc->procLatch);
+
 		if (got_SIGHUP)
 		{
 			got_SIGHUP = false;
 			ProcessConfigFile(PGC_SIGHUP);
-			/* update global shmem state for sync rep */
-			SyncRepUpdateSyncStandbysDefined();
 		}
 		if (shutdown_requested)
 		{
@@ -265,13 +266,14 @@ BackgroundWriterMain(void)
 			 * control back to the sigsetjmp block above
 			 */
 			ExitOnAnyError = true;
-
-			/* Normal exit from the bgwriter server is here */
+			/* Normal exit from the bgwriter is here */
 			proc_exit(0);		/* done */
 		}
 
-		/* Perform a cycle of dirty buffer writing. */
-		BgBufferSync();
+		/*
+		 * Do one cycle of dirty-buffer writing.
+		 */
+		can_hibernate = BgBufferSync();
 
 		/*
 		 * Send off activity statistics to the stats collector
@@ -287,44 +289,61 @@ BackgroundWriterMain(void)
 			smgrcloseall();
 		}
 
-		/* Nap for the configured time. */
-		BgWriterNap();
+		/*
+		 * Sleep until we are signaled or BgWriterDelay has elapsed.
+		 *
+		 * Note: the feedback control loop in BgBufferSync() expects that we
+		 * will call it every BgWriterDelay msec.  While it's not critical for
+		 * correctness that that be exact, the feedback loop might misbehave
+		 * if we stray too far from that.  Hence, avoid loading this process
+		 * down with latch events that are likely to happen frequently during
+		 * normal operation.
+		 */
+		rc = WaitLatch(&MyProc->procLatch,
+					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+					   BgWriterDelay /* ms */ );
+
+		/*
+		 * If no latch event and BgBufferSync says nothing's happening, extend
+		 * the sleep in "hibernation" mode, where we sleep for much longer
+		 * than bgwriter_delay says.  Fewer wakeups save electricity.  When a
+		 * backend starts using buffers again, it will wake us up by setting
+		 * our latch.  Because the extra sleep will persist only as long as no
+		 * buffer allocations happen, this should not distort the behavior of
+		 * BgBufferSync's control loop too badly; essentially, it will think
+		 * that the system-wide idle interval didn't exist.
+		 *
+		 * There is a race condition here, in that a backend might allocate a
+		 * buffer between the time BgBufferSync saw the alloc count as zero
+		 * and the time we call StrategyNotifyBgWriter.  While it's not
+		 * critical that we not hibernate anyway, we try to reduce the odds of
+		 * that by only hibernating when BgBufferSync says nothing's happening
+		 * for two consecutive cycles.	Also, we mitigate any possible
+		 * consequences of a missed wakeup by not hibernating forever.
+		 */
+		if (rc == WL_TIMEOUT && can_hibernate && prev_hibernate)
+		{
+			/* Ask for notification at next buffer allocation */
+			StrategyNotifyBgWriter(&MyProc->procLatch);
+			/* Sleep ... */
+			rc = WaitLatch(&MyProc->procLatch,
+						   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+						   BgWriterDelay * HIBERNATE_FACTOR);
+			/* Reset the notification request in case we timed out */
+			StrategyNotifyBgWriter(NULL);
+		}
+
+		/*
+		 * Emergency bailout if postmaster has died.  This is to avoid the
+		 * necessity for manual cleanup of all postmaster children.
+		 */
+		if (rc & WL_POSTMASTER_DEATH)
+			exit(1);
+
+		prev_hibernate = can_hibernate;
 	}
 }
 
-/*
- * BgWriterNap -- Nap for the configured time or until a signal is received.
- */
-static void
-BgWriterNap(void)
-{
-	long		udelay;
-
-	/*
-	 * Nap for the configured time, or sleep for 10 seconds if there is no
-	 * bgwriter activity configured.
-	 *
-	 * On some platforms, signals won't interrupt the sleep.  To ensure we
-	 * respond reasonably promptly when someone signals us, break down the
-	 * sleep into 1-second increments, and check for interrupts after each
-	 * nap.
-	 */
-	if (bgwriter_lru_maxpages > 0)
-		udelay = BgWriterDelay * 1000L;
-	else
-		udelay = 10000000L;		/* Ten seconds */
-
-	while (udelay > 999999L)
-	{
-		if (got_SIGHUP || shutdown_requested)
-			break;
-		pg_usleep(1000000L);
-		udelay -= 1000000L;
-	}
-
-	if (!(got_SIGHUP || shutdown_requested))
-		pg_usleep(udelay);
-}
 
 /* --------------------------------
  *		signal handler routines
@@ -335,12 +354,35 @@ BgWriterNap(void)
 static void
 BgSigHupHandler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	got_SIGHUP = true;
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+
+	errno = save_errno;
 }
 
 /* SIGTERM: set flag to shutdown and exit */
 static void
 ReqShutdownHandler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	shutdown_requested = true;
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+
+	errno = save_errno;
+}
+
+/* SIGUSR1: used for latch wakeups */
+static void
+bgwriter_sigusr1_handler(SIGNAL_ARGS)
+{
+	int			save_errno = errno;
+
+	latch_sigusr1_handler();
+
+	errno = save_errno;
 }

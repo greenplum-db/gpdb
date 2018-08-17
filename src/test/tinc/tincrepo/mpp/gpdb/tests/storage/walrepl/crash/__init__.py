@@ -133,7 +133,7 @@ class WalReplKillProcessTestCase(TINCTestCase):
  
    def kill_transc_backend(self):
        pid_list = []
-       sql = "SELECT procpid FROM pg_stat_activity WHERE datname='{0}' AND current_query like 'INSERT INTO%'".format(self.pgdatabase)    
+       sql = "SELECT pid FROM pg_stat_activity WHERE datname='{0}' AND query like 'INSERT INTO%'".format(self.pgdatabase)
        tinctest.logger.info("running sql command to get transaction backend process: ---  %s"%sql)
        procid = PSQL.run_sql_command(sql, flags = '-q -t', dbname= self.pgdatabase)
        count = 1
@@ -166,7 +166,7 @@ class WalReplKillProcessTestCase(TINCTestCase):
        activate_stdby = GpactivateStandby()
        stdby_mdd = activate_stdby.get_standby_dd()
        stdby_port = activate_stdby.get_standby_port()
-       cmd="pg_ctl -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E' start &"%(stdby_mdd, stdby_port, stdby_dbid)
+       cmd="pg_ctl -l postmaster.log -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 -i --gp_contentid=-1 -E' start &"%(stdby_mdd, stdby_port, stdby_dbid)
        self.run_remote(stdby_host,cmd,stdby_port,stdby_mdd)
        
 

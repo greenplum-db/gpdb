@@ -10,7 +10,7 @@
  *	  Over time, this has also become the preferred place for widely known
  *	  resource-limitation stuff, such as work_mem and check_stack_depth().
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/miscadmin.h
@@ -311,23 +311,8 @@ extern int	CTimeZone;
 
 #define MAXTZLEN		10		/* max TZ name len, not counting tr. null */
 
-/*
- * In PostgreSQL, allowSystemTableMods is a simple boolean, but in GPDB we
- * distinguish between DML operations on system catalogs, and DDL.
- *
- * Use 'allowSystemTableModsDDL' and 'allowSystemTableModsDML' to check whether
- * an operation is allowed.
- */
-#define ALLOW_SYSTEM_TABLE_MODS_NONE	0
-#define ALLOW_SYSTEM_TABLE_MODS_DDL		(1 << 0)
-#define ALLOW_SYSTEM_TABLE_MODS_DML		(1 << 1)
-#define ALLOW_SYSTEM_TABLE_MODS_ALL		(ALLOW_SYSTEM_TABLE_MODS_DDL | ALLOW_SYSTEM_TABLE_MODS_DDL)
-
-#define allowSystemTableModsDDL		((allowSystemTableModsMask & ALLOW_SYSTEM_TABLE_MODS_DDL) != 0)
-#define allowSystemTableModsDML		((allowSystemTableModsMask & ALLOW_SYSTEM_TABLE_MODS_DML) != 0)
-
 extern bool enableFsync;
-extern int allowSystemTableModsMask;
+extern bool allowSystemTableMods;
 extern PGDLLIMPORT int planner_work_mem;
 extern PGDLLIMPORT int work_mem;
 extern PGDLLIMPORT int maintenance_work_mem;
@@ -340,6 +325,10 @@ extern int	VacuumCostPageMiss;
 extern int	VacuumCostPageDirty;
 extern int	VacuumCostLimit;
 extern int	VacuumCostDelay;
+
+extern int	VacuumPageHit;
+extern int	VacuumPageMiss;
+extern int	VacuumPageDirty;
 
 extern int	VacuumCostBalance;
 extern bool VacuumCostActive;

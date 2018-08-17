@@ -4,7 +4,7 @@
  *	  Support for finding the values associated with Param nodes.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -16,7 +16,6 @@
 #include "postgres.h"
 
 #include "nodes/params.h"
-#include "parser/parse_param.h"
 #include "utils/datum.h"
 #include "utils/lsyscache.h"
 

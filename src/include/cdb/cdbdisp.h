@@ -120,7 +120,7 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
  * will be canceled/finished according to waitMode.
  */
 void
-CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
+cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 
 /*
  * cdbdisp_getDispatchResults:
@@ -133,20 +133,6 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode)
  */
 struct CdbDispatchResults *
 cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError);
-
-/*
- * Wait for all QEs to finish, then report any errors from the given
- * CdbDispatchResults objects and free them.  If not all QEs in the
- * associated gang(s) executed the command successfully, throws an
- * error and does not return.  No-op if both CdbDispatchResults ptrs are NULL.
- * This is a convenience function; callers with unusual requirements may
- * instead call CdbCheckDispatchResult(), etc., directly.
- */
-void
-cdbdisp_finishCommand(struct CdbDispatcherState *ds,
-					 ErrorData **qeError,
-					 struct CdbPgResults *cdb_pgresults,
-					 bool throwError);
 
 /*
  * CdbDispatchHandleError

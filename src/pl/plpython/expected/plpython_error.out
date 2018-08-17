@@ -291,7 +291,7 @@ PL/Python function "python_traceback"
 SELECT sql_error();
 ERROR:  division by zero
 CONTEXT:  SQL statement "select 1/0"
-PL/pgSQL function "sql_error" line 3 at SQL statement
+PL/pgSQL function sql_error() line 3 at SQL statement
 SELECT python_from_sql_error();
 ERROR:  spiexceptions.DivisionByZero: division by zero
 CONTEXT:  Traceback (most recent call last):
@@ -305,7 +305,7 @@ CONTEXT:  Traceback (most recent call last):
     plpy.execute("select sql_error()")
 PL/Python function "python_traceback"
 SQL statement "select python_traceback()"
-PL/pgSQL function "python_from_sql_error" line 3 at SQL statement
+PL/pgSQL function python_from_sql_error() line 3 at SQL statement
 SELECT sql_from_python_error();
 ERROR:  spiexceptions.DivisionByZero: division by zero
 CONTEXT:  Traceback (most recent call last):
@@ -348,6 +348,28 @@ CONTEXT:  PL/Python function "specific_exception"
  specific_exception 
 --------------------
  
+(1 row)
+
+/* SPI errors in PL/Python functions should preserve the SQLSTATE value
+ */
+CREATE FUNCTION python_unique_violation() RETURNS void AS $$
+plpy.execute("insert into specific values (1)")
+plpy.execute("insert into specific values (1)")
+$$ LANGUAGE plpythonu;
+CREATE FUNCTION catch_python_unique_violation() RETURNS text AS $$
+begin
+    begin
+        perform python_unique_violation();
+    exception when unique_violation then
+        return 'ok';
+    end;
+    return 'not reached';
+end;
+$$ language plpgsql;
+SELECT catch_python_unique_violation();
+ catch_python_unique_violation 
+-------------------------------
+ ok
 (1 row)
 
 /* manually starting subtransactions - a bad idea

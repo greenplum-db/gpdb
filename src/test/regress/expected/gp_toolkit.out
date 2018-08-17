@@ -277,7 +277,7 @@ select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass
 create table wide_width_test as select * from pg_attribute;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'attrelid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-set allow_system_table_mods=dml ;
+set allow_system_table_mods=true ;
 update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
 select * from gp_toolkit.gp_bloat_diag WHERE bdinspname <> 'pg_catalog';
  bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag 

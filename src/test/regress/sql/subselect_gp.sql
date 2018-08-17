@@ -124,7 +124,7 @@ drop table if exists mrs_u2;
 
 drop table if exists csq_m1;
 create table csq_m1();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;
@@ -182,7 +182,7 @@ ORDER BY a.attnum
 
 drop table if exists csq_m1;
 create table csq_m1();
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 delete from gp_distribution_policy where localoid='csq_m1'::regclass;
 reset allow_system_table_mods;
 alter table csq_m1 add column x int;
@@ -676,6 +676,7 @@ EXPLAIN SELECT '' AS three, f1, f2
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
                          WHERE f3 IS NOT NULL) ORDER BY 2,3;
 
+ANALYZE tenk1;
 EXPLAIN SELECT * FROM tenk1 a, tenk1 b
 WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
 
@@ -765,3 +766,10 @@ DROP TABLE IF EXISTS dedup_test1;
 DROP TABLE IF EXISTS dedup_test2;
 DROP TABLE IF EXISTS dedup_test3;
 -- end_ignore
+
+-- Test init/main plan are not both parallel
+create table init_main_plan_parallel (c1 int, c2 int);
+-- case 1: init plan is parallel, main plan is not.
+select relname from pg_class where exists(select * from init_main_plan_parallel);
+-- case2: init plan is not parallel, main plan is parallel
+select * from init_main_plan_parallel where exists (select * from pg_class);

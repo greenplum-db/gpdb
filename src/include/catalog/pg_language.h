@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_language.h
@@ -37,7 +37,10 @@ CATALOG(pg_language,2612)
 	Oid			lanplcallfoid;	/* Call handler for PL */
 	Oid			laninline;		/* Optional anonymous-block handler function */
 	Oid			lanvalidator;	/* Optional validation function */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		lanacl[1];		/* Access privileges */
+#endif
 } FormData_pg_language;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

@@ -3,7 +3,7 @@
  * parse_func.c
  *		handle function calls in parser
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -1072,9 +1072,9 @@ func_select_candidate(int nargs,
 	 * Having completed this examination, remove candidates that accept the
 	 * wrong category at any unknown position.	Also, if at least one
 	 * candidate accepted a preferred type at a position, remove candidates
-	 * that accept non-preferred types.  If just one candidate remains,
-	 * return that one.  However, if this rule turns out to reject all
-	 * candidates, keep them all instead.
+	 * that accept non-preferred types.  If just one candidate remains, return
+	 * that one.  However, if this rule turns out to reject all candidates,
+	 * keep them all instead.
 	 */
 	resolved_unknowns = false;
 	for (i = 0; i < nargs; i++)
@@ -1199,7 +1199,7 @@ func_select_candidate(int nargs,
 	 * type, and see if that gives us a unique match.  If so, use that match.
 	 *
 	 * NOTE: for a binary operator with one unknown and one non-unknown input,
-	 * we already tried this heuristic in binary_oper_exact().  However, that
+	 * we already tried this heuristic in binary_oper_exact().	However, that
 	 * code only finds exact matches, whereas here we will handle matches that
 	 * involve coercion, polymorphic type resolution, etc.
 	 */
@@ -2149,90 +2149,4 @@ checkTableFunctions_walker(Node *node, check_table_func_context *context)
 									  checkTableFunctions_walker, 
 									  (void *) context);
 	}
-}
-
-static bool
-check_pg_get_expr_arg(ParseState *pstate, Node *arg, int netlevelsup)
-{
-	if (arg && IsA(arg, Var))
-	{
-		Var		   *var = (Var *) arg;
-		RangeTblEntry *rte;
-		AttrNumber	attnum;
-
-		netlevelsup += var->varlevelsup;
-		rte = GetRTEByRangeTablePosn(pstate, var->varno, netlevelsup);
-		attnum = var->varattno;
-
-		if (rte->rtekind == RTE_JOIN)
-		{
-			/* Recursively examine join alias variable */
-			if (attnum > 0 &&
-				attnum <= list_length(rte->joinaliasvars))
-			{
-				arg = (Node *) list_nth(rte->joinaliasvars, attnum - 1);
-				return check_pg_get_expr_arg(pstate, arg, netlevelsup);
-			}
-		}
-		else if (rte->rtekind == RTE_SUBQUERY)
-		{
-			/* Subselect-in-FROM: examine sub-select's output expr */
-			TargetEntry *ste = get_tle_by_resno(rte->subquery->targetList,
-												attnum);
-			ParseState	mypstate;
-
-			if (ste == NULL || ste->resjunk)
-				elog(ERROR, "subquery %s does not have attribute %d",
-					 rte->eref->aliasname, attnum);
-			arg = (Node *) ste->expr;
-
-			/*
-			 * Recurse into the sub-select to see what its expr refers to.
-			 * We have to build an additional level of ParseState to keep in
-			 * step with varlevelsup in the subselect.
-			 */
-			MemSet(&mypstate, 0, sizeof(mypstate));
-			mypstate.parentParseState = pstate;
-			mypstate.p_rtable = rte->subquery->rtable;
-			/* don't bother filling the rest of the fake pstate */
-
-			return check_pg_get_expr_arg(&mypstate, arg, 0);
-		}
-		else if (rte->rtekind == RTE_RELATION)
-		{
-			switch (rte->relid)
-			{
-				case IndexRelationId:
-					if (attnum == Anum_pg_index_indexprs ||
-						attnum == Anum_pg_index_indpred)
-						return true;
-					break;
-
-				case AttrDefaultRelationId:
-					if (attnum == Anum_pg_attrdef_adbin)
-						return true;
-					break;
-
-				case ConstraintRelationId:
-					if (attnum == Anum_pg_constraint_conbin)
-						return true;
-					break;
-
-				case TypeRelationId:
-					if (attnum == Anum_pg_type_typdefaultbin)
-						return true;
-					break;
-
-				case PartitionRuleRelationId:
-					if (attnum == Anum_pg_partition_rule_parrangestart ||
-						attnum == Anum_pg_partition_rule_parrangeend ||
-						attnum == Anum_pg_partition_rule_parrangeevery ||
-						attnum == Anum_pg_partition_rule_parlistvalues)
-						return true;
-					break;
-			}
-		}
-	}
-
-	return false;
 }

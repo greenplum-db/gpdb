@@ -3114,10 +3114,7 @@ def runAllChecks():
         logger.debug('Building catalog repair scripts')
         # build a script to run these files
         script = ''
-        # set allow_system_table_mods GUC for gpdb >= 4.2
-        catmod_guc = ""
-        if GV.version >= "4.2":
-            catmod_guc = "-c allow_system_table_mods=dml"
+        catmod_guc = "-c allow_system_table_mods=true"
 
         # don't remove anything if ReSync possible --
         # comment out the delete statements from the repair scripts

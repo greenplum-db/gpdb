@@ -35,29 +35,29 @@ struct GddWaitStatusCtx
 	int			row;
 };
 
-static bool isGranted(PROCLOCK *proclock);
-static bool lockEqual(LOCK *lock1, LOCK *lock2);
-static bool lockIsHoldTillEndXact(LOCK *lock);
+static bool isGranted(LockInstanceData *lock);
+static bool lockEqual(LockInstanceData *lock1, LockInstanceData *lock2);
+static bool lockIsHoldTillEndXact(LockInstanceData *lock);
 
 static bool
-isGranted(PROCLOCK *proclock)
+isGranted(LockInstanceData *lock)
 {
-	return proclock->holdMask != 0;
+	return lock->holdMask != 0;
 }
 
 static bool
-lockEqual(LOCK *lock1, LOCK *lock2)
+lockEqual(LockInstanceData *lock1, LockInstanceData *lock2)
 {
-	LOCKTAG		*tag1 = &lock1->tag;
-	LOCKTAG		*tag2 = &lock2->tag;
+	LOCKTAG		*tag1 = &lock1->locktag;
+	LOCKTAG		*tag2 = &lock2->locktag;
 
 	return memcmp(tag1, tag2, sizeof(LOCKTAG)) == 0;
 }
 
 static bool
-lockIsHoldTillEndXact(LOCK *lock)
+lockIsHoldTillEndXact(LockInstanceData *lock)
 {
-	LOCKTAG		*tag = &lock->tag;
+	LOCKTAG		*tag = &lock->locktag;
 
 	if (lock->holdTillEndXact)
 		return true;
@@ -213,12 +213,10 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 	while (ctx->waiter < ctx->lockData->nelements)
 	{
 		int			waiter = ctx->waiter;
-		PROCLOCK   *w_proclock = &ctx->lockData->proclocks[waiter];
-		LOCK	   *w_lock = &ctx->lockData->locks[waiter];
-		PGPROC	   *w_proc = &ctx->lockData->procs[waiter];
+		LockInstanceData	   *w_lock = &ctx->lockData->locks[waiter];
 
 		/* A waiter should have granted == false */
-		if (isGranted(w_proclock))
+		if (isGranted(w_lock))
 		{
 			ctx->waiter++;
 			ctx->holder = 0;
@@ -230,16 +228,14 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 			TransactionId w_dxid;
 			TransactionId h_dxid;
 			int			holder = ctx->holder++;
-			PROCLOCK   *h_proclock = &ctx->lockData->proclocks[holder];
-			LOCK	   *h_lock = &ctx->lockData->locks[holder];
-			PGPROC	   *h_proc = &ctx->lockData->procs[holder];
+			LockInstanceData	   *h_lock = &ctx->lockData->locks[holder];
 
 			if (holder == waiter)
 				continue;
 			/* A holder should have granted == true */
-			if (!isGranted(h_proclock))
+			if (!isGranted(h_lock))
 				continue;
-			if (w_proc->pid == h_proc->pid)
+			if (w_lock->pid == h_lock->pid)
 				continue;
 			if (!lockEqual(w_lock, h_lock))
 				continue;
@@ -247,16 +243,8 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 			/* A valid waiting relation is found */
 
 			/* Find out dxid differently on QD and QE */
-			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				w_dxid = w_proc->gxact.gxid;
-				h_dxid = h_proc->gxact.gxid;
-			}
-			else
-			{
-				w_dxid = w_proc->localDistribXactData.distribXid;
-				h_dxid = h_proc->localDistribXactData.distribXid;
-			}
+			w_dxid = w_lock->distribXid;
+			h_dxid = h_lock->distribXid;
 
 			values[0] = Int32GetDatum(GpIdentity.segindex);
 			values[1] = TransactionIdGetDatum(w_dxid);

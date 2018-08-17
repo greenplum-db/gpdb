@@ -59,27 +59,27 @@ For example, consider the following sequence of user commands:
 In the main processing loop, this results in the following function call
 sequence:
 
-	 /	StartTransactionCommand;
-	/		StartTransaction;
-1) <		ProcessUtility;				<< BEGIN
-	\		BeginTransactionBlock;
-	 \	CommitTransactionCommand;
+     /  StartTransactionCommand;
+    /       StartTransaction;
+1) <        ProcessUtility;             << BEGIN
+    \       BeginTransactionBlock;
+     \  CommitTransactionCommand;
 
-	/	StartTransactionCommand;
-2) /		ProcessQuery;				<< SELECT ...
-   \		CommitTransactionCommand;
-	\		CommandCounterIncrement;
+    /   StartTransactionCommand;
+2) /        ProcessQuery;               << SELECT ...
+   \        CommitTransactionCommand;
+    \       CommandCounterIncrement;
 
-	/	StartTransactionCommand;
-3) /		ProcessQuery;				<< INSERT ...
-   \		CommitTransactionCommand;
-	\		CommandCounterIncrement;
+    /   StartTransactionCommand;
+3) /        ProcessQuery;               << INSERT ...
+   \        CommitTransactionCommand;
+    \       CommandCounterIncrement;
 
-	 /	StartTransactionCommand;
-	/	ProcessUtility;				<< COMMIT
-4) <			EndTransactionBlock;
-	\	CommitTransactionCommand;
-	 \		CommitTransaction;
+     /  StartTransactionCommand;
+    /   ProcessUtility;                 << COMMIT
+4) <            EndTransactionBlock;
+    \   CommitTransactionCommand;
+     \      CommitTransaction;
 
 The point of this example is to demonstrate the need for
 StartTransactionCommand and CommitTransactionCommand to be state smart -- they
@@ -87,25 +87,25 @@ should call CommandCounterIncrement between the calls to BeginTransactionBlock
 and EndTransactionBlock and outside these calls they need to do normal start,
 commit or abort processing.
 
-Furthermore, suppose the "SELECT * FROM foo" caused an abort condition.	In
+Furthermore, suppose the "SELECT * FROM foo" caused an abort condition. In
 this case AbortCurrentTransaction is called, and the transaction is put in
 aborted state.  In this state, any user input is ignored except for
 transaction-termination statements, or ROLLBACK TO <savepoint> commands.
 
 Transaction aborts can occur in two ways:
 
-1)	system dies from some internal cause  (syntax error, etc)
-2)	user types ROLLBACK
+1) system dies from some internal cause  (syntax error, etc)
+2) user types ROLLBACK
 
 The reason we have to distinguish them is illustrated by the following two
 situations:
 
-	case 1					case 2
-	------					------
-1) user types BEGIN			1) user types BEGIN
-2) user does something			2) user does something
-3) user does not like what		3) system aborts for some reason
-   she sees and types ABORT		   (syntax error, etc)
+        case 1                                  case 2
+        ------                                  ------
+1) user types BEGIN                     1) user types BEGIN
+2) user does something                  2) user does something
+3) user does not like what              3) system aborts for some reason
+   she sees and types ABORT                (syntax error, etc)
 
 In case 1, we want to abort the transaction and return to the default state.
 In case 2, there may be more commands coming our way which are part of the
@@ -197,7 +197,7 @@ If a subtransaction requires an XID, we always first assign one to its
 parent.  This maintains the invariant that child transactions have XIDs later
 than their parents, which is assumed in a number of places.
 
-The subsidiary actions of obtaining a lock on the XID and and entering it into
+The subsidiary actions of obtaining a lock on the XID and entering it into
 pg_subtrans and PG_PROC are done at the time it is assigned.
 
 A transaction that has no XID still needs to be identified for various
@@ -251,7 +251,7 @@ enforce, and it assists with some other issues as explained below.)  The
 implementation of this is that GetSnapshotData takes the ProcArrayLock in
 shared mode (so that multiple backends can take snapshots in parallel),
 but ProcArrayEndTransaction must take the ProcArrayLock in exclusive mode
-while clearing MyProc->xid at transaction end (either commit or abort).
+while clearing MyPgXact->xid at transaction end (either commit or abort).
 
 ProcArrayEndTransaction also holds the lock while advancing the shared
 latestCompletedXid variable.  This allows GetSnapshotData to use
@@ -275,12 +275,12 @@ present in the ProcArray, or not running anymore.  (This guarantee doesn't
 apply to subtransaction XIDs, because of the possibility that there's not
 room for them in the subxid array; instead we guarantee that they are
 present or the overflow flag is set.)  If a backend released XidGenLock
-before storing its XID into MyProc, then it would be possible for another
+before storing its XID into MyPgXact, then it would be possible for another
 backend to allocate and commit a later XID, causing latestCompletedXid to
 pass the first backend's XID, before that value became visible in the
 ProcArray.  That would break GetOldestXmin, as discussed below.
 
-We allow GetNewTransactionId to store the XID into MyProc->xid (or the
+We allow GetNewTransactionId to store the XID into MyPgXact->xid (or the
 subxid array) without taking ProcArrayLock.  This was once necessary to
 avoid deadlock; while that is no longer the case, it's still beneficial for
 performance.  We are thereby relying on fetch/store of an XID to be atomic,
@@ -293,7 +293,7 @@ ensure that the C compiler does exactly what you tell it to.)
 Another important activity that uses the shared ProcArray is GetOldestXmin,
 which must determine a lower bound for the oldest xmin of any active MVCC
 snapshot, system-wide.  Each individual backend advertises the smallest
-xmin of its own snapshots in MyProc->xmin, or zero if it currently has no
+xmin of its own snapshots in MyPgXact->xmin, or zero if it currently has no
 live snapshots (eg, if it's between transactions or hasn't yet set a
 snapshot for a new transaction).  GetOldestXmin takes the MIN() of the
 valid xmin fields.  It does this with only shared lock on ProcArrayLock,
@@ -320,7 +320,7 @@ too expensive.  Note that while it is certain that two concurrent
 executions of GetSnapshotData will compute the same xmin for their own
 snapshots, as argued above, it is not certain that they will arrive at the
 same estimate of RecentGlobalXmin.  This is because we allow XID-less
-transactions to clear their MyProc->xmin asynchronously (without taking
+transactions to clear their MyPgXact->xmin asynchronously (without taking
 ProcArrayLock), so one execution might see what had been the oldest xmin,
 and another not.  This is OK since RecentGlobalXmin need only be a valid
 lower bound.  As noted above, we are already assuming that fetch/store
@@ -371,7 +371,7 @@ Top-level transactions do not have a parent, so they leave their pg_subtrans
 entries set to the default value of zero (InvalidTransactionId).
 
 pg_subtrans is used to check whether the transaction in question is still
-running --- the main Xid of a transaction is recorded in the PGPROC struct,
+running --- the main Xid of a transaction is recorded in the PGXACT struct,
 but since we allow arbitrary nesting of subtransactions, we can't fit all Xids
 in shared memory, so we have to store them on disk.  Note, however, that for
 each transaction we keep a "cache" of Xids that are known to be part of the
@@ -470,14 +470,14 @@ which buffers were handled that way --- otherwise they may be misled about
 what the XLOG record actually contains.  XLOG records that describe multi-page
 changes therefore require some care to design: you must be certain that you
 know what data is indicated by each "BKP" bit.  An example of the trickiness
-is that in a HEAP_UPDATE record, BKP(1) normally is associated with the source
-page and BKP(2) is associated with the destination page --- but if these are
-the same page, only BKP(1) would have been set.
+is that in a HEAP_UPDATE record, BKP(0) normally is associated with the source
+page and BKP(1) is associated with the destination page --- but if these are
+the same page, only BKP(0) would have been set.
 
 For this reason as well as the risk of deadlocking on buffer locks, it's best
 to design WAL records so that they reflect small atomic actions involving just
 one or a few pages.  The current XLOG infrastructure cannot handle WAL records
-involving references to more than three shared buffers, anyway.
+involving references to more than four shared buffers, anyway.
 
 In the case where the WAL record contains enough information to re-generate
 the entire contents of a page, do *not* show that page's buffer ID in the
@@ -485,8 +485,7 @@ rdata array, even if some of the rdata items point into the buffer.  This is
 because you don't want XLogInsert to log the whole page contents.  The
 standard replay-routine pattern for this case is
 
-	reln = XLogOpenRelation(rnode);
-	buffer = XLogReadBuffer(reln, blkno, true);
+	buffer = XLogReadBuffer(rnode, blkno, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -501,13 +500,19 @@ incrementally update the page, the rdata array *must* mention the buffer
 ID at least once; otherwise there is no defense against torn-page problems.
 The standard replay-routine pattern for this case is
 
-	if (record->xl_info & XLR_BKP_BLOCK_n)
-		<< do nothing, page was rewritten from logged copy >>;
+	if (record->xl_info & XLR_BKP_BLOCK(N))
+	{
+		/* apply the change from the full-page image */
+		(void) RestoreBackupBlock(lsn, record, N, false, false);
+		return;
+	}
 
-	reln = XLogOpenRelation(rnode);
-	buffer = XLogReadBuffer(reln, blkno, false);
+	buffer = XLogReadBuffer(rnode, blkno, false);
 	if (!BufferIsValid(buffer))
-		<< do nothing, page has been deleted >>;
+	{
+		/* page has been deleted, so we need do nothing */
+		return;
+	}
 	page = (Page) BufferGetPage(buffer);
 
 	if (XLByteLE(lsn, PageGetLSN(page)))
@@ -524,10 +529,10 @@ The standard replay-routine pattern for this case is
 	UnlockReleaseBuffer(buffer);
 
 As noted above, for a multi-page update you need to be able to determine
-which XLR_BKP_BLOCK_n flag applies to each page.  If a WAL record reflects
+which XLR_BKP_BLOCK(N) flag applies to each page.  If a WAL record reflects
 a combination of fully-rewritable and incremental updates, then the rewritable
-pages don't count for the XLR_BKP_BLOCK_n numbering.  (XLR_BKP_BLOCK_n is
-associated with the n'th distinct buffer ID seen in the "rdata" array, and
+pages don't count for the XLR_BKP_BLOCK(N) numbering.  (XLR_BKP_BLOCK(N) is
+associated with the N'th distinct buffer ID seen in the "rdata" array, and
 per the above discussion, fully-rewritable buffers shouldn't be mentioned in
 "rdata".)
 
@@ -538,6 +543,35 @@ problems. All other processes must only call PageSet/GetLSN when holding
 either an exclusive buffer lock or a shared lock plus buffer header lock,
 or be writing the data block directly rather than through shared buffers
 while holding AccessExclusiveLock on the relation.
+
+When replaying a WAL record that describes changes on multiple pages, you
+must be careful to lock the pages properly to prevent concurrent Hot Standby
+queries from seeing an inconsistent state.  If this requires that two
+or more buffer locks be held concurrently, the coding pattern shown above
+is too simplistic, since it assumes the routine can exit as soon as it's
+known the current page requires no modification.  Instead, you might have
+something like
+
+	if (record->xl_info & XLR_BKP_BLOCK(0))
+	{
+		/* apply the change from the full-page image */
+		buffer0 = RestoreBackupBlock(lsn, record, 0, false, true);
+	}
+	else
+	{
+		buffer0 = XLogReadBuffer(rnode, blkno, false);
+		if (BufferIsValid(buffer0))
+		{
+			... apply the change if not already done ...
+			MarkBufferDirty(buffer0);
+		}
+	}
+
+	... similarly apply the changes for remaining pages ...
+
+	/* and now we can release the lock on the first page */
+	if (BufferIsValid(buffer0))
+		UnlockReleaseBuffer(buffer0);
 
 Due to all these constraints, complex changes (such as a multilevel index
 insertion) normally need to be described by a series of atomic-action WAL

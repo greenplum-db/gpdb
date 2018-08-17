@@ -64,14 +64,14 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.subject = RepairMissingExtraneous(self.catalog_table_obj, None, "attrelid")
         oids = [1,3,4]
         delete_sql = self.subject.get_delete_sql(oids)
-        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
+        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods=true;'
                                       'delete from "pg_attribut""e" where "attrelid" in (1,3,4);COMMIT;')
 
     def test_get_delete_sql__with_one_oid(self):
         self.subject = RepairMissingExtraneous(self.catalog_table_obj, None, "attrelid")
         oids = [5]
         delete_sql = self.subject.get_delete_sql(oids)
-        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
+        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods=true;'
                                      'delete from "pg_attribut""e" where "attrelid" in (5);COMMIT;')
 
     def test_get_delete_sql__with_one_pkey_one_issue(self):
@@ -81,7 +81,7 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.subject = RepairMissingExtraneous(self.catalog_table_obj, issues, None)
         oids = None
         delete_sql = self.subject.get_delete_sql(oids)
-        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
+        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods=true;'
                                      'delete from "pg_attribut""e" where oprname = \'!!\';COMMIT;')
 
     def test_get_delete_sql__with_one_pkey_mult_issues(self):
@@ -94,7 +94,7 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.subject = RepairMissingExtraneous(self.catalog_table_obj, issues, None)
         oids = None
         delete_sql = self.subject.get_delete_sql(oids)
-        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
+        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods=true;'
                                      'delete from "pg_attribut""e" where oprname = \'!!\';'
                                      'delete from "pg_attribut""e" where oprname = \'8!\';'
                                      'delete from "pg_attribut""e" where oprname = \'*!\';'
@@ -113,7 +113,7 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.subject = RepairMissingExtraneous(self.catalog_table_obj, issues, None)
         oids = None
         delete_sql = self.subject.get_delete_sql(oids)
-        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
+        self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods=true;'
                                      'delete from "pg_attribut""e" where oprname = \'!!\' and oprnamespace = \'48920\''
                                                                          ' and oprleft = \'0\' and oprright = \'1\';'
                                      'delete from "pg_attribut""e" where oprname = \'8!\' and oprnamespace = \'15\''

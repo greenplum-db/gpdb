@@ -3,7 +3,7 @@
  * port.h
  *	  Header for src/port/ compatibility functions.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/port.h
@@ -34,6 +34,7 @@ extern bool pg_set_block(pgsocket sock);
 
 /* Portable path handling for Unix/Win32 (in path.c) */
 
+extern bool has_drive_prefix(const char *filename);
 extern char *first_dir_separator(const char *filename);
 extern char *last_dir_separator(const char *filename);
 extern char *first_path_var_separator(const char *pathlist);
@@ -182,15 +183,6 @@ extern unsigned char pg_ascii_tolower(unsigned char ch);
 #ifdef printf
 #undef printf
 #endif
-/*
- * Versions of libintl >= 0.18? try to replace setlocale() with a macro
- * to their own versions.  Remove the macro, if it exists, because it
- * ends up calling the wrong version when the backend and libintl use
- * different versions of msvcrt.
- */
-#if defined(setlocale) && defined(WIN32)
-#undef setlocale
-#endif
 
 extern int	pg_vsnprintf(char *str, size_t count, const char *fmt, va_list args);
 extern int
@@ -233,39 +225,30 @@ __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 #endif
 #endif   /* USE_REPL_SNPRINTF */
 
+#if defined(WIN32)
 /*
  * Versions of libintl >= 0.18? try to replace setlocale() with a macro
  * to their own versions.  Remove the macro, if it exists, because it
  * ends up calling the wrong version when the backend and libintl use
  * different versions of msvcrt.
  */
-#if defined(setlocale) && defined(WIN32)
+#if defined(setlocale)
 #undef setlocale
 #endif
+
+/*
+ * Define our own wrapper macro around setlocale() to work around bugs in
+ * Windows' native setlocale() function.
+ */
+extern char *pgwin32_setlocale(int category, const char *locale);
+
+#define setlocale(a,b) pgwin32_setlocale(a,b)
+#endif   /* WIN32 */
 
 /* Portable prompt handling */
 extern char *simple_prompt(const char *prompt, int maxlen, bool echo);
 
-/*
- *	WIN32 doesn't allow descriptors returned by pipe() to be used in select(),
- *	so for that platform we use socket() instead of pipe().
- *	There is some inconsistency here because sometimes we require pg*, like
- *	pgpipe, but in other cases we define rename to pgrename just on Win32.
- */
-#ifndef WIN32
-/*
- *	The function prototypes are not supplied because every C file
- *	includes this file.
- */
-#define pgpipe(a)			pipe(a)
-#define piperead(a,b,c)		read(a,b,c)
-#define pipewrite(a,b,c)	write(a,b,c)
-#else
-extern int	pgpipe(int handles[2]);
-extern int	piperead(int s, char *buf, int len);
-
-#define pipewrite(a,b,c)	send(a,b,c,0)
-
+#ifdef WIN32
 #define PG_SIGNAL_COUNT 32
 #define kill(pid,sig)	pgkill(pid,sig)
 extern int	pgkill(int pid, int sig);
@@ -382,17 +365,18 @@ extern char *crypt(const char *key, const char *setting);
 /* WIN32 handled in port/win32.h */
 #ifndef WIN32
 #define pgoff_t off_t
-#if defined(__bsdi__) || defined(__NetBSD__)
+#ifdef __NetBSD__
 extern int	fseeko(FILE *stream, off_t offset, int whence);
 extern off_t ftello(FILE *stream);
 #endif
 #endif
 
-#ifndef HAVE_ERAND48
-/* we assume all of these are present or missing together */
-extern double erand48(unsigned short xseed[3]);
-extern long lrand48(void);
-extern void srand48(long seed);
+extern double pg_erand48(unsigned short xseed[3]);
+extern long pg_lrand48(void);
+extern void pg_srand48(long seed);
+
+#ifndef HAVE_FLS
+extern int	fls(int mask);
 #endif
 
 #ifndef HAVE_FSEEKO
@@ -420,10 +404,6 @@ extern double rint(double x);
 #include <netinet/in.h>
 #include <arpa/inet.h>
 extern int	inet_aton(const char *cp, struct in_addr * addr);
-#endif
-
-#ifndef HAVE_STRDUP
-extern char *strdup(const char *str);
 #endif
 
 #if !HAVE_DECL_STRLCAT

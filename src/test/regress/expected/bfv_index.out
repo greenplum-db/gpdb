@@ -437,7 +437,7 @@ select * from Tbl23383_partitioned where c='1';
 drop table Tbl23383_partitioned;
 -- end_ignore
 reset enable_seqscan;
--- when optimizer is on PG exception raised during DXL->PlStmt translation for IndexScan query
+-- negative test: due to non compatible cast and CXformGet2TableScan disabled no index plan possible, fallback to planner
 -- start_ignore
 drop table if exists tbl_ab;
 NOTICE:  table "tbl_ab" does not exist, skipping

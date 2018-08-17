@@ -37,51 +37,51 @@ namespace gpdxl
 		private:
 
 			// column id
-			ULONG m_ulColId;
+			ULONG m_colid;
 
 			// column name
-			CWStringBase *m_pstr;
+			CWStringBase *m_str;
 
 			// private copy c'tor
 			COptColInfo(const COptColInfo&);
 
 		public:
 			// ctor
-			COptColInfo(ULONG ulColId, CWStringBase *pstr)
-				: m_ulColId(ulColId), m_pstr(pstr)
+			COptColInfo(ULONG colid, CWStringBase *str)
+				: m_colid(colid), m_str(str)
 			{
-				GPOS_ASSERT(m_pstr);
+				GPOS_ASSERT(m_str);
 			}
 
 			// dtor
 			virtual
 			~COptColInfo()
 			{
-				GPOS_DELETE(m_pstr);
+				GPOS_DELETE(m_str);
 			}
 
 			// accessors
-			ULONG UlColId() const
+			ULONG GetColId() const
 			{
-				return m_ulColId;
+				return m_colid;
 			}
 
-			CWStringBase* PstrColName() const
+			CWStringBase* GetOptColName() const
 			{
-				return m_pstr;
+				return m_str;
 			}
 
 			// equality check
-			BOOL FEquals(const COptColInfo& optcolinfo) const
+			BOOL Equals(const COptColInfo& optcolinfo) const
 			{
 				// don't need to check name as column id is unique
-				return m_ulColId == optcolinfo.m_ulColId;
+				return m_colid == optcolinfo.m_colid;
 			}
 
 			// hash value
-			ULONG UlHash() const
+			ULONG HashValue() const
 			{
-				return gpos::UlHash(&m_ulColId);
+				return gpos::HashValue(&m_colid);
 			}
 
 	};
@@ -90,23 +90,23 @@ namespace gpdxl
 	inline
 	ULONG UlHashOptColInfo
 		(
-		const COptColInfo *poptcolinfo
+		const COptColInfo *opt_col_info
 		)
 	{
-		GPOS_ASSERT(NULL != poptcolinfo);
-		return poptcolinfo->UlHash();
+		GPOS_ASSERT(NULL != opt_col_info);
+		return opt_col_info->HashValue();
 	}
 
 	// equality function
 	inline
 	BOOL FEqualOptColInfo
 		(
-		const COptColInfo *poptcolinfoA,
-		const COptColInfo *poptcolinfoB
+		const COptColInfo *opt_col_infoA,
+		const COptColInfo *opt_col_infoB
 		)
 	{
-		GPOS_ASSERT(NULL != poptcolinfoA && NULL != poptcolinfoB);
-		return poptcolinfoA->FEquals(*poptcolinfoB);
+		GPOS_ASSERT(NULL != opt_col_infoA && NULL != opt_col_infoB);
+		return opt_col_infoA->Equals(*opt_col_infoB);
 	}
 
 }

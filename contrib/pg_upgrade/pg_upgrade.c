@@ -780,7 +780,7 @@ set_frozenxids(bool minmxid_only)
 	 * allow_system_table_mods first.
 	 */
 	PQclear(executeQueryOrDie(conn_template1,
-							  "set allow_system_table_mods='dml'"));
+							  "set allow_system_table_mods=true"));
 
 	if (!minmxid_only)
 		/* set pg_database.datfrozenxid */
@@ -830,7 +830,7 @@ set_frozenxids(bool minmxid_only)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 
 		if (!minmxid_only)

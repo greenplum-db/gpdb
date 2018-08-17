@@ -152,7 +152,7 @@ class DbURL:
 
 
 def connect(dburl, utility=False, verbose=False,
-            encoding=None, allowSystemTableMods=None, logConn=True):
+            encoding=None, allowSystemTableMods=False, logConn=True):
 
     if utility:
         options = '-c gp_session_role=utility'
@@ -160,10 +160,8 @@ def connect(dburl, utility=False, verbose=False,
         options = ''
 
     # MPP-13779, et al
-    if allowSystemTableMods in ['dml']:
-        options += ' -c allow_system_table_mods=' + allowSystemTableMods
-    elif allowSystemTableMods is not None:
-        raise Exception('allowSystemTableMods invalid: %s' % allowSystemTableMods)
+    if allowSystemTableMods:
+        options += ' -c allow_system_table_mods=true'
 
     # bypass pgdb.connect() and instead call pgdb._connect_
     # to avoid silly issues with : in ipv6 address names and the url string

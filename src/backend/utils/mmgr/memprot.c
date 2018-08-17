@@ -242,7 +242,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	/* Request 1 MB of waiver for processing error */
 	VmemTracker_RequestWaiver(1024 * 1024);
 
-	Insist(MemoryProtection_IsOwnerThread());
+	Assert(MemoryProtection_IsOwnerThread());
 	if (ec == MemoryFailure_QueryMemoryExhausted)
 	{
 		elog(LOG, "Logging memory usage for reaching per-query memory limit");
@@ -267,9 +267,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 		elog(LOG, "Logging memory usage for reaching resource group limit");
 	}
 	else
-	{
-		Assert(!"Unknown memory failure error code");
-	}
+		elog(ERROR, "Unknown memory failure error code");
 
 	RedZoneHandler_LogVmemUsageOfAllSessions();
 	MemoryAccounting_SaveToLog();

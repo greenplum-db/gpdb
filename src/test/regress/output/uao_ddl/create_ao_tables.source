@@ -1,4 +1,8 @@
 create schema create_ao_tables_@orientation@;
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
 set search_path="$user",create_ao_tables_@orientation@,public;
 SET gp_default_storage_options='orientation=@orientation@';
 -- Create Updatable AO tables , with indexes, with and without compression
@@ -147,7 +151,8 @@ insert into sto_uao_3 values ('2_two',25);
 COMMIT;
 -- should fail due to constraint violation
 update sto_uao_3 set col_numeric = 20*col_numeric;
-ERROR:  new row for relation "sto_uao_3" violates check constraint "tbl_chk_con1"  (seg0 127.0.0.1:25432 pid=15248)
+ERROR:  new row for relation "sto_uao_3" violates check constraint "tbl_chk_con1"  (seg0 172.17.0.2:25432 pid=282592)
+DETAIL:  Failing row contains (0_zero, 600).
 BEGIN;
 update sto_uao_3 set col_numeric = 20+col_numeric;
 select count(*) from sto_uao_3;

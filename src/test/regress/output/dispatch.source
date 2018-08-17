@@ -54,7 +54,6 @@ DROP DATABASE IF EXISTS "funny""db'with\\quotes";
 reset client_min_messages;
 CREATE DATABASE "funny""db'with\\quotes";
 ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quotes";
-NOTICE:  schema "funny"schema'with\\quotes" does not exist
 -- GPDB_91_MERGE_FIXME: It would be good to leave the database in place, to
 -- also test gpcheckcat and pg_upgrade after all the regression tests have
 -- completed. As of this writing pg_upgrade does not in fact handle that well.
@@ -67,10 +66,7 @@ DROP DATABASE "funny""db'with\\quotes";
 -- Set search_path as a per-user setting so that we can test that.
 CREATE DATABASE "dispatch test db";
 ALTER DATABASE "dispatch test db" SET search_path="my schema",public;
-NOTICE:  schema "my schema" does not exist
 \c "dispatch test db"
-WARNING:  invalid value for parameter "search_path": ""my schema", public"
-DETAIL:  schema "my schema" does not exist
 CREATE SCHEMA "my schema";
 -- Reconnect so that the search_path includes "my schema".
 \c
@@ -300,7 +296,7 @@ select pg_sleep(1); -- small delay to make sure the postmaster has noticed the c
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
-DETAIL:  segments is in recovery mode
+DETAIL:  Segments are in recovery mode.
 -- Wait for the quickdie() sleep to time out, and the server to restart.
 select pg_sleep(5);
  pg_sleep 

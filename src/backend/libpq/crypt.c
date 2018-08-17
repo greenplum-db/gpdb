@@ -6,7 +6,7 @@
  *
  * Original coding by Todd A. Brandys
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/libpq/crypt.c
@@ -28,6 +28,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/syscache.h"
+#include "utils/timestamp.h"
 
 bool
 hash_password(const char *passwd, char *salt, size_t salt_len, char *buf)
@@ -108,7 +109,7 @@ hashed_passwd_verify(const Port *port, const char *role, char *client_pass)
 			{
 				/* stored password already encrypted, only do salt */
 				if (!pg_md5_encrypt(shadow_pass + strlen("md5"),
-									(char *) port->md5Salt,
+									port->md5Salt,
 									sizeof(port->md5Salt), crypt_pwd))
 				{
 					pfree(crypt_pwd);

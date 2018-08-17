@@ -216,24 +216,21 @@ SET enable_seqscan = False;
 
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -259,27 +256,25 @@ CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -332,6 +327,7 @@ INSERT INTO gone (seed, already_gone, too_far_gone, paragon)
  
 
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 
 -- Create an index; use the index; then roll back.
 BEGIN WORK;
@@ -343,6 +339,8 @@ EXPLAIN SELECT * FROM gone
  WHERE already_gone ~= SeedToCircle(857);
 ROLLBACK WORK;
 
+SET optimizer_enable_tablescan = True;
+
 -- Should not use the index, since we rolled back the statement that created 
 -- the index.
 SELECT * FROM gone 
@@ -350,6 +348,7 @@ SELECT * FROM gone
 EXPLAIN SELECT * FROM gone 
  WHERE already_gone ~= SeedToCircle(857);
 
+SET optimizer_enable_tablescan = False;
 CREATE INDEX polly_gone ON gone USING GiST (paragon);
 
 BEGIN WORK;
@@ -437,27 +436,168 @@ DROP TABLE IF EXISTS gone;
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
--- end_ignore
 
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- start_ignore
+
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
--- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11_multiple_filters.sql
+-- ----------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This does a few SELECT statements as a brief sanity check that the 
+--     indexes are working correctly when there are multple predicates in the
+--     where clause.  Furthermore, we request EXPLAIN info for each SELECT.  
+--     In this script, we ignore the output of the EXPLAIN commands, but a 
+--     later part of the test checks that we used an index scan rather than 
+--     a sequential scan when executing the SELECT statements.
+-- ----------------------------------------------------------------------------
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+
+SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+
+SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+
+SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test12_partition.sql
+-- ----------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests partition tables with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE geometricTypesPartition (seed INTEGER, c CIRCLE, b BOX, p POLYGON) 
+PARTITION BY range(seed) (Start(1) end(3) every(1));
+
+INSERT INTO geometricTypesPartition (seed, c, b, p) 
+ SELECT x%2 + 1, 
+   SeedToCircle(x), 
+   SeedToBox(x), 
+   SeedToPolygon(x)
+  FROM generate_series(1, 3000)x
+ ;
+
+CREATE INDEX gt_index_c_part ON geometricTypesPartition USING GIST (c);
+
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+
+SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+EXPLAIN SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+
+DROP TABLE IF EXISTS geometricTypesPartition;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13_textsearch.sql
+-- ----------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests full text search with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE textSearch (seed INTEGER, t tsvector);
+
+CREATE INDEX text_index ON textSearch USING GIST (t);
+
+INSERT INTO textSearch VALUES (1, 'test');
+INSERT INTO textSearch VALUES (2, 'test');
+INSERT INTO textSearch VALUES (2, 't');
+INSERT INTO textSearch VALUES (1, 'est');
+INSERT INTO textSearch VALUES (2, 'te');
+INSERT INTO textSearch VALUES (1, 'st');
+INSERT INTO textSearch VALUES (2, 'tt');
+INSERT INTO textSearch VALUES (1, 'hello');
+INSERT INTO textSearch VALUES (3, 'world');
+INSERT INTO textSearch VALUES (4, 'orca');
+INSERT INTO textSearch VALUES (3, 'gpdb');
+INSERT INTO textSearch VALUES (4, 'gist');
+INSERT INTO textSearch VALUES (3, 'cool');
+
+SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+EXPLAIN SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+
+DROP TABLE IF EXISTS textSearch;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14_performance.sql
+-- ----------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests performance with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements. This test should not be taking longer than a couple of 
+--     seconds. If it goes for a table scan/seq scan, then this query will take
+--     at least 70x times longer. 
+-- ----------------------------------------------------------------------------
+SET optimizer_enable_tablescan = TRUE;
+
+CREATE TABLE gist_tbl (a int, p polygon);
+CREATE TABLE gist_tbl2 (b int, p polygon);
+CREATE INDEX poly_index ON gist_tbl USING gist(p);
+
+INSERT INTO gist_tbl SELECT i, polygon(box(point(i, i+2),point(i+4,
+i+6))) FROM generate_series(1,50000)i;
+INSERT INTO gist_tbl2 SELECT i, polygon(box(point(i+1, i+3),point(i+5,
+i+7))) FROM generate_series(1,50000)i;
+
+ANALYZE gist_tbl;
+ANALYZE gist_tbl2;
+
+SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
+EXPLAIN SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

@@ -26,8 +26,6 @@
 /*
  * Defines for gp_policy
  */
-#define GpPolicyRelationName		"gp_distribution_policy"
-
 #define GpPolicyRelationId  5002
 
 CATALOG(gp_distribution_policy,5002) BKI_WITHOUT_OIDS

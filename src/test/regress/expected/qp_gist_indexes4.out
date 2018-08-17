@@ -192,7 +192,6 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
                                    QUERY PLAN                                    
@@ -204,7 +203,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -212,7 +210,6 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
                                    QUERY PLAN                                    
@@ -224,7 +221,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -232,7 +228,6 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
                                    QUERY PLAN                                    
@@ -244,7 +239,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test06_createIndexes.sql
 -- ----------------------------------------------------------------------
@@ -264,6 +258,7 @@ CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
  seed  |         c          |            b            |             p             
@@ -271,7 +266,6 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
                                         QUERY PLAN                                         
@@ -284,7 +278,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (6 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -292,7 +285,6 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
                                         QUERY PLAN                                         
@@ -304,7 +296,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -312,7 +303,6 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
                                         QUERY PLAN                                         
@@ -325,7 +315,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (6 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test08_reindex.sql
 -- ----------------------------------------------------------------------
@@ -364,6 +353,7 @@ INSERT INTO gone (seed, already_gone, too_far_gone, paragon)
  ;
  
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 -- Create an index; use the index; then roll back.
 BEGIN WORK;
 CREATE INDEX gone_around_the_bend ON gone USING GiST (already_gone);
@@ -388,6 +378,7 @@ EXPLAIN SELECT * FROM gone
 (6 rows)
 
 ROLLBACK WORK;
+SET optimizer_enable_tablescan = True;
 -- Should not use the index, since we rolled back the statement that created 
 -- the index.
 SELECT * FROM gone 
@@ -408,6 +399,7 @@ EXPLAIN SELECT * FROM gone
  Optimizer status: legacy query optimizer
 (5 rows)
 
+SET optimizer_enable_tablescan = False;
 CREATE INDEX polly_gone ON gone USING GiST (paragon);
 BEGIN WORK;
 ALTER INDEX polly_gone RENAME TO polly_wanna_cracker;
@@ -610,6 +602,7 @@ DROP TABLE IF EXISTS gone;
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
  seed  |         c          |            b            |             p             
@@ -617,7 +610,6 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
                                         QUERY PLAN                                         
@@ -630,7 +622,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (6 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -638,7 +629,6 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
                                         QUERY PLAN                                         
@@ -650,7 +640,6 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -658,7 +647,6 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
                                         QUERY PLAN                                         
@@ -671,7 +659,232 @@ EXPLAIN SELECT * FROM geometricTypes
  Optimizer status: legacy query optimizer
 (6 rows)
 
--- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: test11_multiple_filters.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This does a few SELECT statements as a brief sanity check that the 
+--     indexes are working correctly when there are multple predicates in the
+--     where clause.  Furthermore, we request EXPLAIN info for each SELECT.  
+--     In this script, we ignore the output of the EXPLAIN commands, but a 
+--     later part of the test checks that we used an index scan rather than 
+--     a sequential scan when executing the SELECT statements.
+-- ----------------------------------------------------------------------------
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+ seed  |          c          |            b             |             p              
+-------+---------------------+--------------------------+----------------------------
+ 19510 | <(-3197,7903),3150> | (3150,7903),(-3197,7679) | ((-3197,7903),(3150,7679))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..201.27 rows=1 width=129)
+   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..201.27 rows=1 width=129)
+         Index Cond: c ~= '<(-3197,7903),3150>'::circle AND c << '<(7879,8779),7868>'::circle
+ Optimizer: legacy query optimizer
+(4 rows)
+
+SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+ seed |         c          |            b             |             p              
+------+--------------------+--------------------------+----------------------------
+ 1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.37 rows=1 width=129)
+   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..200.37 rows=1 width=129)
+         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box AND b << '(8479,7579),(8441,-3121)'::box
+ Settings:  enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(5 rows)
+
+SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+ seed |         c          |            b            |             p             
+------+--------------------+-------------------------+---------------------------
+  345 | <(1252,8252),1274> | (1274,8252),(1252,7975) | ((1252,8252),(1274,7975))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.37 rows=1 width=129)
+   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..200.37 rows=1 width=129)
+         Index Cond: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
+         Filter: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
+ Settings:  enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(6 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test12_partition.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests partition tables with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE geometricTypesPartition (seed INTEGER, c CIRCLE, b BOX, p POLYGON) 
+PARTITION BY range(seed) (Start(1) end(3) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'seed' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_1" for table "geometrictypespartition"
+NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_2" for table "geometrictypespartition"
+INSERT INTO geometricTypesPartition (seed, c, b, p) 
+ SELECT x%2 + 1, 
+   SeedToCircle(x), 
+   SeedToBox(x), 
+   SeedToPolygon(x)
+  FROM generate_series(1, 3000)x
+ ;
+CREATE INDEX gt_index_c_part ON geometricTypesPartition USING GIST (c);
+NOTICE:  building index for child partition "geometrictypespartition_1_prt_1"
+NOTICE:  building index for child partition "geometrictypespartition_1_prt_2"
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+ seed |          c          |            b             |             p              
+------+---------------------+--------------------------+----------------------------
+    2 | <(8479,-3121),8441> | (8479,7579),(8441,-3121) | ((8479,-3121),(8441,7579))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.56..2673.79 rows=54 width=92)
+   ->  Append  (cost=100.56..2673.79 rows=18 width=92)
+         ->  Bitmap Heap Scan on geometrictypespartition_1_prt_1 geometrictypespartition  (cost=100.56..1336.90 rows=9 width=92)
+               Filter: c ~= '<(8479,-3121),8441>'::circle
+               ->  Bitmap Index Scan on gt_index_c_part_1_prt_1  (cost=0.00..100.55 rows=9 width=0)
+                     Index Cond: c ~= '<(8479,-3121),8441>'::circle
+         ->  Bitmap Heap Scan on geometrictypespartition_1_prt_2 geometrictypespartition  (cost=100.56..1336.90 rows=9 width=92)
+               Filter: c ~= '<(8479,-3121),8441>'::circle
+               ->  Bitmap Index Scan on gt_index_c_part_1_prt_2  (cost=0.00..100.55 rows=9 width=0)
+                     Index Cond: c ~= '<(8479,-3121),8441>'::circle
+ Settings:  enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(12 rows)
+
+DROP TABLE IF EXISTS geometricTypesPartition;
+-- ----------------------------------------------------------------------
+-- Test: test13_textsearch.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests full text search with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE textSearch (seed INTEGER, t tsvector);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'seed' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX text_index ON textSearch USING GIST (t);
+INSERT INTO textSearch VALUES (1, 'test');
+INSERT INTO textSearch VALUES (2, 'test');
+INSERT INTO textSearch VALUES (2, 't');
+INSERT INTO textSearch VALUES (1, 'est');
+INSERT INTO textSearch VALUES (2, 'te');
+INSERT INTO textSearch VALUES (1, 'st');
+INSERT INTO textSearch VALUES (2, 'tt');
+INSERT INTO textSearch VALUES (1, 'hello');
+INSERT INTO textSearch VALUES (3, 'world');
+INSERT INTO textSearch VALUES (4, 'orca');
+INSERT INTO textSearch VALUES (3, 'gpdb');
+INSERT INTO textSearch VALUES (4, 'gist');
+INSERT INTO textSearch VALUES (3, 'cool');
+SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+ seed |   t    
+------+--------
+    1 | 'test'
+    2 | 'test'
+(2 rows)
+
+EXPLAIN SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=17)
+   ->  Index Scan using text_index on textsearch  (cost=0.00..200.27 rows=1 width=17)
+         Index Cond: t @@ '''test'''::tsquery
+         Filter: t @@ '''test'''::tsquery
+ Settings:  enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(6 rows)
+
+DROP TABLE IF EXISTS textSearch;
+-- ----------------------------------------------------------------------
+-- Test: test14_performance.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests performance with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements. This test should not be taking longer than a couple of 
+--     seconds. If it goes for a table scan/seq scan, then this query will take
+--     at least 70x times longer. 
+-- ----------------------------------------------------------------------------
+SET optimizer_enable_tablescan = TRUE;
+CREATE TABLE gist_tbl (a int, p polygon);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE gist_tbl2 (b int, p polygon);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX poly_index ON gist_tbl USING gist(p);
+INSERT INTO gist_tbl SELECT i, polygon(box(point(i, i+2),point(i+4,
+i+6))) FROM generate_series(1,50000)i;
+INSERT INTO gist_tbl2 SELECT i, polygon(box(point(i+1, i+3),point(i+5,
+i+7))) FROM generate_series(1,50000)i;
+ANALYZE gist_tbl;
+ANALYZE gist_tbl2;
+SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
+ count 
+-------
+ 49999
+(1 row)
+
+EXPLAIN SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=398146.51..398146.52 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=398146.44..398146.49 rows=1 width=8)
+         ->  Aggregate  (cost=398146.44..398146.45 rows=1 width=8)
+               ->  Nested Loop  (cost=0.00..391855.82 rows=838750 width=0)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2715.85 rows=49997 width=101)
+                           ->  Seq Scan on gist_tbl2  (cost=0.00..715.97 rows=16666 width=101)
+                     ->  Index Scan using poly_index on gist_tbl  (cost=0.00..1.97 rows=17 width=101)
+                           Index Cond: gist_tbl.p <@ gist_tbl2.p
+                           Filter: gist_tbl.p <@ gist_tbl2.p
+ Settings:  enable_seqscan=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(11 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

@@ -3,15 +3,13 @@
  *
  * Prototypes for functions in commands/seclabel.c
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  */
 #ifndef SECLABEL_H
 #define SECLABEL_H
 
 #include "catalog/objectaddress.h"
-#include "nodes/primnodes.h"
-#include "nodes/parsenodes.h"
 
 /*
  * Internal APIs
@@ -21,6 +19,7 @@ extern char *GetSecurityLabel(const ObjectAddress *object,
 extern void SetSecurityLabel(const ObjectAddress *object,
 				 const char *provider, const char *label);
 extern void DeleteSecurityLabel(const ObjectAddress *object);
+extern void DeleteSharedSecurityLabel(Oid objectId, Oid classId);
 
 /*
  * Statement and ESP hook support

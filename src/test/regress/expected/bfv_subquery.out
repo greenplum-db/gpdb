@@ -116,18 +116,18 @@ select count_operator('select bfv_subquery_t1.i, (select bfv_subquery_t1.i from 
 (1 row)
 
 select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1 order by 1, 2;
- i  | ?column? 
-----+----------
-  1 |        1
-  2 |        2
-  3 |        3
-  4 |        4
-  5 |        5
-  6 |        6
-  7 |        7
-  8 |        8
-  9 |        9
- 10 |       10
+ i  | i  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
 (10 rows)
 
 -- start_ignore
@@ -215,10 +215,10 @@ select
 union 
 select b from  bfv_subquery_foo1 inner2 where inner2.b=outer1.b) 
 from  bfv_subquery_foo1 outer1;
- ?column? 
-----------
-        1
-        2
+ a 
+---
+ 1
+ 2
 (2 rows)
 
 -- using of subqueries with unnest with IN or NOT IN predicates
@@ -339,33 +339,33 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- end_ignore
 SELECT (SELECT count(*) FROM t_coalesce_count_subquery_empty where c = a) FROM t_coalesce_count_subquery;
- ?column? 
-----------
-        0
+ count 
+-------
+     0
 (1 row)
 
 SELECT (SELECT COUNT(*) FROM t_coalesce_count_subquery_empty GROUP BY c LIMIT 1) FROM t_coalesce_count_subquery;
- ?column? 
-----------
-         
+ count 
+-------
+      
 (1 row)
 
 SELECT (SELECT a1 FROM (SELECT count(*) FROM t_coalesce_count_subquery_empty2 group by e
         union all
         SELECT count(*) from t_coalesce_count_subquery_empty group by c) x(a1) LIMIT 1)
 FROM t_coalesce_count_subquery;
- ?column? 
-----------
-         
+ a1 
+----
+   
 (1 row)
 
 SELECT (SELECT a1 FROM (SELECT count(*) from t_coalesce_count_subquery_empty group by c
         union all
         SELECT count(*) FROM t_coalesce_count_subquery_empty2 group by e) x(a1) LIMIT 1)
 FROM t_coalesce_count_subquery;
- ?column? 
-----------
-         
+ a1 
+----
+   
 (1 row)
 
 -- start_ignore

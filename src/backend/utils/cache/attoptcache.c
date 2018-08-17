@@ -6,7 +6,7 @@
  * Attribute options are cached separately from the fixed-size portion of
  * pg_attribute entries, which are handled by the relcache.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -17,12 +17,9 @@
 #include "postgres.h"
 
 #include "access/reloptions.h"
-#include "catalog/pg_attribute.h"
 #include "utils/attoptcache.h"
-#include "utils/catcache.h"
 #include "utils/hsearch.h"
 #include "utils/inval.h"
-#include "utils/rel.h"
 #include "utils/syscache.h"
 
 
@@ -53,7 +50,7 @@ typedef struct
  * query execution), this seems OK.
  */
 static void
-InvalidateAttoptCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
+InvalidateAttoptCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
 {
 	HASH_SEQ_STATUS status;
 	AttoptCacheEntry *attopt;

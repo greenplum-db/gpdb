@@ -3,7 +3,7 @@
  * constraint.c
  *	  PostgreSQL CONSTRAINT support code.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -17,6 +17,7 @@
 #include "commands/trigger.h"
 #include "executor/executor.h"
 #include "utils/builtins.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 

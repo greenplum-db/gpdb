@@ -30,7 +30,7 @@ set enable_seqscan = off;
 -- start_ignore
 -- Known_opt_diff: OPT-929
 -- end_ignore
-explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f where f.id = b.id;
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
 set optimizer_enable_hashjoin = on;
 

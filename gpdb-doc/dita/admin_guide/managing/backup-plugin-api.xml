@@ -6,9 +6,6 @@
   <body>
     <p>This topic describes how to develop a custom storage plugin with the Greenplum Database
       Backup/Restore Storage Plugin API.</p>
-    <note type="warning">The Greenplum Database Backup/Restore Storage Plugin API is an experimental
-      feature and is not intended for use in a production environment. Experimental features are
-      subject to change without notice in future releases.</note>
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and
       integrate a custom backup storage system with the Greenplum Database <xref
         href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
@@ -19,9 +16,6 @@
     <p>When you use the Backup/Restore Storage Plugin API, you create a plugin that the Greenplum
       Database administrator deploys to the Greenplum Database cluster. Once deployed, the plugin is
       available for use in certain backup and restore operations.</p>
-    <note>Greenplum Database supports using a custom storage plugin on a backup operation only when
-        <codeph>gpbackup</codeph> is run with the <codeph>--single-data-file</codeph> or
-        <codeph>--metadata-only</codeph> options.</note>
 
     <p>This topic includes the following subtopics:</p>
     <ul id="ul_wjf_1wy_sp">

@@ -1,11 +1,13 @@
 # contrib/sepgsql/Makefile
 
 MODULE_big = sepgsql
-OBJS = hooks.o selinux.o label.o dml.o \
-	schema.o relation.o proc.o
+OBJS = hooks.o selinux.o uavc.o label.o dml.o \
+	database.o schema.o relation.o proc.o
 DATA_built = sepgsql.sql
-REGRESS = label dml misc
-EXTRA_CLEAN = -r tmp *.pp sepgsql-regtest.if sepgsql-regtest.fc
+
+# Note: because we don't tell the Makefile there are any regression tests,
+# we have to clean those result files explicitly
+EXTRA_CLEAN = -r $(pg_regress_clean_files) tmp/ *.pp sepgsql-regtest.if sepgsql-regtest.fc
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
@@ -18,5 +20,4 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-SHLIB_LINK += $(filter -lselinux, $(LIBS))
-REGRESS_OPTS += --launcher $(top_builddir)/contrib/sepgsql/launcher
+SHLIB_LINK += -lselinux

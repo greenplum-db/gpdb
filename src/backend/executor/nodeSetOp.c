@@ -32,7 +32,7 @@
  * input group.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -344,7 +344,7 @@ setop_fill_hash_table(SetOpState *setopstate)
 	SetOp	   *node = (SetOp *) setopstate->ps.plan;
 	PlanState  *outerPlan;
 	int			firstFlag;
-	bool		in_first_rel;
+	bool in_first_rel PG_USED_FOR_ASSERTS_ONLY;
 
 	/*
 	 * get state info from node

@@ -21,7 +21,7 @@ INSERT INTO toastable_heap VALUES(repeat('A',100000), repeat('B',100001), 2);
 --
 -- This is done in an ignore block so it can run correctly with any number of
 -- segments.
-*U: SET allow_system_table_mods = 'DML';
+*U: SET allow_system_table_mods = true;
 *U: UPDATE pg_index
         SET indisvalid = false
         FROM pg_class heap, pg_class toast

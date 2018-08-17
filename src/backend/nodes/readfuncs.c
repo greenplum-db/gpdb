@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -39,6 +39,7 @@
 
 #include "nodes/parsenodes.h"
 #include "nodes/readfuncs.h"
+#include "nodes/relation.h"
 #include "cdb/cdbgang.h"
 
 /*
@@ -65,7 +66,8 @@
 /* And a few guys need only the pg_strtok support fields */
 #define READ_TEMP_LOCALS()	\
 	char	   *token;		\
-	int			length
+	int			length;		\
+	(void) token				/* possibly unused */
 
 /* ... but most need both */
 #define READ_LOCALS(nodeTypeName)			\
@@ -367,10 +369,10 @@ _readQuery(void)
 
 	READ_ENUM_FIELD(commandType, CmdType);
 	READ_ENUM_FIELD(querySource, QuerySource);
+	local_node->queryId = 0;	/* not saved in output format */
 	READ_BOOL_FIELD(canSetTag);
 	READ_NODE_FIELD(utilityStmt);
 	READ_INT_FIELD(resultRelation);
-	READ_NODE_FIELD(intoClause);
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
@@ -397,6 +399,7 @@ _readQuery(void)
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
 	READ_NODE_FIELD(constraintDeps);
+	READ_BOOL_FIELD(isCTAS);
 
 	local_node->intoPolicy = NULL;
 
@@ -661,6 +664,8 @@ _readIntoClause(void)
 	READ_NODE_FIELD(options);
 	READ_ENUM_FIELD(onCommit, OnCommitAction);
 	READ_STRING_FIELD(tableSpaceName);
+	READ_BOOL_FIELD(skipData);
+	READ_NODE_FIELD(distributedBy);
 
 	READ_DONE();
 }
@@ -751,6 +756,13 @@ _readConstraint(void)
 		local_node->contype = CONSTR_CHECK;
 		READ_NODE_FIELD(raw_expr);
 		READ_STRING_FIELD(cooked_expr);
+		/*
+		 * GPDB: need dispatch skip_validation and is_no_inherit for statement like:
+		 * ALTER DOMAIN things ADD CONSTRAINT meow CHECK (VALUE < 11) NOT VALID;
+		 * ALTER TABLE constraint_rename_test ADD CONSTRAINT con2 CHECK NO INHERIT (b > 0);
+		 */
+		READ_BOOL_FIELD(skip_validation);
+		READ_BOOL_FIELD(is_no_inherit);
 	}
 	else if (strncmp(token, "DEFAULT", length)==0)
 	{
@@ -825,8 +837,9 @@ _readIndexStmt(void)
 	READ_NODE_FIELD(options);
 	READ_NODE_FIELD(whereClause);
 	READ_NODE_FIELD(excludeOpNames);
-	READ_BOOL_FIELD(is_part_child);
 	READ_OID_FIELD(indexOid);
+	READ_OID_FIELD(oldNode);
+	READ_BOOL_FIELD(is_part_child);
 	READ_BOOL_FIELD(unique);
 	READ_BOOL_FIELD(primary);
 	READ_BOOL_FIELD(isconstraint);
@@ -834,6 +847,7 @@ _readIndexStmt(void)
 	READ_BOOL_FIELD(initdeferred);
 	READ_BOOL_FIELD(concurrent);
 	READ_STRING_FIELD(altconname);
+	READ_BOOL_FIELD(is_split_part);
 
 	READ_DONE();
 }
@@ -907,27 +921,13 @@ _readDropStmt(void)
 	READ_LOCALS(DropStmt);
 
 	READ_NODE_FIELD(objects);
+	READ_NODE_FIELD(arguments);
 	READ_ENUM_FIELD(removeType,ObjectType);
 	READ_ENUM_FIELD(behavior,DropBehavior);
 	READ_BOOL_FIELD(missing_ok);
 	READ_BOOL_FIELD(bAllowPartn);
+	READ_BOOL_FIELD(concurrent);
 	local_node->missing_ok=true;
-
-	READ_DONE();
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-#ifndef COMPILING_BINARY_FUNCS
-static DropPropertyStmt *
-_readDropPropertyStmt(void)
-{
-	READ_LOCALS(DropPropertyStmt);
-
-	READ_NODE_FIELD(relation);
-	READ_STRING_FIELD(property);
-	READ_ENUM_FIELD(removeType,ObjectType);
-	READ_ENUM_FIELD(behavior,DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -1106,6 +1106,7 @@ _readAlterObjectSchemaStmt(void)
 	READ_NODE_FIELD(objarg);
 	READ_STRING_FIELD(addname);
 	READ_STRING_FIELD(newschema);
+	READ_BOOL_FIELD(missing_ok);
 	READ_ENUM_FIELD(objectType,ObjectType);
 
 	READ_DONE();
@@ -1134,16 +1135,18 @@ _readRenameStmt(void)
 {
 	READ_LOCALS(RenameStmt);
 
+	READ_ENUM_FIELD(renameType, ObjectType);
+	READ_ENUM_FIELD(relationType, ObjectType);
 	READ_NODE_FIELD(relation);
 	READ_OID_FIELD(objid);
 	READ_NODE_FIELD(object);
 	READ_NODE_FIELD(objarg);
 	READ_STRING_FIELD(subname);
 	READ_STRING_FIELD(newname);
-	READ_ENUM_FIELD(renameType,ObjectType);
 	READ_ENUM_FIELD(behavior,DropBehavior);
 
 	READ_BOOL_FIELD(bAllowPartn);
+	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -2163,6 +2166,7 @@ _readRangeTblEntry(void)
 			break;
 		case RTE_SUBQUERY:
 			READ_NODE_FIELD(subquery);
+			READ_BOOL_FIELD(security_barrier);
 			break;
 		case RTE_JOIN:
 			READ_ENUM_FIELD(jointype, JoinType);
@@ -2408,20 +2412,6 @@ _readCreatePLangStmt(void)
 	READ_DONE();
 }
 
-#ifndef COMPILING_BINARY_FUNCS
-static DropPLangStmt *
-_readDropPLangStmt(void)
-{
-	READ_LOCALS(DropPLangStmt);
-
-	READ_STRING_FIELD(plname);
-	READ_ENUM_FIELD(behavior,DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
 static CreateSeqStmt *
 _readCreateSeqStmt(void)
 {
@@ -2499,6 +2489,7 @@ _readAlterDomainStmt(void)
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(def);
 	READ_ENUM_FIELD(behavior, DropBehavior);
+	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -2531,22 +2522,6 @@ _readFunctionParameter(void)
 
 	READ_DONE();
 }
-
-#ifndef COMPILING_BINARY_FUNCS
-static RemoveFuncStmt *
-_readRemoveFuncStmt(void)
-{
-	READ_LOCALS(RemoveFuncStmt);
-
-	READ_ENUM_FIELD(kind,ObjectType);
-	READ_NODE_FIELD(name);
-	READ_NODE_FIELD(args);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-#endif /* COMPILING_BINARY_FUNCS */
 
 static AlterFunctionStmt *
 _readAlterFunctionStmt(void)
@@ -2610,19 +2585,6 @@ _readCreateCastStmt(void)
 	READ_DONE();
 }
 
-static DropCastStmt *
-_readDropCastStmt(void)
-{
-	READ_LOCALS(DropCastStmt);
-
-	READ_NODE_FIELD(sourcetype);
-	READ_NODE_FIELD(targettype);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-
 static CreateOpClassStmt *
 _readCreateOpClassStmt(void)
 {
@@ -2670,30 +2632,6 @@ _readAlterOpFamilyStmt(void)
 	READ_STRING_FIELD(amname);
 	READ_BOOL_FIELD(isDrop);
 	READ_NODE_FIELD(items);
-
-	READ_DONE();
-}
-
-static RemoveOpClassStmt *
-_readRemoveOpClassStmt(void)
-{
-	READ_LOCALS(RemoveOpClassStmt);
-	READ_NODE_FIELD(opclassname);
-	READ_STRING_FIELD(amname);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-
-static RemoveOpFamilyStmt *
-_readRemoveOpFamilyStmt(void)
-{
-	READ_LOCALS(RemoveOpFamilyStmt);
-	READ_NODE_FIELD(opfamilyname);
-	READ_STRING_FIELD(amname);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -3136,14 +3074,8 @@ parseNodeString(void)
 		return_value = _readDenyLoginInterval();
 	else if (MATCHX("DENYLOGINPOINT"))
 		return_value = _readDenyLoginPoint();
-	else if (MATCHX("DROPCAST"))
-		return_value = _readDropCastStmt();
 	else if (MATCHX("DROPDBSTMT"))
 		return_value = _readDropdbStmt();
-	else if (MATCHX("DROPPLANGSTMT"))
-		return_value = _readDropPLangStmt();
-	else if (MATCHX("DROPPROPSTMT"))
-		return_value = _readDropPropertyStmt();
 	else if (MATCHX("DROPROLESTMT"))
 		return_value = _readDropRoleStmt();
 	else if (MATCHX("DROPSTMT"))
@@ -3188,12 +3120,6 @@ parseNodeString(void)
 		return_value = _readPrivGrantee();
 	else if (MATCHX("REINDEXSTMT"))
 		return_value = _readReindexStmt();
-	else if (MATCHX("REMOVEFUNCSTMT"))
-		return_value = _readRemoveFuncStmt();
-	else if (MATCHX("REMOVEOPCLASS"))
-		return_value = _readRemoveOpClassStmt();
-	else if (MATCHX("REMOVEOPFAMILY"))
-		return_value = _readRemoveOpFamilyStmt();
 	else if (MATCHX("RENAMESTMT"))
 		return_value = _readRenameStmt();
 	else if (MATCHX("RULESTMT"))

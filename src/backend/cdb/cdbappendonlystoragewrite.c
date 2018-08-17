@@ -1067,13 +1067,13 @@ AppendOnlyStorageWrite_VerifyWriteBlock(AppendOnlyStorageWrite *storageWrite,
 
 		decompressor = cfns[COMPRESSION_DECOMPRESS];
 
-		gp_decompress_new(&header[offset], //Compressed data in block.
-						  compressedLen,
-						  storageWrite->verifyWriteBuffer, //Temporary buffer to hold uncompressed data.
-						  uncompressedLen,
-						  decompressor,
-						  storageWrite->verifyWriteCompressionState,
-						  storageWrite->bufferCount);
+		gp_decompress(&header[offset], //Compressed data in block.
+					  compressedLen,
+					  storageWrite->verifyWriteBuffer, //Temporary buffer to hold uncompressed data.
+					  uncompressedLen,
+					  decompressor,
+					  storageWrite->verifyWriteCompressionState,
+					  storageWrite->bufferCount);
 
 		/*
 		 * Compare.
@@ -1177,15 +1177,13 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 	 * Compress into the BufferedAppend buffer after the large header (and
 	 * optional checksum, etc.
 	 */
-	(void) gp_trycompress_new(sourceData,
-							  sourceLen,
-							  dataBuffer,
-							  dataBufferWithOverrrunLen,
-							  sourceLen, /* maxCompressedLen */
-							  compressedLen,
-							  storageWrite->storageAttributes.compressLevel,
-							  compressor,
-							  storageWrite->compressionState);
+	gp_trycompress(sourceData,
+					sourceLen,
+					dataBuffer,
+					dataBufferWithOverrrunLen,
+					compressedLen,
+					compressor,
+					storageWrite->compressionState);
 
 #ifdef FAULT_INJECTOR
 	/* Simulate that compression is not possible if the fault is set. */

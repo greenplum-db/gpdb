@@ -1234,7 +1234,7 @@ updateResgroupCapabilityEntry(Relation rel,
 
 		systable_endscan(sscan);
 
-		insertResgroupCapabilityEntry(rel, groupId, limitType, strValue);
+		insertResgroupCapabilityEntry(rel, groupId, limitType, (char *) strValue);
 
 		return;
 	}

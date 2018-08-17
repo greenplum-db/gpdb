@@ -34,9 +34,9 @@
 #include "utils/array.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rangetypes.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
-
 
 /*
  * When a tuple is received on the motion receiver, the typmod of RECORDOID
@@ -137,20 +137,15 @@ static Datum TRRemap(TupleRemapper *remapper, TupleRemapInfo *remapinfo,
 		Datum value, bool *changed);
 static Datum TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
 			 Datum value, bool *changed);
-#ifdef TYPTYPE_RANGE
-/* GPDB_92_MERGE_FIXME remove these ifdef when range type is supported */
 static Datum TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
 			 Datum value, bool *changed);
-#endif
 static Datum TRRemapRecord(TupleRemapper *remapper, RecordRemapInfo *remapinfo,
 			  Datum value, bool *changed);
 static TupleRemapInfo *BuildTupleRemapInfo(Oid typid, MemoryContext mycontext);
 static TupleRemapInfo *BuildArrayRemapInfo(Oid elemtypid,
 					MemoryContext mycontext);
-#ifdef TYPTYPE_RANGE
 static TupleRemapInfo *BuildRangeRemapInfo(Oid rngtypid,
 					MemoryContext mycontext);
-#endif
 static TupleRemapInfo **BuildFieldRemapInfo(TupleDesc tupledesc,
 					MemoryContext mycontext);
 
@@ -356,11 +351,7 @@ TRRemap(TupleRemapper *remapper, TupleRemapInfo *remapinfo,
 			return TRRemapArray(remapper, &remapinfo->u.arr, value, changed);
 
 		case TUPLE_REMAP_RANGE:
-#ifdef TYPTYPE_RANGE
 			return TRRemapRange(remapper, &remapinfo->u.rng, value, changed);
-#else
-			return value;
-#endif
 
 		case TUPLE_REMAP_RECORD:
 			return TRRemapRecord(remapper, &remapinfo->u.rec, value, changed);
@@ -421,7 +412,6 @@ TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
  * Process the given range datum and replace any transient record typmods
  * contained in it.  Set *changed to TRUE if we actually changed the datum.
  */
-#ifdef TYPTYPE_RANGE
 static Datum
 TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
 			 Datum value, bool *changed)
@@ -458,7 +448,6 @@ TRRemapRange(TupleRemapper *remapper, RangeRemapInfo *remapinfo,
 	/* Else just return the value as-is. */
 	return value;
 }
-#endif
 
 /*
  * Process the given record datum and replace any transient record typmods
@@ -614,14 +603,12 @@ restart:
 		return BuildArrayRemapInfo(typid, mycontext);
 	}
 
-#ifdef TYPTYPE_RANGE
 	/* Similarly, deal with ranges appropriately. */
 	if (typ->typtype == TYPTYPE_RANGE)
 	{
 		ReleaseSysCache(tup);
 		return BuildRangeRemapInfo(typid, mycontext);
 	}
-#endif
 
 	/*
 	 * If it's a composite type (including RECORD), set up for remapping.  We
@@ -672,7 +659,6 @@ BuildArrayRemapInfo(Oid elemtypid, MemoryContext mycontext)
 	return remapinfo;
 }
 
-#ifdef TYPTYPE_RANGE
 static TupleRemapInfo *
 BuildRangeRemapInfo(Oid rngtypid, MemoryContext mycontext)
 {
@@ -702,7 +688,6 @@ BuildRangeRemapInfo(Oid rngtypid, MemoryContext mycontext)
 	remapinfo->u.rng.bound_remap = bound_remapinfo;
 	return remapinfo;
 }
-#endif
 
 /*
  * Build remap info for fields of the type described by the given tupdesc.

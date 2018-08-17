@@ -3,7 +3,7 @@
  * reinit.c
  *	  Reinitialization of unlogged relations
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -54,10 +54,9 @@ ResetUnloggedRelations(int op)
 				oldctx;
 
 	/* Log it. */
-	ereport(DEBUG1,
-			(errmsg("resetting unlogged relations: cleanup %d init %d",
-					(op & UNLOGGED_RELATION_CLEANUP) != 0,
-					(op & UNLOGGED_RELATION_INIT) != 0)));
+	elog(DEBUG1, "resetting unlogged relations: cleanup %d init %d",
+		 (op & UNLOGGED_RELATION_CLEANUP) != 0,
+		 (op & UNLOGGED_RELATION_INIT) != 0);
 
 	/*
 	 * Just to be sure we don't leak any memory, let's create a temporary
@@ -346,7 +345,7 @@ ResetUnloggedRelationsInDbspaceDir(const char *dbspacedirname, int op)
 /*
  * Basic parsing of putative relation filenames.
  *
- * This funtion returns true if the file appears to be in the correct format
+ * This function returns true if the file appears to be in the correct format
  * for a non-temporary relation and false otherwise.
  *
  * NB: If this function returns true, the caller is entitled to assume that

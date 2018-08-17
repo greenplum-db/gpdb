@@ -34,7 +34,6 @@ dispatch.sql
 workfile_mgr_test.sql
 bb_memory_quota.sql
 bb_mpph.sql
-session_level_memory_consumption.sql
 transient_types.sql
 hooktest.sql
 gpcopy.sql

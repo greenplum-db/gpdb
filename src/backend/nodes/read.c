@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -232,6 +232,7 @@ nodeTokenType(char *token, int length)
 
 		errno = 0;
 		val = strtol(token, &endptr, 10);
+		(void) val;				/* avoid compiler warning if unused */
 		if (endptr != token + length || errno == ERANGE
 #ifdef HAVE_LONG_INT_64
 		/* if long > 32 bits, check for overflow of int4 */

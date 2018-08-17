@@ -1079,7 +1079,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_bloat_diag TO public;
 CREATE VIEW gp_toolkit.gp_resq_activity
 AS
     SELECT
-        psa.procpid as resqprocpid,
+        psa.pid as resqprocpid,
         psa.usename as resqrole,
         resq.resqoid,
         resq.rsqname as resqname,
@@ -1102,8 +1102,8 @@ AS
         WHERE
             pgl.objid = pgrq.oid
     ) as resq
-    ON resqprocid = procpid
-    WHERE current_query != '<IDLE>'
+    ON resqprocid = pid
+    WHERE query != '<IDLE>'
     ORDER BY resqstart;
 
 GRANT SELECT ON TABLE gp_toolkit.gp_resq_activity TO public;
@@ -1172,11 +1172,11 @@ AS
         rpb.rqpcommand,
         rpb.rqppriority,
         rpb.rqpweight,
-        psa.current_query AS rqpquery
+        psa.query AS rqpquery
     FROM
         gp_toolkit.gp_resq_priority_backend rpb
         JOIN pg_stat_activity psa ON (rpb.rqpsession = psa.sess_id)
-    WHERE psa.current_query != '<IDLE>';
+    WHERE psa.query != '<IDLE>';
 
 GRANT SELECT ON TABLE gp_toolkit.gp_resq_priority_statement TO public;
 
@@ -1227,7 +1227,7 @@ AS
     FROM pg_catalog.pg_stat_activity pgsa
 
     JOIN pg_catalog.pg_locks pgl
-    ON (pgsa.procpid = pgl.pid)
+    ON (pgsa.pid = pgl.pid)
 
     JOIN pg_catalog.pg_resqueue pgrq
     ON (pgl.objid = pgrq.oid);
@@ -1254,14 +1254,14 @@ AS
         pgl.pid            AS lorpid,
         pgl.mode           AS lormode,
         pgl.granted        AS lorgranted,
-        pgsa.current_query AS lorcurrentquery
+        pgsa.query AS lorcurrentquery
     FROM pg_catalog.pg_locks pgl
 
     JOIN pg_catalog.pg_class pgc
     ON (pgl.relation = pgc.oid)
 
     JOIN pg_catalog.pg_stat_activity pgsa
-    ON (pgl.pid = pgsa.procpid)
+    ON (pgl.pid = pgsa.pid)
 
     ORDER BY
         pgc.relname
@@ -2076,11 +2076,11 @@ WITH all_entries AS (
             numfiles int
           ))
 SELECT S.datname,
-       (CASE WHEN (C.state = 1) THEN S.procpid ELSE NULL END) AS procpid,
+       (CASE WHEN (C.state = 1) THEN S.pid ELSE NULL END) AS pid,
        C.sessionid as sess_id,
        C.commandid as command_cnt,
        S.usename,
-       (CASE WHEN (C.state = 1) THEN S.current_query ELSE NULL END) as current_query,
+       (CASE WHEN (C.state = 1) THEN S.query ELSE NULL END) as query,
        C.segid,
        C.slice,
        C.optype,
@@ -2127,10 +2127,10 @@ GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_segment TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_workfile_usage_per_query AS
-SELECT datname, procpid, sess_id, command_cnt, usename, current_query, segid, state,
+SELECT datname, pid, sess_id, command_cnt, usename, query, segid, state,
     SUM(size) AS size, SUM(numfiles) AS numfiles
 FROM gp_toolkit.gp_workfile_entries
-GROUP BY (datname, procpid, sess_id, command_cnt, usename, current_query, segid, state);
+GROUP BY (datname, pid, sess_id, command_cnt, usename, query, segid, state);
 
 GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
 

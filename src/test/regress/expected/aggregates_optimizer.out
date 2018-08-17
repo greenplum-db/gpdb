@@ -309,9 +309,9 @@ select
   (select max((select i.unique2 from tenk1 i where i.unique1 = o.unique1)))
 from tenk1 o;
 INFO:  GPORCA failed to produce a plan, falling back to planner
- ?column? 
-----------
-     9999
+ max  
+------
+ 9999
 (1 row)
 
 --
@@ -742,8 +742,8 @@ set enable_seqscan=off;
 explain (costs off)
   select min(f1), max(f1) from minmaxtest;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
  Result
    InitPlan 1 (returns $0)  (slice3)
      ->  Limit
@@ -751,13 +751,13 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
                  Merge Key: public.minmaxtest.f1
                  ->  Merge Append
                        Sort Key: public.minmaxtest.f1
-                       ->  Index Scan using minmaxtesti on minmaxtest
+                       ->  Index Only Scan using minmaxtesti on minmaxtest
                              Index Cond: f1 IS NOT NULL
-                       ->  Index Scan using minmaxtest1i on minmaxtest1 minmaxtest
+                       ->  Index Only Scan using minmaxtest1i on minmaxtest1 minmaxtest
                              Index Cond: f1 IS NOT NULL
-                       ->  Index Scan Backward using minmaxtest2i on minmaxtest2 minmaxtest
+                       ->  Index Only Scan Backward using minmaxtest2i on minmaxtest2 minmaxtest
                              Index Cond: f1 IS NOT NULL
-                       ->  Index Scan using minmaxtest3i on minmaxtest3 minmaxtest
+                       ->  Index Only Scan using minmaxtest3i on minmaxtest3 minmaxtest
                              Index Cond: f1 IS NOT NULL
    InitPlan 2 (returns $1)  (slice4)
      ->  Limit
@@ -765,18 +765,16 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
                  Merge Key: public.minmaxtest.f1
                  ->  Merge Append
                        Sort Key: public.minmaxtest.f1
-                       ->  Index Scan Backward using minmaxtesti on minmaxtest
+                       ->  Index Only Scan Backward using minmaxtesti on minmaxtest
                              Index Cond: f1 IS NOT NULL
-                       ->  Index Scan Backward using minmaxtest1i on minmaxtest1 minmaxtest
+                       ->  Index Only Scan Backward using minmaxtest1i on minmaxtest1 minmaxtest
                              Index Cond: f1 IS NOT NULL
-                       ->  Sort
-                             Sort Key: public.minmaxtest.f1
-                             ->  Index Scan using minmaxtest2i on minmaxtest2 minmaxtest
-                                   Index Cond: f1 IS NOT NULL
-                       ->  Index Scan Backward using minmaxtest3i on minmaxtest3 minmaxtest
+                       ->  Index Only Scan using minmaxtest2i on minmaxtest2 minmaxtest
+                             Index Cond: f1 IS NOT NULL
+                       ->  Index Only Scan Backward using minmaxtest3i on minmaxtest3 minmaxtest
                              Index Cond: f1 IS NOT NULL
  Optimizer: legacy query optimizer
-(32 rows)
+(30 rows)
 
 select min(f1), max(f1) from minmaxtest;
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -1201,29 +1199,29 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 select (select count(*)
         from (values (1)) t0(inner_c))
 from (values (2),(3)) t1(outer_c); -- inner query is aggregation query
- ?column? 
-----------
-        1
-        1
+ count 
+-------
+     1
+     1
 (2 rows)
 
 select (select count(*) filter (where outer_c <> 0)
         from (values (1)) t0(inner_c))
 from (values (2),(3)) t1(outer_c); -- outer query is aggregation query
 INFO:  GPORCA failed to produce a plan, falling back to planner
- ?column? 
-----------
-        2
+ count 
+-------
+     2
 (1 row)
 
 select (select count(inner_c) filter (where outer_c <> 0)
         from (values (1)) t0(inner_c))
 from (values (2),(3)) t1(outer_c); -- inner query is aggregation query
 INFO:  GPORCA failed to produce a plan, falling back to planner
- ?column? 
-----------
-        1
-        1
+ count 
+-------
+     1
+     1
 (2 rows)
 
 select
@@ -1231,9 +1229,9 @@ select
      filter (where o.unique1 < 10))
 from tenk1 o;					-- outer query is aggregation query
 INFO:  GPORCA failed to produce a plan, falling back to planner
- ?column? 
-----------
-     9998
+ max  
+------
+ 9998
 (1 row)
 
 -- subquery in FILTER clause (PostgreSQL extension)
@@ -1548,3 +1546,40 @@ CONTEXT:  SQL function "least_accum" during startup
  -4567890123456789
 (1 row)
 
+-- string_agg bytea tests
+create table bytea_test_table(gpDistKey int, v bytea);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'gpdistkey' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select string_agg(v, '') from bytea_test_table;
+ string_agg 
+------------
+ 
+(1 row)
+
+insert into bytea_test_table(v) values(decode('ff','hex'));
+select string_agg(v, '') from bytea_test_table;
+ string_agg 
+------------
+ \xff
+(1 row)
+
+insert into bytea_test_table(v) values(decode('aa','hex'));
+select string_agg(v, '') from bytea_test_table;
+ string_agg 
+------------
+ \xffaa
+(1 row)
+
+select string_agg(v, NULL) from bytea_test_table;
+ string_agg 
+------------
+ \xffaa
+(1 row)
+
+select string_agg(v, decode('ee', 'hex')) from bytea_test_table;
+ string_agg 
+------------
+ \xffeeaa
+(1 row)
+
+drop table bytea_test_table;

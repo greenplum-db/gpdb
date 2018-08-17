@@ -1,6 +1,8 @@
 /*
  * contrib/btree_gist/btree_macaddr.c
  */
+#include "postgres.h"
+
 #include "btree_gist.h"
 #include "btree_utils_num.h"
 #include "utils/builtins.h"
@@ -63,8 +65,8 @@ gbt_macadlt(const void *a, const void *b)
 static int
 gbt_macadkey_cmp(const void *a, const void *b)
 {
-	macKEY	   *ia = (macKEY *) (((Nsrt *) a)->t);
-	macKEY	   *ib = (macKEY *) (((Nsrt *) b)->t);
+	macKEY	   *ia = (macKEY *) (((const Nsrt *) a)->t);
+	macKEY	   *ib = (macKEY *) (((const Nsrt *) b)->t);
 	int			res;
 
 	res = DatumGetInt32(DirectFunctionCall2(macaddr_cmp, MacaddrPGetDatum(&ia->lower), MacaddrPGetDatum(&ib->lower)));

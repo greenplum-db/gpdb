@@ -1,18 +1,19 @@
 SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
-       name        | setting 
--------------------+---------
- enable_bitmapscan | on
- enable_groupagg   | on
- enable_hashagg    | on
- enable_hashjoin   | on
- enable_indexscan  | on
- enable_material   | on
- enable_mergejoin  | off
- enable_nestloop   | off
- enable_seqscan    | on
- enable_sort       | on
- enable_tidscan    | on
-(11 rows)
+         name         | setting 
+----------------------+---------
+ enable_bitmapscan    | on
+ enable_groupagg      | on
+ enable_hashagg       | on
+ enable_hashjoin      | on
+ enable_indexonlyscan | on
+ enable_indexscan     | on
+ enable_material      | on
+ enable_mergejoin     | off
+ enable_nestloop      | off
+ enable_seqscan       | on
+ enable_sort          | on
+ enable_tidscan       | on
+(12 rows)
 
 CREATE TABLE foo2(fooid int, f2 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'fooid' as the Greenplum Database data distribution key for this table.
@@ -293,23 +294,19 @@ INSERT INTO barrescan values(5008);
 CREATE FUNCTION foorescan(int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid = $1;' LANGUAGE SQL;
 --invokes ExecReScanFunctionScan with chgParam != NULL
 SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 127.0.0.1:15432 pid=2755)
+CONTEXT:  SQL function "foorescan" during startup
 SELECT b.fooid, max(f.foosubid) FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 127.0.0.1:15432 pid=2755)
+CONTEXT:  SQL function "foorescan" during startup
 CREATE VIEW fooview1 AS SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
 SELECT * FROM fooview1 AS fv WHERE fv.fooid = 5004;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 127.0.0.1:15432 pid=2755)
+CONTEXT:  SQL function "foorescan" during startup
 CREATE VIEW fooview2 AS SELECT b.fooid, max(f.foosubid) AS maxsubid FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
 SELECT * FROM fooview2 AS fv WHERE fv.maxsubid = 5;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  SQL function "foorescan" statement 1
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  (entry db 127.0.0.1:15432 pid=2755)
+CONTEXT:  SQL function "foorescan" during startup
 DROP VIEW vw_foorescan;
 DROP VIEW fooview1;
 DROP VIEW fooview2;

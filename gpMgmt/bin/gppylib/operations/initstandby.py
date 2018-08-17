@@ -125,40 +125,6 @@ def backup_pg_hba(data_dirs_list):
     except Exception, ex:
         raise Exception('Failed to backup pg_hba.config file %s' % ex)
 
-def backup_pg_hba_on_segment(gparr):
-    """
-    Backup the pg_hba.conf on all of the segments
-    present in the array
-    """
-    logger.info('Backing up pg_hba.conf file on segments...')
-
-    host_to_seg_map = defaultdict(list)
-    for seg in gparr.getDbList():
-        if not seg.isSegmentMaster() and not seg.isSegmentStandby():
-            host_to_seg_map[seg.getSegmentHostName()].append(seg.getSegmentDataDirectory())
-
-    pool = WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
-
-    try:
-        for host, data_dirs_list in host_to_seg_map.items():
-            pickled_data_dirs_list = base64.urlsafe_b64encode(pickle.dumps(data_dirs_list))
-            cmdStr = "$GPHOME/lib/python/gppylib/operations/initstandby.py -d %s -b" % pickled_data_dirs_list
-            cmd = Command('Backup the pg_hba.conf on remote hosts', cmdStr=cmdStr , ctxt=REMOTE, remoteHost=host)
-            pool.addCommand(cmd)
-
-        pool.join()
-
-        for item in pool.getCompletedItems():
-            result = item.get_results()
-            if result.rc != 0:
-                logger.error('Unable to backup pg_hba.conf %s' % str(result.stderr))
-                logger.error('Please check the segment for more details')
-
-    finally:
-        pool.haltWork()
-        pool.joinWorkers()
-        pool = None
-
 def update_pg_hba(standby_pg_hba_info, data_dirs_list):
     backup_pg_hba(data_dirs_list)
     pg_hba_content_list = []

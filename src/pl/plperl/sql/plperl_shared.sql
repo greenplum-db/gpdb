@@ -1,8 +1,7 @@
 -- test plperl.on_plperl_init via the shared hash
 -- (must be done before plperl is first used)
 
--- Avoid need for custom_variable_classes = 'plperl'
-LOAD 'plperl';
+-- This test tests setting on_plperl_init before loading plperl
 
 -- testing on_plperl_init gets run, and that it can alter %_SHARED
 SET plperl.on_plperl_init = '$_SHARED{on_init} = 42';

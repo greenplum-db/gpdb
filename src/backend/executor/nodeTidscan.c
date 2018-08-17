@@ -3,7 +3,7 @@
  * nodeTidscan.c
  *	  Routines to support direct tid scans of relations
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -24,7 +24,6 @@
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/sysattr.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
@@ -33,7 +32,7 @@
 #include "optimizer/clauses.h"
 #include "storage/bufmgr.h"
 #include "utils/array.h"
-#include "parser/parsetree.h"
+#include "utils/rel.h"
 
 
 #define IsCTIDVar(node)  \

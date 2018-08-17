@@ -7,7 +7,7 @@
  * This is a modified version of src/backend/parser/scan.l
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -39,7 +39,7 @@
 extern YYSTYPE yylval;
 
 static int		xcdepth = 0;	/* depth of nesting in slash-star comments */
-static char	   *dolqstart;      /* current $foo$ quote start string */
+static char	   *dolqstart;		/* current $foo$ quote start string */
 static YY_BUFFER_STATE scanbufhandle;
 static char *scanbuf;
 
@@ -49,7 +49,7 @@ static char *scanbuf;
  * to empty, addlit to add text.  Note that the buffer is permanently
  * malloc'd to the largest size needed so far in the current run.
  */
-static char    *literalbuf = NULL;		/* expandable buffer */
+static char	   *literalbuf = NULL;		/* expandable buffer */
 static int		literallen;				/* actual current length */
 static int		literalalloc;			/* current allocated buffer size */
 
@@ -74,8 +74,8 @@ struct _yy_buffer
 {
 	YY_BUFFER_STATE		buffer;
 	long				lineno;
-	char		  		*filename;
-	struct _yy_buffer 	*next;
+	char			   *filename;
+	struct _yy_buffer  *next;
 } *yy_buffer = NULL;
 
 static char *old;
@@ -96,6 +96,7 @@ static struct _if_value
 %option nodefault
 %option noinput
 %option noyywrap
+%option warn
 
 %option yylineno
 
@@ -153,7 +154,7 @@ xhinside		[^']*
 xnstart			[nN]{quote}
 
 /* Quoted string that allows backslash escapes */
-xestart 		[eE]{quote}
+xestart			[eE]{quote}
 xeinside		[^\\']+
 xeescape		[\\][^0-7]
 xeoctesc		[\\][0-7]{1,3}
@@ -328,14 +329,14 @@ other			.
 
 /* some stuff needed for ecpg */
 exec			[eE][xX][eE][cC]
-sql			[sS][qQ][lL]
+sql				[sS][qQ][lL]
 define			[dD][eE][fF][iI][nN][eE]
-include 		[iI][nN][cC][lL][uU][dD][eE]
-include_next 		[iI][nN][cC][lL][uU][dD][eE]_[nN][eE][xX][tT]
-import	 		[iI][mM][pP][oO][rR][tT]
+include			[iI][nN][cC][lL][uU][dD][eE]
+include_next	[iI][nN][cC][lL][uU][dD][eE]_[nN][eE][xX][tT]
+import			[iI][mM][pP][oO][rR][tT]
 undef			[uU][nN][dD][eE][fF]
 
-if			[iI][fF]
+if				[iI][fF]
 ifdef			[iI][fF][dD][eE][fF]
 ifndef			[iI][fF][nN][dD][eE][fF]
 else			[eE][lL][sS][eE]
@@ -346,16 +347,16 @@ struct			[sS][tT][rR][uU][cC][tT]
 
 exec_sql		{exec}{space}*{sql}{space}*
 ipdigit			({digit}|{digit}{digit}|{digit}{digit}{digit})
-ip			{ipdigit}\.{ipdigit}\.{ipdigit}\.{ipdigit}
+ip				{ipdigit}\.{ipdigit}\.{ipdigit}\.{ipdigit}
 
 /* we might want to parse all cpp include files */
-cppinclude 		{space}*#{include}{space}*
+cppinclude		{space}*#{include}{space}*
 cppinclude_next		{space}*#{include_next}{space}*
 
 /* take care of cpp lines, they may also be continuated */
 /* first a general line for all commands not starting with "i" */
 /* and then the other commands starting with "i", we have to add these
- * seperately because the cppline production would match on "include" too */
+ * separately because the cppline production would match on "include" too */
 cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.*{newline}
 
 /*
@@ -391,8 +392,8 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 				}
 <xc>{xcstart}	{
 					xcdepth++;
-			 		/* Put back any characters past slash-star; see above */
-			 		yyless(2);
+					/* Put back any characters past slash-star; see above */
+					yyless(2);
 					fputs("/*", yyout);
 				}
 
@@ -409,7 +410,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 
 <xc>{xcinside}	{ ECHO; }
 <xc>{op_chars}	{ ECHO; }
-<xc>\*+ 		{ ECHO; }
+<xc>\*+			{ ECHO; }
 
 <xc><<EOF>>		{ mmerror(PARSE_ERROR, ET_FATAL, "unterminated /* comment"); }
 
@@ -442,7 +443,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 					addlitchar('x');
 				}
 <xh>{quotestop}	|
-<xh>{quotefail} 	{
+<xh>{quotefail}	{
 				yyless(1);
 				BEGIN(SQL);
 				yylval.str = mm_strdup(literalbuf);
@@ -450,7 +451,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 			}
 
 <xh><<EOF>>		{ mmerror(PARSE_ERROR, ET_FATAL, "unterminated hexadecimal string literal"); }
-<SQL>{xnstart}              {
+<SQL>{xnstart} {
 				/* National character.
 				 * Transfer it as-is to the backend.
 				 */
@@ -519,11 +520,11 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 <xq,xqc,xn,xus>{xqinside}	{ addlit(yytext, yyleng); }
 <xe>{xeinside}		{ addlit(yytext, yyleng); }
 <xe>{xeunicode}		{ addlit(yytext, yyleng); }
-<xe>{xeescape}  	{ addlit(yytext, yyleng); }
+<xe>{xeescape}		{ addlit(yytext, yyleng); }
 <xe>{xeoctesc}		{ addlit(yytext, yyleng); }
 <xe>{xehexesc}		{ addlit(yytext, yyleng); }
 <xq,xqc,xe,xn,xus>{quotecontinue}	{ /* ignore */ }
-<xe>.                   {
+<xe>.		{
 			   /* This is only needed for \ just before EOF */
 			   addlitchar(yytext[0]);
 			}
@@ -534,14 +535,14 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 				/* and treat it as {other} */
 				return yytext[0];
 			}
-<SQL>{dolqdelim}        {
+<SQL>{dolqdelim} {
 				token_start = yytext;
 				dolqstart = mm_strdup(yytext);
 				BEGIN(xdolq);
 				startlit();
 				addlit(yytext, yyleng);
 			}
-<xdolq>{dolqdelim}      {
+<xdolq>{dolqdelim} {
 				if (strcmp(yytext, dolqstart) == 0)
 				{
 					addlit(yytext, yyleng);
@@ -552,22 +553,22 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 				}
 				else
 				{
-			        /*
+					/*
 			         * When we fail to match $...$ to dolqstart, transfer
 			         * the $... part to the output, but put back the final
 			         * $ for rescanning.  Consider $delim$...$junk$delim$
 			         */
-			        addlit(yytext, yyleng-1);
-			        yyless(yyleng-1);
+					addlit(yytext, yyleng-1);
+					yyless(yyleng-1);
 				}
 			}
-<xdolq>{dolqinside} 	{ addlit(yytext, yyleng); }
+<xdolq>{dolqinside}	{ addlit(yytext, yyleng); }
 <xdolq>{dolqfailed}	{ addlit(yytext, yyleng); }
 <xdolq>{other}		{
 				/* single quote or dollar sign */
 				addlitchar(yytext[0]);
 			}
-<xdolq><<EOF>> 		{ base_yyerror("unterminated dollar-quoted string"); }
+<xdolq><<EOF>>		{ base_yyerror("unterminated dollar-quoted string"); }
 <SQL>{xdstart}		{
 						state_before = YYSTATE;
 						BEGIN(xd);
@@ -750,7 +751,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 						return(CVARIABLE);
 					}
 <SQL>{identifier}	{
-						const ScanKeyword    *keyword;
+						const ScanKeyword  *keyword;
 
 						if (!isdefine())
 						{
@@ -809,10 +810,10 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 							BEGIN(incl);
 						}
 						else
-					 	{
+						{
 							yylval.str = mm_strdup(yytext);
 							return(CPP_LINE);
-					  	}
+						}
 					}
 <C>{cppinclude_next}		{
 						if (system_includes)
@@ -821,16 +822,16 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 							BEGIN(incl);
 						}
 						else
-					 	{
+						{
 							yylval.str = mm_strdup(yytext);
 							return(CPP_LINE);
-					  	}
+						}
 					}
 <C,SQL>{cppline}	{
 						yylval.str = mm_strdup(yytext);
 						return(CPP_LINE);
 					}
-<C>{identifier} 	{
+<C>{identifier}		{
 						const ScanKeyword		*keyword;
 
 						/*
@@ -904,7 +905,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 						}
 					}
 <C>{exec_sql}{undef}{space}*		{ BEGIN(undef); }
-<C>{informix_special}{undef}{space}* 	{
+<C>{informix_special}{undef}{space}* {
 						/* are we simulating Informix? */
 						if (INFORMIX_MODE)
 						{
@@ -948,9 +949,9 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 
 					BEGIN(C);
 				}
-<undef>{other}|\n  		{
-		                	mmerror(PARSE_ERROR, ET_FATAL, "missing identifier in EXEC SQL UNDEF command");
-			                yyterminate();
+<undef>{other}|\n {
+						mmerror(PARSE_ERROR, ET_FATAL, "missing identifier in EXEC SQL UNDEF command");
+						yyterminate();
 				}
 <C>{exec_sql}{include}{space}*	{ BEGIN(incl); }
 <C>{informix_special}{include}{space}* {
@@ -1182,17 +1183,17 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 				}
 
 <<EOF>>				{
-			  		if (yy_buffer == NULL)
+					if (yy_buffer == NULL)
 					{
-				  		if ( preproc_tos > 0 )
+						if ( preproc_tos > 0 )
 						{
-					  		preproc_tos = 0;
+							preproc_tos = 0;
 							mmerror(PARSE_ERROR, ET_FATAL, "missing \"EXEC SQL ENDIF;\"");
-				  		}
+						}
 						yyterminate();
 					}
-			  		else
-			  		{
+					else
+					{
 						struct _yy_buffer *yb = yy_buffer;
 						int i;
 						struct _defines *ptr;
@@ -1224,7 +1225,7 @@ cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.
 						if (i != 0)
 							output_line_number();
 
-			  		}
+					}
 				}
 <INITIAL>{other}|\n     	{ mmerror(PARSE_ERROR, ET_FATAL, "internal error: unreachable state; please report this to <bugs@greenplum.org>"); }
 %%
@@ -1289,24 +1290,24 @@ parse_include(void)
 {
 	/* got the include file name */
 	struct _yy_buffer *yb;
-  	struct _include_path *ip;
-  	char inc_file[MAXPGPATH];
-  	unsigned int i;
+	struct _include_path *ip;
+	char inc_file[MAXPGPATH];
+	unsigned int i;
 
-  	yb = mm_alloc(sizeof(struct _yy_buffer));
+	yb = mm_alloc(sizeof(struct _yy_buffer));
 
-  	yb->buffer =	YY_CURRENT_BUFFER;
-  	yb->lineno = yylineno;
-  	yb->filename = input_filename;
-  	yb->next = yy_buffer;
+	yb->buffer =	YY_CURRENT_BUFFER;
+	yb->lineno = yylineno;
+	yb->filename = input_filename;
+	yb->next = yy_buffer;
 
-  	yy_buffer = yb;
+	yy_buffer = yb;
 
-  	/*
+	/*
 	 * skip the ";" if there is one and trailing whitespace. Note that
 	 * yytext contains at least one non-space character plus the ";"
 	 */
-  	for (i = strlen(yytext)-2;
+	for (i = strlen(yytext)-2;
 		 i > 0 && ecpg_isspace(yytext[i]);
 		 i--)
 		;
@@ -1321,7 +1322,7 @@ parse_include(void)
 	/* If file name is enclosed in '"' remove these and look only in '.' */
 	/* Informix does look into all include paths though, except filename starts with '/' */
 	if (yytext[0] == '"' && yytext[i] == '"' &&
-	    ((compat != ECPG_COMPAT_INFORMIX && compat != ECPG_COMPAT_INFORMIX_SE) || yytext[1] == '/'))
+		((compat != ECPG_COMPAT_INFORMIX && compat != ECPG_COMPAT_INFORMIX_SE) || yytext[1] == '/'))
 	{
 		yytext[i] = '\0';
 		memmove(yytext, yytext+1, strlen(yytext));
@@ -1330,7 +1331,7 @@ parse_include(void)
 		yyin = fopen(inc_file, "r");
 		if (!yyin)
 		{
-			if (strcmp(inc_file + strlen(inc_file) - 2, ".h"))
+			if (strcmp(inc_file + strlen(inc_file) - 2, ".h") != 0)
 			{
 				strcat(inc_file, ".h");
 				yyin = fopen(inc_file, "r");
@@ -1346,8 +1347,8 @@ parse_include(void)
 			memmove(yytext, yytext+1, strlen(yytext));
 		}
 
-	  	for (ip = include_paths; yyin == NULL && ip != NULL; ip = ip->next)
-	  	{
+		for (ip = include_paths; yyin == NULL && ip != NULL; ip = ip->next)
+		{
 			if (strlen(ip->path) + strlen(yytext) + 3 > MAXPGPATH)
 			{
 				fprintf(stderr, _("Error: include path \"%s/%s\" is too long on line %d, skipping\n"), ip->path, yytext, yylineno);
@@ -1357,7 +1358,7 @@ parse_include(void)
 			yyin = fopen(inc_file, "r");
 			if (!yyin)
 			{
-				if (strcmp(inc_file + strlen(inc_file) - 2, ".h"))
+				if (strcmp(inc_file + strlen(inc_file) - 2, ".h") != 0)
 				{
 					strcat(inc_file, ".h");
 					yyin = fopen( inc_file, "r" );
@@ -1379,7 +1380,7 @@ parse_include(void)
 	yylineno = 1;
 	output_line_number();
 
-  	BEGIN(C);
+	BEGIN(C);
 }
 
 /*
@@ -1432,9 +1433,9 @@ static bool isinformixdefine(void)
 	if (strcmp(yytext, "dec_t") == 0)
 		new = "decimal";
 	else if (strcmp(yytext, "intrvl_t") == 0)
-	        new = "interval";
+		new = "interval";
 	else if (strcmp(yytext, "dtime_t") == 0)
-                new = "timestamp";
+		new = "timestamp";
 
 	if (new)
 	{

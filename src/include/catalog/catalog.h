@@ -4,7 +4,7 @@
  *	  prototypes for functions in backend/catalog/catalog.c
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/catalog.h
@@ -14,7 +14,11 @@
 #ifndef CATALOG_H
 #define CATALOG_H
 
-#include "catalog/catversion.h"
+/*
+ *	'pgrminclude ignore' needed here because CppAsString2() does not throw
+ *	an error if the symbol is not defined.
+ */
+#include "catalog/catversion.h" /* pgrminclude ignore */
 #include "catalog/pg_class.h"
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"

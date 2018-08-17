@@ -311,7 +311,7 @@ new_gpdb5_0_invalidate_indexes(void)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 		/*
 		 * check_mode doesn't do much interesting for this but at least
@@ -320,15 +320,18 @@ new_gpdb5_0_invalidate_indexes(void)
 		 */
 		if (!user_opts.check)
 		{
+			char	   *olddb_name;
+
 			PQclear(executeQueryOrDie(conn,
 									  "UPDATE pg_index SET indisvalid = false "
 									  "WHERE indexrelid >= %u",
 									  FirstNormalObjectId));
 
-			fprintf(script, "\\connect %s\n",
-					quote_identifier(olddb->db_name));
-			fprintf(script, "REINDEX DATABASE %s;\n",
-					quote_identifier(olddb->db_name));
+			olddb_name = quote_identifier(olddb->db_name);
+
+			fprintf(script, "\\connect %s\n", olddb_name);
+			fprintf(script, "REINDEX DATABASE %s;\n", olddb_name);
+			pg_free(olddb_name);
 		}
 		PQfinish(conn);
 	}
@@ -376,7 +379,7 @@ new_gpdb_invalidate_bitmap_indexes(void)
 		 * GPDB doesn't allow hacking the catalogs without setting
 		 * allow_system_table_mods first.
 		 */
-		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods='dml'"));
+		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
 		/*
 		 * check mode doesn't do much interesting for this but at least

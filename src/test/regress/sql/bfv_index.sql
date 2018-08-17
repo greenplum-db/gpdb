@@ -192,7 +192,7 @@ drop table Tbl23383_partitioned;
 
 reset enable_seqscan;
 
--- when optimizer is on PG exception raised during DXL->PlStmt translation for IndexScan query
+-- negative test: due to non compatible cast and CXformGet2TableScan disabled no index plan possible, fallback to planner
 
 -- start_ignore
 drop table if exists tbl_ab;

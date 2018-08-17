@@ -42,16 +42,16 @@ insert into a values(1),(10),(20),(100);
 7&: select pynestsleep2();
 
 
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') 
-FROM pg_stat_activity WHERE current_query LIKE 'select pybusyloop()%' ORDER BY procpid LIMIT 2;
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') 
-FROM pg_stat_activity WHERE current_query LIKE 'select pysleep()%' ORDER BY procpid LIMIT 2;
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend')
-FROM pg_stat_activity WHERE current_query LIKE 'select pyspisleep()%' ORDER BY procpid LIMIT 1;
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend')
-FROM pg_stat_activity WHERE current_query LIKE 'select pynestsleep()%' ORDER BY procpid LIMIT 1;
-SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend')
-FROM pg_stat_activity WHERE current_query LIKE 'select pynestsleep2()%' ORDER BY procpid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') 
+FROM pg_stat_activity WHERE query LIKE 'select pybusyloop()%' ORDER BY pid LIMIT 2;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend') 
+FROM pg_stat_activity WHERE query LIKE 'select pysleep()%' ORDER BY pid LIMIT 2;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend')
+FROM pg_stat_activity WHERE query LIKE 'select pyspisleep()%' ORDER BY pid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend')
+FROM pg_stat_activity WHERE query LIKE 'select pynestsleep()%' ORDER BY pid LIMIT 1;
+SELECT pg_cancel_backend(pid, 'test pg_cancel_backend')
+FROM pg_stat_activity WHERE query LIKE 'select pynestsleep2()%' ORDER BY pid LIMIT 1;
 -- start_ignore
 -- start_ignore
 -- start_ignore

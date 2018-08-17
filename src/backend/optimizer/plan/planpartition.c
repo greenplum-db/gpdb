@@ -504,6 +504,7 @@ add_restrictinfos(PlannerInfo *root, DynamicScanInfo *dsinfo, Bitmapset *childre
 								  true,
 								  NULL,
 								  NULL,
+								  NULL,
 								  NULL);
 
 		relinfo->baserestrictinfo = lappend(relinfo->baserestrictinfo, rinfo);
@@ -526,7 +527,7 @@ make_mergeclause(Node *outer, Node *inner)
 
 	xpr = make_notclause((Expr *) opxpr);
 
-	rinfo = make_restrictinfo(xpr, false, false, false, NULL, NULL, NULL);
+	rinfo = make_restrictinfo(xpr, false, false, false, NULL, NULL, NULL, NULL);
 	rinfo->mergeopfamilies = get_mergejoin_opfamilies(opxpr->opno);
 
 	return rinfo;

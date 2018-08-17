@@ -233,6 +233,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 	}
 
 	idxid = index_create(lov_heap_rel, lovIndexName, InvalidOid,
+						 InvalidOid,
 						 indexInfo,
 						 indexColNames,
 						 BTREE_AM_OID,

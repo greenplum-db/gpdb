@@ -251,21 +251,17 @@ case $basic_machine in
 	| alpha | alphaev[4-8] | alphaev56 | alphaev6[78] | alphapca5[67] \
 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
 	| am33_2.0 \
-	| arc | arceb \
-	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] \
-	| avr | avr32 \
-	| ba \
-	| be32 | be64 \
+	| arc | arm | arm[bl]e | arme[lb] | armv[2345] | armv[345][lb] | avr | avr32 \
+        | be32 | be64 \
 	| bfin \
 	| c4x | c8051 | clipper \
 	| d10v | d30v | dlx | dsp16xx \
-	| e2k | epiphany \
-	| fido | fr30 | frv | ft32 \
+	| epiphany \
+	| fido | fr30 | frv \
 	| h8300 | h8500 | hppa | hppa1.[01] | hppa2.0 | hppa2.0[nw] | hppa64 \
 	| hexagon \
 	| i370 | i860 | i960 | ia64 \
 	| ip2k | iq2000 \
-	| k1om \
 	| le32 | le64 \
 	| lm32 \
 	| m32c | m32r | m32rle | m68000 | m68k | m88k \
@@ -303,7 +299,6 @@ case $basic_machine in
 	| powerpc | powerpc64 | powerpc64le | powerpcle \
 	| pru \
 	| pyramid \
-	| riscv32 | riscv64 \
 	| rl78 | rx \
 	| score \
 	| sh | sh[1234] | sh[24]a | sh[24]aeb | sh[23]e | sh[234]eb | sheb | shbe | shle | sh[1234]le | sh3ele \
@@ -314,7 +309,6 @@ case $basic_machine in
 	| tahoe | tic4x | tic54x | tic55x | tic6x | tic80 | tron \
 	| ubicom32 \
 	| v850 | v850e | v850e1 | v850e2 | v850es | v850e2v3 \
-	| visium \
 	| we32k \
 	| x86 | xc16x | xstormy16 | xtensa \
 	| z8k | z80)
@@ -329,10 +323,7 @@ case $basic_machine in
 	c6x)
 		basic_machine=tic6x-unknown
 		;;
-	leon|leon[3-9])
-		basic_machine=sparc-$basic_machine
-		;;
-	m6811 | m68hc11 | m6812 | m68hc12 | m68hcs12x | nvptx | picochip)
+	m6811 | m68hc11 | m6812 | m68hc12 | m68hcs12x | picochip)
 		basic_machine=$basic_machine-unknown
 		os=-none
 		;;
@@ -377,7 +368,6 @@ case $basic_machine in
 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
 	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
 	| avr-* | avr32-* \
-	| ba-* \
 	| be32-* | be64-* \
 	| bfin-* | bs2000-* \
 	| c[123]* | c30-* | [cjt]90-* | c4x-* \
@@ -390,7 +380,6 @@ case $basic_machine in
 	| hexagon-* \
 	| i*86-* | i860-* | i960-* | ia64-* \
 	| ip2k-* | iq2000-* \
-	| k1om-* \
 	| le32-* | le64-* \
 	| lm32-* \
 	| m32c-* | m32r-* | m32rle-* \
@@ -431,7 +420,6 @@ case $basic_machine in
 	| powerpc-* | powerpc64-* | powerpc64le-* | powerpcle-* \
 	| pru-* \
 	| pyramid-* \
-	| riscv32-* | riscv64-* \
 	| rl78-* | romp-* | rs6000-* | rx-* \
 	| sh-* | sh[1234]-* | sh[24]a-* | sh[24]aeb-* | sh[23]e-* | sh[34]eb-* | sheb-* | shbe-* \
 	| shle-* | sh[1234]le-* | sh3ele-* | sh64-* | sh64le-* \
@@ -445,7 +433,6 @@ case $basic_machine in
 	| ubicom32-* \
 	| v850-* | v850e-* | v850e1-* | v850es-* | v850e2-* | v850e2v3-* \
 	| vax-* \
-	| visium-* \
 	| we32k-* \
 	| x86-* | x86_64-* | xc16x-* | xps100-* \
 	| xstormy16-* | xtensa*-* \
@@ -864,7 +851,7 @@ case $basic_machine in
 		basic_machine=`echo $basic_machine | sed -e 's/ms1-/mt-/'`
 		;;
 	msys)
-		basic_machine=i686-pc
+		basic_machine=i386-pc
 		os=-msys
 		;;
 	mvs)
@@ -1397,11 +1384,11 @@ case $os in
 	      | -bosx* | -nextstep* | -cxux* | -aout* | -elf* | -oabi* \
 	      | -ptx* | -coff* | -ecoff* | -winnt* | -domain* | -vsta* \
 	      | -udi* | -eabi* | -lites* | -ieee* | -go32* | -aux* \
-	      | -chorusos* | -chorusrdb* | -cegcc* | -glidix* \
+	      | -chorusos* | -chorusrdb* | -cegcc* \
 	      | -cygwin* | -msys* | -pe* | -psos* | -moss* | -proelf* | -rtems* \
-	      | -midipix* | -mingw32* | -mingw64* | -linux-gnu* | -linux-android* \
-	      | -linux-newlib* | -linux-musl* | -linux-uclibc* \
-	      | -uxpv* | -beos* | -mpeix* | -udk* | -moxiebox* \
+	      | -mingw32* | -linux-gnu* | -linux-android* \
+	      | -linux-newlib* | -linux-uclibc* \
+	      | -uxpv* | -beos* | -mpeix* | -udk* \
 	      | -interix* | -uwin* | -mks* | -rhapsody* | -darwin* | -opened* \
 	      | -openstep* | -oskit* | -conix* | -pw32* | -nonstopux* \
 	      | -storm-chaos* | -tops10* | -tenex* | -tops20* | -its* \

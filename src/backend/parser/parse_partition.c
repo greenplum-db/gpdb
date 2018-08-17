@@ -1014,11 +1014,11 @@ make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 	 */
 	if (!child_tab_stmt->tablespacename)
 	{
-		Oid			poid = RangeVarGetRelid(cxt->relation, true);		/* parent branch */
+		Oid			poid = RangeVarGetRelid(cxt->relation, NoLock, true);		/* parent branch */
 
 		if (!poid)
 		{
-			poid = RangeVarGetRelid(stmt->relation, true);		/* whole partitioned
+			poid = RangeVarGetRelid(stmt->relation, NoLock, true);		/* whole partitioned
 																 * table */
 		}
 		if (poid)

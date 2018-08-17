@@ -379,8 +379,9 @@ FORMAT 'text'
 LOG ERRORS SEGMENT REJECT LIMIT 2
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "a68", column l_partkey  (seg1 slice1 172.17.0.4:25433 pid=36416)
-DETAIL:  External table ext_lineitem, line 2 of gpfdist://@hostname@:7070/gpfdist2/bad_data/lineitem.tbl.bad, column l_partkey
+ERROR:  segment reject limit reached, aborting operation
+DETAIL:  Last error was: invalid input syntax for integer: "a68", column l_partkey  (seg1 slice1 172.17.0.4:25433 pid=36416)
+CONTEXT:  External table ext_lineitem, line 2 of gpfdist://@hostname@:7070/gpfdist2/bad_data/lineitem.tbl.bad, column l_partkey
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 11
 CREATE EXTERNAL TABLE ext_lineitem (

@@ -50,7 +50,7 @@
  * there is a window (caused by pgstat delay) on which a worker may choose a
  * table that was already vacuumed; this is a bug in the current design.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -84,6 +84,7 @@
 #include "postmaster/postmaster.h"
 #include "storage/bufmgr.h"
 #include "storage/ipc.h"
+#include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
@@ -95,8 +96,10 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "utils/timestamp.h"
 #include "utils/tqual.h"
 
 #include "cdb/cdbvars.h"
@@ -531,6 +534,27 @@ AutoVacLauncherMain(int argc, char *argv[])
 	/* must unblock signals before calling rebuild_database_list */
 	PG_SETMASK(&UnBlockSig);
 
+	/*
+	 * Force zero_damaged_pages OFF in the autovac process, even if it is set
+	 * in postgresql.conf.	We don't really want such a dangerous option being
+	 * applied non-interactively.
+	 */
+	SetConfigOption("zero_damaged_pages", "false", PGC_SUSET, PGC_S_OVERRIDE);
+
+	/*
+	 * Force statement_timeout to zero to avoid a timeout setting from
+	 * preventing regular maintenance from being executed.
+	 */
+	SetConfigOption("statement_timeout", "0", PGC_SUSET, PGC_S_OVERRIDE);
+
+	/*
+	 * Force default_transaction_isolation to READ COMMITTED.  We don't want
+	 * to pay the overhead of serializable mode, nor add any risk of causing
+	 * deadlocks or delaying other transactions.
+	 */
+	SetConfigOption("default_transaction_isolation", "read committed",
+					PGC_SUSET, PGC_S_OVERRIDE);
+
 	/* in emergency mode, just start a worker and go away */
 	if (!AutoVacuumingActive())
 	{
@@ -555,13 +579,14 @@ AutoVacLauncherMain(int argc, char *argv[])
 		TimestampTz current_time = 0;
 		bool		can_launch;
 		Dlelem	   *elem;
+		int			rc;
 
 		/*
-		 * Emergency bailout if postmaster has died.  This is to avoid the
-		 * necessity for manual cleanup of all postmaster children.
+		 * This loop is a bit different from the normal use of WaitLatch,
+		 * because we'd like to sleep before the first launch of a child
+		 * process.  So it's WaitLatch, then ResetLatch, then check for
+		 * wakening conditions.
 		 */
-		if (!PostmasterIsAlive(true))
-			proc_exit(1);
 
 		launcher_determine_sleep((AutoVacuumShmem->av_freeWorkers != NULL),
 								 false, &nap);
@@ -570,41 +595,23 @@ AutoVacLauncherMain(int argc, char *argv[])
 		EnableCatchupInterrupt();
 
 		/*
-		 * Sleep for a while according to schedule.
-		 *
-		 * On some platforms, signals won't interrupt the sleep.  To ensure we
-		 * respond reasonably promptly when someone signals us, break down the
-		 * sleep into 1-second increments, and check for interrupts after each
-		 * nap.
+		 * Wait until naptime expires or we get some type of signal (all the
+		 * signal handlers will wake us by calling SetLatch).
 		 */
-		while (nap.tv_sec > 0 || nap.tv_usec > 0)
-		{
-			uint32		sleeptime;
+		rc = WaitLatch(&MyProc->procLatch,
+					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+					   (nap.tv_sec * 1000L) + (nap.tv_usec / 1000L));
 
-			if (nap.tv_sec > 0)
-			{
-				sleeptime = 1000000;
-				nap.tv_sec--;
-			}
-			else
-			{
-				sleeptime = nap.tv_usec;
-				nap.tv_usec = 0;
-			}
-			pg_usleep(sleeptime);
-
-			/*
-			 * Emergency bailout if postmaster has died.  This is to avoid the
-			 * necessity for manual cleanup of all postmaster children.
-			 */
-			if (!PostmasterIsAlive(true))
-				proc_exit(1);
-
-			if (got_SIGTERM || got_SIGHUP || got_SIGUSR2)
-				break;
-		}
+		ResetLatch(&MyProc->procLatch);
 
 		DisableCatchupInterrupt();
+
+		/*
+		 * Emergency bailout if postmaster has died.  This is to avoid the
+		 * necessity for manual cleanup of all postmaster children.
+		 */
+		if (rc & WL_POSTMASTER_DEATH)
+			proc_exit(1);
 
 		/* the normal shutdown case */
 		if (got_SIGTERM)
@@ -719,7 +726,7 @@ AutoVacLauncherMain(int argc, char *argv[])
 					worker->wi_links.next = (SHM_QUEUE *) AutoVacuumShmem->av_freeWorkers;
 					AutoVacuumShmem->av_freeWorkers = worker;
 					AutoVacuumShmem->av_startingWorker = NULL;
-					elog(WARNING, "worker took too long to start; cancelled");
+					elog(WARNING, "worker took too long to start; canceled");
 				}
 			}
 			else
@@ -1048,10 +1055,10 @@ rebuild_database_list(Oid newdb)
 static int
 db_comparator(const void *a, const void *b)
 {
-	if (((avl_dbase *) a)->adl_score == ((avl_dbase *) b)->adl_score)
+	if (((const avl_dbase *) a)->adl_score == ((const avl_dbase *) b)->adl_score)
 		return 0;
 	else
-		return (((avl_dbase *) a)->adl_score < ((avl_dbase *) b)->adl_score) ? 1 : -1;
+		return (((const avl_dbase *) a)->adl_score < ((const avl_dbase *) b)->adl_score) ? 1 : -1;
 }
 
 /*
@@ -1325,21 +1332,39 @@ AutoVacWorkerFailed(void)
 static void
 avl_sighup_handler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	got_SIGHUP = true;
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+
+	errno = save_errno;
 }
 
 /* SIGUSR2: a worker is up and running, or just finished, or failed to fork */
 static void
 avl_sigusr2_handler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	got_SIGUSR2 = true;
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+
+	errno = save_errno;
 }
 
 /* SIGTERM: time to die */
 static void
 avl_sigterm_handler(SIGNAL_ARGS)
 {
+	int			save_errno = errno;
+
 	got_SIGTERM = true;
+	if (MyProc)
+		SetLatch(&MyProc->procLatch);
+
+	errno = save_errno;
 }
 
 
@@ -1469,7 +1494,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 	pqsignal(SIGHUP, SIG_IGN);
 
 	/*
-	 * SIGINT is used to signal cancelling the current table's vacuum; SIGTERM
+	 * SIGINT is used to signal canceling the current table's vacuum; SIGTERM
 	 * means abort and exit cleanly, and SIGQUIT means abandon ship.
 	 */
 	pqsignal(SIGINT, StatementCancelHandler);
@@ -1536,12 +1561,21 @@ AutoVacWorkerMain(int argc, char *argv[])
 	SetConfigOption("statement_timeout", "0", PGC_SUSET, PGC_S_OVERRIDE);
 
 	/*
+	 * Force default_transaction_isolation to READ COMMITTED.  We don't want
+	 * to pay the overhead of serializable mode, nor add any risk of causing
+	 * deadlocks or delaying other transactions.
+	 */
+	SetConfigOption("default_transaction_isolation", "read committed",
+					PGC_SUSET, PGC_S_OVERRIDE);
+
+	/*
 	 * Force synchronous replication off to allow regular maintenance even if
 	 * we are waiting for standbys to connect. This is important to ensure we
 	 * aren't blocked from performing anti-wraparound tasks.
 	 */
 	if (synchronous_commit > SYNCHRONOUS_COMMIT_LOCAL_FLUSH)
-		SetConfigOption("synchronous_commit", "local", PGC_SUSET, PGC_S_OVERRIDE);
+		SetConfigOption("synchronous_commit", "local",
+						PGC_SUSET, PGC_S_OVERRIDE);
 
 	/*
 	 * Get the info about the database we're going to work on.
@@ -2019,7 +2053,7 @@ do_autovacuum(void)
 			backendID = GetTempNamespaceBackendId(classForm->relnamespace);
 
 			/* We just ignore it if the owning backend is still active */
-			if (backendID == MyBackendId || !BackendIdIsActive(backendID))
+			if (backendID == MyBackendId || BackendIdGetProc(backendID) == NULL)
 			{
 				/*
 				 * We found an orphan temp table (which was probably left
@@ -2039,7 +2073,7 @@ do_autovacuum(void)
 					object.classId = RelationRelationId;
 					object.objectId = relid;
 					object.objectSubId = 0;
-					performDeletion(&object, DROP_CASCADE);
+					performDeletion(&object, DROP_CASCADE, PERFORM_DELETION_INTERNAL);
 				}
 				else
 				{
@@ -2321,7 +2355,7 @@ do_autovacuum(void)
 						   tab->at_datname, tab->at_nspname, tab->at_relname);
 			EmitErrorReport();
 
-			/* this resets the PGPROC flags too */
+			/* this resets the PGXACT flags too */
 			AbortOutOfAnyTransaction();
 			FlushErrorState();
 			MemoryContextResetAndDeleteChildren(PortalContext);
@@ -2332,7 +2366,7 @@ do_autovacuum(void)
 		}
 		PG_END_TRY();
 
-		/* the PGPROC flags are reset at the next end of transaction */
+		/* the PGXACT flags are reset at the next end of transaction */
 
 deleted:
 		/* be tidy */
@@ -2783,7 +2817,7 @@ autovac_report_activity(autovac_table *tab)
 	/* Set statement_timestamp() to current time for pg_stat_activity */
 	SetCurrentStatementStartTimestamp();
 
-	pgstat_report_activity(activity);
+	pgstat_report_activity(STATE_RUNNING, activity);
 }
 
 /*

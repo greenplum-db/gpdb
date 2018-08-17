@@ -5,16 +5,16 @@
 #include "nodes/plannodes.h"
 
 char *
-SzDXLPlan(Query *pquery)
+SerializeDXLPlan(Query *pquery)
 {
-	elog(ERROR, "mock implementation of SzDXLPlan called");
+	elog(ERROR, "mock implementation of SerializeDXLPlan called");
 	return NULL;
 }
 
 PlannedStmt *
-PplstmtOptimize(Query *pquery, bool pfUnexpectedFailure)
+GPOPTOptimizedPlan(Query *pquery, bool pfUnexpectedFailure)
 {
-	elog(ERROR, "mock implementation of PplStmtOptimize called");
+	elog(ERROR, "mock implementation of GPOPTOptimizedPlan called");
 	return NULL;
 }
 

@@ -226,7 +226,7 @@ CREATE AGGREGATE concat(text) (
 );
 -- TEST
 -- cook some stats
-set allow_system_table_mods='DML';
+set allow_system_table_mods=true;
 UPDATE pg_class set reltuples=524592::real, relpages=2708::integer where oid = 'attribute_table'::regclass;
 select count_operator('select product_id,concat(E''#attribute_''||attribute_id::varchar||E'':''||attribute) as attr FROM attribute_table GROUP BY product_id;','HashAggregate');
  count_operator 

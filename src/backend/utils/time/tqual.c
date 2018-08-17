@@ -10,12 +10,12 @@
  * the passed-in buffer.  The caller must hold not only a pin, but at least
  * shared buffer content lock on the buffer containing the tuple.
  *
- * NOTE: must check TransactionIdIsInProgress (which looks in PGPROC array)
+ * NOTE: must check TransactionIdIsInProgress (which looks in PGXACT array)
  * before TransactionIdDidCommit/TransactionIdDidAbort (which look in
  * pg_clog).  Otherwise we have a race condition: we might decide that a
  * just-committed transaction crashed, because none of the tests succeed.
  * xact.c is careful to record commit/abort in pg_clog before it unsets
- * MyProc->xid in PGPROC array.  That fixes that problem, but it also
+ * MyPgXact->xid in PGXACT array.  That fixes that problem, but it also
  * means there is a window where TransactionIdIsInProgress and
  * TransactionIdDidCommit will both return true.  If we check only
  * TransactionIdDidCommit, we could consider a tuple committed when a
@@ -46,7 +46,7 @@
  *	 HeapTupleSatisfiesAny()
  *		  all tuples are visible
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -144,10 +144,12 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
  * Set commit/abort hint bits on a tuple, if appropriate at this time.
  *
  * It is only safe to set a transaction-committed hint bit if we know the
- * transaction's commit record has been flushed to disk.  We cannot change
- * the LSN of the page here because we may hold only a share lock on the
- * buffer, so we can't use the LSN to interlock this; we have to just refrain
- * from setting the hint bit until some future re-examination of the tuple.
+ * transaction's commit record has been flushed to disk, or if the table is
+ * temporary or unlogged and will be obliterated by a crash anyway.  We
+ * cannot change the LSN of the page here because we may hold only a share
+ * lock on the buffer, so we can't use the LSN to interlock this; we have to
+ * just refrain from setting the hint bit until some future re-examination
+ * of the tuple.
  *
  * We can always set hint bits when marking a transaction aborted.	(Some
  * code in heapam.c relies on that!)
@@ -177,7 +179,7 @@ SetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
 		/* NB: xid must be known committed here! */
 		XLogRecPtr	commitLSN = TransactionIdGetCommitLSN(xid);
 
-		if (XLogNeedsFlush(commitLSN))
+		if (XLogNeedsFlush(commitLSN) && BufferIsPermanent(buffer))
 			return;				/* not flushed yet, so don't set hint */
 	}
 
@@ -400,16 +402,6 @@ HeapTupleSatisfiesSelf(Relation relation, HeapTupleHeader tuple, Snapshot snapsh
  *		 (Xmax != my-transaction &&			the row was deleted by another transaction
  *		  Xmax is not committed))))			that has not been committed
  *
- *		mao says 17 march 1993:  the tests in this routine are correct;
- *		if you think they're not, you're wrong, and you should think
- *		about it again.  i know, it happened to me.  we don't need to
- *		check commit time against the start time of this transaction
- *		because 2ph locking protects us from doing the wrong thing.
- *		if you mess around here, you'll break serializability.  the only
- *		problem with this code is that it does the wrong thing for system
- *		catalog updates, because the catalogs aren't subject to 2ph, so
- *		the serializability guarantees we provide don't extend to xacts
- *		that do catalog accesses.  this is unfortunate, but not critical.
  */
 bool
 HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Snapshot snapshot, Buffer buffer)
@@ -1332,6 +1324,47 @@ HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader tuple, TransactionId
 
 	/* Otherwise, it's dead and removable */
 	return HEAPTUPLE_DEAD;
+}
+
+/*
+ * HeapTupleIsSurelyDead
+ *
+ *	Determine whether a tuple is surely dead.  We sometimes use this
+ *	in lieu of HeapTupleSatisifesVacuum when the tuple has just been
+ *	tested by HeapTupleSatisfiesMVCC and, therefore, any hint bits that
+ *	can be set should already be set.  We assume that if no hint bits
+ *	either for xmin or xmax, the transaction is still running.	This is
+ *	therefore faster than HeapTupleSatisfiesVacuum, because we don't
+ *	consult CLOG (and also because we don't need to give an exact answer,
+ *	just whether or not the tuple is surely dead).
+ */
+bool
+HeapTupleIsSurelyDead(HeapTupleHeader tuple, TransactionId OldestXmin)
+{
+	/*
+	 * If the inserting transaction is marked invalid, then it aborted, and
+	 * the tuple is definitely dead.  If it's marked neither committed nor
+	 * invalid, then we assume it's still alive (since the presumption is that
+	 * all relevant hint bits were just set moments ago).
+	 */
+	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
+		return (tuple->t_infomask & HEAP_XMIN_INVALID) != 0 ? true : false;
+
+	/*
+	 * If the inserting transaction committed, but any deleting transaction
+	 * aborted, the tuple is still alive.  Likewise, if XMAX is a lock rather
+	 * than a delete, the tuple is still alive.
+	 */
+	if (tuple->t_infomask &
+		(HEAP_XMAX_INVALID | HEAP_IS_LOCKED | HEAP_XMAX_IS_MULTI))
+		return false;
+
+	/* If deleter isn't known to have committed, assume it's still running. */
+	if (!(tuple->t_infomask & HEAP_XMAX_COMMITTED))
+		return false;
+
+	/* Deleter committed, so tuple is dead if the XID is old enough. */
+	return TransactionIdPrecedes(HeapTupleHeaderGetXmax(tuple), OldestXmin);
 }
 
 /*

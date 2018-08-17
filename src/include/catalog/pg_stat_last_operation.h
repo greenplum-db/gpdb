@@ -21,8 +21,6 @@
 #include "catalog/genbki.h"
 
 /* MPP-6929: metadata tracking */
-#define StatLastOpRelationName		"pg_stat_last_operation"
-
 #define StatLastOpRelationId 6052
 
 /*

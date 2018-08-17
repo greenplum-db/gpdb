@@ -5,7 +5,7 @@
  *	Lately it's also being used by psql and bin/scripts/ ...
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/pg_dump/dumputils.c
@@ -21,8 +21,23 @@
 #include "parser/keywords.h"
 
 
-int			quote_all_identifiers = 0;
+/* Globals from keywords.c */
+extern const ScanKeyword FEScanKeywords[];
+extern const int NumFEScanKeywords;
 
+/* Globals exported by this file */
+int			quote_all_identifiers = 0;
+const char *progname = NULL;
+
+#define MAX_ON_EXIT_NICELY				20
+
+static struct
+{
+	on_exit_nicely_callback function;
+	void	   *arg;
+}	on_exit_nicely_list[MAX_ON_EXIT_NICELY];
+
+static int	on_exit_nicely_index;
 
 #define supports_grant_options(version) ((version) >= 70400)
 
@@ -37,6 +52,7 @@ static void AddAcl(PQExpBuffer aclbuf, const char *keyword,
 #ifdef WIN32
 static bool parallel_init_done = false;
 static DWORD tls_index;
+static DWORD mainThreadId;
 #endif
 
 void
@@ -47,6 +63,7 @@ init_parallel_dump_utils(void)
 	{
 		tls_index = TlsAlloc();
 		parallel_init_done = true;
+		mainThreadId = GetCurrentThreadId();
 	}
 #endif
 }
@@ -136,8 +153,8 @@ fmtId(const char *rawid)
 		 * that's fine, since we already know we have all-lower-case.
 		 */
 		const ScanKeyword *keyword = ScanKeywordLookup(rawid,
-													   ScanKeywords,
-													   NumScanKeywords);
+													   FEScanKeywords,
+													   NumFEScanKeywords);
 
 		if (keyword != NULL && keyword->category != UNRESERVED_KEYWORD)
 			need_quotes = true;
@@ -776,7 +793,10 @@ parseAclItem(const char *item, const char *type,
 	/* user or group name is string up to = */
 	eqpos = copyAclUserName(grantee, buf);
 	if (*eqpos != '=')
+	{
+		free(buf);
 		return false;
+	}
 
 	/* grantor may be listed after / */
 	slpos = strchr(eqpos + 1, '/');
@@ -1263,60 +1283,217 @@ escape_fmtopts_string(const char *src)
 char *
 custom_fmtopts_string(const char *src)
 {
-		int			len = src ? strlen(src) : 0;
-		char	   *result = calloc(1, len * 2 + 2);
-		char	   *srcdup = src ? strdup(src) : NULL;
-		char	   *srcdup_start = srcdup;
-		char       *find_res = NULL;
-		int        last = 0;
+	int len = src ? strlen(src) : 0;
+	char *result = calloc(1, len * 2 + 2);
+	char *srcdup = src ? strdup(src) : NULL;
+	char *srcdup_start = srcdup;
+	char *find_res = NULL;
+	int last = 0;
 
-		if (!srcdup || !result)
+	if (!srcdup || !result)
+	{
+		if (result)
+			free(result);
+		if (srcdup)
+			free(srcdup);
+		return NULL;
+	}
+
+	while (srcdup)
+	{
+		/* find first word (a) */
+		find_res = strchr(srcdup, ' ');
+		if (!find_res)
+			break;
+		strncat(result, srcdup, (find_res - srcdup));
+		/* skip space */
+		srcdup = find_res + 1;
+		/* remove E if E' */
+		if ((strlen(srcdup) > 2) && (srcdup[0] == 'E') && (srcdup[1] == '\''))
+			srcdup++;
+		/* add " = " */
+		strncat(result, " = ", 3);
+		/* find second word (b) until second '
+		   find \' combinations and ignore them */
+		find_res = strchr(srcdup + 1, '\'');
+		while (find_res && (*(find_res - 1) == '\\') /* ignore \' */)
 		{
-			if (result)
-				free(result);
-			if (srcdup)
-				free(srcdup);
-			return NULL;
+			find_res = strchr(find_res + 1, '\'');
 		}
-
-		while (srcdup)
+		if (!find_res)
+			break;
+		strncat(result, srcdup, (find_res - srcdup + 1));
+		srcdup = find_res + 1;
+		/* skip space and add ',' */
+		if (srcdup && srcdup[0] == ' ')
 		{
-			/* find first word (a) */
-			find_res = strchr(srcdup, ' ');
-			if (!find_res)
-				break;
-			strncat(result, srcdup, (find_res - srcdup));
-			/* skip space */
-			srcdup = find_res + 1;
-			/* remove E if E' */
-			if((strlen(srcdup) > 2) && (srcdup[0] == 'E') && (srcdup[1] == '\''))
-				srcdup++;
-			/* add " = " */
-			strncat(result, " = ", 3);
-			/* find second word (b) until second '
-			   find \' combinations and ignore them */
-			find_res = strchr(srcdup + 1, '\'');
-			while (find_res && (*(find_res - 1) == '\\') /* ignore \' */)
-			{
-				find_res = strchr(find_res + 1, '\'');
-			}
-			if (!find_res)
-				break;
-			strncat(result, srcdup, (find_res - srcdup + 1));
-			srcdup = find_res + 1;
-			/* skip space and add ',' */
-			if (srcdup && srcdup[0] == ' ')
-			{
-				srcdup++;
-				strncat(result, ",", 1);
-			}
+			srcdup++;
+			strncat(result, ",", 1);
 		}
+	}
 
-		/* fix string - remove trailing ',' or '=' */
-		last = strlen(result)-1;
-		if(result[last] == ',' || result[last] == '=')
-			result[last]='\0';
+	/* fix string - remove trailing ',' or '=' */
+	last = strlen(result) - 1;
+	if (result[last] == ',' || result[last] == '=')
+		result[last] = '\0';
 
-		free(srcdup_start);
-		return result;
+	free(srcdup_start);
+	return result;
+}
+
+/*
+ * buildShSecLabelQuery
+ *
+ * Build a query to retrieve security labels for a shared object.
+ */
+void
+buildShSecLabelQuery(PGconn *conn, const char *catalog_name, uint32 objectId,
+					 PQExpBuffer sql)
+{
+	appendPQExpBuffer(sql,
+					  "SELECT provider, label FROM pg_catalog.pg_shseclabel "
+					  "WHERE classoid = '%s'::pg_catalog.regclass AND "
+					  "objoid = %u", catalog_name, objectId);
+}
+
+/*
+ * emitShSecLabels
+ *
+ * Format security label data retrieved by the query generated in
+ * buildShSecLabelQuery.
+ */
+void
+emitShSecLabels(PGconn *conn, PGresult *res, PQExpBuffer buffer,
+				const char *target, const char *objname)
+{
+	int			i;
+
+	for (i = 0; i < PQntuples(res); i++)
+	{
+		char	   *provider = PQgetvalue(res, i, 0);
+		char	   *label = PQgetvalue(res, i, 1);
+
+		/* must use fmtId result before calling it again */
+		appendPQExpBuffer(buffer,
+						  "SECURITY LABEL FOR %s ON %s",
+						  fmtId(provider), target);
+		appendPQExpBuffer(buffer,
+						  " %s IS ",
+						  fmtId(objname));
+		appendStringLiteralConn(buffer, label, conn);
+		appendPQExpBuffer(buffer, ";\n");
+	}
+}
+
+
+/*
+ * Parse a --section=foo command line argument.
+ *
+ * Set or update the bitmask in *dumpSections according to arg.
+ * dumpSections is initialised as DUMP_UNSECTIONED by pg_dump and
+ * pg_restore so they can know if this has even been called.
+ */
+void
+set_dump_section(const char *arg, int *dumpSections)
+{
+	/* if this is the first call, clear all the bits */
+	if (*dumpSections == DUMP_UNSECTIONED)
+		*dumpSections = 0;
+
+	if (strcmp(arg, "pre-data") == 0)
+		*dumpSections |= DUMP_PRE_DATA;
+	else if (strcmp(arg, "data") == 0)
+		*dumpSections |= DUMP_DATA;
+	else if (strcmp(arg, "post-data") == 0)
+		*dumpSections |= DUMP_POST_DATA;
+	else
+	{
+		fprintf(stderr, _("%s: unrecognized section name: \"%s\"\n"),
+				progname, arg);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
+				progname);
+		exit_nicely(1);
+	}
+}
+
+
+/*
+ * Write a printf-style message to stderr.
+ *
+ * The program name is prepended, if "progname" has been set.
+ * Also, if modulename isn't NULL, that's included too.
+ * Note that we'll try to translate the modulename and the fmt string.
+ */
+void
+write_msg(const char *modulename, const char *fmt,...)
+{
+	va_list		ap;
+
+	va_start(ap, fmt);
+	vwrite_msg(modulename, fmt, ap);
+	va_end(ap);
+}
+
+/*
+ * As write_msg, but pass a va_list not variable arguments.
+ */
+void
+vwrite_msg(const char *modulename, const char *fmt, va_list ap)
+{
+	if (progname)
+	{
+		if (modulename)
+			fprintf(stderr, "%s: [%s] ", progname, _(modulename));
+		else
+			fprintf(stderr, "%s: ", progname);
+	}
+	vfprintf(stderr, _(fmt), ap);
+}
+
+
+/*
+ * Fail and die, with a message to stderr.	Parameters as for write_msg.
+ */
+void
+exit_horribly(const char *modulename, const char *fmt,...)
+{
+	va_list		ap;
+
+	va_start(ap, fmt);
+	vwrite_msg(modulename, fmt, ap);
+	va_end(ap);
+
+	exit_nicely(1);
+}
+
+/* Register a callback to be run when exit_nicely is invoked. */
+void
+on_exit_nicely(on_exit_nicely_callback function, void *arg)
+{
+	if (on_exit_nicely_index >= MAX_ON_EXIT_NICELY)
+		exit_horribly(NULL, "out of on_exit_nicely slots");
+	on_exit_nicely_list[on_exit_nicely_index].function = function;
+	on_exit_nicely_list[on_exit_nicely_index].arg = arg;
+	on_exit_nicely_index++;
+}
+
+/*
+ * Run accumulated on_exit_nicely callbacks in reverse order and then exit
+ * quietly.  This needs to be thread-safe.
+ */
+void
+exit_nicely(int code)
+{
+	int			i;
+
+	for (i = on_exit_nicely_index - 1; i >= 0; i--)
+		(*on_exit_nicely_list[i].function) (code,
+											on_exit_nicely_list[i].arg);
+
+#ifdef WIN32
+	if (parallel_init_done && GetCurrentThreadId() != mainThreadId)
+		ExitThread(code);
+#endif
+
+	exit(code);
 }

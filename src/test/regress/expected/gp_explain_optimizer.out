@@ -84,16 +84,18 @@ CREATE TABLE mpp22263 (
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Hash Join  (cost=0.00..431.01 rows=1 width=256)
-   Hash Cond: mpp22263.unique1 = "Values".column1 AND mpp22263.stringu1::text = "Values".column2
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=244)
-         ->  Table Scan on mpp22263  (cost=0.00..431.00 rows=1 width=244)
-   ->  Hash  (cost=0.00..0.00 rows=1 width=12)
-         ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
- Optimizer: PQO version 2.55.21
-(7 rows)
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
+   ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
+         Join Filter: true
+         ->  Result  (cost=0.00..0.00 rows=1 width=12)
+               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
+         ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
+               Index Cond: unique1 = "Values".column1
+               Filter: stringu1::text = "Values".column2
+ Optimizer: PQO version 2.64.0
+(9 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
@@ -104,9 +106,11 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
- et 
-----
-(0 rows)
+                           et                            
+---------------------------------------------------------
+         Join Filter: true
+               Filter: stringu1::text = "Values".column2
+(2 rows)
 
 --
 -- Join condition in explain plan should represent constants with proper

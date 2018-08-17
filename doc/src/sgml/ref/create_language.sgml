@@ -118,8 +118,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
      <term><literal>TRUSTED</literal></term>
 
      <listitem>
-      <para>
-       <literal>TRUSTED</literal> specifies that the language does
+      <para><literal>TRUSTED</literal> specifies that the language does
        not grant access to data that the user would not otherwise
        have.  If this key word is omitted
        when registering the language, only users with the
@@ -144,9 +143,8 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
 
      <listitem>
       <para>
-       The name of the new procedural language.  The language name is
-       case insensitive. The name must be unique among the languages
-       in the database.
+       The name of the new procedural language.
+       The name must be unique among the languages in the database.
       </para>
 
       <para>
@@ -160,8 +158,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
      <term><literal>HANDLER</literal> <replaceable class="parameter">call_handler</replaceable></term>
 
      <listitem>
-      <para>
-       <replaceable class="parameter">call_handler</replaceable> is
+      <para><replaceable class="parameter">call_handler</replaceable> is
        the name of a previously registered function that will be
        called to execute the procedural language's functions.  The call
        handler for a procedural language must be written in a compiled
@@ -178,8 +175,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
      <term><literal>INLINE</literal> <replaceable class="parameter">inline_handler</replaceable></term>
 
      <listitem>
-      <para>
-       <replaceable class="parameter">inline_handler</replaceable> is the
+      <para><replaceable class="parameter">inline_handler</replaceable> is the
        name of a previously registered function that will be called
        to execute an anonymous code block
        (<xref linkend="sql-do"> command)
@@ -199,8 +195,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="pa
      <term><literal>VALIDATOR</literal> <replaceable class="parameter">valfunction</replaceable></term>
 
      <listitem>
-      <para>
-       <replaceable class="parameter">valfunction</replaceable> is the
+      <para><replaceable class="parameter">valfunction</replaceable> is the
        name of a previously registered function that will be called
        when a new function in the language is created, to validate the
        new function.
@@ -309,8 +304,7 @@ CREATE FUNCTION plsample_call_handler() RETURNS language_handler
     LANGUAGE C;
 CREATE LANGUAGE plsample
     HANDLER plsample_call_handler;
-</programlisting>
-  </para>
+</programlisting></para>
  </refsect1>
 
  <refsect1 id="sql-createlanguage-compat">

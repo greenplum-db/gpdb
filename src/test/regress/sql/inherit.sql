@@ -133,60 +133,24 @@ CREATE TABLE otherchild (tomorrow date default now())
 
 DROP TABLE firstparent, secondparent, jointchild, thirdparent, otherchild;
 
-/* Test inheritance of structure (LIKE) */
-CREATE TABLE inhx (xx text DEFAULT 'text');
-
-/*
- * Test double inheritance
- *
- * Ensure that defaults are NOT included unless
- * INCLUDING DEFAULTS is specified
- */
-CREATE TABLE inhe (ee text, LIKE inhx) inherits (b);
-INSERT INTO inhe VALUES ('ee-col1', 'ee-col2', DEFAULT, 'ee-col4');
-SELECT * FROM inhe; /* Columns aa, bb, xx value NULL, ee */
-SELECT * FROM inhx; /* Empty set since LIKE inherits structure only */
-SELECT * FROM b; /* Has ee entry */
-SELECT * FROM a; /* Has ee entry */
-
-CREATE TABLE inhf (LIKE inhx, LIKE inhx); /* Throw error */
-
-CREATE TABLE inhf (LIKE inhx INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
-INSERT INTO inhf DEFAULT VALUES;
-SELECT * FROM inhf; /* Single entry with value 'text' */
-
-ALTER TABLE inhx add constraint foo CHECK (xx = 'text');
-ALTER TABLE inhx ADD PRIMARY KEY (xx);
-CREATE TABLE inhg (LIKE inhx); /* Doesn't copy constraint */
-INSERT INTO inhg VALUES ('foo');
-DROP TABLE inhg;
-CREATE TABLE inhg (x text, LIKE inhx INCLUDING CONSTRAINTS, y text); /* Copies constraints */
-INSERT INTO inhg VALUES ('x', 'text', 'y'); /* Succeeds */
-INSERT INTO inhg VALUES ('x', 'text', 'y'); /* Succeeds -- Unique constraints not copied */
-INSERT INTO inhg VALUES ('x', 'foo',  'y');  /* fails due to constraint */
-SELECT * FROM inhg; /* Two records with three columns in order x=x, xx=text, y=y */
-DROP TABLE inhg;
-
-CREATE TABLE inhg (x text, LIKE inhx INCLUDING INDEXES, y text); /* copies indexes */
-INSERT INTO inhg VALUES (5, 10);
-INSERT INTO inhg VALUES (20, 10); -- should fail
-DROP TABLE inhg;
-/* Multiple primary keys creation should fail */
-CREATE TABLE inhg (x text, LIKE inhx INCLUDING INDEXES, PRIMARY KEY(x)); /* fails */
-CREATE TABLE inhz (xx text DEFAULT 'text', yy int UNIQUE);
-CREATE UNIQUE INDEX inhz_xx_idx on inhz (xx) WHERE xx <> 'test';
-/* Ok to create multiple unique indexes */
-CREATE TABLE inhg (x text UNIQUE, LIKE inhz INCLUDING INDEXES);
-INSERT INTO inhg (xx, yy, x) VALUES ('test', 5, 10);
-INSERT INTO inhg (xx, yy, x) VALUES ('test', 10, 15);
-INSERT INTO inhg (xx, yy, x) VALUES ('foo', 10, 15); -- should fail
-DROP TABLE inhg;
-DROP TABLE inhz;
-
 -- Test changing the type of inherited columns
 insert into d values('test','one','two','three');
 alter table a alter column aa type integer using bit_length(aa);
 select * from d;
+
+-- Test non-inheritable parent constraints
+create table p1(ff1 int);
+alter table p1 add constraint p1chk check no inherit (ff1 > 0);
+alter table p1 add constraint p2chk check (ff1 > 10);
+-- connoinherit should be true for NO INHERIT constraint
+select pc.relname, pgc.conname, pgc.contype, pgc.conislocal, pgc.coninhcount, pgc.connoinherit from pg_class as pc inner join pg_constraint as pgc on (pgc.conrelid = pc.oid) where pc.relname = 'p1' order by 1,2;
+
+-- Test that child does not inherit NO INHERIT constraints
+create table c1 () inherits (p1);
+\d p1
+\d c1
+
+drop table p1 cascade;
 
 -- Tests for casting between the rowtypes of parent and child
 -- tables. See the pgsql-hackers thread beginning Dec. 4/04
@@ -199,7 +163,7 @@ drop table base;
 
 create table p1(ff1 int);
 create table p2(f1 text);
-create function p2text(p2) returns text as 'select $1.f1' language sql CONTAINS SQL;
+create function p2text(p2) returns text as 'select $1.f1' language sql;
 create table c1(f3 int) inherits(p1,p2);
 insert into c1 values(123456789, 'hi', 42);
 select p2text(c1.*) from c1;
@@ -288,81 +252,34 @@ alter table pp1 add column a2 int check (a2 > 0);
 \d cc2
 drop table pp1 cascade;
 
--- including storage and comments
-CREATE TABLE t1 (a text CHECK (length(a) > 2) PRIMARY KEY, b text);
-CREATE INDEX t1_b_key ON t1 (b);
-CREATE INDEX t1_fnidx ON t1 ((a || b));
-COMMENT ON COLUMN t1.a IS 'A';
-COMMENT ON COLUMN t1.b IS 'B';
-COMMENT ON CONSTRAINT t1_a_check ON t1 IS 't1_a_check';
-COMMENT ON INDEX t1_pkey IS 'index pkey';
-COMMENT ON INDEX t1_b_key IS 'index b_key';
-ALTER TABLE t1 ALTER COLUMN a SET STORAGE MAIN;
-
-CREATE TABLE t2 (c text);
-ALTER TABLE t2 ALTER COLUMN c SET STORAGE EXTERNAL;
-COMMENT ON COLUMN t2.c IS 'C';
-
-CREATE TABLE t3 (a text CHECK (length(a) < 5), c text);
-ALTER TABLE t3 ALTER COLUMN c SET STORAGE EXTERNAL;
-ALTER TABLE t3 ALTER COLUMN a SET STORAGE MAIN;
-COMMENT ON COLUMN t3.a IS 'A3';
-COMMENT ON COLUMN t3.c IS 'C';
-COMMENT ON CONSTRAINT t3_a_check ON t3 IS 't3_a_check';
-
-CREATE TABLE t4 (a text, c text);
-ALTER TABLE t4 ALTER COLUMN c SET STORAGE EXTERNAL;
-
-CREATE TABLE t12_storage (LIKE t1 INCLUDING STORAGE, LIKE t2 INCLUDING STORAGE);
-\d+ t12_storage
-CREATE TABLE t12_comments (LIKE t1 INCLUDING COMMENTS, LIKE t2 INCLUDING COMMENTS);
-\d+ t12_comments
-CREATE TABLE t1_inh (LIKE t1 INCLUDING CONSTRAINTS INCLUDING COMMENTS) INHERITS (t1);
-\d+ t1_inh
-SELECT description FROM pg_description, pg_constraint c WHERE classoid = 'pg_constraint'::regclass AND objoid = c.oid AND c.conrelid = 't1_inh'::regclass;
-CREATE TABLE t13_inh () INHERITS (t1, t3);
-\d+ t13_inh
-CREATE TABLE t13_like (LIKE t3 INCLUDING CONSTRAINTS INCLUDING COMMENTS INCLUDING STORAGE) INHERITS (t1);
-\d+ t13_like
-SELECT description FROM pg_description, pg_constraint c WHERE classoid = 'pg_constraint'::regclass AND objoid = c.oid AND c.conrelid = 't13_like'::regclass;
-
-CREATE TABLE t_all (LIKE t1 INCLUDING ALL);
-\d+ t_all
-SELECT c.relname, objsubid, description FROM pg_description, pg_index i, pg_class c WHERE classoid = 'pg_class'::regclass AND objoid = i.indexrelid AND c.oid = i.indexrelid AND i.indrelid = 't_all'::regclass ORDER BY c.relname, objsubid;
-
-CREATE TABLE inh_error1 () INHERITS (t1, t4);
-CREATE TABLE inh_error2 (LIKE t4 INCLUDING STORAGE) INHERITS (t1);
-
-DROP TABLE t1, t2, t3, t4, t12_storage, t12_comments, t1_inh, t13_inh, t13_like, t_all;
-
 -- Test for renaming in simple multiple inheritance
-CREATE TABLE t1 (a int, b int);
-CREATE TABLE s1 (b int, c int);
-CREATE TABLE ts (d int) INHERITS (t1, s1);
+CREATE TABLE inht1 (a int, b int);
+CREATE TABLE inhs1 (b int, c int);
+CREATE TABLE inhts (d int) INHERITS (inht1, inhs1);
 
-ALTER TABLE t1 RENAME a TO aa;
-ALTER TABLE t1 RENAME b TO bb;                -- to be failed
-ALTER TABLE ts RENAME aa TO aaa;      -- to be failed
-ALTER TABLE ts RENAME d TO dd;
-\d+ ts
+ALTER TABLE inht1 RENAME a TO aa;
+ALTER TABLE inht1 RENAME b TO bb;                -- to be failed
+ALTER TABLE inhts RENAME aa TO aaa;      -- to be failed
+ALTER TABLE inhts RENAME d TO dd;
+\d+ inhts
 
-DROP TABLE ts;
+DROP TABLE inhts;
 
 -- Test for renaming in diamond inheritance
-CREATE TABLE t2 (x int) INHERITS (t1);
-CREATE TABLE t3 (y int) INHERITS (t1);
-CREATE TABLE t4 (z int) INHERITS (t2, t3);
+CREATE TABLE inht2 (x int) INHERITS (inht1);
+CREATE TABLE inht3 (y int) INHERITS (inht1);
+CREATE TABLE inht4 (z int) INHERITS (inht2, inht3);
 
-ALTER TABLE t1 RENAME aa TO aaa;
-\d+ t4
+ALTER TABLE inht1 RENAME aa TO aaa;
+\d+ inht4
 
-CREATE TABLE ts (d int) INHERITS (t2, s1);
-ALTER TABLE t1 RENAME aaa TO aaaa;
-ALTER TABLE t1 RENAME b TO bb;                -- to be failed
-\d+ ts
+CREATE TABLE inhts (d int) INHERITS (inht2, inhs1);
+ALTER TABLE inht1 RENAME aaa TO aaaa;
+ALTER TABLE inht1 RENAME b TO bb;                -- to be failed
+\d+ inhts
 
 WITH RECURSIVE r AS (
-  SELECT 't1'::regclass AS inhrelid
+  SELECT 'inht1'::regclass AS inhrelid
 UNION ALL
   SELECT c.inhrelid FROM pg_inherits c, r WHERE r.inhrelid = c.inhparent
 )
@@ -372,7 +289,43 @@ SELECT a.attrelid::regclass, a.attname, a.attinhcount, e.expected
   JOIN pg_attribute a ON e.inhrelid = a.attrelid WHERE NOT attislocal
   ORDER BY a.attrelid::regclass::name, a.attnum;
 
-DROP TABLE t1, s1 CASCADE;
+DROP TABLE inht1, inhs1 CASCADE;
+
+--
+-- Test parameterized append plans for inheritance trees
+--
+
+create temp table patest0 (id, x) as
+  select x, x from generate_series(0,1000) x
+  distributed by (id);
+create temp table patest1() inherits (patest0);
+insert into patest1
+  select x, x from generate_series(0,1000) x;
+create temp table patest2() inherits (patest0);
+insert into patest2
+  select x, x from generate_series(0,1000) x;
+create index patest0i on patest0(id);
+create index patest1i on patest1(id);
+create index patest2i on patest2(id);
+analyze patest0;
+analyze patest1;
+analyze patest2;
+
+set enable_seqscan=off;
+set enable_bitmapscan=off;
+explain (costs off)
+select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
+select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
+
+drop index patest2i;
+
+explain (costs off)
+select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
+select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
+reset enable_seqscan;
+reset enable_bitmapscan;
+
+drop table patest0 cascade;
 
 --
 -- Test merge-append plans for inheritance trees
@@ -401,8 +354,67 @@ select * from matest0 order by 1-id;
 reset enable_indexscan;
 
 set enable_seqscan = off;  -- plan with fewest seqscans should be merge
+-- GPDB_92_MERGE_FIXME: the cost of bitmap scan is not correct?
+-- the cost of merge append with index scan is bigger than the cost
+-- of append with bitmapscan + sort
+set enable_bitmapscan = off; 
 explain (verbose, costs off) select * from matest0 order by 1-id;
 select * from matest0 order by 1-id;
 reset enable_seqscan;
+reset enable_bitmapscan;
 
 drop table matest0 cascade;
+
+--
+-- Test merge-append for UNION ALL append relations
+--
+
+set enable_seqscan = off;
+set enable_indexscan = on;
+set enable_bitmapscan = off;
+
+-- Check handling of duplicated, constant, or volatile targetlist items
+explain (costs off)
+SELECT thousand, tenthous FROM tenk1
+UNION ALL
+SELECT thousand, thousand FROM tenk1
+ORDER BY thousand, tenthous;
+
+explain (costs off)
+SELECT thousand, tenthous, thousand+tenthous AS x FROM tenk1
+UNION ALL
+SELECT 42, 42, hundred FROM tenk1
+ORDER BY thousand, tenthous;
+
+explain (costs off)
+SELECT thousand, tenthous FROM tenk1
+UNION ALL
+SELECT thousand, random()::integer FROM tenk1
+ORDER BY thousand, tenthous;
+
+-- Check min/max aggregate optimization
+-- GPDB_92_MERGE_FIXME: simple union all pull up is disabled
+-- in pull_up_subqueries(), need some work on that.
+explain (costs off)
+SELECT min(x) FROM
+  (SELECT unique1 AS x FROM tenk1 a
+   UNION ALL
+   SELECT unique2 AS x FROM tenk1 b) s;
+
+explain (costs off)
+SELECT min(y) FROM
+  (SELECT unique1 AS x, unique1 AS y FROM tenk1 a
+   UNION ALL
+   SELECT unique2 AS x, unique2 AS y FROM tenk1 b) s;
+
+-- XXX planner doesn't recognize that index on unique2 is sufficiently sorted
+explain (costs off)
+SELECT x, y FROM
+  (SELECT thousand AS x, tenthous AS y FROM tenk1 a
+   UNION ALL
+   SELECT unique2 AS x, unique2 AS y FROM tenk1 b) s
+ORDER BY x, y;
+
+reset enable_seqscan;
+reset enable_indexscan;
+reset enable_bitmapscan;

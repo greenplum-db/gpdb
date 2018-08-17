@@ -4,7 +4,7 @@
  *	  postgres transaction access method support code
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/transam.h
@@ -58,6 +58,11 @@
 	do { \
 		(dest)--; \
 	} while ((dest) < FirstNormalTransactionId)
+
+/* compare two XIDs already known to be normal; this is a macro for speed */
+#define NormalTransactionIdPrecedes(id1, id2) \
+	(AssertMacro(TransactionIdIsNormal(id1) && TransactionIdIsNormal(id2)), \
+	(int32) ((id1) - (id2)) < 0)
 
 /*
  * VariableCache is a data structure in shared memory that is used to track
@@ -118,6 +123,9 @@ extern PGDLLIMPORT VariableCache ShmemVariableCache;
 
 extern int xid_stop_limit;
 extern int xid_warn_limit;
+
+/* in transam/transam.c */
+extern const XLogRecPtr InvalidXLogRecPtr;
 
 
 /*

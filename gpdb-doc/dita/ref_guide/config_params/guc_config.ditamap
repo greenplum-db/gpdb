@@ -70,7 +70,6 @@
             <topicref href="guc-list.xml#escape_string_warning"/>
             <topicref href="guc-list.xml#explain_pretty_print"/>
             <topicref href="guc-list.xml#extra_float_digits"/>
-            <topicref href="guc-list.xml#filerep_mirrorvalidation_during_resync"/>
             <topicref href="guc-list.xml#from_collapse_limit"/>
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
             <topicref href="guc-list.xml#gp_analyze_relative_error"/>
@@ -114,9 +113,6 @@
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
             <topicref href="guc-list.xml#gp_external_max_segs"/>
             <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_count"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_idle"/>
-            <topicref href="guc-list.xml#gp_filerep_tcp_keepalives_interval"/>
             <topicref href="guc-list.xml#gp_fts_probe_interval"/>
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
             <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>

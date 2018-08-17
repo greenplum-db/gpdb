@@ -3,7 +3,7 @@
  * hash.c
  *	  Implementation of Margo Seltzer's Hashing package for postgres.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,6 +25,7 @@
 #include "optimizer/cost.h"
 #include "optimizer/plancat.h"
 #include "storage/bufmgr.h"
+#include "utils/rel.h"
 
 
 /* Working state for hashbuild and its callback */
@@ -54,6 +55,7 @@ hashbuild(PG_FUNCTION_ARGS)
 	IndexBuildResult *result;
 	BlockNumber relpages;
 	double		reltuples;
+	double		allvisfrac;
 	uint32		num_buckets;
 	HashBuildState buildstate;
 
@@ -66,7 +68,7 @@ hashbuild(PG_FUNCTION_ARGS)
 			 RelationGetRelationName(index));
 
 	/* Estimate the number of rows currently present in the table */
-	estimate_rel_size(heap, NULL, &relpages, &reltuples);
+	estimate_rel_size(heap, NULL, &relpages, &reltuples, &allvisfrac);
 
 	/* Initialize the hash index metadata page and initial buckets */
 	num_buckets = _hash_metapinit(index, reltuples, MAIN_FORKNUM);

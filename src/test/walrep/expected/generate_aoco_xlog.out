@@ -60,20 +60,20 @@ ORDER BY gp_segment_id, xrecoff;
 ---------------+--------------------------+--------------------------+-----------------+-----------+-------------
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        72 |          48
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        72 |          48
-             0 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
-             0 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |          48
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |             129 |        24 |          48
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        88 |          48
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        88 |          48
-             1 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
-             1 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |          48
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |             129 |        24 |          48
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        80 |          48
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        80 |          48
-             2 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
-             2 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |               1 |        24 |          48
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_TRUNCATE |             129 |        24 |          48
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
 (18 rows)

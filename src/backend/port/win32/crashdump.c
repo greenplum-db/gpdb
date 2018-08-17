@@ -28,7 +28,7 @@
  * be added, though at the cost of a greater chance of the crash dump failing.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32/crashdump.c
@@ -105,7 +105,7 @@ crashDumpHandler(struct _EXCEPTION_POINTERS * pExceptionInfo)
 		hDll = LoadLibrary("dbghelp.dll");
 		if (hDll == NULL)
 		{
-			write_stderr("could not load dbghelp.dll, cannot write crashdump\n");
+			write_stderr("could not load dbghelp.dll, cannot write crash dump\n");
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
@@ -113,7 +113,7 @@ crashDumpHandler(struct _EXCEPTION_POINTERS * pExceptionInfo)
 
 		if (pDump == NULL)
 		{
-			write_stderr("could not load required functions in dbghelp.dll, cannot write crashdump\n");
+			write_stderr("could not load required functions in dbghelp.dll, cannot write crash dump\n");
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
@@ -144,17 +144,17 @@ crashDumpHandler(struct _EXCEPTION_POINTERS * pExceptionInfo)
 							  NULL);
 		if (dumpFile == INVALID_HANDLE_VALUE)
 		{
-			write_stderr("could not open crash dump file %s for writing: error code %u\n",
-						 dumpPath, (unsigned int) GetLastError());
+			write_stderr("could not open crash dump file \"%s\" for writing: error code %lu\n",
+						 dumpPath, GetLastError());
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
 		if ((*pDump) (selfProcHandle, selfPid, dumpFile, dumpType, &ExInfo,
 					  NULL, NULL))
-			write_stderr("wrote crash dump to %s\n", dumpPath);
+			write_stderr("wrote crash dump to file \"%s\"\n", dumpPath);
 		else
-			write_stderr("could not write crash dump to %s: error code %08x\n",
-						 dumpPath, (unsigned int) GetLastError());
+			write_stderr("could not write crash dump to file \"%s\": error code %lu\n",
+						 dumpPath, GetLastError());
 
 		CloseHandle(dumpFile);
 	}

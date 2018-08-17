@@ -66,7 +66,11 @@ typedef struct PlanProfile
 	 */
 	bool		resultSegments;
 
+	/* main plan is parallelled */
 	bool		dispatchParallel;
+
+	/* init plan is parallelled */
+	bool		initPlanParallel;
 
 	Flow	   *currentPlanFlow;	/* what is the flow of the current plan
 									 * node */
@@ -186,62 +190,14 @@ cdbparallelize(PlannerInfo *root,
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			if (query->intoClause)
-			{
-				/* SELECT INTO always created partitioned tables. */
+			/* SELECT INTO / CREATE TABLE AS always created partitioned tables. */
+			if (query->isCTAS)
 				context->resultSegments = true;
-			}
 			break;
 
 		case CMD_INSERT:
 		case CMD_UPDATE:
 		case CMD_DELETE:
-			/*
-			 * GPDB_90_MERGE_FIXME: Because of this block, we were marking a dummy
-			 * UPDATE that the planner could prove to be a no-op, e.g
-			 * "update target set b = 10 where c = 10;" where 'target' is partitioned
-			 * table and there is no partition for c = 10. The planner would turn
-			 * that into just a dummy Result node. This block nevertheless marked the
-			 * query with 'resultSegments = true', causing the executor to dispatch
-			 * the query. That caused confusion at commit time, because there was no
-			 * active two-phase transaction in the segmetns, but the QD thought that
-			 * there should be.
-			 *
-			 * There is a test case like that in 'update_gp'. I have a feeling that
-			 * we should still have code like this in apply_motion_mutator(), when
-			 * traversing into a ModifyTable node. But everything seems to work
-			 * without it. Go figure...
-			 */
-#if 0
-			{
-				/*
-				 * Since this is a data modification command, we need to
-				 * include information about the result relation in the
-				 * summary of relations touched.
-				 */
-				Oid			reloid;
-				Relation	relation;
-				GpPolicy   *policy = NULL;
-
-				/* Get Oid of target relation. */
-				Insist(query->resultRelation > 0 &&
-					   query->resultRelation <= list_length(root->glob->finalrtable));
-				reloid = getrelid(query->resultRelation, root->glob->finalrtable);
-
-				/* Get a copy of the rel's GpPolicy from the relcache. */
-				relation = relation_open(reloid, NoLock);
-				policy = RelationGetPartitioningKey(relation);
-				relation_close(relation, NoLock);
-
-				/* Tell caller if target rel is distributed. */
-				if (policy &&
-					(GpPolicyIsPartitioned(policy) || GpPolicyIsReplicated(policy)))
-					context->resultSegments = true;
-
-				if (policy)
-					pfree(policy);
-			}
-#endif
 			break;
 
 		default:
@@ -254,6 +210,7 @@ cdbparallelize(PlannerInfo *root,
 	 * dispatched in parallel.
 	 */
 	context->dispatchParallel = context->resultSegments;
+	context->initPlanParallel = false;
 	context->currentPlanFlow = NULL;
 
 	/*
@@ -263,7 +220,7 @@ cdbparallelize(PlannerInfo *root,
 	 */
 	prescan(plan, context);
 
-	if (context->dispatchParallel)
+	if (context->dispatchParallel || context->initPlanParallel)
 	{
 		/*
 		 * Implement the parallelizing directions in the Flow nodes attached
@@ -273,10 +230,12 @@ cdbparallelize(PlannerInfo *root,
 		plan = apply_motion(root, plan, query);
 
 		/*
-		 * From this point on, since part of plan is parallel, we have to
-		 * regard the whole plan as parallel.
+		 * Mark the root plan to DISPATCH_PARALLEL if prescan() says
+		 * it is parallel. Init plan has it's own flag to indicate
+		 * whether it's a parallel plan.
 		 */
-		plan->dispatch = DISPATCH_PARALLEL;
+		if (context->dispatchParallel)
+			plan->dispatch = DISPATCH_PARALLEL;
 	}
 
 	if (gp_enable_motion_deadlock_sanity)
@@ -360,7 +319,7 @@ ContainsParamWalker(Node *expr, void *ctx)
 }
 
 /**
- * Replaces all vars in an expression with OUTER vars referring to the
+ * Replaces all vars in an expression with OUTER_VAR vars referring to the
  * targetlist contained in the context (ctx->outerTL).
  */
 static Node *
@@ -381,7 +340,7 @@ MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx)
 		Var		   *vOrig = (Var *) expr;
 		Var		   *vOuter = (Var *) copyObject(vOrig);
 
-		vOuter->varno = OUTER;
+		vOuter->varno = OUTER_VAR;
 		vOuter->varattno = tle->resno;
 		vOuter->varnoold = vOrig->varno;
 		return (Node *) vOuter;
@@ -860,6 +819,8 @@ ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
 static bool
 prescan_walker(Node *node, PlanProfile *context)
 {
+	bool savedMainPlanParallel = false;
+
 	if (node == NULL)
 		return false;
 
@@ -899,8 +860,7 @@ prescan_walker(Node *node, PlanProfile *context)
 
 			{
 				/*
-				 * SubPlans establish a local state for the contained plan,
-				 * notably the range table.
+				 * SubPlans establish a local state for the contained plan, * notably the range table.
 				 */
 				SubPlan    *subplan = (SubPlan *) node;
 
@@ -908,6 +868,21 @@ prescan_walker(Node *node, PlanProfile *context)
 				{
 					ParallelizeSubplan(subplan, context);
 				}
+
+				/*
+				 * Init plan and main plan are dispatched seperately,
+				 * so we need to set DISPATCH_PARALLEL flag seperately
+				 * for them.
+				 *
+				 * save the parallel state of main plan. init plan
+				 * should not effect main plan.
+				 */
+				if (subplan->is_initplan)
+				{
+					savedMainPlanParallel = context->dispatchParallel;
+					context->dispatchParallel = false;
+				}
+
 				break;
 			}
 
@@ -923,6 +898,23 @@ prescan_walker(Node *node, PlanProfile *context)
 	}
 
 	bool		result = plan_tree_walker(node, prescan_walker, context);
+
+	if (IsA(node, SubPlan))
+	{
+		SubPlan    *subplan = (SubPlan *) node;
+
+		/* mark init plan parallel state and restore it for main plan */
+		if (subplan->is_initplan)
+		{
+			if (context->dispatchParallel)
+			{
+				context->initPlanParallel = true;
+				subplan->initPlanParallel= true;
+			}
+
+			context->dispatchParallel = savedMainPlanParallel;
+		}
+	}
 
 	/**
 	 * Replace saved flow
@@ -1476,6 +1468,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_Limit:
 		case T_Sort:
 		case T_Material:
+		case T_ForeignScan:
 			if (plan_tree_walker(node, motion_sanity_walker, result))
 				return true;
 			break;

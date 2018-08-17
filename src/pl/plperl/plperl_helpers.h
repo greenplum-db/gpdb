@@ -59,7 +59,8 @@ utf_e2u(const char *str)
 static inline char *
 sv2cstr(SV *sv)
 {
-	char	   *val, *res;
+	char	   *val,
+			   *res;
 	STRLEN		len;
 
 	/*

@@ -18,17 +18,6 @@
 	expect_any(ExceptionalCondition,lineNumber); \
     will_be_called_with_sideeffect(ExceptionalCondition, &_ExceptionalCondition, NULL);\
 
-/*
- * This sets up an expected exception that will be completely ignored
- * (i.e., execution continues as if nothing happened)
- */
-#define EXPECT_EXCEPTION_CONTINUE_EXECUTION()     \
-	expect_any(ExceptionalCondition,conditionName); \
-	expect_any(ExceptionalCondition,errorType); \
-	expect_any(ExceptionalCondition,fileName); \
-	expect_any(ExceptionalCondition,lineNumber); \
-	will_be_called(ExceptionalCondition);\
-
 #define EXPECT_EREPORT(LOG_LEVEL)     \
 	expect_any(errstart, elevel); \
 	expect_any(errstart, filename); \
@@ -290,10 +279,6 @@ test__SessionState_Init__AcquiresAndInitializes(void **state)
 	/* Mark it as acquired and see if it is released */
 	SpinLockAcquire(&theEntry->spinLock);
 	assert_true(theEntry->spinLock == 1);
-
-#ifdef USE_ASSERT_CHECKING
-	EXPECT_EXCEPTION_CONTINUE_EXECUTION();
-#endif
 
 	/* These should be new */
 	SessionState *first = AcquireSessionState(1, gp_sessionstate_loglevel);

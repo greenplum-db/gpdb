@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -31,11 +31,9 @@
 #include "commands/tablespace.h"
 #include "executor/execdebug.h"
 #include "executor/hashjoin.h"
-#include "executor/instrument.h"
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
 #include "miscadmin.h"
-#include "parser/parse_expr.h"
 #include "utils/dynahash.h"
 #include "utils/memutils.h"
 #include "utils/lsyscache.h"
@@ -960,8 +958,8 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
  *		Compute the hash value for a tuple
  *
  * The tuple to be tested must be in either econtext->ecxt_outertuple or
- * econtext->ecxt_innertuple.  Vars in the hashkeys expressions reference
- * either OUTER or INNER.
+ * econtext->ecxt_innertuple.  Vars in the hashkeys expressions should have
+ * varno either OUTER_VAR or INNER_VAR.
  *
  * A TRUE result means the tuple's hash value has been successfully computed
  * and stored at *hashvalue.  A FALSE result means the tuple cannot match

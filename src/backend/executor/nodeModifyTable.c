@@ -3,7 +3,7 @@
  * nodeModifyTable.c
  *	  routines to handle ModifyTable nodes.
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -46,6 +46,7 @@
 #include "storage/bufmgr.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 #include "access/fileam.h"
@@ -166,10 +167,18 @@ ExecProcessReturning(ProjectionInfo *projectReturning,
  *		and insert appropriate tuples into the index relations.
  *
  *		Returns RETURNING result if any, otherwise NULL.
+ *
+ * If the target table is partitioned, the input tuple in 'parentslot'
+ * is in the shape required for the parent table. This function will
+ * look up the ResultRelInfo of the target partition, and form a
+ * tuple suitable for the target partition. (It can be different, if
+ * there are dropped columns in the parent, but not the partition,
+ * for example.)
+ *
  * ----------------------------------------------------------------
  */
 TupleTableSlot *
-ExecInsert(TupleTableSlot *slot,
+ExecInsert(TupleTableSlot *parentslot,
 		   TupleTableSlot *planSlot,
 		   EState *estate,
 		   bool canSetTag,
@@ -188,13 +197,21 @@ ExecInsert(TupleTableSlot *slot,
 	bool		rel_is_external = false;
 	ItemPointerData lastTid;
 	Oid			tuple_oid = tupleOid;
+	ProjectionInfo *projectReturning;
+	TupleTableSlot *slot;
+
+	/*
+	 * RETURNING is only present in the parent ResultRelInfo, so stash
+	 * that before looking up the ResultRelInfo of the target partition.
+	 */
+	projectReturning = estate->es_result_relation_info->ri_projectReturning;
 
 	/*
 	 * get information on the (current) result relation
 	 */
 	if (estate->es_result_partitions)
 	{
-		resultRelInfo = slot_get_partition(slot, estate);
+		resultRelInfo = slot_get_partition(parentslot, estate);
 
 		/*
 		 * Check whether the user provided the correct leaf part only if required.
@@ -314,7 +331,7 @@ ExecInsert(TupleTableSlot *slot,
 		{
 			GenericTuple gtuple;
 
-			gtuple = ExecFetchSlotGenericTuple(slot, false);
+			gtuple = ExecFetchSlotGenericTuple(parentslot, false);
 
 			if (!is_memtuple(gtuple))
 				tuple_oid = HeapTupleGetOid((HeapTuple) gtuple);
@@ -327,7 +344,7 @@ ExecInsert(TupleTableSlot *slot,
 		}
 	}
 
-	slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
+	slot = reconstructMatchingTupleSlot(parentslot, resultRelInfo);
 
 	if (rel_is_external &&
 		estate->es_result_partitions &&
@@ -483,24 +500,15 @@ ExecInsert(TupleTableSlot *slot,
 		!isUpdate)
 	{
 		HeapTuple tuple = ExecMaterializeSlot(slot);
-
-		/*
-		 * GPDB_90_MERGE_FIXME: do we really need this? It seems like if ORCA
-		 * can get us here, we shouldn't worry about it. Commenting to get
-		 * alter_table working with ORCA.
-		 *
-		Assert(planGen == PLANGEN_PLANNER);
-		 */
-
 		ExecARInsertTriggers(estate, resultRelInfo, tuple, recheckIndexes);
 	}
 
 	list_free(recheckIndexes);
 
 	/* Process RETURNING if present */
-	if (resultRelInfo->ri_projectReturning)
-		return ExecProcessReturning(resultRelInfo->ri_projectReturning,
-									slot, planSlot);
+	if (projectReturning)
+		return ExecProcessReturning(projectReturning,
+									parentslot, planSlot);
 
 	return NULL;
 }
@@ -796,8 +804,6 @@ ldelete:;
 		HeapTupleData deltuple;
 		Buffer		delbuffer;
 
-		// GPDB_91_MERGE_FIXME: What if it's an AO table?
-
 		if (oldtuple != NULL)
 		{
 			deltuple.t_data = oldtuple;
@@ -807,6 +813,19 @@ ldelete:;
 		}
 		else
 		{
+			/*
+			 * If it's an AO table, we cannot fetch the old tuple. Punt.
+			 *
+			 * We could use the same AO fetcher mechanism that we use for
+			 * (bitmap) index scans on AO tables, but that only works if
+			 * the AO table has a block directory, which it might not have,
+			 * if there are no indexes on it.
+			 */
+			if (!RelationIsHeap(resultRelationDesc))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("DELETE RETURNING is not supported on appendonly tables")));
+
 			deltuple.t_self = *tupleid;
 			if (!heap_fetch(resultRelationDesc, SnapshotAny,
 							&deltuple, &delbuffer, false, NULL))
@@ -1370,6 +1389,18 @@ ExecModifyTable(ModifyTableState *node)
 	HeapTupleHeader oldtuple = NULL;
 
 	/*
+	 * This should NOT get called during EvalPlanQual; we should have passed a
+	 * subplan tree to EvalPlanQual, instead.  Use a runtime test not just
+	 * Assert because this condition is easy to miss in testing.  (Note:
+	 * although ModifyTable should not get executed within an EvalPlanQual
+	 * operation, we do have to allow it to be initialized and shut down in
+	 * case it is within a CTE subplan.  Hence this test must be here, not in
+	 * ExecInitModifyTable.)
+	 */
+	if (estate->es_epqTuple != NULL)
+		elog(ERROR, "ModifyTable should not be called during EvalPlanQual");
+
+	/*
 	 * If we've already completed processing, don't try to do more.  We need
 	 * this test because ExecPostprocessPlan might call us an extra time, and
 	 * our subplan's nodes aren't necessarily robust against being called
@@ -1607,14 +1638,6 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
 
 	/*
-	 * This should NOT get called during EvalPlanQual; we should have passed a
-	 * subplan tree to EvalPlanQual, instead.  Use a runtime test not just
-	 * Assert because this condition is easy to miss in testing ...
-	 */
-	if (estate->es_epqTuple != NULL)
-		elog(ERROR, "ModifyTable should not be called during EvalPlanQual");
-
-	/*
 	 * create state structure
 	 */
 	mtstate = makeNode(ModifyTableState);
@@ -1685,10 +1708,14 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		 * If there are indices on the result relation, open them and save
 		 * descriptors in the result relation info, so that we can add new
 		 * index entries for the tuples we add/update.	We need not do this
-		 * for a DELETE, however, since deletion doesn't affect indexes.
+		 * for a DELETE, however, since deletion doesn't affect indexes. Also,
+		 * inside an EvalPlanQual operation, the indexes might be open
+		 * already, since we share the resultrel state with the original
+		 * query.
 		 */
 		if (resultRelInfo->ri_RelationDesc->rd_rel->relhasindex &&
-			operation != CMD_DELETE)
+			operation != CMD_DELETE &&
+			resultRelInfo->ri_IndexRelationDescs == NULL)
 			ExecOpenIndices(resultRelInfo);
 
 		/* Now init the plan for this result rel */

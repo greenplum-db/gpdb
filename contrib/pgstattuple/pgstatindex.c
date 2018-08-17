@@ -35,6 +35,7 @@
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "utils/builtins.h"
+#include "utils/rel.h"
 
 
 extern Datum pgstatindex(PG_FUNCTION_ARGS);
@@ -85,6 +86,7 @@ pgstatindex(PG_FUNCTION_ARGS)
 	BlockNumber nblocks;
 	BlockNumber blkno;
 	BTIndexStat indexStat;
+	BufferAccessStrategy bstrategy = GetAccessStrategy(BAS_BULKREAD);
 
 	if (!superuser())
 		ereport(ERROR,
@@ -112,7 +114,7 @@ pgstatindex(PG_FUNCTION_ARGS)
 	 * Read metapage
 	 */
 	{
-		Buffer		buffer = ReadBuffer(rel, 0);
+		Buffer		buffer = ReadBufferExtended(rel, MAIN_FORKNUM, 0, RBM_NORMAL, bstrategy);
 		Page		page = BufferGetPage(buffer);
 		BTMetaPageData *metad = BTPageGetMeta(page);
 
@@ -149,7 +151,7 @@ pgstatindex(PG_FUNCTION_ARGS)
 		CHECK_FOR_INTERRUPTS();
 
 		/* Read and lock buffer */
-		buffer = ReadBuffer(rel, blkno);
+		buffer = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_NORMAL, bstrategy);
 		LockBuffer(buffer, BUFFER_LOCK_SHARE);
 
 		page = BufferGetPage(buffer);
@@ -227,7 +229,6 @@ pgstatindex(PG_FUNCTION_ARGS)
 		values[j] = palloc(32);
 		snprintf(values[j++], 32, INT64_FORMAT, indexStat.deleted_pages);
 		values[j] = palloc(32);
-
 		if (indexStat.max_avail > 0)
 			snprintf(values[j++], 32, "%.2f",
 					 100.0 - (double) indexStat.free_space / (double) indexStat.max_avail * 100.0);

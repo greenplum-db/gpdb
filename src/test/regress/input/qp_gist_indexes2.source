@@ -6,6 +6,23 @@
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 
+ -- start_ignore
+create language plpythonu;
+-- end_ignore
+
+create or replace function count_index_scans(explain_query text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = 'Index Scan'
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
@@ -37,6 +54,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -51,11 +69,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -70,11 +86,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -104,6 +118,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -115,6 +130,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 
@@ -166,6 +182,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -182,6 +199,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -233,6 +251,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -241,15 +260,17 @@ SET enable_seqscan = FALSE;
 -- canonical form, as it is for the BOX data type and perhaps some other 
 -- data types), as long as data in all of those formats should be converted 
 -- to the same internal representation.
+set optimizer_trace_fallback = TRUE;
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
--- start_ignore
+SELECT count_index_scans('EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
+--start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
--- end_ignore
+--end_ignore
 
 -- Alter the table and see if we get the same results.
 ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
@@ -258,13 +279,15 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id
  ;
--- start_ignore
+SELECT count_index_scans('EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
+--start_ignore
 EXPLAIN
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id
  ;
--- end_ignore
+--end_ignore
+reset optimizer_trace_fallback;
 
 
 -- ----------------------------------------------------------------------
@@ -334,6 +357,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
@@ -388,38 +412,35 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 REINDEX INDEX propertyBoxIndex;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 DROP INDEX propertyBoxIndex;
-
 -- Obviously, this shouldn't use the index now that the index is gone.
+
+set optimizer_enable_tablescan = TRUE;
+
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -472,6 +493,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -486,11 +508,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -519,6 +539,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -530,6 +551,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -579,6 +601,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -595,6 +618,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -646,6 +670,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -656,13 +681,11 @@ SET enable_seqscan = FALSE;
 -- to the same internal representation.
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -732,6 +755,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
@@ -786,38 +810,35 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 REINDEX INDEX propertyBoxIndex;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 DROP INDEX propertyBoxIndex;
-
 -- Obviously, this shouldn't use the index now that the index is gone.
+
+SET optimizer_enable_tablescan = TRUE; 
+
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -871,6 +892,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -885,11 +907,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -919,6 +939,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -930,6 +951,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -979,6 +1001,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -995,6 +1018,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1046,6 +1070,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -1056,13 +1081,11 @@ SET enable_seqscan = FALSE;
 -- to the same internal representation.
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -1132,6 +1155,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
@@ -1186,38 +1210,35 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 REINDEX INDEX propertyBoxIndex;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 DROP INDEX propertyBoxIndex;
-
 -- Obviously, this shouldn't use the index now that the index is gone.
+
+set optimizer_enable_tablescan = TRUE;
+
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -1271,6 +1292,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -1285,11 +1307,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -1319,6 +1339,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1330,6 +1351,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -1379,6 +1401,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1395,6 +1418,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1446,6 +1470,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -1456,13 +1481,11 @@ SET enable_seqscan = FALSE;
 -- to the same internal representation.
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -1532,6 +1555,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
@@ -1586,38 +1610,35 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 REINDEX INDEX propertyBoxIndex;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 DROP INDEX propertyBoxIndex;
-
 -- Obviously, this shouldn't use the index now that the index is gone.
+
+set optimizer_enable_tablescan = TRUE;
+
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -1672,6 +1693,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -1686,11 +1708,9 @@ SELECT owner, property FROM GistTable1
  WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
--- end_ignore
 
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
@@ -1720,6 +1740,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1731,6 +1752,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 
@@ -1780,6 +1802,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- ----------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1796,6 +1819,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1847,6 +1871,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
@@ -1857,13 +1882,11 @@ SET enable_seqscan = FALSE;
 -- to the same internal representation.
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
@@ -1933,6 +1956,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
@@ -1987,38 +2011,35 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 REINDEX INDEX propertyBoxIndex;
 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 DROP INDEX propertyBoxIndex;
-
 -- Obviously, this shouldn't use the index now that the index is gone.
+
+set optimizer_enable_tablescan = TRUE;
+
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------

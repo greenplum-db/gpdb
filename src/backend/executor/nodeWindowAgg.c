@@ -23,7 +23,7 @@
  * aggregate function over all rows in the current row's window frame.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -1867,7 +1867,7 @@ initialize_range_bound_exprs(WindowAggState *winstate)
 	 *
 	 * (For DESC, they are reversed.)
 	 *
-	 * In the expression, we use a Var with OUTER to represent the current
+	 * In the expression, we use a Var with OUTER_VAR to represent the current
 	 * row's value. The parser has stored the expression representing the
 	 * offset in node->start/endOffset, and we will store the expression for
 	 * the +/- in winstate->start/endOffset.
@@ -1895,7 +1895,7 @@ initialize_range_bound_exprs(WindowAggState *winstate)
 	 * that the parameter is a Const. Make sure this matches!
 	 *------
 	 */
-	cur_row_val = makeVar(OUTER, node->firstOrderCol, typeId, -1, InvalidOid, 0);
+	cur_row_val = makeVar(OUTER_VAR, node->firstOrderCol, typeId, -1, InvalidOid, 0);
 
 	if (node->frameOptions & FRAMEOPTION_START_VALUE)
 	{
@@ -2019,7 +2019,7 @@ ExecEndWindowAgg(WindowAggState *node)
 }
 
 /* -----------------
- * ExecRescanWindowAgg
+ * ExecReScanWindowAgg
  * -----------------
  */
 void

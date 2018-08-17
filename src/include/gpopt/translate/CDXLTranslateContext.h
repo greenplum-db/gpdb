@@ -33,15 +33,15 @@ namespace gpdxl
 	using namespace gpos;
 
 	// hash maps mapping ULONG -> TargetEntry
-	typedef CHashMap<ULONG, TargetEntry, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
-		CleanupDelete<ULONG>, CleanupNULL > HMUlTe;
+	typedef CHashMap<ULONG, TargetEntry, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+		CleanupDelete<ULONG>, CleanupNULL > ULongToTargetEntryMap;
 
 	// hash maps mapping ULONG -> CMappingElementColIdParamId
-	typedef CHashMap<ULONG, CMappingElementColIdParamId, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
-		CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > HMColParam;
+	typedef CHashMap<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+		CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > ULongToColParamMap;
 
-	typedef CHashMapIter<ULONG, CMappingElementColIdParamId, gpos::UlHash<ULONG>, gpos::FEqual<ULONG>,
-					CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > HMColParamIter;
+	typedef CHashMapIter<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+					CleanupDelete<ULONG>, CleanupRelease<CMappingElementColIdParamId> > ULongToColParamMapIter;
 
 
 	//---------------------------------------------------------------------------
@@ -57,60 +57,60 @@ namespace gpdxl
 	{
 
 		private:
-			IMemoryPool *m_pmp;
+			IMemoryPool *m_mp;
 
 			// private copy ctor
 			CDXLTranslateContext(const CDXLTranslateContext&);
 
 			// mappings ColId->TargetEntry used for intermediate DXL nodes
-			HMUlTe *m_phmulte;
+			ULongToTargetEntryMap *m_colid_to_target_entry_map;
 
 			// mappings ColId->ParamId used for outer refs in subplans
-			HMColParam *m_phmcolparam;
+			ULongToColParamMap *m_colid_to_paramid_map;
 
 			// is the node for which this context is built a child of an aggregate node
 			// This is used to assign 0 instead of OUTER for the varno value of columns
 			// in an Agg node, as expected in GPDB
 			// TODO: antovl - Jan 26, 2011; remove this when Agg node in GPDB is fixed
 			// to use OUTER instead of 0 for Var::varno in Agg target lists (MPP-12034)
-			BOOL m_fChildAggNode;
+			BOOL m_is_child_agg_node;
 
 			// copy the params hashmap
-			void CopyParamHashmap(HMColParam *phmOriginal);
+			void CopyParamHashmap(ULongToColParamMap *original);
 
 		public:
 			// ctor/dtor
-			CDXLTranslateContext(IMemoryPool *pmp, BOOL fChildAggNode);
+			CDXLTranslateContext(IMemoryPool *mp, BOOL is_child_agg_node);
 
-			CDXLTranslateContext(IMemoryPool *pmp, BOOL fChildAggNode, HMColParam *phmOriginal);
+			CDXLTranslateContext(IMemoryPool *mp, BOOL is_child_agg_node, ULongToColParamMap *original);
 
 			~CDXLTranslateContext();
 
 			// is parent an aggregate node
-			BOOL FParentAggNode() const;
+			BOOL IsParentAggNode() const;
 
 			// return the params hashmap
-			HMColParam *PhmColParam()
+			ULongToColParamMap *GetColIdToParamIdMap()
 			{
-				return m_phmcolparam;
+				return m_colid_to_paramid_map;
 			}
 
 			// return the target entry corresponding to the given ColId
-			const TargetEntry *Pte(ULONG ulColId) const;
+			const TargetEntry *GetTargetEntry(ULONG colid) const;
 
 			// return the param id corresponding to the given ColId
-			const CMappingElementColIdParamId *Pmecolidparamid(ULONG ulColId) const;
+			const CMappingElementColIdParamId *GetParamIdMappingElement(ULONG colid) const;
 
 			// store the mapping of the given column id and target entry
-			void InsertMapping(ULONG ulColId, TargetEntry *pte);
+			void InsertMapping(ULONG colid, TargetEntry *target_entry);
 
 			// store the mapping of the given column id and param id
-			BOOL FInsertParamMapping(ULONG ulColId, CMappingElementColIdParamId *pmecolidparamid);
+			BOOL FInsertParamMapping(ULONG colid, CMappingElementColIdParamId *pmecolidparamid);
 	};
 
 
 	// array of dxl translation context
-	typedef CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL> DrgPdxltrctx;
+	typedef CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL> CDXLTranslationContextArray;
 }
 
 #endif // !GPDXL_CDXLTranslateContext_H

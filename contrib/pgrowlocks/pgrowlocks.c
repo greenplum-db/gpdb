@@ -24,7 +24,6 @@
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/multixact.h"
 #include "access/relscan.h"
 #include "access/xact.h"
@@ -35,6 +34,7 @@
 #include "storage/procarray.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 

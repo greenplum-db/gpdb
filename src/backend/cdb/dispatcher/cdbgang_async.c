@@ -107,6 +107,7 @@ create_gang_retry:
 	{
 		for (i = 0; i < size; i++)
 		{
+			bool		ret;
 			char		gpqeid[100];
 			char	   *options;
 
@@ -122,10 +123,15 @@ create_gang_retry:
 			 * early enough now some locks are taken before command line
 			 * options are recognized.
 			 */
-			build_gpqeid_param(gpqeid, sizeof(gpqeid),
-							   type == GANGTYPE_PRIMARY_WRITER,
-							   gang_id,
-							   segdbDesc->segment_database_info->hostSegs);
+			ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
+									 type == GANGTYPE_PRIMARY_WRITER,
+									 gang_id,
+									 segdbDesc->segment_database_info->hostSegs);
+
+			if (!ret)
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("failed to construct connectionstring")));
 
 			options = makeOptions();
 
@@ -282,7 +288,7 @@ create_gang_retry:
 				type != GANGTYPE_PRIMARY_WRITER)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("failed to acquire resources on one or more segments"),
-								errdetail("segments is in recovery mode")));
+								errdetail("Segments are in recovery mode.")));
 
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 

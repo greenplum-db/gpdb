@@ -4,7 +4,7 @@
  *	definition of dictionaries for tsearch
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_ts_dict.h
@@ -36,7 +36,10 @@ CATALOG(pg_ts_dict,3600)
 	Oid			dictnamespace;	/* name space */
 	Oid			dictowner;		/* owner */
 	Oid			dicttemplate;	/* dictionary's template */
+
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text		dictinitoption; /* options passed to dict_init() */
+#endif
 } FormData_pg_ts_dict;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

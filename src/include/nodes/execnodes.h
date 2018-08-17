@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/execnodes.h
@@ -18,15 +18,13 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/skey.h"
+#include "executor/instrument.h"
 #include "nodes/params.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"
-#include "nodes/tidbitmap.h"
-#include "utils/hsearch.h"
-#include "utils/rel.h"
-#include "utils/snapshot.h"
+#include "utils/reltrigger.h"
+#include "utils/sortsupport.h"
 #include "utils/tuplestore.h"
+#include "nodes/parsenodes.h"
 
 #include "gpmon/gpmon.h"                /* gpmon_packet_t */
 
@@ -355,7 +353,7 @@ typedef struct ResultRelInfo
 	TriggerDesc *ri_TrigDesc;
 	FmgrInfo   *ri_TrigFunctions;
 	List	  **ri_TrigWhenExprs;
-	struct Instrumentation *ri_TrigInstrument;
+	Instrumentation *ri_TrigInstrument;
 	List	  **ri_ConstraintExprs;
 	JunkFilter *ri_junkFilter;
 	ProjectionInfo *ri_projectReturning;
@@ -386,6 +384,16 @@ typedef struct ResultRelInfo
 	 */
 	HTAB	   *ri_partition_hash;
 
+	/*
+	 * cdb: CopyFrom() buffers the tuples and flush them all together
+	 * in CopyFromInsertBatch()
+	 * For partition table, each child partition needs a buffer array
+	 * to hold the tuples.
+	 */
+	BulkInsertState biState;
+	int			nBufferedTuples;
+	HeapTuple	*bufferedTuples;
+	Size		bufferedTuplesSize;
 } ResultRelInfo;
 
 typedef struct ShareNodeEntry
@@ -558,7 +566,8 @@ typedef struct EState
 	List	   *es_result_aosegnos;
 
 	TupleTableSlot *es_trig_tuple_slot; /* for trigger output tuples */
-	TupleTableSlot *es_trig_oldtup_slot;		/* for trigger old tuples */
+	TupleTableSlot *es_trig_oldtup_slot;		/* for TriggerEnabled */
+	TupleTableSlot *es_trig_newtup_slot;		/* for TriggerEnabled */
 
 	/* Parameter info: */
 	ParamListInfo es_param_list_info;	/* values of external params */
@@ -576,8 +585,6 @@ typedef struct EState
 
 	int			es_top_eflags;	/* eflags passed to ExecutorStart */
 	int			es_instrument;	/* OR of InstrumentOption flags */
-	bool		es_select_into; /* true if doing SELECT INTO */
-	bool		es_into_oids;	/* true to generate OIDs in SELECT INTO */
 	bool		es_finished;	/* true when ExecutorFinish is done */
 
 	List	   *es_exprcontexts;	/* List of ExprContexts within EState */
@@ -1430,7 +1437,7 @@ typedef struct PlanState
 	/*
 	 * EXPLAIN ANALYZE statistics collection
 	 */
-	struct Instrumentation *instrument;     /* runtime stats for this node */
+	Instrumentation *instrument;     /* runtime stats for this node */
 	struct StringInfoData  *cdbexplainbuf;  /* EXPLAIN ANALYZE report buf */
 	void      (*cdbexplainfun)(struct PlanState *planstate, struct StringInfoData *buf);
 	/* callback before ExecutorEnd */
@@ -1465,6 +1472,18 @@ static inline void Gpmon_Incr_Rows_Out(gpmon_packet_t *pkt)
  */
 #define innerPlanState(node)		(((PlanState *)(node))->righttree)
 #define outerPlanState(node)		(((PlanState *)(node))->lefttree)
+
+/* Macros for inline access to certain instrumentation counters */
+#define InstrCountFiltered1(node, delta) \
+	do { \
+		if (((PlanState *)(node))->instrument) \
+			((PlanState *)(node))->instrument->nfiltered1 += (delta); \
+	} while(0)
+#define InstrCountFiltered2(node, delta) \
+	do { \
+		if (((PlanState *)(node))->instrument) \
+			((PlanState *)(node))->instrument->nfiltered2 += (delta); \
+	} while(0)
 
 /*
  * EPQState is state for executing an EvalPlanQual recheck on a candidate
@@ -1570,7 +1589,7 @@ typedef struct SequenceState
  *
  *		nplans			how many plans are in the array
  *		nkeys			number of sort key columns
- *		scankeys		sort keys in ScanKey representation
+ *		sortkeys		sort keys in SortSupport representation
  *		slots			current output tuple of each subplan
  *		heap			heap of active tuples (represented as array indexes)
  *		heap_size		number of active heap entries
@@ -1584,7 +1603,7 @@ typedef struct MergeAppendState
 	PlanState **mergeplans;		/* array of PlanStates for my inputs */
 	int			ms_nplans;
 	int			ms_nkeys;
-	ScanKey		ms_scankeys;	/* array of length ms_nkeys */
+	SortSupport ms_sortkeys;	/* array of length ms_nkeys */
 	TupleTableSlot **ms_slots;	/* array of length ms_nplans */
 	int		   *ms_heap;		/* array of length ms_nplans */
 	int			ms_heap_size;	/* current active length of ms_heap[] */
@@ -1844,6 +1863,42 @@ typedef struct DynamicIndexScanState
 	/* The partition oid for which the current varnos are mapped */
 	Oid columnLayoutOid;
 } DynamicIndexScanState;
+
+/* ----------------
+ *	 IndexOnlyScanState information
+ *
+ *		indexqual		   execution state for indexqual expressions
+ *		ScanKeys		   Skey structures for index quals
+ *		NumScanKeys		   number of ScanKeys
+ *		OrderByKeys		   Skey structures for index ordering operators
+ *		NumOrderByKeys	   number of OrderByKeys
+ *		RuntimeKeys		   info about Skeys that must be evaluated at runtime
+ *		NumRuntimeKeys	   number of RuntimeKeys
+ *		RuntimeKeysReady   true if runtime Skeys have been computed
+ *		RuntimeContext	   expr context for evaling runtime Skeys
+ *		RelationDesc	   index relation descriptor
+ *		ScanDesc		   index scan descriptor
+ *		VMBuffer		   buffer in use for visibility map testing, if any
+ *		HeapFetches		   number of tuples we were forced to fetch from heap
+ * ----------------
+ */
+typedef struct IndexOnlyScanState
+{
+	ScanState	ss;				/* its first field is NodeTag */
+	List	   *indexqual;
+	ScanKey		ioss_ScanKeys;
+	int			ioss_NumScanKeys;
+	ScanKey		ioss_OrderByKeys;
+	int			ioss_NumOrderByKeys;
+	IndexRuntimeKeyInfo *ioss_RuntimeKeys;
+	int			ioss_NumRuntimeKeys;
+	bool		ioss_RuntimeKeysReady;
+	ExprContext *ioss_RuntimeContext;
+	Relation	ioss_RelationDesc;
+	IndexScanDesc ioss_ScanDesc;
+	Buffer		ioss_VMBuffer;
+	long		ioss_HeapFetches;
+} IndexOnlyScanState;
 
 /* ----------------
  *	 BitmapIndexScanState information
@@ -2902,7 +2957,7 @@ typedef struct MotionState
 	bool		isExplictGatherMotion;
 } MotionState;
 
-/*
+/*zx
  * ExecNode for PartitionSelector.
  * This operator contains a Plannode in PlanState.
  */

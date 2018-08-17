@@ -22,7 +22,7 @@ rsqcountvalue
 -------------
 1            
 (1 row)
-0:SELECT waiting_reason from pg_stat_activity where current_query = 'EXECUTE fooplan;';
+0:SELECT waiting_reason from pg_stat_activity where query = 'EXECUTE fooplan;';
 waiting_reason
 --------------
 lock          

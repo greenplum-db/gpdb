@@ -3725,7 +3725,7 @@ libgpoptudf/src/CCatalogUtils.cpp,libgpoptudf/src/CCatalogUtils.cpp,CCatalogUtil
 libgpoptudf/src/CCatalogUtils.cpp,libgpoptudf/src/CCatalogUtils.cpp,CCatalogUtils::PlFunctionOids,raghav
 libgpoptudf/src/CCatalogUtils.cpp,libgpoptudf/src/CCatalogUtils.cpp,CCatalogUtils::PlAllOids,raghav
 libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::PvRun,solimm1
-libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::PplstmtOptimize,solimm1
+libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::GPOPTOptimizedPlan,solimm1
 libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::SetTraceflags,solimm1
 libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::SendRequest,solimm1
 libgpoptudf/src/COptClient.cpp,libgpoptudf/src/COptClient.cpp,COptClient::SzPlanDXL,solimm1
@@ -3755,7 +3755,7 @@ libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::PvQueryFr
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::PvDXLFromMDObjsTask,raghav
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::PvDXLFromRelStatsTask,raghav
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::SzOptimize,raghav
-libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::PplstmtOptimize,raghav
+libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::GPOPTOptimizedPlan,raghav
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::SzDXL,raghav
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::SzDXL,raghav
 libgpoptudf/src/COptTasks.cpp,libgpoptudf/src/COptTasks.cpp,COptTasks::PqueryFromXML,raghav

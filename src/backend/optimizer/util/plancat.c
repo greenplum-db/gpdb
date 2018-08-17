@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -24,10 +24,10 @@
 #include "access/sysattr.h"
 #include "access/transam.h"
 #include "catalog/catalog.h"
+#include "catalog/heap.h"
 #include "miscadmin.h"
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
-#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/plancat.h"
@@ -58,6 +58,8 @@ static int32 get_rel_data_width(Relation rel, int32 *attr_widths);
 static List *get_relation_constraints(PlannerInfo *root,
 						 Oid relationObjectId, RelOptInfo *rel,
 						 bool include_notnull);
+static List *build_index_tlist(PlannerInfo *root, IndexOptInfo *index,
+				  Relation heapRelation);
 
 static void get_external_relation_info(Relation relation, RelOptInfo *rel);
 
@@ -140,10 +142,10 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		cdb_estimate_rel_size(
 			rel,
 			relation,
-			relation,
 			rel->attr_widths - rel->min_attr,
 			&rel->pages,
-			&rel->tuples);
+			&rel->tuples,
+			&rel->allvisfrac);
 	}
 
 	/*
@@ -241,8 +243,10 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 
 			info->relam = indexRelation->rd_rel->relam;
 			info->amcostestimate = indexRelation->rd_am->amcostestimate;
+			info->canreturn = index_can_return(indexRelation);
 			info->amcanorderbyop = indexRelation->rd_am->amcanorderbyop;
 			info->amoptionalkey = indexRelation->rd_am->amoptionalkey;
+			info->amsearcharray = indexRelation->rd_am->amsearcharray;
 			info->amsearchnulls = indexRelation->rd_am->amsearchnulls;
 			info->amhasgettuple = OidIsValid(indexRelation->rd_am->amgettuple);
 			info->amhasgetbitmap = OidIsValid(indexRelation->rd_am->amgetbitmap);
@@ -345,8 +349,13 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 				ChangeVarNodes((Node *) info->indexprs, 1, varno, 0);
 			if (info->indpred && varno != 1)
 				ChangeVarNodes((Node *) info->indpred, 1, varno, 0);
+
+			/* Build targetlist using the completed indexprs data */
+			info->indextlist = build_index_tlist(root, info, relation);
+
 			info->predOK = false;		/* set later in indxpath.c */
 			info->unique = index->indisunique;
+			info->immediate = index->indimmediate;
 			info->hypothetical = false;
 
 			/*
@@ -356,12 +365,14 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			 * a table, except we can be sure that the index is not larger
 			 * than the table.
 			 */
+			double		allvisfrac; /* dummy */
+
 			cdb_estimate_rel_size(rel,
-                                  relation,
                                   indexRelation,
                                   NULL,
                                   &info->pages,
-                                  &info->tuples);
+                                  &info->tuples,
+                                  &allvisfrac);
 
 			if (!info->indpred ||
 				info->tuples > rel->tuples)
@@ -415,14 +426,15 @@ get_external_relation_info(Relation relation, RelOptInfo *rel)
  */
 void
 cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
-                      Relation      baserel,
                       Relation      rel,
                       int32        *attr_widths,
 				      BlockNumber  *pages,
-                      double       *tuples)
+                      double       *tuples,
+                      double       *allvisfrac)
 {
 	BlockNumber relpages;
 	double		reltuples;
+	BlockNumber relallvisible;
 	double		density;
     BlockNumber curpages = 0;
 
@@ -430,13 +442,14 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
     if (!relOptInfo->cdbpolicy ||
         relOptInfo->cdbpolicy->ptype == POLICYTYPE_ENTRY)
     {
-        estimate_rel_size(rel, attr_widths, pages, tuples);
+        estimate_rel_size(rel, attr_widths, pages, tuples, allvisfrac);
         return;
     }
 
 	/* coerce values in pg_class to more desirable types */
 	relpages = (BlockNumber) rel->rd_rel->relpages;
 	reltuples = (double) rel->rd_rel->reltuples;
+	relallvisible = (BlockNumber) rel->rd_rel->relallvisible;
 
 	/*
 	 * Asking the QE for the size of the relation is a bit expensive.  Do we
@@ -507,15 +520,31 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 		/* note: integer division is intentional here */
 		density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 	}
-	*tuples = ceil(density * curpages);
+	*tuples = rint(density * (double) curpages);
 
-	elog(DEBUG2, "cdb_estimate_rel_size estimated %g tuples and %d pages",
-		 *tuples, (int) *pages);
+	/*
+	 * We use relallvisible as-is, rather than scaling it up like we
+	 * do for the pages and tuples counts, on the theory that any
+	 * pages added since the last VACUUM are most likely not marked
+	 * all-visible.  But costsize.c wants it converted to a fraction.
+	 */
+	if (relallvisible == 0 || curpages <= 0)
+		*allvisfrac = 0;
+	else if ((double) relallvisible >= curpages)
+		*allvisfrac = 1;
+	else
+		*allvisfrac = (double) relallvisible / curpages;
+
+	elog(DEBUG2, "cdb_estimate_rel_size estimated %g tuples, %d pages, and"
+		" %f allvisfrac", *tuples, (int) *pages, *allvisfrac);
 }
 
 
 /*
  * estimate_rel_size - estimate # pages and # tuples in a table or index
+ *
+ * We also estimate the fraction of the pages that are marked all-visible in
+ * the visibility map, for use in estimation of index-only scans.
  *
  * If attr_widths isn't NULL, it points to the zero-index entry of the
  * relation's attr_widths[] cache; we fill this in if we have need to compute
@@ -523,11 +552,12 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
  */
 void
 estimate_rel_size(Relation rel, int32 *attr_widths,
-				  BlockNumber *pages, double *tuples)
+				  BlockNumber *pages, double *tuples, double *allvisfrac)
 {
 	BlockNumber curpages;
 	BlockNumber relpages;
 	double		reltuples;
+	BlockNumber relallvisible;
 	double		density;
 
 	switch (rel->rd_rel->relkind)
@@ -565,24 +595,38 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 
 			/*
 			 * HACK: if the relation has never yet been vacuumed, use a
-			 * minimum estimate of 10 pages.  This emulates a desirable aspect
-			 * of pre-8.0 behavior, which is that we wouldn't assume a newly
-			 * created relation is really small, which saves us from making
-			 * really bad plans during initial data loading.  (The plans are
-			 * not wrong when they are made, but if they are cached and used
-			 * again after the table has grown a lot, they are bad.) It would
-			 * be better to force replanning if the table size has changed a
-			 * lot since the plan was made ... but we don't currently have any
-			 * infrastructure for redoing cached plans at all, so we have to
-			 * kluge things here instead.
+			 * minimum size estimate of 10 pages.  The idea here is to avoid
+			 * assuming a newly-created table is really small, even if it
+			 * currently is, because that may not be true once some data gets
+			 * loaded into it.	Once a vacuum or analyze cycle has been done
+			 * on it, it's more reasonable to believe the size is somewhat
+			 * stable.
+			 *
+			 * (Note that this is only an issue if the plan gets cached and
+			 * used again after the table has been filled.	What we're trying
+			 * to avoid is using a nestloop-type plan on a table that has
+			 * grown substantially since the plan was made.  Normally,
+			 * autovacuum/autoanalyze will occur once enough inserts have
+			 * happened and cause cached-plan invalidation; but that doesn't
+			 * happen instantaneously, and it won't happen at all for cases
+			 * such as temporary tables.)
 			 *
 			 * We approximate "never vacuumed" by "has relpages = 0", which
 			 * means this will also fire on genuinely empty relations.	Not
 			 * great, but fortunately that's a seldom-seen case in the real
 			 * world, and it shouldn't degrade the quality of the plan too
 			 * much anyway to err in this direction.
+			 *
+			 * There are two exceptions wherein we don't apply this heuristic.
+			 * One is if the table has inheritance children.  Totally empty
+			 * parent tables are quite common, so we should be willing to
+			 * believe that they are empty.  Also, we don't apply the 10-page
+			 * minimum to indexes.
 			 */
-			if (curpages < 10 && rel->rd_rel->relpages == 0)
+			if (curpages < 10 &&
+				rel->rd_rel->relpages == 0 &&
+				!rel->rd_rel->relhassubclass &&
+				rel->rd_rel->relkind != RELKIND_INDEX)
 				curpages = 10;
 
 			/* report estimated # pages */
@@ -591,16 +635,19 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			if (curpages == 0)
 			{
 				*tuples = 0;
+				*allvisfrac = 0;
 				break;
 			}
 			/* coerce values in pg_class to more desirable types */
 			relpages = (BlockNumber) rel->rd_rel->relpages;
 			reltuples = (double) rel->rd_rel->reltuples;
+			relallvisible = (BlockNumber) rel->rd_rel->relallvisible;
 
 			/*
-			 * If it's an index, discount the metapage.  This is a kluge
-			 * because it assumes more than it ought to about index contents;
-			 * it's reasonably OK for btrees but a bit suspect otherwise.
+			 * If it's an index, discount the metapage while estimating the
+			 * number of tuples.  This is a kluge because it assumes more than
+			 * it ought to about index structure.  Currently it's OK for
+			 * btree, hash, and GIN indexes but suspect for GiST indexes.
 			 */
 			if (rel->rd_rel->relkind == RELKIND_INDEX &&
 				relpages > 0)
@@ -608,6 +655,7 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				curpages--;
 				relpages--;
 			}
+
 			/* estimate number of tuples from previous tuple density */
 			if (relpages > 0)
 				density = reltuples / (double) relpages;
@@ -636,22 +684,39 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				/* note: integer division is intentional here */
 				density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 			}
-			*tuples = ceil(density * curpages);
+			*tuples = rint(density * (double) curpages);
+
+			/*
+			 * We use relallvisible as-is, rather than scaling it up like we
+			 * do for the pages and tuples counts, on the theory that any
+			 * pages added since the last VACUUM are most likely not marked
+			 * all-visible.  But costsize.c wants it converted to a fraction.
+			 */
+			if (relallvisible == 0 || curpages <= 0)
+				*allvisfrac = 0;
+			else if ((double) relallvisible >= curpages)
+				*allvisfrac = 1;
+			else
+				*allvisfrac = (double) relallvisible / curpages;
+
 			break;
 		case RELKIND_SEQUENCE:
 			/* Sequences always have a known size */
 			*pages = 1;
 			*tuples = 1;
+			*allvisfrac = 0;
 			break;
 		case RELKIND_FOREIGN_TABLE:
 			/* Just use whatever's in pg_class */
 			*pages = rel->rd_rel->relpages;
 			*tuples = rel->rd_rel->reltuples;
+			*allvisfrac = 0;
 			break;
 		default:
 			/* else it has no disk storage; probably shouldn't get here? */
 			*pages = 0;
 			*tuples = 0;
+			*allvisfrac = 0;
 			break;
 	}
 }
@@ -732,7 +797,7 @@ get_relation_data_width(Oid relid, int32 *attr_widths)
 /*
  * get_relation_constraints
  *
- * Retrieve the CHECK constraint expressions of the given relation.
+ * Retrieve the validated CHECK constraint expressions of the given relation.
  *
  * Returns a List (possibly empty) of constraint expressions.  Each one
  * has been canonicalized, and its Vars are changed to have the varno
@@ -770,6 +835,13 @@ get_relation_constraints(PlannerInfo *root,
 		for (i = 0; i < num_check; i++)
 		{
 			Node	   *cexpr;
+
+			/*
+			 * If this constraint hasn't been fully validated yet, we must
+			 * ignore it here.
+			 */
+			if (!constr->check[i].ccvalid)
+				continue;
 
 			cexpr = stringToNode(constr->check[i].ccbin);
 
@@ -843,7 +915,7 @@ get_relation_constraints(PlannerInfo *root,
  *
  * Detect whether the relation need not be scanned because it has either
  * self-inconsistent restrictions, or restrictions inconsistent with the
- * relation's CHECK constraints.
+ * relation's validated CHECK constraints.
  *
  * Note: this examines only rel->relid, rel->reloptkind, and
  * rel->baserestrictinfo; therefore it can be called before filling in
@@ -1089,6 +1161,70 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 }
 
 /*
+ * build_index_tlist
+ *
+ * Build a targetlist representing the columns of the specified index.
+ * Each column is represented by a Var for the corresponding base-relation
+ * column, or an expression in base-relation Vars, as appropriate.
+ *
+ * There are never any dropped columns in indexes, so unlike
+ * build_physical_tlist, we need no failure case.
+ */
+static List *
+build_index_tlist(PlannerInfo *root, IndexOptInfo *index,
+				  Relation heapRelation)
+{
+	List	   *tlist = NIL;
+	Index		varno = index->rel->relid;
+	ListCell   *indexpr_item;
+	int			i;
+
+	indexpr_item = list_head(index->indexprs);
+	for (i = 0; i < index->ncolumns; i++)
+	{
+		int			indexkey = index->indexkeys[i];
+		Expr	   *indexvar;
+
+		if (indexkey != 0)
+		{
+			/* simple column */
+			Form_pg_attribute att_tup;
+
+			if (indexkey < 0)
+				att_tup = SystemAttributeDefinition(indexkey,
+										   heapRelation->rd_rel->relhasoids);
+			else
+				att_tup = heapRelation->rd_att->attrs[indexkey - 1];
+
+			indexvar = (Expr *) makeVar(varno,
+										indexkey,
+										att_tup->atttypid,
+										att_tup->atttypmod,
+										att_tup->attcollation,
+										0);
+		}
+		else
+		{
+			/* expression column */
+			if (indexpr_item == NULL)
+				elog(ERROR, "wrong number of index expressions");
+			indexvar = (Expr *) lfirst(indexpr_item);
+			indexpr_item = lnext(indexpr_item);
+		}
+
+		tlist = lappend(tlist,
+						makeTargetEntry(indexvar,
+										i + 1,
+										NULL,
+										false));
+	}
+	if (indexpr_item != NULL)
+		elog(ERROR, "wrong number of index expressions");
+
+	return tlist;
+}
+
+/*
  * restriction_selectivity
  *
  * Returns the selectivity of a specified restriction operator clause.
@@ -1172,6 +1308,11 @@ join_selectivity(PlannerInfo *root,
  * Detect whether there is a unique index on the specified attribute
  * of the specified relation, thus allowing us to conclude that all
  * the (non-null) values of the attribute are distinct.
+ *
+ * This function does not check the index's indimmediate property, which
+ * means that uniqueness may transiently fail to hold intra-transaction.
+ * That's appropriate when we are making statistical estimates, but beware
+ * of using this for any correctness proofs.
  */
 bool
 has_unique_index(RelOptInfo *rel, AttrNumber attno)

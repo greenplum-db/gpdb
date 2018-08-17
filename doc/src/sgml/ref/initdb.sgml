@@ -24,9 +24,11 @@ PostgreSQL documentation
    <command>initdb</command>
    <arg rep="repeat"><replaceable>option</replaceable></arg>
    <group choice="plain">
-    <arg>--pgdata</arg>
-    <arg>-D </arg>
-    <replaceable>directory</replaceable>
+    <group choice="opt">
+     <arg choice="plain"><option>--pgdata</option></arg>
+     <arg choice="plain"><option>-D</option></arg>
+    </group>
+    <replaceable> directory</replaceable>
    </group>
   </cmdsynopsis>
  </refsynopsisdiv>
@@ -118,10 +120,33 @@ PostgreSQL documentation
       <term><option>--auth=<replaceable class="parameter">authmethod</replaceable></option></term>
       <listitem>
        <para>
-        This option specifies the authentication method for local users
-        used in <filename>pg_hba.conf</>.  Do not use <literal>trust</>
-        unless you trust all local users on your system.  <literal>Trust</>
-        is the default for ease of installation.
+        This option specifies the authentication method for local users used
+        in <filename>pg_hba.conf</> (<literal>host</literal>
+        and <literal>local</literal> lines).  Do not use <literal>trust</>
+        unless you trust all local users on your system.  <literal>trust</> is
+        the default for ease of installation.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--auth-host=<replaceable class="parameter">authmethod</replaceable></option></term>
+      <listitem>
+       <para>
+        This option specifies the authentication method for local users via
+        TCP/IP connections used in <filename>pg_hba.conf</>
+        (<literal>host</literal> lines).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--auth-local=<replaceable class="parameter">authmethod</replaceable></option></term>
+      <listitem>
+       <para>
+        This option specifies the authentication method for local users via
+        Unix-domain socket connections used in <filename>pg_hba.conf</>
+        (<literal>local</literal> lines).
        </para>
       </listitem>
      </varlistentry>
@@ -203,7 +228,7 @@ PostgreSQL documentation
       <term><option>--no-locale</option></term>
       <listitem>
        <para>
-		Equivalent to <option>--locale=C</option>.
+        Equivalent to <option>--locale=C</option>.
        </para>
       </listitem>
      </varlistentry>
@@ -217,6 +242,18 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term><option>-T <replaceable>CFG</></option></term>
+      <term><option>--text-search-config=<replaceable>CFG</></option></term>
+      <listitem>
+       <para>
+        Sets the default text search configuration.
+        See <xref linkend="guc-default-text-search-config"> for further information.
+       </para>
+      </listitem>
+     </varlistentry>
+
      <varlistentry>
       <term><option>-U <replaceable class="parameter">username</replaceable></option></term>
       <term><option>--username=<replaceable class="parameter">username</replaceable></option></term>
@@ -271,7 +308,7 @@ PostgreSQL documentation
    </para>
 
    <para>
-    Other, less commonly used, parameters are also available:
+    Other, less commonly used, options are also available:
 
     <variablelist>
      <varlistentry>

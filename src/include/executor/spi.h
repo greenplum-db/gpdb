@@ -3,7 +3,7 @@
  * spi.h
  *				Server Programming Interface public declarations
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/spi.h
@@ -15,8 +15,6 @@
 
 #include "nodes/parsenodes.h"
 #include "utils/portal.h"
-#include "utils/relcache.h"
-#include "utils/snapshot.h"
 
 
 typedef struct SPITupleTable
@@ -95,6 +93,7 @@ extern SPIPlanPtr SPI_prepare_params(const char *src,
 				   ParserSetupHook parserSetup,
 				   void *parserSetupArg,
 				   int cursorOptions);
+extern int	SPI_keepplan(SPIPlanPtr plan);
 extern SPIPlanPtr SPI_saveplan(SPIPlanPtr plan);
 extern int	SPI_freeplan(SPIPlanPtr plan);
 

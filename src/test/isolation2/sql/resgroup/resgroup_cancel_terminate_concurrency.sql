@@ -5,7 +5,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
 CREATE OR REPLACE VIEW rg_concurrency_view AS
-	SELECT waiting, waiting_reason, current_query, rsgname
+	SELECT waiting, waiting_reason, state, query, rsgname
 	FROM pg_stat_activity
 	WHERE rsgname='rg_concurrency_test';
 
@@ -18,7 +18,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 3:SET ROLE role_concurrency_test;
 3&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 1:END;
 2<:
 3<:
@@ -44,7 +44,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 3:SET ROLE role_concurrency_test;
 3&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
 1:END;
 2<:
 3<:
@@ -72,7 +72,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 7:SET ROLE role_concurrency_test;
 7&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting='f' AND rsgname='rg_concurrency_test';
+SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE waiting='f' AND rsgname='rg_concurrency_test';
 1<:
 2<:
 6<:
@@ -102,7 +102,7 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 7:SET ROLE role_concurrency_test;
 7&:BEGIN;
 SELECT * FROM rg_concurrency_view;
-SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting='f' AND rsgname='rg_concurrency_test';
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE waiting='f' AND rsgname='rg_concurrency_test';
 1<:
 2<:
 6<:

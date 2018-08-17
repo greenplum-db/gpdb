@@ -211,6 +211,48 @@ select distinct a from (select  distinct 'A' from (select 'C' from (select disti
  B
 (2 rows)
 
+-- Test case where input to one branch of UNION resides on a single segment, and another on the QE.
+-- The external table resides on QD, and the LIMIT on the test1 table forces the plan to be focused
+-- on a single QE.
+--
+CREATE TABLE test1 (id int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into test1 values (1);
+CREATE EXTERNAL WEB TABLE test2 (id int) EXECUTE 'echo 2' ON MASTER FORMAT 'csv';
+(SELECT 'test1' as branch, id FROM test1 LIMIT 1)
+union
+(SELECT 'test2' as branch, id FROM test2);
+ branch | id 
+--------+----
+ test1  |  1
+ test2  |  2
+(2 rows)
+
+-- The plan you currently get for this has a Motion to move the data from the single QE to
+-- QD. That's a bit silly, it would probably make more sense to pull all the data to the QD
+-- in the first place, and execute the Limit in the QD, to avoid the extra Motion. But this
+-- is hopefully a pretty rare case.
+explain (SELECT 'test1' as branch, id FROM test1 LIMIT 1)
+union
+(SELECT 'test2' as branch, id FROM test2);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Unique  (cost=1.06..1.07 rows=2 width=4)
+   Group Key: "outer".branch, "*SELECT* 1".id
+   ->  Sort  (cost=1.06..1.06 rows=2 width=4)
+         Sort Key (Distinct): "outer".branch, "*SELECT* 1".id
+         ->  Append  (cost=0.00..1.05 rows=2 width=4)
+               ->  Gather Motion 1:1  (slice2; segments: 1)  (cost=0.00..1.04 rows=1 width=4)
+                     ->  Subquery Scan on "*SELECT* 1"  (cost=0.00..1.04 rows=1 width=4)
+                           ->  Limit  (cost=0.00..1.03 rows=1 width=4)
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                       ->  Limit  (cost=0.00..1.01 rows=1 width=4)
+                                             ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=4)
+               ->  External Scan on test2  (cost=0.00..0.00 rows=1 width=4)
+ Optimizer: legacy query optimizer
+(13 rows)
+
 --
 -- Setup
 --
@@ -1868,6 +1910,22 @@ UNION SELECT 300, 300)
 ----------------
               2
 (1 row)
+
+CREATE TABLE t1_setop(a int) DISTRIBUTED BY (a);
+CREATE TABLE t2_setop(a int) DISTRIBUTED BY (a);
+INSERT INTO t1_setop VALUES (1), (2), (3);
+INSERT INTO t2_setop VALUES (3), (4), (5);
+(SELECT a FROM t1_setop EXCEPT SELECT a FROM t2_setop ORDER BY a)
+UNION
+(SELECT a FROM t2_setop EXCEPT SELECT a FROM t1_setop ORDER BY a)
+ORDER BY a;
+ a 
+---
+ 1
+ 2
+ 4
+ 5
+(4 rows)
 
 --
 -- Clean up

@@ -1580,6 +1580,7 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 		is_new_lov_blkno = true;
 	}
 
+	/* First create the LOV item. */
 	START_CRIT_SECTION();
 
 	if (is_new_lov_blkno)
@@ -1594,17 +1595,6 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 
 	MarkBufferDirty(currLovBuffer);
 
-	lovDatum = palloc0((numOfAttrs + 2) * sizeof(Datum));
-	lovNulls = palloc0((numOfAttrs + 2) * sizeof(bool));
-	memcpy(lovDatum, attdata, numOfAttrs * sizeof(Datum));
-	memcpy(lovNulls, nulls, numOfAttrs * sizeof(bool));
-	lovDatum[numOfAttrs] = Int32GetDatum(*lovBlockP);
-	lovNulls[numOfAttrs] = false;
-	lovDatum[numOfAttrs + 1] = Int16GetDatum(*lovOffsetP);
-	lovNulls[numOfAttrs + 1] = false;
-
-	_bitmap_insert_lov(lovHeap, lovIndex, lovDatum, lovNulls, use_wal);
-
 	if (PageAddItem(currLovPage, (Item)lovitem, itemSize, *lovOffsetP,
 					false, false) == InvalidOffsetNumber)
 		ereport(ERROR,
@@ -1617,6 +1607,25 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 							metabuf, is_new_lov_blkno);
 
 	END_CRIT_SECTION();
+
+	/*
+	 * .. and then create the entry in the auxiliary LOV heap and index for it.
+	 *
+	 * This could still fail for various reasons, e.g. if you run out of disk
+	 * space. In that case, we'll leave behind an "orphan" LOV item, with no
+	 * corresponding item in the LOV heap. That's a bit sloppy and leaky, but
+	 * harmless; the orphaned LOV item won't be encountered by any scans.
+	 */
+	lovDatum = palloc0((numOfAttrs + 2) * sizeof(Datum));
+	lovNulls = palloc0((numOfAttrs + 2) * sizeof(bool));
+	memcpy(lovDatum, attdata, numOfAttrs * sizeof(Datum));
+	memcpy(lovNulls, nulls, numOfAttrs * sizeof(bool));
+	lovDatum[numOfAttrs] = Int32GetDatum(*lovBlockP);
+	lovNulls[numOfAttrs] = false;
+	lovDatum[numOfAttrs + 1] = Int16GetDatum(*lovOffsetP);
+	lovNulls[numOfAttrs + 1] = false;
+
+	_bitmap_insert_lov(lovHeap, lovIndex, lovDatum, lovNulls, use_wal);
 
 	_bitmap_relbuf(currLovBuffer);
 
@@ -2497,7 +2506,7 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 
 	/* insert this new tuple into the bitmap index. */
 	inserttuple(rel, metabuf, tidOffset, ht_ctid, tupDesc, attdata, nulls, 
-				lovHeap, lovIndex, scanKeys, scanDesc, true);
+				lovHeap, lovIndex, scanKeys, scanDesc, RelationNeedsWAL(rel));
 
 	index_endscan(scanDesc);
 	_bitmap_close_lov_heapandindex(lovHeap, lovIndex, RowExclusiveLock);

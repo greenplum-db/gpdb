@@ -14,7 +14,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/pg_type.h"	/* INT8OID */
 #include "catalog/pg_operator.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"

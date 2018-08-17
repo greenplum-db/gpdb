@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import filecmp
 import fileinput
 import os
 import re
@@ -181,14 +180,6 @@ def check_return_code(context, ret_code):
         raise Exception("expected return code '%s' does not equal actual return code '%s' \n%s" % (ret_code, context.ret_code, emsg))
 
 
-def check_not_return_code(context, ret_code):
-    if context.ret_code == int(ret_code):
-        emsg = ""
-        if context.error_message:
-            emsg += context.error_message
-        raise Exception("return code unexpectedly equals '%s' %s" % (ret_code, emsg))
-
-
 def check_database_is_running(context):
     if not 'PGPORT' in os.environ:
         raise Exception('PGPORT should be set')
@@ -290,13 +281,6 @@ def get_segment_hostnames(context, dbname):
     return getRows(dbname, sql)
 
 
-def check_partition_table_exists(context, dbname, schemaname, table_name, table_type=None, part_level=1, part_number=1):
-    partitions = get_partition_names(schemaname, table_name, dbname, part_level, part_number)
-    if not partitions:
-        return False
-    return check_table_exists(context, dbname, partitions[0][0].strip(), table_type)
-
-
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
     with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         if '.' in table_name:
@@ -396,19 +380,6 @@ def drop_schema(context, schema_name, dbname):
         conn.commit()
     if check_schema_exists(context, schema_name, dbname):
         raise Exception('Unable to successfully drop the schema %s' % schema_name)
-
-
-def get_table_names(dbname):
-    sql = """
-            SELECT n.nspname AS schemaname, c.relname AS tablename\
-            FROM pg_class c\
-            LEFT JOIN pg_namespace n ON n.oid = c.relnamespace\
-            LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace\
-            WHERE c.relkind = 'r'::CHAR AND c.oid > 16384 AND (c.relnamespace > 16384 OR n.nspname = 'public')
-                  AND n.nspname NOT LIKE 'pg_temp_%'
-          """
-
-    return getRows(dbname, sql)
 
 
 def get_partition_tablenames(tablename, dbname, part_level=1):
@@ -605,17 +576,6 @@ def drop_database_if_exists(context, dbname=None, host=None, port=0, user=None):
         drop_database(context, dbname, host=host, port=port, user=user)
 
 
-def run_on_all_segs(context, dbname, query):
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-
-    for seg in primary_segs:
-        with dbconn.connect(dbconn.DbURL(dbname=dbname, hostname=seg.getSegmentHostName(), port=seg.getSegmentPort()),
-                            utility=True) as conn:
-            dbconn.execSQL(conn, query)
-            conn.commit()
-
-
 def get_nic_up(hostname, nic):
     address = hostname + '-cm'
     cmd = Command(name='ifconfig nic', cmdStr='sudo /sbin/ifconfig %s' % nic, remoteHost=address, ctxt=REMOTE)
@@ -715,17 +675,6 @@ def truncate_table(dbname, tablename):
     execute_sql(dbname, TRUNCATE_SQL)
 
 
-def get_table_oid(context, dbname, schema, tablename):
-    OID_SQL = """SELECT c.oid
-                 FROM pg_class c, pg_namespace n
-                 WHERE c.relnamespace = n.oid AND c.relname = '%s' AND n.nspname = '%s'""" % (tablename, schema)
-
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        oid = dbconn.execSQLForSingleton(conn, OID_SQL)
-
-    return oid
-
-
 def insert_row(context, row_values, table, dbname):
     sql = """INSERT INTO %s values(%s)""" % (table, row_values)
     execute_sql(dbname, sql)
@@ -774,20 +723,6 @@ def get_pid_for_segment(seg_data_dir, seg_host):
         return None
 
     return int(pid)
-
-
-def install_gppkg(context):
-    if 'GPPKG_PATH' not in os.environ:
-        raise Exception('GPPKG_PATH needs to be set in the environment to install gppkg')
-    if 'GPPKG_NAME' not in os.environ:
-        raise Exception('GPPKG_NAME needs to be set in the environment to install gppkg')
-
-    gppkg_path = os.environ['GPPKG_PATH']
-    gppkg_name = os.environ['GPPKG_NAME']
-    command = "gppkg --install %s/%s.gppkg" % (gppkg_path, gppkg_name)
-    run_command(context, command)
-    print "Install gppkg command: '%s', stdout: '%s', stderr: '%s'" % (
-    command, context.stdout_message, context.error_message)
 
 
 def kill_process(pid, host=None, sig=signal.SIGTERM):

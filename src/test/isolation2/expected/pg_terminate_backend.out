@@ -5,7 +5,7 @@ CREATE 10
 1&:create temp table t as select count(*) from foo where pg_sleep(20) is null;  <waiting ...>
 
 -- extract the pid for the previous query
-SELECT pg_terminate_backend(procpid,'test pg_terminate_backend') FROM pg_stat_activity WHERE current_query like 'create temp table t as select%' ORDER BY procpid LIMIT 1;
+SELECT pg_terminate_backend(pid,'test pg_terminate_backend') FROM pg_stat_activity WHERE query like 'create temp table t as select%' ORDER BY pid LIMIT 1;
 pg_terminate_backend
 --------------------
 t                   

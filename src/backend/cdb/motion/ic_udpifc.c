@@ -3730,7 +3730,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		{
 			checkQDConnectionAlive();
 
-			if (!PostmasterIsAlive(true))
+			if (!PostmasterIsAlive())
 				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("Interconnect failed to recv chunks"),
 								errdetail("Postmaster is not alive\n")));
@@ -5228,7 +5228,7 @@ checkExceptions(ChunkTransportState *transportStates,
 	{
 		checkQDConnectionAlive();
 
-		if (!PostmasterIsAlive(true))
+		if (!PostmasterIsAlive())
 			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Interconnect failed to send chunks"),
 							errdetail("Postmaster is not alive\n")));

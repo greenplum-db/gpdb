@@ -591,3 +591,20 @@ drop view aggordview1;
 -- variadic aggregates
 select least_agg(q1,q2) from int8_tbl;
 select least_agg(variadic array[q1,q2]) from int8_tbl;
+
+-- string_agg bytea tests
+create table bytea_test_table(gpDistKey int, v bytea);
+
+select string_agg(v, '') from bytea_test_table;
+
+insert into bytea_test_table(v) values(decode('ff','hex'));
+
+select string_agg(v, '') from bytea_test_table;
+
+insert into bytea_test_table(v) values(decode('aa','hex'));
+
+select string_agg(v, '') from bytea_test_table;
+select string_agg(v, NULL) from bytea_test_table;
+select string_agg(v, decode('ee', 'hex')) from bytea_test_table;
+
+drop table bytea_test_table;

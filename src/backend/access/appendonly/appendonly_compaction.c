@@ -491,15 +491,11 @@ HasLockForSegmentFileDrop(Relation aorel)
 #ifdef USE_ASSERT_CHECKING
 			acquireResult = LockRelationNoWait(aorel, ShareUpdateExclusiveLock);
 			if (acquireResult != LOCKACQUIRE_ALREADY_HELD)
-			{
 				elog(ERROR, "Don't hold access exclusive lock during drop");
-				return false;
-			}
 #endif
 			return false;
 		default:
-			Insist(false);
-			return false;
+			elog(ERROR, "invalid LockAcquireResult");
 	}
 }
 

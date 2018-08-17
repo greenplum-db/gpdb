@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -27,7 +27,6 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
-#include "optimizer/var.h"
 #include "parser/analyze.h"
 #include "parser/parsetree.h"
 #include "parser/parse_agg.h"
@@ -348,9 +347,9 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 * allow DML when:
 	 * 	- in single user mode: initdb insert PIN entries to pg_depend,...
 	 * 	- in maintenance mode, upgrade mode or
-	 *  - allow_system_table_mods = dml
+	 *  - allow_system_table_mods = true
 	 */
-	if (IsUnderPostmaster && !allowSystemTableModsDML
+	if (IsUnderPostmaster && !allowSystemTableMods
 		&& IsSystemRelation(pstate->p_target_relation))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -717,12 +716,6 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 		query->commandType != CMD_SELECT ||
 		query->utilityStmt != NULL)
 		elog(ERROR, "unexpected non-SELECT command in subquery in FROM");
-	if (query->intoClause)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("subquery in FROM cannot have SELECT INTO"),
-				 parser_errposition(pstate,
-								 exprLocation((Node *) query->intoClause))));
 
 	/*
 	 * The subquery cannot make use of any variables from FROM items created
@@ -3549,7 +3542,7 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 
 			if (con->constisnull)
 				ereport(ERROR,
-						(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+						(errcode(ERRCODE_WINDOWING_ERROR),
 						 errmsg("RANGE parameter cannot be NULL"),
 						 parser_errposition(pstate, con->location)));
 		}
@@ -3665,7 +3658,7 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 
 				if (result)
 					ereport(ERROR,
-							(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+							(errcode(ERRCODE_WINDOWING_ERROR),
 							 errmsg("RANGE parameter cannot be negative"),
 							 parser_errposition(pstate, con->location)));
 

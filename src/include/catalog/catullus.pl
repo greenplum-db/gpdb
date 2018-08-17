@@ -275,7 +275,7 @@ sub get_fnoptlist
 	my @optlist;
 
 	my $rex = 'called\s+on\s+null\s+input|'.
-		'returns\s+null\s+on\s+null\s+input|strict|immutable|stable|volatile|'.
+		'returns\s+null\s+on\s+null\s+input|strict|immutable|stable|volatile|leakproof|'.
 		'external\s+security\s+definer|external\s+security\s+invoker|' .
 		'security\s+definer|security\s+invoker|' .
 		'cost\s+(\d+)|' .
@@ -296,6 +296,7 @@ sub get_fnoptlist
 	while (scalar(@foo))
 	{
 		my $opt = $foo[0];
+
 		push @optlist, $opt;
 		my $o2 = quotemeta($opt);
 		$funcdef =~ s/$o2//;
@@ -319,6 +320,7 @@ sub make_opt
 	};
 
 	my $proname		= $fndef->{name};
+	my $proleakproof;
 	my $prolang;
 	my $procost;
 	my $prorows;
@@ -350,6 +352,13 @@ sub make_opt
 				$provolatile = lc(substr($opt, 0, 1));
 			}
 
+			if ($opt =~ m/^leakproof/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proleakproof));
+
+				$proleakproof = 1;
+			}
 
 			if ($opt =~ m/^language\s+(internal|c|sql|plpgsql)$/i)
 			{
@@ -446,6 +455,7 @@ sub make_opt
 			provariadic	 => 0,
 			proisagg	 => 0,
 			prosecdef	 => $prosecdef,
+			proleakproof => $proleakproof,
 			proisstrict	 => $proisstrict,
 #			proretset
 			provolatile	 => $provolatile,
@@ -494,6 +504,12 @@ sub make_opt
 				die ("bad lang: $prolang");
 			}
 		} 
+
+		if (!defined($proleakproof))
+		{
+			$proleakproof = 0;
+			$tdef->{proleakproof} = $proleakproof;
+		}
 
 		if (!defined($prodataaccess))
 		{ 
@@ -854,11 +870,18 @@ sub printfndef
 		$tup->{procost} . " " .
 		$tup->{prorows} . " " .
 		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
+		# GPDB_92_MERGE_FIXME: Column protransform is hardcoded to 0. Should
+		# modify pg_proc.sql and this file to allow to set transform function,
+		# although it seems that this is not widely used.  Given pg 11 has
+		# better initial catalog data format, I'm not sure if we use this file
+		# or not in the future.
+		"0 ".
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
 		(exists($fndef->{with}->{proiswindow}) ? $fndef->{with}->{proiswindow} :
 		 ($tup->{proiswindow} ? "t" : "f")) . " " .
 		($tup->{prosecdef} ? "t" : "f") . " " .
+		($tup->{proleakproof} ? "t" : "f") . " " .
 		($tup->{proisstrict} ? "t" : "f") . " " .
 		($tup->{proretset} ? "t" : "f") . " " .
 		($tup->{provolatile} ? $tup->{provolatile} : "_null_" ) . " " .

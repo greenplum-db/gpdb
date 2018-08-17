@@ -1418,13 +1418,13 @@ AppendOnlyStorageRead_Content(AppendOnlyStorageRead *storageRead,
 
 			decompressor = cfns[COMPRESSION_DECOMPRESS];
 
-			gp_decompress_new(content,	/* Compressed data in block. */
-							  storageRead->current.compressedLen,
-							  contentOut,
-							  storageRead->current.uncompressedLen,
-							  decompressor,
-							  storageRead->compressionState,
-							  storageRead->bufferCount);
+			gp_decompress(content,    /* Compressed data in block. */
+						  storageRead->current.compressedLen,
+						  contentOut,
+						  storageRead->current.uncompressedLen,
+						  decompressor,
+						  storageRead->compressionState,
+						  storageRead->bufferCount);
 
 			if (Debug_appendonly_print_scan)
 				elog(LOG,

@@ -65,10 +65,10 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat miss_attr_db1"
         And gpcheckcat should return a return code of 0
         Then gpcheckcat should not print "Missing" to stdout
-        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_table'::regclass::oid;""
-        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_part_table'::regclass::oid;""
-        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_table'::regclass::oid;""
-        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_part_table'::regclass::oid;""
+        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='heap_table'::regclass::oid;""
+        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='heap_part_table'::regclass::oid;""
+        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='ao_table'::regclass::oid;""
+        And the user runs "psql miss_attr_db1 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='ao_part_table'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db1"
         Then gpcheckcat should print "Missing" to stdout
@@ -100,10 +100,10 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat miss_attr_db2"
         And gpcheckcat should return a return code of 0
         Then gpcheckcat should not print "Missing" to stdout
-        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_table_idx'::regclass::oid;""
-        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='heap_part_table_idx'::regclass::oid;""
-        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_table_idx'::regclass::oid;""
-        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='ao_part_table_idx'::regclass::oid;""
+        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='heap_table_idx'::regclass::oid;""
+        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='heap_part_table_idx'::regclass::oid;""
+        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='ao_table_idx'::regclass::oid;""
+        And the user runs "psql miss_attr_db2 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='ao_part_table_idx'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db2"
         Then gpcheckcat should print "Missing" to stdout
@@ -125,7 +125,7 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat miss_attr_db3"
         And gpcheckcat should return a return code of 0
         Then gpcheckcat should not print "Missing" to stdout
-        And the user runs "psql miss_attr_db3 -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='part_external_1_prt_p_2'::regclass::oid;""
+        And the user runs "psql miss_attr_db3 -c "SET allow_system_table_mods=true; DELETE FROM <tablename> where <attrname>='part_external_1_prt_p_2'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db3"
         Then gpcheckcat should print "Missing" to stdout
@@ -148,7 +148,7 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat miss_attr_db4"
         Then gpcheckcat should print "Missing" to stdout
         And gpcheckcat should print "Table miss_attr_db4.public.heap_table.0" to stdout
-        And the user runs "psql miss_attr_db4 -c "SET allow_system_table_mods='dml'; DELETE FROM pg_attribute where attrelid='heap_table'::regclass::oid;""
+        And the user runs "psql miss_attr_db4 -c "SET allow_system_table_mods=true; DELETE FROM pg_attribute where attrelid='heap_table'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db4"
         Then gpcheckcat should print "Extra" to stdout
@@ -284,7 +284,7 @@ Feature: gpcheckcat tests
         And the user runs "psql extra_pk_db -c 'CREATE SCHEMA my_pk_schema' "
         And the user runs "psql extra_pk_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/add_operator.sql "
         Then psql should return a return code of 0
-        And the user runs "psql extra_pk_db -c "set allow_system_table_mods=DML;DELETE FROM pg_catalog.pg_operator where oprname='!#'" "
+        And the user runs "psql extra_pk_db -c "set allow_system_table_mods=true;DELETE FROM pg_catalog.pg_operator where oprname='!#'" "
         Then psql should return a return code of 0
         When the user runs "gpcheckcat -R missing_extraneous extra_pk_db"
         Then gpcheckcat should return a return code of 3
@@ -303,7 +303,7 @@ Feature: gpcheckcat tests
         Given database "extra_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And the user runs "psql extra_db -c "CREATE TABLE foo(i int)""
-        Then The user runs sql "set allow_system_table_mods=DML;delete from pg_class where relname='foo'" in "extra_db" on first primary segment
+        Then The user runs sql "set allow_system_table_mods=true;delete from pg_class where relname='foo'" in "extra_db" on first primary segment
         And the user runs "psql extra_db -c "drop table if exists foo""
         Then the user runs "gpcheckcat -R missing_extraneous extra_db"
         Then gpcheckcat should return a return code of 3
@@ -338,7 +338,7 @@ Feature: gpcheckcat tests
         Given database "extra_gr_db" is dropped and recreated
         And the path "repair_dir" is removed from current working directory
         And the user runs "psql extra_gr_db -c "CREATE TABLE foo(i int)""
-        Then The user runs sql "set allow_system_table_mods=DML;delete from pg_class where relname='foo'" in "extra_gr_db" on first primary segment
+        Then The user runs sql "set allow_system_table_mods=true;delete from pg_class where relname='foo'" in "extra_gr_db" on first primary segment
         And the user runs "psql extra_gr_db -c "drop table if exists foo""
         Then the user runs "gpcheckcat -R missing_extraneous -E -g repair_dir extra_gr_db"
         Then gpcheckcat should return a return code of 1
@@ -356,7 +356,7 @@ Feature: gpcheckcat tests
     Scenario: gpcheckcat should generate repair scripts when only -g option is provided
         Given database "constraint_g_db" is dropped and recreated
         And the user runs "psql constraint_g_db -c "create table foo(i int primary key);""
-        And the user runs sql "set allow_system_table_mods='dml'; update gp_distribution_policy  set attrnums=NULL where localoid='foo'::regclass::oid;" in "constraint_g_db" on all the segments
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy  set attrnums=NULL where localoid='foo'::regclass::oid;" in "constraint_g_db" on all the segments
         Then psql should return a return code of 0
         When the user runs "gpcheckcat -g repair_dir constraint_g_db"
         Then gpcheckcat should return a return code of 1
@@ -377,7 +377,7 @@ Feature: gpcheckcat tests
         And the user runs "psql timestamp_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_aoco_table.sql"
         And the user runs sql file "test/behave/mgmt_utils/steps/data/gpcheckcat/create_inconsistent_gpfastsequence.sql" in "timestamp_db" on all the segments
         And the user runs "psql timestamp_db -c "CREATE TABLE foo(i int)""
-        Then The user runs sql "set allow_system_table_mods=DML;delete from pg_class where relname='foo'" in "timestamp_db" on first primary segment
+        Then The user runs sql "set allow_system_table_mods=true;delete from pg_class where relname='foo'" in "timestamp_db" on first primary segment
         And the user runs "psql timestamp_db -c "drop table if exists foo""
         Then the user runs "gpcheckcat timestamp_db"
         Then gpcheckcat should return a return code of 3

@@ -4,7 +4,7 @@
  *	  header file for postgres btree access method implementation.
  *
  *
- * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/nbtree.h
@@ -19,7 +19,7 @@
 #include "access/sdir.h"
 #include "access/xlog.h"
 #include "access/xlogutils.h"
-
+#include "catalog/pg_index.h"
 
 /* There's room for a 16-bit vacuum cycle ID in BTPageOpaqueData */
 typedef uint16 BTCycleId;
@@ -417,13 +417,18 @@ typedef struct xl_btree_newroot
 
 /*
  *	When a new operator class is declared, we require that the user
- *	supply us with an amproc procedure for determining whether, for
- *	two keys a and b, a < b, a = b, or a > b.  This routine must
- *	return < 0, 0, > 0, respectively, in these three cases.  Since we
- *	only have one such proc in amproc, it's number 1.
+ *	supply us with an amproc procedure (BTORDER_PROC) for determining
+ *	whether, for two keys a and b, a < b, a = b, or a > b.	This routine
+ *	must return < 0, 0, > 0, respectively, in these three cases.  (It must
+ *	not return INT_MIN, since we may negate the result before using it.)
+ *
+ *	To facilitate accelerated sorting, an operator class may choose to
+ *	offer a second procedure (BTSORTSUPPORT_PROC).	For full details, see
+ *	src/include/utils/sortsupport.h.
  */
 
-#define BTORDER_PROC	1
+#define BTORDER_PROC		1
+#define BTSORTSUPPORT_PROC	2
 
 /*
  *	We need to be able to tell the difference between read and write
@@ -472,12 +477,18 @@ typedef BTStackData *BTStack;
  * items were killed, we re-lock the page to mark them killed, then unlock.
  * Finally we drop the pin and step to the next page in the appropriate
  * direction.
+ *
+ * If we are doing an index-only scan, we save the entire IndexTuple for each
+ * matched item, otherwise only its heap TID and offset.  The IndexTuples go
+ * into a separate workspace array; each BTScanPosItem stores its tuple's
+ * offset within that array.
  */
 
 typedef struct BTScanPosItem	/* what we remember about each match */
 {
 	ItemPointerData heapTid;	/* TID of referenced heap item */
 	OffsetNumber indexOffset;	/* index item's location within page */
+	LocationIndex tupleOffset;	/* IndexTuple's offset in workspace, if any */
 } BTScanPosItem;
 
 typedef struct BTScanPosData
@@ -494,6 +505,12 @@ typedef struct BTScanPosData
 	 */
 	bool		moreLeft;
 	bool		moreRight;
+
+	/*
+	 * If we are doing an index-only scan, nextTupleOffset is the first free
+	 * location in the associated tuple storage workspace.
+	 */
+	int			nextTupleOffset;
 
 	/*
 	 * The items array is always ordered in index order (ie, increasing
@@ -513,6 +530,15 @@ typedef BTScanPosData *BTScanPos;
 
 #define BTScanPosIsValid(scanpos) BufferIsValid((scanpos).buf)
 
+/* We need one of these for each equality-type SK_SEARCHARRAY scan key */
+typedef struct BTArrayKeyInfo
+{
+	int			scan_key;		/* index of associated key in arrayKeyData */
+	int			cur_elem;		/* index of current element in elem_values */
+	int			num_elems;		/* number of elems in current array value */
+	Datum	   *elem_values;	/* array of num_elems Datums */
+} BTArrayKeyInfo;
+
 typedef struct BTScanOpaqueData
 {
 	/* these fields are set by _bt_preprocess_keys(): */
@@ -520,9 +546,24 @@ typedef struct BTScanOpaqueData
 	int			numberOfKeys;	/* number of preprocessed scan keys */
 	ScanKey		keyData;		/* array of preprocessed scan keys */
 
+	/* workspace for SK_SEARCHARRAY support */
+	ScanKey		arrayKeyData;	/* modified copy of scan->keyData */
+	int			numArrayKeys;	/* number of equality-type array keys (-1 if
+								 * there are any unsatisfiable array keys) */
+	BTArrayKeyInfo *arrayKeys;	/* info about each equality-type array key */
+	MemoryContext arrayContext; /* scan-lifespan context for array data */
+
 	/* info about killed items if any (killedItems is NULL if never used) */
 	int		   *killedItems;	/* currPos.items indexes of killed items */
 	int			numKilled;		/* number of currently stored items */
+
+	/*
+	 * If we are doing an index-only scan, these are the tuple storage
+	 * workspaces for the currPos and markPos respectively.  Each is of size
+	 * BLCKSZ, so it can hold as much as a full page's worth of tuples.
+	 */
+	char	   *currTuples;		/* tuple storage for currPos */
+	char	   *markTuples;		/* tuple storage for markPos */
 
 	/*
 	 * If the marked position is on the same page as current position, we
@@ -566,6 +607,7 @@ extern Datum btmarkpos(PG_FUNCTION_ARGS);
 extern Datum btrestrpos(PG_FUNCTION_ARGS);
 extern Datum btbulkdelete(PG_FUNCTION_ARGS);
 extern Datum btvacuumcleanup(PG_FUNCTION_ARGS);
+extern Datum btcanreturn(PG_FUNCTION_ARGS);
 extern Datum btoptions(PG_FUNCTION_ARGS);
 
 /*
@@ -593,7 +635,8 @@ extern bool _bt_page_recyclable(Page page);
 extern void _bt_delitems_delete(Relation rel, Buffer buf,
 					OffsetNumber *itemnos, int nitems, Relation heapRel);
 extern void _bt_delitems_vacuum(Relation rel, Buffer buf,
-		   OffsetNumber *itemnos, int nitems, BlockNumber lastBlockVacuumed);
+					OffsetNumber *itemnos, int nitems,
+					BlockNumber lastBlockVacuumed);
 extern int	_bt_pagedel(Relation rel, Buffer buf, BTStack stack);
 
 /*
@@ -619,8 +662,11 @@ extern ScanKey _bt_mkscankey(Relation rel, IndexTuple itup);
 extern ScanKey _bt_mkscankey_nodata(Relation rel);
 extern void _bt_freeskey(ScanKey skey);
 extern void _bt_freestack(BTStack stack);
+extern void _bt_preprocess_array_keys(IndexScanDesc scan);
+extern void _bt_start_array_keys(IndexScanDesc scan, ScanDirection dir);
+extern bool _bt_advance_array_keys(IndexScanDesc scan, ScanDirection dir);
 extern void _bt_preprocess_keys(IndexScanDesc scan);
-extern bool _bt_checkkeys(IndexScanDesc scan,
+extern IndexTuple _bt_checkkeys(IndexScanDesc scan,
 			  Page page, OffsetNumber offnum,
 			  ScanDirection dir, bool *continuescan);
 extern void _bt_killitems(IndexScanDesc scan, bool haveLock);

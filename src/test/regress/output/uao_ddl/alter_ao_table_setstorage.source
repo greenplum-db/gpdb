@@ -81,6 +81,25 @@ not NULL AND visimapidxid is not NULL AND relid='sto_alt_uao1_setstorage'::regcl
               1
 (1 row)
 
+-- Run another reorganize to confirm that the relcache has been invalidated
+-- when we changed the value of this table's gp_distribution_policy. If the
+-- relcache wasn't invalidated by the previous ALTER TABLE command, then the
+-- table will revert to the original distribution policy.
+ALTER TABLE sto_alt_uao1_setstorage SET WITH (reorganize='true');
+SELECT gp_segment_id, attrnums, policytype FROM gp_distribution_policy WHERE
+localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass
+UNION
+SELECT gp_segment_id, attrnums, policytype
+FROM gp_dist_random('gp_distribution_policy') WHERE
+localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass;
+ gp_segment_id | attrnums | policytype 
+---------------+----------+------------
+            -1 | {2}      | p
+             0 | {2}      | p
+             1 | {2}      | p
+             2 | {2}      | p
+(4 rows)
+
 update sto_alt_uao1_setstorage set numeric_col = -numeric_col;
 delete from sto_alt_uao1_setstorage where numeric_col = 0;
 select * from sto_alt_uao1_setstorage;
@@ -94,7 +113,7 @@ set gp_select_invisible=true;
 select count(*) from sto_alt_uao1_setstorage;
  count 
 -------
-     9
+     6
 (1 row)
 
 set gp_select_invisible=false;

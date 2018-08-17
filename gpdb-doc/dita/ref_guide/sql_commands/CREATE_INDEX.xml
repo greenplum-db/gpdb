@@ -95,9 +95,9 @@
                                                 support multicolumn indexes. Up to 32 fields can be
                                                 specified by default. Only B-tree currently supports
                                                 unique indexes.</pd>
-                                        <pd>GPORCA supports only B-tree and bitmap indexes. GPORCA
-                                                ignores indexes created with unsupported indexing
-                                                methods.</pd>
+                                        <pd>GPORCA supports only B-tree, bitmap, and GiST indexes.
+                                                GPORCA ignores indexes created with unsupported
+                                                indexing methods.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>

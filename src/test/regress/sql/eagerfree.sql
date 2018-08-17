@@ -128,6 +128,9 @@ and smallt.d = '2011-01-04'::date;
 explain analyze select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
 and smallt.d = '2011-01-04'::date;
 
+-- IndexOnlyScan
+explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as dummy from pg_class c;
+
 -- BitmapScan
 -- start_ignore
 -- Known_opt_diff: This test is only here for the planner. It doesn't exercise eagerfree in ORCA plans

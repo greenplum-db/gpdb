@@ -20,7 +20,7 @@ $$ language plpgsql VOLATILE;
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 create table store_session_id(a int, sess_id int);
 -- adding `0` as first column as the distribution column and add this tuple to segment 0
-1: insert into store_session_id select 0, sess_id from pg_stat_activity where procpid = pg_backend_pid();
+1: insert into store_session_id select 0, sess_id from pg_stat_activity where pid = pg_backend_pid();
 -- suspend to hit commit-prepared point on segment (as we are
 -- interested in testing Commit here and not really Prepare)
 select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', 2);
@@ -37,7 +37,7 @@ select gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
 0U: select wait_for_replication(200);
 -- hitting this fault, is checked for test validation
 select gp_inject_fault_infinite('sync_rep_query_cancel', 'skip', 2);
-0U: select pg_cancel_backend(procpid) from pg_stat_activity where waiting_reason='replication' and sess_id in (select sess_id from store_session_id);
+0U: select pg_cancel_backend(pid) from pg_stat_activity where waiting_reason='replication' and sess_id in (select sess_id from store_session_id);
 -- EXPECT: hit this fault for QueryCancelPending
 select gp_wait_until_triggered_fault('sync_rep_query_cancel', 1, 2);
 -- EXPECT: the query is still in waiting mode, to verify the cancel is ignored.

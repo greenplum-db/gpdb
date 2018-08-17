@@ -192,19 +192,16 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..436.30 rows=8013 width=129)
+   ->  Table Scan on geometrictypes  (cost=0.00..432.44 rows=2671 width=129)
          Filter: c ~= '<(1255,7955),1227>'::circle
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Optimizer: PQO version 2.68.0
+(4 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -212,19 +209,16 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..436.30 rows=8013 width=129)
+   ->  Table Scan on geometrictypes  (cost=0.00..432.44 rows=2671 width=129)
          Filter: b ~= '(7352,7352),(7350,-3128)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Optimizer status: PQO version 2.64.0
+(4 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -232,19 +226,16 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..436.30 rows=8013 width=129)
+   ->  Table Scan on geometrictypes  (cost=0.00..432.44 rows=2671 width=129)
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Optimizer: PQO version 2.68.0
+(4 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test06_createIndexes.sql
 -- ----------------------------------------------------------------------
@@ -264,6 +255,7 @@ CREATE INDEX gt_index_p ON geometricTypes USING GIST (p);
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
  seed  |         c          |            b            |             p             
@@ -271,19 +263,17 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: c ~= '<(1255,7955),1227>'::circle
          Filter: c ~= '<(1255,7955),1227>'::circle
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -291,19 +281,17 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
          Filter: b ~= '(7352,7352),(7350,-3128)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -311,19 +299,17 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test08_reindex.sql
 -- ----------------------------------------------------------------------
@@ -362,6 +348,7 @@ INSERT INTO gone (seed, already_gone, too_far_gone, paragon)
  ;
  
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 -- Create an index; use the index; then roll back.
 BEGIN WORK;
 CREATE INDEX gone_around_the_bend ON gone USING GiST (already_gone);
@@ -375,16 +362,17 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE already_gone ~= SeedToCircle(857);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using gone_around_the_bend on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: already_gone ~= '<(-3176,7824),3174>'::circle
          Filter: already_gone ~= '<(-3176,7824),3174>'::circle
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
+SET optimizer_enable_tablescan = True;
 -- Should not use the index, since we rolled back the statement that created 
 -- the index.
 SELECT * FROM gone 
@@ -401,10 +389,10 @@ EXPLAIN SELECT * FROM gone
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
    ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
          Filter: already_gone ~= '<(-3176,7824),3174>'::circle
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Optimizer: PQO version 2.68.0
+(4 rows)
 
+SET optimizer_enable_tablescan = False;
 CREATE INDEX polly_gone ON gone USING GiST (paragon);
 BEGIN WORK;
 ALTER INDEX polly_gone RENAME TO polly_wanna_cracker;
@@ -418,13 +406,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE paragon ~= SeedToPolygon(858);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using polly_wanna_cracker on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
          Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
@@ -438,13 +426,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE paragon ~= SeedToPolygon(858);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using polly_gone on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
          Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 CREATE INDEX box_of_rain ON gone USING GiST (too_far_gone) 
@@ -462,13 +450,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
@@ -481,13 +469,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 BEGIN WORK;
@@ -501,13 +489,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
@@ -523,13 +511,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
@@ -544,13 +532,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 REINDEX TABLE gone;
@@ -563,13 +551,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 ROLLBACK WORK;
@@ -582,13 +570,13 @@ SELECT * FROM gone
 
 EXPLAIN SELECT * FROM gone 
  WHERE too_far_gone ~= SeedToBox(859);
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..433.64 rows=4000 width=129)
-   ->  Table Scan on gone  (cost=0.00..431.72 rows=1334 width=129)
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8003.28 rows=4000 width=129)
+   ->  Index Scan using box_of_rain on gone  (cost=0.00..8001.36 rows=1334 width=129)
+         Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
          Filter: too_far_gone ~= '(7342,8385),(7338,6538)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
 DROP TABLE IF EXISTS gone;
@@ -605,6 +593,7 @@ DROP TABLE IF EXISTS gone;
 --     statements.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
 SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
  seed  |         c          |            b            |             p             
@@ -612,19 +601,17 @@ SELECT * FROM geometricTypes
  10001 | <(1255,7955),1227> | (1255,8445),(1227,7955) | ((1255,7955),(1227,8445))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE c ~= SeedToCircle(10001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: c ~= '<(1255,7955),1227>'::circle
          Filter: c ~= '<(1255,7955),1227>'::circle
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
  seed |         c          |            b             |             p              
@@ -632,19 +619,17 @@ SELECT * FROM geometricTypes
  1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE b ~= SeedToBox(1001);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
          Filter: b ~= '(7352,7352),(7350,-3128)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
 SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
  seed |         c          |            b             |             p              
@@ -652,26 +637,258 @@ SELECT * FROM geometricTypes
  3456 | <(4679,8579),4670> | (4679,8579),(4670,-3232) | ((4679,8579),(4670,-3232))
 (1 row)
 
--- start_ignore
 EXPLAIN SELECT * FROM geometricTypes 
  WHERE p ~= SeedToPolygon(3456);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.40 rows=120117 width=129)
-   ->  Table Scan on geometrictypes  (cost=0.00..452.65 rows=40039 width=129)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16031.38 rows=8013 width=129)
+   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..16027.52 rows=2671 width=129)
+         Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer: PQO version 2.68.0
 (5 rows)
 
--- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: test11_multiple_filters.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This does a few SELECT statements as a brief sanity check that the 
+--     indexes are working correctly when there are multple predicates in the
+--     where clause.  Furthermore, we request EXPLAIN info for each SELECT.  
+--     In this script, we ignore the output of the EXPLAIN commands, but a 
+--     later part of the test checks that we used an index scan rather than 
+--     a sequential scan when executing the SELECT statements.
+-- ----------------------------------------------------------------------------
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+ seed  |          c          |            b             |             p              
+-------+---------------------+--------------------------+----------------------------
+ 19510 | <(-3197,7903),3150> | (3150,7903),(-3197,7679) | ((-3197,7903),(3150,7679))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE c ~= SeedToCircle(19510) AND c << SeedToCircle(100000);
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6412.55 rows=3205 width=129)
+   ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..6411.01 rows=1069 width=129)
+         Index Cond: c ~= '<(-3197,7903),3150>'::circle AND c << '<(7879,8779),7868>'::circle
+         Filter: c ~= '<(-3197,7903),3150>'::circle AND c << '<(7879,8779),7868>'::circle
+ Optimizer: PQO version 2.68.0
+(5 rows)
+
+SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+ seed |         c          |            b             |             p              
+------+--------------------+--------------------------+----------------------------
+ 1001 | <(7352,7352),7350> | (7352,7352),(7350,-3128) | ((7352,7352),(7350,-3128))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE b ~= SeedToBox(1001) AND b << SeedToBox(101);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6412.55 rows=3205 width=129)
+   ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..6411.01 rows=1069 width=129)
+         Index Cond: b ~= '(7352,7352),(7350,-3128)'::box AND b << '(8479,7579),(8441,-3121)'::box
+         Filter: b ~= '(7352,7352),(7350,-3128)'::box AND b << '(8479,7579),(8441,-3121)'::box
+ Optimizer: PQO version 2.68.0
+(5 rows)
+
+SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+ seed |         c          |            b            |             p             
+------+--------------------+-------------------------+---------------------------
+  345 | <(1252,8252),1274> | (1274,8252),(1252,7975) | ((1252,8252),(1274,7975))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypes 
+ WHERE p ~= SeedToPolygon(345) AND p << SeedToPolygon(34);
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6412.55 rows=3205 width=129)
+   ->  Index Scan using gt_index_p on geometrictypes  (cost=0.00..6411.01 rows=1069 width=129)
+         Index Cond: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
+         Filter: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
+ Optimizer: PQO version 2.68.0
+(5 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test12_partition.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests partition tables with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE geometricTypesPartition (seed INTEGER, c CIRCLE, b BOX, p POLYGON) 
+PARTITION BY range(seed) (Start(1) end(3) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'seed' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_1" for table "geometrictypespartition"
+NOTICE:  CREATE TABLE will create partition "geometrictypespartition_1_prt_2" for table "geometrictypespartition"
+INSERT INTO geometricTypesPartition (seed, c, b, p) 
+ SELECT x%2 + 1, 
+   SeedToCircle(x), 
+   SeedToBox(x), 
+   SeedToPolygon(x)
+  FROM generate_series(1, 3000)x
+ ;
+CREATE INDEX gt_index_c_part ON geometricTypesPartition USING GIST (c);
+NOTICE:  building index for child partition "geometrictypespartition_1_prt_1"
+NOTICE:  building index for child partition "geometrictypespartition_1_prt_2"
+SET enable_seqscan = False;
+SET optimizer_enable_tablescan = False;
+SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+ seed |          c          |            b             |             p              
+------+---------------------+--------------------------+----------------------------
+    2 | <(8479,-3121),8441> | (8479,7579),(8441,-3121) | ((8479,-3121),(8441,7579))
+(1 row)
+
+EXPLAIN SELECT * FROM geometricTypesPartition 
+ WHERE c ~= SeedToCircle(101);
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.01 rows=1 width=68)
+   ->  Sequence  (cost=0.00..0.00 rows=1 width=68)
+         ->  Partition Selector for geometrictypespartition (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Bitmap Table Scan on geometrictypespartition (dynamic scan id: 1)  (cost=0.00..0.00 rows=1 width=68)
+               Recheck Cond: c ~= '<(8479,-3121),8441>'::circle
+               ->  Dynamic Bitmap Index Scan on gt_index_c_part_1_prt_1  (cost=0.00..0.00 rows=0 width=0)
+                     Index Cond: c ~= '<(8479,-3121),8441>'::circle
+ Optimizer: PQO version 2.68.0
+(9 rows)
+
+DROP TABLE IF EXISTS geometricTypesPartition;
+-- ----------------------------------------------------------------------
+-- Test: test13_textsearch.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests full text search with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements.
+-- ----------------------------------------------------------------------------
+CREATE TABLE textSearch (seed INTEGER, t tsvector);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'seed' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX text_index ON textSearch USING GIST (t);
+INSERT INTO textSearch VALUES (1, 'test');
+INSERT INTO textSearch VALUES (2, 'test');
+INSERT INTO textSearch VALUES (2, 't');
+INSERT INTO textSearch VALUES (1, 'est');
+INSERT INTO textSearch VALUES (2, 'te');
+INSERT INTO textSearch VALUES (1, 'st');
+INSERT INTO textSearch VALUES (2, 'tt');
+INSERT INTO textSearch VALUES (1, 'hello');
+INSERT INTO textSearch VALUES (3, 'world');
+INSERT INTO textSearch VALUES (4, 'orca');
+INSERT INTO textSearch VALUES (3, 'gpdb');
+INSERT INTO textSearch VALUES (4, 'gist');
+INSERT INTO textSearch VALUES (3, 'cool');
+SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+ seed |   t    
+------+--------
+    1 | 'test'
+    2 | 'test'
+(2 rows)
+
+EXPLAIN SELECT * FROM textSearch 
+ WHERE t @@ to_tsquery('test'); 
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=17)
+   ->  Index Scan using text_index on textsearch  (cost=0.00..2.00 rows=1 width=17)
+         Index Cond: t @@ '''test'''::tsquery
+         Filter: t @@ '''test'''::tsquery
+ Optimizer: PQO version 2.68.0
+(5 rows)
+
+DROP TABLE IF EXISTS textSearch;
+-- ----------------------------------------------------------------------
+-- Test: test14_performance.sql
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- PURPOSE:
+--     This tests performance with GiST indexes as a brief sanity check
+--     that the indexes are working correctly. Furthermore, we request EXPLAIN info
+--     for each SELECT.  In this script, we ignore the output of the EXPLAIN
+--     commands, but a later part of the test checks that we used an index 
+--     scan rather than a sequential scan when executing the SELECT 
+--     statements. This test should not be taking longer than a couple of 
+--     seconds. If it goes for a table scan/seq scan, then this query will take
+--     at least 70x times longer. 
+-- ----------------------------------------------------------------------------
+SET optimizer_enable_tablescan = TRUE;
+CREATE TABLE gist_tbl (a int, p polygon);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE gist_tbl2 (b int, p polygon);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX poly_index ON gist_tbl USING gist(p);
+INSERT INTO gist_tbl SELECT i, polygon(box(point(i, i+2),point(i+4,
+i+6))) FROM generate_series(1,50000)i;
+INSERT INTO gist_tbl2 SELECT i, polygon(box(point(i+1, i+3),point(i+5,
+i+7))) FROM generate_series(1,50000)i;
+ANALYZE gist_tbl;
+ANALYZE gist_tbl2;
+SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
+ count 
+-------
+ 49999
+(1 row)
+
+EXPLAIN SELECT count(*) FROM gist_tbl, gist_tbl2 
+ WHERE gist_tbl.p <@ gist_tbl2.p;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..21623779.93 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..21623779.93 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..21623779.93 rows=1 width=8)
+               ->  Nested Loop  (cost=0.00..21623779.93 rows=333840193 width=1)
+                     Join Filter: true
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..525.84 rows=50038 width=101)
+                           ->  Table Scan on gist_tbl2  (cost=0.00..432.24 rows=16680 width=101)
+                     ->  Bitmap Table Scan on gist_tbl  (cost=0.00..21621461.63 rows=6672 width=1)
+                           Recheck Cond: p <@ gist_tbl2.p
+                           ->  Bitmap Index Scan on poly_index  (cost=0.00..0.00 rows=0 width=0)
+                                 Index Cond: p <@ gist_tbl2.p
+ Optimizer: PQO version 2.68.0
+(12 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema qp_gist_indexes4 cascade;
-NOTICE:  drop cascades to function seedtopolygon(integer)
-NOTICE:  drop cascades to function seedtocircle(integer)
-NOTICE:  drop cascades to function seedtobox(integer)
-NOTICE:  drop cascades to function seedtoboxastext(integer)
+NOTICE:  drop cascades to 14 other objects
+DETAIL:  drop cascades to function seedtomangledinteger(integer,bytea,bytea)
+drop cascades to function f1(integer)
+drop cascades to function f2(integer)
+drop cascades to function f3(integer)
+drop cascades to function f4(integer)
+drop cascades to function seedtopoint1(integer)
+drop cascades to function seedtopoint2(integer)
+drop cascades to function seedtoboxastext(integer)
+drop cascades to function seedtobox(integer)
+drop cascades to function seedtocircle(integer)
+drop cascades to function seedtopolygon(integer)
+drop cascades to table geometrictypes
+drop cascades to table gist_tbl
+drop cascades to table gist_tbl2
 -- end_ignore

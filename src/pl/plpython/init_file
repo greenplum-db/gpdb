@@ -1,4 +1,8 @@
 -- start_matchsubs
+m/ \(plpy_elog\.c:\d+\)/
+s/ \(plpy_elog\.c:\d+\)//
+m/ \(plpy_exec\.c:\d+\)/
+s/ \(plpy_exec\.c:\d+\)//
 m/ \(plpython\.c:\d+\)/
 s/ \(plpython\.c:\d+\)//
 -- end_matchsubs
