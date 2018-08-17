@@ -240,11 +240,11 @@
         </plentry>
         <plentry>
           <pt><b>--on-error-continue</b></pt>
-          <pd>Optional. Specify this option to continue the restore operation when an SQL error
-            occurs when creating database metadata (such as tables, roles, or functions) or
-            restoring data. If another type of error occurs, the utility exits. The utility displays
-            an error summary and writes error information to the <codeph>gprestore</codeph> log file
-            and continues the restore operation. </pd>
+          <pd>Optional. Specify this option to continue the restore operation if an SQL error occurs
+            when creating database metadata (such as tables, roles, or functions) or restoring data.
+            If another type of error occurs, the utility exits. The utility displays an error
+            summary and writes error information to the <codeph>gprestore</codeph> log file and
+            continues the restore operation. </pd>
           <pd>The default is to exit on the first error.</pd>
         </plentry>
         <plentry>
