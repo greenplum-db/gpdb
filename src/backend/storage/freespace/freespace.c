@@ -791,8 +791,17 @@ fsm_vacuum_page(Relation rel, FSMAddress addr, bool *eof_p)
 	 * pages, increasing the chances that a later vacuum can truncate the
 	 * relation.
 	 */
+#ifdef MPROTECT_BUFFERS
+	/*
+	 * When mprotect() is used to detect shared buffer access violations, lock
+	 * must be acquired so that write access is allowed on this buffer.
+	 */
+	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+#endif
 	((FSMPage) PageGetContents(page))->fp_next_slot = 0;
-
+#ifdef MPROTECT_BUFFERS
+	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+#endif
 	ReleaseBuffer(buf);
 
 	return max_avail;
