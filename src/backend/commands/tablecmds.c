@@ -14394,6 +14394,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						useExistingColumnAttributes);
+		queryDesc->gpmon_pkt = NULL;
 
 		/* 
 		 * We need to update our snapshot here to make sure we see all
