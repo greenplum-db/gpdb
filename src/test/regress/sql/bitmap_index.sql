@@ -7,6 +7,7 @@ insert into bm_test select i % 10, (i % 10)::text  from generate_series(1, 100) 
 create index bm_test_idx on bm_test using bitmap (i);
 select count(*) from bm_test where i=1;
 select count(*) from bm_test where i in(1, 2);
+select count(*) from bm_test where i in(1, 8); -- tuple with i = 1 and i = 8 is on different segments
 select * from bm_test where i > 10;
 reindex index bm_test_idx;
 select count(*) from bm_test where i in(1, 2);
