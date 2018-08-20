@@ -124,7 +124,7 @@ function _main() {
 	time setup_gpadmin_user
 	time install_mapr_client
 	time configure
-	sed -i s/1024/unlimited/ /etc/security/limits.d/90-nproc.conf
+	sed -i s/\(1024\|4096\)/unlimited/ /etc/security/limits.d/*-nproc.conf
 	time install_gpdb
 	time make_cluster
 	time copy_jar_to_mapr_host
