@@ -833,44 +833,6 @@ bool isGreenplumDbOprHashable(Oid oprid)
 }
 
 /*
- * is_restrictinfo_hashjoinable
- *	  If the restrictinfo's clause is hashjoinable, return true.
- */
-bool
-is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
-{
-	Expr	   *clause = restrictinfo->clause;
-	Oid			opno;
-
-	/**
-	 * If this is a IS NOT FALSE boolean test, we can peek underneath.
-	 */
-	if (IsA(clause, BooleanTest))
-	{
-		BooleanTest *bt = (BooleanTest *) clause;
-
-		if (bt->booltesttype == IS_NOT_FALSE)
-		{
-			clause = bt->arg;
-		}
-	}
-
-	if (restrictinfo->pseudoconstant)
-		return false;
-	if (!is_opclause(clause))
-		return false;
-	if (list_length(((OpExpr *) clause)->args) != 2)
-		return false;
-
-	opno = ((OpExpr *) clause)->opno;
-
-	if (isGreenplumDbOprHashable(opno))
-		return true;
-	else
-		return false;
-}
-
-/*
  * fnv1_32_buf - perform a 32 bit FNV 1 hash on a buffer
  *
  * input:

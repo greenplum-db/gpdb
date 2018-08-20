@@ -94,10 +94,6 @@ extern bool isGreenplumDbHashable(Oid typide);
 extern bool isGreenplumDbOprHashable(Oid oprid);
 
 /*
- * Return true if the RestrictInfo is hashable internally in Greenplum Database.
- */
-extern bool is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo);
-/*
  * Return true if the Oid is an array type.  This can be used prior
  *   to hashing the datum because array typeoids are expected to
  *   have been converted to any array oid.

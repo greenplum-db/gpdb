@@ -69,4 +69,9 @@ cdbpath_rows(PlannerInfo *root, Path *path)
     return rows;
 }                               /* cdbpath_rows */
 
+/*
+ * Return true if the RestrictInfo is hashable internally in Greenplum Database.
+ */
+extern bool is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo);
+
 #endif   /* CDBPATH_H */
