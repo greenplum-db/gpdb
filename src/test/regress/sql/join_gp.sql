@@ -269,6 +269,23 @@ insert into SECO_t2 values(11 ,'2018-1-11'::timestamp);
 
 select * from SECO_t1 t1 full outer join SECO_t2 t2 on T1.id = T2.id and T1.field_dt = t2.field_tms;
 
+-- test float type
+set enable_nestloop to off;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+create table test_float1(id int, data float4)  DISTRIBUTED BY (data);
+create table test_float2(id int, data float8)  DISTRIBUTED BY (data);
+insert into test_float1 values(1, 10), (2, 20);
+insert into test_float2 values(3, 10), (4, 20);
+select t1.id, t1.data, t2.id, t2.data from test_float1 t1, test_float2 t2 where t1.data = t2.data;
+
+-- test int type
+create table test_int1(id int, data int4)  DISTRIBUTED BY (data);
+create table test_int2(id int, data int8)  DISTRIBUTED BY (data);
+insert into test_int1 values(1, 10), (2, 20);
+insert into test_int2 values(3, 10), (4, 20);
+select t1.id, t1.data, t2.id, t2.data from test_int1 t1, test_int2 t2 where t1.data = t2.data;
+
 -- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

@@ -769,7 +769,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
                         JoinType        jointype,           /* JOIN_INNER/FULL/LEFT/RIGHT/IN */
                         Path          **p_outer_path,       /* INOUT */
                         Path          **p_inner_path,       /* INOUT */
-                        List           *mergeclause_list,   /* equijoin RestrictInfo list */
+                        List           *redistribution_clauses,   /* equijoin RestrictInfo list */
                         List           *outer_pathkeys,
                         List           *inner_pathkeys,
                         bool            outer_require_existing_order,
@@ -917,7 +917,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
 
         /* Redistribute single rel if joining on other rel's partitioning key */
         else if (cdbpath_match_preds_to_partkey(root,
-                                                mergeclause_list,
+                                                redistribution_clauses,
                                                 other->locus,
                                                 &single->move_to))  /* OUT */
         {}
@@ -930,7 +930,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
         /* Redistribute both rels on equijoin cols. */
         else if (!other->require_existing_order &&
                  cdbpath_partkeys_from_preds(root,
-                                             mergeclause_list,
+                                             redistribution_clauses,
                                              single->path,
                                              &single->move_to,  /* OUT */
                                              &other->move_to))  /* OUT */
@@ -965,7 +965,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
     /*
      * No motion if partitioned alike and joining on the partitioning keys.
      */
-    else if (cdbpath_match_preds_to_both_partkeys(root, mergeclause_list,
+    else if (cdbpath_match_preds_to_both_partkeys(root, redistribution_clauses,
                                                   outer.locus, inner.locus))
         return cdbpathlocus_join(outer.locus, inner.locus);
 
@@ -994,7 +994,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
         /* If joining on larger rel's partitioning key, redistribute smaller. */
         if (!small->require_existing_order &&
             cdbpath_match_preds_to_partkey(root,
-                                           mergeclause_list,
+                                           redistribution_clauses,
                                            large->locus,
                                            &small->move_to))    /* OUT */
         {}
@@ -1010,7 +1010,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
         /* If joining on smaller rel's partitioning key, redistribute larger. */
         else if (!large->require_existing_order &&
                  cdbpath_match_preds_to_partkey(root,
-                                                mergeclause_list,
+                                                redistribution_clauses,
                                                 small->locus,
                                                 &large->move_to))   /* OUT */
         {}
@@ -1025,7 +1025,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
         else if (!small->require_existing_order &&
                  !large->require_existing_order &&
                  cdbpath_partkeys_from_preds(root,
-                                             mergeclause_list,
+                                             redistribution_clauses,
                                              large->path,
                                              &large->move_to,
                                              &small->move_to))

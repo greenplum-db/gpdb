@@ -17,6 +17,7 @@
 
 #include "access/tuptoaster.h"
 #include "utils/builtins.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "parser/parse_type.h"
 #include "utils/numeric.h"
@@ -29,6 +30,7 @@
 #include "utils/nabstime.h"
 #include "utils/varbit.h"
 #include "utils/uuid.h"
+#include "optimizer/clauses.h"
 #include "fmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
@@ -780,6 +782,92 @@ isGreenplumDbHashable(Oid typid)
 		default:
 			return false;
 	}
+}
+
+bool isGreenplumDbOprHashable(Oid oprid)
+{
+	switch(oprid)
+	{
+		case Int2EqualOperator:
+		case Int4EqualOperator:
+		case Int8EqualOperator:
+		case Int24EqualOperator:
+		case Int28EqualOperator:
+		case Int42EqualOperator:
+		case Int48EqualOperator:
+		case Int82EqualOperator:
+		case Int84EqualOperator:
+		case Float4EqualOperator:
+		case Float8EqualOperator:
+		case NumericEqualOperator:
+		case CharEqualOperator:
+		case BPCharEqualOperator:
+		case TextEqualOperator:
+		case ByteaEqualOperator:
+		case NameEqualOperator:
+		case OidEqualOperator:
+		case TIDEqualOperator:
+		case TimestampEqualOperator:
+		case TimestampTZEqualOperator:
+		case DateEqualOperator:
+		case TimeEqualOperator:
+		case TimeTZEqualOperator:
+		case IntervalEqualOperator:
+		case AbsTimeEqualOperator:
+		case RelTimeEqualOperator:
+		case TIntervalEqualOperator:
+		case InetEqualOperator:
+		case MacAddrEqualOperator:
+		case BitEqualOperator:
+		case VarbitEqualOperator:
+		case BooleanEqualOperator:
+		case ARRAY_EQ_OP:
+		case OidVectEqualOperator:
+		case CashEqualOperator:
+		case UuidEqualOperator:
+		case ComplexEqualOperator:
+			return true;
+		default:
+			return false;
+	}
+}
+
+/*
+ * is_restrictinfo_hashjoinable
+ *	  If the restrictinfo's clause is hashjoinable, return true.
+ */
+bool
+is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
+{
+	Expr	   *clause = restrictinfo->clause;
+	Oid			opno;
+
+	/**
+	 * If this is a IS NOT FALSE boolean test, we can peek underneath.
+	 */
+	if (IsA(clause, BooleanTest))
+	{
+		BooleanTest *bt = (BooleanTest *) clause;
+
+		if (bt->booltesttype == IS_NOT_FALSE)
+		{
+			clause = bt->arg;
+		}
+	}
+
+	if (restrictinfo->pseudoconstant)
+		return false;
+	if (!is_opclause(clause))
+		return false;
+	if (list_length(((OpExpr *) clause)->args) != 2)
+		return false;
+
+	opno = ((OpExpr *) clause)->opno;
+
+	if (isGreenplumDbOprHashable(opno))
+		return true;
+	else
+		return false;
 }
 
 /*
