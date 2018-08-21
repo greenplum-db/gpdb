@@ -119,7 +119,7 @@ makeCdbHash(int numsegs)
 	 */
 	switch(MyDatabaseHashMethod)
 	{
-		case MODULE_HASH_METHOD:
+		case MODULO_HASH_METHOD:
 			h->reducealg = ispowof2(numsegs) ? REDUCE_BITMASK : REDUCE_LAZYMOD;
 			break;
 		case JUMP_HASH_METHOD:

@@ -20,7 +20,7 @@
  * if change here, please also change pg_database.h
  */
 #define INVALID_HASH_METHOD      (-1)
-#define MODULE_HASH_METHOD       0
+#define MODULO_HASH_METHOD       0
 #define JUMP_HASH_METHOD         1
 
 /*
