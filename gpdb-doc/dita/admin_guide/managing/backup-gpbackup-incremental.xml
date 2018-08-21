@@ -9,7 +9,8 @@
       incremental backups of append-optimized tables and restoring from incremental backups. An
       incremental backup backs up all specified heap tables and backs up append-optimized tables
       (including append-optimized, column-oriented tables) only if the tables have changed. For
-      partitioned append-optimized tables, only the changed partitions are backed up. </p>
+      example, if a row of an append-optimized table has changed, the table is backed up. For
+      partitioned append-optimized tables, only the changed leaf partitions are backed up. </p>
     <p>Incremental backups are efficient when the total amount of data in append-optimized tables or
       table partitions that changed is small compared to the data that has not changed since the
       last backup. </p>
