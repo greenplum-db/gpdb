@@ -31,7 +31,7 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 
-static List *pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum);
+static List *pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum, int *logicalNotOpsNum);
 static void pxf_free_filter(PxfFilterDesc * filter);
 static char *pxf_serialize_filter_list(List *filters);
 static bool opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc * filter);
@@ -292,7 +292,7 @@ pxf_free_expression_items_list(List *expressionItems)
  *
  */
 static List *
-pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
+pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum, int *logicalNotOpsNum)
 {
 	ExpressionItem *expressionItem = NULL;
 	List	   *result = NIL;
@@ -326,11 +326,11 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 				}
 			case T_BoolExpr:
 				{
-					(*logicalOpsNum)++;
+					//(*logicalOpsNum)++;
 					BoolExpr   *expr = (BoolExpr *) node;
 
 					elog(DEBUG1, "pxf_make_expression_items_list: found T_BoolExpr; make recursive call");
-					List	   *inner_result = pxf_make_expression_items_list(expr->args, node, logicalOpsNum);
+					List	   *inner_result = pxf_make_expression_items_list(expr->args, node, logicalOpsNum, logicalNotOpsNum);
 
 					elog(DEBUG1, "pxf_make_expression_items_list: recursive call end");
 
@@ -350,10 +350,14 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 						}
 					}
 
+					// We set the logicalOpsNum based on the number of children at this level
+					// We keep track of num. of OR and AND operators using logicalOpsNum
+					// We keep track of num. of NOT operators using logicalNotOpsNum;
 					if (expr->boolop == NOT_EXPR)
 					{
 						for (int i = 0; i < childNodesNum; i++)
 						{
+							(*logicalNotOpsNum)++;
 							result = lappend(result, expressionItem);
 						}
 					}
@@ -361,6 +365,7 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 					{
 						for (int i = 0; i < childNodesNum - 1; i++)
 						{
+							(*logicalOpsNum)++;
 							result = lappend(result, expressionItem);
 						}
 					}
@@ -1285,7 +1290,8 @@ serializePxfFilterQuals(List *quals)
 	}
 
 	int			logicalOpsNum = 0;
-	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
+	int			logicalNotOpsNum = 0;
+	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum, &logicalNotOpsNum);
 
 	/*
 	 * The 'expressionItems' are always explicitly AND'ed. If there are extra
@@ -1293,14 +1299,15 @@ serializePxfFilterQuals(List *quals)
 	 * need to add AND items only for "meaningful" expression items (not
 	 * including these logical operations)
 	 */
-	if (expressionItems)
-	{
-		int			extraAndOperatorsNum = expressionItems->length - 1 - logicalOpsNum;
 
-		add_extra_and_expression_items(expressionItems, extraAndOperatorsNum, &extraBoolExprNodePointer);
+	// Expressions expression corresponds to the number of expressions which don't have corresponding logical operator
+	// Example P1 && P2 && P3
+	bool isEnrichRequired = logicalOpsNum == 0 && expressionItems && (expressionItems->length - logicalNotOpsNum) > 1;
+	if (isEnrichRequired) {
+		int missingAndExpressionCount = expressionItems->length - logicalNotOpsNum - 1;
+		add_extra_and_expression_items(expressionItems, missingAndExpressionCount, &extraBoolExprNodePointer);
 	}
-
-	result = pxf_serialize_filter_list(expressionItems);
+	result  = pxf_serialize_filter_list(expressionItems);
 
 	if (extraBoolExprNodePointer)
 	{
