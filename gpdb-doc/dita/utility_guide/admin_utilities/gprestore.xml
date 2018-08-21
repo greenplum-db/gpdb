@@ -97,6 +97,7 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. Include
             this option when you specify a custom backup directory with
             <codeph>gpbackup</codeph>.</pd>
+          <pd>You cannot combine this option with the option <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--create-db</b></pt>
@@ -256,6 +257,7 @@
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
+          <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
               href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
               Plugins</xref>.</pd>

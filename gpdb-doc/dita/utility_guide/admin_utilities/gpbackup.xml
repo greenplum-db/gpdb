@@ -87,6 +87,7 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. When you
             specify a custom backup directory, files are copied to these paths in subdirectories of
             the backup directory.</pd>
+          <pd>You cannot combine this option with the option <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--compression-level</b>
@@ -248,6 +249,7 @@
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
+          <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
               href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
               Plugins</xref>.</pd>
