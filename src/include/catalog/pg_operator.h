@@ -516,6 +516,7 @@ DATA(insert OID = 1117 (  "-"		PGNSP PGUID b f f 700 701 701  0	 0 float48mi - -
 DATA(insert OID = 1118 (  "/"		PGNSP PGUID b f f 700 701 701  0	 0 float48div - - ));
 DATA(insert OID = 1119 (  "*"		PGNSP PGUID b f f 700 701 701 1129	 0 float48mul - - ));
 DATA(insert OID = 1120 (  "="		PGNSP PGUID b t t  700	701  16 1130 1121 float48eq eqsel eqjoinsel ));
+#define Float48EqualOperator 1120
 DATA(insert OID = 1121 (  "<>"		PGNSP PGUID b f f  700	701  16 1131 1120 float48ne neqsel neqjoinsel ));
 DATA(insert OID = 1122 (  "<"		PGNSP PGUID b f f  700	701  16 1133 1125 float48lt scalarltsel scalarltjoinsel ));
 DATA(insert OID = 1123 (  ">"		PGNSP PGUID b f f  700	701  16 1132 1124 float48gt scalargtsel scalargtjoinsel ));
@@ -528,6 +529,7 @@ DATA(insert OID = 1127 (  "-"		PGNSP PGUID b f f 701 700 701  0	 0 float84mi - -
 DATA(insert OID = 1128 (  "/"		PGNSP PGUID b f f 701 700 701  0	 0 float84div - - ));
 DATA(insert OID = 1129 (  "*"		PGNSP PGUID b f f 701 700 701 1119	 0 float84mul - - ));
 DATA(insert OID = 1130 (  "="		PGNSP PGUID b t t  701	700  16 1120 1131 float84eq eqsel eqjoinsel ));
+#define Float84EqualOperator 1130
 DATA(insert OID = 1131 (  "<>"		PGNSP PGUID b f f  701	700  16 1121 1130 float84ne neqsel neqjoinsel ));
 DATA(insert OID = 1132 (  "<"		PGNSP PGUID b f f  701	700  16 1123 1135 float84lt scalarltsel scalarltjoinsel ));
 DATA(insert OID = 1133 (  ">"		PGNSP PGUID b f f  701	700  16 1122 1134 float84gt scalargtsel scalargtjoinsel ));

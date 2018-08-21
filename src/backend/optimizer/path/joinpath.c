@@ -1128,7 +1128,7 @@ select_cdb_redistribute_clauses(PlannerInfo *root,
 		if (isouterjoin && restrictinfo->is_pushed_down)
 			continue;
 
-		if (!is_restrictinfo_hashjoinable(restrictinfo))
+		if (!has_redistributable_clause(restrictinfo))
 			continue;
 
 		if (!restrictinfo->can_join ||

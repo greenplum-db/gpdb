@@ -91,7 +91,7 @@ extern bool isGreenplumDbHashable(Oid typide);
 /*
  * Return true if the operator Oid is hashable internally in Greenplum Database.
  */
-extern bool isGreenplumDbOprHashable(Oid oprid);
+extern bool isGreenplumDbOprRedistributable(Oid oprid);
 
 /*
  * Return true if the Oid is an array type.  This can be used prior

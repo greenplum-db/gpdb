@@ -1606,11 +1606,11 @@ cdbpath_contains_wts(Path *path)
 
 
 /*
- * is_restrictinfo_hashjoinable
- *	  If the restrictinfo's clause is hashjoinable, return true.
+ * has_redistributable_clause
+ *	  If the restrictinfo's clause is redistributable, return true.
  */
 bool
-is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
+has_redistributable_clause(RestrictInfo *restrictinfo)
 {
 	Expr	   *clause = restrictinfo->clause;
 	Oid			opno;
@@ -1637,7 +1637,7 @@ is_restrictinfo_hashjoinable(RestrictInfo *restrictinfo)
 
 	opno = ((OpExpr *) clause)->opno;
 
-	if (isGreenplumDbOprHashable(opno))
+	if (isGreenplumDbOprRedistributable(opno))
 		return true;
 	else
 		return false;

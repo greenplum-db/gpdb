@@ -715,6 +715,10 @@ typeIsEnumType(Oid typeoid)
 	return res;
 }
 
+/*
+ * isGreenplumDbHashable
+ * return true if a type is hashable in cdb hash
+ */
 bool
 isGreenplumDbHashable(Oid typid)
 {
@@ -784,7 +788,11 @@ isGreenplumDbHashable(Oid typid)
 	}
 }
 
-bool isGreenplumDbOprHashable(Oid oprid)
+/*
+ * isGreenplumDbOprHashable
+ * return true if a operator is redistributable
+ */
+bool isGreenplumDbOprRedistributable(Oid oprid)
 {
 	switch(oprid)
 	{
@@ -821,12 +829,15 @@ bool isGreenplumDbOprHashable(Oid oprid)
 		case BitEqualOperator:
 		case VarbitEqualOperator:
 		case BooleanEqualOperator:
-		case ARRAY_EQ_OP:
 		case OidVectEqualOperator:
 		case CashEqualOperator:
 		case UuidEqualOperator:
 		case ComplexEqualOperator:
 			return true;
+		case ARRAY_EQ_OP:
+		case Float48EqualOperator:
+		case Float84EqualOperator:
+			return false;
 		default:
 			return false;
 	}

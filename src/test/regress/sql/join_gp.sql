@@ -234,6 +234,9 @@ WITH RECURSIVE subdept(id, parent_department, name) AS
 SELECT count(*) FROM subdept;
 
 -- MPP-29458
+-- When we join on a clause with two different types. If one table distribute by one type, the query plan
+-- will redistribute data on another type. But the has values of two types would not be equal. The data will
+-- redistribute to wrong segments.
 create table SECO_t1 (id  numeric(10,0) ,field_dt date) distributed by (id);
 create table SECO_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (id,field_tms);
 
