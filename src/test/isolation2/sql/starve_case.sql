@@ -34,13 +34,13 @@ RETURNS bool AS $$ /*in func*/
 declare /*in func*/
 	num_awaited int := 0; /*in func*/
 	iterations int := 0; /*in func*/
+	sessions_waiting_for_locks int[]; /*in func*/
 begin /*in func*/
 	while num_awaited = 0 and iterations < 20 loop /*in func*/
-		with locks_awaited as /*in func*/
-		(select * from pg_locks where granted = false and gp_segment_id = -1) /*in func*/
+		select array_agg(mppsessionid) into sessions_waiting_for_locks
+			from pg_locks where granted = false and gp_segment_id = -1; /*in func*/
 		select count(*) into num_awaited from starve_helper s where /*in func*/
-		s.name = sess_name and s.sessionid in /*in func*/
-		(select mppsessionid from locks_awaited); /*in func*/
+		s.name = sess_name and s.sessionid = ANY (sessions_waiting_for_locks); /*in func*/
 		perform pg_sleep(.1); /*in func*/
 		iterations := iterations + 1; /*in func*/
 	end loop; /*in func*/
