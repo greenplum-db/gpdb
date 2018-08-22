@@ -774,9 +774,6 @@
                   <codeph>gp_log_format</codeph>
                 </p>
                 <p>
-                  <codeph>gp_max_csv_line_length</codeph>
-                </p>
-                <p>
                   <codeph>gp_reraise_signal</codeph>
                 </p>
               </stentry>

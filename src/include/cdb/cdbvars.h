@@ -173,17 +173,6 @@ extern int			gp_cached_gang_threshold;
 extern int			gp_reject_percent_threshold;
 
 /*
- * gp_max_csv_line_length
- *
- * maximum csv line length for COPY and external tables. It is best to keep
- * the default value of 64K to as it protects against a never ending rejection
- * of valid csv data as a result of a quote related formatting error. however,
- * there may be cases where data lines are indeed larger than 64K and that's
- * when this guc must be increased in order to be able to load the data.
- */
-extern int 			gp_max_csv_line_length;
-
-/*
  * For use while debugging DTM issues: alter MVCC semantics such that
  * "invisible" rows are returned.
  */

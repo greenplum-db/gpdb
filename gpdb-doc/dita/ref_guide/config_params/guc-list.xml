@@ -344,9 +344,6 @@
               <xref href="#gp_log_gang"/>
             </li>
             <li>
-              <xref href="#gp_max_csv_line_length"/>
-            </li>
-            <li>
               <xref href="#gp_max_local_distributed_cache"/>
             </li>
             <li>
@@ -4342,36 +4339,6 @@
             <row>
               <entry colname="col1">csv<p>text</p></entry>
               <entry colname="col2">csv</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_max_csv_line_length">
-    <title>gp_max_csv_line_length</title>
-    <body>
-      <p>The maximum length of a line in a CSV formatted file that will be imported into the system.
-        The default is 1MB (1048576 bytes). Maximum allowed is 4MB (4194304 bytes). The default may
-        need to be increased if using the <i>gp_toolkit</i> administrative schema to read Greenplum
-        Database log files.</p>
-      <table id="gp_max_csv_line_length_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">number of bytes</entry>
-              <entry colname="col2">1048576</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

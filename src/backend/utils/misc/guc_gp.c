@@ -3352,16 +3352,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 
-	{
-		{"gp_max_csv_line_length", PGC_USERSET, EXTERNAL_TABLES,
-			gettext_noop("Maximum allowed length of a csv input data row in bytes"),
-			NULL,
-		},
-		&gp_max_csv_line_length,
-		1 * 1024 * 1024, 32 * 1024, 4 * 1024 * 1024,
-		NULL, NULL, NULL
-	},
-
 	/*
 	 * Solaris doesn't support setting SO_SNDTIMEO, so setting this won't work
 	 * on Solaris (MPP-22526)
