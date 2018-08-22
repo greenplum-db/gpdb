@@ -4600,18 +4600,32 @@ make_result_inplace(NumericVar *var, Numeric result, int in_len)
 		sign = NUMERIC_POS;
 	}
 
-	/* Build the result */
-	len = NUMERIC_HDRSZ + n * sizeof(NumericDigit);
-
-	if(in_len < len)
-		return len;
-
-	/* GPDB_91_MERGE_FIXME: this always uses the "long" format. Is that good? */
-	Assert(result);
-	SET_VARSIZE(result, len);
-	result->choice.n_long.n_sign_dscale =
-		sign | (var->dscale & NUMERIC_DSCALE_MASK);
-	result->choice.n_long.n_weight = weight;
+	/* set result values and flags by var */
+	if (NUMERIC_CAN_BE_SHORT(var->dscale, weight))
+	{
+		len = NUMERIC_HDRSZ_SHORT + n * sizeof(NumericDigit);
+		if(in_len < len)
+			return len;
+		Assert(result);
+		SET_VARSIZE(result, len);
+		result->choice.n_short.n_header =
+				(sign == NUMERIC_NEG ? (NUMERIC_SHORT | NUMERIC_SHORT_SIGN_MASK)
+									 : NUMERIC_SHORT)
+				| (var->dscale << NUMERIC_SHORT_DSCALE_SHIFT)
+				| (weight < 0 ? NUMERIC_SHORT_WEIGHT_SIGN_MASK : 0)
+				| (weight & NUMERIC_SHORT_WEIGHT_MASK);
+	}
+	else
+	{
+		len = NUMERIC_HDRSZ + n * sizeof(NumericDigit);
+		if(in_len < len)
+			return len;
+		Assert(result);
+		SET_VARSIZE(result, len);
+		result->choice.n_long.n_sign_dscale =
+				sign | (var->dscale & NUMERIC_DSCALE_MASK);
+		result->choice.n_long.n_weight = weight;
+	}
 
 	memcpy(NUMERIC_DIGITS(result), digits, n * sizeof(NumericDigit));
 
