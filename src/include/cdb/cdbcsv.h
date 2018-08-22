@@ -16,6 +16,6 @@
 #ifndef CDBCSV_H
 #define CDBCSV_H
 
-#define MAX_GP_MAX_CSV_LINE_LENGTH (4 * 1024 * 1024)
+#define MAX_GP_MAX_CSV_LINE_LENGTH (1024 * 1024 * 1024)
 
 #endif   /* CDBCSV_H */
