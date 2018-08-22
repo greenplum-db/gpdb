@@ -38,6 +38,7 @@ DEFAULT_BACKUP_DIR_PREFIX = 'pt_rebuild_bk_'
 PGPORT=os.environ.get('PGPORT', '5432')
 TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
 BACKUP_RESTORE_LOG = os.path.join('/tmp', 'pt_bkup_restore_' + TIMESTAMP + '.log')
+TRANSACTION_FILES_FILESPACE = 'gp_transaction_files_filespace'
 TRANSACTION_LOG_DIRS = ['pg_clog', 'pg_xlog', 'pg_distributedlog', 'pg_distributedxidmap', 'pg_changetracking']
 NON_EMPTY_TRANSACTION_LOG_DIRS = ['pg_clog', 'pg_xlog', 'pg_distributedlog']
 GLOBAL_PERSISTENT_FILES = defaultdict(defaultdict) # {segment: {dbid1: [file1, file2], dbid2: [file3, file4]}}
@@ -644,6 +645,21 @@ class BackupPersistentTableFiles:
         failures = 0
         for di in self.dbid_info:
             datadir = di.filespace_dirs[SYSTEM_FSOID].rstrip(os.sep)
+            transaction_filespace_path = os.path.join(datadir,
+                                                      TRANSACTION_FILES_FILESPACE)
+
+            # Change datadir if the transaction directories have been moved
+            if os.path.isfile(transaction_filespace_path):
+                try:
+                    with open(transaction_filespace_path) as file:
+                        fs_oid = file.readline().strip()
+
+                except e:
+                    raise('Cannot read file %s. Error: %s' %
+                          (transaction_filespace_path,  str(e)))
+
+                datadir = di.filespace_dirs[int(fs_oid)]
+
             allSrcFiles, allDestFiles = [], []
             for xlog_dir_name in TRANSACTION_LOG_DIRS:
                 xlog_dir = os.path.join(datadir, xlog_dir_name)

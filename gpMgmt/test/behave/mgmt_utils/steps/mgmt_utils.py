@@ -598,6 +598,28 @@ def impl(context, USER, HOST, PORT, config_file, dir):
     run_command(context, cmdStr)
 
 
+@given('a filespace_config_file for filespace "{fs_name}" is created using config file "{config_file}" in directory "{dir}"')
+def impl(context, fs_name, config_file, dir):
+    user = None
+    host = None
+    port = None
+    config_file_path = dir + "/" + config_file
+    create_gpfilespace_config(host, port, user, fs_name, config_file_path, dir)
+
+@given('a filespace is created using config file "{config_file}" in directory "{dir}"')
+def impl(context, config_file, dir):
+    config_file_path = dir + "/" + config_file
+    cmdStr = 'gpfilespace -c "%s"' % config_file_path
+    run_command(context, cmdStr)
+
+
+@given('transaction files are moved to the filespace {fs_name}')
+@then('transaction files are moved to the filespace {fs_name}')
+def impl(context, fs_name):
+    cmdStr = 'gpfilespace  --movetransfilespace "%s"' % fs_name
+    run_command(context, cmdStr)
+
+
 @given('the user modifies the external_table.sql file "{filepath}" with host "{HOST}" and port "{port}"')
 @when('the user modifies the external_table.sql file "{filepath}" with host "{HOST}" and port "{port}"')
 def impl(context, filepath, HOST, port):
