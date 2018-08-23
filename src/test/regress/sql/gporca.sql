@@ -1833,6 +1833,23 @@ reset log_min_duration_statement;
 reset log_statement;
 reset optimizer_enable_ctas;
 
+-- Test to ensure that ORCA produces correct results for a query with an Agg on top of LOJ
+-- start_ignore
+create table input_tab1 (a int, b int);
+create table input_tab2 (c int, d int);
+insert into input_tab1 values (1, 1);
+insert into input_tab1 values (NULL, NULL);
+set optimizer_force_multistage_agg = off;
+set optimizer_force_three_stage_scalar_dqa = off;
+-- end_ignore
+explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
+select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
+
+-- start_ignore
+reset optimizer_force_multistage_agg;
+reset optimizer_force_three_stage_scalar_dqa;
+-- end_ignore
+
 -- start_ignore
 drop table bar;
 -- end_ignore
