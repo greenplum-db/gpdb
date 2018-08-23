@@ -4600,7 +4600,7 @@ make_result_inplace(NumericVar *var, Numeric result, int in_len)
 		sign = NUMERIC_POS;
 	}
 
-	/* set result values and flags by var */
+	/* set result values and flags by var and weight */
 	if (NUMERIC_CAN_BE_SHORT(var->dscale, weight))
 	{
 		len = NUMERIC_HDRSZ_SHORT + n * sizeof(NumericDigit);
