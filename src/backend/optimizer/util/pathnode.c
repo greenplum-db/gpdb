@@ -2834,7 +2834,7 @@ create_hashjoin_path(PlannerInfo *root,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-                     List *hash_inner_and_outer,    /*CDB*/
+                     List *redistribution_clauses,    /*CDB*/
 					 List *hashclauses)
 {
 	HashPath       *pathnode;
@@ -2849,7 +2849,7 @@ create_hashjoin_path(PlannerInfo *root,
 										 jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
-										 hash_inner_and_outer,
+										 redistribution_clauses,
 										 NIL,   /* don't care about ordering */
 										 NIL,
 										 false,
