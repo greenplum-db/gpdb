@@ -24,6 +24,7 @@ test: gp_collation
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
+test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row

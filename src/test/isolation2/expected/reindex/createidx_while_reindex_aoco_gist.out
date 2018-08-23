@@ -27,10 +27,11 @@ DELETE 254
 BEGIN
 1: REINDEX index idx_gist_reindex_aoco;
 REINDEX
-2: create index idx_gist_reindex_aoco2 on reindex_aoco_gist USING Gist(target);
-CREATE
+2&: create index idx_gist_reindex_aoco2 on reindex_aoco_gist USING Gist(target);  <waiting ...>
 1: COMMIT;
 COMMIT
+2<:  <... completed>
+CREATE
 2: COMMIT;
 COMMIT
 3: SELECT COUNT(*) FROM reindex_aoco_gist WHERE id = 1500;

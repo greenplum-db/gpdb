@@ -40,8 +40,9 @@ SELECT 1 AS default_partition_oid_same_on_all_segs from gp_dist_random('pg_class
 DELETE FROM reindex_ao_gist  WHERE id < 128;
 1: BEGIN;
 1: REINDEX index idx_gist_reindex_ao;
-2: create index idx_gist_reindex_ao2 on reindex_ao_gist USING Gist(target);
+2&: create index idx_gist_reindex_ao2 on reindex_ao_gist USING Gist(target);
 1: COMMIT;
+2<:
 2: COMMIT;
 3: SELECT COUNT(*) FROM reindex_ao_gist WHERE id = 1500;
 3: insert into reindex_ao_gist (id, owner, description, property, poli, target) values(1500, 'gpadmin', 'Reindex Concurrency test', '((1500, 1500), (1560, 1580))', '( (111, 112), (114, 115), (110, 110) )', '( (96, 86), 96)' );

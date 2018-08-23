@@ -52,6 +52,7 @@ typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
 #define RangeVarGetRelid(relation, lockmode, missing_ok) \
 	RangeVarGetRelidExtended(relation, lockmode, missing_ok, false, NULL, NULL)
 
+
 extern Oid RangeVarGetRelidExtended(const RangeVar *relation,
 						 LOCKMODE lockmode, bool missing_ok, bool nowait,
 						 RangeVarGetRelidCallback callback,
@@ -61,6 +62,7 @@ extern Oid RangeVarGetAndCheckCreationNamespace(RangeVar *newRelation,
 									 LOCKMODE lockmode,
 									 Oid *existing_relation_id);
 extern void RangeVarAdjustRelationPersistence(RangeVar *newRelation, Oid nspid);
+extern bool RangeVarIsAppendOptimizedTable(RangeVar *relation);
 extern Oid	RelnameGetRelid(const char *relname);
 extern bool RelationIsVisible(Oid relid);
 
