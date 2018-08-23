@@ -40,7 +40,7 @@
           </li>
         </ul></li>
       <li id="im16806gpcc" otherprops="pivotal">
-        <xref href="#topic999" type="topic" format="dita"/>
+        <xref href="#topic999" format="dita"/>
       </li>
       <li id="im16806d">
         <xref href="#topic71717999" type="topic" format="dita"/>
@@ -497,23 +497,21 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
   </topic>
 
   <topic id="topic999" otherprops="pivotal" xml:lang="en">
-    <title>Using Greenplum Command Center to Manage Workloads</title>
+    <title>Using Greenplum Command Center to Manage Resource Groups</title>
     <body>
-      <p>A Greenplum Database workload is a resource group with special assignment
-        capabilities. With Pivotal Greenplum Command Center, an administrator can
-        create and manage workloads, and can define the criteria under which a transaction
-        is assigned to a workload. This capability to assign transactions to workloads
-        based on attributes other than the submitting role is unique to Greenplum Command
-        Center.</p>
-      <p>When you install and configure Greenplum Command Center, Greenplum Database
-        defers the assignment of transactions to resource groups to the workload
-        management component of the tool. You can also define idle session kill rules
-        with Greenplum Command Center, specifying the maximum number of seconds that a
-        session can remain idle before it kills itself. Refer to the
-         <xref href="http://gpcc.docs.pivotal.io/latest" format="html"
-         scope="external">Greenplum Command Center documentation</xref> for more
-         information about creating and managing workloads, transaction assignment,
-         and session kill rules.</p>
+      <p>Using Pivotal Greenplum Command Center, an administrator can create and manage resource
+        groups, change roles' resource groups, and create workload management rules. </p>
+      <p>Workload management rules are defined in Command Center and stored in Greenplum Database.
+        When a transaction is submitted, Greenplum Database calls the workload management database
+        extension to evaluate and apply the rules. </p>
+      <p>Workload management assignment rules assign transactions to different resource groups based
+        on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the
+        transaction to the role's default resource group. Workload management idle session kill
+        rules set the maximum number of seconds that sessions managed by a resource group can remain
+        idle before they are terminated.</p>
+      <p>Refer to the <xref href="http://gpcc.docs.pivotal.io/latest" format="html" scope="external"
+          >Greenplum Command Center documentation</xref> for more information about creating and
+        managing resource groups and workload management rules. </p>
     </body>
   </topic>
 
