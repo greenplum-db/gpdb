@@ -790,7 +790,7 @@ isGreenplumDbHashable(Oid typid)
 
 /*
  * isGreenplumDbOprHashable
- * return true if a operator is redistributable
+ * return true if a operator is redistributable.
  */
 bool isGreenplumDbOprRedistributable(Oid oprid)
 {
