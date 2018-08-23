@@ -18,4 +18,4 @@ params:
   MODE: planner
   ACTION: test
   BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB
-  CONFIGURE_OPTION: --disable-gpcloud --enable-cassert
+  CONFIGURE_OPTION: --disable-gpcloud
