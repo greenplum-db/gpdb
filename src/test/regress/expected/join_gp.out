@@ -412,17 +412,17 @@ SELECT count(*) FROM subdept;
 -- When we join on a clause with two different types. If one table distribute by one type, the query plan
 -- will redistribute data on another type. But the has values of two types would not be equal. The data will
 -- redistribute to wrong segments.
-create table SECO_t1 (id  numeric(10,0) ,field_dt date) distributed by (id);
-create table SECO_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (id,field_tms);
-insert into seco_t1 values(10 ,'2018-1-10');
-insert into seco_t1 values(11 ,'2018-1-11');
-insert into seco_t2 values(10 ,'2018-1-10'::timestamp);
-insert into seco_t2 values(11 ,'2018-1-11'::timestamp);
+create table test_timestamp_t1 (id  numeric(10,0) ,field_dt date) distributed by (id);
+create table test_timestamp_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (id,field_tms);
+insert into test_timestamp_t1 values(10 ,'2018-1-10');
+insert into test_timestamp_t1 values(11 ,'2018-1-11');
+insert into test_timestamp_t2 values(10 ,'2018-1-10'::timestamp);
+insert into test_timestamp_t2 values(11 ,'2018-1-11'::timestamp);
 -- Test nest loop redistribute keys
 set enable_nestloop to on;
 set enable_hashjoin to on;
 set enable_mergejoin to on;
-select count(*) from seco_t1 t1 ,seco_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+select count(*) from test_timestamp_t1 t1 ,test_timestamp_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
  count 
 -------
      2
@@ -432,22 +432,22 @@ select count(*) from seco_t1 t1 ,seco_t2 t2 where T1.id = T2.id and T1.field_dt 
 set enable_nestloop to off;
 set enable_hashjoin to on;
 set enable_mergejoin to on;
-select count(*) from seco_t1 t1 ,seco_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+select count(*) from test_timestamp_t1 t1 ,test_timestamp_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
  count 
 -------
      2
 (1 row)
 
-drop table SECO_t1;
-drop table SECO_t2;
+drop table test_timestamp_t1;
+drop table test_timestamp_t2;
 -- Test merge join redistribute keys
-create table SECO_t1 (id  numeric(10,0) ,field_dt date) distributed randomly;
-create table SECO_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (field_tms);
-insert into SECO_t1 values(10 ,'2018-1-10');
-insert into SECO_t1 values(11 ,'2018-1-11');
-insert into SECO_t2 values(10 ,'2018-1-10'::timestamp);
-insert into SECO_t2 values(11 ,'2018-1-11'::timestamp);
-select * from SECO_t1 t1 full outer join SECO_t2 t2 on T1.id = T2.id and T1.field_dt = t2.field_tms;
+create table test_timestamp_t1 (id  numeric(10,0) ,field_dt date) distributed randomly;
+create table test_timestamp_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (field_tms);
+insert into test_timestamp_t1 values(10 ,'2018-1-10');
+insert into test_timestamp_t1 values(11 ,'2018-1-11');
+insert into test_timestamp_t2 values(10 ,'2018-1-10'::timestamp);
+insert into test_timestamp_t2 values(11 ,'2018-1-11'::timestamp);
+select * from test_timestamp_t1 t1 full outer join test_timestamp_t2 t2 on T1.id = T2.id and T1.field_dt = t2.field_tms;
  id |  field_dt  | id |        field_tms         
 ----+------------+----+--------------------------
  11 | 01-11-2018 | 11 | Thu Jan 11 00:00:00 2018
