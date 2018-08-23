@@ -98,6 +98,11 @@ extern unsigned int cdbhashreduce(CdbHash *h);
 extern bool isGreenplumDbHashable(Oid typid);
 
 /*
+ * Return true if the operator Oid is hashable internally in Greenplum Database.
+ */
+extern bool isGreenplumDbOprRedistributable(Oid oprid);
+
+/*
  * Return true if the Oid is an array type.  This can be used prior
  *   to hashing the datum because array typeoids are expected to
  *   have been converted to any array oid.

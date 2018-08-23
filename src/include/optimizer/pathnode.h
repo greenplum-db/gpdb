@@ -121,7 +121,7 @@ extern NestPath *create_nestloop_path(PlannerInfo *root,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-					 List *mergeclause_list,    /*CDB*/
+					 List *redistribution_clauses,    /*CDB*/
 					 List *pathkeys,
 					 Relids required_outer);
 
@@ -136,7 +136,7 @@ extern MergePath *create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  Relids required_outer,
 					  List *mergeclauses,
-                      List *allmergeclauses,    /*CDB*/
+                      List *redistribution_clauses,    /*CDB*/
 					  List *outersortkeys,
 					  List *innersortkeys);
 
@@ -150,7 +150,7 @@ extern HashPath *create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
 					 Relids required_outer,
-                     List *mergeclause_list,    /*CDB*/
+                     List *redistribution_clauses,    /*CDB*/
 					 List *hashclauses);
 
 extern Path *reparameterize_path(PlannerInfo *root, Path *path,

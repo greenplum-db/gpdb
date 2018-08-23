@@ -2925,7 +2925,7 @@ create_nestloop_path(PlannerInfo *root,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
-					 List *mergeclause_list,    /*CDB*/
+					 List *redistribution_clauses,    /*CDB*/
 					 List *pathkeys,
 					 Relids required_outer)
 {
@@ -2945,7 +2945,7 @@ create_nestloop_path(PlannerInfo *root,
 										 jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
-										 mergeclause_list,
+										 redistribution_clauses,
 										 pathkeys,
 										 NIL,
 										 false,
@@ -3090,7 +3090,7 @@ create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  Relids required_outer,
 					  List *mergeclauses,
-					  List *allmergeclauses,    /*CDB*/
+					  List *redistribution_clauses,    /*CDB*/
 					  List *outersortkeys,
 					  List *innersortkeys)
 {
@@ -3141,7 +3141,7 @@ create_mergejoin_path(PlannerInfo *root,
 										 jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
-										 allmergeclauses,
+										 redistribution_clauses,
 										 outermotionkeys,
 										 innermotionkeys,
 										 preserve_outer_ordering,
@@ -3228,7 +3228,7 @@ create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
 					 Relids required_outer,
-					 List *mergeclause_list,    /*CDB*/
+					 List *redistribution_clauses,    /*CDB*/
 					 List *hashclauses)
 {
 	HashPath   *pathnode;
@@ -3239,7 +3239,7 @@ create_hashjoin_path(PlannerInfo *root,
 										 jointype,
 										 &outer_path,       /* INOUT */
 										 &inner_path,       /* INOUT */
-										 mergeclause_list,
+										 redistribution_clauses,
 										 NIL,   /* don't care about ordering */
 										 NIL,
 										 false,

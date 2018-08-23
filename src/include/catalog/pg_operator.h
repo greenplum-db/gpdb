@@ -479,6 +479,7 @@ DATA(insert OID = 648 (  ">="	   PGNSP PGUID b f f	30	30	16 647 645 oidvectorge 
 DESCR("greater than or equal");
 DATA(insert OID = 649 (  "="	   PGNSP PGUID b t t	30	30	16 649 644 oidvectoreq eqsel eqjoinsel ));
 DESCR("equal");
+#define OidVectEqualOperator 649
 
 DATA(insert OID = 613 (  "<->"	   PGNSP PGUID b f f 600 628 701	 0	 0 dist_pl - - ));
 DESCR("distance between");
@@ -875,6 +876,7 @@ DATA(insert OID = 1119 (  "*"		PGNSP PGUID b f f 700 701 701 1129	 0 float48mul 
 DESCR("multiply");
 DATA(insert OID = 1120 (  "="		PGNSP PGUID b t t  700	701  16 1130 1121 float48eq eqsel eqjoinsel ));
 DESCR("equal");
+#define Float48EqualOperator 1120
 DATA(insert OID = 1121 (  "<>"		PGNSP PGUID b f f  700	701  16 1131 1120 float48ne neqsel neqjoinsel ));
 DESCR("not equal");
 DATA(insert OID = 1122 (  "<"		PGNSP PGUID b f f  700	701  16 1133 1125 float48lt scalarltsel scalarltjoinsel ));
@@ -897,6 +899,7 @@ DATA(insert OID = 1129 (  "*"		PGNSP PGUID b f f 701 700 701 1119	 0 float84mul 
 DESCR("multiply");
 DATA(insert OID = 1130 (  "="		PGNSP PGUID b t t  701	700  16 1120 1131 float84eq eqsel eqjoinsel ));
 DESCR("equal");
+#define Float84EqualOperator 1130
 DATA(insert OID = 1131 (  "<>"		PGNSP PGUID b f f  701	700  16 1121 1130 float84ne neqsel neqjoinsel ));
 DESCR("not equal");
 DATA(insert OID = 1132 (  "<"		PGNSP PGUID b f f  701	700  16 1123 1135 float84lt scalarltsel scalarltjoinsel ));
@@ -1624,6 +1627,7 @@ DESCR("deprecated, use @> instead");
 /* uuid operators */
 DATA(insert OID = 2972 (  "="	   PGNSP PGUID b t t 2950 2950 16 2972 2973 uuid_eq eqsel eqjoinsel ));
 DESCR("equal");
+#define UuidEqualOperator 2972
 DATA(insert OID = 2973 (  "<>"	   PGNSP PGUID b f f 2950 2950 16 2973 2972 uuid_ne neqsel neqjoinsel ));
 DESCR("not equal");
 DATA(insert OID = 2974 (  "<"	   PGNSP PGUID b f f 2950 2950 16 2975 2977 uuid_lt scalarltsel scalarltjoinsel ));
@@ -1790,6 +1794,7 @@ DESCR("greater than or equal");
 /* operators for complex data type */
 DATA(insert OID = 3469 (  "="	   PGNSP PGUID b t f 7198 7198 16 3469 3470 complex_eq eqsel eqjoinsel)); 
 DESCR("equal");
+#define ComplexEqualOperator 3469
 DATA(insert OID = 3470 (  "<>"	   PGNSP PGUID b f f 7198 7198 16 3470 3469 complex_ne  neqsel neqjoinsel)); 
 DESCR("not equal");
 DATA(insert OID = 3471 (  "@"	   PGNSP PGUID l f f 0   7198 701 0	0	 complexabs  - -)); 
