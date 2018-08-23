@@ -299,7 +299,7 @@ pxf_make_expression_items_list(List *quals, Node *parent)
 	ListCell   *lc = NULL;
 	ListCell   *ilc = NULL;
 
-    int quals_size = list_length(quals);
+	int quals_size = list_length(quals);
 	if (quals_size == 0)
 		return NIL;
 
@@ -329,7 +329,6 @@ pxf_make_expression_items_list(List *quals, Node *parent)
 			case T_BoolExpr:
                 /* Logical operators AND, OR, NOT */
 				{
-					//(*logicalOpsNum)++;
 					BoolExpr   *expr = (BoolExpr *) node;
 
 					elog(DEBUG1, "pxf_make_expression_items_list: found T_BoolExpr; make recursive call");
@@ -383,7 +382,7 @@ pxf_make_expression_items_list(List *quals, Node *parent)
 				break;
 		}
 	}
-    if ( quals_size > 1 && parent == NULL )
+	if ( quals_size > 1 && parent == NULL )
 	{
         // Planner (but not ORCA) will omit AND operators at the root level, so if we find more than 1 qualifier
         // there, it means we are looking at 2 or more expressions that are implicitly AND-ed by the planner.
@@ -1290,7 +1289,6 @@ char *
 serializePxfFilterQuals(List *quals)
 {
 	char	   *result = NULL;
-//	BoolExpr   *extraBoolExprNodePointer = NULL;
 
 	if (quals == NULL)
 	{
@@ -1302,10 +1300,6 @@ serializePxfFilterQuals(List *quals)
 
 	result  = pxf_serialize_filter_list(expressionItems);
 
-//	if (extraBoolExprNodePointer)
-//	{
-//		pfree(extraBoolExprNodePointer);
-//	}
 	pxf_free_expression_items_list(expressionItems);
 
 	elog(DEBUG1, "serializePxfFilterQuals: resulting filter string is '%s'", (result == NULL) ? "" : result);
@@ -1329,8 +1323,6 @@ add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum)
 	BoolExpr   *andExpr = makeNode(BoolExpr);
 
 	andExpr->boolop = AND_EXPR;
-//	*extraNodePointer = andExpr;
-
 	andExpressionItem->node = (Node *) andExpr;
 	andExpressionItem->parent = NULL;
 	andExpressionItem->processed = false;
