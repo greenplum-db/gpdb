@@ -728,6 +728,25 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		wfunc->windistinct = agg_distinct;
 
 		/*
+		 * agg_star is allowed for aggregate functions but distinct isn't
+		 *
+		 * GPDB: We have implemented this in GPDB, with some limitations.
+		 */
+		if (agg_distinct)
+		{
+			if (fdresult == FUNCDETAIL_WINDOWFUNC)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("DISTINCT is not implemented for window functions"),
+						 parser_errposition(pstate, location)));
+
+			if (list_length(fargs) != 1)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("DISTINCT is supported only for single-argument window aggregates")));
+		}
+
+		/*
 		 * Reject attempt to call a parameterless aggregate without (*)
 		 * syntax.	This is mere pedantry but some folks insisted ...
 		 *

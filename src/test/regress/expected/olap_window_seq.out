@@ -8388,4 +8388,95 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where i = 1;
+--
+-- Tests for DISTINCT-qualified window aggregates
+--
+-- This is a GPDB extension, not implemented in PostgreSQL.
+--
+select dt, pn, count(distinct pn) over (partition by dt) from sale;
+     dt     | pn  | count 
+------------+-----+-------
+ 01-01-1401 | 100 |     1
+ 03-01-1401 | 200 |     1
+ 04-01-1401 | 200 |     1
+ 05-01-1401 | 100 |     1
+ 05-02-1401 | 300 |     1
+ 06-01-1401 | 400 |     5
+ 06-01-1401 | 400 |     5
+ 06-01-1401 | 500 |     5
+ 06-01-1401 | 500 |     5
+ 06-01-1401 | 600 |     5
+ 06-01-1401 | 700 |     5
+ 06-01-1401 | 800 |     5
+(12 rows)
+
+select dt, pn, count(distinct pn) over (partition by dt), sum(distinct pn) over (partition by dt) from sale;
+     dt     | pn  | count | sum  
+------------+-----+-------+------
+ 01-01-1401 | 100 |     1 |  100
+ 03-01-1401 | 200 |     1 |  200
+ 04-01-1401 | 200 |     1 |  200
+ 05-01-1401 | 100 |     1 |  100
+ 05-02-1401 | 300 |     1 |  300
+ 06-01-1401 | 400 |     5 | 3000
+ 06-01-1401 | 400 |     5 | 3000
+ 06-01-1401 | 500 |     5 | 3000
+ 06-01-1401 | 500 |     5 | 3000
+ 06-01-1401 | 600 |     5 | 3000
+ 06-01-1401 | 700 |     5 | 3000
+ 06-01-1401 | 800 |     5 | 3000
+(12 rows)
+
+select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
+     dt     | pn  | sum  | sum  
+------------+-----+------+------
+ 01-01-1401 | 100 |  100 |  100
+ 03-01-1401 | 200 |  200 |  200
+ 04-01-1401 | 200 |  200 |  200
+ 05-01-1401 | 100 |  100 |  100
+ 05-02-1401 | 300 |  300 |  300
+ 06-01-1401 | 400 | 3000 | 3900
+ 06-01-1401 | 400 | 3000 | 3900
+ 06-01-1401 | 500 | 3000 | 3900
+ 06-01-1401 | 500 | 3000 | 3900
+ 06-01-1401 | 600 | 3000 | 3900
+ 06-01-1401 | 700 | 3000 | 3900
+ 06-01-1401 | 800 | 3000 | 3900
+(12 rows)
+
+-- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
+select pcolor, pname, count(distinct pname) over (partition by pcolor) from product;
+  pcolor   |   pname   | count 
+-----------+-----------+-------
+ Black     | Dream     |     2
+ Black     | Sword     |     2
+ Chocolate | Donuts    |     1
+ Clear     | Justice   |     1
+ Grey      | Castle    |     3
+ Grey      | Fries     |     3
+ Grey      | Hamburger |     3
+ Plain     | Donuts    |     1
+(8 rows)
+
+-- Disallowed or not-implemented cases
+select dt, pn, count(distinct pn) over (partition by pn order by dt) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing an ORDER BY clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn orde...
+                       ^
+select dt, pn, count(distinct pn) over (partition by pn rows unbounded preceding ) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing a framing clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn rows...
+                       ^
+select dt, pn, count(distinct pn) over (partition by pn rows between unbounded preceding and unbounded following ) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing a framing clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn rows...
+                       ^
+-- not supported with true window functions.
+select dt, pn, lead(distinct pn) over (partition by pn) from sale;
+ERROR:  DISTINCT is not implemented for window functions
+LINE 1: select dt, pn, lead(distinct pn) over (partition by pn) from...
+                       ^
+-- not supported with aggregates with multiple arguments.
+select dt, pn, corr(distinct pn, pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
+ERROR:  DISTINCT is supported only for single-argument window aggregates
 -- End of Test
