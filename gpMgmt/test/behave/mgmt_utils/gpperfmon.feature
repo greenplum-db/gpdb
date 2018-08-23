@@ -58,6 +58,29 @@ Feature: gpperfmon
             """
         Then validate that first column of first stored row has "3" lines of raw output
 
+    @gpperfmon_query_history
+    Scenario: gpperfmon ignore ALTER TABLE SET DISTRIBUTED BY
+        Given gpperfmon is configured and running in qamode
+        When the user truncates "queries_history" tables in "gpperfmon"
+        Given database "gptest" is dropped and recreated
+        When below sql is executed in "gptest" db
+        """
+        CREATE TABLE ignore_alter (id int, amt decimal(10,2), t text)
+        DISTRIBUTED BY (id);
+        """
+        When below sql is executed in "gptest" db
+        """
+        --alter distributed by
+        ALTER TABLE ignore_alter SET DISTRIBUTED BY (t);
+        """
+        When below sql is executed in "gptest" db
+        """
+        --end flag
+        SELECT 1 from ignore_alter;
+        """
+        Then wait until the results from boolean sql "SELECT count(*) = 0 FROM queries_history WHERE query_text like '--alter distributed by%'" is "true"
+        And wait until the results from boolean sql "SELECT count(*) = 1 FROM queries_history WHERE query_text like '--end flag%'" is "true"
+
     @gpperfmon_system_history
     Scenario: gpperfmon adds to system_history table
         Given gpperfmon is configured and running in qamode
