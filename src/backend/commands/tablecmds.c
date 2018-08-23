@@ -12019,6 +12019,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						useExistingColumnAttributes);
+
+		/*
+		 * bypass gpmon info collecting in following ExecutorStart
+		 * to be consistent with other alter table commands,
+		 * ALTER TABLE SET DISTRIBUTED BY should not be logged in gpperfmon.
+		 */
 		queryDesc->gpmon_pkt = NULL;
 
 		PG_TRY();
