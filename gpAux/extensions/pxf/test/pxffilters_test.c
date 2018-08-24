@@ -865,7 +865,8 @@ test__serializePxfFilterQuals__manyFilters(void **state)
     qualifierItems = lappend(qualifierItems, qualifierItem6);
 
     result = serializePxfFilterQuals(qualifierItems);
-    assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5a6o9");
+    // make sure the result has 5 "l0" at the end that correspond to implicit AND operation implied by planner's tree
+    assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5l0l0l0l0l0");
     pfree(result);
 
     // TODO: cleanup qualifierItems
