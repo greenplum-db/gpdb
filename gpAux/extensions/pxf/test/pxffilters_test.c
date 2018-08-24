@@ -990,15 +990,15 @@ main(int argc, char* argv[])
 			unit_test(test__opexpr_to_pxffilter__twoVars),
 			unit_test(test__opexpr_to_pxffilter__unsupportedOpNot),
 			unit_test(test__opexpr_to_pxffilter__attributeIsNull),
-            unit_test(test__pxf_serialize_filter_list__oneFilter),
-            unit_test(test__pxf_serialize_fillter_list__nullFilter),
-            unit_test(test__pxf_serialize_filter_list__manyFilters),
-            unit_test(test__serializePxfFilterQuals__emptyFilter),
-            unit_test(test__serializePxfFilterQuals__oneFilter),
-            unit_test(test__serializePxfFilterQuals__nullFilter),
-            unit_test(test__serializePxfFilterQuals__manyFilters),
-            unit_test(test__extractPxfAttributes_empty_quals),
-            unit_test(test__extractPxfAttributes_supported_function_one_arg)
+			unit_test(test__pxf_serialize_filter_list__oneFilter),
+			unit_test(test__pxf_serialize_fillter_list__nullFilter),
+			unit_test(test__pxf_serialize_filter_list__manyFilters),
+			unit_test(test__serializePxfFilterQuals__emptyFilter),
+			unit_test(test__serializePxfFilterQuals__oneFilter),
+			unit_test(test__serializePxfFilterQuals__nullFilter),
+			unit_test(test__serializePxfFilterQuals__manyFilters),
+			unit_test(test__extractPxfAttributes_empty_quals),
+			unit_test(test__extractPxfAttributes_supported_function_one_arg)
 	};
 
 	MemoryContextInit();

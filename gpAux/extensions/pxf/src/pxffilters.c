@@ -352,9 +352,6 @@ pxf_make_expression_items_list(List *quals, Node *parent)
 						}
 					}
 
-					// We set the logicalOpsNum based on the number of children at this level
-					// We keep track of num. of OR and AND operators using logicalOpsNum
-					// We keep track of num. of NOT operators using logicalNotOpsNum;
 					if (expr->boolop == NOT_EXPR)
 					{
 						for (int i = 0; i < childNodesNum; i++)
