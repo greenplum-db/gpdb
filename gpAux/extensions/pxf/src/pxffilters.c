@@ -384,8 +384,8 @@ pxf_make_expression_items_list(List *quals, Node *parent)
 	}
 	if ( quals_size > 1 && parent == NULL )
 	{
-        // Planner (but not ORCA) will omit AND operators at the root level, so if we find more than 1 qualifier
-        // there, it means we are looking at 2 or more expressions that are implicitly AND-ed by the planner.
+        // Planner (but not ORCA) will omit AND operators at the root level, so if we find more than 1 qualifier,
+        // it means we are looking at 2 or more expressions that are implicitly AND-ed by the planner.
         // Here, to make it explicit, we will need to add additional AND operators to compensate for the missing ones.
         add_extra_and_expression_items(result, quals_size - 1);
 	}
@@ -1295,9 +1295,10 @@ serializePxfFilterQuals(List *quals)
 		return result;
 	}
 
-	// expressionItems will contain all the expressions including comparator and logical operators
+	// expressionItems will contain all the expressions including comparator and logical operators in postfix order
 	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL);
 
+	// result will contain seralized version of the above postfix ordered expressions list
 	result  = pxf_serialize_filter_list(expressionItems);
 
 	pxf_free_expression_items_list(expressionItems);

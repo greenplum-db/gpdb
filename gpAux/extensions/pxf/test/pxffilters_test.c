@@ -845,6 +845,46 @@ test__pxf_serialize_filter_list__manyFilters(void **state)
 }
 
 void
+test__serializePxfFilterQuals__emptyFilter(void **state)
+{
+	char* result = NULL;
+	List* qualifierItems = NIL;
+
+	result = serializePxfFilterQuals(qualifierItems);
+	assert_true(result == NULL);
+}
+
+void
+test__serializePxfFilterQuals__oneFilter(void **state)
+{
+	char* result = NULL;
+
+	List* qualifierItems = NIL;
+
+	OpExpr* qualifierItem1 = build_qualifier(1, TEXTOID, "1984", TEXTOID, TextEqualOperator);
+	qualifierItems = lappend(qualifierItems, qualifierItem1);
+
+	result = serializePxfFilterQuals(qualifierItems);
+	assert_string_equal(result, "a0c25s4d1984o5");
+	pfree(result);
+}
+
+void
+test__serializePxfFilterQuals__nullFilter(void **state)
+{
+	char* result = NULL;
+
+	List* qualifierItems = NIL;
+
+	OpExpr* qualifierItem1 = (OpExpr*) build_null_expression_item(1, TEXTOID, IS_NULL)->node;
+	qualifierItems = lappend(qualifierItems, qualifierItem1);
+
+	result = serializePxfFilterQuals(qualifierItems);
+	assert_string_equal(result, "a0o8");
+	pfree(result);
+}
+
+void
 test__serializePxfFilterQuals__manyFilters(void **state)
 {
     char* result = NULL;
@@ -868,9 +908,6 @@ test__serializePxfFilterQuals__manyFilters(void **state)
     // make sure the result has 5 "l0" at the end that correspond to implicit AND operation implied by planner's tree
     assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5l0l0l0l0l0");
     pfree(result);
-
-    // TODO: cleanup qualifierItems
-    qualifierItems = NIL;
 }
 
 void
@@ -956,6 +993,9 @@ main(int argc, char* argv[])
             unit_test(test__pxf_serialize_filter_list__oneFilter),
             unit_test(test__pxf_serialize_fillter_list__nullFilter),
             unit_test(test__pxf_serialize_filter_list__manyFilters),
+            unit_test(test__serializePxfFilterQuals__emptyFilter),
+            unit_test(test__serializePxfFilterQuals__oneFilter),
+            unit_test(test__serializePxfFilterQuals__nullFilter),
             unit_test(test__serializePxfFilterQuals__manyFilters),
             unit_test(test__extractPxfAttributes_empty_quals),
             unit_test(test__extractPxfAttributes_supported_function_one_arg)
