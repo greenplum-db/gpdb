@@ -576,6 +576,13 @@ ExpressionItem* build_expression_item(int lattnum, Oid lattrtype, char* rconstst
 	return expressionItem;
 }
 
+OpExpr* build_qualifier(int lattnum, Oid lattrtype, char* rconststr, Oid rattrtype, int op)
+{
+	Var *leftop = build_var(lattrtype, lattnum);
+	Const *rightop = build_const(rattrtype, strdup(rconststr), true);
+	return build_op_expr(leftop, rightop, op);
+}
+
 FuncExpr* build_func_expr_operand(List *args, CoercionForm funcformat) {
 	FuncExpr* operand = palloc0(sizeof(FuncExpr));
 	((Node*) operand)->type = T_FuncExpr;
