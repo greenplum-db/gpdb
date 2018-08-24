@@ -143,10 +143,9 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
           group for the workload and the time of day.</li>
         <li>Use the <codeph>gptoolkit</codeph> views to examine resource group resource
             usage and to monitor how the groups are working.</li>
-        <li otherprops="pivotal">A Greenplum Database workload is a resource group with
-          special assignment capabilities. Consider using Pivotal Greenplum Command Center
-          to create and manage workloads, and to define the criteria under which Command
-          Center dynamically assigns a transaction to a workload.</li>
+        <li otherprops="pivotal">Consider using Pivotal Greenplum Command Center
+          to create and manage resource groups, and to define the criteria under which
+          Command Center dynamically assigns a transaction to a resource group.</li>
       </ul>
     </section>
     <section id="section113x" xml:lang="en">
