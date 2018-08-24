@@ -108,11 +108,14 @@ total_gp_memory = total_node_usable_memory * gp_resource_group_memory_limit
                 = 134.4GB</codeblock>
       <p>The memory available to a Greenplum Database segment on a segment host is a function
         of the memory reserved for Greenplum on the host and the number of active primary
-        segments on the host:</p>
+        segments on the host. On cluster startup:</p>
         <codeblock>
 gp_seg_memory = total_gp_memory / number_of_active_primary_segments
-              = 134.4GB / 11
-              = 12.2GB</codeblock>
+              = 134.4GB / 8
+              = 16.8GB</codeblock>
+      <p>Note that when 3 mirror segments switch to primary segments, the per-segment
+        memory is still 16.8GB. Total memory usage on the segment host may approach:
+        <codeblock>total_gp_memory_with_primaries = 16.8GB * 11 = 184.8GB</codeblock></p>
     </section>
     <section id="configuring_rg">
       <title>Configuring Resource Groups</title>
@@ -133,10 +136,6 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
         <li>Use the <codeph>MEMORY_LIMIT</codeph> and <codeph>MEMORY_SHARED_QUOTA</codeph>
             parameters to control the maximum amount of memory that queries running in the
            resource group can consume.</li>
-        <li>When you specify a <codeph>memory_spill_ratio</codeph> in your session,
-            individual queries running in the session can allocate more than their "share"
-           of memory, which reduces the memory available for other queries running in the
-           resource group.</li>
         <li>Greenplum Database assigns unreserved memory (100 - (sum of all resource
           group <codeph>MEMORY_LIMIT</codeph>s) to a global shared memory pool. This
           memory is available to all queries on a first-come, first-served basis.</li>
