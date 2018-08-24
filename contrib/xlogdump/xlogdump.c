@@ -180,7 +180,11 @@ readXLogPage(void)
 			if ( (((XLogPageHeader)pageBuffer)->xlp_info & XLP_FIRST_IS_CONTRECORD) )
 				printf("XLP_FIRST_IS_CONTRECORD ");
 			if ((((XLogPageHeader)pageBuffer)->xlp_info & XLP_LONG_HEADER) )
-				printf("XLP_LONG_HEADER ");
+			{
+				printf("XLP_LONG_HEADER seg_size %d, blcksz %d ",
+					   ((XLogLongPageHeader) pageBuffer)->xlp_seg_size,
+					   ((XLogLongPageHeader) pageBuffer)->xlp_xlog_blcksz);
+			}
 #if PG_VERSION_NUM >= 90200
 			if ((((XLogPageHeader)pageBuffer)->xlp_info & XLP_BKP_REMOVABLE) )
 				printf("XLP_BKP_REMOVABLE ");
@@ -304,23 +308,28 @@ restart:
 		if (! readXLogPage())
 			return false;
 		logRecOff = XLogPageHeaderSize((XLogPageHeader) pageBuffer);
-		if ((((XLogPageHeader) pageBuffer)->xlp_info & ~XLP_LONG_HEADER) != 0)
+		/*
+		 * Current logid from page header is more reliable than what can be
+		 * inferred from the filename (see logId).
+		 */
+		curRecPtr.xlogid = ((XLogPageHeader) pageBuffer)->xlp_pageaddr.xlogid;
+		/* Check for a continuation record */
+		if (((XLogPageHeader) pageBuffer)->xlp_info & XLP_FIRST_IS_CONTRECORD)
 		{
-			printf("Unexpected page info flags %04X at offset %X\n",
-				   ((XLogPageHeader) pageBuffer)->xlp_info, logPageOff);
-			/* Check for a continuation record */
-			if (((XLogPageHeader) pageBuffer)->xlp_info & XLP_FIRST_IS_CONTRECORD)
-			{
-				printf("Skipping unexpected continuation record at offset %X\n",
-					   logPageOff);
-				contrecord = (XLogContRecord *) (pageBuffer + logRecOff);
-				logRecOff += MAXALIGN(contrecord->xl_rem_len + SizeOfXLogContRecord);
-			}
+			printf("Skipping unexpected continuation record at offset %X\n",
+				   logPageOff);
+			contrecord = (XLogContRecord *) (pageBuffer + logRecOff);
+			logRecOff += MAXALIGN(contrecord->xl_rem_len + SizeOfXLogContRecord);
 		}
 	}
 
-	curRecPtr.xlogid = logId;
-	curRecPtr.xrecoff = logSeg * XLogSegSize + logPageOff + logRecOff;
+	/*
+	 * Similar to current logid above, compute current record offset based on
+	 * start of the current page, rather than log segment found in the file
+	 * name (see logSeg).
+	 */
+	curRecPtr.xrecoff = ((XLogPageHeader) pageBuffer)->xlp_pageaddr.xrecoff + logRecOff;
+
 	record = (XLogRecord *) (pageBuffer + logRecOff);
 
 	if (record->xl_len == 0)
