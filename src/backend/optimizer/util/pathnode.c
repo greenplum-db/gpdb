@@ -1626,6 +1626,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	int			numCols;
 	ListCell   *lc;
 	CdbPathLocus locus;
+	bool		add_motion = false;
 
 	/* Caller made a mistake if subpath isn't cheapest_total ... */
 	Assert(subpath == rel->cheapest_total_path);
@@ -1792,10 +1793,14 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	if (!CdbPathLocus_IsBottleneck(subpath->locus) &&
 		!cdbpathlocus_is_hashed_on_exprs(subpath->locus, uniq_exprs))
 	{
-		// GPDB_90_MERGE_FIXME: this looks very wrong.
-		goto no_unique_path;
         locus = cdbpathlocus_from_exprs(root, uniq_exprs);
         subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
+		/*
+		 * We probably add agg/sort node above the added motion node, but it is
+		 * possible to add an agg/sort node below this motion node also,
+		 * which might be optimal in some cases?
+		 */
+		add_motion = true;
         Insist(subpath);
 	}
 	else
@@ -1832,6 +1837,14 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		relation_has_unique_index_for(root, rel, NIL,
 									  uniq_exprs, in_operators))
 	{
+		/*
+		 * For UNIQUE_PATH_NOOP, it is possible that subplan could be a
+		 * motion node. It is not allowed to add a motion node above a
+		 * motion node so we simply disallow this unique path although
+		 * in theory we could improve this.
+		 */
+		if (add_motion)
+			return NULL;
 		pathnode->umethod = UNIQUE_PATH_NOOP;
 		pathnode->path.rows = rel->rows;
 		pathnode->path.startup_cost = subpath->startup_cost;
@@ -1865,6 +1878,9 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 			query_is_distinct_for(rte->subquery,
 								  sub_tlist_colnos, in_operators))
 		{
+			/* Subplan node could be a motion. See previous comment for details. */
+			if (add_motion)
+				return NULL;
 			pathnode->umethod = UNIQUE_PATH_NOOP;
 			pathnode->path.rows = rel->rows;
 			pathnode->path.startup_cost = subpath->startup_cost;
