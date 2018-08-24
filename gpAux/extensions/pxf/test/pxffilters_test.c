@@ -838,6 +838,34 @@ test__pxf_serialize_filter_list__manyFilters(void **state)
 }
 
 void
+test__serializePxfFilterQuals__manyFilters(void **state)
+{
+    char* result = NULL;
+    List* qualifierItems = NIL;
+
+    OpExpr* qualifierItem1 = build_qualifier(1, TEXTOID, "1984", TEXTOID, TextEqualOperator);
+    OpExpr* qualifierItem2 = build_qualifier(2, TEXTOID, "George Orwell", TEXTOID, TextEqualOperator);
+    OpExpr* qualifierItem3 = build_qualifier(3, TEXTOID, "Winston", TEXTOID, TextEqualOperator);
+    OpExpr* qualifierItem4 = build_qualifier(4, TEXTOID, "Eric-%", TEXTOID, 1209);
+    OpExpr* qualifierItem5 = build_qualifier(5, TEXTOID, "\"Ugly\" string with quotes", TEXTOID, TextEqualOperator);
+    OpExpr* qualifierItem6 = build_qualifier(6, TEXTOID, "", TEXTOID, TextEqualOperator);
+
+    qualifierItems = lappend(qualifierItems, qualifierItem1);
+    qualifierItems = lappend(qualifierItems, qualifierItem2);
+    qualifierItems = lappend(qualifierItems, qualifierItem3);
+    qualifierItems = lappend(qualifierItems, qualifierItem4);
+    qualifierItems = lappend(qualifierItems, qualifierItem5);
+    qualifierItems = lappend(qualifierItems, qualifierItem6);
+
+    result = serializePxfFilterQuals(qualifierItems);
+    assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5a6o9");
+    pfree(result);
+
+    // TODO: cleanup qualifierItems
+    qualifierItems = NIL;
+}
+
+void
 test__extractPxfAttributes_empty_quals(void **state)
 {
 	bool qualsAreSupported;
@@ -920,8 +948,9 @@ main(int argc, char* argv[])
             unit_test(test__pxf_serialize_filter_list__oneFilter),
             unit_test(test__pxf_serialize_fillter_list__nullFilter),
             unit_test(test__pxf_serialize_filter_list__manyFilters),
-			unit_test(test__extractPxfAttributes_empty_quals),
-			unit_test(test__extractPxfAttributes_supported_function_one_arg)
+            unit_test(test__serializePxfFilterQuals__manyFilters),
+            unit_test(test__extractPxfAttributes_empty_quals),
+            unit_test(test__extractPxfAttributes_supported_function_one_arg)
 	};
 
 	MemoryContextInit();
