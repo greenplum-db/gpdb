@@ -81,6 +81,7 @@ select * from check_env;
  GP_HADOOP_CONN_VERSION=CE_1.0.0.0
  GP_MASTER_HOST=127.0.0.1
  GP_MASTER_PORT=5432
+ GP_QUERY_STRING=select * from check_env;
  GP_SEGMENT_COUNT=2
  GP_SEGMENT_ID=0
  GP_SEG_DATADIR=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
