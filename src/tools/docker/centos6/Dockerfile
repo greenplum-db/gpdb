@@ -45,6 +45,8 @@ RUN yum -y install centos-release-scl && yum -y install --nogpgcheck cmake3 devt
     yum clean all && rm -rf /usr/bin/cmake && ln -s /usr/bin/cmake3 /usr/bin/cmake && \
     echo -e 'source /opt/rh/devtoolset-6/enable' >> /opt/gcc_env.sh && \
     echo -e 'source /opt/gcc_env.sh' >> /root/.bashrc && \
-    echo -e 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /root/.bashrc && \
-    ldconfig && mkdir -p /usr/local/gpdb/lib/python && \
-    cp -r $(find /usr/lib64 -name psi | sort -r | head -1) /usr/local/gpdb/lib/python
+    echo -e '#!/bin/sh' >> /etc/profile.d/jdk_home.sh && \
+    echo -e 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /etc/profile.d/jdk_home.sh && \
+    echo -e 'export PATH=$JAVA_HOME/bin:$PATH' >> /etc/profile.d/jdk_home.sh && \
+    ldconfig && mkdir -p /usr/local/greenplum-db-devel/lib/python && \
+    cp -r $(find /usr/lib64 -name psi | sort -r | head -1) /usr/local/greenplum-db-devel/lib/python

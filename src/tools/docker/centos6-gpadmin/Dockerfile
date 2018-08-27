@@ -15,9 +15,7 @@ RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     { ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /home/gpadmin/.ssh/known_hosts && \
     chown -R gpadmin:gpadmin /home/gpadmin/.ssh && \
     echo -e 'source /opt/gcc_env.sh' >> /home/gpadmin/.bashrc && \
-    echo 'sudo /usr/sbin/sshd' >> /home/gpadmin/.bashrc && \
-    echo -e 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /home/gpadmin/.bashrc && \
-    echo -e 'export GPHOME=/usr/local/gpdb' >> /home/gpadmin/.bashrc && \
-    chown -R gpadmin:gpadmin /usr/local/gpdb
+    echo -e 'export GPHOME=/usr/local/greenplum-db-devel' >> /home/gpadmin/.bashrc && \
+    chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
 
 USER gpadmin
