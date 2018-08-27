@@ -69,6 +69,7 @@ typedef struct extvar_t
  	/* EOL vars */
  	char* GP_LINE_DELIM_STR;
  	char GP_LINE_DELIM_LENGTH[8];
+	char *GP_QUERY_STRING;
 } extvar_t;
 
 
