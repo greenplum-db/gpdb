@@ -57,9 +57,9 @@ parseCommandLine(int argc, char *argv[])
 
 		/* Greenplum specific parameters */
 		{"mode", required_argument, NULL, 1},
-		{"progress", no_argument, NULL, '2'},
-		{"add-checksum", no_argument, NULL, '3'},
-		{"remove-checksum", no_argument, NULL, '4'},
+		{"progress", no_argument, NULL, 2},
+		{"add-checksum", no_argument, NULL, 3},
+		{"remove-checksum", no_argument, NULL, 4},
 
 		{NULL, 0, NULL, 0}
 	};
