@@ -2161,12 +2161,8 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 							transfn_oid,
 							finalfn_oid,
 							InvalidOid,             /* prelim */
-							InvalidOid,             /* invtrans */
-							InvalidOid,             /* invprelim */
 							&transfnexpr,
 							&finalfnexpr,
-							NULL,
-							NULL,
 							NULL);
 
 	/* set up infrastructure for calling the transfn(s) and finalfn */

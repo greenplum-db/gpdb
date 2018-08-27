@@ -71,9 +71,6 @@ static Timestamp dt2local(Timestamp dt, int timezone);
 static void AdjustTimestampForTypmod(Timestamp *time, int32 typmod);
 static void AdjustIntervalForTypmod(Interval *interval, int32 typmod);
 static TimestampTz timestamp2timestamptz(Timestamp timestamp);
-static ArrayType *interval_amalg_demalg(ArrayType  *aTransArray,
-					ArrayType  *bTransArray,
-					bool is_amalg);
 static inline Timestamp timestamp_offset_internal(Timestamp timestamp,
 						Interval *span);
 static inline Timestamp timestamp_offset_multiple(Timestamp base, Interval *unit,
@@ -3650,52 +3647,6 @@ interval_avg(PG_FUNCTION_ARGS)
 							   Float8GetDatum(N.time));
 }
 
-Datum
-interval_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Interval   *newval = PG_GETARG_INTERVAL_P(1);
-	Datum	   *transdatums;
-	int			ndatums;
-	Interval	miX,
-				N;
-	Interval   *newmi;
-	ArrayType  *result;
-
-	deconstruct_array(transarray,
-					  INTERVALOID, sizeof(Interval), false, 'd',
-					  &transdatums, NULL, &ndatums);
-	if (ndatums != 2)
-		elog(ERROR, "expected 2-element interval array");
-
-	/*
-	 * XXX memcpy, instead of just extracting a pointer, to work around buggy
-	 * array code: it won't ensure proper alignment of Interval objects on
-	 * machines where double requires 8-byte alignment. That should be fixed,
-	 * but in the meantime...
-	 *
-	 * Note: must use DatumGetPointer here, not DatumGetIntervalP, else some
-	 * compilers optimize into double-aligned load/store anyway.
-	 */
-	memcpy((void *) &miX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &N, DatumGetPointer(transdatums[1]), sizeof(Interval));
-
-	newmi = DatumGetIntervalP(DirectFunctionCall2(interval_mi,
-												   IntervalPGetDatum(&miX),
-												 IntervalPGetDatum(newval)));
-	N.time -= 1;
-
-	transdatums[0] = IntervalPGetDatum(newmi);
-	transdatums[1] = IntervalPGetDatum(&N);
-
-	result = construct_array(transdatums, 2,
-							 INTERVALOID, sizeof(Interval), false, 'd');
-
-	PG_RETURN_ARRAYTYPE_P(result);
-}
-
-
-
 /* timestamp_age()
  * Calculate time difference while retaining year/month fields.
  * Note that this does not result in an accurate absolute time span
@@ -5621,26 +5572,6 @@ interval_amalg(PG_FUNCTION_ARGS)
 {
 	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
 	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-	
-	PG_RETURN_ARRAYTYPE_P(interval_amalg_demalg(aTransArray, bTransArray,
-												true));
-}
-
-Datum
-interval_demalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-	
-	PG_RETURN_ARRAYTYPE_P(interval_amalg_demalg(aTransArray, bTransArray,
-												false));
-}
-
-static ArrayType *
-interval_amalg_demalg(ArrayType  *aTransArray,
-					  ArrayType  *bTransArray,
-					  bool is_amalg)
-{
 	Datum	   *transdatums;
 	int			ndatums;
 	Interval	aSumMiX, bSumMiX,
@@ -5676,21 +5607,10 @@ interval_amalg_demalg(ArrayType  *aTransArray,
 	memcpy((void *) &bN, DatumGetPointer(transdatums[1]), sizeof(Interval));
 
 
-	if (is_amalg)
-	{
-		newsummi = DatumGetIntervalP(DirectFunctionCall2(interval_pl,
-														 IntervalPGetDatum(&aSumMiX),
-														 IntervalPGetDatum(&bSumMiX)));
-		aN.time += bN.time;
-	}
-	
-	else
-	{
-		newsummi = DatumGetIntervalP(DirectFunctionCall2(interval_mi,
-														 IntervalPGetDatum(&aSumMiX),
-														 IntervalPGetDatum(&bSumMiX)));
-		aN.time -= bN.time;
-	}
+	newsummi = DatumGetIntervalP(DirectFunctionCall2(interval_pl,
+													 IntervalPGetDatum(&aSumMiX),
+													 IntervalPGetDatum(&bSumMiX)));
+	aN.time += bN.time;
 
 	transdatums[0] = IntervalPGetDatum(newsummi);
 	transdatums[1] = IntervalPGetDatum(&aN);
@@ -5698,6 +5618,5 @@ interval_amalg_demalg(ArrayType  *aTransArray,
 	result = construct_array(transdatums, 2,
 							 INTERVALOID, sizeof(Interval), false, 'd');
 
-    return result;
+	PG_RETURN_ARRAYTYPE_P(result);
 }
-

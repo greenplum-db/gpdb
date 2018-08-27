@@ -145,7 +145,6 @@ extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
 extern bool has_agg_prelimfunc(Oid aggid);
-extern bool agg_has_prelim_or_invprelim_func(Oid aggid);
 extern bool get_func_leakproof(Oid funcid);
 extern float4 get_func_cost(Oid funcid);
 extern float4 get_func_rows(Oid funcid);

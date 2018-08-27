@@ -4,19 +4,12 @@
 -- This file is translated into DATA rows by catullus.pl. See
 -- README.add_catalog_function for instructions on how to run it.
 
- CREATE FUNCTION float4_decum(_float8, float4) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float4_decum' WITH (OID=6024, DESCRIPTION="aggregate inverse transition function");
  CREATE FUNCTION float4_avg_accum(bytea, float4) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float4_avg_accum' WITH (OID=4106, DESCRIPTION="aggregate transition function");
- CREATE FUNCTION float4_avg_decum(bytea, float4) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float4_avg_decum' WITH (OID=4107, DESCRIPTION="aggregate inverse transition function");
- CREATE FUNCTION float8_decum(_float8, float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_decum' WITH (OID=6025, DESCRIPTION="aggregate inverse transition function");
  CREATE FUNCTION float8_avg_accum(bytea, float8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float8_avg_accum' WITH (OID=4108, DESCRIPTION="aggregate transition function");
- CREATE FUNCTION float8_avg_decum(bytea, float8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float8_avg_decum' WITH (OID=4109, DESCRIPTION="aggregate inverse transition function");
  CREATE FUNCTION btgpxlogloccmp(gpxlogloc, gpxlogloc) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'btgpxlogloccmp' WITH (OID=7081, DESCRIPTION="btree less-equal-greater");
 
 -- MPP -- array_add -- special for prospective customer 
  CREATE FUNCTION array_add(_int4, _int4) RETURNS _int4 LANGUAGE internal IMMUTABLE STRICT AS 'array_int4_add' WITH (OID=6012, DESCRIPTION="itemwise add two integer arrays");
-
- CREATE FUNCTION int8dec(int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'int8dec' WITH (OID=3546, DESCRIPTION="decrement");
-
 
  CREATE FUNCTION interval_interval_div("interval", "interval") RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_div' WITH (OID=6115, DESCRIPTION="divide");
 
@@ -59,30 +52,6 @@
 
 
 -- Aggregate-related functions
- CREATE FUNCTION numeric_decum(_numeric, "numeric") RETURNS _numeric LANGUAGE internal IMMUTABLE STRICT AS 'numeric_decum' WITH (OID=7309, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION numeric_avg_decum(bytea, "numeric") RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'numeric_avg_decum' WITH (OID=4103, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION int2_decum(_numeric, int2) RETURNS _numeric LANGUAGE internal IMMUTABLE STRICT AS 'int2_decum' WITH (OID=7306, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION int4_decum(_numeric, int4) RETURNS _numeric LANGUAGE internal IMMUTABLE STRICT AS 'int4_decum' WITH (OID=7307, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION int8_decum(_numeric, int8) RETURNS _numeric LANGUAGE internal IMMUTABLE STRICT AS 'int8_decum' WITH (OID=7308, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION int2_invsum(int8, int2) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'int2_invsum' WITH (OID=7008, DESCRIPTION="SUM(int2) inverse transition function");
-
- CREATE FUNCTION int4_invsum(int8, int4) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'int4_invsum' WITH (OID=7009, DESCRIPTION="SUM(int4) inverse transition function");
-
- CREATE FUNCTION int8_invsum("numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'int8_invsum' WITH (OID=7010, DESCRIPTION="SUM(int8) inverse transition function");
-
- CREATE FUNCTION interval_decum(_interval, "interval") RETURNS _interval LANGUAGE internal IMMUTABLE STRICT AS 'interval_decum' WITH (OID=6038, DESCRIPTION="aggregate inverse transition function");
-
- CREATE FUNCTION int2_avg_decum(bytea, int2) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'int2_avg_decum' WITH (OID=6019, DESCRIPTION="AVG(int2) transition function");
-
- CREATE FUNCTION int4_avg_decum(bytea, int4) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'int4_avg_decum' WITH (OID=6020, DESCRIPTION="AVG(int4) transition function");
-
- CREATE FUNCTION int8_avg_decum(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'int8_avg_decum' WITH (OID=4101, DESCRIPTION="AVG(int8) transition function");
-
  CREATE FUNCTION pg_stat_get_backend_waiting_reason(int4) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_stat_get_backend_waiting_reason' WITH (OID=7298, DESCRIPTION="Statistics: Reason backend is waiting for");
 
  CREATE FUNCTION pg_stat_get_queue_num_exec(oid) RETURNS int8 LANGUAGE internal STABLE STRICT AS 'pg_stat_get_queue_num_exec' WITH (OID=6031, DESCRIPTION="Statistics: Number of queries that executed in queue");
@@ -212,18 +181,6 @@
  CREATE FUNCTION float8_avg_amalg(bytea, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float8_avg_amalg' WITH (OID=4111, DESCRIPTION="aggregate preliminary function");
 
  CREATE FUNCTION interval_amalg(_interval, _interval) RETURNS _interval LANGUAGE internal IMMUTABLE STRICT AS 'interval_amalg' WITH (OID=6011, DESCRIPTION="aggregate preliminary function");
-
- CREATE FUNCTION numeric_demalg(_numeric, _numeric) RETURNS _numeric LANGUAGE internal IMMUTABLE STRICT AS 'numeric_demalg' WITH (OID=6015, DESCRIPTION="aggregate inverse preliminary function");
-
- CREATE FUNCTION numeric_avg_demalg(bytea, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'numeric_avg_demalg' WITH (OID=4105, DESCRIPTION="aggregate inverse preliminary function");
-
- CREATE FUNCTION int8_avg_demalg(bytea, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'int8_avg_demalg' WITH (OID=6016, DESCRIPTION="aggregate preliminary function");
-
- CREATE FUNCTION float8_demalg(_float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_demalg' WITH (OID=6017, DESCRIPTION="aggregate inverse preliminary function");
-
- CREATE FUNCTION float8_avg_demalg(bytea, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float8_avg_demalg' WITH (OID=4110, DESCRIPTION="aggregate inverse preliminary function");
-
- CREATE FUNCTION interval_demalg(_interval, _interval) RETURNS _interval LANGUAGE internal IMMUTABLE STRICT AS 'interval_demalg' WITH (OID=6018, DESCRIPTION="aggregate preliminary function");
 
  CREATE FUNCTION float8_regr_amalg(_float8, _float8) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float8_regr_amalg' WITH (OID=6014, DESCRIPTION="aggregate preliminary function");
 

@@ -1809,32 +1809,6 @@ has_agg_prelimfunc(Oid aggid)
 	return has_prelimfunc;
 }
 
-
-/*
- * agg_has_prelim_or_invprelim_func
- *		Given aggregate id, check if it is has a prelim or inverse prelim function
- */
-bool
-agg_has_prelim_or_invprelim_func(Oid aggid)
-{
-	HeapTuple aggTuple;
-	Form_pg_aggregate aggform;
-	bool		has_prelimfunc;
-	bool		has_invprelimfunc;
-
-	aggTuple = SearchSysCache1(AGGFNOID,
-							   ObjectIdGetDatum(aggid));
-	if (!HeapTupleIsValid(aggTuple))
-		elog(ERROR, "cache lookup failed for aggregate %u", aggid);
-	aggform = (Form_pg_aggregate) GETSTRUCT(aggTuple);
-	has_prelimfunc = (aggform->aggprelimfn != InvalidOid);
-	has_invprelimfunc = (aggform->agginvprelimfn != InvalidOid);
-
-	ReleaseSysCache(aggTuple);
-
-	return has_prelimfunc || has_invprelimfunc;
-}
-
 /*
  * get_rel_tablespace
  *

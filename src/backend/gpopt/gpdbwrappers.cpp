@@ -791,21 +791,6 @@ gpdb::AggHasPrelimFunc
 	return false;
 }
 
-bool
-gpdb::AggHasPrelimOrInvPrelimFunc
-	(
-	Oid aggid
-	)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_aggregate */
-		return agg_has_prelim_or_invprelim_func(aggid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 Oid
 gpdb::GetAggregate
 	(

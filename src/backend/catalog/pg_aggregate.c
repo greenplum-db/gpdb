@@ -69,9 +69,7 @@ AggregateCreate(const char *aggName,
 	Datum		values[Natts_pg_aggregate];
 	Form_pg_proc proc;
 	Oid			transfn;
-	Oid			invtransfn = InvalidOid; /* MPP windowing optimization */
 	Oid			prelimfn = InvalidOid;	/* if omitted, disables MPP 2-stage for this aggregate */
-	Oid			invprelimfn = InvalidOid; /* MPP windowing optimization */
 	Oid			finalfn = InvalidOid;	/* can be omitted */
 	Oid			sortop = InvalidOid;	/* can be omitted */
 	Oid		   *aggArgTypes = parameterTypes->values;
@@ -438,9 +436,7 @@ AggregateCreate(const char *aggName,
 	values[Anum_pg_aggregate_aggkind - 1] = CharGetDatum(aggKind);
 	values[Anum_pg_aggregate_aggnumdirectargs - 1] = Int16GetDatum(numDirectArgs);
 	values[Anum_pg_aggregate_aggtransfn - 1] = ObjectIdGetDatum(transfn);
-	values[Anum_pg_aggregate_agginvtransfn - 1] = ObjectIdGetDatum(invtransfn); 
 	values[Anum_pg_aggregate_aggprelimfn - 1] = ObjectIdGetDatum(prelimfn);
-	values[Anum_pg_aggregate_agginvprelimfn - 1] = ObjectIdGetDatum(invprelimfn);
 	values[Anum_pg_aggregate_aggfinalfn - 1] = ObjectIdGetDatum(finalfn);
 	values[Anum_pg_aggregate_aggfinalextra - 1] = BoolGetDatum(finalfnExtraArgs);
 	values[Anum_pg_aggregate_aggsortop - 1] = ObjectIdGetDatum(sortop);
@@ -475,29 +471,11 @@ AggregateCreate(const char *aggName,
 	referenced.objectSubId = 0;
 	recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-	/* Depends on inverse transition function, if any */
-	if (OidIsValid(invtransfn))
-	{
-		referenced.classId = ProcedureRelationId;
-		referenced.objectId = invtransfn;
-		referenced.objectSubId = 0;
-		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
-	}
-
 	/* Depends on preliminary aggregation function, if any */
 	if (OidIsValid(prelimfn))
 	{
 		referenced.classId = ProcedureRelationId;
 		referenced.objectId = prelimfn;
-		referenced.objectSubId = 0;
-		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
-	}
-
-	/* Depends on inverse preliminary aggregation function, if any */
-	if (OidIsValid(invprelimfn))
-	{
-		referenced.classId = ProcedureRelationId;
-		referenced.objectId = invprelimfn;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}

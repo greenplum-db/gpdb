@@ -68,9 +68,6 @@ static int	float8_cmp_internal(float8 a, float8 b);
 static double cbrt(double x);
 #endif   /* HAVE_CBRT */
 
-static ArrayType *float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
-									  FunctionCallInfo fcinfo, bool is_amalg);
-
 /*
  * Routines to provide reasonably platform-independent handling of
  * infinity and NaN.  We assume that isinf() and isnan() are available
@@ -1884,59 +1881,6 @@ float8_accum(PG_FUNCTION_ARGS)
 	}
 }
 
-
-Datum
-float8_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	float8		newval = PG_GETARG_FLOAT8(1);
-	float8	   *transvalues;
-	float8		N,
-				miX,
-				miX2;
-
-	transvalues = check_float8_array(transarray, "float8_decum", 3);
-	N = transvalues[0];
-	miX = transvalues[1];
-	miX2 = transvalues[2];
-
-	N -= 1.0;
-	miX -= newval;
-	miX2 -= newval * newval;
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = N;
-		transvalues[1] = miX;
-		transvalues[2] = miX2;
-
-		PG_RETURN_ARRAYTYPE_P(transarray);
-	}
-	else
-	{
-		Datum		transdatums[3];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(N);
-		transdatums[1] = Float8GetDatumFast(miX);
-		transdatums[2] = Float8GetDatumFast(miX2);
-
-		result = construct_array(transdatums, 3,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
-
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
-}
-
-
 Datum
 float4_accum(PG_FUNCTION_ARGS)
 {
@@ -1985,62 +1929,6 @@ float4_accum(PG_FUNCTION_ARGS)
 		result = construct_array(transdatums, 3,
 								 FLOAT8OID,
 								 sizeof(float8), FLOAT8PASSBYVAL, 'd');
-
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
-}
-
-
-Datum
-float4_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	float4		newval4 = PG_GETARG_FLOAT4(1);
-	float8	   *transvalues;
-	float8		N,
-				miX,
-				miX2,
-				newval;
-
-	transvalues = check_float8_array(transarray, "float4_decum", 3);
-	N = transvalues[0];
-	miX = transvalues[1];
-	miX2 = transvalues[2];
-
-	/* Do arithmetic in float8 for best accuracy */
-	newval = newval4;
-
-	N -= 1.0;
-	miX -= newval;
-	miX2 -= newval * newval;
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = N;
-		transvalues[1] = miX;
-		transvalues[2] = miX2;
-
-		PG_RETURN_ARRAYTYPE_P(transarray);
-	}
-	else
-	{
-		Datum		transdatums[3];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(N);
-		transdatums[1] = Float8GetDatumFast(miX);
-		transdatums[2] = Float8GetDatumFast(miX2);
-
-		result = construct_array(transdatums, 3,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
 
 		PG_RETURN_ARRAYTYPE_P(result);
 	}
@@ -2949,58 +2837,24 @@ float8_amalg(PG_FUNCTION_ARGS)
 {
 	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
 	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(float8_amalg_demalg(aTransArray, bTransArray,
-											  fcinfo, true));
-}
-
-Datum
-float8_demalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(float8_amalg_demalg(aTransArray, bTransArray,
-											  fcinfo, false));	
-}
-
-static ArrayType *
-float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
-					FunctionCallInfo fcinfo, bool is_amalg)
-{
 	float8	   *transvalues;
 	float8		aN, bN,
 				aSumX, bSumX,
 				aSumX2, bSumX2;
 
-	if (is_amalg)
-		transvalues = check_float8_array(bTransArray, "float8_amalg", 3);
-	else
-		transvalues = check_float8_array(bTransArray, "float8_demalg", 3);
+	transvalues = check_float8_array(bTransArray, "float8_amalg", 3);
 	bN = transvalues[0];
 	bSumX = transvalues[1];
 	bSumX2 = transvalues[2];
 
-	if (is_amalg)
-		transvalues = check_float8_array(aTransArray, "float8_amalg", 3);
-	else
-		transvalues = check_float8_array(aTransArray, "float8_demalg", 3);
+	transvalues = check_float8_array(aTransArray, "float8_amalg", 3);
 	aN = transvalues[0];
 	aSumX = transvalues[1];
 	aSumX2 = transvalues[2];
 
-	if (is_amalg)
-	{
-		aN += bN;
-		aSumX += bSumX;
-		aSumX2 += bSumX2;
-	}
-	else
-	{
-		aN -= bN;
-		aSumX -= bSumX;
-		aSumX2 -= bSumX2;
-	}
+	aN += bN;
+	aSumX += bSumX;
+	aSumX2 += bSumX2;
 
 	/*
 	 * If we're invoked by nodeAgg, we can cheat and modify our first
@@ -3015,7 +2869,7 @@ float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
 		transvalues[1] = aSumX;
 		transvalues[2] = aSumX2;
 
-		return aTransArray;
+		PG_RETURN_ARRAYTYPE_P(aTransArray);
 	}
 	else
 	{
@@ -3030,7 +2884,7 @@ float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
 								 FLOAT8OID,
 							 sizeof(float8), true /* float8 byval */ , 'd');
 
-		return result;
+		PG_RETURN_ARRAYTYPE_P(result);
 	}
 }
 
