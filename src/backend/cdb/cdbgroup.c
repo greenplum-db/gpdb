@@ -4733,7 +4733,8 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 
 				/*
 				 * The param 'rel' is only used on making and findding EC in childredrels.
-				 * But I think the situation does not happen in adding cdb path. So Null is ok.
+				 * But I think the situation does not happen in adding cdb path. So Null is
+				 * ok.
 				 */
 				new_eclass = get_eclass_for_sort_expr(root,
 													  new_tle->expr,
