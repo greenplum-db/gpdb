@@ -173,6 +173,25 @@ def impl(context, checksum_toggle):
     if context.ret_code != 0:
         raise Exception('%s' % context.error_message)
 
+@given('the gpinitsystem config is generated with FQDN_HBA "{fqdn_toggle}"')
+def impl(context, checksum_toggle):
+    import socket
+    hostname = socket.gethostname()
+    config = """
+QD_PRIMARY_ARRAY={hostname}~5432~/greenplum/data-1~1~-1~0
+declare -a PRIMARY_ARRAY=(
+{hostname}~40000~/greenplum/data~2~0~6000
+)
+declare -a MIRROR_ARRAY=(
+{hostname}~50000~/greenplum/mirror/data~3~0~6001
+)
+FQDN_HBA={fqdn_toggle}
+""".format(hostname=hostname,
+           fqdn_toggle=fqdn_toggle)
+
+    with open("/tmp/fqdn_config_file", 'w') as fp:
+        fp.write(config)
+
 
 @given('the database is running')
 @then('the database is running')

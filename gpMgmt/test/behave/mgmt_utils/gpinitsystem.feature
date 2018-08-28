@@ -78,3 +78,22 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
+    @gpinitsystem_fqdn
+    Scenario: gpinitsystem should print IP addresses in pg_hba.conf when FQDN_HBA=1
+        Given the cluster config is generated with FQDN_HBA "1"
+        Then verify that file "fqdn_config_file" exists under "/tmp"
+        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=1"
+        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
+        And gpinitsystem should return a return code of 0
+        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "master_hostname       trust"
+
+    @gpinitsystem_fqdn
+    Scenario: gpinitsystem should print FQDNs in pg_hba.conf when FQDN_HBA=0
+        Given the cluster config is generated with FQDN_HBA "0"
+        Then verify that file "fqdn_config_file" exists under "/tmp"
+        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=0"
+        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
+        And gpinitsystem should return a return code of 0
+        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "127.0.0.1       trust"
