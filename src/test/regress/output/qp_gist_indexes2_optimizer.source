@@ -78,10 +78,10 @@ SELECT owner, property FROM GistTable1
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=47)
-   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=47)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=8 width=47)
+   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..6.00 rows=3 width=47)
          Index Cond: property ~= '(7052,250),(6050,20)'::box
          Filter: property ~= '(7052,250),(6050,20)'::box
  Optimizer: PQO version 2.68.0
@@ -124,10 +124,10 @@ SELECT owner, property FROM GistTable1
 EXPLAIN
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=47)
-   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=47)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=8 width=47)
+   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..6.00 rows=3 width=47)
          Index Cond: property ~= '(7052,250),(6050,20)'::box
          Filter: property ~= '(7052,250),(6050,20)'::box
  Optimizer: PQO version 2.68.0
@@ -656,14 +656,14 @@ SELECT id FROM GistTable1
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=4)
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=8 width=4)
    Merge Key: id
-   ->  Result  (cost=0.00..14.40 rows=3 width=4)
-         ->  Sort  (cost=0.00..14.40 rows=3 width=4)
+   ->  Result  (cost=0.00..6.00 rows=3 width=4)
+         ->  Sort  (cost=0.00..6.00 rows=3 width=4)
                Sort Key: id
-               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=4)
+               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..6.00 rows=3 width=4)
                      Index Cond: property ~= '(3,4),(1,2)'::box
                      Filter: property ~= '(3,4),(1,2)'::box
  Optimizer: PQO version 2.68.0
@@ -683,14 +683,14 @@ SELECT id FROM GistTable1
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=4)
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=8 width=4)
    Merge Key: id
-   ->  Result  (cost=0.00..14.40 rows=3 width=4)
-         ->  Sort  (cost=0.00..14.40 rows=3 width=4)
+   ->  Result  (cost=0.00..6.00 rows=3 width=4)
+         ->  Sort  (cost=0.00..6.00 rows=3 width=4)
                Sort Key: id
-               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=4)
+               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..6.00 rows=3 width=4)
                      Index Cond: property ~= '(3,4),(1,2)'::box
                      Filter: property ~= '(3,4),(1,2)'::box
  Optimizer: PQO version 2.68.0

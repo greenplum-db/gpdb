@@ -517,12 +517,12 @@ select * from tt;
 
 -- insert will execute to completion even if function needs just 1 row
 create or replace function insert_tt(text) returns int as
-$$ insert into tt(data) values($1),($1||$1) returning f1 $$
+$$ insert into tt(data) values($1),($1||$1) returning (f1>0)::int $$
 language sql;
 select insert_tt('fool');
  insert_tt 
 -----------
-         3
+         1
 (1 row)
 
 select * from tt;
@@ -587,6 +587,13 @@ select * from tt;
  10 | barrish
 (10 rows)
 
+-- add two dummy tuples to make the following
+-- cases' insert tuples are (13,14) which
+-- will be on the same seg under current
+-- jump consistent hash. This will make the
+-- case not flaky.
+insert into tt(data) values ('nextisright');--11
+insert into tt(data) values ('previswrong');--12
 -- triggers will fire, too
 create function noticetrigger() returns trigger as $$
 begin
@@ -596,72 +603,83 @@ end $$ language plpgsql;
 create trigger tnoticetrigger after insert on tt for each row
 execute procedure noticetrigger();
 select insert_tt2('foolme','barme') limit 1;
-NOTICE:  noticetrigger 11 foolme
-CONTEXT:  SQL function "insert_tt2" statement 1
-NOTICE:  noticetrigger 12 barme
-CONTEXT:  SQL function "insert_tt2" statement 1
- insert_tt2 
-------------
-         11
-(1 row)
-
-select * from tt;
- f1 |   data   
-----+----------
-  1 | foo
-  2 | bar
-  3 | fool
-  4 | foolfool
-  5 | foolish
-  6 | barrish
-  7 | baz
-  8 | quux
-  9 | foolish
- 10 | barrish
- 11 | foolme
- 12 | barme
-(12 rows)
-
--- and rules work
-create temp table tt_log(f1 int, data text);
-create rule insert_tt_rule as on insert to tt do also
-  insert into tt_log values(new.*);
-select insert_tt2('foollog','barlog') limit 1;
-NOTICE:  noticetrigger 13 foollog
-CONTEXT:  SQL function "insert_tt2" statement 1
-NOTICE:  noticetrigger 14 barlog
-CONTEXT:  SQL function "insert_tt2" statement 1
+NOTICE:  noticetrigger 13 foolme  (seg2 slice2 127.0.0.1:25434 pid=22720)
+NOTICE:  noticetrigger 14 barme  (seg2 slice2 127.0.0.1:25434 pid=22720)
  insert_tt2 
 ------------
          13
 (1 row)
 
 select * from tt;
- f1 |   data   
-----+----------
+ f1 |    data     
+----+-------------
   1 | foo
-  2 | bar
   3 | fool
+ 13 | foolme
+ 14 | barme
   4 | foolfool
-  5 | foolish
-  6 | barrish
   7 | baz
   8 | quux
+ 11 | nextisright
+  2 | bar
+  5 | foolish
+  6 | barrish
   9 | foolish
  10 | barrish
- 11 | foolme
- 12 | barme
- 13 | foollog
- 14 | barlog
+ 12 | previswrong
 (14 rows)
+
+-- add two dummy tuples to make the following
+-- cases' insert tuples are (17,18) which
+-- will be on the same seg under current
+-- jump consistent hash. This will make the
+-- case not flaky.
+insert into tt(data) values ('nextiswrong');--15
+NOTICE:  noticetrigger 15 nextiswrong  (seg2 127.0.0.1:25434 pid=22720)
+insert into tt(data) values ('previsright');--16
+NOTICE:  noticetrigger 16 previsright  (seg1 127.0.0.1:25433 pid=22719)
+-- and rules work
+create temp table tt_log(f1 int, data text);
+create rule insert_tt_rule as on insert to tt do also
+  insert into tt_log values(new.*);
+select insert_tt2('foollog','barlog') limit 1;
+NOTICE:  noticetrigger 17 foollog  (seg0 slice2 127.0.0.1:25432 pid=22718)
+NOTICE:  noticetrigger 18 barlog  (seg0 slice2 127.0.0.1:25432 pid=22718)
+ insert_tt2 
+------------
+         17
+(1 row)
+
+select * from tt;
+ f1 |    data     
+----+-------------
+  2 | bar
+  5 | foolish
+  6 | barrish
+  9 | foolish
+ 10 | barrish
+ 12 | previswrong
+ 16 | previsright
+  1 | foo
+  3 | fool
+ 13 | foolme
+ 14 | barme
+ 15 | nextiswrong
+  4 | foolfool
+  7 | baz
+  8 | quux
+ 11 | nextisright
+ 17 | foollog
+ 18 | barlog
+(18 rows)
 
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.
 select * from tt_log;
  f1 |  data   
 ----+---------
- 15 | foollog
- 16 | barlog
+ 19 | foollog
+ 20 | barlog
 (2 rows)
 
 -- test case for a whole-row-variable bug

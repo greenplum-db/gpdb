@@ -47,7 +47,7 @@ typedef struct NewConstraint
 
 extern const char *synthetic_sql;
 
-extern Oid	DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, bool dispatch, bool useChangedOpts);
+extern Oid	DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, bool dispatch, bool useChangedOpts, GpPolicy *intoPolicy);
 
 extern void	DefineExternalRelation(CreateExternalStmt *stmt);
 
@@ -116,7 +116,7 @@ extern Oid  rel_partition_get_master(Oid relid);
 extern Oid get_settable_tablespace_oid(char *tablespacename);
 
 extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
-			List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
+			List **supOids, List **supconstr, int *supOidCount);
 
 extern DistributedBy *make_dist_clause(Relation rel);
 

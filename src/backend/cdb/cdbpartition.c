@@ -509,12 +509,12 @@ rel_has_appendonly_partition(Oid relid)
 	{
 		Relation	rel = heap_open(lfirst_oid(lc), NoLock);
 
-		heap_close(rel, NoLock);
-
 		if (RelationIsAppendOptimized(rel))
 		{
+			heap_close(rel, NoLock);
 			return true;
 		}
+		heap_close(rel, NoLock);
 	}
 
 	return false;
@@ -5131,7 +5131,7 @@ atpxPart_validate_spec(PartitionBy *pBy,
 												pstrdup(RelationGetRelationName(rel)), -1)),
 						RELPERSISTENCE_PERMANENT, /* GPDB_91_MERGE_FIXME: what if it's unlogged or temp? Where to get a proper value for this? */
 						true /* isPartitioned */ ,
-						&inheritOids, &old_constraints, &parentOidCount, NULL);
+						&inheritOids, &old_constraints, &parentOidCount);
 
 	spec->partElem = list_make1(pelem);
 
@@ -6606,7 +6606,6 @@ atpxPartAddList(Relation rel,
 	ct->distributedBy = NULL;
 	ct->partitionBy = (Node *) pBy;
 	ct->relKind = RELKIND_RELATION;
-	ct->policy = 0;
 	ct->postCreate = NULL;
 
 	ct->is_add_part = true;		/* subroutines need to know this */

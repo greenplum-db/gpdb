@@ -24,7 +24,7 @@ SELECT barrier();
 -- seg 1: con40 ==> con20, xid lock
 40&: UPDATE t107 SET val=40 WHERE id=segid(1,2);
 
--- so far there is no deadlock yet as con30 is idel in transaction
+-- so far there is no deadlock yet as con30 is idle in transaction
 SELECT pg_sleep(20);
 
 -- when con30 quits the edge from con10 to con20 on seg 1 will change:

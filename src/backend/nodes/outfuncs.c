@@ -3224,6 +3224,7 @@ _outCreateOpClassItem(StringInfo str, const CreateOpClassItem *node)
 	WRITE_NODE_FIELD(name);
 	WRITE_NODE_FIELD(args);
 	WRITE_INT_FIELD(number);
+	WRITE_NODE_FIELD(order_family);
 	WRITE_NODE_FIELD(class_args);
 	WRITE_NODE_FIELD(storedtype);
 }

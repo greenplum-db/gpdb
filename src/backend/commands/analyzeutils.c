@@ -1097,18 +1097,22 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
  *    1.5. None empty & all have stats - return TRUE
  */
 bool
-leaf_parts_analyzed(VacAttrStats *stats)
+leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 {
-	PartitionNode *pn = get_parts(stats->attr->attrelid, 0 /*level*/ ,
+	PartitionNode *pn = get_parts(attrelid, 0 /*level*/ ,
 								  0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
 	Assert(pn);
 
 	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
 	bool all_parts_empty = true;
-	ListCell *lc;
-	foreach(lc, oid_list)
+	ListCell *lc, *lc_col;
+	forboth(lc_col, va_cols, lc, oid_list)
 	{
+		AttrNumber attnum = lfirst_int(lc_col);
 		Oid partRelid = lfirst_oid(lc);
+		if (partRelid == relid_exclude)
+			continue;
+
 		float4 relTuples = get_rel_reltuples(partRelid);
 		int4 relpages = get_rel_relpages(partRelid);
 
@@ -1121,7 +1125,7 @@ leaf_parts_analyzed(VacAttrStats *stats)
 		if (relTuples == 0.0 && relpages == 1)
 			continue;
 
-		HeapTuple heaptupleStats = get_att_stats(partRelid, stats->attr->attnum);
+		HeapTuple heaptupleStats = get_att_stats(partRelid, attnum);
 		all_parts_empty = false;
 
 		// if there is no colstats

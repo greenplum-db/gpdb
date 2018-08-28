@@ -49,7 +49,12 @@ getBitmapTableScanMethod(TableType tableType)
 			&BitmapHeapScanNext, &BitmapHeapScanRecheck, &BitmapHeapScanBegin, &BitmapHeapScanEnd,
 			&BitmapHeapScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
 		},
-		// GPDB_90_MERGE_FIXME: should we have rechecks for AO / AOCS scans?
+		/*
+		 * AO and AOCS tables don't need a recheck-method, because they never
+		 * participate in EvalPlanQual rechecks. (They don't have a ctid
+		 * field, so UPDATE in REPEATABLE READ mode cannot follow the chain
+		 * to the updated tuple.
+		 */
 		{
 			&BitmapAOScanNext, NULL, &BitmapAOScanBegin, &BitmapAOScanEnd,
 			&BitmapAOScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
@@ -146,13 +151,10 @@ fetchNextBitmapPage(BitmapTableScanState *scanState)
 		scanState->needNewBitmapPage = false;
 
 		if (tbmres->ntuples == BITMAP_IS_LOSSY)
-		{
 			scanState->isLossyBitmapPage = true;
-		}
 		else
-		{
 			scanState->isLossyBitmapPage = false;
-		}
+		scanState->recheckTuples = tbmres->recheck;
 	}
 
 	return (tbmres != NULL);
@@ -243,8 +245,6 @@ BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap)
 	 *	Aocs/Lossy          1        0
 	 *	Aocs/Non-Lossy      0        0
 	 */
-	scanState->recheckTuples = true;
-
 	getBitmapTableScanMethod(node->tableType)->beginScanMethod(node);
 
 	/*
@@ -266,7 +266,6 @@ BitmapTableScanReScanPartition(ScanState *node)
 	Assert(scanState->tbm == NULL);
 
 	scanState->needNewBitmapPage = true;
-	scanState->recheckTuples = true;
 
 	getBitmapTableScanMethod(node->tableType)->reScanMethod(node);
 }

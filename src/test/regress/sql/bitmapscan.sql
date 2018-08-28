@@ -286,19 +286,19 @@ drop table if exists bm_test;
 create table bm_table_foo (c int, d int) distributed by (c);
 create index ie_bm_table_foo on bm_table_foo using bitmap(d);
 insert into bm_table_foo values (1, 1);
-insert into bm_table_foo values (2, 2);
+insert into bm_table_foo values (3, 3);
 
 -- Next queries will create additional StreamNodes. In particular,
 -- d in (1, 2) will be transformed into an OR with two BMS_INDEX input streams.
-select * from bm_table_foo where d in (1, 2) and (d = 1 or d = 2);
-select * from bm_table_foo where (d = 1 or d = 2) and d in (1, 2);
+select * from bm_table_foo where d in (1, 3) and (d = 1 or d = 3);
+select * from bm_table_foo where (d = 1 or d = 3) and d in (1, 3);
 
--- This query will eliminate StreamNodes since there is no tuple where d =3.
-select * from bm_table_foo where d = 3 and (d = 1 or d = 2);
+-- This query will eliminate StreamNodes since there is no tuple where d =2.
+select * from bm_table_foo where d = 2 and (d = 1 or d = 3);
 
--- If a segment contains tuples with d in (1, 2), then it will create the whole StreamNode tree, 
+-- If a segment contains tuples with d in (1, 3), then it will create the whole StreamNode tree,
 -- otherwise segments will eliminate nodes.
-select * from bm_table_foo where d = 2 and (d = 1 or d = 2);
+select * from bm_table_foo where d = 3 and (d = 1 or d = 3);
 
 -- double free mixed bitmap indexes (StreamBitmap with TIDBitmap)
 CREATE TABLE bmheapcrash (

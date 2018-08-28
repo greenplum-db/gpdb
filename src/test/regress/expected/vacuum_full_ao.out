@@ -20,14 +20,14 @@ select junkloop('vfao', 300);
       300
 (1 row)
 
-select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 2;
  pg_relation_size 
 ------------------
             65536
 (1 row)
 
 vacuum full vfao;
-select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 2;
  pg_relation_size 
 ------------------
             32768

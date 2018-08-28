@@ -97,6 +97,8 @@ keep_minimal_cgroup_dirs() {
     ssh -t $gpdb_master_alias sudo bash -ex <<EOF
         rmdir $basedir/memory/gpdb/*/ || :
         rmdir $basedir/memory/gpdb
+        rmdir $basedir/cpuset/gpdb/*/ || :
+        rmdir $basedir/cpuset/gpdb
 EOF
 }
 

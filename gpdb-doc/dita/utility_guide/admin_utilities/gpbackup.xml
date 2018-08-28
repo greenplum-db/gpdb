@@ -17,6 +17,7 @@
    [<b>--include-schema</b> <varname>schema_name</varname>]
    [<b>--include-table</b> <varname>schema.table</varname>]
    [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--incremental</b> [<b>--from-timestamp</b> <varname>backup-timestamp</varname>]]
    [<b>--jobs</b> <varname>int</varname>]
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
@@ -53,6 +54,12 @@
         Greenplum Database master and segment hosts to an absolute path for later use. Additional
         options are provided to filter the backup set in order to include or exclude specific
         tables.</p>
+      <p>You can create an incremental backup with the <codeph><xref href="#topic1/incremental"
+            format="dita">--incremental</xref></codeph> option. Incremental backups are efficient
+        when the total amount of data in append-optimized tables or table partitions that changed is
+        small compared to the data has not changed. See <xref
+          href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/> for information about
+        incremental backups. </p>
       <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
         operation uses a single transaction on the Greenplum Database master host. The <codeph>COPY
           ... ON SEGMENT</codeph> command performs the backup task in parallel on each segment host.
@@ -87,6 +94,7 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. When you
             specify a custom backup directory, files are copied to these paths in subdirectories of
             the backup directory.</pd>
+          <pd>You cannot combine this option with the option <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--compression-level</b>
@@ -203,6 +211,40 @@
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
+        <plentry id="incremental">
+          <pt><b>--incremental</b></pt>
+          <pd>Specify this option to add an incremental backup to an incremental backup set. A
+            backup set is a full backup and one or more incremental backups. The backups in the set
+            must be created with a consistent set of backup options to ensure that the backup set
+            can be used in a restore operation. </pd>
+          <pd>By default, <codeph>gpbackup</codeph> attempts to find the most recent existing backup
+            with a consistent set of options. If the backup is a full backup, the utility creates a
+            backup set. If the backup is an incremental backup, the utility adds the backup to the
+            existing backup set. The incremental backup is added as the latest backup in the backup
+            set. You can specify <codeph>--from-timestamp</codeph> to override the default
+            behavior.</pd>
+          <pd>
+            <parml>
+              <plentry>
+                <pt><b>--from-timestamp</b>
+                  <varname>backup-timestamp</varname></pt>
+                <pd>Optional. Specifies the timestamp of a backup. The specified backup must have
+                  backup options that are consistent with the incremental backup that is being
+                  created. If the specified backup is a full backup, the utility creates a backup
+                  set. If the specified backup is an incremental backup, the utility adds the
+                  incremental backup to the existing backup set.</pd>
+              </plentry>
+            </parml>
+          </pd>
+          <pd>You must specify <codeph>--leaf-partition-data</codeph> with this option. You cannot
+            combine this option with <codeph>--data-only</codeph> or
+              <codeph>--metadata-only</codeph>.</pd>
+          <pd>A backup is not created and the utility returns an error if the backup cannot add the
+            backup to an existing incremental backup set or cannot use the backup to create a backup
+            set.</pd>
+          <pd>For information about creating and using incremental backups, see <xref
+              href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</pd>
+        </plentry>
         <plentry>
           <pt><b>--jobs</b>
             <varname>int</varname></pt>
@@ -248,6 +290,7 @@
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
+          <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
               href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
               Plugins</xref>.</pd>

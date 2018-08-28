@@ -829,7 +829,7 @@ _bitmap_log_newpage(Relation rel, uint8 info, Buffer buf)
  * _bitmap_log_metapage() -- log the changes to the metapage
  */
 void
-_bitmap_log_metapage(Relation rel, Page page)
+_bitmap_log_metapage(Relation rel, ForkNumber fork, Page page)
 {
 	BMMetaPage metapage = (BMMetaPage) PageGetContents(page);
 
@@ -840,6 +840,7 @@ _bitmap_log_metapage(Relation rel, Page page)
 	xlMeta = (xl_bm_metapage *)
 		palloc(MAXALIGN(sizeof(xl_bm_metapage)));
 	xlMeta->bm_node = rel->rd_node;
+	xlMeta->bm_fork = fork;
 	xlMeta->bm_lov_heapId = metapage->bm_lov_heapId;
 	xlMeta->bm_lov_indexId = metapage->bm_lov_indexId;
 	xlMeta->bm_lov_lastpage = metapage->bm_lov_lastpage;
@@ -890,7 +891,7 @@ _bitmap_log_bitmap_lastwords(Relation rel, Buffer lovBuffer,
  * _bitmap_log_lovitem() -- log adding a new lov item to a lov page.
  */
 void
-_bitmap_log_lovitem(Relation rel, Buffer lovBuffer, OffsetNumber offset,
+_bitmap_log_lovitem(Relation rel, ForkNumber fork, Buffer lovBuffer, OffsetNumber offset,
 					BMLOVItem lovItem, Buffer metabuf, bool is_new_lov_blkno)
 {
 	Page lovPage = BufferGetPage(lovBuffer);
@@ -902,6 +903,7 @@ _bitmap_log_lovitem(Relation rel, Buffer lovBuffer, OffsetNumber offset,
 	Assert(BufferGetBlockNumber(lovBuffer) > 0);
 
 	xlLovItem.bm_node = rel->rd_node;
+	xlLovItem.bm_fork = fork;
 	xlLovItem.bm_lov_blkno = BufferGetBlockNumber(lovBuffer);
 	xlLovItem.bm_lov_offset = offset;
 	memcpy(&(xlLovItem.bm_lovItem), lovItem, sizeof(BMLOVItemData));

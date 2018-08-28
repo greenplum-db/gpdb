@@ -1,3 +1,6 @@
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION btree_gin" to load this file. \quit
+
 DROP TYPE IF EXISTS svec CASCADE;
 CREATE TYPE svec;
 

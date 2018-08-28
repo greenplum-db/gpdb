@@ -6,10 +6,10 @@ create table bm_test (i int, t text);
 insert into bm_test select i % 10, (i % 10)::text  from generate_series(1, 100) i;
 create index bm_test_idx on bm_test using bitmap (i);
 select count(*) from bm_test where i=1;
-select count(*) from bm_test where i in(1, 2);
+select count(*) from bm_test where i in(1, 3);
 select * from bm_test where i > 10;
 reindex index bm_test_idx;
-select count(*) from bm_test where i in(1, 2);
+select count(*) from bm_test where i in(1, 3);
 drop index bm_test_idx;
 create index bm_test_multi_idx on bm_test using bitmap(i, t);
 select * from bm_test where i=5 and t='5';
@@ -235,3 +235,18 @@ select * from oversize_test where c1 < 'z';
 drop index oversize_test_idx;
 insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
 CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);
+
+
+--
+-- Test unlogged table
+--
+set enable_seqscan=off;
+set enable_indexscan=on;
+set optimizer_enable_bitmapscan=on;
+create unlogged table unlogged_test(c1 int); 
+insert into unlogged_test select * from generate_series(1,1000);
+CREATE INDEX unlogged_test_idx ON unlogged_test USING BITMAP (c1);
+analyze unlogged_test;
+explain select * from unlogged_test where c1 = 100;
+select * from unlogged_test where c1 = 100;
+drop table unlogged_test;

@@ -272,8 +272,6 @@ struct DropRelationCallbackState
 static void truncate_check_rel(Relation rel);
 static void MergeAttributesIntoExisting(Relation child_rel, Relation parent_rel,
 						List *inhAttrNameList, bool is_partition);
-List * MergeAttributes(List *schema, List *supers, char relpersistence, bool isPartitioned,
-				List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
 static bool MergeCheckConstraint(List *constraints, char *name, Node *expr);
 static void MergeConstraintsIntoExisting(Relation child_rel, Relation parent_rel);
 static void StoreCatalogInheritance(Oid relationId, List *supers);
@@ -500,11 +498,12 @@ static void inherit_parent(Relation parent_rel, Relation child_rel,
  * ----------------------------------------------------------------
  */
 Oid
-DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, bool dispatch, bool useChangedOpts)
+DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, bool dispatch, bool useChangedOpts, GpPolicy *intoPolicy)
 {
 	char		relname[NAMEDATALEN];
 	Oid			namespaceId;
 	List	   *schema;
+	GpPolicy   *policy;
 	Oid			relationId = InvalidOid;
 	Oid			tablespaceId;
 	Relation	rel;
@@ -687,7 +686,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 								 stmt->relation->relpersistence,
 								 isPartitioned,
 								 &stmt->inhOids, &old_constraints,
-								 &stmt->parentOidCount, stmt->policy);
+								 &stmt->parentOidCount);
 	}
 	else
 	{
@@ -707,6 +706,19 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 
 	localHasOids = interpretOidsOption(stmt->options);
 	descriptor->tdhasoid = (localHasOids || stmt->parentOidCount > 0);
+
+
+	/*
+	 * now that we have the final list of attributes, interpret DISTRIBUTED BY
+	 * column names into a GpPolicy
+	 */
+	if (intoPolicy)
+	{
+		Assert(!stmt->inhRelations);
+		policy = intoPolicy;
+	}
+	else
+		policy = getPolicyForDistributedBy(stmt->distributedBy, descriptor);
 
 	/*
 	 * Find columns with default values and prepare for insertion of the
@@ -850,7 +862,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 										  localHasOids,
 										  stmt->parentOidCount,
 										  stmt->oncommit,
-                                          stmt->policy,  /*CDB*/
+                                          policy,  /*CDB*/
                                           reloptions,
 										  true,
 										  allowSystemTableMods,
@@ -2011,7 +2023,7 @@ storage_name(char c)
  */
 List *
 MergeAttributes(List *schema, List *supers, char relpersistence, bool isPartitioned,
-				List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy)
+				List **supOids, List **supconstr, int *supOidCount)
 {
 	ListCell   *entry;
 	List	   *inhSchema = NIL;
@@ -2250,27 +2262,6 @@ MergeAttributes(List *schema, List *supers, char relpersistence, bool isPartitio
 				def->is_not_null |= attribute->attnotnull;
 				/* Default and other constraints are handled below */
 				newattno[parent_attno - 1] = exist_attno;
-
-				/*
-				 * Update GpPolicy
-				 */
-				if (policy != NULL)
-				{
-					int attr_ofst = 0;
-
-					Assert(policy->nattrs >= 0 && "the number of distribution attributes is not negative");
-
-					/* Iterate over all distribution attribute offsets */
-					for (attr_ofst = 0; attr_ofst < policy->nattrs; attr_ofst++)
-					{
-						/* Check if any distribution attribute has higher offset than the current */
-						if (policy->attrs[attr_ofst] > child_attno)
-						{
-							Assert(policy->attrs[attr_ofst] > 0 && "index should not become negative");
-							policy->attrs[attr_ofst]--;
-						}
-					}
-				}
 
 			}
 			else
@@ -14394,6 +14385,13 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						untransformRelOptions(newOptions),
 						&tmprv,
 						useExistingColumnAttributes);
+
+		/*
+		 * bypass gpmon info collecting in following ExecutorStart
+		 * to be consistent with other alter table commands,
+		 * ALTER TABLE SET DISTRIBUTED BY should not be logged in gpperfmon.
+		 */
+		queryDesc->gpmon_pkt = NULL;
 
 		/* 
 		 * We need to update our snapshot here to make sure we see all

@@ -16,6 +16,11 @@
 
 #include <sys/mman.h>
 
+#ifdef MPROTECT_BUFFERS
+#include <sys/mman.h>
+#include "miscadmin.h"
+#endif
+
 #include "storage/bufmgr.h"
 #include "storage/buf_internals.h"
 
@@ -24,6 +29,28 @@ BufferDesc *BufferDescriptors;
 char	   *BufferBlocks;
 int32	   *PrivateRefCount;
 
+#ifdef MPROTECT_BUFFERS
+/*
+ * Protect the entire shared buffers region such that neither read nor write
+ * is allowed.  Protection will change for specific buffers when accessed
+ * through buffer manager's interface.  The intent is to catch violation of
+ * buffer access rules.
+ */
+static void
+ProtectMemoryPoolBuffers()
+{
+	Size bufferBlocksTotalSize = mul_size((Size)NBuffers, (Size) BLCKSZ);
+	if (IsUnderPostmaster && IsNormalProcessingMode() &&
+		mprotect(BufferBlocks, bufferBlocksTotalSize, PROT_NONE))
+	{
+		ereport(ERROR,
+				(errmsg("unable to set memory level to %d, error %d, "
+						"allocation size %ud, ptr %ld", PROT_NONE,
+						errno, (unsigned int) bufferBlocksTotalSize,
+						(long int) BufferBlocks)));
+	}
+}
+#endif
 
 /*
  * Data Structures:
@@ -63,19 +90,6 @@ int32	   *PrivateRefCount;
  *		has pinned them, so that it will not blow away buffers of another
  *		backend.
  */
-
-static void
-ProtectMemoryPoolBuffers()
-{
-	Size bufferBlocksTotalSize = mul_size((Size)NBuffers, (Size) BLCKSZ);
-	if ( ShouldMemoryProtectBufferPool() &&
-         mprotect(BufferBlocks, bufferBlocksTotalSize, PROT_NONE ))
-    {
-        ereport(ERROR,
-                (errmsg("Unable to set memory level to %d, error %d, allocation size %ud, ptr %ld", PROT_NONE,
-                errno, (unsigned int) bufferBlocksTotalSize, (long int) BufferBlocks)));
-    }
-}
 
 /*
  * Initialize shared buffer pool
@@ -143,7 +157,9 @@ InitBufferPool(void)
 		BufferDescriptors[NBuffers - 1].freeNext = FREENEXT_END_OF_LIST;
 	}
 
+#ifdef MPROTECT_BUFFERS
     ProtectMemoryPoolBuffers();
+#endif
 
 	/* Init other shared buffer-management stuff */
 	StrategyInitialize(!foundDescs);
@@ -164,8 +180,9 @@ InitBufferPool(void)
 void
 InitBufferPoolAccess(void)
 {
+#ifdef MPROTECT_BUFFERS
 	ProtectMemoryPoolBuffers();
-	
+#endif
 	/*
 	 * Allocate and zero local arrays of per-buffer info.
 	 */

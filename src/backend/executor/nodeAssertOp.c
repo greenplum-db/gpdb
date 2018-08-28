@@ -21,8 +21,7 @@
 #include "executor/nodeAssertOp.h"
 #include "executor/instrument.h"
 
-/* Number of slots and memory used by node.*/
-#define ASSERTOP_NSLOTS 1
+/* memory used by node.*/
 #define ASSERTOP_MEM 	1
 
 /*

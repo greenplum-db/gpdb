@@ -324,7 +324,7 @@ typedef enum
 	PM_RUN,						/* normal "database is alive" state */
 	PM_WAIT_BACKUP,				/* waiting for online backup mode to end */
 	PM_WAIT_READONLY,			/* waiting for read only backends to exit */
-	PM_WAIT_BACKENDS,			/* waiting for live backends to exit (including seqserver) */
+	PM_WAIT_BACKENDS,			/* waiting for live backends to exit */
 	PM_SHUTDOWN,				/* waiting for checkpointer to do shutdown
 								 * ckpt */
 	PM_SHUTDOWN_2,				/* waiting for archiver and walsenders to
@@ -585,7 +585,6 @@ static void ShmemBackendArrayRemove(Backend *bn);
 /* Macros to check exit status of a child process */
 #define EXIT_STATUS_0(st)  ((st) == 0)
 #define EXIT_STATUS_1(st)  (WIFEXITED(st) && WEXITSTATUS(st) == 1)
-#define EXIT_STATUS_2(st)  (WIFEXITED(st) && WEXITSTATUS(st) == 2)
 
 /* if we are a QD postmaster or not */
 extern bool Gp_entry_postmaster;
@@ -1360,6 +1359,7 @@ PostmasterMain(int argc, char *argv[])
 	return 0;					/* not reached */
 }
 
+
 /*
  * Compute and check the directory paths to files that are part of the
  * installation (as deduced from the postgres executable's own location)
@@ -2065,11 +2065,9 @@ retry1:
 		 * given packet length, complain.
 		 */
 		if (offset != len - 1)
-		{
 			ereport(FATAL,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("invalid startup packet layout: expected terminator as last byte")));
-		}
 	}
 	else
 	{
@@ -2217,6 +2215,7 @@ retry1:
 
 	return STATUS_OK;
 }
+
 
 /*
  * The client has sent a cancel request packet, not a normal
@@ -2498,6 +2497,7 @@ reset_shared(int port)
 	CreateSharedMemoryAndSemaphores(false, port);
 }
 
+
 /*
  * SIGHUP -- reread config files, and tell children to do same
  */
@@ -2759,7 +2759,6 @@ reaper(SIGNAL_ARGS)
 	int			pid;			/* process id of dead child process */
 	int			exitstatus;		/* its exit status */
 	bool        wasServiceProcess = false;
-	bool        didServiceProcessWork = true;
 
 	/* These macros hide platform variations in getting child status. */
 #ifdef HAVE_WAITPID
@@ -3088,10 +3087,7 @@ reaper(SIGNAL_ARGS)
 				LogChildExit(LOG, _("archiver process"),
 							 pid, exitstatus);
 			if (XLogArchivingActive() && pmState == PM_RUN)
-			{
 				PgArchPID = pgarch_start();
-				didServiceProcessWork &= (PgArchPID > 0);
-			}
 			continue;
 		}
 
@@ -3107,14 +3103,7 @@ reaper(SIGNAL_ARGS)
 				LogChildExit(LOG, _("statistics collector process"),
 							 pid, exitstatus);
 			if (pmState == PM_RUN)
-            {
 				PgStatPID = pgstat_start();
-				/*
-				 * Since we will retry on failure (see comment above), avoid
-				 * promoting the status to error.
-				 */
-				didServiceProcessWork &= true;
-			}
 			continue;
 		}
 
@@ -3124,7 +3113,6 @@ reaper(SIGNAL_ARGS)
 			SysLoggerPID = 0;
 			/* for safety's sake, launch new logger *first* */
 			SysLoggerPID = SysLogger_Start();
-			didServiceProcessWork &= (SysLoggerPID > 0);
 			if (!EXIT_STATUS_0(exitstatus))
 				LogChildExit(LOG, _("system logger process"),
 							 pid, exitstatus);
@@ -3492,12 +3480,6 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 					sys_siglist[WTERMSIG(exitstatus)] : "(unknown)"),
 	  activity ? errdetail("Failed process was running: %s", activity) : 0));
 #else
-	{
-		// If we don't have strsignal or sys_siglist, do our own translation
-		const char *signalName;
-		signalName = signal_to_name(WTERMSIG(exitstatus));
-		if (signalName == NULL)
-			signalName = "(unknown)";
 		ereport(lev,
 
 		/*------
@@ -3518,7 +3500,7 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 				 activity ? errdetail("Failed process was running: %s", activity) : 0));
 }
 
- /*
+/*
  * Advance the postmaster's state machine and take actions as appropriate
  *
  * This is common code for pmdie(), reaper() and sigusr1_handler(), which
@@ -3761,7 +3743,7 @@ PostmasterStateMachine(void)
 	if (FatalError && pmState == PM_NO_CHILDREN)
 	{
 		ereport(LOG,
-				(errmsg("all server terminated; reinitializing")));
+				(errmsg("all server processes terminated; reinitializing")));
 
 		shmem_exit(1);
 		reset_shared(PostPortNumber);
@@ -4167,7 +4149,7 @@ BackendInitialize(Port *port)
 	else if (am_ftshandler)
 		init_ps_display("fts handler process", port->user_name, remote_ps_data,
 						update_process_title ? "authentication" : "");
-    else
+	else
 		init_ps_display(port->user_name, port->database_name, remote_ps_data,
 						update_process_title ? "authentication" : "");
 

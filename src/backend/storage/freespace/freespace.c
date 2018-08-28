@@ -538,10 +538,29 @@ fsm_readbuf(Relation rel, FSMAddress addr, bool extend)
 	 * pages than error out. Since the FSM changes are not WAL-logged, the
 	 * so-called torn page problem on crash can lead to pages with corrupt
 	 * headers, for example.
+	 *
+	 * The initialize-the-page part is trickier than it looks, because of the
+	 * possibility of multiple backends doing this concurrently, and our
+	 * desire to not uselessly take the buffer lock in the normal path where
+	 * the page is OK.  We must take the lock to initialize the page, so
+	 * recheck page newness after we have the lock, in case someone else
+	 * already did it.  Also, because we initially check PageIsNew with no
+	 * lock, it's possible to fall through and return the buffer while someone
+	 * else is still initializing the page (i.e., we might see pd_upper as set
+	 * but other page header fields are still zeroes).  This is harmless for
+	 * callers that will take a buffer lock themselves, but some callers
+	 * inspect the page without any lock at all.  The latter is OK only so
+	 * long as it doesn't depend on the page header having correct contents.
+	 * Current usage is safe because PageGetContents() does not require that.
 	 */
 	buf = ReadBufferExtended(rel, FSM_FORKNUM, blkno, RBM_ZERO_ON_ERROR, NULL);
 	if (PageIsNew(BufferGetPage(buf)))
-		PageInit(BufferGetPage(buf), BLCKSZ, 0);
+	{
+		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+		if (PageIsNew(BufferGetPage(buf)))
+			PageInit(BufferGetPage(buf), BLCKSZ, 0);
+		LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+	}
 	return buf;
 }
 
@@ -791,8 +810,17 @@ fsm_vacuum_page(Relation rel, FSMAddress addr, bool *eof_p)
 	 * pages, increasing the chances that a later vacuum can truncate the
 	 * relation.
 	 */
+#ifdef MPROTECT_BUFFERS
+	/*
+	 * When mprotect() is used to detect shared buffer access violations, lock
+	 * must be acquired so that write access is allowed on this buffer.
+	 */
+	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+#endif
 	((FSMPage) PageGetContents(page))->fp_next_slot = 0;
-
+#ifdef MPROTECT_BUFFERS
+	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+#endif
 	ReleaseBuffer(buf);
 
 	return max_avail;

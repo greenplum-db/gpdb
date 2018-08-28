@@ -815,10 +815,6 @@
                 <xref href="guc-list.xml#gp_log_format" type="section">gp_log_format</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_max_csv_line_length" type="section"
-                  >gp_max_csv_line_length</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#gp_reraise_signal" type="section">gp_reraise_signal</xref>
               </p>
             </stentry>

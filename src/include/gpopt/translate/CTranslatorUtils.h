@@ -304,10 +304,6 @@ namespace gpdxl
 			static
 			BOOL IsGroupingColumn(const TargetEntry *target_entry, const SortGroupClause *sort_group_clause);
 
-			// check to see if the sorting column entry is a grouping column
-			static
-			BOOL IsGroupingColumn(const SortGroupClause *sort_group_clause, List *group_clause_list);
-
 			// check if the expression has a matching target entry that is a grouping column
 			static
 			BOOL IsGroupingColumn(Node *node, List *group_clause_list, List *target_list);

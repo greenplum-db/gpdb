@@ -6,6 +6,10 @@
   <body>
     <p>This topic describes how to develop a custom storage plugin with the Greenplum Database
       Backup/Restore Storage Plugin API.</p>
+    <note type="warning">The Greenplum Database Backup/Restore Storage Plugin API is an experimental
+      feature and is not intended for use in a production environment. Experimental features are
+      subject to change without notice in future releases.<p>Only the Backup/Restore Storage Plugin
+        API is experimental. The storage plugins are not experimental.</p></note>
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and
       integrate a custom backup storage system with the Greenplum Database <xref
         href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and

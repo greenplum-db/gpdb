@@ -1127,15 +1127,25 @@ getExprListFromTargetList(List *tlist,
  * isAnyColChangedByUpdate
  */
 bool
-isAnyColChangedByUpdate(Index targetvarno,
+isAnyColChangedByUpdate(PlannerInfo *root,
+						Index targetvarno,
+						RangeTblEntry *rte,
 						List *targetlist,
 						int nattrs,
 						AttrNumber *attrs)
 {
+	RelOptInfo *rel = root->simple_rel_array[targetvarno];
 	/*
 	 * Want to test whether an update statement possibly changes the value of
 	 * any of the partitioning columns.
 	 */
+
+	/*
+	 * If the relation has been deemed to be excluded by constraints, then
+	 * this relation will never yield any tuples to update.
+	 */
+	if(relation_excluded_by_constraints(root, rel, rte))
+		return false;
 
 	/*
 	 * For each partitioning column, the TargetListEntry for that varattno

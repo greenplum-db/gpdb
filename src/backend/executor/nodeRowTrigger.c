@@ -34,8 +34,6 @@
 #define GPMD_TRIGGER_DELETE 8
 #define GPMD_TRIGGER_UPDATE 16
 
-/* Number of slots used by node.*/
-#define ROWTRIGGER_NSLOTS 4
 /* Memory used by RowTrigger */
 #define ROWTRIGGER_MEM 1
 

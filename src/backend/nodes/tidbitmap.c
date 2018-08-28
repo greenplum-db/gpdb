@@ -804,6 +804,7 @@ tbm_iterate_page(PagetableEntry *page, TBMIterateResult *output)
 
 	output->blockno = page->blockno;
 	output->ntuples = ntuples;
+	output->recheck = page->recheck;
 
 	return true;
 }

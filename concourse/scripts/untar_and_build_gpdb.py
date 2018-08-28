@@ -13,8 +13,21 @@ def exec_command(cmd):
   if retcode != 0:
     sys.exit(retcode)
 
+def get_assert_mode():
+    with open('gporca-commits-to-test/gpdb_assert_mode.txt') as fp:
+        assert_mode = fp.read().strip()
+        return assert_mode 
+
 untar_gpdb_cmd = "mkdir -p gpdb_src && tar -xf gpdb_tarball/gpdb_src.tar.gz -C gpdb_src --strip 1"
 exec_command(untar_gpdb_cmd)
+
+# Default build mode is to enable assert. If the user explicitly specifies
+# 'disable-assert' option, only then don't enable the assert build.
+assert_mode = get_assert_mode()
+if assert_mode == 'enable-cassert':
+    configure_option += ' --enable-cassert'
+elif assert_mode != 'disable-cassert':
+    raise Exception('Unknown build type: (%s). Possible options are \'enable-cassert\' or \'disable-cassert\'')
 
 print "Beginning to {0}".format(action)
 if action == 'build':

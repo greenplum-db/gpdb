@@ -870,12 +870,11 @@ sub printfndef
 		$tup->{procost} . " " .
 		$tup->{prorows} . " " .
 		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
-		# GPDB_92_MERGE_FIXME: Column protransform is hardcoded to 0. Should
-		# modify pg_proc.sql and this file to allow to set transform function,
-		# although it seems that this is not widely used.  Given pg 11 has
-		# better initial catalog data format, I'm not sure if we use this file
-		# or not in the future.
-		"0 ".
+		# 'protransform' is currently hardcoded to 0, because we don't
+		# need it in any of the functions. Fix it if you need it.
+		# (PostgreSQL v11 has a better initial catalog data format,
+		# and we probably won't need catullus.pl after that, anyway)
+		"0 ".     # protransform
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
 		(exists($fndef->{with}->{proiswindow}) ? $fndef->{with}->{proiswindow} :

@@ -22,6 +22,5 @@ extern SequenceState *ExecInitSequence(Sequence *node, EState *estate, int eflag
 extern TupleTableSlot *ExecSequence(SequenceState *node);
 extern void ExecReScanSequence(SequenceState *node);
 extern void ExecEndSequence(SequenceState *node);
-extern int ExecCountSlotsSequence(Sequence *node);
 
 #endif

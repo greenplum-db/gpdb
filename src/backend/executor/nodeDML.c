@@ -24,8 +24,7 @@
 #include "executor/nodeDML.h"
 #include "utils/memutils.h"
 
-/*DML Slots and default memory */
-#define DML_NSLOTS 2
+/* DML default memory */
 #define DML_MEM 1
 
 /*

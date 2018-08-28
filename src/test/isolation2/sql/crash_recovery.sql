@@ -38,5 +38,8 @@
 5<:
 
 -- transaction of session 2, session 3 and session 4 will be committed during recovery.
-6:select * from crash_test_table;
-6:select * from crash_test_ddl;
+-- SELECT from a heap table, result order is uncertain.
+-- Strangely, the test framework does not sort this output.
+-- So to make things correct, we add `order by` here.
+6:select * from crash_test_table order by 1;
+6:select * from crash_test_ddl order by 1;

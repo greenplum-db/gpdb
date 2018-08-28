@@ -1488,14 +1488,12 @@ varstr_cmp(char *arg1, int len1, char *arg2, int len2, Oid collid)
 		memcpy(a2p, arg2, len2);
 		a2p[len2] = '\0';
 
-		// GPDB_91_MERGE_FIXME: Why does gp_strcoll() exist?
-		// Should we remove it, or add gp_strcoll_l()?
 #ifdef HAVE_LOCALE_T
 		if (mylocale)
 			result = strcoll_l(a1p, a2p, mylocale);
 		else
 #endif
-			result = gp_strcoll(a1p, a2p);
+			result = strcoll(a1p, a2p);
 
 		/*
 		 * In some locales strcoll() can claim that nonidentical strings are

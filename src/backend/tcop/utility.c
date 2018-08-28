@@ -680,7 +680,7 @@ standard_ProcessUtility(Node *parsetree,
 						relOid = DefineRelation((CreateStmt *) stmt,
 												relKind,
 												((CreateStmt *) stmt)->ownerid,
-												relStorage, false, true);
+												relStorage, false, true, NULL);
 
 						/*
 						 * Let AlterTableCreateToastTable decide if this one
@@ -755,7 +755,8 @@ standard_ProcessUtility(Node *parsetree,
 												((CreateStmt *) stmt)->ownerid,
 												RELSTORAGE_FOREIGN,
 												true,
-												true);
+												true,
+												NULL);
 						CreateForeignTable((CreateForeignTableStmt *) stmt,
 										   relOid);
 					}
@@ -2809,7 +2810,7 @@ GetCommandLogLevel(Node *parsetree)
 
 				/* Look through an EXECUTE to the referenced stmt */
 				ps = FetchPreparedStatement(stmt->name, false);
-				if (ps)
+				if (ps && ps->plansource->raw_parse_tree)
 					lev = GetCommandLogLevel(ps->plansource->raw_parse_tree);
 				else
 					lev = LOGSTMT_ALL;

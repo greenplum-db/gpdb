@@ -22,6 +22,7 @@
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/planmain.h"
 
 #include "executor/nodeHash.h"                  /* ExecHashRowSize() */
 #include "cdb/cdbpath.h"                        /* cdbpath_rows() */
@@ -29,12 +30,14 @@
 
 static void sort_inner_and_outer(PlannerInfo *root, RelOptInfo *joinrel,
 					 RelOptInfo *outerrel, RelOptInfo *innerrel,
-					 List *restrictlist, List *mergeclause_list,
+					 List *restrictlist, List *redistribution_clauses,
+					 List *mergeclause_list,
 					 JoinType jointype, SpecialJoinInfo *sjinfo,
 					 Relids param_source_rels);
 static void match_unsorted_outer(PlannerInfo *root, RelOptInfo *joinrel,
 					 RelOptInfo *outerrel, RelOptInfo *innerrel,
-					 List *restrictlist, List *mergeclause_list,
+					 List *restrictlist, List *redistribution_clauses,
+					 List *mergeclause_list,
 					 JoinType jointype, SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
 					 Relids param_source_rels);
@@ -44,7 +47,7 @@ static void hash_inner_and_outer(PlannerInfo *root, RelOptInfo *joinrel,
 					 JoinType jointype, SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
 					 Relids param_source_rels,
-					 List *mergeclause_list /*CDB*/);
+					 List *redistribution_clauses /*CDB*/);
 static List *select_mergejoin_clauses(PlannerInfo *root,
 						 RelOptInfo *joinrel,
 						 RelOptInfo *outerrel,
@@ -52,6 +55,12 @@ static List *select_mergejoin_clauses(PlannerInfo *root,
 						 List *restrictlist,
 						 JoinType jointype,
 						 bool *mergejoin_allowed);
+static List *select_cdb_redistribute_clauses(PlannerInfo *root,
+											 RelOptInfo *joinrel,
+											 RelOptInfo *outerrel,
+											 RelOptInfo *innerrel,
+											 List *restrictlist,
+											 JoinType jointype);
 
 /*
  * add_paths_to_joinrel
@@ -86,6 +95,7 @@ add_paths_to_joinrel(PlannerInfo *root,
 					 List *restrictlist)
 {
 	List	   *mergeclause_list = NIL;
+	List	   *redistribution_clauses = NIL;
 	bool		mergejoin_allowed = true;
 	SemiAntiJoinFactors semifactors;
 	Relids		param_source_rels = NULL;
@@ -111,13 +121,12 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 *
 	 * CDB: Always build mergeclause_list.  We need it for motion planning.
 	 */
-	mergeclause_list = select_mergejoin_clauses(root,
-													joinrel,
-													outerrel,
-													innerrel,
-													restrictlist,
-													jointype,
-													&mergejoin_allowed);
+	redistribution_clauses = select_cdb_redistribute_clauses(root,
+															 joinrel,
+															 outerrel,
+															 innerrel,
+															 restrictlist,
+															 jointype);
 
 	/*
 	 * If it's SEMI or ANTI join, compute correction factors for cost
@@ -169,9 +178,17 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * 1. Consider mergejoin paths where both relations must be explicitly
 	 * sorted.	Skip this if we can't mergejoin.
 	 */
+	mergeclause_list = select_mergejoin_clauses(root,
+												joinrel,
+												outerrel,
+												innerrel,
+												restrictlist,
+												jointype,
+												&mergejoin_allowed);
 	if (mergejoin_allowed && jointype != JOIN_LASJ_NOTIN)
 		sort_inner_and_outer(root, joinrel, outerrel, innerrel,
-							 restrictlist, mergeclause_list, jointype,
+							 restrictlist, redistribution_clauses,
+							 mergeclause_list, jointype,
 							 sjinfo, param_source_rels);
 
 	/*
@@ -183,7 +200,8 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 */
 	if (mergejoin_allowed)
 		match_unsorted_outer(root, joinrel, outerrel, innerrel,
-							 restrictlist, mergeclause_list, jointype,
+							 restrictlist, redistribution_clauses,
+							 mergeclause_list, jointype,
 							 sjinfo, &semifactors, param_source_rels);
 
 #ifdef NOT_USED
@@ -201,7 +219,8 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 */
 	if (mergejoin_allowed)
 		match_unsorted_inner(root, joinrel, outerrel, innerrel,
-							 restrictlist, mergeclause_list, jointype,
+							 restrictlist, redistribution_clauses,
+							 mergeclause_list, jointype,
 							 sjinfo, &semifactors, param_source_rels);
 #endif
 
@@ -218,7 +237,7 @@ add_paths_to_joinrel(PlannerInfo *root,
 		hash_inner_and_outer(root, joinrel, outerrel, innerrel,
 							 restrictlist, jointype,
 							 sjinfo, &semifactors, param_source_rels,
-							 mergeclause_list);
+							 redistribution_clauses);
 }
 
 /*
@@ -237,7 +256,7 @@ try_nestloop_path(PlannerInfo *root,
 				  Path *outer_path,
 				  Path *inner_path,
 				  List *restrict_clauses,
-				  List *mergeclause_list,    /*CDB*/
+				  List *redistribution_clauses,    /*CDB*/
 				  List *pathkeys)
 {
 	Relids		required_outer;
@@ -284,7 +303,7 @@ try_nestloop_path(PlannerInfo *root,
 									  outer_path,
 									  inner_path,
 									  restrict_clauses,
-									  mergeclause_list,
+									  redistribution_clauses,
 									  pathkeys,
 									  required_outer));
 	}
@@ -312,7 +331,7 @@ try_mergejoin_path(PlannerInfo *root,
 				   List *restrict_clauses,
 				   List *pathkeys,
 				   List *mergeclauses,
-				   List *mergeclause_list,
+				   List *redistribution_clauses,
 				   List *outersortkeys,
 				   List *innersortkeys)
 {
@@ -368,7 +387,7 @@ try_mergejoin_path(PlannerInfo *root,
 									   pathkeys,
 									   required_outer,
 									   mergeclauses,
-									   mergeclause_list,
+									   redistribution_clauses,
 									   outersortkeys,
 									   innersortkeys));
 	}
@@ -395,7 +414,7 @@ try_hashjoin_path(PlannerInfo *root,
 				  Path *outer_path,
 				  Path *inner_path,
 				  List *restrict_clauses,
-				  List *mergeclause_list,    /*CDB*/
+				  List *redistribution_clauses,    /*CDB*/
 				  List *hashclauses)
 {
 	Relids		required_outer;
@@ -438,7 +457,7 @@ try_hashjoin_path(PlannerInfo *root,
 									  inner_path,
 									  restrict_clauses,
 									  required_outer,
-									  mergeclause_list,
+									  redistribution_clauses,
 									  hashclauses));
 	}
 	else
@@ -501,6 +520,7 @@ sort_inner_and_outer(PlannerInfo *root,
 					 RelOptInfo *outerrel,
 					 RelOptInfo *innerrel,
 					 List *restrictlist,
+					 List *redistribution_clauses,
 					 List *mergeclause_list,
 					 JoinType jointype,
 					 SpecialJoinInfo *sjinfo,
@@ -632,7 +652,7 @@ sort_inner_and_outer(PlannerInfo *root,
 						   restrictlist,
 						   merge_pathkeys,
 						   cur_mergeclauses,
-						   mergeclause_list,
+						   redistribution_clauses,
 						   outerkeys,
 						   innerkeys);
 	}
@@ -680,6 +700,7 @@ match_unsorted_outer(PlannerInfo *root,
 					 RelOptInfo *outerrel,
 					 RelOptInfo *innerrel,
 					 List *restrictlist,
+					 List *redistribution_clauses,
 					 List *mergeclause_list,
 					 JoinType jointype,
 					 SpecialJoinInfo *sjinfo,
@@ -811,7 +832,7 @@ match_unsorted_outer(PlannerInfo *root,
 							  outerpath,
 							  inner_cheapest_total,
 							  restrictlist,
-							  mergeclause_list,
+							  redistribution_clauses,
 							  merge_pathkeys);
 		}
 		else if (nestjoinOK)
@@ -838,7 +859,7 @@ match_unsorted_outer(PlannerInfo *root,
 								  outerpath,
 								  innerpath,
 								  restrictlist,
-								  mergeclause_list,
+								  redistribution_clauses,
 								  merge_pathkeys);
 			}
 
@@ -854,7 +875,7 @@ match_unsorted_outer(PlannerInfo *root,
 								  outerpath,
 								  matpath,
 								  restrictlist,
-								  mergeclause_list,
+								  redistribution_clauses,
 								  merge_pathkeys);
 		}
 
@@ -913,7 +934,7 @@ match_unsorted_outer(PlannerInfo *root,
 						   restrictlist,
 						   merge_pathkeys,
 						   mergeclauses,
-						   mergeclause_list,
+						   redistribution_clauses,
 						   NIL,
 						   innersortkeys);
 
@@ -1013,7 +1034,7 @@ match_unsorted_outer(PlannerInfo *root,
 								   restrictlist,
 								   merge_pathkeys,
 								   newclauses,
-								   mergeclause_list,
+								   redistribution_clauses,
 								   NIL,
 								   NIL);
 				cheapest_total_inner = innerpath;
@@ -1060,7 +1081,7 @@ match_unsorted_outer(PlannerInfo *root,
 									   restrictlist,
 									   merge_pathkeys,
 									   newclauses,
-									   mergeclause_list,
+									   redistribution_clauses,
 									   NIL,
 									   NIL);
 				}
@@ -1101,7 +1122,7 @@ hash_inner_and_outer(PlannerInfo *root,
 					 SpecialJoinInfo *sjinfo,
 					 SemiAntiJoinFactors *semifactors,
 					 Relids param_source_rels,
-					 List *mergeclause_list     /*CDB*/)
+					 List *redistribution_clauses     /*CDB*/)
 {
 	bool		isouterjoin = IS_OUTER_JOIN(jointype);
 	List	   *hashclauses;
@@ -1184,7 +1205,7 @@ hash_inner_and_outer(PlannerInfo *root,
 							  cheapest_total_outer,
 							  cheapest_total_inner,
 							  restrictlist,
-							  mergeclause_list,
+							  redistribution_clauses,
 							  hashclauses);
 			/* no possibility of cheap startup here */
 		}
@@ -1205,7 +1226,7 @@ hash_inner_and_outer(PlannerInfo *root,
 							  cheapest_total_outer,
 							  cheapest_total_inner,
 							  restrictlist,
-							  mergeclause_list,
+							  redistribution_clauses,
 							  hashclauses);
 			if (cheapest_startup_outer != cheapest_total_outer)
 				try_hashjoin_path(root,
@@ -1218,7 +1239,7 @@ hash_inner_and_outer(PlannerInfo *root,
 								  cheapest_startup_outer,
 								  cheapest_total_inner,
 								  restrictlist,
-								  mergeclause_list,
+								  redistribution_clauses,
 								  hashclauses);
 		}
 		else
@@ -1243,7 +1264,7 @@ hash_inner_and_outer(PlannerInfo *root,
 							  cheapest_startup_outer,
 							  cheapest_total_inner,
 							  restrictlist,
-							  mergeclause_list,
+							  redistribution_clauses,
 							  hashclauses);
 
 			foreach(lc1, outerrel->cheapest_parameterized_paths)
@@ -1283,7 +1304,7 @@ hash_inner_and_outer(PlannerInfo *root,
 									  outerpath,
 									  innerpath,
 									  restrictlist,
-									  mergeclause_list,
+									  redistribution_clauses,
 									  hashclauses);
 				}
 			}
@@ -1408,6 +1429,103 @@ select_mergejoin_clauses(PlannerInfo *root,
 		default:
 			*mergejoin_allowed = true;
 			break;
+	}
+
+	return result_list;
+}
+
+
+/*
+ * select_cdb_redistribute_clauses
+ *	  Select redistribute clauses that are usable for a particular join.
+ *	  Returns a list of RestrictInfo nodes for those clauses.
+ *
+ * The result of this function is a subset of mergejoin_clauses. Also
+ * verify that the operator can be cdbhash.
+ */
+static List *
+select_cdb_redistribute_clauses(PlannerInfo *root,
+								RelOptInfo *joinrel,
+								RelOptInfo *outerrel,
+								RelOptInfo *innerrel,
+								List *restrictlist,
+								JoinType jointype)
+{
+	List	   *result_list = NIL;
+	bool		isouterjoin = IS_OUTER_JOIN(jointype);
+	bool		have_nonmergeable_joinclause = false;
+	ListCell   *l;
+
+	foreach(l, restrictlist)
+	{
+		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
+
+		/*
+		 * If processing an outer join, only use its own join clauses in the
+		 * merge.  For inner joins we can use pushed-down clauses too. (Note:
+		 * we don't set have_nonmergeable_joinclause here because pushed-down
+		 * clauses will become otherquals not joinquals.)
+		 */
+		if (isouterjoin && restrictinfo->is_pushed_down)
+			continue;
+
+		if (!has_redistributable_clause(restrictinfo))
+			continue;
+
+		/* Check that clause is a mergeable operator clause */
+		if (!restrictinfo->can_join ||
+			restrictinfo->mergeopfamilies == NIL)
+		{
+			/*
+			 * The executor can handle extra joinquals that are constants, but
+			 * not anything else, when doing right/full merge join.  (The
+			 * reason to support constants is so we can do FULL JOIN ON
+			 * FALSE.)
+			 */
+			if (!restrictinfo->clause || !IsA(restrictinfo->clause, Const))
+				have_nonmergeable_joinclause = true;
+			continue;			/* not mergejoinable */
+		}
+
+		/*
+		 * Check if clause has the form "outer op inner" or "inner op outer".
+		 */
+		if (!clause_sides_match_join(restrictinfo, outerrel, innerrel))
+		{
+			have_nonmergeable_joinclause = true;
+			continue;			/* no good for these input relations */
+		}
+
+		/*
+		 * Insist that each side have a non-redundant eclass.  This
+		 * restriction is needed because various bits of the planner expect
+		 * that each clause in a merge be associatable with some pathkey in a
+		 * canonical pathkey list, but redundant eclasses can't appear in
+		 * canonical sort orderings.  (XXX it might be worth relaxing this,
+		 * but not enough time to address it for 8.3.)
+		 *
+		 * Note: it would be bad if this condition failed for an otherwise
+		 * mergejoinable FULL JOIN clause, since that would result in
+		 * undesirable planner failure.  I believe that is not possible
+		 * however; a variable involved in a full join could only appear in
+		 * below_outer_join eclasses, which aren't considered redundant.
+		 *
+		 * This case *can* happen for left/right join clauses: the outer-side
+		 * variable could be equated to a constant.  Because we will propagate
+		 * that constant across the join clause, the loss of ability to do a
+		 * mergejoin is not really all that big a deal, and so it's not clear
+		 * that improving this is important.
+		 */
+		update_mergeclause_eclasses(root, restrictinfo);
+
+		if (EC_MUST_BE_REDUNDANT(restrictinfo->left_ec) ||
+			EC_MUST_BE_REDUNDANT(restrictinfo->right_ec))
+		{
+			have_nonmergeable_joinclause = true;
+			continue;			/* can't handle redundant eclasses */
+		}
+
+		result_list = lappend(result_list, restrictinfo);
 	}
 
 	return result_list;

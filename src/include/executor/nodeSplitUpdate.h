@@ -20,7 +20,6 @@ extern void ExecSplitUpdateExplainEnd(PlanState *planstate, struct StringInfoDat
 extern TupleTableSlot* ExecSplitUpdate(SplitUpdateState *node);
 extern SplitUpdateState* ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags);
 extern void ExecEndSplitUpdate(SplitUpdateState *node);
-extern int ExecCountSlotsSplitUpdate(SplitUpdate *node);
 
 extern void initGpmonPktForSplitUpdate(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 

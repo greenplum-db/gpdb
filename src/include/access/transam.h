@@ -157,6 +157,5 @@ extern bool ForceTransactionIdLimitUpdate(void);
 extern Oid	GetNewObjectId(void);
 extern void AdvanceObjectId(Oid newOid);
 extern Oid	GetNewSegRelfilenode(void);
-extern Oid	GetNewSequenceRelationObjectId(void);
 
 #endif   /* TRAMSAM_H */

@@ -53,6 +53,6 @@ extern int aggregate_leaf_partition_histograms(Oid relationOid,
 											   int rem_mcv,
 											   void **result);
 extern bool needs_sample(VacAttrStats **vacattrstats, int attr_cnt);
-extern bool leaf_parts_analyzed(VacAttrStats *stats);
+extern bool leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols);
 
 #endif  /* ANALYZEUTILS_H */

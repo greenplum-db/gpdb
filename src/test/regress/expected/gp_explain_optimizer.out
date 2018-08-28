@@ -138,3 +138,19 @@ WHERE et like '%Hash Cond:%';
  Hash Cond: column1 = column1
 (1 row)
 
+--
+-- Test EXPLAINing of the Partition By in a window function. (PostgreSQL
+-- doesn't print it at all.)
+--
+explain (costs off) select count(*) over (partition by g) from generate_series(1, 10) g;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Result
+   ->  WindowAgg
+         Partition By: generate_series
+         ->  Sort
+               Sort Key: generate_series
+               ->  Function Scan on generate_series
+ Optimizer: PQO version 2.70.0
+(7 rows)
+

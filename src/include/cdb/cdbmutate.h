@@ -44,7 +44,9 @@ extern Plan *replace_shareinput_targetlists(PlannerInfo *root, Plan *plan);
 extern Plan *apply_shareinput_xslice(Plan *plan, PlannerInfo *root);
 extern void assign_plannode_id(PlannedStmt *stmt);
 
-extern bool isAnyColChangedByUpdate(Index targetvarno,
+extern bool isAnyColChangedByUpdate(PlannerInfo *root,
+						Index targetvarno,
+						RangeTblEntry *rte,
 						List *targetlist,
 						int nattrs,
 						AttrNumber *attrs);

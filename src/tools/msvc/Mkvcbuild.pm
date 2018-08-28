@@ -558,9 +558,6 @@ sub mkvcbuild
 
 	$solution->Save();
 
-	# GPDB_92_MERGE_FIXME: Do we need to run this system command?
-        # # Upgrade the files to work with Visual Studio newer than 2005
-        # system("devenv /upgrade pgsql.sln");
         return $solution->{vcver};
 }
 

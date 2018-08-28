@@ -1449,8 +1449,8 @@ print_rmgr_bitmap(XLogRecPtr cur, XLogRecord *record, uint8 info)
 		{
 			xl_bm_lovitem	*xlrec = (xl_bm_lovitem *) XLogRecGetData(record);
 			snprintf(buf, sizeof(buf),
-				"bitmap insert lov item: s/d/r:%u/%u/%u lov_block:%u, lov_off:%u, lov_isnew:%u",
-				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				"bitmap insert lov item: s/d/r:%u/%u/%u fork:%u, lov_block:%u, lov_off:%u, lov_isnew:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode, xlrec->bm_fork,
 				xlrec->bm_lov_blkno, xlrec->bm_lov_offset, xlrec->bm_is_new_lov_blkno);
 			break;
 		}
@@ -1459,8 +1459,8 @@ print_rmgr_bitmap(XLogRecPtr cur, XLogRecord *record, uint8 info)
 		{
 			xl_bm_metapage	*xlrec = (xl_bm_metapage *) XLogRecGetData(record);
 			snprintf(buf, sizeof(buf),
-				"bitmap insert meta: s/d/r:%u/%u/%u heap:%u, index:%u, last_lov:%u",
-				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode,
+				"bitmap insert meta: s/d/r:%u/%u/%u fork: %u, heap:%u, index:%u, last_lov:%u",
+				xlrec->bm_node.spcNode, xlrec->bm_node.dbNode, xlrec->bm_node.relNode, xlrec->bm_fork,
 				xlrec->bm_lov_heapId, xlrec->bm_lov_indexId, xlrec->bm_lov_lastpage);
 			break;
 		}

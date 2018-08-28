@@ -12,7 +12,7 @@ select count(*) from bm_test where i=1;
     10
 (1 row)
 
-select count(*) from bm_test where i in(1, 2);
+select count(*) from bm_test where i in(1, 3);
  count 
 -------
     20
@@ -24,7 +24,7 @@ select * from bm_test where i > 10;
 (0 rows)
 
 reindex index bm_test_idx;
-select count(*) from bm_test where i in(1, 2);
+select count(*) from bm_test where i in(1, 3);
  count 
 -------
     20
@@ -548,4 +548,34 @@ select * from oversize_test where c1 < 'z';
 drop index oversize_test_idx;
 insert into oversize_test values (array_to_string(array(select generate_series(1, 10000)), '123456789'));
 CREATE INDEX oversize_test_idx ON oversize_test USING BITMAP (c1);
-ERROR:  row is too big: size 33256, maximum size 32736  (seg2 127.0.0.1:40002 pid=5270)
+ERROR:  row is too big: size 33256, maximum size 32736  (seg2 172.17.0.2:25434 pid=391078)
+--
+-- Test unlogged table
+--
+set enable_seqscan=off;
+set enable_indexscan=on;
+set optimizer_enable_bitmapscan=on;
+create unlogged table unlogged_test(c1 int); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into unlogged_test select * from generate_series(1,1000);
+CREATE INDEX unlogged_test_idx ON unlogged_test USING BITMAP (c1);
+analyze unlogged_test;
+explain select * from unlogged_test where c1 = 100;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..204.38 rows=1 width=4)
+   ->  Bitmap Table Scan on unlogged_test  (cost=0.00..204.38 rows=1 width=4)
+         Recheck Cond: c1 = 100
+         ->  Bitmap Index Scan on unlogged_test_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: c1 = 100
+ Optimizer: PQO version 2.70.0
+(6 rows)
+
+select * from unlogged_test where c1 = 100;
+ c1  
+-----
+ 100
+(1 row)
+
+drop table unlogged_test;

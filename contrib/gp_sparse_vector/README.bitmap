@@ -1,67 +1,110 @@
 Revision: 02/03/10
 
-I’m spending most of my part time on working out the actual mechanics (with examples) of the matrix/vector implementation.
+I’m spending most of my part time on working out the actual mechanics (with
+examples) of the matrix/vector implementation.
 
-What will help is to get some input on likely use-cases that can drive the work – though I’ve got a good number of examples from scientific and econometric modeling, I could always benefit from something concrete and immediate.
+What will help is to get some input on likely use-cases that can drive the work
+– though I’ve got a good number of examples from scientific and econometric
+modeling, I could always benefit from something concrete and immediate.
 
 Following is more on mechanics.    
 
 Another finding on indexes, RLE compression and matrices:
-input matrices come in various flavors, many of them in non-sorted “not ready for sparse compression” formats 
-in many circumstances there is no a-priori choice of whether there are zeros or NVP 
-Because of (1), in the input processing and sorting, it is necessary to create an uncompressed index that is identical to the single RLE index I’ve described previously, sans the special values.
+input matrices come in various flavors, many of them in non-sorted “not ready
+for sparse compression” formats 
+in many circumstances there is no a-priori choice of whether there are zeros or
+NVP 
+Because of (1), in the input processing and sorting, it is necessary to create
+an uncompressed index that is identical to the single RLE index I’ve described
+previously, sans the special values.
 
-I’ve described the input processing here in a program I wrote to process matrices from the Matrix Mart at NIST:
-                /* The Matrix Market format does not specify the order in which the
-                 * successive elements are stored.  We need to compress the matrix into
-                 * one of CRS or CCS format (row or column compression), so we need to
-                 * sort the matrix into one of those forms.
-                 *
-                 * Here we'll use quicksort to sort the matrix elements into row
-                 * contiguous storage.
-                 *
-                 * If we desire row contiguous storage, we'll also need the column order
-                 * within the row preserved.  We'll do this by computing the index into
-                 * the matrix using a "columns progressive" ordering, which is computed
-                 * as NJ * I + J. Then we'll sort based on that index.  The index value
-                 * will range from 0 to NJ*NI-1. For any index value, you can compute I
-                 * and J using:
-                 *      I = index/NJ
-                 *      J = index - NJ * I
-                 *
-                 * If we sort the matrix by this index, we'll have things in row/column
-                 * order, suitable for CRS compression.
-                 *
-                 * Note that if we want CCS, we can construct the index using:
-                 *      index = NI * J + I
-                 */
+I’ve described the input processing here in a program I wrote to process
+matrices from the Matrix Mart at NIST:
 
-In the Yale/MKL formats, we deconstruct the single index into a set of two values for each run and that is stored as the compression index.
+    /* The Matrix Market format does not specify the order in which the
+     * successive elements are stored.  We need to compress the matrix into
+     * one of CRS or CCS format (row or column compression), so we need to
+     * sort the matrix into one of those forms.
+     *
+     * Here we'll use quicksort to sort the matrix elements into row
+     * contiguous storage.
+     *
+     * If we desire row contiguous storage, we'll also need the column order
+     * within the row preserved.  We'll do this by computing the index into
+     * the matrix using a "columns progressive" ordering, which is computed
+     * as NJ * I + J. Then we'll sort based on that index.  The index value
+     * will range from 0 to NJ*NI-1. For any index value, you can compute I
+     * and J using:
+     *      I = index/NJ
+     *      J = index - NJ * I
+     *
+     * If we sort the matrix by this index, we'll have things in row/column
+     * order, suitable for CRS compression.
+     *
+     * Note that if we want CCS, we can construct the index using:
+     *      index = NI * J + I
+     */
+
+In the Yale/MKL formats, we deconstruct the single index into a set of two
+values for each run and that is stored as the compression index.
 
 I’m thinking now that for the RLE index we can do something along these lines:
-Treat all values symmetrically, that is: all runs of the various types we’re discussing (inf,-inf,0,NVP,value) are described by the same kind of word 
-Each RLE word is composed of a leading set of descriptor bits, followed by a payload describing how many of the value are found.
+Treat all values symmetrically, that is: all runs of the various types we’re
+discussing (inf,-inf,0,NVP,value) are described by the same kind of word 
+Each RLE word is composed of a leading set of descriptor bits, followed by a
+payload describing how many of the value are found.
 
-So if we pick the descriptor bits = 3, we can represent 8 “things”, of which 5 things must be “what kind of value is this?”, leaving 3 things.  A good use of the 3 things can be word length, one of 8, 16 or 32.
+So if we pick the descriptor bits = 3, we can represent 8 “things”, of which 5
+things must be “what kind of value is this?”, leaving 3 things.  A good use of
+the 3 things can be word length, one of 8, 16 or 32.
 
-So if we go down this path, we’re left with 5, 13 and 29 bits to represent a run and can dynamically choose which one to use based on the data content.  That’s 32, 8192 and 536,870,912 values in each run, which is perfect for capturing various kinds of sparsity.
+So if we go down this path, we’re left with 5, 13 and 29 bits to represent a run
+and can dynamically choose which one to use based on the data content. 
+That’s 32, 8192 and 536,870,912 values in each run, which is perfect for
+capturing various kinds of sparsity.
 
-If we expand to one more descriptor bit, then we can represent 8 more things, which could be used to recognize additional types of values to compress out.  That would leave us with 16, 4096 and 268,435,456 values in each run, which also works pretty well and leaves us room for the future in case we find there are more values than {inf,-inf,0,NVP,value}.
+If we expand to one more descriptor bit, then we can represent 8 more things,
+which could be used to recognize additional types of values to compress out.
+That would leave us with 16, 4096 and 268,435,456 values in each run, which also
+works pretty well and leaves us room for the future in case we find there are
+more values than {inf,-inf,0,NVP,value}.
 
-Some additional results to share (see table below) – I did a computation of the various storage and compute requirements for the MKL/Yale index and the RLE index.  I used 5 matrix examples from NIST’s “Matrix Market”, read them in and translated them from Matrix Market format to MKL/RLE which required sorting them into CRS.  From this, I calculated the relevant stats on each in terms of storage and number of words in each of the RLE and MKL indices.
+Some additional results to share (see table below) – I did a computation of the
+various storage and compute requirements for the MKL/Yale index and the RLE
+index.  I used 5 matrix examples from NIST’s “Matrix Market”, read them in and
+translated them from Matrix Market format to MKL/RLE which required sorting them
+into CRS.  From this, I calculated the relevant stats on each in terms of
+storage and number of words in each of the RLE and MKL indices.
 
-Bottom line is that the results corroborated my earlier calculations.  The RLE index is a lot smaller than MKL always, and is more computationally efficient for linear scans through the compressed matrix.  This means we should use only RLE for most use-cases and calculate MKL only when we need to use the algorithms in the matrix solver libraries.  We can optionally store the MKL index if we calculate it – we can provide a marker to indicate the presence/absence of it in the type. 
+Bottom line is that the results corroborated my earlier calculations. The RLE
+index is a lot smaller than MKL always, and is more computationally efficient
+for linear scans through the compressed matrix.  This means we should use only
+RLE for most use-cases and calculate MKL only when we need to use the 
+algorithms in the matrix solver libraries.  We can optionally store the MKL
+index if we calculate it – we can provide a marker to indicate the
+presence/absence of it in the type. 
 
-I’ve also thought through the compatibility with all the sparse solver libs – seems like we have easy compatibility with a CRS-based approach, so I think that should be the baseline.  We can provide another marker to indicate what is being stored – CRS, CCS, CDS, etc.
+I’ve also thought through the compatibility with all the sparse solver libs –
+seems like we have easy compatibility with a CRS-based approach, so I think that
+should be the baseline.  We can provide another marker to indicate what is being
+stored – CRS, CCS, CDS, etc.
 
-I believe I have enough information to produce a draft design of the matrix type that we can review and get some other feedback about.  Here is a sketch of how I think it should work:
-Two separate types, one for vectors and one for matrices – but they share the same format and support routines.  The separate types allows definition of vector and matrix specific operators. 
+I believe I have enough information to produce a draft design of the matrix type
+that we can review and get some other feedback about.  Here is a sketch of how I
+think it should work:
+Two separate types, one for vectors and one for matrices – but they share the
+same format and support routines.  The separate types allows definition of
+vector and matrix specific operators. 
 The format stores the following metadata about the datum: 
-    nD, (n(i),i=1,nD): dimension and rank – for a vector, this is {1,N}; for a matrix it’s {2,Nrows,Ncolumns} 
+    nD, (n(i),i=1,nD): dimension and rank – for a vector, this is {1,N}; for a
+        matrix it’s {2,Nrows,Ncolumns} 
     nZ: number of values (non-special values) 
-    valType: type of value, one of {bit, byte, int4, int8, real4, complex4, real8, complex8} 
-    storType: type of storage, one of {CRS, CCS, CDS, ... Up to maybe 32 total with some reserved} 
-    specValList: a list of special values to be used in the compression, up to 8, e.g. {inf,-inf,NVP,0} 
+    valType: type of value, one of {bit, byte, int4, int8, real4, complex4,
+        real8, complex8} 
+    storType: type of storage, one of {CRS, CCS, CDS, ... Up to maybe 32 total
+        with some reserved} 
+    specValList: a list of special values to be used in the compression, up to 
+        8, e.g. {inf,-inf,NVP,0} 
     hasMKL: if true, the MKL index is stored 
 The format stores the following data: 
     values: a dense array of values, size is (nZ*sizeof(valType)) 
@@ -213,7 +256,8 @@ storage will depend on the dispersion of values.  We can compute best case and
 worst case scenarios however.
 
 A reasonable "best case" scenario will have one non-special value per row. In
-this case the storage required by the RLE format for a real matrix with N nonzero values, NI rows and NJ columns is:
+this case the storage required by the RLE format for a real matrix with N 
+nonzero values, NI rows and NJ columns is:
 	Comp Size = (9 bytes) * N + (2 bytes) *(NJ*(NI/8192) +1)
 		  = (9 bytes) *NI + (2 bytes) *(NJ*(NI/8192) +1)
 			for the common case of NI < 8192:

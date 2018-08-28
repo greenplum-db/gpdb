@@ -390,3 +390,52 @@ create table mpp5746_2 as select * from mpp5746 distributed by (c);
 select gp_segment_id, * from mpp5746 except
 select gp_segment_id, * from mpp5746_2;
 drop table mpp5746, mpp5746_2;
+
+--
+-- Test for disallowed combinations of DISTRIBUTED BY and PRIMARY KEY/UNIQUE
+-- constraints
+--
+create table distby_with_constraint (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED RANDOMLY;
+create table distby_with_constraint (col1 int4 UNIQUE, col2 int4) DISTRIBUTED RANDOMLY;
+create table distby_with_constraint (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED BY (col2);
+create table distby_with_constraint (col1 int4 UNIQUE, col2 int4) DISTRIBUTED BY (col2);
+
+-- these are allowed
+create table distby_with_constraint1 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED BY (col1);
+create table distby_with_constraint2 (col1 int4 UNIQUE, col2 int4) DISTRIBUTED BY (col1);
+create table distby_with_constraint3 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED REPLICATED;
+create table distby_with_constraint4 (col1 int4 UNIQUE, col2 int4) DISTRIBUTED REPLICATED;
+
+--
+-- Test that DISTRIBUTED BY is interpreted correctly with inheritance.
+--
+CREATE TABLE inhdisttest_a (
+ssn integer,
+lastname character varying,
+junk integer
+) DISTRIBUTED BY (ssn);
+
+CREATE TABLE inhdisttest_b (
+id integer,
+lastname character varying,
+morejunk integer
+) DISTRIBUTED BY (id);
+
+CREATE TABLE inhdisttest_c (
+ssn integer,
+lastname character varying,
+junk integer,
+id integer,
+morejunk integer,
+uid1 integer,
+uid2 integer,
+uid3 integer
+) INHERITS (inhdisttest_a, inhdisttest_b) DISTRIBUTED BY (uid1, uid2, uid3);
+
+INSERT INTO inhdisttest_a VALUES (1, 'lastname a', 42);
+INSERT INTO inhdisttest_b VALUES (1, 'lastname b', 42);
+INSERT INTO inhdisttest_c (ssn, lastname, junk, id, morejunk, uid1, uid2, uid3) VALUES
+  (1, 'lastname c', 42, 1, 422, 1, 1, 1);
+
+select * from inhdisttest_a;
+select * from inhdisttest_b;

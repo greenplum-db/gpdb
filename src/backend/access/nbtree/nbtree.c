@@ -220,6 +220,7 @@ btbuildempty(PG_FUNCTION_ARGS)
 	_bt_initmetapage(metapage, P_NONE, 0);
 
 	/* Write the page.	If archiving/streaming, XLOG it. */
+	PageSetChecksumInplace(metapage, BTREE_METAPAGE);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, BTREE_METAPAGE,
 			  (char *) metapage, true);
 	if (XLogIsNeeded())

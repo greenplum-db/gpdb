@@ -33,7 +33,9 @@
 #include "postgres.h"
 
 #include <sys/file.h>
+#ifdef MPROTECT_BUFFERS
 #include <sys/mman.h>
+#endif
 #include <unistd.h>
 
 #include "catalog/catalog.h"
@@ -74,7 +76,6 @@
 
 
 /* GUC variables */
-bool        memory_protect_buffer_pool = true;
 bool		zero_damaged_pages = false;
 int			bgwriter_lru_maxpages = 100;
 double		bgwriter_lru_multiplier = 2.0;
@@ -120,69 +121,73 @@ static volatile BufferDesc *BufferAlloc(SMgrRelation smgr,
 static void FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln);
 static void AtProcExit_Buffers(int code, Datum arg);
 
-
-#define ShouldMemoryProtect(buf) (ShouldMemoryProtectBufferPool() && ! BufferIsLocal(buf->buf_id+1) && ! BufferIsInvalid(buf->buf_id+1))
+#ifdef MPROTECT_BUFFERS
+#define ShouldMemoryProtect(buf) (IsUnderPostmaster &&		  \
+								  IsNormalProcessingMode() && \
+								  !BufferIsLocal(buf->buf_id+1) && \
+								  !BufferIsInvalid(buf->buf_id+1))
 
 static inline void BufferMProtect(volatile BufferDesc *bufHdr, int protectionLevel)
 {
-    if ( ShouldMemoryProtect(bufHdr))
-    {
-        if ( mprotect(BufHdrGetBlock(bufHdr), BLCKSZ, protectionLevel))
-        {
-            ereport(ERROR,
-                    (errmsg("Unable to set memory level to %d, error %d, block size %d, ptr %ld", protectionLevel,
-                    errno, BLCKSZ, (long int) BufHdrGetBlock(bufHdr))));
-        }
-    }
+	if (ShouldMemoryProtect(bufHdr))
+	{
+		if (mprotect(BufHdrGetBlock(bufHdr), BLCKSZ, protectionLevel))
+		{
+			ereport(ERROR,
+					(errmsg("unable to set memory level to %d, error %d, "
+							"block size %d, ptr %ld", protectionLevel,
+							errno, BLCKSZ, (long int) BufHdrGetBlock(bufHdr))));
+		}
+	}
+}
+#endif
+
+static inline void ReleaseContentLock(volatile BufferDesc *buf)
+{
+	LWLockRelease(buf->content_lock);
+
+#ifdef MPROTECT_BUFFERS
+	/* make the buffer read-only after releasing content lock */
+	if (!LWLockHeldByMe(buf->content_lock))
+		BufferMProtect(buf, PROT_READ);
+#endif
 }
 
-static inline void ReleaseContentLock( volatile BufferDesc *buf )
-{
-    LWLockRelease(buf->content_lock);
 
-    /**
-     * if last content lock released then reduce memory access level
-     */
-    if ( ShouldMemoryProtect(buf))
-    {
-        if ( ! LWLockHeldByMe(buf->content_lock))
-        {
-            BufferMProtect( buf, PROT_READ );
-        }
-    }
+static inline void AcquireContentLock(volatile BufferDesc *buf, LWLockMode mode)
+{
+#ifdef MPROTECT_BUFFERS
+	const bool newAcquisition =
+		!LWLockHeldByMe(buf->content_lock);
+
+	LWLockAcquire(buf->content_lock, mode);
+
+	/* new acquisition of content lock, allow read/write memory access */
+	if (newAcquisition)
+		BufferMProtect(buf, PROT_READ|PROT_WRITE);
+#else
+	LWLockAcquire(buf->content_lock, mode);
+#endif
 }
 
-static inline void AcquireContentLock( volatile BufferDesc *buf, LWLockMode mode)
+static inline bool ConditionalAcquireContentLock(volatile BufferDesc *buf,
+												 LWLockMode mode)
 {
-    const bool shouldChangeMemoryProtection = ShouldMemoryProtect(buf) && ! LWLockHeldByMe( buf->content_lock );
+#ifdef MPROTECT_BUFFERS
+	const bool newAcquisition =
+		!LWLockHeldByMe(buf->content_lock);
 
-    LWLockAcquire(buf->content_lock, mode);
-
-    if ( shouldChangeMemoryProtection )
-    {
-        /*
-         * first acquisition of lock...allow read/write memory access
-         */
-        BufferMProtect( buf, PROT_READ | PROT_WRITE );
-    }
-}
-
-static inline bool ConditionalAcquireContentLock( volatile BufferDesc *buf, LWLockMode mode)
-{
-    const bool shouldChangeMemoryProtection = ShouldMemoryProtect(buf) && ! LWLockHeldByMe( buf->content_lock );
-
-    if ( LWLockConditionalAcquire(buf->content_lock, mode))
-    {
-        if ( shouldChangeMemoryProtection )
-        {
-            /*
-             * first acquisition of lock...allow read/write memory access
-             */
-            BufferMProtect( buf, PROT_READ | PROT_WRITE );
-        }
-        return true;
-    }
-    else return false;
+	if (LWLockConditionalAcquire(buf->content_lock, mode))
+	{
+		/* new acquisition of lock, allow read/write memory access */
+		if (newAcquisition)
+			BufferMProtect( buf, PROT_READ | PROT_WRITE );
+		return true;
+	}
+	return false;
+#else
+	return LWLockConditionalAcquire(buf->content_lock, mode);
+#endif
 }
 
 /*
@@ -507,7 +512,9 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 
 	bufBlock = isLocalBuf ? LocalBufHdrGetBlock(bufHdr) : BufHdrGetBlock(bufHdr);
 
-    BufferMProtect( bufHdr, PROT_WRITE | PROT_READ );
+#ifdef MPROTECT_BUFFERS
+    BufferMProtect(bufHdr, PROT_WRITE | PROT_READ);
+#endif
 
 	if (isExtend)
 	{
@@ -564,7 +571,9 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 		}
 	}
 
+#ifdef MPROTECT_BUFFERS
     BufferMProtect( bufHdr, PROT_READ );
+#endif
 
 	if (isLocalBuf)
 	{
@@ -916,10 +925,15 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 	 * paranoia.  We also reset the usage_count since any recency of use of
 	 * the old content is no longer relevant.  (The usage_count starts out at
 	 * 1 so that the buffer can survive one clock-sweep pass.)
+	 *
+	 * Make sure BM_PERMANENT is set for buffers that must be written at every
+	 * checkpoint.  Unlogged buffers only need to be written at shutdown
+	 * checkpoints, except for their "init" forks, which need to be treated
+	 * just like permanent relations.
 	 */
 	buf->tag = newTag;
 	buf->flags &= ~(BM_VALID | BM_DIRTY | BM_JUST_DIRTIED | BM_CHECKPOINT_NEEDED | BM_IO_ERROR | BM_PERMANENT | BM_TEMP);
-	if (relpersistence == RELPERSISTENCE_PERMANENT)
+	if (relpersistence == RELPERSISTENCE_PERMANENT || forkNum == INIT_FORKNUM)
 		buf->flags |= BM_TAG_VALID | BM_PERMANENT;
 	else if (relpersistence == RELPERSISTENCE_TEMP)
 		buf->flags |= BM_TAG_VALID | BM_TEMP;
@@ -1195,7 +1209,9 @@ PinBuffer(volatile BufferDesc *buf, BufferAccessStrategy strategy)
 				buf->usage_count = 1;
 		}
 		result = (buf->flags & BM_VALID) != 0;
+#ifdef MPROTECT_BUFFERS
 		BufferMProtect(buf, PROT_READ);
+#endif
 		UnlockBufHdr(buf);
 	}
 	else
@@ -1231,7 +1247,9 @@ PinBuffer_Locked(volatile BufferDesc *buf)
 	if (PrivateRefCount[b] == 0)
     {
 		buf->refcount++;
+#ifdef MPROTECT_BUFFERS
 		BufferMProtect(buf, PROT_READ);
+#endif
     }
 	UnlockBufHdr(buf);
 	PrivateRefCount[b]++;
@@ -1270,7 +1288,9 @@ UnpinBuffer(volatile BufferDesc *buf, bool fixOwner)
 		/* Decrement the shared reference count */
 		Assert(buf->refcount > 0);
 		buf->refcount--;
+#ifdef MPROTECT_BUFFERS
 		BufferMProtect(buf, PROT_NONE);
+#endif
 
 		/* Support LockBufferForCleanup() */
 		if ((buf->flags & BM_PIN_COUNT_WAITER) &&
@@ -3130,7 +3150,9 @@ StartBufferIO(volatile BufferDesc *buf, bool forInput)
 	}
 
 	buf->flags |= BM_IO_IN_PROGRESS;
-
+#ifdef MPROTECT_BUFFERS
+    BufferMProtect(buf, forInput ? PROT_WRITE|PROT_READ : PROT_READ);
+#endif
 	UnlockBufHdr(buf);
 
 	InProgressBuf = buf;
@@ -3174,6 +3196,11 @@ TerminateBufferIO(volatile BufferDesc *buf, bool clear_dirty,
 
 	InProgressBuf = NULL;
 
+#ifdef MPROTECT_BUFFERS
+	/* XXX: should this be PROT_NONE if called from AbortBufferIO? */
+	if (!LWLockHeldByMe(buf->content_lock))
+		BufferMProtect(buf, PROT_READ);
+#endif
 	LWLockRelease(buf->io_in_progress_lock);
 }
 

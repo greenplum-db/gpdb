@@ -23,8 +23,6 @@
 #include "executor/executor.h"
 #include "miscadmin.h"
 
-#define SEQUENCE_NSLOTS 1
-
 SequenceState *
 ExecInitSequence(Sequence *node, EState *estate, int eflags)
 {

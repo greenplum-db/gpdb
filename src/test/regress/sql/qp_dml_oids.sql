@@ -43,7 +43,11 @@ WITH OIDS DISTRIBUTED BY (a);
 --
 -- DML on table with constraints and OIDS(Negative Test)
 --
-INSERT INTO dml_heap_check_r SELECT i, i ,'r', i FROM generate_series(1,2)i;
+-- Under current jump consistent hash algorithm,
+-- Tuple (1) and (3) are on the same segment(seg2).
+-- The case `UPDATE dml_heap_check_r set a = 110` will not be
+-- flaky only under this condition.
+INSERT INTO dml_heap_check_r SELECT i, i ,'r', i FROM generate_series(1,3) i where i <> 2;
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
 SELECT COUNT(*) FROM dml_heap_check_r;
 

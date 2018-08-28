@@ -33,18 +33,6 @@
 #include "utils/memutils.h"
 
 /*
- * Account for the number of tuple slots required for DynamicIndexScan
- *
- * XXX: We have backported the PostgreSQL patch that made these functions
- * obsolete. The returned value isn't used for anything, so just return 0.
- */
-int
-ExecCountSlotsDynamicIndexScan(DynamicIndexScan *node)
-{
-	return 0;
-}
-
-/*
  * Initialize ScanState in DynamicIndexScan.
  */
 DynamicIndexScanState *

@@ -1213,7 +1213,7 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 
 	/*
 	 * if needed, collect mpp dispatch results and tear down
-	 * all mpp specific resources (interconnect, seq server).
+	 * all mpp specific resources (e.g. interconnect).
 	 */
 	PG_TRY();
 	{

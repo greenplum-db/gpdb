@@ -229,7 +229,13 @@ SELECT a, lower(coalesce(x, 'foo')), lower(coalesce(y, 'foo')) FROM collate_test
  2 | hij   | hij
 (2 rows)
 
-SELECT a, b, greatest(b, 'CCC') FROM collate_test1 ORDER BY 3;
+-- Current test frame work does not sort the output of
+-- `select order by` statement. This is not enough.
+-- Because there are tuples with the same order-by key
+-- but different other cols. Their order is important
+-- to the correctness of cases. So we add more order-by
+-- keys here.
+SELECT * FROM (SELECT a, b, greatest(b, 'CCC') FROM collate_test1 ORDER BY 3) r order by 3,1;
  a |  b  | greatest 
 ---+-----+----------
  2 | Abc | CCC
@@ -238,7 +244,7 @@ SELECT a, b, greatest(b, 'CCC') FROM collate_test1 ORDER BY 3;
  3 | bbc | bbc
 (4 rows)
 
-SELECT a, b, greatest(b, 'CCC') FROM collate_test2 ORDER BY 3;
+SELECT * FROM (SELECT a, b, greatest(b, 'CCC') FROM collate_test2 ORDER BY 3) r order by 3,1;
  a |  b  | greatest 
 ---+-----+----------
  2 | Abc | CCC

@@ -152,6 +152,7 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	SpGistInitMetapage(page);
 
 	/* Write the page.	If archiving/streaming, XLOG it. */
+	PageSetChecksumInplace(page, SPGIST_METAPAGE_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_METAPAGE_BLKNO,
 			  (char *) page, true);
 	if (XLogIsNeeded())
@@ -161,6 +162,7 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	/* Likewise for the root page. */
 	SpGistInitPage(page, SPGIST_LEAF);
 
+	PageSetChecksumInplace(page, SPGIST_ROOT_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_ROOT_BLKNO,
 			  (char *) page, true);
 	if (XLogIsNeeded())
@@ -170,6 +172,7 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	/* Likewise for the null-tuples root page. */
 	SpGistInitPage(page, SPGIST_LEAF | SPGIST_NULLS);
 
+	PageSetChecksumInplace(page, SPGIST_NULL_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_NULL_BLKNO,
 			  (char *) page, true);
 	if (XLogIsNeeded())

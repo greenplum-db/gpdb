@@ -19,7 +19,6 @@
 
 extern TupleTableSlot *ExecRepeat(RepeatState *repeatstate);
 extern RepeatState *ExecInitRepeat(Repeat *node, EState *estate, int eflags);
-extern int ExecCountSlotsRepeat(Repeat *node);
 extern void ExecEndRepeat(RepeatState *node);
 extern void ExecReScanRepeat(RepeatState *node);
 

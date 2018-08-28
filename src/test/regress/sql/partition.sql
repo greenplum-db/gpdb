@@ -1995,6 +1995,23 @@ partition nnull start (300) end (400)
 alter table partsupp add partition foo start(500) end(NULL);
 drop table partsupp;
 
+-- Test for an old bug, where we used to crash on NULLs, because the code
+-- to order the partitions by their start/end boundaries did not anticipate
+-- NULLs. NULLs in boundaries are not accepted, but because we check for
+-- them only after ordering the partitions, the sorting code needs to
+-- handle them. (This test needs at least two partitions, so that there
+-- is something to sort.)
+create table partnulltest (
+  col1 int,
+  col2 numeric
+)
+distributed by (col1)
+partition by range(col2)
+(
+  partition part2 start(1) end(10) ,
+  partition part1 start (NULL)
+);
+
 --MPP-6240
 CREATE TABLE supplier_hybrid_part(
                 S_SUPPKEY INTEGER,

@@ -174,7 +174,7 @@ static bool range_partition_walker(Node *node, void *context);
  */
 void
 transformPartitionBy(CreateStmtContext *cxt,
-					 CreateStmt *stmt, Node *partitionBy, GpPolicy *policy)
+					 CreateStmt *stmt, Node *partitionBy)
 {
 	Oid			snamespaceid;
 	char	   *snamespace;
@@ -2015,10 +2015,51 @@ L_redoLoop:
 	return rc;
 }	/* end partition_range_compare */
 
+/* Compare two Consts of the same type, using a less than (<) operator. */
+static int
+cmp_consts(RegProcedure lt_proc, Const *c1, Const *c2)
+{
+	FmgrInfo	flinfo;
+	FunctionCallInfoData fcinfo;
+
+	fmgr_info(lt_proc, &flinfo);
+
+	if (flinfo.fn_strict)
+	{
+		if (!c1->constisnull && c2->constisnull)
+			return -1;
+		if (c1->constisnull && !c2->constisnull)
+			return 1;
+		if (c1->constisnull && c2->constisnull)
+			return 0;
+	}
+
+	/* Is c1 < c2 ? */
+	InitFunctionCallInfoData(fcinfo, &flinfo, 2, c1->constcollid, NULL, NULL);
+	fcinfo.arg[0] = c1->constvalue;
+	fcinfo.argnull[0] = c1->constisnull;
+	fcinfo.arg[1] = c2->constvalue;
+	fcinfo.argnull[1] = c2->constisnull;
+	if (DatumGetBool(FunctionCallInvoke(&fcinfo)))
+		return -1;
+
+	/* Is c2 < c1 ? */
+	InitFunctionCallInfoData(fcinfo, &flinfo, 2, c1->constcollid, NULL, NULL);
+	fcinfo.arg[0] = c2->constvalue;
+	fcinfo.argnull[0] = c2->constisnull;
+	fcinfo.arg[1] = c1->constvalue;
+	fcinfo.argnull[1] = c1->constisnull;
+	if (DatumGetBool(FunctionCallInvoke(&fcinfo)))
+		return 1;
+
+	/* must be equal, then */
+	return 0;
+}
+
 static int
 part_el_cmp(void *a, void *b, void *arg)
 {
-	RegProcedure **sortfuncs = (RegProcedure **) arg;
+	RegProcedure *lt_funcs = (RegProcedure *) arg;
 	PartitionElem *el1 = (PartitionElem *) a;
 	PartitionElem *el2 = (PartitionElem *) b;
 	PartitionBoundSpec *bs1;
@@ -2077,20 +2118,12 @@ part_el_cmp(void *a, void *b, void *arg)
 			{
 				Const	   *c1 = lfirst(lc1);
 				Const	   *c2 = lfirst(lc2);
+				int			cmp;
 
-				/* use < */
-				RegProcedure sortFunction = sortfuncs[0][i++];
-
-				if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-													  c1->constcollid,
-													  c1->constvalue,
-													  c2->constvalue)))
-					return -1;	/* a < b */
-				if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-													  c1->constcollid,
-													  c2->constvalue,
-													  c1->constvalue)))
-					return 1;
+				cmp = cmp_consts(lt_funcs[i], c1, c2);
+				if (cmp != 0)
+					return cmp;
+				i++;
 			}
 			/* equal */
 			return 0;
@@ -2119,24 +2152,14 @@ part_el_cmp(void *a, void *b, void *arg)
 		{
 			Const	   *c1 = lfirst(lc1);
 			Const	   *c2 = lfirst(lc2);
-			RegProcedure sortFunction;
-
-			sortFunction = sortfuncs[0][i];
+			int			cmp;
 
 			/* try < first */
-			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-												  c1->constcollid,
-												  c1->constvalue,
-												  c2->constvalue)))
-				return -1;
+			cmp = cmp_consts(lt_funcs[i], c1, c2);
 
-			/* see if they're equal */
-			sortFunction = sortfuncs[1][i];
-
-			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-												  c1->constcollid,
-												  c1->constvalue,
-												  c2->constvalue)))
+			if (cmp != 0)
+				return cmp;
+			else
 			{
 				/* equal, but that might actually mean < */
 				if (pe1 == PART_EDGE_EXCLUSIVE)
@@ -2147,8 +2170,6 @@ part_el_cmp(void *a, void *b, void *arg)
 
 				/* otherwise, they're equal */
 			}
-			else
-				return 1;
 
 			i++;
 		}
@@ -2172,32 +2193,21 @@ part_el_cmp(void *a, void *b, void *arg)
 		{
 			Const	   *c1 = lfirst(lc1);
 			Const	   *c2 = lfirst(lc2);
+			int			cmp;
 
-			/* use < */
-			RegProcedure sortFunction = sortfuncs[0][i];
-
-			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-												  c1->constcollid,
-												  c1->constvalue,
-												  c2->constvalue)))
-				return -1;		/* a < b */
-
-			sortFunction = sortfuncs[1][i];
-			if (DatumGetBool(OidFunctionCall2Coll(sortFunction,
-												  c1->constcollid,
-												  c1->constvalue,
-												  c2->constvalue)))
+			cmp = cmp_consts(lt_funcs[i], c1, c2);
+			if (cmp != 0)
+				return cmp;
+			else
 			{
+				/* equal, but that might actually mean something else */
 				if (pe1 == PART_EDGE_INCLUSIVE &&
 					pe2 == PART_EDGE_EXCLUSIVE)
 					return -1;	/* actually, it was < */
 				else if (pe1 == PART_EDGE_EXCLUSIVE &&
 						 pe2 == PART_EDGE_INCLUSIVE)
 					return 1;
-
 			}
-			else
-				return 1;
 
 			i++;
 		}
@@ -2212,16 +2222,13 @@ sort_range_elems(List *opclasses, List *elems)
 {
 	ListCell   *lc;
 	PartitionElem *clauses;
-	RegProcedure *sortfuncs[2];
+	RegProcedure *lt_funcs;
 	int			i;
 	List	   *newelems = NIL;
 
-	sortfuncs[0] = palloc(list_length(opclasses) *
-						  sizeof(RegProcedure));
-	sortfuncs[1] = palloc(list_length(opclasses) *
-						  sizeof(RegProcedure));
+	/* Get the < operator for each operator class */
+	lt_funcs = palloc(list_length(opclasses) * sizeof(RegProcedure));
 	i = 0;
-
 	foreach(lc, opclasses)
 	{
 		Oid			opclass = lfirst_oid(lc);
@@ -2229,25 +2236,18 @@ sort_range_elems(List *opclasses, List *elems)
 		Oid			opfam = get_opclass_family(opclass);
 		Oid			opoid;
 
-		/* < first */
 		opoid = get_opfamily_member(opfam, intype, intype, BTLessStrategyNumber);
-		sortfuncs[0][i] = get_opcode(opoid);
-
-		opoid = get_opfamily_member(opfam, intype, intype, BTEqualStrategyNumber);
-
-		sortfuncs[1][i] = get_opcode(opoid);
+		lt_funcs[i] = get_opcode(opoid);
 		i++;
 	}
 
 	i = 0;
 	clauses = palloc(sizeof(PartitionElem) * list_length(elems));
-
 	foreach(lc, elems)
 		clauses[i++] = *(PartitionElem *) lfirst(lc);
 
 	qsort_arg(clauses, list_length(elems), sizeof(PartitionElem),
-			  (qsort_arg_comparator) part_el_cmp, (void *) sortfuncs);
-
+			  (qsort_arg_comparator) part_el_cmp, (void *) lt_funcs);
 
 	for (i = 0; i < list_length(elems); i++)
 		newelems = lappend(newelems, &clauses[i]);

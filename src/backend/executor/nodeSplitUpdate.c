@@ -28,8 +28,6 @@
 void
 SplitTupleTableSlot(List *targetList, SplitUpdate *plannode, SplitUpdateState *node, Datum *values, bool *nulls);
 
-/* Number of slots used by SplitUpdate node */
-#define SPLITUPDATE_NSLOTS 3
 /* Memory used by node */
 #define SPLITUPDATE_MEM 1
 

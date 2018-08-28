@@ -463,6 +463,18 @@ select * from s;
  12 | 2
 (5 rows)
 
+-- Confirm that a split update is not created for a table excluded by
+-- constraints in the planner.
+create table nosplitupdate (a int) distributed by (a);
+explain update nosplitupdate set a=0 where a=1 and a<1;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Update on nosplitupdate  (cost=0.00..0.01 rows=1 width=0)
+   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+         One-Time Filter: false
+ Optimizer: legacy query optimizer
+(4 rows)
+
 -- start_ignore
 drop table r;
 drop table s;

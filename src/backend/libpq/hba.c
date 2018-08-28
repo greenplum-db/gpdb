@@ -1305,21 +1305,6 @@ parse_hba_line(List *line, int line_num)
 						 errmsg("authentication option not in name=value format: %s", token->string),
 						 errcontext("line %d of configuration file \"%s\"",
 									line_num, HbaFileName)));
-
-				/* GPDB_92_MERGE_FIXME: Is the code below needed? */
-				if (parsedline->auth_method == uaIdent && strcmp(token->string,"sameuser")==0)
-				{
-					if (list_length(parsedline->databases) == 1 &&
-						strcmp(linitial(parsedline->databases), "all")==0)
-						linitial(parsedline->databases) = pstrdup("sameuser");
-					continue;
-				}
-				else if (parsedline->auth_method == uaIdent)
-				{
-					parsedline->usermap = pstrdup(token->string);
-					continue;
-				}
-	
 				return NULL;
 			}
 

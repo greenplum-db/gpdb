@@ -482,16 +482,16 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	int			eflags;
 	int			instrument_option = 0;
 
-	if (es->analyze)
-	{
-		/*
-		 * GPDB_90_MERGE_FIXME: we need to backport more from the 9.2 timeframe
-		 * to deal with each separate INSTRUMENT_ flag correctly.
-		 */
-		instrument_option |= (INSTRUMENT_ALL & ~INSTRUMENT_BUFFERS);
-	}
+	if (es->analyze && es->timing)
+		instrument_option |= INSTRUMENT_TIMER;
+	else if (es->analyze)
+		instrument_option |= INSTRUMENT_ROWS;
+
 	if (es->buffers)
 		instrument_option |= INSTRUMENT_BUFFERS;
+
+	if (es->analyze)
+		instrument_option |= INSTRUMENT_CDB;
 
 	/*
 	 * Start timing.
@@ -2227,16 +2227,20 @@ show_windowagg_keys(WindowAggState *waggstate, List *ancestors, ExplainState *es
 {
 	WindowAgg *window = (WindowAgg *) waggstate->ss.ps.plan;
 
+	/* The key columns refer to the tlist of the child plan */
+	ancestors = lcons(window, ancestors);
 	if ( window->partNumCols > 0 )
 	{
-		show_sort_group_keys((PlanState *) waggstate, "Partition By",
+		show_sort_group_keys((PlanState *) outerPlanState(waggstate), "Partition By",
 							 window->partNumCols, window->partColIdx,
 							 ancestors, es);
 	}
 
-	show_sort_group_keys((PlanState *) waggstate, "Order By",
+	show_sort_group_keys((PlanState *) outerPlanState(waggstate), "Order By",
 						 window->ordNumCols, window->ordColIdx,
 						 ancestors, es);
+	ancestors = list_delete_first(ancestors);
+
 	/* XXX don't show framing for now */
 }
 

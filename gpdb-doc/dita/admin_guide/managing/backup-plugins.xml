@@ -11,6 +11,8 @@
       the backup files to a remote location. During a restore operation, the plugin retrieves the
       files from the remote location. </p>
     <p>You can also develop a custom storage plugin with the Greenplum Database Backup/Restore
-      Storage Plugin API. See <xref href="backup-plugin-api.xml"/>.</p>
+      Storage Plugin API (Experimental). See <xref href="backup-plugin-api.xml"/>.</p>
+    <note>Only the Backup/Restore Storage Plugin API is experimental. The storage plugins are not
+      experimental.</note>
   </body>
 </topic>

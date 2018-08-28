@@ -969,7 +969,6 @@ select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
 
 --
 --q38
--- GPDB_90_MERGE_FIXME: We should generate c2 IS NOT NULL derived filter.
 --
 explain select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
                                  QUERY PLAN                                 

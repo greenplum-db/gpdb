@@ -1603,7 +1603,7 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 				RelationGetRelationName(rel))));
 
 	if(use_wal)
-		_bitmap_log_lovitem(rel, currLovBuffer, *lovOffsetP, lovitem,
+		_bitmap_log_lovitem(rel, MAIN_FORKNUM, currLovBuffer, *lovOffsetP, lovitem,
 							metabuf, is_new_lov_blkno);
 
 	END_CRIT_SECTION();

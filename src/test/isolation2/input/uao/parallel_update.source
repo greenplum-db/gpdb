@@ -11,9 +11,11 @@ INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,10) AS i;
 2: UPDATE ao SET b = 42 WHERE a = 1;
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
-1&: UPDATE ao SET b = 42 WHERE a = 2;
+-- The case here should update a tuple at the same seg with(1).
+-- Under jump hash, (3) and (1) are on the same seg(seg2).
+1&: UPDATE ao SET b = 42 WHERE a = 3;
 2: COMMIT;
 1<:
 1: COMMIT;
 3: SELECT * FROM ao WHERE a < 5 ORDER BY a;
-0U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
+2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');

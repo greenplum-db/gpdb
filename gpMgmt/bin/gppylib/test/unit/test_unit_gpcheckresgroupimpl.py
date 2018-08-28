@@ -30,6 +30,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpu"), 0755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct"), 0755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "memory"), 0755)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset"), 0755)
 
         self.cgroup = gpcheckresgroupimpl.cgroup()
         self.cgroup.mount_point = self.cgroup_mntpnt
@@ -52,6 +53,11 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.mkdir(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0700)
         self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.limit_in_bytes"), 0600)
         self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0400)
+
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"), 0600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"), 0600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"), 0600)
 
     def tearDown(self):
         shutil.rmtree(self.cgroup_mntpnt)
@@ -220,6 +226,72 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0100)
         if gpver.version >= [6, 0, 0]:
             with self.assertRaisesRegexp(AssertionError, "file '.*/memory/gpdb/memory.usage_in_bytes' permission denied: require permission 'r'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_dir_missing(self):
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "directory '.*/cpuset/gpdb/' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_dir_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0500)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "directory '.*/cpuset/gpdb/' permission denied: require permission 'rwx'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+        # restore permission for the dir to be removed in tearDown()
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0700)
+
+    def test_when_cpuset_gpdb_cgroup_procs_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cgroup.procs' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_cgroup_procs_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"), 0100)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cgroup.procs' permission denied: require permission 'rw'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_cpuset_cpus_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cpuset.cpus' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_cpuset_cpus_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"), 0100)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cpuset.cpus' permission denied: require permission 'rw'"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_cpuset_mems_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"))
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cpuset.mems' does not exist"):
+                self.cgroup.validate_all()
+        else:
+            self.cgroup.validate_all()
+
+    def test_when_cpuset_gpdb_cpuset_mems_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"), 0100)
+        if gpver.version >= [6, 0, 0]:
+            with self.assertRaisesRegexp(AssertionError, "file '.*/cpuset/gpdb/cpuset.mems' permission denied: require permission 'rw'"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()

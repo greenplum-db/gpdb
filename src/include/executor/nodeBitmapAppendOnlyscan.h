@@ -20,7 +20,6 @@
 
 #include "nodes/execnodes.h"
 
-extern int	ExecCountSlotsBitmapAppendOnlyScan(BitmapAppendOnlyScan *node);
 extern BitmapAppendOnlyScanState *ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
 extern void ExecEndBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);

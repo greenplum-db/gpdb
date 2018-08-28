@@ -63,6 +63,18 @@ LockTableCommand(LockStmt *lockstmt)
 										  RangeVarCallbackForLockTable,
 										  (void *) &lockstmt->mode);
 
+		/*
+		 * CDB: LOCK TABLE will not release the lock until end of transaction,
+		 * set the holdTillEndXact flag for GDD to know about this.
+		 */
+		if (lockstmt->mode != NoLock)
+		{
+			LOCKTAG		tag;
+
+			SET_LOCKTAG_RELATION(tag, MyDatabaseId, reloid);
+			LockSetHoldTillEndXact(&tag);
+		}
+
 		if (recurse)
 			LockTableRecurse(reloid, lockstmt->mode, lockstmt->nowait);
 	}
@@ -142,7 +154,22 @@ LockTableRecurse(Oid reloid, LOCKMODE lockmode, bool nowait)
 
 		/* We have enough rights to lock the relation; do so. */
 		if (!nowait)
+		{
 			LockRelationOid(childreloid, lockmode);
+
+			/*
+			 * CDB: LOCK TABLE will not release the lock until end of
+			 * transaction, set the holdTillEndXact flag for GDD to know about
+			 * this.
+			 */
+			if (lockmode != NoLock)
+			{
+				LOCKTAG		tag;
+
+				SET_LOCKTAG_RELATION(tag, MyDatabaseId, childreloid);
+				LockSetHoldTillEndXact(&tag);
+			}
+		}
 		else if (!ConditionalLockRelationOid(childreloid, lockmode))
 		{
 			/* try to throw error by name; relation could be deleted... */

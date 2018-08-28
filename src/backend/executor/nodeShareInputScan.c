@@ -16,7 +16,6 @@
 
 /*
  * INTERFACE ROUNTINES
- * 	ExecCountSlotsShareInputScan
  *	ExecInitShareInputScan
  * 	ExecShareInputScan
  * 	ExecEndShareInputScan

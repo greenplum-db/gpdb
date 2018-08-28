@@ -19,7 +19,7 @@ SELECT barrier();
 -- seg 1: con10 ~~> con20, tuple lock
 10&: UPDATE t105 SET val=10 WHERE val=segid(1,1);
 
--- so far there is no deadlock yet as con30 is idel in transaction
+-- so far there is no deadlock yet as con30 is idle in transaction
 SELECT pg_sleep(20);
 
 -- when con30 quits the edge from con10 to con20 on seg 1 will change:

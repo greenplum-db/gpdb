@@ -51,12 +51,6 @@ BitmapHeapScanBegin(ScanState *scanState)
 									   estate->es_snapshot,
 									   0,
 									   NULL);
-
-	/*
-	 * Heap always needs rechecking each tuple because of potential
-	 * visibility issue (we don't store MVCC info in the index).
-	 */
-	node->recheckTuples = true;
 }
 
 /*

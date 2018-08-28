@@ -696,8 +696,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	MASTER MEDIAN MISSING MODIFIES
 
-	MERGE
-
 	NEWLINE NOCREATEEXTTABLE NOOVERCOMMIT
 
 	ORDERED OTHERS OVER OVERCOMMIT
@@ -3824,7 +3822,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $12;
 					n->partitionBy = $13;
 					n->relKind = RELKIND_RELATION;
-					n->policy = 0;
 					n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
@@ -3846,7 +3843,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $15;
 					n->partitionBy = $16;
 					n->relKind = RELKIND_RELATION;
-					n->policy = 0;
 					n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
@@ -3868,7 +3864,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $11;
 					n->partitionBy = $12;
 					n->relKind = RELKIND_RELATION;
-					n->policy = 0;
                     n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
@@ -3890,7 +3885,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $14;
 					n->partitionBy = $15;
 					n->relKind = RELKIND_RELATION;
-					n->policy = 0;
                     n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
@@ -5117,7 +5111,6 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							n->encoding = $16;
 							n->sreh = $17;
 							n->distributedBy = (DistributedBy *) $18;
-							n->policy = 0;
 							
 							/* various syntax checks for EXECUTE external table */
 							if(((ExtTableTypeDesc *) n->exttypedesc)->exttabletype == EXTTBL_TYPE_EXECUTE)
@@ -10724,18 +10717,6 @@ AnalyzeStmt:
 					n->va_cols = $4;
 					$$ = (Node *)n;
 				}
-			| analyze_keyword opt_verbose MERGE qualified_name opt_name_list
-				{
-					VacuumStmt *n = makeNode(VacuumStmt);
-					n->options = VACOPT_ANALYZE;
-					if ($2)
-						n->options |= VACOPT_VERBOSE;
-					n->options |= VACOPT_MERGE;
-					n->freeze_min_age = -1;
-					n->relation = $4;
-					n->va_cols = $5;
-					$$ = (Node *)n;
-				}
 			| analyze_keyword opt_verbose FULLSCAN qualified_name opt_name_list
 				{
 					VacuumStmt *n = makeNode(VacuumStmt);
@@ -15278,7 +15259,6 @@ unreserved_keyword:
 			| MEMORY_LIMIT
 			| MEMORY_SHARED_QUOTA
 			| MEMORY_SPILL_RATIO
-			| MERGE
 			| MINUTE_P
 			| MINVALUE
 			| MISSING

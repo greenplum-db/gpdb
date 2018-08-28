@@ -75,7 +75,7 @@ select d, count(*) from smallt group by d limit 5; --ignore
 explain analyze select d, count(*) from smallt group by d limit 5;
 
 -- HashJoin
-select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
+select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
 explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
 
 -- Rescan on HashJoin
@@ -84,7 +84,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
 
 -- Material in SubPlan
 select smallt2.* from smallt2
-where i < (select count(*) from smallt where smallt.i = smallt2.i);
+where i < (select count(*) from smallt where smallt.i = smallt2.i) order by 1,2,3;
 explain select smallt2.* from smallt2
 where i < (select count(*) from smallt where smallt.i = smallt2.i);
 
@@ -124,7 +124,7 @@ set enable_nestloop=on;
 set enable_seqscan=off;
 set enable_bitmapscan=off;
 select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
-and smallt.d = '2011-01-04'::date;
+and smallt.d = '2011-01-04'::date order by 1,2,3;
 explain analyze select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
 and smallt.d = '2011-01-04'::date;
 
@@ -138,7 +138,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
 set enable_indexscan=off;
 set enable_bitmapscan=on;
 select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
-and smallt.d = '2011-01-04'::date;
+and smallt.d = '2011-01-04'::date order by 1,2,3;
 explain analyze select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
 and smallt.d = '2011-01-04'::date;
 set enable_hashjoin=on;

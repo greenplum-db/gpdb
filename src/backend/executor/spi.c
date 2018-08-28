@@ -1755,7 +1755,9 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 		 * Parameter datatypes are driven by parserSetup hook if provided,
 		 * otherwise we use the fixed parameter list.
 		 */
-		if (plan->parserSetup != NULL)
+		if (parsetree == NULL)
+			stmt_list = NIL;
+		else if (plan->parserSetup != NULL)
 		{
 			Assert(plan->nargs == 0);
 			stmt_list = pg_analyze_and_rewrite_params(parsetree,

@@ -260,6 +260,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	for (;;)
 	{
 		TBMIterateResult *tbmres = node->baos_tbmres;
+		bool		need_recheck;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -326,6 +327,9 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 			continue;
 		}
 
+		if (node->baos_lossy || tbmres->recheck)
+			need_recheck = true;
+
 		/*
 		 * Must account for lossy page info...
 		 */
@@ -359,10 +363,9 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		{
 			appendonly_fetch(aoFetchDesc, &aoTid, slot);
 		}
-		
 		else
 		{
-			if (node->baos_lossy) 
+			if (need_recheck)
 			{
 				Assert(aocsLossyFetchDesc != NULL);
 				aocs_fetch(aocsLossyFetchDesc, &aoTid, slot);
@@ -383,7 +386,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		 * If we are using lossy info, we have to recheck the qual
 		 * conditions at every tuple.
 		 */
-		if (node->baos_lossy)
+		if (need_recheck)
 		{
 			econtext->ecxt_scantuple = slot;
 			ResetExprContext(econtext);
@@ -571,8 +574,6 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 	scanstate->baos_bitmapqualorig = (List *)
 		ExecInitExpr((Expr *) node->bitmapqualorig,
 					 (PlanState *) scanstate);
-
-#define BITMAPAPPENDONLYSCAN_NSLOTS 2
 
 	/*
 	 * tuple table initialization

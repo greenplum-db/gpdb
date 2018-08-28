@@ -252,8 +252,6 @@ ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 	externalstate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
 	ItemPointerSetInvalid(&externalstate->cdb_fake_ctid);
 
-#define EXTSCAN_NSLOTS 2
-
 	/*
 	 * tuple table initialization
 	 */

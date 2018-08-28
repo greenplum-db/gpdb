@@ -3578,6 +3578,8 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 		appendPQExpBuffer(&buf, "'h', 'a', 'c',");
 	if (showExternal)
 		appendPQExpBuffer(&buf, "'x',");
+	if (showForeign)
+		appendPQExpBuffer(&buf, "'f',");
 	if (showViews)
 		appendPQExpBuffer(&buf, "'v',");
 	appendPQExpBuffer(&buf, "''");		/* dummy */

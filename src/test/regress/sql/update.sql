@@ -123,6 +123,8 @@ UPDATE tab3 set (c1,c2) = (5,6) where c4 = 1;
 SELECT gp_segment_id, * FROM tab3;
 UPDATE tab3 set (c1,c2,c3) = (3,2,1) where c4 = 1;
 SELECT gp_segment_id, * FROM tab3;
+UPDATE tab3 set c1 = 11 where c2 = 10 and c2 < 1;
+SELECT gp_segment_id, * FROM tab3;
 
 -- test tab5
 SELECT gp_segment_id, * FROM tab5;
@@ -133,6 +135,8 @@ SELECT gp_segment_id, * FROM tab5;
 UPDATE tab5 set (c1,c2,c4) = (5,8,6) where c4 = 1;
 SELECT gp_segment_id, * FROM tab5;
 UPDATE tab5 set (c1,c2,c3,c4,c5) = (1,2,3,0,6) where c5 = 1;
+SELECT gp_segment_id, * FROM tab5;
+UPDATE tab5 set c1 = 11 where c3 = 10 and c3 < 1;
 SELECT gp_segment_id, * FROM tab5;
 
 -- clean up

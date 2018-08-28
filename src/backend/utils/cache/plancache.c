@@ -129,7 +129,7 @@ InitPlanCache(void)
  * Once constructed, the cached plan can be made longer-lived, if needed,
  * by calling SaveCachedPlan.
  *
- * raw_parse_tree: output of raw_parser()
+ * raw_parse_tree: output of raw_parser(), or NULL if empty query
  * query_string: original query text
  * commandTag: compile-time-constant tag for query, or NULL if empty query
  * sourceTag: GPDB specific.
@@ -471,7 +471,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 		 * By now, if any invalidation has happened, the inval callback
 		 * functions will have marked the query invalid.
 		 */
-		if (plansource->is_valid)
+		if (plansource->is_valid && intoClause == NULL)
 		{
 			/* Successfully revalidated and locked the query. */
 			return NIL;
@@ -543,7 +543,9 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	 * its input, so we must copy the raw parse tree to prevent corruption of
 	 * the cache.
 	 */
-	if (plansource->parserSetup != NULL)
+	if (rawtree == NULL)
+		tlist = NIL;
+	else if (plansource->parserSetup != NULL)
 		tlist = pg_analyze_and_rewrite_params(rawtree,
 											  plansource->query_string,
 											  plansource->parserSetup,
@@ -786,6 +788,7 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	 */
 	snapshot_set = false;
 	if (!ActiveSnapshotSet() &&
+		plansource->raw_parse_tree &&
 		analyze_requires_snapshot(plansource->raw_parse_tree))
 	{
 		PushActiveSnapshot(GetTransactionSnapshot());

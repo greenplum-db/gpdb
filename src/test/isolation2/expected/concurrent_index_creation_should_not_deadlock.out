@@ -1,0 +1,34 @@
+CREATE extension if NOT EXISTS gp_inject_fault;
+CREATE
+
+-- Create an append only table, popluated with data
+CREATE TABLE index_deadlocking_test_table (value int) WITH (appendonly=true);
+CREATE
+
+-- Setup a fault to ensure that the first session pauses while creating an index,
+-- ensuring a concurrent index creation.
+SELECT gp_inject_fault('before_acquire_lock_during_create_ao_blkdir_table', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- Attempt to concurrently create an index
+1>: CREATE INDEX index_deadlocking_test_table_idx1 ON index_deadlocking_test_table (value);  <waiting ...>
+SELECT gp_wait_until_triggered_fault('before_acquire_lock_during_create_ao_blkdir_table', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+2>: CREATE INDEX index_deadlocking_test_table_idx2 ON index_deadlocking_test_table (value);  <waiting ...>
+SELECT gp_inject_fault('before_acquire_lock_during_create_ao_blkdir_table', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- Both index creation attempts should succeed
+1<:  <... completed>
+CREATE
+2<:  <... completed>
+CREATE

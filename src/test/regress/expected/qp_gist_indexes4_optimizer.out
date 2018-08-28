@@ -810,8 +810,8 @@ EXPLAIN SELECT * FROM textSearch
  WHERE t @@ to_tsquery('test'); 
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=17)
-   ->  Index Scan using text_index on textsearch  (cost=0.00..2.00 rows=1 width=17)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=17)
+   ->  Index Scan using text_index on textsearch  (cost=0.00..6.00 rows=1 width=17)
          Index Cond: t @@ '''test'''::tsquery
          Filter: t @@ '''test'''::tsquery
  Optimizer: PQO version 2.68.0
@@ -857,19 +857,18 @@ EXPLAIN SELECT count(*) FROM gist_tbl, gist_tbl2
  WHERE gist_tbl.p <@ gist_tbl2.p;
                                                   QUERY PLAN                                                   
 ---------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..21623779.93 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..21623779.93 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..21623779.93 rows=1 width=8)
-               ->  Nested Loop  (cost=0.00..21623779.93 rows=333840193 width=1)
+ Aggregate  (cost=0.00..570099.74 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..570099.74 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..570099.74 rows=1 width=8)
+               ->  Nested Loop  (cost=0.00..570099.74 rows=335499869 width=1)
                      Join Filter: true
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..525.84 rows=50038 width=101)
-                           ->  Table Scan on gist_tbl2  (cost=0.00..432.24 rows=16680 width=101)
-                     ->  Bitmap Table Scan on gist_tbl  (cost=0.00..21621461.63 rows=6672 width=1)
-                           Recheck Cond: p <@ gist_tbl2.p
-                           ->  Bitmap Index Scan on poly_index  (cost=0.00..0.00 rows=0 width=0)
-                                 Index Cond: p <@ gist_tbl2.p
- Optimizer: PQO version 2.68.0
-(12 rows)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..525.76 rows=49997 width=101)
+                           ->  Table Scan on gist_tbl2  (cost=0.00..432.24 rows=16666 width=101)
+                     ->  Index Scan using poly_index on gist_tbl  (cost=0.00..568396.66 rows=2685 width=1)
+                           Index Cond: p <@ gist_tbl2.p
+                           Filter: p <@ gist_tbl2.p
+ Optimizer: PQO version 2.69.0
+(11 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

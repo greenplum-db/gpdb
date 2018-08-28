@@ -20,7 +20,6 @@ extern void ExecAssertOpExplainEnd(PlanState *planstate, struct StringInfoData *
 extern TupleTableSlot* ExecAssertOp(AssertOpState *node);
 extern AssertOpState* ExecInitAssertOp(AssertOp *node, EState *estate, int eflags);
 extern void ExecEndAssertOp(AssertOpState *node);
-extern int ExecCountSlotsAssertOp(AssertOp *node);
 extern void ExecReScanAssertOp(AssertOpState *node);
 extern void initGpmonPktForAssertOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 

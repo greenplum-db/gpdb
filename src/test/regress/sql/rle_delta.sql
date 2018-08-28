@@ -421,7 +421,7 @@ DELETE FROM delta_one USING delta_two WHERE delta_one.b = delta_two.b AND delta_
 -- configuration (1 segdb, 2 or more segdbs).
 
 SELECT distinct(a) FROM delta_one
-WHERE gp_segment_id = 0 AND delta_one.a IN (12, 80001, 1001)
+WHERE gp_segment_id = 2 AND delta_one.a IN (12, 80001, 1001)
 ORDER BY a;
 
 DELETE FROM delta_one USING delta_two WHERE delta_one.b = delta_two.b AND delta_one.a = delta_two.a AND
@@ -460,7 +460,7 @@ UPDATE delta_one SET a = 0 FROM delta_two WHERE delta_one.b = delta_two.b AND de
 (delta_two.a = 10 OR delta_two.a = 40000 OR delta_two.a = 20000);
 
 -- Ensure that tuples to be updated are all from the same GPDB segment.
-SELECT distinct(a) FROM delta_one WHERE gp_segment_id = 0 AND
+SELECT distinct(a) FROM delta_one WHERE gp_segment_id = 2 AND
 delta_one.a IN (12, 80001, 1001) ORDER BY a;
 
 UPDATE delta_one SET a = 1 FROM delta_two WHERE

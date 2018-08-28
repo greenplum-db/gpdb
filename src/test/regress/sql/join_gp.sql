@@ -231,6 +231,71 @@ WITH RECURSIVE subdept(id, parent_department, name) AS
 )
 SELECT count(*) FROM subdept;
 
+
+-- MPP-29458
+-- When we join on a clause with two different types. If one table distribute by one type, the query plan
+-- will redistribute data on another type. But the has values of two types would not be equal. The data will
+-- redistribute to wrong segments.
+create table test_timestamp_t1 (id  numeric(10,0) ,field_dt date) distributed by (id);
+create table test_timestamp_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (id,field_tms);
+
+insert into test_timestamp_t1 values(10 ,'2018-1-10');
+insert into test_timestamp_t1 values(11 ,'2018-1-11');
+insert into test_timestamp_t2 values(10 ,'2018-1-10'::timestamp);
+insert into test_timestamp_t2 values(11 ,'2018-1-11'::timestamp);
+
+-- Test nest loop redistribute keys
+set enable_nestloop to on;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+select count(*) from test_timestamp_t1 t1 ,test_timestamp_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+
+-- Test hash join redistribute keys
+set enable_nestloop to off;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+select count(*) from test_timestamp_t1 t1 ,test_timestamp_t2 t2 where T1.id = T2.id and T1.field_dt = t2.field_tms;
+
+drop table test_timestamp_t1;
+drop table test_timestamp_t2;
+
+-- Test merge join redistribute keys
+create table test_timestamp_t1 (id  numeric(10,0) ,field_dt date) distributed randomly;
+
+create table test_timestamp_t2 (id numeric(10,0),field_tms timestamp without time zone) distributed by (field_tms);
+
+insert into test_timestamp_t1 values(10 ,'2018-1-10');
+insert into test_timestamp_t1 values(11 ,'2018-1-11');
+insert into test_timestamp_t2 values(10 ,'2018-1-10'::timestamp);
+insert into test_timestamp_t2 values(11 ,'2018-1-11'::timestamp);
+
+select * from test_timestamp_t1 t1 full outer join test_timestamp_t2 t2 on T1.id = T2.id and T1.field_dt = t2.field_tms;
+
+-- test float type
+set enable_nestloop to off;
+set enable_hashjoin to on;
+set enable_mergejoin to on;
+create table test_float1(id int, data float4)  DISTRIBUTED BY (data);
+create table test_float2(id int, data float8)  DISTRIBUTED BY (data);
+insert into test_float1 values(1, 10), (2, 20);
+insert into test_float2 values(3, 10), (4, 20);
+select t1.id, t1.data, t2.id, t2.data from test_float1 t1, test_float2 t2 where t1.data = t2.data;
+
+-- test int type
+create table test_int1(id int, data int4)  DISTRIBUTED BY (data);
+create table test_int2(id int, data int8)  DISTRIBUTED BY (data);
+insert into test_int1 values(1, 10), (2, 20);
+insert into test_int2 values(3, 10), (4, 20);
+select t1.id, t1.data, t2.id, t2.data from test_int1 t1, test_int2 t2 where t1.data = t2.data;
+
+-- Test to ensure that for full outer join on varchar columns, planner is successful in finding a sort operator in the catalog
+-- start_ignore
+create table input_table(a varchar(30), b varchar(30));
+set enable_hashjoin = off;
+-- end_ignore
+explain (costs off) select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
+select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
+
 -- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

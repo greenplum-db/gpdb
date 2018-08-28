@@ -16,7 +16,6 @@
 
 #include "nodes/execnodes.h"
 
-extern int	ExecCountSlotsDynamicTableScan(DynamicTableScan *node);
 extern DynamicTableScanState *ExecInitDynamicTableScan(DynamicTableScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecDynamicTableScan(DynamicTableScanState *node);
 extern void ExecEndDynamicTableScan(DynamicTableScanState *node);

@@ -1286,7 +1286,6 @@ _equalCreateStmt(const CreateStmt *a, const CreateStmt *b)
 	COMPARE_NODE_FIELD(distributedBy);
 	COMPARE_SCALAR_FIELD(relKind);
 	COMPARE_SCALAR_FIELD(relStorage);
-	COMPARE_NODE_FIELD(policy);
 	/* postCreate omitted */
 	/* deferredStmts omitted */
 	COMPARE_SCALAR_FIELD(is_part_child);

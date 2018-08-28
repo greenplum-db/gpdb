@@ -234,6 +234,8 @@ create_gang_retry:
 			if (nfds == 0)
 				break;
 
+			SIMPLE_FAULT_INJECTOR(CreateGangInProgress);
+
 			CHECK_FOR_INTERRUPTS();
 
 			/* Wait until something happens */

@@ -8833,20 +8833,6 @@ CreateCheckPoint(int flags)
 	checkPoint.time = (pg_time_t) time(NULL);
 
 	/*
-	 * The WRITE_PERSISTENT_STATE_ORDERED_LOCK gets these locks:
-	 *    MirroredLock SHARED, and
-	 *    PersistentObjLock EXCLUSIVE.
-	 * as well as set MyProc->inCommit = true.
-	 *
-	 * The READ_PERSISTENT_STATE_ORDERED_LOCK gets this lock:
-	 *    PersistentObjLock SHARED.
-	 *
-	 * They do this to prevent Persistent object changes during checkpoint and
-	 * prevent persistent object reads while writing.  And acquire the MirroredLock
-	 * at a level that blocks DDL during FileRep statechanges...
-	 */
-
-	/*
 	 * For Hot Standby, derive the oldestActiveXid before we fix the redo
 	 * pointer. This allows us to begin accumulating changes to assemble our
 	 * starting snapshot of locks and transactions.
@@ -9004,17 +8990,6 @@ CreateCheckPoint(int flags)
 	{
 		do
 		{
-			/*
-			 * GPDB needs to AbsorbFsyncRequests() here to avoid deadlock when
-			 * fsync request queue is full while backend is in commit and
-			 * performing ForgetRelationFsyncRequests() or
-			 * ForgetDatabaseFsyncRequests(). Since for GPDB the mdlink
-			 * happens through persistent tables cleanup, during which
-			 * inCommit flag is set to avoid checkpoint from happening.
-			 * PostgreSQL doesn't need this as ForgetRelationFsyncRequests()
-			 * or ForgetDatabaseFsyncRequests() are not under inCommit=true.
-			 */
-			AbsorbFsyncRequests();
 			pg_usleep(10000L);	/* wait for 10 msec */
 		} while (HaveVirtualXIDsDelayingChkpt(vxids, nvxids));
 	}
@@ -9105,32 +9080,7 @@ CreateCheckPoint(int flags)
 
 	/*
 	 * Now insert the checkpoint record into XLOG.
-	 *
-	 * Here is the locking order and scope:
-	 *
-	 * 	READ_PERSISTENT_STATE_ORDERED_LOCK (i.e. PersistentObjLock)
-	 * 		mmxlog_append_checkpoint_data
-	 * 		XLogInsert
-	 * 	READ_PERSISTENT_STATE_ORDERED_UNLOCK
-	 * XLogFlush
-	 *
-	 * We get the PersistentObjLock to prevent Persistent Object writers as
-	 * we collect the Master Mirroring information from mmxlog_append_checkpoint_data()
-	 * until finally after the checkpoint record is inserted into the XLOG to prevent the
-	 * persistent information from changing.
-	 *
-	 * For example, if we don't hold the PersistentObjLock across mmxlog_append_checkpoint_data()
-	 * and XLogInsert(), another xlog activity like drop tablespace could happen in between, which
-	 * might caused wrong behavior when master standby replay checkpoint record.
-	 *
-	 * Master standby replay (mmxlog_read_checkpoint_data) the mmxlog information stored in the checkpoint
-	 * record to recreate those persistent objects like filespace, tablespace, database dir, etc. If those
-	 * objects dropped after checkpoint collected persistent objects information, but before checkpoint
-	 * record write to XLOG, then the standby replay would first drop the object based on mmxlog record,
-	 * then recreated based on the checkpoint record. That will ends-up left behind the directories already
-	 * dropped on the master, break the consistency between the master and the standby.
 	 */
-
 	rdata[0].data = (char *) (&checkPoint);
 	rdata[0].len = sizeof(checkPoint);
 	rdata[0].buffer = InvalidBuffer;

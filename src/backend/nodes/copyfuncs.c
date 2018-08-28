@@ -3488,12 +3488,6 @@ CopyCreateStmtFields(const CreateStmt *from, CreateStmt *newnode)
 	COPY_NODE_FIELD(partitionBy);
 	COPY_SCALAR_FIELD(relKind);
 	COPY_SCALAR_FIELD(relStorage);
-	if (from->policy)
-	{
-		COPY_NODE_FIELD(policy);
-	}
-	else
-		newnode->policy = NULL;
 	/* postCreate omitted (why?) */
 	COPY_NODE_FIELD(deferredStmts);
 	COPY_SCALAR_FIELD(is_part_child);
@@ -3710,12 +3704,6 @@ _copyCreateExternalStmt(const CreateExternalStmt *from)
 	COPY_NODE_FIELD(extOptions);
 	COPY_NODE_FIELD(encoding);
 	COPY_NODE_FIELD(distributedBy);
-	if (from->policy)
-	{
-		COPY_NODE_FIELD(policy);
-	}
-	else
-		newnode->policy = NULL;
 
 	return newnode;
 }

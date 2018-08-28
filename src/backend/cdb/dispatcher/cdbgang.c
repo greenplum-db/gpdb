@@ -1512,6 +1512,9 @@ freeGangsForPortal(char *portal_name)
 	{
 		GangType	type = CurrentGangCreating->type;
 
+		Assert(type >= GANGTYPE_UNALLOCATED &&
+			   type <= GANGTYPE_PRIMARY_WRITER);
+
 		DisconnectAndDestroyGang(CurrentGangCreating);
 		CurrentGangCreating = NULL;
 

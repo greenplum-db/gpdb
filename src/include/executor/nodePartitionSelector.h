@@ -21,7 +21,6 @@ extern TupleTableSlot* ExecPartitionSelector(PartitionSelectorState *node);
 extern PartitionSelectorState* ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags);
 extern void ExecEndPartitionSelector(PartitionSelectorState *node);
 extern void ExecReScanPartitionSelector(PartitionSelectorState *node);
-extern int ExecCountSlotsPartitionSelector(PartitionSelector *node);
 extern void initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 
 #endif   /* NODEPARTITIONSELECTOR_H */

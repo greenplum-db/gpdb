@@ -731,17 +731,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"memory_protect_buffer_pool", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Enables memory protection of the buffer pool"),
-			gettext_noop("Turn on memory protection of the buffer pool "
-					"to detect invalid accesses to the buffer pool memory."),
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&memory_protect_buffer_pool,
-		false,
-		NULL, NULL, NULL
-	},
-	{
 		{"debug_print_prelim_plan", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Prints the preliminary execution plan to server log."),
 			NULL
@@ -3360,16 +3349,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&GpIdentity.numsegments,
 		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_max_csv_line_length", PGC_USERSET, EXTERNAL_TABLES,
-			gettext_noop("Maximum allowed length of a csv input data row in bytes"),
-			NULL,
-		},
-		&gp_max_csv_line_length,
-		1 * 1024 * 1024, 32 * 1024, 4 * 1024 * 1024,
 		NULL, NULL, NULL
 	},
 

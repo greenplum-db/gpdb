@@ -21,35 +21,6 @@ from pygresql import pg
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
 
-GET_APPENDONLY_DATA_TABLE_INFO_SQL = """SELECT ALL_DATA_TABLES.oid, ALL_DATA_TABLES.schemaname, ALL_DATA_TABLES.tablename, OUTER_PG_CLASS.relname AS tupletable FROM(
-SELECT ALLTABLES.oid, ALLTABLES.schemaname, ALLTABLES.tablename FROM
-    (SELECT c.oid, n.nspname AS schemaname, c.relname AS tablename FROM pg_class c, pg_namespace n
-    WHERE n.oid = c.relnamespace) AS ALLTABLES,
-    (SELECT n.nspname AS schemaname, c.relname AS tablename
-    FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-    LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
-    WHERE c.relkind = 'r'::CHAR AND c.oid > 16384 AND (c.relnamespace > 16384 OR n.nspname = 'public')
-    EXCEPT
-    ((SELECT x.schemaname, x.partitiontablename FROM
-    (SELECT DISTINCT schemaname, tablename, partitiontablename, partitionlevel FROM pg_partitions) AS X,
-    (SELECT schemaname, tablename maxtable, max(partitionlevel) maxlevel FROM pg_partitions GROUP BY (tablename, schemaname))
- AS Y
-    WHERE x.schemaname = y.schemaname AND x.tablename = Y.maxtable AND x.partitionlevel != Y.maxlevel)
-    UNION (SELECT DISTINCT schemaname, tablename FROM pg_partitions))) AS DATATABLES
-WHERE ALLTABLES.schemaname = DATATABLES.schemaname AND ALLTABLES.tablename = DATATABLES.tablename AND ALLTABLES.oid NOT IN (SELECT reloid FROM pg_exttable)
-) AS ALL_DATA_TABLES, pg_appendonly, pg_class OUTER_PG_CLASS
-    WHERE ALL_DATA_TABLES.oid = pg_appendonly.relid
-    AND OUTER_PG_CLASS.oid = pg_appendonly.segrelid
-"""
-
-GET_ALL_AO_DATATABLES_SQL = """
-    %s AND pg_appendonly.columnstore = 'f'
-""" % GET_APPENDONLY_DATA_TABLE_INFO_SQL
-
-GET_ALL_CO_DATATABLES_SQL = """
-    %s AND pg_appendonly.columnstore = 't'
-""" % GET_APPENDONLY_DATA_TABLE_INFO_SQL
-
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
     raise Exception('MASTER_DATA_DIRECTORY is not set')
@@ -576,32 +547,6 @@ def drop_database_if_exists(context, dbname=None, host=None, port=0, user=None):
         drop_database(context, dbname, host=host, port=port, user=user)
 
 
-def get_nic_up(hostname, nic):
-    address = hostname + '-cm'
-    cmd = Command(name='ifconfig nic', cmdStr='sudo /sbin/ifconfig %s' % nic, remoteHost=address, ctxt=REMOTE)
-    cmd.run(validateAfter=True)
-
-    return 'UP' in cmd.get_results().stdout
-
-
-def bring_nic_down(hostname, nic):
-    address = hostname + '-cm'
-    cmd = Command(name='bring down nic', cmdStr='sudo /sbin/ifdown %s' % nic, remoteHost=address, ctxt=REMOTE)
-    cmd.run(validateAfter=True)
-
-    if get_nic_up(hostname, nic):
-        raise Exception('Unable to bring down nic %s on host %s' % (nic, hostname))
-
-
-def bring_nic_up(hostname, nic):
-    address = hostname + '-cm'
-    cmd = Command(name='bring up nic', cmdStr='sudo /sbin/ifup %s' % nic, remoteHost=address, ctxt=REMOTE)
-    cmd.run(validateAfter=True)
-
-    if not get_nic_up(hostname, nic):
-        raise Exception('Unable to bring up nic %s on host %s' % (nic, hostname))
-
-
 def are_segments_synchronized():
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()
@@ -678,19 +623,6 @@ def truncate_table(dbname, tablename):
 def insert_row(context, row_values, table, dbname):
     sql = """INSERT INTO %s values(%s)""" % (table, row_values)
     execute_sql(dbname, sql)
-
-
-def get_partition_list(partition_type, dbname):
-    if partition_type == 'ao':
-        sql = GET_ALL_AO_DATATABLES_SQL
-    elif partition_type == 'co':
-        sql = GET_ALL_CO_DATATABLES_SQL
-
-    partition_list = getRows(dbname, sql)
-    for line in partition_list:
-        if len(line) != 4:
-            raise Exception('Invalid results from query to get all AO tables: [%s]' % (','.join(line)))
-    return partition_list
 
 
 def get_all_hostnames_as_list(context, dbname):

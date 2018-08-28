@@ -2382,7 +2382,6 @@ print_path(PlannerInfo *root, Path *path, int indent)
 			break;
 		case T_ResultPath:
 			ptype = "Result";
-			subpath = ((ResultPath *) path)->subpath;
 			break;
 		case T_MaterialPath:
 			ptype = "Material";

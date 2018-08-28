@@ -5,5 +5,4 @@ Requirements:
 To install:
 	- Make sure that you have the Greenplum binary distribution in your path
 	- type 'make install'
-	- install the function and type definitions with "psql -d <your_db_name> -f gp_svec.sql"
-	- <optional> run tests with "psql -d <your_db_name> -af gp_svec_test.sql | diff - test_output"
+	- create the extension in psql using: `CREATE EXTENSION gp_sparse_vector;`

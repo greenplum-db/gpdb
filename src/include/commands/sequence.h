@@ -86,19 +86,6 @@ extern void ResetSequence(Oid seq_relid);
 extern void seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
 extern void seq_desc(StringInfo buf, XLogRecord *record);
 
-/*
- * CDB: nextval entry point called by sequence server
- */
-void
-cdb_sequence_nextval_server(Oid    tablespaceid,
-                            Oid    dbid,
-                            Oid    relid,
-                            bool   istemp,
-                            int64 *plast,
-                            int64 *pcached,
-                            int64 *pincrement,
-                            bool  *poverflow);
-
 extern void seq_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* SEQUENCE_H */

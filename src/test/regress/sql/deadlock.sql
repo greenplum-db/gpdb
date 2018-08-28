@@ -14,8 +14,13 @@ set search_path = deadlock;
 create table l (i int, j int) distributed by (i);
 create table r (i int, j int) distributed by (j);
 
+-- Sanity check the distribution hash algorithm to make sure value (2) and value (3) are stored in differnt segments.
+create table sanity_check_distribution (j int) distributed by (j);
+insert into sanity_check_distribution values(2),(3); -- Values of l.j + 1 and r.j.
+select count(distinct gp_segment_id) from sanity_check_distribution; -- should be 2.
+
 insert into l select i, 2 from generate_series(1, 100000) i;  -- one segment destination
-insert into r select i, 1 from generate_series(1, 100000) i;  -- one segment destination
+insert into r select i, 2 from generate_series(1, 100000) i;  -- one segment destination
 
 set enable_mergejoin = off;
 set enable_hashjoin = on;

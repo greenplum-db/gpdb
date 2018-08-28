@@ -97,7 +97,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	createStmt->options = NIL;
 	createStmt->oncommit = ONCOMMIT_NOOP;
 	createStmt->tablespacename = NULL;
-	createStmt->policy = createExtStmt->policy; /* policy was set in transform */
+	createStmt->distributedBy = createExtStmt->distributedBy; /* policy was set in transform */
 
 	switch (exttypeDesc->exttabletype)
 	{
@@ -410,7 +410,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
 		reloid = DefineRelation(createStmt, RELKIND_RELATION, InvalidOid,
-								RELSTORAGE_EXTERNAL, true, true);
+								RELSTORAGE_EXTERNAL, true, true, NULL);
 
 	/*
 	 * Now we take care of pg_exttable.

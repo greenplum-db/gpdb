@@ -348,10 +348,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		 * We recheck the qual conditions for every tuple, since the bitmap
 		 * may contain invalid entries from deleted tuples.
 		 */
-		/*
-		 * GPDB_92_MERGE_FIXME:
-		 * PG check "if (tbmres->recheck)" here. Do we really not want this?
-		 */
+		if (tbmres->recheck)
 		{
 			econtext->ecxt_scantuple = slot;
 			ResetExprContext(econtext);

@@ -92,3 +92,23 @@ ALTER OPERATOR FAMILY alt_opf17 USING btree ADD
   OPERATOR 5 > (int4, int2) ,
   FUNCTION 1 btint42cmp(int4, int2);    -- procedure 1 requested again in separate statement
 DROP OPERATOR FAMILY alt_opf17 USING btree;
+
+
+-- GPDB: Test a GiST ordering operator.
+
+CREATE TYPE my_gisttest_type AS (f1 int, f2 text);
+
+CREATE FUNCTION my_gisttest_function(geom1 my_gisttest_type, geom2 my_gisttest_type)
+    RETURNS float8
+    AS $$
+        select 1.0::float8
+    $$ language SQL;
+
+CREATE OPERATOR <-> (
+    LEFTARG = my_gisttest_type, RIGHTARG = my_gisttest_type, PROCEDURE = my_gisttest_function,
+    COMMUTATOR = '<->'
+);
+
+CREATE OPERATOR CLASS my_gisttest_op_class
+DEFAULT FOR TYPE my_gisttest_type USING GIST AS
+OPERATOR        13       <-> FOR ORDER BY pg_catalog.float_ops;

@@ -623,9 +623,13 @@ STDERR>
 STDOUT>
 
 (3 rows)
+-- The result of the following test case is related to the underlying hash algorithm
+-- because the intermediate result of computing is saved as table in gpdb and hash-distributed.
+-- If you change the underlying hash algorithm, please remember to verify the answer and change
+-- here also.
 SELECT ps.value, pn.value FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
 value|value
-0.85, (266,265,264,263,262,261,260,259,258,1)|0.265867988394584, (266,265,264,263,262,261,260,259,258,1)
+0.85, (258,259,260,261,262,263,264,265,266,1)|0.265867988394584, (258,259,260,261,262,263,264,265,266,1)
 (1 row)
 -- Test setup
 CREATE TABLE simple (m int,n int) distributed randomly;

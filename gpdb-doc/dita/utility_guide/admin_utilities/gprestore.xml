@@ -21,6 +21,7 @@
    [<b>--include-table-file</b> <varname>file_name</varname>]
    [<b>--data-only</b> | <b>--metadata-only</b>]
    [<b>--jobs</b> <varname>int</varname>]
+   [<b>--on-error-continue</b>]
    [<b>--plugin-config</b> <varname>config_file_location</varname>]
    [<b>--quiet</b>]
    [<b>--redirect-db</b> <varname>database_name</varname>]
@@ -39,11 +40,18 @@
           <codeph>--backup-dir</codeph> to consolidate the backup files, include the same
           <codeph>--backup-dir</codeph> option with <codeph>gprestore</codeph> to locate the backup
         files.</p>
+      <p>If the backup you specify is an incremental backup, you need a complete set of backup files
+        (a full backup and any required incremental backups). <codeph>gprestore</codeph> ensures
+        that the complete backup set is available before attempting to restore a backup. <note
+          type="important">For incremental backup sets, the backups must be on a single device. For
+          example, a backup set must all be on a Data Domain system. </note></p>
+      <p>For information about incremental backups, see <xref
+          href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
-        same name as the name specified when creating the backup set. If the target database exists
-        and a table being restored exists in the database, the restore operation fails. Include the
-          <codeph>--create-db</codeph> option if the target database does not exist in the cluster.
-        You can optionally restore a backup set to a different database by using the
+        the same name as the name specified when creating the backup set. If the target database
+        exists and a table being restored exists in the database, the restore operation fails.
+        Include the <codeph>--create-db</codeph> option if the target database does not exist in the
+        cluster. You can optionally restore a backup set to a different database by using the
           <codeph>--redirect-db</codeph> option.</p>
       <p>When restoring a backup set that contains data from some leaf partitions of a partitioned
         tables, the partitioned table is restored along with the data for the leaf partitions. For
@@ -96,6 +104,7 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. Include
             this option when you specify a custom backup directory with
             <codeph>gpbackup</codeph>.</pd>
+          <pd>You cannot combine this option with the option <codeph>--plugin-config</codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--create-db</b></pt>
@@ -115,12 +124,12 @@
             created with the <codeph>gpbackup</codeph> option <codeph>--metadata-only</codeph> does
             not contain table data.</pd>
           <pd>To restore only database tables, without restoring the table data, see the option
-                <codeph><xref href="#topic_phj_g5j_tbb/metadata_only" format="dita"
-                >--metadata-only</xref></codeph>.</pd>
+                <codeph><xref href="#topic1/metadata_only" format="dita"
+              >--metadata-only</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt><b>--debug</b></pt>
-          <pd>Optional. Displays verbose debug messages during operation.</pd>
+          <pd>Optional. Displays verbose and debug log messages during a restore operation.</pd>
         </plentry>
         <plentry>
           <pt><b>--exclude-schema</b>
@@ -225,16 +234,26 @@
         <plentry id="metadata_only">
           <pt><b>--metadata-only</b></pt>
           <pd>Optional. Creates database tables from a backup created with the
-              <codeph>gpbackup</codeph> utility, but does not restore the table data. To create a
-            specific set of tables from a backup set, you can specify an option to include tables or
-            schemas or exclude tables or schemas. Specify the option <codeph>--with-globals</codeph>
-            to restore the Greenplum Database system objects.</pd>
+              <codeph>gpbackup</codeph> utility, but does not restore the table data. This option
+            assumes the tables do not exist in the target database. To create a specific set of
+            tables from a backup set, you can specify an option to include tables or schemas or
+            exclude tables or schemas. Specify the option <codeph>--with-globals</codeph> to restore
+            the Greenplum Database system objects.</pd>
           <pd>The backup set must contain the DDL for tables to be restored. For example, a backup
             created with the <codeph>gpbackup</codeph> option <codeph>--data-only</codeph> does not
             contain the DDL for tables. </pd>
           <pd>To restore table data after you create the database tables, see the option
-                <codeph><xref href="#topic_phj_g5j_tbb/data_only" format="dita"
-              >--data-only</xref></codeph>.</pd>
+                <codeph><xref href="#topic1/data_only" format="dita"
+            >--data-only</xref></codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>--on-error-continue</b></pt>
+          <pd>Optional. Specify this option to continue the restore operation if an SQL error occurs
+            when creating database metadata (such as tables, roles, or functions) or restoring data.
+            If another type of error occurs, the utility exits. The utility displays an error
+            summary and writes error information to the <codeph>gprestore</codeph> log file and
+            continues the restore operation. </pd>
+          <pd>The default is to exit on the first error.</pd>
         </plentry>
         <plentry>
           <pt><b>--plugin-config</b>
@@ -245,6 +264,7 @@
           <pd>If you specify the <codeph>--plugin-config</codeph> option when you back up a
             database, you must specify this option with configuration information for a
             corresponding plugin application when you restore the database from the backup.</pd>
+          <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
               href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
               Plugins</xref>.</pd>
@@ -261,7 +281,7 @@
         </plentry>
         <plentry>
           <pt><b>--verbose</b></pt>
-          <pd>Optional. Print verbose log messages.</pd>
+          <pd>Optional. Displays verbose log messages during a restore operation.</pd>
         </plentry>
         <plentry>
           <pt><b>--version</b></pt>
@@ -312,6 +332,19 @@ $ gprestore --timestamp 20171103152558 --redirect-db demo2</codeblock></p>
       <p>Restore only the "wikipedia" schema included in the backup
         set:<codeblock>$ dropdb demo
 $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</codeblock></p>
+      <p>If you restore from an incremental backup set, all the required files in the backup set
+        must be available to <codeph>gprestore</codeph>. For example, the following timestamp keys
+        specify an incremental backup set. 20170514054532 is the full backup and the others are
+        incremental backups.</p>
+      <pre>20170514054532 (full backup)
+20170714095512 
+20170914081205 
+20171114064330 
+20180114051246</pre>
+      <p>The following <codeph>gprestore</codeph> command specifies the timestamp 20121114064330.
+        The incremental backup with the timestamps 20120714095512 and 20120914081205 and the full
+        backup must be available to perform a restore.</p>
+      <codeblock>gpdbrestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>

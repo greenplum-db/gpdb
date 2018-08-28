@@ -9,8 +9,17 @@ set search_path = deadlock;
 -- see src/backend/cdb/cdbllize.c
 create table l (i int, j int) distributed by (i);
 create table r (i int, j int) distributed by (j);
+-- Sanity check the distribution hash algorithm to make sure value (2) and value (3) are stored in differnt segments.
+create table sanity_check_distribution (j int) distributed by (j);
+insert into sanity_check_distribution values(2),(3); -- Values of l.j + 1 and r.j.
+select count(distinct gp_segment_id) from sanity_check_distribution; -- should be 2.
+ count 
+-------
+     2
+(1 row)
+
 insert into l select i, 2 from generate_series(1, 100000) i;  -- one segment destination
-insert into r select i, 1 from generate_series(1, 100000) i;  -- one segment destination
+insert into r select i, 2 from generate_series(1, 100000) i;  -- one segment destination
 set enable_mergejoin = off;
 set enable_hashjoin = on;
 set enable_nestloop = off;
@@ -42,6 +51,7 @@ select count(*) from gp_dist_random('l') left outer join gp_dist_random('r') on 
 (1 row)
 
 drop schema if exists deadlock cascade;
-NOTICE:  drop cascades to 2 other objects
+NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table l
 drop cascades to table r
+drop cascades to table sanity_check_distribution

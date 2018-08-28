@@ -403,10 +403,9 @@ intorel_initplan(struct QueryDesc *queryDesc, int eflags)
 	else
 		relstorage = RELSTORAGE_HEAP;
 
-	create->distributedBy = (DistributedBy *) into->distributedBy; /* Seems to be not needed? */
+	create->distributedBy = NULL; /* We will pass a pre-made intoPolicy instead */
 	create->partitionBy = NULL; /* CTAS does not not support partition. */
 
-    create->policy = queryDesc->plannedstmt->intoPolicy;
 	create->postCreate = NULL;
 	create->deferredStmts = NULL;
 	create->is_part_child = false;
@@ -425,13 +424,16 @@ intorel_initplan(struct QueryDesc *queryDesc, int eflags)
 	 * Actually create the target table.
 	 * Don't dispatch it yet, as we haven't created the toast and other
 	 * auxiliary tables yet.
+	 *
+	 * Pass the policy that was computed by the planner.
 	 */
 	intoRelationId = DefineRelation(create,
 									RELKIND_RELATION,
 									InvalidOid,
 									relstorage,
 									false,
-									queryDesc->ddesc ? queryDesc->ddesc->useChangedAOOpts : true);
+									queryDesc->ddesc ? queryDesc->ddesc->useChangedAOOpts : true,
+									queryDesc->plannedstmt->intoPolicy);
 
 	/*
 	 * If necessary, create a TOAST table for the target table.  Note that

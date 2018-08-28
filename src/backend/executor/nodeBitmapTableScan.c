@@ -49,8 +49,6 @@
 #include "nodes/tidbitmap.h"
 #include "cdb/cdbpartition.h"
 
-#define BITMAPTABLESCAN_NSLOTS 2
-
 /*
  * Initializes the BitmapTableScanState, including creation of the
  * scan description and the bitmapqualorig.

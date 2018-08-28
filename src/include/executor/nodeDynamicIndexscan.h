@@ -16,7 +16,6 @@
 
 #include "nodes/execnodes.h"
 
-extern int ExecCountSlotsDynamicIndexScan(DynamicIndexScan *node);
 extern DynamicIndexScanState *ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecDynamicIndexScan(DynamicIndexScanState *node);
 extern void ExecEndDynamicIndexScan(DynamicIndexScanState *node);

@@ -1067,8 +1067,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	return motionstate;
 }
 
-#define MOTION_NSLOTS 1
-
 /* ----------------------------------------------------------------
  *		ExecEndMotion(node)
  * ----------------------------------------------------------------

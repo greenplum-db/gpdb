@@ -523,17 +523,6 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 		attr_cnt = tcnt;
 	}
 
-	if (vacstmt->options & VACOPT_MERGE)
-	{
-		for (i = 0; i < attr_cnt; i++)
-		{
-			if (vacattrstats[i]->merge_stats == true)
-				break;
-			ereport(ERROR,
-					(errmsg("Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge")));
-		}
-	}
-
 	/*
 	 * Open all indexes of the relation, and see if there are any analyzable
 	 * columns in the indexes.	We do not analyze index columns if there was
@@ -2715,8 +2704,9 @@ std_typanalyze(VacAttrStats *stats)
 	/*
 	 * Determine which standard statistics algorithm to use
 	 */
+	List *va_cols = list_make1_int(stats->attr->attnum);
 	if (rel_part_status(attr->attrelid) == PART_STATUS_ROOT &&
-		leaf_parts_analyzed(stats) &&
+		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols) &&
 		isGreenplumDbHashable(attr->atttypid))
 	{
 		stats->merge_stats = true;
@@ -2762,7 +2752,7 @@ std_typanalyze(VacAttrStats *stats)
 		/* Might as well use the same minrows as above */
 		stats->minrows = 300 * attr->attstattarget;
 	}
-
+	list_free(va_cols);
 	return true;
 }
 
@@ -3918,7 +3908,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 			 * the number of distinct values for the table based on the estimator
 			 * proposed by Haas and Stokes, used later in the code.
 			 */
-			if ((fabs(samplerows - ndistinct) / (float) samplerows) < 0.003)
+			if ((fabs(samplerows - ndistinct) / (float) samplerows) < HLL_ERROR_MARGIN)
 			{
 				allDistinct = true;
 			}

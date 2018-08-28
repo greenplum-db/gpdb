@@ -237,6 +237,10 @@ SELECT mapreduce('@abs_srcdir@/yml/pagerank-init.yml') ORDER BY 1;
 SELECT count(*) FROM pagerank_source;
 SELECT mapreduce('@abs_srcdir@/yml/pagerank-iter.yml') ORDER BY 1;
 SELECT mapreduce('@abs_srcdir@/yml/pagerank-final.yml') ORDER BY 1;
+-- The result of the following test case is related to the underlying hash algorithm
+-- because the intermediate result of computing is saved as table in gpdb and hash-distributed.
+-- If you change the underlying hash algorithm, please remember to verify the answer and change
+-- here also.
 SELECT ps.value, pn.value FROM pagerank_source ps JOIN pagerank_next pn USING (key) WHERE ps.key = '17';
 
 -- Test setup

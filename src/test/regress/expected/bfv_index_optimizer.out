@@ -548,3 +548,119 @@ SELECT * FROM bpchar_ops WHERE v = 'row '::char(20);
 (1 row)
 
 DROP TABLE bpchar_ops;
+--
+-- Test index rechecks with AO and AOCS tables (and heaps as well, for good measure)
+--
+create table shape_heap (c circle) with (appendonly=false);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+create table shape_ao (c circle) with (appendonly=true, orientation=row);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+create table shape_aocs (c circle) with (appendonly=true, orientation=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+insert into shape_heap values ('<(0,0), 5>');
+insert into shape_ao   values ('<(0,0), 5>');
+insert into shape_aocs values ('<(0,0), 5>');
+create index shape_heap_bb_idx on shape_heap using gist(c);
+create index shape_ao_bb_idx   on shape_ao   using gist(c);
+create index shape_aocs_bb_idx on shape_aocs using gist(c);
+select c && '<(5,5), 1>'::circle,
+       c && '<(5,5), 2>'::circle,
+       c && '<(5,5), 3>'::circle
+from shape_heap;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+ f        | f        | t
+(1 row)
+
+-- Test the same values with (bitmap) index scans
+--
+-- The first two values don't overlap with the value in the tables, <(0,0), 5>,
+-- but their bounding boxes do. In a GiST index scan that uses the bounding
+-- boxes, these will fetch the row from the index, but filtered out by the
+-- recheck using the actual overlap operator. The third entry is sanity check
+-- that the index returns any rows.
+set enable_seqscan=off;
+set enable_indexscan=off;
+set enable_bitmapscan=on;
+-- Use EXPLAIN to verify that these use a bitmap index scan
+explain select * from shape_heap where c && '<(5,5), 1>'::circle;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=24)
+   ->  Index Scan using shape_heap_bb_idx on shape_heap  (cost=0.00..6.00 rows=1 width=24)
+         Index Cond: c && '<(5,5),1>'::circle
+         Filter: c && '<(5,5),1>'::circle
+ Optimizer: PQO version 2.70.0
+(5 rows)
+
+explain select * from shape_ao   where c && '<(5,5), 1>'::circle;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=1 width=24)
+   ->  Bitmap Table Scan on shape_ao  (cost=0.00..204.38 rows=1 width=24)
+         Recheck Cond: c && '<(5,5),1>'::circle
+         ->  Bitmap Index Scan on shape_ao_bb_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: c && '<(5,5),1>'::circle
+ Optimizer: PQO version 2.70.0
+(6 rows)
+
+explain select * from shape_aocs where c && '<(5,5), 1>'::circle;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=1 width=24)
+   ->  Bitmap Table Scan on shape_aocs  (cost=0.00..204.38 rows=1 width=24)
+         Recheck Cond: c && '<(5,5),1>'::circle
+         ->  Bitmap Index Scan on shape_aocs_bb_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: c && '<(5,5),1>'::circle
+ Optimizer: PQO version 2.70.0
+(6 rows)
+
+-- Test that they return correct results.
+select * from shape_heap where c && '<(5,5), 1>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_ao   where c && '<(5,5), 1>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_aocs where c && '<(5,5), 1>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_heap where c && '<(5,5), 2>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_ao   where c && '<(5,5), 2>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_aocs where c && '<(5,5), 2>'::circle;
+ c 
+---
+(0 rows)
+
+select * from shape_heap where c && '<(5,5), 3>'::circle;
+     c     
+-----------
+ <(0,0),5>
+(1 row)
+
+select * from shape_ao   where c && '<(5,5), 3>'::circle;
+     c     
+-----------
+ <(0,0),5>
+(1 row)
+
+select * from shape_aocs where c && '<(5,5), 3>'::circle;
+     c     
+-----------
+ <(0,0),5>
+(1 row)
+

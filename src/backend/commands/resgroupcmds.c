@@ -547,6 +547,9 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 
 	MemSet(resgroupCaps, 0, sizeof(ResGroupCaps));
 
+	/* Init cpuset with proper value */
+	strcpy(resgroupCaps->cpuset, DefaultCpuset);
+
 	ScanKeyInit(&key,
 				Anum_pg_resgroupcapability_resgroupid,
 				BTEqualStrategyNumber, F_OIDEQ,

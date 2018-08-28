@@ -282,7 +282,7 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 		 * existing view, so we don't need more code to complain if "replace"
 		 * is false).
 		 */
-		relid = DefineRelation(createStmt, RELKIND_VIEW, InvalidOid, RELSTORAGE_VIRTUAL, false, true);
+		relid = DefineRelation(createStmt, RELKIND_VIEW, InvalidOid, RELSTORAGE_VIRTUAL, false, true, NULL);
 		Assert(relid != InvalidOid);
 		return relid;
 	}

@@ -41,8 +41,11 @@ void
 BitmapAOScanBegin(ScanState *scanState)
 {
 	BitmapTableScanState *node = (BitmapTableScanState *)(scanState);
+	BitmapTableScan *plan = (BitmapTableScan *)(node->ss.ps.plan);
 	Relation currentRelation = node->ss.ss_currentRelation;
 	EState *estate = node->ss.ps.state;
+
+	Assert(IsA(plan, BitmapTableScan));
 
 	Snapshot appendOnlyMetaDataSnapshot = estate->es_snapshot;
 	if (appendOnlyMetaDataSnapshot == SnapshotAny)
@@ -73,6 +76,15 @@ BitmapAOScanBegin(ScanState *scanState)
 		GetNeededColumnsForScan((Node *) node->ss.ps.plan->targetlist, proj, currentRelation->rd_att->natts);
 		GetNeededColumnsForScan((Node *) node->ss.ps.plan->qual, proj, currentRelation->rd_att->natts);
 
+		/*
+		 * XXX: we only need to fetch these columns when rechecking. The
+		 * corresponding code in nodeBitmapAppendOnlyScan.c is smarter, and
+		 * initializes two fetchers: one for the lossy case, and another for
+		 * non-lossy. We should do the same here. (Or rather, we should not
+		 * have two copies of essentially the same thing.)
+		 */
+		GetNeededColumnsForScan((Node *) plan->bitmapqualorig, proj, currentRelation->rd_att->natts);
+
 		int colno = 0;
 
 		/* Check if any column is projected */
@@ -101,14 +113,6 @@ BitmapAOScanBegin(ScanState *scanState)
 	{
 		Assert(!"Invalid table type");
 	}
-
-
-	/*
-	 * AO doesn't need rechecking every tuple once it resolves
-	 * from the bitmap page, except when it deals with lossy
-	 * bitmap, which is handled via scanState->isLossyBitmapPage.
-	 */
-	node->recheckTuples = false;
 }
 
 /*
@@ -287,14 +291,6 @@ BitmapAOScanNext(ScanState *scanState)
 void
 BitmapAOScanReScan(ScanState *scanState)
 {
-	/*
-	 * AO doesn't need rechecking every tuple once it resolves
-	 * from the bitmap page, except when it deals with lossy
-	 * bitmap, which is handled via scanState->isLossyBitmapPage.
-	 */
-	BitmapTableScanState *node = (BitmapTableScanState *)(scanState);
-	node->recheckTuples = false;
-
 	/*
 	 * As per the existing implementation from nodeBitmapAppendOnlyScan.c
 	 * for rescanning of AO, we don't have anything else

@@ -6590,7 +6590,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 				 * partitioning columns.
 				 */
 				if (node->operation == CMD_UPDATE &&
-					isAnyColChangedByUpdate(rti,
+					isAnyColChangedByUpdate(root, rti, rte,
 											subplan->targetlist,
 											targetPolicy->nattrs,
 											targetPolicy->attrs))

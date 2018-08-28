@@ -81,8 +81,8 @@ bmbuild(PG_FUNCTION_ARGS)
 
 	tupDesc = RelationGetDescr(index);
 
-	/* initialize the bitmap index. */
-	_bitmap_init(index, RelationNeedsWAL(index));
+	/* initialize the bitmap index for MAIN_FORKNUM. */
+	_bitmap_init(index, RelationNeedsWAL(index), false);
 
 	/* initialize the build state. */
 	_bitmap_init_buildstate(index, &bmstate);
@@ -108,7 +108,10 @@ bmbuild(PG_FUNCTION_ARGS)
 Datum
 bmbuildempty(PG_FUNCTION_ARGS)
 {
-	elog(ERROR, "GPDB_91_MERGE_FIXME: bmbuildempty not implemented");
+	Relation indexrel = (Relation) PG_GETARG_POINTER(0);
+	/* initialize meta page and first LOV page for INIT_FORKNUM */
+	_bitmap_init(indexrel, true, true);
+	PG_RETURN_VOID();
 }
 
 /*

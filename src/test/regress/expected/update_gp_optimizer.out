@@ -467,6 +467,23 @@ select * from s;
  12 | 2
 (5 rows)
 
+-- Confirm that a split update is not created for a table excluded by
+-- constraints in the planner.
+create table nosplitupdate (a int) distributed by (a);
+explain update nosplitupdate set a=0 where a=1 and a<1;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Update  (cost=0.00..0.00 rows=0 width=1)
+   ->  Result  (cost=0.00..0.00 rows=0 width=22)
+         ->  Result  (cost=0.00..0.00 rows=0 width=18)
+               ->  Result  (cost=0.00..0.00 rows=0 width=18)
+                     ->  Split  (cost=0.00..0.00 rows=0 width=18)
+                           ->  Result  (cost=0.00..0.00 rows=0 width=18)
+                                 ->  Result  (cost=0.00..0.00 rows=0 width=18)
+                                       One-Time Filter: false
+ Optimizer: PQO version 2.70.0
+(9 rows)
+
 -- start_ignore
 drop table r;
 drop table s;

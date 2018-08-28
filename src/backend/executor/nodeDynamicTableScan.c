@@ -89,6 +89,10 @@ initNextTableToScan(DynamicTableScanState *node)
 	if (scanState->scan_state == SCAN_INIT ||
 		scanState->scan_state == SCAN_DONE)
 	{
+		Relation lastScannedRel;
+		TupleDesc partTupDesc;
+		TupleDesc lastTupDesc;
+		AttrNumber *attMap;
 		Oid *pid = hash_seq_search(&node->pidStatus);
 		if (pid == NULL)
 		{
@@ -115,17 +119,12 @@ initNextTableToScan(DynamicTableScanState *node)
 		scanState->ss_ScanTupleSlot->tts_tableOid = *pid;
 
 		scanState->ss_currentRelation = OpenScanRelationByOid(*pid);
-		Relation lastScannedRel = OpenScanRelationByOid(node->lastRelOid);
-		TupleDesc lastTupDesc = RelationGetDescr(lastScannedRel);
-		CloseScanRelation(lastScannedRel);
-
-		TupleDesc partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
-
+		lastScannedRel = OpenScanRelationByOid(node->lastRelOid);
+		lastTupDesc = RelationGetDescr(lastScannedRel);
+		partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
 		ExecAssignScanType(scanState, partTupDesc);
-
-		AttrNumber	*attMap;
-
 		attMap = varattnos_map(lastTupDesc, partTupDesc);
+		CloseScanRelation(lastScannedRel);
 
 		/* If attribute remapping is not necessary, then do not change the varattno */
 		if (attMap)
@@ -319,14 +318,4 @@ void
 ExecDynamicTableRestrPos(DynamicTableScanState *node)
 {
 	MarkRestrNotAllowed((ScanState *)node);
-}
-
-/*
- * XXX: We have backported the PostgreSQL patch that made these functions
- * obsolete. The returned value isn't used for anything, so just return 0.
- */
-int
-ExecCountSlotsDynamicTableScan(DynamicTableScan *node)
-{
-	return 0;
 }

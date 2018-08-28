@@ -584,7 +584,12 @@ create table bar2 ( a int, b int) with (appendonly = true);
 insert into bar2 select x , x from generate_series(1,10) as x;
 SET gp_select_invisible=false;
 set gp_select_invisible = true;
-select * from bar2 order by 1;
+-- The test framework assumes that the output of `select ... order by`
+-- is in order. It is true but not enought because the order of the
+-- tuples with the same order-by key might be different in other cols.
+-- To make these kind of test cases not flaky, we should order the
+-- results in all the cols. 
+select * from (select * from bar2 order by 1) r order by 1, 2;
  a  | b  
 ----+----
   1 |  1
@@ -600,15 +605,15 @@ select * from bar2 order by 1;
 (10 rows)
 
 update bar2 set b = b+200 where a = 5;
-select * from bar2 order by 1;
+select * from (select * from bar2 order by 1) r order by 1, 2;
  a  |  b  
 ----+-----
   1 |   1
   2 |   2
   3 |   3
   4 |   4
-  5 | 205
   5 |   5
+  5 | 205
   6 |   6
   7 |   7
   8 |   8
@@ -624,8 +629,8 @@ select * from bar2 order by 1;
   2 |   2
   3 |   3
   4 |   4
-  5 | 205
   5 |   5
+  5 | 205
   6 |   6
   7 |   7
   8 |   8
@@ -1083,7 +1088,7 @@ DELETE FROM foo USING BAR WHERE foo.b = bar.b AND foo.a = bar.a AND
 -- This query should return the same output irrespective of GPDB
 -- configuration (1 segdb, 2 or more segdbs).
 SELECT distinct(a) FROM foo
-WHERE gp_segment_id = 0 AND foo.a IN (12, 80001, 1001)
+WHERE gp_segment_id = 2 AND foo.a IN (12, 80001, 1001)
 ORDER BY a;
    a   
 -------
@@ -1122,7 +1127,7 @@ set enable_nestloop=false;
 UPDATE foo SET a = 0 FROM bar WHERE foo.b = bar.b AND foo.a = bar.a AND
 (bar.a = 10 OR bar.a = 40000 OR bar.a = 20000);
 -- Ensure that tuples to be updated are all from the same GPDB segment.
-SELECT distinct(a) FROM foo WHERE gp_segment_id = 0 AND
+SELECT distinct(a) FROM foo WHERE gp_segment_id = 2 AND
 foo.a IN (12, 80001, 1001) ORDER BY a;
    a   
 -------

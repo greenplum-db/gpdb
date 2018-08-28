@@ -1,11 +1,16 @@
+# Tests on global deadlock detector
 test: select_for_update
-# test for global distributed deadlock detector
 test: gdd/prepare
-test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/local-deadlock-03 gdd/non-lock-105 gdd/non-lock-107
+test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105 gdd/non-lock-107
+# keep this in a separate group
 test: gdd/avoid-qd-deadlock
+test: gdd/prepare-for-local
+test: gdd/local-deadlock-03
 
-test: pg_terminate_backend deadlock_under_entry_db_singleton pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
-#test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+
+# this case contains fault injection, must be put in a separate test group
+test: terminate_in_gang_creation
 
 test: reindex
 test: reindex_gpfastsequence
@@ -19,6 +24,7 @@ test: gp_collation
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
+test: concurrent_index_creation_should_not_deadlock
 test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row

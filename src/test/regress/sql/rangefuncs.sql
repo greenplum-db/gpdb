@@ -302,7 +302,7 @@ select * from tt;
 
 -- insert will execute to completion even if function needs just 1 row
 create or replace function insert_tt(text) returns int as
-$$ insert into tt(data) values($1),($1||$1) returning f1 $$
+$$ insert into tt(data) values($1),($1||$1) returning (f1>0)::int $$
 language sql;
 
 select insert_tt('fool');
@@ -321,6 +321,14 @@ select * from tt;
 select insert_tt2('foolish','barrish') limit 1;
 select * from tt;
 
+-- add two dummy tuples to make the following
+-- cases' insert tuples are (13,14) which
+-- will be on the same seg under current
+-- jump consistent hash. This will make the
+-- case not flaky.
+insert into tt(data) values ('nextisright');--11
+insert into tt(data) values ('previswrong');--12
+
 -- triggers will fire, too
 create function noticetrigger() returns trigger as $$
 begin
@@ -333,6 +341,14 @@ execute procedure noticetrigger();
 select insert_tt2('foolme','barme') limit 1;
 select * from tt;
 
+-- add two dummy tuples to make the following
+-- cases' insert tuples are (17,18) which
+-- will be on the same seg under current
+-- jump consistent hash. This will make the
+-- case not flaky.
+insert into tt(data) values ('nextiswrong');--15
+insert into tt(data) values ('previsright');--16
+
 -- and rules work
 create temp table tt_log(f1 int, data text);
 
@@ -341,6 +357,7 @@ create rule insert_tt_rule as on insert to tt do also
 
 select insert_tt2('foollog','barlog') limit 1;
 select * from tt;
+
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.
 select * from tt_log;

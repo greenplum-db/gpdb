@@ -138,6 +138,13 @@ select btdrelpages > 0 as btdrelpages_over_0,
 from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'toolkit_skew'::regclass;
 select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass;
 
+-- Make sure gp_toolkit.gp_bloat_expected_pages does not report partition roots
+create table do_not_report_partition_root (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(2) every(1));
+insert into do_not_report_partition_root values (1,1);
+analyze do_not_report_partition_root;
+select count(*) from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'do_not_report_partition_root'::regclass::oid;
 
 -- Check that gp_bloat_diag can deal with big numbers. (This used to provoke an
 -- integer overflow error, before the view was fixed to use numerics for all the

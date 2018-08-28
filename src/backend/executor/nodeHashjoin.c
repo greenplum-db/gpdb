@@ -188,7 +188,10 @@ ExecHashJoin(HashJoinState *node)
 				hashtable = ExecHashTableCreate(hashNode,
 												node,
 												node->hj_HashOperators,
-				/* GPDB_91_MERGE_FIXME: do we need to get rid of hs_keepnull? */
+				/*
+				 * hashNode->hs_keepnull is required to support using IS NOT DISTINCT FROM as hash condition
+				 * For example, in ORCA, `explain SELECT t2.a FROM t2 INTERSECT (SELECT t1.a FROM t1);`
+				 */
 												HJ_FILL_INNER(node) || hashNode->hs_keepnull,
 												PlanStateOperatorMemKB((PlanState *) hashNode));
 				node->hj_HashTable = hashtable;

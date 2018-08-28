@@ -11,6 +11,10 @@
       <topicref href="backup-gpbackup.xml#topic_et4_b5d_tbb"/>
       <topicref href="backup-gpbackup.xml#topic_qwd_d5d_tbb"/>
       <topicref href="backup-gpbackup.xml#topic_xnj_b4c_tbb"/>
+      <topicref href="backup-gpbackup-incremental.xml">
+        <topicref href="backup-gpbackup-incremental.xml#topic_kvf_mkr_t2b"/>
+        <topicref href="backup-gpbackup-incremental.xml#topic_btr_xfr_t2b"/>
+      </topicref>
       <topicref href="backup-boostfs.xml">
         <topicref href="backup-boostfs.xml#topic_zp4_mvv_bdb"/>
         <topicref href="backup-boostfs.xml#topic_t4z_tvv_bdb"/>

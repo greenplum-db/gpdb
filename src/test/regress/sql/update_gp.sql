@@ -225,10 +225,16 @@ prepare update_s(int) as update s set a = s.a + $1 where exists (select 1 from r
 execute update_s(10);
 select * from s;
 
+-- Confirm that a split update is not created for a table excluded by
+-- constraints in the planner.
+create table nosplitupdate (a int) distributed by (a);
+explain update nosplitupdate set a=0 where a=1 and a<1;
+
 -- start_ignore
 drop table r;
 drop table s;
 drop table update_dist;
 drop table ao_table;
 drop table aoco_table;
+drop table nosplitupdate;
 -- end_ignore

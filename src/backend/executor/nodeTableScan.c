@@ -21,8 +21,6 @@
 #include "utils/elog.h"
 #include "parser/parsetree.h"
 
-#define TABLE_SCAN_NSLOTS 2
-
 TableScanState *
 ExecInitTableScan(TableScan *node, EState *estate, int eflags)
 {
@@ -83,12 +81,6 @@ void
 ExecTableRestrPos(TableScanState *node)
 {
 	RestrPosScanRelation((ScanState *)node);
-}
-
-int
-ExecCountSlotsTableScan(TableScan *node)
-{
-	return TABLE_SCAN_NSLOTS;
 }
 
 void

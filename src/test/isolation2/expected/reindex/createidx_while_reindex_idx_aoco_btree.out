@@ -26,10 +26,11 @@ BEGIN
 BEGIN
 1: REINDEX index idx_reindex_crtab_aoco_btree;
 REINDEX
-2: create index idx_reindex_crtab_aoco_btree2 on reindex_crtab_aoco_btree(a);
-CREATE
+2&: create index idx_reindex_crtab_aoco_btree2 on reindex_crtab_aoco_btree(a);  <waiting ...>
 1: COMMIT;
 COMMIT
+2<:  <... completed>
+CREATE
 2: COMMIT;
 COMMIT
 3: SELECT 1 AS oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_reindex_crtab_aoco_btree' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);

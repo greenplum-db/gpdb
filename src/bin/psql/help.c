@@ -233,9 +233,8 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\dT[S+] [PATTERN]      list data types\n"));
 	fprintf(output, _("  \\du[+]  [PATTERN]      list roles\n"));
 	fprintf(output, _("  \\dv[S+] [PATTERN]      list views\n"));
-	/* GPDB_91_MERGE_FIXME: can we use \dE for both external and foreign tables? */
-	fprintf(output, _("  \\dE     [PATTERN]      list external tables\n"));
-	fprintf(output, _("  \\dE[S+] [PATTERN]      list foreign tables\n"));
+	/* In GPDB, we use \dE for both external and foreign tables. */
+	fprintf(output, _("  \\dE[S+] [PATTERN]      list foreign and external tables\n"));
 	fprintf(output, _("  \\dx[+]  [PATTERN]      list extensions\n"));
 	fprintf(output, _("  \\l[+]                  list all databases\n"));
 	fprintf(output, _("  \\sf[+] FUNCNAME        show a function's definition\n"));

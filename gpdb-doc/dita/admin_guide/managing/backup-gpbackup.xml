@@ -55,7 +55,6 @@
               <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names
             in a file specified with <codeph>--exclude-table-file</codeph>,
               <codeph>gpbackup</codeph> ignores the partition names.</li>
-          <li>Incremental backups are not supported.</li>
         </ul></p>
     </body>
   </topic>
@@ -280,6 +279,20 @@ End Time: 2018-02-13 11:54:31
 Duration: 0:00:05
 
 Restore Status: Success</codeblock></section>
+      <section>
+        <title>History File</title>
+        <p>When performing a backup operation, <codeph>gpbackup</codeph> appends backup information
+          in the gpbackup history file, <codeph>gpbackup_history.yaml</codeph>, in the Greenplum
+          Database master data directory. The file contains the backup timestamp, information about
+          the backup options, and backup set information for incremental backups. This file is not
+          backed up by <codeph>gpbackup</codeph>.</p>
+        <p><codeph>gpbackup</codeph> uses the information in the file to find a matching backup for
+          an incremental backup when you run <codeph>gpbackup</codeph> with the
+            <codeph>--incremental</codeph> option and do not specify the
+            <codeph>--from-timesamp</codeph> option to indicate the backup that you want to use as
+          the latest backup in the incremental backup set. For information about incremental
+          backups, see <xref href="backup-gpbackup-incremental.xml"/>.</p>
+      </section>
       <section>
         <title>Return Codes</title>
         <p>One of these codes is returned after <codeph>gpbackup</codeph> or
@@ -670,6 +683,15 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
                         <codeph>--metadata-only</codeph>, <codeph>--data-only</codeph>, and
                         <codeph>--with-stats</codeph>.</li>
                   </ul></entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_history.yaml</filepath></entry>
+                <entry>Contains information about options that were used when creating a backup with
+                    <codeph>gpbackup</codeph>, and information about incremental backups.<p>Stored
+                    on the Greenplum Database master host in the Greenplum Database master data
+                    directory.</p><p>This file is not backed up by <codeph>gpbackup</codeph>.</p><p>
+                    For information about incremental backups, see <xref
+                      href="backup-gpbackup-incremental.xml"/>.</p></entry>
               </row>
             </tbody>
           </tgroup>

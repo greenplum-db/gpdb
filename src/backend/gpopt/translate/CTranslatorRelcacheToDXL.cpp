@@ -1077,6 +1077,9 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 	CMDName *mdname = NULL;
 	IMDIndex::EmdindexType index_type = IMDIndex::EmdindSentinel;
 	IMDId *mdid_item_type = NULL;
+	bool index_clustered = false;
+	ULongPtrArray *index_key_cols_array = NULL;
+	ULONG *attno_mapping = NULL;
 
 	GPOS_TRY
 	{
@@ -1087,6 +1090,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 
 		form_pg_index = index_rel->rd_index;
 		GPOS_ASSERT (NULL != form_pg_index);
+		index_clustered = form_pg_index->indisclustered;
 
 		OID rel_oid = form_pg_index->indrelid;
 
@@ -1135,6 +1139,23 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 		CWStringDynamic *str_name = CDXLUtils::CreateDynamicStringFromCharArray(mp, index_name);
 		mdname = GPOS_NEW(mp) CMDName(mp, str_name);
 		GPOS_DELETE(str_name);
+
+		Relation table = gpdb::GetRelation(CMDIdGPDB::CastMdid(md_rel->MDId())->Oid());
+		ULONG size = GPDXL_SYSTEM_COLUMNS + (ULONG) table->rd_att->natts + 1;
+		gpdb::CloseRelation(table); // close relation as early as possible
+
+		attno_mapping = PopulateAttnoPositionMap(mp, md_rel, size);
+
+		// extract the position of the key columns
+		index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
+
+		for (int i = 0; i < form_pg_index->indnatts; i++)
+		{
+			INT attno = form_pg_index->indkey.values[i];
+			GPOS_ASSERT(0 != attno && "Index expressions not supported");
+
+			index_key_cols_array->Append(GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
 		mdid_rel->Release();
 		gpdb::CloseRelation(index_rel);
 	}
@@ -1144,45 +1165,26 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
-	
-	Relation table = gpdb::GetRelation(CMDIdGPDB::CastMdid(md_rel->MDId())->Oid());
-	ULONG size = GPDXL_SYSTEM_COLUMNS + (ULONG) table->rd_att->natts + 1;
-	gpdb::CloseRelation(table); // close relation as early as possible
-
-	ULONG *attno_mapping = PopulateAttnoPositionMap(mp, md_rel, size);
 
 	ULongPtrArray *included_cols = ComputeIncludedCols(mp, md_rel);
-
-	// extract the position of the key columns
-	ULongPtrArray *index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
-
-	for (ULONG ul = 0; ul < form_pg_index->indnatts; ul++)
-	{
-		INT attno = form_pg_index->indkey.values[ul];
-		GPOS_ASSERT(0 != attno && "Index expressions not supported");
-
-		index_key_cols_array->Append(GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
-	}
-
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
-	
+
 	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB
-										(
-										mp,
-										mdid_index,
-										mdname,
-										form_pg_index->indisclustered,
-										index_type,
-										mdid_item_type,
-										index_key_cols_array,
-										included_cols,
-										op_families_mdids,
-										NULL // mdpart_constraint
-										);
+		(
+		 mp,
+		 mdid_index,
+		 mdname,
+		 index_clustered,
+		 index_type,
+		 mdid_item_type,
+		 index_key_cols_array,
+		 included_cols,
+		 op_families_mdids,
+		 NULL // mdpart_constraint
+		);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
-
 	return index;
 }
 
@@ -1304,9 +1306,9 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex
 	// extract the position of the key columns
 	ULongPtrArray *index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
 
-	for (ULONG ul = 0; ul < index_info->nColumns; ul++)
+	for (int i = 0; i < index_info->nColumns; i++)
 	{
-		INT attno = index_info->indexKeys[ul];
+		INT attno = index_info->indexKeys[i];
 		GPOS_ASSERT(0 != attno && "Index expressions not supported");
 
 		index_key_cols_array->Append(GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));

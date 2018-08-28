@@ -960,6 +960,12 @@ AS
                     FROM gp_toolkit.__gp_is_append_only
                     WHERE iaooid = pgc.oid AND iaotype = 't'
                 )
+                AND NOT EXISTS
+                (
+                    SELECT parrelid
+                    FROM pg_partition
+                    WHERE parrelid = pgc.oid
+                )
             )
             AS pgc
         LEFT OUTER JOIN

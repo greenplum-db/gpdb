@@ -55,11 +55,15 @@ NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to
 --
 -- DML on table with constraints and OIDS(Negative Test)
 --
-INSERT INTO dml_heap_check_r SELECT i, i ,'r', i FROM generate_series(1,2)i;
+-- Under current jump consistent hash algorithm,
+-- Tuple (1) and (3) are on the same segment(seg2).
+-- The case `UPDATE dml_heap_check_r set a = 110` will not be
+-- flaky only under this condition.
+INSERT INTO dml_heap_check_r SELECT i, i ,'r', i FROM generate_series(1,3) i where i <> 2;
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 
 -----+-----
-   3 |   3
+   4 |   4
 (1 row)
 
 SELECT COUNT(*) FROM dml_heap_check_r;
@@ -74,7 +78,7 @@ DETAIL:  Failing row contains (100, null, rn, 0).
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 
 -----+-----
-   3 |   3
+   4 |   4
 (1 row)
 
 SELECT COUNT(*) FROM dml_heap_check_r;
@@ -89,7 +93,7 @@ DETAIL:  Failing row contains (110, null, rn, 0).
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 
 -----+-----
-   3 |   3
+   4 |   4
 (1 row)
 
 SELECT COUNT(*) FROM dml_heap_check_r;
@@ -101,18 +105,18 @@ SELECT COUNT(*) FROM dml_heap_check_r;
 SELECT SUM(a) FROM dml_heap_check_r;
  sum 
 -----
-   3
+   4
 (1 row)
 
 DROP TABLE IF EXISTS tempoid;
 CREATE TABLE tempoid as SELECT oid,a FROM dml_heap_check_r DISTRIBUTED BY (a);
 UPDATE dml_heap_check_r set a = 110;
-ERROR:  new row for relation "dml_heap_check_r" violates check constraint "dml_heap_check_r_a_check"
+ERROR:  new row for relation "dml_heap_check_r" violates check constraint "dml_heap_check_r_a_check"  (seg0 127.0.0.1:25432 pid=26024)
 DETAIL:  Failing row contains (110, 1, r, 1).
 SELECT SUM(a) FROM dml_heap_check_r;
  sum 
 -----
-   3
+   4
 (1 row)
 
 -- THIS SQL CONFIRMS THAT POST UPDATE THE OID OF THE TUPLE REMAINS THE SAME

@@ -32,9 +32,6 @@ static void LogPartitionSelection(EState *estate, int32 selectorId);
 static void
 partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
 
-/* PartitionSelector Slots */
-#define PARTITIONSELECTOR_NSLOTS 1
-
 void
 initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {

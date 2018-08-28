@@ -939,8 +939,8 @@ SELECT tablename, n_distinct FROM pg_stats WHERE tablename like 'foo%' ORDER BY 
  foo_1_prt_2 |     -0.199
 (9 rows)
 
--- Test ANALYZE MERGE behavior
--- Merge stats from only one partition
+-- Test ANALYZE auto merge behavior
+-- Do not merge stats from only one partition while other partitions have not been analyzed yet
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -949,8 +949,6 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1;
-ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -969,7 +967,6 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -984,7 +981,7 @@ SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_
  foo_1_prt_2 | c       |         0 |          3 | {3,4,5}          | {0.34,0.34,0.32}  | 
 (9 rows)
 
--- No stats after MERGE
+-- No stats after merging 
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -993,8 +990,6 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
  tablename | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -----------+---------+-----------+------------+------------------+-------------------+------------------
@@ -1012,8 +1007,6 @@ SET allow_system_table_mods=true;
 UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass and ATTNAME in ('a','b','c');
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
@@ -1031,43 +1024,12 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1(c);
-ANALYZE MERGE foo(c);
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
   tablename  | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
 -------------+---------+-----------+------------+------------------+-------------------+------------------
  foo_1_prt_1 | c       |         0 |          3 | {1,2,0}          | {0.34,0.34,0.32}  | 
 (1 row)
 
--- Merge fails as all partitions are not analyzed
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
-INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
-ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
--- Merge fails as all partitions are empty and are not analyzed
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
-ANALYZE MERGE foo;
-ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)
--- Merge errors on partition of a table
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
-NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
-INSERT INTO foo select i, i%6, i%100 FROM generate_series(1,2000)i;
-ANALYZE MERGE foo_1_prt_1;
-WARNING:  skipping "foo_1_prt_1" --- cannot analyze a non-root partition using ANALYZE MERGE
 -- Test merging of leaf stats when one partition has
 -- FULL SCAN HLL and the other has HLL from sample
 DROP TABLE IF EXISTS foo;
@@ -1079,8 +1041,7 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO FOO SELECT i,i%6 FROM generate_series(1,1000)i;
 ANALYZE foo_1_prt_1;
 ANALYZE FULLSCAN foo_1_prt_2;
-ANALYZE MERGE foo;
-ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)
+ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:4005)
 HINT:  Re-run ANALYZE or ANALYZE FULLSCAN
 -- Test merging of stats for a newly added partition
 -- Do not collect samples while merging stats
@@ -1097,21 +1058,15 @@ ALTER TABLE foo ADD partition new_part START (6) INCLUSIVE END (9) EXCLUSIVE;
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
 INSERT INTO foo SELECT i, i%3+6 FROM generate_series(1,500)i;
 ANALYZE foo_1_prt_new_part;
+SET log_statement='none';
 SET client_min_messages = 'log';
-ANALYZE MERGE foo;
-LOG:  statement: ANALYZE MERGE foo;
-LOG:  Merging leaf stats
-LOG:  Merging leaf stats
 -- Insert a new column that is not analyzed in the leaf partitions.
 -- Analyzing root partition will use merging statistics for the first 2 columns, 
 -- will create a sample for the root to analyze the newly added columns since 
 -- the leaf partitions does not have any stats for it, yet
 ALTER TABLE foo ADD COLUMN c int;
-LOG:  statement: ALTER TABLE foo ADD COLUMN c int;
 INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
-LOG:  statement: INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
 ANALYZE rootpartition foo;
-LOG:  statement: ANALYZE rootpartition foo;
 LOG:  Needs sample for foo
 LOG:  Merging leaf stats
 LOG:  Merging leaf stats

@@ -704,7 +704,6 @@ _outCreateStmt_common(StringInfo str, CreateStmt *node)
 	WRITE_NODE_FIELD(distributedBy);
 	WRITE_CHAR_FIELD(relKind);
 	WRITE_CHAR_FIELD(relStorage);
-	WRITE_NODE_FIELD(policy);
 	/* postCreate - for analysis, QD only */
 	/* deferredStmts - for analysis, QD only */
 	WRITE_BOOL_FIELD(is_part_child);

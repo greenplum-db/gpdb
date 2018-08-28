@@ -1,61 +1,27 @@
--- \set FETCH_COUNT 100
-\timing
-Timing is on.
+CREATE EXTENSION gp_sparse_vector;
 DROP TABLE IF EXISTS features;
-DROP TABLE
-Time: 33.300 ms
 DROP TABLE IF EXISTS corpus;
-DROP TABLE
-Time: 10.930 ms
 DROP TABLE IF EXISTS documents;
-DROP TABLE
-Time: 11.157 ms
 DROP TABLE IF EXISTS dictionary;
-DROP TABLE
-Time: 0.556 ms
 -- Test simple document classIFication routines
-CREATE TABLE features (a text[][]) DISTRIBUTED RANDOMLY;
-CREATE TABLE
-Time: 23.411 ms
+CREATE TABLE features (dictionary text[][]) DISTRIBUTED RANDOMLY;
 INSERT INTO features values ('{am,before,being,bothered,corpus,document,i,in,is,me,never,now,one,really,second,the,third,this,until}');
-INSERT 0 1
-Time: 58.249 ms
-DROP TABLE IF EXISTS documents;
-DROP TABLE
-Time: 0.581 ms
-CREATE TABLE documents (docnum int, a text[]) DISTRIBUTED RANDOMLY;
-CREATE TABLE
-Time: 18.009 ms
+CREATE TABLE documents (docnum int, document text[]) DISTRIBUTED RANDOMLY;
 INSERT INTO documents values (1,'{this,is,one,document,in,the,corpus}');
-INSERT 0 1
-Time: 92.216 ms
 INSERT INTO documents values (2,'{i,am,the,second,document,in,the,corpus}');
-INSERT 0 1
-Time: 5.971 ms
 INSERT INTO documents values (3,'{being,third,never,really,bothered,me,until,now}');
-INSERT 0 1
-Time: 5.199 ms
 INSERT INTO documents values (4,'{the,document,before,me,is,the,third,document}');
-INSERT 0 1
-Time: 6.822 ms
-CREATE TABLE corpus (docnum int, a svec) DISTRIBUTED RANDOMLY;
-CREATE TABLE
-Time: 17.750 ms
-INSERT INTO corpus (SELECT docnum,gp_extract_feature_histogram((SELECT a FROM features LIMIT 1),a) FROM documents);
-INSERT 0 4
-Time: 77.271 ms
-\qecho Show the feature dictionary
-Show the feature dictionary
-SELECT a dictionary FROM features;
+CREATE TABLE corpus (docnum int, feature_vector svec) DISTRIBUTED RANDOMLY;
+INSERT INTO corpus (SELECT docnum,gp_extract_feature_histogram((SELECT dictionary FROM features LIMIT 1),document) FROM documents);
+-- Show the feature dictionary
+SELECT dictionary FROM features;
                                                dictionary                                               
 --------------------------------------------------------------------------------------------------------
  {am,before,being,bothered,corpus,document,i,in,is,me,never,now,one,really,second,the,third,this,until}
 (1 row)
 
-Time: 2.450 ms
-\qecho Show each document
-Show each document
-SELECT docnum Document_Number, a document FROM documents ORDER BY 1;
+-- Show each document
+SELECT docnum AS Document_Number, document FROM documents ORDER BY 1;
  document_number |                     document                     
 -----------------+--------------------------------------------------
                1 | {this,is,one,document,in,the,corpus}
@@ -64,10 +30,8 @@ SELECT docnum Document_Number, a document FROM documents ORDER BY 1;
                4 | {the,document,before,me,is,the,third,document}
 (4 rows)
 
-Time: 1.895 ms
-\qecho The extracted feature vector for each document
-The extracted feature vector for each document
-SELECT docnum Document_Number, a::float8[] feature_vector FROM corpus ORDER BY 1;
+-- The extracted feature vector for each document
+SELECT docnum AS Document_Number, feature_vector::float8[] FROM corpus ORDER BY 1;
  document_number |             feature_vector              
 -----------------+-----------------------------------------
                1 | {0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,1,0,1,0}
@@ -76,28 +40,22 @@ SELECT docnum Document_Number, a::float8[] feature_vector FROM corpus ORDER BY 1
                4 | {0,1,0,0,0,2,0,0,1,1,0,0,0,0,0,2,1,0,0}
 (4 rows)
 
-Time: 2.378 ms
-\qecho Count the number of times each feature occurs at least once in all documents
-Count the number of times each feature occurs at least once in all documents
-SELECT (vec_count_nonzero(a))::float8[] count_in_document FROM corpus;
+-- Count the number of times each feature occurs at least once in all documents
+SELECT (vec_count_nonzero(feature_vector))::float8[] AS count_in_document FROM corpus;
             count_in_document            
 -----------------------------------------
  {1,1,1,1,2,3,1,2,2,2,1,1,1,1,1,3,2,1,1}
 (1 row)
 
-Time: 2.600 ms
-\qecho Count all occurrences of each term in all documents
-Count all occurrences of each term in all documents
-SELECT (sum(a))::float8[] sum_in_document FROM corpus;
+-- Count all occurrences of each term in all documents
+SELECT (sum(feature_vector))::float8[] AS sum_in_document FROM corpus;
              sum_in_document             
 -----------------------------------------
  {1,1,1,1,2,4,1,2,2,2,1,1,1,1,1,5,2,1,1}
 (1 row)
 
-Time: 2.367 ms
-\qecho Calculate Term Frequency / Inverse Document Frequency
-Calculate Term Frequency / Inverse Document Frequency
-SELECT docnum, (a*logidf)::float8[] tf_idf FROM (SELECT log(count(a)/vec_count_nonzero(a)) logidf FROM corpus) foo, corpus ORDER BY docnum;
+-- Calculate Term Frequency / Inverse Document Frequency
+SELECT docnum, (feature_vector*logidf)::float8[] AS tf_idf FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector)) AS logidf FROM corpus) AS foo, corpus ORDER BY docnum;
  docnum |                                                                              tf_idf                                                                               
 --------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
       1 | {0,0,0,0,0.693147180559945,0.287682072451781,0,0.693147180559945,0.693147180559945,0,0,0,1.38629436111989,0,0,0.287682072451781,0,1.38629436111989,0}
@@ -106,10 +64,8 @@ SELECT docnum, (a*logidf)::float8[] tf_idf FROM (SELECT log(count(a)/vec_count_n
       4 | {0,1.38629436111989,0,0,0,0.575364144903562,0,0,0.693147180559945,0.693147180559945,0,0,0,0,0,0.575364144903562,0.693147180559945,0,0}
 (4 rows)
 
-Time: 13.013 ms
-\qecho Show the same calculation in compressed vector format
-Show the same calculation in compressed vector format
-SELECT docnum, (a*logidf) tf_idf FROM (SELECT log(count(a)/vec_count_nonzero(a)) logidf FROM corpus) foo, corpus ORDER BY docnum;
+-- Show the same calculation in compressed vector format
+SELECT docnum, (feature_vector*logidf) AS tf_idf FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector)) AS logidf FROM corpus) foo, corpus ORDER BY docnum;
  docnum |                                                                          tf_idf                                                                          
 --------+----------------------------------------------------------------------------------------------------------------------------------------------------------
       1 | {4,1,1,1,2,3,1,2,1,1,1,1}:{0,0.693147180559945,0.287682072451781,0,0.693147180559945,0,1.38629436111989,0,0.287682072451781,0,1.38629436111989,0}
@@ -118,18 +74,11 @@ SELECT docnum, (a*logidf) tf_idf FROM (SELECT log(count(a)/vec_count_nonzero(a))
       4 | {1,1,3,1,2,2,5,1,1,2}:{0,1.38629436111989,0,0.575364144903562,0,0.693147180559945,0,0.575364144903562,0.693147180559945,0}
 (4 rows)
 
-Time: 5.794 ms
-\qecho Create a table with TF / IDF weighted vectors in it
-Create a table with TF / IDF weighted vectors in it
+-- Create a table with TF / IDF weighted vectors in it
 DROP TABLE IF EXISTS WEIGHTS;
-DROP TABLE
-Time: 11.575 ms
-CREATE TABLE weights AS (SELECT docnum, (a*logidf) tf_idf FROM (SELECT log(count(a)/vec_count_nonzero(a)) logidf FROM corpus) foo, corpus ORDER BY docnum) DISTRIBUTED RANDOMLY;
-SELECT 4
-Time: 101.241 ms
-\qecho Calculate the angular distance between the first document to each other document
-Calculate the angular distance between the first document to each other document
-SELECT docnum,trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2norm(testdoc))))/(4.*ATAN(1.))))::numeric,2) angular_distance FROM weights,(SELECT tf_idf testdoc FROM weights WHERE docnum = 1 LIMIT 1) foo ORDER BY 1;
+CREATE TABLE weights AS (SELECT docnum, (feature_vector*logidf) tf_idf FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector)) AS logidf FROM corpus) foo, corpus ORDER BY docnum) DISTRIBUTED RANDOMLY;
+-- Calculate the angular distance between the first document to each other document
+SELECT docnum,trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2norm(testdoc))))/(4.*ATAN(1.))))::numeric,2) AS angular_distance FROM weights,(SELECT tf_idf testdoc FROM weights WHERE docnum = 1 LIMIT 1) foo ORDER BY 1;
  docnum | angular_distance 
 --------+------------------
       1 |             0.00
@@ -138,4 +87,8 @@ SELECT docnum,trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2nor
       4 |            80.02
 (4 rows)
 
-Time: 8.357 ms
+DROP TABLE features;
+DROP TABLE corpus;
+DROP TABLE documents;
+DROP TABLE WEIGHTS;
+DROP EXTENSION gp_sparse_vector;

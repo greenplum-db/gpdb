@@ -179,7 +179,13 @@ select c, percentile_cont(0.9999) within group (order by ts2::timestamptz -ts1::
 (10 rows)
 
 -- DATE
-select c, percentile_cont(0.9999) within group (order by ts2::date -ts1::date) from perctint group by c order by 2 limit 10;
+-- The test frame work now does not sort the output of
+-- `select ... order by` statement. This is not enough.
+-- Because there are tuples with the same order-by key
+-- but different other cols. Their order is important
+-- to the correctness of the case. So we add more order-by
+-- keys here.
+select * from (select c, percentile_cont(0.9999) within group (order by ts2::date -ts1::date) from perctint group by c order by 2 limit 10) r order by 2,1;
  c  | percentile_cont 
 ----+-----------------
   1 |            1462
@@ -187,8 +193,8 @@ select c, percentile_cont(0.9999) within group (order by ts2::date -ts1::date) f
   3 |            1464
   4 |            1465
   5 |            1466
-  7 |            1467
   6 |            1467
+  7 |            1467
   8 |            1468
   9 |            1469
  10 |            1470

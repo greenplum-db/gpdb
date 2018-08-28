@@ -34,8 +34,9 @@ SELECT 1 AS oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname
 DELETE FROM reindex_aoco_gist  WHERE id < 128;
 1: BEGIN;
 1: REINDEX index idx_gist_reindex_aoco;
-2: create index idx_gist_reindex_aoco2 on reindex_aoco_gist USING Gist(target);
+2&: create index idx_gist_reindex_aoco2 on reindex_aoco_gist USING Gist(target);
 1: COMMIT;
+2<:
 2: COMMIT;
 3: SELECT COUNT(*) FROM reindex_aoco_gist WHERE id = 1500;
 3: select count(*) from reindex_aoco_gist;

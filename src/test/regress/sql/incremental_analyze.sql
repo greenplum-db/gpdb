@@ -1,6 +1,7 @@
 -- start_ignore
 DROP DATABASE IF EXISTS incrementalanalyze;
 CREATE DATABASE incrementalanalyze;
+ALTER DATABASE incrementalanalyze SET lc_monetary TO 'C';
 \c incrementalanalyze
 DROP SCHEMA IF EXISTS incremental_analyze;
 CREATE SCHEMA incremental_analyze;
@@ -480,13 +481,12 @@ INSERT INTO foo SELECT i, i%3+3, 'text_'||i%200 FROM generate_series(1,1000)i;
 SET default_statistics_target to 3;
 ANALYZE FULLSCAN foo;
 SELECT tablename, n_distinct FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
--- Test ANALYZE MERGE behavior
--- Merge stats from only one partition
+-- Test ANALYZE auto merge behavior
+-- Do not merge stats from only one partition while other partitions have not been analyzed yet
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1;
-ANALYZE MERGE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 
 -- Merge stats from both partitions
@@ -495,15 +495,13 @@ CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6)
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 
--- No stats after MERGE
+-- No stats after merging 
 DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 
 -- Merge stats from only one partition
@@ -514,7 +512,6 @@ SET allow_system_table_mods=true;
 UPDATE pg_attribute SET attstattarget=0 WHERE attrelid = 'foo_1_prt_1'::regclass and ATTNAME in ('a','b','c');
 ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
-ANALYZE MERGE foo;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 
 -- Merge stats from only one partition one column
@@ -522,25 +519,7 @@ DROP TABLE IF EXISTS foo;
 CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
 INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
 ANALYZE foo_1_prt_1(c);
-ANALYZE MERGE foo(c);
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
-
--- Merge fails as all partitions are not analyzed
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-INSERT INTO foo SELECT i, i%6, i%6 FROM generate_series(1,100)i; 
-ANALYZE MERGE foo;
-
--- Merge fails as all partitions are empty and are not analyzed
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-ANALYZE MERGE foo;
-
--- Merge errors on partition of a table
-DROP TABLE IF EXISTS foo;
-CREATE TABLE foo (a int, b int, c int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
-INSERT INTO foo select i, i%6, i%100 FROM generate_series(1,2000)i;
-ANALYZE MERGE foo_1_prt_1;
 
 -- Test merging of leaf stats when one partition has
 -- FULL SCAN HLL and the other has HLL from sample
@@ -549,7 +528,6 @@ CREATE TABLE foo (a int, b int) PARTITION BY RANGE (b) (START (0) END (6) EVERY 
 INSERT INTO FOO SELECT i,i%6 FROM generate_series(1,1000)i;
 ANALYZE foo_1_prt_1;
 ANALYZE FULLSCAN foo_1_prt_2;
-ANALYZE MERGE foo;
 -- Test merging of stats for a newly added partition
 -- Do not collect samples while merging stats
 DROP TABLE IF EXISTS foo;
@@ -560,8 +538,8 @@ ANALYZE foo;
 ALTER TABLE foo ADD partition new_part START (6) INCLUSIVE END (9) EXCLUSIVE;
 INSERT INTO foo SELECT i, i%3+6 FROM generate_series(1,500)i;
 ANALYZE foo_1_prt_new_part;
+SET log_statement='none';
 SET client_min_messages = 'log';
-ANALYZE MERGE foo;
 -- Insert a new column that is not analyzed in the leaf partitions.
 -- Analyzing root partition will use merging statistics for the first 2 columns, 
 -- will create a sample for the root to analyze the newly added columns since 

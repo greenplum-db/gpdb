@@ -105,3 +105,9 @@ SELECT trim(et) et from
 get_explain_output($$
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
+
+--
+-- Test EXPLAINing of the Partition By in a window function. (PostgreSQL
+-- doesn't print it at all.)
+--
+explain (costs off) select count(*) over (partition by g) from generate_series(1, 10) g;

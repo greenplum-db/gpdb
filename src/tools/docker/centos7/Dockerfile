@@ -36,5 +36,7 @@ RUN ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa && \
 RUN yum -y install centos-release-scl && yum -y install --nogpgcheck devtoolset-6-gcc devtoolset-6-gcc-c++ && yum clean all && \
     echo -e 'source /opt/rh/devtoolset-6/enable' >> /opt/gcc_env.sh && \
     echo -e 'source /opt/gcc_env.sh' >> /root/.bashrc && \
-    echo -e 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /root/.bashrc && \
-    mkdir -p /usr/local/gpdb/lib/python
+    echo -e '#!/bin/sh' >> /etc/profile.d/jdk_home.sh && \
+    echo -e 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /etc/profile.d/jdk_home.sh && \
+    echo -e 'export PATH=$JAVA_HOME/bin:$PATH' >> /etc/profile.d/jdk_home.sh && \
+    mkdir -p /usr/local/greenplum-db-devel/lib/python

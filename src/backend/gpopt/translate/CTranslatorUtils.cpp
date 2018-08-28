@@ -2057,36 +2057,6 @@ CTranslatorUtils::IsGroupingColumn
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorUtils::IsGroupingColumn
-//
-//	@doc:
-//		Check if the sorting column is a grouping column
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::IsGroupingColumn
-	(
-	const SortGroupClause *sort_group_clause,
-	List *group_clause
-	)
-{
-	ListCell *group_clause_cell = NULL;
-	ForEach (group_clause_cell, group_clause)
-	{
-		Node *group_clause_node = (Node*) lfirst(group_clause_cell);
-		GPOS_ASSERT(IsA(group_clause_node, SortGroupClause) && "We currently do not support grouping sets.");
-
-		SortGroupClause *sort_group_clause = (SortGroupClause *) group_clause_node;
-		if (sort_group_clause->tleSortGroupRef == sort_group_clause->tleSortGroupRef)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorUtils::PlAttnosFromColids
 //
 //	@doc:
