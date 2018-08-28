@@ -317,15 +317,15 @@ UPDATE joinview SET f1 = f1 + 1 WHERE f3 = 57 RETURNING *, other + 1;
 SELECT * FROM joinview;
  f1 |  f2  | f3 | f4  | other 
 ----+------+----+-----+-------
- 17 | zoo2 | 57 |  99 | 54321
   2 | more | 42 | 141 | 12345
+ 17 | zoo2 | 57 |  99 | 54321
 (2 rows)
 
 SELECT * FROM foo;
  f1 |  f2  | f3 | f4  
 ----+------+----+-----
- 17 | zoo2 | 57 |  99
   2 | more | 42 | 141
+ 17 | zoo2 | 57 |  99
 (2 rows)
 
 SELECT * FROM voo;
