@@ -4731,13 +4731,16 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 				if (!new_tle)
 					elog(ERROR, "could not find path key expression in constructed subquery's target list");
 
+				/*
+				 * The param 'rel' is only used on making and findding EC in childredrels.
+				 * But I think the situation does not happen in adding cdb path. So Null is ok.
+				 */
 				new_eclass = get_eclass_for_sort_expr(root,
 													  new_tle->expr,
 													  pathkey->pk_eclass->ec_opfamilies,
 													  em->em_datatype,
 													  exprCollation((Node *) tle->expr),
 													  0,
- 				/* GPDB_92_MERGE_FIXME_AFTER_GPDB_RUNS: NULL does not look like a correct parameter. */
 													  NULL,
 													  true);
 				new_pathkey = makePathKey(new_eclass, pathkey->pk_opfamily, pathkey->pk_strategy,

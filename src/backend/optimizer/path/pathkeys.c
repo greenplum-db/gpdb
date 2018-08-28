@@ -1193,7 +1193,7 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 									  typeoid,
 									  exprCollation(expr),
 									  0,
-									  NULL, /* GPDB_92_MERGE_FIXME: What is the expected rel here? */
+									  NULL,
 									  true);
 	if (!canonical)
 		pk = makePathKey(eclass, opfamily, strategy, false);
