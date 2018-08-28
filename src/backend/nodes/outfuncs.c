@@ -3416,6 +3416,7 @@ _outInsertStmt(StringInfo str, const InsertStmt *node)
 	WRITE_NODE_FIELD(cols);
 	WRITE_NODE_FIELD(selectStmt);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void
@@ -3427,6 +3428,7 @@ _outDeleteStmt(StringInfo str, const DeleteStmt *node)
 	WRITE_NODE_FIELD(usingClause);
 	WRITE_NODE_FIELD(whereClause);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void
@@ -3437,7 +3439,9 @@ _outUpdateStmt(StringInfo str, const UpdateStmt *node)
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(targetList);
 	WRITE_NODE_FIELD(whereClause);
+	WRITE_NODE_FIELD(fromClause);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void

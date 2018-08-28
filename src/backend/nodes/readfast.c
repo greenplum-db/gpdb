@@ -674,6 +674,7 @@ _readInsertStmt(void)
 	READ_NODE_FIELD(cols);
 	READ_NODE_FIELD(selectStmt);
 	READ_NODE_FIELD(returningList);
+	READ_NODE_FIELD(withClause);
 	READ_DONE();
 }
 
@@ -686,6 +687,7 @@ _readDeleteStmt(void)
 	READ_NODE_FIELD(usingClause);
 	READ_NODE_FIELD(whereClause);
 	READ_NODE_FIELD(returningList);
+	READ_NODE_FIELD(withClause);
 	READ_DONE();
 }
 
@@ -697,7 +699,9 @@ _readUpdateStmt(void)
 	READ_NODE_FIELD(relation);
 	READ_NODE_FIELD(targetList);
 	READ_NODE_FIELD(whereClause);
+	READ_NODE_FIELD(fromClause);
 	READ_NODE_FIELD(returningList);
+	READ_NODE_FIELD(withClause);
 	READ_DONE();
 }
 
