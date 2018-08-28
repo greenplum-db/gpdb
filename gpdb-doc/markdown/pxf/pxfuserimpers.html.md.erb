@@ -47,7 +47,7 @@ Perform the following procedure to turn PXF user impersonation on or off in your
 
 When PXF user personation is enabled (the default), you must configure the Hadoop `core-site.xml` configuration file to permit user impersonation for PXF. Follow these steps:
 
-1. Open the `core-site.xml` configuration file using a text editor, or use Ambari to add or edit the Hadoop property values described in this procedure.
+1. On your Hadoop cluster, open the `core-site.xml` configuration file using a text editor, or use Ambari to add or edit the Hadoop property values described in this procedure.
 
 2. Set the property `hadoop.proxyuser.<name>.hosts` to specify the list of PXF host names from which proxy requests are permitted. Substitute the PXF proxy user (generally `gpadmin`) for `<name>`, and provide multiple PXF host names in a comma-separated list.  For example:
 
@@ -66,6 +66,8 @@ When PXF user personation is enabled (the default), you must configure the Hadoo
     </property>
     ```
 4. After changing `core-site.xml`, you must restart Hadoop for your changes to take effect.
+
+5. Copy the updated `core-site.xml` file to the Hadoop client installation on each Greenplum Database segment host.
 
 ## <a id="hive"></a>Hive User Impersonation
 
