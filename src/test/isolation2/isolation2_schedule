@@ -15,6 +15,7 @@ test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: instr_in_shmem_cleanup
 test: vacuum_full_recently_dead_tuple_due_to_distributed_snapshot
+test: resync_xlog_hints
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

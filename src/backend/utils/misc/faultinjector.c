@@ -231,6 +231,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault at the start of finish prepare step executed by QEs */
 	_("filerep_verification"),
 	    /* inject fault to start verification */
+	_("changetracking_add_buffer"),
+		/* inject fault before recording a changed buffer in change tracking log */
 	_("twophase_transaction_commit_prepared"),
 		/* inject fault before transaction commit is recorded in xlog */
 	_("twophase_transaction_abort_prepared"),

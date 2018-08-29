@@ -245,10 +245,12 @@ static void ChangeTracking_AddBufferPoolChange(CTFType			ftype,
 	/* gp_persistent relation change? we shouldn't log it. exit early */
 	if(GpPersistent_SkipXLogInfo(relFileNode->relNode))
 		return;
-	
+
 	Assert(ftype != CTF_META);
 	Assert(ftype != CTF_LOG_TRANSIENT);
 	
+	SIMPLE_FAULT_INJECTOR(ChangeTrackingAddBuffer);
+
 	if(ftype == CTF_LOG_FULL)
 	{
 		/* this is a regular write from xlog */

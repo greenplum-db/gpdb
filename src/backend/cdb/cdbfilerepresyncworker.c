@@ -640,50 +640,47 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 						 result->entries[ii].lsn_end.xrecoff);
 				}
 
-				if (XLByteLE(result->entries[ii].lsn_end, PageGetLSN(page)))
+				if (! XLByteEQ(PageGetLSN(page), result->entries[ii].lsn_end))
 				{
-					if (! XLByteEQ(PageGetLSN(page), result->entries[ii].lsn_end))
-					{
-						ereport(LOG,
-							(errmsg("Resynchonize buffer pool relation '%s' block '%d' has page lsn more than CT lsn, "
-								"lsn end change tracking '%X/%X' lsn page '%X/%X' "
-								"number of blocks '%d'",
-								relidstr,
-								blkno,
-								loc.xlogid,
-								loc.xrecoff,
-								result->entries[ii].lsn_end.xlogid,
-								result->entries[ii].lsn_end.xrecoff,
-								numBlocks),
-							 FileRep_errcontext()));
-
-					}
-
-					/*
-					 * We checksum every page before replicating for the reasons described
-					 * in FileRepPrimary_ResyncWrite above
-					 */
-					char *pageCopy = PageSetChecksumCopy(page, blkno);
-
-					/*
-					 * It's safe and better to perform write of the page to mirror,
-					 * for this case, as primary and mirror data pages should always
-					 * be same. So, we might do some extra work but definitely won't
-					 * lose out blocks, or error out and need to perform full recovery.
-					 * Need to cover for this case as there are some known scenarios where
-					 * CT file can have extra records which should have been discarded,
-					 * but as we loose out information of xlog LSN cannot be discarded.
-					 * One such case is when CT_TRANSIENT being compacted to CT_COMPACT
-					 * with specific xlog LSN (to discard extra records) in CT mode gets
-					 * interrupted by resync. Compaction during Resync collects all the
-					 * CT records and doesn't have xlog LSN information to discard any
-					 * extra records from CT_TRANSIENT.
-					 */
-					smgrwrite(smgr_relation,
+					ereport(LOG,
+						(errmsg("Resynchonize buffer pool relation '%s' block '%d' has page lsn more than CT lsn, "
+							"lsn end change tracking '%X/%X' lsn page '%X/%X' "
+							"number of blocks '%d'",
+							relidstr,
 							blkno,
-							pageCopy,
-							FALSE);
+							loc.xlogid,
+							loc.xrecoff,
+							result->entries[ii].lsn_end.xlogid,
+							result->entries[ii].lsn_end.xrecoff,
+							numBlocks),
+						 FileRep_errcontext()));
+
 				}
+
+				/*
+				 * We checksum every page before replicating for the reasons described
+				 * in FileRepPrimary_ResyncWrite above
+				 */
+				char *pageCopy = PageSetChecksumCopy(page, blkno);
+
+				/*
+				 * It's safe and better to perform write of the page to mirror,
+				 * for this case, as primary and mirror data pages should always
+				 * be same. So, we might do some extra work but definitely won't
+				 * lose out blocks, or error out and need to perform full recovery.
+				 * Need to cover for this case as there are some known scenarios where
+				 * CT file can have extra records which should have been discarded,
+				 * but as we loose out information of xlog LSN cannot be discarded.
+				 * One such case is when CT_TRANSIENT being compacted to CT_COMPACT
+				 * with specific xlog LSN (to discard extra records) in CT mode gets
+				 * interrupted by resync. Compaction during Resync collects all the
+				 * CT records and doesn't have xlog LSN information to discard any
+				 * extra records from CT_TRANSIENT.
+				 */
+				smgrwrite(smgr_relation,
+						blkno,
+						pageCopy,
+						FALSE);
 
 				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
 
