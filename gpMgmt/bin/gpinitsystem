@@ -232,7 +232,7 @@ CHK_PARAMS () {
 		    fi
 		    
 		    # Make sure old CLUSTER_CONFIG settings are not hanging around.
-		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM
+		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM FQDN_HBA
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
 		    $TR -d '\r' < $CLUSTER_CONFIG > $TMP_FILE
@@ -286,6 +286,11 @@ CHK_PARAMS () {
 		if [ x"" = x"$HEAP_CHECKSUM" ]; then
 			HEAP_CHECKSUM=on
 			LOG_MSG "[INFO]:-Could not find HEAP_CHECKSUM in cluster config, defaulting to on."
+		fi
+
+		if [ x"" = x"$FQDN_HBA" ]; then
+			FQDN_HBA=0
+			LOG_MSG "[INFO]:-Could not find FQDN_HBA in cluster config, defaulting to 0."
 		fi
 
 		if [ x"" == x"$LOCALE_SETTING" ];then
@@ -1079,6 +1084,7 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
 		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is         = $GP_LIBRARY_PATH" 1
 		LOG_MSG "[INFO]:-HEAP_CHECKSUM is           = $HEAP_CHECKSUM" 1
+		LOG_MSG "[INFO]:-FQDN_HBA is                = $FQDN_HBA" 1
 		if [ $ULIMIT_WARN -eq 1 ];then
 			LOG_MSG "[WARN]:-Ulimit check               = Warnings generated, see log file $WARN_MARK" 1
 		else
@@ -1680,6 +1686,10 @@ DUMP_OUTPUT_CONFIG () {
 
     if [ x"" != x"$HEAP_CHECKSUM" ] ; then
 	$ECHO "HEAP_CHECKSUM=$HEAP_CHECKSUM" >> $OUTPUT_CONFIG
+    fi
+
+    if [ x"" != x"$FQDN_HBA" ] ; then
+	$ECHO "FQDN_HBA=$FQDN_HBA" >> $OUTPUT_CONFIG
     fi
 
     $ECHO "QD_PRIMARY_ARRAY=$QD_PRIMARY_ARRAY" >> $OUTPUT_CONFIG

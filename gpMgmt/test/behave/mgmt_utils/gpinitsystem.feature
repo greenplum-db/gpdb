@@ -78,22 +78,26 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
-    @gpinitsystem_fqdn
-    Scenario: gpinitsystem should print IP addresses in pg_hba.conf when FQDN_HBA=1
+    @gpinitsystem_fqdn_hba
+    @gpinitsystem_fqdn_hba_on
+    Scenario: gpinitsystem should print FQDN in pg_hba.conf when FQDN_HBA=1
         Given the cluster config is generated with FQDN_HBA "1"
-        Then verify that file "fqdn_config_file" exists under "/tmp"
-        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=1"
-        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
-        And gpinitsystem should return a return code of 0
-        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "master_hostname       trust"
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
-    @gpinitsystem_fqdn
-    Scenario: gpinitsystem should print FQDNs in pg_hba.conf when FQDN_HBA=0
+    @gpinitsystem_fqdn_hba
+    @gpinitsystem_fqdn_hba_off
+    Scenario: gpinitsystem should print CIDR in pg_hba.conf when FQDN_HBA=0
         Given the cluster config is generated with FQDN_HBA "0"
-        Then verify that file "fqdn_config_file" exists under "/tmp"
-        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=0"
-        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
-        And gpinitsystem should return a return code of 0
-        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "127.0.0.1       trust"
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=0"
+        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
