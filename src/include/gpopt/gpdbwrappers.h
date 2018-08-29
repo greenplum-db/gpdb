@@ -448,6 +448,9 @@ namespace gpdb {
 	// convert numeric to double; if out of range, return +/- HUGE_VAL
 	double NumericToDoubleNoOverflow(Numeric num);
 
+	// is the given Numeric value NaN?
+	bool NumericIsNan(Numeric num);
+
 	// convert time-related datums to double for stats purpose
 	double ConvertTimeValueToScalar(Datum datum, Oid typid);
 

@@ -126,6 +126,20 @@ EXPLAIN EXECUTE prep_prune;
  Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
 (9 rows)
 
+-- Also test that Params are const-evaluated.
+PREPARE prep_prune_param AS select * from pt_lt_tab WHERE col2 = $1;
+EXPLAIN EXECUTE prep_prune_param(10);
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
+         ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 1 (out of 5)
+         ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
+               Filter: col2 = 10::numeric
+ Optimizer: PQO version 2.70.0
+(7 rows)
+
 -- @description B-tree single index key = non-partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col1);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"

@@ -16,7 +16,7 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
+
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
 #include "nodes/primnodes.h"
@@ -27,14 +27,9 @@
 
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h" /* for is_projection_capable_plan() */
-#include "optimizer/var.h"		/* for contain_vars_of_level_or_above() */
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "parser/parse_oper.h"	/* for compatible_oper_opid() */
-#include "nodes/makefuncs.h"	/* for makeVar() */
-#include "nodes/value.h"		/* for makeString() */
-#include "utils/guc.h"	/* for getatttypetypmod() */
-#include "utils/lsyscache.h"	/* for getatttypetypmod() */
-#include "utils/relcache.h"		/* RelationGetPartitioningKey() */
+#include "nodes/makefuncs.h"	/* for makeTargetEntry() */
+#include "utils/guc.h"			/* for Debug_pretty_print */
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbplan.h"
@@ -42,13 +37,6 @@
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "optimizer/tlist.h"
-
-#define ARRAYCOPY(to, from, sz) \
-	do { \
-		Size	_size = (sz) * sizeof((to)[0]); \
-		(to) = palloc(_size); \
-		memcpy((to), (from), _size); \
-	} while (0)
 
 /*
  * A PlanProfile holds state for recursive prescan_walker().
@@ -1125,34 +1113,6 @@ repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr)
 	}
 
 	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_REPARTITION, hashExpr);
-}
-
-/*
- * repartitionPlanForGroupClauses
- */
-bool
-repartitionPlanForGroupClauses(PlannerInfo *root, Plan *plan,
-							   bool stable, bool rescannable,
-							   List *groupclauses, List *targetlist)
-{
-	List	   *hashExpr;
-	ListCell   *lc;
-
-	/*
-	 * Build a hashExpr from the SortGroupClauses.
-	 */
-	hashExpr = NIL;
-	foreach (lc, groupclauses)
-	{
-		SortGroupClause *sortcl = (SortGroupClause *) lfirst(lc);
-		Node	   *n;
-
-		n = get_sortgroupclause_expr(sortcl, targetlist);
-
-		hashExpr = lappend(hashExpr, n);
-	}
-
-	return repartitionPlan(plan, stable, rescannable, hashExpr);
 }
 
 /*

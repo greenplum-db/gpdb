@@ -21,14 +21,6 @@
 #include "utils/datum.h"
 #include "utils/date.h"
 
-/*
- * GPDB_91_MERGE_FIXME: This allows us to call numeric_is_nan(). This is probably
- * a violation of some ORCA coding rule, because we don't do this elsewhere...
- */
-extern "C" {
-#include "utils/numeric.h"
-}
-
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
@@ -2327,8 +2319,7 @@ CTranslatorScalarToDXL::ExtractDoubleValueFromDatum
 	{
 		Numeric num = (Numeric) (bytes);
 
-		// NOTE: we assume that numeric_is_nan() cannot throw an error!
-		if (numeric_is_nan(num))
+		if (gpdb::NumericIsNan(num))
 		{
 			// in GPDB NaN is considered the largest numeric number.
 			return CDouble(GPOS_FP_ABS_MAX);

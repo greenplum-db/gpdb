@@ -124,6 +124,10 @@ PREPARE prep_prune AS select * from pt_lt_tab WHERE col2 = stabletestfunc();
 -- The plan should only scan one partition, where col2 = 10.
 EXPLAIN EXECUTE prep_prune;
 
+-- Also test that Params are const-evaluated.
+PREPARE prep_prune_param AS select * from pt_lt_tab WHERE col2 = $1;
+EXPLAIN EXECUTE prep_prune_param(10);
+
 
 -- @description B-tree single index key = non-partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col1);

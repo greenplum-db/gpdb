@@ -2483,19 +2483,6 @@ eval_const_expressions_mutator(Node *node,
 							bool		typByVal;
 							Datum		pval;
 
-							/*
-							 * In GPDB, unlike in upstream, we go ahead and evaluate
-							 * stable functions in any case. But it means that the
-							 * plan is only good for this execution, and will need to
-							 * be re-planned on next one. For GPDB, that's considered
-							 * a good tradeoff, as typical queries are long running,
-							 * and evaluating the stable functions aggressively can
-							 * allow partition pruning to happen, which can be a big
-							 * win.
-							 */
-							if (!(context->estimate || (prm->pflags & PARAM_FLAG_CONST)))
-								context->root->glob->oneoffPlan = true;
-
 							Assert(prm->ptype == param->paramtype);
 							get_typlenbyval(param->paramtype,
 											&typLen, &typByVal);
@@ -4281,7 +4268,16 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
 		 /* okay */ ;
 	else if (context->root && context->root->glob && funcform->provolatile == PROVOLATILE_STABLE)
 	{
-		 /* okay, but we cannot reuse this plan */
+		/*
+		 * okay, but we cannot reuse this plan
+		 *
+		 * Explanation: in GPDB, unlike in upstream, we go ahead and evaluate
+		 * stable functions in any case. But it means that the plan is only
+		 * good for this execution, and will need to be re-planned on next one.
+		 * For GPDB, that's considered a good tradeoff, as typical queries are
+		 * long running, and evaluating the stable functions aggressively can
+		 * allow partition pruning to happen, which can be a big win.
+		 */
 		context->root->glob->oneoffPlan = true;
 	}
 	else

@@ -131,13 +131,6 @@ static SimpleStringList relid_string_list = {NULL, NULL};
 static SimpleStringList funcid_string_list = {NULL, NULL};
 static SimpleOidList function_include_oids = {NULL, NULL};
 
-/*
- * Indicates whether or not SET SESSION AUTHORIZATION statements should be emitted
- * instead of ALTER ... OWNER statements to establish object ownership.
- * Set through the --use-set-session-authorization option.
- */
-static int	use_setsessauth = 0;
-
 /* default, if no "inclusion" switches appear, is to dump everything */
 static bool include_everything = true;
 
@@ -205,8 +198,6 @@ static void dumpCompositeTypeColComments(Archive *fout, TypeInfo *tyinfo);
 static void dumpShellType(Archive *fout, ShellTypeInfo *stinfo);
 static void dumpProcLang(Archive *fout, ProcLangInfo *plang);
 static void dumpFunc(Archive *fout, FuncInfo *finfo);
-static char *getFuncOwner(Archive *fout, Oid funcOid, const char *templateField);
-static void dumpPlTemplateFunc(Archive *fout, Oid funcOid, const char *templateField, PQExpBuffer buffer);
 static void dumpCast(Archive *fout, CastInfo *cast);
 static void dumpOpr(Archive *fout, OprInfo *oprinfo);
 static void dumpOpclass(Archive *fout, OpclassInfo *opcinfo);
@@ -8856,69 +8847,6 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	}
 	appendPQExpBuffer(defqry, ";\n");
 
-	/* GPDB_91_MERGE_FIXME: Where did this code come from? I can't see it in
-	 * any upstream version, and I don't understand why we'd need it. Can
-	 * we remove it?
-	 */
-	/*
-	 * If the language is one of those for which the call handler and
-	 * validator functions are defined in pg_pltemplate, we must add ALTER
-	 * FUNCTION ... OWNER statements to switch the functions to the user to
-	 * whom the functions are assigned -OR- adjust the language owner to
-	 * reflect the call handler owner so a SET SESSION AUTHORIZATION statement
-	 * properly reflects the "language" owner.
-	 *
-	 * Functions specified in pg_pltemplate are entered into pg_proc under
-	 * pg_catalog.	Functions in pg_catalog are omitted from the function list
-	 * structure resulting in the references to them in this procedure to be
-	 * NULL.
-	 *
-	 * TODO: Adjust for ALTER LANGUAGE ... OWNER support.
-	 */
-	if (use_setsessauth)
-	{
-		/*
-		 * If using SET SESSION AUTHORIZATION statements to reflect
-		 * language/function ownership, alter the LANGUAGE owner to reflect
-		 * the owner of the call handler function (or the validator function)
-		 * if the fuction is from pg_pltempate. (Other functions are
-		 * explicitly created and not subject the user in effect with CREATE
-		 * LANGUAGE.)
-		 */
-		char	   *languageOwner = NULL;
-
-		if (funcInfo == NULL)
-		{
-			languageOwner = getFuncOwner(fout, plang->lanplcallfoid, "tmplhandler");
-		}
-		else if (validatorInfo == NULL)
-		{
-			languageOwner = getFuncOwner(fout, plang->lanvalidator, "tmplvalidator");
-		}
-		if (languageOwner != NULL)
-		{
-			free(plang->lanowner);
-			plang->lanowner = languageOwner;
-		}
-	}
-	else
-	{
-		/*
-		 * If the call handler or validator is defined, check to see if it's
-		 * one of the pre-defined ones.  If so, it won't have been dumped as a
-		 * function so won't have the proper owner -- we need to emit an ALTER
-		 * FUNCTION ... OWNER statement for it.
-		 */
-		if (funcInfo == NULL)
-		{
-			dumpPlTemplateFunc(fout, plang->lanplcallfoid, "tmplhandler", defqry);
-		}
-		if (validatorInfo == NULL)
-		{
-			dumpPlTemplateFunc(fout, plang->lanvalidator, "tmplvalidator", defqry);
-		}
-	}
-
 	appendPQExpBuffer(labelq, "LANGUAGE %s", qlanname);
 
 	if (binary_upgrade)
@@ -8953,98 +8881,6 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	destroyPQExpBuffer(defqry);
 	destroyPQExpBuffer(delqry);
 	destroyPQExpBuffer(labelq);
-}
-
-
-/*
- * getFuncOwner - retrieves the "proowner" of the function identified by funcOid
- * if, and only if, funcOid represents a function specified in pg_pltemplate.
- */
-static char *
-getFuncOwner(Archive *fout, Oid funcOid, const char *templateField)
-{
-	PGresult   *res;
-	int			ntups;
-	int			i_funcowner;
-	char	   *functionOwner = NULL;
-	PQExpBuffer query = createPQExpBuffer();
-
-	/* Ensure we're in the proper schema */
-	selectSourceSchema(fout, "pg_catalog");
-
-	appendPQExpBuffer(query,
-					  "SELECT ( %s proowner ) AS funcowner "
-					  "FROM pg_proc "
-		"WHERE ( oid = %d AND proname IN ( SELECT %s FROM pg_pltemplate ) )",
-					  username_subquery, funcOid, templateField);
-
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	ntups = PQntuples(res);
-	if (ntups != 0)
-	{
-		i_funcowner = PQfnumber(res, "funcowner");
-		functionOwner = pg_strdup(PQgetvalue(res, 0, i_funcowner));
-	}
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-
-	return functionOwner;
-}
-
-
-/*
- * dumpPlTemplateFunc - appends an "ALTER FUNCTION ... OWNER" statement for the
- * pg_pltemplate-defined language function specified to the PQExpBuffer provided.
- *
- * The ALTER FUNCTION statement is added if, and only if, the function is defined
- * in the pg_catalog schema AND is identified in the pg_pltemplate table.
- */
-static void
-dumpPlTemplateFunc(Archive *fout, Oid funcOid, const char *templateField, PQExpBuffer buffer)
-{
-	PGresult   *res;
-	int			ntups;
-	int			i_signature;
-	int			i_owner;
-	char	   *functionSignature = NULL;
-	char	   *ownerName = NULL;
-	PQExpBuffer fquery = createPQExpBuffer();
-
-	/* Make sure we are in proper schema */
-	selectSourceSchema(fout, "pg_catalog");
-
-	appendPQExpBuffer(fquery,
-					  "SELECT p.oid::pg_catalog.regprocedure AS signature, "
-					  "( %s proowner ) AS owner "
-					  "FROM pg_pltemplate t, pg_proc p "
-					  "WHERE p.oid = %d "
-					  "AND proname = %s "
-					  "AND pronamespace = ( SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog' )",
-					  username_subquery, funcOid, templateField);
-
-	res = ExecuteSqlQuery(fout, fquery->data, PGRES_TUPLES_OK);
-
-	ntups = PQntuples(res);
-	if (ntups != 0)
-	{
-		i_signature = PQfnumber(res, "signature");
-		i_owner = PQfnumber(res, "owner");
-		functionSignature = pg_strdup(PQgetvalue(res, 0, i_signature));
-		ownerName = pg_strdup(PQgetvalue(res, 0, i_owner));
-
-		if (functionSignature != NULL && ownerName != NULL)
-		{
-			appendPQExpBuffer(buffer, "ALTER FUNCTION %s OWNER TO %s;\n", functionSignature, ownerName);
-		}
-
-		free(functionSignature);
-		free(ownerName);
-	}
-
-	PQclear(res);
-	destroyPQExpBuffer(fquery);
 }
 
 /*

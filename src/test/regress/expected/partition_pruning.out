@@ -124,6 +124,18 @@ EXPLAIN EXECUTE prep_prune;
  Optimizer status: legacy query optimizer
 (6 rows)
 
+-- Also test that Params are const-evaluated.
+PREPARE prep_prune_param AS select * from pt_lt_tab WHERE col2 = $1;
+EXPLAIN EXECUTE prep_prune_param(10);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000003.12 rows=1 width=12)
+   ->  Append  (cost=10000000000.00..10000000003.12 rows=1 width=12)
+         ->  Seq Scan on pt_lt_tab_1_prt_part1 pt_lt_tab  (cost=10000000000.00..10000000003.12 rows=1 width=12)
+               Filter: col2 = 10::numeric
+ Optimizer: legacy query optimizer
+(5 rows)
+
 -- @description B-tree single index key = non-partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col1);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"

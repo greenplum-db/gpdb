@@ -842,8 +842,13 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	plan = (CachedPlan *) palloc(sizeof(CachedPlan));
 	plan->magic = CACHEDPLAN_MAGIC;
 	plan->stmt_list = plist;
-	/* GPDB_92_MERGE_FIXME: pg upstream does not set for boundParams, but
-	 * previous gpdb code considers that. Why? */
+
+	/*
+	 * In GPDB, the planner is more aggressive, and e.g. eagerly evaluates
+	 * stable functions in the planner already. Such plans are marked as
+	 * 'one-off', and mustn't be reused. Likewise, plans for CTAS are not
+	 * reused, because the plan depends on the target data distribution.
+	 */
 	if (plan_list_is_oneoff(plist) || intoClause)
 	{
 		plan->saved_xmin = BootstrapTransactionId;

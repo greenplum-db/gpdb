@@ -21,34 +21,6 @@
 struct Plan;                    /* #include "nodes/plannodes.h" */
 
 /*
- * cdbpullup_colIdx
- *
- * Given a [potentially] projecting Plan operator and a vector
- * of attribute numbers in the plan's single subplan, create a
- * vector of attribute numbers in the plan's targetlist.
- *
- * Parameters:
- *      plan -> the Plan node
- *      subplan -> the Plan node's subplan
- *      numCols = number of colIdx array elements
- *      subplanColIdx (IN) -> array [0..numCols-1] of AttrNumber, designating
- *          entries in the targetlist of the Plan operator's subplan.
- *     *pProjectedColIdx (OUT) -> array [0..n-1] of AttrNumber, palloc'd
- *          by this function, where n is the function's return value; or
- *          NULL when n == 0.
- *
- * Returns the number of leading subplanColIdx entries for which matching
- * Var nodes were found in the plan's targetlist.
- */
-int
-cdbpullup_colIdx(struct Plan   *plan,
-                 struct Plan   *subplan,
-                 int            numCols,
-                 AttrNumber    *subplanColIdx,
-                 AttrNumber   **pProjectedColIdx);
-
-
-/*
  * cdbpullup_expr
  *
  * Suppose there is a Plan node 'P' whose projection is defined by

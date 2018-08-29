@@ -2083,6 +2083,20 @@ gpdb::NumericToDoubleNoOverflow
 	return 0.0;
 }
 
+bool
+gpdb::NumericIsNan
+	(
+	Numeric num
+	)
+{
+	GP_WRAP_START;
+	{
+		return numeric_is_nan(num);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
 double
 gpdb::ConvertTimeValueToScalar
 	(

@@ -994,7 +994,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			}
 			break;
 		case T_Repeat:
-			pname = "Repeat";
+			pname = sname = "Repeat";
 			break;
 		case T_Append:
 			pname = sname = "Append";
@@ -1006,7 +1006,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			pname = sname = "Recursive Union";
 			break;
 		case T_Sequence:
-			pname = "Sequence";
+			pname = sname = "Sequence";
 			break;
 		case T_BitmapAnd:
 			pname = sname = "BitmapAnd";
@@ -1034,25 +1034,25 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			pname = sname = "Seq Scan";
 			break;
 		case T_AppendOnlyScan:
-			pname = "Append-only Scan";
+			pname = sname = "Append-only Scan";
 			break;
 		case T_AOCSScan:
-			pname = "Append-only Columnar Scan";
+			pname = sname = "Append-only Columnar Scan";
 			break;
 		case T_TableScan:
-			pname = "Table Scan";
+			pname = sname = "Table Scan";
 			break;
 		case T_DynamicTableScan:
-			pname = "Dynamic Table Scan";
+			pname = sname = "Dynamic Table Scan";
 			break;
 		case T_ExternalScan:
-			pname = "External Scan";
+			pname = sname = "External Scan";
 			break;
 		case T_IndexScan:
 			pname = sname = "Index Scan";
 			break;
 		case T_DynamicIndexScan:
-			pname = "Dynamic Index Scan";
+			pname = sname = "Dynamic Index Scan";
 			break;
 		case T_IndexOnlyScan:
 			pname = sname = "Index Only Scan";
@@ -1061,19 +1061,19 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			pname = sname = "Bitmap Index Scan";
 			break;
 		case T_DynamicBitmapIndexScan:
-			pname = "Dynamic Bitmap Index Scan";
+			pname = sname = "Dynamic Bitmap Index Scan";
 			break;
 		case T_BitmapHeapScan:
 			pname = sname = "Bitmap Heap Scan";
 			break;
 		case T_BitmapAppendOnlyScan:
 			if (((BitmapAppendOnlyScan *)plan)->isAORow)
-				pname = "Bitmap Append-Only Row-Oriented Scan";
+				pname = sname = "Bitmap Append-Only Row-Oriented Scan";
 			else
-				pname = "Bitmap Append-Only Column-Oriented Scan";
+				pname = sname = "Bitmap Append-Only Column-Oriented Scan";
 			break;
 		case T_BitmapTableScan:
-			pname = "Bitmap Table Scan";
+			pname = sname = "Bitmap Table Scan";
 			break;
 		case T_TidScan:
 			pname = sname = "Tid Scan";
@@ -1212,34 +1212,35 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_DML:
 			{
+				sname = "DML";
 				switch (es->pstmt->commandType)
 				{
 					case CMD_INSERT:
-						pname = "Insert";
+						pname = operation = "Insert";
 						break;
 					case CMD_DELETE:
-						pname = "Delete";
+						pname = operation = "Delete";
 						break;
 					case CMD_UPDATE:
-						pname = "Update";
+						pname = operation = "Update";
 						break;
 					default:
-						pname = "DML ???";
+						pname = operation = "DML ???";
 						break;
 				}
 			}
 			break;
 		case T_SplitUpdate:
-			pname = "Split";
+			pname = sname = "Split";
 			break;
 		case T_AssertOp:
-			pname = "Assert";
+			pname = sname = "Assert";
 			break;
 		case T_PartitionSelector:
-			pname = "Partition Selector";
+			pname = sname = "Partition Selector";
 			break;
 		case T_RowTrigger:
- 			pname = "RowTrigger";
+			pname = sname = "RowTrigger";
  			break;
 		default:
 			pname = sname = "???";

@@ -36,9 +36,6 @@ extern Flow *pull_up_Flow(Plan *plan, Plan *subplan);
 
 extern bool focusPlan(Plan *plan, bool stable, bool rescannable);
 extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr);
-extern bool repartitionPlanForGroupClauses(struct PlannerInfo *root, Plan *plan,
-							   bool stable, bool rescannable,
-							   List *sortclauses, List *targetlist);
 extern bool broadcastPlan(Plan *plan, bool stable, bool rescannable);
 
 #endif   /* CDBLLIZE_H */
