@@ -211,6 +211,13 @@ PROCESS_QE () {
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
         done
     else
+        # cleanup the pg_hba.conf
+        $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
+        $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+
+        # add localhost
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
+
         if [ x"" = x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${MASTER_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
             PARA_EXIT $? "Update $PG_HBA for master IP address ${MASTER_HOSTNAME}"

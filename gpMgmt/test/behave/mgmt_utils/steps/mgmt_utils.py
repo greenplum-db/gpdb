@@ -150,6 +150,30 @@ def impl(context, scenario_number):
     label_key = 'timestamp_labels' + scenario_number
     global_labels[label_key] = _read_label_from_json(context, label_key)
 
+@given('the cluster config is generated with FQDN_HBA "{fqdn_hba_toggle}"')
+def impl(context, fqdn_hba_toggle):
+    stop_database(context)
+
+    cmd = """
+    cd ../gpAux/gpdemo; \
+        export MASTER_DEMO_PORT={master_port} && \
+        export DEMO_PORT_BASE={port_base} && \
+        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+        export WITH_MIRRORS={with_mirrors} && \
+        ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
+        env EXTRA_CONFIG="FQDN_HBA={fqdn_hba_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
+    """.format(master_port=os.getenv('MASTER_PORT', 15432),
+               port_base=os.getenv('PORT_BASE', 25432),
+               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
+               with_mirrors='true',
+               fqdn_hba_toggle=fqdn_hba_toggle)
+
+    run_command(context, cmd)
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
+
 @given('the cluster config is generated with data_checksums "{checksum_toggle}"')
 def impl(context, checksum_toggle):
     stop_database(context)
@@ -172,26 +196,6 @@ def impl(context, checksum_toggle):
 
     if context.ret_code != 0:
         raise Exception('%s' % context.error_message)
-
-@given('the gpinitsystem config is generated with FQDN_HBA "{fqdn_toggle}"')
-def impl(context, checksum_toggle):
-    import socket
-    hostname = socket.gethostname()
-    config = """
-QD_PRIMARY_ARRAY={hostname}~5432~/greenplum/data-1~1~-1~0
-declare -a PRIMARY_ARRAY=(
-{hostname}~40000~/greenplum/data~2~0~6000
-)
-declare -a MIRROR_ARRAY=(
-{hostname}~50000~/greenplum/mirror/data~3~0~6001
-)
-FQDN_HBA={fqdn_toggle}
-""".format(hostname=hostname,
-           fqdn_toggle=fqdn_toggle)
-
-    with open("/tmp/fqdn_config_file", 'w') as fp:
-        fp.write(config)
-
 
 @given('the database is running')
 @then('the database is running')
@@ -4426,6 +4430,38 @@ def impl(context, cmd):
 @when('the user runs the command "{cmd}" in the background without sleep')
 def impl(context, cmd):
     thread.start_new_thread(run_command, (context, cmd))
+
+
+# For any pg_hba.conf line with `host ... trust`, its address should only contain FQDN
+@then('verify that the file "{filename}" contains FQDN only for trusted host')
+def impl(context, filename):
+    with open(filename) as fr:
+        for line in fr:
+            contents = line.strip()
+            # for example: host all all hostname    trust
+            if contents.startswith("host") and contents.endswith("trust"):
+                tokens = contents.split()
+                if tokens.__len__() != 5:
+                    raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+                hostname = tokens[3]
+                if hostname.__contains__("/"):
+                    raise Exception("'%s' is not valid FQDN" % hostname)
+
+
+# For any pg_hba.conf line with `host ... trust`, its address should only contain CIDR
+@then('verify that the file "{filename}" contains CIDR only for trusted host')
+def impl(context, filename):
+    with open(filename) as fr:
+        for line in fr:
+            contents = line.strip()
+            # for example: host all all hostname    trust
+            if contents.startswith("host") and contents.endswith("trust"):
+                tokens = contents.split()
+                if tokens.__len__() != 5:
+                    raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+                cidr = tokens[3]
+                if not cidr.__contains__("/") and cidr not in ["samenet", "samehost"]:
+                    raise Exception("'%s' is not valid CIDR" % cidr)
 
 
 @then('verify that the file "{filename}" contains the string "{output}"')
