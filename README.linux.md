@@ -107,7 +107,7 @@ then run command `ldconfig`.
   net.ipv4.tcp_tw_recycle = 1
   net.ipv4.tcp_max_syn_backlog = 4096
   net.ipv4.conf.all.arp_filter = 1
-  net.ipv4.ip_local_port_range = 1025 65535
+  net.ipv4.ip_local_port_range = 10000 65535
   net.core.netdev_max_backlog = 10000
   net.core.rmem_max = 2097152
   net.core.wmem_max = 2097152
