@@ -283,9 +283,9 @@ DATA(insert ( 2828	n 0 float8_regr_accum	float8_covar_samp		float8_regr_combine 
 DATA(insert ( 2829	n 0 float8_regr_accum	float8_corr				float8_regr_combine -	-	-				-				-			f f 0	1022	0	0		0	"{0,0,0,0,0,0}" _null_ ));
 
 /* boolean-and and boolean-or */
-DATA(insert ( 2517	n 0 booland_statefunc	-	booland_statefunc	-	-		-	-	-	f f 58	16	0	0	0	_null_ _null_ ));
-DATA(insert ( 2518	n 0 boolor_statefunc	-	boolor_statefunc	-	-		-	-	-	f f 59	16	0	0	0	_null_ _null_ ));
-DATA(insert ( 2519	n 0 booland_statefunc	-	booland_statefunc	-	-		-	-	-	f f 58	16	0	0	0	_null_ _null_ ));
+DATA(insert ( 2517	n 0 booland_statefunc	-	booland_statefunc	-	-		bool_accum		bool_accum_inv	bool_alltrue	f f 58	16	0	2281	16	_null_ _null_ ));
+DATA(insert ( 2518	n 0 boolor_statefunc	-	boolor_statefunc	-	-		bool_accum		bool_accum_inv	bool_anytrue	f f 59	16	0	2281	16	_null_ _null_ ));
+DATA(insert ( 2519	n 0 booland_statefunc	-	booland_statefunc	-	-		bool_accum		bool_accum_inv	bool_alltrue	f f 58	16	0	2281	16	_null_ _null_ ));
 
 /* bitwise integer */
 DATA(insert ( 2236	n 0 int2and		-				int2and -	-	-				-				-				f f 0	21		0	0		0	_null_ _null_ ));
