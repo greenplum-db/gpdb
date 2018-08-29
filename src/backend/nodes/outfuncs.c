@@ -3380,6 +3380,8 @@ _outConstraintsSetStmt(StringInfo str, const ConstraintsSetStmt *node)
  *
  * In GPDB, these are also dispatched from QD to QEs, so we need full
  * out/read support.
+ *
+ * If the Nodes Struct changed, we need to maintain these funtions.
  */
 static void
 _outSelectStmt(StringInfo str, const SelectStmt *node)
