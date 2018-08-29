@@ -24,9 +24,21 @@
 
 CREATE extension IF NOT EXISTS gp_inject_fault;
 CREATE
-1:set dtx_phase2_retry_count=5;
+1:set dtx_phase2_retry_count=10;
 SET
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery. Approximately we want to wait 30 seconds.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -99,7 +111,6 @@ p   |m
 ERROR:  relation "tolerance_test_table" does not exist
 LINE 1: INSERT INTO tolerance_test_table VALUES(42);
                     ^
-
 
 -- Scenario 2: Prepared but not committed
 -- NOTICE: Don't use session 2 again because it's cached gang is invalid
@@ -189,32 +200,34 @@ t
 1<:  <... completed>
 DROP
 
-1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-gp_inject_fault
----------------
-t              
-(1 row)
-1:SELECT gp_inject_fault('fts_handle_message', 'reset', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-gp_inject_fault
----------------
-t              
-(1 row)
-1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
+-- Use new connection session. This helps is to make sure master is up and
+-- running, even if in worst case the above Drop command commit-prepared retries
+-- are exhausted and PANICs the master.
+5:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
 role|preferred_role
 ----+--------------
 m   |p             
 p   |m             
 (2 rows)
 
-1:!\retcode gprecoverseg -aF;
+5:!\retcode gprecoverseg -aF;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
-1:!\retcode gprecoverseg -ar;
+5:!\retcode gprecoverseg -ar;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
+
 !\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -226,7 +239,7 @@ p   |m
 -- loop while segments come in sync
 do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
 DO
-1:SELECT role, preferred_role, content FROM gp_segment_configuration;
+5:SELECT role, preferred_role, content FROM gp_segment_configuration;
 role|preferred_role|content
 ----+--------------+-------
 p   |p             |-1     

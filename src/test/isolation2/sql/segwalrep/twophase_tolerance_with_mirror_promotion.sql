@@ -23,8 +23,14 @@
 -- end_matchsubs
 
 CREATE extension IF NOT EXISTS gp_inject_fault;
-1:set dtx_phase2_retry_count=5;
+1:set dtx_phase2_retry_count=10;
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery. Approximately we want to wait 30 seconds.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
 !\retcode gpstop -u;
 1:SELECT role, preferred_role, content FROM gp_segment_configuration;
 
@@ -48,7 +54,6 @@ CREATE extension IF NOT EXISTS gp_inject_fault;
 1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 0;
 -- expect to fail with table not-exists
 1:INSERT INTO tolerance_test_table VALUES(42);
-
 
 -- Scenario 2: Prepared but not committed
 -- NOTICE: Don't use session 2 again because it's cached gang is invalid
@@ -87,15 +92,17 @@ CREATE extension IF NOT EXISTS gp_inject_fault;
 4:SELECT gp_request_fts_probe_scan();
 1<:
 
-1:SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid)
-  FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-1:SELECT gp_inject_fault('fts_handle_message', 'reset', dbid)
-  FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
-1:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
+-- Use new connection session. This helps is to make sure master is up and
+-- running, even if in worst case the above Drop command commit-prepared retries
+-- are exhausted and PANICs the master.
+5:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
 
-1:!\retcode gprecoverseg -aF;
-1:!\retcode gprecoverseg -ar;
+5:!\retcode gprecoverseg -aF;
+5:!\retcode gprecoverseg -ar;
+
 !\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
 !\retcode gpstop -u;
 
 -- loop while segments come in sync
@@ -109,4 +116,4 @@ begin /* in func */
   end loop; /* in func */
 end; /* in func */
 $$;
-1:SELECT role, preferred_role, content FROM gp_segment_configuration;
+5:SELECT role, preferred_role, content FROM gp_segment_configuration;
