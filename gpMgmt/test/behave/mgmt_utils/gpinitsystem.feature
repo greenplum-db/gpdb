@@ -82,49 +82,53 @@ Feature: gpinitsystem tests
     Scenario: gpinitsystem creates a cluster in default timezone
         Given the database is not running
         And the environment variable "TZ" is not set
-		And the system timezone is saved
-		And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
-		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
-		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-		And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-		When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
-		And gpinitsystem should return a return code of 0
-		Then the database timezone is saved
-		And the database timezone matches the system timezone
-		And the startup timezone is saved
-		And the startup timezone matches the system timezone
+        And the system timezone is saved
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And gpinitsystem should return a return code of 0
+        Then the database timezone is saved
+        And the database timezone matches the system timezone
+        And the startup timezone is saved
+        And the startup timezone matches the system timezone
 
     @gpinitsystem_verify_timezone_setting
     Scenario: gpinitsystem creates a cluster using TZ
         Given the database is not running
         And the environment variable "TZ" is set to "US/Hawaii"
-		And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
-		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
-		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
-		And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
-		When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
-		And gpinitsystem should return a return code of 0
-		Then the database timezone is saved
-		And the database timezone matches "HST"
-		And the startup timezone is saved
-		And the startup timezone matches "HST"
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And gpinitsystem should return a return code of 0
+        Then the database timezone is saved
+        And the database timezone matches "HST"
+        And the startup timezone is saved
+        And the startup timezone matches "HST"
 
-    @gpinitsystem_fqdn
-    Scenario: gpinitsystem should print IP addresses in pg_hba.conf when FQDN_HBA=1
+    @gpinitsystem_fqdn_hba
+    @gpinitsystem_fqdn_hba_on
+    Scenario: gpinitsystem should print FQDN in pg_hba.conf when FQDN_HBA=1
         Given the cluster config is generated with FQDN_HBA "1"
-        Then verify that file "fqdn_config_file" exists under "/tmp"
-        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=1"
-        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
-        And gpinitsystem should return a return code of 0
-        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "master_hostname       trust"
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
-    @gpinitsystem_fqdn
-    Scenario: gpinitsystem should print FQDNs in pg_hba.conf when FQDN_HBA=0
+    @gpinitsystem_fqdn_hba
+    @gpinitsystem_fqdn_hba_off
+    Scenario: gpinitsystem should print CIDR in pg_hba.conf when FQDN_HBA=0
         Given the cluster config is generated with FQDN_HBA "0"
-        Then verify that file "fqdn_config_file" exists under "/tmp"
-        And verify that the file "/tmp/fqdn_config_file" contains "FQDN_HBA=0"
-        And the user runs "gpinitsystem -a -I /tmp/fqdn_config_file -l /tmp/"
-        And gpinitsystem should return a return code of 0
-        Then verify that file "pg_hba.conf" exists under "../gpAux/gpdemo/datadirs/qddir"
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/pg_hba.conf" contains "127.0.0.1
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=0"
+        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
+        Then gpinitsystem should return a return code of 0
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
