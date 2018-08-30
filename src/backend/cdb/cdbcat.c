@@ -171,11 +171,7 @@ GpPolicyIsReplicated(const GpPolicy *policy)
 bool
 GpPolicyIsPartitioned(const GpPolicy *policy)
 {
-	if (policy == NULL)
-		return false;
-
-	return GpPolicyIsHashPartitioned(policy) ||
-		GpPolicyIsRandomPartitioned(policy);
+	return (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED);
 }
 
 bool

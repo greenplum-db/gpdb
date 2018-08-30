@@ -1813,8 +1813,7 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 			if (rte->rtekind == RTE_RELATION)
 			{
 				Relation relation = heap_open(rte->relid, NoLock);
-				if (relation->rd_cdbpolicy &&
-					relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+				if (GpPolicyIsPartitioned(relation->rd_cdbpolicy))
 					isdistributed = true;
 				heap_close(relation, NoLock);
 				if (isdistributed)
@@ -1844,14 +1843,6 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 			mtstate->mt_arowmarks[i] = lappend(mtstate->mt_arowmarks[i], aerm);
 		}
 	}
-
-	/* GPDB_90_MERGE_FIXME: This code was heavily refactored in the merge.
-	 * This used to be in ExecInsert, in execMain.c. It was also heavily
-	 * modified in GPDB, to handle rowmarks differently, and to disable
-	 * some sanity checks for ORCA. I did not copy over those GPDB changes,
-	 * because I wasn't sure how, and wasn't sure which of the changes
-	 * were still needed.
-	 */
 
 	/* select first subplan */
 	mtstate->mt_whichplan = 0;

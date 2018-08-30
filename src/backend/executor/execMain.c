@@ -1885,12 +1885,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		switch (rc->markType)
 		{
 			case ROW_MARK_TABLE_EXCLUSIVE:
-				/* CDB: On QD, lock whole table in X mode, if distributed ao able. */
 				relid = getrelid(rc->rti, rangeTable);
 				relation = heap_open(relid, ExclusiveLock);
 				break;
 			case ROW_MARK_TABLE_SHARE:
-				/* CDB: On QD, lock whole table in S mode, if distributed. */
 				relid = getrelid(rc->rti, rangeTable);
 				relation = heap_open(relid, RowShareLock);
 				break;

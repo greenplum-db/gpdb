@@ -2764,6 +2764,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * The reason is that gpdb is an MPP database, the result tuples may not be on
 		 * the same segment. And for cursor statement, reader gang cannot get Xid to lock
 		 * the tuples. (More details: https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/p-6_dNjnRMQ)
+		 * Upgrading the lock mode (see below) for distributed table is probably
+		 * not needed for all the cases and we may want to enhance this later.
 		 */
 		foreach(lc, root->rowMarks)
 		{
