@@ -685,6 +685,9 @@
               <xref href="#password_hash_algorithm"/>
             </li>
             <li>
+              <xref href="#pgstat_track_activity_query_size"/>
+            </li>
+            <li>
               <xref href="#pljava_classpath"/>
             </li>
             <li>
@@ -788,9 +791,6 @@
             </li>
             <li>
               <xref href="#track_activities"/>
-            </li>
-            <li>
-              <xref href="#track_activity_query_size"/>
             </li>
             <li>
               <xref href="#track_counts"/>
@@ -7231,13 +7231,19 @@
   <topic id="optimizer_analyze_root_partition">
     <title>optimizer_analyze_root_partition</title>
     <body>
-      <p>For a partitioned table, collects statistics for the root partition when the
-          <cmdname>ANALYZE</cmdname> command is run on the table. GPORCA uses the root partition
-        statistics when generating a query plan. The legacy query optimizer does not use these
-        statistics. When the value of the server configuration parameter <codeph><xref
-            href="#optimizer" format="dita"/></codeph> is on (the default), the value of this
-        parameter should also be on (the default). For information about collecting table statistics
-        on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"/></codeph>.</p>
+      <p>For a partitioned table, controls whether the <codeph>ROOTPARTITION</codeph> keyword is
+        required to collect root partition statistics when the <cmdname>ANALYZE</cmdname> command is
+        run on the table. GPORCA uses the root partition statistics when generating a query plan.
+        The legacy query optimizer does not use these statistics. </p>
+      <p>The default setting for the parameter is <codeph>on</codeph>, the <codeph>ANALYZE</codeph>
+        command can collect root partition statistics without the <codeph>ROOTPARTITION</codeph>
+        keyword. When the value is <codeph>off</codeph>, you must run <codeph>ANALZYE
+          ROOTPARTITION</codeph> to collect root partition statistics. </p>
+      <p>When the value of the server configuration parameter <codeph><xref href="#optimizer"
+            format="dita"/></codeph> is <codeph>on</codeph> (the default), the value of this
+        parameter should also be <codeph>on</codeph>. For information about collecting table
+        statistics on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"
+          /></codeph>.</p>
       <p>For information about the legacy query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -7980,6 +7986,34 @@
               <entry colname="col1">MD5<p>SHA-256</p></entry>
               <entry colname="col2">MD5</entry>
               <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="pgstat_track_activity_query_size">
+    <title>pgstat_track_activity_query_size</title>
+    <body>
+      <p>Sets the maximum length limit for the query text stored in <codeph>current_query</codeph>
+        column of the system catalog view pg_stat_activity. The minimum length is 1024 characters. </p>
+      <table id="pgstat_track_activity_query_size_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">integer</entry>
+              <entry colname="col2">1024</entry>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -8898,7 +8932,8 @@
     <body>
       <p>How many keepalives may be lost before the connection is considered dead. A value of 0 uses
         the system default. If TCP_KEEPCNT is not supported, this parameter must be 0. </p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_count_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8927,7 +8962,8 @@
     <body>
       <p>Number of seconds between sending keepalives on an otherwise idle connection. A value of 0
         uses the system default. If TCP_KEEPIDLE is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_idle_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8956,7 +8992,8 @@
     <body>
       <p>How many seconds to wait for a response to a keepalive before retransmitting. A value of 0
         uses the system default. If TCP_KEEPINTVL is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_interval_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9116,34 +9153,6 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="track_activity_query_size">
-    <title>track_activity_query_size</title>
-    <body>
-      <p>Sets the maximum length limit for the query text stored in <codeph>current_query</codeph>
-        column of the system catalog view pg_stat_activity. The minimum length is 1024 characters. </p>
-      <table id="track_activity_query_size_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer</entry>
-              <entry colname="col2">1024</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
