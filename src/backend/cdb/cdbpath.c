@@ -140,7 +140,9 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.total_cost = subpath->total_cost;
 			pathnode->path.memory = subpath->memory;
 			pathnode->path.motionHazard = subpath->motionHazard;
-			pathnode->path.rescannable = subpath->rescannable;
+
+			/* Motion nodes are never rescannable. */
+			pathnode->path.rescannable = false;
 			return (Path *) pathnode;
 		}
 
@@ -168,7 +170,9 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.total_cost = subpath->total_cost;
 			pathnode->path.memory = subpath->memory;
 			pathnode->path.motionHazard = subpath->motionHazard;
-			pathnode->path.rescannable = subpath->rescannable;
+
+			/* Motion nodes are never rescannable. */
+			pathnode->path.rescannable = false;
 			return (Path *) pathnode;
 		}
 
