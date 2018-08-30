@@ -1850,6 +1850,48 @@ reset optimizer_force_multistage_agg;
 reset optimizer_force_three_stage_scalar_dqa;
 -- end_ignore
 
+--
+-- Test to ensure orca produces correct equivalence class for an alias projected by a LOJ and thus producing correct results.
+-- Previously, orca produced an incorrect filter (cd2 = cd) on top of LOJ which led to incorrect results as column 'cd' is
+-- produced by a nullable side of LOJ (tab2).
+--
+-- start_ignore
+CREATE TABLE tab_1 (id VARCHAR(32)) DISTRIBUTED RANDOMLY;
+INSERT INTO tab_1 VALUES('qwert'), ('vbn');
+
+CREATE TABLE tab_2(key VARCHAR(200) NOT NULL, id VARCHAR(32) NOT NULL, cd VARCHAR(2) NOT NULL) DISTRIBUTED BY(key);
+INSERT INTO tab_2 VALUES('abc', 'rew', 'dr');
+INSERT INTO tab_2 VALUES('tyu', 'rer', 'fd');
+
+CREATE TABLE tab_3 (region TEXT, code TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO tab_3 VALUES('cvb' ,'tyu');
+INSERT INTO tab_3 VALUES('hjj' ,'xyz');
+-- end_ignore
+
+EXPLAIN SELECT Count(*)
+FROM   (SELECT *
+        FROM   (SELECT tab_2.cd AS CD1,
+                       tab_2.cd AS CD2
+                FROM   tab_1
+                       LEFT JOIN tab_2
+                              ON tab_1.id = tab_2.id) f
+        UNION ALL
+        SELECT region,
+               code
+        FROM   tab_3)a;
+
+SELECT Count(*)
+FROM   (SELECT *
+        FROM   (SELECT tab_2.cd AS CD1,
+                       tab_2.cd AS CD2
+                FROM   tab_1
+                       LEFT JOIN tab_2
+                              ON tab_1.id = tab_2.id) f
+        UNION ALL
+        SELECT region,
+               code
+        FROM   tab_3)a;
+
 -- start_ignore
 drop table bar;
 -- end_ignore

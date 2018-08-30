@@ -10566,6 +10566,69 @@ select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c 
 reset optimizer_force_multistage_agg;
 reset optimizer_force_three_stage_scalar_dqa;
 -- end_ignore
+--
+-- Test to ensure orca produces correct equivalence class for an alias projected by a LOJ and thus producing correct results.
+-- Previously, orca produced an incorrect filter (cd2 = cd) on top of LOJ which led to incorrect results as column 'cd' is
+-- produced by a nullable side of LOJ (tab2).
+--
+-- start_ignore
+CREATE TABLE tab_1 (id VARCHAR(32)) DISTRIBUTED RANDOMLY;
+INSERT INTO tab_1 VALUES('qwert'), ('vbn');
+CREATE TABLE tab_2(key VARCHAR(200) NOT NULL, id VARCHAR(32) NOT NULL, cd VARCHAR(2) NOT NULL) DISTRIBUTED BY(key);
+INSERT INTO tab_2 VALUES('abc', 'rew', 'dr');
+INSERT INTO tab_2 VALUES('tyu', 'rer', 'fd');
+CREATE TABLE tab_3 (region TEXT, code TEXT) DISTRIBUTED RANDOMLY;
+INSERT INTO tab_3 VALUES('cvb' ,'tyu');
+INSERT INTO tab_3 VALUES('hjj' ,'xyz');
+-- end_ignore
+EXPLAIN SELECT Count(*)
+FROM   (SELECT *
+        FROM   (SELECT tab_2.cd AS CD1,
+                       tab_2.cd AS CD2
+                FROM   tab_1
+                       LEFT JOIN tab_2
+                              ON tab_1.id = tab_2.id) f
+        UNION ALL
+        SELECT region,
+               code
+        FROM   tab_3)a;
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3.31..3.32 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=3.25..3.30 rows=1 width=8)
+         ->  Aggregate  (cost=3.25..3.26 rows=1 width=8)
+               ->  Subquery Scan on a  (cost=1.04..3.24 rows=2 width=0)
+                     ->  Append  (cost=1.04..3.20 rows=2 width=4)
+                           ->  Hash Left Join  (cost=1.04..2.14 rows=2 width=3)
+                                 Hash Cond: tab_1.id::text = tab_2.id::text
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=5)
+                                       Hash Key: tab_1.id
+                                       ->  Seq Scan on tab_1  (cost=0.00..1.02 rows=1 width=5)
+                                 ->  Hash  (cost=1.03..1.03 rows=1 width=7)
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=7)
+                                             Hash Key: tab_2.id
+                                             ->  Seq Scan on tab_2  (cost=0.00..1.01 rows=1 width=7)
+                           ->  Subquery Scan on "*SELECT* 2"  (cost=0.00..1.02 rows=1 width=8)
+                                 ->  Seq Scan on tab_3  (cost=0.00..1.01 rows=1 width=8)
+ Optimizer: legacy query optimizer
+(17 rows)
+
+SELECT Count(*)
+FROM   (SELECT *
+        FROM   (SELECT tab_2.cd AS CD1,
+                       tab_2.cd AS CD2
+                FROM   tab_1
+                       LEFT JOIN tab_2
+                              ON tab_1.id = tab_2.id) f
+        UNION ALL
+        SELECT region,
+               code
+        FROM   tab_3)a;
+ count 
+-------
+     4
+(1 row)
+
 -- start_ignore
 drop table bar;
 -- end_ignore
