@@ -31,19 +31,18 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           <li>During query optimization, HLL statistics generate a more accurate number of distinct
             values (NDV) estimates than the standard table statistics when aggregating estimates
             across multiple leaf child partitions. </li>
-          <li>When updating HLL statistics, <codeph>ANALYZE</codeph> operations are only required
-            only on leaf child partitions that have changed. For example, if the leaf child
-            partition data has changed, or if the leaf child partition has been exchanged with
-            another table.</li>
+          <li>When updating HLL statistics, <codeph>ANALYZE</codeph> operations are required only on
+            leaf child partitions that have changed. For example, if the leaf child partition data
+            has changed, or if the leaf child partition has been exchanged with another table.</li>
         </ul></p>
       <note type="important">If you intend to execute queries on partitioned tables with GPORCA
         enabled (the default), then you must collect statistics on the root partition of the
         partitioned table with the <codeph>ANALYZE [FULLSCAN]</codeph> or <codeph>ANALYZE
-          ROOTPARTITION</codeph> command. For information about GPORCA, see <xref
-          href="../../admin_guide/query/topics/query-piv-opt-overview.xml"/><ph
-          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>.
-        For information about collecting statistics on partitioned tables, see <xref
-          href="#topic1/section5" format="dita">Notes</xref>.</note>
+          ROOTPARTITION</codeph> command. For information about collecting statistics on partitioned
+        tables and when the <codeph>ROOTPARTITION</codeph> keyword is required, see <xref
+          href="#topic1/section5" format="dita">Notes</xref>. For information about GPORCA, see
+          <xref href="../../admin_guide/query/topics/query-piv-opt-overview.xml"/><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </note>
       <note>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update
         table statistics. The <codeph>analyzedb</codeph> utility can update statistics for multiple
         tables concurrently. The utility can also check table statistics and update statistics only
@@ -62,13 +61,13 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           <pd><codeph>ANALYZE [FULLSCAN] <varname>leaf_partition</varname></codeph>, collects
             statistics on the leaf child partition. </pd>
           <pd>If the <codeph>FULLSCAN</codeph> keyword is specified, <codeph>ANALYZE</codeph>
-            performs a full scan on the table to calculate HLL statistics. Without the
-              <codeph>FULLSCAN</codeph> keyword, <codeph>ANALYZE</codeph> collects a sample from the
-            table and calculates HLL statistics on the sample. </pd>
+            performs a full scan on the table when collecting partitioned table statistics. Without
+            the <codeph>FULLSCAN</codeph> keyword, <codeph>ANALYZE</codeph> collects table
+            statistics base on a sample of table data.</pd>
           <pd>Specifying the <codeph>FULLSCAN</codeph> keyword must be consistent for a partitioned
             table. If you specify the <codeph>FULLSCAN</codeph> keyword when analyzing a root
-            partition or a leaf child partition, you must specify the keyword when you analyze a
-            leaf child partition of the partitioned table.</pd>
+            partition or on one leaf child partition, you must specify the keyword when you analyze
+            any leaf child partition of the partitioned table.</pd>
           <pd>If you specify a leaf child partition, and all other leaf child partitions have
             statistics, <codeph>ANALYZE</codeph> updates the root partition statistics.</pd>
         </plentry>
@@ -146,32 +145,33 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         table, the statistics do not change.</p>
       <p>For a partitioned table, specifying which portion of the table to analyze, the root
         partition or subpartitions (leaf child partition tables) can be useful if the partitioned
-        table has large number of partitions that have been analyzed and only a few leaf child
+        table has a large number of partitions that have been analyzed and only a few leaf child
         partitions have changed.</p>
       <ul>
         <li>Running <codeph>ANALYZE FULLSCAN</codeph> collects more accurate statistics than running
             <codeph>ANALYZE</codeph>, but requires more time.</li>
         <li id="bd138200">When you run <codeph>ANALYZE [FULLSCAN]</codeph> on the root partitioned
           table, statistics are collected for all the leaf child partitions. Leaf child partitions
-          are lowest-level tables in the hierarchy of child tables created by Greenplum Database for
-          use by the partitioned table. </li>
+          are the lowest-level tables in the hierarchy of child tables created by Greenplum Database
+          for use by the partitioned table. </li>
         <li id="bd138204">When you run <codeph>ANALYZE [FULLSCAN]</codeph> on a leaf child
-          partition, statistics are collected only for that leaf child partition. When you run
-            <codeph>ANALYZE [FULLSCAN]</codeph> on a child table that is not a leaf child partition,
-          statistics are not collected. <p>For example, you can create a partitioned table with
-            partitions for the years 2006 to 2016 and subpartitions for each month in each year. If
-            you run <codeph>ANALYZE</codeph> on the child table for the year 2013 no statistics are
-            collected. If you run <codeph>ANALYZE</codeph> on the leaf child partition for March of
-            2013, statistics are collected only for that leaf child partition.</p><p>When you run
-              <codeph>ANALYZE FULLSCAN</codeph> on a leaf child partition, <codeph>ANALYZE</codeph>
-            updates the root partition statistics when possible.</p><note>When you create a
-            partitioned table with the <codeph>CREATE TABLE</codeph> command, Greenplum Database
-            creates the table that you specify (the root partition or parent table), and also
-            creates a hierarchy of tables based on the partition hierarchy that you specified (the
-            child tables). Partitioned tables, child tables and their inheritance level
-            relationships are tracked in the system view <i>pg_partitions</i>.</note></li>
-        <li>For leaf child partition that has changed, for example, you exchange the leaf child
-          partition or make significant updates to the leaf child partition data, you can run
+          partition, statistics are collected only for that leaf child partition and the root
+          partition. When you run <codeph>ANALYZE [FULLSCAN]</codeph> on a child table that is not a
+          leaf child partition, statistics are not collected. <p>For example, you can create a
+            partitioned table with partitions for the years 2006 to 2016 and subpartitions for each
+            month in each year. If you run <codeph>ANALYZE</codeph> on the child table for the year
+            2013 no statistics are collected. If you run <codeph>ANALYZE</codeph> on the leaf child
+            partition for March of 2013, statistics are collected only for that leaf child
+            partition.</p><p>When you run <codeph>ANALYZE FULLSCAN</codeph> on a leaf child
+            partition, <codeph>ANALYZE</codeph> updates the root partition statistics when
+            possible.</p><note>When you create a partitioned table with the <codeph>CREATE
+              TABLE</codeph> command, Greenplum Database creates the table that you specify (the
+            root partition or parent table), and also creates a hierarchy of tables based on the
+            partition hierarchy that you specified (the child tables). Partitioned tables, child
+            tables and their inheritance level relationships are tracked in the system view
+              <i>pg_partitions</i>.</note></li>
+        <li>For a leaf child partition that has changed, (for example, you exchange the leaf child
+          partition or make significant updates to the leaf child partition data), you can run
             <codeph>ANALYZE [FULLSCAN]</codeph> on a leaf child partition to collect table
           statistics and HLL statistics. If all other leaf child partitions have statistics, the
           command updates the root partition statistics. <p>This query displays the leaf child
@@ -197,9 +197,10 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
             >optimizer_analyze_root_partition</xref></codeph> affects when statistics are collected
         on the root partition of a partitioned table. If the parameter is <codeph>on</codeph> (the
         default), the <codeph>ROOTPARTITION</codeph> keyword is not required to collect statistics
-        on the root partition when you run <codeph>ANALYZE</codeph>. If the parameter is
-          <codeph>off</codeph>, you must run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root
-        partition statistics.</p>
+        on the root partition when you run <codeph>ANALYZE</codeph>. Root partition statistics are
+        collected when you perform an <codeph>ANALYZE</codeph> operation on the root partition or a
+        child leaf partition of the partitioned table. If the parameter is <codeph>off</codeph>, you
+        must run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root partition statistics.</p>
       <p>The statistics collected by <codeph>ANALYZE</codeph> usually include a list of some of the
         most common values in each column and a histogram showing the approximate data distribution
         in each column. One or both of these may be omitted if <codeph>ANALYZE</codeph> deems them

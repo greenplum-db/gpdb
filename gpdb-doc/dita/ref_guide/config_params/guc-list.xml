@@ -7237,7 +7237,9 @@
         The legacy query optimizer does not use these statistics. </p>
       <p>The default setting for the parameter is <codeph>on</codeph>, the <codeph>ANALYZE</codeph>
         command can collect root partition statistics without the <codeph>ROOTPARTITION</codeph>
-        keyword. When the value is <codeph>off</codeph>, you must run <codeph>ANALZYE
+        keyword. Root partition statistics are collected when you perform an
+          <codeph>ANALYZE</codeph> operation on the root partition or a child leaf partition of the
+        partitioned table. When the value is <codeph>off</codeph>, you must run <codeph>ANALZYE
           ROOTPARTITION</codeph> to collect root partition statistics. </p>
       <p>When the value of the server configuration parameter <codeph><xref href="#optimizer"
             format="dita"/></codeph> is <codeph>on</codeph> (the default), the value of this
@@ -7995,8 +7997,9 @@
   <topic id="pgstat_track_activity_query_size">
     <title>pgstat_track_activity_query_size</title>
     <body>
-      <p>Sets the maximum length limit for the query text stored in <codeph>current_query</codeph>
-        column of the system catalog view pg_stat_activity. The minimum length is 1024 characters. </p>
+      <p>Sets the maximum length limit for the query text stored in the
+          <codeph>current_query</codeph> column of the system catalog view pg_stat_activity. The
+        minimum length is 1024 characters. </p>
       <table id="pgstat_track_activity_query_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

@@ -20,11 +20,11 @@
             href="../../../ref_guide/sql_commands/ANALYZE.xml#topic1">ANALYZE</xref></codeph>
         command for information about collecting statistics on partitioned tables.</p>
       <p>Keep in mind that <codeph>ANALYZE</codeph> and <codeph>ANALYZE ROOTPARTITION</codeph>
-        always scans the entire table before updating the root partition statistics. If your table
-        is very large, this operation can take a significant amount of time. <codeph>ANALYZE
+        always scan the entire table before updating the root partition statistics. If your table is
+        very large, this operation can take a significant amount of time. <codeph>ANALYZE
           ROOTPARTITION</codeph> also uses an <codeph>ACCESS SHARE</codeph> lock that prevents
         certain operations, such as <codeph>TRUNCATE</codeph> and <codeph>VACUUM</codeph>
-        operations, during execution. For these reason, you should schedule <codeph>ANALYZE
+        operations, during execution. For these reasons, you should schedule <codeph>ANALYZE
           ROOTPARTITION</codeph> operations periodically, or when there are significant changes to
         leaf partition data.</p>
       <p>Keep in mind that even if the root partition statistics are not up-to-date or do not exist,
@@ -76,14 +76,21 @@
   <topic id="topic_r5d_hv1_kr">
     <title>Disabling Automatic Root Partition Statistics Collection</title>
     <body>
-      <p>The server configuration parameter <codeph>optimizer_analyze_root_partition</codeph>
-        controls whether the <codeph>ROOTPARTITION</codeph> keyword is required to collect root
-        statistics for the root partition of a partitioned table. The default setting for the
-        parameter is <codeph>on</codeph>, the <codeph>ANALYZE</codeph> command can collect root
-        partition statistics without the <codeph>ROOTPARTITION</codeph> keyword. You can disable
-        automatic collection of root partition statistics by setting the parameter to
-          <codeph>off</codeph>. When the value is <codeph>off</codeph>, you must run <codeph>ANALZYE
-          ROOTPARTITION</codeph> to collect root partition statistics.</p>
+      <p>If you do not intend to execute queries on partitioned tables with GPORCA (setting the
+        server configuration parameter <codeph><xref
+            href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+            >optimizer</xref></codeph> to <codeph>off</codeph>), then you can disable the automatic
+        collect statistics on the root partition of the partitioned table. The server configuration
+        parameter <codeph><xref
+            href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+            >optimizer_analyze_root_partition</xref></codeph> controls whether the
+          <codeph>ROOTPARTITION</codeph> keyword is required to collect root statistics for the root
+        partition of a partitioned table. The default setting for the parameter is
+          <codeph>on</codeph>, the <codeph>ANALYZE</codeph> command can collect root partition
+        statistics without the <codeph>ROOTPARTITION</codeph> keyword. You can disable automatic
+        collection of root partition statistics by setting the parameter to <codeph>off</codeph>.
+        When the value is <codeph>off</codeph>, you must run <codeph>ANALZYE ROOTPARTITION</codeph>
+        to collect root partition statistics.</p>
       <ol id="ol_n22_hv1_kr">
         <li>Log into the Greenplum Database master host as <codeph>gpadmin</codeph>, the Greenplum
           Database administrator.</li>

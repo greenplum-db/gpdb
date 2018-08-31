@@ -197,8 +197,8 @@
                       into the element type's default order (to support binary search for a
                       particular value). Since this puts the minimum and maximum frequencies at
                       unpredictable spots in <codeph>stanumbers</codeph>, there are two extra
-                      members of <codeph>stanumbers</codeph>, that hold copies of the minimum and
-                      maximum frequencies. Optionally, there can be a third extra member, that holds
+                      members of <codeph>stanumbers</codeph> that hold copies of the minimum and
+                      maximum frequencies. Optionally, there can be a third extra member that holds
                       the frequency of null elements (the frequency is expressed in the same terms:
                       the fraction of non-null rows that contain at least one null element). If this
                       member is omitted, the column is presumed to contain no <codeph>NULL</codeph>
@@ -231,12 +231,12 @@
                         <li>99 - <i>hyperloglog slot</i> stores the
                             <codeph>hyperloglog_counter</codeph> created for sampled data. The
                             <codeph>hyperloglog_counter</codeph> data structure is converted into a
-                            <codeph>bytea</codeph> and stored in <codeph>stavalues4</codeph> slot of
-                          the <codeph>pg_statistic</codeph> catalog table.</li>
+                            <codeph>bytea</codeph> and stored in a <codeph>stavalues4</codeph> slot
+                          of the <codeph>pg_statistic</codeph> catalog table.</li>
                         <li>98 - <i>full hyperloglog slot</i> is similar to <i>hyperloglog slot</i>,
                           except it stores the <codeph>hyperloglog_counter</codeph> created for full
                           table scan. This <codeph>hyperloglog_counter</codeph> data structure is
-                          converted into a <codeph>bytea</codeph> and stored in
+                          converted into a <codeph>bytea</codeph> and stored in a
                             <codeph>stavalues4</codeph> slot of the <codeph>pg_statistic</codeph>
                           catalog table.</li>
                       </ul></p></entry>
@@ -348,10 +348,9 @@
       <section id="section_cv2_crv_mt">
         <title>Analyzing Partitioned Tables</title>
         <p>When the <codeph>ANALYZE</codeph> command is run on a partitioned table, it analyzes each
-          child leaf partition tables, one at a time. You can run <codeph>ANALYZE
-            [FULLSCAN]</codeph> on just new or changed partition files to avoid analyzing partitions
-          that have not changed. If a table is partitioned, you can analyze just new or changed
-          partitions. </p>
+          child leaf partition table, one at a time. You can run <codeph>ANALYZE [FULLSCAN]</codeph>
+          on just new or changed partition files to avoid analyzing partitions that have not
+          changed. </p>
         <p>The <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
           automatically. It also runs concurrent sessions so it can analyze several partitions
           concurrently. It runs five sessions by default, but the number of sessions can be set from
@@ -366,11 +365,11 @@
           partition statistics. GPORCA requires statistics at the root level for partitioned tables.
           The legacy optimizer does not use these statistics. </p>
         <p>The time to run <codeph>ANALYZE ROOTPARTITION</codeph> is similar to the time to analyze
-          a non-partitioned table with the same data since <codeph>ANALYZE ROOTPARTITION</codeph> do
-          not collect statistics on the leaf partitions, the data is only sampled. The
+          a non-partitioned table with the same data since <codeph>ANALYZE ROOTPARTITION</codeph>
+          does not collect statistics on the leaf partitions (the data is only sampled). The
             <codeph>analyzedb</codeph> utility updates root partition statistics by default but you
           can add the <codeph>--skip_root_stats</codeph> option to leave root partition statistics
-          empty if you do not use GPORCA. You can also set server configuration parameter
+          empty if you do not use GPORCA. You can also set the server configuration parameter
               <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
               >optimizer_analyze_root_partition</xref></codeph> to <codeph>off</codeph> to limit
