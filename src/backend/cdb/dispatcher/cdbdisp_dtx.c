@@ -154,7 +154,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		}
 
 		cdbdisp_destroyDispatcherState(ds);
-		return false;
+		return NULL;
 	}
 
 	cdbdisp_returnResults(pr, &cdb_pgresults);
