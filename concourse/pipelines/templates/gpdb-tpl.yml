@@ -2350,7 +2350,6 @@ jobs:
       TEST_OS: centos6
       DB_TYPE: gpdb6
       CMAKE_BUILD_TYPE: Release
-      GCC_VERSION: "gcc4"
   - aggregate:
     - put: madlib_gppkg
       params:
