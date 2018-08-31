@@ -129,7 +129,7 @@ def parseargs():
                       'if the warm master standby host has failed.  This option will '
                       'need to shutdown the GPDB array to be able to complete the request')
     optgrp.add_option('', '--fqdn_hba', action='store_true', dest='fqdn_hba',
-                      help='do not add standby IP addresses to pg_hba.conf')
+                      help='add fully-qualified domain names to pg_hba.conf')
 
     # XXX - This option is added to keep backward compatibility with DCA tools.
     # But this option plays no role in the whole process, its a No-Op
