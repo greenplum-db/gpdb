@@ -173,7 +173,7 @@ PROCESS_QE () {
 	            PARA_EXIT $RETVAL "Update $PG_CONF $SEARCH_TXT $NEW_PARAM"
 	        done
         fi
-
+    fi
     # Configuring PG_HBA  -- on mirror, only need to add local addresses (skip the other addresses)
     LOG_MSG "[INFO][$INST_COUNT]:-Configuring segment $PG_HBA"
     if [ $FQDN_HBA -eq 0 ]; then
@@ -233,13 +233,6 @@ PROCESS_QE () {
         fi
 
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
-    fi
-    
-    if [ x"" = x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
-	# Primary: start the segment to fill in configuration
-	START_QE
-	UPDATE_MPP $GP_PORT "$ARRAY_NAME" $TOTAL_SEG $GP_DBID $GP_CONTENT 1 $GP_HOSTADDRESS $GP_DIR
-	STOP_QE
     fi
 
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
