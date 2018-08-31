@@ -138,6 +138,9 @@ class PSQL(Command):
         @type background: boolean
         @param background: Run the command in the background and return immediately if set.
 
+        @type validate: boolean
+        @param validate: Set to true if the PSQL command's return code should be equal to zero; an exception will be thrown otherwise.
+
         @rtype: boolean
         @return: True if the command invocation was successful. False otherwise.
 
@@ -159,7 +162,7 @@ class PSQL(Command):
     def run_sql_command(sql_cmd, out_file = None, dbname = None,
                         host = None, port = None, username = None, password = None,
                         PGOPTIONS = None, flags = '-a', isODBC = None,
-                        timeout = 900, background = False, results={'rc':0, 'stdout':'', 'stderr':''}):
+                        timeout = 900, background = False, results=None):
         """
         Run the given sql command using psql command line.
 
@@ -199,6 +202,9 @@ class PSQL(Command):
         @type background: boolean
         @param background: Run the command in the background and return immediately if set.
 
+        @type results: dict
+        @param results: Pass a dictionary to receive the return code, stdout, and stderr from the command. The return code will *not* be validated in this case.
+
         @rtype: string
         @return: Output of the sql command
         """
@@ -207,11 +213,17 @@ class PSQL(Command):
                    PGOPTIONS = PGOPTIONS, flags = flags,
                    isODBC = isODBC, timeout = timeout, background = background)
         tinctest.logger.debug("Running command - %s" %cmd)
-        cmd.run(validateAfter = False)
+
+        # If the caller passes a results dictionary, we assume they want to
+        # verify the return code themselves; otherwise validate during the call.
+        validate = (results is None)
+        cmd.run(validateAfter = validate)
+
         result = cmd.get_results()
-        results['rc'] = result.rc
-        results['stdout'] = result.stdout
-        results['stderr'] = result.stderr
+        if results is not None:
+            results['rc'] = result.rc
+            results['stdout'] = result.stdout
+            results['stderr'] = result.stderr
         tinctest.logger.debug("Output - %s" %result)
         return result.stdout
 
