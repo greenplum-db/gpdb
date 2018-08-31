@@ -5822,3 +5822,23 @@ def step_impl(context, options):
                     raise Exception("gpstate -m output missing expected mirror info, datadir %s port %d" %(datadir, port))
     else:
         raise Exception("no verification for gpstate option given")
+
+@given('ensure the standby directory does not exist')
+def impl(context):
+    run_command(context, 'rm -rf $MASTER_DATA_DIRECTORY/newstandby')
+    run_command(context, 'rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest')
+
+@when('initialize a cluster with standby using "{config_file}"')
+def impl(context, config_file):
+    run_gpcommand(context, 'gpinitsystem -a -I %s -l /tmp/ -s localhost -P 21100 -F pg_system:$MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile' % config_file)
+    check_return_code(context, 0)
+
+@when('initialize a cluster using "{config_file}"')
+def impl(context, config_file):
+    run_gpcommand(context, 'gpinitsystem -a -I %s -l /tmp/' % config_file)
+    check_return_code(context, 0)
+
+@when('generate cluster config file "{config_file}"')
+def impl(context, config_file):
+    run_gpcommand(context, 'gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O %s' % config_file)
+    check_return_code(context, 0)

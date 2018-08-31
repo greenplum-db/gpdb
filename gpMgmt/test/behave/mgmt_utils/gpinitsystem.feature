@@ -82,22 +82,34 @@ Feature: gpinitsystem tests
     @gpinitsystem_fqdn_hba_on
     Scenario: gpinitsystem should print FQDN in pg_hba.conf when FQDN_HBA=1
         Given the cluster config is generated with FQDN_HBA "1"
-        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
-        Then gpinitsystem should return a return code of 0
-        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
-        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
-        Then gpinitsystem should return a return code of 0
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
+        When generate cluster config file "/tmp/output_config_file"
+        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        When initialize a cluster using "/tmp/output_config_file"
+        Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
     @gpinitsystem_fqdn_hba
     @gpinitsystem_fqdn_hba_off
     Scenario: gpinitsystem should print CIDR in pg_hba.conf when FQDN_HBA=0
         Given the cluster config is generated with FQDN_HBA "0"
-        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
-        Then gpinitsystem should return a return code of 0
-        And verify that the file "/tmp/output_config_file" contains "FQDN_HBA=0"
-        When the user runs "gpinitsystem -a -I /tmp/output_config_file -l /tmp/"
-        Then gpinitsystem should return a return code of 0
-        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
+        When generate cluster config file "/tmp/output_config_file"
+        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=0"
+        When initialize a cluster using "/tmp/output_config_file"
+        Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
+
+    @gpinitsystem_fqdn_hba
+    @gpinitsystem_fqdn_hba_on_with_standby
+    Scenario: gpinitsystem should print FQDN in pg_hba.conf for standby when FQDN_HBA=1
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the standby is not initialized
+        And ensure the standby directory does not exist
+        And the cluster config is generated with FQDN_HBA "1"
+        When generate cluster config file "/tmp/output_config_file"
+        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        When initialize a cluster with standby using "/tmp/output_config_file"
+        Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
+        And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/newstandby/pg_hba.conf" contains FQDN only for trusted host
