@@ -1340,7 +1340,7 @@ exec_mpp_query(const char *query_string,
 		/*
 		 * Start the portal.
 		 */
-		PortalStart(portal, paramLI, 0, false, ddesc);
+		PortalStart(portal, paramLI, 0, InvalidSnapshot, ddesc);
 
 		/*
 		 * Select text output format, the default.
