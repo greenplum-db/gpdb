@@ -965,10 +965,10 @@ mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 	rel->pathlist = NIL;
 
 	/* Set up the dummy path */
-	add_path(root, rel, (Path *) create_append_path(root, rel, NIL, NULL));
+	add_path(rel, (Path *) create_append_path(root, rel, NIL, NULL));
 
 	/* Set or update cheapest_total_path */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 
 	MemoryContextSwitchTo(oldcontext);
 }

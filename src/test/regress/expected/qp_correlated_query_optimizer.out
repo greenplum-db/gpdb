@@ -1704,12 +1704,12 @@ select A.i, (select C.j from C group by C.j having max(C.j) = any (select min(B.
 (10 rows)
 
 select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x)) as avg_x from qp_csq_t1 order by 1;
- avg_x 
--------
-     4
-     4
-     4
-     4
+       avg_x        
+--------------------
+ 4.0000000000000000
+ 4.0000000000000000
+ 4.0000000000000000
+ 4.0000000000000000
 (4 rows)
 
 -- ----------------------------------------------------------------------

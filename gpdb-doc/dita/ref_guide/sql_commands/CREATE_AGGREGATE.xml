@@ -4,7 +4,7 @@
 <topic id="topic1"><title id="bm20941">CREATE AGGREGATE</title><body><p id="sql_command_desc">Defines a new aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [ORDERED] AGGREGATE <varname>name</varname> (<varname>input_data_type</varname> [ , ... ]) 
       ( SFUNC = <varname>sfunc</varname>,
         STYPE = <varname>state_data_type</varname>
-        [, PREFUNC = <varname>prefunc</varname>]
+        [, COMBINEFUNC = <varname>combinefunc</varname>]
         [, FINALFUNC = <varname>ffunc</varname>]
         [, INITCOND = <varname>initial_condition</varname>]
         [, SORTOP = <varname>sort_operator</varname>] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE AGGREGATE</codeph> defines a new
@@ -16,27 +16,31 @@
         function is identified by its name and input data types. Two aggregate functions in the same
         schema can have the same name if they operate on different input types. The name and input
         data types of an aggregate function must also be distinct from the name and input data types
-        of every ordinary function in the same schema.</p><p>An aggregate function is made from one,
-        two or three ordinary functions (all of which must be <codeph>IMMUTABLE</codeph> functions): </p><ul>
+        of every ordinary function in the same schema.</p>
+
+	<p>An aggregate function is made from one,
+        two or three ordinary functions (all of which must be <codeph>IMMUTABLE</codeph> functions): </p>
+	<ul>
         <li id="bm141603">A state transition function <varname>sfunc</varname></li>
-        <li id="bm141604">An optional preliminary segment-level calculation function
-          <varname>prefunc</varname></li>
+        <li id="bm141604">An optional combine function <varname>combinefunc</varname></li>
         <li id="bm141605">An optional final calculation function <varname>ffunc</varname></li>
-      </ul><p>These functions are used as
+        </ul>
+
+	<p>These functions are used as
         follows:</p><codeblock>sfunc( internal-state, next-data-values ) ---&gt; next-internal-state
-prefunc( internal-state, internal-state ) ---&gt; next-internal-state
+combinefunc( internal-state, internal-state ) ---&gt; next-internal-state
 ffunc( internal-state ) ---&gt; aggregate-value</codeblock><p>You
-        can specify <codeph>PREFUNC</codeph> as method for optimizing aggregate execution. By
-        specifying <codeph>PREFUNC</codeph>, the aggregate can be executed in parallel on segments
+        can specify <codeph>COMBINEFUNC</codeph> as method for optimizing aggregate execution. By
+        specifying <codeph>COMBINEFUNC</codeph>, the aggregate can be executed in parallel on segments
         first and then on the master. When a two-level execution is performed,
           <codeph>SFUNC</codeph> is executed on the segments to generate partial aggregate results,
-        and <codeph>PREFUNC</codeph> is executed on the master to aggregate the partial results from
+        and <codeph>COMBINEFUNC</codeph> is executed on the master to aggregate the partial results from
         segments. If single-level aggregation is performed, all the rows are sent to the master and
           <codeph>sfunc</codeph> is applied to the rows.</p><p>Single-level aggregation and
         two-level aggregation are equivalent execution strategies. Either type of aggregation can be
-        implemented in a query plan. When you implement the functions <codeph>prefunc</codeph> and
+        implemented in a query plan. When you implement the functions <codeph>combinefunc</codeph> and
           <codeph>sfunc</codeph>, you must ensure that the invocation of <codeph>sfunc</codeph> on
-        the segment instances followed by <codeph>prefunc</codeph> on the master produce the same
+        the segment instances followed by <codeph>combinefunc</codeph> on the master produce the same
         result as single-level aggregation that sends all the rows to the master and then applies
         only the <codeph>sfunc</codeph> to the rows. </p><p>Greenplum Database creates a temporary
         variable of data type <varname>stype</varname> to hold the current internal state of the aggregate
@@ -93,17 +97,19 @@ N+1 arguments, the first being of type <varname>state_data_type</varname> and th
 rest matching the declared input data types of the aggregate. The function
 must return a value of type <varname>state_data_type</varname>. This function takes
 the current state value and the current input data values, and returns
-the next state value.</pd></plentry><plentry><pt><varname>state_data_type</varname></pt><pd>The data type for the aggregate state value.</pd></plentry><plentry><pt><varname>prefunc</varname></pt><pd>The name of a preliminary aggregation function. This is a function
+the next state value.</pd></plentry><plentry><pt><varname>state_data_type</varname></pt><pd>The data type for the aggregate state value.</pd></plentry>
+<plentry><pt><varname>combinefunc</varname></pt><pd>The name of a combine function. This is a function
 of two arguments, both of type <varname>state_data_type</varname>. It must return
-a value of <varname>state_data_type</varname>. A preliminary function takes two transition
+a value of <varname>state_data_type</varname>. A combine function takes two transition
 state values and returns a new transition state value representing the
 combined aggregation. In Greenplum Database, if the result of the aggregate
-function is computed in a segmented fashion, the preliminary aggregation
+function is computed in a segmented fashion, the combine
 function is invoked on the individual internal states in order to combine
 them into an ending internal state.</pd><pd>Note that this function is also called in hash aggregate mode within
-a segment. Therefore, if you call this aggregate function without a preliminary
+a segment. Therefore, if you call this aggregate function without a combine
 function, hash aggregate is never chosen. Since hash aggregate is efficient,
-consider defining preliminary function whenever possible.</pd></plentry><plentry><pt><varname>ffunc</varname></pt><pd>The name of the final function called to compute the aggregate result after all input rows have
+consider defining combine function whenever possible.</pd></plentry>
+<plentry><pt><varname>ffunc</varname></pt><pd>The name of the final function called to compute the aggregate result after all input rows have
             been traversed. The function must take a single argument of type
               <codeph>state_data_type</codeph>. The return data type of the aggregate is defined as
             the return type of this function. If <codeph>ffunc</codeph> is not specified, then the
@@ -119,7 +125,7 @@ is assumed to have the same input data types as the aggregate function
 
 <p>The ordinary functions used to define a new aggregate function must
 be defined first. Note that in this release of Greenplum Database, it
-is required that the <varname>sfunc</varname>, <varname>ffunc</varname>, and <varname>prefunc</varname> functions
+is required that the <varname>sfunc</varname>, <varname>ffunc</varname>, and <varname>combinefunc</varname> functions
 used to create the aggregate are defined as <codeph>IMMUTABLE</codeph>.</p>
 
 <p>If the value of the Greenplum Database server configuration parameter
@@ -142,15 +148,15 @@ ordered aggregate, using the syntax:
 
 </section><section id="section7"><title>Example</title><p>The following simple example creates an aggregate function that computes
 the sum of two columns. </p><p>Before creating the aggregate function, create two functions that
-are used as the <codeph>SFUNC</codeph> and <codeph>PREFUNC</codeph> functions
+are used as the <codeph>SFUNC</codeph> and <codeph>COMBINEFUNC</codeph> functions
 of the aggregate function. </p><p>This function is specified as the <codeph>SFUNC</codeph> function
 in the aggregate function.</p><codeblock>CREATE FUNCTION mysfunc_accum(numeric, numeric, numeric) 
   RETURNS numeric
    AS 'select $1 + $2 + $3'
    LANGUAGE SQL
    IMMUTABLE
-   RETURNS NULL ON NULL INPUT;</codeblock><p>This function is specified as the <codeph>PREFUNC</codeph> function in
-the aggregate function.</p><codeblock>CREATE FUNCTION mypre_accum(numeric, numeric )
+   RETURNS NULL ON NULL INPUT;</codeblock><p>This function is specified as the <codeph>COMBINEFUNC</codeph> function in
+the aggregate function.</p><codeblock>CREATE FUNCTION mycombine_accum(numeric, numeric )
   RETURNS numeric
    AS 'select $1 + $2'
    LANGUAGE SQL
@@ -159,7 +165,7 @@ the aggregate function.</p><codeblock>CREATE FUNCTION mypre_accum(numeric, numer
 that adds two columns. </p><codeblock>CREATE AGGREGATE agg_prefunc(numeric, numeric) (
    SFUNC = mysfunc_accum,
    STYPE = numeric,
-   PREFUNC = mypre_accum,
+   COMBINEFUNC = mycombine_accum,
    INITCOND = 0 );</codeblock><p>The following commands create a table, adds some rows, and runs the aggregate
 function.</p><codeblock>create table t1 (a int, b int) DISTRIBUTED BY (a);
 insert into t1 values

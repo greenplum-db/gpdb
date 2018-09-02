@@ -65,9 +65,6 @@ int			SessionReplicationRole = SESSION_REPLICATION_ROLE_ORIGIN;
 /* How many levels deep into trigger execution are we? */
 static int	MyTriggerDepth = 0;
 
-#define GetModifiedColumns(relinfo, estate) \
-	(rt_fetch((relinfo)->ri_RangeTableIndex, (estate)->es_range_table)->modifiedCols)
-
 /* Local function prototypes */
 static void ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid);
 static void SetTriggerFlags(TriggerDesc *trigdesc, Trigger *trigger);
@@ -76,10 +73,6 @@ static HeapTuple GetTupleForTrigger(EState *estate,
 				   ResultRelInfo *relinfo,
 				   ItemPointer tid,
 				   TupleTableSlot **newSlot);
-static bool TriggerEnabled(EState *estate, ResultRelInfo *relinfo,
-			   Trigger *trigger, TriggerEvent event,
-			   Bitmapset *modifiedCols,
-			   HeapTuple oldtup, HeapTuple newtup);
 
 static void AfterTriggerSaveEvent(EState *estate, ResultRelInfo *relinfo,
 					  int event, bool row_trigger,
@@ -2779,7 +2772,7 @@ ltrmark:;
 /*
  * Is trigger enabled to fire?
  */
-static bool
+bool
 TriggerEnabled(EState *estate, ResultRelInfo *relinfo,
 			   Trigger *trigger, TriggerEvent event,
 			   Bitmapset *modifiedCols,

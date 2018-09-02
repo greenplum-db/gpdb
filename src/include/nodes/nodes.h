@@ -732,7 +732,7 @@ typedef enum JoinType
 	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
 
 	/*
-	 * GDPB: Like JOIN_UNIQUE_OUTER/INNER, these codes are used internally
+	 * GPDB: Like JOIN_UNIQUE_OUTER/INNER, these codes are used internally
 	 * in the planner, but are not supported by the executor or by most of the
 	 * planner. A JOIN_DEDUP_SEMI join indicates a semi-join, but to be
 	 * implemented by performing a normal inner join, and eliminating the
@@ -796,16 +796,6 @@ typedef enum DispatchMethod
 	DISPATCH_PARALLEL			/* Dispatch on query executor and entry processes. */
 
 } DispatchMethod;
-
-/*
- * Inside the executor, if a caller to some data type manipulation functions
- * (e.g., int8inc()) is doing aggregate or window function work, we want to
- * avoid copying the input datum and just write directly over the input. This
- * isn't legal if the function is being used outside this context.
- */
-#define IS_AGG_EXECUTION_NODE(node) \
-	((IsA((Node *)(node), AggState) || IsA((Node *)(node), WindowAggState)) ? \
-	 true : false)
 
 /*
  * If the partIndex in Scan set to 0 then we don't have

@@ -2579,7 +2579,7 @@ transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 		 * only at the topmost setop of the CTE, of course.
 		 *
 		 * In PostgreSQL, transformSetOperationTree() runs as a single pass,
-		 * and we coerce the column types as we go. In GDPB, it's a two-pass
+		 * and we coerce the column types as we go. In GPDB, it's a two-pass
 		 * process. This function is part of the first pass, where we just
 		 * collect datatype information, and in the second pass we coerce
 		 * the targetlist of each branch of the setop tree to have compatible

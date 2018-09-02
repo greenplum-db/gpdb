@@ -1256,39 +1256,3 @@ getgpsegmentCount(void)
 	Assert(GpIdentity.numsegments > 0);
 	return GpIdentity.numsegments;
 }
-
-bool
-isSockAlive(int sock)
-{
-	int			ret;
-	char		buf;
-	int			i = 0;
-
-	for (i = 0; i < 10; i++)
-	{
-#ifndef WIN32
-		ret = recv(sock, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
-#else
-		ret = recv(sock, &buf, 1, MSG_PEEK | MSG_PARTIAL);
-#endif
-
-		if (ret == 0)			/* socket has been closed. EOF */
-			return false;
-
-		if (ret > 0)			/* data waiting on socket, it must be OK. */
-			return true;
-
-		if (ret == -1)			/* error, or would be block. */
-		{
-			if (errno == EAGAIN || errno == EINPROGRESS)
-				return true;	/* connection intact, no data available */
-			else if (errno == EINTR)
-				continue;		/* interrupted by signal, retry at most 10
-								 * times */
-			else
-				return false;
-		}
-	}
-
-	return true;
-}

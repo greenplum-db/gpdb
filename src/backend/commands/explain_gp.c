@@ -359,6 +359,10 @@ static void show_grouping_keys(PlanState *planstate, int numCols,
 							   AttrNumber *subplanColIdx,
 							   const char  *qlabel,
 							   List *ancestors, ExplainState *es);
+static void
+gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
+                             struct EState *estate,
+                             ExplainState *es);
 
 /*
  * Convert the sort method in string to corresponding
@@ -1381,7 +1385,7 @@ cdbexplain_formatMemory(char *outbuf, int bufsize, double bytes)
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
 #endif							/* USE_ASSERT_CHECKING */
-	snprintf(outbuf, bufsize, "%.0fK bytes", floor((bytes + 1023.0) / 1024.0));
+	snprintf(outbuf, bufsize, "%.0fK bytes", kb(bytes));
 
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
@@ -1553,6 +1557,10 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		Motion	   *pMotion = (Motion *) planstate->plan;
 		int			curSliceId = pMotion->motionID;
 
+		/*
+		 * FIXME: Only displayed in text format
+		 * [#159442827]
+		 */
 		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
 		{
 			appendStringInfoSpaces(es->str, es->indent * 2);
@@ -1654,6 +1662,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 
 	/*
 	 * What value of work_mem would suffice to eliminate workfile I/O?
+	 * [#159443489]
 	 */
 	if (es->analyze && es->verbose && ns->workmemwanted.vcnt > 0)
 	{
@@ -1686,163 +1695,180 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 												|| T_DynamicTableScanState == planstate->type
 												|| T_DynamicIndexScanState == planstate->type))
 	{
-		double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
-
-		if (0 == nPartTableScanned_avg)
+		/*
+		 * FIXME: Only displayed in TEXT format
+		 * [#159443692]
+		 */
+		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
-			bool		displayPartitionScanned = true;
+			double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
 
-			if (T_BitmapTableScanState == planstate->type)
+			if (0 == nPartTableScanned_avg)
 			{
-				ScanState  *scanState = (ScanState *) planstate;
+				bool		displayPartitionScanned = true;
 
-				if (!isDynamicScan(scanState->ps.plan))
+				if (T_BitmapTableScanState == planstate->type)
 				{
-					displayPartitionScanned = false;
+					ScanState  *scanState = (ScanState *) planstate;
+
+					if (!isDynamicScan(scanState->ps.plan))
+					{
+						displayPartitionScanned = false;
+					}
 				}
-			}
 
-			if (displayPartitionScanned)
-			{
-				int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
-
-				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str,
-								 "Partitions scanned:  0 (out of %d).\n",
-								 numTotalLeafParts);
-			}
-		}
-		else
-		{
-			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
-			int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
-
-			appendStringInfoSpaces(es->str, es->indent * 2);
-
-			/* only 1 segment scans partitions */
-			if (1 == ns->totalPartTableScanned.vcnt)
-			{
-				/* rescan */
-				if (1 < instr->nloops)
+				if (displayPartitionScanned)
 				{
-					double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+					int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
 
+					appendStringInfoSpaces(es->str, es->indent * 2);
 					appendStringInfo(es->str,
-									 "Partitions scanned:  %.0f (out of %d) %s of %ld scans.\n",
-									 totalPartTableScannedPerRescan,
-									 numTotalLeafParts,
-									 segbuf,
-									 instr->nloops);
-				}
-				else
-				{
-					appendStringInfo(es->str,
-									 "Partitions scanned:  %.0f (out of %d) %s.\n",
-									 ns->totalPartTableScanned.vmax,
-									 numTotalLeafParts,
-									 segbuf);
+									 "Partitions scanned:  0 (out of %d).\n",
+									 numTotalLeafParts);
 				}
 			}
 			else
 			{
-				/* rescan */
-				if (1 < instr->nloops)
-				{
-					double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
-					double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
+				int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
 
-					appendStringInfo(es->str,
-									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %ld scans."
-									 "  Max %.0f parts%s.\n",
-									 totalPartTableScannedPerRescan,
-									 numTotalLeafParts,
-									 ns->totalPartTableScanned.vcnt,
-									 instr->nloops,
-									 maxPartTableScannedPerRescan,
-									 segbuf
-						);
+				appendStringInfoSpaces(es->str, es->indent * 2);
+
+				/* only 1 segment scans partitions */
+				if (1 == ns->totalPartTableScanned.vcnt)
+				{
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f (out of %d) %s of %ld scans.\n",
+										 totalPartTableScannedPerRescan,
+										 numTotalLeafParts,
+										 segbuf,
+										 instr->nloops);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f (out of %d) %s.\n",
+										 ns->totalPartTableScanned.vmax,
+										 numTotalLeafParts,
+										 segbuf);
+					}
 				}
 				else
 				{
-					appendStringInfo(es->str,
-									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers."
-									 "  Max %.0f parts%s.\n",
-									 nPartTableScanned_avg,
-									 numTotalLeafParts,
-									 ns->totalPartTableScanned.vcnt,
-									 ns->totalPartTableScanned.vmax,
-									 segbuf);
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
+						double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %ld scans."
+										 "  Max %.0f parts%s.\n",
+										 totalPartTableScannedPerRescan,
+										 numTotalLeafParts,
+										 ns->totalPartTableScanned.vcnt,
+										 instr->nloops,
+										 maxPartTableScannedPerRescan,
+										 segbuf
+							);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers."
+										 "  Max %.0f parts%s.\n",
+										 nPartTableScanned_avg,
+										 numTotalLeafParts,
+										 ns->totalPartTableScanned.vcnt,
+										 ns->totalPartTableScanned.vmax,
+										 segbuf);
+					}
 				}
 			}
 		}
 	}
 
-	/*
-	 * Extra message text. The text is preformatted in the nodeXXX code into
-	 * TEXT format output, it's a GPDB_90_MERGE_FIXME to transform this into
-	 * something that all formats can consume
-	 */
-	if (es->format == EXPLAIN_FORMAT_TEXT)
+	bool haveExtraText = false;
+	StringInfo extraData = makeStringInfo();
+	for (i = 0; i < ns->ninst; i++)
 	{
-		for (i = 0; i < ns->ninst; i++)
-		{
-			CdbExplain_StatInst *nsi = &ns->insts[i];
+		CdbExplain_StatInst *nsi = &ns->insts[i];
 
-			if (nsi->bnotes < nsi->enotes)
-			{
-				cdbexplain_formatExtraText(es->str,
-										   es->indent,
-										   (ns->ninst == 1) ? -1
-										   : ns->segindex0 + i,
-										   ctx->extratextbuf.data + nsi->bnotes,
-										   nsi->enotes - nsi->bnotes);
+		if (nsi->bnotes < nsi->enotes)
+		{
+			if (!haveExtraText) {
+				ExplainOpenGroup("Extra Text", "Extra Text", false, es);
+				ExplainOpenGroup("Segment", NULL, true, es);
+				haveExtraText = true;
 			}
+			
+			resetStringInfo(extraData);
+
+			cdbexplain_formatExtraText(extraData,
+									   0,
+									   (ns->ninst == 1) ? -1
+									   : ns->segindex0 + i,
+									   ctx->extratextbuf.data + nsi->bnotes,
+									   nsi->enotes - nsi->bnotes);
+			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData->data);
 		}
 	}
+
+	if (haveExtraText) {
+		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
+		ExplainCloseGroup("Segment", NULL, true, es);
+	}
+	pfree(extraData);
 
 	/*
 	 * Dump stats for all workers.
 	 */
 	if (gp_enable_explain_allstat && ns->segindex0 >= 0 && ns->ninst > 0)
 	{
-		/*
-		 * create a header for all stats: separate each individual stat by an
-		 * underscore, separate the grouped stats for each node by a slash
-		 */
-		appendStringInfoSpaces(es->str, es->indent * 2);
-		appendStringInfoString(es->str,
-							   "allstat: "
 
 		/*
-		 *
-		 * "seg_starttime_firststart_counter_firsttuple_startup_total_ntuples_n
-		 * loops"
+		 * FIXME: Only displyed on TEXT format
+		 * [#159443819]
 		 */
-							   "seg_firststart_total_ntuples");
-
-		for (i = 0; i < ns->ninst; i++)
+		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
-			CdbExplain_StatInst *nsi = &ns->insts[i];
+			/*
+			 * create a header for all stats: separate each individual stat by an
+			 * underscore, separate the grouped stats for each node by a slash
+			 */
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfoString(es->str,
+								   "allstat: seg_firststart_total_ntuples");
 
-			if (INSTR_TIME_IS_ZERO(nsi->firststart))
+			for (i = 0; i < ns->ninst; i++)
 			{
-				continue;
+				CdbExplain_StatInst *nsi = &ns->insts[i];
+
+				if (INSTR_TIME_IS_ZERO(nsi->firststart))
+				{
+					continue;
+				}
+
+				/* Time from start of query on qDisp to worker's first result row */
+				INSTR_TIME_SET_ZERO(timediff);
+				INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
+				cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
+				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf), nsi->total);
+
+				appendStringInfo(es->str,
+								 "/seg%d_%s_%s_%.0f",
+								 ns->segindex0 + i,
+								 startbuf,
+								 totalbuf,
+								 nsi->ntuples);
 			}
-
-			/* Time from start of query on qDisp to worker's first result row */
-			INSTR_TIME_SET_ZERO(timediff);
-			INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
-			cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-			cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf), nsi->total);
-
-			appendStringInfo(es->str,
-							 "/seg%d_%s_%s_%.0f",
-							 ns->segindex0 + i,
-							 startbuf,
-							 totalbuf,
-							 nsi->ntuples);
+			appendStringInfoString(es->str, "//end\n");
 		}
-		appendStringInfoString(es->str, "//end\n");
 	}
 }								/* cdbexplain_showExecStats */
 
@@ -1866,232 +1892,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 							struct EState *estate,
 							ExplainState *es)
 {
-	Slice	   *slice;
-	int			sliceIndex;
-	int			flag;
-	double		total_memory_across_slices = 0;
-
-	char		avgbuf[50];
-	char		maxbuf[50];
-	char		segbuf[50];
-
-	/*
-	 * Summary by slice
-	 *
-	 * GPDB_90_MERGE_FIXME: Refactor the Slice statistics printing such that
-	 * we can use it in non-TEXT format output.
-	 */
-	if (es->format == EXPLAIN_FORMAT_TEXT)
-	{
-		if (showstatctx->nslice > 0)
-			ExplainOpenGroup("Slice statistics", "Slice statistics", true, es);
-
-		for (sliceIndex = 0; sliceIndex < showstatctx->nslice; sliceIndex++)
-		{
-			CdbExplain_SliceSummary *ss = &showstatctx->slices[sliceIndex];
-			CdbExplain_DispatchSummary *ds = &ss->dispatchSummary;
-
-			appendStringInfo(es->str, "  (slice%d) ", sliceIndex);
-			if (sliceIndex < 10)
-				appendStringInfoChar(es->str, ' ');
-
-			flag = es->str->len;
-			appendStringInfoString(es->str, "  ");
-
-			/* Worker counts */
-			slice = getCurrentSlice(estate, sliceIndex);
-			if (slice &&
-				slice->numGangMembersToBeActive > 0 &&
-				slice->numGangMembersToBeActive != ss->dispatchSummary.nOk)
-			{
-				int			nNotDispatched = slice->numGangMembersToBeActive - ds->nResult + ds->nNotDispatched;
-
-				es->str->data[flag] = (ss->dispatchSummary.nError > 0) ? 'X' : '_';
-
-				appendStringInfoString(es->str, "Workers:");
-				if (ds->nError == 1)
-				{
-					appendStringInfo(es->str,
-									 " %d error;",
-									 ds->nError);
-				}
-				else if (ds->nError > 1)
-				{
-					appendStringInfo(es->str,
-									 " %d errors;",
-									 ds->nError);
-				}
-				if (ds->nCanceled > 0)
-				{
-					appendStringInfo(es->str,
-									 " %d canceled;",
-									 ds->nCanceled);
-				}
-				if (nNotDispatched > 0)
-				{
-					appendStringInfo(es->str,
-									 " %d not dispatched;",
-									 nNotDispatched);
-				}
-				if (ds->nIgnorableError > 0)
-				{
-					appendStringInfo(es->str,
-									 " %d aborted;",
-									 ds->nIgnorableError);
-				}
-				if (ds->nOk > 0)
-				{
-					appendStringInfo(es->str,
-									 " %d ok;",
-									 ds->nOk);
-				}
-				es->str->len--;
-				appendStringInfoString(es->str, ".  ");
-			}
-
-			/* Executor memory high-water mark */
-			cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->peakmemused.vmax);
-			if (ss->peakmemused.vcnt == 1)
-			{
-				const char *seg = segbuf;
-
-				if (ss->peakmemused.imax >= 0)
-				{
-					cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->peakmemused.imax, 999);
-				}
-				else if (slice &&
-						 slice->gangSize > 0)
-				{
-					seg = " (entry db)";
-				}
-				else
-				{
-					seg = "";
-				}
-				appendStringInfo(es->str,
-								 "Executor memory: %s%s.",
-								 maxbuf,
-								 seg);
-			}
-			else if (ss->peakmemused.vcnt > 1)
-			{
-				cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->peakmemused));
-				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->peakmemused.imax, ss->nworker);
-				appendStringInfo(es->str,
-								 "Executor memory: %s avg x %d workers, %s max%s.",
-								 avgbuf,
-								 ss->peakmemused.vcnt,
-								 maxbuf,
-								 segbuf);
-			}
-
-			if (EXPLAIN_MEMORY_VERBOSITY_SUPPRESS < explain_memory_verbosity)
-			{
-				/* Memory accounting global peak memory usage */
-				double kilobytes = ss->memory_accounting_global_peak.vmax;
-				int workers = 1;
-				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), kilobytes);
-				if (ss->memory_accounting_global_peak.vcnt == 1)
-				{
-					const char *seg = segbuf;
-
-					if (ss->memory_accounting_global_peak.imax >= 0)
-					{
-						cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, 999);
-					}
-					else if (slice &&
-							 slice->gangSize > 0)
-					{
-						seg = " (entry db)";
-					}
-					else
-					{
-						seg = "";
-					}
-					appendStringInfo(es->str,
-									 "  Peak memory: %s%s.",
-									 maxbuf,
-									 seg);
-				}
-				else if (ss->memory_accounting_global_peak.vcnt > 1)
-				{
-					kilobytes = cdbexplain_agg_avg(&ss->memory_accounting_global_peak);
-					workers = ss->memory_accounting_global_peak.vcnt;
-					kilobytes = floor((kilobytes + 1023.0) / 1024.0);
-					cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), kilobytes);
-					cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, ss->nworker);
-					appendStringInfo(es->str,
-									 "  Peak memory: %s avg x %d workers, %s max%s.",
-									 avgbuf,
-									 ss->memory_accounting_global_peak.vcnt,
-									 maxbuf,
-									 segbuf);
-				}
-
-				kilobytes = floor((kilobytes + 1023.0) / 1024.0);
-				total_memory_across_slices += (kilobytes * workers);
-
-				/* Vmem reserved by QEs */
-				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->vmem_reserved.vmax);
-				if (ss->vmem_reserved.vcnt == 1)
-				{
-					const char *seg = segbuf;
-
-					if (ss->vmem_reserved.imax >= 0)
-					{
-						cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->vmem_reserved.imax, 999);
-					}
-					else if (slice &&
-							 slice->gangSize > 0)
-					{
-						seg = " (entry db)";
-					}
-					else
-					{
-						seg = "";
-					}
-					appendStringInfo(es->str,
-									 "  Vmem reserved: %s%s.",
-									 maxbuf,
-									 seg);
-				}
-				else if (ss->vmem_reserved.vcnt > 1)
-				{
-					cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->vmem_reserved));
-					cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->vmem_reserved.imax, ss->nworker);
-					appendStringInfo(es->str,
-									 "  Vmem reserved: %s avg x %d workers, %s max%s.",
-									 avgbuf,
-									 ss->vmem_reserved.vcnt,
-									 maxbuf,
-									 segbuf);
-				}
-			}
-
-			/* Work_mem used/wanted (max over all nodes and workers of slice) */
-			if (ss->workmemused_max + ss->workmemwanted_max > 0)
-			{
-				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->workmemused_max);
-				appendStringInfo(es->str, "  Work_mem: %s max", maxbuf);
-				if (ss->workmemwanted_max > 0)
-				{
-					es->str->data[flag] = '*';	/* draw attention to this slice */
-					cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->workmemwanted_max);
-					appendStringInfo(es->str, ", %s wanted", maxbuf);
-				}
-				appendStringInfoChar(es->str, '.');
-			}
-
-			appendStringInfoChar(es->str, '\n');
-		}
-
-		if (total_memory_across_slices > 0)
-		{
-			appendStringInfo(es->str, "Total memory used across slices: %.0fK bytes \n", total_memory_across_slices);
-		}
-
-		ExplainCloseGroup("Slice statistics", "Slice statistics", true, es);
-	}
+    gpexplain_formatSlicesOutput(showstatctx, estate, es);
 
 	if (!IsResManagerMemoryPolicyNone())
 	{
@@ -2109,7 +1910,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 			{
 				if (es->format == EXPLAIN_FORMAT_TEXT)
 				{
-					appendStringInfo(es->str, "ORCA Memory used: peak %ldkB  allocated %ldkB  freed %ldkB",
+					appendStringInfo(es->str, "ORCA Memory used: peak %ldkB  allocated %ldkB  freed %ldkB\n",
 									 (long) ceil((double) acct->peak / 1024L),
 									 (long) ceil((double) acct->allocated / 1024L),
 									 (long) ceil((double) acct->freed / 1024L));
@@ -2144,6 +1945,371 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		ExplainCloseGroup("Statement statistics", "Statement statistics", true, es);
 	}
 }								/* cdbexplain_showExecStatsEnd */
+
+/*
+ * Given a statistics context search for all the slice statistics
+ * and format them to the correct layout
+ */
+static void
+gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
+                             struct EState *estate,
+                             ExplainState *es)
+{
+	Slice	   *slice;
+	int			sliceIndex;
+	int			flag;
+	double		total_memory_across_slices = 0;
+
+	char		avgbuf[50];
+	char		maxbuf[50];
+	char		segbuf[50];
+
+    if (showstatctx->nslice > 0)
+        ExplainOpenGroup("Slice statistics", "Slice statistics", false, es);
+
+    for (sliceIndex = 0; sliceIndex < showstatctx->nslice; sliceIndex++)
+    {
+        CdbExplain_SliceSummary *ss = &showstatctx->slices[sliceIndex];
+        CdbExplain_DispatchSummary *ds = &ss->dispatchSummary;
+        
+        flag = es->str->len;
+        if (es->format == EXPLAIN_FORMAT_TEXT)
+        {
+
+            appendStringInfo(es->str, "  (slice%d) ", sliceIndex);
+            if (sliceIndex < 10)
+                appendStringInfoChar(es->str, ' ');
+
+            appendStringInfoString(es->str, "  ");
+        }
+        else 
+        {
+            ExplainOpenGroup("Slice", NULL, true, es);
+            ExplainPropertyInteger("Slice", sliceIndex, es);
+        }
+
+        /* Worker counts */
+        slice = getCurrentSlice(estate, sliceIndex);
+        if (slice &&
+            slice->numGangMembersToBeActive > 0 &&
+            slice->numGangMembersToBeActive != ss->dispatchSummary.nOk)
+        {
+            int nNotDispatched = slice->numGangMembersToBeActive - ds->nResult + ds->nNotDispatched;
+
+            es->str->data[flag] = (ss->dispatchSummary.nError > 0) ? 'X' : '_';
+            StringInfoData workersInformationText;
+            initStringInfo(&workersInformationText);
+
+            appendStringInfo(&workersInformationText, "Workers:");
+
+            if (es->format == EXPLAIN_FORMAT_TEXT)
+            {
+                if (ds->nError == 1)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d error;",
+                                     ds->nError);
+                }
+                else if (ds->nError > 1)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d errors;",
+                                     ds->nError);
+                }
+            }
+            else
+            {
+                ExplainOpenGroup("Workers", "Workers", true, es);
+                if (ds->nError > 0)
+                    ExplainPropertyInteger("Errors", ds->nError, es);
+            }
+
+            if (ds->nCanceled > 0)
+            {
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d canceled;",
+                                     ds->nCanceled);
+                }
+                else
+                {
+                    ExplainPropertyInteger("Canceled", ds->nCanceled, es);
+                }
+            }
+
+            if (nNotDispatched > 0)
+            {
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d not dispatched;",
+                                     nNotDispatched);
+                }
+                else
+                {
+                    ExplainPropertyInteger("Not Dispatched", nNotDispatched, es);
+                }
+            }
+
+            if (ds->nIgnorableError > 0)
+            {
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d aborted;",
+                                     ds->nIgnorableError);
+                }
+                else
+                {
+                    ExplainPropertyInteger("Aborted", ds->nIgnorableError, es);
+                }
+            }
+
+            if (ds->nOk > 0)
+            {
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    appendStringInfo(&workersInformationText,
+                                     " %d ok;",
+                                     ds->nOk);
+                }
+                else
+                {
+                    ExplainPropertyInteger("Ok", ds->nOk, es);
+                }
+            }
+
+            if (es->format == EXPLAIN_FORMAT_TEXT)
+            {
+                workersInformationText.len--;
+                ExplainPropertyStringInfo("Workers", es, "%s.  ", workersInformationText.data);
+            }
+            else
+            {
+                ExplainCloseGroup("Workers", "Workers", true, es);
+            }
+        }
+
+        /* Executor memory high-water mark */
+        cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->peakmemused.vmax);
+        if (ss->peakmemused.vcnt == 1)
+        {
+            if (es->format == EXPLAIN_FORMAT_TEXT)
+            {
+                const char *seg = segbuf;
+
+                if (ss->peakmemused.imax >= 0)
+                {
+                    cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->peakmemused.imax, 999);
+                }
+                else if (slice &&
+                         slice->gangSize > 0)
+                {
+                    seg = " (entry db)";
+                }
+                else
+                {
+                    seg = "";
+                }
+                appendStringInfo(es->str,
+                                 "Executor memory: %s%s.",
+                                 maxbuf,
+                                 seg);
+            }
+            else
+            {
+                ExplainPropertyInteger("Executor Memory", ss->peakmemused.vmax, es);
+            }
+        }
+        else if (ss->peakmemused.vcnt > 1)
+        {
+            if (es->format == EXPLAIN_FORMAT_TEXT)
+            {
+                cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->peakmemused));
+                cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->peakmemused.imax, ss->nworker);
+                appendStringInfo(es->str,
+                                 "Executor memory: %s avg x %d workers, %s max%s.",
+                                 avgbuf,
+                                 ss->peakmemused.vcnt,
+                                 maxbuf,
+                                 segbuf);
+            }
+            else
+            {
+                ExplainOpenGroup("Executor Memory", "Executor Memory", true, es);
+                ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->peakmemused), es);
+                ExplainPropertyInteger("Workers", ss->peakmemused.vcnt, es);
+                ExplainPropertyInteger("Maximum Memory Used", ss->peakmemused.vmax, es);
+                ExplainCloseGroup("Executor Memory", "Executor Memory", true, es);
+            }
+        }
+
+        if (EXPLAIN_MEMORY_VERBOSITY_SUPPRESS < explain_memory_verbosity)
+        {
+            /* Memory accounting global peak memory usage */
+            double peakMemoryUsage = ss->memory_accounting_global_peak.vmax;
+            int workers = 1;
+            cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), peakMemoryUsage);
+			peakMemoryUsage = kb(peakMemoryUsage);
+			
+            if (ss->memory_accounting_global_peak.vcnt == 1)
+            {
+                
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    const char *seg = segbuf;
+
+                    if (ss->memory_accounting_global_peak.imax >= 0)
+                    {
+                        cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, 999);
+                    }
+                    else if (slice &&
+                             slice->gangSize > 0)
+                    {
+                        seg = " (entry db)";
+                    }
+                    else
+                    {
+                        seg = "";
+                    }
+                    appendStringInfo(es->str,
+                                     "  Peak memory: %s%s.",
+                                     maxbuf,
+                                     seg);
+                } 
+                else
+                {
+                    ExplainPropertyInteger("Global Peak Memory", ss->memory_accounting_global_peak.vmax, es);
+                }
+            }
+            else if (ss->memory_accounting_global_peak.vcnt > 1)
+            {
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                	peakMemoryUsage = cdbexplain_agg_avg(&ss->memory_accounting_global_peak);
+                	workers = ss->memory_accounting_global_peak.vcnt;
+                	peakMemoryUsage = kb(peakMemoryUsage);
+                	cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), peakMemoryUsage);
+                	cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, ss->nworker);
+                	appendStringInfo(es->str,
+                	                 "  Peak memory: %s avg x %d workers, %s max%s.",
+                	                 avgbuf,
+                	                 ss->memory_accounting_global_peak.vcnt,
+                	                 maxbuf,
+                	                 segbuf);
+				}
+				else
+                {
+                    ExplainOpenGroup("Global Peak Memory", "Global Peak Memory", true, es);
+                    ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->memory_accounting_global_peak), es);
+                    ExplainPropertyInteger("Workers", ss->memory_accounting_global_peak.vcnt, es);
+                    ExplainPropertyInteger("Maximum Memory Used", ss->memory_accounting_global_peak.vmax, es);
+                    ExplainCloseGroup("Global Peak Memory", "Global Peak Memory", true, es);
+                }
+            }
+
+            total_memory_across_slices += (peakMemoryUsage * workers);
+
+            /* Vmem reserved by QEs */
+            cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->vmem_reserved.vmax);
+            if (ss->vmem_reserved.vcnt == 1)
+            {
+
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    const char *seg = segbuf;
+
+                    if (ss->vmem_reserved.imax >= 0)
+                    {
+                        cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->vmem_reserved.imax, 999);
+                    }
+                    else if (slice &&
+                             slice->gangSize > 0)
+                    {
+                        seg = " (entry db)";
+                    }
+                    else
+                    {
+                        seg = "";
+                    }
+                    appendStringInfo(es->str,
+                                     "  Vmem reserved: %s%s.",
+                                     maxbuf,
+                                     seg);
+                }
+                else
+                {
+                    ExplainPropertyInteger("Virtual Memory", ss->vmem_reserved.vmax, es);
+                }
+            }
+            else if (ss->vmem_reserved.vcnt > 1)
+            {
+                if (es->format == EXPLAIN_FORMAT_TEXT)
+                {
+                    cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->vmem_reserved));
+                    cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->vmem_reserved.imax, ss->nworker);
+                    appendStringInfo(es->str,
+                                     "  Vmem reserved: %s avg x %d workers, %s max%s.",
+                                     avgbuf,
+                                     ss->vmem_reserved.vcnt,
+                                     maxbuf,
+                                     segbuf);
+                }
+                else
+                {
+                    ExplainOpenGroup("Virtual Memory", "Virtual Memory", true, es);
+                    ExplainPropertyInteger("Average", cdbexplain_agg_avg(&ss->vmem_reserved), es);
+                    ExplainPropertyInteger("Workers", ss->vmem_reserved.vcnt, es);
+                    ExplainPropertyInteger("Maximum Memory Used", ss->vmem_reserved.vmax, es);
+                    ExplainCloseGroup("Virtual Memory", "Virtual Memory", true, es);
+                }
+
+            }
+        }
+
+        /* Work_mem used/wanted (max over all nodes and workers of slice) */
+        if (ss->workmemused_max + ss->workmemwanted_max > 0)
+        {
+            if (es->format == EXPLAIN_FORMAT_TEXT)
+            {
+                cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->workmemused_max);
+                appendStringInfo(es->str, "  Work_mem: %s max", maxbuf);
+                if (ss->workmemwanted_max > 0)
+                {
+                    es->str->data[flag] = '*';	/* draw attention to this slice */
+                    cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->workmemwanted_max);
+                    appendStringInfo(es->str, ", %s wanted", maxbuf);
+                }
+                appendStringInfoChar(es->str, '.');
+            }
+            else
+            {
+                ExplainPropertyInteger("Work Maximum Memory", ss->workmemused_max, es);
+            }
+        }
+
+        if (es->format == EXPLAIN_FORMAT_TEXT)
+            appendStringInfoChar(es->str, '\n');
+
+        ExplainCloseGroup("Slice", NULL, true, es);
+    }
+
+    if (showstatctx->nslice > 0)
+        ExplainCloseGroup("Slice statistics", "Slice statistics", false, es);
+
+    if (total_memory_across_slices > 0)
+    {
+        if (es->format == EXPLAIN_FORMAT_TEXT)
+        {
+            appendStringInfo(es->str, "Total memory used across slices: %.0fK bytes \n", total_memory_across_slices);
+        }
+        else
+        {
+            ExplainPropertyInteger("Total memory used across slices", total_memory_across_slices, es);
+        }
+    }
+}
 
 static int
 cdbexplain_countLeafPartTables(PlanState *planstate)

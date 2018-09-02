@@ -3556,11 +3556,11 @@ choose_hashed_grouping(PlannerInfo *root,
 		return false;
 
 	/*
-	 * CDB: The preliminary function is used to merge transient values during
+	 * CDB: The combine function is used to merge transient values during
 	 * hash reloading (see execHHashagg.c). So hash agg is not allowed if one
-	 * of the aggregates doesn't have its preliminary function.
+	 * of the aggregates doesn't have a combine function.
 	 */
-	if (agg_costs->missing_prelimfunc)
+	if (agg_costs->missing_combinefunc)
 		return false;
 
 	/*

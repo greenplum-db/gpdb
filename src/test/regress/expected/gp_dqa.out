@@ -440,38 +440,38 @@ select count(distinct t1.a), count(distinct t2.b), t1.c, t2.c from t1_mdqa t1, t
 
 -- distinct on top of some mdqas
 select distinct sum(distinct t1.a), avg(t2.a), sum(distinct t2.b), t1.a, t2.b from t1_mdqa t1, t2_mdqa t2 where t1.a = t2.a group by t1.a, t2.b order by t1.a;
- sum | avg | sum | a | b 
------+-----+-----+---+---
-   0 |   0 |   0 | 0 | 0
-   1 |   1 |   1 | 1 | 1
-   2 |   2 |   2 | 2 | 2
-   3 |   3 |   3 | 3 | 3
-   4 |   4 |   4 | 4 | 4
+ sum |          avg           | sum | a | b 
+-----+------------------------+-----+---+---
+   0 | 0.00000000000000000000 |   0 | 0 | 0
+   1 | 1.00000000000000000000 |   1 | 1 | 1
+   2 |     2.0000000000000000 |   2 | 2 | 2
+   3 |     3.0000000000000000 |   3 | 3 | 3
+   4 |     4.0000000000000000 |   4 | 4 | 4
 (5 rows)
 
 select distinct sum (distinct t1.a), avg(distinct t2.a), sum(distinct t2.b), t1.c from t1_mdqa t1, t2_mdqa t2 where t1.a = t2.a group by t1.c order by t1.c;
- sum | avg | sum |    c    
------+-----+-----+---------
-   0 |   0 |   0 | 10value
-   1 |   1 |   1 | 11value
-   2 |   2 |   2 | 12value
-   3 |   3 |   3 | 13value
-   4 |   4 |   4 | 14value
-   0 |   0 |   0 | 15value
-   1 |   1 |   1 | 16value
-   2 |   2 |   2 | 17value
-   3 |   3 |   3 | 18value
-   4 |   4 |   4 | 19value
-   1 |   1 |   1 | 1value
-   0 |   0 |   0 | 20value
-   2 |   2 |   2 | 2value
-   3 |   3 |   3 | 3value
-   4 |   4 |   4 | 4value
-   0 |   0 |   0 | 5value
-   1 |   1 |   1 | 6value
-   2 |   2 |   2 | 7value
-   3 |   3 |   3 | 8value
-   4 |   4 |   4 | 9value
+ sum |          avg           | sum |    c    
+-----+------------------------+-----+---------
+   0 | 0.00000000000000000000 |   0 | 10value
+   1 | 1.00000000000000000000 |   1 | 11value
+   2 |     2.0000000000000000 |   2 | 12value
+   3 |     3.0000000000000000 |   3 | 13value
+   4 |     4.0000000000000000 |   4 | 14value
+   0 | 0.00000000000000000000 |   0 | 15value
+   1 | 1.00000000000000000000 |   1 | 16value
+   2 |     2.0000000000000000 |   2 | 17value
+   3 |     3.0000000000000000 |   3 | 18value
+   4 |     4.0000000000000000 |   4 | 19value
+   1 | 1.00000000000000000000 |   1 | 1value
+   0 | 0.00000000000000000000 |   0 | 20value
+   2 |     2.0000000000000000 |   2 | 2value
+   3 |     3.0000000000000000 |   3 | 3value
+   4 |     4.0000000000000000 |   4 | 4value
+   0 | 0.00000000000000000000 |   0 | 5value
+   1 | 1.00000000000000000000 |   1 | 6value
+   2 |     2.0000000000000000 |   2 | 7value
+   3 |     3.0000000000000000 |   3 | 8value
+   4 |     4.0000000000000000 |   4 | 9value
 (20 rows)
 
 -- distinct on group by fields
@@ -502,23 +502,23 @@ select distinct t1.c , sum(distinct t1.a), count(t2.b), sum(distinct t2.b) from 
 
 -- distinct on normal aggregates
 select distinct sum(t1.a), avg(distinct t2.a), sum(distinct (t1.a + t2.a)), t1.a, t2.b from t1_mdqa t1, t2_mdqa t2 where t1.a = t2.a group by t1.a, t2.b order by t1.a;
- sum | avg | sum | a | b 
------+-----+-----+---+---
-   0 |   0 |   0 | 0 | 0
-  32 |   1 |   2 | 1 | 1
-  64 |   2 |   4 | 2 | 2
-  96 |   3 |   6 | 3 | 3
- 128 |   4 |   8 | 4 | 4
+ sum |          avg           | sum | a | b 
+-----+------------------------+-----+---+---
+   0 | 0.00000000000000000000 |   0 | 0 | 0
+  32 | 1.00000000000000000000 |   2 | 1 | 1
+  64 |     2.0000000000000000 |   4 | 2 | 2
+  96 |     3.0000000000000000 |   6 | 3 | 3
+ 128 |     4.0000000000000000 |   8 | 4 | 4
 (5 rows)
 
 select distinct avg(t1.a + t2.b), count(distinct t1.c), count(distinct char_length(t1.c)), t1.a, t2.b from t1_mdqa t1, t2_mdqa t2 where t1.a = t2.a group by t1.a, t2.b order by t1.a;
- avg | count | count | a | b 
------+-------+-------+---+---
-   0 |     4 |     2 | 0 | 0
-   2 |     4 |     2 | 1 | 1
-   4 |     4 |     2 | 2 | 2
-   6 |     4 |     2 | 3 | 3
-   8 |     4 |     2 | 4 | 4
+          avg           | count | count | a | b 
+------------------------+-------+-------+---+---
+ 0.00000000000000000000 |     4 |     2 | 0 | 0
+     2.0000000000000000 |     4 |     2 | 1 | 1
+     4.0000000000000000 |     4 |     2 | 2 | 2
+     6.0000000000000000 |     4 |     2 | 3 | 3
+     8.0000000000000000 |     4 |     2 | 4 | 4
 (5 rows)
 
 -- cleanup

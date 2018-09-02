@@ -786,7 +786,7 @@ find_nodes_walker(Node *node, find_nodes_context *context)
 }
 
 /**
- * GDPB_91_MERGE_FIXME: collation
+ * GPDB_91_MERGE_FIXME: collation
  * Look for nodes with non-default collation; return 1 if any exist, -1
  * otherwise.
  */

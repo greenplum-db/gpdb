@@ -412,9 +412,9 @@ select
  city.name,city.population
  from                                                                                                                                
  city where city.countrycode='QAT';
- max_pop |    world_avg     | name | population 
----------+------------------+------+------------
-  355000 | 376916.466666667 | Doha |     355000
+ max_pop |      world_avg      | name | population 
+---------+---------------------+------+------------
+  355000 | 376916.466666666667 | Doha |     355000
 (1 row)
 
 --query6 using CTE in the select list with a qual
@@ -796,22 +796,22 @@ select CITY12,POPULATION12 from
   ) FOO2
 ) FOO1
 ) FOO0 group by city12 order by city12;-- negative cases where queries have duplicate names in CTEs
-   avg    |      city12      
-----------+------------------
-  8591309 | Ciudad de Mexico
-  7206704 | Delhi
-  8787958 | Istanbul
-  9604900 | Jakarta
-  9269265 | Karachi
-  7285000 | London
-  8389200 | Moscow
- 10500000 | Mumbai (Bombay)
-  8008278 | New York
-  7472000 | Peking
-  9968485 | Sao Paulo
-  9981619 | Seoul
-  9696300 | Shanghai
-  7980230 | Tokyo
+          avg          |      city12      
+-----------------------+------------------
+  8591309.000000000000 | Ciudad de Mexico
+  7206704.000000000000 | Delhi
+  8787958.000000000000 | Istanbul
+  9604900.000000000000 | Jakarta
+  9269265.000000000000 | Karachi
+  7285000.000000000000 | London
+  8389200.000000000000 | Moscow
+ 10500000.000000000000 | Mumbai (Bombay)
+  8008278.000000000000 | New York
+  7472000.000000000000 | Peking
+  9968485.000000000000 | Sao Paulo
+  9981619.000000000000 | Seoul
+  9696300.000000000000 | Shanghai
+  7980230.000000000000 | Tokyo
 (14 rows)
 
 --query1 having duplicates without specifying a column list. Should error out. 
@@ -3208,48 +3208,48 @@ where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
 group by region ) OUTERMOST_FOO,bad_headofstates,country 
 where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
 order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40;
-       avg        |          region           |           headofstate            
-------------------+---------------------------+----------------------------------
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Fidel Castro Ruz
- 744388.888888889 | Caribbean                 | George W. Bush
- 744388.888888889 | Caribbean                 | Jacques Chirac
-          7651000 | Central Africa            | Idriss Deby
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Elisabeth II
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |           headofstate            
+-----------------------+---------------------------+----------------------------------
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Fidel Castro Ruz
+   744388.888888888889 | Caribbean                 | George W. Bush
+   744388.888888888889 | Caribbean                 | Jacques Chirac
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Elisabeth II
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (40 rows)
 
 -- query 7 Use CTE in the main query, where clause and having clause
@@ -8540,22 +8540,22 @@ select CITY,POPULATION from
   ) FOO2
 ) FOO1 order by city
 ) FOO0 group by city order by city;
-   avg    |       city       
-----------+------------------
-  8591309 | Ciudad de Mexico
-  7206704 | Delhi
-  8787958 | Istanbul
-  9604900 | Jakarta
-  9269265 | Karachi
-  7285000 | London
-  8389200 | Moscow
- 10500000 | Mumbai (Bombay)
-  8008278 | New York
-  7472000 | Peking
-  9968485 | Sao Paulo
-  9981619 | Seoul
-  9696300 | Shanghai
-  7980230 | Tokyo
+          avg          |       city       
+-----------------------+------------------
+  8591309.000000000000 | Ciudad de Mexico
+  7206704.000000000000 | Delhi
+  8787958.000000000000 | Istanbul
+  9604900.000000000000 | Jakarta
+  9269265.000000000000 | Karachi
+  7285000.000000000000 | London
+  8389200.000000000000 | Moscow
+ 10500000.000000000000 | Mumbai (Bombay)
+  8008278.000000000000 | New York
+  7472000.000000000000 | Peking
+  9968485.000000000000 | Sao Paulo
+  9981619.000000000000 | Seoul
+  9696300.000000000000 | Shanghai
+  7980230.000000000000 | Tokyo
 (14 rows)
 
 --query 2 deeply nested CTEs with shared scans in the plan 
@@ -8609,22 +8609,22 @@ select CITY,POPULATION from
   ) FOO2
 ) FOO1 order by city
 ) FOO0 group by city order by city;
-   avg    |       city       
-----------+------------------
-  8591309 | Ciudad de Mexico
-  7206704 | Delhi
-  8787958 | Istanbul
-  9604900 | Jakarta
-  9269265 | Karachi
-  7285000 | London
-  8389200 | Moscow
- 10500000 | Mumbai (Bombay)
-  8008278 | New York
-  7472000 | Peking
-  9968485 | Sao Paulo
-  9981619 | Seoul
-  9696300 | Shanghai
-  7980230 | Tokyo
+          avg          |       city       
+-----------------------+------------------
+  8591309.000000000000 | Ciudad de Mexico
+  7206704.000000000000 | Delhi
+  8787958.000000000000 | Istanbul
+  9604900.000000000000 | Jakarta
+  9269265.000000000000 | Karachi
+  7285000.000000000000 | London
+  8389200.000000000000 | Moscow
+ 10500000.000000000000 | Mumbai (Bombay)
+  8008278.000000000000 | New York
+  7472000.000000000000 | Peking
+  9968485.000000000000 | Sao Paulo
+  9981619.000000000000 | Seoul
+  9696300.000000000000 | Shanghai
+  7980230.000000000000 | Tokyo
 (14 rows)
 
 -- query 3 deeply nested CTEs using every CTE defined 
@@ -8689,28 +8689,28 @@ select CITY,POPULATION from
 ) FOO1 order by city
 ) FOO0 group by city order by avg_p,city
 LIMIT 20;
- avg_p  |      city      
---------+----------------
- 410000 | Port Harcourt
- 410102 | Alberton
- 410407 | Xiangfan
- 410775 | Pingdingshan
- 411542 | Bhubaneswar
- 411822 | General Santos
- 412639 | Kaunas
- 415346 | San Salvador
- 415466 | Panzhihua
- 416100 | al-Taif
- 416289 | Bikaner
- 416428 | Matamoros
- 416474 | Atlanta
- 416988 | Szczecin
- 417517 | Kisangani
- 417597 | Sialkot
- 417610 | Suez
- 417748 | Rasht
- 417810 | Kolwezi
- 418624 | Kirkuk
+        avg_p        |      city      
+---------------------+----------------
+ 410000.000000000000 | Port Harcourt
+ 410102.000000000000 | Alberton
+ 410407.000000000000 | Xiangfan
+ 410775.000000000000 | Pingdingshan
+ 411542.000000000000 | Bhubaneswar
+ 411822.000000000000 | General Santos
+ 412639.000000000000 | Kaunas
+ 415346.000000000000 | San Salvador
+ 415466.000000000000 | Panzhihua
+ 416100.000000000000 | al-Taif
+ 416289.000000000000 | Bikaner
+ 416428.000000000000 | Matamoros
+ 416474.000000000000 | Atlanta
+ 416988.000000000000 | Szczecin
+ 417517.000000000000 | Kisangani
+ 417597.000000000000 | Sialkot
+ 417610.000000000000 | Suez
+ 417748.000000000000 | Rasht
+ 417810.000000000000 | Kolwezi
+ 418624.000000000000 | Kirkuk
 (20 rows)
 
 -- sanity tests with queries using CTEs in insert,update,delete and create
@@ -8739,48 +8739,48 @@ order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select * from bad_headofstates order by region,headofstate;
-       avg        |          region           |           headofstate            
-------------------+---------------------------+----------------------------------
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Fidel Castro Ruz
- 744388.888888889 | Caribbean                 | George W. Bush
- 744388.888888889 | Caribbean                 | Jacques Chirac
-          7651000 | Central Africa            | Idriss Deby
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Elisabeth II
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |           headofstate            
+-----------------------+---------------------------+----------------------------------
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Fidel Castro Ruz
+   744388.888888888889 | Caribbean                 | George W. Bush
+   744388.888888888889 | Caribbean                 | Jacques Chirac
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Elisabeth II
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (40 rows)
 
 --query 2 insert using CTE
@@ -8807,88 +8807,88 @@ where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.re
 order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
 );
 select * from bad_headofstates order by region,headofstate;
-       avg        |          region           |           headofstate            
-------------------+---------------------------+----------------------------------
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Beatrix
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Elisabeth II
- 744388.888888889 | Caribbean                 | Fidel Castro Ruz
- 744388.888888889 | Caribbean                 | Fidel Castro Ruz
- 744388.888888889 | Caribbean                 | George W. Bush
- 744388.888888889 | Caribbean                 | George W. Bush
- 744388.888888889 | Caribbean                 | Jacques Chirac
- 744388.888888889 | Caribbean                 | Jacques Chirac
-          7651000 | Central Africa            | Idriss Deby
-          7651000 | Central Africa            | Idriss Deby
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Elisabeth II
-          2657500 | Central America           | Elisabeth II
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Jiang Zemin
-         34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |           headofstate            
+-----------------------+---------------------------+----------------------------------
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Beatrix
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Elisabeth II
+   744388.888888888889 | Caribbean                 | Fidel Castro Ruz
+   744388.888888888889 | Caribbean                 | Fidel Castro Ruz
+   744388.888888888889 | Caribbean                 | George W. Bush
+   744388.888888888889 | Caribbean                 | George W. Bush
+   744388.888888888889 | Caribbean                 | Jacques Chirac
+   744388.888888888889 | Caribbean                 | Jacques Chirac
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Elisabeth II
+  2657500.000000000000 | Central America           | Elisabeth II
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (80 rows)
 
 --query3 update using CTE
@@ -8919,88 +8919,88 @@ order by OUTERMOST_FOO.region
 where bad_headofstates.region = 'Caribbean';
  
 select * from bad_headofstates order by avg,region,headofstate;
-       avg        |          region           |           headofstate            
-------------------+---------------------------+----------------------------------
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Beatrix
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Elisabeth II
- 744388.888888889 | Central America           | Fidel Castro Ruz
- 744388.888888889 | Central America           | Fidel Castro Ruz
- 744388.888888889 | Central America           | George W. Bush
- 744388.888888889 | Central America           | George W. Bush
- 744388.888888889 | Central America           | Jacques Chirac
- 744388.888888889 | Central America           | Jacques Chirac
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Arnoldo Aleman Lacayo
-          2657500 | Central America           | Elisabeth II
-          2657500 | Central America           | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
-          7651000 | Central Africa            | Idriss Deby
-          7651000 | Central Africa            | Idriss Deby
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Jiang Zemin
-         34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |           headofstate            
+-----------------------+---------------------------+----------------------------------
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Beatrix
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Elisabeth II
+   744388.888888888889 | Central America           | Fidel Castro Ruz
+   744388.888888888889 | Central America           | Fidel Castro Ruz
+   744388.888888888889 | Central America           | George W. Bush
+   744388.888888888889 | Central America           | George W. Bush
+   744388.888888888889 | Central America           | Jacques Chirac
+   744388.888888888889 | Central America           | Jacques Chirac
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Arnoldo Aleman Lacayo
+  2657500.000000000000 | Central America           | Elisabeth II
+  2657500.000000000000 | Central America           | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  7651000.000000000000 | Central Africa            | Idriss Deby
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (80 rows)
 
 --query4 delete using CTE
@@ -9030,52 +9030,52 @@ order by OUTERMOST_FOO.region
 ) as  cm
 where bad_headofstates.region = cm.region;
 select * from bad_headofstates order by region,headofstate;
-       avg        |          region           |           headofstate            
-------------------+---------------------------+----------------------------------
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          4550620 | Australia and New Zealand | Elisabeth II
-          7651000 | Central Africa            | Idriss Deby
-          7651000 | Central Africa            | Idriss Deby
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | Bakili Muluzi
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | France-Albert Rene
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Jacques Chirac
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Paul Kagame
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Pierre Buyoya
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
- 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Akihito
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Chen Shui-bian
-         34288500 | Eastern Asia              | Jiang Zemin
-         34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |           headofstate            
+-----------------------+---------------------------+----------------------------------
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  7651000.000000000000 | Central Africa            | Idriss Deby
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Abdiqassim Salad Hassan
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | Bakili Muluzi
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | France-Albert Rene
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Ismail Omar Guelleh
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Jacques Chirac
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Paul Kagame
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Pierre Buyoya
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+  5982809.523809523810 | Eastern Africa            | Robert G. Mugabe
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (44 rows)
 
 -- delete using CTE in its subplan
@@ -9103,24 +9103,24 @@ and OUTERMOST_FOO.region = 'Australia and New Zealand' or OUTERMOST_FOO.region =
 order by OUTERMOST_FOO.region
 );
 select * from bad_headofstates order by region,headofstate;
-   avg    |          region           |  headofstate   
-----------+---------------------------+----------------
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
-  4550620 | Australia and New Zealand | Elisabeth II
- 34288500 | Eastern Asia              | Akihito
- 34288500 | Eastern Asia              | Akihito
- 34288500 | Eastern Asia              | Chen Shui-bian
- 34288500 | Eastern Asia              | Chen Shui-bian
- 34288500 | Eastern Asia              | Jiang Zemin
- 34288500 | Eastern Asia              | Jiang Zemin
+          avg          |          region           |  headofstate   
+-----------------------+---------------------------+----------------
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+  4550620.000000000000 | Australia and New Zealand | Elisabeth II
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Akihito
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Chen Shui-bian
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
+ 34288500.000000000000 | Eastern Asia              | Jiang Zemin
 (16 rows)
 
 drop table bad_headofstates;

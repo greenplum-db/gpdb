@@ -31,7 +31,7 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 
-static List *pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum);
+static List *pxf_make_expression_items_list(List *quals, Node *parent);
 static void pxf_free_filter(PxfFilterDesc * filter);
 static char *pxf_serialize_filter_list(List *filters);
 static bool opexpr_to_pxffilter(OpExpr *expr, PxfFilterDesc * filter);
@@ -43,7 +43,7 @@ static bool supported_operator_type_scalar_array_op_expr(Oid type, PxfFilterDesc
 static void scalar_const_to_str(Const *constval, StringInfo buf);
 static void list_const_to_str(Const *constval, StringInfo buf);
 static List *append_attr_from_var(Var *var, List *attrs);
-static void add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum, BoolExpr **extraNodePointer);
+static void add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum);
 static List *get_attrs_from_expr(Expr *expr, bool *expressionIsSupported);
 
 /*
@@ -292,14 +292,15 @@ pxf_free_expression_items_list(List *expressionItems)
  *
  */
 static List *
-pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
+pxf_make_expression_items_list(List *quals, Node *parent)
 {
 	ExpressionItem *expressionItem = NULL;
 	List	   *result = NIL;
 	ListCell   *lc = NULL;
 	ListCell   *ilc = NULL;
 
-	if (list_length(quals) == 0)
+	int quals_size = list_length(quals);
+	if (quals_size == 0)
 		return NIL;
 
 	foreach(lc, quals)
@@ -318,6 +319,7 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 			case T_Var:
 				/* IN(single_value) */
 			case T_OpExpr:
+                /* Comparison operators >,>=,=,etc */
 			case T_ScalarArrayOpExpr:
 			case T_NullTest:
 				{
@@ -325,12 +327,12 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 					break;
 				}
 			case T_BoolExpr:
+                /* Logical operators AND, OR, NOT */
 				{
-					(*logicalOpsNum)++;
 					BoolExpr   *expr = (BoolExpr *) node;
 
 					elog(DEBUG1, "pxf_make_expression_items_list: found T_BoolExpr; make recursive call");
-					List	   *inner_result = pxf_make_expression_items_list(expr->args, node, logicalOpsNum);
+					List	   *inner_result = pxf_make_expression_items_list(expr->args, node);
 
 					elog(DEBUG1, "pxf_make_expression_items_list: recursive call end");
 
@@ -376,6 +378,13 @@ pxf_make_expression_items_list(List *quals, Node *parent, int *logicalOpsNum)
 				elog(DEBUG1, "pxf_make_expression_items_list: unsupported node tag %d", tag);
 				break;
 		}
+	}
+	if ( quals_size > 1 && parent == NULL )
+	{
+        // Planner (but not ORCA) will omit AND operators at the root level, so if we find more than 1 qualifier,
+        // it means we are looking at 2 or more expressions that are implicitly AND-ed by the planner.
+        // Here, to make it explicit, we will need to add additional AND operators to compensate for the missing ones.
+        add_extra_and_expression_items(result, quals_size - 1);
 	}
 
 	return result;
@@ -1277,35 +1286,18 @@ char *
 serializePxfFilterQuals(List *quals)
 {
 	char	   *result = NULL;
-	BoolExpr   *extraBoolExprNodePointer = NULL;
 
 	if (quals == NULL)
 	{
 		return result;
 	}
 
-	int			logicalOpsNum = 0;
-	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL, &logicalOpsNum);
+	// expressionItems will contain all the expressions including comparator and logical operators in postfix order
+	List	   *expressionItems = pxf_make_expression_items_list(quals, NULL);
 
-	/*
-	 * The 'expressionItems' are always explicitly AND'ed. If there are extra
-	 * logical operations present, they are the items in the same list. We
-	 * need to add AND items only for "meaningful" expression items (not
-	 * including these logical operations)
-	 */
-	if (expressionItems)
-	{
-		int			extraAndOperatorsNum = expressionItems->length - 1 - logicalOpsNum;
+	// result will contain seralized version of the above postfix ordered expressions list
+	result  = pxf_serialize_filter_list(expressionItems);
 
-		add_extra_and_expression_items(expressionItems, extraAndOperatorsNum, &extraBoolExprNodePointer);
-	}
-
-	result = pxf_serialize_filter_list(expressionItems);
-
-	if (extraBoolExprNodePointer)
-	{
-		pfree(extraBoolExprNodePointer);
-	}
 	pxf_free_expression_items_list(expressionItems);
 
 	elog(DEBUG1, "serializePxfFilterQuals: resulting filter string is '%s'", (result == NULL) ? "" : result);
@@ -1315,14 +1307,12 @@ serializePxfFilterQuals(List *quals)
 
 /*
  * Adds a given number of AND expression items to an existing list of expression items
- * Note that this will not work if OR operators are introduced
  */
 void
-add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum, BoolExpr **extraNodePointer)
+add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum)
 {
 	if ((!expressionItems) || (extraAndOperatorsNum < 1))
 	{
-		*extraNodePointer = NULL;
 		return;
 	}
 
@@ -1331,8 +1321,6 @@ add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum, 
 	BoolExpr   *andExpr = makeNode(BoolExpr);
 
 	andExpr->boolop = AND_EXPR;
-	*extraNodePointer = andExpr;
-
 	andExpressionItem->node = (Node *) andExpr;
 	andExpressionItem->parent = NULL;
 	andExpressionItem->processed = false;

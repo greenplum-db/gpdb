@@ -335,13 +335,17 @@
         pseudo-types called polymorphic types. Some procedural languages also support polymorphic
         functions using the types <i>anyarray</i>, <i>anyelement</i>, <i>anyenum</i>, and
           <i>anynonarray</i>.</p>
+      <p>The pseudo-type <i>anytable</i> is a Greenplum Database type that specifies a table
+        expression—an expression that computes a table. Greenplum Database allows this type only as
+        an argument to a user-defined function. See <xref href="#topic1/topic22" format="dita"/> for
+        more about the <i>anytable</i> pseudo-type.</p>
       <p>For more information about pseudo-types, see the Postgres documentation about <xref
           href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html" format="html"
           scope="external">Pseudo-Types</xref>.</p>
     </section>
     <section>
       <title>Polymorphic Types</title>
-      <p>Four pseudo-types types of special interest are <i>anyelement</i>, <i>anyarray</i>,
+      <p>Four pseudo-types of special interest are <i>anyelement</i>, <i>anyarray</i>,
           <i>anynonarray</i>, and <i>anyenum</i>, which are collectively called <i>polymorphic</i>
         types. Any function declared using these types is said to be a polymorphic function. A
         polymorphic function can operate on many different data types, with the specific data types
@@ -357,7 +361,7 @@
           <i>anynonarray</i> is treated exactly the same as <i>anyelement</i>, but adds the
         additional constraint that the actual type must not be an array type. <i>anyenum</i> is
         treated exactly the same as <i>anyelement</i>, but adds the additional constraint that the
-        actual type must be an <codeph>enum</codeph> type.</p>
+        actual type must be an <codeph>enum</codeph> type. </p>
       <p>When more than one argument position is declared with a polymorphic type, the net effect is
         that only certain combinations of actual argument types are allowed. For example, a function
         declared as <codeph>equal(<i>anyelement</i>, <i>anyelement</i>)</codeph> takes any two input
@@ -385,5 +389,34 @@
           href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html#AEN41553" format="html"
           scope="external">Polymorphic Arguments and Return Types</xref>.</p>
     </section>
-  </body>
+    <section id="topic22" xml:lang="en">
+      <title>Table Value Expressions</title>
+      <p>The <i>anytable</i> pseudo-type declares a function argument that is a table value
+        expression. The notation for a table value expression is a <codeph>SELECT</codeph> statement
+        enclosed in a <codeph>TABLE()</codeph> function. You can specify a distribution policy for
+        the table by adding <codeph>SCATTER RANDOMLY</codeph>, or a <codeph>SCATTER BY</codeph>
+        clause with a column list to specify the distribution key. </p>
+      <p>The <codeph>SELECT</codeph> statement is executed when the function is called and the
+        result rows are distributed to segments so that each segment executes the function with a
+        subset of the result table.</p>
+      <p>For example, this table expression selects three columns from a table named
+          <codeph>customer</codeph> and sets the distribution key to the first column:</p>
+      <codeblock>TABLE(SELECT cust_key, name, address FROM customer SCATTER BY 1)</codeblock>
+      <p>The <codeph>SELECT</codeph> statement may include joins on multiple base tables,
+          <codeph>WHERE</codeph> clauses, aggregates, and any other valid query syntax.</p>
+      <p>The <i>anytable</i> type is only permitted in functions implemented in the C or C++
+        languages. The body of the function can access the table using the Greenplum Database Server
+        Programming Interface (SPI) or the Greenplum Partner Connector (GPPC) API. </p>
+      <p otherprops="pivotal">The <i>anytable</i> type is used in some user-defined functions in the
+        Pivotal GPText API. The following GPText example uses the <codeph>TABLE</codeph> function
+        with the <codeph>SCATTER BY</codeph> clause in the GPText function
+          <codeph>gptext.index()</codeph> to populate the index
+          <codeph>mydb.mytest.articles</codeph> with data from the messages
+        table:<codeblock>SELECT * FROM gptext.index(TABLE(SELECT * FROM mytest.messages 
+          SCATTER BY distrib_id), 'mydb.mytest.messages');
+        </codeblock></p>
+      <p otherprops="pivotal">For information about the function <codeph>gptext.index()</codeph>,
+        see the Pivotal GPText documentation.</p>
+    </section>
+  </body> 
 </topic>

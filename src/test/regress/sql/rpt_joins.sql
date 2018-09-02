@@ -442,4 +442,12 @@ select * from
       left join zv1 on (f3 = f1)
 where f2 = 53;
 
+--
+-- regression test for nest loop join of rpt and entry
+--
+create temp table t_5628 (c1 int, c2 int) distributed replicated;
+insert into t_5628 values (1,1), (2,2);
+explain (costs off) select max(c1) from pg_class left join t_5628 on true;
+select max(c1) from pg_class left join t_5628 on true;
+
 drop schema rpt_joins cascade;

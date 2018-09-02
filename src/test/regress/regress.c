@@ -554,9 +554,16 @@ ttdummy(PG_FUNCTION_ARGS)
 		if (isnull)
 			elog(ERROR, "ttdummy (%s): %s must be NOT NULL", relname, args[1]);
 
+		/*
+		 * GPDB: elog prints 'filename':'line number', which will make 'triggers'
+		 * test fail if the line number changes. To make the tests stable, use
+		 * ereport with an error code other than ERRCODE_INTERNAL_ERROR.
+		 */
 		if (oldon != newon || oldoff != newoff)
-			elog(ERROR, "ttdummy (%s): you cannot change %s and/or %s columns (use set_ttdummy)",
-				 relname, args[0], args[1]);
+			ereport(ERROR,
+					(errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
+					 errmsg("ttdummy (%s): you cannot change %s and/or %s columns "
+					 	 	"(use set_ttdummy)", relname, args[0], args[1])));
 
 		if (newoff != TTDUMMY_INFINITY)
 		{

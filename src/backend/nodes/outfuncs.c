@@ -3380,6 +3380,8 @@ _outConstraintsSetStmt(StringInfo str, const ConstraintsSetStmt *node)
  *
  * In GPDB, these are also dispatched from QD to QEs, so we need full
  * out/read support.
+ *
+ * If the Nodes Struct changed, we need to maintain these funtions.
  */
 static void
 _outSelectStmt(StringInfo str, const SelectStmt *node)
@@ -3416,6 +3418,7 @@ _outInsertStmt(StringInfo str, const InsertStmt *node)
 	WRITE_NODE_FIELD(cols);
 	WRITE_NODE_FIELD(selectStmt);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void
@@ -3427,6 +3430,7 @@ _outDeleteStmt(StringInfo str, const DeleteStmt *node)
 	WRITE_NODE_FIELD(usingClause);
 	WRITE_NODE_FIELD(whereClause);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void
@@ -3437,7 +3441,9 @@ _outUpdateStmt(StringInfo str, const UpdateStmt *node)
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(targetList);
 	WRITE_NODE_FIELD(whereClause);
+	WRITE_NODE_FIELD(fromClause);
 	WRITE_NODE_FIELD(returningList);
+	WRITE_NODE_FIELD(withClause);
 }
 
 static void
@@ -4314,6 +4320,7 @@ _outCreatePLangStmt(StringInfo str, const CreatePLangStmt *node)
 {
 	WRITE_NODE_TYPE("CREATEPLANGSTMT");
 
+	WRITE_BOOL_FIELD(replace);
 	WRITE_STRING_FIELD(plname);
 	WRITE_NODE_FIELD(plhandler);
 	WRITE_NODE_FIELD(plinline);

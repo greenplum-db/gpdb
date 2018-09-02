@@ -483,7 +483,7 @@ char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
 
-bool		gp_external_enable_filter_pushdown = false;
+bool		gp_external_enable_filter_pushdown = true;
 
 /* Executor */
 bool		gp_enable_mk_sort = true;
@@ -3049,7 +3049,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_GPDB_ADDOPT
 		},
 		&gp_external_enable_filter_pushdown,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{

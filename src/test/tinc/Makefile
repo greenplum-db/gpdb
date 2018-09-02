@@ -62,6 +62,5 @@ gpexpand_2:
 
 # mpp interconnect test
 mpp_interconnect:
-	make -C tincrepo/mpp/gpdb/tests/dispatch/interconnect/ickm all distribute
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
 	-s dispatch/interconnect

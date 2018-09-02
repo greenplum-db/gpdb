@@ -3,15 +3,34 @@
  * nodeAgg.c
  *	  Routines to handle aggregate nodes.
  *
- *	  ExecAgg evaluates each aggregate in the following steps:
+ *	  ExecAgg normally evaluates each aggregate in the following steps:
  *
  *		 transvalue = initcond
  *		 foreach input_tuple do
  *			transvalue = transfunc(transvalue, input_value(s))
  *		 result = finalfunc(transvalue, direct_argument(s))
  *
- *	  If a finalfunc is not supplied then the result is just the ending
- *	  value of transvalue.
+ *	  If a finalfunc is not supplied or finalizeAggs is false, then the result
+ *	  is just the ending value of transvalue.
+ *
+ *	  The transition function might actually be a "combine" function, if this
+ *	  Aggregate node is part of a multi-stage aggregate. Note that although
+ *	  we use the same "combine" functions and catalogs as PostgrSQL 9.4,
+ *	  the implementation in this file is quite different. TODO: refactor
+ *	  this to not be so different.
+ *
+ *	  Combine functions which use pass-by-ref states should be careful to
+ *	  always update the 1st state parameter by adding the 2nd parameter to it,
+ *	  rather than the other way around. If the 1st state is NULL, then it's not
+ *	  sufficient to simply return the 2nd state, as the memory context is
+ *	  incorrect. Instead a new state should be created in the correct aggregate
+ *	  memory context and the 2nd state should be copied over.
+ *
+ *	  The 'serialStates' option can be used to allow multi-stage aggregation
+ *	  for aggregates with an INTERNAL state type. When this mode is disabled
+ *	  only a pointer to the INTERNAL aggregate states are passed around the
+ *	  executor.  When enabled, INTERNAL states are serialized and deserialized
+ *	  as required; this is useful when data must be passed between processes.
  *
  *	  If a normal aggregate call specifies DISTINCT or ORDER BY, we sort the
  *	  input tuples and eliminate duplicates (if required) before performing
@@ -525,6 +544,8 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 			/* DISTINCT and/or ORDER BY case */
 			Assert(slot->PRIVATE_tts_nvalid == peraggstate->numInputs);
 
+			Assert(peraggstate->deserialfn_oid == InvalidOid);
+
 			/*
 			 * If the transfn is strict, we want to check for nullity before
 			 * storing the row in the sorter, to save space if there are a lot
@@ -570,6 +591,54 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 			{
 				fcinfo.arg[i + 1] = slot_getattr(slot, i+1, &isnull);
 				fcinfo.argnull[i + 1] = isnull;
+			}
+
+			/*
+			 * deserialfn_oid will be set if we must deserialize the input state
+			 * before calling the combine function
+			 */
+			if (OidIsValid(peraggstate->deserialfn_oid))
+			{
+				Datum		serialized = fcinfo.arg[1];
+				bool		serializednull = fcinfo.argnull[1];
+
+				Assert(numTransInputs == 1);
+
+				/* Don't call a strict deserialization function with NULL input */
+				if (peraggstate->deserialfn.fn_strict && serializednull)
+				{
+					fcinfo.arg[1] = serialized;
+					fcinfo.argnull[1] = serializednull;
+				}
+				else
+				{
+					FunctionCallInfoData _dsinfo;
+					FunctionCallInfo dsinfo = &_dsinfo;
+					MemoryContext oldContext;
+
+					InitFunctionCallInfoData(_dsinfo,
+											 &peraggstate->deserialfn,
+											 2,
+											 InvalidOid,
+											 (void *) aggstate, NULL);
+
+					dsinfo->arg[0] = serialized;
+					dsinfo->argnull[0] = serializednull;
+					/* Dummy second argument for type-safety reasons */
+					dsinfo->arg[1] = PointerGetDatum(NULL);
+					dsinfo->argnull[1] = false;
+
+					/*
+					 * We run the deserialization functions in per-input-tuple
+					 * memory context.
+					 */
+					oldContext = MemoryContextSwitchTo(aggstate->tmpcontext->ecxt_per_tuple_memory);
+
+					fcinfo.arg[1] = FunctionCallInvoke(dsinfo);
+					fcinfo.argnull[1] = dsinfo->isnull;
+
+					MemoryContextSwitchTo(oldContext);
+				}
 			}
 
 			advance_transition_function(aggstate, peraggstate, pergroupstate,
@@ -805,6 +874,8 @@ finalize_aggregate(AggState *aggstate,
 	{
 		int			numFinalArgs = peraggstate->numFinalArgs;
 
+		Assert(peraggstate->serialfn_oid == InvalidOid);
+
 		/* set up aggstate->curperagg for AggGetAggref() */
 		aggstate->curperagg = peraggstate;
 
@@ -838,6 +909,35 @@ finalize_aggregate(AggState *aggstate,
 			*resultIsNull = fcinfo.isnull;
 		}
 		aggstate->curperagg = NULL;
+	}
+	/*
+	 * serialfn_oid will be set if we must serialize the transvalue before
+	 * returning it
+	 */
+	else if (OidIsValid(peraggstate->serialfn_oid))
+	{
+		/* Don't call a strict serialization function with NULL input. */
+		if (peraggstate->serialfn.fn_strict && pergroupstate->transValueIsNull)
+		{
+			*resultVal = (Datum) 0;
+			*resultIsNull = true;
+		}
+		else
+		{
+			FunctionCallInfoData fcinfo;
+
+			InitFunctionCallInfoData(fcinfo,
+									 &peraggstate->serialfn,
+									 1,
+									 InvalidOid,
+									 (void *) aggstate, NULL);
+
+			fcinfo.arg[0] = pergroupstate->transValue;
+			fcinfo.argnull[0] = pergroupstate->transValueIsNull;
+
+			*resultVal = FunctionCallInvoke(&fcinfo);
+			*resultIsNull = fcinfo.isnull;
+		}
 	}
 	else
 	{
@@ -1914,7 +2014,9 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 					finalfn_oid = InvalidOid;
 		Expr	   *transfnexpr = NULL,
 				   *finalfnexpr = NULL,
-				   *prelimfnexpr = NULL;
+				   *combinefnexpr = NULL;
+		Expr	   *serialfnexpr = NULL,
+				   *deserialfnexpr = NULL;
 		Datum		textInitVal;
 		int			i;
 		ListCell   *lc;
@@ -1977,17 +2079,17 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 				break;
 
 			case AGGSTAGE_INTERMEDIATE:
-				peraggstate->transfn_oid = transfn_oid = aggform->aggprelimfn;
+				peraggstate->transfn_oid = transfn_oid = aggform->aggcombinefn;
 				peraggstate->finalfn_oid = finalfn_oid = InvalidOid;
 				break;
 
 			case AGGSTAGE_FINAL:		/* Two-stage aggregation - final stage */
-				peraggstate->transfn_oid = transfn_oid = aggform->aggprelimfn;
+				peraggstate->transfn_oid = transfn_oid = aggform->aggcombinefn;
 				peraggstate->finalfn_oid = finalfn_oid = aggform->aggfinalfn;
 				break;
 		}
 
-		peraggstate->prelimfn_oid = aggform->aggprelimfn;
+		peraggstate->combinefn_oid = aggform->aggcombinefn;
 
 		/* Check that aggregate owner has permission to call component fns */
 		{
@@ -2015,13 +2117,29 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 					aclcheck_error(aclresult, ACL_KIND_PROC,
 								   get_func_name(finalfn_oid));
 			}
-			if (OidIsValid(peraggstate->prelimfn_oid))
+			if (OidIsValid(peraggstate->combinefn_oid))
 			{
-				aclresult = pg_proc_aclcheck(peraggstate->prelimfn_oid, aggOwner,
+				aclresult = pg_proc_aclcheck(peraggstate->combinefn_oid, aggOwner,
 											 ACL_EXECUTE);
 				if (aclresult != ACLCHECK_OK)
 					aclcheck_error(aclresult, ACL_KIND_PROC,
-								   get_func_name(peraggstate->prelimfn_oid));
+								   get_func_name(peraggstate->combinefn_oid));
+			}
+			if (OidIsValid(aggform->aggserialfn))
+			{
+				aclresult = pg_proc_aclcheck(aggform->aggserialfn, aggOwner,
+											 ACL_EXECUTE);
+				if (aclresult != ACLCHECK_OK)
+					aclcheck_error(aclresult, ACL_KIND_PROC,
+								   get_func_name(aggform->aggserialfn));
+			}
+			if (OidIsValid(aggform->aggdeserialfn))
+			{
+				aclresult = pg_proc_aclcheck(aggform->aggdeserialfn, aggOwner,
+											 ACL_EXECUTE);
+				if (aclresult != ACLCHECK_OK)
+					aclcheck_error(aclresult, ACL_KIND_PROC,
+								   get_func_name(aggform->aggdeserialfn));
 			}
 		}
 
@@ -2068,15 +2186,13 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 								aggref->aggtype,
 								aggref->inputcollid,
 								transfn_oid,
+								InvalidOid,		/* invtrans is not needed here */
 								finalfn_oid,
-								peraggstate->prelimfn_oid /* prelim */ ,
-								InvalidOid /* invtrans */ ,
-								InvalidOid /* invprelim */ ,
+								peraggstate->combinefn_oid,
 								&transfnexpr,
-								&finalfnexpr,
-								&prelimfnexpr,
 								NULL,
-								NULL);
+								&finalfnexpr,
+								&combinefnexpr);
 
 		fmgr_info(transfn_oid, &peraggstate->transfn);
 		fmgr_info_set_expr((Node *) transfnexpr, &peraggstate->transfn);
@@ -2087,10 +2203,55 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			fmgr_info_set_expr((Node *) finalfnexpr, &peraggstate->finalfn);
 		}
 
-		if (OidIsValid(peraggstate->prelimfn_oid))
+		if (OidIsValid(peraggstate->combinefn_oid))
 		{
-			fmgr_info(peraggstate->prelimfn_oid, &peraggstate->prelimfn);
-			peraggstate->prelimfn.fn_expr = (Node *) prelimfnexpr;
+			fmgr_info(peraggstate->combinefn_oid, &peraggstate->combinefn);
+			fmgr_info_set_expr((Node *) combinefnexpr, &peraggstate->combinefn);
+		}
+
+		/*
+		 * Check if serialization/deserialization is required.  We only do it
+		 * for aggregates that have transtype INTERNAL.
+		 */
+		if (aggtranstype == INTERNALOID)
+		{
+			/*
+			 * The planner should only have generated a serialize agg node if
+			 * every aggregate with an INTERNAL state has a serialization
+			 * function.  Verify that.
+			 */
+			if (aggref->aggstage == AGGSTAGE_PARTIAL ||
+				aggref->aggstage == AGGSTAGE_INTERMEDIATE)
+			{
+				if (!OidIsValid(aggform->aggserialfn))
+					elog(ERROR, "serialfunc not provided for serialization aggregation");
+				peraggstate->serialfn_oid = aggform->aggserialfn;
+			}
+
+			/* Likewise for deserialization functions */
+			if (aggref->aggstage == AGGSTAGE_INTERMEDIATE ||
+				aggref->aggstage == AGGSTAGE_FINAL)
+			{
+				if (!OidIsValid(aggform->aggdeserialfn))
+					elog(ERROR, "deserialfunc not provided for deserialization aggregation");
+				peraggstate->deserialfn_oid = aggform->aggdeserialfn;
+			}
+		}
+
+		if (OidIsValid(peraggstate->serialfn_oid))
+		{
+			build_aggregate_serialfn_expr(peraggstate->serialfn_oid,
+										  &serialfnexpr);
+			fmgr_info(peraggstate->serialfn_oid, &peraggstate->serialfn);
+			fmgr_info_set_expr((Node *) serialfnexpr, &peraggstate->serialfn);
+		}
+
+		if (OidIsValid(peraggstate->deserialfn_oid))
+		{
+			build_aggregate_deserialfn_expr(peraggstate->deserialfn_oid,
+											&deserialfnexpr);
+			fmgr_info(peraggstate->deserialfn_oid, &peraggstate->deserialfn);
+			fmgr_info_set_expr((Node *) deserialfnexpr, &peraggstate->deserialfn);
 		}
 
 		peraggstate->aggCollation = aggref->inputcollid;
@@ -2121,7 +2282,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		 * type and transtype are the same (or at least binary-compatible), so
 		 * that it's OK to use the first aggregated input value as the initial
 		 * transValue.	This should have been checked at agg definition time,
-		 * but just in case...
+		 * but we must check again in case the transfn's strictness property
+		 * has been changed.
 		 */
 		if (peraggstate->transfn.fn_strict && peraggstate->initValueIsNull)
 		{
@@ -2389,7 +2551,6 @@ ExecReScanAgg(AggState *node)
 		ExecReScan(node->ss.ps.lefttree);
 }
 
-
 /*
  * ExecAggExplainEnd
  *		Called before ExecutorEnd to finish EXPLAIN ANALYZE reporting.
@@ -2403,6 +2564,11 @@ ExecAggExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 	planstate->instrument->execmemused +=
 		(double) MemoryContextGetPeakSpace(aggstate->aggcontext);
 }	/* ExecAggExplainEnd */
+
+
+/***********************************************************************
+ * API exposed to aggregate functions
+ ***********************************************************************/
 
 /*
  * AggCheckCallContext - test if a SQL function is being called as an aggregate
@@ -2430,7 +2596,7 @@ AggCheckCallContext(FunctionCallInfo fcinfo, MemoryContext *aggcontext)
 	if (fcinfo->context && IsA(fcinfo->context, WindowAggState))
 	{
 		if (aggcontext)
-			*aggcontext = ((WindowAggState *) fcinfo->context)->aggcontext;
+			*aggcontext = ((WindowAggState *) fcinfo->context)->curaggcontext;
 		return AGG_CONTEXT_WINDOW;
 	}
 

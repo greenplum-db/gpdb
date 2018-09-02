@@ -166,7 +166,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarIfStmtToScalar
 
 	CaseExpr *case_expr = MakeNode(CaseExpr);
 	case_expr->casetype = CMDIdGPDB::CastMdid(scalar_if_stmt_dxl->GetResultTypeMdId())->Oid();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	case_expr->casecollid = gpdb::TypeCollation(case_expr->casetype);
 
 	CDXLNode *curr_node = const_cast<CDXLNode*>(scalar_if_stmt_node);
@@ -232,7 +232,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarSwitchToScalar
 
 	CaseExpr *case_expr = MakeNode(CaseExpr);
 	case_expr->casetype = CMDIdGPDB::CastMdid(dxlop->MdidType())->Oid();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	case_expr->casecollid = gpdb::TypeCollation(case_expr->casetype);
 
 	// translate arg child
@@ -283,7 +283,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCaseTestToScalar
 	CaseTestExpr *case_test_expr = MakeNode(CaseTestExpr);
 	case_test_expr->typeId = CMDIdGPDB::CastMdid(dxlop->MdidType())->Oid();
 	case_test_expr->typeMod = -1;
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	case_test_expr->collation = gpdb::TypeCollation(case_test_expr->typeId);
 
 	return (Expr *)case_test_expr;
@@ -330,7 +330,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarOpExprToScalar
 	// translate children
 	op_expr->args = TranslateScalarChildren(op_expr->args, scalar_op_expr_node, colid_var);
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	op_expr->inputcollid = gpdb::ExprCollation((Node *) op_expr->args);
 	op_expr->opcollid = gpdb::TypeCollation(op_expr->opresulttype);
 
@@ -390,7 +390,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCompToScalar
 	Expr *right_expr = TranslateDXLToScalar(right_node, colid_var);
 
 	array_op_expr->args = ListMake2(left_expr, right_expr);
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	array_op_expr->inputcollid = gpdb::ExprCollation((Node *) array_op_expr->args);
 
 	return (Expr *)array_op_expr;
@@ -421,7 +421,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarDistinctToScalar
 
 	dist_expr->opfuncid = CMDIdGPDB::CastMdid(md_scalar_op->FuncMdId())->Oid();
 	dist_expr->opresulttype = GetFunctionReturnTypeOid(md_scalar_op->FuncMdId());
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	dist_expr->opcollid = gpdb::TypeCollation(dist_expr->opresulttype);
 
 	// translate left and right child
@@ -538,7 +538,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar
 		aggref->args = gpdb::LAppend(aggref->args, new_target_entry);
 	}
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	aggref->inputcollid = gpdb::ExprCollation((Node *) exprs);
 	aggref->aggcollid = gpdb::TypeCollation(aggref->aggtype);
 
@@ -596,7 +596,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarWindowRefToScalar
 
 	// translate the arguments of the window function
 	window_func->args = TranslateScalarChildren(window_func->args, scalar_winref_node, colid_var);
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	window_func->wincollid = gpdb::TypeCollation(window_func->wintype);
 	window_func->inputcollid = gpdb::ExprCollation((Node *) window_func->args);
 
@@ -628,7 +628,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarFuncExprToScalar
 	func_expr->funcresulttype = CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
 	func_expr->args = TranslateScalarChildren(func_expr->args, scalar_func_expr_node, colid_var);
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
@@ -920,7 +920,7 @@ CTranslatorDXLToScalar::TranslateSubplanFromChildPlan
 	subplan->plan_name = GetSubplanAlias(subplan->plan_id);
 	subplan->is_initplan = false;
 	subplan->firstColType = gpdb::ExprType( (Node*) ((TargetEntry*) gpdb::ListNth(plan->targetlist, 0))->expr);
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	subplan->firstColCollation = gpdb::TypeCollation(subplan->firstColType);
 	subplan->firstColTypmod = -1;
 	subplan->subLinkType = slink;
@@ -976,7 +976,7 @@ CTranslatorDXLToScalar::TranslateParamFromMapping
 	param->paramkind = PARAM_EXEC;
 	param->paramtype = CMDIdGPDB::CastMdid(colid_to_param_id_map->MdidType())->Oid();
 	param->paramtypmod = colid_to_param_id_map->TypeModifier();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	param->paramcollid = gpdb::TypeCollation(param->paramtype);
 
 	return param;
@@ -1157,7 +1157,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarNullIfToScalar
 	// translate children
 	GPOS_ASSERT(2 == scalar_null_if_node->Arity());
 	scalar_null_if_expr->args = TranslateScalarChildren(scalar_null_if_expr->args, scalar_null_if_node, colid_var);
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	scalar_null_if_expr->opcollid = gpdb::TypeCollation(scalar_null_if_expr->opresulttype);
 	scalar_null_if_expr->inputcollid = gpdb::ExprCollation((Node *) scalar_null_if_expr->args);
 
@@ -1181,7 +1181,7 @@ CTranslatorDXLToScalar::TranslateRelabelTypeOrFuncExprFromDXL(const CDXLScalarCa
 		func_expr->args = NIL;
 		func_expr->args = gpdb::LAppend(func_expr->args, child_expr);
 
-		// GDPB_91_MERGE_FIXME: collation
+		// GPDB_91_MERGE_FIXME: collation
 		func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 		func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
@@ -1195,7 +1195,7 @@ CTranslatorDXLToScalar::TranslateRelabelTypeOrFuncExprFromDXL(const CDXLScalarCa
 	relabel_type->resulttypmod = -1;
 	relabel_type->location = -1;
 	relabel_type->relabelformat = COERCE_DONTCARE;
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	relabel_type->resultcollid = gpdb::TypeCollation(relabel_type->resulttype);
 
 	return (Expr *) relabel_type;
@@ -1250,7 +1250,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCoerceToDomainToScalar
 	coerce->resulttypmod = dxlop->TypeModifier();
 	coerce->location = dxlop->GetLocation();
 	coerce->coercionformat = (CoercionForm)  dxlop->GetDXLCoercionForm();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	coerce->resultcollid = gpdb::TypeCollation(coerce->resulttype);
 
 	return (Expr *) coerce;
@@ -1284,7 +1284,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCoerceViaIOToScalar
 	coerce->arg = child_expr;
 	coerce->location = dxlop->GetLocation();
 	coerce->coerceformat = (CoercionForm)  dxlop->GetDXLCoercionForm();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	coerce->resultcollid = gpdb::TypeCollation(coerce->resulttype);
 
   return (Expr *) coerce;
@@ -1319,7 +1319,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCoerceExprToScalar
 	coerce->elemfuncid = CMDIdGPDB::CastMdid(dxlop->GetCoerceFuncMDid())->Oid();
 	coerce->resulttype = CMDIdGPDB::CastMdid(dxlop->GetResultTypeMdId())->Oid();
 	coerce->resulttypmod = dxlop->TypeModifier();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	coerce->resultcollid = gpdb::TypeCollation(coerce->resulttype);
 	coerce->isExplicit = dxlop->IsExplicit();
 	coerce->coerceformat = (CoercionForm)  dxlop->GetDXLCoercionForm();
@@ -1348,7 +1348,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCoalesceToScalar
 	CoalesceExpr *coalesce = MakeNode(CoalesceExpr);
 
 	coalesce->coalescetype = CMDIdGPDB::CastMdid(dxlop->MdidType())->Oid();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	coalesce->coalescecollid = gpdb::TypeCollation(coalesce->coalescetype);
 	coalesce->args = TranslateScalarChildren(coalesce->args, scalar_coalesce_node, colid_var);
 	coalesce->location = -1;
@@ -1378,7 +1378,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarMinMaxToScalar
 	min_max_expr->minmaxtype = CMDIdGPDB::CastMdid(dxlop->MdidType())->Oid();
 	min_max_expr->minmaxcollid = gpdb::TypeCollation(min_max_expr->minmaxtype);
 	min_max_expr->args = TranslateScalarChildren(min_max_expr->args, scalar_min_max_node, colid_var);
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	min_max_expr->inputcollid = gpdb::ExprCollation((Node *) min_max_expr->args);
 	min_max_expr->location = -1;
 
@@ -1699,7 +1699,7 @@ CTranslatorDXLToScalar::TranslateDXLDatumGenericToScalar
 	Const *constant = MakeNode(Const);
 	constant->consttype = CMDIdGPDB::CastMdid(datum_generic_dxl->MDId())->Oid();
 	constant->consttypmod = datum_generic_dxl->TypeModifier();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	constant->constcollid = gpdb::TypeCollation(constant->consttype);
 	constant->constbyval = datum_generic_dxl->IsPassedByValue();
 	constant->constisnull = datum_generic_dxl->IsNull();
@@ -1951,7 +1951,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCmpToScalar
 
 	op_expr->args = ListMake2(left_expr, right_expr);
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	op_expr->inputcollid = gpdb::ExprCollation((Node *) op_expr->args);
 	op_expr->opcollid = gpdb::TypeCollation(op_expr->opresulttype);;
 
@@ -1979,7 +1979,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayToScalar
 	ArrayExpr *expr = MakeNode(ArrayExpr);
 	expr->element_typeid = CMDIdGPDB::CastMdid(dxlop->ElementTypeMDid())->Oid();
 	expr->array_typeid = CMDIdGPDB::CastMdid(dxlop->ArrayTypeMDid())->Oid();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	expr->array_collid = gpdb::TypeCollation(expr->array_typeid);
 	expr->multidims = dxlop->IsMultiDimensional();
 	expr->elements = TranslateScalarChildren(expr->elements, scalar_array_node, colid_var);
@@ -2016,7 +2016,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayRefToScalar
 	ArrayRef *array_ref = MakeNode(ArrayRef);
 	array_ref->refarraytype = CMDIdGPDB::CastMdid(dxlop->ArrayTypeMDid())->Oid();
 	array_ref->refelemtype = CMDIdGPDB::CastMdid(dxlop->ElementTypeMDid())->Oid();
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	array_ref->refcollid = gpdb::TypeCollation(array_ref->refelemtype);
 	array_ref->reftypmod = dxlop->TypeModifier();
 

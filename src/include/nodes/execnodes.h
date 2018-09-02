@@ -2708,7 +2708,8 @@ typedef struct WindowAggState
 	bool		end_offset_var_free;
 
 	MemoryContext partcontext;	/* context for partition-lifespan data */
-	MemoryContext aggcontext;	/* context for each aggregate data */
+	MemoryContext aggcontext;	/* shared context for aggregate working data */
+	MemoryContext curaggcontext;	/* current aggregate's working data */
 	ExprContext *tmpcontext;	/* short-term evaluation context */
 
 	bool		all_first;		/* true if the scan is starting */

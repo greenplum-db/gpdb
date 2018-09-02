@@ -1818,9 +1818,9 @@ Table(select a,e from t1 t1 where a >
 
 select avg(a) from t1 
 group by (select b from transform(TABLE(select a,e from t1 where a=10 )) );
- avg  
-------
- 50.5
+         avg         
+---------------------
+ 50.5000000000000000
 (1 row)
 
 SELECT min(b) FROM
@@ -3299,9 +3299,9 @@ ERROR:  DESCRIBE is not supported for functions with OUT parameters
 
     -- Avg function
     SELECT avg(id) FROM project( TABLE( SELECT * FROM history ), 1);
-       avg        
-------------------
- 2.33333333333333
+        avg         
+--------------------
+ 2.3333333333333333
 (1 row)
 
     -- extract function, which takes timestamp type as input

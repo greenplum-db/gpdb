@@ -41,6 +41,7 @@
 #error -ffast-math is known to break this code
 #endif
 
+#define SAMESIGN(a,b)	(((a) < 0) == ((b) < 0))
 
 /* Set at postmaster start */
 TimestampTz PgStartTime;
@@ -71,9 +72,6 @@ static Timestamp dt2local(Timestamp dt, int timezone);
 static void AdjustTimestampForTypmod(Timestamp *time, int32 typmod);
 static void AdjustIntervalForTypmod(Interval *interval, int32 typmod);
 static TimestampTz timestamp2timestamptz(Timestamp timestamp);
-static ArrayType *interval_amalg_demalg(ArrayType  *aTransArray,
-					ArrayType  *bTransArray,
-					bool is_amalg);
 static inline Timestamp timestamp_offset_internal(Timestamp timestamp,
 						Interval *span);
 static inline Timestamp timestamp_offset_multiple(Timestamp base, Interval *unit,
@@ -3323,8 +3321,26 @@ interval_mi(PG_FUNCTION_ARGS)
 	result = (Interval *) palloc(sizeof(Interval));
 
 	result->month = span1->month - span2->month;
+	/* overflow check copied from int4mi */
+	if (!SAMESIGN(span1->month, span2->month) &&
+		!SAMESIGN(result->month, span1->month))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+
 	result->day = span1->day - span2->day;
+	if (!SAMESIGN(span1->day, span2->day) &&
+		!SAMESIGN(result->day, span1->day))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+
 	result->time = span1->time - span2->time;
+	if (!SAMESIGN(span1->time, span2->time) &&
+		!SAMESIGN(result->time, span1->time))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 
 	PG_RETURN_INTERVAL_P(result);
 }
@@ -3562,12 +3578,18 @@ interval_interval_mod(PG_FUNCTION_ARGS)
 }
 
 /*
- * interval_accum and interval_avg implement the AVG(interval) aggregate.
+ * interval_accum, interval_accum_inv, and interval_avg implement the
+ * AVG(interval) aggregate.
  *
  * The transition datatype for this aggregate is a 2-element array of
  * intervals, where the first is the running sum and the second contains
  * the number of values so far in its 'time' field.  This is a bit ugly
  * but it beats inventing a specialized datatype for the purpose.
+ *
+ * NOTE: The inverse transition function cannot guarantee exact results
+ * when using float8 timestamps.  However, int8 timestamps are now the
+ * norm, and the probable range of values is not so wide that disastrous
+ * cancellation is likely even with float8, so we'll ignore the risk.
  */
 
 Datum
@@ -3588,22 +3610,97 @@ interval_accum(PG_FUNCTION_ARGS)
 	if (ndatums != 2)
 		elog(ERROR, "expected 2-element interval array");
 
-	/*
-	 * XXX memcpy, instead of just extracting a pointer, to work around buggy
-	 * array code: it won't ensure proper alignment of Interval objects on
-	 * machines where double requires 8-byte alignment. That should be fixed,
-	 * but in the meantime...
-	 *
-	 * Note: must use DatumGetPointer here, not DatumGetIntervalP, else some
-	 * compilers optimize into double-aligned load/store anyway.
-	 */
-	memcpy((void *) &sumX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &N, DatumGetPointer(transdatums[1]), sizeof(Interval));
+	sumX = *(DatumGetIntervalP(transdatums[0]));
+	N = *(DatumGetIntervalP(transdatums[1]));
 
 	newsum = DatumGetIntervalP(DirectFunctionCall2(interval_pl,
 												   IntervalPGetDatum(&sumX),
 												 IntervalPGetDatum(newval)));
 	N.time += 1;
+
+	transdatums[0] = IntervalPGetDatum(newsum);
+	transdatums[1] = IntervalPGetDatum(&N);
+
+	result = construct_array(transdatums, 2,
+							 INTERVALOID, sizeof(Interval), false, 'd');
+
+	PG_RETURN_ARRAYTYPE_P(result);
+}
+
+Datum
+interval_combine(PG_FUNCTION_ARGS)
+{
+	ArrayType  *transarray1 = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *transarray2 = PG_GETARG_ARRAYTYPE_P(1);
+	Datum	   *transdatums1;
+	Datum	   *transdatums2;
+	int			ndatums1;
+	int			ndatums2;
+	Interval	sum1,
+				N1;
+	Interval	sum2,
+				N2;
+
+	Interval   *newsum;
+	ArrayType  *result;
+
+	deconstruct_array(transarray1,
+					  INTERVALOID, sizeof(Interval), false, 'd',
+					  &transdatums1, NULL, &ndatums1);
+	if (ndatums1 != 2)
+		elog(ERROR, "expected 2-element interval array");
+
+	sum1 = *(DatumGetIntervalP(transdatums1[0]));
+	N1 = *(DatumGetIntervalP(transdatums1[1]));
+
+	deconstruct_array(transarray2,
+					  INTERVALOID, sizeof(Interval), false, 'd',
+					  &transdatums2, NULL, &ndatums2);
+	if (ndatums2 != 2)
+		elog(ERROR, "expected 2-element interval array");
+
+	sum2 = *(DatumGetIntervalP(transdatums2[0]));
+	N2 = *(DatumGetIntervalP(transdatums2[1]));
+
+	newsum = DatumGetIntervalP(DirectFunctionCall2(interval_pl,
+												   IntervalPGetDatum(&sum1),
+												   IntervalPGetDatum(&sum2)));
+	N1.time += N2.time;
+
+	transdatums1[0] = IntervalPGetDatum(newsum);
+	transdatums1[1] = IntervalPGetDatum(&N1);
+
+	result = construct_array(transdatums1, 2,
+							 INTERVALOID, sizeof(Interval), false, 'd');
+
+	PG_RETURN_ARRAYTYPE_P(result);
+}
+
+Datum
+interval_accum_inv(PG_FUNCTION_ARGS)
+{
+	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
+	Interval   *newval = PG_GETARG_INTERVAL_P(1);
+	Datum	   *transdatums;
+	int			ndatums;
+	Interval	sumX,
+				N;
+	Interval   *newsum;
+	ArrayType  *result;
+
+	deconstruct_array(transarray,
+					  INTERVALOID, sizeof(Interval), false, 'd',
+					  &transdatums, NULL, &ndatums);
+	if (ndatums != 2)
+		elog(ERROR, "expected 2-element interval array");
+
+	sumX = *(DatumGetIntervalP(transdatums[0]));
+	N = *(DatumGetIntervalP(transdatums[1]));
+
+	newsum = DatumGetIntervalP(DirectFunctionCall2(interval_mi,
+												   IntervalPGetDatum(&sumX),
+												 IntervalPGetDatum(newval)));
+	N.time -= 1;
 
 	transdatums[0] = IntervalPGetDatum(newsum);
 	transdatums[1] = IntervalPGetDatum(&N);
@@ -3629,17 +3726,8 @@ interval_avg(PG_FUNCTION_ARGS)
 	if (ndatums != 2)
 		elog(ERROR, "expected 2-element interval array");
 
-	/*
-	 * XXX memcpy, instead of just extracting a pointer, to work around buggy
-	 * array code: it won't ensure proper alignment of Interval objects on
-	 * machines where double requires 8-byte alignment. That should be fixed,
-	 * but in the meantime...
-	 *
-	 * Note: must use DatumGetPointer here, not DatumGetIntervalP, else some
-	 * compilers optimize into double-aligned load/store anyway.
-	 */
-	memcpy((void *) &sumX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &N, DatumGetPointer(transdatums[1]), sizeof(Interval));
+	sumX = *(DatumGetIntervalP(transdatums[0]));
+	N = *(DatumGetIntervalP(transdatums[1]));
 
 	/* SQL92 defines AVG of no values to be NULL */
 	if (N.time == 0)
@@ -3647,54 +3735,8 @@ interval_avg(PG_FUNCTION_ARGS)
 
 	return DirectFunctionCall2(interval_div,
 							   IntervalPGetDatum(&sumX),
-							   Float8GetDatum(N.time));
+							   Float8GetDatum((double) N.time));
 }
-
-Datum
-interval_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	Interval   *newval = PG_GETARG_INTERVAL_P(1);
-	Datum	   *transdatums;
-	int			ndatums;
-	Interval	miX,
-				N;
-	Interval   *newmi;
-	ArrayType  *result;
-
-	deconstruct_array(transarray,
-					  INTERVALOID, sizeof(Interval), false, 'd',
-					  &transdatums, NULL, &ndatums);
-	if (ndatums != 2)
-		elog(ERROR, "expected 2-element interval array");
-
-	/*
-	 * XXX memcpy, instead of just extracting a pointer, to work around buggy
-	 * array code: it won't ensure proper alignment of Interval objects on
-	 * machines where double requires 8-byte alignment. That should be fixed,
-	 * but in the meantime...
-	 *
-	 * Note: must use DatumGetPointer here, not DatumGetIntervalP, else some
-	 * compilers optimize into double-aligned load/store anyway.
-	 */
-	memcpy((void *) &miX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &N, DatumGetPointer(transdatums[1]), sizeof(Interval));
-
-	newmi = DatumGetIntervalP(DirectFunctionCall2(interval_mi,
-												   IntervalPGetDatum(&miX),
-												 IntervalPGetDatum(newval)));
-	N.time -= 1;
-
-	transdatums[0] = IntervalPGetDatum(newmi);
-	transdatums[1] = IntervalPGetDatum(&N);
-
-	result = construct_array(transdatums, 2,
-							 INTERVALOID, sizeof(Interval), false, 'd');
-
-	PG_RETURN_ARRAYTYPE_P(result);
-}
-
-
 
 /* timestamp_age()
  * Calculate time difference while retaining year/month fields.
@@ -5605,99 +5647,3 @@ generate_series_timestamptz(PG_FUNCTION_ARGS)
 		SRF_RETURN_DONE(funcctx);
 	}
 }
-
-/* ----------------------------------------------------------------------
- *
- * Aggregate functions -- Greenplum Database Extensions
- *
- * Greenplum Database adds some builtin functions to amalgamate transition type
- * instances for two-stage aggregation.
- *
- * ----------------------------------------------------------------------
- */
-
-Datum
-interval_amalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-	
-	PG_RETURN_ARRAYTYPE_P(interval_amalg_demalg(aTransArray, bTransArray,
-												true));
-}
-
-Datum
-interval_demalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-	
-	PG_RETURN_ARRAYTYPE_P(interval_amalg_demalg(aTransArray, bTransArray,
-												false));
-}
-
-static ArrayType *
-interval_amalg_demalg(ArrayType  *aTransArray,
-					  ArrayType  *bTransArray,
-					  bool is_amalg)
-{
-	Datum	   *transdatums;
-	int			ndatums;
-	Interval	aSumMiX, bSumMiX,
-				aN, bN;
-	Interval   *newsummi;
-	ArrayType  *result;
-
-	deconstruct_array(aTransArray,
-					  INTERVALOID, sizeof(Interval), false, 'd',
-					  &transdatums, NULL, &ndatums);
-	if (ndatums != 2)
-		elog(ERROR, "expected 2-element interval array");
-
-	/*
-	 * XXX memcpy, instead of just extracting a pointer, to work around buggy
-	 * array code: it won't ensure proper alignment of Interval objects on
-	 * machines where double requires 8-byte alignment. That should be fixed,
-	 * but in the meantime...
-	 *
-	 * Note: must use DatumGetPointer here, not DatumGetIntervalP, else some
-	 * compilers optimize into double-aligned load/store anyway.
-	 */
-	memcpy((void *) &aSumMiX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &aN, DatumGetPointer(transdatums[1]), sizeof(Interval));
-
-	deconstruct_array(bTransArray,
-					  INTERVALOID, sizeof(Interval), false, 'd',
-					  &transdatums, NULL, &ndatums);
-	if (ndatums != 2)
-		elog(ERROR, "expected 2-element interval array");
-
-	memcpy((void *) &bSumMiX, DatumGetPointer(transdatums[0]), sizeof(Interval));
-	memcpy((void *) &bN, DatumGetPointer(transdatums[1]), sizeof(Interval));
-
-
-	if (is_amalg)
-	{
-		newsummi = DatumGetIntervalP(DirectFunctionCall2(interval_pl,
-														 IntervalPGetDatum(&aSumMiX),
-														 IntervalPGetDatum(&bSumMiX)));
-		aN.time += bN.time;
-	}
-	
-	else
-	{
-		newsummi = DatumGetIntervalP(DirectFunctionCall2(interval_mi,
-														 IntervalPGetDatum(&aSumMiX),
-														 IntervalPGetDatum(&bSumMiX)));
-		aN.time -= bN.time;
-	}
-
-	transdatums[0] = IntervalPGetDatum(newsummi);
-	transdatums[1] = IntervalPGetDatum(&aN);
-
-	result = construct_array(transdatums, 2,
-							 INTERVALOID, sizeof(Interval), false, 'd');
-
-    return result;
-}
-

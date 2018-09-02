@@ -67,7 +67,8 @@ insert into sale values
 
 
 --
--- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
+-- Test case errors out when we define aggregates without combine functions
+-- and use it as an aggregate derived window function.
 --
 
 -- SETUP
@@ -77,7 +78,7 @@ drop aggregate if exists mysum1(int4);
 drop aggregate if exists mysum2(int4);
 -- end_ignore
 create table toy(id,val) as select i,i from generate_series(1,5) i;
-create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
+create aggregate mysum1(int4) (sfunc = int4_sum, combinefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
 
 -- TEST

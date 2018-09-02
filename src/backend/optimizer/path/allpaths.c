@@ -415,8 +415,8 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			 * select it (only external path is considered for an external
 			 * base rel).
 			 */
-			add_path(root, rel, (Path *) create_external_path(root, rel, NULL));
-			set_cheapest(root, rel);
+			add_path(rel, (Path *) create_external_path(root, rel, NULL));
+			set_cheapest(rel);
 			return;
 
 		case RELSTORAGE_AOROWS:
@@ -446,7 +446,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	create_index_paths(root, rel);
 
 	/* we can add the seqscan path now */
-	add_path(root, rel, seqpath);
+	add_path(rel, seqpath);
 
 	/*
 	 * Consider TID scans
@@ -457,7 +457,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		create_tidscan_paths(root, rel);
 
 	/* Now find the cheapest of the paths for this rel */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -488,7 +488,7 @@ set_foreign_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	rel->fdwroutine->GetForeignPaths(root, rel, rte->relid);
 
 	/* Select cheapest path */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -885,7 +885,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	 * (Note: this is correct even if we have zero or one live subpath due to
 	 * constraint exclusion.)
 	 */
-	add_path(root, rel, (Path *) create_append_path(root, rel, subpaths, NULL));
+	add_path(rel, (Path *) create_append_path(root, rel, subpaths, NULL));
 
 	/*
 	 * Build unparameterized MergeAppend paths based on the collected list of
@@ -942,12 +942,12 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		}
 
 		if (ok)
-			add_path(root, rel, (Path *)
+			add_path(rel, (Path *)
 					 create_append_path(root, rel, subpaths, required_outer));
 	}
 
 	/* Select cheapest paths */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1033,13 +1033,13 @@ generate_mergeappend_paths(PlannerInfo *root, RelOptInfo *rel,
 		}
 
 		/* ... and build the MergeAppend paths */
-		add_path(root, rel, (Path *) create_merge_append_path(root,
+		add_path(rel, (Path *) create_merge_append_path(root,
 														rel,
 														startup_subpaths,
 														pathkeys,
 														NULL));
 		if (startup_neq_total)
-			add_path(root, rel, (Path *) create_merge_append_path(root,
+			add_path(rel, (Path *) create_merge_append_path(root,
 															rel,
 															total_subpaths,
 															pathkeys,
@@ -1087,10 +1087,10 @@ set_dummy_rel_pathlist(PlannerInfo *root, RelOptInfo *rel)
 	/* Discard any pre-existing paths; no further need for them */
 	rel->pathlist = NIL;
 
-	add_path(root, rel, (Path *) create_append_path(root, rel, NIL, NULL));
+	add_path(rel, (Path *) create_append_path(root, rel, NIL, NULL));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /* quick-and-dirty test to see if any joining is needed */
@@ -1237,10 +1237,10 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	if (forceDistRand)
 		CdbPathLocus_MakeStrewn(&subquery_path->locus);
 
-	add_path(root, rel, subquery_path);
+	add_path(rel, subquery_path);
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1251,10 +1251,10 @@ static void
 set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
 	/* Generate appropriate path */
-	add_path(root, rel, create_functionscan_path(root, rel, rte));
+	add_path(rel, create_functionscan_path(root, rel, rte));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1306,10 +1306,10 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	set_table_function_size_estimates(root, rel);
 
 	/* Generate appropriate path */
-	add_path(root, rel, create_tablefunction_path(root, rel, rte));
+	add_path(rel, create_tablefunction_path(root, rel, rte));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1324,10 +1324,10 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 				   !expression_returns_set((Node *) rte->values_lists));
 
 	/* Generate appropriate path */
-	add_path(root, rel, create_valuesscan_path(root, rel, rte));
+	add_path(rel, create_valuesscan_path(root, rel, rte));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1522,10 +1522,10 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	pathkeys = convert_subquery_pathkeys(root, rel, pathkeys);
 
 	/* Generate appropriate path */
-	add_path(root, rel, create_ctescan_path(root, rel, pathkeys));
+	add_path(rel, create_ctescan_path(root, rel, pathkeys));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1568,10 +1568,10 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 	ctelocus = cteplan->flow->locustype;
 	/* Generate appropriate path */
-	add_path(root, rel, create_worktablescan_path(root, rel, ctelocus));
+	add_path(rel, create_worktablescan_path(root, rel, ctelocus));
 
 	/* Select cheapest path (pretty easy in this case...) */
-	set_cheapest(root, rel);
+	set_cheapest(rel);
 }
 
 /*
@@ -1730,7 +1730,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
 			rel = (RelOptInfo *) lfirst(lc);
 
 			/* Find and save the cheapest paths for this rel */
-			set_cheapest(root, rel);
+			set_cheapest(rel);
 
 #ifdef OPTIMIZER_DEBUG
 			debug_print_rel(root, rel);

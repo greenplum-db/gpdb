@@ -44,9 +44,9 @@ select avg(i3) from (
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2
 ) foo;
- avg 
------
- 500
+         avg          
+----------------------
+ 500.0000000000000000
 (1 row)
 
 select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
@@ -80,9 +80,9 @@ select avg(i3) from (
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2
 ) foo;
- avg 
------
- 500
+         avg          
+----------------------
+ 500.0000000000000000
 (1 row)
 
 select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)

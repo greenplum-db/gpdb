@@ -320,7 +320,7 @@ CTranslatorQueryToDXL::CheckUnsupportedNodeTypes
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, unsupported_features[unsupported_node].m_feature_name);
 	}
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	INT non_default_collation = gpdb::CheckCollation((Node *) query);
 
 	if (0 < non_default_collation)

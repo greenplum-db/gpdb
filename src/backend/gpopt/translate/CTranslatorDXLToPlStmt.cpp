@@ -1268,7 +1268,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 
 		func_scan->funccoltypes = gpdb::LAppendOid(func_scan->funccoltypes, oid_type);
 		func_scan->funccoltypmods = gpdb::LAppendInt(func_scan->funccoltypmods, typ_mod);
-		// GDPB_91_MERGE_FIXME: collation
+		// GPDB_91_MERGE_FIXME: collation
 		func_scan->funccolcollations = gpdb::LAppendOid(func_scan->funccolcollations, collation_type_oid);
 	}
 
@@ -1350,14 +1350,14 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry
 		func_expr->args = gpdb::LAppend(func_expr->args, pexprFuncArg);
 	}
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
 	rte->funcexpr = (Node *)func_expr;
 	rte->inFromCl = true;
 	rte->eref = alias;
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	// set rte->funccoltypemods & rte->funccolcollations?
 
 	return rte;
@@ -1705,7 +1705,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 	plan->nMotionNodes = left_plan->nMotionNodes + right_plan->nMotionNodes;
 	SetParamIds(plan);
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	// Need to set merge_join->mergeCollations, but ORCA does not produce plans with
 	// Merge Joins.
 
@@ -5126,7 +5126,7 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToIntoClause
 		col_def->colname = col_name_char_array;
 		col_def->is_local = true;
 
-		// GDPB_91_MERGE_FIXME: collation
+		// GPDB_91_MERGE_FIXME: collation
 		col_def->collClause = NULL;
 		col_def->collOid = gpdb::TypeCollation(CMDIdGPDB::CastMdid(dxl_col_descr->MdidType())->Oid());
 		into_clause->colNames = gpdb::LAppend(into_clause->colNames, col_def);

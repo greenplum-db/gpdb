@@ -258,5 +258,5 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 	tidquals = TidQualFromRestrictinfo(rel->baserestrictinfo, rel->relid);
 
 	if (tidquals)
-		add_path(root, rel, (Path *) create_tidscan_path(root, rel, tidquals));
+		add_path(rel, (Path *) create_tidscan_path(root, rel, tidquals));
 }

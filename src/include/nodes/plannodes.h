@@ -1048,6 +1048,8 @@ typedef struct Agg
 	AggStrategy aggstrategy;
 	int			numCols;		/* number of grouping columns */
 	AttrNumber *grpColIdx;		/* their indexes in the target list */
+	bool		combineStates;	/* input tuples contain transition states */
+	bool		finalizeAggs;	/* should we call the finalfn on agg states? */
 	Oid		   *grpOperators;	/* equality operators to compare with */
 	long		numGroups;		/* estimated number of groups in input */
 	int			transSpace;		/* est storage per group for byRef transition values */

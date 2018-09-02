@@ -715,7 +715,7 @@ do_compile(FunctionCallInfo fcinfo,
 	 * Now parse the function's text
 	 */
 	/*
-	 * In GDPB, temporarily disable escape_string_warning, if we're in a QE
+	 * In GPDB, temporarily disable escape_string_warning, if we're in a QE
 	 * node. When we're parsing a PL/pgSQL function, e.g. in a CREATE FUNCTION
 	 * command, you should've gotten the same warning from the QD node already.
 	 * We could probably disable the warning in QE nodes altogether, not just

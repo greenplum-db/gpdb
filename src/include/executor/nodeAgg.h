@@ -75,7 +75,9 @@ typedef struct AggStatePerAggData
 
 	/* Oids of transfer functions */
 	Oid			transfn_oid;
-	Oid         prelimfn_oid;
+	Oid			serialfn_oid;
+	Oid			deserialfn_oid;
+	Oid         combinefn_oid;
 	Oid			finalfn_oid;	/* may be InvalidOid */
 
 	/*
@@ -84,7 +86,9 @@ typedef struct AggStatePerAggData
 	 * flags are kept here.
 	 */
 	FmgrInfo	transfn;
-	FmgrInfo    prelimfn;
+	FmgrInfo	serialfn;
+	FmgrInfo	deserialfn;
+	FmgrInfo    combinefn;
 	FmgrInfo	finalfn;
 
 	/* Input collation derived for aggregate */

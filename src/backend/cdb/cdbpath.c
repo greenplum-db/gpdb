@@ -140,7 +140,9 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.total_cost = subpath->total_cost;
 			pathnode->path.memory = subpath->memory;
 			pathnode->path.motionHazard = subpath->motionHazard;
-			pathnode->path.rescannable = subpath->rescannable;
+
+			/* Motion nodes are never rescannable. */
+			pathnode->path.rescannable = false;
 			return (Path *) pathnode;
 		}
 
@@ -168,7 +170,9 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.total_cost = subpath->total_cost;
 			pathnode->path.memory = subpath->memory;
 			pathnode->path.motionHazard = subpath->motionHazard;
-			pathnode->path.rescannable = subpath->rescannable;
+
+			/* Motion nodes are never rescannable. */
+			pathnode->path.rescannable = false;
 			return (Path *) pathnode;
 		}
 
@@ -1110,16 +1114,6 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	else if (cdbpath_match_preds_to_both_partkeys(root, redistribution_clauses,
 												  outer.locus, inner.locus))
 		return cdbpathlocus_join(outer.locus, inner.locus);
-
-	/*
-	 * Kludge used internally for querying catalogs on segment dbs. Each QE
-	 * will join the catalogs that are local to its own segment. The catalogs
-	 * don't have partitioning keys.  No motion needed.
-	 */
-	else if (CdbPathLocus_IsStrewn(outer.locus) &&
-			 CdbPathLocus_IsStrewn(inner.locus) &&
-			 cdbpathlocus_querysegmentcatalogs)
-		return outer.locus;
 
 	/*
 	 * Both sources are partitioned.  Redistribute or replicate one or both.

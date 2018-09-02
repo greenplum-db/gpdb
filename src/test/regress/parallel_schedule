@@ -58,11 +58,7 @@ test: create_index create_view
 
 test: inherit
 
-# 'triggers' test is disabled in GPDB, because it contains a trigger function
-# that would need to access rows on other segments, which doens't work. You
-# get errors like:
-# ERROR: function cannot execute on a QE slice because it accesses relation "public.pkeys"
-#test: triggers
+test: triggers
 
 # ----------
 # Another group of parallel tests

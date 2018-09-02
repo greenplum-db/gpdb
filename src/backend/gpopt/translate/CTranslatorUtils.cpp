@@ -2413,8 +2413,8 @@ CTranslatorUtils::CheckRTEPermissions
 //		CTranslatorUtils::CheckAggregateWindowFn
 //
 //	@doc:
-//		Check if the window function is an aggregate and has either
-//      prelim or inverse prelim function
+//		Check if the window function is an aggregate and has 
+//      a combine function
 //
 //---------------------------------------------------------------------------
 void
@@ -2428,10 +2428,10 @@ CTranslatorUtils::CheckAggregateWindowFn
 
 	WindowFunc *winfunc = (WindowFunc *) node;
 
-	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasPrelimOrInvPrelimFunc(winfunc->winfnoid))
+	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasCombineFunc(winfunc->winfnoid))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT("Aggregate window function without prelim or inverse prelim function"));
+				GPOS_WSZ_LIT("Aggregate window function without combine function"));
 	}
 }
 

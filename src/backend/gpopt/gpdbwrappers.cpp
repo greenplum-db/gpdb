@@ -553,7 +553,7 @@ gpdb::ExprCollation
 	{
 		if (expr && IsA(expr, List))
 		{
-			// GDPB_91_MERGE_FIXME: collation
+			// GPDB_91_MERGE_FIXME: collation
 			List *exprlist = (List *) expr;
 			ListCell   *lc;
 
@@ -777,7 +777,7 @@ gpdb::IsOrderedAgg
 }
 
 bool
-gpdb::AggHasPrelimFunc
+gpdb::AggHasCombineFunc
 	(
 	Oid aggid
 	)
@@ -785,22 +785,7 @@ gpdb::AggHasPrelimFunc
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_aggregate */
-		return has_agg_prelimfunc(aggid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
-gpdb::AggHasPrelimOrInvPrelimFunc
-	(
-	Oid aggid
-	)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_aggregate */
-		return agg_has_prelim_or_invprelim_func(aggid);
+		return has_agg_combinefunc(aggid);
 	}
 	GP_WRAP_END;
 	return false;

@@ -675,11 +675,11 @@ cdb_grouping_planner(PlannerInfo *root,
 			allowed_agg &= AGG_SINGLEPHASE;
 
 		/*
-		 * This prohibition could be relaxed if we tracked missing preliminary
+		 * This prohibition could be relaxed if we tracked missing combine
 		 * functions per DQA and were willing to plan some DQAs as single and
 		 * some as multiple phases.  Not currently, however.
 		 */
-		if (agg_costs->missing_prelimfunc)
+		if (agg_costs->missing_combinefunc)
 			allowed_agg &= ~AGG_MULTIPHASE;
 
 		/*
@@ -3142,7 +3142,10 @@ generate_three_tlists(List *tlist,
 							 0);
 
 			new_aggref->aggfnoid = aggref->aggfnoid;
-			new_aggref->aggtype = aggref->aggtype;
+			if (aggref->aggtype == INTERNALOID)
+				new_aggref->aggtype = BYTEAOID;
+			else
+				new_aggref->aggtype = aggref->aggtype;
 			new_aggref->aggcollid = aggref->aggcollid;
 			new_aggref->inputcollid = aggref->inputcollid;
 			new_aggref->args =
@@ -3203,6 +3206,8 @@ generate_three_tlists(List *tlist,
 			Aggref	   *aggref = (Aggref *) tle->expr;
 
 			aggref->aggstage = AGGSTAGE_INTERMEDIATE;
+			if (aggref->aggtype == INTERNALOID)
+				aggref->aggtype = BYTEAOID;
 		}
 	}
 }
@@ -4118,6 +4123,8 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			pref = (Aggref *) copyObject(aggref);
 			pref->aggtype = transtype;
 			pref->aggstage = AGGSTAGE_PARTIAL;
+			if (pref->aggtype == INTERNALOID)
+				pref->aggtype = BYTEAOID;
 
 			attrno = 1 + list_length(ctx->prefs_tlist);
 			prelim_tle = makeTargetEntry((Expr *) pref, attrno, NULL, false);
@@ -4139,7 +4146,10 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 
 				iref = makeNode(Aggref);
 				iref->aggfnoid = pref->aggfnoid;
-				iref->aggtype = transtype;
+				if (transtype == INTERNALOID)
+					iref->aggtype = BYTEAOID;
+				else
+					iref->aggtype = transtype;
 				iref->aggcollid = aggref->aggcollid;
 				iref->inputcollid = aggref->inputcollid;
 				iref->args = list_make1((Expr *) makeTargetEntry(copyObject(args), 1, NULL, false));
@@ -4731,13 +4741,17 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 				if (!new_tle)
 					elog(ERROR, "could not find path key expression in constructed subquery's target list");
 
+				/*
+				 * The param 'rel' is only used on making and findding EC in childredrels.
+				 * But I think the situation does not happen in adding cdb path, So Null is
+				 * ok.
+				 */
 				new_eclass = get_eclass_for_sort_expr(root,
 													  new_tle->expr,
 													  pathkey->pk_eclass->ec_opfamilies,
 													  em->em_datatype,
 													  exprCollation((Node *) tle->expr),
 													  0,
- 				/* GPDB_92_MERGE_FIXME_AFTER_GPDB_RUNS: NULL does not look like a correct parameter. */
 													  NULL,
 													  true);
 				new_pathkey = makePathKey(new_eclass, pathkey->pk_opfamily, pathkey->pk_strategy,

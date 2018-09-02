@@ -94,7 +94,7 @@ extern void cost_index(IndexPath *path, PlannerInfo *root,
 extern void cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel,
 					  ParamPathInfo *param_info,
 					  Path *bitmapqual, double loop_count);
-/* GDPB_92_MERGE_FIXME: Suspect we need to add ParamPathInfo for some scans below. */
+/* GPDB_92_MERGE_FIXME: Suspect we need to add ParamPathInfo for some scans below. */
 extern void cost_externalscan(ExternalPath *path, PlannerInfo *root, RelOptInfo *baserel,
 					  ParamPathInfo *param_info);
 extern void cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root, RelOptInfo *baserel,
@@ -147,7 +147,7 @@ extern void cost_group(Path *path, PlannerInfo *root,
 		   int numGroupCols, double numGroups,
 		   Cost input_startup_cost, Cost input_total_cost,
 		   double input_tuples);
-/* GDPB_92_MERGE_FIXME: parameterized path for shared input scan? */
+/* GPDB_92_MERGE_FIXME: parameterized path for shared input scan? */
 extern void cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost, double ntuples, int width);
 extern void initial_cost_nestloop(PlannerInfo *root,
 					  JoinCostWorkspace *workspace,

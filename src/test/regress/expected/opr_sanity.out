@@ -329,7 +329,8 @@ WHERE pronargs > 8 and prolang = 12 AND
 -- Look for functions that return type "internal" and do not have any
 -- "internal" argument.  Such a function would be a security hole since
 -- it might be used to call an internal function from an SQL command.
--- As of 7.3 this query should find only internal_in.
+-- As of 7.3 this query should find only internal_in, which is safe because
+-- it always throws an error when called.
 SELECT p1.oid, p1.proname
 FROM pg_proc as p1
 WHERE p1.prorettype = 'internal'::regtype AND NOT
@@ -796,7 +797,7 @@ WHERE aggfnoid = 0 OR aggtransfn = 0 OR
     aggkind NOT IN ('n', 'o', 'h') OR
     aggnumdirectargs < 0 OR
     (aggkind = 'n' AND aggnumdirectargs > 0) OR
-    aggtranstype = 0;
+    aggtranstype = 0 OR aggtransspace < 0 OR aggmtransspace < 0;
  ctid | aggfnoid 
 ------+----------
 (0 rows)
@@ -886,6 +887,213 @@ WHERE a.aggfnoid = p.oid AND
     NOT binary_coercible(p.proargtypes[0], a.aggtranstype);
  aggfnoid | proname | oid | proname 
 ----------+---------+-----+---------
+(0 rows)
+
+-- Check for inconsistent specifications of moving-aggregate columns.
+SELECT ctid, aggfnoid::oid
+FROM pg_aggregate as p1
+WHERE aggmtranstype != 0 AND
+    (aggmtransfn = 0 OR aggminvtransfn = 0);
+ ctid | aggfnoid 
+------+----------
+(0 rows)
+
+SELECT ctid, aggfnoid::oid
+FROM pg_aggregate as p1
+WHERE aggmtranstype = 0 AND
+    (aggmtransfn != 0 OR aggminvtransfn != 0 OR aggmfinalfn != 0 OR
+     aggmtransspace != 0 OR aggminitval IS NOT NULL);
+ ctid | aggfnoid 
+------+----------
+(0 rows)
+
+-- If there is no mfinalfn then the output type must be the mtranstype.
+SELECT a.aggfnoid::oid, p.proname
+FROM pg_aggregate as a, pg_proc as p
+WHERE a.aggfnoid = p.oid AND
+    a.aggmtransfn != 0 AND
+    a.aggmfinalfn = 0 AND p.prorettype != a.aggmtranstype;
+ aggfnoid | proname 
+----------+---------
+(0 rows)
+
+-- Cross-check mtransfn (if present) against its entry in pg_proc.
+SELECT a.aggfnoid::oid, p.proname, ptr.oid, ptr.proname
+FROM pg_aggregate AS a, pg_proc AS p, pg_proc AS ptr
+WHERE a.aggfnoid = p.oid AND
+    a.aggmtransfn = ptr.oid AND
+    (ptr.proretset
+     OR NOT (ptr.pronargs =
+             CASE WHEN a.aggkind = 'n' THEN p.pronargs + 1
+             ELSE greatest(p.pronargs - a.aggnumdirectargs, 1) + 1 END)
+     OR NOT physically_coercible(ptr.prorettype, a.aggmtranstype)
+     OR NOT physically_coercible(a.aggmtranstype, ptr.proargtypes[0])
+     OR (p.pronargs > 0 AND
+         NOT physically_coercible(p.proargtypes[0], ptr.proargtypes[1]))
+     OR (p.pronargs > 1 AND
+         NOT physically_coercible(p.proargtypes[1], ptr.proargtypes[2]))
+     OR (p.pronargs > 2 AND
+         NOT physically_coercible(p.proargtypes[2], ptr.proargtypes[3]))
+     -- we could carry the check further, but 3 args is enough for now
+    );
+ aggfnoid | proname | oid | proname 
+----------+---------+-----+---------
+(0 rows)
+
+-- Cross-check minvtransfn (if present) against its entry in pg_proc.
+SELECT a.aggfnoid::oid, p.proname, ptr.oid, ptr.proname
+FROM pg_aggregate AS a, pg_proc AS p, pg_proc AS ptr
+WHERE a.aggfnoid = p.oid AND
+    a.aggminvtransfn = ptr.oid AND
+    (ptr.proretset
+     OR NOT (ptr.pronargs =
+             CASE WHEN a.aggkind = 'n' THEN p.pronargs + 1
+             ELSE greatest(p.pronargs - a.aggnumdirectargs, 1) + 1 END)
+     OR NOT physically_coercible(ptr.prorettype, a.aggmtranstype)
+     OR NOT physically_coercible(a.aggmtranstype, ptr.proargtypes[0])
+     OR (p.pronargs > 0 AND
+         NOT physically_coercible(p.proargtypes[0], ptr.proargtypes[1]))
+     OR (p.pronargs > 1 AND
+         NOT physically_coercible(p.proargtypes[1], ptr.proargtypes[2]))
+     OR (p.pronargs > 2 AND
+         NOT physically_coercible(p.proargtypes[2], ptr.proargtypes[3]))
+     -- we could carry the check further, but 3 args is enough for now
+    );
+ aggfnoid | proname | oid | proname 
+----------+---------+-----+---------
+(0 rows)
+
+-- Cross-check mfinalfn (if present) against its entry in pg_proc.
+SELECT a.aggfnoid::oid, p.proname, pfn.oid, pfn.proname
+FROM pg_aggregate AS a, pg_proc AS p, pg_proc AS pfn
+WHERE a.aggfnoid = p.oid AND
+    a.aggmfinalfn = pfn.oid AND
+    (pfn.proretset OR
+     NOT binary_coercible(pfn.prorettype, p.prorettype) OR
+     NOT binary_coercible(a.aggmtranstype, pfn.proargtypes[0]) OR
+     CASE WHEN a.aggkind = 'n' THEN pfn.pronargs != 1
+     ELSE pfn.pronargs != p.pronargs + 1
+       OR (p.pronargs > 0 AND
+         NOT binary_coercible(p.proargtypes[0], pfn.proargtypes[1]))
+       OR (p.pronargs > 1 AND
+         NOT binary_coercible(p.proargtypes[1], pfn.proargtypes[2]))
+       OR (p.pronargs > 2 AND
+         NOT binary_coercible(p.proargtypes[2], pfn.proargtypes[3]))
+       -- we could carry the check further, but 3 args is enough for now
+     END);
+ aggfnoid | proname | oid | proname 
+----------+---------+-----+---------
+(0 rows)
+
+-- If mtransfn is strict then either minitval should be non-NULL, or
+-- input type should match mtranstype so that the first non-null input
+-- can be assigned as the state value.
+SELECT a.aggfnoid::oid, p.proname, ptr.oid, ptr.proname
+FROM pg_aggregate AS a, pg_proc AS p, pg_proc AS ptr
+WHERE a.aggfnoid = p.oid AND
+    a.aggmtransfn = ptr.oid AND ptr.proisstrict AND
+    a.aggminitval IS NULL AND
+    NOT binary_coercible(p.proargtypes[0], a.aggmtranstype);
+ aggfnoid | proname | oid | proname 
+----------+---------+-----+---------
+(0 rows)
+
+-- mtransfn and minvtransfn should have same strictness setting.
+SELECT a.aggfnoid::oid, p.proname, ptr.oid, ptr.proname, iptr.oid, iptr.proname
+FROM pg_aggregate AS a, pg_proc AS p, pg_proc AS ptr, pg_proc AS iptr
+WHERE a.aggfnoid = p.oid AND
+    a.aggmtransfn = ptr.oid AND
+    a.aggminvtransfn = iptr.oid AND
+    ptr.proisstrict != iptr.proisstrict;
+ aggfnoid | proname | oid | proname | oid | proname 
+----------+---------+-----+---------+-----+---------
+(0 rows)
+
+-- Check that all combine functions have signature
+-- combine(transtype, transtype) returns transtype
+-- NOTE: use physically_coercible here, not binary_coercible, because
+-- max and min on abstime are implemented using int4larger/int4smaller.
+-- start_ignore
+-- GPDB: pivot_sum() currently fails this. It uses int8_matrix_accum,
+-- which is declared to takes as argument and returns an int8[], as the
+-- combine function, even though the transition type is int4[]. That's bogus,
+-- but it works, because the C implementation of int8_matrix_accum() actually
+-- checks the type of the input array, and returns an int4[] array. FIXME
+-- some day.
+-- end_ignore
+SELECT a.aggfnoid, p.proname
+FROM pg_aggregate as a, pg_proc as p
+WHERE a.aggcombinefn = p.oid AND
+    (p.pronargs != 2 OR
+     p.prorettype != p.proargtypes[0] OR
+     p.prorettype != p.proargtypes[1] OR
+     NOT physically_coercible(a.aggtranstype, p.proargtypes[0]));
+       aggfnoid       |      proname      
+----------------------+-------------------
+ pg_catalog.pivot_sum | int8_matrix_accum
+(1 row)
+
+-- Check that no combine function for an INTERNAL transtype is strict.
+SELECT a.aggfnoid, p.proname
+FROM pg_aggregate as a, pg_proc as p
+WHERE a.aggcombinefn = p.oid AND
+    a.aggtranstype = 'internal'::regtype AND p.proisstrict;
+ aggfnoid | proname 
+----------+---------
+(0 rows)
+
+-- serialize/deserialize functions should be specified only for aggregates
+-- with transtype internal and a combine function, and we should have both
+-- or neither of them.
+SELECT aggfnoid, aggtranstype, aggserialfn, aggdeserialfn
+FROM pg_aggregate
+WHERE (aggserialfn != 0 OR aggdeserialfn != 0)
+  AND (aggtranstype != 'internal'::regtype OR aggcombinefn = 0 OR
+       aggserialfn = 0 OR aggdeserialfn = 0);
+ aggfnoid | aggtranstype | aggserialfn | aggdeserialfn 
+----------+--------------+-------------+---------------
+(0 rows)
+
+-- Check that all serialization functions have signature
+-- serialize(internal) returns bytea
+-- Also insist that they be strict; it's wasteful to run them on NULLs.
+SELECT a.aggfnoid, p.proname
+FROM pg_aggregate as a, pg_proc as p
+WHERE a.aggserialfn = p.oid AND
+    (p.prorettype != 'bytea'::regtype OR p.pronargs != 1 OR
+     p.proargtypes[0] != 'internal'::regtype OR
+     NOT p.proisstrict);
+ aggfnoid | proname 
+----------+---------
+(0 rows)
+
+-- Check that all deserialization functions have signature
+-- deserialize(bytea, internal) returns internal
+-- Also insist that they be strict; it's wasteful to run them on NULLs.
+SELECT a.aggfnoid, p.proname
+FROM pg_aggregate as a, pg_proc as p
+WHERE a.aggdeserialfn = p.oid AND
+    (p.prorettype != 'internal'::regtype OR p.pronargs != 2 OR
+     p.proargtypes[0] != 'bytea'::regtype OR
+     p.proargtypes[1] != 'internal'::regtype OR
+     NOT p.proisstrict);
+ aggfnoid | proname 
+----------+---------
+(0 rows)
+
+-- Check that aggregates which have the same transition function also have
+-- the same combine, serialization, and deserialization functions.
+-- While that isn't strictly necessary, it's fishy if they don't.
+SELECT a.aggfnoid, a.aggcombinefn, a.aggserialfn, a.aggdeserialfn,
+       b.aggfnoid, b.aggcombinefn, b.aggserialfn, b.aggdeserialfn
+FROM
+    pg_aggregate a, pg_aggregate b
+WHERE
+    a.aggfnoid < b.aggfnoid AND a.aggtransfn = b.aggtransfn AND
+    (a.aggcombinefn != b.aggcombinefn OR a.aggserialfn != b.aggserialfn
+     OR a.aggdeserialfn != b.aggdeserialfn);
+ aggfnoid | aggcombinefn | aggserialfn | aggdeserialfn | aggfnoid | aggcombinefn | aggserialfn | aggdeserialfn 
+----------+--------------+-------------+---------------+----------+--------------+-------------+---------------
 (0 rows)
 
 -- Cross-check aggsortop (if present) against pg_operator.

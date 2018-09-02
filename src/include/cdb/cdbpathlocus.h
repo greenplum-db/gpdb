@@ -24,18 +24,6 @@ struct PlannerInfo;				/* defined in relation.h */
 
 
 /*
- * This flag controls the policy type returned from
- * cdbpathlocus_from_baserel() for non-partitioned tables.
- * It's a kludge put in to allow us to do
- * distributed queries on catalog tables, like pg_class
- * and pg_statistic.
- * To use it, simply set it to true before running a catalog query, then set
- * it back to false.
- */
-extern bool cdbpathlocus_querysegmentcatalogs;
-
-
-/*
  * CdbLocusType
  */
 typedef enum CdbLocusType

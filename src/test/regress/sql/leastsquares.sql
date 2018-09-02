@@ -94,8 +94,6 @@ from weibull;
 -- start_equiv
 select float8_regr_accum(float8_regr_accum(array[0,0,0,0,0,0], 1, 2),  2, 1);
 select float8_regr_accum(float8_regr_accum(array[0,0,0,0,0,0], 2, 1),  1, 2);
-select float8_regr_amalg(float8_regr_accum(array[0,0,0,0,0,0], 1, 2),
-                         float8_regr_accum(array[0,0,0,0,0,0], 2, 1));
 -- end_equiv
 
 -- Component testing of the individual aggregate callback functions
@@ -105,8 +103,6 @@ select float8_regr_amalg(float8_regr_accum(array[0,0,0,0,0,0], 1, 2),
 select float8_regr_accum(null, 1, 2);
 select float8_regr_accum(array[0,0,0,0,0,0], 1, null);
 select float8_regr_accum(array[0,0,0,0,0,0], null, 2);
-select float8_regr_amalg(array[0,0,0,0,0,0], null);
-select float8_regr_amalg(null, array[0,0,0,0,0,0]);
 select float8_regr_sxx(null);
 select float8_regr_sxx(array[0,0,0,0,0,0]);
 select float8_regr_sxx(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
@@ -133,9 +129,6 @@ select float8_regr_intercept(array[0,0,0,0,0,0]);
 select float8_regr_intercept(float8_regr_accum(array[0,0,0,0,0,0], 1, 2));
 
 select float8_regr_accum('{}'::float8[], 1, 2);
-select float8_regr_amalg('{}'::float8[], array[0,0,0,0,0,0]);
-select float8_regr_amalg(array[0,0,0,0,0,0], '{}'::float8[]);
-select float8_regr_amalg(array[null,0,0,0,0,0], '{}'::float8[]);
 select float8_regr_sxx('{}'::float8[]);
 select float8_regr_syy('{}'::float8[]);
 select float8_regr_sxy('{}'::float8[]);
@@ -151,10 +144,6 @@ DISTRIBUTED RANDOMLY;
 
 select float8_regr_accum(x, 0, 3), 
        float8_regr_accum(x, 0, 2), 
-       x 
-from regr_test;
-select float8_regr_amalg(x, array[1,3,9,0,0,0]), 
-       float8_regr_amalg(x, array[1,2,4,0,0,0]), 
        x 
 from regr_test;
 

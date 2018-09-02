@@ -1945,12 +1945,12 @@ CTranslatorRelcacheToDXL::RetrieveAgg
 	BOOL is_ordered = gpdb::IsOrderedAgg(agg_oid);
 	
 	// GPDB does not support splitting of ordered aggs and aggs without a
-	// preliminary function
-	BOOL is_splittable = !is_ordered && gpdb::AggHasPrelimFunc(agg_oid);
+	// combine function
+	BOOL is_splittable = !is_ordered && gpdb::AggHasCombineFunc(agg_oid);
 	
-	// cannot use hash agg for ordered aggs or aggs without a prelim func
+	// cannot use hash agg for ordered aggs or aggs without a combine func
 	// due to the fact that hashAgg may spill
-	BOOL is_hash_agg_capable = !is_ordered && gpdb::AggHasPrelimFunc(agg_oid);
+	BOOL is_hash_agg_capable = !is_ordered && gpdb::AggHasCombineFunc(agg_oid);
 
 	CMDAggregateGPDB *pmdagg = GPOS_NEW(mp) CMDAggregateGPDB
 											(
@@ -2242,9 +2242,22 @@ CTranslatorRelcacheToDXL::RetrieveAggIntermediateResultType
 	)
 {
 	OID agg_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
+	OID intermediate_type_oid;
 
 	GPOS_ASSERT(InvalidOid != agg_oid);
-	return GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggIntermediateResultType(agg_oid));
+	intermediate_type_oid = gpdb::GetAggIntermediateResultType(agg_oid);
+
+	/*
+	 * If the transition type is 'internal', we will use the
+	 * serial/deserial type to convert it to a bytea, for transfer
+	 * between the segments. Therefore return 'bytea' as the
+	 * intermediate type, so that any Motion nodes in between use the
+	 * right datatype.
+	 */
+	if (intermediate_type_oid == INTERNALOID)
+		intermediate_type_oid = BYTEAOID;
+
+	return GPOS_NEW(mp) CMDIdGPDB(intermediate_type_oid);
 }
 
 //---------------------------------------------------------------------------

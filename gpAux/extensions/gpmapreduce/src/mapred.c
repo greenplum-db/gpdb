@@ -3035,7 +3035,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				bufcat(&buffer, transition->name);
 				if (combiner)
 				{
-					bufcat(&buffer, ",\n  prefunc = ");
+					bufcat(&buffer, ",\n  combinefunc = ");
 					if (!combiner->internal)
 						bufcat(&buffer, doc->prefix);
 					bufcat(&buffer, combiner->name);
