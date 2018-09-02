@@ -401,11 +401,11 @@ with recursive r(i, j) as (
 	select i + 1, j from r, recursive_table_3 where r.i < recursive_table_3.id
 )
 select avg(i) over(partition by j) from r limit 100;
- avg 
------
-   2
- 1.5
- 1.5
+        avg         
+--------------------
+ 2.0000000000000000
+ 1.5000000000000000
+ 1.5000000000000000
 (3 rows)
 
 -- WITH RECURSIVE ref used within a UDF

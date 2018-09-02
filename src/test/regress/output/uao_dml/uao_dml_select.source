@@ -51,13 +51,13 @@ select
  city_uao.name as populationwise_top_five_cities,city_uao.population
  from
  city_uao order by city_uao.population desc LIMIT 5;
- world_max_pop |  world_avg_pop   | populationwise_top_five_cities | population 
----------------+------------------+--------------------------------+------------
-      10500000 | 350468.223584212 | Mumbai (Bombay)                |   10500000
-      10500000 | 350468.223584212 | Seoul                          |    9981619
-      10500000 | 350468.223584212 | Sao Paulo                      |    9968485
-      10500000 | 350468.223584212 | Shanghai                       |    9696300
-      10500000 | 350468.223584212 | Jakarta                        |    9604900
+ world_max_pop |    world_avg_pop    | populationwise_top_five_cities | population 
+---------------+---------------------+--------------------------------+------------
+      10500000 | 350468.223584211817 | Mumbai (Bombay)                |   10500000
+      10500000 | 350468.223584211817 | Seoul                          |    9981619
+      10500000 | 350468.223584211817 | Sao Paulo                      |    9968485
+      10500000 | 350468.223584211817 | Shanghai                       |    9696300
+      10500000 | 350468.223584211817 | Jakarta                        |    9604900
 (5 rows)
 
 select

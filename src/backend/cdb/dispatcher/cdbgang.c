@@ -294,31 +294,6 @@ createGang(GangType type, int gang_id, int size, int content)
 }
 
 /*
- * Test if the connections of the primary writer gang are alive.
- */
-bool
-isPrimaryWriterGangAlive(void)
-{
-	if (primaryWriterGang == NULL)
-		return false;
-
-	int			size = primaryWriterGang->size;
-	int			i = 0;
-
-	Assert(size == getgpsegmentCount());
-
-	for (i = 0; i < size; i++)
-	{
-		SegmentDatabaseDescriptor *segdb = &primaryWriterGang->db_descriptors[i];
-
-		if (!isSockAlive(segdb->conn->sock))
-			return false;
-	}
-
-	return true;
-}
-
-/*
  * Check the segment failure reason by comparing connection error message.
  */
 bool

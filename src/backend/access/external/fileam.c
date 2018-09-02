@@ -601,7 +601,7 @@ external_insert_init(Relation rel)
 	extInsertDesc->ext_values = (Datum *) palloc(extInsertDesc->ext_tupDesc->natts * sizeof(Datum));
 	extInsertDesc->ext_nulls = (bool *) palloc(extInsertDesc->ext_tupDesc->natts * sizeof(bool));
 
-	/* GDPB_91_MERGE_FIXME: call BeginCopyFrom  (Or BeginCopyTo?) here */
+	/* GPDB_91_MERGE_FIXME: call BeginCopyFrom  (Or BeginCopyTo?) here */
 
 	/*
 	 * Writing to an external table is like COPY TO: we get tuples from the executor,

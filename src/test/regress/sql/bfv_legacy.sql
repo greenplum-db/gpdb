@@ -1,8 +1,16 @@
 --
 -- SETUP: Helper functions for query plan verification
 --
+
+-- The helper functions are written in python.
+create or replace language plpythonu;
+
+-- While we're at it, test that CREATE OR REPLACE LANGUAGE works when
+-- the language exists already (we had a little bug at one point, where
+-- the "OR REPLACE" was not dispatched to segments, and this failed)
+create or replace language plpythonu;
+
 --start_ignore
-create language plpythonu;
 drop schema if exists bfv_legacy cascade;
 --end_ignore
 

@@ -179,8 +179,6 @@ extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRol
  */
 extern int	getgpsegmentCount(void);
 
-extern bool isSockAlive(int sock);
-
 #define ELOG_DISPATCHER_DEBUG(...) do { \
        if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \
     } while(false);

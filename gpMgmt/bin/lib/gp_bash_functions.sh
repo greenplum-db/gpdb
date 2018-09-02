@@ -1296,23 +1296,6 @@ MAKE_DBID_FILE() {
 dbid = $DBID\" > $FILEPATH &&  chmod 400 $FILEPATH"
 }
 
-UPDATE_MPP () {
-	LOG_MSG "[INFO][$INST_COUNT]:-Start Function $FUNCNAME"
-	U_DB=$DEFAULTDB
-	U_PT=$1
-	U_MPPNAME="$2"
-	U_NUMSEG=$3
-	U_DBID=$4
-	U_CONTENT=$5
-	TYPE=$6
-	U_HOST=$7
-	U_DIR=$8
-	LOG_MSG "[INFO][$INST_COUNT]:-Making dbid file @ $U_HOST:$U_DIR = $U_DBID"
-	MAKE_DBID_FILE $U_DBID $U_HOST $U_DIR
-	LOG_MSG "[INFO][$INST_COUNT]:-Successfully updated GPDB system table"
-	LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
-}
-
 #******************************************************************************
 # Main Section
 #******************************************************************************

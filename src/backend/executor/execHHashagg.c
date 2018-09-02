@@ -1789,7 +1789,7 @@ agg_hash_reload(AggState *aggstate)
 
 			adjustInputGroup(aggstate, input);
 			
-			/* Advance the aggregates for the group by applying preliminary function. */
+			/* Advance the aggregates for the group by applying combine function. */
 			for (aggno = 0; aggno < aggstate->numaggs; aggno++)
 			{
 				AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
@@ -1803,8 +1803,8 @@ agg_hash_reload(AggState *aggstate)
 				pergroupstate->transValue =
 					invoke_agg_trans_func(aggstate,
 										  peraggstate,
-										  &(peraggstate->prelimfn),
-										  peraggstate->prelimfn.fn_nargs - 1,
+										  &(peraggstate->combinefn),
+										  peraggstate->combinefn.fn_nargs - 1,
 										  pergroupstate->transValue,
 										  &(pergroupstate->noTransValue),
 										  &(pergroupstate->transValueIsNull),

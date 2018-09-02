@@ -2136,6 +2136,29 @@ where f2 = 53;
  53 |    |    | 
 (1 row)
 
+--
+-- regression test for nest loop join of rpt and entry
+--
+create temp table t_5628 (c1 int, c2 int) distributed replicated;
+insert into t_5628 values (1,1), (2,2);
+explain (costs off) select max(c1) from pg_class left join t_5628 on true;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Aggregate
+   ->  Nested Loop Left Join
+         ->  Seq Scan on pg_class
+         ->  Materialize
+               ->  Gather Motion 1:1  (slice1; segments: 1)
+                     ->  Seq Scan on t_5628
+ Optimizer: legacy query optimizer
+(7 rows)
+
+select max(c1) from pg_class left join t_5628 on true;
+ max 
+-----
+   2
+(1 row)
+
 drop schema rpt_joins cascade;
 NOTICE:  drop cascades to 5 other objects
 DETAIL:  drop cascades to table j1_tbl

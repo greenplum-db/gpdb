@@ -32,8 +32,8 @@ extern int compare_path_costs(Path *path1, Path *path2,
 				   CostSelector criterion);
 extern int compare_fractional_path_costs(Path *path1, Path *path2,
 							  double fraction);
-extern void set_cheapest(PlannerInfo *root, RelOptInfo *parent_rel);    /*CDB*/
-extern void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path);
+extern void set_cheapest(RelOptInfo *parent_rel);
+extern void add_path(RelOptInfo *parent_rel, Path *new_path);
 extern void cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_jointype,
 				  Relids required_outer, JoinPath *new_path);
 extern Path *create_seqscan_path(PlannerInfo *root, RelOptInfo *rel,

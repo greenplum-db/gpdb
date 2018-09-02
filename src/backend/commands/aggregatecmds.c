@@ -61,13 +61,23 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	AclResult	aclresult;
 	char		aggKind = AGGKIND_NORMAL;
 	List	   *transfuncName = NIL;
-	List	   *prelimfuncName = NIL; /* MPP */
 	List	   *finalfuncName = NIL;
+	List	   *combinefuncName = NIL;
+	List	   *serialfuncName = NIL;
+	List	   *deserialfuncName = NIL;
+	List	   *mtransfuncName = NIL;
+	List	   *minvtransfuncName = NIL;
+	List	   *mfinalfuncName = NIL;
 	bool		finalfuncExtraArgs = false;
+	bool		mfinalfuncExtraArgs = false;
 	List	   *sortoperatorName = NIL;
 	TypeName   *baseType = NULL;
 	TypeName   *transType = NULL;
+	TypeName   *mtransType = NULL;
+	int32		transSpace = 0;
+	int32		mtransSpace = 0;
 	char	   *initval = NULL;
+	char	   *minitval = NULL;
 	int			numArgs;
 	int			numDirectArgs = 0;
 	oidvector  *parameterTypes;
@@ -77,6 +87,9 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	List	   *parameterDefaults;
 	Oid			variadicArgType;
 	Oid			transTypeId;
+	char		transTypeType;
+	Oid			mtransTypeId = InvalidOid;
+	char		mtransTypeType = 0;
 	ListCell   *pl;
 	List	   *orig_args = args;
 
@@ -116,8 +129,22 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 			transfuncName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "finalfunc") == 0)
 			finalfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "combinefunc") == 0)
+			combinefuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "serialfunc") == 0)
+			serialfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "deserialfunc") == 0)
+			deserialfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "msfunc") == 0)
+			mtransfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "minvfunc") == 0)
+			minvtransfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "mfinalfunc") == 0)
+			mfinalfuncName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "finalfunc_extra") == 0)
 			finalfuncExtraArgs = defGetBoolean(defel);
+		else if (pg_strcasecmp(defel->defname, "mfinalfunc_extra") == 0)
+			mfinalfuncExtraArgs = defGetBoolean(defel);
 		else if (pg_strcasecmp(defel->defname, "sortop") == 0)
 			sortoperatorName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "basetype") == 0)
@@ -137,12 +164,18 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 			transType = defGetTypeName(defel);
 		else if (pg_strcasecmp(defel->defname, "stype1") == 0)
 			transType = defGetTypeName(defel);
+		else if (pg_strcasecmp(defel->defname, "sspace") == 0)
+			transSpace = defGetInt32(defel);
+		else if (pg_strcasecmp(defel->defname, "mstype") == 0)
+			mtransType = defGetTypeName(defel);
+		else if (pg_strcasecmp(defel->defname, "msspace") == 0)
+			mtransSpace = defGetInt32(defel);
 		else if (pg_strcasecmp(defel->defname, "initcond") == 0)
 			initval = defGetString(defel);
 		else if (pg_strcasecmp(defel->defname, "initcond1") == 0)
 			initval = defGetString(defel);
-		else if (pg_strcasecmp(defel->defname, "prefunc") == 0) /* MPP */
-			prelimfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "minitcond") == 0)
+			minitval = defGetString(defel);
 		else
 			ereport(WARNING,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -163,12 +196,52 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 				 errmsg("aggregate sfunc must be specified")));
 
 	/*
-	 * MPP: Ordered aggregates do not support prefuncs
+	 * MPP: Ordered aggregates do not support combine functions.
 	 */
-	if (aggKind == AGGKIND_ORDERED_SET && prelimfuncName != NIL)
+	if (aggKind == AGGKIND_ORDERED_SET && combinefuncName != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-				 errmsg("ordered aggregate prefunc is not supported")));
+				 errmsg("ordered aggregate combine function is not supported")));
+
+	/*
+	 * if mtransType is given, mtransfuncName and minvtransfuncName must be as
+	 * well; if not, then none of the moving-aggregate options should have
+	 * been given.
+	 */
+	if (mtransType != NULL)
+	{
+		if (mtransfuncName == NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate msfunc must be specified when mstype is specified")));
+		if (minvtransfuncName == NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate minvfunc must be specified when mstype is specified")));
+	}
+	else
+	{
+		if (mtransfuncName != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate msfunc must not be specified without mstype")));
+		if (minvtransfuncName != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate minvfunc must not be specified without mstype")));
+		if (mfinalfuncName != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate mfinalfunc must not be specified without mstype")));
+		if (mtransSpace != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate msspace must not be specified without mstype")));
+		if (minitval != NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate minitcond must not be specified without mstype")));
+	}
 
 	/*
 	 * look up the aggregate's input datatype(s).
@@ -249,7 +322,8 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 * aggregate.
 	 */
 	transTypeId = typenameTypeId(NULL, transType);
-	if (get_typtype(transTypeId) == TYPTYPE_PSEUDO &&
+	transTypeType = get_typtype(transTypeId);
+	if (transTypeType == TYPTYPE_PSEUDO &&
 		!IsPolymorphicType(transTypeId))
 	{
 		if (transTypeId == INTERNALOID && superuser())
@@ -259,6 +333,48 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 					 errmsg("aggregate transition data type cannot be %s",
 							format_type_be(transTypeId))));
+	}
+
+	if (serialfuncName && deserialfuncName)
+	{
+		/*
+		 * Serialization is only needed/allowed for transtype INTERNAL.
+		 */
+		if (transTypeId != INTERNALOID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("serialization functions may be specified only when the aggregate transition data type is %s",
+							format_type_be(INTERNALOID))));
+	}
+	else if (serialfuncName || deserialfuncName)
+	{
+		/*
+		 * Cannot specify one function without the other.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+				 errmsg("must specify both or neither of serialization and deserialization functions")));
+	}
+
+	/*
+	 * If a moving-aggregate transtype is specified, look that up.  Same
+	 * restrictions as for transtype.
+	 */
+	if (mtransType)
+	{
+		mtransTypeId = typenameTypeId(NULL, mtransType);
+		mtransTypeType = get_typtype(mtransTypeId);
+		if (mtransTypeType == TYPTYPE_PSEUDO &&
+			!IsPolymorphicType(mtransTypeId))
+		{
+			if (mtransTypeId == INTERNALOID && superuser())
+				 /* okay */ ;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+						 errmsg("aggregate transition data type cannot be %s",
+								format_type_be(mtransTypeId))));
+		}
 	}
 
 	/*
@@ -276,12 +392,22 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 					parameterDefaults,
 					variadicArgType,
 					transfuncName,		/* step function name */
-					prelimfuncName,		/* prelim function name */
 					finalfuncName,		/* final function name */
+					combinefuncName,		/* combine function name */
+					serialfuncName,		/* serial function name */
+					deserialfuncName,	/* deserial function name */
+					mtransfuncName,	/* fwd trans function name */
+					minvtransfuncName,	/* inv trans function name */
+					mfinalfuncName,	/* final function name */
 					finalfuncExtraArgs,
+					mfinalfuncExtraArgs,
 					sortoperatorName,	/* sort operator name */
 					transTypeId,	/* transition data type */
-					initval);		/* initial condition */
+					transSpace,		/* transition space */
+					mtransTypeId,	/* transition data type */
+					mtransSpace, /* transition space */
+					initval,		/* initial condition */
+					minitval);	/* initial condition */
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{

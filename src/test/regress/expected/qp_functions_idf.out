@@ -524,32 +524,32 @@ select count(*),median(a) from perct group by b having median(b) <> 33 order by 
 
 --SQL with multiple IDF conditions in HAVING clause
 select a, avg(b),percentile_cont(0.4) within group (order by a)  from perct group by a having percentile_cont(0.4) within group (order by a)  > 1 and percentile_cont(0.4) within group( order by a ) < 10  order by a;
- a | avg | percentile_cont 
----+-----+-----------------
- 2 |   0 |               2
- 3 |   0 |               3
- 4 |   0 |               4
- 5 |   0 |               5
- 6 |   0 |               6
- 7 |   0 |               7
- 8 |   0 |               8
- 9 |   0 |               9
+ a |          avg           | percentile_cont 
+---+------------------------+-----------------
+ 2 | 0.00000000000000000000 |               2
+ 3 | 0.00000000000000000000 |               3
+ 4 | 0.00000000000000000000 |               4
+ 5 | 0.00000000000000000000 |               5
+ 6 | 0.00000000000000000000 |               6
+ 7 | 0.00000000000000000000 |               7
+ 8 | 0.00000000000000000000 |               8
+ 9 | 0.00000000000000000000 |               9
 (8 rows)
 
 --SQL with multiple IDF conditions in HAVING clause (including median)
 select a, avg(b)  from perct group by a having percentile_cont(0.4) within group (order by a)  > median(b)  order by a desc limit 10;
-  a  | avg 
------+-----
- 100 |  10
-  99 |   9
-  98 |   9
-  97 |   9
-  96 |   9
-  95 |   9
-  94 |   9
-  93 |   9
-  92 |   9
-  91 |   9
+  a  |         avg         
+-----+---------------------
+ 100 | 10.0000000000000000
+  99 |  9.0000000000000000
+  98 |  9.0000000000000000
+  97 |  9.0000000000000000
+  96 |  9.0000000000000000
+  95 |  9.0000000000000000
+  94 |  9.0000000000000000
+  93 |  9.0000000000000000
+  92 |  9.0000000000000000
+  91 |  9.0000000000000000
 (10 rows)
 
 --SQL with IDF and not in condition in HAVING clause

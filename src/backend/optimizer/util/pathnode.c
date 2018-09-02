@@ -384,7 +384,7 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor)
  * list for the rel node.
  */
 void
-set_cheapest(PlannerInfo *root, RelOptInfo *parent_rel)
+set_cheapest(RelOptInfo *parent_rel)
 {
 	Path	   *cheapest_startup_path;
 	Path	   *cheapest_total_path;
@@ -511,7 +511,7 @@ set_cheapest(PlannerInfo *root, RelOptInfo *parent_rel)
  * Returns nothing, but modifies parent_rel->pathlist.
  */
 void
-add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
+add_path(RelOptInfo *parent_rel, Path *new_path)
 {
 	bool		accept_new = true;		/* unless we find a superior old path */
 	ListCell   *insert_after = NULL;	/* where to insert new item */
@@ -774,7 +774,7 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
 												 required_outer);
 	}
 
-	add_path(root, parent_rel, path);
+	add_path(parent_rel, path);
 }
 
 /*

@@ -2401,6 +2401,7 @@ _readCreatePLangStmt(void)
 {
 	READ_LOCALS(CreatePLangStmt);
 
+	READ_BOOL_FIELD(replace);
 	READ_STRING_FIELD(plname);
 	READ_NODE_FIELD(plhandler);
 	READ_NODE_FIELD(plinline);

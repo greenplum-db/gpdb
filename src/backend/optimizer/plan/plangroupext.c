@@ -570,12 +570,12 @@ make_aggs_for_rollup(PlannerInfo *root,
 	/*
 	 * We always try to create a sequence of Agg/Group nodes one after
 	 * the other whenever possible. Currently, this includes non-distinct
-	 * qualified queries and there are defined prelimfuncs for requested
+	 * qualified queries and there are defined combine funcs for requested
 	 * aggregates. Otherwise, we fall back to use
 	 * Append-Aggs.
 	 */
 	if (context->agg_costs->numOrderedAggs == 0 &&
-		!context->agg_costs->missing_prelimfunc)
+		!context->agg_costs->missing_combinefunc)
 		result_plan = make_list_aggs_for_rollup(root, context, lefttree);
 	else
 		result_plan = make_append_aggs_for_rollup(root, context, lefttree);

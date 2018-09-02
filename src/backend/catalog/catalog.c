@@ -103,7 +103,7 @@ forkname_to_number(char *forkName)
 
 /*
  * Return directory name within tablespace location to use, for this server.
- * This is the GDPB replacement for PostgreSQL's TABLESPACE_VERSION_DIRECTORY
+ * This is the GPDB replacement for PostgreSQL's TABLESPACE_VERSION_DIRECTORY
  * constant.
  */
 const char *

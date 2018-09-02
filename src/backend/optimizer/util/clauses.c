@@ -477,15 +477,20 @@ count_agg_clauses_walker(Node *node, count_agg_clauses_context *context)
 		Form_pg_aggregate aggform;
 		Oid			aggtransfn;
 		Oid			aggfinalfn;
+		Oid			aggcombinefn;
 		Oid			aggtranstype;
-		Oid			aggprelimfn;
+		int32		aggtransspace;
 		QualCost	argcosts;
 		Oid			inputTypes[FUNC_MAX_ARGS];
 		int			numArguments;
 
 		Assert(aggref->agglevelsup == 0);
 
-		/* fetch info about aggregate from pg_aggregate */
+		/*
+		 * Fetch info about aggregate from pg_aggregate.  Note it's correct to
+		 * ignore the moving-aggregate variant, since what we're concerned
+		 * with here is aggregates not window functions.
+		 */
 		aggTuple = SearchSysCache1(AGGFNOID,
 								   ObjectIdGetDatum(aggref->aggfnoid));
 		if (!HeapTupleIsValid(aggTuple))
@@ -494,8 +499,9 @@ count_agg_clauses_walker(Node *node, count_agg_clauses_context *context)
 		aggform = (Form_pg_aggregate) GETSTRUCT(aggTuple);
 		aggtransfn = aggform->aggtransfn;
 		aggfinalfn = aggform->aggfinalfn;
+		aggcombinefn = aggform->aggcombinefn;
 		aggtranstype = aggform->aggtranstype;
-		aggprelimfn = aggform->aggprelimfn;
+		aggtransspace = aggform->aggtransspace;
 		ReleaseSysCache(aggTuple);
 
 		/* count it; note ordered-set aggs always have nonempty aggorder */
@@ -517,9 +523,9 @@ count_agg_clauses_walker(Node *node, count_agg_clauses_context *context)
 		}
 
 		/* CDB wants to know whether the function can do 2-stage aggregation */
-		if ( aggprelimfn == InvalidOid )
+		if ( aggcombinefn == InvalidOid )
 		{
-			costs->missing_prelimfunc = true; /* Nope! */
+			costs->missing_combinefunc = true; /* Nope! */
 		}
 
 		/* add component function execution costs to appropriate totals */
@@ -575,22 +581,30 @@ count_agg_clauses_walker(Node *node, count_agg_clauses_context *context)
 		 */
 		if (!get_typbyval(aggtranstype))
 		{
-			int32		aggtranstypmod;
 			int32		avgwidth;
 
-			/*
-			 * If transition state is of same type as first input, assume it's
-			 * the same typmod (same width) as well.  This works for cases
-			 * like MAX/MIN and is probably somewhat reasonable otherwise.
-			 */
-			if (numArguments > 0 && aggtranstype == inputTypes[0])
-				aggtranstypmod = exprTypmod((Node *) linitial(aggref->args));
+			/* Use average width if aggregate definition gave one */
+			if (aggtransspace > 0)
+				avgwidth = aggtransspace;
 			else
-				aggtranstypmod = -1;
+			{
+				/*
+				 * If transition state is of same type as first input, assume
+				 * it's the same typmod (same width) as well.  This works for
+				 * cases like MAX/MIN and is probably somewhat reasonable
+				 * otherwise.
+				 */
+				int32		aggtranstypmod;
 
-			avgwidth = get_typavgwidth(aggtranstype, aggtranstypmod);
+				if (numArguments > 0 && aggtranstype == inputTypes[0])
+					aggtranstypmod = exprTypmod((Node *) linitial(aggref->args));
+				else
+					aggtranstypmod = -1;
+
+				avgwidth = get_typavgwidth(aggtranstype, aggtranstypmod);
+			}
+
 			avgwidth = MAXALIGN(avgwidth);
-
 			costs->transitionSpace += avgwidth + 2 * sizeof(void *);
 		}
 		else if (aggtranstype == INTERNALOID)
@@ -598,12 +612,16 @@ count_agg_clauses_walker(Node *node, count_agg_clauses_context *context)
 			/*
 			 * INTERNAL transition type is a special case: although INTERNAL
 			 * is pass-by-value, it's almost certainly being used as a pointer
-			 * to some large data structure.  We assume usage of
+			 * to some large data structure.  The aggregate definition can
+			 * provide an estimate of the size.  If it doesn't, then we assume
 			 * ALLOCSET_DEFAULT_INITSIZE, which is a good guess if the data is
 			 * being kept in a private memory context, as is done by
 			 * array_agg() for instance.
 			 */
-			costs->transitionSpace += ALLOCSET_DEFAULT_INITSIZE;
+			if (aggtransspace > 0)
+				costs->transitionSpace += aggtransspace;
+			else
+				costs->transitionSpace += ALLOCSET_DEFAULT_INITSIZE;
 		}
 
 		/*

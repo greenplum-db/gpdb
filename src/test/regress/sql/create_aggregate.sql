@@ -4,9 +4,9 @@
 
 -- all functions CREATEd
 CREATE AGGREGATE newavg (
-   sfunc = int4_avg_accum, basetype = int4, stype = bytea,
+   sfunc = int4_avg_accum, basetype = int4, stype = _int8,
    finalfunc = int8_avg,
-   initcond1 = '{0}'
+   initcond1 = '{0,0}'
 );
 
 -- test comments
@@ -68,7 +68,7 @@ create aggregate aggfstr(integer,integer,text) (
 );
 
 create aggregate aggfns(integer,integer,text) (
-   sfunc = aggfns_trans, stype = aggtype[],
+   sfunc = aggfns_trans, stype = aggtype[], sspace = 10000,
    initcond = '{}'
 );
 
@@ -104,12 +104,109 @@ alter aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any")
 
 \da test_*
 
+-- moving-aggregate options
+
+CREATE AGGREGATE sumdouble (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi
+);
+
+-- aggregate combine and serialization functions
+
+-- can't specify just one of serialfunc and deserialfunc
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize
+);
+
+-- serialfunc must have correct parameters
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_deserialize,
+	deserialfunc = numeric_avg_deserialize
+);
+
+-- deserialfunc must have correct parameters
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_serialize
+);
+
+-- ensure combine function parameters are checked
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = int4larger
+);
+
+-- ensure create aggregate works.
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = numeric_avg_combine
+);
+
+-- Ensure all these functions made it into the catalog
+SELECT aggfnoid,aggtransfn,aggcombinefn,aggtranstype,aggserialfn,aggdeserialfn
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+
+DROP AGGREGATE myavg (numeric);
+
+-- invalid: nonstrict inverse with strict forward function
+
+CREATE FUNCTION float8mi_n(float8, float8) RETURNS float8 AS
+$$ SELECT $1 - $2; $$
+LANGUAGE SQL;
+
+CREATE AGGREGATE invalidsumdouble (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi_n
+);
+
+-- invalid: non-matching result types
+
+CREATE FUNCTION float8mi_int(float8, float8) RETURNS int AS
+$$ SELECT CAST($1 - $2 AS INT); $$
+LANGUAGE SQL;
+
+CREATE AGGREGATE wrongreturntype (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi_int
+);
+
 
 -- Negative test: "ordered aggregate prefunc is not supported"
 create ordered aggregate should_error(integer,integer,text) (
    stype = aggtype[],
    sfunc = aggfns_trans, 
-   prefunc = array_cat,
+   combinefunc = array_cat,
    initcond = '{}'
 );
 
@@ -120,7 +217,7 @@ $$
     select $1 || $2;
 $$ language sql CONTAINS SQL;
 
-CREATE AGGREGATE string_concat (sfunc = str_concat, prefunc=str_concat, basetype = 'text', stype = text,initcond = '');
+CREATE AGGREGATE string_concat (sfunc = str_concat, combinefunc=str_concat, basetype = 'text', stype = text,initcond = '');
 
 create table aggtest2(i int, t text) DISTRIBUTED BY (i);
 insert into aggtest2 values(1, 'hello');

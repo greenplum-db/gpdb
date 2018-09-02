@@ -320,6 +320,19 @@ query is complex, you may need to tag it with a comment to force the
 explain.  Using this command for non-EXPLAIN statements is
 inadvisable.
 
+=item -- explain_processing_on
+
+Enables the automated processing of the explain output, removing all
+the variable fields using the `explain` perl module
+This is the default.
+
+=item -- explain_processing_off
+
+Do not process the explain output. This might result in test failures
+if the test does not replace the variable values itself.
+An example of a test that uses this is the test that validates the
+format of the explain output.
+
 =back
 
 Note that you can combine the directives for a single query, but each

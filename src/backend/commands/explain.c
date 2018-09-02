@@ -1509,10 +1509,23 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	{
 		ExplainPropertyInteger("operatorMem", PlanStateOperatorMemKB(planstate), es);
 	}
+	/*
+	 * We have to forcibly clean up the instrumentation state because we
+	 * haven't done ExecutorEnd yet.  This is pretty grotty ...
+	 *
+	 * Note: contrib/auto_explain could cause instrumentation to be set up
+	 * even though we didn't ask for it here.  Be careful not to print any
+	 * instrumentation results the user didn't ask for.  But we do the
+	 * InstrEndLoop call anyway, if possible, to reduce the number of cases
+	 * auto_explain has to contend with.
+	 */
+	if (planstate->instrument)
+		InstrEndLoop(planstate->instrument);
 
 	/* GPDB_90_MERGE_FIXME: In GPDB, these are printed differently. But does that work
 	 * with the new XML/YAML EXPLAIN output */
-	if (planstate->instrument && planstate->instrument->nloops > 0)
+	if (es->analyze &&
+		planstate->instrument && planstate->instrument->nloops > 0)
 	{
  		double		nloops = planstate->instrument->nloops;
 		double		startup_sec = 1000.0 * planstate->instrument->startup / nloops;
@@ -1521,7 +1534,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
-			if (planstate->instrument->need_timer)
+			if (es->timing)
 				appendStringInfo(es->str,
 							" (actual time=%.3f..%.3f rows=%.0f loops=%.0f)",
 								 startup_sec, total_sec, rows, nloops);
@@ -1532,7 +1545,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		}
 		else
 		{
-			if (planstate->instrument->need_timer)
+			if (es->timing)
 			{
 				ExplainPropertyFloat("Actual Startup Time", startup_sec, 3, es);
 				ExplainPropertyFloat("Actual Total Time", total_sec, 3, es);
@@ -1543,20 +1556,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	}
 	else if (es->analyze)
 	{
-
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 			appendStringInfo(es->str, " (never executed)");
-		else if (planstate->instrument->need_timer)
-		{
-			ExplainPropertyFloat("Actual Startup Time", 0.0, 3, es);
-			ExplainPropertyFloat("Actual Total Time", 0.0, 3, es);
-		}
 		else
 		{
+			if (es->timing)
+			{
+				ExplainPropertyFloat("Actual Startup Time", 0.0, 3, es);
+				ExplainPropertyFloat("Actual Total Time", 0.0, 3, es);
+			}
 			ExplainPropertyFloat("Actual Rows", 0.0, 0, es);
 			ExplainPropertyFloat("Actual Loops", 0.0, 0, es);
 		}
-
 	}
 
 	/* in text format, first line ends here */
@@ -1804,7 +1815,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		cdbexplain_showExecStats(planstate, es);
 
 	/* Show buffer usage */
-	if (es->buffers)
+	if (es->buffers && planstate->instrument)
 	{
 		const BufferUsage *usage = &planstate->instrument->bufusage;
 

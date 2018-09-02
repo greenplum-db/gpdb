@@ -185,21 +185,21 @@ SELECT MAX(i) FROM filter_test WHERE i < 5;
 
 -- TEST AVG(i)
 SELECT AVG(i) FROM filter_test;
-       avg        
-------------------
- 5.55555555555556
+        avg         
+--------------------
+ 5.5555555555555556
 (1 row)
 
 SELECT AVG(i) FILTER (WHERE i < 5) FROM filter_test;
- avg 
------
- 2.5
+        avg         
+--------------------
+ 2.5000000000000000
 (1 row)
 
 SELECT AVG(i) FROM filter_test WHERE i < 5;
- avg 
------
- 2.5
+        avg         
+--------------------
+ 2.5000000000000000
 (1 row)
 
 -- TEST SUM(i)

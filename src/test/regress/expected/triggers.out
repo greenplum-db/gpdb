@@ -63,33 +63,51 @@ create trigger check_fkeys2_fkey_restrict
 	for each row
 	execute procedure check_foreign_key (1, 'restrict', 'pkey23', 'fkeys', 'fkey3');
 insert into fkeys2 values (10, '1', 1);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.pkeys"  (seg1 172.17.0.2:25433 pid=51031)
+CONTEXT:  SQL statement "select 1 from pkeys where pkey1 = $1 and pkey2 = $2 "
 insert into fkeys2 values (30, '3', 2);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.pkeys"  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "select 1 from pkeys where pkey1 = $1 and pkey2 = $2 "
 insert into fkeys2 values (40, '4', 5);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.pkeys"  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "select 1 from pkeys where pkey1 = $1 and pkey2 = $2 "
 insert into fkeys2 values (50, '5', 3);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.pkeys"  (seg0 172.17.0.2:25432 pid=51030)
+CONTEXT:  SQL statement "select 1 from pkeys where pkey1 = $1 and pkey2 = $2 "
 -- no key in pkeys
 insert into fkeys2 values (70, '5', 3);
-ERROR:  tuple references non-existent key
-DETAIL:  Trigger "check_fkeys2_pkey_exist" found tuple referencing non-existent key in "pkeys".
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.pkeys"  (seg1 172.17.0.2:25433 pid=51031)
+CONTEXT:  SQL statement "select 1 from pkeys where pkey1 = $1 and pkey2 = $2 "
 insert into fkeys values (10, '1', 2);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg1 172.17.0.2:25433 pid=51031)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 insert into fkeys values (30, '3', 3);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 insert into fkeys values (40, '4', 2);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 insert into fkeys values (50, '5', 2);
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg0 172.17.0.2:25432 pid=51030)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 -- no key in pkeys
 insert into fkeys values (70, '5', 1);
-ERROR:  tuple references non-existent key
-DETAIL:  Trigger "check_fkeys_pkey_exist" found tuple referencing non-existent key in "pkeys".
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg1 172.17.0.2:25433 pid=51031)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 -- no key in fkeys2
 insert into fkeys values (60, '6', 4);
-ERROR:  tuple references non-existent key
-DETAIL:  Trigger "check_fkeys_pkey2_exist" found tuple referencing non-existent key in "fkeys2".
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.fkeys2"  (seg0 172.17.0.2:25432 pid=51030)
+CONTEXT:  SQL statement "select 1 from fkeys2 where pkey23 = $1 "
 delete from pkeys where pkey1 = 30 and pkey2 = '3';
-ERROR:  "check_fkeys2_fkey_restrict": tuple is referenced in "fkeys"
-CONTEXT:  SQL statement "delete from fkeys2 where fkey21 = $1 and fkey22 = $2 "
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "delete from fkeys where fkey1 = $1 and fkey2 = $2 "
 delete from pkeys where pkey1 = 40 and pkey2 = '4';
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "delete from fkeys where fkey1 = $1 and fkey2 = $2 "
 update pkeys set pkey1 = 7, pkey2 = '70' where pkey1 = 50 and pkey2 = '5';
-ERROR:  "check_fkeys2_fkey_restrict": tuple is referenced in "fkeys"
-CONTEXT:  SQL statement "delete from fkeys2 where fkey21 = $1 and fkey22 = $2 "
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 update pkeys set pkey1 = 7, pkey2 = '70' where pkey1 = 10 and pkey2 = '1';
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 DROP TABLE pkeys;
 DROP TABLE fkeys;
 DROP TABLE fkeys2;
@@ -156,12 +174,14 @@ select * from tttest;
 (3 rows)
 
 delete from tttest where price_id = 2;
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 172.17.0.2:25433 pid=51031)
+CONTEXT:  SQL statement "INSERT INTO tttest VALUES ($1, $2, $3, $4)"
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
         3 |         3 |       30 |    999999
-        2 |         2 |       20 |        40
 (3 rows)
 
 -- what do we see ?
@@ -169,33 +189,34 @@ select * from tttest;
 select * from tttest where price_off = 999999;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
         3 |         3 |       30 |    999999
-(2 rows)
+(3 rows)
 
 -- change price for price_id == 3
 update tttest set price_val = 30 where price_id = 3;
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 172.17.0.2:25434 pid=51032)
+CONTEXT:  SQL statement "INSERT INTO tttest VALUES ($1, $2, $3, $4)"
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
-        2 |         2 |       20 |        40
-        3 |        30 |       50 |    999999
-        3 |         3 |       30 |        50
-(4 rows)
+        3 |         3 |       30 |    999999
+(3 rows)
 
 -- now we want to change pric_id in ALL tuples
 -- this gets us not what we need
 update tttest set price_id = 5 where price_id = 3;
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
-        2 |         2 |       20 |        40
-        3 |         3 |       30 |        50
-        5 |        30 |       60 |    999999
-        3 |        30 |       50 |        60
-(5 rows)
+        3 |         3 |       30 |    999999
+(3 rows)
 
 -- restore data as before last update:
 select set_ttdummy(0);
@@ -209,22 +230,21 @@ update tttest set price_off = 999999 where price_val = 30;
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
-        2 |         2 |       20 |        40
-        3 |         3 |       30 |        50
-        3 |        30 |       50 |    999999
-(4 rows)
+        3 |         3 |       30 |    999999
+(3 rows)
 
 -- and try change price_id now!
 update tttest set price_id = 5 where price_id = 3;
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
+        2 |         2 |       20 |    999999
         1 |         1 |       10 |    999999
-        2 |         2 |       20 |        40
-        5 |         3 |       30 |        50
-        5 |        30 |       50 |    999999
-(4 rows)
+        3 |         3 |       30 |    999999
+(3 rows)
 
 -- isn't it what we need ?
 select set_ttdummy(1);
@@ -235,7 +255,7 @@ select set_ttdummy(1);
 
 -- we want to correct some "date"
 update tttest set price_on = -1 where price_id = 1;
-ERROR:  ttdummy (tttest): you cannot change price_on and/or price_off columns (use set_ttdummy)
+ERROR:  ttdummy (tttest): you cannot change price_on and/or price_off columns (use set_ttdummy)  (seg2 172.17.0.2:25434 pid=221098)
 -- but this doesn't work
 -- try in this way
 select set_ttdummy(0);
@@ -245,22 +265,21 @@ select set_ttdummy(0);
 (1 row)
 
 update tttest set price_on = -1 where price_id = 1;
+ERROR:  ttdummy (tttest): you cannot change price_on and/or price_off columns (use set_ttdummy)  (seg2 172.17.0.2:25434 pid=221098)
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
-        2 |         2 |       20 |        40
-        5 |         3 |       30 |        50
-        5 |        30 |       50 |    999999
-        1 |         1 |       -1 |    999999
-(4 rows)
+        2 |         2 |       20 |    999999
+        1 |         1 |       10 |    999999
+        3 |         3 |       30 |    999999
+(3 rows)
 
 -- isn't it what we need ?
 -- get price for price_id == 5 as it was @ "date" 35
 select * from tttest where price_on <= 35 and price_off > 35 and price_id = 5;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
-        5 |         3 |       30 |        50
-(1 row)
+(0 rows)
 
 drop table tttest;
 drop sequence ttdummy_seq;
@@ -288,17 +307,11 @@ EXECUTE PROCEDURE trigger_func('after_upd_stmt');
 CREATE TRIGGER after_upd_row_trig AFTER UPDATE ON main_table
 FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_row');
 INSERT INTO main_table DEFAULT VALUES;
-NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
-NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, level = STATEMENT
 UPDATE main_table SET a = a + 1 WHERE b < 30;
-NOTICE:  trigger_func(after_upd_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 -- UPDATE that effects zero rows should still call per-statement trigger
 UPDATE main_table SET a = a + 2 WHERE b > 100;
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 -- COPY should fire per-row and per-statement INSERT triggers
 COPY main_table (a, b) FROM stdin;
 NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
@@ -306,13 +319,13 @@ NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, lev
 SELECT * FROM main_table ORDER BY a, b;
  a  | b  
 ----+----
-  6 | 10
- 21 | 20
+  5 | 10
+ 20 | 20
+ 30 | 10
  30 | 40
- 31 | 10
  50 | 35
  50 | 60
- 81 | 15
+ 80 | 15
     |   
 (8 rows)
 
@@ -332,39 +345,27 @@ FOR EACH STATEMENT WHEN (true) EXECUTE PROCEDURE trigger_func('insert_when');
 CREATE TRIGGER delete_when AFTER DELETE ON main_table
 FOR EACH STATEMENT WHEN (true) EXECUTE PROCEDURE trigger_func('delete_when');
 INSERT INTO main_table (a) VALUES (123), (456);
-NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
-NOTICE:  trigger_func(insert_when) called: action = INSERT, when = BEFORE, level = STATEMENT
-NOTICE:  trigger_func(insert_a) called: action = INSERT, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, level = STATEMENT
+NOTICE:  trigger_func(insert_a) called: action = INSERT, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
 COPY main_table FROM stdin;
 NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
 NOTICE:  trigger_func(insert_when) called: action = INSERT, when = BEFORE, level = STATEMENT
 NOTICE:  trigger_func(insert_a) called: action = INSERT, when = AFTER, level = ROW
 NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, level = STATEMENT
 DELETE FROM main_table WHERE a IN (123, 456);
-NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW
-NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW
-NOTICE:  trigger_func(delete_when) called: action = DELETE, when = AFTER, level = STATEMENT
+NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
 UPDATE main_table SET a = 50, b = 60;
-NOTICE:  trigger_func(modified_any) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_any) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_a) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_a) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_a) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_a) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(modified_a) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(after_upd_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 SELECT * FROM main_table ORDER BY a, b;
  a  | b  
 ----+----
-  6 | 10
- 21 | 20
+  5 | 10
+ 20 | 20
+ 30 | 10
  30 | 40
- 31 | 10
  50 | 35
  50 | 60
- 81 | 15
+ 80 | 15
     |   
 (8 rows)
 
@@ -411,35 +412,24 @@ SELECT pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'main_table'::regc
 (1 row)
 
 UPDATE main_table SET a = 50;
-NOTICE:  trigger_func(before_upd_a_stmt) called: action = UPDATE, when = BEFORE, level = STATEMENT
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 UPDATE main_table SET b = 10;
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-NOTICE:  trigger_func(after_upd_b_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg0 172.17.0.2:25432 pid=113596)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg2 172.17.0.2:25434 pid=113598)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg0 172.17.0.2:25432 pid=113596)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg2 172.17.0.2:25434 pid=113598)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg0 172.17.0.2:25432 pid=113596)
+NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg2 172.17.0.2:25434 pid=113598)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg0 172.17.0.2:25432 pid=113596)
+NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg2 172.17.0.2:25434 pid=113598)
 --
 -- Test case for bug with BEFORE trigger followed by AFTER trigger with WHEN
 --
@@ -461,13 +451,11 @@ CREATE TRIGGER some_trig_afterb AFTER UPDATE ON some_t FOR EACH ROW
   EXECUTE PROCEDURE dummy_update_func('afterb');
 INSERT INTO some_t VALUES (TRUE);
 UPDATE some_t SET some_col = TRUE;
-NOTICE:  dummy_update_func(before) called: action = UPDATE, old = (t), new = (t)
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 UPDATE some_t SET some_col = FALSE;
-NOTICE:  dummy_update_func(before) called: action = UPDATE, old = (t), new = (f)
-NOTICE:  dummy_update_func(afterb) called: action = UPDATE, old = (t), new = (f)
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 UPDATE some_t SET some_col = TRUE;
-NOTICE:  dummy_update_func(before) called: action = UPDATE, old = (f), new = (t)
-NOTICE:  dummy_update_func(aftera) called: action = UPDATE, old = (f), new = (t)
+ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
 DROP TABLE some_t;
 -- bogus cases
 CREATE TRIGGER error_upd_and_col BEFORE UPDATE OR UPDATE OF a ON main_table
@@ -527,11 +515,14 @@ NOTICE:  CREATE TABLE will create implicit sequence "trigtest_i_seq" for serial 
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "trigtest_pkey" for table "trigtest"
 -- test that disabling RI triggers works
 create table trigtest2 (i int references trigtest(i) on delete cascade);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
 create function trigtest() returns trigger as $$
 begin
 	raise notice '% % % %', TG_RELNAME, TG_OP, TG_WHEN, TG_LEVEL;
 	return new;
-end;$$ language plpgsql immutable;
+end;$$ language plpgsql;
 create trigger trigtest_b_row_tg before insert or update or delete on trigtest
 for each row execute procedure trigtest();
 create trigger trigtest_a_row_tg after insert or update or delete on trigtest
@@ -541,37 +532,33 @@ for each statement execute procedure trigtest();
 create trigger trigtest_a_stmt_tg after insert or update or delete on trigtest
 for each statement execute procedure trigtest();
 insert into trigtest default values;
-NOTICE:  trigtest INSERT BEFORE STATEMENT
-NOTICE:  trigtest INSERT BEFORE ROW
-NOTICE:  trigtest INSERT AFTER ROW
-NOTICE:  trigtest INSERT AFTER STATEMENT
+NOTICE:  trigtest INSERT BEFORE ROW  (seg2 172.17.0.2:25434 pid=113598)
+NOTICE:  trigtest INSERT AFTER ROW  (seg2 172.17.0.2:25434 pid=113598)
 alter table trigtest disable trigger trigtest_b_row_tg;
 insert into trigtest default values;
-NOTICE:  trigtest INSERT BEFORE STATEMENT
-NOTICE:  trigtest INSERT AFTER ROW
-NOTICE:  trigtest INSERT AFTER STATEMENT
+NOTICE:  trigtest INSERT AFTER ROW  (seg1 172.17.0.2:25433 pid=113597)
 alter table trigtest disable trigger user;
 insert into trigtest default values;
 alter table trigtest enable trigger trigtest_a_stmt_tg;
 insert into trigtest default values;
-NOTICE:  trigtest INSERT AFTER STATEMENT
 insert into trigtest2 values(1);
 insert into trigtest2 values(2);
 delete from trigtest where i=2;
-NOTICE:  trigtest DELETE AFTER STATEMENT
 select * from trigtest2;
  i 
 ---
+ 2
  1
-(1 row)
+(2 rows)
 
 alter table trigtest disable trigger all;
 delete from trigtest where i=1;
 select * from trigtest2;
  i 
 ---
+ 2
  1
-(1 row)
+(2 rows)
 
 -- ensure we still insert, even when all triggers are disabled
 insert into trigtest default values;
@@ -687,7 +674,9 @@ DROP TABLE trigger_test;
 --
 -- Test use of row comparisons on OLD/NEW
 --
-CREATE TABLE trigger_test (f1 int, f2 text, f3 text);
+CREATE TABLE trigger_test (dkey int, f1 int, f2 text, f3 text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dkey' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- this is the obvious (and wrong...) way to compare rows
 CREATE FUNCTION mytrigger() RETURNS trigger LANGUAGE plpgsql as $$
 begin
@@ -701,8 +690,8 @@ end$$;
 CREATE TRIGGER t
 BEFORE UPDATE ON trigger_test
 FOR EACH ROW EXECUTE PROCEDURE mytrigger();
-INSERT INTO trigger_test VALUES(1, 'foo', 'bar');
-INSERT INTO trigger_test VALUES(2, 'baz', 'quux');
+INSERT INTO trigger_test VALUES(0, 1, 'foo', 'bar');
+INSERT INTO trigger_test VALUES(0, 2, 'baz', 'quux');
 UPDATE trigger_test SET f3 = 'bar';
 NOTICE:  row 1 not changed
 NOTICE:  row 2 changed
@@ -749,7 +738,7 @@ CREATE TABLE serializable_update_tab (
 	id int,
 	filler  text,
 	description text
-);
+) distributed by (filler);
 CREATE TRIGGER serializable_update_trig BEFORE UPDATE ON serializable_update_tab
 	FOR EACH ROW EXECUTE PROCEDURE serializable_update_trig();
 INSERT INTO serializable_update_tab SELECT a, repeat('xyzxz', 100), 'new'
@@ -774,6 +763,9 @@ CREATE TABLE min_updates_test_oids (
 	f1	text,
 	f2 int,
 	f3 int) WITH OIDS;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 INSERT INTO min_updates_test VALUES ('a',1,2),('b','2',null);
 INSERT INTO min_updates_test_oids VALUES ('a',1,2),('b','2',null);
 CREATE TRIGGER z_min_update
@@ -818,18 +810,18 @@ DROP TABLE min_updates_test_oids;
 CREATE VIEW main_view AS SELECT a, b FROM main_table;
 -- Updates should fail without rules or triggers
 INSERT INTO main_view VALUES (1,2);
-ERROR:  cannot insert into view "main_view"
-HINT:  You need an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE main_view SET b = 20 WHERE a = 50;
-ERROR:  cannot update view "main_view"
-HINT:  You need an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 DELETE FROM main_view WHERE a = 50;
-ERROR:  cannot delete from view "main_view"
-HINT:  You need an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- Should fail even when there are no matching rows
 DELETE FROM main_view WHERE a = 51;
-ERROR:  cannot delete from view "main_view"
-HINT:  You need an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- VIEW trigger function
 CREATE OR REPLACE FUNCTION view_trigger() RETURNS trigger
 LANGUAGE plpgsql AS $$
@@ -921,22 +913,25 @@ DETAIL:  Tables cannot have INSTEAD OF triggers.
 -- Don't support WHEN clauses with INSTEAD OF triggers
 CREATE TRIGGER invalid_trig INSTEAD OF UPDATE ON main_view
 FOR EACH ROW WHEN (OLD.a <> NEW.a) EXECUTE PROCEDURE view_trigger('instead_of_upd');
-ERROR:  INSTEAD OF triggers cannot have WHEN conditions
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 -- Don't support column-level INSTEAD OF triggers
 CREATE TRIGGER invalid_trig INSTEAD OF UPDATE OF a ON main_view
 FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_upd');
-ERROR:  INSTEAD OF triggers cannot have column lists
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 -- Don't support statement-level INSTEAD OF triggers
 CREATE TRIGGER invalid_trig INSTEAD OF UPDATE ON main_view
 EXECUTE PROCEDURE view_trigger('instead_of_upd');
-ERROR:  INSTEAD OF triggers must be FOR EACH ROW
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 -- Valid INSTEAD OF triggers
 CREATE TRIGGER instead_of_insert_trig INSTEAD OF INSERT ON main_view
 FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_ins');
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 CREATE TRIGGER instead_of_update_trig INSTEAD OF UPDATE ON main_view
 FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_upd');
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 CREATE TRIGGER instead_of_delete_trig INSTEAD OF DELETE ON main_view
 FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_del');
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 -- Valid BEFORE statement VIEW triggers
 CREATE TRIGGER before_ins_stmt_trig BEFORE INSERT ON main_view
 FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_ins_stmt');
@@ -954,152 +949,38 @@ FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('after_view_del_stmt');
 \set QUIET false
 -- Insert into view using trigger
 INSERT INTO main_view VALUES (20, 30);
-NOTICE:  main_view BEFORE INSERT STATEMENT (before_view_ins_stmt)
-NOTICE:  main_view INSTEAD OF INSERT ROW (instead_of_ins)
-NOTICE:  NEW: (20,30)
-NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "INSERT INTO main_table VALUES (NEW.a, NEW.b)"
-PL/pgSQL function view_trigger() line 17 at SQL statement
-NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "INSERT INTO main_table VALUES (NEW.a, NEW.b)"
-PL/pgSQL function view_trigger() line 17 at SQL statement
-NOTICE:  main_view AFTER INSERT STATEMENT (after_view_ins_stmt)
-INSERT 0 1
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 INSERT INTO main_view VALUES (21, 31) RETURNING a, b;
-NOTICE:  main_view BEFORE INSERT STATEMENT (before_view_ins_stmt)
-NOTICE:  main_view INSTEAD OF INSERT ROW (instead_of_ins)
-NOTICE:  NEW: (21,31)
-NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "INSERT INTO main_table VALUES (NEW.a, NEW.b)"
-PL/pgSQL function view_trigger() line 17 at SQL statement
-NOTICE:  trigger_func(after_ins_stmt) called: action = INSERT, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "INSERT INTO main_table VALUES (NEW.a, NEW.b)"
-PL/pgSQL function view_trigger() line 17 at SQL statement
-NOTICE:  main_view AFTER INSERT STATEMENT (after_view_ins_stmt)
- a  | b  
-----+----
- 21 | 31
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- Table trigger will prevent updates
 UPDATE main_view SET b = 31 WHERE a = 20;
-NOTICE:  main_view BEFORE UPDATE STATEMENT (before_view_upd_stmt)
-NOTICE:  main_view INSTEAD OF UPDATE ROW (instead_of_upd)
-NOTICE:  OLD: (20,30), NEW: (20,31)
-NOTICE:  trigger_func(before_upd_a_stmt) called: action = UPDATE, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  main_view AFTER UPDATE STATEMENT (after_view_upd_stmt)
-UPDATE 0
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE main_view SET b = 32 WHERE a = 21 AND b = 31 RETURNING a, b;
-NOTICE:  main_view BEFORE UPDATE STATEMENT (before_view_upd_stmt)
-NOTICE:  main_view INSTEAD OF UPDATE ROW (instead_of_upd)
-NOTICE:  OLD: (21,31), NEW: (21,32)
-NOTICE:  trigger_func(before_upd_a_stmt) called: action = UPDATE, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(before_upd_a_row) called: action = UPDATE, when = BEFORE, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  main_view AFTER UPDATE STATEMENT (after_view_upd_stmt)
- a | b 
----+---
-(0 rows)
-
-UPDATE 0
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- Remove table trigger to allow updates
 DROP TRIGGER before_upd_a_row_trig ON main_table;
 DROP TRIGGER
 UPDATE main_view SET b = 31 WHERE a = 20;
-NOTICE:  main_view BEFORE UPDATE STATEMENT (before_view_upd_stmt)
-NOTICE:  main_view INSTEAD OF UPDATE ROW (instead_of_upd)
-NOTICE:  OLD: (20,30), NEW: (20,31)
-NOTICE:  trigger_func(before_upd_a_stmt) called: action = UPDATE, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  main_view AFTER UPDATE STATEMENT (after_view_upd_stmt)
-UPDATE 1
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE main_view SET b = 32 WHERE a = 21 AND b = 31 RETURNING a, b;
-NOTICE:  main_view BEFORE UPDATE STATEMENT (before_view_upd_stmt)
-NOTICE:  main_view INSTEAD OF UPDATE ROW (instead_of_upd)
-NOTICE:  OLD: (21,31), NEW: (21,32)
-NOTICE:  trigger_func(before_upd_a_stmt) called: action = UPDATE, when = BEFORE, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_b_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  trigger_func(after_upd_stmt) called: action = UPDATE, when = AFTER, level = STATEMENT
-CONTEXT:  SQL statement "UPDATE main_table SET a = NEW.a, b = NEW.b WHERE a = OLD.a AND b = OLD.b"
-PL/pgSQL function view_trigger() line 23 at SQL statement
-NOTICE:  main_view AFTER UPDATE STATEMENT (after_view_upd_stmt)
- a  | b  
-----+----
- 21 | 32
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- Before and after stmt triggers should fire even when no rows are affected
 UPDATE main_view SET b = 0 WHERE false;
-NOTICE:  main_view BEFORE UPDATE STATEMENT (before_view_upd_stmt)
-NOTICE:  main_view AFTER UPDATE STATEMENT (after_view_upd_stmt)
-UPDATE 0
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 -- Delete from view using trigger
 DELETE FROM main_view WHERE a IN (20,21);
-NOTICE:  main_view BEFORE DELETE STATEMENT (before_view_del_stmt)
-NOTICE:  main_view INSTEAD OF DELETE ROW (instead_of_del)
-NOTICE:  OLD: (21,10)
-NOTICE:  main_view INSTEAD OF DELETE ROW (instead_of_del)
-NOTICE:  OLD: (20,31)
-NOTICE:  main_view INSTEAD OF DELETE ROW (instead_of_del)
-NOTICE:  OLD: (21,32)
-NOTICE:  main_view AFTER DELETE STATEMENT (after_view_del_stmt)
-DELETE 3
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 DELETE FROM main_view WHERE a = 31 RETURNING a, b;
-NOTICE:  main_view BEFORE DELETE STATEMENT (before_view_del_stmt)
-NOTICE:  main_view INSTEAD OF DELETE ROW (instead_of_del)
-NOTICE:  OLD: (31,10)
-NOTICE:  main_view AFTER DELETE STATEMENT (after_view_del_stmt)
- a  | b  
-----+----
- 31 | 10
-(1 row)
-
-DELETE 1
+ERROR:  cannot change view "main_view"
+HINT:  changing views is not supported in Greenplum
 \set QUIET true
 -- Describe view should list triggers
 \d main_view
@@ -1115,13 +996,12 @@ Triggers:
     before_del_stmt_trig BEFORE DELETE ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_del_stmt')
     before_ins_stmt_trig BEFORE INSERT ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_ins_stmt')
     before_upd_stmt_trig BEFORE UPDATE ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_upd_stmt')
-    instead_of_delete_trig INSTEAD OF DELETE ON main_view FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_del')
-    instead_of_insert_trig INSTEAD OF INSERT ON main_view FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_ins')
-    instead_of_update_trig INSTEAD OF UPDATE ON main_view FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_upd')
 
 -- Test dropping view triggers
 DROP TRIGGER instead_of_insert_trig ON main_view;
+ERROR:  trigger "instead_of_insert_trig" for table "main_view" does not exist
 DROP TRIGGER instead_of_delete_trig ON main_view;
+ERROR:  trigger "instead_of_delete_trig" for table "main_view" does not exist
 \d+ main_view
                View "public.main_view"
  Column |  Type   | Modifiers | Storage | Description 
@@ -1138,20 +1018,19 @@ Triggers:
     before_del_stmt_trig BEFORE DELETE ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_del_stmt')
     before_ins_stmt_trig BEFORE INSERT ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_ins_stmt')
     before_upd_stmt_trig BEFORE UPDATE ON main_view FOR EACH STATEMENT EXECUTE PROCEDURE view_trigger('before_view_upd_stmt')
-    instead_of_update_trig INSTEAD OF UPDATE ON main_view FOR EACH ROW EXECUTE PROCEDURE view_trigger('instead_of_upd')
 
 DROP VIEW main_view;
 --
 -- Test triggers on a join view
+-- GPDB ignore this test: don't support modifications on views.
 --
 CREATE TABLE country_table (
     country_id        serial primary key,
-    country_name    text unique not null,
+    country_name    text not null,
     continent        text not null
 );
 NOTICE:  CREATE TABLE will create implicit sequence "country_table_country_id_seq" for serial column "country_table.country_id"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "country_table_pkey" for table "country_table"
-NOTICE:  CREATE TABLE / UNIQUE will create implicit index "country_table_country_name_key" for table "country_table"
 INSERT INTO country_table (country_name, continent)
     VALUES ('Japan', 'Asia'),
            ('UK', 'Europe'),
@@ -1172,6 +1051,7 @@ CREATE TABLE city_table (
 );
 NOTICE:  CREATE TABLE will create implicit sequence "city_table_city_id_seq" for serial column "city_table.city_id"
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "city_table_pkey" for table "city_table"
+WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
 CREATE VIEW city_view AS
     SELECT city_id, city_name, population, country_name, continent
     FROM city_table ci
@@ -1204,6 +1084,7 @@ end;
 $$;
 CREATE TRIGGER city_insert_trig INSTEAD OF INSERT ON city_view
 FOR EACH ROW EXECUTE PROCEDURE city_insert();
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 CREATE FUNCTION city_delete() RETURNS trigger LANGUAGE plpgsql AS $$
 begin
     DELETE FROM city_table WHERE city_id = OLD.city_id;
@@ -1213,6 +1094,7 @@ end;
 $$;
 CREATE TRIGGER city_delete_trig INSTEAD OF DELETE ON city_view
 FOR EACH ROW EXECUTE PROCEDURE city_delete();
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 CREATE FUNCTION city_update() RETURNS trigger LANGUAGE plpgsql AS $$
 declare
     ctry_id int;
@@ -1241,99 +1123,54 @@ end;
 $$;
 CREATE TRIGGER city_update_trig INSTEAD OF UPDATE ON city_view
 FOR EACH ROW EXECUTE PROCEDURE city_update();
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 \set QUIET false
 -- INSERT .. RETURNING
 INSERT INTO city_view(city_name) VALUES('Tokyo') RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       1 | Tokyo     |            |              | 
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 INSERT INTO city_view(city_name, population) VALUES('London', 7556900) RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       2 | London    |    7556900 |              | 
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 INSERT INTO city_view(city_name, country_name) VALUES('Washington DC', 'USA') RETURNING *;
- city_id |   city_name   | population | country_name |   continent   
----------+---------------+------------+--------------+---------------
-       3 | Washington DC |            | USA          | North America
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 INSERT INTO city_view(city_id, city_name) VALUES(123456, 'New York') RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-  123456 | New York  |            |              | 
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 INSERT INTO city_view VALUES(234567, 'Birmingham', 1016800, 'UK', 'EU') RETURNING *;
- city_id | city_name  | population | country_name | continent 
----------+------------+------------+--------------+-----------
-  234567 | Birmingham |    1016800 | UK           | Europe
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 -- UPDATE .. RETURNING
 UPDATE city_view SET country_name = 'Japon' WHERE city_name = 'Tokyo'; -- error
-ERROR:  No such country: "Japon"
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET country_name = 'Japan' WHERE city_name = 'Takyo'; -- no match
-UPDATE 0
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET country_name = 'Japan' WHERE city_name = 'Tokyo' RETURNING *; -- OK
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       1 | Tokyo     |            | Japan        | Asia
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET population = 13010279 WHERE city_name = 'Tokyo' RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       1 | Tokyo     |   13010279 | Japan        | Asia
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET country_name = 'UK' WHERE city_name = 'New York' RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-  123456 | New York  |            | UK           | Europe
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET country_name = 'USA', population = 8391881 WHERE city_name = 'New York' RETURNING *;
- city_id | city_name | population | country_name |   continent   
----------+-----------+------------+--------------+---------------
-  123456 | New York  |    8391881 | USA          | North America
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view SET continent = 'EU' WHERE continent = 'Europe' RETURNING *;
- city_id | city_name  | population | country_name | continent 
----------+------------+------------+--------------+-----------
-  234567 | Birmingham |    1016800 | UK           | Europe
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE city_view v1 SET country_name = v2.country_name FROM city_view v2
     WHERE v2.city_name = 'Birmingham' AND v1.city_name = 'London' RETURNING *;
- city_id | city_name | population | country_name | continent | city_id | city_name  | population | country_name | continent 
----------+-----------+------------+--------------+-----------+---------+------------+------------+--------------+-----------
-       2 | London    |    7556900 | UK           | Europe    |  234567 | Birmingham |    1016800 | UK           | Europe
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 -- DELETE .. RETURNING
 DELETE FROM city_view WHERE city_name = 'Birmingham' RETURNING *;
- city_id | city_name  | population | country_name | continent 
----------+------------+------------+--------------+-----------
-  234567 | Birmingham |    1016800 | UK           | Europe
-(1 row)
-
-DELETE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 \set QUIET true
 -- read-only view with WHERE clause
 CREATE VIEW european_city_view AS
@@ -1341,20 +1178,24 @@ CREATE VIEW european_city_view AS
 SELECT count(*) FROM european_city_view;
  count 
 -------
-     1
+     0
 (1 row)
 
 CREATE FUNCTION no_op_trig_fn() RETURNS trigger LANGUAGE plpgsql
 AS 'begin RETURN NULL; end';
 CREATE TRIGGER no_op_trig INSTEAD OF INSERT OR UPDATE OR DELETE
 ON european_city_view FOR EACH ROW EXECUTE PROCEDURE no_op_trig_fn();
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
 \set QUIET false
 INSERT INTO european_city_view VALUES (0, 'x', 10000, 'y', 'z');
-INSERT 0 0
+ERROR:  cannot change view "european_city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE european_city_view SET population = 10000;
-UPDATE 0
+ERROR:  cannot change view "european_city_view"
+HINT:  changing views is not supported in Greenplum
 DELETE FROM european_city_view;
-DELETE 0
+ERROR:  cannot change view "european_city_view"
+HINT:  changing views is not supported in Greenplum
 \set QUIET true
 -- rules bypassing no-op triggers
 CREATE RULE european_city_insert_rule AS ON INSERT TO european_city_view
@@ -1374,41 +1215,27 @@ DO INSTEAD DELETE FROM city_view WHERE city_id = OLD.city_id RETURNING *;
 -- INSERT not limited by view's WHERE clause, but UPDATE AND DELETE are
 INSERT INTO european_city_view(city_name, country_name)
     VALUES ('Cambridge', 'USA') RETURNING *;
- city_id | city_name | population | country_name |   continent   
----------+-----------+------------+--------------+---------------
-       4 | Cambridge |            | USA          | North America
-(1 row)
-
-INSERT 0 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE european_city_view SET country_name = 'UK'
     WHERE city_name = 'Cambridge';
-UPDATE 0
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 DELETE FROM european_city_view WHERE city_name = 'Cambridge';
-DELETE 0
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 -- UPDATE and DELETE via rule and trigger
 UPDATE city_view SET country_name = 'UK'
     WHERE city_name = 'Cambridge' RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       4 | Cambridge |            | UK           | Europe
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 UPDATE european_city_view SET population = 122800
     WHERE city_name = 'Cambridge' RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       4 | Cambridge |     122800 | UK           | Europe
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 DELETE FROM european_city_view WHERE city_name = 'Cambridge' RETURNING *;
- city_id | city_name | population | country_name | continent 
----------+-----------+------------+--------------+-----------
-       4 | Cambridge |     122800 | UK           | Europe
-(1 row)
-
-DELETE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 -- join UPDATE test
 UPDATE city_view v SET population = 599657
     FROM city_table ci, country_table co
@@ -1416,21 +1243,13 @@ UPDATE city_view v SET population = 599657
     AND v.city_id = ci.city_id AND v.country_name = co.country_name
     RETURNING co.country_id, v.country_name,
               v.city_id, v.city_name, v.population;
- country_id | country_name | city_id |   city_name   | population 
-------------+--------------+---------+---------------+------------
-          3 | USA          |       3 | Washington DC |     599657
-(1 row)
-
-UPDATE 1
+ERROR:  cannot change view "city_view"
+HINT:  changing views is not supported in Greenplum
 \set QUIET true
 SELECT * FROM city_view;
- city_id |   city_name   | population | country_name |   continent   
----------+---------------+------------+--------------+---------------
-       1 | Tokyo         |   13010279 | Japan        | Asia
-  123456 | New York      |    8391881 | USA          | North America
-       2 | London        |    7556900 | UK           | Europe
-       3 | Washington DC |     599657 | USA          | North America
-(4 rows)
+ city_id | city_name | population | country_name | continent 
+---------+-----------+------------+--------------+-----------
+(0 rows)
 
 DROP TABLE city_table CASCADE;
 NOTICE:  drop cascades to 2 other objects
@@ -1438,6 +1257,7 @@ DETAIL:  drop cascades to view city_view
 drop cascades to view european_city_view
 DROP TABLE country_table;
 -- Test pg_trigger_depth()
+-- GPDB ignore this test: execute insert in trigger function
 create table depth_a (id int not null primary key);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "depth_a_pkey" for table "depth_a"
 create table depth_b (id int not null primary key);
@@ -1494,30 +1314,9 @@ select pg_trigger_depth();
 (1 row)
 
 insert into depth_a values (1);
-NOTICE:  depth_a_tr: depth = 1
-NOTICE:  depth_b_tr: depth = 2
+NOTICE:  depth_a_tr: depth = 1  (seg2 172.17.0.2:25434 pid=123164)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 172.17.0.2:25434 pid=123164)
 CONTEXT:  SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_c_tr: depth = 3
-CONTEXT:  SQL statement "insert into depth_c values (1)"
-PL/pgSQL function depth_b_tf() line 5 at EXECUTE statement
-SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  SQLSTATE = U9999: depth = 2
-CONTEXT:  SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_b_tr: depth = 2
-CONTEXT:  SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_c_tr: depth = 3
-CONTEXT:  SQL statement "insert into depth_c values (1)"
-PL/pgSQL function depth_b_tf() line 12 at EXECUTE statement
-SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-ERROR:  U9999
-CONTEXT:  SQL statement "insert into depth_c values (1)"
-PL/pgSQL function depth_b_tf() line 12 at EXECUTE statement
-SQL statement "insert into depth_b values (new.id)"
 PL/pgSQL function depth_a_tf() line 4 at SQL statement
 select pg_trigger_depth();
  pg_trigger_depth 
@@ -1526,24 +1325,10 @@ select pg_trigger_depth();
 (1 row)
 
 insert into depth_a values (2);
-NOTICE:  depth_a_tr: depth = 1
-NOTICE:  depth_b_tr: depth = 2
+NOTICE:  depth_a_tr: depth = 1  (seg1 172.17.0.2:25433 pid=123163)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 172.17.0.2:25433 pid=123163)
 CONTEXT:  SQL statement "insert into depth_b values (new.id)"
 PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_c_tr: depth = 3
-CONTEXT:  SQL statement "insert into depth_c values (2)"
-PL/pgSQL function depth_b_tf() line 5 at EXECUTE statement
-SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_c_tr: depth = 3
-CONTEXT:  SQL statement "insert into depth_c values (2)"
-PL/pgSQL function depth_b_tf() line 5 at EXECUTE statement
-SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_b_tr: depth = 2
-CONTEXT:  SQL statement "insert into depth_b values (new.id)"
-PL/pgSQL function depth_a_tf() line 4 at SQL statement
-NOTICE:  depth_a_tr: depth = 1
 select pg_trigger_depth();
  pg_trigger_depth 
 ------------------

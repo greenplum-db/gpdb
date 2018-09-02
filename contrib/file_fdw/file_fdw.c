@@ -463,7 +463,7 @@ fileGetForeignPaths(PlannerInfo *root,
 				   &startup_cost, &total_cost);
 
 	/* Create a ForeignPath node and add it as only possible path */
-	add_path(root, baserel, (Path *)
+	add_path(baserel, (Path *)
 			 create_foreignscan_path(root, baserel,
 									 baserel->rows,
 									 startup_cost,

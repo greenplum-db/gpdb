@@ -623,7 +623,9 @@ sub format_query_output
     # EXPLAIN (COSTS OFF) output is *not* processed. The output with COSTS OFF
     # shouldn't contain anything that varies across runs, and shouldn't need
     # sanitizing.
-    if (exists($directive->{explain}) && $directive->{explain} ne 'costs_off')
+    if (exists($directive->{explain}) && $directive->{explain} ne 'costs_off'
+        && (!exists($directive->{explain_processing})
+            || ($directive->{explain_processing} =~ m/on/)))
     {
        format_explain($outarr, $directive);
        if ($glob_verbose)
@@ -1340,9 +1342,10 @@ sub atmsort_bigloop
 			# each command has a unique first character. This allows us to
 			# use fewer regular expression matches in this hot section.
 			if ($has_comment &&
-				$ini =~ m/\-\-\s*((force_explain)\s*(operator)?\s*$|(ignore)\s*$|(order)\s+(\d+|none).*$|(mvd)\s+\d+.*$)/)
+				$ini =~ m/\-\-\s*((force_explain)\s*(operator)?\s*$|(ignore)\s*$|(order)\s+(\d+|none).*$|(mvd)\s+\d+.*$|(explain_processing_(on|off))\s+.*$)/)
 			{
-				my $cmd = substr($1, 0, 1);
+				my $full_command = $1;
+				my $cmd = substr($full_command, 0, 1);
 				if ($cmd eq 'i')
 				{
 					$directive->{ignore} = 'ignore';
@@ -1370,6 +1373,11 @@ sub atmsort_bigloop
 					{
 						$directive->{explain} = 'normal';
 					}
+				}
+				elsif ($cmd eq 'e')
+				{
+					$full_command =~ m/(on|off)$/;
+					$directive->{explain_processing} = $1;
 				}
 				else
 				{

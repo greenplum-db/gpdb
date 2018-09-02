@@ -234,9 +234,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into x values (456),(12),(901),(678),(789),(345);
 insert into x values (456),(12),(901),(678),(789),(345);
 select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a and test1.b in (select x from x)) as foo;
-       avg        
-------------------
- 530.166666666667
+         avg          
+----------------------
+ 530.1666666666666667
 (1 row)
 
 CREATE FUNCTION complexquery() RETURNS float AS $$
@@ -453,9 +453,9 @@ PL/pgSQL function tbl16369_func11(integer) line 8 at assignment
 -- Test: test12_funtion_with_complex_query.sql
 -- ----------------------------------------------------------------------
 select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a and test1.b in (select x from x)) as foo;
-       avg        
-------------------
- 530.166666666667
+         avg          
+----------------------
+ 530.1666666666666667
 (1 row)
 
 select complexquery();

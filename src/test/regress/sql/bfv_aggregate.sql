@@ -43,7 +43,7 @@ select 1, to_char(col1, 'YYYY'), median(col2) from d group by 1, 2;
 
 -- SETUP
 create table toy(id,val) as select i,i from generate_series(1,5) i;
-create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
+create aggregate mysum1(int4) (sfunc = int4_sum, combinefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
 
 -- TEST
@@ -128,7 +128,7 @@ reset optimizer_segments;
 set optimizer_force_multistage_agg = off;
 
 --
--- Testing not picking HashAgg for aggregates without preliminary functions
+-- Testing not picking HashAgg for aggregates without combine functions
 --
 -- SETUP
 set optimizer_print_missing_stats = off;
@@ -143,7 +143,7 @@ ELSE $1 || $2 END;'
      LANGUAGE SQL
      IMMUTABLE
      RETURNS NULL ON NULL INPUT;
--- UDA definition. No PREFUNC exists
+-- UDA definition. No COMBINEFUNC exists
 CREATE AGGREGATE concat(text) (
    --text/string concatenation
    SFUNC = do_concat, --Function to call for each string that builds the aggregate
@@ -160,7 +160,8 @@ select count_operator('select product_id,concat(E''#attribute_''||attribute_id::
 -- CLEANUP
 
 --
--- Testing fallback to planner when the agg used in window does not have either prelim or inverse prelim function.
+-- Testing fallback to planner when the agg used in window does not have
+-- a combine function.
 --
 
 -- SETUP
@@ -1378,7 +1379,7 @@ select array_agg(a order by b nulls last) from aggordertest;
 select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
--- begin MPP-14125: if prelim function is missing, do not choose hash agg.
+-- begin MPP-14125: if combine function is missing, do not choose hash agg.
 create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
 explain select string_agg(a, '') from mpp14125 group by b;
 -- end MPP-14125
@@ -1388,6 +1389,12 @@ CREATE TABLE tbl_agg_srf (foo int[]) DISTRIBUTED RANDOMLY;
 INSERT INTO tbl_agg_srf VALUES (array[1,2,3]);
 EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
 SELECT count(unnest(foo)) FROM tbl_agg_srf;
+
+-- Test that integer AVG() aggregate is accurate with large values. We used to
+-- use float8 to hold the running sums, which did not have enough precision
+-- for this.
+select avg('1000000000000000000'::int8) from generate_series(1, 100000);
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

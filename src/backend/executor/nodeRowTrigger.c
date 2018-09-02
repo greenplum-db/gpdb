@@ -26,6 +26,7 @@
 #include "executor/nodeRowTrigger.h"
 #include "executor/instrument.h"
 #include "commands/trigger.h"
+#include "parser/parsetree.h"
 
 /* Optimizer mapping for Row Triggers */
 #define GPMD_TRIGGER_ROW 1
@@ -108,29 +109,31 @@ ExecUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 				HeapTuple trigtuple /*old*/, TriggerEvent eventFlags)
 {
 	TriggerData triggerData;
+	Bitmapset	*modifiedCols;
 
 	HeapTuple	oldtuple;
 	HeapTuple	intuple = newtuple;
 
 	InitTriggerData(&triggerData, eventFlags, relinfo->ri_RelationDesc);
 
+	modifiedCols = GetModifiedColumns(relinfo, estate);
 	/* Executes all update triggers one by one. The resulting tuple from a
 	* trigger is given to the following one */
 	for (int i = 0; i < trigdesc->numtriggers; i++)
 	{
 		Trigger    *trigger = &trigdesc->triggers[i];
 
-		/* GPDB_91_MERGE_FIXME: should use TriggerEnabled here. */
-		if (!trigger->tgenabled)
-		{
-			continue;
-		}
-
 		if (!TRIGGER_TYPE_MATCHES(trigger->tgtype,
 								  TRIGGER_TYPE_ROW,
 								  before ? TRIGGER_TYPE_BEFORE : TRIGGER_TYPE_AFTER,
 								  TRIGGER_TYPE_UPDATE))
 			continue;
+
+		if (!TriggerEnabled(estate, relinfo, trigger, eventFlags,
+					modifiedCols, trigtuple, newtuple))
+		{
+			continue;
+		}
 
 		triggerData.tg_trigtuple = trigtuple;
 		triggerData.tg_newtuple = oldtuple = newtuple;
@@ -183,16 +186,17 @@ ExecInsertTriggers(EState *estate, ResultRelInfo *relinfo,
 	{
 		Trigger    *trigger = &trigdesc->triggers[i];
 
-		if (!trigger->tgenabled)
-		{
-			continue;
-		}
-
 		if (!TRIGGER_TYPE_MATCHES(trigger->tgtype,
 								  TRIGGER_TYPE_ROW,
 								  before ? TRIGGER_TYPE_BEFORE : TRIGGER_TYPE_AFTER,
 								  TRIGGER_TYPE_INSERT))
 			continue;
+
+		if (!TriggerEnabled(estate, relinfo, trigger, eventFlags,
+					NULL, NULL, newtuple))
+		{
+			continue;
+		}
 
 		triggerData.tg_trigtuple = oldtuple = newtuple;
 		triggerData.tg_trigtuplebuf = InvalidBuffer;
@@ -248,16 +252,17 @@ ExecDeleteTriggers(EState *estate, ResultRelInfo *relinfo,
 	{
 		Trigger    *trigger = &trigdesc->triggers[i];
 
-		if (!trigger->tgenabled)
-		{
-			continue;
-		}
-
 		if (!TRIGGER_TYPE_MATCHES(trigger->tgtype,
 								  TRIGGER_TYPE_ROW,
 								  before ? TRIGGER_TYPE_BEFORE : TRIGGER_TYPE_AFTER,
 								  TRIGGER_TYPE_DELETE))
 			continue;
+
+		if (!TriggerEnabled(estate, relinfo, trigger, eventFlags,
+					NULL, trigtuple, NULL))
+		{
+			continue;
+		}
 
 		triggerData.tg_trigtuple = trigtuple;
 		triggerData.tg_trigtuplebuf = InvalidBuffer;

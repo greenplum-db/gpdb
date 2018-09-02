@@ -59,11 +59,15 @@ gp_inject_fault
 ---------------
 t              
 (1 row)
+-- start_ignore
+-- We ignore the output here because PANIC output is intermittent and is
+-- unrelated to this test. Test simply cares to trigger fault.
 1:select 1;
 PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
+-- end_ignore
 
 2<:  <... completed>
 server closed the connection unexpectedly

@@ -344,7 +344,7 @@ create_index_paths(PlannerInfo *root, RelOptInfo *rel)
 
 		bitmapqual = choose_bitmap_and(root, rel, bitindexpaths);
 		bpath = create_bitmap_scan_path(root, rel, bitmapqual, NULL, 1.0);
-		add_path(root, rel, (Path *) bpath);
+		add_path(rel, (Path *) bpath);
 	}
 
 	/*
@@ -367,7 +367,7 @@ create_index_paths(PlannerInfo *root, RelOptInfo *rel)
 		loop_count = get_loop_count(root, required_outer);
 		bpath = create_bitmap_scan_path(root, rel, bitmapqual,
 										required_outer, loop_count);
-		add_path(root, rel, (Path *) bpath);
+		add_path(rel, (Path *) bpath);
 	}
 }
 
@@ -611,7 +611,7 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 */
 		if (index->amhasgettuple &&
 			rel->relstorage == RELSTORAGE_HEAP)
-			add_path(root, rel, (Path *) ipath);
+			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
 			/* GPDB: Give a chance of bitmap index path if seqscan is disabled.

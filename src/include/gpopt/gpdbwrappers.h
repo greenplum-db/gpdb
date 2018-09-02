@@ -153,7 +153,7 @@ namespace gpdb {
 	// expression collation
 	Oid	ExprCollation(Node *expr);
 
-	// expression collation - GDPB_91_MERGE_FIXME
+	// expression collation - GPDB_91_MERGE_FIXME
 	Oid	TypeCollation(Oid type);
 
 	// extract nodes with specific tag from a plan tree
@@ -172,11 +172,8 @@ namespace gpdb {
 	// is aggregate ordered
 	bool IsOrderedAgg(Oid aggid);
 	
-	// does aggregate have a preliminary function
-	bool AggHasPrelimFunc(Oid aggid);
-
-	// does aggregate have a prelim or inverse prelim function
-	bool AggHasPrelimOrInvPrelimFunc(Oid aggid);
+	// does aggregate have a combine function
+	bool AggHasCombineFunc(Oid aggid);
 
 	// intermediate result type of given aggregate
 	Oid GetAggregate(const char* agg, Oid type_oid);
@@ -593,7 +590,7 @@ namespace gpdb {
 	// the first one found, or -1 if there are none
 	int FindNodes(Node *node, List *nodeTags);
 
-	// GDPB_91_MERGE_FIXME: collation
+	// GPDB_91_MERGE_FIXME: collation
 	// look for nodes with non-default collation; returns 1 if any exist, -1 otherwise
 	int CheckCollation(Node *node);
 

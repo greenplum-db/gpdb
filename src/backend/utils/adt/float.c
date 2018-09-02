@@ -68,9 +68,6 @@ static int	float8_cmp_internal(float8 a, float8 b);
 static double cbrt(double x);
 #endif   /* HAVE_CBRT */
 
-static ArrayType *float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
-									  FunctionCallInfo fcinfo, bool is_amalg);
-
 /*
  * Routines to provide reasonably platform-independent handling of
  * infinity and NaN.  We assume that isinf() and isnan() are available
@@ -1833,6 +1830,50 @@ check_float8_array(ArrayType *transarray, const char *caller, int n)
 	return (float8 *) ARR_DATA_PTR(transarray);
 }
 
+/*
+ * float8_combine
+ *
+ * An aggregate combine function used to combine two 3 fields
+ * aggregate transition data into a single transition data.
+ * This function is used only in two stage aggregation and
+ * shouldn't be called outside aggregate context.
+ */
+Datum
+float8_combine(PG_FUNCTION_ARGS)
+{
+	ArrayType  *transarray1 = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *transarray2 = PG_GETARG_ARRAYTYPE_P(1);
+	float8	   *transvalues1;
+	float8	   *transvalues2;
+	float8		N,
+				sumX,
+				sumX2;
+
+	if (!AggCheckCallContext(fcinfo, NULL))
+		elog(ERROR, "aggregate function called in non-aggregate context");
+
+	transvalues1 = check_float8_array(transarray1, "float8_combine", 3);
+	N = transvalues1[0];
+	sumX = transvalues1[1];
+	sumX2 = transvalues1[2];
+
+	transvalues2 = check_float8_array(transarray2, "float8_combine", 3);
+
+	N += transvalues2[0];
+	sumX += transvalues2[1];
+	CHECKFLOATVAL(sumX, isinf(transvalues1[1]) || isinf(transvalues2[1]),
+				  true);
+	sumX2 += transvalues2[2];
+	CHECKFLOATVAL(sumX2, isinf(transvalues1[2]) || isinf(transvalues2[2]),
+				  true);
+
+	transvalues1[0] = N;
+	transvalues1[1] = sumX;
+	transvalues1[2] = sumX2;
+
+	PG_RETURN_ARRAYTYPE_P(transarray1);
+}
+
 Datum
 float8_accum(PG_FUNCTION_ARGS)
 {
@@ -1883,59 +1924,6 @@ float8_accum(PG_FUNCTION_ARGS)
 		PG_RETURN_ARRAYTYPE_P(result);
 	}
 }
-
-
-Datum
-float8_decum(PG_FUNCTION_ARGS)
-{
-	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	float8		newval = PG_GETARG_FLOAT8(1);
-	float8	   *transvalues;
-	float8		N,
-				miX,
-				miX2;
-
-	transvalues = check_float8_array(transarray, "float8_decum", 3);
-	N = transvalues[0];
-	miX = transvalues[1];
-	miX2 = transvalues[2];
-
-	N -= 1.0;
-	miX -= newval;
-	miX2 -= newval * newval;
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = N;
-		transvalues[1] = miX;
-		transvalues[2] = miX2;
-
-		PG_RETURN_ARRAYTYPE_P(transarray);
-	}
-	else
-	{
-		Datum		transdatums[3];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(N);
-		transdatums[1] = Float8GetDatumFast(miX);
-		transdatums[2] = Float8GetDatumFast(miX2);
-
-		result = construct_array(transdatums, 3,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
-
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
-}
-
 
 Datum
 float4_accum(PG_FUNCTION_ARGS)
@@ -1990,60 +1978,24 @@ float4_accum(PG_FUNCTION_ARGS)
 	}
 }
 
-
 Datum
-float4_decum(PG_FUNCTION_ARGS)
+float8_avg(PG_FUNCTION_ARGS)
 {
 	ArrayType  *transarray = PG_GETARG_ARRAYTYPE_P(0);
-	float4		newval4 = PG_GETARG_FLOAT4(1);
 	float8	   *transvalues;
 	float8		N,
-				miX,
-				miX2,
-				newval;
+				sumX;
 
-	transvalues = check_float8_array(transarray, "float4_decum", 3);
+	transvalues = check_float8_array(transarray, "float8_avg", 3);
 	N = transvalues[0];
-	miX = transvalues[1];
-	miX2 = transvalues[2];
+	sumX = transvalues[1];
+	/* ignore sumX2 */
 
-	/* Do arithmetic in float8 for best accuracy */
-	newval = newval4;
+	/* SQL defines AVG of no values to be NULL */
+	if (N == 0.0)
+		PG_RETURN_NULL();
 
-	N -= 1.0;
-	miX -= newval;
-	miX2 -= newval * newval;
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = N;
-		transvalues[1] = miX;
-		transvalues[2] = miX2;
-
-		PG_RETURN_ARRAYTYPE_P(transarray);
-	}
-	else
-	{
-		Datum		transdatums[3];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(N);
-		transdatums[1] = Float8GetDatumFast(miX);
-		transdatums[2] = Float8GetDatumFast(miX2);
-
-		result = construct_array(transdatums, 3,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
-
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
+	PG_RETURN_FLOAT8(sumX / N);
 }
 
 Datum
@@ -2248,6 +2200,69 @@ float8_regr_accum(PG_FUNCTION_ARGS)
 		PG_RETURN_ARRAYTYPE_P(result);
 	}
 }
+
+/*
+ * float8_regr_combine
+ *
+ * An aggregate combine function used to combine two 6 fields
+ * aggregate transition data into a single transition data.
+ * This function is used only in two stage aggregation and
+ * shouldn't be called outside aggregate context.
+ */
+Datum
+float8_regr_combine(PG_FUNCTION_ARGS)
+{
+	ArrayType  *transarray1 = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *transarray2 = PG_GETARG_ARRAYTYPE_P(1);
+	float8	   *transvalues1;
+	float8	   *transvalues2;
+	float8		N,
+				sumX,
+				sumX2,
+				sumY,
+				sumY2,
+				sumXY;
+
+	if (!AggCheckCallContext(fcinfo, NULL))
+		elog(ERROR, "aggregate function called in non-aggregate context");
+
+	transvalues1 = check_float8_array(transarray1, "float8_regr_combine", 6);
+	N = transvalues1[0];
+	sumX = transvalues1[1];
+	sumX2 = transvalues1[2];
+	sumY = transvalues1[3];
+	sumY2 = transvalues1[4];
+	sumXY = transvalues1[5];
+
+	transvalues2 = check_float8_array(transarray2, "float8_regr_combine", 6);
+
+	N += transvalues2[0];
+	sumX += transvalues2[1];
+	CHECKFLOATVAL(sumX, isinf(transvalues1[1]) || isinf(transvalues2[1]),
+				  true);
+	sumX2 += transvalues2[2];
+	CHECKFLOATVAL(sumX2, isinf(transvalues1[2]) || isinf(transvalues2[2]),
+				  true);
+	sumY += transvalues2[3];
+	CHECKFLOATVAL(sumY, isinf(transvalues1[3]) || isinf(transvalues2[3]),
+				  true);
+	sumY2 += transvalues2[4];
+	CHECKFLOATVAL(sumY2, isinf(transvalues1[4]) || isinf(transvalues2[4]),
+				  true);
+	sumXY += transvalues2[5];
+	CHECKFLOATVAL(sumXY, isinf(transvalues1[5]) || isinf(transvalues2[5]),
+				  true);
+
+	transvalues1[0] = N;
+	transvalues1[1] = sumX;
+	transvalues1[2] = sumX2;
+	transvalues1[3] = sumY;
+	transvalues1[4] = sumY2;
+	transvalues1[5] = sumXY;
+
+	PG_RETURN_ARRAYTYPE_P(transarray1);
+}
+
 
 Datum
 float8_regr_sxx(PG_FUNCTION_ARGS)
@@ -2942,169 +2957,3 @@ cbrt(double x)
 }
 
 #endif   /* !HAVE_CBRT */
-
-
-Datum
-float8_amalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(float8_amalg_demalg(aTransArray, bTransArray,
-											  fcinfo, true));
-}
-
-Datum
-float8_demalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-
-	PG_RETURN_ARRAYTYPE_P(float8_amalg_demalg(aTransArray, bTransArray,
-											  fcinfo, false));	
-}
-
-static ArrayType *
-float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
-					FunctionCallInfo fcinfo, bool is_amalg)
-{
-	float8	   *transvalues;
-	float8		aN, bN,
-				aSumX, bSumX,
-				aSumX2, bSumX2;
-
-	if (is_amalg)
-		transvalues = check_float8_array(bTransArray, "float8_amalg", 3);
-	else
-		transvalues = check_float8_array(bTransArray, "float8_demalg", 3);
-	bN = transvalues[0];
-	bSumX = transvalues[1];
-	bSumX2 = transvalues[2];
-
-	if (is_amalg)
-		transvalues = check_float8_array(aTransArray, "float8_amalg", 3);
-	else
-		transvalues = check_float8_array(aTransArray, "float8_demalg", 3);
-	aN = transvalues[0];
-	aSumX = transvalues[1];
-	aSumX2 = transvalues[2];
-
-	if (is_amalg)
-	{
-		aN += bN;
-		aSumX += bSumX;
-		aSumX2 += bSumX2;
-	}
-	else
-	{
-		aN -= bN;
-		aSumX -= bSumX;
-		aSumX2 -= bSumX2;
-	}
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = aN;
-		transvalues[1] = aSumX;
-		transvalues[2] = aSumX2;
-
-		return aTransArray;
-	}
-	else
-	{
-		Datum		transdatums[3];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(aN);
-		transdatums[1] = Float8GetDatumFast(aSumX);
-		transdatums[2] = Float8GetDatumFast(aSumX2);
-
-		result = construct_array(transdatums, 3,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
-
-		return result;
-	}
-}
-
-/* amalgamate values for linear regression functions */
-Datum
-float8_regr_amalg(PG_FUNCTION_ARGS)
-{
-	ArrayType  *aTransArray = PG_GETARG_ARRAYTYPE_P(0);
-	ArrayType  *bTransArray = PG_GETARG_ARRAYTYPE_P(1);
-	float8	   *transvalues;
-	float8		aN, bN,
-				aSumX, bSumX,
-				aSumY, bSumY,
-				aSumX2, bSumX2,
-				aSumY2, bSumY2,
-				aSumXY, bSumXY;
-
-	transvalues = check_float8_array(bTransArray, "float8_regr_amalg", 6);
-	bN = transvalues[0];
-	bSumX = transvalues[1];
-	bSumX2 = transvalues[2];
-	bSumY = transvalues[3];
-	bSumY2 = transvalues[4];
-	bSumXY = transvalues[5];
-
-	transvalues = check_float8_array(aTransArray, "float8_regr_amalg", 6);
-	aN = transvalues[0];
-	aSumX = transvalues[1];
-	aSumX2 = transvalues[2];
-	aSumY = transvalues[3];
-	aSumY2 = transvalues[4];
-	aSumXY = transvalues[5];
-
-	aN += bN;
-	aSumX += bSumX;
-	aSumX2 += bSumX2;
-	aSumY += bSumY;
-	aSumY2 += bSumY2;
-	aSumXY += bSumXY;
-
-	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
-	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
-	 * new array with the updated transition data and return it.
-	 */
-	if (fcinfo->context &&
-		(IsA(fcinfo->context, AggState) ||
-		 IsA(fcinfo->context, WindowAggState)))
-	{
-		transvalues[0] = aN;
-		transvalues[1] = aSumX;
-		transvalues[2] = aSumX2;
-		transvalues[3] = aSumY;
-		transvalues[4] = aSumY2;
-		transvalues[5] = aSumXY;
-
-		PG_RETURN_ARRAYTYPE_P(aTransArray);
-	}
-	else
-	{
-		Datum		transdatums[6];
-		ArrayType  *result;
-
-		transdatums[0] = Float8GetDatumFast(aN);
-		transdatums[1] = Float8GetDatumFast(aSumX);
-		transdatums[2] = Float8GetDatumFast(aSumX2);
-		transdatums[3] = Float8GetDatumFast(aSumY);
-		transdatums[4] = Float8GetDatumFast(aSumY2);
-		transdatums[5] = Float8GetDatumFast(aSumXY);
-
-		result = construct_array(transdatums, 6,
-								 FLOAT8OID,
-							 sizeof(float8), true /* float8 byval */ , 'd');
-
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
-}

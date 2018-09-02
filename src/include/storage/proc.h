@@ -271,7 +271,7 @@ extern PGPROC *PreparedXactProcs;
  * launched only after startup has exited, so we only need 4 slots.
  *
  * In GPDB, we have some extra processes.
- * GDPB_90_MERGE_FIXME: count them correctly. 10 is an exaggeration.
+ * GPDB_90_MERGE_FIXME: count them correctly. 10 is an exaggeration.
  */
 #define NUM_AUXILIARY_PROCS		(/* PG */ 4 + /* GPDB */ 10)
 

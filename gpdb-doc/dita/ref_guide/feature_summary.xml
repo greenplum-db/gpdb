@@ -408,7 +408,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported Clauses / Options:</b><p><codeph>[ , SORTOP =
                     </codeph><i>sort_operator</i><codeph> ]</codeph></p><p><b>Greenplum Database
-                    Clauses:</b></p><p><codeph>[ , PREFUNC = </codeph><i>prefunc</i><codeph>
+                    Clauses:</b></p><p><codeph>[ , COMBINEFUNC = </codeph><i>combinefunc</i><codeph>
                     ]</codeph></p><p><b>Limitations:</b></p><p>The functions used to implement the
                   aggregate must be <codeph>IMMUTABLE</codeph> functions.</p></entry>
             </row>

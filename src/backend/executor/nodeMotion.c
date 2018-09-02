@@ -1241,7 +1241,7 @@ CdbMergeComparator(void *lhs, void *rhs, void *context)
 
         compare = ApplySortFunction(&sortFunctions[nkey],
                                     cmpFlags[nkey],
-                                    InvalidOid, /* GDPB_91_MERGE_FIXME: collation */
+                                    InvalidOid, /* GPDB_91_MERGE_FIXME: collation */
                                     datum1, isnull1,
                                     datum2, isnull2);
         if (compare != 0)

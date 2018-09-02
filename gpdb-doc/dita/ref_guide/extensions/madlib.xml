@@ -64,9 +64,11 @@
               href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
               >Pivotal Network</xref>.</li>
           <li>Copy the MADlib package to the Greenplum Database master host.</li>
+          <li>Unpack the MADlib distribution package. For
+            example:<codeblock>$ tar xzvf madlib-1.15-gp5-rhel7-x86_64.tar.gz</codeblock></li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
-            command. This example installs the MADlib 1.11 package on a Linux
-            system:<codeblock>$ gppkg -i madlib-ossv1.11_pv1.9.8_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock></li>
+            command. For
+            example:<codeblock>$ gppkg -i ./madlib-1.15-gp5-rhel7-x86_64/madlib-1.15-gp5-rhel7-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -110,7 +112,7 @@
       <body>
         <p>To upgrade MADlib, run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph>
           option. This command upgrades an installed MADlib package to MADlib
-          1.13.<codeblock>gppkg -u madlib-1.13-gp4.3orca-rhel5-x86_64.tar.gz</codeblock></p>
+          1.15.<codeblock>$ gppkg -u madlib-1.15-gp5-rhel7-x86_64.gppkg</codeblock></p>
       </body>
     </topic>
     <topic id="topic_bql_bgd_3w">
@@ -160,8 +162,8 @@ psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</var
         <p>If no databases use the MADlib functions, use the Greenplum <codeph>gppkg</codeph>
           utility with the <codeph>-r</codeph> option to uninstall the MADlib package. When removing
           the package you must specify the package and version. This example uninstalls MADlib
-          package version 1.9.</p>
-        <codeblock>$ gppkg -r madlib-ossv1.11_pv1.9.8_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock>
+          package version 1.4.</p>
+        <codeblock>$ gppkg -r madlib-1.14-gp5-rhel7-x86_64</codeblock>
         <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
           to list the installed extensions and their versions.</p>
         <p>After you uninstall the package, restart the database.</p>

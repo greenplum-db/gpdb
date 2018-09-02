@@ -7433,7 +7433,7 @@ StartupXLOG(void)
 				 * GPDB_84_MERGE_FIXME: Create restartpoints aggressively.
 				 *
 				 * In PostgreSQL, the bgwriter creates restartpoints during archive
-				 * recovery at its own leisure. In GDPB, with WAL replication based
+				 * recovery at its own leisure. In GPDB, with WAL replication based
 				 * mirroring, that was tripping the gp_replica_check checks, because
 				 * it bypasses the shared buffer cache and reads directly from disk.
 				 * For now, restore the old behavior, before the upstream change

@@ -33,18 +33,6 @@ static List *cdb_build_distribution_pathkeys(PlannerInfo *root,
 								int nattrs,
 								AttrNumber *attrs);
 
-
-/*
- * This flag controls the policy type returned from
- * cdbpathlocus_from_baserel() for non-partitioned tables.
- * It's a kludge put in to allow us to do
- * distributed queries on catalog tables, like pg_class
- * and pg_statistic.
- * To use it, simply set it to true before running a catalog query, then set
- * it back to false.
- */
-bool		cdbpathlocus_querysegmentcatalogs = false;
-
 /*
  * Are two pathkeys equal?
  *
@@ -336,10 +324,6 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 	{
 		CdbPathLocus_MakeSegmentGeneral(&result);
 	}
-	/* Kludge used internally for querying catalogs on segment dbs */
-	else if (cdbpathlocus_querysegmentcatalogs)
-		CdbPathLocus_MakeStrewn(&result);
-
 	/* Normal catalog access */
 	else
 		CdbPathLocus_MakeEntry(&result);

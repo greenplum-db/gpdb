@@ -2408,7 +2408,7 @@ vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt)
 }
 
 
-/* GDPB_91_MERGE_FIXME: 'amindexnulls' is gone. Do we need this function anymore? */
+/* GPDB_91_MERGE_FIXME: 'amindexnulls' is gone. Do we need this function anymore? */
 #if 0
 /*
  * Is an index partial (ie, could it contain fewer tuples than the heap?)
@@ -2477,7 +2477,7 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 			  stats->pages_deleted, stats->pages_free,
 			  pg_rusage_show(&ru0))));
 
-	/* GDPB_91_MERGE_FIXME: vac_is_partial_index() doesn't work. Do we need this sanity check? */
+	/* GPDB_91_MERGE_FIXME: vac_is_partial_index() doesn't work. Do we need this sanity check? */
 #if 0 	
 	/*
 	 * Check for tuple count mismatch.	If the index is partial, then it's OK

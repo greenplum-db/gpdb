@@ -3,9 +3,9 @@
 --
 -- all functions CREATEd
 CREATE AGGREGATE newavg (
-   sfunc = int4_avg_accum, basetype = int4, stype = bytea,
+   sfunc = int4_avg_accum, basetype = int4, stype = _int8,
    finalfunc = int8_avg,
-   initcond1 = '{0}'
+   initcond1 = '{0,0}'
 );
 -- test comments
 COMMENT ON AGGREGATE newavg_wrong (int4) IS 'an agg comment';
@@ -56,7 +56,7 @@ create aggregate aggfstr(integer,integer,text) (
    initcond = '{}'
 );
 create aggregate aggfns(integer,integer,text) (
-   sfunc = aggfns_trans, stype = aggtype[],
+   sfunc = aggfns_trans, stype = aggtype[], sspace = 10000,
    initcond = '{}'
 );
 -- variadic aggregate
@@ -92,11 +92,103 @@ alter aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any")
  public | test_rank            | bigint           | VARIADIC "any" ORDER BY VARIADIC "any" | 
 (2 rows)
 
+-- moving-aggregate options
+CREATE AGGREGATE sumdouble (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi
+);
+-- aggregate combine and serialization functions
+-- can't specify just one of serialfunc and deserialfunc
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize
+);
+ERROR:  must specify both or neither of serialization and deserialization functions
+-- serialfunc must have correct parameters
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_deserialize,
+	deserialfunc = numeric_avg_deserialize
+);
+ERROR:  function numeric_avg_deserialize(internal) does not exist
+-- deserialfunc must have correct parameters
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_serialize
+);
+ERROR:  function numeric_avg_serialize(bytea, internal) does not exist
+-- ensure combine function parameters are checked
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = int4larger
+);
+ERROR:  function int4larger(internal, internal) does not exist
+-- ensure create aggregate works.
+CREATE AGGREGATE myavg (numeric)
+(
+	stype = internal,
+	sfunc = numeric_avg_accum,
+	finalfunc = numeric_avg,
+	serialfunc = numeric_avg_serialize,
+	deserialfunc = numeric_avg_deserialize,
+	combinefunc = numeric_avg_combine
+);
+-- Ensure all these functions made it into the catalog
+SELECT aggfnoid,aggtransfn,aggcombinefn,aggtranstype,aggserialfn,aggdeserialfn
+FROM pg_aggregate
+WHERE aggfnoid = 'myavg'::REGPROC;
+ aggfnoid |    aggtransfn     |    aggcombinefn     | aggtranstype |      aggserialfn      |      aggdeserialfn      
+----------+-------------------+---------------------+--------------+-----------------------+-------------------------
+ myavg    | numeric_avg_accum | numeric_avg_combine |         2281 | numeric_avg_serialize | numeric_avg_deserialize
+(1 row)
+
+DROP AGGREGATE myavg (numeric);
+-- invalid: nonstrict inverse with strict forward function
+CREATE FUNCTION float8mi_n(float8, float8) RETURNS float8 AS
+$$ SELECT $1 - $2; $$
+LANGUAGE SQL;
+CREATE AGGREGATE invalidsumdouble (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi_n
+);
+ERROR:  strictness of aggregate's forward and inverse transition functions must match
+-- invalid: non-matching result types
+CREATE FUNCTION float8mi_int(float8, float8) RETURNS int AS
+$$ SELECT CAST($1 - $2 AS INT); $$
+LANGUAGE SQL;
+CREATE AGGREGATE wrongreturntype (float8)
+(
+    stype = float8,
+    sfunc = float8pl,
+    mstype = float8,
+    msfunc = float8pl,
+    minvfunc = float8mi_int
+);
+ERROR:  return type of inverse transition function float8mi_int is not double precision
 -- Negative test: "ordered aggregate prefunc is not supported"
 create ordered aggregate should_error(integer,integer,text) (
    stype = aggtype[],
    sfunc = aggfns_trans, 
-   prefunc = array_cat,
+   combinefunc = array_cat,
    initcond = '{}'
 );
 -- MPP-2863: ensure that aggregate declarations with an initial value == ''
@@ -105,7 +197,7 @@ create function str_concat(t1 text, t2 text) returns text as
 $$
     select $1 || $2;
 $$ language sql CONTAINS SQL;
-CREATE AGGREGATE string_concat (sfunc = str_concat, prefunc=str_concat, basetype = 'text', stype = text,initcond = '');
+CREATE AGGREGATE string_concat (sfunc = str_concat, combinefunc=str_concat, basetype = 'text', stype = text,initcond = '');
 create table aggtest2(i int, t text) DISTRIBUTED BY (i);
 insert into aggtest2 values(1, 'hello');
 insert into aggtest2 values(2, 'hello');

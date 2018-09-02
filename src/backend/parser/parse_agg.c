@@ -70,6 +70,7 @@ static void check_ungrouped_columns(Node *node, ParseState *pstate, Query *qry,
 static bool check_ungrouped_columns_walker(Node *node,
 							   check_ungrouped_columns_context *context);
 static List* get_groupclause_exprs(Node *grpcl, List *targetList);
+static Node *make_agg_arg(Oid argtype, Oid argcollation);
 
 
 /*
@@ -1219,11 +1220,13 @@ resolve_aggregate_transtype(Oid aggfuncid,
  * For an ordered-set aggregate, remember that agg_input_types describes
  * the direct arguments followed by the aggregated arguments.
  *
- * transfn_oid and finalfn_oid identify the funcs to be called; the latter
- * may be InvalidOid.
+ * transfn_oid, invtransfn_oid and finalfn_oid identify the funcs to be
+ * called; the latter two may be InvalidOid.
  *
- * Pointers to the constructed trees are returned into *transfnexpr and
- * *finalfnexpr.  The latter is set to NULL if there's no finalfn.
+ * Pointers to the constructed trees are returned into *transfnexpr,
+ * *invtransfnexpr and *finalfnexpr. If there is no invtransfn or finalfn,
+ * the respective pointers are set to NULL.  Since use of the invtransfn is
+ * optional, NULL may be passed for invtransfnexpr.
  */
 void
 build_aggregate_fnexprs(Oid *agg_input_types,
@@ -1235,15 +1238,13 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 						Oid agg_result_type,
 						Oid agg_input_collation,
 						Oid transfn_oid,
-						Oid finalfn_oid,
-						Oid prelimfn_oid,
 						Oid invtransfn_oid,
-						Oid invprelimfn_oid,
+						Oid finalfn_oid,
+						Oid combinefn_oid,
 						Expr **transfnexpr,
-						Expr **finalfnexpr,
-						Expr **prelimfnexpr,
 						Expr **invtransfnexpr,
-						Expr **invprelimfnexpr)
+						Expr **finalfnexpr,
+						Expr **combinefnexpr)
 {
 	Param	   *argp;
 	List	   *args;
@@ -1287,6 +1288,26 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 	fexpr->funcvariadic = agg_variadic;
 	*transfnexpr = (Expr *) fexpr;
 
+	/*
+	 * Build invtransfn expression if requested, with same args as transfn
+	 */
+	if (invtransfnexpr != NULL)
+	{
+		if (OidIsValid(invtransfn_oid))
+		{
+			fexpr = makeFuncExpr(invtransfn_oid,
+								 agg_state_type,
+								 args,
+								 InvalidOid,
+								 agg_input_collation,
+								 COERCE_EXPLICIT_CALL);
+			fexpr->funcvariadic = agg_variadic;
+			*invtransfnexpr = (Expr *) fexpr;
+		}
+		else
+			*invtransfnexpr = NULL;
+	}
+
 	/* see if we have a final function */
 	if (!OidIsValid(finalfn_oid))
 	{
@@ -1325,11 +1346,11 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 											 COERCE_DONTCARE);
 	}
 
-	/* prelim function */
-	if (OidIsValid(prelimfn_oid))
+	/* combine function */
+	if (OidIsValid(combinefn_oid))
 	{
 		/*
-		 * Build expr tree for inverse transition function
+		 * Build expr tree for combine function
 		 */
 		argp = makeNode(Param);
 		argp->paramkind = PARAM_EXEC;
@@ -1340,56 +1361,82 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 		args = list_make1(argp);
 
 		/* XXX: is agg_state_type correct here? */
-		*prelimfnexpr = (Expr *) makeFuncExpr(prelimfn_oid,
-											  agg_state_type,
-											  args,
-											  InvalidOid,
-											  agg_input_collation,
-											  COERCE_DONTCARE);
+		*combinefnexpr = (Expr *) makeFuncExpr(combinefn_oid,
+											   agg_state_type,
+											   args,
+											   InvalidOid,
+											   agg_input_collation,
+											   COERCE_DONTCARE);
 	}
+}
 
-	/* inverse functions */
-	if (OidIsValid(invtransfn_oid))
-	{
-		/*
-		 * Build expr tree for inverse transition function
-		 */
-		argp = makeNode(Param);
-		argp->paramkind = PARAM_EXEC;
-		argp->paramid = -1;
-		argp->paramtype = agg_state_type;
-		argp->paramtypmod = -1;
-		argp->location = -1;
-		args = list_make1(argp);
+/*
+ * Like build_aggregate_transfn_expr, but creates an expression tree for the
+ * serialization function of an aggregate.
+ */
+void
+build_aggregate_serialfn_expr(Oid serialfn_oid,
+							  Expr **serialfnexpr)
+{
+	List	   *args;
+	FuncExpr   *fexpr;
 
-		*invtransfnexpr = (Expr *) makeFuncExpr(invtransfn_oid,
-												agg_state_type,
-												args,
-												InvalidOid,
-												agg_input_collation,
-												COERCE_DONTCARE);
-	}
+	/* serialfn always takes INTERNAL and returns BYTEA */
+	args = list_make1(make_agg_arg(INTERNALOID, InvalidOid));
 
-	if (OidIsValid(invprelimfn_oid))
-	{
-		/*
-		 * Build expr tree for inverse prelim function
-		 */
-		argp = makeNode(Param);
-		argp->paramkind = PARAM_EXEC;
-		argp->paramid = -1;
-		argp->paramtype = agg_state_type;
-		argp->paramtypmod = -1;
-		argp->location = -1;
-		args = list_make1(argp);
+	fexpr = makeFuncExpr(serialfn_oid,
+						 BYTEAOID,
+						 args,
+						 InvalidOid,
+						 InvalidOid,
+						 COERCE_EXPLICIT_CALL);
+	*serialfnexpr = (Expr *) fexpr;
+}
 
-		*invprelimfnexpr = (Expr *) makeFuncExpr(invprelimfn_oid,
-												 agg_state_type,
-												 args,
-												 InvalidOid,
-												 agg_input_collation,
-												 COERCE_DONTCARE);
-	}
+/*
+ * Like build_aggregate_transfn_expr, but creates an expression tree for the
+ * deserialization function of an aggregate.
+ */
+void
+build_aggregate_deserialfn_expr(Oid deserialfn_oid,
+								Expr **deserialfnexpr)
+{
+	List	   *args;
+	FuncExpr   *fexpr;
+
+	/* deserialfn always takes BYTEA, INTERNAL and returns INTERNAL */
+	args = list_make2(make_agg_arg(BYTEAOID, InvalidOid),
+					  make_agg_arg(INTERNALOID, InvalidOid));
+
+	fexpr = makeFuncExpr(deserialfn_oid,
+						 INTERNALOID,
+						 args,
+						 InvalidOid,
+						 InvalidOid,
+						 COERCE_EXPLICIT_CALL);
+	*deserialfnexpr = (Expr *) fexpr;
+}
+
+
+/*
+ * Convenience function to build dummy argument expressions for aggregates.
+ *
+ * We really only care that an aggregate support function can discover its
+ * actual argument types at runtime using get_fn_expr_argtype(), so it's okay
+ * to use Param nodes that don't correspond to any real Param.
+ */
+static Node *
+make_agg_arg(Oid argtype, Oid argcollation)
+{
+	Param	   *argp = makeNode(Param);
+
+	argp->paramkind = PARAM_EXEC;
+	argp->paramid = -1;
+	argp->paramtype = argtype;
+	argp->paramtypmod = -1;
+	argp->paramcollid = argcollation;
+	argp->location = -1;
+	return (Node *) argp;
 }
 
 /*
