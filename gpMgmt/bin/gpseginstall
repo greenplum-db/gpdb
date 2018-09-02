@@ -311,7 +311,7 @@ def checkUsernames():
     logger.info("check for user %s on cluster" % options.user)
 
     try:
-        for k in uniqueseghosts.keys():
+        for k in uniqueseghosts.keys():pqpgthen
             uh = uniqueseghosts[k]
             cmd = Command(uh.address, "id %s" % options.user, NAKED, uh.address, nakedExecutionInfo=NakedExecutionInfo(passwordMap))
             pool.addCommand(cmd)

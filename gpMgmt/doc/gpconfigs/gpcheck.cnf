@@ -18,6 +18,6 @@ sysctl.net.ipv4.conf.default.accept_source_route = 0
 sysctl.net.ipv4.tcp_tw_recycle = 1
 sysctl.net.ipv4.tcp_max_syn_backlog = 4096
 sysctl.net.ipv4.conf.all.arp_filter = 1
-sysctl.net.ipv4.ip_local_port_range = 1025 65535
+sysctl.net.ipv4.ip_local_port_range = 10000 65535
 sysctl.net.core.netdev_max_backlog = 10000
 sysctl.vm.overcommit_memory = 2
