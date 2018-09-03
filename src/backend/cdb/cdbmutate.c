@@ -1315,7 +1315,19 @@ Motion *
 make_hashed_motion(Plan *lefttree,
 				   List *hashExpr, bool useExecutorVarFormat)
 {
-	Motion *motion;
+	Motion	   *motion;
+	ListCell   *lc;
+
+	/*
+	 * The expressions used as the distribution key must be "GPDB-hashable".
+	 * There's also an assertion for this in setrefs.c, but better to catch
+	 * these as early as possible.
+	 */
+	foreach(lc, hashExpr)
+	{
+		if (!isGreenplumDbHashable(exprType((Node *) lfirst(lc))))
+			elog(ERROR, "cannot use expression as distribution key, because it is not hashable");
+	}
 
 	motion = make_motion(lefttree, false,
 						 0, NULL, NULL, NULL, useExecutorVarFormat);
