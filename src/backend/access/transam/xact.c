@@ -376,21 +376,6 @@ IsTransactionState(void)
 	return (s->state == TRANS_INPROGRESS);
 }
 
-bool
-IsAbortInProgress(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return (s->state == TRANS_ABORT);
-}
-
-bool
-IsTransactionPreparing(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return (s->state == TRANS_PREPARE);
-}
 /*
  *	IsAbortedTransactionBlockState
  *
