@@ -57,10 +57,21 @@ typedef struct
 #define PG_GETARG_UNKNOWN_P_COPY(n) DatumGetUnknownPCopy(PG_GETARG_DATUM(n))
 #define PG_RETURN_UNKNOWN_P(x)		PG_RETURN_POINTER(x)
 
+
+/*
+ * Max considered sub-string size is set to MaxAllocSize - 4MB).
+ * The 4MB is saved aside for memory allocation overhead such
+ * as allocation set headers.
+ */
+#define MAX_STRING_BYTES	((Size) (MaxAllocSize - 0x400000))
+
+
+static int	text_position_ptr_len(char* p1, int len1, char *p2, int len2);
+static void text_position_setup_ptr_len(char* p1, int len1, char* p2, int len2, TextPositionState *state);
+
+
 static int	text_cmp(text *arg1, text *arg2, Oid collid);
 static int32 text_length(Datum str);
-static int	text_position(text *t1, text *t2);
-static void text_position_setup(text *t1, text *t2, TextPositionState *state);
 static int	text_position_next(int start_pos, TextPositionState *state);
 static void text_position_cleanup(TextPositionState *state);
 static text *text_catenate(text *t1, text *t2);
@@ -1022,19 +1033,33 @@ text_overlay(text *t1, text *t2, int sp, int sl)
 Datum
 textpos(PG_FUNCTION_ARGS)
 {
-	text	   *str = PG_GETARG_TEXT_PP(0);
-	text	   *search_str = PG_GETARG_TEXT_PP(1);
+	Datum d0 = PG_GETARG_DATUM(0);
+	Datum d1 = PG_GETARG_DATUM(1);
+	char *p0; void *tofree0; int len0;
+	char *p1; void *tofree1; int len1;
+	int32 pos;
 
-	PG_RETURN_INT32((int32) text_position(str, search_str));
+	varattrib_untoast_ptr_len(d0, &p0, &len0, &tofree0);
+	varattrib_untoast_ptr_len(d1, &p1, &len1, &tofree1);
+
+	pos = text_position_ptr_len(p0, len0, p1, len1);
+
+	if(tofree0)
+		pfree(tofree0);
+	if(tofree1)
+		pfree(tofree1);
+
+	PG_RETURN_INT32(pos);
 }
+
 
 /*
  * text_position -
  *	Does the real work for textpos()
  *
  * Inputs:
- *		t1 - string to be searched
- *		t2 - pattern to match within t1
+ *		p1, len1 - string to be searched
+ *		p2, len2 - pattern to match within t1
  * Result:
  *		Character index of the first matched char, starting from 1,
  *		or 0 if no match.
@@ -1043,146 +1068,27 @@ textpos(PG_FUNCTION_ARGS)
  *	functions.
  */
 static int
-text_position(text *t1, text *t2)
+text_position_ptr_len(char* p1, int len1, char* p2, int len2)
 {
-	TextPositionState state;
-	int			result;
+	TextPositionState state =
+			{
+					0, /* use_wchar */
+					NULL, /* str1 */
+					NULL, /* str2 */
+					NULL, /* wstr1 */
+					NULL, /* wstr2 */
+					0, /* len1 */
+					0, /* len2 */
+			};
 
-	text_position_setup(t1, t2, &state);
+
+	int result;
+
+	text_position_setup_ptr_len(p1, len1, p2, len2, &state);
+
 	result = text_position_next(1, &state);
 	text_position_cleanup(&state);
 	return result;
-}
-
-
-/*
- * text_position_setup, text_position_next, text_position_cleanup -
- *	Component steps of text_position()
- *
- * These are broken out so that a string can be efficiently searched for
- * multiple occurrences of the same pattern.  text_position_next may be
- * called multiple times with increasing values of start_pos, which is
- * the 1-based character position to start the search from.  The "state"
- * variable is normally just a local variable in the caller.
- */
-
-static void
-text_position_setup(text *t1, text *t2, TextPositionState *state)
-{
-	int			len1 = VARSIZE_ANY_EXHDR(t1);
-	int			len2 = VARSIZE_ANY_EXHDR(t2);
-
-	/*
-	 * Initialize unused fields, to keep compiler quiet about missing
-	 * initializations. But ignore 'skiptable', it's large enough that
-	 * clearing it unnecessarily could be a measurable slowdown.
-	 */
-	memset(state, 0, offsetof(TextPositionState, skiptable));
-
-	if (pg_database_encoding_max_length() == 1)
-	{
-		/* simple case - single byte encoding */
-		state->use_wchar = false;
-		state->str1 = VARDATA_ANY(t1);
-		state->str2 = VARDATA_ANY(t2);
-		state->len1 = len1;
-		state->len2 = len2;
-	}
-	else
-	{
-		/* not as simple - multibyte encoding */
-		pg_wchar   *p1,
-				   *p2;
-
-		p1 = (pg_wchar *) palloc((len1 + 1) * sizeof(pg_wchar));
-		len1 = pg_mb2wchar_with_len(VARDATA_ANY(t1), p1, len1);
-		p2 = (pg_wchar *) palloc((len2 + 1) * sizeof(pg_wchar));
-		len2 = pg_mb2wchar_with_len(VARDATA_ANY(t2), p2, len2);
-
-		state->use_wchar = true;
-		state->wstr1 = p1;
-		state->wstr2 = p2;
-		state->len1 = len1;
-		state->len2 = len2;
-	}
-
-	/*
-	 * Prepare the skip table for Boyer-Moore-Horspool searching.  In these
-	 * notes we use the terminology that the "haystack" is the string to be
-	 * searched (t1) and the "needle" is the pattern being sought (t2).
-	 *
-	 * If the needle is empty or bigger than the haystack then there is no
-	 * point in wasting cycles initializing the table.  We also choose not to
-	 * use B-M-H for needles of length 1, since the skip table can't possibly
-	 * save anything in that case.
-	 */
-	if (len1 >= len2 && len2 > 1)
-	{
-		int			searchlength = len1 - len2;
-		int			skiptablemask;
-		int			last;
-		int			i;
-
-		/*
-		 * First we must determine how much of the skip table to use.  The
-		 * declaration of TextPositionState allows up to 256 elements, but for
-		 * short search problems we don't really want to have to initialize so
-		 * many elements --- it would take too long in comparison to the
-		 * actual search time.  So we choose a useful skip table size based on
-		 * the haystack length minus the needle length.  The closer the needle
-		 * length is to the haystack length the less useful skipping becomes.
-		 *
-		 * Note: since we use bit-masking to select table elements, the skip
-		 * table size MUST be a power of 2, and so the mask must be 2^N-1.
-		 */
-		if (searchlength < 16)
-			skiptablemask = 3;
-		else if (searchlength < 64)
-			skiptablemask = 7;
-		else if (searchlength < 128)
-			skiptablemask = 15;
-		else if (searchlength < 512)
-			skiptablemask = 31;
-		else if (searchlength < 2048)
-			skiptablemask = 63;
-		else if (searchlength < 4096)
-			skiptablemask = 127;
-		else
-			skiptablemask = 255;
-		state->skiptablemask = skiptablemask;
-
-		/*
-		 * Initialize the skip table.  We set all elements to the needle
-		 * length, since this is the correct skip distance for any character
-		 * not found in the needle.
-		 */
-		for (i = 0; i <= skiptablemask; i++)
-			state->skiptable[i] = len2;
-
-		/*
-		 * Now examine the needle.  For each character except the last one,
-		 * set the corresponding table element to the appropriate skip
-		 * distance.  Note that when two characters share the same skip table
-		 * entry, the one later in the needle must determine the skip
-		 * distance.
-		 */
-		last = len2 - 1;
-
-		if (!state->use_wchar)
-		{
-			const char *str2 = state->str2;
-
-			for (i = 0; i < last; i++)
-				state->skiptable[(unsigned char) str2[i] & skiptablemask] = last - i;
-		}
-		else
-		{
-			const pg_wchar *wstr2 = state->wstr2;
-
-			for (i = 0; i < last; i++)
-				state->skiptable[wstr2[i] & skiptablemask] = last - i;
-		}
-	}
 }
 
 static int
@@ -2650,20 +2556,56 @@ appendStringInfoText(StringInfo str, const text *t)
 Datum
 replace_text(PG_FUNCTION_ARGS)
 {
-	text	   *src_text = PG_GETARG_TEXT_PP(0);
-	text	   *from_sub_text = PG_GETARG_TEXT_PP(1);
-	text	   *to_sub_text = PG_GETARG_TEXT_PP(2);
+	Datum d0 = PG_GETARG_DATUM(0);
+	char *p0; void *tofree0; int len0;
+
+	Datum d1 = PG_GETARG_DATUM(1);
+	char *p1; void *tofree1; int len1;
+
+	Datum d2 = PG_GETARG_DATUM(2);
+	char *p2; void *tofree2; int len2;
+
 	int			src_text_len;
 	int			from_sub_text_len;
-	TextPositionState state;
+
+	TextPositionState state = 
+		{
+		0, /* use_wchar */
+		NULL, /* str1 */
+		NULL, /* str2 */
+		NULL, /* wstr1 */
+		NULL, /* wstr2 */
+		0, /* len1 */
+		0, /* len2 */
+		};
 	text	   *ret_text;
 	int			start_posn;
 	int			curr_posn;
 	int			chunk_len;
 	char	   *start_ptr;
 	StringInfoData str;
+ 
+	varattrib_untoast_ptr_len(d0, &p0, &len0, &tofree0);
+	varattrib_untoast_ptr_len(d1, &p1, &len1, &tofree1);
+	varattrib_untoast_ptr_len(d2, &p2, &len2, &tofree2);
 
-	text_position_setup(src_text, from_sub_text, &state);
+	if(pg_database_encoding_max_length() == 1)
+		from_sub_text_len = len1;
+	else
+		from_sub_text_len = pg_mbstrlen_with_len(p1, len1);
+
+	if (len0 == 0 || from_sub_text_len == 0)
+	{
+		if(tofree0)
+			pfree(tofree0);
+		if(tofree1)
+			pfree(tofree1);
+		if(tofree2)
+			pfree(tofree2);
+		return d0;
+	}
+
+	text_position_setup_ptr_len(p0, len0, p1, len1, &state); 
 
 	/*
 	 * Note: we check the converted string length, not the original, because
@@ -2676,7 +2618,7 @@ replace_text(PG_FUNCTION_ARGS)
 	if (src_text_len < 1 || from_sub_text_len < 1)
 	{
 		text_position_cleanup(&state);
-		PG_RETURN_TEXT_P(src_text);
+		PG_RETURN_DATUM(d0);
 	}
 
 	start_posn = 1;
@@ -2685,12 +2627,19 @@ replace_text(PG_FUNCTION_ARGS)
 	/* When the from_sub_text is not found, there is nothing to do. */
 	if (curr_posn == 0)
 	{
+		if(tofree0)
+			pfree(tofree0);
+		if(tofree1)
+			pfree(tofree1);
+		if(tofree2)
+			pfree(tofree2);
+
 		text_position_cleanup(&state);
-		PG_RETURN_TEXT_P(src_text);
+		return d0;
 	}
 
 	/* start_ptr points to the start_posn'th character of src_text */
-	start_ptr = VARDATA_ANY(src_text);
+	start_ptr = p0; 
 
 	initStringInfo(&str);
 
@@ -2701,8 +2650,7 @@ replace_text(PG_FUNCTION_ARGS)
 		/* copy the data skipped over by last text_position_next() */
 		chunk_len = charlen_to_bytelen(start_ptr, curr_posn - start_posn);
 		appendBinaryStringInfo(&str, start_ptr, chunk_len);
-
-		appendStringInfoText(&str, to_sub_text);
+		appendBinaryStringInfo(&str, p2, len2);
 
 		start_posn = curr_posn;
 		start_ptr += chunk_len;
@@ -2714,13 +2662,19 @@ replace_text(PG_FUNCTION_ARGS)
 	while (curr_posn > 0);
 
 	/* copy trailing data */
-	chunk_len = ((char *) src_text + VARSIZE_ANY(src_text)) - start_ptr;
+	chunk_len = ((char *) p0 + len0) - start_ptr;
 	appendBinaryStringInfo(&str, start_ptr, chunk_len);
 
 	text_position_cleanup(&state);
 
 	ret_text = cstring_to_text_with_len(str.data, str.len);
 	pfree(str.data);
+	if(tofree0)
+		pfree(tofree0);
+	if(tofree1)
+		pfree(tofree1);
+	if(tofree2)
+		pfree(tofree2);
 
 	PG_RETURN_TEXT_P(ret_text);
 }
@@ -3002,15 +2956,43 @@ replace_text_regexp(text *src_text, void *regexp,
 Datum
 split_text(PG_FUNCTION_ARGS)
 {
-	text	   *inputstring = PG_GETARG_TEXT_PP(0);
-	text	   *fldsep = PG_GETARG_TEXT_PP(1);
+	Datum d0 = PG_GETARG_DATUM(0);
+	char *p0; void *tofree0; int len0;
+
+	Datum d1 = PG_GETARG_DATUM(1);
+	char *p1; void *tofree1; int len1;
+
 	int			fldnum = PG_GETARG_INT32(2);
 	int			inputstring_len; 
 	int			fldsep_len; 
-	TextPositionState state;
+	TextPositionState state = 		
+		{
+		0, /* use_wchar */
+		NULL, /* str1 */
+		NULL, /* str2 */
+		NULL, /* wstr1 */
+		NULL, /* wstr2 */
+		0, /* len1 */
+		0, /* len2 */
+		};
+
 	int			start_posn;
 	int			end_posn;
 	text	   *result_text;
+
+	varattrib_untoast_ptr_len(d0, &p0, &len0, &tofree0);
+	varattrib_untoast_ptr_len(d1, &p1, &len1, &tofree1);
+
+	if(pg_database_encoding_max_length() == 1)
+	{
+		inputstring_len = len0;
+		fldsep_len = len1;
+	}
+	else
+	{
+		inputstring_len = pg_mbstrlen_with_len(p0, len0);
+		fldsep_len = pg_mbstrlen_with_len(p1, len1);
+	}
 
 	/* field number is 1 based */
 	if (fldnum < 1)
@@ -3018,18 +3000,14 @@ split_text(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("field position must be greater than zero")));
 
-	text_position_setup(inputstring, fldsep, &state);
-
-	/*
-	 * Note: we check the converted string length, not the original, because
-	 * they could be different if the input contained invalid encoding.
-	 */
-	inputstring_len = state.len1;
-	fldsep_len = state.len2;
-
 	/* return empty string for empty input string */
 	if (inputstring_len < 1)
 	{
+		if(tofree0)
+			pfree(tofree0);
+		if(tofree1)
+			pfree(tofree1);
+
 		text_position_cleanup(&state);
 		PG_RETURN_TEXT_P(cstring_to_text(""));
 	}
@@ -3037,13 +3015,19 @@ split_text(PG_FUNCTION_ARGS)
 	/* empty field separator */
 	if (fldsep_len < 1)
 	{
-		text_position_cleanup(&state);
+		if(tofree0)
+			pfree(tofree0);
+		if(tofree1)
+			pfree(tofree1);
+
 		/* if first field, return input string, else empty string */
 		if (fldnum == 1)
-			PG_RETURN_TEXT_P(inputstring);
+			return d0;
 		else
 			PG_RETURN_TEXT_P(cstring_to_text(""));
 	}
+
+	text_position_setup_ptr_len(p0, len0, p1, len1, &state);
 
 	/* identify bounds of first field */
 	start_posn = 1;
@@ -3053,9 +3037,14 @@ split_text(PG_FUNCTION_ARGS)
 	if (end_posn == 0)
 	{
 		text_position_cleanup(&state);
+		if(tofree0)
+			pfree(tofree0);
+		if(tofree1)
+			pfree(tofree1);
+
 		/* if field 1 requested, return input string, else empty string */
 		if (fldnum == 1)
-			PG_RETURN_TEXT_P(inputstring);
+			return d0;
 		else
 			PG_RETURN_TEXT_P(cstring_to_text(""));
 	}
@@ -3074,7 +3063,7 @@ split_text(PG_FUNCTION_ARGS)
 		/* N'th field separator not found */
 		/* if last field requested, return it, else empty string */
 		if (fldnum == 1)
-			result_text = text_substring(PointerGetDatum(inputstring),
+			result_text = text_substring(d0, 
 										 start_posn,
 										 -1,
 										 true);
@@ -3084,11 +3073,16 @@ split_text(PG_FUNCTION_ARGS)
 	else
 	{
 		/* non-last field requested */
-		result_text = text_substring(PointerGetDatum(inputstring),
+		result_text = text_substring(d0,
 									 start_posn,
 									 end_posn - start_posn,
 									 false);
 	}
+
+	if(tofree0)
+		pfree(tofree0);
+	if(tofree1)
+		pfree(tofree1);
 
 	PG_RETURN_TEXT_P(result_text);
 }
@@ -3105,8 +3099,355 @@ text_isequal(text *txt1, text *txt2)
 }
 
 /*
+ * find_memory_limited_substring()
+ *	Computes the sub-string length in number of characters and number
+ *	of bytes where the sub-string consumes up to "memoryLimit" amount of memory.
+ *
+ *	Parameters:
+ *		strStart: starting pointer in the string
+ * 		byteLen: number of bytes in the string, starting from strStart
+ * 		memoryLimit: max string size in terms of bytes
+ *
+ * 	Out parameters:
+ *		subStringByteLen: length of chosen sub-string in bytes
+ *		subStringCharLen: length of chosen sub-string in character count
+ *
+ * It is caller's responsibility that there actually are byteLen bytes
+ * starting from strStart; the string needs not be null-terminated.
+ */
+static void
+find_memory_limited_substring(const char *strStart, int byteLen, int memoryLimit, int *subStringByteLen, int *subStringCharLen)
+{
+	AssertArg(byteLen > memoryLimit);
+	AssertArg(NULL != strStart);
+	AssertArg(NULL != subStringCharLen);
+
+	if (pg_database_encoding_max_length() == 1)
+	{
+		/* Optimization for single-byte encodings */
+		*subStringByteLen = byteLen < memoryLimit ? byteLen : memoryLimit;
+		*subStringCharLen = *subStringByteLen;
+
+		return;
+	}
+	else
+	{
+		const char *strCurPointer = strStart;;
+
+		int consumedBytes = 0;
+		int consumedChars = 0;
+
+		while (consumedBytes <= byteLen)
+		{
+			int curCharBytes = pg_mblen(strCurPointer);
+			strCurPointer += curCharBytes;
+			consumedChars++;
+			consumedBytes += curCharBytes;
+
+			if (consumedBytes > memoryLimit)
+			{
+				*subStringByteLen = consumedBytes - curCharBytes;
+				*subStringCharLen = consumedChars - 1;
+
+				Insist((*subStringByteLen > 0) && (*subStringCharLen > 0));
+
+				return;
+			}
+		}
+	}
+}
+
+
+
+/*
+ * text_position_setup, text_position_next, text_position_cleanup -
+ *	Component steps of text_position()
+ *
+ * These are broken out so that a string can be efficiently searched for
+ * multiple occurrences of the same pattern.  text_position_next may be
+ * called multiple times with increasing values of start_pos, which is
+ * the 1-based character position to start the search from.  The "state"
+ * variable is normally just a local variable in the caller.
+ */
+
+/* Set up text postion, using pointer and len. */
+static void
+text_position_setup_ptr_len(char* p1, int len1, char* p2, int len2, TextPositionState *state)
+{
+	if (pg_database_encoding_max_length() == 1)
+	{
+		/* simple case - single byte encoding */
+		state->use_wchar = false;
+		state->str1 = p1;
+		state->str2 = p2;
+		state->len1 = len1;
+		state->len2 = len2;
+	}
+	else
+	{
+		/* not as simple - multibyte encoding */
+		pg_wchar   *wp1,
+				*wp2;
+
+		wp1 = (pg_wchar *) palloc((len1 + 1) * sizeof(pg_wchar));
+		len1 = pg_mb2wchar_with_len(p1, wp1, len1);
+		wp2 = (pg_wchar *) palloc((len2 + 1) * sizeof(pg_wchar));
+		len2 = pg_mb2wchar_with_len(p2, wp2, len2);
+
+		state->use_wchar = true;
+		state->wstr1 = wp1;
+		state->wstr2 = wp2;
+		state->len1 = len1;
+		state->len2 = len2;
+	}
+
+	/*
+	 * Prepare the skip table for Boyer-Moore-Horspool searching.  In these
+	 * notes we use the terminology that the "haystack" is the string to be
+	 * searched (t1) and the "needle" is the pattern being sought (t2).
+	 *
+	 * If the needle is empty or bigger than the haystack then there is no
+	 * point in wasting cycles initializing the table.	We also choose not to
+	 * use B-M-H for needles of length 1, since the skip table can't possibly
+	 * save anything in that case.
+	 */
+	if (len1 >= len2 && len2 > 1)
+	{
+		int			searchlength = len1 - len2;
+		int			skiptablemask;
+		int			last;
+		int			i;
+
+		/*
+		 * First we must determine how much of the skip table to use.  The
+		 * declaration of TextPositionState allows up to 256 elements, but for
+		 * short search problems we don't really want to have to initialize so
+		 * many elements --- it would take too long in comparison to the
+		 * actual search time.	So we choose a useful skip table size based on
+		 * the haystack length minus the needle length.  The closer the needle
+		 * length is to the haystack length the less useful skipping becomes.
+		 *
+		 * Note: since we use bit-masking to select table elements, the skip
+		 * table size MUST be a power of 2, and so the mask must be 2^N-1.
+		 */
+		if (searchlength < 16)
+			skiptablemask = 3;
+		else if (searchlength < 64)
+			skiptablemask = 7;
+		else if (searchlength < 128)
+			skiptablemask = 15;
+		else if (searchlength < 512)
+			skiptablemask = 31;
+		else if (searchlength < 2048)
+			skiptablemask = 63;
+		else if (searchlength < 4096)
+			skiptablemask = 127;
+		else
+			skiptablemask = 255;
+		state->skiptablemask = skiptablemask;
+
+		/*
+		 * Initialize the skip table.  We set all elements to the needle
+		 * length, since this is the correct skip distance for any character
+		 * not found in the needle.
+		 */
+		for (i = 0; i <= skiptablemask; i++)
+			state->skiptable[i] = len2;
+
+		/*
+		 * Now examine the needle.	For each character except the last one,
+		 * set the corresponding table element to the appropriate skip
+		 * distance.  Note that when two characters share the same skip table
+		 * entry, the one later in the needle must determine the skip
+		 * distance.
+		 */
+		last = len2 - 1;
+
+		if (!state->use_wchar)
+		{
+			const char *str2 = state->str2;
+
+			for (i = 0; i < last; i++)
+				state->skiptable[(unsigned char) str2[i] & skiptablemask] = last - i;
+		}
+		else
+		{
+			const pg_wchar *wstr2 = state->wstr2;
+
+			for (i = 0; i < last; i++)
+				state->skiptable[wstr2[i] & skiptablemask] = last - i;
+		}
+	}
+}
+
+/*
+ * text_to_array_impl
+ *		Carries out the actual tokenization and array conversion of an input string.
+ *
+ * Parameters:
+ * 		string: Where to start in the input string
+ * 		stringByteLen: Length of current string
+ * 		delimiter: Which delimiter to use
+ * 		delimiterByteLen: Length of delimiter in bytes
+ * 		delimiterCharLen: Length of delimiter in chars
+ * 		arrayState: State of the output array where we accumulate results
+ * 		endOfString: Do we expect any more chunk of the main input string?
+ *
+ * Returns the pointer where the last match was found. Successively the
+ * caller can splice more data starting from this address to find further
+ * array elements.
+ */
+static char* text_to_array_impl(char *string, int stringByteLen, char *delimiter,
+								int delimiterByteLen, int delimiterCharLen,
+								ArrayBuildState **arrayState, bool endOfString, text* null_string)
+{
+	int start_posn = 1;
+	int fldnum = 1;
+	int end_posn = 0;
+	int chunk_len = 0;
+	text	   *result_text;
+	bool		is_null;
+
+	char* cur_ptr = string;
+
+	TextPositionState state =
+			{
+					0, /* use_wchar */
+					NULL, /* str1 */
+					NULL, /* str2 */
+					NULL, /* wstr1 */
+					NULL, /* wstr2 */
+					0, /* len1 */
+					0, /* len2 */
+			};
+
+
+	text_position_setup_ptr_len(string, stringByteLen, delimiter, delimiterByteLen, &state);
+
+
+	for (fldnum = 1;; fldnum++) /* field number is 1 based */
+	{
+		CHECK_FOR_INTERRUPTS();
+
+		end_posn = text_position_next(start_posn, &state);
+
+		if (end_posn == 0 && !endOfString)
+		{
+			break;
+		}
+		else if (end_posn == 0)
+		{
+			/* fetch last field */
+			chunk_len = (string + stringByteLen) - cur_ptr;
+		}
+		else
+		{
+			/* fetch non-last field */
+			chunk_len = charlen_to_bytelen(cur_ptr, end_posn - start_posn);
+		}
+
+		/* must build a temp text datum to pass to accumArrayResult */
+		result_text = cstring_to_text_with_len(cur_ptr, chunk_len);
+		is_null = null_string ? text_isequal(result_text, null_string) : false;
+
+		/* stash away this field */
+		*arrayState = accumArrayResult(*arrayState,
+									   PointerGetDatum(result_text),
+									   is_null,
+									   TEXTOID,
+									   CurrentMemoryContext);
+
+		pfree(result_text);
+
+		if (end_posn == 0)
+		{
+			/* Process next sub-string if any */
+			break;
+		}
+
+		start_posn = end_posn;
+		cur_ptr += chunk_len;
+		start_posn += delimiterCharLen;
+		cur_ptr += charlen_to_bytelen(cur_ptr, delimiterCharLen);
+	}
+
+	text_position_cleanup(&state);
+
+	return cur_ptr;
+}
+
+
+/*
+ * text_to_array_multi_pass
+ *		Carries out the actual tokenization and array conversion of input string
+ *		in multiple passes, where each pass is restricted to GPDB memory allocation limit.
+ *
+ * Parameters:
+ * 		string: The start of the input string
+ * 		stringByteLen: Length of current string
+ * 		delimiter: Which delimiter to use
+ * 		delimiterByteLen: Length of delimiter in bytes
+ * 		delimiterCharLen: Length of delimiter in chars
+ * 		endOfString: Do we expect any more chunk of the main input string?
+ *
+ * Returns the ArrayBuildState containing all the array elements.
+ */
+static ArrayBuildState* text_to_array_multi_pass(char *string, int stringByteLen, char *delimiter,
+												 int delimiterByteLen, int delimiterCharLen,
+												 text *null_string)
+{
+	ArrayBuildState *astate = NULL;
+
+	/* Start with full string. If it is too big then we chunk it later */
+	char	   *start_ptr = string;
+	int curSubStringByteLen = stringByteLen;
+
+	bool endOfString = false;
+
+	/* More bytes to consider? */
+	while (!endOfString)
+	{
+		/*
+		 * Give the rest of the string to the current pass; may be chunked if
+		 * the rest still doesn't fit in the memory
+		 */
+		curSubStringByteLen = (string + stringByteLen) - start_ptr;
+
+		/* Will this MBCS become too big to fit in memory once converted to wchar? */
+		if (pg_database_encoding_max_length() > 1 && curSubStringByteLen > ((MAX_STRING_BYTES)/ sizeof(pg_wchar)))
+		{
+			int curSubStringCharLen = 0;
+			/* We need multi-pass. So find the sub-string boundary for the current pass */
+			find_memory_limited_substring(start_ptr, string + stringByteLen - start_ptr,
+										  (MAX_STRING_BYTES) / sizeof(pg_wchar), &curSubStringByteLen, &curSubStringCharLen);
+		}
+
+		Insist(start_ptr + curSubStringByteLen <= string + stringByteLen);
+
+		endOfString = ((start_ptr + curSubStringByteLen) == (string + stringByteLen));
+
+		char *nextStartPtr = text_to_array_impl(start_ptr, curSubStringByteLen, delimiter,
+												delimiterByteLen, delimiterCharLen, &astate,
+												endOfString, null_string);
+
+		Insist(nextStartPtr >= start_ptr);
+
+		if (!endOfString && nextStartPtr == start_ptr)
+		{
+			elog(ERROR, "String size not supported.");
+		}
+
+		start_ptr = nextStartPtr;
+	}
+
+	return astate;
+}
+
+
+/*
  * text_to_array
- * parse input string and return text array of elements,
+ * parse input string
+ * return text array of elements
  * based on provided field separator
  */
 Datum
@@ -3114,6 +3455,7 @@ text_to_array(PG_FUNCTION_ARGS)
 {
 	return text_to_array_internal(fcinfo);
 }
+
 
 /*
  * text_to_array_null
@@ -3135,6 +3477,9 @@ text_to_array_null(PG_FUNCTION_ARGS)
  * here. */
 
 
+
+
+
 /*
  * common code for text_to_array and text_to_array_null functions
  *
@@ -3143,27 +3488,31 @@ text_to_array_null(PG_FUNCTION_ARGS)
 static Datum
 text_to_array_internal(PG_FUNCTION_ARGS)
 {
-	text	   *inputstring;
-	text	   *fldsep;
-	text	   *null_string;
-	int			inputstring_len;
-	int			fldsep_len;
-	char	   *start_ptr;
-	text	   *result_text;
-	bool		is_null;
+	Datum stringDatum;
+	char *string = NULL;
+	void *toFreeString = NULL;
+	int stringByteLen = 0;
+
+	Datum delimiterDatum;
+	char *delimiter = NULL;
+	void *toFreeDelimiter = NULL;
+	int delimiterByteLen = 0;
+
+	int stringCharLen = 0;
+	int	delimiterCharLen = 0;
+
+	text *null_string;
+
+	text *result_text;
+	bool is_null;
 	ArrayBuildState *astate = NULL;
 
 	/* when input string is NULL, then result is NULL too */
 	if (PG_ARGISNULL(0))
 		PG_RETURN_NULL();
 
-	inputstring = PG_GETARG_TEXT_PP(0);
-
-	/* fldsep can be NULL */
-	if (!PG_ARGISNULL(1))
-		fldsep = PG_GETARG_TEXT_PP(1);
-	else
-		fldsep = NULL;
+	stringDatum = PG_GETARG_DATUM(0);
+	delimiterDatum = PG_GETARG_DATUM(1);
 
 	/* null_string can be NULL or omitted */
 	if (PG_NARGS() > 2 && !PG_ARGISNULL(2))
@@ -3171,117 +3520,85 @@ text_to_array_internal(PG_FUNCTION_ARGS)
 	else
 		null_string = NULL;
 
-	if (fldsep != NULL)
+	varattrib_untoast_ptr_len_without_check(stringDatum, &string,
+											&stringByteLen, &toFreeString);
+	varattrib_untoast_ptr_len_without_check(delimiterDatum, &delimiter,
+											&delimiterByteLen, &toFreeDelimiter);
+
+	if(pg_database_encoding_max_length() == 1)
 	{
-		/*
-		 * Normal case with non-null fldsep.  Use the text_position machinery
-		 * to search for occurrences of fldsep.
-		 */
-		TextPositionState state;
-		int			fldnum;
-		int			start_posn;
-		int			end_posn;
-		int			chunk_len;
-
-		text_position_setup(inputstring, fldsep, &state);
-
-		/*
-		 * Note: we check the converted string length, not the original,
-		 * because they could be different if the input contained invalid
-		 * encoding.
-		 */
-		inputstring_len = state.len1;
-		fldsep_len = state.len2;
-
-		/* return empty array for empty input string */
-		if (inputstring_len < 1)
-		{
-			text_position_cleanup(&state);
-			PG_RETURN_ARRAYTYPE_P(construct_empty_array(TEXTOID));
-		}
-
-		/*
-		 * empty field separator: return the input string as a one-element
-		 * array
-		 */
-		if (fldsep_len < 1)
-		{
-			text_position_cleanup(&state);
-			/* single element can be a NULL too */
-			is_null = null_string ? text_isequal(inputstring, null_string) : false;
-			PG_RETURN_ARRAYTYPE_P(create_singleton_array(fcinfo, TEXTOID,
-												PointerGetDatum(inputstring),
-														 is_null, 1));
-		}
-
-		start_posn = 1;
-		/* start_ptr points to the start_posn'th character of inputstring */
-		start_ptr = VARDATA_ANY(inputstring);
-
-		for (fldnum = 1;; fldnum++)		/* field number is 1 based */
-		{
-			CHECK_FOR_INTERRUPTS();
-
-			end_posn = text_position_next(start_posn, &state);
-
-			if (end_posn == 0)
-			{
-				/* fetch last field */
-				chunk_len = ((char *) inputstring + VARSIZE_ANY(inputstring)) - start_ptr;
-			}
-			else
-			{
-				/* fetch non-last field */
-				chunk_len = charlen_to_bytelen(start_ptr, end_posn - start_posn);
-			}
-
-			/* must build a temp text datum to pass to accumArrayResult */
-			result_text = cstring_to_text_with_len(start_ptr, chunk_len);
-			is_null = null_string ? text_isequal(result_text, null_string) : false;
-
-			/* stash away this field */
-			astate = accumArrayResult(astate,
-									  PointerGetDatum(result_text),
-									  is_null,
-									  TEXTOID,
-									  CurrentMemoryContext);
-
-			pfree(result_text);
-
-			if (end_posn == 0)
-				break;
-
-			start_posn = end_posn;
-			start_ptr += chunk_len;
-			start_posn += fldsep_len;
-			start_ptr += charlen_to_bytelen(start_ptr, fldsep_len);
-		}
-
-		text_position_cleanup(&state);
+		stringCharLen = stringByteLen;
+		delimiterCharLen = delimiterByteLen;
 	}
 	else
 	{
-		/*
-		 * When fldsep is NULL, each character in the inputstring becomes an
-		 * element in the result array.  The separator is effectively the
-		 * space between characters.
-		 */
-		inputstring_len = VARSIZE_ANY_EXHDR(inputstring);
+		stringCharLen = pg_mbstrlen_with_len(string, stringByteLen);
+		delimiterCharLen = pg_mbstrlen_with_len(delimiter, delimiterByteLen);
+	}
 
-		/* return empty array for empty input string */
-		if (inputstring_len < 1)
-			PG_RETURN_ARRAYTYPE_P(construct_empty_array(TEXTOID));
-
-		start_ptr = VARDATA_ANY(inputstring);
-
-		while (inputstring_len > 0)
+	/* return NULL for empty input string */
+	if (stringCharLen < 1)
+	{
+		if(toFreeString)
 		{
-			int			chunk_len = pg_mblen(start_ptr);
+			pfree(toFreeString);
+		}
+
+		if(toFreeDelimiter)
+		{
+			pfree(toFreeDelimiter);
+		}
+
+		PG_RETURN_ARRAYTYPE_P(construct_empty_array(TEXTOID));
+	}
+
+
+	if (delimiter != NULL)
+	{
+		/*
+		 * empty field separator return one element, 1D, array using the input
+	 	 * string
+	 	 */
+		if (delimiterCharLen < 1)
+		{
+			text *text_input;
+			if(toFreeString)
+			{
+				pfree(toFreeString);
+			}
+			if(toFreeDelimiter)
+			{
+				pfree(toFreeDelimiter);
+			}
+
+			if (null_string)
+			{
+				text_input = cstring_to_text_with_len(string, VARSIZE_ANY_EXHDR(null_string));
+				is_null = text_isequal(text_input, null_string);
+				pfree(text_input);
+			}
+			else
+			{
+				is_null = false;
+			}
+
+			PG_RETURN_ARRAYTYPE_P(create_singleton_array(fcinfo, TEXTOID, stringDatum, is_null, 1));
+		}
+
+		astate = text_to_array_multi_pass(string, stringByteLen, delimiter,
+														   delimiterByteLen, delimiterCharLen,
+														   null_string);
+	}
+	else
+	{
+		while (stringByteLen > 0)
+		{
+			int			chunk_len = pg_mblen(string);
 
 			CHECK_FOR_INTERRUPTS();
 
 			/* must build a temp text datum to pass to accumArrayResult */
-			result_text = cstring_to_text_with_len(start_ptr, chunk_len);
+			result_text = cstring_to_text_with_len(string, chunk_len);
 			is_null = null_string ? text_isequal(result_text, null_string) : false;
 
 			/* stash away this field */
@@ -3293,13 +3610,22 @@ text_to_array_internal(PG_FUNCTION_ARGS)
 
 			pfree(result_text);
 
-			start_ptr += chunk_len;
-			inputstring_len -= chunk_len;
+			string += chunk_len;
+			stringByteLen -= chunk_len;
 		}
 	}
 
-	PG_RETURN_ARRAYTYPE_P(makeArrayResult(astate,
-										  CurrentMemoryContext));
+	if(toFreeString)
+	{
+		pfree(toFreeString);
+	}
+
+	if(toFreeDelimiter)
+	{
+		pfree(toFreeDelimiter);
+	}
+
+	PG_RETURN_DATUM(makeArrayResult(astate, CurrentMemoryContext));
 }
 
 /*

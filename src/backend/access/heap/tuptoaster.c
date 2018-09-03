@@ -192,20 +192,10 @@ varattrib_untoast_len(Datum d)
 	return len;
 }
 
-/*
- * If this function is changed then update varattrib_untoast_len as well
- */
-void
-varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
-{
-	if (DatumGetPointer(d) == NULL)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg(" Unable to detoast datum "),
-				 errprintstack(true)));
-	}
 
+void
+varattrib_untoast_ptr_len_internal(Datum d, char **datastart, int *len, void **tofree)
+{
 	struct varlena *va = (struct varlena *) DatumGetPointer(d);
 	struct varlena *attr = va;
 
@@ -228,8 +218,8 @@ varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
 			SET_VARSIZE(attr, PGLZ_RAW_SIZE(tmp) + VARHDRSZ);
 			pglz_decompress(tmp, VARDATA(attr));
 
-			/* If tofree is set, that is, we get it from toast_fetch_datum.  
-			 * We need to free it here 
+			/* If tofree is set, that is, we get it from toast_fetch_datum.
+			 * We need to free it here
 			 */
 			if(*tofree)
 				pfree(*tofree);
@@ -237,7 +227,7 @@ varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
 		}
 		else if (VARATT_IS_SHORT(attr))
 		{
-		    /* Warning! Return unaligned pointer! */
+			/* Warning! Return unaligned pointer! */
 			*len = VARSIZE_SHORT(attr) - VARHDRSZ_SHORT;
 			*datastart = VARDATA_SHORT(attr);
 			attr = NULL;
@@ -251,6 +241,41 @@ varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
 	}
 
 	Assert(*len >= 0);
+}
+
+/*
+ * If this function is changed then update varattrib_untoast_len as well
+ */
+void
+varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
+{
+	if (DatumGetPointer(d) == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg(" Unable to detoast datum "),
+						errprintstack(true)));
+	}
+	varattrib_untoast_ptr_len_internal(d, datastart, len, tofree);
+}
+
+/*
+ * varattrib_untoast_ptr_len_without_check
+ *
+ *		Fast path to get the pointer and length, avoid palloc if possible.
+ *		If datum is null, return a null datastart and len -1.
+ */
+
+void
+varattrib_untoast_ptr_len_without_check(Datum d, char **datastart, int *len, void **tofree)
+{
+	if (DatumGetPointer(d) == NULL)
+	{
+		*datastart = NULL;
+		*len = -1;
+		return;
+	}
+	varattrib_untoast_ptr_len_internal(d, datastart, len, tofree);
 }
 
 /* ----------
