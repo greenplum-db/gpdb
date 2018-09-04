@@ -376,6 +376,51 @@ class GpRestoreFilterProcessLineTestCase(unittest.TestCase):
         self.assertFalse(newState.further_investigation_required)
         self.assertEqual(newState.schema, 'schemaICareAbout')
 
+    def test_sequence_owned_by_in_comments_exists_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaICareAbout']
+        state = ParserState()
+        state.schema = 'schemaICareAbout'
+        input_line = '-- Name: some_sequence; Type: SEQUENCE OWNED BY; Schema: schemaICareAbout; Owner: user_role_b;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEquals(line, input_line)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_sequence_set_in_comments_exists_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaICareAbout']
+        state = ParserState()
+        state.schema = 'schemaICareAbout'
+        input_line = '-- Name: some_sequence; Type: SEQUENCE SET; Schema: schemaICareAbout; Owner: user_role_b;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEquals(line, input_line)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
+    def test_default_in_comments_exists_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['schemaICareAbout']
+        state = ParserState()
+        state.schema = 'schemaICareAbout'
+        input_line = '-- Name: some_sequence; Type: DEFAULT; Schema: schemaICareAbout; Owner: user_role_b;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertFalse(newState.function_ddl)
+        self.assertFalse(newState.further_investigation_required)
+        self.assertEquals(line, input_line)
+        self.assertEqual(newState.schema, 'schemaICareAbout')
+
     def test_constraint_expression_in_comments_exists_in_table_file(self):
         arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
         arguments.schemas_in_schema_file = None

@@ -205,6 +205,8 @@ def _handle_expressions_in_comments(state, line, arguments):
         elif data_type in ['CAST', 'PROCEDURAL LANGUAGE']:  # Restored to pg_catalog, so always filtered in
             state.output = True
             state.change_cast_func_schema = True  # When changing schemas, we need to ensure that functions used in casts reference the new schema
+        elif data_type in ['SEQUENCE OWNED BY', 'SEQUENCE SET', 'DEFAULT']:
+            state.output = check_valid_schema(state.schema, schemas_in_table_file, schemas_in_schema_file)
         return True, state, line
     return False, state, line
 
