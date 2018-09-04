@@ -20,14 +20,11 @@ returns void as $$ /*in func*/
 declare /*in func*/
     iterations int := 0; /*in func*/ 
 begin /*in func*/
-    while iterations < 3000 loop /*in func*/
+    while iterations < 120 loop /*in func*/
         perform pg_sleep(1); /*in func*/
-        begin /*in func*/
-            if exists (select * from gp_segment_configuration where content = 0 and mode = target_mode) then /*in func*/
+        if exists (select * from gp_segment_configuration where content = 0 and mode = target_mode) then /*in func*/
                 return; /*in func*/
         end if; /*in func*/
-        exception when others then /*in func*/
-        end; /*in func*/
         iterations := iterations + 1; /*in func*/
     end loop; /*in func*/
 end $$ /*in func*/
@@ -37,7 +34,7 @@ language plpgsql;
 select stop_segment(fselocation) from pg_filespace_entry fe, gp_segment_configuration c, pg_filespace f
 where fe.fsedbid = c.dbid and c.content=0 and c.role='p' and f.oid = fe.fsefsoid and f.fsname = 'pg_system';
 
-1U: select wait_for_content0('c');
+select wait_for_content0('c');
 
 -- the following tuple hashes to seg0
 1: insert into resync_xlog_hints values (1, 1);
@@ -82,9 +79,9 @@ where fe.fsedbid = c.dbid and c.content=0 and c.role='p' and f.oid = fe.fsefsoid
 
 -- start_ignore
 ! gprecoverseg -a;
-1: select wait_for_content0('s');
+select wait_for_content0('s');
 ! gprecoverseg -ra;
-1: select wait_for_content0('s');
+select wait_for_content0('s');
 -- end_ignore
 
-1: select * from resync_xlog_hints;
+select * from resync_xlog_hints;

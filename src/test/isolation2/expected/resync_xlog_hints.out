@@ -16,7 +16,7 @@ create or replace function stop_segment(datadir text) returns text as $$ import 
 CREATE
 
 -- Wait for content 0 to assume specified mode
-create or replace function wait_for_content0(target_mode char) /*in func*/ returns void as $$ /*in func*/ declare /*in func*/ iterations int := 0; /*in func*/ begin /*in func*/ while iterations < 3000 loop /*in func*/ perform pg_sleep(1); /*in func*/ begin /*in func*/ if exists (select * from gp_segment_configuration where content = 0 and mode = target_mode) then /*in func*/ return; /*in func*/ end if; /*in func*/ exception when others then /*in func*/ end; /*in func*/ iterations := iterations + 1; /*in func*/ end loop; /*in func*/ end $$ /*in func*/ language plpgsql;
+create or replace function wait_for_content0(target_mode char) /*in func*/ returns void as $$ /*in func*/ declare /*in func*/ iterations int := 0; /*in func*/ begin /*in func*/ while iterations < 120 loop /*in func*/ perform pg_sleep(1); /*in func*/ if exists (select * from gp_segment_configuration where content = 0 and mode = target_mode) then /*in func*/ return; /*in func*/ end if; /*in func*/ iterations := iterations + 1; /*in func*/ end loop; /*in func*/ end $$ /*in func*/ language plpgsql;
 CREATE
 
 -- Stop content 0 primary and let the mirror take over
@@ -28,7 +28,7 @@ server stopped
 
 (1 row)
 
-1U: select wait_for_content0('c');
+select wait_for_content0('c');
 wait_for_content0
 -----------------
                  
@@ -123,16 +123,12 @@ CHECKPOINT
 
 -- start_ignore
 ! gprecoverseg -a;
-1: select wait_for_content0('s');
+select wait_for_content0('s');
 ! gprecoverseg -ra;
-1: select wait_for_content0('s');
-wait_for_content0
------------------
-                 
-(1 row)
+select wait_for_content0('s');
 -- end_ignore
 
-1: select * from resync_xlog_hints;
+select * from resync_xlog_hints;
 a|b
 -+-
 1|0
