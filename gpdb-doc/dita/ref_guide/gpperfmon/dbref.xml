@@ -30,9 +30,9 @@
       setting the <codeph>min_query_time</codeph> parameter in the
         <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> configuration file.
       Setting the value to 0 saves history for all queries.</p>
-    <note><codeph>gpperfmon</codeph> does not support <codeph>ALTER TABLE...SET DISTRIBUTED</codeph>
-      queries. These queries are not recorded in the <codeph>gpperfmon</codeph> query history
-      tables.</note>
+    <note><codeph>gpperfmon</codeph> does not support SQL <codeph>ALTER</codeph> commands.
+        <codeph>ALTER</codeph> queries are not recorded in the <codeph>gpperfmon</codeph> query
+      history tables.</note>
     <p>The <codeph>history</codeph> tables are partitioned by month. See <xref
         href="#overview/section_et2_wmt_n1b" format="dita"/> for information about removing old
       partitions.</p>
