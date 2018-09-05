@@ -433,6 +433,7 @@ extern bool optimizer_enable_outerjoin_rewrite;
 extern bool optimizer_enable_multiple_distinct_aggs;
 extern bool optimizer_enable_hashjoin_redistribute_broadcast_children;
 extern bool optimizer_enable_broadcast_nestloop_outer_child;
+extern bool optimizer_enable_streaming_material;
 extern bool optimizer_enable_assert_maxonerow;
 extern bool optimizer_enable_constant_expression_evaluation;
 extern bool optimizer_enable_bitmapscan;

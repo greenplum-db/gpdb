@@ -10197,6 +10197,54 @@ FROM   (SELECT *
      4
 (1 row)
 
+--
+-- Test to ensure that ORCA produces correct results with both blocking and
+-- streaming materialze as controlled by optimizer_enable_streaming_material
+-- GUC.
+--
+-- start_ignore
+create table t_outer (c1 integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t_inner (c2 integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c2' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_outer values (generate_series (1,10));
+insert into t_inner values (generate_series (1,300));
+-- end_ignore
+set optimizer_enable_streaming_material = on;
+select c1 from t_outer where not c1 =all (select c2 from t_inner);
+ c1 
+----
+  8
+  9
+ 10
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+(10 rows)
+
+set optimizer_enable_streaming_material = off;
+select c1 from t_outer where not c1 =all (select c2 from t_inner);
+ c1 
+----
+  8
+  9
+ 10
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+(10 rows)
+
+reset optimizer_enable_streaming_material;
 -- start_ignore
 drop table bar;
 -- end_ignore

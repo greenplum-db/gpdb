@@ -307,6 +307,13 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 		},
 
 		{
+		EopttraceMotionHazardHandling,
+		&optimizer_enable_streaming_material,
+		false,  // m_fNegate
+		GPOS_WSZ_LIT("Enable motion hazard handling during NLJ optimization and generate streaming material when appropriate")
+		},
+
+		{
 		EopttraceEnforceCorrelatedExecution,
 		&optimizer_enforce_subplans,
 		false,  // m_negate_param

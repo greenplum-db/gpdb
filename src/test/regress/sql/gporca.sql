@@ -1468,6 +1468,24 @@ FROM   (SELECT *
                code
         FROM   tab_3)a;
 
+--
+-- Test to ensure that ORCA produces correct results with both blocking and
+-- streaming materialze as controlled by optimizer_enable_streaming_material
+-- GUC.
+--
+-- start_ignore
+create table t_outer (c1 integer);
+create table t_inner (c2 integer);
+insert into t_outer values (generate_series (1,10));
+insert into t_inner values (generate_series (1,300));
+-- end_ignore
+
+set optimizer_enable_streaming_material = on;
+select c1 from t_outer where not c1 =all (select c2 from t_inner);
+set optimizer_enable_streaming_material = off;
+select c1 from t_outer where not c1 =all (select c2 from t_inner);
+reset optimizer_enable_streaming_material;
+
 -- start_ignore
 drop table bar;
 -- end_ignore
