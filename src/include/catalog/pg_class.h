@@ -174,6 +174,8 @@ DESCR("");
  * RELSTORAGE_HEAP    - stored on disk using heap storage.
  * RELSTORAGE_AOROWS  - stored on disk using append only storage.
  * RELSTORAGE_AOCOLS  - stored on dist using append only column storage.
+ * RELSTORAGE_PARQUET - nested data structures in a flat columnar format,
+ * 						stores in any Hadoop ecosystem like Hive, Impala, Pig, and Spark.
  * RELSTORAGE_VIRTUAL - has virtual storage, meaning, relation has no
  *						data directly stored forit  (right now this
  *						relates to views and comp types).

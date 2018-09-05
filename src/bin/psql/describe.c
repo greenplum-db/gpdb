@@ -3517,8 +3517,10 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 	if (isGPDB())   /* GPDB? */
 		appendPQExpBuffer(&buf,
 				  ", CASE c.relstorage WHEN 'h' THEN '%s' WHEN 'x' THEN '%s' WHEN 'a' "
-				  "THEN '%s' WHEN 'v' THEN '%s' WHEN 'c' THEN '%s' END as \"%s\"\n",
-				  gettext_noop("heap"), gettext_noop("external"), gettext_noop("append only"), gettext_noop("none"), gettext_noop("append only columnar"), gettext_noop("Storage"));
+				  "THEN '%s' WHEN 'v' THEN '%s' WHEN 'c' THEN '%s' WHEN 'p' THEN '%s' "
+				  "WHEN 'f' THEN '%s' END as \"%s\"\n",
+				  gettext_noop("heap"), gettext_noop("external"), gettext_noop("append only"), gettext_noop("none"), gettext_noop("append only columnar"), 
+				  gettext_noop("Apache Parquet"), gettext_noop("external data source"), gettext_noop("Storage"));
 
 	if (showIndexes)
 		appendPQExpBuffer(&buf,
