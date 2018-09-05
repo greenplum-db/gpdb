@@ -18,6 +18,7 @@
 
 static const char *modulename = gettext_noop("sorter");
 
+#if 0 /* GPDB_100_MERGE_FIXME: we don't support pre-7.3 dumps. This disappears in PG10. */
 /*
  * Sort priority for object types when dumping a pre-7.3 database.
  * Objects are sorted by priority levels, and within an equal priority level
@@ -57,6 +58,7 @@ static const int oldObjectTypePriority[] =
 	11,							/* DO_BLOB_COMMENTS */
 	3,							/* DO_EXTPROTOCOL */
 };
+#endif
 
 /*
  * Sort priority for object types when dumping newer databases.
@@ -83,7 +85,6 @@ static const int newObjectTypePriority[] =
 	24,							/* DO_FK_CONSTRAINT */
 	2,							/* DO_PROCLANG */
 	8,							/* DO_CAST */
-	8,							/* DO_EXTPROTOCOL */
 	17,							/* DO_TABLE_DATA */
 	15,							/* DO_DUMMY_TYPE */
 	10,							/* DO_TSPARSER */
@@ -92,7 +93,9 @@ static const int newObjectTypePriority[] =
 	13,							/* DO_TSCONFIG */
 	18,							/* DO_BLOBS */
 	19,							/* DO_BLOB_COMMENTS */
-	19							/* DO_TYPE_STORAGE_OPTIONS */
+	8,							/* DO_EXTPROTOCOL */
+	19,							/* DO_TYPE_STORAGE_OPTIONS */
+	19							/* DO_TYPE_CACHE */
 };
 
 
@@ -167,6 +170,7 @@ DOTypeNameCompare(const void *p1, const void *p2)
 }
 
 
+#if 0 /* GPDB_100_MERGE_FIXME: we don't support pre-7.3 dumps. This disappears in PG10. */
 /*
  * Sort the given objects into a type/OID-based ordering
  *
@@ -196,6 +200,7 @@ DOTypeOidCompare(const void *p1, const void *p2)
 
 	return oidcmp(obj1->catId.oid, obj2->catId.oid);
 }
+#endif
 
 
 /*

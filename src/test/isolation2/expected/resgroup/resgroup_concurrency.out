@@ -416,7 +416,20 @@ DECLARE
 DECLARE
 71:DECLARE c3 CURSOR for select count(*) from foo_concurrency_test t1, bar_concurrency_test t2 where t1.c2 = t2.c2;
 DECLARE
-71: 71:Fetch ALL FROM c1;
+71:Fetch ALL FROM c1;
+c1|c2
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
 71:Fetch ALL FROM c2;
 c1|c2
 --+--

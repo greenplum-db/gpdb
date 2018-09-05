@@ -245,6 +245,8 @@ typedef enum FaultInjectorIdentifier_e {
 	CreateResourceGroupFail,
 	CreateGangInProgress,
 
+	DecreaseToastMaxChunkSize,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

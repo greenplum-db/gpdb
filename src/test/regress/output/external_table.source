@@ -2922,3 +2922,25 @@ SET gp_max_csv_line_length TO 4194304;
 INSERT INTO gp_max_csv_line_length_target SELECT * FROM gp_max_csv_line_length_issue;
 DROP TABLE gp_max_csv_line_length_target;
 DROP EXTERNAL TABLE gp_max_csv_line_length_issue;
+-- Incomplete external data file
+CREATE OR REPLACE FUNCTION gpformatter() RETURNS record
+AS '$libdir/gpformatter.so', 'formatter_import'
+LANGUAGE C STABLE;
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_gpformatter;
+NOTICE:  table "tbl_ext_gpformatter" does not exist, skipping
+CREATE READABLE EXTERNAL TABLE tbl_ext_gpformatter (
+d1 text
+)
+LOCATION (
+  'file://@hostname@@abs_srcdir@/data/incomplete_formatter_data.tbl'
+)
+FORMAT 'CUSTOM' (formatter='gpformatter');
+SELECT * FROM tbl_ext_gpformatter;
+WARNING:  unexpected end of file  (seg0 slice1 127.0.0.1:25432 pid=18207)
+CONTEXT:  External table tbl_ext_gpformatter
+ d1
+----
+ 0
+ 1
+(2 rows)
+

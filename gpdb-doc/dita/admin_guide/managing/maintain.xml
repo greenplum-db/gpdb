@@ -130,7 +130,11 @@ wraparound data loss in database "database_name"
           <p>These are Greenplum Database system catalog maintenance steps.<ol id="ol_un5_p1l_f2b">
               <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the
                 system catalog indexes. This removes bloat in the indexes and improves
-                  <codeph>VACUUM</codeph> performance.</li>
+                  <codeph>VACUUM</codeph> performance.
+                <note>When performing <codeph>REINDEX</codeph> on the system catalog tables, locking
+                  will occur on the tables and might have an impact on currently running queries.
+                  You can schedule the <codeph>REINDEX</codeph> operation during a period of low
+                  activity to avoid disrupting ongoing business operations.</note></li>
               <li>Perform a <codeph>VACUUM</codeph> on the system catalog tables. </li>
               <li>Perform an <codeph>ANALYZE</codeph> on the system catalog tables to update the
                 catalog table statistics. </li>
@@ -229,13 +233,13 @@ analyzedb -s pg_catalog -d $DBNAME
 VACUUM cust_info;</codeblock></p>
         <note type="important">If you intend to execute queries on partitioned tables with GPORCA
           enabled (the default), you must collect statistics on the partitioned table root partition
-          with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about GPORCA,
-          see <xref href="../query/topics/query-piv-opt-overview.xml"/>. </note>
+          with the <cmdname>ANALYZE</cmdname> command. For information about GPORCA, see <xref
+            href="../query/topics/query-piv-opt-overview.xml"/>. </note>
         <note>You can use the Greenplum Database utility <cmdname>analyzedb</cmdname> to update
           table statistics. Tables can be analyzed concurrently. For append optimized tables,
             <cmdname>analyzedb</cmdname> updates statistics only if the statistics are not current.
-          For information about the <cmdname>analyzedb</cmdname> utility, see the <cite>Greenplum
-            Database Utility Guide</cite>.</note>
+          See the <codeph><xref href="../../utility_guide/admin_utilities/analyzedb.xml"
+              >analyzedb</xref></codeph> utility.</note>
       </body>
     </topic>
   </topic>

@@ -99,8 +99,8 @@
     </section>
     <section id="remove_bloat">
       <title>Removing Bloat from Database Tables</title>
-      <p>The <codeph>VACUUM</codeph> command adds expired rows to the shared free space map so that
-        the space can be reused. When <codeph>VACUUM</codeph> is run regularly on a table that is
+      <p>The <codeph>VACUUM</codeph> command adds expired rows to the free space map so that the
+        space can be reused. When <codeph>VACUUM</codeph> is run regularly on a table that is
         frequently updated, the space occupied by the expired rows can be promptly reused,
         preventing the table file from growing larger. It is also important to run
           <codeph>VACUUM</codeph> before the free space map is filled. For heavily updated tables,
@@ -170,7 +170,11 @@ DISTRIBUTED BY (<i>&lt;original distribution columns&gt;</i>);</codeblock><p>Thi
       <p>These are Greenplum Database system catalog maintenance steps.<ol id="ol_un5_p1l_f2b">
           <li>Perform a <codeph>REINDEX</codeph> on the system catalog tables to rebuild the system
             catalog indexes. This removes bloat in the indexes and improves <codeph>VACUUM</codeph>
-            performance.</li>
+            performance.
+            <note>When performing <codeph>REINDEX</codeph> on the system catalog tables, locking
+              will occur on the tables and might have an impact on currently running queries. You
+              can schedule the <codeph>REINDEX</codeph> operation during a period of low activity to
+              avoid disrupting ongoing business operations.</note></li>
           <li>Perform a <codeph>VACUUM</codeph> on system catalog tables. </li>
           <li>Perform an <codeph>ANALYZE</codeph> on the system catalog tables to update the table
             statistics. </li>

@@ -20,7 +20,9 @@
 #include "postgres.h"
 
 #include "nodes/makefuncs.h"
+#include "parser/parse_expr.h"
 
+#include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsetop.h"
@@ -28,7 +30,6 @@
 #include "cdb/cdbpullup.h"
 
 static Flow *copyFlow(Flow *model_flow, bool withExprs, bool withSort);
-static List *makeHashExprsFromNonjunkTargets(List *targetList);
 
 #define ARRAYCOPY(to, from, sz) \
 	do { \
@@ -374,12 +375,44 @@ make_motion_gather(Plan *subplan, int segindex, bool keep_ordering)
  *		Add a Motion node atop the given subplan to hash collocate
  *      tuples non-distinct on the non-junk attributes.  This motion
  *      should only be applied to a non-replicated, non-root subplan.
+ *
+ * This will align with the sort attributes used as input to a SetOp
+ * or Unique operator. This is used in plans for UNION and other
+ * set-operations that implicitly do a DISTINCT on the whole target
+ * list.
  */
 Motion *
 make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 {
-	List *hashexprs = makeHashExprsFromNonjunkTargets(subplan->targetlist);	
-	return make_motion_hash(root, subplan, hashexprs);
+	ListCell   *cell;
+	List	   *hashexprs = NIL;
+
+	foreach(cell, subplan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(cell);
+
+		if (tle->resjunk)
+			continue;
+
+		if (!isGreenplumDbHashable(exprType((Node *) tle->expr)))
+			continue;
+
+		hashexprs = lappend(hashexprs, copyObject(tle->expr));
+	}
+
+	if (hashexprs)
+		return make_motion_hash(root, subplan, hashexprs);
+	else
+	{
+		/*
+		 * Degenerate case, where none of the columns are hashable.
+		 *
+		 * (If the caller knew this, it probably would have been better to
+		 * produce a different plan, with Sorts in the segments, and an
+		 * order-preserving gather on the top.)
+		 */
+		return make_motion_gather(subplan, -1, false);
+	}
 }
 
 /*
@@ -401,33 +434,6 @@ make_motion_hash(PlannerInfo *root __attribute__((unused)) , Plan *subplan, List
 		false /* useExecutorVarFormat */);
 
 	return motion;
-}
-
-/*
- * makeHashExprsFromNonjunkTargets
- *		Make a list of hash expressions over all non-resjunk targets in
- *		the targetlist are in the given target list.  This will align
- *		with the sort attributes used as input to a SetOp or Unique
- *		operator.
- *
- * Returns the newly allocate expression list for a Motion node.
- */
-List *makeHashExprsFromNonjunkTargets(List *targetlist)
-{
-	ListCell   *cell;
-	List *hashlist = NIL;
-
-	foreach(cell, targetlist)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(cell);
-
-		if (!tle->resjunk)
-		{
-			hashlist = lappend(hashlist, copyObject(tle->expr));
-		}
-	}
-	return hashlist;
-
 }
 
 /*

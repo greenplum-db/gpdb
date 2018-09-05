@@ -606,7 +606,7 @@ char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
 
-bool		gp_external_enable_filter_pushdown = false;
+bool		gp_external_enable_filter_pushdown = true;
 
 IndexCheckType gp_indexcheck_insert = INDEX_CHECK_NONE;
 IndexCheckType gp_indexcheck_vacuum = INDEX_CHECK_NONE;
@@ -3310,7 +3310,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_GPDB_ADDOPT
 		},
 		&gp_external_enable_filter_pushdown,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{

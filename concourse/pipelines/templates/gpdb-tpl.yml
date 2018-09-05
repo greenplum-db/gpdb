@@ -434,8 +434,8 @@ resources:
 - name: centos6-gpdb-dev-pxf-hdp
   type: docker-image
   source:
-    repository: pivotaldata/gpdb-dev
-    tag: centos6-pxf-hdp-server
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: centos6-hdp-server
 
 {% endif %}
 - name: debian_release

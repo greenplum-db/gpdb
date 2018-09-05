@@ -6,7 +6,7 @@
     <p>The <codeph>gpperfmon</codeph> database is a dedicated database where data collection agents
       on Greenplum segment hosts save query and system statistics. <ph otherprops="pivotal">The
         optional Greenplum Command Center management tool depends upon the
-          <codeph>gpperfmon</codeph> database.</ph></p>
+          <codeph>gpperfmon</codeph> database for query history.</ph></p>
     <p>The <codeph>gpperfmon</codeph> database is created using the
         <codeph>gpperfmon_install</codeph> command-line utility. The utility creates the database
       and the <codeph>gpmon</codeph> database role and enables the data collection agents on the
@@ -29,7 +29,10 @@
       minimum number of seconds, 20 by default. You can set this threshold to another value by
       setting the <codeph>min_query_time</codeph> parameter in the
         <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> configuration file.
-      Setting the value to 0 saves history for all queries. </p>
+      Setting the value to 0 saves history for all queries.</p>
+    <note><codeph>gpperfmon</codeph> does not support SQL <codeph>ALTER</codeph> commands.
+        <codeph>ALTER</codeph> queries are not recorded in the <codeph>gpperfmon</codeph> query
+      history tables.</note>
     <p>The <codeph>history</codeph> tables are partitioned by month. See <xref
         href="#overview/section_et2_wmt_n1b" format="dita"/> for information about removing old
       partitions.</p>

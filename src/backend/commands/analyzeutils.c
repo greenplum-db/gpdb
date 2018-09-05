@@ -1086,20 +1086,32 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
 
 /*
  *	leaf_parts_analyzed() -- checks if all the leaf partitions are analyzed
+ *                           for each requested column to be analyzed
  *
- *	We use this to determine if all the leaf partitions are analyzed and
- *	the statistics are in place to be able to merge and generate meaningful
- *	statistics for the root partition. If any partition is analyzed and the
- *	attstattarget is set to collect stats, but there are no statistics for
- *  the partition in pg_statistics, root statistics will be bogus if we continue
- *  merging.
- *  0. A single partition is not analyzed - return FALSE
+ *	We use this function to determine if all the leaf partitions are analyzed
+ *  for the requested columns and the statistics are in place to be able to
+ *  merge and generate meaningful statistics for the root partition. If any
+ *  partition is analyzed and the attstattarget is set to collect stats, but
+ *  there are no statistics for the partition in pg_statistics, root
+ *  statistics will be bogus if we continue merging.
+ *  0. A requested column in a single partition is not analyzed - return FALSE
  *  1. All partitions are analyzed
  *	  1.1. All partitions are empty - return FALSE
  *    1.2. Some empty & rest have stats - return TRUE
  *    1.3. Some empty & at least one don't have stats - return FALSE
  *    1.4. None empty & at least one don't have stats - return FALSE
  *    1.5. None empty & all have stats - return TRUE
+ *
+ *
+ *  attrelid - the relation id of the root table
+ *  relid_exclude - it is the relid that is excluded to check for the stats.
+ *  It is used when we are asked to auto merge statistics when analyzing a
+ *  single leaf partition. As we are going to produce stats for that
+ *  specific leaf partition, we should not check its stats availibility.
+ *  va_cols - column attnum list to be analyzed from root table's perspective.
+ *  These attnum's needs to be translated for each leaf table as the attnums
+ *  for different columns might be different due to the dropped columns and
+ *  split partitions.
  */
 bool
 leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
@@ -1111,9 +1123,9 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
 	bool all_parts_empty = true;
 	ListCell *lc, *lc_col;
-	forboth(lc_col, va_cols, lc, oid_list)
+
+	foreach(lc, oid_list)
 	{
-		AttrNumber attnum = lfirst_int(lc_col);
 		Oid partRelid = lfirst_oid(lc);
 		if (partRelid == relid_exclude)
 			continue;
@@ -1130,15 +1142,24 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 		if (relTuples == 0.0 && relpages == 1)
 			continue;
 
-		HeapTuple heaptupleStats = get_att_stats(partRelid, attnum);
 		all_parts_empty = false;
 
-		// if there is no colstats
-		if (!HeapTupleIsValid(heaptupleStats))
+		foreach(lc_col, va_cols)
 		{
-			return false;
+			// Check stats availibility for each column that asked to be analyzed.
+			AttrNumber attnum = lfirst_int(lc_col);
+			const char *attname = get_relid_attribute_name(attrelid, attnum);
+			AttrNumber child_attno = get_attnum(partRelid, attname);
+
+			HeapTuple heaptupleStats = get_att_stats(partRelid, child_attno);
+
+			// if there is no colstats
+			if (!HeapTupleIsValid(heaptupleStats))
+			{
+				return false;
+			}
+			heap_freetuple(heaptupleStats);
 		}
-		heap_freetuple(heaptupleStats);
 	}
 
 	return !all_parts_empty;

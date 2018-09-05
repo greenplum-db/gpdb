@@ -29,7 +29,10 @@ import traceback
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
-        self.command_pattern = re.compile(r"^(\d+)([&\\<\\>Uq]*?)\:(.*)")
+        # The re.S flag makes the "." in the regex match newlines.
+        # When matched against a command in process_command(), all
+        # lines in the command are matched and sent as SQL query.
+        self.command_pattern = re.compile(r"^(\d+|[*])([&\\<\\>Uq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
@@ -218,6 +221,20 @@ class SQLIsolationExecutor(object):
         self.processes[(name, utility_mode)].quit()
         del self.processes[(name, False)]
 
+    def get_all_primary_dbids(self, dbname):
+        """
+        Retrieves all primary DBIDs (including the master). Intended for use by
+        *U queries.
+        """
+        if not dbname:
+            dbname = self.dbname
+
+        con = pygresql.pg.connect(dbname=dbname)
+        result = con.query("SELECT dbid FROM gp_segment_configuration WHERE role = 'p'").getresult()
+        if len(result) == 0:
+            raise Exception("Invalid gp_segment_configuration contents")
+        return [int(dbid[0]) for dbid in result]
+
     def process_command(self, command, output_file):
         """
             Processes the given command.
@@ -264,7 +281,13 @@ class SQLIsolationExecutor(object):
                 raise Exception("No query should be given on join")
             self.get_process(output_file, process_name, dbname=dbname).join()
         elif flag == "U":
-            self.get_process(output_file, process_name, utility_mode=True, dbname=dbname).query(sql.strip())
+            if process_name == '*':
+                process_names = [str(dbid) for dbid in self.get_all_primary_dbids(dbname)]
+            else:
+                process_names = [process_name]
+
+            for name in process_names:
+                self.get_process(output_file, name, utility_mode=True, dbname=dbname).query(sql.strip())
         elif flag == "U&":
             self.get_process(output_file, process_name, utility_mode=True, dbname=dbname).fork(sql.strip(), True)
         elif flag == "U<":
@@ -317,7 +340,10 @@ class SQLIsolationTestCase:
         executing transactions. This is mainly used to test isolation behavior.
 
         [<#>[flag]:] <sql> | ! <shell scripts or command>
-        #: just any integer indicating an unique session or dbid if followed by U
+        #: either an integer indicating an unique session, or a dbid if followed
+           by U (for utility-mode connections). In 'U' mode, the dbid can
+           alternatively be an asterisk '*' to perform a utility-mode query on
+           the master and all primaries.
         flag:
             &: expect blocking behavior
             >: running in background without blocking
@@ -325,8 +351,8 @@ class SQLIsolationTestCase:
             q: quit the given session
 
             U: connect in utility mode to dbid from gp_segment_configuration
-            U&: expect blocking behavior in utility mode
-            U<: join an existing utility mode session
+            U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
+            U<: join an existing utility mode session (does not currently support an asterisk target)
 
         An example is:
 
@@ -410,6 +436,22 @@ class SQLIsolationTestCase:
         2q:  ---> Will quit the session established with test2db.
 
         The subsequent 2: @db_name test: <sql> will open a new session with the database test and execute the sql against that session.
+
+        Catalog Modification:
+
+        Some tests are easier to write if it's possible to modify a system
+        catalog across the *entire* cluster. To perform a utility-mode query on
+        all segments and the master, you can use *U commands:
+
+        *U: SET allow_system_table_mods = 'DML';
+        *U: UPDATE pg_catalog.<table> SET <column> = <value> WHERE <cond>;
+
+        Since the number of query results returned by a *U command depends on
+        the developer's cluster configuration, it can be useful to wrap them in
+        a start_/end_ignore block. (Unfortunately, this also hides legitimate
+        failures; a better long-term solution is needed.)
+
+        Block/join flags are not currently supported with *U.
     """
 
     def run_sql_file(self, sql_file, out_file = None, out_dir = None, optimizer = None):

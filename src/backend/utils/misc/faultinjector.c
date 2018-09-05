@@ -361,6 +361,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault before create resource group committing */
 	_("create_gang_in_progress"),
 		/* inject fault during gang creation, before check for interrupts */
+	_("decrease_toast_max_chunk_size"),
+		/* inject fault when creating new TOAST tables, to modify the chunk size */
 	_("not recognized"),
 };
 
@@ -1066,6 +1068,8 @@ FaultInjector_NewHashEntry(
 			case AutoVacWorkerBeforeDoAutovacuum:
 			case CreateResourceGroupFail:
 			case CreateGangInProgress:
+
+			case DecreaseToastMaxChunkSize:
 
 				break;
 			default:
