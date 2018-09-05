@@ -4476,7 +4476,6 @@
       </table>
     </body>
   </topic>
-
   <topic id="gp_motion_cost_per_row">
     <title>gp_motion_cost_per_row</title>
     <body>
@@ -7231,13 +7230,22 @@
   <topic id="optimizer_analyze_root_partition">
     <title>optimizer_analyze_root_partition</title>
     <body>
-      <p>For a partitioned table, collects statistics for the root partition when the
-          <cmdname>ANALYZE</cmdname> command is run on the table. GPORCA uses the root partition
-        statistics when generating a query plan. The legacy query optimizer does not use these
-        statistics. When the value of the server configuration parameter <codeph><xref
-            href="#optimizer" format="dita"/></codeph> is on (the default), the value of this
-        parameter should also be on (the default). For information about collecting table statistics
-        on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"/></codeph>.</p>
+      <p>For a partitioned table, controls whether the <codeph>ROOTPARTITION</codeph> keyword is
+        required to collect root partition statistics when the <cmdname>ANALYZE</cmdname> command is
+        run on the table. GPORCA uses the root partition statistics when generating a query plan.
+        The legacy query optimizer does not use these statistics. </p>
+      <p>The default setting for the parameter is <codeph>on</codeph>, the <codeph>ANALYZE</codeph>
+        command can collect root partition statistics without the <codeph>ROOTPARTITION</codeph>
+        keyword. Root partition statistics are collected when you run <codeph>ANALYZE</codeph> on
+        the root partition, or when you run <codeph>ANALYZE</codeph> on a child leaf partition of
+        the partitioned table and the other child leaf partitions have statistics. When the value is
+          <codeph>off</codeph>, you must run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root
+        partition statistics. </p>
+      <p>When the value of the server configuration parameter <codeph><xref href="#optimizer"
+            format="dita"/></codeph> is <codeph>on</codeph> (the default), the value of this
+        parameter should also be <codeph>on</codeph>. For information about collecting table
+        statistics on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"
+          /></codeph>.</p>
       <p>For information about the legacy query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -8898,7 +8906,8 @@
     <body>
       <p>How many keepalives may be lost before the connection is considered dead. A value of 0 uses
         the system default. If TCP_KEEPCNT is not supported, this parameter must be 0. </p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_count_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8927,7 +8936,8 @@
     <body>
       <p>Number of seconds between sending keepalives on an otherwise idle connection. A value of 0
         uses the system default. If TCP_KEEPIDLE is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_idle_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8956,7 +8966,8 @@
     <body>
       <p>How many seconds to wait for a response to a keepalive before retransmitting. A value of 0
         uses the system default. If TCP_KEEPINTVL is not supported, this parameter must be 0.</p>
-      <p>Use this parameter for all connections that are not between a primary and mirror segment.</p>
+      <p>Use this parameter for all connections that are not between a primary and mirror
+        segment.</p>
       <table id="tcp_keepalives_interval_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9601,9 +9612,9 @@
         </ul></p>
       <p>You can set the value to <codeph>false</codeph> to disable authentication when testing the
         communication between the Greenplum Database external table and the <codeph>gpfdist</codeph>
-        utility that is serving the external data.<note type="warning">Disabling SSL certificate
-          authentication exposes a security risk by not validating the <codeph>gpfdists</codeph> SSL
-          certificate. </note></p>
+        utility that is serving the external data.
+        <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
+          validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
       <p>For information about the <codeph>gpfdists</codeph> protocol, see <xref
           href="../../admin_guide/external/g-gpfdists-protocol.xml">gpfdists:// Protocol</xref>. For
         information about running the <codeph>gpfdist</codeph> utility, see <xref

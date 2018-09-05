@@ -2,8 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gwc_jkd_3s">
   <title>About Database Statistics in Greenplum Database</title>
-  <shortdesc>An overview of statistics gathered by the <codeph>ANALYZE</codeph> command in Greenplum
-    Database.</shortdesc>
+  <shortdesc>An overview of statistics gathered by the <codeph><xref
+        href="../../ref_guide/sql_commands/ANALYZE.xml#topic1">ANALYZE</xref></codeph> command in
+    Greenplum Database.</shortdesc>
   <body>
     <p>Statistics are metadata that describe the data stored in the database. The query optimizer
       needs up-to-date statistics to choose the best execution plan for a query. For example, if a
@@ -61,13 +62,13 @@
               <pd>The object ID of the table or index the column belongs to.</pd>
             </plentry>
             <plentry>
-              <pt>staatnum</pt>
+              <pt>staattnum</pt>
               <pd>The number of the described column, beginning with 1.</pd>
             </plentry>
             <plentry>
               <pt>stainherit</pt>
-              <pd>If true, the statistics include inheritance child columns, not just the
-                values in the specified relation.</pd>
+              <pd>If true, the statistics include inheritance child columns, not just the values in
+                the specified relation.</pd>
             </plentry>
             <plentry>
               <pt>stanullfrac</pt>
@@ -101,14 +102,15 @@
             <plentry>
               <pt>stanumbers<i>N</i></pt>
               <pd>float4 array containing numerical statistics of the appropriate kind for the
-                  <i>N</i>th slot, or NULL if the slot kind does not involve numerical values.</pd>
+                  <i>N</i>th slot, or <codeph>NULL</codeph> if the slot kind does not involve
+                numerical values.</pd>
             </plentry>
             <plentry>
               <pt>stavalues<i>N</i></pt>
-              <pd>Column data values of the appropriate kind for the <i>N</i>th slot, or NULL if the
-                slot kind does not store any data values. Each array's element values are actually
-                of the specific column's data type, so there is no way to define these columns'
-                types more specifically than <i>anyarray</i>.</pd>
+              <pd>Column data values of the appropriate kind for the <i>N</i>th slot, or
+                  <codeph>NULL</codeph> if the slot kind does not store any data values. Each
+                array's element values are actually of the specific column's data type, so there is
+                no way to define these columns' types more specifically than <i>anyarray</i>.</pd>
             </plentry>
           </parml></p>
         <p>The statistics collected for a column vary for different data types, so the
@@ -120,7 +122,7 @@
         <p>The <codeph>stakind<varname>N</varname></codeph> columns each contain a numeric code to
           describe the type of statistics stored in their slot. The <codeph>stakind</codeph> code
           numbers from 1 to 99 are reserved for core PostgreSQL data types. Greenplum Database uses
-          code numbers 1, 2, and 3. A value of 0 means the slot is unused. The following table
+          code numbers 1, 2, 3, 4, and 5. A value of 0 means the slot is unused. The following table
           describes the kinds of statistics stored for the three codes.<table frame="all"
             id="table_upf_1yc_nt">
             <title>Contents of pg_statistic "slots"</title>
@@ -140,14 +142,14 @@
                     <ul id="ul_ipg_gyc_nt">
                       <li><codeph>staop</codeph> contains the object ID of the "=" operator, used to
                         decide whether values are the same or not.</li>
-                      <li><codeph>stavalues</codeph> contains an array of the <i>K</i> most common
-                        non-null values appearing in the column.</li>
+                      <li><codeph>stavalues</codeph> contains an array of the <varname>K</varname>
+                        most common non-null values appearing in the column.</li>
                       <li><codeph>stanumbers</codeph> contains the frequencies (fractions of total
                         row count) of the values in the <codeph>stavalues</codeph> array. </li>
                     </ul>The values are ordered in decreasing frequency. Since the arrays are
-                    variable-size, <i>K</i> can be chosen by the statistics collector. Values must
-                    occur more than once to be added to the <codeph>stavalues</codeph> array; a
-                    unique column has no MCV slot.</entry>
+                    variable-size, <varname>K</varname> can be chosen by the statistics collector.
+                    Values must occur more than once to be added to the <codeph>stavalues</codeph>
+                    array; a unique column has no MCV slot.</entry>
                 </row>
                 <row>
                   <entry>2</entry>
@@ -155,11 +157,13 @@
                       id="ul_t2f_zyc_nt">
                       <li><codeph>staop</codeph> is the object ID of the "&lt;" operator, which
                         describes the sort ordering. </li>
-                      <li><codeph>stavalues</codeph> contains <i>M</i> (where <i>M</i>>=2) non-null
-                        values that divide the non-null column data values into <i>M</i>-1 bins of
-                        approximately equal population. The first <codeph>stavalues</codeph> item is
-                        the minimum value and the last is the maximum value. </li>
-                      <li><codeph>stanumbers</codeph> is not used and should be null. </li>
+                      <li><codeph>stavalues</codeph> contains <varname>M</varname> (where
+                            <codeph><varname>M</varname>>=2</codeph>) non-null values that divide
+                        the non-null column data values into <codeph><varname>M</varname>-1</codeph>
+                        bins of approximately equal population. The first <codeph>stavalues</codeph>
+                        item is the minimum value and the last is the maximum value. </li>
+                      <li><codeph>stanumbers</codeph> is not used and should be
+                          <codeph>NULL</codeph>. </li>
                     </ul><p>If a Most Common Values slot is also provided, then the histogram
                       describes the data distribution after removing the values listed in the MCV
                       array. (It is a <i>compressed histogram</i> in the technical parlance). This
@@ -175,11 +179,67 @@
                       id="ul_yvj_sfd_nt">
                       <li><codeph>staop</codeph> is the object ID of the "&lt;" operator. As with
                         the histogram, more than one entry could theoretically appear.</li>
-                      <li><codeph>stavalues</codeph> is not used and should be NULL. </li>
+                      <li><codeph>stavalues</codeph> is not used and should be
+                        <codeph>NULL</codeph>. </li>
                       <li><codeph>stanumbers</codeph> contains a single entry, the correlation
                         coefficient between the sequence of data values and the sequence of their
                         actual tuple positions. The coefficient ranges from +1 to -1.</li>
                     </ul></entry>
+                </row>
+                <row>
+                  <entry>4</entry>
+                  <entry><i>Most Common Elements Slot</i> - is similar to a Most Common Values (MCV)
+                    Slot, except that it stores the most common non-null <i>elements</i> of the
+                    column values. This is useful when the column datatype is an array or some other
+                    type with identifiable elements (for instance, <codeph>tsvector</codeph>). <ul
+                      id="ul_kj4_wnm_y2b">
+                      <li><codeph>staop</codeph> contains the equality operator appropriate to the
+                        element type. </li>
+                      <li><codeph>stavalues</codeph> contains the most common element values.</li>
+                      <li><codeph>stanumbers</codeph> contains common element frequencies. </li>
+                    </ul><p>Frequencies are measured as the fraction of non-null rows the element
+                      value appears in, not the frequency of all rows. Also, the values are sorted
+                      into the element type's default order (to support binary search for a
+                      particular value). Since this puts the minimum and maximum frequencies at
+                      unpredictable spots in <codeph>stanumbers</codeph>, there are two extra
+                      members of <codeph>stanumbers</codeph> that hold copies of the minimum and
+                      maximum frequencies. Optionally, there can be a third extra member that holds
+                      the frequency of null elements (the frequency is expressed in the same terms:
+                      the fraction of non-null rows that contain at least one null element). If this
+                      member is omitted, the column is presumed to contain no <codeph>NULL</codeph>
+                      elements. </p>
+                    <note>For <codeph>tsvector</codeph> columns, the <codeph>stavalues</codeph>
+                      elements are of type <codeph>text</codeph>, even though their representation
+                      within <codeph>tsvector</codeph> is not exactly
+                    <codeph>text</codeph>.</note></entry>
+                </row>
+                <row>
+                  <entry>5</entry>
+                  <entry><i>Distinct Elements Count Histogram Slot</i> - describes the distribution
+                    of the number of distinct element values present in each row of an array-type
+                    column. Only non-null rows are considered, and only non-null elements.<ul
+                      id="ul_gmr_jnm_y2b">
+                      <li><codeph>staop</codeph> contains the equality operator appropriate to the
+                        element type. </li>
+                      <li><codeph>stavalues</codeph> is not used and should be
+                        <codeph>NULL</codeph>. </li>
+                      <li><codeph>stanumbers</codeph> contains information about distinct elements.
+                        The last member of <codeph>stanumbers</codeph> is the average count of
+                        distinct element values over all non-null rows. The preceding
+                          <varname>M</varname> (where <codeph><varname>M</varname> >=2</codeph>)
+                        members form a histogram that divides the population of distinct-elements
+                        counts into <codeph><varname>M</varname>-1</codeph> bins of approximately
+                        equal population. The first of these is the minimum observed count, and the
+                        last the maximum.</li>
+                    </ul></entry>
+                </row>
+                <row>
+                  <entry>99</entry>
+                  <entry><i>Hyperloglog Slot</i> - for child leaf partitions of a partitioned table,
+                    stores the <codeph>hyperloglog_counter</codeph> created for sampled data. The
+                      <codeph>hyperloglog_counter</codeph> data structure is converted into a
+                      <codeph>bytea</codeph> and stored in a <codeph>stavalues5</codeph> slot of the
+                      <codeph>pg_statistic</codeph> catalog table.</entry>
                 </row>
               </tbody>
             </tgroup>
@@ -251,6 +311,20 @@
               <dt>correlation</dt>
               <dd>Greenplum Database does not calculate the correlation statistic. </dd>
             </dlentry>
+            <dlentry>
+              <dt>most_common_elems</dt>
+              <dd>An array that contains the most common element values.</dd>
+            </dlentry>
+          </dl><dl>
+            <dlentry>
+              <dt>most_common_elem_freqs</dt>
+              <dd>An array that contains common element frequencies.</dd>
+            </dlentry>
+            <dlentry>
+              <dt>elem_count_histogram</dt>
+              <dd>An array that describes the distribution of the number of distinct element values
+                present in each row of an array-type column. </dd>
+            </dlentry>
           </dl></p>
         <p>Newly created tables and indexes have no statistics. You can check for tables with
           missing statistics using the <codeph>gp_stats_missing</codeph> view, which is in the
@@ -289,13 +363,11 @@
         <p>Refer to the <i>Greenplum Database Management Utility Reference</i> for details of
           running the <codeph>analyzedb</codeph> command.</p>
       </section>
-      <section id="section_cv2_crv_mt">
-        <title>Analyzing Partitioned and Append-Optimized Tables</title>
-        <p>When the <codeph>ANALYZE</codeph> command is run on a partitioned table, it analyzes each
-          leaf-level subpartition, one at a time. You can run <codeph>ANALYZE</codeph> on just new
-          or changed partition files to avoid analyzing partitions that have not changed. If a table
-          is partitioned, you can analyze just new or changed partitions. </p>
-        <p>The <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
+      <section id="section_cv2_crv_mt"><title>Analyzing Partitioned Tables</title><p>When the
+            <codeph>ANALYZE</codeph> command is run on a partitioned table, it analyzes each child
+          leaf partition table, one at a time. You can run <codeph>ANALYZE</codeph> on just new or
+          changed partition files to avoid analyzing partitions that have not changed. </p><p>The
+            <codeph>analyzedb</codeph> command-line utility skips unchanged partitions
           automatically. It also runs concurrent sessions so it can analyze several partitions
           concurrently. It runs five sessions by default, but the number of sessions can be set from
           1 to 10 with the <codeph>-p</codeph> command-line option. Each time
@@ -303,21 +375,32 @@
           and partitions in the <codeph>db_analyze</codeph> directory in the master data directory.
           The next time it runs, <codeph>analyzedb</codeph> compares the current state of each table
           with the saved state and skips analyzing a table or partition if it is unchanged. Heap
-          tables are always analyzed. </p>
-        <p>If GPORCA is enabled (the default), you also need to run <codeph>ANALYZE
-            ROOTPARTITION</codeph> to refresh the root partition statistics. GPORCA requires
-          statistics at the root level for partitioned tables. The legacy optimizer does not use
-          these statistics. Enable GPORCA by setting both the <codeph>optimizer</codeph> and
-            <codeph>optimizer_analyze_root_partition</codeph> system configuration parameters to on.
-          The root level statistics are then updated when you run <codeph>ANALYZE</codeph> or
-            <codeph>ANALYZE ROOTPARTITION</codeph>. The time to run <codeph>ANALYZE
-            ROOTPARTITION</codeph> is similar to the time to analyze a non-partitioned table with
-          the same data since <codeph>ANALYZE ROOTPARTITION</codeph> does not collect statistics on
-          the leaf partitions, the data is only sampled. The <codeph>analyzedb</codeph> utility
-          updates root partition statistics by default but you can add the
-            <codeph>--skip_root_stats</codeph> option to leave root partition statistics empty if
-          you do not use GPORCA.</p>
-      </section>
+          tables are always analyzed. </p><p>If GPORCA is enabled (the default), you also need to
+          run <codeph>ANALYZE</codeph> or <codeph>ANALYZE ROOTPARTITION</codeph> to refresh the root
+          partition statistics. GPORCA requires statistics at the root level for partitioned tables.
+          The legacy optimizer does not use these statistics. </p><p>The time to analyze a
+          partitioned table is similar to the time to analyze a non-partitioned table with the same
+          data since <codeph>ANALYZE</codeph> does not collect statistics on the leaf partitions
+          (the data is only sampled). The <codeph>analyzedb</codeph> utility updates root partition
+          statistics by default but you can add the <codeph>--skip_root_stats</codeph> option to
+          leave root partition statistics empty if you do not use GPORCA. </p>The Greenplum Database
+        server configuration parameter <codeph><xref
+            href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+            >optimizer_analyze_root_partition</xref></codeph> affects when statistics are collected
+        on the root partition of a partitioned table. If the parameter is <codeph>on</codeph> (the
+        default), the <codeph>ROOTPARTITION</codeph> keyword is not required to collect statistics
+        on the root partition when you run <codeph>ANALYZE</codeph>. Root partition statistics are
+        collected when you run <codeph>ANALYZE</codeph> on the root partition, or when you run
+          <codeph>ANALYZE</codeph> on a child leaf partition of the partitioned table and the other
+        child leaf partitions have statistics. If the parameter is <codeph>off</codeph>, you must
+        run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root partition statistics.<p>If you do
+          not intend to execute queries on partitioned tables with GPORCA (setting the server
+          configuration parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+              >optimizer</xref></codeph> to <codeph>off</codeph>), you can also set the server
+          configuration parameter <codeph>optimizer_analyze_root_partition</codeph> to
+            <codeph>off</codeph> to limit when <codeph>ANALYZE</codeph> updates the root partition
+          statistics. </p></section>
       <section> </section>
     </body>
   </topic>
