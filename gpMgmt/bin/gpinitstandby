@@ -679,6 +679,21 @@ def remove_standby_from_catalog(options, array):
         
 
 #-------------------------------------------------------------------------
+def force_fts_probe():
+    """Force an fts probe"""
+    try:
+        dburl = getDbUrlForInitStandby()
+        conn = dbconn.connect(dburl)
+        sql = "select gp_request_fts_probe_scan()"
+
+        logger.info('Forcing FTS probe.')
+        dbconn.execSQL(conn, sql)
+        conn.close()
+    except Exception, ex:
+        logger.error('Failed to force FTS probe.')
+        raise GpInitStandbyException(ex)
+
+#-------------------------------------------------------------------------
 def copy_master_datadir_to_standby(options, array, standby_datadir):
     """Copies the data directory from the master to the standby."""
 
@@ -811,6 +826,9 @@ try:
     else:
         create_standby(options)
         logger.info('Successfully created standby master on %s' % options.standby_host)
+
+    # Force an FTS probe after doing work
+    force_fts_probe()
 
 except KeyboardInterrupt:
     logger.error('User canceled')

@@ -1116,21 +1116,44 @@ def impl(context):
         context.standby_host = standby
         run_gpcommand(context, 'gpinitstandby -ra')
 
+        check_segment_config_query = "SELECT role, mode, status FROM gp_segment_configuration WHERE content = -1"
+        with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+            segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
+
+        if len(segconfig) != 1:
+            raise Exception("gp_segment_configuration still shows standby master")
+
+        # Check that the master is not in-sync because standby is gone
+        master_role = segconfig[0][0]
+        master_mode = segconfig[0][1]
+        master_status = segconfig[0][2]
+        if master_role != 'p' or master_mode != 'n' or master_status != 'u':
+            raise Exception("master (role, mode, status) of (%s, %s, %s) does not match (p, n, u)" % (master_role, master_mode, master_status))
+
 @then('verify the standby master entries in catalog')
 def impl(context):
-	check_segment_config_query = "SELECT * FROM gp_segment_configuration WHERE content = -1 AND role = 'm'"
+	check_segment_config_query = "SELECT dbid, role, mode, status FROM gp_segment_configuration WHERE content = -1 ORDER BY role DESC"
 	check_stat_replication_query = "SELECT * FROM pg_stat_replication"
 	with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
 		segconfig = dbconn.execSQL(conn, check_segment_config_query).fetchall()
 		statrep = dbconn.execSQL(conn, check_stat_replication_query).fetchall()
 
-	context.standby_dbid = segconfig[0][0]
-
-	if len(segconfig) != 1:
+	if len(segconfig) != 2:
 		raise Exception("gp_segment_configuration did not have standby master")
 
 	if len(statrep) != 1:
 		raise Exception("pg_stat_replication did not have standby master")
+
+	# Check that both master and standby are both in-sync and up
+	master_mode = segconfig[0][2]
+	master_status = segconfig[0][3]
+	standby_mode = segconfig[1][2]
+	standby_status = segconfig[1][3]
+
+	if master_mode != 's' or master_status != 'u' or standby_mode != 's' or standby_status != 'u':
+		raise Exception("master/standby status (%s,%s)/(%s,%s) does not match (s,u)/(s,u)" % (master_mode, master_status, standby_mode, standby_status))
+
+	context.standby_dbid = segconfig[1][0]
 
 @then('verify the standby master is now acting as master')
 def impl(context):

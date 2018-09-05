@@ -24,6 +24,7 @@ int poll_mock (struct pollfd * p1, nfds_t p2, int p3)
 }
 
 #include "postgres.h"
+#include "utils/memutils.h"
 
 /* Actual function body */
 #include "../ftsprobe.c"
@@ -1355,6 +1356,187 @@ test_FtsWalRepInitProbeContext_initial_state(void **state)
 	}
 }
 
+void
+test_updateMasterStandbyStatus_checkStandby_deleted(void **state)
+{
+	/* set up entry_db_info to only have the master */
+	CdbComponentDatabaseInfo *entry_db_info;
+	entry_db_info = palloc(
+		sizeof(CdbComponentDatabaseInfo) * 2);
+	entry_db_info[0].dbid = 1;
+	entry_db_info[0].segindex = MASTER_CONTENT_ID;
+	entry_db_info[0].role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	entry_db_info[0].mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
+	entry_db_info[0].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	will_be_called_count(StartTransactionCommand, 1);
+	will_be_called_count(GetTransactionSnapshot, 1);
+	will_be_called_count(CommitTransactionCommand, 1);
+
+	expect_value(probeWalRepUpdateConfig, dbid, 1);
+	expect_value(probeWalRepUpdateConfig, segindex, MASTER_CONTENT_ID);
+	expect_value(probeWalRepUpdateConfig, role, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);
+	expect_value(probeWalRepUpdateConfig, IsSegmentAlive, true);
+	expect_value(probeWalRepUpdateConfig, IsInSync, false);
+	will_be_called(probeWalRepUpdateConfig);
+
+	/* test that master updates after standby is deleted */
+	updateMasterStandbyStatus(entry_db_info);
+}
+
+void
+test_updateMasterStandbyStatus_checkStandby_down_to_up(void **state)
+{
+	FtsResponse mockresponse;
+	CdbComponentDatabaseInfo *entry_db_info;
+	LargestIntegralType dbids[2] = {1, 8};
+	LargestIntegralType roles[2] = {GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+									GP_SEGMENT_CONFIGURATION_ROLE_MIRROR};
+
+	/* set up response to say standby is up */
+	mockresponse.IsMirrorUp = true;
+	mockresponse.IsInSync = true;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror = false;
+	mockresponse.RequestRetry = false;
+
+	expect_any(GetMirrorStatus, response);
+	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	will_be_called(GetMirrorStatus);
+
+	/* set up entry_db_info to have master up and standby down */
+	entry_db_info = palloc(
+		sizeof(CdbComponentDatabaseInfo) * 2);
+	entry_db_info[0].dbid = 1;
+	entry_db_info[0].segindex = MASTER_CONTENT_ID;
+	entry_db_info[0].role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	entry_db_info[0].mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
+	entry_db_info[0].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	entry_db_info[1].dbid = 8;
+	entry_db_info[1].segindex = MASTER_CONTENT_ID;
+	entry_db_info[1].role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+	entry_db_info[1].mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
+	entry_db_info[1].status = GP_SEGMENT_CONFIGURATION_STATUS_DOWN;
+
+	will_be_called_count(StartTransactionCommand, 1);
+	will_be_called_count(GetTransactionSnapshot, 1);
+	will_be_called_count(CommitTransactionCommand, 1);
+
+	expect_in_set_count(probeWalRepUpdateConfig, dbid, dbids, 2);
+	expect_value_count(probeWalRepUpdateConfig, segindex, MASTER_CONTENT_ID, 2);
+	expect_in_set_count(probeWalRepUpdateConfig, role, roles, 2);
+	expect_value_count(probeWalRepUpdateConfig, IsSegmentAlive, true, 2);
+	expect_value_count(probeWalRepUpdateConfig, IsInSync, true, 2);
+	will_be_called_count(probeWalRepUpdateConfig, 2);
+
+	/* test that standby will be marked up */
+	updateMasterStandbyStatus(entry_db_info);
+}
+
+void
+test_updateMasterStandbyStatus_checkStandby_up_to_down(void **state)
+{
+	FtsResponse mockresponse;
+	CdbComponentDatabaseInfo *entry_db_info;
+	LargestIntegralType dbids[2] = {1, 8};
+	LargestIntegralType roles[2] = {GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+									GP_SEGMENT_CONFIGURATION_ROLE_MIRROR};
+	LargestIntegralType issegmentalive[2] = {true, false};
+
+	/* set up response to say standby is down */
+	mockresponse.IsMirrorUp = false;
+	mockresponse.IsInSync = false;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror = false;
+	mockresponse.RequestRetry = false;
+
+	expect_any(GetMirrorStatus, response);
+	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	will_be_called(GetMirrorStatus);
+
+	/* set up entry_db_info to have master up and standby up */
+	entry_db_info = palloc(
+		sizeof(CdbComponentDatabaseInfo) * 2);
+	entry_db_info[0].dbid = 1;
+	entry_db_info[0].segindex = MASTER_CONTENT_ID;
+	entry_db_info[0].role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	entry_db_info[0].mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
+	entry_db_info[0].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	entry_db_info[1].dbid = 8;
+	entry_db_info[1].segindex = MASTER_CONTENT_ID;
+	entry_db_info[1].role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+	entry_db_info[1].mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
+	entry_db_info[1].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	will_be_called_count(StartTransactionCommand, 1);
+	will_be_called_count(GetTransactionSnapshot, 1);
+	will_be_called_count(CommitTransactionCommand, 1);
+
+	expect_in_set_count(probeWalRepUpdateConfig, dbid, dbids, 2);
+	expect_value_count(probeWalRepUpdateConfig, segindex, MASTER_CONTENT_ID, 2);
+	expect_in_set_count(probeWalRepUpdateConfig, role, roles, 2);
+	expect_in_set_count(probeWalRepUpdateConfig, IsSegmentAlive, issegmentalive, 2);
+	expect_value_count(probeWalRepUpdateConfig, IsInSync, false, 2);
+	will_be_called_count(probeWalRepUpdateConfig, 2);
+
+	/* test that standby will be marked down */
+	updateMasterStandbyStatus(entry_db_info);
+}
+
+void
+test_updateMasterStandbyStatus_checkStandby_no_update(void **state)
+{
+	FtsResponse mockresponse;
+	CdbComponentDatabaseInfo *entry_db_info;
+	LargestIntegralType dbids[2] = {1, 8};
+	LargestIntegralType roles[2] = {GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+									GP_SEGMENT_CONFIGURATION_ROLE_MIRROR};
+	LargestIntegralType issegmentalive[2] = {true, false};
+
+	/* set up response to say standby is up */
+	mockresponse.IsMirrorUp = true;
+	mockresponse.IsInSync = true;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror = false;
+	mockresponse.RequestRetry = false;
+
+	expect_any(GetMirrorStatus, response);
+	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	will_be_called(GetMirrorStatus);
+
+	/* set up entry_db_info to have master up and standby up */
+	entry_db_info = palloc(
+		sizeof(CdbComponentDatabaseInfo) * 2);
+	entry_db_info[0].dbid = 1;
+	entry_db_info[0].segindex = MASTER_CONTENT_ID;
+	entry_db_info[0].role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	entry_db_info[0].mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
+	entry_db_info[0].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	entry_db_info[1].dbid = 8;
+	entry_db_info[1].segindex = MASTER_CONTENT_ID;
+	entry_db_info[1].role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+	entry_db_info[1].mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
+	entry_db_info[1].status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+
+	/* test that nothing will change because probeWalRepUpdateConfig() is not called */
+	updateMasterStandbyStatus(entry_db_info);
+
+	/* set up response to say request retry */
+	mockresponse.IsMirrorUp = false;
+	mockresponse.IsInSync = false;
+	mockresponse.RequestRetry = true;
+
+	expect_any(GetMirrorStatus, response);
+	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	will_be_called(GetMirrorStatus);
+
+	/* test that retry request delays update because probeWalRepUpdateConfig() is not called */
+	updateMasterStandbyStatus(entry_db_info);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -1391,7 +1573,16 @@ main(int argc, char* argv[])
 		unit_test(test_PrimaryUpMirrorDownNotInSync_to_PrimaryDown),
 		unit_test(test_probeTimeout),
 		/*-----------------------------------------------------------------------*/
-		unit_test(test_FtsWalRepInitProbeContext_initial_state)
+		unit_test(test_FtsWalRepInitProbeContext_initial_state),
+		/* -----------------------------------------------------------------------
+		 * Group of master and standby master FTS unit tests
+		 * -----------------------------------------------------------------------
+		 */
+		unit_test(test_updateMasterStandbyStatus_checkStandby_deleted),
+		unit_test(test_updateMasterStandbyStatus_checkStandby_down_to_up),
+		unit_test(test_updateMasterStandbyStatus_checkStandby_up_to_down),
+		unit_test(test_updateMasterStandbyStatus_checkStandby_no_update)
+		/*-----------------------------------------------------------------------*/
 	};
 	MemoryContextInit();
 	InitFtsProbeInfo();

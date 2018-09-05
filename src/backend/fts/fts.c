@@ -541,6 +541,13 @@ void FtsLoop()
 			skipFtsProbe = true;
 #endif
 
+		if (!skipFtsProbe)
+		{
+			oldContext = MemoryContextSwitchTo(probeContext);
+			updateMasterStandbyStatus(cdbs->entry_db_info);
+			MemoryContextSwitchTo(oldContext);
+		}
+
 		if (skipFtsProbe || !has_mirrors)
 		{
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,

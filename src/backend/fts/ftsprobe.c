@@ -31,6 +31,7 @@
 #include "postmaster/postmaster.h"
 #include "utils/snapmgr.h"
 
+#include "replication/gp_replication.h"
 
 static struct pollfd *PollFds;
 
@@ -1298,6 +1299,90 @@ FtsWalRepMessageSegments(CdbComponentDatabases *cdbs)
 	pfree(context.perSegInfos);
 	pfree(PollFds);
 	return is_updated;
+}
+
+/*
+ * Update master and standby master segment configuration by comparing current
+ * segment configuration with master's current WalSndCtl.
+ */
+void
+updateMasterStandbyStatus(CdbComponentDatabaseInfo *entry_db_info)
+{
+	char master_mode;
+	char standby_master_mode;
+	char standby_master_status;
+
+	Assert(entry_db_info[0].segindex == MASTER_CONTENT_ID);
+
+	master_mode = entry_db_info[0].mode;
+	standby_master_mode = entry_db_info[1].mode;
+	standby_master_status = entry_db_info[1].status;
+
+	if (standby_master_mode == '\0')
+	{
+		/* standby master was deleted or did not exist */
+		if (master_mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC)
+		{
+			ResourceOwner save = CurrentResourceOwner;
+			StartTransactionCommand();
+			GetTransactionSnapshot();
+
+			probeWalRepUpdateConfig(entry_db_info[0].dbid,
+									entry_db_info[0].segindex,
+									entry_db_info[0].role,
+									true,
+									false);
+
+			CommitTransactionCommand();
+			CurrentResourceOwner = save;
+		}
+	}
+	else
+	{
+		/* standby master detected so check current status */
+		FtsResponse response = {
+			false, /* IsMirrorUp */
+			false, /* IsInSync */
+			false, /* IsSyncRepEnabled */
+			false, /* IsRoleMirror */
+			false, /* RequestRetry */
+		};
+
+		Assert(entry_db_info[1].segindex == MASTER_CONTENT_ID);
+
+		GetMirrorStatus(&response);
+
+		if (response.RequestRetry)
+			return;
+
+		if ((response.IsMirrorUp &&
+			 standby_master_status == GP_SEGMENT_CONFIGURATION_STATUS_DOWN) ||
+			(!response.IsMirrorUp &&
+			 standby_master_status == GP_SEGMENT_CONFIGURATION_STATUS_UP) ||
+			(response.IsInSync &&
+			 master_mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC) ||
+			(!response.IsInSync &&
+			 master_mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC))
+		{
+			ResourceOwner save = CurrentResourceOwner;
+			StartTransactionCommand();
+			GetTransactionSnapshot();
+
+			probeWalRepUpdateConfig(entry_db_info[0].dbid,
+									entry_db_info[0].segindex,
+									entry_db_info[0].role,
+									true,
+									response.IsInSync);
+			probeWalRepUpdateConfig(entry_db_info[1].dbid,
+									entry_db_info[1].segindex,
+									entry_db_info[1].role,
+									response.IsMirrorUp,
+									response.IsInSync);
+
+			CommitTransactionCommand();
+			CurrentResourceOwner = save;
+		}
+	}
 }
 
 /* EOF */

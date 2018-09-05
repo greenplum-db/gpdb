@@ -93,4 +93,5 @@ typedef struct
 } fts_context;
 
 extern bool FtsWalRepMessageSegments(CdbComponentDatabases *context);
+extern void updateMasterStandbyStatus(CdbComponentDatabaseInfo *entry_db_info);
 #endif
