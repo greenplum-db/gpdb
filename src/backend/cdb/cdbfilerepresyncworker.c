@@ -644,7 +644,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 				{
 					ereport(LOG,
 						(errmsg("Resynchonize buffer pool relation '%s' block '%d' has page lsn more than CT lsn, "
-							"lsn end change tracking '%X/%X' lsn page '%X/%X' "
+							"lsn page '%X/%X' lsn end change tracking '%X/%X' "
 							"number of blocks '%d'",
 							relidstr,
 							blkno,
