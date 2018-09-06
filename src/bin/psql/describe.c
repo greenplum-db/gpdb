@@ -3515,12 +3515,17 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 					  gettext_noop("Owner"));
 
 	if (isGPDB())   /* GPDB? */
-		appendPQExpBuffer(&buf,
-				  ", CASE c.relstorage WHEN 'h' THEN '%s' WHEN 'x' THEN '%s' WHEN 'a' "
-				  "THEN '%s' WHEN 'v' THEN '%s' WHEN 'c' THEN '%s' WHEN 'p' THEN '%s' "
-				  "WHEN 'f' THEN '%s' END as \"%s\"\n",
-				  gettext_noop("heap"), gettext_noop("external"), gettext_noop("append only"), gettext_noop("none"), gettext_noop("append only columnar"), 
-				  gettext_noop("Apache Parquet"), gettext_noop("external data source"), gettext_noop("Storage"));
+	{
+		appendPQExpBuffer(&buf, ", CASE c.relstorage");
+		appendPQExpBuffer(&buf, " WHEN 'h' THEN '%s'", gettext_noop("heap"));
+		appendPQExpBuffer(&buf, " WHEN 'x' THEN '%s'", gettext_noop("external"));
+		appendPQExpBuffer(&buf, " WHEN 'a' THEN '%s'", gettext_noop("append only"));
+		appendPQExpBuffer(&buf, " WHEN 'v' THEN '%s'", gettext_noop("none"));
+		appendPQExpBuffer(&buf, " WHEN 'c' THEN '%s'", gettext_noop("append only columnar"));
+		appendPQExpBuffer(&buf, " WHEN 'p' THEN '%s'", gettext_noop("Apache Parquet"));
+		appendPQExpBuffer(&buf, " WHEN 'f' THEN '%s'", gettext_noop("foreign"));
+		appendPQExpBuffer(&buf, " END as \"%s\"\n", gettext_noop("Storage"));
+	}
 
 	if (showIndexes)
 		appendPQExpBuffer(&buf,

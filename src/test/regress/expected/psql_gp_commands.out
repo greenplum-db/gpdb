@@ -162,7 +162,7 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
  Schema |       Name        |     Type      |       Owner       | Storage  
 --------+-------------------+---------------+-------------------+----------
  public | dE_external_table | table         | test_psql_de_role | external
- public | dE_foreign_table  | foreign table | test_psql_de_role | 
+ public | dE_foreign_table  | foreign table | test_psql_de_role | foreign
 (2 rows)
 
 -- Clean up
