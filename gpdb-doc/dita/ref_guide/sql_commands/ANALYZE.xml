@@ -29,9 +29,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         HyperLogLog (HLL) statistics, on the leaf child partitions. HLL statistics are used are used
         to derive number of distinct values (NDV) for queries against partitioned tables.<ul
           id="ul_nxx_p3p_x2b">
-          <li>During query optimization, HLL statistics generate a more accurate number of distinct
-            values (NDV) estimates than the standard table statistics when aggregating estimates
-            across multiple leaf child partitions. </li>
+          <li>When aggregating NDV estimates across multiple leaf child partitions, HLL statistics
+            generate a more accurate NDV estimates than the standard table statistics. </li>
           <li>When updating HLL statistics, <codeph>ANALYZE</codeph> operations are required only on
             leaf child partitions that have changed. For example, <codeph>ANALYZE</codeph> is
             required if the leaf child partition data has changed, or if the leaf child partition

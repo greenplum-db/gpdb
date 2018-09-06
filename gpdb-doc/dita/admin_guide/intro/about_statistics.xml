@@ -122,8 +122,8 @@
         <p>The <codeph>stakind<varname>N</varname></codeph> columns each contain a numeric code to
           describe the type of statistics stored in their slot. The <codeph>stakind</codeph> code
           numbers from 1 to 99 are reserved for core PostgreSQL data types. Greenplum Database uses
-          code numbers 1, 2, 3, 4, and 5. A value of 0 means the slot is unused. The following table
-          describes the kinds of statistics stored for the three codes.<table frame="all"
+          code numbers 1, 2, 3, 4, 5, and 99. A value of 0 means the slot is unused. The following
+          table describes the kinds of statistics stored for the three codes.<table frame="all"
             id="table_upf_1yc_nt">
             <title>Contents of pg_statistic "slots"</title>
             <tgroup cols="2">
