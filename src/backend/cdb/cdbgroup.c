@@ -4190,7 +4190,7 @@ split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			fref->agglevelsup = 0;
 			fref->aggstar = false;
 			fref->aggkind = aggref->aggkind;
-			fref->aggdistinct = false; /* handled in preliminary aggregation */
+			fref->aggdistinct = NIL; /* handled in preliminary aggregation */
 			fref->aggstage = AGGSTAGE_FINAL;
 			fref->location = -1;
 			final_tle = makeTargetEntry((Expr *) fref, attrno, NULL, false);
