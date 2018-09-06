@@ -26,8 +26,9 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         collected.</p>
       <p><codeph>ANALYZE</codeph> does not collect statistics on external tables. </p>
       <p>For partitioned tables, <codeph>ANALYZE</codeph> collects additional statistics,
-        HyperLogLog (HLL) statistics, on the leaf child partitions. HLL statistics are used during
-        optimization of queries against partitioned tables.<ul id="ul_nxx_p3p_x2b">
+        HyperLogLog (HLL) statistics, on the leaf child partitions. HLL statistics are used are used
+        to derive number of distinct values (NDV) for queries against partitioned tables.<ul
+          id="ul_nxx_p3p_x2b">
           <li>During query optimization, HLL statistics generate a more accurate number of distinct
             values (NDV) estimates than the standard table statistics when aggregating estimates
             across multiple leaf child partitions. </li>
@@ -72,12 +73,11 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         <plentry>
           <pt>ROOTPARTITION [ALL]</pt>
           <pd>Collect statistics only on the root partition of partitioned tables based on the data
-            in the partitioned table. If possible ,<codeph>ANALYZE</codeph> uses leaf child
+            in the partitioned table. If possible, <codeph>ANALYZE</codeph> uses leaf child
             partition statistics to generate root partition statistics. Otherwise,
               <codeph>ANALYZE</codeph> collects the statistics by sampling leaf child partition
             data. Statistics are not collected on the leaf child partitions, the data is only
-            sampled. HLL statistics are not collected. If possible ,<codeph>ANALYZE</codeph> uses
-            leaf child partition statistics. </pd>
+            sampled. HLL statistics are not collected. </pd>
           <pd>For information about when the <codeph>ROOTPARTITION</codeph> keyword is required, see
               <xref href="#topic1/section5" format="dita">Notes</xref>.</pd>
           <pd>When you specify <codeph>ROOTPARTITION</codeph>, you must specify either
@@ -172,9 +172,9 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
             level relationships are tracked in the system view <i>pg_partitions</i>.</note></li>
         <li>For a leaf child partition that has changed, (for example, you make significant updates
           to the leaf child partition data or exchange the leaf child partition), you can run
-            <codeph>ANALYZE</codeph> on a leaf child partition to collect table statistics and HLL
-          statistics. By default, if all other leaf child partitions have statistics, the command
-          updates the root partition statistics. </li>
+            <codeph>ANALYZE</codeph> on a leaf child partition to collect table statistics. By
+          default, if all other leaf child partitions have statistics, the command updates the root
+          partition statistics. </li>
       </ul>
       <p>For a partitioned table that contains a leaf child partition that has been exchanged to use
         an external table, <codeph>ANALYZE</codeph> does not collect statistics for the external

@@ -10,18 +10,18 @@
     <p>If you execute queries on partitioned tables, you should collect statistics on the root
       partition and periodically update those statistics to ensure that GPORCA can generate optimal
       query plans. If the root partition statistics are not up-to-date or do not exist, GPORCA still
-      performs dynamic partition elimination for queries against the table However, the query plan
+      performs dynamic partition elimination for queries against the table. However, the query plan
       might not be optimal. </p>
   </body>
   <topic id="topic_w1y_srn_wbb">
     <title>Running ANALYZE</title>
     <body>
-      <p>By default, running the <codeph>ANALYZE</codeph> on the root partition of a partitioned
-        table samples the leaf partition data in a table, and stores the statistics for the root
-        partition. <codeph>ANALYZE</codeph> collects statistics on the root and leaf partitions,
-        including HLL statistics on the leaf partitions. <codeph>ANALYZE ROOTPARTITION</codeph>
-        collects statistics only on the root partition, the leaf partition data is only sampled. The
-        server configuration parameter <codeph><xref
+      <p>By default, running the <codeph>ANALYZE</codeph> command on the root partition of a
+        partitioned table samples the leaf partition data in the table, and stores the statistics
+        for the root partition. <codeph>ANALYZE</codeph> collects statistics on the root and leaf
+        partitions, including HyperLogLog (HLL) statistics on the leaf partitions. <codeph>ANALYZE
+          ROOTPARTITION</codeph> collects statistics only on the root partition. The server
+        configuration parameter <codeph><xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
             >optimizer_analyze_root_partition</xref></codeph> controls whether the
           <codeph>ROOTPARTITION</codeph> keyword is required to collect root statistics for the root
@@ -37,9 +37,10 @@
         there are significant changes to leaf partition data.</p>
       <p>Follow these best practices for running <codeph>ANALYZE</codeph> or <codeph>ANALYZE
           ROOTPARTITION</codeph> on partitioned tables in your system:<ul id="ul_vm4_fsn_wbb">
-          <li>Always run <codeph>ANALYZE</codeph> or <codeph>ANALYZE ROOTPARTITION</codeph> at least
-            once for each newly-created partitioned table, after adding initial data. You can run
-              <codeph>ANALYZE</codeph> on a new or changed leaf partition. By default, the command
+          <li>Run <codeph>ANALYZE &lt;<varname>root_partition</varname>></codeph> on a new
+            partitioned table after adding initial data. Run <codeph>ANALYZE
+                &lt;<varname>leaf_partition</varname>></codeph> on a new leaf partition or a leaf
+            partition where data has changed. By default, running the command on a leaf partition
             updates the root partition statistics if the other leaf partitions have statistics.</li>
           <li>Update root partition statistics when you observe query performance regression in
               <codeph>EXPLAIN</codeph> plans against the table, or after significant changes to leaf
@@ -86,8 +87,8 @@
         server configuration parameter <codeph><xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
             >optimizer</xref></codeph> to <codeph>off</codeph>), then you can disable the automatic
-        collect statistics on the root partition of the partitioned table. The server configuration
-        parameter <codeph><xref
+        collection of statistics on the root partition of the partitioned table. The server
+        configuration parameter <codeph><xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
             >optimizer_analyze_root_partition</xref></codeph> controls whether the
           <codeph>ROOTPARTITION</codeph> keyword is required to collect root statistics for the root
