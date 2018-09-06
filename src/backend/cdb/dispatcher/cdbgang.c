@@ -104,9 +104,6 @@ static CdbComponentDatabaseInfo *copyCdbComponentDatabaseInfo(
 static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
 						   CdbComponentDatabases *cdbs, int segIndex);
 static Gang *getAvailableGang(GangType type, int size, int content);
-#ifdef USE_ASSERT_CHECKING
-static bool readerGangsExist(void);
-#endif
 
 /*
  * Create a reader gang.
@@ -1626,14 +1623,6 @@ GangsExist(void)
 			numAllocatedReaderGangs > 0);
 }
 
-
-static bool
-readerGangsExist(void)
-{
-	return (availableReaderGangsN != NIL ||
-			availableReaderGangs1 != NIL ||
-			numAllocatedReaderGangs > 0);
-}
 
 int
 largestGangsize(void)
