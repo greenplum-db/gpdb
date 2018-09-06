@@ -139,6 +139,8 @@ SELECT gp_segment_id, * FROM tab5;
 UPDATE tab5 set c1 = 11 where c3 = 10 and c3 < 1;
 SELECT gp_segment_id, * FROM tab5;
 
+EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
+
 -- clean up
 drop table tab3;
 drop table tab5;

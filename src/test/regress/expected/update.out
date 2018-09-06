@@ -328,6 +328,17 @@ SELECT gp_segment_id, * FROM tab5;
              2 |  9 |  9 |  9 |  9 |  9
 (10 rows)
 
+EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
+                      QUERY PLAN
+------------------------------------------------------
+ Update on tab3
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         Hash Key: (c1 + 1), c2, c3
+         ->  Split
+               ->  Seq Scan on tab3
+ Optimizer: legacy query optimizer
+(6 rows)
+
 -- clean up
 drop table tab3;
 drop table tab5;

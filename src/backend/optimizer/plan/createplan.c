@@ -6405,6 +6405,28 @@ make_modifytable(PlannerInfo *root, CmdType operation, bool canSetTag,
 	Assert(returningLists == NIL ||
 		   list_length(resultRelations) == list_length(returningLists));
 
+
+
+	node->plan.lefttree = NULL;
+	node->plan.righttree = NULL;
+	node->plan.qual = NIL;
+	/* setrefs.c will fill in the targetlist, if needed */
+	node->plan.targetlist = NIL;
+
+	node->operation = operation;
+	node->canSetTag = canSetTag;
+	node->resultRelations = resultRelations;
+	node->resultRelIndex = -1;	/* will be set correctly in setrefs.c */
+	node->plans = subplans;
+	node->returningLists = returningLists;
+	node->rowMarks = rowMarks;
+	node->epqParam = epqParam;
+	node->action_col_idxes = NIL;
+	node->ctid_col_idxes = NIL;
+	node->oid_col_idxes = NIL;
+
+	adjust_modifytable_flow(root, node);
+
 	/*
 	 * Compute cost as sum of subplan costs.
 	 */
@@ -6426,26 +6448,6 @@ make_modifytable(PlannerInfo *root, CmdType operation, bool canSetTag,
 		plan->plan_width = rint(total_size / plan->plan_rows);
 	else
 		plan->plan_width = 0;
-
-	node->plan.lefttree = NULL;
-	node->plan.righttree = NULL;
-	node->plan.qual = NIL;
-	/* setrefs.c will fill in the targetlist, if needed */
-	node->plan.targetlist = NIL;
-
-	node->operation = operation;
-	node->canSetTag = canSetTag;
-	node->resultRelations = resultRelations;
-	node->resultRelIndex = -1;	/* will be set correctly in setrefs.c */
-	node->plans = subplans;
-	node->returningLists = returningLists;
-	node->rowMarks = rowMarks;
-	node->epqParam = epqParam;
-	node->action_col_idxes = NIL;
-	node->ctid_col_idxes = NIL;
-	node->oid_col_idxes = NIL;
-
-	adjust_modifytable_flow(root, node);
 
 	return node;
 }

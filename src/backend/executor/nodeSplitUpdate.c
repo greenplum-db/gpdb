@@ -72,13 +72,21 @@ SplitTupleTableSlot(List *targetList, SplitUpdate *plannode, SplitUpdateState *n
 		else if (((int)tle->resno) < plannode->ctidColIdx)
 		{
 			/* Old and new values */
-			delete_values[resno] = values[deleteAtt->data.int_value-1];
-			delete_nulls[resno] = nulls[deleteAtt->data.int_value-1];
+			if (deleteAtt != NULL)
+			{
+				delete_values[resno] = values[deleteAtt->data.int_value-1];
+				delete_nulls[resno] = nulls[deleteAtt->data.int_value-1];
+			}
+			else
+			{
+				delete_nulls[resno] = true;
+			}
 
 			insert_values[resno] = values[insertAtt->data.int_value-1];
 			insert_nulls[resno] = nulls[insertAtt->data.int_value-1];
 
-			deleteAtt = deleteAtt->next;
+			if(deleteAtt != NULL)
+			    deleteAtt = deleteAtt->next;
 			insertAtt = insertAtt->next;
 		}
 		else
