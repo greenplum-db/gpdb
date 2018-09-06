@@ -43,6 +43,8 @@ SELECT count(*) FROM bmscantest WHERE a = 1 AND b = 1;
 SELECT count(*) FROM bmscantest WHERE a = 1 OR b = 1;
 
 -- Test mix BitmapOp load of on-disk bitmap index scan and in-memory bitmap index scan:
+
+-- 1) heap
 CREATE TABLE bmscantest2 (a int, b int, c int, d int, t text);
 INSERT INTO bmscantest2
   SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
@@ -59,6 +61,43 @@ SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+
+-- 2) ao and aocs.
+CREATE TABLE bmscantest_ao (a int, b int, c int, d int, t text);
+INSERT INTO bmscantest_ao
+  SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+  FROM generate_series(1,70000) r;
+CREATE INDEX i_bmtest_ao_a ON bmscantest_ao USING BITMAP(a);
+CREATE INDEX i_bmtest_ao_b ON bmscantest_ao USING BITMAP(b);
+CREATE INDEX i_bmtest_ao_c ON bmscantest_ao(c);
+CREATE INDEX i_bmtest_ao_d ON bmscantest_ao(d);
+
+EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
+
+EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+
+
+CREATE TABLE bmscantest_aocs (a int, b int, c int, d int, t text);
+INSERT INTO bmscantest_aocs
+  SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+  FROM generate_series(1,70000) r;
+CREATE INDEX i_bmtest_aocs_a ON bmscantest_aocs USING BITMAP(a);
+CREATE INDEX i_bmtest_aocs_b ON bmscantest_aocs USING BITMAP(b);
+CREATE INDEX i_bmtest_aocs_c ON bmscantest_aocs(c);
+CREATE INDEX i_bmtest_aocs_d ON bmscantest_aocs(d);
+
+EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
+
+EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+
 
 -- clean up
 DROP TABLE bmscantest;

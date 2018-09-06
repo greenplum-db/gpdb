@@ -111,5 +111,146 @@ SELECT count(*) FROM bmscantest2 WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
   2485
 (1 row)
 
+-- 2) ao and aocs.
+CREATE TABLE bmscantest_ao (a int, b int, c int, d int, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bmscantest_ao
+  SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+  FROM generate_series(1,70000) r;
+CREATE INDEX i_bmtest_ao_a ON bmscantest_ao USING BITMAP(a);
+CREATE INDEX i_bmtest_ao_b ON bmscantest_ao USING BITMAP(b);
+CREATE INDEX i_bmtest_ao_c ON bmscantest_ao(c);
+CREATE INDEX i_bmtest_ao_d ON bmscantest_ao(d);
+EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=58.75..58.76 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=58.68..58.73 rows=1 width=8)
+         ->  Aggregate  (cost=58.68..58.69 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_ao  (cost=54.56..58.57 rows=15 width=0)
+                     Recheck Cond: b = 1 AND c = 1 AND a = 1
+                     ->  BitmapAnd  (cost=54.56..54.56 rows=1 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..17.13 rows=394 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.45 rows=452 width=0)
+                                 Index Cond: c = 1
+                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..18.45 rows=452 width=0)
+                                 Index Cond: a = 1
+ Optimizer: legacy query optimizer
+(13 rows)
+
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+ count 
+-------
+    23
+(1 row)
+
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
+ count 
+-------
+    23
+(1 row)
+
+EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=450.11..450.12 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=450.05..450.10 rows=1 width=8)
+         ->  Aggregate  (cost=450.05..450.06 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_ao  (cost=35.48..440.51 rows=1272 width=0)
+                     Recheck Cond: a = 1 OR b = 1 OR c = 1
+                     ->  BitmapOr  (cost=35.48..35.48 rows=1296 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..7.67 rows=452 width=0)
+                                 Index Cond: a = 1
+                           ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..6.50 rows=394 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.45 rows=452 width=0)
+                                 Index Cond: c = 1
+ Optimizer: legacy query optimizer
+(13 rows)
+
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+ count 
+-------
+  2485
+(1 row)
+
+SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+ count 
+-------
+  2485
+(1 row)
+
+CREATE TABLE bmscantest_aocs (a int, b int, c int, d int, t text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bmscantest_aocs
+  SELECT (r%53), (r%59), (r%53), (r%59), 'foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
+  FROM generate_series(1,70000) r;
+CREATE INDEX i_bmtest_aocs_a ON bmscantest_aocs USING BITMAP(a);
+CREATE INDEX i_bmtest_aocs_b ON bmscantest_aocs USING BITMAP(b);
+CREATE INDEX i_bmtest_aocs_c ON bmscantest_aocs(c);
+CREATE INDEX i_bmtest_aocs_d ON bmscantest_aocs(d);
+EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=57.28..57.29 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=57.22..57.27 rows=1 width=8)
+         ->  Aggregate  (cost=57.22..57.23 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=53.10..57.12 rows=14 width=0)
+                     Recheck Cond: b = 1 AND c = 1 AND a = 1
+                     ->  BitmapAnd  (cost=53.10..53.10 rows=1 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..17.25 rows=399 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..17.66 rows=417 width=0)
+                                 Index Cond: c = 1
+                           ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..17.66 rows=417 width=0)
+                                 Index Cond: a = 1
+ Optimizer: legacy query optimizer
+(13 rows)
+
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+ count 
+-------
+    23
+(1 row)
+
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
+ count 
+-------
+    23
+(1 row)
+
+EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=445.11..445.12 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=445.04..445.09 rows=1 width=8)
+         ->  Aggregate  (cost=445.04..445.05 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=34.32..435.97 rows=1210 width=0)
+                     Recheck Cond: a = 1 OR b = 1 OR c = 1
+                     ->  BitmapOr  (cost=34.32..34.32 rows=1232 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..7.41 rows=417 width=0)
+                                 Index Cond: a = 1
+                           ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..6.53 rows=399 width=0)
+                                 Index Cond: b = 1
+                           ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..17.66 rows=417 width=0)
+                                 Index Cond: c = 1
+ Optimizer: legacy query optimizer
+(13 rows)
+
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+ count 
+-------
+  2485
+(1 row)
+
+SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+ count 
+-------
+  2485
+(1 row)
+
 -- clean up
 DROP TABLE bmscantest;
