@@ -269,7 +269,7 @@ ProcessQuery(Portal portal,
 			{
 				portal->status = PORTAL_QUEUE;
 
-				portal->releaseResLock = ResLockPortal(portal, queryDesc);
+				ResLockPortal(portal, queryDesc);
 			}
 			else
 			{
@@ -597,7 +597,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 	/* Set up the sequence server */
 	SetupSequenceServer(seqServerHost, seqServerPort);
 
-	portal->releaseResLock = false;
+	portal->hasResQueueLock = false;
     
 	portal->ddesc = ddesc;
 
@@ -708,7 +708,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 						 * no additional checks.
 						 */
 						if (!SPI_context() || !saveActivePortal || !IsResQueueLockedForPortal(saveActivePortal))
-							portal->releaseResLock = ResLockPortal(portal, queryDesc);
+							ResLockPortal(portal, queryDesc);
 					}
 				}
 

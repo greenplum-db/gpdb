@@ -623,7 +623,7 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 
 bool
 IsResQueueLockedForPortal(Portal portal) {
-	return portal->releaseResLock;
+	return portal->hasResQueueLock;
 }
 
 

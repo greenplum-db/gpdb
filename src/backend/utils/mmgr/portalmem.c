@@ -447,7 +447,6 @@ PortalDrop(Portal portal, bool isTopCommit)
 
 	if (IsResQueueLockedForPortal(portal))
 	{
-		portal->releaseResLock = false;
 		ResUnLockPortal(portal);
 	}
 
