@@ -218,7 +218,7 @@ DROP TABLE tenk_ao3;
 DROP TABLE tenk_ao4;
 
 -- CTAS
-CREATE TABLE tenk_ao1 with(appendonly=true, checksum=true) AS SELECT * FROM tenk_heap;
+CREATE TABLE tenk_ao1 with(appendonly=true, checksum=true) AS SELECT * FROM tenk_heap DISTRIBUTED BY (unique1);
 -- Incase of CTAS also, gp_fastsequence entries must get created and use segfile 0
 
 -- With and without ORCA last_sequence fluctuates bit and hence using >= 3300 as
