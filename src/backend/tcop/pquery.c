@@ -262,7 +262,7 @@ ProcessQuery(Portal portal,
 		 * Skip if this query is added by the rewriter or
 		 * we are superuser.
 		 */
-		if (IsResQueueEnabled() && !superuser())
+		if (IsResQueueEnabled() && !superuser() && portal->releaseResLock == false)
 		{
 			if((!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) &&
 			   stmt->canSetTag)
