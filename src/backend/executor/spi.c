@@ -2132,7 +2132,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 				 */
 				if (ActivePortal)
 				{
-					if (!ActivePortal->releaseResLock)
+					if (!IsResQueueLockedForPortal(ActivePortal))
 					{
 						/** TODO: siva - can we ever reach this point? */
 						ActivePortal->status = PORTAL_QUEUE;

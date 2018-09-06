@@ -262,7 +262,7 @@ ProcessQuery(Portal portal,
 		 * Skip if this query is added by the rewriter or
 		 * we are superuser.
 		 */
-		if (IsResQueueEnabled() && !superuser() && portal->releaseResLock == false)
+		if (IsResQueueEnabled() && !superuser() && !IsResQueueLockedForPortal(portal))
 		{
 			if((!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) &&
 			   stmt->canSetTag)
@@ -707,7 +707,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 						 * If not in SPI context, acquire resource queue lock with
 						 * no additional checks.
 						 */
-						if (!SPI_context() || !saveActivePortal || !saveActivePortal->releaseResLock)
+						if (!SPI_context() || !saveActivePortal || !IsResQueueLockedForPortal(saveActivePortal))
 							portal->releaseResLock = ResLockPortal(portal, queryDesc);
 					}
 				}

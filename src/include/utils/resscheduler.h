@@ -130,6 +130,7 @@ typedef enum
 extern LockAcquireResult ResLockAcquire(LOCKTAG *locktag, 
 										ResPortalIncrement *incrementSet);
 extern bool				ResLockRelease(LOCKTAG *locktag, uint32 resPortalId);
+extern bool             IsResQueueLockedForPortal(Portal portal);
 extern int				ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, 
 										  ResPortalIncrement *incrementSet,
 										  bool increment);
