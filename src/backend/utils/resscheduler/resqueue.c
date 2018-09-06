@@ -622,6 +622,11 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	return true;
 }
 
+bool
+IsResQueueLockedForPortal(Portal portal) {
+	return portal->releaseResLock;
+}
+
 
 /*
  * ResLockCheckLimit -- test whether the given process acquiring the this lock
