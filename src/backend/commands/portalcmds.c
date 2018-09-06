@@ -358,7 +358,6 @@ PortalCleanup(Portal portal)
 	 */
 	if (IsResQueueLockedForPortal(portal))
 	{
-		portal->releaseResLock = false;
         ResUnLockPortal(portal);
 	}
 

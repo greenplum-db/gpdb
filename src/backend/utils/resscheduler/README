@@ -276,7 +276,7 @@ Notes
      In the current incarnation of the code it means:
 
        portal->queueId != InvalidOid
-       portal->releaseResLock == true
+       portal->hasResQueueLock == true
 
      Typically every portal gets queueId set at creation, but this may get
      reset when the to-lock-or-not-to-lock decision comes around (see
