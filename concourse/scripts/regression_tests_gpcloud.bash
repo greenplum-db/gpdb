@@ -19,7 +19,7 @@ source \$INSTALL_DIR/greenplum_path.sh
 cd "\${GPDB_SRC_DIR}/gpAux"
 source gpdemo/gpdemo-env.sh
 
-cd "\${GPDB_SRC_DIR}/gpAux/extensions/gpcloud/regress"
+cd "\${GPDB_SRC_DIR}/gpcontrib/gpcloud/regress"
 make installcheck pgxs_dir=\$INSTALL_DIR/lib/postgresql/pgxs
 
 [ -s regression.diffs ] && cat regression.diffs && exit 1

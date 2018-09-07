@@ -32,6 +32,7 @@ all:
 	$(MAKE) -C gpcontrib/gp_distribution_policy all
 	$(MAKE) -C gpcontrib/gp_inject_fault all
 	$(MAKE) -C gpcontrib/gp_internal_tools all
+	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
 
 docs:
@@ -70,6 +71,7 @@ install:
 	$(MAKE) -C gpcontrib/gp_distribution_policy $@
 	$(MAKE) -C gpcontrib/gp_inject_fault $@
 	$(MAKE) -C gpcontrib/gp_internal_tools $@
+	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
 install-docs:
@@ -99,6 +101,7 @@ clean:
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
+	$(MAKE) -C gpcontrib $@
 
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
@@ -108,6 +111,7 @@ distclean maintainer-clean:
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C contrib $@
+	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C src $@
