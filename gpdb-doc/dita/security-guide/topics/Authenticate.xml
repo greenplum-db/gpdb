@@ -89,7 +89,7 @@
             <pt> address </pt>
             <pd>Specifies the client machine addresses that this record matches. This field can
               contain an IP address range. You can configure the Greenplum Database system to also
-              allow client host names. Setting the <codeph>gpinitsystem</codeph> configuration file
+              allow client host names. Set the <codeph>gpinitsystem</codeph> configuration file
               parameter <codeph>HBA_HOSTNAMES=1</codeph> to enable the use of client host
               names.</pd>
             <pd>An IP address range is specified using standard numeric notation for the range's
