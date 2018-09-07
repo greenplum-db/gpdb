@@ -978,7 +978,7 @@ class gpexpand:
         self.numworkers = parallel
         self.gparray = gparray
         self.unique_index_tables = {}
-        self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+        self.conn = dbconn.connect(self.dburl, utility=True, allowSystemTableMods='dml')
         self.old_segments = self.gparray.getSegDbList()
         if dburl.pgdb == 'template0' or dburl.pgdb == 'template1' or dburl.pgdb == 'postgres':
             raise ExpansionError("Invalid database '%s' specified.  Cannot use a template database.\n"
@@ -1068,7 +1068,7 @@ class gpexpand:
         gpexpand_db_status = None
         if get_local_db_mode(options.master_data_directory) == 'NORMAL':
             try:
-                status_conn = dbconn.connect(dburl, encoding='UTF8')
+                status_conn = dbconn.connect(dburl)
                 # Get the last status entry
                 cursor = dbconn.execSQL(status_conn, 'SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1')
                 if cursor.rowcount == 1:
@@ -1091,7 +1091,7 @@ class gpexpand:
 
             Note: -c/--clean will not necessarily work either, as it too has assumptions about the non-emptiness of the gpexpand schema.
             """
-            with dbconn.connect(dburl, encoding='UTF8', utility=True) as conn:
+            with dbconn.connect(dburl, utility=True) as conn:
                 count = dbconn.execSQLForSingleton(conn,
                                                    "SELECT count(n.nspname) FROM pg_catalog.pg_namespace n WHERE n.nspname = 'gpexpand'")
                 if count > 0:
@@ -1099,7 +1099,7 @@ class gpexpand:
                         "Existing expansion state could not be determined, but a gpexpand schema already exists. Cannot proceed.")
 
             # now determine whether gpexpand schema merely resides in another DB
-            status_conn = dbconn.connect(dburl, encoding='UTF8')
+            status_conn = dbconn.connect(dburl)
             db_list = catalog.getDatabaseList(status_conn)
             status_conn.close()
 
@@ -1110,7 +1110,7 @@ class gpexpand:
                 logger.debug('Looking for gpexpand schema in %s' % dbname.decode('utf-8'))
                 test_url = copy.deepcopy(dburl)
                 test_url.pgdb = dbname
-                c = dbconn.connect(test_url, encoding='UTF8')
+                c = dbconn.connect(test_url)
                 try:
                     cursor = dbconn.execSQL(c, 'SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1')
                 except:
@@ -1128,7 +1128,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
     def validate_max_connections(self):
         try:
-            conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+            conn = dbconn.connect(self.dburl, utility=True)
             max_connections = int(catalog.getSessionGUC(conn, 'max_connections'))
         except DatabaseError, ex:
             if self.options.verbose:
@@ -1151,7 +1151,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         unalterable_tables = []
 
         try:
-            conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+            conn = dbconn.connect(self.dburl, utility=True)
             databases = catalog.getDatabaseList(conn)
             conn.close()
 
@@ -1161,7 +1161,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                     continue
                 self.logger.info('Checking database %s for unalterable tables...' % db[0].decode('utf-8'))
                 tempurl.pgdb = db[0]
-                conn = dbconn.connect(tempurl, utility=True, encoding='UTF8')
+                conn = dbconn.connect(tempurl, utility=True)
                 cursor = dbconn.execSQL(conn, unalterable_table_sql)
                 for row in cursor:
                     unalterable_tables.append(row)
@@ -1194,7 +1194,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         has_unique_indexes = False
 
         try:
-            conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+            conn = dbconn.connect(self.dburl, utility=True)
             databases = catalog.getDatabaseList(conn)
             conn.close()
 
@@ -1204,7 +1204,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                     continue
                 self.logger.info('Checking database %s for tables with unique indexes...' % db[0].decode('utf-8'))
                 tempurl.pgdb = db[0]
-                conn = dbconn.connect(tempurl, utility=True, encoding='UTF8')
+                conn = dbconn.connect(tempurl, utility=True)
                 cursor = dbconn.execSQL(conn, has_unique_index_sql)
                 for row in cursor:
                     has_unique_indexes = True
@@ -1268,7 +1268,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         if cleanSchema:
             GpStart.local('gpexpand rollback start database restricted', restricted=True)
             self.logger.info('Dropping expansion expansion schema')
-            schema_conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods='dml')
+            schema_conn = dbconn.connect(self.dburl, allowSystemTableMods='dml')
             try:
                 dbconn.execSQL(schema_conn, drop_schema_sql)
                 schema_conn.commit()
@@ -1674,7 +1674,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.gparray.reOrderExpansionSegs()
 
         # Issue checkpoint due to forced shutdown below
-        self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+        self.conn = dbconn.connect(self.dburl, utility=True)
         dbconn.execSQL(self.conn, "CHECKPOINT")
         self.conn.close()
 
@@ -1742,7 +1742,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         startCmd = GpStart('gpexpand update master start database master only', masterOnly=True)
         startCmd.run(validateAfter=True)
 
-        conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+        conn = dbconn.connect(self.dburl, utility=True)
         databases = catalog.getDatabaseList(conn)
         conn.close()
 
@@ -1827,7 +1827,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         startCmd.run(validateAfter=True)
 
         # Need to restore the connection used by the expansion
-        self.conn = dbconn.connect(self.dburl, encoding='UTF8')
+        self.conn = dbconn.connect(self.dburl)
 
     # --------------------------------------------------------------------------
     def restore_master(self):
@@ -1854,7 +1854,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             # Update the catalog with the contents of the backup
             restore_conn = None
             try:
-                restore_conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+                restore_conn = dbconn.connect(self.dburl, utility=True, allowSystemTableMods='dml')
 
                 # Get a list of all the expand primary segments
                 sqlStr = "select dbid from pg_catalog.gp_segment_configuration where dbid not in (%s) and role = 'p'" % str(
@@ -1948,7 +1948,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.statusLogger.set_status('PREPARE_EXPANSION_SCHEMA_STARTED')
 
         if not self.conn:
-            self.conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods='dml')
+            self.conn = dbconn.connect(self.dburl, allowSystemTableMods='dml')
             self.gparray = GpArray.initFromCatalog(self.dburl)
 
         nowStr = datetime.datetime.now()
@@ -2224,7 +2224,7 @@ UPDATE gp_distribution_policy
         self.queue = WorkerPool(numWorkers=self.numworkers)
 
         # go through and reset any "IN PROGRESS" tables
-        self.conn = dbconn.connect(self.dburl, encoding='UTF8')
+        self.conn = dbconn.connect(self.dburl)
         sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STARTED', '%s' ) " % (
             gpexpand_schema, status_table, expansionStart)
         cursor = dbconn.execSQL(self.conn, sql)
@@ -2344,7 +2344,7 @@ UPDATE gp_distribution_policy
         """Removes the gpexpand schema"""
         # drop schema
         if gpexpand_db_status != 'EXPANSION COMPLETE':
-            c = dbconn.connect(self.dburl, encoding='UTF8')
+            c = dbconn.connect(self.dburl)
             self.logger.warn('Expansion has not yet completed.  Removing the expansion')
             self.logger.warn('schema now will leave the following tables unexpanded:')
             unexpanded_tables_sql = "SELECT fq_name FROM %s.%s WHERE status = 'NOT STARTED' ORDER BY rank" % (
@@ -2363,7 +2363,7 @@ UPDATE gp_distribution_policy
                 sys.exit(0)
 
         # See if user wants to dump the status_detail table to file
-        c = dbconn.connect(self.dburl, encoding='UTF8')
+        c = dbconn.connect(self.dburl)
         if ask_yesno('', "Do you want to dump the gpexpand.status_detail table to file?", 'Y'):
             self.logger.info(
                 "Dumping gpexpand.status_detail to %s/gpexpand.status_detail" % self.options.master_data_directory)
@@ -2378,7 +2378,7 @@ UPDATE gp_distribution_policy
     def connect_database(self, dbname):
         test_url = copy.deepcopy(self.dburl)
         test_url.pgdb = dbname
-        c = dbconn.connect(test_url, encoding='UTF8', allowSystemTableMods='dml')
+        c = dbconn.connect(test_url, allowSystemTableMods='dml')
         return c
 
     def sync_packages(self):
@@ -2695,7 +2695,7 @@ class ExecuteSQLStatementsCommand(SQLCommand):
                                      )
 
         try:
-            self.conn = dbconn.connect(self.url, utility=True, encoding='UTF8', allowSystemTableMods='dml')
+            self.conn = dbconn.connect(self.url, utility=True, allowSystemTableMods='dml')
             for statement in self.sqlCommandList:
                 dbconn.execSQL(self.conn, statement)
             self.conn.commit()
@@ -2752,8 +2752,8 @@ class ExpandCommand(SQLCommand):
         table_exp_success = False
 
         try:
-            status_conn = dbconn.connect(self.status_url, encoding='UTF8')
-            table_conn = dbconn.connect(self.table_url, encoding='UTF8')
+            status_conn = dbconn.connect(self.status_url)
+            table_conn = dbconn.connect(self.table_url)
         except DatabaseError, ex:
             if self.options.verbose:
                 logger.exception(ex)

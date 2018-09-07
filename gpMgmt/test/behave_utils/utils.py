@@ -247,8 +247,10 @@ def getRow(dbname, exec_sql):
     return result
 
 
-def check_db_exists(dbname, host=None, port=0, user=None):
+def check_db_exists(dbname, host=None, port=0, user=None, encoding=None):
     LIST_DATABASE_SQL = 'SELECT datname FROM pg_database'
+    if encoding:
+        LIST_DATABASE_SQL = 'select datname, pg_encoding_to_char(encoding) from pg_database'
 
     results = []
     with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1')) as conn:
@@ -257,25 +259,39 @@ def check_db_exists(dbname, host=None, port=0, user=None):
 
     for result in results:
         if result[0] == dbname:
+            if encoding:
+                if result[1] == encoding:
+                    return True
+                else:
+                    return False
             return True
 
     return False
 
 
-def create_database_if_not_exists(context, dbname, host=None, port=0, user=None, saveConnInfoInContext=False):
-    if not check_db_exists(dbname, host, port, user):
-        create_database(context, dbname, host, port, user)
+def create_database_if_not_exists(context, dbname, host=None, port=0, user=None, saveConnInfoInContext=False, encoding=None):
+    if not check_db_exists(dbname, host, port, user, encoding):
+        create_database(context, dbname, host, port, user, encoding)
     if saveConnInfoInContext:
         context.dbname = dbname
         context.conn = dbconn.connect(dbconn.DbURL(dbname=context.dbname))
 
-def create_database(context, dbname=None, host=None, port=0, user=None):
+def create_database(context, dbname=None, host=None, port=0, user=None, encoding=None):
     LOOPS = 10
+
     if host == None or port == 0 or user == None:
-        createdb_cmd = 'createdb %s' % dbname
+        if encoding:
+            createdb_cmd = 'createdb %s --encoding=\'%s\'' % (dbname, encoding.strip())
+        else:
+            createdb_cmd = 'createdb %s' % dbname
     else:
-        createdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "create database %s"' % (host,
-                                                                                        port, user, dbname)
+        if encoding:
+            createdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "create database %s with encoding \'%s\'"' % (host,
+                                                                                               port, user, dbname,
+                                                                                               encoding.strip())
+        else:
+            createdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "create database %s"' % (host,
+                                                                                               port, user, dbname)
     for i in range(LOOPS):
         context.exception = None
 

@@ -189,3 +189,21 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile
         Then gpexpand should return a return code of 0
         And verify that the cluster has 14 new segments
+
+    Scenario: expand a cluster where database encoding is 'WIN874' and table exists with thai characters
+        Given a working directory of the test as '/tmp/gpexpand_behave'
+        And the database is killed on hosts "mdw,sdw1"
+        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
+        And a temporary directory to expand into
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1" with locale "C"
+        And the database "gptest" does not exist
+        And database "gptest" exists with encoding "WIN874"
+        And the sql file "test/behave/mgmt_utils/steps/data/create_populate_thai_table.sql" is run against database "gptest"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
+        And the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile
+        Then gpexpand should return a return code of 0
+        And verify that the cluster has 2 new segments

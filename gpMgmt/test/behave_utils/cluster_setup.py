@@ -64,7 +64,7 @@ class GpDeleteSystem(Command):
 
 
 class TestCluster:
-    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', standby_enabled = False):
+    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', standby_enabled = False, locale=None):
         """
         hosts: lists of cluster hosts. master host will be assumed to be the first element.
         base_dir: cluster directory
@@ -103,6 +103,7 @@ class TestCluster:
         self.number_of_segments = 2
         self.number_of_hosts = len(self.hosts)-1
         self.standby_enabled = standby_enabled
+        self.locale = locale
 
         self.number_of_expansion_hosts = 0
         self.number_of_expansion_segments = 0
@@ -154,6 +155,10 @@ class TestCluster:
         gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s ' % (self.init_file)
         if self.standby_enabled:
             gpinitsystem_cmd += ' -s {} -P {} '.format(self.hosts[0], int(self.master_port)+1)
+
+        if self.locale:
+            gpinitsystem_cmd += ' --locale={} '.format(self.locale)
+
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
         # initsystem returns 1 for warnings and 2 for errors
         if res['rc'] > 1:

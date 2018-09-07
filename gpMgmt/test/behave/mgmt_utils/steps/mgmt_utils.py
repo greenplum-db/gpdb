@@ -29,7 +29,7 @@ from datetime import datetime
 from time import sleep
 
 
-from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
+from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop, Psql
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.backup_utils import Context
 from gppylib.operations.dump import get_partition_state
@@ -241,6 +241,11 @@ def impl(context, dbconn, version):
     (rc, out, err) = run_cmd(command)
     if not ('Greenplum Database ' + version) in out:
         print 'version %s does not match current gpdb version %s' % (version, out)
+
+
+@given('database "{dbname}" exists with encoding "{encoding}"')
+def impl(context, dbname, encoding):
+    create_database_if_not_exists(context, dbname, saveConnInfoInContext=True, encoding=encoding)
 
 
 @given('database "{dbname}" exists')
@@ -5502,7 +5507,7 @@ def impl(context, command, target):
 def impl(context, working_directory):
     context.working_directory = working_directory
 
-def _create_cluster(context, master_host, segment_host_list):
+def _create_cluster(context, master_host, segment_host_list, locale=None):
     segment_host_list = segment_host_list.split(",")
     del os.environ['MASTER_DATA_DIRECTORY']
     os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
@@ -5517,10 +5522,14 @@ def _create_cluster(context, master_host, segment_host_list):
     except:
         pass
 
-    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory)
+    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory, locale=locale)
     testcluster.reset_cluster()
     testcluster.create_cluster(with_mirrors=False)
     context.gpexpand_mirrors_enabled = False
+
+@given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}" with locale "{locale}"')
+def impl(context, master_host, segment_host_list, locale):
+    _create_cluster(context, master_host, segment_host_list, locale)
 
 @given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
@@ -5767,3 +5776,8 @@ def step_impl(context, options):
                     raise Exception("gpstate -m output missing expected mirror info, datadir %s port %d" %(datadir, port))
     else:
         raise Exception("no verification for gpstate option given")
+
+
+@given('the sql file "{path}" is run against database "{dbname}"')
+def impl(context, path, dbname):
+    psql = Psql("run %s" % path, filename=path, database=dbname).run(validateAfter=True)
