@@ -50,7 +50,6 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - icw_extensions_gpcloud_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
@@ -64,7 +63,6 @@ groups:
 {% if "ubuntu16" in os_types %}
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
-  - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 {% if "ubuntu16" in os_types %}
   - gpdb_packaging_ubuntu16
@@ -129,6 +127,15 @@ groups:
   - MADlib_Test_planner_centos7
 {% endif %}
 {% endif %}
+ ## ---------------------------------------------------------------------
+{% if "Extensions" in test_sections %}
+{% if "centos6" in os_types %}
+  - icw_extensions_gpcloud_centos6
+{% endif %}
+{% if "ubuntu16" in os_types %}
+  - icw_extensions_gpcloud_ubuntu16
+{% endif %}
+{%endif %}
 
 
 {% if pipeline_type == "prod" %}
@@ -187,7 +194,6 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - icw_extensions_gpcloud_centos6
   - compile_gpdb_centos6
 {% endif %}
 {% if "centos7" in os_types %}
@@ -206,10 +212,23 @@ groups:
   - icw_gporca_conan_ubuntu16
   - compile_gpdb_ubuntu16
   - gpdb_packaging_ubuntu16
-  - icw_extensions_gpcloud_ubuntu16
   - compile_gpdb_ubuntu16
 {% endif %}
   - gate_icw_end
+
+{% endif %}
+
+## ======================================================================
+
+{% if "Extensions" in test_sections %}
+- name: Extensions
+  jobs:
+{% if "centos6" in os_types %}
+  - icw_extensions_gpcloud_centos6
+{% endif %}
+{% if "ubuntu16" in os_types %}
+  - icw_extensions_gpcloud_ubuntu16
+{% endif %}
 
 {% endif %}
 {% if "Replication" in test_sections %}
@@ -1443,64 +1462,6 @@ jobs:
       DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if 'centos6' in os_types%}
-- name: icw_extensions_gpcloud_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-      trigger: [[ test_trigger ]]
-    - get: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-    - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: unit_tests_gpcloud
-      file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
-      image: centos-gpdb-dev-6
-      params:
-        TARGET_OS: centos
-    - task: regression_tests_gpcloud_centos
-      input_mapping:
-        bin_gpdb: bin_gpdb_centos6
-      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-      image: centos-gpdb-dev-6
-      params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
-        TARGET_OS: centos
-    - task: gpcheckcloud_tests_gpcloud_centos
-      input_mapping:
-        bin_gpdb: bin_gpdb_centos6
-      file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
-      image: centos-gpdb-dev-6
-      params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
-        TARGET_OS: centos
-{% endif %}
-
-{% if 'ubuntu16' in os_types %}
-- name: icw_extensions_gpcloud_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_ubuntu16]
-      trigger: [[ test_trigger ]]
-    - get: compiled_bits_ubuntu16
-      passed: [compile_gpdb_ubuntu16]
-    - get: ubuntu-gpdb-dev-16
-  - aggregate:
-    - task: regression_tests_gpcloud_ubuntu
-      input_mapping:
-        bin_gpdb: compiled_bits_ubuntu16
-      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-      image: ubuntu-gpdb-dev-16
-      params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
-        TARGET_OS: ubuntu
-{% endif %}
-
 - name: gate_icw_end
   plan:
   - aggregate:
@@ -1511,7 +1472,9 @@ jobs:
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
+{% if "Extensions" in test_sections %}
       - icw_extensions_gpcloud_centos6
+{% endif %}
 {% endif %}
     - get: gpdb_src
       passed:
@@ -1520,10 +1483,14 @@ jobs:
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
+{% if "Extensions" in test_sections %}
       - icw_extensions_gpcloud_centos6
 {% endif %}
+{% endif %}
 {% if 'ubuntu16' in os_types %}
+{% if "Extensions" in test_sections %}
       - icw_extensions_gpcloud_ubuntu16
+{% endif %}
 {% endif %}
 {% if "centos7" in os_types %}
       - icw_gporca_centos7
@@ -2580,4 +2547,72 @@ jobs:
   - put: bin_gpdb_sles11_rc
     params:
       file: bin_gpdb_sles11/bin_gpdb.tar.gz
+{% endif %}
+
+## ======================================================================
+##    __      _                 _                 
+##   /__\_  _| |_ ___ _ __  ___(_) ___  _ __  ___ 
+##  /_\ \ \/ / __/ _ \ '_ \/ __| |/ _ \| '_ \/ __|
+## //__  >  <| ||  __/ | | \__ \ | (_) | | | \__ \
+## \__/ /_/\_\\__\___|_| |_|___/_|\___/|_| |_|___/
+## ======================================================================
+
+{% if "Extensions" in test_sections %}
+{% if 'centos6' in os_types%}
+- name: icw_extensions_gpcloud_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+      trigger: [[ test_trigger ]]
+    - get: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: unit_tests_gpcloud
+      file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
+      image: centos-gpdb-dev-6
+      params:
+        TARGET_OS: centos
+    - task: regression_tests_gpcloud_centos
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
+      image: centos-gpdb-dev-6
+      params:
+        gpcloud_access_key_id: {{gpcloud-access-key-id}}
+        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        TARGET_OS: centos
+    - task: gpcheckcloud_tests_gpcloud_centos
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+      file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
+      image: centos-gpdb-dev-6
+      params:
+        gpcloud_access_key_id: {{gpcloud-access-key-id}}
+        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        TARGET_OS: centos
+{% endif %}
+
+{% if 'ubuntu16' in os_types %}
+- name: icw_extensions_gpcloud_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_ubuntu16]
+      trigger: [[ test_trigger ]]
+    - get: compiled_bits_ubuntu16
+      passed: [compile_gpdb_ubuntu16]
+    - get: ubuntu-gpdb-dev-16
+  - aggregate:
+    - task: regression_tests_gpcloud_ubuntu
+      input_mapping:
+        bin_gpdb: compiled_bits_ubuntu16
+      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
+      image: ubuntu-gpdb-dev-16
+      params:
+        gpcloud_access_key_id: {{gpcloud-access-key-id}}
+        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        TARGET_OS: ubuntu
+{% endif %}
 {% endif %}

@@ -222,7 +222,7 @@ if __name__ == "__main__":
     PARSER.add_argument('-a', '--test_sections',
                         action='store',
                         dest='test_sections',
-                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA'],
+                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions'],
                         default=['ICW'],
                         nargs='+',
                         help='Select tests sections to run')
@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA']
+        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:
