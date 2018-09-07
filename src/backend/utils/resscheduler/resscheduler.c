@@ -551,6 +551,8 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 
 	plan = qDesc->plannedstmt->planTree;
 
+	portal->status = PORTAL_QUEUE;
+
 	queueid = portal->queueId;
 
 	/* 

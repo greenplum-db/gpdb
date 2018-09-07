@@ -267,8 +267,6 @@ ProcessQuery(Portal portal,
 			if((!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) &&
 			   stmt->canSetTag)
 			{
-				portal->status = PORTAL_QUEUE;
-
 				ResLockPortal(portal, queryDesc);
 			}
 			else
@@ -694,7 +692,6 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 					 */
 					if (IsResQueueEnabled() && !superuser())
 					{
-						portal->status = PORTAL_QUEUE;
 						/*
 						 * MPP-16369 - If we are in SPI context, only acquire
 						 * resource queue lock if the outer portal hasn't
