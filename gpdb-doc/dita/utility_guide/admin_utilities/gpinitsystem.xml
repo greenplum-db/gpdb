@@ -14,7 +14,6 @@
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
             [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>]
-            [<b>--hba_hostnames</b>] 
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
             [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
@@ -128,16 +127,6 @@
                                 <varname>cluster_configuration_file</varname></codeph> option or the
                             <codeph>-I <varname>input_configuration_file</varname></codeph> option
                         to <codeph>gpinitsystem</codeph>. </pd>
-                </plentry>
-                <plentry>
-                    <pt>--hba_hostnames</pt>
-                    <pd>Enables use of host names in the <codeph>pg_hba.conf</codeph> file when
-                        specifying client addresses that can connect to Greenplum Database. If not
-                        enabled, only IP addresses or IP address ranges can be specified. If not
-                        specified on the command line, you can enable the use of client host names
-                        using the <codeph>HBA_HOSTNAMES</codeph> parameter in the
-                            <varname>gpinitsystem_config</varname> file. This option is set when the
-                        system is initialized and cannot be changed later.</pd>
                 </plentry>
                 <plentry>
                     <pt>--locale=<varname>locale</varname> | -n <varname>locale</varname></pt>
@@ -497,11 +486,13 @@ declare -a MIRROR_ARRAY=(
                 </plentry>
                 <plentry>
                     <pt>HBA_HOSTNAMES</pt>
-                    <pd><b>Optional.</b> This parameter enables using client host names in the
+                    <pd><b>Optional.</b> This parameter enables the use of client host names in the
                             <codeph>pg_hba.conf</codeph> file when specifying client addresses that
-                        can connect to Greenplum Database. If not specified, only IP addresses or IP
-                        address ranges can be specified. This option is set when the system is
-                        initialized and cannot be changed later. </pd>
+                        can connect to Greenplum Database. The default value is <codeph>0</codeph>,
+                        host names cannot be used as client addresses, only IP addresses or IP
+                        address ranges can be specified. Specify <codeph>HBA_HOSTNAMES=1</codeph> to
+                        allow client host names. This option is set when the system is initialized
+                        and cannot be changed later. </pd>
                 </plentry>
             </parml>
         </section>
