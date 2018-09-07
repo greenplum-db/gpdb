@@ -85,7 +85,7 @@
     <body>
       <p>If you do not intend to execute queries on partitioned tables with GPORCA (setting the
         server configuration parameter <codeph><xref
-            href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+            href="../../../ref_guide/config_params/guc-list.xml#optimizer"
             >optimizer</xref></codeph> to <codeph>off</codeph>), then you can disable the automatic
         collection of statistics on the root partition of the partitioned table. The server
         configuration parameter <codeph><xref

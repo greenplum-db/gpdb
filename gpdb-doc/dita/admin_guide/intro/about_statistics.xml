@@ -326,7 +326,7 @@
         run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root partition statistics.<p>If you do
           not intend to execute queries on partitioned tables with GPORCA (setting the server
           configuration parameter <codeph><xref
-              href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
+              href="../../ref_guide/config_params/guc-list.xml#optimizer"
               >optimizer</xref></codeph> to <codeph>off</codeph>), you can also set the server
           configuration parameter <codeph>optimizer_analyze_root_partition</codeph> to
             <codeph>off</codeph> to limit when <codeph>ANALYZE</codeph> updates the root partition
