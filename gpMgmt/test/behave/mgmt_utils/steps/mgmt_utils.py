@@ -150,8 +150,8 @@ def impl(context, scenario_number):
     label_key = 'timestamp_labels' + scenario_number
     global_labels[label_key] = _read_label_from_json(context, label_key)
 
-@given('the cluster config is generated with FQDN_HBA "{fqdn_hba_toggle}"')
-def impl(context, fqdn_hba_toggle):
+@given('the cluster config is generated with HBA_HOSTNAMES "{hba_hostnames_toggle}"')
+def impl(context, hba_hostnames_toggle):
     stop_database(context)
 
     cmd = """
@@ -161,12 +161,12 @@ def impl(context, fqdn_hba_toggle):
         export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
         export WITH_MIRRORS={with_mirrors} && \
         ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
-        env EXTRA_CONFIG="FQDN_HBA={fqdn_hba_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
+        env EXTRA_CONFIG="HBA_HOSTNAMES={hba_hostnames_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
     """.format(master_port=os.getenv('MASTER_PORT', 15432),
                port_base=os.getenv('PORT_BASE', 25432),
                num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
                with_mirrors='true',
-               fqdn_hba_toggle=fqdn_hba_toggle)
+               hba_hostnames_toggle=hba_hostnames_toggle)
 
     run_command(context, cmd)
 

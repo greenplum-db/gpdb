@@ -128,8 +128,8 @@ def parseargs():
                       help='remove current warm master standby.  Use this option '
                       'if the warm master standby host has failed.  This option will '
                       'need to shutdown the GPDB array to be able to complete the request')
-    optgrp.add_option('', '--fqdn_hba', action='store_true', dest='fqdn_hba',
-                      help='add fully-qualified domain names to pg_hba.conf')
+    optgrp.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
+                      help='use hostnames instead of CIDR in pg_hba.conf')
 
     # XXX - This option is added to keep backward compatibility with DCA tools.
     # But this option plays no role in the whole process, its a No-Op
@@ -437,7 +437,7 @@ def create_standby(options):
         logger.info('Updating pg_hba.conf file...')
         update_pg_hba_conf(options, array)
         logger.debug('Updating pg_hba.conf file on segments...')
-        update_pg_hba_conf_on_segments(array, options.standby_host, options.fqdn_hba)
+        update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames)
         logger.info('pg_hba.conf files updated successfully.')
 
         copy_master_filespaces_to_standby(options, array,
@@ -567,7 +567,7 @@ def update_pg_hba_conf(options, array):
 
         new_section = ['# standby master host ip addresses\n']
         for ip in standby_ips:
-            if not options.fqdn_hba:
+            if not options.hba_hostnames:
                 cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
                 address = ip + cidr_suffix
             else:

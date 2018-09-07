@@ -172,7 +172,7 @@ PROCESS_QE () {
 
     # Configuring PG_HBA  -- on mirror, only need to add local addresses (skip the other addresses)
     LOG_MSG "[INFO][$INST_COUNT]:-Configuring segment $PG_HBA"
-    if [ $FQDN_HBA -eq 0 ]; then
+    if [ $HBA_HOSTNAMES -eq 0 ]; then
         if [ x"" = x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
         for MASTER_IP in "${MASTER_IP_ADDRESS[@]}"
         do

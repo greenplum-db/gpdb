@@ -232,7 +232,7 @@ CHK_PARAMS () {
 		    fi
 		    
 		    # Make sure old CLUSTER_CONFIG settings are not hanging around.
-		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM FQDN_HBA
+		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM HBA_HOSTNAMES
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
 		    $TR -d '\r' < $CLUSTER_CONFIG > $TMP_FILE
@@ -288,9 +288,9 @@ CHK_PARAMS () {
 			LOG_MSG "[INFO]:-Could not find HEAP_CHECKSUM in cluster config, defaulting to on."
 		fi
 
-		if [ x"" = x"$FQDN_HBA" ]; then
-			FQDN_HBA=0
-			LOG_MSG "[INFO]:-Could not find FQDN_HBA in cluster config, defaulting to 0."
+		if [ x"" = x"$HBA_HOSTNAMES" ]; then
+			HBA_HOSTNAMES=0
+			LOG_MSG "[INFO]:-Could not find HBA_HOSTNAMES in cluster config, defaulting to 0."
 		fi
 
 		if [ x"" == x"$LOCALE_SETTING" ];then
@@ -1084,7 +1084,7 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
 		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is         = $GP_LIBRARY_PATH" 1
 		LOG_MSG "[INFO]:-HEAP_CHECKSUM is           = $HEAP_CHECKSUM" 1
-		LOG_MSG "[INFO]:-FQDN_HBA is                = $FQDN_HBA" 1
+		LOG_MSG "[INFO]:-HBA_HOSTNAMES is           = HBA_HOSTNAMES" 1
 		if [ $ULIMIT_WARN -eq 1 ];then
 			LOG_MSG "[WARN]:-Ulimit check               = Warnings generated, see log file $WARN_MARK" 1
 		else
@@ -1280,7 +1280,7 @@ CREATE_QD_DB () {
 				done
 		fi
 		LOG_MSG "[INFO]:-Adding gp_dumpall access to $PG_HBA for master host"
-		BUILD_MASTER_PG_HBA_FILE $GP_DIR $FQDN_HBA
+		BUILD_MASTER_PG_HBA_FILE $GP_DIR $HBA_HOSTNAMES
 		LOG_MSG "[INFO]:-Creating gpssh configuration file"
 		BUILD_GPSSH_CONF $GP_DIR
 		LOG_MSG "[INFO]:-Creating perfmon directories and configuration file"
@@ -1450,7 +1450,7 @@ CREATE_QES_PRIMARY () {
                 HAS_MIRRORS_OPTION=no
             fi
 
-			MASTER_HOSTNAME=${MASTER_HOSTNAME} FQDN_HBA=${FQDN_HBA} $GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
+			MASTER_HOSTNAME=${MASTER_HOSTNAME} HBA_HOSTNAMES=${HBA_HOSTNAMES} $GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1510,7 +1510,7 @@ CREATE_QES_MIRROR () {
 		    FLAG="-p $PG_CONF_ADD_FILE"
 		fi
 
-		MASTER_HOSTNAME=${MASTER_HOSTNAME} FQDN_HBA=${FQDN_HBA} $GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
+		MASTER_HOSTNAME=${MASTER_HOSTNAME} HBA_HOSTNAMES=${HBA_HOSTNAMES} $GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 		PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1560,8 +1560,8 @@ CREATE_STANDBY_QD () {
 		if [ x"" != x"$STANDBY_FILESPACES" ]; then
 			INIT_STANDBY_ARGS+=" -F $STANDBY_FILESPACES"
 		fi
-		if [ $FQDN_HBA -eq 1 ]; then
-		    INIT_STANDBY_ARGS+=" --fqdn_hba"
+		if [ $HBA_HOSTNAMES -eq 1 ]; then
+		    INIT_STANDBY_ARGS+=" --hba-hostnames"
 		fi
 		export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1;$INIT_STANDBY_PROG -s $STANDBY_HOSTNAME $INIT_STANDBY_ARGS -a
 		STANDBY_RET_CODE=$?
@@ -1688,8 +1688,8 @@ DUMP_OUTPUT_CONFIG () {
 	$ECHO "HEAP_CHECKSUM=$HEAP_CHECKSUM" >> $OUTPUT_CONFIG
     fi
 
-    if [ x"" != x"$FQDN_HBA" ] ; then
-	$ECHO "FQDN_HBA=$FQDN_HBA" >> $OUTPUT_CONFIG
+    if [ x"" != x"$HBA_HOSTNAMES" ] ; then
+	$ECHO "HBA_HOSTNAMES=$HBA_HOSTNAMES" >> $OUTPUT_CONFIG
     fi
 
     $ECHO "QD_PRIMARY_ARRAY=$QD_PRIMARY_ARRAY" >> $OUTPUT_CONFIG

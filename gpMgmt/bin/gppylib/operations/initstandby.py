@@ -19,12 +19,12 @@ logger = gplog.get_default_logger()
 
 DEFAULT_BATCH_SIZE = 16
 
-def get_standby_pg_hba_info(standby_host, is_fqdn=False):
+def get_standby_pg_hba_info(standby_host, is_hba_hostnames=False):
     standby_ips = unix.InterfaceAddrs.remote('get standby ips', standby_host)
     current_user = unix.UserId.local('get userid')
     new_section = ['# standby master host ip addresses\n']
     for ip in standby_ips:
-        if not is_fqdn:
+        if not is_hba_hostnames:
             cidr_suffix = '/128' if ':' in ip else '/32' # MPP-15889
             address = ip + cidr_suffix
         else:
@@ -182,13 +182,13 @@ def update_pg_hba(standby_pg_hba_info, data_dirs_list):
         pg_hba_content_list.append(pg_hba_contents)
     return pg_hba_content_list
 
-def update_pg_hba_conf_on_segments(gparr, standby_host, is_fqdn=False):
+def update_pg_hba_conf_on_segments(gparr, standby_host, is_hba_hostnames=False):
     """
     Updates the pg_hba.conf on all of the segments 
     present in the array
     """
     logger.debug('Updating pg_hba.conf file on segments...')
-    standby_pg_hba_info = get_standby_pg_hba_info(standby_host, is_fqdn)
+    standby_pg_hba_info = get_standby_pg_hba_info(standby_host, is_hba_hostnames)
     pickled_standby_pg_hba_info = base64.urlsafe_b64encode(pickle.dumps(standby_pg_hba_info))
 
     host_to_seg_map = defaultdict(list) 

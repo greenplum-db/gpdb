@@ -78,37 +78,37 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
-    @gpinitsystem_fqdn_hba
-    @gpinitsystem_fqdn_hba_on
-    Scenario: gpinitsystem should print FQDN in pg_hba.conf when FQDN_HBA=1
-        Given the cluster config is generated with FQDN_HBA "1"
+    @gpinitsystem_hba_hostnames
+    @gpinitsystem_hba_hostnames_on
+    Scenario: gpinitsystem should print FQDN in pg_hba.conf when HBA_HOSTNAMES=1
+        Given the cluster config is generated with HBA_HOSTNAMES "1"
         When generate cluster config file "/tmp/output_config_file"
-        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        Then verify that the file "/tmp/output_config_file" contains "HBA_HOSTNAMES=1"
         When initialize a cluster using "/tmp/output_config_file"
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
-    @gpinitsystem_fqdn_hba
-    @gpinitsystem_fqdn_hba_off
-    Scenario: gpinitsystem should print CIDR in pg_hba.conf when FQDN_HBA=0
-        Given the cluster config is generated with FQDN_HBA "0"
+    @gpinitsystem_hba_hostnames
+    @gpinitsystem_hba_hostnames_off
+    Scenario: gpinitsystem should print CIDR in pg_hba.conf when HBA_HOSTNAMES=0
+        Given the cluster config is generated with HBA_HOSTNAMES "0"
         When generate cluster config file "/tmp/output_config_file"
-        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=0"
+        Then verify that the file "/tmp/output_config_file" contains "HBA_HOSTNAMES=0"
         When initialize a cluster using "/tmp/output_config_file"
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
 
-    @gpinitsystem_fqdn_hba
-    @gpinitsystem_fqdn_hba_on_with_standby
-    Scenario: gpinitsystem should print FQDN in pg_hba.conf for standby when FQDN_HBA=1
+    @gpinitsystem_hba_hostnames
+    @gpinitsystem_hba_hostnames_on_with_standby
+    Scenario: gpinitsystem should print FQDN in pg_hba.conf for standby when HBA_HOSTNAMES=1
         Given the database is running
         And all the segments are running
         And the segments are synchronized
         And the standby is not initialized
         And ensure the standby directory does not exist
-        And the cluster config is generated with FQDN_HBA "1"
+        And the cluster config is generated with HBA_HOSTNAMES "1"
         When generate cluster config file "/tmp/output_config_file"
-        Then verify that the file "/tmp/output_config_file" contains "FQDN_HBA=1"
+        Then verify that the file "/tmp/output_config_file" contains "HBA_HOSTNAMES=1"
         When initialize a cluster with standby using "/tmp/output_config_file"
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
