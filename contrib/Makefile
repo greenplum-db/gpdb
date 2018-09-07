@@ -53,10 +53,6 @@ SUBDIRS += \
 		formatter \
 		formatter_fixedwidth \
 		extprotocol \
-		gp_distribution_policy \
-		gp_internal_tools \
-		gp_inject_fault \
-		gp_sparse_vector \
 		indexscan \
 
 ifeq ($(with_openssl),yes)
@@ -82,8 +78,6 @@ SUBDIRS += sepgsql
 else
 ALWAYS_SUBDIRS += sepgsql
 endif
-
-SUBDIRS += gp_replica_check
 
 # Missing:
 #		start-scripts	\ (does not have a makefile)

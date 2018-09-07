@@ -17,10 +17,6 @@ all:
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
 	$(MAKE) -C contrib/dblink all
-	$(MAKE) -C contrib/gp_sparse_vector all
-	$(MAKE) -C contrib/gp_distribution_policy all
-	$(MAKE) -C contrib/gp_inject_fault all
-	$(MAKE) -C contrib/gp_internal_tools all
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
@@ -30,6 +26,12 @@ all:
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
+	
+	
+	$(MAKE) -C gpcontrib/gp_sparse_vector all
+	$(MAKE) -C gpcontrib/gp_distribution_policy all
+	$(MAKE) -C gpcontrib/gp_inject_fault all
+	$(MAKE) -C gpcontrib/gp_internal_tools all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
 
 docs:
@@ -52,10 +54,6 @@ install:
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
-	$(MAKE) -C contrib/gp_sparse_vector $@
-	$(MAKE) -C contrib/gp_distribution_policy $@
-	$(MAKE) -C contrib/gp_inject_fault $@
-	$(MAKE) -C contrib/gp_internal_tools $@
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
@@ -66,6 +64,12 @@ install:
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
+	
+
+	$(MAKE) -C gpcontrib/gp_sparse_vector $@
+	$(MAKE) -C gpcontrib/gp_distribution_policy $@
+	$(MAKE) -C gpcontrib/gp_inject_fault $@
+	$(MAKE) -C gpcontrib/gp_internal_tools $@
 	+@echo "Greenplum Database installation complete."
 
 install-docs:
@@ -155,7 +159,7 @@ $(call recurse,installcheck-world, \
 			   contrib/indexscan \
 			   contrib/hstore \
 			   contrib/pgcrypto \
-			   contrib/gp_internal_tools \
+			   gpcontrib/gp_internal_tools \
 			   gpAux/extensions \
 			   src/bin/gpfdist \
 			   src/interfaces/gppc \
@@ -165,7 +169,7 @@ $(call recurse,installcheck-world, \
 installcheck-world: installcheck-gpcheckcat
 installcheck-gpcheckcat:
 	gpcheckcat -A
-$(call recurse,installcheck-world,contrib/gp_replica_check,installcheck)
+$(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,contrib/pg_upgrade,check)
 
 $(call recurse,maintainer-check,doc src config contrib)
