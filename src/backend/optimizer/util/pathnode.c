@@ -1838,7 +1838,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 									  uniq_exprs, in_operators))
 	{
 		/*
-		 * For UNIQUE_PATH_NOOP, it is possible that subplan could be a
+		 * For UNIQUE_PATH_NOOP, it is possible that subpath could be a
 		 * motion node. It is not allowed to add a motion node above a
 		 * motion node so we simply disallow this unique path although
 		 * in theory we could improve this.
@@ -1878,7 +1878,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 			query_is_distinct_for(rte->subquery,
 								  sub_tlist_colnos, in_operators))
 		{
-			/* Subplan node could be a motion. See previous comment for details. */
+			/* Subpath node could be a motion. See previous comment for details. */
 			if (add_motion)
 				return NULL;
 			pathnode->umethod = UNIQUE_PATH_NOOP;
