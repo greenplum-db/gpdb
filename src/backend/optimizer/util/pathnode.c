@@ -1844,7 +1844,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		 * in theory we could improve this.
 		 */
 		if (add_motion)
-			return NULL;
+			goto no_unique_path;
 		pathnode->umethod = UNIQUE_PATH_NOOP;
 		pathnode->path.rows = rel->rows;
 		pathnode->path.startup_cost = subpath->startup_cost;
@@ -1880,7 +1880,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		{
 			/* Subpath node could be a motion. See previous comment for details. */
 			if (add_motion)
-				return NULL;
+				goto no_unique_path;
 			pathnode->umethod = UNIQUE_PATH_NOOP;
 			pathnode->path.rows = rel->rows;
 			pathnode->path.startup_cost = subpath->startup_cost;
