@@ -218,19 +218,6 @@ with my_sum(total) as (select sum(value) from with_test1 into total_value)
 select *
 from my_sum;
 
--- alias columns mismatch
-with my_sum(group_total) as (select i, sum(value) from with_test1 group by i)
-select *
-from my_sum;
-
-with my_sum as (select i, sum(value) as i from with_test1 group by i)
-select *
-from my_sum;
-
-with my_sum(i, total) as (select i, sum(value) as i from with_test1 group by i)
-select *
-from my_sum; -- this works
-
 -- name resolution
 select * from with_test1, my_max
 where value < (with my_max(maximum) as (select max(i) from with_test1)

@@ -1352,46 +1352,6 @@ from my_sum;
 ERROR:  syntax error at or near "into"
 LINE 1: ..._sum(total) as (select sum(value) from with_test1 into total...
                                                              ^
--- alias columns mismatch
-with my_sum(group_total) as (select i, sum(value) from with_test1 group by i)
-select *
-from my_sum;
- group_total | sum 
--------------+-----
-           9 | 180
-           8 | 170
-           7 | 160
-           6 | 150
-           4 | 130
-           3 | 120
-           5 | 140
-           1 | 100
-           2 | 110
-           0 |  90
-(10 rows)
-
-with my_sum as (select i, sum(value) as i from with_test1 group by i)
-select *
-from my_sum;
-ERROR:  WITH query "my_sum" must not have duplicate column name: i
-HINT:  Specify a column list without duplicate names
-with my_sum(i, total) as (select i, sum(value) as i from with_test1 group by i)
-select *
-from my_sum; -- this works
- i | total 
----+-------
- 2 |   110
- 6 |   150
- 0 |    90
- 4 |   130
- 8 |   170
- 9 |   180
- 7 |   160
- 5 |   140
- 3 |   120
- 1 |   100
-(10 rows)
-
 -- name resolution
 select * from with_test1, my_max
 where value < (with my_max(maximum) as (select max(i) from with_test1)

@@ -339,41 +339,6 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 }
 
 /*
- * reportDuplicateNames
- *    Report error when a given list of names (in String) contain duplicate values for a given
- * query name.
- */
-static void
-reportDuplicateNames(const char *queryName, List *names)
-{
-	if (names == NULL)
-		return;
-
-	ListCell *lc;
-	foreach (lc, names)
-	{
-		Value *string = (Value *)lfirst(lc);
-		Assert(IsA(string, String));
-
-		ListCell *rest;
-		for_each_cell(rest, lnext(lc))
-		{
-			Value *string2 = (Value *)lfirst(rest);
-			Assert(IsA(string, String));
-			
-			if (strcmp(strVal(string), strVal(string2)) == 0)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("WITH query \"%s\" must not have duplicate column name: %s",
-								queryName, strVal(string)),
-						 errhint("Specify a column list without duplicate names")));
-			}
-		}
-	}
-}
-
-/*
  * Compute derived fields of a CTE, given the transformed output targetlist
  *
  * For a nonrecursive CTE, this is called after transforming the CTE's query.
@@ -456,8 +421,6 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 				 errmsg("WITH query \"%s\" has %d columns available but %d columns specified",
 						cte->ctename, varattno, numaliases),
 				 parser_errposition(pstate, cte->location)));
-
-	reportDuplicateNames(cte->ctename, cte->ctecolnames);
 }
 
 
