@@ -113,7 +113,7 @@ typedef struct
  * SSL support GUCs - should be added soon. Until then we will use stubs
  *
  *  SSL Params
- *	extssl_protocol  CURL_SSLVERSION_TLSv1 				
+ *	extssl_protocol  CURL_SSLVERSION_TLSv1_1
  *  extssl_cipher 	 TLS_RSA_WITH_AES_128_CBC_SHA
  *  extssl_verifycert 	1
  *  extssl_verifyhost 	2
@@ -127,7 +127,7 @@ typedef struct
  *  extssl_libcurldebug 1 	
  */
 
-const static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
+const static int extssl_protocol  = CURL_SSLVERSION_TLSv1_1;
 const char* extssl_cipher = "AES128-SHA";
 const static int extssl_verifycert = 1;
 const static int extssl_verifyhost = 2;
