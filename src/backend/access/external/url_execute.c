@@ -184,8 +184,11 @@ make_export(char *name, const char *value, StringInfo buf)
 
 	for ( ; 0 != (ch = *value); value++)
 	{
-		if (ch == '\'' || ch == '\\')
+		if (ch == '\\'){
 			appendStringInfoChar(buf, '\\');
+		}else if(ch == '\''){
+			appendStringInfo(buf, "\'\\\'");
+		}
 
 		appendStringInfoChar(buf, ch);
 	}
