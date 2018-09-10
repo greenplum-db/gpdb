@@ -26,19 +26,13 @@ all:
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
-	
-	
-	$(MAKE) -C gpcontrib/gp_sparse_vector all
-	$(MAKE) -C gpcontrib/gp_distribution_policy all
-	$(MAKE) -C gpcontrib/gp_inject_fault all
-	$(MAKE) -C gpcontrib/gp_internal_tools all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
 
 docs:
 	$(MAKE) -C doc all
 
-$(call recurse,world,doc src config contrib,all)
+$(call recurse,world,doc src config contrib gpcontrib,all)
 world:
 	+@echo "PostgreSQL, contrib, and documentation successfully made. Ready to install."
 
@@ -65,32 +59,26 @@ install:
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
-	
-
-	$(MAKE) -C gpcontrib/gp_sparse_vector $@
-	$(MAKE) -C gpcontrib/gp_distribution_policy $@
-	$(MAKE) -C gpcontrib/gp_inject_fault $@
-	$(MAKE) -C gpcontrib/gp_internal_tools $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
 install-docs:
 	$(MAKE) -C doc install
 
-$(call recurse,install-world,doc src config contrib,install)
+$(call recurse,install-world,doc src config contrib gpcontrib,install)
 install-world:
 	+@echo "PostgreSQL, contrib, and documentation installation complete."
 
 # build src/ before contrib/
 install-world-contrib-recurse: install-world-src-recurse
 
-$(call recurse,installdirs uninstall coverage,doc src config)
+$(call recurse,installdirs uninstall coverage,doc src config contrib gpcontrib)
 
-$(call recurse,distprep,doc src config contrib)
+$(call recurse,distprep,doc src config contrib gpcontrib)
 
 # clean, distclean, etc should apply to contrib too, even though
 # it's not built by default
-$(call recurse,clean,doc contrib src config)
+$(call recurse,clean,doc contrib gpcontrib src config)
 clean:
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
@@ -101,7 +89,6 @@ clean:
 	$(MAKE) -C gpAux/gpperfmon $@
 	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
-	$(MAKE) -C gpcontrib $@
 
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
@@ -138,7 +125,7 @@ check: all
 check installcheck installcheck-parallel:
 	$(MAKE) -C src/test/regress $@
 
-$(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib,check)
+$(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib gpcontrib,check)
 
 # This is a top-level target that runs "all" regression test suites against
 # a running server. This is what the CI pipeline runs.
@@ -176,7 +163,7 @@ installcheck-gpcheckcat:
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,contrib/pg_upgrade,check)
 
-$(call recurse,maintainer-check,doc src config contrib)
+$(call recurse,maintainer-check,doc src config contrib gpcontrib)
 
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of
