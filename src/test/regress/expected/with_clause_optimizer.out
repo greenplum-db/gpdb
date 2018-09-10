@@ -2123,10 +2123,9 @@ explain (costs off) with t as (select * from with_test1) select * from t where i
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Seq Scan on with_test1
+   ->  Table Scan on with_test1
          Filter: i = 10
- Optimizer: legacy query optimizer
-(4 rows)
+(3 rows)
 
 -- Test to validate an old bug which caused incorrect results when a subquery
 -- in the WITH clause appears under a nested-loop join in the query plan when

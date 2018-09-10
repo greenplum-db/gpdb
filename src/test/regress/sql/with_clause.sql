@@ -311,9 +311,8 @@ limit 60; --order 1,2,3
 
 drop table if exists d;
 drop table if exists b;
-create table with_b (i integer);
-insert into with_b values(1);
-insert into with_b values(2);
+create table with_b (i integer) distributed by (i);
+insert into with_b values (1), (2);
 
 --begin_equivalent
 with b1 as (select * from with_b) select * from (select * from b1 where b1.i =1) AS FOO, b1 FOO2;
@@ -321,15 +320,15 @@ with b1 as (select * from with_b) select * from (select * from b1 where b1.i =1)
 select * from (select * from (select * from with_b) as b1 where b1.i = 1) AS FOO, (select * from with_b) as foo2;
 --end_equivalent
 -- qual push down test
-with t as (select * from with_test1) select * from t where i = 10;
+explain (costs off) with t as (select * from with_test1) select * from t where i = 10;
 
--- MPP-17848
-drop table x;
-CREATE TABLE x(a int);
+-- Test to validate an old bug which caused incorrect results when a subquery
+-- in the WITH clause appears under a nested-loop join in the query plan when
+-- gp_cte_sharing was set to off. (MPP-17848)
+CREATE TABLE x (a integer) DISTRIBUTED BY (a);
 insert into x values(1), (2);
 
-drop TABLE y;
-CREATE TABLE y (m integer NOT NULL, n smallint);
+CREATE TABLE y (m integer NOT NULL, n smallint) DISTRIBUTED BY (m);
 insert into y values(10, 1);
 insert into y values(20, 1);
 
@@ -340,4 +339,3 @@ with yy as (
    where n = iv.p
 )
 select * from x, yy;
--- End of MPP-17848
