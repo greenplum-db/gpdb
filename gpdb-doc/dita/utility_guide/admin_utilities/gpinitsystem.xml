@@ -486,13 +486,14 @@ declare -a MIRROR_ARRAY=(
                 </plentry>
                 <plentry>
                     <pt>HBA_HOSTNAMES</pt>
-                    <pd><b>Optional.</b> This parameter enables the use of client host names in the
-                            <codeph>pg_hba.conf</codeph> file when specifying client addresses that
-                        can connect to Greenplum Database. The default value is <codeph>0</codeph>,
-                        host names cannot be used as client addresses, only IP addresses or IP
-                        address ranges can be specified. Specify <codeph>HBA_HOSTNAMES=1</codeph> to
-                        allow client host names. This option is set when the system is initialized
-                        and cannot be changed later. </pd>
+                    <pd><b>Optional.</b> This parameter enables the use of host names in the
+                            <codeph>pg_hba.conf</codeph> file when specifying addresses that can
+                        connect to Greenplum Database. The default value is <codeph>0</codeph>, only
+                        IP addresses or IP address ranges can be specified as addresses. When
+                        initializing a Greenplum Database system, specify
+                            <codeph>HBA_HOSTNAMES=1</codeph> to enable the use of host names in the
+                            <codeph>pg_hba.conf</codeph> file. This option is set when the system is
+                        initialized and cannot be changed after the system is initialized. </pd>
                 </plentry>
             </parml>
         </section>
