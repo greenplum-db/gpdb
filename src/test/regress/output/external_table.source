@@ -128,6 +128,15 @@ select * from check_env;
 (55 rows)
 
 -- end_ignore
+CREATE EXTERNAL WEB TABLE table_env (name TEXT, val TEXT )
+  EXECUTE E'env' ON SEGMENT 0
+  FORMAT 'TEXT' (DELIMITER '=');
+SELECT name, val FROM table_env WHERE name LIKE 'GP_QUERY%' ORDER BY name ASC;
+      name       |                                      val                                       
+-----------------+--------------------------------------------------------------------------------
+ GP_QUERY_STRING | SELECT name, val FROM table_env WHERE name LIKE 'GP_QUERY%' ORDER BY name ASC;
+(1 row)
+
 -- --------------------------------------
 -- some negative tests
 -- --------------------------------------
