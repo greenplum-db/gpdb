@@ -50,7 +50,7 @@ core
 *.gcno
 
 gpcloud_test
-gpcheckcloud
+bin/gpcheckcloud/gpcheckcloud
 
 s3.conf
 
