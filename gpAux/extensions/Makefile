@@ -15,24 +15,18 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck mapreduce pxf gphdfs mkgphdfs mkorafce
+.PHONY: all install clean distclean installcheck mapreduce gphdfs mkgphdfs mkorafce
 
 #
 # targets built via top_builddir/GNUmakefile
 #
 
-all: mapreduce pxf gphdfs
+all: mapreduce gphdfs
 
 mapreduce:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		echo "gpmapreduce enabled"; \
 		$(MAKE) -C gpmapreduce; \
-	fi
-
-pxf:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
-		$(MAKE) -C pxf; \
 	fi
 
 gphdfs:
@@ -45,21 +39,16 @@ install:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
 	fi
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf install; \
-	fi
 	@if [ "$(enable_gphdfs)" = "yes" ]; then \
 		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
 	fi
 
 clean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf clean; fi
 	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs clean; fi
 
 distclean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf distclean; fi
 	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
 
 installcheck:
@@ -69,12 +58,6 @@ installcheck:
 	fi; \
 	if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce installcheck; \
-	fi
-
-unittest-check:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
-		$(MAKE) -C pxf unittest-check; \
 	fi
 
 #

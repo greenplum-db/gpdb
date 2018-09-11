@@ -1,5 +1,5 @@
 subdir=gpAux/extensions/pxf/test
-top_builddir=../../../..
+top_builddir=../../..
 include $(top_builddir)/src/Makefile.global
 
 TARGETS= libchurl pxfprotocol pxfbridge pxfheaders pxfuriparser pxfutils pxffragment pxffilters
