@@ -487,14 +487,14 @@ declare -a MIRROR_ARRAY=(
                 <plentry>
                     <pt>HBA_HOSTNAMES</pt>
                     <pd><b>Optional.</b> This parameter controls whether Greenplum Database
-                        utilities use IP addresses or host names or in the
-                            <codeph>pg_hba.conf</codeph> file when updating the file with addresses
-                        that can connect to Greenplum Database. The default value is
-                            <codeph>0</codeph>, the utilities use IP addresses when updating the
-                        file. When initializing a Greenplum Database system, specify
-                            <codeph>HBA_HOSTNAMES=1</codeph> to have the utilities use host names in
-                        the <codeph>pg_hba.conf</codeph> file. This option is set when the system is
-                        initialized and cannot be changed after the system is initialized. </pd>
+                        utilities use IP addresses or host names in the <codeph>pg_hba.conf</codeph>
+                        file when updating the file with addresses that can connect to Greenplum
+                        Database. The default value is <codeph>0</codeph>, the utilities use IP
+                        addresses when updating the file. When initializing a Greenplum Database
+                        system, specify <codeph>HBA_HOSTNAMES=1</codeph> to have the utilities use
+                        host names in the <codeph>pg_hba.conf</codeph> file. This option is set when
+                        the system is initialized and cannot be changed after the system is
+                        initialized. </pd>
                     <pd>For information about how Greenplum Database resolves host names in the
                             <codeph>pg_hba.conf</codeph> file, see <xref
                             href="../../admin_guide/client_auth.xml#topic1"/>.</pd>
