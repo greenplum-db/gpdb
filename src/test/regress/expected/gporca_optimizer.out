@@ -10132,15 +10132,15 @@ explain select id, comment from idxscan_outer as o join idxscan_inner as i on o.
 where ordernum between 10 and 20;
                                                  QUERY PLAN                                                 
 ------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..435.91 rows=3 width=9)
-   ->  Nested Loop  (cost=0.00..435.91 rows=1 width=9)
-         Join Filter: true
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
-               ->  Table Scan on idxscan_outer  (cost=0.00..431.00 rows=3 width=4)
-         ->  Index Scan using idxscan_inner_ordernum_key on idxscan_inner  (cost=0.00..4.91 rows=1 width=5)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..888833.77 rows=3 width=9)
+   ->  Nested Loop  (cost=0.00..888833.77 rows=1 width=9)
+         Join Filter: idxscan_outer.id = idxscan_inner.productid
+         ->  Index Scan using idxscan_inner_ordernum_key on idxscan_inner  (cost=0.00..6.00 rows=1 width=9)
                Index Cond: ordernum >= 10 AND ordernum <= 20
-               Filter: idxscan_outer.id = productid
- Optimizer: PQO version 2.64.0
+         ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                     ->  Table Scan on idxscan_outer  (cost=0.00..431.00 rows=3 width=4)
+ Optimizer: PQO version 2.73.0
 (9 rows)
 
 select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
