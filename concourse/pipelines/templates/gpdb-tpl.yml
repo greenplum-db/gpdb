@@ -3228,9 +3228,9 @@ jobs:
       trigger: true
       passed:
       - DPM_backup-restore
-      - DPM_backup-restore_ddboost_part1
-      - DPM_backup-restore_ddboost_part2
-      - DPM_backup-restore_ddboost_part3
+      # - DPM_backup-restore_ddboost_part1
+      # - DPM_backup-restore_ddboost_part2
+      # - DPM_backup-restore_ddboost_part3
       # - DPM_backup-restore_netbackup_part1
       # - DPM_backup-restore_netbackup_part2
       # - DPM_backup-restore_netbackup_part3
@@ -3240,9 +3240,9 @@ jobs:
     - get: bin_gpdb_centos6
       passed:
       - DPM_backup-restore
-      - DPM_backup-restore_ddboost_part1
-      - DPM_backup-restore_ddboost_part2
-      - DPM_backup-restore_ddboost_part3
+      # - DPM_backup-restore_ddboost_part1
+      # - DPM_backup-restore_ddboost_part2
+      # - DPM_backup-restore_ddboost_part3
       # - DPM_backup-restore_netbackup_part1
       # - DPM_backup-restore_netbackup_part2
       # - DPM_backup-restore_netbackup_part3
@@ -3641,9 +3641,9 @@ jobs:
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
       - regression_tests_pxf
-      - DPM_backup-restore_ddboost_part1
-      - DPM_backup-restore_ddboost_part2
-      - DPM_backup-restore_ddboost_part3
+      # - DPM_backup-restore_ddboost_part1
+      # - DPM_backup-restore_ddboost_part2
+      # - DPM_backup-restore_ddboost_part3
       # - DPM_backup-restore_netbackup_part1
       # - DPM_backup-restore_netbackup_part2
       # - DPM_backup-restore_netbackup_part3
