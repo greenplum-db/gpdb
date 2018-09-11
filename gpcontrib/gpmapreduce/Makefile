@@ -1,5 +1,5 @@
 
-top_builddir = ../../..
+top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
 BLD_OS := $(shell uname -s)

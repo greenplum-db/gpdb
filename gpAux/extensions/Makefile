@@ -15,19 +15,13 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck mapreduce gphdfs mkgphdfs mkorafce
+.PHONY: all install clean distclean installcheck gphdfs mkgphdfs mkorafce
 
 #
 # targets built via top_builddir/GNUmakefile
 #
 
-all: mapreduce gphdfs
-
-mapreduce:
-	@if [ "$(enable_mapreduce)" = "yes" ]; then \
-		echo "gpmapreduce enabled"; \
-		$(MAKE) -C gpmapreduce; \
-	fi
+all: gphdfs
 
 gphdfs:
 	@if [ "$(enable_gphdfs)" = "yes" ]; then \
@@ -36,19 +30,14 @@ gphdfs:
 	fi
 
 install:
-	@if [ "$(enable_mapreduce)" = "yes" ]; then \
-		$(MAKE) -C gpmapreduce install; \
-	fi
 	@if [ "$(enable_gphdfs)" = "yes" ]; then \
 		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
 	fi
 
 clean:
-	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
 	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs clean; fi
 
 distclean:
-	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
 
 installcheck:
@@ -56,9 +45,6 @@ installcheck:
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 && \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
 	fi; \
-	if [ "$(enable_mapreduce)" = "yes" ]; then \
-		$(MAKE) -C gpmapreduce installcheck; \
-	fi
 
 #
 # below targets will be built via top_builddir/gpAux/Makefile
