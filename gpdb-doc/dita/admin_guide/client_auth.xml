@@ -93,17 +93,14 @@
             <row>
               <entry colname="col1">address</entry>
               <entry colname="col2">Specifies the client machine addresses that this record matches.
-                This field can contain an IP address or address range. You can configure the
-                Greenplum Database system to also allow client host names. Set the
-                  <codeph>gpinitsystem</codeph> configuration file parameter
-                  <codeph>HBA_HOSTNAMES=1</codeph> to enable the use of host names.<p>An IP address
-                  range is specified using standard numeric notation for the range's starting
-                  address, then a slash (<codeph>/</codeph>) and a CIDR mask length. The mask length
-                  indicates the number of high-order bits of the client IP address that must match.
-                  Bits to the right of this should be zero in the given IP address. There must not
-                  be any white space between the IP address, the <codeph>/</codeph>, and the CIDR
-                  mask length.</p><p>Typical examples of an IPv4 address range specified this way
-                  are <codeph>172.20.143.89/32</codeph> for a single host, or
+                This field can contain an IP address, an IP address range, or a host name. <p>An IP
+                  address range is specified using standard numeric notation for the range's
+                  starting address, then a slash (<codeph>/</codeph>) and a CIDR mask length. The
+                  mask length indicates the number of high-order bits of the client IP address that
+                  must match. Bits to the right of this should be zero in the given IP address.
+                  There must not be any white space between the IP address, the <codeph>/</codeph>,
+                  and the CIDR mask length.</p><p>Typical examples of an IPv4 address range
+                  specified this way are <codeph>172.20.143.89/32</codeph> for a single host, or
                     <codeph>172.20.143.0/24</codeph> for a small network, or
                     <codeph>10.6.0.0/16</codeph> for a larger one. An IPv6 address range might look
                   like <codeph>::1/128</codeph> for a single host (in this case the IPv6 loopback
@@ -115,24 +112,24 @@
                   connections, and an entry given in IPv6 format will match only IPv6 connections,
                   even if the represented address is in the IPv4-in-IPv6 range.
                   <note>Entries in IPv6 format will be rejected if the host system C library does
-                    not have support for IPv6 addresses.</note></p><p>If Greenplum Database is
-                  enabled to allow host names, and a host name is specified (an address that is not
-                  an IP address or IP range is treated as a host name), that name is compared with
-                  the result of a reverse name resolution of the client IP address (for example,
-                  reverse DNS lookup, if DNS is used). Host name comparisons are case insensitive.
-                  If there is a match, then a forward name resolution (for example, forward DNS
-                  lookup) is performed on the host name to check whether any of the addresses it
-                  resolves to are equal to the client IP address. If both directions match, then the
-                  entry is considered to match. </p><p>Some host name databases allow associating an
-                  IP address with multiple host names, but the operating system only returns one
-                  host name when asked to resolve an IP address. The host name that is used in
-                    <codeph>pg_hba.conf</codeph> must be the one that the address-to-name resolution
-                  of the client IP address returns, otherwise the line will not be considered a
-                  match. </p><p>When host names are specified in <codeph>pg_hba.conf</codeph>, you
-                  should ensure that name resolution is reasonably fast. It can be of advantage to
-                  set up a local name resolution cache such as <codeph>nscd</codeph>. Also, you can
-                  enable the server configuration parameter <codeph>log_hostname</codeph> to see the
-                  client host name instead of the IP address in the log. </p></entry>
+                    not have support for IPv6 addresses.</note></p><p>If a host name is specified
+                  (an address that is not an IP address or IP range is treated as a host name), that
+                  name is compared with the result of a reverse name resolution of the client IP
+                  address (for example, reverse DNS lookup, if DNS is used). Host name comparisons
+                  are case insensitive. If there is a match, then a forward name resolution (for
+                  example, forward DNS lookup) is performed on the host name to check whether any of
+                  the addresses it resolves to are equal to the client IP address. If both
+                  directions match, then the entry is considered to match. </p><p>Some host name
+                  databases allow associating an IP address with multiple host names, but the
+                  operating system only returns one host name when asked to resolve an IP address.
+                  The host name that is used in <codeph>pg_hba.conf</codeph> must be the one that
+                  the address-to-name resolution of the client IP address returns, otherwise the
+                  line will not be considered a match. </p><p>When host names are specified in
+                    <codeph>pg_hba.conf</codeph>, you should ensure that name resolution is
+                  reasonably fast. It can be of advantage to set up a local name resolution cache
+                  such as <codeph>nscd</codeph>. Also, you can enable the server configuration
+                  parameter <codeph>log_hostname</codeph> to see the client host name instead of the
+                  IP address in the log. </p></entry>
             </row>
             <row>
               <entry colname="col1">IP-address<p>IP-mask</p></entry>

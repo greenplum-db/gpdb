@@ -88,10 +88,7 @@
           <plentry>
             <pt> address </pt>
             <pd>Specifies the client machine addresses that this record matches. This field can
-              contain an IP address range. You can configure the Greenplum Database system to also
-              allow client host names. Set the <codeph>gpinitsystem</codeph> configuration file
-              parameter <codeph>HBA_HOSTNAMES=1</codeph> to enable the use of client host
-              names.</pd>
+              contain an IP address, an IP address range, or a host name. </pd>
             <pd>An IP address range is specified using standard numeric notation for the range's
               starting address, then a slash (<codeph>/</codeph>) and a CIDR mask length. The mask
               length indicates the number of high-order bits of the client IP address that must
@@ -112,14 +109,13 @@
               the IPv4-in-IPv6 range.
               <note>Entries in IPv6 format will be rejected if the host system C library does not
                 have support for IPv6 addresses.</note></pd>
-            <pd>If Greenplum Database is enabled to support host names, and a host name is specified
-              (an address that is not an IP address or IP range is treated as a host name), that
-              name is compared with the result of a reverse name resolution of the client IP address
-              (for example, reverse DNS lookup, if DNS is used). Host name comparisons are case
-              insensitive. If there is a match, then a forward name resolution (for example, forward
-              DNS lookup) is performed on the host name to check whether any of the addresses it
-              resolves to are equal to the client IP address. If both directions match, then the
-              entry is considered to match. </pd>
+            <pd>If a host name is specified (an address that is not an IP address or IP range is
+              treated as a host name), that name is compared with the result of a reverse name
+              resolution of the client IP address (for example, reverse DNS lookup, if DNS is used).
+              Host name comparisons are case insensitive. If there is a match, then a forward name
+              resolution (for example, forward DNS lookup) is performed on the host name to check
+              whether any of the addresses it resolves to are equal to the client IP address. If
+              both directions match, then the entry is considered to match. </pd>
             <pd>Some host name databases allow associating an IP address with multiple host names,
               but the operating system only returns one host name when asked to resolve an IP
               address. The host name that is used in <codeph>pg_hba.conf</codeph> must be the one
