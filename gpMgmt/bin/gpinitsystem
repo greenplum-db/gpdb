@@ -1084,7 +1084,7 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
 		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is         = $GP_LIBRARY_PATH" 1
 		LOG_MSG "[INFO]:-HEAP_CHECKSUM is           = $HEAP_CHECKSUM" 1
-		LOG_MSG "[INFO]:-HBA_HOSTNAMES is           = HBA_HOSTNAMES" 1
+		LOG_MSG "[INFO]:-HBA_HOSTNAMES is           = $HBA_HOSTNAMES" 1
 		if [ $ULIMIT_WARN -eq 1 ];then
 			LOG_MSG "[WARN]:-Ulimit check               = Warnings generated, see log file $WARN_MARK" 1
 		else
