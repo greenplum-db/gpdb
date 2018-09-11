@@ -2403,6 +2403,10 @@ print_path(PlannerInfo *root, Path *path, int indent)
 			ptype = "HashJoin";
 			join = true;
 			break;
+		case T_CdbMotionPath:
+			ptype = "Motion";
+			subpath = ((CdbMotionPath *) path)->subpath;
+			break;
 		default:
 			ptype = "???Path";
 			break;
@@ -2418,6 +2422,7 @@ print_path(PlannerInfo *root, Path *path, int indent)
 		print_relids(path->parent->relids);
 		printf(") rows=%.0f", path->parent->rows);
 	}
+	printf(" locus=%d", path->locus.locustype);
 	printf(" cost=%.2f..%.2f\n", path->startup_cost, path->total_cost);
 
 	if (path->pathkeys)
