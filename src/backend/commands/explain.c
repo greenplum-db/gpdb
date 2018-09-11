@@ -389,6 +389,7 @@ ExplainOneQuery(Query *query, IntoClause *into, ExplainState *es,
 		/* plan the query */
 		plan = pg_plan_query(query, 0, params);
 
+		/* run it (if needed) and produce output */
 		ExplainOnePlan(plan, into, es, queryString, params);
 	}
 }
