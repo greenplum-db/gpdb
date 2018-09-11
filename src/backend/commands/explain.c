@@ -389,12 +389,6 @@ ExplainOneQuery(Query *query, IntoClause *into, ExplainState *es,
 		/* plan the query */
 		plan = pg_plan_query(query, 0, params);
 
-		/*
-		 * GPDB_92_MERGE_FIXME: it really should be an optimizer's responsibility
-		 * to correctly set the into-clause and into-policy of the PlannedStmt.
-		 */
-		if (into != NULL)
-			plan->intoClause = copyObject(into);
 		/* run it (if needed) and produce output */
 		ExplainOnePlan(plan, into, es, queryString, params);
 	}
