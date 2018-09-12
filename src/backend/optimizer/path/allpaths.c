@@ -2341,6 +2341,7 @@ static void
 print_path(PlannerInfo *root, Path *path, int indent)
 {
 	const char *ptype;
+	const char *ltype;
 	bool		join = false;
 	Path	   *subpath = NULL;
 	int			i;
@@ -2422,7 +2423,38 @@ print_path(PlannerInfo *root, Path *path, int indent)
 		print_relids(path->parent->relids);
 		printf(") rows=%.0f", path->parent->rows);
 	}
-	printf(" locus=%d", path->locus.locustype);
+
+	switch (path->locus.locustype)
+	{
+		case CdbLocusType_Entry:
+			ltype = "Entry";
+			break;
+		case CdbLocusType_SingleQE:
+			ltype = "SingleQE";
+			break;
+		case CdbLocusType_General:
+			ltype = "General";
+			break;
+		case CdbLocusType_SegmentGeneral:
+			ltype = "SegmentGeneral";
+			break;
+		case CdbLocusType_Replicated:
+			ltype = "Replicated";
+			break;
+		case CdbLocusType_Hashed:
+			ltype = "Hashed";
+			break;
+		case CdbLocusType_HashedOJ:
+			ltype = "HashedOJ";
+			break;
+		case CdbLocusType_Strewn:
+			ltype = "Strewn";
+			break;
+		default:
+			ltype = "???CdbLocus";
+			break;
+	}
+	printf(" locus=%s", ltype);
 	printf(" cost=%.2f..%.2f\n", path->startup_cost, path->total_cost);
 
 	if (path->pathkeys)
