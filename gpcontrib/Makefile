@@ -3,12 +3,15 @@
 default: all
 
 BLD_TOP=..
-include $(BLD_TOP)/gpAux/Makefile.windows
+
+GPAUX_DIR=$(BLD_TOP)/gpAux/
+
+ext_dir=$(BLD_TOP)/gpAux/ext
 
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
-.PHONY: all install clean distclean gpcloud pxf mapreduce
+.PHONY: all install clean distclean gpcloud pxf mapreduce gphdfs mkgphdfs
 
 #
 # targets built via top_builddir/GNUmakefile
@@ -41,6 +44,16 @@ mapreduce:
 		$(MAKE) -C gpmapreduce; \
 	fi
 
+gphdfs:
+	@if [ "$(enable_gphdfs)" = "yes" ]; then \
+		echo "gphdfs enabled"; \
+		$(MAKE) -C gphdfs; \
+	fi
+
+mkgphdfs:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs USE_PGXS=1 install \
+		JAVA_HOME=${JAVA_HOME}
+
 install:
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
 		$(MAKE) -C gpcloud install && \
@@ -50,20 +63,28 @@ install:
 		$(MAKE) -C gpmapreduce install; \
 	fi
 	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf install; fi
+	@if [ "$(enable_gphdfs)" = "yes" ]; then \
+		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
+	fi
 
 clean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud cleanall; fi
 	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf clean; fi
+	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs clean; fi
 
 distclean:
 	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud distclean; fi
 	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf distclean; fi
+	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
 
 installcheck:
 	if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce installcheck; \
+	fi
+	if [ -d "$(ext_dir)" ]; then \
+		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
 	fi
 
 unittest-check:
@@ -71,4 +92,3 @@ unittest-check:
 		echo "pxf enabled"; \
 		$(MAKE) -C pxf unittest-check; \
 	fi
-

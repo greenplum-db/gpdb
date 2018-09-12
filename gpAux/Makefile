@@ -342,7 +342,7 @@ define BUILD_STEPS
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
-	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) && \
+	  $(MAKE) -C ../gpcontrib mkgphdfs INSTLOC=$(INSTLOC) && \
 	  $(MAKE) mkorafce INSTLOC=$(INSTLOC);  \
 	fi
 	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
@@ -877,9 +877,6 @@ set_scripts_version :
 #---------------------------------------------------------------------
 # Internal functions
 #---------------------------------------------------------------------
-
-mkgphdfs:
-	@cd extensions && $(MAKE) mkgphdfs OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
 
 mkorafce:
 	@cd extensions && $(MAKE) mkorafce OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)

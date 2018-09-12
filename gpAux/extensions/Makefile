@@ -15,48 +15,23 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck gphdfs mkgphdfs mkorafce
+.PHONY: all install clean distclean installcheck mkorafce
 
 #
 # targets built via top_builddir/GNUmakefile
 #
 
-all: gphdfs
-
-gphdfs:
-	@if [ "$(enable_gphdfs)" = "yes" ]; then \
-		echo "gphdfs enabled"; \
-		$(MAKE) -C gphdfs; \
-	fi
-
-install:
-	@if [ "$(enable_gphdfs)" = "yes" ]; then \
-		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
-	fi
-
-clean:
-	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs clean; fi
-
-distclean:
-	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
-
 installcheck:
 	if [ -d "$(ext_dir)" ]; then \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 && \
-		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
 	fi; \
 
 #
 # below targets will be built via top_builddir/gpAux/Makefile
 #
 
-mkgphdfs:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs USE_PGXS=1 docdir=$(INSTLOC)/docs install \
-		ANT=/opt/releng/apache-ant/bin/ant \
-		JAVA_HOME=${JAVA_HOME}
-
 # Only include these files when running enterprise build
-ENTERPRISE_TARGETS="mkgphdfs mkorafce"
+ENTERPRISE_TARGETS="mkorafce"
 ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
 include $(BLD_TOP)/Makefile.global
 include $(BLD_TOP)/Makefile.thirdparty

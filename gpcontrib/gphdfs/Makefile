@@ -7,15 +7,15 @@ PG_LIBS = $(libpq_pgport)
 
 ANT = ant
 TAR = tar
-ANT_OPTS="-Djavax.net.ssl.trustStore=../../releng/make/dependencies/cacerts"
+ANT_OPTS="-Djavax.net.ssl.trustStore=../../gpAux/releng/make/dependencies/cacerts"
 
 ifdef USE_PGXS
 	PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 else
-	top_builddir = ../../..
+	top_builddir = ../..
 	include $(top_builddir)/src/Makefile.global
-	include $(top_srcdir)/contrib/contrib-global.mk
+	include $(top_builddir)/contrib/contrib-global.mk
 endif
 
 JAR_FILES = dist/hadoop-gnet-1.2.0.0.jar
