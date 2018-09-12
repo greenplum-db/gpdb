@@ -173,7 +173,7 @@ $(call recurse,maintainer-check,doc src config contrib gpcontrib)
 unittest-check:
 	$(MAKE) -C src/backend unittest-check
 	$(MAKE) -C src/bin unittest-check
-	$(MAKE) -C gpAux/extensions unittest-check
+	$(MAKE) -C gpcontrib unittest-check
 
 GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 	./config.status $@
