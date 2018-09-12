@@ -80,6 +80,7 @@ distclean:
 	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
 
 installcheck:
+	$(MAKE) -C gp_internal_tools installcheck
 	if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi

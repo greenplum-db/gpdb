@@ -150,8 +150,7 @@ $(call recurse,installcheck-world, \
 			   contrib/indexscan \
 			   contrib/hstore \
 			   contrib/pgcrypto \
-			   gpcontrib/gp_internal_tools \
-			   gpAux/extensions \
+			   gpcontrib \
 			   src/bin/gpfdist \
 			   src/interfaces/gppc \
 			   src/test/kerberos \
