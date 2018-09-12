@@ -1,4 +1,4 @@
-top_builddir = $(shell cd ../../../.. && pwd)
+top_builddir = $(shell cd ../../.. && pwd)
 pgxs_dir = $(top_builddir)
 
 config_file := \/home\/gpadmin\/s3\.conf
