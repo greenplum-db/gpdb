@@ -21,15 +21,15 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Some of your data may already reside in an external SQL database. Greenplum Database provides access to this data via the PXF JDBC Connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, and Hive.
+Some of your data may already reside in an external SQL database. PXF provides access to this data via the PXF JDBC Connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, and Hive.
 
-This section describes how to use the PXF JDBC connector to access data in an external SQL database, including how to create and query or insert data into a PXF external table referencing a table in an external database.
+This section describes how to use the PXF JDBC connector to access data in an external SQL database, including how to create and query or insert data into a PXF external table that references a table in an external database.
 
-**Note**: The JDBC Connector does not guarantee consistency when writing to an external SQL database. Be aware that even if an `INSERT` operation fails, some data maybe still be written to the external database table. Consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.
+**Note**: The JDBC Connector does not guarantee consistency when writing to an external SQL database. Be aware that even if an `INSERT` operation fails, some data maybe still be written to the external database table. If you require consistency for writes, consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.
 
 ## <a id="prereq"></a>Prerequisites
 
-Before accessing an external SQL database using the PXF JDBC connector, ensure that:
+Before you access an external SQL database using the PXF JDBC connector, ensure that:
 
 - You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Managing PXF](instcfg_pxf.html) for PXF initialization, configuration, and startup information.
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
@@ -82,7 +82,7 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 
 You include JDBC connector custom options in the `LOCATION` URI, prefacing each option with an ampersand `&`.
 
-The `Jdbc` profile supports the following \<custom-option\>s:
+The `Jdbc` profile supports the following \<custom-option\> values:
 
 | Option Name   | Operation | Description
 |---------------|------------|--------|
@@ -92,7 +92,7 @@ The `Jdbc` profile supports the following \<custom-option\>s:
 | PASS | Read, Write | The database password for `USER`. Required if `USER` is provided. |
 | BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Batching is enabled by default. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
-| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\>s. A null `PARTITION_BY` defaults to a single fragment. |
+| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. A null `PARTITION_BY` defaults to a single fragment. |
 | RANGE | Read | (Used only when `PARTITION_BY` is specified.) The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
 | INTERVAL | Read | (Used only when `PARTITION_BY` is specified and of the `int` or `date` type.) The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. |
 
@@ -109,17 +109,17 @@ When the JDBC driver of the external SQL database supports it, batching of `INSE
 
 Batching is enabled by default, and the default batch size is 100. To disable batching or to modify the default batch size value, create the PXF external table with a `BATCH_SIZE` setting:
 
-- `BATCH_SIZE=0` or `&BATCH_SIZE=1` - disable batching
-- `BATCH_SIZE=(n>1)` - set the `BATCH_SIZE` to `n`
+- `BATCH_SIZE=0` or `BATCH_SIZE=1` - disables batching
+- `BATCH_SIZE=(n>1)` - sets the `BATCH_SIZE` to `n`
 
 When the external database JDBC driver does not support batching, the behaviour of the PXF JDBC connector depends on the `BATCH_SIZE` setting as follows:
 
-- `BATCH_SIZE` omitted - the JDBC connector inserts without batching
-- `BATCH_SIZE=(n>1)` - the `INSERT` operation fails and the connector returns an error
+- `BATCH_SIZE` omitted - The JDBC connector inserts without batching.
+- `BATCH_SIZE=(n>1)` - The `INSERT` operation fails and the connector returns an error.
 
 #### <a id="threadpool"></a>Thread Pooling (Write)
 
-The PXF JDBC connector can further increase write performance by processing `INSERT` operations in multiple threads, when threading is supported by the JDBC driver of the external SQL database.
+The PXF JDBC connector can further increase write performance by processing `INSERT` operations in multiple threads when threading is supported by the JDBC driver of the external SQL database.
 
 Consider using batching together with a thread pool. When used together, each thread receives and processes one complete batch of data. If you use a thread pool without batching, each thread in the pool receives exactly one tuple.
 
@@ -156,15 +156,15 @@ In this example, you:
 
 - Create a PostgreSQL database and table, and insert data into the table
 - Create a PostgreSQL user and assign all privileges on the table to the user
-- Create a PXF readable external table referencing the PostgreSQL table
+- Create a PXF readable external table that references the PostgreSQL table
 - Read the data in the PostgreSQL table
-- Create a PXF writable external table referencing the PostgreSQL table
+- Create a PXF writable external table that references the PostgreSQL table
 - Write data to the PostgreSQL table
 - Read the data in the PostgreSQL table again
 
 #### <a id="ex_create_pgtbl"></a>Create a PostgreSQL Table
 
-Perform the following steps to create a PostgreSQL table named `forpxf_table1` in the `public` schema of a database named `pgtestdb` and grant a user named `pxfuser1` all privileges on this table:
+Perform the following steps to create a PostgreSQL table named `forpxf_table1` in the `public` schema of a database named `pgtestdb`, and grant a user named `pxfuser1` all privileges on this table:
 
 1. Identify the host name and port of your PostgreSQL server.
 
@@ -255,7 +255,7 @@ You must download the PostgreSQL driver JAR file to your system, identify the lo
 
 #### <a id="ex_readjdbc"></a>Read from the PostgreSQL Table
 
-Perform the following procedure to create a PXF external table referencing the `forpxf_table1` PostgreSQL table that you created in the previous section, and read the data in the table:
+Perform the following procedure to create a PXF external table that references the `forpxf_table1` PostgreSQL table that you created in the previous section, and read the data in the table:
 
 1. Create the PXF external table specifying the `Jdbc` profile. For example:
 
