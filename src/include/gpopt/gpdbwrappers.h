@@ -595,7 +595,10 @@ namespace gpdb {
 	
 	// hash a const value with GPDB's hash function
 	int32 CdbHashConst(Const *constant, int num_segments);
-	
+
+	// pick a random segment from a pool of segments using GPDB's hash function
+	int32 CdbHashRandom(int num_segments);
+
 	// hash a list of const values with GPDB's hash function
 	int32 CdbHashConstList(List *constants, int num_segments);
 	

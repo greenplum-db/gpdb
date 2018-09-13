@@ -2824,6 +2824,27 @@ gpdb::CdbHashConst
 	return 0;
 }
 
+// pick a segment randomly from a pool of segments using GPDB's hash function
+int32
+gpdb::CdbHashRandom
+	(
+	int num_segments
+	)
+{
+	GP_WRAP_START;
+	{
+		CdbHash    *pcdbhash = makeCdbHash(num_segments);
+
+		cdbhashinit(pcdbhash);
+
+		cdbhashnokey(pcdbhash);
+
+		return cdbhashreduce(pcdbhash);
+	}
+	GP_WRAP_END;
+	return 0;
+}
+
 // hash a list of const values with GPDB's hash function
 int32 
 gpdb::CdbHashConstList

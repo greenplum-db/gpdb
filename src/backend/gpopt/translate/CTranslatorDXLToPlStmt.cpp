@@ -1960,6 +1960,21 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 			motion->motionType = MOTIONTYPE_FIXED;
 			// get segment id
 			INT segid = CDXLPhysicalGatherMotion::Cast(motion_dxlop)->IOutputSegIdx();
+
+			// if it's a gather on a segment, pick a segment from
+			// available segments using GPDB's hash function.
+			// This function outputs a segment index in a round
+			// robin fashion using a random segment index as the
+			// starting point.
+			// This ensures that concurrent DML queries issued via
+			// a same session, use a different output segment each
+			// time a gather on segment is needed.
+			if (segid >= 0)
+			{
+				segid = gpdb::CdbHashRandom(m_num_of_segments);
+				GPOS_ASSERT(segid >= 0);
+			}
+
 			motion->numOutputSegs = 1;
 			motion->outputSegIdx = (INT *) gpdb::GPDBAlloc(sizeof(INT));
 			*(motion->outputSegIdx) = segid;
