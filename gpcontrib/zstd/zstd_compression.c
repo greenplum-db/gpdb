@@ -15,10 +15,21 @@
 #include "fmgr.h"
 #include "utils/builtins.h"
 
-#ifdef HAVE_LIBZSTD
-/* Zstandard library is provided */
-
 #include <zstd.h>
+
+Datum zstd_constructor(PG_FUNCTION_ARGS);
+Datum zstd_destructor(PG_FUNCTION_ARGS);
+Datum zstd_compress(PG_FUNCTION_ARGS);
+Datum zstd_decompress(PG_FUNCTION_ARGS);
+Datum zstd_validator(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(zstd_constructor);
+PG_FUNCTION_INFO_V1(zstd_destructor);
+PG_FUNCTION_INFO_V1(zstd_compress);
+PG_FUNCTION_INFO_V1(zstd_decompress);
+PG_FUNCTION_INFO_V1(zstd_validator);
+
+PG_MODULE_MAGIC;
 
 /* Internal state for zstd */
 typedef struct zstd_state
@@ -140,44 +151,3 @@ zstd_validator(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
-
-#else							/* HAVE_LIBZSTD */
-/* Zstandard library is not provided; use dummy functions instead */
-
-#define NO_ZSTD_SUPPORT() \
-	ereport(ERROR, \
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED), \
-			 errmsg("Zstandard library is not supported by this build"), \
-			 errhint("Compile with --with-zstd to use Zstandard compression.")))
-
-Datum
-zstd_constructor(PG_FUNCTION_ARGS)
-{
-	NO_ZSTD_SUPPORT();
-}
-
-Datum
-zstd_destructor(PG_FUNCTION_ARGS)
-{
-	NO_ZSTD_SUPPORT();
-}
-
-Datum
-zstd_compress(PG_FUNCTION_ARGS)
-{
-	NO_ZSTD_SUPPORT();
-}
-
-Datum
-zstd_decompress(PG_FUNCTION_ARGS)
-{
-	NO_ZSTD_SUPPORT();
-}
-
-Datum
-zstd_validator(PG_FUNCTION_ARGS)
-{
-	NO_ZSTD_SUPPORT();
-}
-
-#endif							/* HAVE_LIBZSTD */

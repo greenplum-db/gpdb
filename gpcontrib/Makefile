@@ -16,12 +16,14 @@ include $(top_builddir)/src/Makefile.global
 #
 # targets built via top_builddir/GNUmakefile
 #
-
-$(call recurse,all install clean distclean,\
-			   gp_sparse_vector \
-			   gp_distribution_policy \
-			   gp_internal_tools \
-			   gp_inject_fault)
+recurse_targets = gp_sparse_vector \
+               gp_distribution_policy \
+               gp_internal_tools \
+               gp_inject_fault
+ifeq "$(with_zstd)" "yes"
+	recurse_targets += zstd
+endif
+$(call recurse,all install clean distclean, $(recurse_targets))
 
 all: gpcloud pxf mapreduce
 

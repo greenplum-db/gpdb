@@ -77,8 +77,6 @@ DATA(insert OID = 7062 ( rle_type gp_rle_type_constructor gp_rle_type_destructor
 
 DATA(insert OID = 7063 ( none gp_dummy_compression_constructor gp_dummy_compression_destructor gp_dummy_compression_compress gp_dummy_compression_decompress gp_dummy_compression_validator PGUID ));
 
-DATA(insert OID = 7070 ( zstd gp_zstd_constructor gp_zstd_destructor gp_zstd_compress gp_zstd_decompress gp_zstd_validator PGUID ));
-
 #define NUM_COMPRESS_FUNCS 5
 
 #define COMPRESSION_CONSTRUCTOR 0

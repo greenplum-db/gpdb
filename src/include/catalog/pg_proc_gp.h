@@ -631,26 +631,6 @@ DESCR("Type specific RLE decompressor");
 DATA(insert OID = 9923 ( gp_rle_type_validator  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2278 "2281" _null_ _null_ _null_ _null_ rle_type_validator _null_ _null_ _null_ n a ));
 DESCR("Type speific RLE compression validator");
 
-/* gp_zstd_constructor(internal, internal, bool) => internal */
-DATA(insert OID = 7071 ( gp_zstd_constructor  PGNSP PGUID 12 1 0 0 0 f f f f f f v 3 0 2281 "2281 2281 16" _null_ _null_ _null_ _null_ zstd_constructor _null_ _null_ _null_ n a ));
-DESCR("zstd compressor and decompressor constructor");
-
-/* gp_zstd_destructor(internal) => void */
-DATA(insert OID = 7072 ( gp_zstd_destructor  PGNSP PGUID 12 1 0 0 0 f f f f f f v 1 0 2278 "2281" _null_ _null_ _null_ _null_ zstd_destructor _null_ _null_ _null_ n a ));
-DESCR("zstd compressor and decompressor destructor");
-
-/* gp_zstd_compress(internal, int4, internal, int4, internal, internal) => void */
-DATA(insert OID = 7073 ( gp_zstd_compress  PGNSP PGUID 12 1 0 0 0 f f f f f f i 6 0 2278 "2281 23 2281 23 2281 2281" _null_ _null_ _null_ _null_ zstd_compress _null_ _null_ _null_ n a ));
-DESCR("zstd compressor");
-
-/* gp_zstd_decompress(internal, int4, internal, int4, internal, internal) => void */
-DATA(insert OID = 7074 ( gp_zstd_decompress  PGNSP PGUID 12 1 0 0 0 f f f f f f i 6 0 2278 "2281 23 2281 23 2281 2281" _null_ _null_ _null_ _null_ zstd_decompress _null_ _null_ _null_ n a ));
-DESCR("zstd decompressor");
-
-/* gp_zstd_validator(internal) => void */
-DATA(insert OID = 7075 ( gp_zstd_validator  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2278 "2281" _null_ _null_ _null_ _null_ zstd_validator _null_ _null_ _null_ n a ));
-DESCR("zstdcompression validator");
-
 /* gp_dummy_compression_constructor(internal, internal, bool) => internal */
 DATA(insert OID = 7064 ( gp_dummy_compression_constructor  PGNSP PGUID 12 1 0 0 0 f f f f f f v 3 0 2281 "2281 2281 16" _null_ _null_ _null_ _null_ dummy_compression_constructor _null_ _null_ _null_ n a ));
 DESCR("Dummy compression destructor");
