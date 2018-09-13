@@ -1910,6 +1910,72 @@ set optimizer_enable_streaming_material = off;
 select c1 from t_outer where not c1 =all (select c2 from t_inner);
 reset optimizer_enable_streaming_material;
 
+--
+-- Test to ensure sane behavior when DML queries are optimized by ORCA by
+-- enforcing a non-master gather motion, controlled by
+-- optimizer_enable_gather_on_segment_for_DML GUC
+--
+
+--
+-- CTAS with global-local aggregation
+--
+-- start_ignore
+create table test1 (a int, b int);
+insert into test1 select generate_series(1,100),generate_series(1,100);
+-- end_ignore
+create table t_new as select avg(a) from test1 join (select i from unnest(array[1,2,3]) i) t on (test1.a = t.i);
+select * from t_new;
+
+-- start_ignore
+drop table t_new;
+set optimizer_enable_gather_on_segment_for_DML=off;
+-- end_ignore
+create table t_new as select avg(a) from test1 join (select i from unnest(array[1,2,3]) i) t on (test1.a = t.i);
+select * from t_new;
+
+-- start_ignore
+reset optimizer_enable_gather_on_segment_for_DML;
+-- end_ignore
+
+--
+-- Insert with outer references in the subquery
+--
+-- start_ignore
+create table x_tab(a int);
+create table y_tab(a int);
+create table z_tab(a int);
+
+insert into x_tab values(1);
+insert into y_tab values(0);
+insert into z_tab values(1);
+-- end_ignore
+
+insert into x_tab select * from x_tab where exists (select * from x_tab where x_tab.a = (select x_tab.a + y_tab.a from y_tab));
+select * from x_tab;
+
+--
+-- Insert with Union All with an universal child
+--
+insert into y_tab select 1 union all select a from x_tab limit 10;
+select * from y_tab;
+
+--
+-- Insert with a function containing a SQL
+--
+create or replace function test_func_pg_stats()
+returns integer
+as $$ declare cnt int; begin execute 'select count(*) from pg_statistic' into cnt; return cnt; end $$
+language plpgsql volatile READS SQL DATA;
+
+insert into y_tab select test_func_pg_stats() from x_tab limit 2;
+select count(*) from y_tab;
+
+--
+-- Delete with Hash Join with a universal child
+--
+delete from x_tab where exists (select z_tab.a from z_tab join (select 1 as g) as tab on z_tab.a = tab.g);
+select * from x_tab;
+
 -- start_ignore
 drop table bar;
 -- end_ignore

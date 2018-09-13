@@ -108,7 +108,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                              ->  Broadcast Motion 3:3  (slice7; segments: 3)
                                                    ->  Hash Join
                                                          Hash Cond: public.keo1.user_vie_project_code_pk::text = keo2.projects_pk::text
-                                                         ->  Redistribute Motion 1:3  (slice5)
+                                                         ->  Redistribute Motion 1:3  (slice5; segments: 1)
                                                                ->  Hash Join
                                                                      Hash Cond: public.keo1.user_vie_fiscal_year_period_sk::text = (max(keo3.sky_per::text))
                                                                      ->  Gather Motion 3:1  (slice1; segments: 3)
@@ -169,7 +169,7 @@ EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS
                            Join Filter: true
                            ->  Table Scan on keo5
                            ->  Materialize
-                                 ->  Broadcast Motion 1:3  (slice2)
+                                 ->  Broadcast Motion 1:3  (slice2; segments: 1)
                                        ->  Limit
                                              ->  Gather Motion 3:1  (slice1; segments: 3)
                                                    ->  Table Scan on keo5

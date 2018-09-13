@@ -317,6 +317,13 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 		},
 
 		{
+		EopttraceDisableNonMasterGatherForDML,
+		&optimizer_enable_gather_on_segment_for_dml,
+		true,  // m_fNegate
+		GPOS_WSZ_LIT("Enable DML optimization by enforcing a non-master gather when appropriate")
+		},
+
+		{
 		EopttraceEnforceCorrelatedExecution,
 		&optimizer_enforce_subplans,
 		false,  // m_negate_param
