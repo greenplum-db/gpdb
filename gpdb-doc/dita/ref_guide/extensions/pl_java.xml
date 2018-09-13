@@ -218,23 +218,23 @@
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
             system:<codeblock>$ gppkg -i pljava-ossv1.5.0_pv1.4.0-GPDB-<varname>version</varname>-orca-rhel6-x86_64.gppkg</codeblock></li>
-          <li>Ensure the environment variables <codeph>JAVA_HOME</codeph> and
+          <li>Ensure that the environment variables <codeph>JAVA_HOME</codeph> and
               <codeph>LD_LIBRARY_PATH</codeph> are set properly in
               <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul
               id="ul_mgq_wgh_qw">
               <li>Set the <codeph>JAVA_HOME</codeph> variable to the directory where your Java
                 Runtime is installed. For example, for Oracle JRE this directory would be
                   <codeph>/usr/java/latest</codeph>. For OpenJDK, the directory is
-                  <codeph>/usr/lib/jvm/jre</codeph>. This example changes the environment variable
+                  <codeph>/usr/lib/jvm</codeph>. This example changes the environment variable
                 to use
-                <codeph>/usr/java/latest</codeph>.<codeblock>JAVA_HOME=/usr/java/latest</codeblock></li>
-              <li>Set the <codeph>LD_LIBRARY_PATH</codeph> to include the directory with Java server
+                <codeph>/usr/lib/jvm</codeph>.<codeblock>JAVA_HOME=/usr/lib/jvm</codeblock></li>
+              <li>Set the <codeph>LD_LIBRARY_PATH</codeph> to include the directory with the Java server
                 runtime libraries. PL/Java depends on <codeph>libjvm.so</codeph> and the shared
                 object should be in your <codeph>LD_LIBRARY_PATH</codeph>. By default,
                   <codeph>libjvm.so</codeph> is available in
-                  <codeph>$JAVA_HOME/lib/amd64/server</codeph>. This example adds the directory to
+                  <codeph>$JAVA_HOME/jre/lib/amd64/server</codeph>. This example adds the directory to
                 the environment
-                variable.<codeblock>LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:<b>$JAVA_HOME/lib/amd64/server</b>:$LD_LIBRARY_PATH</codeblock></li>
+                variable.<codeblock>LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:<b>$JAVA_HOME/jre/lib/amd64/server</b>:$LD_LIBRARY_PATH</codeblock></li>
             </ul>This example <codeph>gpscp</codeph> command copies the file to all hosts specified
             in the file
             <codeph>gphosts_file</codeph>.<codeblock>$ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
