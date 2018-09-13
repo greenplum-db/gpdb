@@ -25,7 +25,7 @@ The Greenplum Platform Extension Framework (PXF) implements a protocol named `px
 
 You must enable the PXF extension in each database in which you plan to use the framework to access external data. You must also explicitly `GRANT` permission to the `pxf` protocol to those users/roles who require access.
 
-After the extension is registered and privileges are assigned, you can use the `CREATE EXTERNAL TABLE` command to create an external table using the `pxf` protocol. PXF provides built-in HDFS, Hive, and HBase connectors. These connectors define profiles that support different file formats. You specify the profile name in the `CREATE EXTERNAL TABLE` command `LOCATION` URI.
+After the extension is registered and privileges are assigned, you can use the `CREATE EXTERNAL TABLE` command to create an external table using the `pxf` protocol. PXF provides built-in HDFS, Hive, HBase, and JDBC connectors. These connectors define profiles that support varied external data sources and file formats. You specify the profile name in the `CREATE EXTERNAL TABLE` command `LOCATION` URI.
 
 
 ## <a id="enable-pxf-ext"></a>Enabling/Disabling PXF
@@ -105,6 +105,7 @@ PXF accesses data sources using different connectors, and filter pushdown suppor
 
 - Hive Connector
 - HBase Connector
+- JDBC Connector
 
 PXF filter pushdown can be used with these data types:
 
@@ -127,11 +128,11 @@ To summarize, all of the following criteria must be met for filter pushdown to o
 * You enable external table filter pushdown by setting the `gp_external_enable_filter_pushdown` server configuration parameter to `'on'`.
 * The Greenplum Database protocol that you use to access external data source must support filter pushdown. The `pxf` external table protocol supports pushdown.
 * The external data source that you are accessing must support pushdown. For example, HBase and Hive support pushdown.
-* For queries on external tables that you create with the `pxf` protocol, the underlying PXF connector must also support filter pushdown. For example, the PXF Hive and HBase connectors support pushdown.
+* For queries on external tables that you create with the `pxf` protocol, the underlying PXF connector must also support filter pushdown. For example, the PXF Hive, HBase, and JDBC connectors support pushdown.
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
-PXF is installed with HDFS, Hive, and HBase connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
+PXF is installed with HDFS, Hive, HBase, and JDBC connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
 
 PXF provides the following built-in profiles. Those profiles that support write access are identified as such in their `Description`.
 
@@ -149,6 +150,7 @@ PXF provides the following built-in profiles. Those profiles that support write 
 | Hive | SequenceFile | Hive | Data consisting of binary key/value pairs. |
 | Hive | ORC | Hive, HiveORC, HiveVectorizedORC | Optimized row columnar data with stripe, footer, and postscript sections. |
 | Hive | Parquet | Hive | Compressed columnar data representation.|
+| SQL Database | Many | Jdbc | Read from and write to external SQL database.|
 
 A PXF profile definition includes the name of the profile, a description, and the Java classes that implement parsing and reading external data for the profile. Built-in PXF profiles are defined in the `$GPHOME/pxf/conf/pxf-profiles-default.xml` configuration file. The built-in `HdfsTextSimple` profile definition is reproduced below:
 
@@ -175,7 +177,7 @@ You use PXF to access data stored on external systems. Depending upon the extern
 
 PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on your Hadoop distribution and optional Hive and HBase client installations. 
 
-Should you need to add additional JAR dependencies for PXF, you must add them to the `pxf-public.classpath` file on each segment host, and then restart PXF on each host.
+Should you need to add additional JAR dependencies for PXF, for example a JDBC driver JAR file, you must add them to the `pxf-public.classpath` file on each segment host, and then restart PXF on each host.
 
 
 ## <a id="creatinganexternaltable"></a>Creating an External Table using PXF
@@ -204,7 +206,7 @@ Greenplum Database passes the parameters in the `LOCATION` string as headers to 
 | Keyword               | Value and Description                                                                                                                                                                                                                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | \<path\-to\-data\>        | A directory, file name, wildcard pattern, table name, etc. The syntax of \<path-to-data\> is dependent upon the profile currently in use.                                                                                                                                                                                                                    |
-| PROFILE              | The profile PXF uses to access the data. PXF supports HBase, HDFS, and Hive connectors that expose profiles named `HBase`, `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Json`, `SequenceWritable`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
+| PROFILE              | The profile PXF uses to access the data. PXF supports HBase, HDFS, Hive, and JDBC connectors that expose profiles named `HBase`, `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Json`, `SequenceWritable`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, `HiveVectorizedORC`, and `Jdbc`.                                                                                                                                                                                   |
 | \<custom-option\>=\<value\> | Additional options and values supported by the profile.                                                                  |
 | FORMAT  \<value\>| PXF profiles support the '`TEXT`', '`CSV`', and '`CUSTOM`' `FORMAT`s.  |
 | \<formatting-properties\> | Formatting properties supported by the profile; for example, the `formatter` or `delimiter`.                                                                   |
