@@ -117,6 +117,18 @@ main(int argc, char **argv)
 
 	check_and_dump_old_cluster(live_check, &sequence_script_file_name);
 
+	/*
+	 * In upgrading from GPDB, copy pg_clog and pg_distributedlog over in
+	 * vanilla. The assumption that this works needs to be verified
+	 *
+	 * On segments, copy pg_clog and pg_distributedlog before start up new
+	 * cluster.
+	 */
+	if (user_opts.segment_mode == SEGMENT)
+	{
+		copy_clog_xlog_xid();
+		copy_subdir_files("pg_distributedlog");
+	}
 
 	/* -- NEW -- */
 	start_postmaster(&new_cluster, true);
@@ -135,13 +147,8 @@ main(int argc, char **argv)
 	 * Destructive Changes to New Cluster
 	 */
 
-	copy_clog_xlog_xid();
-
-	/*
-	 * In upgrading from GPDB4, copy the pg_distributedlog over in vanilla.
-	 * The assumption that this works needs to be verified
-	 */
-	copy_subdir_files("pg_distributedlog");
+	if (user_opts.segment_mode == DISPATCHER)
+		copy_clog_xlog_xid();
 
 	/* New now using xids of the old system */
 
