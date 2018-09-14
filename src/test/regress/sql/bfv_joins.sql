@@ -199,6 +199,15 @@ ON member_group.group_id = member_subgroup.group_id
 LEFT OUTER JOIN region
 ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = region.county_name);
 
+-- Test colocated equijoins on coerced distribution keys
+CREATE TABLE coercejoin (a varchar(10), b varchar(10)) DISTRIBUTED BY (a);
+-- Positive test, the join should be colocated as the implicit cast from the
+-- parse rewrite is a relabeling (varchar::text).
+EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
+-- Negative test, the join should not be colocated since the cast is a coercion
+-- which cannot guarantee that the coerced value would hash to the same segment
+-- as the uncoerced tuple.
+EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric;
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

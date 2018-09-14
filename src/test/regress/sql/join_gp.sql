@@ -289,12 +289,9 @@ insert into test_int2 values(3, 10), (4, 20);
 select t1.id, t1.data, t2.id, t2.data from test_int1 t1, test_int2 t2 where t1.data = t2.data;
 
 -- Test to ensure that for full outer join on varchar columns, planner is successful in finding a sort operator in the catalog
--- start_ignore
-create table input_table(a varchar(30), b varchar(30));
+create table input_table(a varchar(30), b varchar(30)) distributed by (a);
 set enable_hashjoin = off;
--- end_ignore
 explain (costs off) select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
-select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
 
 -- Cleanup
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs

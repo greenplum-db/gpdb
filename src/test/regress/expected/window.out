@@ -1065,27 +1065,21 @@ SELECT * FROM
           min(salary) OVER (PARTITION BY depname, empno order by enroll_date) depminsalary
    FROM empsalary) emp
 WHERE depname = 'sales';
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Subquery Scan on emp
          ->  WindowAgg
                Order By: empsalary.empno
-               ->  Sort
-                     Sort Key: empsalary.empno
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: empsalary.depname
-                           ->  WindowAgg
-                                 Partition By: empsalary.empno
-                                 Order By: empsalary.enroll_date
-                                 ->  Sort
-                                       Sort Key: empsalary.empno, empsalary.enroll_date
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                             Hash Key: empsalary.depname, empsalary.empno
-                                             ->  Seq Scan on empsalary
-                                                   Filter: ((depname)::text = 'sales'::text)
+               ->  WindowAgg
+                     Partition By: empsalary.empno
+                     Order By: empsalary.enroll_date
+                     ->  Sort
+                           Sort Key: empsalary.empno, empsalary.enroll_date
+                           ->  Seq Scan on empsalary
+                                 Filter: ((depname)::text = 'sales'::text)
  Optimizer: legacy query optimizer
-(18 rows)
+(12 rows)
 
 -- Test Sort node reordering
 EXPLAIN (COSTS OFF)
@@ -1093,9 +1087,9 @@ SELECT
   lead(1) OVER (PARTITION BY depname ORDER BY salary, enroll_date),
   lag(1) OVER (PARTITION BY depname ORDER BY salary,enroll_date,empno)
 FROM empsalary;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  WindowAgg
          Partition By: depname
          Order By: salary, enroll_date
@@ -1104,11 +1098,9 @@ FROM empsalary;
                Order By: salary, enroll_date, empno
                ->  Sort
                      Sort Key: depname, salary, enroll_date, empno
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: depname
-                           ->  Seq Scan on empsalary
+                     ->  Seq Scan on empsalary
  Optimizer: legacy query optimizer
-(13 rows)
+(11 rows)
 
 -- cleanup
 DROP TABLE empsalary;

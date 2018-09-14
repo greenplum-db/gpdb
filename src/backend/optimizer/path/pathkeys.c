@@ -1156,6 +1156,8 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 	EquivalenceClass *eclass;
 	int			strategy = 0;
 	ListCell   *lc;
+	Oid			lefttype;
+	Oid			righttype;
 
 	/* Get the expr's data type. */
 	typeoid = exprType(expr);
@@ -1180,9 +1182,23 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 	}
 	if (!lc)
 		elog(ERROR, "could not find operator family for equality operator %u", eqopoid);
+
+	/*
+	 * Get the equality operator's operand type. It might be different from the
+	 * original datatype, if the datatype itself doesn't have an equivalence
+	 * operator, but relies on casts. For example with two varchars, "a = b" uses
+	 * the text equals operator, i.e. "a::text = b::text".
+	 */
+	op_input_types(eqopoid, &lefttype, &righttype);
+	Assert(lefttype == righttype);
+
+	/* If this type is a domain type, get its base type. */
+	if (get_typtype(lefttype) == 'd')
+		lefttype = getBaseType(lefttype);
+
 	eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
 									  mergeopfamilies,
-									  typeoid,
+									  lefttype,
 									  exprCollation(expr),
 									  0,
 									  NULL,
