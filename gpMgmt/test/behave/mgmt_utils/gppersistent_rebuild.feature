@@ -57,3 +57,11 @@ Feature: persistent rebuild tests
         And the information of a "primary" segment on any host is saved
         When run gppersistent_rebuild with the saved content id
         Then gppersistent_rebuild should return a return code of 0
+
+    Scenario: persistent_rebuild starts database in restricted mode
+        Given the database is running
+        And the information of a "primary" segment on any host is saved
+        And gpAdminLogs directory has no "gpstart" files
+        Then run gppersistent_rebuild with the saved content id
+        And gppersistent_rebuild should return a return code of 0
+        And gpstart should print "[INFO]:-Starting gpstart with args: -a -R" to logfile
