@@ -235,8 +235,6 @@ cdb_build_distribution_pathkeys(PlannerInfo *root,
 		/* Find or create a Var node that references the specified column. */
 		Var		   *expr = find_indexkey_var(root, rel, attrs[i]);
 
-		Assert(expr);
-
 		/*
 		 * Find or create a pathkey. We distinguish two cases for performance
 		 * reasons: 1) If the relation in question is a child relation under
@@ -266,7 +264,6 @@ cdb_build_distribution_pathkeys(PlannerInfo *root,
 			Assert(list_length(canonicalPathKeyList) == 1);
 #endif
 			cpathkey = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, false);
-			Assert(cpathkey);
 		}
 		else
 		{
