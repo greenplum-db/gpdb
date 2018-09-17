@@ -276,6 +276,22 @@ SELECT ntile(0) OVER (ORDER BY ten), ten, four FROM tenk1;
 
 SELECT nth_value(four, 0) OVER (ORDER BY ten), ten, four FROM tenk1;
 
+-- Test Sort node collapsing
+EXPLAIN (COSTS OFF)
+SELECT * FROM
+  (SELECT depname,
+          sum(salary) OVER (PARTITION BY depname order by empno) depsalary,
+          min(salary) OVER (PARTITION BY depname, empno order by enroll_date) depminsalary
+   FROM empsalary) emp
+WHERE depname = 'sales';
+
+-- Test Sort node reordering
+EXPLAIN (COSTS OFF)
+SELECT
+  lead(1) OVER (PARTITION BY depname ORDER BY salary, enroll_date),
+  lag(1) OVER (PARTITION BY depname ORDER BY salary,enroll_date,empno)
+FROM empsalary;
+
 -- cleanup
 DROP TABLE empsalary;
 

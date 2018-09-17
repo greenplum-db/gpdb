@@ -511,9 +511,9 @@ SELECT sum(salary),
 FROM empsalary GROUP BY depname;
   sum  | row_number |  sum  
 -------+------------+-------
- 14600 |          3 | 14600
-  7400 |          2 | 22000
  25100 |          1 | 47100
+  7400 |          2 | 22000
+ 14600 |          3 | 14600
 (3 rows)
 
 -- identical windows with different names
@@ -1059,6 +1059,55 @@ SELECT ntile(0) OVER (ORDER BY ten), ten, four FROM tenk1;
 ERROR:  argument of ntile must be greater than zero
 SELECT nth_value(four, 0) OVER (ORDER BY ten), ten, four FROM tenk1;
 ERROR:  argument of nth_value must be greater than zero
+-- Test Sort node collapsing
+EXPLAIN (COSTS OFF)
+SELECT * FROM
+  (SELECT depname,
+          sum(salary) OVER (PARTITION BY depname order by empno) depsalary,
+          min(salary) OVER (PARTITION BY depname, empno order by enroll_date) depminsalary
+   FROM empsalary) emp
+WHERE depname = 'sales';
+                                  QUERY PLAN
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: depname, empno
+               Order By: enroll_date
+               ->  Sort
+                     Sort Key: depname, empno, enroll_date
+                     ->  WindowAgg
+                           Partition By: depname
+                           Order By: empno
+                           ->  Sort
+                                 Sort Key: depname, empno
+                                 ->  Table Scan on empsalary
+                                       Filter: ((depname)::text = 'sales'::text)
+(15 rows)
+
+-- Test Sort node reordering
+EXPLAIN (COSTS OFF)
+SELECT
+  lead(1) OVER (PARTITION BY depname ORDER BY salary, enroll_date),
+  lag(1) OVER (PARTITION BY depname ORDER BY salary,enroll_date,empno)
+FROM empsalary;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: depname
+               Order By: salary, enroll_date, empno
+               ->  Sort
+                     Sort Key: depname, salary, enroll_date, empno
+                     ->  WindowAgg
+                           Partition By: depname
+                           Order By: salary, enroll_date
+                           ->  Sort
+                                 Sort Key: depname, salary, enroll_date
+                                 ->  Table Scan on empsalary
+(14 rows)
+
 -- cleanup
 DROP TABLE empsalary;
 --
