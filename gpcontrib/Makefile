@@ -86,6 +86,9 @@ installcheck:
 	if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce installcheck; \
 	fi
+ifeq "$(with_zstd)" "yes"
+	$(MAKE) -C zstd installcheck
+endif
 	if [ -d "$(ext_dir)" ]; then \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
 	fi
