@@ -5,6 +5,8 @@ OBJS = zstd_compression.o
 CFLAGS_SL += -lzstd
 LDFLAGS_SL += -lzstd
 
+REGRESS = compression_zstd
+
 ifdef USE_PGXS
   PGXS := $(shell pg_config --pgxs)
   include $(PGXS)
