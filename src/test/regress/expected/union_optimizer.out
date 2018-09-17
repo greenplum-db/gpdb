@@ -493,28 +493,24 @@ explain (costs off)
   UNION
   SELECT * FROM t2) t
  WHERE ab = 'ab';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  GroupAggregate
          Group Key: (t1.a || t1.b)
          ->  Sort
                Sort Key: (t1.a || t1.b)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: (t1.a || t1.b)
-                     ->  GroupAggregate
-                           Group Key: (t1.a || t1.b)
-                           ->  Sort
-                                 Sort Key: (t1.a || t1.b)
-                                 ->  Append
-                                       ->  Result
-                                             Filter: (t1.a || t1.b) = 'ab'::text
-                                             ->  Result
-                                                   ->  Table Scan on t1
-                                       ->  Index Scan using t2_pkey on t2
-                                             Index Cond: ab = 'ab'::text
- Optimizer: PQO version 2.64.0
-(19 rows)
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: (t1.a || t1.b)
+                           ->  Result
+                                 Filter: (t1.a || t1.b) = 'ab'::text
+                                 ->  Result
+                                       ->  Table Scan on t1
+                     ->  Index Scan using t2_pkey on t2
+                           Index Cond: ab = 'ab'::text
+ Optimizer: PQO version 2.72.0
+(15 rows)
 
 reset enable_seqscan;
 reset enable_indexscan;

@@ -2,6 +2,7 @@ create schema hashagg_spill;
 set search_path to hashagg_spill;
 
 -- start_ignore
+set optimizer_force_multistage_agg = on;
 create language plpythonu;
 -- end_ignore
 

@@ -29,9 +29,10 @@ explain (costs off) select count(distinct d) from dqa_t1;
 ------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(4 rows)
+         ->  Aggregate
+               ->  Table Scan on dqa_t1
+ Optimizer: PQO version 2.72.0
+(5 rows)
 
 select count(distinct d) from dqa_t1 group by i;
  count 
@@ -242,17 +243,18 @@ select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d;
 (1 row)
 
 explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d;
-                   QUERY PLAN                   
-------------------------------------------------
+                     QUERY PLAN                     
+----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Hash Join
-               Hash Cond: dqa_t1.d = dqa_t2.d
-               ->  Table Scan on dqa_t1
-               ->  Hash
-                     ->  Table Scan on dqa_t2
- Optimizer: PQO version 2.70.0
-(8 rows)
+         ->  Aggregate
+               ->  Hash Join
+                     Hash Cond: dqa_t1.d = dqa_t2.d
+                     ->  Table Scan on dqa_t1
+                     ->  Hash
+                           ->  Table Scan on dqa_t2
+ Optimizer: PQO version 2.72.0
+(9 rows)
 
 select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d group by dqa_t2.dt;
  count 
@@ -316,26 +318,23 @@ select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d gr
 (56 rows)
 
 explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d group by dqa_t2.dt;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Result
-         ->  HashAggregate
+         ->  GroupAggregate
                Group Key: dqa_t2.dt
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: dqa_t2.dt
-                     ->  Result
-                           ->  GroupAggregate
-                                 Group Key: dqa_t2.dt
-                                 ->  Sort
-                                       Sort Key: dqa_t2.dt
-                                       ->  Hash Join
-                                             Hash Cond: dqa_t2.d = dqa_t1.d
-                                             ->  Table Scan on dqa_t2
-                                             ->  Hash
-                                                   ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(17 rows)
+               ->  Sort
+                     Sort Key: dqa_t2.dt
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: dqa_t2.dt
+                           ->  Hash Join
+                                 Hash Cond: dqa_t2.d = dqa_t1.d
+                                 ->  Table Scan on dqa_t2
+                                 ->  Hash
+                                       ->  Table Scan on dqa_t1
+ Optimizer: PQO version 2.72.0
+(14 rows)
 
 -- Distinct keys are not distribution keys
 select count(distinct c) from dqa_t1;
@@ -345,23 +344,16 @@ select count(distinct c) from dqa_t1;
 (1 row)
 
 explain (costs off) select count(distinct c) from dqa_t1;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice2; segments: 3)
-         ->  GroupAggregate
-               Group Key: c
-               ->  Sort
-                     Sort Key: c
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: c
-                           ->  GroupAggregate
-                                 Group Key: c
-                                 ->  Sort
-                                       Sort Key: c
-                                       ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(14 rows)
+         ->  Aggregate
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: c
+                     ->  Table Scan on dqa_t1
+ Optimizer: PQO version 2.72.0
+(7 rows)
 
 select count(distinct c) from dqa_t1 group by dt;
  count 
@@ -403,24 +395,19 @@ select count(distinct c) from dqa_t1 group by dt;
 (34 rows)
 
 explain (costs off) select count(distinct c) from dqa_t1 group by dt;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  Result
-         ->  HashAggregate
+         ->  GroupAggregate
                Group Key: dt
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: dt
-                     ->  Result
-                           ->  GroupAggregate
-                                 Group Key: dt
-                                 ->  Sort
-                                       Sort Key: dt, c
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                             Hash Key: c
-                                             ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(15 rows)
+               ->  Sort
+                     Sort Key: dt
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: dt
+                           ->  Table Scan on dqa_t1
+ Optimizer: PQO version 2.72.0
+(10 rows)
 
 select count(distinct c) from dqa_t1 group by d;
  count 
@@ -451,24 +438,17 @@ select count(distinct c) from dqa_t1 group by d;
 (23 rows)
 
 explain (costs off) select count(distinct c) from dqa_t1 group by d;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Result
-         ->  HashAggregate
+         ->  GroupAggregate
                Group Key: d
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: d
-                     ->  Result
-                           ->  GroupAggregate
-                                 Group Key: d
-                                 ->  Sort
-                                       Sort Key: d, c
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                             Hash Key: c
-                                             ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(15 rows)
+               ->  Sort
+                     Sort Key: d
+                     ->  Table Scan on dqa_t1
+ Optimizer: PQO version 2.72.0
+(8 rows)
 
 select count(distinct c), count(distinct dt) from dqa_t1;
  count | count 
@@ -611,29 +591,24 @@ select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c;
 (1 row)
 
 explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c;
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice4; segments: 3)
-         ->  GroupAggregate
-               Group Key: dqa_t1.dt
-               ->  Sort
-                     Sort Key: dqa_t1.dt
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                           Hash Key: dqa_t1.dt
-                           ->  HashAggregate
-                                 Group Key: dqa_t1.dt
-                                 ->  Hash Join
-                                       Hash Cond: dqa_t1.c = dqa_t2.c
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                             Hash Key: dqa_t1.c
-                                             ->  Table Scan on dqa_t1
-                                       ->  Hash
-                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                   Hash Key: dqa_t2.c
-                                                   ->  Table Scan on dqa_t2
- Optimizer: PQO version 2.70.0
-(20 rows)
+         ->  Aggregate
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: dqa_t1.dt
+                     ->  Hash Join
+                           Hash Cond: dqa_t1.c = dqa_t2.c
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: dqa_t1.c
+                                 ->  Table Scan on dqa_t1
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: dqa_t2.c
+                                       ->  Table Scan on dqa_t2
+ Optimizer: PQO version 2.72.0
+(15 rows)
 
 select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c group by dqa_t2.dt;
  count 
@@ -697,32 +672,27 @@ select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c g
 (56 rows)
 
 explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c group by dqa_t2.dt;
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
    ->  Result
-         ->  HashAggregate
+         ->  GroupAggregate
                Group Key: dqa_t2.dt
-               ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                     Hash Key: dqa_t2.dt
-                     ->  Result
-                           ->  GroupAggregate
-                                 Group Key: dqa_t2.dt
-                                 ->  Sort
-                                       Sort Key: dqa_t2.dt
-                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                             Hash Key: dqa_t1.dt
-                                             ->  Hash Join
-                                                   Hash Cond: dqa_t1.c = dqa_t2.c
-                                                   ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                                         Hash Key: dqa_t1.c
-                                                         ->  Table Scan on dqa_t1
-                                                   ->  Hash
-                                                         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                               Hash Key: dqa_t2.c
-                                                               ->  Table Scan on dqa_t2
- Optimizer: PQO version 2.70.0
-(23 rows)
+               ->  Sort
+                     Sort Key: dqa_t2.dt
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: dqa_t2.dt
+                           ->  Hash Join
+                                 Hash Cond: dqa_t1.c = dqa_t2.c
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                       Hash Key: dqa_t1.c
+                                       ->  Table Scan on dqa_t1
+                                 ->  Hash
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: dqa_t2.c
+                                             ->  Table Scan on dqa_t2
+ Optimizer: PQO version 2.72.0
+(18 rows)
 
 -- MPP-19037
 drop table if exists fact_route_aggregation;

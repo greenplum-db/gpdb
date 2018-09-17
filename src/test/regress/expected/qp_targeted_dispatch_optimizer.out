@@ -730,16 +730,15 @@ explain select count(*) from mpp7638 where a =1;
                                                     QUERY PLAN                                                     
 -------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Result  (cost=0.00..431.00 rows=1 width=1)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
                      ->  Partition Selector for mpp7638 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                           Partitions selected:  9 (out of 9)
+                           Partitions selected: 9 (out of 9)
                      ->  Dynamic Table Scan on mpp7638 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
                            Filter: a = 1
- Settings:  optimizer=on
- Optimizer status: PQO version 1.624
-(10 rows)
+ Optimizer: PQO version 2.74.0
+(9 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
 INFO:  Dispatch command to ALL contents
@@ -1044,18 +1043,16 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a);
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-         Hash Cond: "outer".max = public.table_a.a0
+         Hash Cond: (max(public.table_a.a1)) = public.table_a.a0
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
-               Hash Key: max
+               Hash Key: (max(public.table_a.a1))
                ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
                      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on
- Optimizer status: PQO version 1.624
-(13 rows)
+ Optimizer: PQO version 2.74.0
+(11 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
 INFO:  Dispatch command to ALL contents
@@ -1084,19 +1081,17 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-         Hash Cond: "outer".max = public.table_a.a0
+         Hash Cond: (max(public.table_a.a1)) = public.table_a.a0
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
-               Hash Key: max
+               Hash Key: (max(public.table_a.a1))
                ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
                      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
-                                       Filter: a0 = 1
+                           ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                                 Filter: a0 = 1
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
- Settings:  optimizer=on
- Optimizer status: PQO version 1.624
-(14 rows)
+ Optimizer: PQO version 2.74.0
+(12 rows)
 
 --start_ignore
 drop table table_a cascade;

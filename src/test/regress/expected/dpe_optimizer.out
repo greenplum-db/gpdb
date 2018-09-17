@@ -1623,32 +1623,27 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH
 --
 set gp_dynamic_partition_pruning=off;
 explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
-                                                                                                                QUERY PLAN                                                                                                                 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
    Merge Key: fact1.code
-   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
-         Group Key: fact1.code
-         ->  Sort  (cost=0.00..862.00 rows=1 width=16)
-               Sort Key: fact1.code
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
-                     Hash Key: fact1.code
-                     ->  Result  (cost=0.00..862.00 rows=1 width=16)
-                           ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
-                                 Group Key: fact1.code
-                                 ->  Sort  (cost=0.00..862.00 rows=1 width=8)
-                                       Sort Key: fact1.code
-                                       ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                                             Hash Cond: fact1.pid = dim1.pid
-                                             ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
-                                             ->  Hash  (cost=100.00..100.00 rows=34 width=4)
-                                                   ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                                                         Filter: fact1.dist = dim1.pid
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                                               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
-(23 rows)
+   ->  Sort  (cost=0.00..862.00 rows=1 width=16)
+         Sort Key: fact1.code
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+               Group Key: fact1.code
+               ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+                     Sort Key: fact1.code
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                           Hash Key: fact1.code
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                                 Hash Cond: fact1.pid = dim1.pid
+                                 ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
+                                 ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                                       ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(18 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
  code | count 
@@ -1659,32 +1654,27 @@ select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) g
 
 set gp_dynamic_partition_pruning=on;
 explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
-                                                                                                                QUERY PLAN                                                                                                                
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
    Merge Key: fact1.code
-   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
-         Group Key: fact1.code
-         ->  Sort  (cost=0.00..862.00 rows=1 width=16)
-               Sort Key: fact1.code
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
-                     Hash Key: fact1.code
-                     ->  Result  (cost=0.00..862.00 rows=1 width=16)
-                           ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
-                                 Group Key: fact1.code
-                                 ->  Sort  (cost=0.00..862.00 rows=1 width=8)
-                                       Sort Key: fact1.code
-                                       ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                                             Hash Cond: fact1.pid = dim1.pid
-                                             ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
-                                             ->  Hash  (cost=100.00..100.00 rows=34 width=4)
-                                                   ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                                                         Filter: fact1.dist = dim1.pid
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                                               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
-(23 rows)
+   ->  Sort  (cost=0.00..862.00 rows=1 width=16)
+         Sort Key: fact1.code
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+               Group Key: fact1.code
+               ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+                     Sort Key: fact1.code
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                           Hash Key: fact1.code
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                                 Hash Cond: fact1.pid = dim1.pid
+                                 ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
+                                 ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                                       ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(18 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
  code | count 

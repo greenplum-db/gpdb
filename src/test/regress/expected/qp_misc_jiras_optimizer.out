@@ -2418,8 +2418,8 @@ select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a
 (2 rows)
 
 explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
-                                                                                            QUERY PLAN                                                                                             
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.00 rows=1 width=4)
    ->  Sequence  (cost=0.00..1293.00 rows=1 width=4)
          ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=1 width=1)
@@ -2427,30 +2427,21 @@ explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping 
                      ->  Table Scan on tbl7553_test  (cost=0.00..431.00 rows=1 width=4)
          ->  Append  (cost=0.00..862.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: share0_ref2.j
+                     Group Key: share0_ref2.j
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                            Sort Key: share0_ref2.j
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                  Hash Key: share0_ref2.j
-                                 ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                       Group By: share0_ref2.j
-                                       ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                             Sort Key: share0_ref2.j
-                                             ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: share0_ref3.j, share0_ref3.j
+                     Group Key: share0_ref3.j, share0_ref3.j
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                            Sort Key: share0_ref3.j, share0_ref3.j
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                  Hash Key: share0_ref3.j, share0_ref3.j
-                                 ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                       Group By: share0_ref3.j, share0_ref3.j
-                                       ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                             Sort Key: share0_ref3.j, share0_ref3.j
-                                             ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on; optimizer_force_three_stage_scalar_dqa=off
- Optimizer status: PQO version 2.51.0
-(30 rows)
+                                 ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(21 rows)
 
 select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
  a | b 
@@ -3046,112 +3037,84 @@ reset gp_enable_agg_distinct_pruning;
 set enable_groupagg=off;
 -- both queries should use hashagg
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                                 QUERY PLAN                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  Result  (cost=0.00..862.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
-               Group By: qp_misc_jiras.tbl5994_test.j
-               ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                     Group By: qp_misc_jiras.tbl5994_test.j
-                     ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                           Sort Key: qp_misc_jiras.tbl5994_test.j
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                                 Hash Key: qp_misc_jiras.tbl5994_test.j
-                                 ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                                       Group By: qp_misc_jiras.tbl5994_test.j
-                                       ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                                             Sort Key: qp_misc_jiras.tbl5994_test.j
-                                             ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                                                   Hash Cond: qp_misc_jiras.tbl5994_test.j = qp_misc_jiras.tbl5994_test.j
-                                                   ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
-                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                                               ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=off; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
- Optimizer status: PQO version 2.51.1
-(22 rows)
+               Group Key: qp_misc_jiras.tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: qp_misc_jiras.tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: qp_misc_jiras.tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: qp_misc_jiras.tbl5994_test.j = qp_misc_jiras.tbl5994_test.j
+                                 ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(15 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  Result  (cost=0.00..862.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
-               Group By: qp_misc_jiras.tbl5994_test.j
-               ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                     Group By: qp_misc_jiras.tbl5994_test.j
-                     ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                           Sort Key: qp_misc_jiras.tbl5994_test.j
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                                 Hash Key: qp_misc_jiras.tbl5994_test.j
-                                 ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                                       Group By: qp_misc_jiras.tbl5994_test.j
-                                       ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                                             Sort Key: qp_misc_jiras.tbl5994_test.j
-                                             ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                                                   Hash Cond: qp_misc_jiras.tbl5994_test.i = qp_misc_jiras.tbl5994_test.i
-                                                   ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
-                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                                         ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=off; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
- Optimizer status: PQO version 2.51.1
-(21 rows)
+               Group Key: qp_misc_jiras.tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: qp_misc_jiras.tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: qp_misc_jiras.tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: qp_misc_jiras.tbl5994_test.i = qp_misc_jiras.tbl5994_test.i
+                                 ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(14 rows)
 
 set enable_groupagg=on;
 -- first query should use groupagg, and second one - hashagg
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                                 QUERY PLAN                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  Result  (cost=0.00..862.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
-               Group By: qp_misc_jiras.tbl5994_test.j
-               ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                     Group By: qp_misc_jiras.tbl5994_test.j
-                     ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                           Sort Key: qp_misc_jiras.tbl5994_test.j
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                                 Hash Key: qp_misc_jiras.tbl5994_test.j
-                                 ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                                       Group By: qp_misc_jiras.tbl5994_test.j
-                                       ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                                             Sort Key: qp_misc_jiras.tbl5994_test.j
-                                             ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                                                   Hash Cond: qp_misc_jiras.tbl5994_test.j = qp_misc_jiras.tbl5994_test.j
-                                                   ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
-                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                                               ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=on; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
- Optimizer status: PQO version 2.51.1
-(22 rows)
+               Group Key: qp_misc_jiras.tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: qp_misc_jiras.tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: qp_misc_jiras.tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: qp_misc_jiras.tbl5994_test.j = qp_misc_jiras.tbl5994_test.j
+                                 ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(15 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  Result  (cost=0.00..862.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
-               Group By: qp_misc_jiras.tbl5994_test.j
-               ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                     Group By: qp_misc_jiras.tbl5994_test.j
-                     ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                           Sort Key: qp_misc_jiras.tbl5994_test.j
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                                 Hash Key: qp_misc_jiras.tbl5994_test.j
-                                 ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
-                                       Group By: qp_misc_jiras.tbl5994_test.j
-                                       ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-                                             Sort Key: qp_misc_jiras.tbl5994_test.j
-                                             ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                                                   Hash Cond: qp_misc_jiras.tbl5994_test.i = qp_misc_jiras.tbl5994_test.i
-                                                   ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
-                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                                         ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=on; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
- Optimizer status: PQO version 2.51.1
-(21 rows)
+               Group Key: qp_misc_jiras.tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: qp_misc_jiras.tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: qp_misc_jiras.tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: qp_misc_jiras.tbl5994_test.i = qp_misc_jiras.tbl5994_test.i
+                                 ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: PQO version 2.74.0
+(14 rows)
 
 drop table qp_misc_jiras.tbl5994_test;
 CREATE TABLE qp_misc_jiras.tbl_8205 (
@@ -3605,25 +3568,20 @@ then 'MO' else 'foo' end
 case when ir_call_type_group_code in ('H', 'VH', 'PCB') then 'Thailland'
 else 'Unidentify' end
 ;
-                                                            QUERY PLAN                                                             
------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                                                  QUERY PLAN                                                                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
    ->  Result  (cost=0.00..431.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
-               Group By: "?column?", "?column?"
+               Group Key: (CASE WHEN ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[]) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ir_call_type_group_code::text = ANY ('{H,VH,PCB}'::text[]) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
                ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                     Sort Key: "?column?", "?column?"
+                     Sort Key: (CASE WHEN ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[]) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ir_call_type_group_code::text = ANY ('{H,VH,PCB}'::text[]) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                           Hash Key: "?column?", "?column?"
-                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                                 Group By: "?column?", "?column?"
-                                 ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                                       Sort Key: "?column?", "?column?"
-                                       ->  Result  (cost=0.00..431.00 rows=1 width=16)
-                                             ->  Table Scan on ir_voice_sms_and_data  (cost=0.00..431.00 rows=1 width=16)
- Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
-(16 rows)
+                           Hash Key: (CASE WHEN ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[]) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ir_call_type_group_code::text = ANY ('{H,VH,PCB}'::text[]) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
+                           ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                                 ->  Table Scan on ir_voice_sms_and_data  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: PQO version 2.74.0
+(11 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
 create table qp_misc_jiras.r
@@ -3883,27 +3841,18 @@ select  * from qp_misc_jiras.test_co where ctid='(33554432,32769)' and gp_segmen
 set gp_enable_explain_allstat=on;
 insert into qp_misc_jiras.test_heap select i, i from generate_series(0, 99999) i;
 explain analyze select count(*) from qp_misc_jiras.test_heap;
-                                                                         QUERY PLAN                                                                         
-------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   Rows out:  1 rows with 10 ms to end, start offset by 0.342 ms.
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-         Rows out:  3 rows at destination with 10 ms to end, start offset by 0.343 ms.
-         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-               Rows out:  Avg 1.0 rows x 3 workers.  Max 1 rows (seg0) with 10 ms to end, start offset by 0.638 ms.
-               allstat: seg_firststart_total_ntuples/seg0_0.638 ms_10 ms_1/seg1_0.636 ms_10 ms_1/seg2_0.637 ms_10 ms_1//end
-               ->  Table Scan on test_heap  (cost=0.00..431.00 rows=1 width=1)
-                     Rows out:  Avg 33333.7 rows x 3 workers.  Max 33350 rows (seg0) with 0.039 ms to first row, 5.346 ms to end, start offset by 0.638 ms.
-                     allstat: seg_firststart_total_ntuples/seg0_0.638 ms_5.346 ms_33350/seg1_0.636 ms_5.368 ms_33336/seg2_0.637 ms_5.264 ms_33315//end
- Slice statistics:
-   (slice0)    Executor memory: 382K bytes.
-   (slice1)    Executor memory: 163K bytes avg x 3 workers, 163K bytes max (seg0).
- Statement statistics:
-   Memory used: 128000K bytes
- Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.684
- Total runtime: 10.892 ms
-(18 rows)
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=51.450..51.450 rows=0 loops=2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1) (actual time=1.677..40.539 rows=50000 loops=2)
+         ->  Table Scan on test_heap  (cost=0.00..431.00 rows=1 width=1) (actual time=0.034..5.955 rows=16676 loops=2)
+               allstat: seg_firststart_total_ntuples//end
+   (slice0)    Executor memory: 1085K bytes.
+   (slice1)    Executor memory: 70K bytes avg x 3 workers, 70K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: PQO version 2.74.0
+ Total runtime: 103.438 ms
+(9 rows)
 
 -- start_ignore
 -- This is to verify MPP-8946
@@ -4017,40 +3966,30 @@ explain select * from qp_misc_jiras.r;
 (4 rows)
 
 explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
-                                                                             QUERY PLAN                                                                             
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.26 rows=1000 width=16)
-   Rows out:  1000 rows at destination with 60 ms to first row, 87 ms to end, start offset by 0.252 ms.
-   ->  Hash Join  (cost=0.00..862.20 rows=334 width=16)
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.26 rows=1000 width=16) (actual time=21.749..39.838 rows=500 loops=2)
+   ->  Hash Join  (cost=0.00..862.20 rows=334 width=16) (actual time=21.471..39.470 rows=174 loops=2)
          Hash Cond: r.a = s.b
-         Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 60 ms to first row, 86 ms to end, start offset by 0.527 ms.
-         Executor memory:  11K bytes avg, 11K bytes max (seg1).
-         Work_mem used:  11K bytes avg, 11K bytes max (seg1). Workfile: (0 spilling, 0 reused)
-         (seg1)   Hash chain length 1.0 avg, 1 max, using 342 of 8388619 buckets.
-         allstat: seg_firststart_total_ntuples/seg0_0.559 ms_86 ms_321/seg1_0.527 ms_86 ms_342/seg2_0.576 ms_86 ms_337//end
-         ->  Table Scan on r  (cost=0.00..431.01 rows=334 width=8)
-               Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 0.019 ms to first row, 0.037 ms to end, start offset by 60 ms.
-               allstat: seg_firststart_total_ntuples/seg0_61 ms_0.041 ms_321/seg1_60 ms_0.037 ms_342/seg2_61 ms_0.036 ms_337//end
-         ->  Hash  (cost=431.02..431.02 rows=334 width=8)
-               Rows in:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 0.131 ms to end, start offset by 60 ms.
-               allstat: seg_firststart_total_ntuples/seg0_61 ms_0.135 ms_321/seg1_60 ms_0.131 ms_342/seg2_61 ms_0.176 ms_337//end
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 347 of 8388608 buckets.
+ 
+         allstat: seg_firststart_total_ntuples//end
+         ->  Table Scan on r  (cost=0.00..431.01 rows=334 width=8) (actual time=0.032..0.062 rows=174 loops=2)
+               allstat: seg_firststart_total_ntuples//end
+         ->  Hash  (cost=431.02..431.02 rows=334 width=8) (actual time=0.309..0.309 rows=174 loops=2)
+               allstat: seg_firststart_total_ntuples//end
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=334 width=8) (actual time=0.123..0.183 rows=174 loops=2)
                      Hash Key: s.b
-                     Rows out:  Avg 333.3 rows x 3 workers at destination.  Max 342 rows (seg1) with 0.048 ms to first row, 0.081 ms to end, start offset by 60 ms.
-                     allstat: seg_firststart_total_ntuples/seg0_61 ms_0.076 ms_321/seg1_60 ms_0.081 ms_342/seg2_61 ms_0.117 ms_337//end
-                     ->  Table Scan on s  (cost=0.00..431.01 rows=334 width=8)
-                           Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 2.039 ms to first row, 2.069 ms to end, start offset by 2.265 ms.
-                           allstat: seg_firststart_total_ntuples/seg0_2.222 ms_2.232 ms_321/seg1_2.265 ms_2.069 ms_342/seg2_2.286 ms_1.974 ms_337//end
- Slice statistics:
-   (slice0)    Executor memory: 267K bytes.
-   (slice1)    Executor memory: 193K bytes avg x 3 workers, 193K bytes max (seg0).
-   (slice2)    Executor memory: 131378K bytes avg x 3 workers, 131399K bytes max (seg1).  Work_mem: 11K bytes max.
- Statement statistics:
-   Memory used: 1945600K bytes
- Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
- Total runtime: 87.064 ms
-(31 rows)
+                     allstat: seg_firststart_total_ntuples//end
+                     ->  Table Scan on s  (cost=0.00..431.01 rows=334 width=8) (actual time=0.018..0.040 rows=174 loops=2)
+                           allstat: seg_firststart_total_ntuples//end
+   (slice0)    Executor memory: 386K bytes.
+   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
+   (slice2)    Executor memory: 65802K bytes avg x 3 workers, 65802K bytes max (seg0).  Work_mem: 11K bytes max.
+ Memory used:  1945600kB
+ Optimizer: PQO version 2.74.0
+ Total runtime: 81.049 ms
+(21 rows)
 
 drop table qp_misc_jiras.r;
 drop table qp_misc_jiras.s;

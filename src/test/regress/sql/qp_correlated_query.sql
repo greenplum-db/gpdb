@@ -1,16 +1,12 @@
 
--- ----------------------------------------------------------------------
 -- Test: setup.sql
--- ----------------------------------------------------------------------
 
 -- start_ignore
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
 -- end_ignore
 
--- ----------------------------------------------------------------------
 -- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
--- ----------------------------------------------------------------------
 
 -- start_ignore
 create table qp_csq_t1(a int, b int) distributed by (a);
@@ -91,9 +87,7 @@ insert into E values(78,62);
 analyze E;
 -- end_ignore
 
--- -- -- --
 -- Basic queries with IN clause
--- -- -- --
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a in (select x);
 select A.i from A where A.i in (select B.i from B where A.i = B.i) order by A.i;
 select * from B where exists (select * from C,A where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i != 10)) order by 1, 2;
@@ -113,9 +107,7 @@ explain (costs off)
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
 
--- -- -- --
 -- Basic queries with NOT IN clause
--- -- -- --
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a not in (select x) order by a,x;
 select A.i from A where A.i not in (select B.i from B where A.i = B.i) order by A.i;
 select * from A where exists (select * from B,C where C.j = A.j and B.i not in (select sum(C.i) from C where C.i = B.i and C.i != 10)) order by 1,2;
@@ -139,14 +131,10 @@ select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i n
 
 
 
--- ----------------------------------------------------------------------
 -- Test: csq_heap_any.sql - Correlated Subquery: CSQ using ANY clause (Heap)
--- ----------------------------------------------------------------------
 
 
--- -- -- --
 -- Basic queries with ANY clause
--- -- -- --
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x);
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x) order by a, x;
 select A.i from A where A.i = any (select B.i from B where A.i = B.i) order by A.i;
@@ -166,14 +154,10 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C whe
 select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
 
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using ALL clause (Heap)
--- ----------------------------------------------------------------------
 
 
--- -- -- --
 -- Basic queries with ALL clause
--- -- -- --
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = all (select x) order by a;
 select A.i from A where A.i = all (select B.i from B where A.i = B.i) order by A.i;
 
@@ -189,14 +173,10 @@ explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C whe
 select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
 
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using EXISTS clause (Heap)
--- ----------------------------------------------------------------------
 
 
--- -- -- -- 
 -- Basic queries with EXISTS clause
--- -- -- --
 select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
 select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a) order by b;
 select A.i from A where exists(select B.i from B where A.i = B.i) order by A.i;
@@ -225,9 +205,7 @@ select * from A where exists (select * from C where C.i = A.i and exists (select
 select * from A where exists (select * from C where C.i = A.i and not exists (select * from B where C.j = B.j and B.j < 10)) order by 1,2;
 
 select * from A,B,C where C.i = A.i and exists (select C.j where C.j = B.j and A.j < 10);
--- -- -- --
 -- Basic queries with NOT EXISTS clause
--- -- -- --
 select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a);
 select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a) order by b;
 select A.i from A where not exists(select B.i from B where A.i = B.i) order by A.i;
@@ -263,9 +241,7 @@ explain select * from A where not exists (select sum(c.i) from C where C.i = A.i
 select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
 
 
--- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
--- ----------------------------------------------------------------------
 
 -- start_ignore
 drop table if exists qp_csq_t4;
@@ -279,9 +255,7 @@ analyze qp_csq_t4;
 
 -- end_ignore
 
--- -- -- --
 -- Basic CSQ with UPDATE statements
--- -- -- --
 select * from qp_csq_t4 order by a;
 update qp_csq_t4 set a = (select y from qp_csq_t2 where x=a) where b < 8;
 select * from qp_csq_t4 order by a;
@@ -299,9 +273,7 @@ select * from D;
 update D set i = 22222 from C where C.i = D.i and not exists (select C.j from C,B where C.j = B.j and D.j < 10);
 select * from D;
 
--- -- -- --
 -- Basic CSQ with DELETE statements
--- -- -- --
 select * from qp_csq_t4 order by a;
 delete from qp_csq_t4 where a <= (select min(y) from qp_csq_t2 where x=a);
 select * from qp_csq_t4 order by a;
@@ -319,14 +291,10 @@ select * from D order by D.i;
 
 
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using WHERE clause (Heap)
--- ----------------------------------------------------------------------
 
 
--- -- -- --
 -- Basic queries with WHERE clause
--- -- -- --
 select a, (select y from qp_csq_t2 where x=a) from qp_csq_t1 where b < 8 order by a;
 select a, x from qp_csq_t2, qp_csq_t1 where qp_csq_t1.a = (select x) order by a;
 select a from qp_csq_t1 where (select (y*2)>b from qp_csq_t2 where a=x) order by a;
@@ -335,21 +303,15 @@ SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a order by a;
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ in select list (Heap) 
--- ----------------------------------------------------------------------
 
 
--- -- -- --
 -- Basic queries in SELECT list
--- -- -- --
 select A.i, (select C.j from C group by C.j having max(C.j) = any (select min(B.j) from B)) as C_j from A,B,C where A.i = 99 order by A.i, C_j limit 10;
 select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x)) as avg_x from qp_csq_t1 order by 1;
 
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
--- ----------------------------------------------------------------------
 
 select A.i, B.i from A, B where (A.i,A.j) = (select min(B.i),min(B.j) from B where B.i = A.i) order by A.i, B.i;
 select A.i, B.i from A, B where (A.i,A.j) = all(select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
@@ -364,13 +326,9 @@ select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < 
 
 select A.i as A_i, B.i as B_i,C.i as C_i from A, B, C where (A.i,B.i) = (select min(A.i), min(B.i) from A,B where A.i = C.i and B.i = C.i) order by A_i, B_i, C_i;
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using HAVING clause (Heap) 
--- ----------------------------------------------------------------------
 
--- -- -- --
 -- Basic queries with HAVING clause
--- -- -- -- 
 select A.i from A group by A.i having min(A.i) not in (select B.i from B where A.i = B.i) order by A.i;
 select A.i, B.i, C.j from A, B, C group by A.j,A.i,B.i,C.j having max(A.j) = any(select max(C.j) from C where C.j = A.j) order by A.i, B.i, C.j limit 10; 
 select A.i, B.i, C.j from A, B, C where exists (select C.j from C group by C.j having max(C.j) = all (select min(B.j) from B)) order by A.i, B.i, C.j limit 10;
@@ -390,9 +348,7 @@ SELECT name, department, salary FROM csq_emp ea group by name, department,salary
     (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department);
 
 
--- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multi-row subqueries (Heap)
--- ----------------------------------------------------------------------
 
 -- start_ignore
 drop table if exists Employee;
@@ -647,9 +603,7 @@ SELECT id, first_name, salary from employee
 
 
 
--- ----------------------------------------------------------------------
 -- Test: Misc Queries
--- ----------------------------------------------------------------------
 
 -- start_ignore
 drop table if exists with_test1 cascade;
@@ -859,9 +813,7 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
 EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
 SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
 
--- ----------------------------------------------------------------------
 -- Test: teardown.sql
--- ----------------------------------------------------------------------
 
 -- start_ignore
 drop schema qp_correlated_query cascade;

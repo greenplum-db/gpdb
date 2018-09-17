@@ -96,23 +96,21 @@ analyze t2;
 -- infer over equalities
 --
 explain select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..862.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
-               ->  Hash Join  (cost=0.00..862.00 rows=1 width=1)
-                     Hash Cond: t1.x = t2.x
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           Hash Key: t1.x
-                           ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=4)
-                                 Filter: x = 100
-                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                           ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
-                                 Filter: x = 100
- Settings:  optimizer=on
- Optimizer status: PQO version 2.39.2
-(14 rows)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=1)
+         ->  Hash Join  (cost=0.00..862.00 rows=1 width=1)
+               Hash Cond: t1.x = t2.x
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: t1.x
+                     ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: x = 100
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                     ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: x = 100
+ Optimizer: PQO version 2.72.0
+(12 rows)
 
 select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
  count 
