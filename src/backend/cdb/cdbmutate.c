@@ -1385,13 +1385,9 @@ failIfUpdateTriggers(Relation relation)
 	}
 
 	if (found || child_triggers(relation->rd_id, TRIGGER_TYPE_UPDATE))
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-						errmsg("UPDATE on distributed key columns is now supported in general."
-						       "But disabled for current statement because result relation has update triggers. "
-							   "Running trigger across segment is not supported")));
-		relation_close(relation, NoLock);
-	}
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+				 errmsg("UPDATE on distributed key column not allowed on relation with update triggers")));
 }
 
 static void
