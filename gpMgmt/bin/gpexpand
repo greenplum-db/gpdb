@@ -1751,7 +1751,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
     def sync_new_mirrors(self):
         """ This method will execute gprecoverseg so that all new segments sync with their mirrors."""
-        if self.gparray.get_mirroring_enabled() == True:
+        if self.gparray.get_mirroring_enabled():
             self.logger.info('Starting new mirror segment synchronization')
             cmd = GpRecoverSeg(name="gpexpand syncing mirrors", options="-a -F")
             cmd.run(validateAfter=True)
