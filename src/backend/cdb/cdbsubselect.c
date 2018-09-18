@@ -1241,7 +1241,8 @@ is_targetlist_nullable(Query *subq)
 			 */
 			Const	   *constant = (Const *) tle->expr;
 
-			if (strcmp(tle->resname, DUMMY_COLUMN_NAME) != 0
+			if ((strcmp(tle->resname, DUMMY_COLUMN_NAME) != 0
+				|| constant->consttypmod == -1)
 				&& constant->constisnull == true)
 			{
 				result = true;
