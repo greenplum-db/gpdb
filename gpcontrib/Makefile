@@ -29,26 +29,22 @@ all: gpcloud pxf mapreduce
 
 gpcloud:
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
-		echo "gpcloud enabled"; \
 		$(MAKE) -C gpcloud && \
 		$(MAKE) -C gpcloud/bin/gpcheckcloud; \
 	fi
 
 pxf:
 	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
 		$(MAKE) -C pxf; \
 	fi
 
 mapreduce:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
-		echo "gpmapreduce enabled"; \
 		$(MAKE) -C gpmapreduce; \
 	fi
 
 gphdfs:
 	@if [ "$(enable_gphdfs)" = "yes" ]; then \
-		echo "gphdfs enabled"; \
 		$(MAKE) -C gphdfs; \
 	fi
 
@@ -64,7 +60,9 @@ install:
 	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
 	fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf install; fi
+	@if [ "$(enable_pxf)" = "yes" ]; then \
+		$(MAKE) -C pxf install; \
+	fi
 	@if [ "$(enable_gphdfs)" = "yes" ]; then \
 		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
 	fi
@@ -95,6 +93,5 @@ endif
 
 unittest-check:
 	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
 		$(MAKE) -C pxf unittest-check; \
 	fi

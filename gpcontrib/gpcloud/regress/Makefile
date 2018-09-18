@@ -1,4 +1,5 @@
-top_builddir = $(shell cd ../../.. && pwd)
+top_builddir = ../../..
+subdir = gpcontrib/gpcloud/regress
 pgxs_dir = $(top_builddir)
 
 config_file := \/home\/gpadmin\/s3\.conf
