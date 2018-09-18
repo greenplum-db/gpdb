@@ -194,7 +194,7 @@ extern MemoryAccountIdType ActiveMemoryAccountId;
  * that will not be executed in current slice
  */
 #define CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, planNode, NodeType) \
-		(MEMORY_OWNER_TYPE_Undefined != planNode->memoryAccountId) ?\
+		(MEMORY_OWNER_TYPE_Undefined != planNode->memoryAccountId && MemoryAccounting_IsLiveAccount(planNode->memoryAccountId)) ?\
 			planNode->memoryAccountId : \
 			(isAlienPlanNode ? MEMORY_OWNER_TYPE_Exec_AlienShared : \
 				MemoryAccounting_CreateAccount(((Plan*)node)->operatorMemKB == 0 ? \
@@ -206,7 +206,7 @@ extern MemoryAccountIdType ActiveMemoryAccountId;
  */
 #define SAVE_EXECUTOR_MEMORY_ACCOUNT(execState, curMemoryAccountId)\
 		Assert(MEMORY_OWNER_TYPE_Undefined == ((PlanState *)execState)->plan->memoryAccountId || \
-		MEMORY_OWNER_TYPE_Undefined == ((PlanState *)execState)->plan->memoryAccountId || \
+		!MemoryAccounting_IsLiveAccount(((PlanState *)execState)->plan->memoryAccountId) || \
 		curMemoryAccountId == ((PlanState *)execState)->plan->memoryAccountId);\
 		((PlanState *)execState)->plan->memoryAccountId = curMemoryAccountId;
 
@@ -233,6 +233,9 @@ MemoryAccounting_GetAccountCurrentBalance(MemoryAccountIdType memoryAccountId);
 
 extern uint64
 MemoryAccounting_GetGlobalPeak(void);
+
+extern bool
+MemoryAccounting_IsLiveAccount(MemoryAccountIdType id);
 
 extern void
 MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,

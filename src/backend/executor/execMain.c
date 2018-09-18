@@ -263,7 +263,8 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 	PlannedStmt *plannedStmt = queryDesc->plannedstmt;
 
-	if (MEMORY_OWNER_TYPE_Undefined == plannedStmt->memoryAccountId)
+	if (MEMORY_OWNER_TYPE_Undefined == plannedStmt->memoryAccountId ||
+		!MemoryAccounting_IsLiveAccount(plannedStmt->memoryAccountId))
 	{
 		plannedStmt->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
 	}
