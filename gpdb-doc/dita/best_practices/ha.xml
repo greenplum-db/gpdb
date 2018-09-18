@@ -438,7 +438,7 @@
             <codeph>gpaddmirrors -i <varname>mirror_config_file</varname></codeph> with a custom
           mirror configuration file to create the mirrors for each block. You must create the file
           system locations for the mirror segments before you run <codeph>gpaddmirrors</codeph>. See
-          the <codeph>gpadmirrors</codeph> reference page in the <cite>Greenplum Database Management
+          the <codeph>gpaddmirrors</codeph> reference page in the <cite>Greenplum Database Management
             Utility Guide</cite> for details. </p>
         <p>If you expand a system that has block mirroring or you want to implement block mirroring
           at the same time you expand a cluster, it is recommended that you complete the expansion
