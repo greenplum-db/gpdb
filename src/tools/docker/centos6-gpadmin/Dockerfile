@@ -19,4 +19,3 @@ RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
 
 USER gpadmin
-
