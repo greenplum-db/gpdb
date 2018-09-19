@@ -1191,6 +1191,9 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
  * This method simply determines if the targetlist i.e. (t1.x, t2.y) is nullable.
  * A targetlist is "nullable" if all entries in the targetlist
  * cannot be proven to be non-nullable.
+ *
+ * We don't use NULL for the 'dummy' column, because is_targetlist_nullable() 
+ * would then treat the target list as nullable
  */
 static bool
 is_targetlist_nullable(Query *subq)
@@ -1241,9 +1244,10 @@ is_targetlist_nullable(Query *subq)
 			 */
 			Const	   *constant = (Const *) tle->expr;
 
-			if ((strcmp(tle->resname, DUMMY_COLUMN_NAME) != 0
-				|| constant->consttypmod == -1)
-				&& constant->constisnull == true)
+			/**
+			 *  Note: the 'dummy' column is not NULL, so we don't need any special handling for it 
+			 */	
+			if (constant->constisnull == true)
 			{
 				result = true;
 			}
