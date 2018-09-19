@@ -22,9 +22,4 @@ cdbpathtoplan_create_flow(PlannerInfo  *root,
                           Relids        relids,
                           Plan         *plan);
 
-Motion *
-cdbpathtoplan_create_motion_plan(PlannerInfo   *root,
-                                 CdbMotionPath *path,
-                                 Plan          *subplan);
-
 #endif   /* CDBPATHTOPLAN_H */

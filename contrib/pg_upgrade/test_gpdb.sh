@@ -186,6 +186,51 @@ usage()
 	exit 0
 }
 
+# Diffs the dump1.sql and dump2.sql files in the $temp_root, and exits
+# accordingly (exit code 1 if they differ, 0 otherwise).
+diff_and_exit() {
+	args=
+	pgopts=
+
+	if (( $smoketest )) ; then
+		# After a smoke test, we only have the master available to query.
+		args='-m'
+		pgopts='-c gp_session_role=utility'
+	fi
+
+	# Start the new cluster, dump it and stop it again when done. We need to bump
+	# the exports to the new cluster for starting it but reset back to the old
+	# when done. Set the same variables as gpdemo-env.sh exports. Since creation
+	# of that file can collide between the gpdemo clusters, perform it manually
+	export PGPORT=17432
+	export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
+	gpstart -a ${args}
+
+	echo -n 'Dumping database schema after upgrade... '
+	PGOPTIONS="${pgopts}" ${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump2.sql"
+	echo done
+
+	gpstop -a ${args}
+	export PGPORT=15432
+	export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
+
+	# Since we've used the same pg_dumpall binary to create both dumps, whitespace
+	# shouldn't be a cause of difference in the files but it is. Partitioning info
+	# is generated via backend functionality in the cluster being dumped, and not
+	# in pg_dump, so whitespace changes can trip up the diff.
+	# FIXME: Maybe we should not use '-w' in the future since it is too aggressive.
+	if diff -w "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
+		rm -f regression.diffs
+		echo "Passed"
+		exit 0
+	fi
+
+	# To aid debugging in pipelines, print the diff to stdout
+	diff -du "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
+	echo "Error: before and after dumps differ"
+	exit 1
+}
+
 # Main
 temp_root=`pwd`/tmp_check
 base_dir=`pwd`
@@ -280,9 +325,9 @@ if (( $gpcheckcat )) ; then
 	fi
 fi
 
-if (( !$smoketest )) ; then
-	${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump1.sql"
-fi
+echo -n 'Dumping database schema before upgrade... '
+${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump1.sql"
+echo done
 
 gpstop -a
 
@@ -309,10 +354,9 @@ PGOPTIONS=""; unset PGOPTIONS
 upgrade_qd "${temp_root}/upgrade/qd" "${OLD_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/qddir/demoDataDir-1/"
 
 # If this is a minimal smoketest to ensure that we are handling all objects
-# properly, then exit here as we have now successfully upgraded the QD.
+# properly, then check that the upgraded schema is identical and exit.
 if (( $smoketest )) ; then
-	restore_cluster
-	exit
+	diff_and_exit
 fi
 
 # Upgrade all the segments and mirrors. In a production setup the segments
@@ -347,36 +391,4 @@ done
 
 . ${NEW_BINDIR}/../greenplum_path.sh
 
-# Start the new cluster, dump it and stop it again when done. We need to bump
-# the exports to the new cluster for starting it but reset back to the old
-# when done. Set the same variables as gpdemo-env.sh exports. Since creation
-# of that file can collide between the gpdemo clusters, perform it manually
-export PGPORT=17432
-export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
-gpstart -a
-
-# Run any post-upgrade tasks to prep the cluster for diffing
-if [ -f "test_gpdb_post.sql" ]; then
-	psql -f test_gpdb_post.sql regression
-fi
-
-${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump2.sql"
-gpstop -a
-export PGPORT=15432
-export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
-
-# Since we've used the same pg_dumpall binary to create both dumps, whitespace
-# shouldn't be a cause of difference in the files but it is. Partitioning info
-# is generated via backend functionality in the cluster being dumped, and not
-# in pg_dump, so whitespace changes can trip up the diff.
-# FIXME: Maybe we should not use '-w' in the future since it is too aggressive.
-if diff -w "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
-	rm -f regression.diffs
-	echo "Passed"
-	exit 0
-else
-	# To aid debugging in pipelines, print the diff to stdout
-	diff -du "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
-	echo "Error: before and after dumps differ"
-	exit 1
-fi
+diff_and_exit

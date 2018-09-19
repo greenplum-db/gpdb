@@ -726,7 +726,7 @@ cdb_grouping_planner(PlannerInfo *root,
 				case 1:
 					/*
 					 * The DQA-planning code works by redistributing data based on
-					 * the DQA argument. That only works if the datatype is GDPB-
+					 * the DQA argument. That only works if the datatype is GPDB-
 					 * hashable.
 					 */
 					if (areAllGreenplumDbHashable(agg_costs->dqaArgs))

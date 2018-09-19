@@ -418,10 +418,14 @@ select * from shipped_view;
 create rule shipped_view_update as on update to shipped_view do instead
     update shipped set partnum = new.partnum, value = new.value
         where ttype = new.ttype and ordnum = new.ordnum;
+update shipped_view set value = 11
+    from int4_tbl a join int4_tbl b
+      on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1))
+    where ordnum = a.f1;
 select * from shipped_view;
- ttype | ordnum | partnum |  value  
--------+--------+---------+---------
- wt    |      0 | 1       | 1234.56
+ ttype | ordnum | partnum | value 
+-------+--------+---------+-------
+ wt    |      0 | 1       |    11
 (1 row)
 
 select f1, ss1 as relabel from
@@ -565,24 +569,6 @@ select (select (a.*)::text) from view_a a;
 (1 row)
 
 --
--- Test case for sublinks pushed down into subselects via join alias expansion
---
--- Greenplum note: This query will only work with ORCA. This type of query
--- was not supported in postgres versions prior to 8.4, and thus was never
--- supported in the planner. After 8.4 versions, the planner works, but
--- the plan it creates is not currently parallel safe.
-select
-  (select sq1) as qq1
-from
-  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
-   from int8_tbl) sq0
-  join
-  int4_tbl i4 on dummy = i4.f1;
- qq1 
------
-(0 rows)
-
---
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
@@ -607,6 +593,24 @@ with q as (select max(f1) from int4_tbl group by f1 order by f1)
  (123456)
  (2147483647)
 (5 rows)
+
+--
+-- Test case for sublinks pushed down into subselects via join alias expansion
+--
+-- Greenplum note: This query will only work with ORCA. This type of query
+-- was not supported in postgres versions prior to 8.4, and thus was never
+-- supported in the planner. After 8.4 versions, the planner works, but
+-- the plan it creates is not currently parallel safe.
+select
+  (select sq1) as qq1
+from
+  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
+   from int8_tbl) sq0
+  join
+  int4_tbl i4 on dummy = i4.f1;
+ qq1 
+-----
+(0 rows)
 
 --
 -- Test case for cross-type partial matching in hashed subplan (bug #7597)

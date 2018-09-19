@@ -992,7 +992,9 @@ make_union_motion(Plan *lefttree, int destSegIndex, bool useExecutorVarFormat)
 
 	outSegIdx[0] = destSegIndex;
 
-	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree,
+						 0, NULL, NULL, NULL, NULL, /* no ordering */
+						 useExecutorVarFormat);
 	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
 	return motion;
 }
@@ -1000,8 +1002,9 @@ make_union_motion(Plan *lefttree, int destSegIndex, bool useExecutorVarFormat)
 Motion *
 make_sorted_union_motion(PlannerInfo *root,
 						 Plan *lefttree,
+						 int numSortCols, AttrNumber *sortColIdx,
+						 Oid *sortOperators, Oid *collations, bool *nullsFirst,
 						 int destSegIndex,
-						 List *sortPathKeys,
 						 bool useExecutorVarFormat)
 {
 	Motion	   *motion;
@@ -1009,7 +1012,9 @@ make_sorted_union_motion(PlannerInfo *root,
 
 	outSegIdx[0] = destSegIndex;
 
-	motion = make_motion(root, lefttree, sortPathKeys, useExecutorVarFormat);
+	motion = make_motion(root, lefttree,
+						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
+						 useExecutorVarFormat);
 	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
 	return motion;
 }
@@ -1032,7 +1037,9 @@ make_hashed_motion(Plan *lefttree,
 			elog(ERROR, "cannot use expression as distribution key, because it is not hashable");
 	}
 
-	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree,
+						 0, NULL, NULL, NULL, NULL, /* no ordering */
+						 useExecutorVarFormat);
 	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, 0, NULL);
 	return motion;
 }
@@ -1042,7 +1049,9 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat)
 {
 	Motion	   *motion;
 
-	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree,
+						 0, NULL, NULL, NULL, NULL, /* no ordering */
+						 useExecutorVarFormat);
 
 	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 0, NULL);
 	return motion;
@@ -1053,7 +1062,9 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 {
 	Motion	   *motion;
 
-	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree,
+						 0, NULL, NULL, NULL, NULL, /* no ordering */
+						 useExecutorVarFormat);
 
 	Assert(segidColIdx > 0 && segidColIdx <= list_length(lefttree->targetlist));
 
@@ -1385,13 +1396,9 @@ failIfUpdateTriggers(Relation relation)
 	}
 
 	if (found || child_triggers(relation->rd_id, TRIGGER_TYPE_UPDATE))
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-						errmsg("UPDATE on distributed key columns is now supported in general."
-						       "But disabled for current statement because result relation has update triggers. "
-							   "Running trigger across segment is not supported")));
-		relation_close(relation, NoLock);
-	}
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+				 errmsg("UPDATE on distributed key column not allowed on relation with update triggers")));
 }
 
 static void
@@ -1671,7 +1678,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	 *   is not correct after process_targetlist_for_splitupdate function, we will
 	 *   correct it in correct_delete_idxes function.)
 	 * 2.we need to get the old value which would be used to compute the segment ID,
-	 *   but the lower plan node have no TargetEntry for old values, so we need to add
+	 *   but the lower plan node have no TargetEntry for old values, so we need to
 	 *   add the TargetEntry of old values to the lower plan node, we use the varsAbsent
 	 *   to record the TargetEntry for old values.
 	 */
@@ -1692,8 +1699,8 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	add_absent_targetlist(root, subplan, varsAbsent, resultRelationsIdx);
 
 	/*
-	 * the deleteColIdx which is returned by process_targetlist_for_splitupdate funciton
-	 * is not correct, now we correct it to the index of old values
+	 * The deleteColIdx which is returned by process_targetlist_for_splitupdate
+	 * function is not correct, now we correct it to the index of old values.
 	 */
 	correct_delete_idxes(deleteColIdx, subplan->targetlist, varsAbsent, absentAttrStart);
 
@@ -1731,7 +1738,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	splitupdate->plan.total_cost += (splitupdate->plan.plan_rows * cpu_tuple_cost);
 	splitupdate->plan.plan_width = subplan->plan_width;
 
-	/* we need an motion node above the SplitUpdate, so mark it as strewn */
+	/* We need a motion node above the SplitUpdate, so mark it as strewn */
 	mark_plan_strewn((Plan *) splitupdate);
 
 	mt->action_col_idxes = lappend_int(mt->action_col_idxes, actionColIdx);

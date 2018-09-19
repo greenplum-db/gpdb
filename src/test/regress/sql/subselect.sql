@@ -241,6 +241,11 @@ create rule shipped_view_update as on update to shipped_view do instead
     update shipped set partnum = new.partnum, value = new.value
         where ttype = new.ttype and ordnum = new.ordnum;
 
+update shipped_view set value = 11
+    from int4_tbl a join int4_tbl b
+      on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1))
+    where ordnum = a.f1;
+
 select * from shipped_view;
 
 select f1, ss1 as relabel from
@@ -335,6 +340,16 @@ select (select (select view_a)) from view_a;
 select (select (a.*)::text) from view_a a;
 
 --
+-- Check that whole-row Vars reading the result of a subselect don't include
+-- any junk columns therein
+--
+
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
+
+--
 -- Test case for sublinks pushed down into subselects via join alias expansion
 --
 -- Greenplum note: This query will only work with ORCA. This type of query
@@ -349,16 +364,6 @@ from
    from int8_tbl) sq0
   join
   int4_tbl i4 on dummy = i4.f1;
-
---
--- Check that whole-row Vars reading the result of a subselect don't include
--- any junk columns therein
---
-
-select q from (select max(f1) from int4_tbl group by f1 order by f1) q
-  order by max;
-with q as (select max(f1) from int4_tbl group by f1 order by f1)
-  select q from q;
 
 --
 -- Test case for cross-type partial matching in hashed subplan (bug #7597)

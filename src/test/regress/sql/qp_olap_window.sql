@@ -23,7 +23,6 @@ drop table ow_vendor;
 drop table ow_product;
 drop table ow_sale;
 drop table ow_sale_ord;
-drop table ow_util;
 
 create table ow_customer 
 (
@@ -82,14 +81,6 @@ create table ow_sale_ord
 	
 ) distributed by (cn,vn,pn);
 
-create table ow_util
-(
-	xn int not null,
-	
-	primary key (xn)
-	
-) distributed by (xn);
-
 -- Customers
 insert into ow_customer values 
   ( 1, 'Macbeth', 'Inverness'),
@@ -146,14 +137,6 @@ insert into ow_sale_ord values
   ( 10,3, 30, 600, '1401-6-1', 12, 5),
   ( 11,4, 40, 700, '1401-6-1', 1, 1),
   ( 12,4, 40, 800, '1401-6-1', 1, 1);
-
--- ow_util
-
-insert into ow_util values 
-  (1),
-  (20),
-  (300);
-
 -- end_ignore
 
 set datestyle="ISO, MDY";
@@ -24047,6 +24030,5 @@ drop table ow_vendor;
 drop table ow_product;
 drop table ow_sale;
 drop table ow_sale_ord;
-drop table ow_util;
-drop function ow_count_operator;
+drop function ow_count_operator(text, text);
 -- end_ignore

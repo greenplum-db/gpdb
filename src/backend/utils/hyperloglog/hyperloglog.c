@@ -33,7 +33,7 @@
  *
  * We have updated, removed and modified the content of this file.
  *
- * 	1. We have removed some funciton definitions in as we did not need
+ * 	1. We have removed some function definitions in as we did not need
  * 	them for implementing incremental analyze.
  * 	2. We modified utility function definitions as most of them are used in the
  * 	code internally and not exposed to the user.Function parameters are

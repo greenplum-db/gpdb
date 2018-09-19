@@ -43,6 +43,8 @@ static PathKey *make_canonical_pathkey(PlannerInfo *root,
 static bool pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys);
 static bool right_merge_direction(PlannerInfo *root, PathKey *pathkey);
 
+static bool op_in_eclass_opfamily(Oid opno, EquivalenceClass *eclass);
+
 
 /****************************************************************************
  *		PATHKEY CONSTRUCTION AND REDUNDANCY TESTING
@@ -104,6 +106,28 @@ replace_expression_mutator(Node *node, void *context)
 	return expression_tree_mutator(node, replace_expression_mutator, (void *) context);
 }
 
+/*
+ * op_in_eclass_opfamily
+ *
+ *		Return t iff operator 'opno' is in eclass's operator family.
+ *
+ * This function only considers search operators, not ordering operators.
+ */
+static bool
+op_in_eclass_opfamily(Oid opno, EquivalenceClass *eclass)
+{
+	ListCell	*lc;
+
+	foreach(lc, eclass->ec_opfamilies)
+	{
+		Oid		opfamily = lfirst_oid(lc);
+
+		if (op_in_opfamily(opno, opfamily))
+			return true;
+	}
+	return false;
+}
+
 /**
  * Generate implied qual
  * Input:
@@ -140,8 +164,6 @@ gen_implied_qual(PlannerInfo *root,
 		return;
 
 	new_qualscope = pull_varnos(new_clause);
-
-	/* distribute_qual_to_rels doesn't accept pseudoconstants? XXX: doesn't it? */
 	if (new_qualscope == NULL)
 		return;
 
@@ -219,16 +241,49 @@ gen_implied_qual(PlannerInfo *root,
 static void
 gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 {
+	Expr	   *clause = rinfo->clause;
+	Oid			opno,
+				collation,
+				item1_type,
+				item2_type;
+	Expr	   *item1;
+	Expr	   *item2;
 	ListCell   *lcec;
 
-	/*
-	 * Is it safe to infer from this clause?
-	 */
-	if (contain_volatile_functions((Node *) rinfo->clause) ||
-		contain_subplans((Node *) rinfo->clause))
-	{
+	if (rinfo->pseudoconstant)
 		return;
+	if (contain_volatile_functions((Node *) clause) ||
+		contain_subplans((Node *) clause))
+		return;
+
+	if (is_opclause(clause))
+	{
+		if (list_length(((OpExpr *) clause)->args) != 2)
+			return;
+		opno = ((OpExpr *) clause)->opno;
+		collation = ((OpExpr *) clause)->inputcollid;
+		item1 = (Expr *) get_leftop(clause);
+		item2 = (Expr *) get_rightop(clause);
 	}
+	else if (clause && IsA(clause, ScalarArrayOpExpr))
+	{
+		if (list_length(((ScalarArrayOpExpr *) clause)->args) != 2)
+			return;
+		opno = ((ScalarArrayOpExpr *) clause)->opno;
+		collation = ((ScalarArrayOpExpr *) clause)->inputcollid;
+		item1 = (Expr *) get_leftscalararrayop(clause);
+		item2 = (Expr *) get_rightscalararrayop(clause);
+	}
+	else
+		return;
+
+	item1 = canonicalize_ec_expression(item1,
+									   exprType((Node *) item1),
+									   collation);
+	item2 = canonicalize_ec_expression(item2,
+									   exprType((Node *) item2),
+									   collation);
+	op_input_types(opno, &item1_type, &item2_type);
 
 	/*
 	 * Find every equivalence class that's relevant for this RestrictInfo.
@@ -241,13 +296,19 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 		EquivalenceClass *eclass = (EquivalenceClass *) lfirst(lcec);
 		ListCell   *lcem1;
 
+		/*
+		 * Only generate derived clauses using operators from the same operator
+		 * family.
+		 */
+		if (!op_in_eclass_opfamily(opno, eclass))
+			continue;
+
 		/* Single-member ECs won't generate any deductions */
 		if (list_length(eclass->ec_members) <= 1)
 			continue;
 
 		if (!bms_overlap(eclass->ec_relids, rinfo->clause_relids))
-			continue;			/* none of the members can appear in the
-								 * clause */
+			continue;
 
 		foreach(lcem1, eclass->ec_members)
 		{
@@ -255,7 +316,7 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 			ListCell   *lcem2;
 
 			if (!bms_overlap(em1->em_relids, rinfo->clause_relids))
-				continue;		/* this member cannot appear in the clause */
+				continue;
 
 			/*
 			 * Skip duplicating subplans clauses as multiple subplan node referring
@@ -264,6 +325,15 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 			 */
 			if (contain_subplans((Node *) em1->em_expr))
 				continue;
+
+			/*
+			 * Skip if this EquivalenceMember does not match neither left expr
+			 * nor right expr.
+			 */
+			if (!((item1_type == em1->em_datatype && equal(item1, em1->em_expr)) ||
+					(item2_type == em1->em_datatype && equal(item2, em1->em_expr))))
+				continue;
+
 			/* now try to apply to others in the equivalence class */
 			foreach(lcem2, eclass->ec_members)
 			{

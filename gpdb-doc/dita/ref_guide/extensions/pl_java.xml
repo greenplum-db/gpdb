@@ -54,7 +54,7 @@
       <p>With the Greenplum Database PL/Java extension, you can write Java methods using your
         favorite Java IDE and install the JAR files that contain those methods into Greenplum
         Database. </p>
-      <p>Greenplum Database PL/Java package is based on the open source PL/Java 1.4.0. Greenplum
+      <p>Greenplum Database PL/Java package is based on the open source PL/Java 1.5.0. Greenplum
         Database PL/Java provides the following features.</p>
       <ul>
         <li id="pv161029">Ability to execute PL/Java functions with Java 1.7 or higher.</li>
@@ -146,24 +146,21 @@
               set by a user without Greenplum Database superuser privileges. When
                 <codeph>pljava_classpath_insecure</codeph> is enabled, Greenplum Database developers
               who are working on PL/Java functions do not have to be database superusers to change
-                <codeph>pljava_classpath</codeph>.</p><note type="warning">Enabling
-                <codeph>pljava_classpath_insecure</codeph> exposes a security risk by giving
-              non-administrator database users the ability to run unauthorized Java methods.</note>
-          </li>
+                <codeph>pljava_classpath</codeph>.</p>
+            <note type="warning">Enabling <codeph>pljava_classpath_insecure</codeph> exposes a
+              security risk by giving non-administrator database users the ability to run
+              unauthorized Java methods.</note></li>
           <li id="pv159853">
             <codeph>pljava_statement_cache_size</codeph>
             <p>Sets the size in KB of the Most Recently Used (MRU) cache for prepared statements.
-            </p>
-          </li>
+            </p></li>
           <li id="pv159856">
             <codeph>pljava_release_lingering_savepoints</codeph>
             <p>If <codeph>TRUE</codeph>, lingering savepoints will be released on function exit. If
-                <codeph>FALSE</codeph>, they will be rolled back. </p>
-          </li>
+                <codeph>FALSE</codeph>, they will be rolled back. </p></li>
           <li id="pv159859">
             <codeph>pljava_vmoptions</codeph>
-            <p>Defines the start up options for the Greenplum Database Java VM. </p>
-          </li>
+            <p>Defines the start up options for the Greenplum Database Java VM. </p></li>
         </ul>
         <p>See the <cite>Greenplum Database Reference Guide</cite> for information about the
           Greenplum Database server configuration parameters.</p>
@@ -217,8 +214,8 @@
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-ossv1.5.0_pv1.4.0-GPDB-<varname>version</varname>-orca-rhel6-x86_64.gppkg</codeblock></li>
-          <li>Ensure that the environment variables <codeph>JAVA_HOME</codeph> and
+            system:<codeblock>$ gppkg -i pljava-1.4.3-gp5-rhel<varname>osversion</varname>-x86_64.gppkg</codeblock></li>
+          <li>Ensure the environment variables <codeph>JAVA_HOME</codeph> and
               <codeph>LD_LIBRARY_PATH</codeph> are set properly in
               <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul
               id="ul_mgq_wgh_qw">
@@ -283,9 +280,9 @@
           <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
               <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
             the PL/Java extension on a Linux
-              system:<codeblock>$ gppkg -r pljava-ossv1.4.0_pv1.3_gpdb<varname>version</varname></codeblock><p>You
-              can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
-              to list the installed extensions and their versions.</p></li>
+              system:<codeblock>$ gppkg -r pljava-1.4.3</codeblock><p>You can run the
+                <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
+              the installed extensions and their versions.</p></li>
           <li dir="ltr">Reload
             <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
           <li id="pv158621">Restart the database.<codeblock>$ gpstop -r </codeblock></li>
@@ -318,13 +315,13 @@
           is a colon (:) separated list of the JAR files. For
             example:<codeblock>$ gpconfig -c pljava_classpath -v 'examples.jar:myclasses.jar'</codeblock><p>The
             file <codeph>examples.jar</codeph> is installed when you install the PL/Java extension
-            package with the <codeph>gppkg</codeph> utility.</p><note>If you install JAR files in a
-            directory other than <codeph>$GPHOME/lib/postgresql/java/</codeph>, you must specify the
-            absolute path to the JAR file. Each JAR file must be in the same location on all
-            Greenplum Database hosts. For more information about specifying the location of JAR
-            files, see the information about the <codeph>pljava_classpath</codeph> server
-            configuration parameter in the <cite>Greenplum Database Reference
-          Guide</cite>.</note></li>
+            package with the <codeph>gppkg</codeph> utility.</p>
+          <note>If you install JAR files in a directory other than
+              <codeph>$GPHOME/lib/postgresql/java/</codeph>, you must specify the absolute path to
+            the JAR file. Each JAR file must be in the same location on all Greenplum Database
+            hosts. For more information about specifying the location of JAR files, see the
+            information about the <codeph>pljava_classpath</codeph> server configuration parameter
+            in the <cite>Greenplum Database Reference Guide</cite>.</note></li>
         <li id="pv160329">Reload the <codeph>postgresql.conf</codeph>
           file.<codeblock>$ gpstop -u</codeblock></li>
         <li id="pv160335">(optional) Greenplum provides an <codeph>examples.sql</codeph> file
@@ -1029,8 +1026,9 @@ select java_substring(a, 1, 5) from temp;</codeblock>
     <body>
       <p>The PL/Java Github wiki page - <xref href="https://github.com/tada/pljava/wiki"
           format="html" scope="external">https://github.com/tada/pljava/wiki</xref>.</p>
-      <p> PL/Java 1.4.0 release - <xref href="https://github.com/tada/pljava/tree/B1_4"
-          format="html" scope="external">https://github.com/tada/pljava/tree/B1_4</xref>.</p>
+      <p> PL/Java 1.5.0 release - <xref href="https://github.com/tada/pljava/tree/REL1_5_STABLE"
+          format="html" scope="external"
+        >https://github.com/tada/pljava/tree/REL1_5_STABLE</xref>.</p>
     </body>
   </topic>
 </topic>

@@ -25,8 +25,11 @@ extern Plan *apply_motion(struct PlannerInfo *root, Plan *plan, Query *query);
 
 extern Motion *make_union_motion(Plan *lefttree,
 		                                int destSegIndex, bool useExecutorVarFormat);
-extern Motion *make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int destSegIndex,
-										List *sortPathKeys,
+extern Motion *make_sorted_union_motion(PlannerInfo *root,
+						 Plan *lefttree,
+						 int numSortCols, AttrNumber *sortColIdx,
+						 Oid *sortOperators, Oid *collations, bool *nullsFirst,
+						 int destSegIndex,
 						 bool useExecutorVarFormat);
 extern Motion *make_hashed_motion(Plan *lefttree,
 				    List *hashExpr, bool useExecutorVarFormat);

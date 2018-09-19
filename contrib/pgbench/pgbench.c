@@ -345,9 +345,10 @@ usage(const char *progname)
 		   "\nInitialization options:\n"
 		   "  -i           invokes initialization mode\n"
 		   "  -x STRING    append this string to the storage clause e.g. 'appendonly=true, orientation=column'\n"
-		   "  -q           make the indexes that are created non-unique indexes (default: unique)\n"
 		   "  -F NUM       fill factor\n"
 		   "  -s NUM       scaling factor\n"
+		   "  --use-unique-keys"
+		   "               make the indexes that are created non-unique indexes (default: unique)\n"
 		   "  --index-tablespace=TABLESPACE\n"
 		   "               create indexes in the specified tablespace\n"
 		   "  --tablespace=TABLESPACE\n"
@@ -1341,11 +1342,11 @@ init(void)
 		if (ddl->declare_fillfactor)
 			snprintf(opts + strlen(opts), 256 - strlen(opts),
 					 " with (fillfactor=%d, %s) DISTRIBUTED BY (%s)",
-					 fillfactor, storage_clause, ddl->declare_fillfactor);
+					 fillfactor, storage_clause, ddl->distributed_col);
 		else
 			snprintf(opts + strlen(opts), 256 - strlen(opts),
 					 " with (%s) DISTRIBUTED BY (%s)",
-					 storage_clause, ddl->declare_fillfactor);
+					 storage_clause, ddl->distributed_col);
 		if (tablespace != NULL)
 		{
 			char	   *escape_tablespace;
@@ -1891,6 +1892,7 @@ main(int argc, char **argv)
 	int			i;
 
 	static struct option long_options[] = {
+		{"use-unique-keys", no_argument, &use_unique_key, 0},
 		{"index-tablespace", required_argument, NULL, 3},
 		{"tablespace", required_argument, NULL, 2},
 		{"unlogged-tables", no_argument, &unlogged_tables, 1},
@@ -1940,15 +1942,12 @@ main(int argc, char **argv)
 	state = (CState *) xmalloc(sizeof(CState));
 	memset(state, 0, sizeof(CState));
 
-	while ((c = getopt(argc, argv, "ih:nvp:dSNc:Crs:t:T:U:lf:D:F:M:j:x:q")) != -1)
+	while ((c = getopt_long(argc, argv, "ih:nvp:dSNc:Crs:t:T:U:lf:D:F:M:j:x:", long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
 			case 'i':
 				is_init_mode++;
-				break;
-			case 'q':
-				use_unique_key = 0;
 				break;
 			case 'x':
 				storage_clause = optarg;

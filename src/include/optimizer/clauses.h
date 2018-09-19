@@ -54,6 +54,8 @@ extern Expr *make_opclause(Oid opno, Oid opresulttype, bool opretset,
 			  Oid opcollid, Oid inputcollid);
 extern Node *get_leftop(const Expr *clause);
 extern Node *get_rightop(const Expr *clause);
+extern Node *get_leftscalararrayop(const Expr *clause);
+extern Node *get_rightscalararrayop(const Expr *clause);
 
 extern bool not_clause(Node *clause);
 extern Expr *make_notclause(Expr *notclause);

@@ -44,6 +44,12 @@ class cgroup(object):
         if not self.compdirs:
             self.die("failed to detect cgroup component dirs.")
 
+        # 'memory' on 5X is special, although dir 'memory/gpdb' is optional,
+        # dir 'memory' is mandatory to provide 'memory.limit_in_bytes'.
+        # in such a case we must always put 'memory' in compdirs on 5X.
+        if gpver.version < [6, 0, 0] and 'memory' not in self.compdirs:
+            self.compdirs['memory'] = ''
+
         self.validate_permission("cpu", "gpdb/", "rwx")
         self.validate_permission("cpu", "gpdb/cgroup.procs", "rw")
         self.validate_permission("cpu", "gpdb/cpu.cfs_period_us", "rw")
@@ -106,11 +112,7 @@ class cgroup(object):
         otherwise return False.
         """
 
-        comps = ['cpu', 'cpuacct']
-        if gpver.version >= [6, 0, 0]:
-            comps.extend(['cpuset', 'memory'])
-
-        for comp in comps:
+        for comp in self.required_comps():
             if comp not in self.compdirs:
                 return False
 

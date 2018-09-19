@@ -1730,3 +1730,55 @@ reset optimizer_segments;
 UPDATE dml_union_r SET b = ( SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
 ERROR:  One or more assertions failed  (seg1 antova-mbp.local:40011 pid=42293)
 DETAIL:  Expected no more than one row to be returned by expression
+--
+-- Test for creation of MergeAppend paths.
+--
+-- We used to have a bug in creation of MergeAppend paths, so that this failed
+-- with "could not find pathkey item to sort" error.  See
+-- https://github.com/greenplum-db/gpdb/issues/5695
+--
+create table mergeappend_test ( a int, b int, x int ) distributed by (a,b);
+insert into mergeappend_test select g/100, g/100, g from generate_series(1, 500) g;
+analyze mergeappend_test;
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) from mergeappend_test r
+order by 1,2;
+ a | b | array_dims 
+---+---+------------
+ 0 | 0 | [1:99]
+ 1 | 1 | [1:100]
+ 2 | 2 | [1:100]
+ 3 | 3 | [1:100]
+ 4 | 4 | [1:100]
+ 5 | 5 | [1:1]
+   |   | [1:500]
+(7 rows)
+
+-- Check that it's using a MergeAppend
+explain (costs off)
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) from mergeappend_test r
+order by 1,2;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Merge Key: public.mergeappend_test.a, public.mergeappend_test.b
+   ->  Sort
+         Sort Key: public.mergeappend_test.a, public.mergeappend_test.b
+         ->  Append
+               ->  Result
+                     ->  GroupAggregate
+                           Group Key: public.mergeappend_test.a, public.mergeappend_test.b
+                           ->  Sort
+                                 Sort Key: public.mergeappend_test.a, public.mergeappend_test.b
+                                 ->  Table Scan on mergeappend_test
+               ->  Result
+                     ->  Redistribute Motion 1:3  (slice2)
+                           ->  Aggregate
+                                 ->  Gather Motion 3:1  (slice1; segments: 3)
+                                       ->  Table Scan on mergeappend_test
+ Optimizer: PQO version 2.71.0
+(17 rows)
+

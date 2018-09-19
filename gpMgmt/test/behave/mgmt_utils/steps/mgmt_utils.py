@@ -2089,7 +2089,7 @@ def impl(context):
 def impl(context, num_of_segments):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content and status = 'u'"""
         end_data_segments = dbconn.execSQLForSingleton(conn, query)
 
     if int(num_of_segments) == int(end_data_segments - context.start_data_segments):

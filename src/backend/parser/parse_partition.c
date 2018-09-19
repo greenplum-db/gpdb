@@ -2714,14 +2714,16 @@ preprocess_range_spec(partValidationState *vstate)
 
 						typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-						newnode = coerce_partition_value(lfirst(lcstart),
+						newnode = coerce_partition_value(pstate,
+														 lfirst(lcstart),
 														 typid, typmod,
 														 PARTTYP_RANGE);
 
 						lfirst(lcstart) = newnode;
 
 						/* be sure we coerce the end value */
-						newnode = coerce_partition_value(lfirst(lcend),
+						newnode = coerce_partition_value(pstate,
+														 lfirst(lcend),
 														 typid,
 														 typmod,
 														 PARTTYP_RANGE);
@@ -2767,7 +2769,8 @@ preprocess_range_spec(partValidationState *vstate)
 							ReleaseSysCache(newetyp);
 
 							/* we need to coerce */
-							e = coerce_partition_value(e,
+							e = coerce_partition_value(pstate,
+													   e,
 													   newrtypeId,
 													   typmod,
 													   PARTTYP_RANGE);
@@ -3001,7 +3004,8 @@ preprocess_range_spec(partValidationState *vstate)
 
 					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-					newnode = coerce_partition_value(mystart,
+					newnode = coerce_partition_value(pstate,
+													 mystart,
 													 typid, typmod,
 													 PARTTYP_RANGE);
 
@@ -3028,7 +3032,8 @@ preprocess_range_spec(partValidationState *vstate)
 
 					typenameTypeIdAndMod(pstate, typ, &typid, &typmod);
 
-					newnode = coerce_partition_value(myend,
+					newnode = coerce_partition_value(pstate,
+													 myend,
 													 typid, typmod,
 													 PARTTYP_RANGE);
 
@@ -4361,7 +4366,8 @@ validate_list_partition(partValidationState *vstate)
 				Oid			typid;
 
 				typenameTypeIdAndMod(pstate, type, &typid, &typmod);
-				node = coerce_partition_value(node, typid, typmod,
+				node = coerce_partition_value(pstate,
+											  node, typid, typmod,
 											  PARTTYP_LIST);
 
 				tvals = lappend(tvals, node);
@@ -4639,7 +4645,7 @@ range_partition_walker(Node *node, void *context)
 }
 
 Node *
-coerce_partition_value(Node *node, Oid typid, int32 typmod,
+coerce_partition_value(ParseState *pstate, Node *node, Oid typid, int32 typmod,
 					   PartitionByType partype)
 {
 	Oid			typcollation;
@@ -4654,30 +4660,11 @@ coerce_partition_value(Node *node, Oid typid, int32 typmod,
 
 	/* MPP-3626: better error message */
 	if (!out)
-	{
-		char		   *pparam;
-		StringInfoData	sid;
-
-		initStringInfo(&sid);
-
-		/*
-		 * Try to build a printable string of the node value.
-		 * deparse_expression() returns a palloc'd buffer from a StringInfo so
-		 * we can safely inspect it.
-		 */
-		pparam = deparse_expression(node,
-									deparse_context_for("partition", InvalidOid),
-									false, false);
-		if (strlen(pparam) != 0)
-			appendStringInfo(&sid, "(%s) ", pparam);
-
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("cannot coerce %s partition parameter %sto column type (%s)",
-						(partype == PARTTYP_LIST) ? "LIST" : "RANGE",
-						sid.data,
-						format_type_be(typid))));
-	}
+				 errmsg("cannot coerce partition parameter to column type \"%s\"",
+						format_type_be(typid)),
+				 parser_errposition(pstate, exprLocation(node))));
 
 	/*
 	 * GPDB_91_MERGE_FIXME: For now, partition specifications always use

@@ -193,6 +193,10 @@ static EquivalenceMember *find_ec_member_for_tle(EquivalenceClass *ec,
 					   TargetEntry *tle,
 					   Relids relids);
 
+static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
+								 CdbMotionPath *path,
+								 Plan *subplan);
+
 /*
  * GPDB_92_MERGE_FIXME: The following functions have been removed in PG 9.2
  * But GPDB codes are still using them, so keep them here.
@@ -5691,7 +5695,10 @@ reconstruct_group_clause(List *orig_groupClause, List *tlist, AttrNumber *grpCol
  * --------------------------------------------------------------------
  */
 Motion *
-make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecutorVarFormat)
+make_motion(PlannerInfo *root, Plan *lefttree,
+			int numSortCols, AttrNumber *sortColIdx,
+			Oid *sortOperators, Oid *collations, bool *nullsFirst,
+			bool useExecutorVarFormat)
 {
     Motion *node = makeNode(Motion);
     Plan   *plan = &node->plan;
@@ -5710,35 +5717,28 @@ make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecu
 	plan->righttree = NULL;
 	plan->dispatch = DISPATCH_PARALLEL;
 
-	if (sortPathKeys)
-	{
-		Sort *sort;
-
-		/* FIXME: add_keys_to_targetlist, or not? */
-		sort = make_sort_from_pathkeys(root, lefttree, sortPathKeys, -1, true);
-
-		node->numSortCols = sort->numCols;
-		node->sortColIdx = sort->sortColIdx;
-		node->sortOperators = sort->sortOperators;
-		node->collations = sort->collations;
-		node->nullsFirst = sort->nullsFirst;
+	node->numSortCols = numSortCols;
+	node->sortColIdx = sortColIdx;
+	node->sortOperators = sortOperators;
+	node->collations = collations;
+	node->nullsFirst = nullsFirst;
 
 #ifdef USE_ASSERT_CHECKING
-		/*
-		 * If the child node was a Sort, then surely the order the caller gave us
-		 * must match that of the underlying sort.
-		 */
-		if (IsA(lefttree, Sort))
-		{
-			Sort	   *childsort = (Sort *) lefttree;
-			Assert(childsort->numCols >= node->numSortCols);
-			Assert(memcmp(childsort->sortColIdx, node->sortColIdx, node->numSortCols * sizeof(AttrNumber)) == 0);
-			Assert(memcmp(childsort->sortOperators, node->sortOperators, node->numSortCols * sizeof(Oid)) == 0);
-			Assert(memcmp(childsort->nullsFirst, node->nullsFirst, node->numSortCols * sizeof(bool)) == 0);
-		}
-#endif
+	/*
+	 * If the child node was a Sort, then surely the order the caller gave us
+	 * must match that of the underlying sort.
+	 */
+	if (numSortCols > 0 && IsA(lefttree, Sort))
+	{
+		Sort	   *childsort = (Sort *) lefttree;
+		Assert(childsort->numCols >= node->numSortCols);
+		Assert(memcmp(childsort->sortColIdx, node->sortColIdx, node->numSortCols * sizeof(AttrNumber)) == 0);
+		Assert(memcmp(childsort->sortOperators, node->sortOperators, node->numSortCols * sizeof(Oid)) == 0);
+		Assert(memcmp(childsort->nullsFirst, node->nullsFirst, node->numSortCols * sizeof(bool)) == 0);
 	}
-	node->sendSorted = (node->numSortCols > 0);
+#endif
+
+	node->sendSorted = (numSortCols > 0);
 
 	plan->extParam = bms_copy(lefttree->extParam);
 	plan->allParam = bms_copy(lefttree->allParam);
@@ -6944,3 +6944,158 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, Oid coll, bool nulls_first,
 	nullsFirst[numCols] = nulls_first;
 	return numCols + 1;
 }
+
+
+
+
+/*
+ * cdbpathtoplan_create_motion_plan
+ */
+static Motion *
+cdbpathtoplan_create_motion_plan(PlannerInfo *root,
+								 CdbMotionPath *path,
+								 Plan *subplan)
+{
+	Motion	   *motion = NULL;
+	Path	   *subpath = path->subpath;
+
+	/* Send all tuples to a single process? */
+	if (CdbPathLocus_IsBottleneck(path->path.locus))
+	{
+		int			destSegIndex = -1;	/* to dispatcher */
+
+		if (CdbPathLocus_IsSingleQE(path->path.locus))
+			destSegIndex = gp_singleton_segindex;	/* to singleton qExec */
+
+		if (path->path.pathkeys)
+		{
+			Plan	   *prep;
+			int			numSortCols;
+			AttrNumber *sortColIdx;
+			Oid		   *sortOperators;
+			Oid		   *collations;
+			bool		*nullsFirst;
+
+			/*
+			 * Build sort key info to define our Merge Receive keys.
+			 */
+			prep = prepare_sort_from_pathkeys(root,
+											  subplan,
+											  path->path.pathkeys,
+											  subpath->parent->relids,
+											  NULL,
+											  false,
+											  &numSortCols,
+											  &sortColIdx,
+											  &sortOperators,
+											  &collations,
+											  &nullsFirst,
+											  true /* add_keys_to_targetlist */);
+
+			if (prep)
+			{
+				/*
+				 * Create a Merge Receive to preserve ordering.
+				 *
+				 * prepare_sort_from_pathkeys() might return a Result node, if
+				 * one would needs to be inserted above the Sort. We don't
+				 * create an actual Sort node here, the input is already
+				 * ordered, but use the Result node, if any, as the input to
+				 * the Motion node. (I'm not sure if that is possible with
+				 * Gather Motion nodes. Since the input is already ordered,
+				 * presumably the target list already contains the expressions
+				 * for the key columns. But better safe than sorry.)
+				 */
+				subplan = prep;
+				motion = make_sorted_union_motion(root,
+												  subplan,
+												  numSortCols,
+												  sortColIdx,
+												  sortOperators,
+												  collations,
+												  nullsFirst,
+												  destSegIndex,
+												  false /* useExecutorVarFormat */);
+			}
+			else
+			{
+				/* Degenerate ordering... build unordered Union Receive */
+				motion = make_union_motion(subplan,
+										   destSegIndex,
+										   false	/* useExecutorVarFormat */);
+			}
+		}
+
+		/* Unordered Union Receive */
+		else
+			motion = make_union_motion(subplan,
+									   destSegIndex,
+									   false	/* useExecutorVarFormat */
+				);
+	}
+
+	/* Send all of the tuples to all of the QEs in gang above... */
+	else if (CdbPathLocus_IsReplicated(path->path.locus))
+		motion = make_broadcast_motion(subplan,
+									   false	/* useExecutorVarFormat */
+			);
+
+	/* Hashed redistribution to all QEs in gang above... */
+	else if (CdbPathLocus_IsHashed(path->path.locus) ||
+			 CdbPathLocus_IsHashedOJ(path->path.locus))
+	{
+		List	   *hashExpr = cdbpathlocus_get_partkey_exprs(path->path.locus,
+															  path->path.parent->relids,
+															  subplan->targetlist);
+
+		Insist(hashExpr);
+
+		/**
+         * If there are subplans in the hashExpr, push it down to lower level.
+         */
+		if (contain_subplans((Node *) hashExpr))
+		{
+			/* make a Result node to do the projection if necessary */
+			if (!is_projection_capable_plan(subplan))
+			{
+				List	   *tlist = copyObject(subplan->targetlist);
+
+				subplan = (Plan *) make_result(root, tlist, NULL, subplan);
+			}
+			subplan->targetlist = add_to_flat_tlist_junk(subplan->targetlist,
+														 hashExpr,
+														 true /* resjunk */);
+        }
+        motion = make_hashed_motion(subplan,
+                                    hashExpr,
+                                    false /* useExecutorVarFormat */);
+    }
+    else
+        Insist(0);
+
+    /*
+     * Decorate the subplan with a Flow node telling the plan slicer
+     * what kind of gang will be needed to execute the subplan.
+     */
+    subplan->flow = cdbpathtoplan_create_flow(root,
+                                              subpath->locus,
+                                              subpath->parent
+                                                ? subpath->parent->relids
+                                                : NULL,
+                                              subplan);
+
+	/**
+	 * If plan has a flow node, and its child is projection capable,
+	 * then ensure all entries of hashExpr are in the targetlist.
+	 */
+	if (subplan->flow &&
+		subplan->flow->hashExpr &&
+		is_projection_capable_plan(subplan))
+	{
+		subplan->targetlist = add_to_flat_tlist_junk(subplan->targetlist,
+													 subplan->flow->hashExpr,
+													 true /* resjunk */);
+	}
+
+	return motion;
+}								/* cdbpathtoplan_create_motion_plan */

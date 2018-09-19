@@ -3812,30 +3812,135 @@ SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS 
 (0 rows)
 
 -- ----------------------------------------------------------------------
+-- Test: non-equivalence clauses
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS qp_non_eq_a;
+NOTICE:  table "qp_non_eq_a" does not exist, skipping
+DROP TABLE IF EXISTS qp_non_eq_b;
+NOTICE:  table "qp_non_eq_b" does not exist, skipping
+CREATE TABLE qp_non_eq_a (i int, f float8);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE qp_non_eq_b (i int, f float8);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO qp_non_eq_a VALUES (1, '0'), (2, '-0');
+INSERT INTO qp_non_eq_b VALUES (3, '0'), (1, '-0');
+-- end_ignore
+EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
+         Hash Cond: qp_non_eq_b.f = qp_non_eq_a.f
+         ->  Table Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Table Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+                           Filter: f::text <> '-0'::text
+ Optimizer: PQO version 2.72.0
+(9 rows)
+
+SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
+ i | f | i | f  
+---+---+---+----
+ 1 | 0 | 3 |  0
+ 1 | 0 | 1 | -0
+(2 rows)
+
+EXPLAIN SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_non_eq_b.f AND CASE WHEN qp_non_eq_b.f::text = '-0' THEN 1 ELSE -1::float8 END < '0';
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
+         Hash Cond: qp_non_eq_a.f = qp_non_eq_b.f
+         ->  Table Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Table Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+                           Filter: CASE WHEN f::text = '-0'::text THEN 1::double precision ELSE (-1)::double precision END < 0::double precision
+ Optimizer: PQO version 2.72.0
+(9 rows)
+
+SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_non_eq_b.f AND CASE WHEN qp_non_eq_b.f::text = '-0' THEN 1 ELSE -1::float8 END < '0';
+ i | f  | i | f 
+---+----+---+---
+ 1 |  0 | 3 | 0
+ 2 | -0 | 3 | 0
+(2 rows)
+
+EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::integer[]);
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
+         Hash Cond: qp_non_eq_a.i = qp_non_eq_b.i
+         ->  Table Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (i = ANY ('{1,2,3}'::integer[])) AND (i = 1 OR i = 2 OR i = 3)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+               ->  Table Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+                     Filter: i = 1 OR i = 2 OR i = 3
+ Optimizer: PQO version 2.72.0
+(9 rows)
+
+SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::integer[]);
+ i | f | i | f  
+---+---+---+----
+ 1 | 0 | 1 | -0
+(1 row)
+
+EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::numeric[]);
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=24)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
+         Hash Cond: qp_non_eq_a.i = qp_non_eq_b.i
+         ->  Table Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+               Filter: i::numeric = ANY ('{1,2,3}'::numeric[])
+         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+               ->  Table Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: PQO version 2.72.0
+(8 rows)
+
+SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::numeric[]);
+ i | f | i | f  
+---+---+---+----
+ 1 | 0 | 1 | -0
+(1 row)
+
+-- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema qp_correlated_query cascade;
-NOTICE:  drop cascades to table qp_tjoin4
-NOTICE:  drop cascades to table qp_tjoin3
-NOTICE:  drop cascades to table qp_tjoin2
-NOTICE:  drop cascades to table qp_tjoin1
-NOTICE:  drop cascades to table tversion
-NOTICE:  drop cascades to table t1
-NOTICE:  drop cascades to function f(integer)
-NOTICE:  drop cascades to table csq_emp
-NOTICE:  drop cascades to table with_test2
-NOTICE:  drop cascades to table with_test1
-NOTICE:  drop cascades to table employee
-NOTICE:  drop cascades to table job
-NOTICE:  drop cascades to table product_order
-NOTICE:  drop cascades to table product
-NOTICE:  drop cascades to table d
-NOTICE:  drop cascades to table qp_csq_t4
-NOTICE:  drop cascades to table c
-NOTICE:  drop cascades to table b
-NOTICE:  drop cascades to table a
-NOTICE:  drop cascades to table qp_csq_t3
-NOTICE:  drop cascades to table qp_csq_t2
-NOTICE:  drop cascades to table qp_csq_t1
+NOTICE:  drop cascades to 28 other objects
+DETAIL:  drop cascades to table qp_csq_t1
+drop cascades to table qp_csq_t2
+drop cascades to table qp_csq_t3
+drop cascades to table a
+drop cascades to table b
+drop cascades to table c
+drop cascades to table d
+drop cascades to table e
+drop cascades to table qp_csq_t4
+drop cascades to table product
+drop cascades to table product_order
+drop cascades to table job
+drop cascades to table employee
+drop cascades to table with_test1
+drop cascades to table with_test2
+drop cascades to table csq_emp
+drop cascades to function f(integer)
+drop cascades to table t1
+drop cascades to table tversion
+drop cascades to table qp_tjoin1
+drop cascades to table qp_tjoin2
+drop cascades to table qp_tjoin3
+drop cascades to table qp_tjoin4
+drop cascades to table qp_tab1
+drop cascades to table qp_tab2
+drop cascades to table qp_tab3
+drop cascades to table qp_non_eq_a
+drop cascades to table qp_non_eq_b
 -- end_ignore

@@ -396,7 +396,11 @@ detectCompDirs(void)
 	if (maskDetected != maskAll)
 		goto fallback; /* not all the comps are detected */
 
-	dumpCompDirs();
+	/*
+	 * Dump the comp dirs for debugging?  No!
+	 * This function is executed before timezone initialization, logs are
+	 * forbidden.
+	 */
 
 	fclose(f);
 	return;
@@ -407,8 +411,6 @@ fallback:
 	{
 		compSetDir(comp, FALLBACK_COMP_DIR);
 	}
-
-	dumpCompDirs();
 
 	fclose(f);
 }
@@ -1168,6 +1170,12 @@ ResGroupOps_Bless(void)
 	 * Check again, this time we will fail on unmet requirements.
 	 */
 	checkPermission(RESGROUP_ROOT_ID, true);
+
+	/*
+	 * Dump the cgroup comp dirs to logs.
+	 * Check detectCompDirs() to know why this is not done in that function.
+	 */
+	dumpCompDirs();
 }
 
 /* Initialize the OS group */

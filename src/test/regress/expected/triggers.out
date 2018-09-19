@@ -105,9 +105,9 @@ delete from pkeys where pkey1 = 40 and pkey2 = '4';
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 172.17.0.2:25434 pid=51032)
 CONTEXT:  SQL statement "delete from fkeys where fkey1 = $1 and fkey2 = $2 "
 update pkeys set pkey1 = 7, pkey2 = '70' where pkey1 = 50 and pkey2 = '5';
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 update pkeys set pkey1 = 7, pkey2 = '70' where pkey1 = 10 and pkey2 = '1';
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 DROP TABLE pkeys;
 DROP TABLE fkeys;
 DROP TABLE fkeys2;
@@ -209,7 +209,7 @@ select * from tttest;
 -- now we want to change pric_id in ALL tuples
 -- this gets us not what we need
 update tttest set price_id = 5 where price_id = 3;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
@@ -237,7 +237,7 @@ select * from tttest;
 
 -- and try change price_id now!
 update tttest set price_id = 5 where price_id = 3;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 select * from tttest;
  price_id | price_val | price_on | price_off 
 ----------+-----------+----------+-----------
@@ -308,10 +308,10 @@ CREATE TRIGGER after_upd_row_trig AFTER UPDATE ON main_table
 FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_row');
 INSERT INTO main_table DEFAULT VALUES;
 UPDATE main_table SET a = a + 1 WHERE b < 30;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 -- UPDATE that effects zero rows should still call per-statement trigger
 UPDATE main_table SET a = a + 2 WHERE b > 100;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 -- COPY should fire per-row and per-statement INSERT triggers
 COPY main_table (a, b) FROM stdin;
 NOTICE:  trigger_func(before_ins_stmt) called: action = INSERT, when = BEFORE, level = STATEMENT
@@ -355,7 +355,7 @@ DELETE FROM main_table WHERE a IN (123, 456);
 NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
 NOTICE:  trigger_func(delete_a) called: action = DELETE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
 UPDATE main_table SET a = 50, b = 60;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 SELECT * FROM main_table ORDER BY a, b;
  a  | b  
 ----+----
@@ -412,7 +412,7 @@ SELECT pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'main_table'::regc
 (1 row)
 
 UPDATE main_table SET a = 50;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 UPDATE main_table SET b = 10;
 NOTICE:  trigger_func(after_upd_a_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
 NOTICE:  trigger_func(after_upd_b_row) called: action = UPDATE, when = AFTER, level = ROW  (seg1 172.17.0.2:25433 pid=113597)
@@ -451,11 +451,11 @@ CREATE TRIGGER some_trig_afterb AFTER UPDATE ON some_t FOR EACH ROW
   EXECUTE PROCEDURE dummy_update_func('afterb');
 INSERT INTO some_t VALUES (TRUE);
 UPDATE some_t SET some_col = TRUE;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 UPDATE some_t SET some_col = FALSE;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 UPDATE some_t SET some_col = TRUE;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 DROP TABLE some_t;
 -- bogus cases
 CREATE TRIGGER error_upd_and_col BEFORE UPDATE OR UPDATE OF a ON main_table

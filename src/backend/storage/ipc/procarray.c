@@ -1610,7 +1610,12 @@ getAllDistributedXactStatus(TMGALLXACTSTATUS **allDistributedXactStatus)
 			palloc(MAXALIGN(count * sizeof(TMGXACTSTATUS)));
 		for (i = 0; i < count; i++)
 		{
-			volatile TMGXACT *gxact = &allTmGxact[arrayP->pgprocnos[i]];
+			/*
+			 * This function is only used by view gp_distributed_xacts. We do
+			 * not need to return a strictly correct gxact array. So no
+			 * 'volatile' is used for 'gxact'.
+			 */
+			TMGXACT *gxact = &allTmGxact[arrayP->pgprocnos[i]];
 
 			all->statusArray[i].gxid = gxact->gxid;
 			if (strlen(gxact->gid) >= TMGIDSIZE)
@@ -1688,7 +1693,22 @@ getDtxCheckPointInfo(char **result, int *result_size)
 	for (i = 0; i < arrayP->numProcs; i++)
 	{
 		TMGXACT_LOG *gxact_log;
-		volatile TMGXACT *gxact = &allTmGxact[arrayP->pgprocnos[i]];
+
+		/*
+		 * Note no 'volatile' is used to describe 'gxact'.  We will check
+		 * gxact->state first before memcpy gxact->gid. And the allowed state
+		 * are:
+		 * DTX_STATE_INSERTED_COMMITTED,
+		 * DTX_STATE_FORCED_COMMITTED,
+		 * DTX_STATE_NOTIFYING_COMMIT_PREPARED,
+		 * DTX_STATE_INSERTING_FORGET_COMMITTED,
+		 * DTX_STATE_RETRY_COMMIT_PREPARED.
+		 *
+		 * So this will not contend with setCurrentGxact, as it sets
+		 * gxact->state to DTX_STATE_ACTIVE_NOT_DISTRIBUTED after settling down
+		 * gxact->gid.
+		 */
+		TMGXACT *gxact = &allTmGxact[arrayP->pgprocnos[i]];
 
 		if (!includeInCheckpointIsNeeded(gxact))
 			continue;

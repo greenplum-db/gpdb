@@ -6,7 +6,16 @@
 -- * Create the functions to be used for testing 
 -- ************************************************************
 --
-create function gp_build_logical_index(IN rootoid oid)
+create function gp_build_logical_index(IN rootoid oid,
+  OUT logicalIndexOid Oid,
+  OUT nColumns smallint,
+  OUT indKey text,
+  OUT indUnique bool,
+  OUT indPred pg_node_tree,
+  OUT indExprs pg_node_tree,
+  OUT partCons text,
+  OUT defaultLevels pg_node_tree,
+  OUT indType int2)
 returns setof record
 language C volatile NO SQL as '@abs_builddir@/regress@DLSUFFIX@', 'gp_build_logical_index_info';
 
@@ -36,38 +45,32 @@ partition by range(part_key)
 -- output show 1 logical index 
 create index rp_i1 on part_table1(part_key);
 
-select nColumns, indKey, indUnique, indPred, indExprs, partCons, defaultLevels, indType from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select nColumns, indKey, indUnique, indPred, indExprs, partCons, defaultLevels, indType from gp_build_logical_index('part_table1'::regclass);
 
 -- partial index on all part
 -- output shows 1 logical index with partial predicate 
 create index parent_partial_ind1 on part_table1(part_key)
 where part_key >=1 and part_key < 10;
 
-select indKey, indpred, partCons from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select indKey, pg_get_expr(indpred, 'part_table1'::regclass), partCons from gp_build_logical_index('part_table1'::regclass)
 where indpred is NOT NULL;
 
 -- add a new part - index automatically created 
 alter table part_table1 add partition part4 start('31') end ('40');
 
 -- output should still show that 2 logical indexes exists on all parts 
-select count(*) from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select count(*) from gp_build_logical_index('part_table1'::regclass);
 
-select indKey, indpred, partCons from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2) 
+select indKey, pg_get_expr(indpred, 'part_table1'::regclass), partCons from gp_build_logical_index('part_table1'::regclass)
 where indpred is NOT NULL;
 
 -- create index on just 1 part
 create index rp_i2 on part_table1_1_prt_part4(part_key, content);
 
 -- extra logical index in the output with the constraint of the part_table1_1_prt_part4 constraint.
-select count(*) from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select count(*) from gp_build_logical_index('part_table1'::regclass);
 
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where partcons is NOT NULL;
 
 -- split a part into 2 parts - index created on both the parts
@@ -76,8 +79,7 @@ where partcons is NOT NULL;
 alter table part_table1 split partition for ('31') at ('35') into (partition part41, partition part42);
 
 -- back to showing 2 rows - the 2nd index above is gone
-select indKey, defaultLevels, partCons from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('part_table1'::regclass);
 
 --
 -- ************************************************************
@@ -99,8 +101,7 @@ create index e1 on exchange_tab(lower(content));
 alter table part_table1 exchange partition for ('11') with table exchange_tab;
 
 -- output of the function shows the index on expression on just the exchanged part.
-select indKey, indExprs, partCons from gp_build_logical_index('part_table1'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select indKey, pg_get_expr(indExprs, 'part_table1'::regclass), partCons from gp_build_logical_index('part_table1'::regclass)
 where indExprs is NOT NULL;
 
 
@@ -130,24 +131,21 @@ subpartition template
 create index first_index on part_table2(trans_id);
 
 -- output will show 1 row returned -- pulled up to root
-select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass);
 
 -- create a partial index on part_table2 (will be created on all parts/subparts)
 create index second_index on part_table2(trans_id)  
 where trans_id >=1000 and trans_id < 2000;  
 
 -- output will show 1 index with partial pred
-select indKey, indPred, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select indKey, pg_get_expr(indPred, 'part_table2'::regclass), defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
 where indPred is NOT NULL;
 
 -- create index on expression on all parts
 create index third_index on part_table2(lower(region));
 
 -- output will show 1 index on expression
-select indKey, indPred, indExprs, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select indKey, indPred, pg_get_expr(indExprs, 'part_table2'::regclass), partCons from gp_build_logical_index('part_table2'::regclass)
 where indExprs is NOT NULL;
 
 -- create indexes on all leaf parts of a mid-level partition
@@ -160,14 +158,12 @@ create index fourth_index4 on part_table2_1_prt_11_2_prt_other_regions(date);
 -- row with following constraint shows up 
 --  ((date >= '2008-10-01'::date) AND (date < '2008-11-01'::date))
 select indKey, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 order by indKey;
 
 -- create an index on the mid-level -- internal part -- will not show up
 -- in the result
 create index idummy1 on part_table2_1_prt_9(date); 
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 order by indKey;
 
 -- create an index on a default part
@@ -177,23 +173,20 @@ create index fifth_index on part_table2_1_prt_8_2_prt_other_regions(date);
 -- following row shows up 
 --            | (i 1)         | ((date >= '2008-07-01'::date) AND (date < '2008-08-01'::date))
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 order by indKey;
 
 -- create an index on a bunch of default partitions 
 create index subset_index1 on part_table2_1_prt_7_2_prt_other_regions(upper(region));
 create index subset_index2 on part_table2_1_prt_9_2_prt_other_regions(upper(region));
 create index subset_index3 on part_table2_1_prt_11_2_prt_other_regions(upper(region));
-select indExprs, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indExprs, 'part_table2'::regclass), defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
 where partcons is NOT NULL
 order by partcons;
 
 create index subset_index4 on part_table2_1_prt_7_2_prt_other_regions(upper(region));
 create index subset_index5 on part_table2_1_prt_outlying_years_2_prt_other_regions(upper(region));
 
-select indExprs, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indExprs, 'part_table2'::regclass), defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
 where partcons is NOT NULL
 order by partcons;
 
@@ -234,8 +227,7 @@ insert into part_table3 values ('2009-02-02', 'usa', 'Texas', 10.05), ('2009-03-
 
 -- index on atts 1, 4
 create index i1 on part_table3(date, amount); 
-select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass);
 
 -- truncate partitions until table is empty
 select * from part_table3;
@@ -250,21 +242,18 @@ select * from part_table3;
 
 -- drop column region1
 alter table part_table3 drop column region1;  
-select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass);
 
 -- the index i1 on this part has atts - 1 3
 alter table part_table3 add partition part3 start(date '2010-01-01') end (date '2011-01-01')
 (subpartition usa values('usa')); 
 
 -- only 1 logical index shows up !!
-select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass);
 
 -- extra row just on the default part show up
 create index i2 on part_table3(region);
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 order by nColumns;
 
 -- create an index on ALL subparts of 2 parts (part3 no dropped col)
@@ -276,7 +265,6 @@ create index i33 on part_table3_1_prt_part1_2_prt_asia(amount);
 create index i34 on part_table3_1_prt_part1_2_prt_def(amount);
 
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 order by indKey;
 
 -- dropped cols in the ind expr 
@@ -286,8 +274,7 @@ create index i42 on part_table3_1_prt_part2_2_prt_usa(ceil(amount));
 create index i43 on part_table3_1_prt_part2_2_prt_asia(ceil(amount));
 
 -- 1 extra index on expression shoule show up with constraints of part3/part2
-select indExprs, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indExprs, 'part_table3'::regclass), partCons from gp_build_logical_index('part_table3'::regclass)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
 
@@ -296,8 +283,7 @@ create index i52 on part_table3_1_prt_part2_2_prt_usa(amount) where amount < 100
 create index i53 on part_table3_1_prt_part2_2_prt_asia(amount) where amount < 1000;
 
 -- 1 extra row shows up with constraints of part3 and part2
-select indPred, indExprs, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select indPred, pg_get_expr(indExprs, 'part_table3'::regclass), defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
 
@@ -415,18 +401,15 @@ create index part_table5_i2 on part_table5(c1) where c1 < 100;
 create index part_table5_i3 on part_table5_1_prt_def(abs(c1));
 
 -- returns 1 row with index on part_table5_1_prt_part1
-select indPred, indExprs, partCons from gp_build_logical_index('part_table5'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indPred, 'part_table5'::regclass), indExprs, partCons from gp_build_logical_index('part_table5'::regclass)
 where defaultLevels is NULL and partcons is NULL;
 
 -- returns 1 row with index on whole table
-select indPred from gp_build_logical_index('part_table5'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indPred, 'part_table5'::regclass) from gp_build_logical_index('part_table5'::regclass)
 where partCons is NULL;
 
 -- returns 1 row with index on default part
-select indExprs, defaultLevels from gp_build_logical_index('part_table5'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
+select pg_get_expr(indExprs, 'part_table5'::regclass), defaultLevels from gp_build_logical_index('part_table5'::regclass)
 where defaultLevels is NOT NULL;
 
 -- ************************************************************
@@ -434,8 +417,7 @@ where defaultLevels is NOT NULL;
 -- *    - negative tests
 -- ************************************************************
 -- regular table
-select indKey, defaultLevels, partCons from gp_build_logical_index('pg_class'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select indKey, defaultLevels, partCons from gp_build_logical_index('pg_class'::regclass);
 
 -- index doesn't exist on attnum 3 in the partition
 select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, ('3'::int2vector), indpred, indexprs, true)
@@ -505,26 +487,20 @@ PARTITION p3 START (3) EXCLUSIVE END (4) INCLUSIVE
 create index part_table10_1_ind on part_table10_1_prt_p1(a);
 create index part_table10_2_ind on part_table10_1_prt_p2(a);
 
-select 'part_table6', partCons, defaultLevels from gp_build_logical_index('part_table6'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table6', partCons, defaultLevels from gp_build_logical_index('part_table6'::regclass);
 
-select 'part_table7', partCons, defaultLevels from gp_build_logical_index('part_table7'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table7', partCons, defaultLevels from gp_build_logical_index('part_table7'::regclass);
 
-select 'part_table8', partCons, defaultLevels from gp_build_logical_index('part_table8'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table8', partCons, defaultLevels from gp_build_logical_index('part_table8'::regclass);
 
-select 'part_table9', partCons, defaultLevels from gp_build_logical_index('part_table9'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table9', partCons, defaultLevels from gp_build_logical_index('part_table9'::regclass);
 
-select 'part_table10', partCons, defaultLevels from gp_build_logical_index('part_table10'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table10', partCons, defaultLevels from gp_build_logical_index('part_table10'::regclass);
 
 -- AO partitioned tables: Orca treats them as bitmap indexes
 create table part_table11(a int, b int, c int) with (appendonly=true) partition by list(b) (partition p1 values(1), partition p2 values(2));
 create index part_table11_idx on part_table11(c);
-select 'part_table11', partCons, defaultLevels from gp_build_logical_index('part_table11'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table11', partCons, defaultLevels from gp_build_logical_index('part_table11'::regclass);
 
 -- mixed heap, AO and AOCO tables: Orca treats them as bitmap indexes
 create table part_table12(a int, b int, c int) partition by list(b) 
@@ -534,8 +510,7 @@ partition p3 values(3) with (appendonly=true),
 partition p4 values(4)
 );
 create index part_table12_idx on part_table12(c);
-select 'part_table12', partCons, defaultLevels, indType from gp_build_logical_index('part_table12'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table12', partCons, defaultLevels, indType from gp_build_logical_index('part_table12'::regclass);
 
 
 -- ************************************************************
@@ -561,8 +536,7 @@ create index part_table13_3_idx on part_table13_1_prt_p3 using bitmap(c);
 -- heap/bitmap
 create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c); 
 
-select 'part_table13', partCons, defaultLevels, indType from gp_build_logical_index('part_table13'::regclass)
-as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
+select 'part_table13', partCons, defaultLevels, indType from gp_build_logical_index('part_table13'::regclass);
 
 --
 -- ************************************************************

@@ -248,9 +248,9 @@ SELECT * FROM trigger_test;
 (4 rows)
 
 UPDATE trigger_test SET i = 5 where i=3;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 UPDATE trigger_test SET i = 100 where i=1;
-ERROR:  UPDATE on distributed key columns is now supported in general.But disabled for current statement because result relation has update triggers. Running trigger across segment is not supported
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 SELECT * FROM trigger_test;
  i |                v                 |   foo   
 ---+----------------------------------+---------

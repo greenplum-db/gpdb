@@ -823,40 +823,9 @@ FROM sale;
 select cn,pn,vn, count(*) over (order by cn) as c1, 
 count(*) over (order by cn,vn) as c2,
 count(*) over (order by cn,vn,pn) as c3 from sale;
--- The following  case is flaky! Please look at the plan.
---                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
--- WindowAgg  (rows=12 width=12)
---   Output: cn, pn, vn, (count(*) OVER (?)), (count(*) OVER (?)), count(*) OVER (?)
---   Order By: sale.cn, sale.vn, sale.pn
---   ->  Sort  (rows=12 width=12)
---         Output: cn, pn, vn, cn, (count(*) OVER (?)), (count(*) OVER (?))
---         Sort Key: sale.cn, sale.vn, sale.pn
---         ->  WindowAgg  (rows=12 width=12)
---               Output: cn, pn, vn, cn, (count(*) OVER (?)), count(*) OVER (?)
---               Order By: sale.cn, sale.vn
---               ->  Sort  (rows=12 width=12)
---                     Output: cn, pn, vn, cn, (count(*) OVER (?))
---                     Sort Key: sale.cn, sale.vn
---                     ->  WindowAgg  (rows=12 width=12)
---                           Output: cn, pn, vn, cn, count(*) OVER (?)
---                           Order By: sale.cn
---                           ->  Gather Motion 3:1  (slice1; segments: 3)  (rows=12 width=12)
---                                 Output: cn, pn, vn, cn
---                                 Merge Key: cn
---                                 ->  Sort  (rows=4 width=12)
---                                       Output: cn, pn, vn, cn
---                                       Sort Key: sale.cn
---                                       ->  Seq Scan on public.sale  (rows=4 width=12)
---                                             Output: cn, pn, vn, cn
--- c2's value is flaky, because there are tuples with the same cn, vn but different
--- pn. So their order is uncertain. However, the order is important to the value returned by
--- window function. Previous case assumes the first time running on pipeline env is always
--- the same as the answer. We keep the assumption here after changing the underlying hash
--- algorithm to jump consistent hash.
-select cn,pn,vn, count(*) over (order by cn range between 2 preceding and 2 following) as c1,
-count(*) over (order by cn,vn rows between 2 preceding and 2 following) as c2,
-count(*) over (order by cn,vn,pn) as c3 from sale;
+select cn,pn,vn, count(*) over (order by ord range between 2 preceding and 2 following) as c1,
+count(*) over (order by ord,cn,vn rows between 2 preceding and 2 following) as c2,
+count(*) over (order by ord,cn,vn,pn) as c3 from sale_ord;
 
 -- MPP-1897
 SELECT sale.cn,sale.qty,

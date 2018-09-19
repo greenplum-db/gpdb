@@ -8,7 +8,10 @@ COMPILED_BITS_FILENAME=${COMPILED_BITS_FILENAME:="compiled_bits_ubuntu16.tar.gz"
 function build_external_depends() {
     pushd gpdb_src/depends
     ./configure
-    make  > build_external_depends.log 2>&1
+    if ! make > build_external_depends.log 2>&1 ; then
+        cat build_external_depends.log
+        return 1
+    fi
     grep -v "Installing:" build_external_depends.log
     make
     popd

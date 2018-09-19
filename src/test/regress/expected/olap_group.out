@@ -5983,7 +5983,17 @@ union all
 select null, null, array_agg((a+1)*x order by x), array_agg((b+1)*y order by y)
 from r6756 r
 order by 1,2;
-ERROR:  could not find pathkey item to sort (createplan.c:5360)
+ a | b |       array_agg       |       array_agg       
+---+---+-----------------------+-----------------------
+ 0 | 0 | {1}                   | {1}
+ 0 | 1 | {2,2}                 | {4,4}
+ 0 |   | {1,2,2}               | {1,4,4}
+ 1 | 0 | {6,6,6}               | {3,3,3}
+ 1 | 1 | {8,8,8,8}             | {8,8,8,8}
+ 1 |   | {6,6,6,8,8,8,8}       | {3,3,3,8,8,8,8}
+   |   | {1,2,2,6,6,6,8,8,8,8} | {1,4,4,3,3,3,8,8,8,8}
+(7 rows)
+
 select a, b, array_agg((a+1)*x order by x), array_agg((b+1)*y order by y)
 from r6756 r
 group by rollup (a,b)

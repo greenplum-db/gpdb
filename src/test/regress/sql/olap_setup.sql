@@ -8,7 +8,6 @@ drop table if exists vendor cascade;
 drop table if exists product cascade;
 drop table if exists sale cascade;
 drop table if exists sale_ord cascade;
-drop table if exists util cascade;
 -- end_ignore
 
 create table customer 
@@ -68,14 +67,6 @@ create table sale_ord
 
 ) distributed by (cn,vn,pn);
 
-create table util
-(
-	xn int not null,
-	
-	primary key (xn)
-	
-) distributed by (xn);
-
 -- Customers
 insert into customer values 
   ( 1, 'Macbeth', 'Inverness'),
@@ -133,10 +124,3 @@ insert into sale_ord values
   ( 10,3, 30, 600, '1401-6-1', 12, 5),
   ( 11,4, 40, 700, '1401-6-1', 1, 1),
   ( 12,4, 40, 800, '1401-6-1', 1, 1);
-
--- Util
-
-insert into util values 
-  (1),
-  (20),
-  (300);

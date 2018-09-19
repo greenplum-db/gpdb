@@ -132,7 +132,7 @@ setupFunctionArguments(TableFunctionState *node)
 }
 
 /*
- * TableFunctionNext - ExecScan callback function for table funciton scans 
+ * TableFunctionNext - ExecScan callback function for table function scans
  */
 static TupleTableSlot *
 TableFunctionNext(TableFunctionState *node)

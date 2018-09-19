@@ -3658,7 +3658,7 @@ magic_expr_to_datum(Relation rel, PartitionNode *partnode,
 				/* see coerce_partition_value */
 				Node	   *out;
 
-				out = coerce_partition_value(n1, lhsid, attribute->atttypmod,
+				out = coerce_partition_value(NULL, n1, lhsid, attribute->atttypmod,
 											 char_to_parttype(partnode->part->parkind));
 				if (!out)
 					ereport(ERROR,

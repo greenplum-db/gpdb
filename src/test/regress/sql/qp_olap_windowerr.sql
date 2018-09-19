@@ -9,8 +9,6 @@ drop table cf_olap_windowerr_vendor;
 drop table cf_olap_windowerr_product;
 drop table cf_olap_windowerr_sale;
 drop table cf_olap_windowerr_sale_ord;
-drop table cf_olap_windowerr_util;
-
 
 create table cf_olap_windowerr_customer 
 (
@@ -69,14 +67,6 @@ create table cf_olap_windowerr_sale_ord
 	
 ) distributed by (cn,vn,pn);
 
-create table cf_olap_windowerr_util
-(
-	xn int not null,
-	
-	primary key (xn)
-	
-) distributed by (xn);
-
 -- cf_olap_windowerr_customers
 insert into cf_olap_windowerr_customer values 
   ( 1, 'Macbeth', 'Inverness'),
@@ -133,14 +123,6 @@ insert into cf_olap_windowerr_sale_ord values
   ( 10,3, 30, 600, '1401-6-1', 12, 5),
   ( 11,4, 40, 700, '1401-6-1', 1, 1),
   ( 12,4, 40, 800, '1401-6-1', 1, 1);
-
--- cf_olap_windowerr_util
-
-insert into cf_olap_windowerr_util values 
-  (1),
-  (20),
-  (300);
-
 -- end_ignore
 
 -- LEAD() function with OVER() clause having ONLY ORDER BY ASC/DESC (without framing) --
@@ -3782,5 +3764,4 @@ drop table cf_olap_windowerr_vendor;
 drop table cf_olap_windowerr_product;
 drop table cf_olap_windowerr_sale;
 drop table cf_olap_windowerr_sale_ord;
-drop table cf_olap_windowerr_util;
 -- end_ignore

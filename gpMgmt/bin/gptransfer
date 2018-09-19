@@ -1380,7 +1380,7 @@ class GpCreateNamedPipe(Command):
         fifo_name: full path of the named pipe to create
         """
 
-        cmdStr = 'mkfifo %s' % fifo_name
+        cmdStr = 'mkfifo -m 600 %s' % fifo_name
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 

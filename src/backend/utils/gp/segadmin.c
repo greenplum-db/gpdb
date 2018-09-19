@@ -18,7 +18,6 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
-#include "access/xlog.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_proc.h"
 #include "catalog/indexing.h"
@@ -26,6 +25,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbfts.h"
+#include "postmaster/startup.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 

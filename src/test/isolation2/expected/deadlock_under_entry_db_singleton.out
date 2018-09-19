@@ -14,7 +14,7 @@ CREATE
 -- QD may wait for ENTRY_DB_SINGLETON and we will have a wait cycle,
 -- causing deadlock.
 --
--- This test creates one such scenario using a volatile funciton.  It
+-- This test creates one such scenario using a volatile function.  It
 -- is critical that the function be volatile, otherwise,
 -- ENTRY_DB_SIGNLETON reader is not spawned to execute the query.
 --

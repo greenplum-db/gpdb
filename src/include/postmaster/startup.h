@@ -12,6 +12,8 @@
 #ifndef _STARTUP_H
 #define _STARTUP_H
 
+extern bool am_startup;
+
 extern void HandleStartupProcInterrupts(void);
 extern void StartupProcessMain(void);
 extern void PreRestoreCommand(void);

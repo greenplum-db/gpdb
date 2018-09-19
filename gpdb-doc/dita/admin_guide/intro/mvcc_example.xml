@@ -6,7 +6,7 @@
    <body>
       <p>For Greenplum Database, the transaction ID (XID) value an incrementing 32-bit
             (2<sup>32</sup>) value. The maximum unsigned 32-bit value is 4,294,967,295, or about
-         four billion. The XID values restart at 0 after the maximum is reached. Greenplum Database
+         four billion. The XID values restart at 3 after the maximum is reached. Greenplum Database
          handles the limit of XID values with two features:<ul id="ul_nlb_ks5_vv">
             <li>Calculations on XID values using modulo-2<sup>32</sup> arithmetic that allow
                Greenplum Database to reuse XID values. The modulo calculations determine the order
