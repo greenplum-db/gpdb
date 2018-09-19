@@ -5,15 +5,6 @@ PXF consists of a server side JVM based component and a C client component which
 This module only includes the PXF C client and the build instructions only builds the client.
 Using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
 
-## Table of Contents
-
-* Usage
-* Initialize and start GPDB cluster
-* Enable PXF extension
-* Run unit tests
-* Run regression tests
-=======
-
 ## Usage
 
 ### Enable PXF extension in GPDB build process.
@@ -54,8 +45,13 @@ Additional instructions on building and starting a GPDB cluster can be
 found in the top-level [README.md](../../../README.md) ("_Build the
 database_" section).
 
-## Create and use PXF external table
-If you wish to simply test GPDB and PXF without hadoop, you can use the Demo Profile.
+
+### Install PXF Server
+Please refer to [PXF Development](https://github.com/greenplum-db/pxf/blob/master/README.md) for instructions to setup PXF.
+Once you install and run PXF server alongside the GPDB segments, you can select data from the demo PXF profile:
+
+### Create and use PXF external table
+If you wish to simply test drive PXF extension without hadoop, you can avoid installing the hadoop components and simply use the Demo Profile.
 
 The Demo profile demonstrates how GPDB can parallely the external data via the PXF agents. The data served is 
 static data from the PXF agents themselves.
@@ -69,8 +65,6 @@ FORMAT 'TEXT' (DELIMITER ',');
 ```
 
 
-Please refer to [PXF Setup](https://cwiki.apache.org/confluence/display/HAWQ/PXF+Build+and+Install) for instructions to setup PXF.
-Once you install and run PXF server alongside the GPDB segments, you can select data from the demo PXF profile:
 ```
 # SELECT * from pxf_read_test order by a;
 
@@ -90,7 +84,7 @@ If you wish to use PXF with Hadoop, you will need to integrate with Hdfs or Hive
 
 
 
-## Run regression tests
+### Run regression tests
 
 ```
 make installcheck
