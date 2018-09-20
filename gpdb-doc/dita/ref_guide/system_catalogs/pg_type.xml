@@ -71,8 +71,7 @@
               value or by reference. <codeph>typbyval </codeph>had better be false if
                 <codeph>typlen</codeph> is not 1, 2, or 4 (or 8 on machines where Datum is 8 bytes).
               Variable-length types are always passed by reference. Note that
-                <codeph>typbyval</codeph> can be false even if the length would allow pass-by-value;
-              this is currently true for type <codeph>float4</codeph>, for example.</entry>
+                <codeph>typbyval</codeph> can be false even if the length would allow pass-by-value.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -82,7 +81,27 @@
             <entry colname="col3"/>
             <entry colname="col4"><codeph>b</codeph> for a base type, <codeph>c</codeph> for a
               composite type, <codeph>d</codeph> for a domain, <codeph>e</codeph> for an enum 
-              type, or <codeph>p</codeph> for a pseudo-type.</entry>
+              type, <codeph>p</codeph> for a pseudo-type, or <codeph>r</codeph> for a range
+              type. See also <codeph>typrelid</codeph> and <codeph>typbasetype</codeph>.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typcategory</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Arbitrary classification of data types that is used
+              by the parser to determine which implicit casts should be preferred.
+              See <xref href="#topic1/typcategory" type="topic" format="dita">Category Codes</xref>.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typispreferred</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">True if the type is a preferred cast target within
+              its <codeph>typcategory</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -124,7 +143,7 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">If not <codeph>0</codeph> then it identifies another row in
-              pg_type. The current type can then be subscripted like an array yielding values of
+              <codeph>pg_type</codeph>. The current type can then be subscripted like an array yielding values of
               type <codeph>typelem</codeph>. A true array type is variable length
                 (<codeph>typlen</codeph> = <codeph>-1</codeph>), but some fixed-length
                 (<codeph>tylpen</codeph> &gt; <codeph>0</codeph>) types also have nonzero
@@ -261,8 +280,8 @@
             </entry>
             <entry colname="col2">int4</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Domains use typtypmod to record the typmod to be applied to their
-              base type (-1 if base type does not use a typmod). -1 if this type is not a
+            <entry colname="col4">Domains use <codeph>typtypmod</codeph> to record the <codeph>typmod</codeph> to be applied to their
+              base type (-1 if base type does not use a <codeph>typmod</codeph>). -1 if this type is not a
               domain.</entry>
           </row>
           <row>
@@ -271,16 +290,26 @@
             </entry>
             <entry colname="col2">int4</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The number of array dimensions for a domain that is an array (if
-                <codeph>typbasetype</codeph> is an array type; the domain's <codeph>typelem</codeph>
-              will match the base type's <codeph>typelem</codeph>). Zero for types other than array
-              domains.</entry>
+            <entry colname="col4">The number of array dimensions for a domain over an array (if
+               <codeph>typbasetype</codeph> is an array type). Zero for types other than
+               domains over  array types.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typcollation</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_collation.oid</entry>
+            <entry colname="col4">Specifies the collation of the type. Zero if the type
+              does not support collations. The value is <codeph>DEFAULT_COLLATION_OID</codeph>
+              for a base type that suppports collations. A domain over a collatable type
+              can have some other collation OID if one was specified for the domain.</entry>
           </row>
           <row>
             <entry colname="col1">
               <codeph>typdefaultbin</codeph>
             </entry>
-            <entry colname="col2">text</entry>
+            <entry colname="col2">pg_node_tree</entry>
             <entry colname="col3"/>
             <entry colname="col4">If not null, it is the <codeph>nodeToString()</codeph>
               representation of a default expression for the type. This is only used for
@@ -293,10 +322,102 @@
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">Null if the type has no associated default value. If not null,
-              typdefault must contain a human-readable version of the default expression represented
-              by typdefaultbin. If typdefaultbin is null and typdefault is not, then typdefault is
+              <codeph>typdefault</codeph> must contain a human-readable version of
+              the default expression represented
+              by <codeph>typdefaultbin</codeph>. If <codeph>typdefaultbin</codeph> is
+              null and <codeph>typdefault</codeph> is not, then <codeph>typdefault</codeph> is
               the external representation of the type's default value, which may be fed to the
               type's input converter to produce a constant.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typacl</codeph>
+            </entry>
+            <entry colname="col2">aclitem[]</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Access privileges; see <codeph><xref href="../sql_commands/GRANT.xml#topic1" type="topic" format="dita"/></codeph>
+              and <codeph><xref href="../sql_commands/REVOKE.xml#topic1" type="topic" format="dita"/></codeph>
+              for details.</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+
+    <p>The following table lists the system-defined values of
+       <codeph>typcategory</codeph>. Any future additions to this list will also
+       be upper-case ASCII letters. All other ASCII characters are reserved for
+        user-defined categories.</p>
+    <table id="typcategory">
+      <title>typcategory Codes</title>
+      <tgroup cols="2">
+        <colspec colnum="1" colname="col1" colwidth="52pt"/>
+        <colspec colnum="2" colname="col2" colwidth="352pt"/>
+        <thead>
+          <row>
+            <entry colname="col1">Code</entry>
+            <entry colname="col2">Category</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry colname="col1">A</entry>
+            <entry colname="col2">Array types</entry>
+          </row>
+          <row>
+            <entry colname="col1">B</entry>
+            <entry colname="col2">Boolean types</entry>
+          </row>
+          <row>
+            <entry colname="col1">C</entry>
+            <entry colname="col2">Composite types</entry>
+          </row>
+          <row>
+            <entry colname="col1">D</entry>
+            <entry colname="col2">Date/time types</entry>
+          </row>
+          <row>
+            <entry colname="col1">E</entry>
+            <entry colname="col2">Enum types</entry>
+          </row>
+          <row>
+            <entry colname="col1">G</entry>
+            <entry colname="col2">Geometric types</entry>
+          </row>
+          <row>
+            <entry colname="col1">I</entry>
+            <entry colname="col2">Network address types</entry>
+          </row>
+          <row>
+            <entry colname="col1">N</entry>
+            <entry colname="col2">Numeric types</entry>
+          </row>
+          <row>
+            <entry colname="col1">P</entry>
+            <entry colname="col2">Pseudo-types</entry>
+          </row>
+          <row>
+            <entry colname="col1">R</entry>
+            <entry colname="col2">Range types</entry>
+          </row>
+          <row>
+            <entry colname="col1">S</entry>
+            <entry colname="col2">String types</entry>
+          </row>
+          <row>
+            <entry colname="col1">T</entry>
+            <entry colname="col2">Timespan types</entry>
+          </row>
+          <row>
+            <entry colname="col1">U</entry>
+            <entry colname="col2">User-defined types</entry>
+          </row>
+          <row>
+            <entry colname="col1">V</entry>
+            <entry colname="col2">Bit-string types</entry>
+          </row>
+          <row>
+            <entry colname="col1">X</entry>
+            <entry colname="col2"><codeph>unknown</codeph> type</entry>
           </row>
         </tbody>
       </tgroup>
