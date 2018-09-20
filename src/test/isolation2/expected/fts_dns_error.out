@@ -110,7 +110,7 @@ t
 
 -- wait until fts done the probe and this query will fail
 0<:  <... completed>
-ERROR:  Cannot resolve network address for dbid=2 (cdbutil.c:269)
+ERROR:  Cannot resolve network address for dbid=2
 
 -- verify a fts failover happens
 select count(*) from gp_segment_configuration where status = 'd';
