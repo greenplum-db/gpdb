@@ -42,7 +42,12 @@ getScanMethod(int tableType)
 			&HeapScanNext, &HeapScanRecheck, &BeginScanHeapRelation, &EndScanHeapRelation,
 			&ReScanHeapRelation, &MarkPosHeapRelation, &RestrPosHeapRelation
 		},
-		// GPDB_90_MERGE_FIXME: should we have rechecks for AO / AOCS scans?
+		/*
+		 * AO and AOCS tables don't need a recheck-method, because they never
+		 * participate in EvalPlanQual rechecks. (They don't have a ctid
+		 * field, so UPDATE in REPEATABLE READ mode cannot follow the chain
+		 * to the updated tuple.
+		 */
 		{
 			&AppendOnlyScanNext, NULL, &BeginScanAppendOnlyRelation, &EndScanAppendOnlyRelation,
 			&ReScanAppendOnlyRelation, &MarkRestrNotAllowed, &MarkRestrNotAllowed
