@@ -134,12 +134,12 @@ Perform the following procedure to create a local copy of the *Demo* connector s
     user@devsystem$ cp $PXFDEV_BASE/pxf-api-<version>.jar libs/
     ```
     
-4. The source code for the PXF *Demo* connector is located in the `pxf/pxf/pxf-api/src/main/java/org/greenplum/pxf/api/examples` directory of the repository you cloned in Step 1. Copy this code to your work area. For example:
+4. The source code for the PXF *Demo* connector is located in the `pxf/server/pxf-api/src/main/java/org/greenplum/pxf/api/examples` directory of the repository you cloned in Step 1. Copy this code to your work area. For example:
 
     ``` shell
     user@devsystem$ mkdir -p src/main/java/org/greenplum/pxf/example/demo
     user@devsystem$ cd src/main/java/org/greenplum/pxf/example/demo
-    user@devsystem$ cp $PXFDEV_BASE/pxf/pxf/pxf-api/src/main/java/org/greenplum/pxf/api/examples/* .
+    user@devsystem$ cp $PXFDEV_BASE/pxf/server/pxf-api/src/main/java/org/greenplum/pxf/api/examples/* .
     ```
 
 5. The original PXF *Demo* connector resides in the `org.greenplum.pxf.api.examples` package. Your *Demo* connector resides in a package named `org.greenplum.pxf.example.demo`. Update the package name in your local copy of the *Demo* connector source code. You can edit the files, run a script, etc. For example:
