@@ -268,7 +268,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			pRow->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			ereport(DNSLookupAsError ? ERROR : LOG,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					errmsg("Cannot resolve network address for dbid=%d", dbid)));
+					errmsg("cannot resolve network address for dbid=%d", dbid)));
 
 		if (pRow->hostaddrs[0] != NULL)
 			pRow->hostip = pstrdup(pRow->hostaddrs[0]);
