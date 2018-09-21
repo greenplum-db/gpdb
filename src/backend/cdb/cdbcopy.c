@@ -54,10 +54,11 @@ makeCdbCopy(bool is_copy_in)
 	CdbCopy    *c;
 	int			seg;
 
-	c = palloc(sizeof(CdbCopy));
+	c = palloc0(sizeof(CdbCopy));
 
 	/* fresh start */
 	c->total_segs = 0;
+	c->mirror_map = NULL;
 	c->io_errors = false;
 	c->copy_in = is_copy_in;
 	c->skip_ext_partition = false;
@@ -65,6 +66,7 @@ makeCdbCopy(bool is_copy_in)
 	c->partitions = NULL;
 	c->ao_segnos = NIL;
 	c->hasReplicatedTable = false;
+	c->dispatcherState = NULL;
 	initStringInfo(&(c->err_msg));
 	initStringInfo(&(c->err_context));
 	initStringInfo(&(c->copy_out_buf));
