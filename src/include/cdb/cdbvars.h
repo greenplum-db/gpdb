@@ -445,8 +445,6 @@ extern bool gp_interconnect_cache_future_packets;
 
 #define UNDEF_SEGMENT -2
 
-extern int	getgpsegmentCount(void);
-
 /*
  * Parameter interconnect_setup_timeout
  *

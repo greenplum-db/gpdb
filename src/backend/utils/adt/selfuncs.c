@@ -142,7 +142,8 @@
 #include "utils/tqual.h"
 #include "utils/typcache.h"
 
-#include "cdb/cdbvars.h"                /* getgpsegmentCount */
+#include "cdb/cdbutil.h"
+#include "cdb/cdbvars.h"
 
 /* Hooks for plugins to get control when we ask for stats */
 get_relation_stats_hook_type get_relation_stats_hook = NULL;

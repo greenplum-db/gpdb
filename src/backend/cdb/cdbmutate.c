@@ -56,6 +56,7 @@
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbsetop.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbtargeteddispatch.h"
 
 #include "nodes/print.h"

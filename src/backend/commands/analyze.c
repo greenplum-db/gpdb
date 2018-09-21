@@ -31,6 +31,7 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbtm.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "commands/analyzeutils.h"
 #include "commands/dbcommands.h"
