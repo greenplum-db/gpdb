@@ -3623,7 +3623,8 @@ int gpfdist_run()
 
 int main(int argc, const char* const argv[])
 {
-	gpfdist_init(argc, argv);
+	if (gpfdist_init(argc, argv) == -1)
+		gfatal(NULL, "Initialization failed");
 	return gpfdist_run();
 }
 
@@ -3790,7 +3791,8 @@ int main(int argc, const char* const argv[])
 	srv_ret = StartServiceCtrlDispatcher(ServiceTable);
 	if (0 == srv_ret) /* program is being run as a Windows console application */
 	{
-		gpfdist_init(argc, argv);
+		if (gpfdist_init(argc, argv) == -1)
+			gfatal(NULL, "Initialization failed");
 		main_ret = gpfdist_run();
 	}
 
