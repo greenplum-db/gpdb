@@ -39,3 +39,4 @@ gp_tablespace.out
 partition_ddl.out
 autovacuum-template0.out
 rpt_tpch.out
+session_reset.out
