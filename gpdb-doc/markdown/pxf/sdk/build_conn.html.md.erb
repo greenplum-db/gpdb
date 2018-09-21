@@ -148,7 +148,7 @@ Perform the following procedure to create a local copy of the *Demo* connector s
     user@devsystem$ sed -i.bak s/"org.greenplum.pxf.api.examples"/"org.greenplum.pxf.example.demo"/g *.java
     ```
 
-    The `sed` command above creates a backup of each file. Remove the backup files. For example:
+    Remove the temporary files created by the previous command:
     
     ``` shell
     user@devsystem$ rm *.bak
