@@ -525,12 +525,25 @@ AutoVacLauncherMain(int argc, char *argv[])
 	/* must unblock signals before calling rebuild_database_list */
 	PG_SETMASK(&UnBlockSig);
 
+/*
+ * In GPDB, we only want an autovacuum worker to start once we know
+ * there is a database to vacuum. Therefore, we never want emergency mode
+ * to start a worker immediately.
+ *
+ * Note: when the emergency mode is running it is possible to continuously
+ * start an autovacuum worker. Within the worker, the PMSIGNAL_START_AUTOVAC_LAUNCHER
+ * signal is sent when a database is found that is old enough to be vacuumed. If
+ * the database chosen is connectable, the launcher will never select it and the
+ * worker will continue to signal for a new launcher.
+ */
+#if 0
 	/* in emergency mode, just start a worker and go away */
 	if (!AutoVacuumingActive())
 	{
 		do_start_worker();
 		proc_exit(0);			/* done */
 	}
+#endif
 
 	AutoVacuumShmem->av_launcherpid = MyProcPid;
 
