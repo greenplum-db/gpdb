@@ -48,13 +48,12 @@ database_" section).
 
 ### Install PXF Server
 Please refer to [PXF Development](https://github.com/greenplum-db/pxf/blob/master/README.md) for instructions to setup PXF.
-Once you install and run PXF server alongside the GPDB segments, you can select data from the demo PXF profile:
+You will need one PXF server agent per Segment host.
 
 ### Create and use PXF external table
-If you wish to simply test drive PXF extension without hadoop, you can avoid installing the hadoop components and simply use the Demo Profile.
+If you wish to simply test drive PXF extension without hitting any external data source, you can avoid starting any of the hadoop components (while installing the PXF Server) and simply use the Demo Profile.
 
-The Demo profile demonstrates how GPDB can parallely the external data via the PXF agents. The data served is 
-static data from the PXF agents themselves.
+The Demo profile demonstrates how GPDB using its segments can access static data served by the PXF service(s) in parallel.
 ```
 # CREATE EXTERNAL TABLE pxf_read_test (a TEXT, b TEXT, c TEXT) \
 LOCATION ('pxf://localhost:5888/tmp/dummy1' \
