@@ -566,7 +566,7 @@
           <row>
             <entry colname="col1">E081-05</entry>
             <entry colname="col2"><codeph>UPDATE</codeph> privilege at the column level</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
@@ -1863,7 +1863,7 @@
           <row>
             <entry colname="col1">F731</entry>
             <entry colname="col2"><codeph>INSERT</codeph> column privileges</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>
@@ -2682,7 +2682,7 @@
           <row>
             <entry colname="col1">T281</entry>
             <entry colname="col2"><codeph>SELECT</codeph> privilege with column granularity</entry>
-            <entry colname="col3">NO</entry>
+            <entry colname="col3">YES</entry>
             <entry colname="col4"/>
           </row>
           <row>

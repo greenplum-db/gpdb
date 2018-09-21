@@ -263,7 +263,7 @@
       </p>
       <p>The role attributes <codeph>LOGIN</codeph>, <codeph>SUPERUSER</codeph>,
           <codeph>CREATEDB</codeph>, <codeph>CREATEROLE</codeph>, <codeph>CREATEEXTTABLE</codeph>,
-          and<codeph>RESOURCE QUEUE</codeph> are never inherited as ordinary privileges on database
+          and <codeph>RESOURCE QUEUE</codeph> are never inherited as ordinary privileges on database
         objects are. User members must actually <codeph>SET ROLE</codeph> to a specific role having
         one of these attributes in order to make use of the attribute. In the above example, we gave
           <codeph>CREATEDB</codeph> and <codeph>CREATEROLE</codeph> to the <codeph>admin</codeph>
@@ -392,15 +392,19 @@
           </tbody>
         </tgroup>
       </table>
-      <note type="note">Privileges must be granted for each object individually. For example,
+      <note type="note">You must grant privileges for each object individually. For example,
         granting <codeph>ALL</codeph> on a database does not grant full access to the objects within
         that database. It only grants all of the database-level privileges
         (<codeph>CONNECT</codeph>, <codeph>CREATE</codeph>, <codeph>TEMPORARY</codeph>) to the
         database itself.</note>
       <p>Use the <codeph>GRANT</codeph> SQL command to give a specified role privileges on an
-        object. For example:</p>
+        object. For example, to grant the role named <codeph>jsmith</codeph> insert
+        privileges on the table named <codeph>mytable</codeph>:</p>
       <p>
         <codeblock>=# GRANT INSERT ON mytable TO jsmith;</codeblock>
+        Similarly, to grant <codeph>jsmith</codeph> select access to only the column named
+        <codeph>col1</codeph> in the table named <codeph>table2</codeph>:
+        <codeblock>=# GRANT SELECT (col1) on TABLE table2 TO jsmith;</codeblock>
       </p>
       <p>To revoke privileges, use the <codeph>REVOKE</codeph> command. For example:</p>
       <p>
@@ -417,13 +421,13 @@
       </p>
     </body>
     <topic id="topic7" xml:lang="en">
-      <title>Simulating Row and Column Level Access Control</title>
+      <title>Simulating Row Level Access Control</title>
       <body>
-        <p>Row-level or column-level access is not supported, nor is labeled security. Row-level and
-          column-level access can be simulated using views to restrict the columns and/or rows that
-          are selected. Row-level labels can be simulated by adding an extra column to the table to
+        <p>Row-level access is not supported, nor is labeled security. You can
+          simulate row-level access by using views to restrict the rows that
+          are selected. You can simulate row-level labels by adding an extra column to the table to
           store sensitivity information, and then using views to control row-level access based on
-          this column. Roles can then be granted access to the views rather than the base table.
+          this column. You can then grant roles access to the views rather than the base table.
         </p>
       </body>
     </topic>

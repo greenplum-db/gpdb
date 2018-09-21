@@ -27,9 +27,9 @@
         clause. Which technique is more appropriate depends on the specific circumstances. </p>
       <p>If the <codeph>WHERE CURRENT OF</codeph> clause is specified, the row that is updated is
         the one most recently fetched from the specified cursor. </p>
-      <p>You must have the <codeph>UPDATE</codeph> privilege on the table to update it, as well as
-        the <codeph>SELECT</codeph> privilege to any table whose values are read in the expressions
-        or condition.</p>
+      <p>You must have the <codeph>UPDATE</codeph> privilege on the table, or at least on the column(s) that are listed to be updated. You must also have
+        the <codeph>SELECT</codeph> privilege on any column whose values are read in the <varname>expression</varname>s
+        or <varname>condition</varname>.</p>
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>UPDATE</codeph> command returns a command tag of the

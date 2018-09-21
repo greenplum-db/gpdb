@@ -29,7 +29,13 @@
         any expression using the table's columns is allowed. The syntax of the
           <codeph>RETURNING</codeph> list is identical to that of the output list of
           <codeph>SELECT</codeph>.</p>
-      <p>You must have <codeph>INSERT</codeph> privilege on a table in order to insert into it.</p>
+      <p>You must have <codeph>INSERT</codeph> privilege on a table in order to insert into it.
+        When a column list is specified, you need <codeph>INSERT</codeph> privilege only on the listed columns.
+        Use of the <codeph>RETURNING</codeph> clause requires <codeph>SELECT</codeph>
+        privilege on all columns mentioned in <codeph>RETURNING</codeph>.  If you provide
+        a <varname>query</varname> to insert rows from a query, you must have
+        <codeph>SELECT</codeph> privilege on any table or column referenced in the
+         query.</p>
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>INSERT</codeph> command returns a command tag of the

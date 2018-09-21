@@ -101,9 +101,9 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           the <codeph>SELECT</codeph> statement locks the entire table against concurrent
           updates.</li>
       </ol>
-      <p>You must have <codeph>SELECT</codeph> privilege on a table to read its values. The use of
+      <p>You must have <codeph>SELECT</codeph> privilege on each column used in a <codeph>SELECT</codeph> command. The use of
           <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> requires <codeph>UPDATE</codeph>
-        privilege as well.</p>
+        privilege as well (for at least one column of each table so selected).</p>
     </section>
     <section id="section4">
       <title>Parameters</title>

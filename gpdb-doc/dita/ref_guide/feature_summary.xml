@@ -82,8 +82,6 @@
           <li id="ik264840"><codeph>INTERVAL</codeph> literals are supported in Greenplum Database,
             but do not conform to the standard.</li>
           <li id="ik264841"><codeph>GET DIAGNOSTICS</codeph> statement.</li>
-          <li id="ik264842"><codeph>GRANT INSERT</codeph> or <codeph>UPDATE</codeph> privileges on
-            columns. Privileges can only be granted on tables in Greenplum Database.</li>
           <li id="ik264843"><codeph>GLOBAL TEMPORARY TABLE</codeph>s and <codeph>LOCAL TEMPORARY
               TABLE</codeph>s. Greenplum <codeph>TEMPORARY TABLE</codeph>s do not conform to the SQL
             standard, but many commercial database systems have implemented temporary tables in the
@@ -161,8 +159,6 @@
             as a work-around to get random samples from tables.</li>
           <li id="ik265712">The <i>partitioned join tables</i> construct (<codeph>PARTITION
               BY</codeph> in a join).</li>
-          <li id="ik265713"><codeph>GRANT SELECT</codeph> privileges on columns. Privileges can only
-            be granted on tables in Greenplum Database. Views can be used as a work-around.</li>
           <li id="ik265714">For <codeph>CREATE TABLE x (LIKE(y))</codeph> statements, Greenplum does
             not support the
               <codeph>[INCLUDING|EXCLUDING]</codeph><codeph>[DEFAULTS|CONSTRAINTS|INDEXES]</codeph>
