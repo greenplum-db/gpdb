@@ -365,6 +365,7 @@ FaultInjector_InjectFaultNameIfSet(
 		case FaultInjectorTypeNotSpecified:
 			
 			break;
+
 		case FaultInjectorTypeSleep:
 			ereport(LOG,
 					(errcode(ERRCODE_FAULT_INJECT),
@@ -374,22 +375,15 @@ FaultInjector_InjectFaultNameIfSet(
 			
 			pg_usleep(entryLocal->extraArg * 1000000L);
 			break;
-		case FaultInjectorTypeFault:
-			ereport(ERROR,
-					(errcode(ERRCODE_FAULT_INJECT),
-					 errmsg("currently this fault type has no implementation, fault name:'%s' fault type:'%s' ",
-							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
-			
-			break;
+
 		case FaultInjectorTypeFatal:
 			ereport(FATAL, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
-
+							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			break;
+
 		case FaultInjectorTypePanic:
 			/*
 			 * Avoid core file generation for this PANIC. It helps to avoid
@@ -411,6 +405,7 @@ FaultInjector_InjectFaultNameIfSet(
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
 			break;
+
 		case FaultInjectorTypeError:
 			ereport(ERROR, 
 					(errcode(ERRCODE_FAULT_INJECT),
@@ -418,6 +413,7 @@ FaultInjector_InjectFaultNameIfSet(
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			break;
+
 		case FaultInjectorTypeInfiniteLoop:
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
@@ -430,13 +426,6 @@ FaultInjector_InjectFaultNameIfSet(
 				pg_usleep(1000000L); // sleep for 1 sec (1 sec * 3600 = 1 hour)
 				CHECK_FOR_INTERRUPTS();
 			}
-			break;
-		case FaultInjectorTypeDataCorruption:
-			ereport(LOG, 
-					(errcode(ERRCODE_FAULT_INJECT),
-					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
 			
 		case FaultInjectorTypeSuspend:
@@ -480,6 +469,7 @@ FaultInjector_InjectFaultNameIfSet(
 			}
 			break;
 		}
+
 		case FaultInjectorTypeSkip:
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
@@ -487,37 +477,7 @@ FaultInjector_InjectFaultNameIfSet(
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
-			
-		case FaultInjectorTypeMemoryFull:
-		{
-			char	*buffer = NULL;
-			
-			ereport(LOG, 
-					(errcode(ERRCODE_FAULT_INJECT),
-					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
-			buffer = (char*) palloc(BLCKSZ);
-
-			while (buffer != NULL)
-			{
-				buffer = (char*) palloc(BLCKSZ);
-			}
-			
-			break;
-		}	
-		case FaultInjectorTypeReset:
-		case FaultInjectorTypeStatus:
-			
-			ereport(LOG, 
-					(errcode(ERRCODE_FAULT_INJECT),
-					 errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
-							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
-			
-			Assert(0);
-			break;
 		case FaultInjectorTypeResume:
 			break;
 			
@@ -567,17 +527,6 @@ FaultInjector_InjectFaultNameIfSet(
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			QueryFinishPending = true;
-			break;
-		}
-
-		case FaultInjectorTypeCheckpointAndPanic:
-		{
-			RequestCheckpoint(CHECKPOINT_WAIT | CHECKPOINT_IMMEDIATE);
-			ereport(PANIC,
-					(errcode(ERRCODE_FAULT_INJECT),
-					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							entryLocal->faultName,
-							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			break;
 		}
 

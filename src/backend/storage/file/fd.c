@@ -1472,32 +1472,6 @@ FileWrite(File file, char *buffer, int amount)
 	if (returnCode < 0)
 		return returnCode;
 
-#ifdef FAULT_INJECTOR
-	if (! strcmp(VfdCache[file].fileName, "global/pg_control"))
-	{
-		if (FaultInjector_InjectFaultIfSet(
-										   PgControl,
-										   DDLNotSpecified,
-										   "" /* databaseName */,
-										   "" /* tableName */) == FaultInjectorTypeDataCorruption)
-		{
-			MemSet(buffer, 0, amount);
-		}
-	}
-
-	if (strstr(VfdCache[file].fileName, "pg_xlog/"))
-	{
-		if (FaultInjector_InjectFaultIfSet(
-										   PgXlog,
-										   DDLNotSpecified,
-										   "" /* databaseName */,
-										   "" /* tableName */) == FaultInjectorTypeDataCorruption)
-		{
-			MemSet(buffer, 0, amount);
-		}
-	}
-#endif
-
 	/*
 	 * If enforcing temp_file_limit and it's a temp file, check to see if the
 	 * write would overrun temp_file_limit, and throw error if so.	Note: it's
