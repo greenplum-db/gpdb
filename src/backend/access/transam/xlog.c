@@ -91,8 +91,6 @@ bool		XLogArchiveMode = false;
 char	   *XLogArchiveCommand = NULL;
 bool		EnableHotStandby = false;
 bool		fullPageWrites = true;
-char   *wal_consistency_checking_string = NULL;
-bool   *wal_consistency_checking = NULL;
 bool		log_checkpoints = false;
 int			sync_method = DEFAULT_SYNC_METHOD;
 int			wal_level = WAL_LEVEL_MINIMAL;
@@ -248,9 +246,6 @@ static TransactionId recoveryStopXid;
 static TimestampTz recoveryStopTime;
 static char recoveryStopName[MAXFNAMELEN];
 static bool recoveryStopAfter;
-
-static char *replay_image_masked = NULL;
-static char *master_image_masked = NULL;
 
 /*
  * During normal operation, the only timeline we care about is ThisTimeLineID.
@@ -750,7 +745,6 @@ static int	get_sync_bit(int method);
 static void XLogProcessCheckpointRecord(XLogRecord *rec);
 
 static void GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo);
-static void checkXLogConsistency(XLogRecord *record, XLogRecPtr EndRecPtr);
 
 #ifdef WAL_DEBUG
 static char *XLogContiguousCopy(
@@ -846,7 +840,6 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	bool		updrqst;
 	bool		doPageWrites;
 	bool		isLogSwitch = (rmid == RM_XLOG_ID && info == XLOG_SWITCH);
-	uint8       extended_info = 0;
 	uint8		info_orig = info;
 	static XLogRecord *rechdr;
 
@@ -877,15 +870,6 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 		RecPtr = SizeOfXLogLongPHD;		/* start of 1st chkpt record */
 		return RecPtr;
 	}
-
-	/*
-	 * Enforce consistency checks for this record if user is looking for
-	 * it. Do this before at the beginning of this routine to give the
-	 * possibility for callers of XLogInsert() to pass XLR_CHECK_CONSISTENCY
-	 * directly for a record.
-	 */
-	if (wal_consistency_checking[rmid])
-		extended_info |= XLR_CHECK_CONSISTENCY;
 
 	/*
 	 * Here we scan the rdata chain, to determine which buffers must be backed
@@ -5009,14 +4993,6 @@ ApplyStartupRedo(
 
 	RmgrTable[record->xl_rmid].rm_redo(*beginLoc, *lsn, record);
 
-	/*
-	 * After redo, check whether the backup pages associated with
-	 * the WAL record are consistent with the existing pages. This
-	 * check is done only if consistency check is enabled for this
-	 * record.
-	 */
-	if ((record->xl_extended_info & XLR_CHECK_CONSISTENCY) != 0)
-		checkXLogConsistency(record, *lsn);
 	/* Pop the error context stack */
 	error_context_stack = errcontext_cb.previous;
 
@@ -5404,13 +5380,6 @@ StartupXLOG(void)
 	if (StandbyModeRequested)
 		ereport(LOG,
 				(errmsg("entering standby mode")));
-
-	/*
-	 * Allocate pages dedicated to WAL consistency checks, those had better
-	 * be aligned.
-	 */
-	replay_image_masked = (char *) palloc(BLCKSZ);
-	master_image_masked = (char *) palloc(BLCKSZ);
 
 	if (ArchiveRecoveryRequested)
 	{
@@ -11023,132 +10992,6 @@ GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo)
 }
 
 /*
- * Checks whether the current buffer page and backup page stored in the
- * WAL record are consistent or not. Before comparing the two pages, a
- * masking can be applied to the pages to ignore certain areas like hint bits,
- * unused space between pd_lower and pd_upper among other things. This
- * function should be called once WAL replay has been completed for a
- * given record.
- */
-static void
-checkXLogConsistency(XLogRecord *record, XLogRecPtr EndRecPtr)
-{
-	RmgrId		rmid = record->xl_rmid;
-	char       *blk;
-
-	/* Records with no backup blocks have no need for consistency checks. */
-	if (!(record->xl_info & XLR_BKP_BLOCK_MASK))
-		return;
-
-	Assert((record->xl_extended_info & XLR_CHECK_CONSISTENCY) != 0);
-
-	blk = (char *) XLogRecGetData(record) + record->xl_len;
-	for (int i = 0; i < XLR_MAX_BKP_BLOCKS; i++)
-	{
-		BkpBlock    bkpb;
-		Buffer		buf;
-		Page		page;
-		char       *src_buffer;
-
-		if (!(record->xl_info & XLR_BKP_BLOCK(i)))
-		{
-			/*
-			 * WAL record doesn't contain a block do nothing.
-			 */
-			continue;
-		}
-
-		memcpy(&bkpb, blk, sizeof(BkpBlock));
-		blk += sizeof(BkpBlock);
-		src_buffer = blk;
-		/* move on to point to next block */
-		blk += BLCKSZ - bkpb.hole_length;
-
-		if (bkpb.block_info & BLOCK_APPLY)
-		{
-			/*
-			 * WAL record has already applied the page, so bypass the
-			 * consistency check as that would result in comparing the full
-			 * page stored in the record with itself.
-			 */
-			continue;
-		}
-
-		/*
-		 * Read the contents from the current buffer and store it in a
-		 * temporary page.
-		 */
-		buf = XLogReadBuffer(bkpb.node, bkpb.block, false);
-		if (!BufferIsValid(buf))
-			continue;
-
-		page = BufferGetPage(buf);
-
-		/*
-		 * Take a copy of the local page where WAL has been applied to have a
-		 * comparison base before masking it...
-		 */
-		memcpy(replay_image_masked, page, BLCKSZ);
-
-		/* No need for this page anymore now that a copy is in. */
-		UnlockReleaseBuffer(buf);
-
-		/*
-		 * If the block LSN is already ahead of this WAL record, we can't
-		 * expect contents to match.  This can happen if recovery is
-		 * restarted.
-		 */
-		if (EndRecPtr < PageGetLSN(replay_image_masked))
-			continue;
-
-		/*
-		 * Read the contents from the backup copy, stored in WAL record and
-		 * store it in a temporary page. There is no need to allocate a new
-		 * page here, a local buffer is fine to hold its contents and a mask
-		 * can be directly applied on it.
-		 */
-		if (bkpb.hole_length == 0)
-		{
-			memcpy((char *) master_image_masked, src_buffer, BLCKSZ);
-		}
-		else
-		{
-			/* zero-fill the hole, anyways gets masked out */
-			MemSet((char *) master_image_masked, 0, BLCKSZ);
-			memcpy((char *) master_image_masked, src_buffer, bkpb.hole_offset);
-			memcpy((char *) master_image_masked + (bkpb.hole_offset + bkpb.hole_length),
-				   src_buffer + bkpb.hole_offset,
-				   BLCKSZ - (bkpb.hole_offset + bkpb.hole_length));
-		}
-
-		/*
-		 * If masking function is defined, mask both the master and replay
-		 * images
-		 */
-		if (RmgrTable[rmid].rm_mask != NULL)
-		{
-			RmgrTable[rmid].rm_mask(replay_image_masked, bkpb.block);
-			RmgrTable[rmid].rm_mask(master_image_masked, bkpb.block);
-		}
-
-		/* Time to compare the master and replay images. */
-		if (memcmp(replay_image_masked, master_image_masked, BLCKSZ) != 0)
-		{
-			elog(FATAL,
-				 "inconsistent page found, rel %u/%u/%u, blkno %u",
-				 bkpb.node.spcNode, bkpb.node.dbNode, bkpb.node.relNode,
-				 bkpb.block);
-		}
-		else
-		{
-			elog(DEBUG1,
-				 "Consistent page for rel %u/%u/%u, blkno %u",
-				 bkpb.node.spcNode, bkpb.node.dbNode, bkpb.node.relNode,
-				 bkpb.block);
-		}
-	}
-}
-/*
  * Report the last WAL replay location
  */
 XLogRecPtr
@@ -11165,7 +11008,6 @@ last_xlog_replay_location()
 
 	return recptr;
 }
-
 
 void
 wait_for_mirror()
