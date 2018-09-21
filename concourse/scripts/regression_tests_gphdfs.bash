@@ -16,7 +16,7 @@ function gen_env(){
 
 	function look4diffs() {
 
-	    diff_files=\`find \${dir}/gpdb_src/gpAux/extensions/gphdfs/regression -name regression.diffs\`
+	    diff_files=\`find \${dir}/gpdb_src/gpcontrib/gphdfs/regression -name regression.diffs\`
 
 	    for diff_file in \${diff_files}; do
 		if [ -f "\${diff_file}" ]; then
@@ -62,10 +62,10 @@ function gen_env(){
 		wget -O \${HADOOP_HOME}/share/hadoop/common/lib/parquet-hadoop-bundle-1.8.1.jar http://central.maven.org/maven2/org/apache/parquet/parquet-hadoop-bundle/1.8.1/parquet-hadoop-bundle-1.8.1.jar
 	fi
 
-	cd "\${1}/gpdb_src/gpAux/extensions/gphdfs/regression/integrate"
+	cd "\${1}/gpdb_src/gpcontrib/gphdfs/regression/integrate"
 	./generate_gphdfs_data.sh
 
-	cd "\${1}/gpdb_src/gpAux/extensions/gphdfs/regression"
+	cd "\${1}/gpdb_src/gpcontrib/gphdfs/regression"
 	GP_HADOOP_TARGET_VERSION=$HADOOP_TARGET_VERSION HADOOP_HOST=localhost HADOOP_PORT=9000 ./run_gphdfs_regression.sh
 
 	exit 0

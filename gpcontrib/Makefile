@@ -25,7 +25,7 @@ ifeq "$(with_zstd)" "yes"
 endif
 $(call recurse,all install clean distclean, $(recurse_targets))
 
-all: gpcloud pxf mapreduce
+all: gpcloud pxf mapreduce gphdfs
 
 gpcloud:
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
