@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-
 <topic id="topic1" xml:lang="en">
   <title>System Tables</title>
   <body>
     <ul>
-      <li id="eu150153">gp_configuration (Deprecated. See <xref
-        href="./gp_segment_configuration.xml#topic1" type="topic" format="dita"/>.)</li>
       <li id="eu150554">
         <xref href="./gp_configuration_history.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -23,8 +20,8 @@
       <li id="eu150476">
         <xref href="./gp_id.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu152757">gp_master_mirroring (Deprecated. See <xref
-        href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
+      <li>
+        <xref href="./gp_stat_replication.xml#topic1" type="topic" format="dita"/></li>
       <li id="eu150031">
         <xref href="./gp_segment_configuration.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -165,6 +162,7 @@
       <li id="eu150417">
         <xref href="./pg_stat_last_shoperation.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li><xref href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/></li>
       <li id="eu149970">
         <xref href="./pg_statistic.xml#topic1" type="topic" format="dita"/>
       </li>
