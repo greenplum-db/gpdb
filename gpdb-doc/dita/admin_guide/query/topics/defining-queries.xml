@@ -361,7 +361,7 @@
             <body>
                 <p>A type cast specifies a conversion from one data type to another. A cast applied
                     to a value expression of a known type is a run-time type conversion. The cast
-                    succeeds only if a suitable type conversion operation is defined. This differs
+                    succeeds only if a suitable type conversion is defined. This differs
                     from the use of casts with constants. A cast applied to a string literal
                     represents the initial assignment of a type to a literal constant value, so it
                     succeeds for any type if the contents of the string literal are acceptable input
@@ -401,8 +401,8 @@ expression::type</codeblock>
                 <p>You can usually omit an explicit type cast if there is no ambiguity about the
                     type a value expression must produce (for example, when it is assigned to a
                     table column); the system automatically applies a type cast. Greenplum Database
-                    implicitly applies casts only when the cast is marked as "OK to apply
-                    implicitly" in the system catalogs. Other casts must be
+                    implicitly applies casts only to casts defined with a cast context of
+                    assignment or explicit in the system catalogs. Other casts must be
                     invoked with explicit casting syntax to prevent unexpected conversions from
                     being applied without the user's knowledge. </p>
                 <p>You can display cast information with the <codeph>psql</codeph> meta-command
