@@ -1,7 +1,5 @@
 We've confirmed that these steps work on a brand new installation of macOS
-Sierra or a brand new installation of macOS Sierra with [Pivotal's
-workstation-setup](https://github.com/pivotal/workstation-setup)
-
+Sierra.
 
 ## 1. Install needed dependencies
 
