@@ -22,7 +22,6 @@
 int			IdleSessionGangTimeout = 18000;
 
 static volatile sig_atomic_t clientWaitTimeoutInterruptEnabled = 0;
-static volatile sig_atomic_t clientWaitTimeoutInterruptOccurred = 0;
 
 static volatile sig_atomic_t idle_gang_timeout_occurred;
 
