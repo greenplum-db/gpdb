@@ -34,10 +34,6 @@
 #include "cdb/cdbpath.h"		/* me */
 #include "cdb/cdbvars.h"
 
-#ifdef small					/* <socket.h> might #define small */
-#undef small					/* but I want it for a variable name */
-#endif
-
 
 /*
  * cdbpath_cost_motion
@@ -1146,20 +1142,20 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	 */
 	else
 	{							/* partitioned */
-		CdbpathMfjRel *large = &outer;
-		CdbpathMfjRel *small = &inner;
+		CdbpathMfjRel *large_rel = &outer;
+		CdbpathMfjRel *small_rel = &inner;
 
 		/* Which rel is bigger? */
-		if (large->bytes < small->bytes)
-			CdbSwap(CdbpathMfjRel *, large, small);
+		if (large_rel->bytes < small_rel->bytes)
+			CdbSwap(CdbpathMfjRel *, large_rel, small_rel);
 
 		/* If joining on larger rel's partitioning key, redistribute smaller. */
-		if (!small->require_existing_order &&
+		if (!small_rel->require_existing_order &&
 			cdbpath_match_preds_to_partkey(root,
 										   redistribution_clauses,
-										   large->path,
-										   large->locus,
-										   &small->move_to))	/* OUT */
+										   large_rel->path,
+										   large_rel->locus,
+										   &small_rel->move_to))	/* OUT */
 		{
 		}
 
@@ -1167,37 +1163,37 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		 * Replicate smaller rel if cheaper than redistributing larger rel.
 		 * But don't replicate a rel that is to be preserved in outer join.
 		 */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate &&
-				 small->bytes * root->config->cdbpath_segments < large->bytes)
-			CdbPathLocus_MakeReplicated(&small->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate &&
+				 small_rel->bytes * root->config->cdbpath_segments < large_rel->bytes)
+			CdbPathLocus_MakeReplicated(&small_rel->move_to);
 
 		/* If joining on smaller rel's partitioning key, redistribute larger. */
-		else if (!large->require_existing_order &&
+		else if (!large_rel->require_existing_order &&
 				 cdbpath_match_preds_to_partkey(root,
 												redistribution_clauses,
-												small->path,
-												small->locus,
-												&large->move_to))	/* OUT */
+												small_rel->path,
+												small_rel->locus,
+												&large_rel->move_to))	/* OUT */
 		{
 		}
 
 		/* Replicate smaller rel if cheaper than redistributing both rels. */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate &&
-				 small->bytes * root->config->cdbpath_segments < large->bytes + small->bytes)
-			CdbPathLocus_MakeReplicated(&small->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate &&
+				 small_rel->bytes * root->config->cdbpath_segments < large_rel->bytes + small_rel->bytes)
+			CdbPathLocus_MakeReplicated(&small_rel->move_to);
 
 		/* Redistribute both rels on equijoin cols. */
-		else if (!small->require_existing_order &&
-				 !small->has_wts &&
-				 !large->require_existing_order &&
-				 !large->has_wts &&
+		else if (!small_rel->require_existing_order &&
+				 !small_rel->has_wts &&
+				 !large_rel->require_existing_order &&
+				 !large_rel->has_wts &&
 				 cdbpath_partkeys_from_preds(root,
 											 redistribution_clauses,
-											 large->path,
-											 &large->move_to,
-											 &small->move_to))
+											 large_rel->path,
+											 &large_rel->move_to,
+											 &small_rel->move_to))
 		{
 		}
 
@@ -1206,12 +1202,12 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		 * motion. Replicate one rel if possible. MPP TODO: Consider number of
 		 * seg dbs per host.
 		 */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate)
-			CdbPathLocus_MakeReplicated(&small->move_to);
-		else if (!large->require_existing_order &&
-				 large->ok_to_replicate)
-			CdbPathLocus_MakeReplicated(&large->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate)
+			CdbPathLocus_MakeReplicated(&small_rel->move_to);
+		else if (!large_rel->require_existing_order &&
+				 large_rel->ok_to_replicate)
+			CdbPathLocus_MakeReplicated(&large_rel->move_to);
 
 		/* Last resort: Move both rels to a single qExec. */
 		else
