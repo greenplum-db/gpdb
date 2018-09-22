@@ -89,12 +89,6 @@ static uint32 recvOff = 0;
 static volatile sig_atomic_t got_SIGHUP = false;
 static volatile sig_atomic_t got_SIGTERM = false;
 
-/* Following flags should be strictly used for testing purposes ONLY */
-static volatile sig_atomic_t wait_before_rcv = false;
-static volatile sig_atomic_t wait_before_send = false;
-static volatile sig_atomic_t wait_before_send_ack = false;
-static volatile sig_atomic_t resume = false;
-
 /*
  * LogstreamResult indicates the byte positions that we have already
  * written/fsynced.
@@ -145,7 +139,6 @@ static void WalRcvSigHupHandler(SIGNAL_ARGS);
 static void WalRcvSigUsr1Handler(SIGNAL_ARGS);
 static void WalRcvShutdownHandler(SIGNAL_ARGS);
 static void WalRcvQuickDieHandler(SIGNAL_ARGS);
-static void WalRcvUsr2Handler(SIGNAL_ARGS);
 static void WalRcvCrashHandler(SIGNAL_ARGS);
 
 
@@ -196,7 +189,6 @@ WalReceiverMain(void)
 	volatile WalRcvData *walrcv = WalRcv;
 	TimestampTz last_recv_timestamp;
 	bool		ping_sent;
-	File		pid_file;
 	sigjmp_buf	local_sigjmp_buf;
 
 	/*
@@ -280,7 +272,7 @@ WalReceiverMain(void)
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, WalRcvSigUsr1Handler);
-	pqsignal(SIGUSR2, WalRcvUsr2Handler);
+	pqsignal(SIGUSR2, SIG_IGN);
 
 	/* Reset some signals that are accepted by postmaster but not here */
 	pqsignal(SIGCHLD, SIG_DFL);
@@ -327,30 +319,7 @@ WalReceiverMain(void)
 
 	/* Establish the connection to the primary for XLOG streaming */
 	EnableWalRcvImmediateExit();
-
-	/*
-	 * (Testing Purpose) - Create a PID file under $PGDATA directory
-	 * This file existence is very temporary and will be removed once the WAL receiver
-	 * sets up successful connection. Verifying the presence of the PID file
-	 * helps to find if the WAL Receiver was actually started or not.
-	 * Again, This is just for testing purpose. With enhancements in future,
-	 * this change can/will go away.
-	 */
-	if ((pid_file = PathNameOpenFile("wal_rcv.pid", O_RDWR | O_CREAT| PG_BINARY, 0600)) < 0)
-	{
-		ereport(LOG,
-				(errcode_for_file_access(),
-				 errmsg("could not open file \"%s\" for reading: %m",
-						"wal_rcv.pid")));
-	}
-	else
-		FileClose(pid_file);
-
 	walrcv_connect(conninfo);
-
-	/* (Testing Purpose) - Now drop the PID file */
-	unlink("wal_rcv.pid");
-
 	DisableWalRcvImmediateExit();
 
 	/* Initialize LogstreamResult, reply_message */
@@ -492,21 +461,6 @@ WalReceiverMain(void)
 							break;
 						}
 
-						/* Perform suspend if signaled by an external entity (Testing Purpose) */
-						if (wait_before_rcv)
-						{
-							while(true)
-							{
-								if (resume)
-								{
-									resume = false;
-									break;
-								}
-								pg_usleep(5000);
-							}
-							wait_before_rcv = false;
-						}
-
 						len = walrcv_receive(0, &buf);
 					}
 
@@ -564,21 +518,6 @@ WalReceiverMain(void)
 								ping_sent = true;
 							}
 						}
-					}
-
-					/* Perform suspend if signaled by an external entity (Testing Purpose) */
-					if (wait_before_send_ack)
-					{
-						while(true)
-						{
-							if (resume)
-							{
-								resume = false;
-								break;
-							}
-							pg_usleep(5000);
-						}
-						wait_before_send_ack = false;
 					}
 
 					XLogWalRcvSendReply(requestReply, requestReply);
@@ -767,55 +706,6 @@ WalRcvFetchTimeLineHistoryFiles(TimeLineID first, TimeLineID last)
 			pfree(fname);
 			pfree(content);
 		}
-	}
-}
-
-/*
- * This is the handler for USR2 signal. Currently, it is used for testing
- * purposes. Normally, an external entity signals (USR2) the WAL receiver process
- * and based on the input from an external file on disk the WAL Receiver acts
- * upon that.
- */
-static void
-WalRcvUsr2Handler(SIGNAL_ARGS)
-{
-#define BUF_SIZE 80
-	File file;
-	int nbytes = 0;
-	char buf[BUF_SIZE];
-
-	/* Read the type of action to take later from the file in the $PGDATA */
-	if ((file = PathNameOpenFile("wal_rcv_test", O_RDONLY | PG_BINARY, 0600)) < 0)
-	{
-		/* Do not error out inside signal handler. Ignore it.*/
-		return;
-	}
-	else
-	{
-		nbytes = FileRead(file, buf, BUF_SIZE - 1);
-		if (nbytes <= 0)
-		{
-			/* Cleanup */
-			FileClose(file);
-
-			/* Don't error out. Ignore. */
-			return;
-		}
-		FileClose(file);
-
-		Assert(nbytes < BUF_SIZE);
-		buf[nbytes] = '\0';
-
-		if (strcmp(buf,"wait_before_send_ack") == 0)
-			wait_before_send_ack = true;
-		else if (strcmp(buf,"wait_before_rcv") == 0)
-			wait_before_rcv = true;
-		else if (strcmp(buf,"wait_before_send") == 0)
-			wait_before_send = true;
-		else if (strcmp(buf,"resume") == 0)
-			resume = true;
-		else
-			return;
 	}
 }
 
@@ -1208,21 +1098,6 @@ XLogWalRcvSendReply(bool force, bool requestReply)
 	writePtr = LogstreamResult.Write;
 	flushPtr = LogstreamResult.Flush;
 	applyPtr = GetXLogReplayRecPtr(NULL);
-
-	/* Perform suspend if signaled by an external entity (Testing Purpose) */
-	if (wait_before_send)
-	{
-		while(true)
-		{
-			if (resume)
-			{
-				resume = false;
-				break;
-			}
-			pg_usleep(5000);
-		}
-		wait_before_send = false;
-	}
 
 	resetStringInfo(&reply_message);
 	pq_sendbyte(&reply_message, 'r');
