@@ -54,11 +54,11 @@ static HTAB *hostSegsHashTableInit(void);
 
 static HTAB *segment_ip_cache_htab = NULL;
 
-struct segment_ip_cache_entry
+typedef struct SegIpEntry
 {
 	char		key[NAMEDATALEN];
 	char		hostinfo[NI_MAXHOST];
-};
+} SegIpEntry;
 
 typedef struct HostSegsEntry
 {
@@ -636,31 +636,39 @@ CdbComponentDatabaseInfoCompare(const void *p1, const void *p2)
  * The keys are all NAMEDATALEN long.
  */
 static char *
-getDnsCachedAddress(char *name, int port, int elevel)
+getDnsCachedAddress(char *name, int port, int elevel, bool use_cache)
 {
-	struct segment_ip_cache_entry *e;
+	SegIpEntry	   *e = NULL;
+	char			hostinfo[NI_MAXHOST];
 
-	if (segment_ip_cache_htab == NULL)
+	if (use_cache)
 	{
-		HASHCTL		hash_ctl;
+		if (segment_ip_cache_htab == NULL)
+		{
+			HASHCTL		hash_ctl;
 
-		MemSet(&hash_ctl, 0, sizeof(hash_ctl));
+			MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 
-		hash_ctl.keysize = NAMEDATALEN + 1;
-		hash_ctl.entrysize = sizeof(struct segment_ip_cache_entry);
+			hash_ctl.keysize = NAMEDATALEN + 1;
+			hash_ctl.entrysize = sizeof(SegIpEntry);
 
-		segment_ip_cache_htab = hash_create("segment_dns_cache",
-											256,
-											&hash_ctl,
-											HASH_ELEM);
-		Assert(segment_ip_cache_htab != NULL);
+			segment_ip_cache_htab = hash_create("segment_dns_cache",
+												256, &hash_ctl, HASH_ELEM);
+		}
+		else
+		{
+			e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+										   name, HASH_FIND, NULL);
+			if (e != NULL)
+				return e->hostinfo;
+		}
 	}
 
-	e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-													  name, HASH_FIND, NULL);
-
-	/* not in our cache, we've got to actually do the name lookup. */
-	if (e == NULL)
+	/*
+	 * The name is either not in our cache, or we've been instructed to not
+	 * use the cache. Perform the name lookup.
+	 */
+	if (!use_cache || (use_cache && e == NULL))
 	{
 		MemoryContext oldContext;
 		int			ret;
@@ -702,7 +710,8 @@ getDnsCachedAddress(char *name, int port, int elevel)
 		}
 
 		/* save in the cache context */
-		oldContext = MemoryContextSwitchTo(TopMemoryContext);
+		if (use_cache)
+			oldContext = MemoryContextSwitchTo(TopMemoryContext);
 
 		for (addr = addrs; addr; addr = addr->ai_next)
 		{
@@ -713,21 +722,19 @@ getDnsCachedAddress(char *name, int port, int elevel)
 #endif
 			if (addr->ai_family == AF_INET) /* IPv4 address */
 			{
-				char		hostinfo[NI_MAXHOST];
-
+				memset(hostinfo, 0, sizeof(hostinfo));
 				pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
 								   hostinfo, sizeof(hostinfo),
 								   NULL, 0,
 								   NI_NUMERICHOST);
 
-				/* INSERT INTO OUR CACHE HTAB HERE */
-
-				e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-																  name,
-																  HASH_ENTER,
-																  NULL);
-				Assert(e != NULL);
-				memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+				if (use_cache)
+				{
+					/* Insert into our cache htab */
+					e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+												   name, HASH_ENTER, NULL);
+					memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+				}
 
 				break;
 			}
@@ -743,123 +750,52 @@ getDnsCachedAddress(char *name, int port, int elevel)
 		 * we'd only want to use the IPv6 address if there isn't an IPv4
 		 * address.  All we really need to do is test this.
 		 */
-		if (e == NULL && addrs->ai_family == AF_INET6)
+		if (((!use_cache && !hostinfo) || (use_cache && e == NULL))
+			&& addrs->ai_family == AF_INET6)
 		{
 			char		hostinfo[NI_MAXHOST];
 
 			addr = addrs;
-
-
-
-			pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
-							   hostinfo, sizeof(hostinfo),
-							   NULL, 0,
-							   NI_NUMERICHOST);
-
-			/* INSERT INTO OUR CACHE HTAB HERE */
-
-			e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-															  name,
-															  HASH_ENTER,
-															  NULL);
-			Assert(e != NULL);
-			memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
-
-		}
-#endif
-
-		MemoryContextSwitchTo(oldContext);
-
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	}
-
-	/* return a pointer to our cache. */
-	return e->hostinfo;
-}
-
-/*
- * getDnsAddress
- *
- * same as getDnsCachedAddress, but without caching. Looks like the
- * non-cached version was used inline inside of cdbgang.c, and since
- * it is needed now elsewhere, it is factored out to this routine.
- */
-char *
-getDnsAddress(char *hostname, int port, int elevel)
-{
-	int			ret;
-	char		portNumberStr[32];
-	char	   *service;
-	char	   *result = NULL;
-	struct addrinfo *addrs = NULL,
-			   *addr;
-	struct addrinfo hint;
-
-	/* Initialize hint structure */
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;
-
-	snprintf(portNumberStr, sizeof(portNumberStr), "%d", port);
-	service = portNumberStr;
-
-	ret = pg_getaddrinfo_all(hostname, service, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		if (addrs)
-			pg_freeaddrinfo_all(hint.ai_family, addrs);
-		ereport(elevel,
-				(errmsg("could not translate host name \"%s\", port \"%d\" to address: %s",
-						hostname, port, gai_strerror(ret))));
-	}
-	for (addr = addrs; addr; addr = addr->ai_next)
-	{
-#ifdef HAVE_UNIX_SOCKETS
-		/* Ignore AF_UNIX sockets, if any are returned. */
-		if (addr->ai_family == AF_UNIX)
-			continue;
-#endif
-		if (addr->ai_family == AF_INET) /* IPv4 address */
-		{
-			char		hostinfo[NI_MAXHOST];
-
 			/* Get a text representation of the IP address */
 			pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
 							   hostinfo, sizeof(hostinfo),
 							   NULL, 0,
 							   NI_NUMERICHOST);
-			result = pstrdup(hostinfo);
-			break;
+
+			if (use_cache)
+			{
+				/* Insert into our cache htab */
+				e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+											   name, HASH_ENTER, NULL);
+				memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+			}
 		}
-	}
-
-#ifdef HAVE_IPV6
-
-	/*
-	 * IPv6 should would work fine, we'd just need to make sure all the data
-	 * structures are big enough for the IPv6 address.  And on some broken
-	 * systems, you can get an IPv6 address, but not be able to bind to it
-	 * because IPv6 is disabled or missing in the kernel, so we'd only want to
-	 * use the IPv6 address if there isn't an IPv4 address.  All we really
-	 * need to do is test this.
-	 */
-	if (result == NULL && addrs->ai_family == AF_INET6)
-	{
-		char		hostinfo[NI_MAXHOST];
-
-		addr = addrs;
-		/* Get a text representation of the IP address */
-		pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
-						   hostinfo, sizeof(hostinfo),
-						   NULL, 0,
-						   NI_NUMERICHOST);
-		result = pstrdup(hostinfo);
-	}
 #endif
 
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
+		if (use_cache)
+			MemoryContextSwitchTo(oldContext);
 
-	return result;
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
+	}
+
+	/* return a pointer to our cache. */
+	if (use_cache)
+		return e->hostinfo;
+
+	return pstrdup(hostinfo);
+}
+
+/*
+ * getDnsAddress
+ *
+ * same as getDnsCachedAddress, but without using the cache. A non-cached
+ * version was used inline inside of cdbgang.c, and since it is needed now
+ * elsewhere, it is available externally.
+ */
+char *
+getDnsAddress(char *hostname, int port, int elevel)
+{
+	return getDnsCachedAddress(hostname, port, elevel, false);
 }
 
 
@@ -895,7 +831,7 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	 * add an entry, using the first the "address" and then the "hostname" as
 	 * fallback.
 	 */
-	name = getDnsCachedAddress(c->address, c->port, elevel);
+	name = getDnsCachedAddress(c->address, c->port, elevel, true);
 
 	if (name)
 	{
@@ -904,7 +840,7 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	}
 
 	/* now the hostname. */
-	name = getDnsCachedAddress(c->hostname, c->port, elevel);
+	name = getDnsCachedAddress(c->hostname, c->port, elevel, true);
 	if (name)
 	{
 		c->hostaddrs[0] = pstrdup(name);
