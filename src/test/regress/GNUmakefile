@@ -209,9 +209,6 @@ bigtest: all tablespace-setup
 bigcheck: all tablespace-setup
 	$(pg_regress_check) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) numeric_big
 
-bkuprestore: all
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bkuprestore_schedule
-
 ##
 ## Clean up
 ##

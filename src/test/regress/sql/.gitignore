@@ -9,15 +9,10 @@
 /security_label.sql
 /tablespace.sql
 
-restore_restoredb.sql
 sreh.sql
 upg2.sql
 gptokencheck.sql
-bkuprestore_advance.sql
-bkuprestore_cleanup.sql
-aocs.sql
 appendonly.sql
-bkup_bkupdb.sql
 filespace.sql
 upgrade.sql
 auth_constraint.sql
