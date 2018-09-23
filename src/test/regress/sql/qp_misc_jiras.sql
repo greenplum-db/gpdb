@@ -1366,23 +1366,23 @@ create table qp_misc_jiras.tbl7616_test (a int, b text) with (appendonly=true, o
 insert into qp_misc_jiras.tbl7616_test select generate_series(1,1000), generate_series(1,1000);
 select count(a.*) from qp_misc_jiras.tbl7616_test a inner join qp_misc_jiras.tbl7616_test b using (a);
 select count(a.b) from qp_misc_jiras.tbl7616_test a inner join qp_misc_jiras.tbl7616_test b using (a);
--- start_ignore
 drop table qp_misc_jiras.tbl7616_test;
-create table qp_misc_jiras.tbl6874 ( a int, b text);
+
+create table qp_misc_jiras.tbl6874 (a int, b text) distributed by (a);
 \d+ qp_misc_jiras.tbl6874
-insert into qp_misc_jiras.tbl6874 values ( generate_series(1,1000),'test_1');
-create index qp_misc_jiras.tbl6874_a on qp_misc_jiras.tbl6874 using bitmap(a);
+insert into qp_misc_jiras.tbl6874 values (generate_series(1,10),'test_1');
+create index tbl6874_a on qp_misc_jiras.tbl6874 using bitmap(a);
 \d+ qp_misc_jiras.tbl6874
 drop index qp_misc_jiras.tbl6874_a;
 \d+ qp_misc_jiras.tbl6874
-drop table qp_misc_jiras.tbl6874 ;
+drop table qp_misc_jiras.tbl6874;
 CREATE TABLE qp_misc_jiras.tbl7740_rank (id int, gender char(1), count char(1) )
             DISTRIBUTED BY (id)
             PARTITION BY LIST (gender,count)
             ( PARTITION girls VALUES (('F','1')),
               PARTITION boys VALUES (('M','1')),
               DEFAULT PARTITION other );
--- end_ignore
+
 insert into qp_misc_jiras.tbl7740_rank values(1,'F','1');
 insert into qp_misc_jiras.tbl7740_rank values(1,'F','0');
 insert into qp_misc_jiras.tbl7740_rank values(1,'M','1');

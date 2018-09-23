@@ -326,14 +326,11 @@ show gp_default_storage_options;
 create table ao8 with (compresstype=none) as select * from ao7
     distributed by (a);
 \d ao8
--- compresslevel only
+-- compresslevel only (should fail)
 create table ao9 with (compresslevel=0) as select * from ao8
     distributed by (a);
-\d ao9
-select * from ao9 limit 4 order by 1;
 create table ao10 with (compresslevel=0, compresstype=none)
-    as select * from ao9 distributed by (a);
-\d ao10
+    as select * from ao8 distributed by (a);
 
 -- MPP-14504: we need to allow compresstype=none with compresslevel>0
 create table ao11 (a int, b int) with (compresstype=none, compresslevel=2)

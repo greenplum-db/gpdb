@@ -798,21 +798,12 @@ Block Size: 32768
 Checksum: t
 Distributed by: (a)
 
--- compresslevel only
+-- compresslevel only (should fail)
 create table ao9 with (compresslevel=0) as select * from ao8
     distributed by (a);
 ERROR:  compresstype can't be used with compresslevel 0
-\d ao9
-select * from ao9 limit 4 order by 1;
-ERROR:  syntax error at or near "order"
-LINE 1: select * from ao9 limit 4 order by 1;
-                                  ^
 create table ao10 with (compresslevel=0, compresstype=none)
-    as select * from ao9 distributed by (a);
-ERROR:  relation "ao9" does not exist
-LINE 2:     as select * from ao9 distributed by (a);
-                             ^
-\d ao10
+    as select * from ao8 distributed by (a);
 -- MPP-14504: we need to allow compresstype=none with compresslevel>0
 create table ao11 (a int, b int) with (compresstype=none, compresslevel=2)
     distributed by (a);

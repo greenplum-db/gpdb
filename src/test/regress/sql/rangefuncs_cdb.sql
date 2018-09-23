@@ -217,7 +217,7 @@ ORDER BY 1,2;
 -- nested functions
 select z.fooid, z.f2 from fooro(sin(pi()/2)::int) z ORDER BY 1,2;
 
-DROP FUNCTION fooro;
+DROP FUNCTION fooro(int);
 
 --
 -- RETURNS TABLE
@@ -275,7 +275,7 @@ ORDER BY 1,2;
 -- nested functions
 select z.fooid, z.f2 from foot(sin(pi()/2)::int) z ORDER BY 1,2;
 
-DROP FUNCTION foot;
+DROP FUNCTION foot(int);
 
 -- sql, proretset = f, prorettype = b
 CREATE FUNCTION getfoo(int) RETURNS int AS 'SELECT $1;' LANGUAGE SQL CONTAINS SQL;
