@@ -58,6 +58,7 @@
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbgroup.h"		/* grouping_planner extensions */
 #include "cdb/cdbsetop.h"		/* motion utilities */
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 #include "storage/lmgr.h"

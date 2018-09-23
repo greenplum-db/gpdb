@@ -95,6 +95,7 @@
 #include "utils/spccache.h"
 #include "utils/tuplesort.h"
 
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 #define LOG2(x)  (log(x) / 0.693147180559945)

@@ -42,6 +42,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbexplain.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 static void ExecHashIncreaseNumBatches(HashJoinTable hashtable);

@@ -75,8 +75,6 @@ makeCdbCopy(bool is_copy_in)
 	c->total_segs = getgpsegmentCount();
 	c->aotupcounts = NULL;
 
-	Assert(c->total_segs >= 0);
-
 	/* Initialize the state of each segment database */
 	c->segdb_state = (SegDbState **) palloc((c->total_segs) * sizeof(SegDbState *));
 

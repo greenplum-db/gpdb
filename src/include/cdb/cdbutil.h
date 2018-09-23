@@ -172,10 +172,6 @@ extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRol
 
 /*
  * Returns the number of segments
- *
- * N.B.  Gp_role must be either dispatch or execute, since
- * when utiliy	no mpp catalog tables are read.  An Assert is
- * thrown if Gp_role = utility.
  */
 extern int	getgpsegmentCount(void);
 
