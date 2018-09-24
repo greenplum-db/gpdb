@@ -10730,6 +10730,7 @@ select c1 from t_outer where not c1 =all (select c2 from t_inner);
 (10 rows)
 
 reset optimizer_enable_streaming_material;
+
 -- start_ignore
 drop table bar;
 ERROR:  table "bar" does not exist
