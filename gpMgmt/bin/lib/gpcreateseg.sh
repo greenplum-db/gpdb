@@ -211,9 +211,11 @@ PROCESS_QE () {
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
         done
     else
-        # cleanup the pg_hba.conf
-        $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
-        $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+        # cleanup the CIDR example for localhost in pg_hba.conf if exists
+        if [ -f ${GP_DIR}/$PG_HBA ]; then
+            $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
+            $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+        fi
 
         # add localhost
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
