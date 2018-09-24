@@ -3,15 +3,9 @@
 -- exist at the time of running upgrades. If objects are to be manipulated
 -- in other databases, make sure to change to the correct database first.
 
--- drop all AO tables
-\ir pre_drop_ao.sql
-
 DROP DATABASE IF EXISTS isolation2test;
 
 \c regression;
-
--- drop all AO tables
-\ir pre_drop_ao.sql
 
 -- Greenplum pg_upgrade doesn't support indexes on partitions since they can't
 -- be reliably dump/restored in all situations. Drop all such indexes before
@@ -127,22 +121,12 @@ DROP PROTOCOL IF EXISTS demoprot_untrusted;
 
 \c dsp1;
 
--- drop all AO tables
-\ir pre_drop_ao.sql
-
 -- h1 seems to switch AO storage options after upgrade.
 DROP TABLE IF EXISTS public.h1 CASCADE;
 
-\c dsp2;
-
--- drop all AO tables
-\ir pre_drop_ao.sql
-
 \c dsp3;
 
--- drop all AO tables
-\ir pre_drop_ao.sql
-
--- toast table and index aren't correctly migrated for this relation, for some
+-- toast table and index aren't correctly migrated for these relations, for some
 -- reason
 DROP TABLE IF EXISTS public.alter_table_reorg_heap CASCADE;
+DROP TABLE IF EXISTS public.alter_table_reorg_aoco CASCADE;

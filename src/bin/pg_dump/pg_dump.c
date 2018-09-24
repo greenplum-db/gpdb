@@ -3197,17 +3197,26 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 	char	   *pg_class_reltidxname;
 	Oid			pg_class_bmoid;
 	Oid			pg_class_bmidxoid;
+	Oid			ao_segrelid = InvalidOid;
+	Oid			ao_blkdirrelid = InvalidOid;
+	Oid			ao_blkdiridxid = InvalidOid;
+	Oid			ao_visimaprelid = InvalidOid;
+	Oid			ao_visimapidxid = InvalidOid;
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT c.reltoastrelid, t.relnamespace AS toast_relnamespace, t.relname AS toast_relname, "
 					  "       c.relnamespace, c.relname, "
 					  "       t.reltoastidxid, ti.relnamespace AS tidx_relnamespace, ti.relname AS tidx_relname, "
-					  "       bi.oid AS bmoid, bidx.oid AS bmidxoid "
+					  "       bi.oid AS bmoid, bidx.oid AS bmidxoid, "
+					  "       pgao.segrelid, "
+					  "       pgao.blkdirrelid, pgao.blkdiridxid, "
+					  "       pgao.visimaprelid, pgao.visimapidxid "
 					  "FROM pg_catalog.pg_class c LEFT JOIN "
 					  "pg_catalog.pg_class t ON (c.reltoastrelid = t.oid) "
 					  "LEFT JOIN pg_catalog.pg_class ti ON (t.reltoastidxid = ti.oid) "
 					  "LEFT OUTER JOIN pg_catalog.pg_class bi ON (bi.relname = 'pg_bm_%u'::text) "
 					  "LEFT OUTER JOIN pg_catalog.pg_class bidx ON (bidx.relname = 'pg_bm_%u_index'::text) "
+					  "LEFT OUTER JOIN pg_catalog.pg_appendonly pgao ON (c.oid = pgao.relid) "
 					  "WHERE c.oid = '%u'::pg_catalog.oid;",
 					  pg_class_oid, pg_class_oid, pg_class_oid);
 
@@ -3225,6 +3234,15 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 	pg_class_reltidxname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "tidx_relname"));
 	pg_class_bmoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "bmoid")));
 	pg_class_bmidxoid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "bmidxoid")));
+
+	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "segrelid")))
+	{
+		ao_segrelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "segrelid")));
+		ao_blkdirrelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdirrelid")));
+		ao_blkdiridxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "blkdiridxid")));
+		ao_visimaprelid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimaprelid")));
+		ao_visimapidxid = atooid(PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "visimapidxid")));
+	}
 
 	appendPQExpBuffer(upgrade_buffer,
 				   "\n-- For binary upgrade, must preserve pg_class oids\n");
@@ -3255,6 +3273,27 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 							  pg_class_reltoastidxid, pg_class_reltidxnamespace, pg_class_reltidxname);
+		}
+
+		/* Set up any AO auxiliary tables with preallocated OIDs as well. */
+		if (OidIsValid(ao_segrelid))
+		{
+			binary_upgrade_set_pg_class_oids(fout, upgrade_buffer, ao_segrelid, false);
+			binary_upgrade_set_type_oids_by_rel_oid(fout, upgrade_buffer, ao_segrelid);
+
+			/* blkdir is optional. */
+			if (OidIsValid(ao_blkdirrelid))
+			{
+				binary_upgrade_set_pg_class_oids(fout, upgrade_buffer, ao_blkdirrelid, false);
+				binary_upgrade_set_type_oids_by_rel_oid(fout, upgrade_buffer, ao_blkdirrelid);
+
+				binary_upgrade_set_pg_class_oids(fout, upgrade_buffer, ao_blkdiridxid, true);
+			}
+
+			binary_upgrade_set_pg_class_oids(fout, upgrade_buffer, ao_visimaprelid, false);
+			binary_upgrade_set_type_oids_by_rel_oid(fout, upgrade_buffer, ao_visimaprelid);
+
+			binary_upgrade_set_pg_class_oids(fout, upgrade_buffer, ao_visimapidxid, true);
 		}
 	}
 	else
@@ -13779,6 +13818,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 						Oid part_oid = atooid(PQgetvalue(partres, i, 0));
 
 						binary_upgrade_set_pg_class_oids(fout, q, part_oid, false);
+						binary_upgrade_set_type_oids_by_rel_oid(fout, q, part_oid);
 					}
 				}
 

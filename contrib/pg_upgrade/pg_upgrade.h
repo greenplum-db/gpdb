@@ -205,6 +205,9 @@ typedef struct
 	Oid			reloid;			/* relation oid */
 	char		relstorage;
 	Oid			relfilenode;	/* relation relfile node */
+	/* GPDB_96_MERGE_FIXME: indtable and toastheap are backported from 9.6. */
+	Oid			indtable;		/* if index, OID of its table, else 0 */
+	Oid			toastheap;		/* if toast table, OID of base table, else 0 */
 	/* relation tablespace path, or "" for the cluster default */
 	char		tablespace[MAXPGPATH];
 
