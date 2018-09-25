@@ -324,9 +324,14 @@ GetTransactionIdLimit(void)
  * Determine the last safe XID to allocate given the currently oldest
  * datfrozenxid (ie, the oldest XID that might exist in any database
  * of our cluster), and the OID of the (or a) database with that value.
+ *
+ *      signal_autovacuum: enable or disable sending the postmaster a signal to
+ *      start an autovacuum. GPDB uses this to avoid signaling an autovacuum
+ *      when there are no databases to be autovacuumed.
  */
 void
-SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
+SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid,
+					  bool signal_autovacuum)
 {
 	TransactionId xidVacLimit;
 	TransactionId xidWarnLimit;
@@ -415,7 +420,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
 	 * another iteration immediately if there are still any old databases.
 	 */
 	if (TransactionIdFollowsOrEquals(curXid, xidVacLimit) &&
-		IsUnderPostmaster && !InRecovery)
+		IsUnderPostmaster && !InRecovery && signal_autovacuum)
 		SendPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER);
 
 	/* Give an immediate warning if past the wrap warn point */

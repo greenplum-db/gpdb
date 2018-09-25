@@ -15,6 +15,7 @@
 #define AUTOVACUUM_H
 
 #include "tcop/utility.h"
+#include "catalog/pg_database.h"
 
 /* GUC variables */
 extern bool autovacuum_start_daemon;
@@ -53,6 +54,11 @@ extern void AutoVacWorkerFailed(void);
 
 /* autovacuum cost-delay balancer */
 extern void AutoVacuumUpdateDelay(void);
+
+extern bool GpAutovacuumEnabled(Form_pg_database dbform);
+extern bool GpDatabaseNeedsAutovacuum(Form_pg_database dbform,
+                                      TransactionId xid);
+
 
 #ifdef EXEC_BACKEND
 extern void AutoVacLauncherMain(int argc, char *argv[]) __attribute__((noreturn));

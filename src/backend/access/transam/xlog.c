@@ -4273,7 +4273,7 @@ BootStrapXLOG(void)
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
 	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
-	SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB);
+	SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB, true);
 	SetMultiXactIdLimit(checkPoint.oldestMulti, checkPoint.oldestMultiDB);
 
 	/* Set up the XLOG page header */
@@ -5634,7 +5634,7 @@ StartupXLOG(void)
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
 	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
-	SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB);
+	SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB, true);
 	SetMultiXactIdLimit(checkPoint.oldestMulti, checkPoint.oldestMultiDB);
 	XLogCtl->ckptXidEpoch = checkPoint.nextXidEpoch;
 	XLogCtl->ckptXid = checkPoint.nextXid;
@@ -8757,7 +8757,7 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		LWLockRelease(OidGenLock);
 		MultiXactSetNextMXact(checkPoint.nextMulti,
 							  checkPoint.nextMultiOffset);
-		SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB);
+		SetTransactionIdLimit(checkPoint.oldestXid, checkPoint.oldestXidDB, true);
 		SetMultiXactIdLimit(checkPoint.oldestMulti, checkPoint.oldestMultiDB);
 
 		/*
@@ -8870,7 +8870,8 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		if (TransactionIdPrecedes(ShmemVariableCache->oldestXid,
 								  checkPoint.oldestXid))
 			SetTransactionIdLimit(checkPoint.oldestXid,
-								  checkPoint.oldestXidDB);
+								  checkPoint.oldestXidDB,
+								  true);
 		MultiXactAdvanceOldest(checkPoint.oldestMulti,
 							   checkPoint.oldestMultiDB);
 

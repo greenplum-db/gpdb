@@ -1895,14 +1895,7 @@ get_database_list(void)
 		 */
 		oldcxt = MemoryContextSwitchTo(resultcxt);
 
-		/*
-		 * In GPDB, autovacuum is currently disabled, except for the
-		 * anti-wraparound vacuum of template0 (and any other databases
-		 * with !datallowconn). The administrator is expected to do all
-		 * VACUUMing manually, except for template0, which you cannot
-		 * VACUUM manually because you cannot connect to it.
-		 */
-		if (pgdatabase->datallowconn)
+		if (GpAutovacuumEnabled(pgdatabase))
 			continue;
 
 		avdb = (avw_dbase *) palloc(sizeof(avw_dbase));
@@ -2991,4 +2984,35 @@ autovac_refresh_stats(void)
 	}
 
 	pgstat_clear_snapshot();
+}
+
+/*
+ * In GPDB, autovacuum is currently disabled, except for the
+ * anti-wraparound vacuum of template0 (and any other databases
+ * with !datallowconn). The administrator is expected to do all
+ * VACUUMing manually, except for template0, which you cannot
+ * VACUUM manually because you cannot connect to it.
+ */
+bool 
+GpAutovacuumEnabled(Form_pg_database dbform) 
+{
+	return !dbform->datallowconn;
+}
+
+/*
+ * autovacuum when the current transaction id is older than the
+ * autovacuum_freeze_max_age iff the database does not
+ * allow connections.
+ */
+bool
+GpDatabaseNeedsAutovacuum(Form_pg_database dbform, TransactionId xid)
+{
+	TransactionId xidVacLimit;
+	
+	if (!GpAutovacuumEnabled(dbform))
+		return false;
+
+	xidVacLimit = dbform->datfrozenxid + autovacuum_freeze_max_age;
+	
+	return TransactionIdPrecedesOrEquals(xidVacLimit, xid);
 }

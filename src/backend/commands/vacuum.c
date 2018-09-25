@@ -1791,6 +1791,7 @@ vac_truncate_clog(TransactionId frozenXID, MultiXactId frozenMulti)
 	Oid			oldestxid_datoid;
 	Oid			oldestmulti_datoid;
 	bool		frozenAlreadyWrapped = false;
+	bool		signal_autovacuum = false;
 
 	/* init oldest datoids to sync with my frozen values */
 	oldestxid_datoid = MyDatabaseId;
@@ -1832,6 +1833,21 @@ vac_truncate_clog(TransactionId frozenXID, MultiXactId frozenMulti)
 			frozenMulti = dbform->datminmxid;
 			oldestmulti_datoid = HeapTupleGetOid(tuple);
 		}
+
+		/*
+		 * We should only signal the postmaster that it should
+		 * start another autovacuum worker when there are more
+		 * databases to be vacuumed.
+		 *
+		 * In GPDB, autovacuum only vacuums databases that do
+		 * not allow connections. If we signal for an autovacuum
+		 * for databases that *do* allow connections autovacuum
+		 * will skip vacuuming for that database, find more work
+		 * to do, and signal for another autovacuum - entering
+		 * an endless loop.
+		 */
+		if (GpDatabaseNeedsAutovacuum(dbform, myXID))
+			signal_autovacuum = true;
 	}
 
 	heap_endscan(scan);
@@ -1862,7 +1878,7 @@ vac_truncate_clog(TransactionId frozenXID, MultiXactId frozenMulti)
 	 * for an(other) autovac cycle if needed.	XXX should we avoid possibly
 	 * signalling twice?
 	 */
-	SetTransactionIdLimit(frozenXID, oldestxid_datoid);
+	SetTransactionIdLimit(frozenXID, oldestxid_datoid, signal_autovacuum);
 	MultiXactAdvanceOldest(frozenMulti, oldestmulti_datoid);
 }
 
@@ -2921,3 +2937,4 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults* cdb_pgresu
 		}
 	}
 }
+

@@ -148,7 +148,7 @@ extern TransactionId GetNewTransactionId(bool isSubXact);
 extern TransactionId ReadNewTransactionId(void);
 extern TransactionId GetTransactionIdLimit(void);
 extern void SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
-					  Oid oldest_datoid);
+					  Oid oldest_datoid, bool signal_autovacuum);
 extern bool ForceTransactionIdLimitUpdate(void);
 extern Oid	GetNewObjectId(void);
 extern void AdvanceObjectId(Oid newOid);
