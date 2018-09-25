@@ -594,30 +594,30 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
                              ->  Seq Scan on a a_1  (cost=0.00..2.06 rows=1 width=4)
                                    Filter: i = 10
    ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=20000000024.67..20000000024.90 rows=10 width=12)
-         Merge Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
+         Merge Key: a.i, b.i, c.j
          ->  Limit  (cost=20000000024.67..20000000024.70 rows=4 width=12)
                ->  Sort  (cost=20000000024.67..20000000025.35 rows=90 width=12)
-                     Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
+                     Sort Key: a.i, b.i, c.j
                      ->  Result  (cost=20000000005.51..20000000018.84 rows=90 width=12)
                            One-Time Filter: NOT $0
                            ->  Hash Join  (cost=20000000005.51..20000000018.84 rows=90 width=12)
-                                 Hash Cond: qp_correlated_query.c.j = qp_correlated_query.a.j
+                                 Hash Cond: (c_1.j = a.j)
                                  ->  Nested Loop  (cost=20000000003.29..20000000013.66 rows=18 width=12)
                                        ->  Nested Loop  (cost=10000000003.29..10000000008.34 rows=2 width=8)
                                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.30 rows=6 width=4)
                                                    ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
                                              ->  Materialize  (cost=3.29..3.40 rows=3 width=4)
                                                    ->  HashAggregate  (cost=3.29..3.36 rows=3 width=4)
-                                                         Group Key: qp_correlated_query.c.j
+                                                         Group Key: c_1.j
                                                          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.27 rows=3 width=4)
-                                                               Hash Key: qp_correlated_query.c.j
-                                                               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+                                                               Hash Key: c_1.j
+                                                               ->  Seq Scan on c c_1  (cost=0.00..3.09 rows=3 width=4)
                                        ->  Materialize  (cost=0.00..3.58 rows=9 width=4)
                                              ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
                                                    ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
                                  ->  Hash  (cost=2.15..2.15 rows=2 width=8)
                                        ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..2.15 rows=2 width=8)
-                                             Hash Key: qp_correlated_query.a.j
+                                             Hash Key: a.j
                                              ->  Seq Scan on a  (cost=0.00..2.05 rows=2 width=8)
  Optimizer: legacy query optimizer
 (37 rows)
