@@ -681,6 +681,8 @@ python_version
 python_majorversion
 PYTHON
 perl_embed_ldflags
+perl_embed_ccflags
+perl_includedir
 perl_useshrplib
 perl_privlibexp
 perl_archlibexp
@@ -9287,6 +9289,14 @@ $as_echo_n "checking for Perl useshrplib... " >&6; }
 perl_useshrplib=`$PERL -MConfig -e 'print $Config{useshrplib}'`
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $perl_useshrplib" >&5
 $as_echo "$perl_useshrplib" >&6; }
+  # On most platforms, archlibexp is also where the Perl include files live ...
+  perl_includedir="$perl_archlibexp"
+  # ... but on some macOS versions, we must look under $PG_SYSROOT instead
+  if test x"$PG_SYSROOT" != x"" ; then
+    if test -d "$PG_SYSROOT$perl_archlibexp" ; then
+      perl_includedir="$PG_SYSROOT$perl_archlibexp"
+    fi
+  fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for flags to link embedded Perl" >&5
 $as_echo_n "checking for flags to link embedded Perl... " >&6; }
@@ -17971,7 +17981,14 @@ if test -z "$TCL_CONFIG_SH"; then
     set X $pgac_test_dirs; shift
     if test $# -eq 0; then
         test -z "$TCLSH" && as_fn_error $? "unable to locate tclConfig.sh because no Tcl shell was found" "$LINENO" 5
-        set X `echo 'puts $auto_path' | $TCLSH`; shift
+        pgac_test_dirs=`echo 'puts $auto_path' | $TCLSH`
+        # On newer macOS, $auto_path frequently doesn't include the place
+        # where tclConfig.sh actually lives.  Append that to the end, so as not
+        # to break cases where a non-default Tcl installation is being used.
+        if test -d "$PG_SYSROOT/System/Library/Frameworks/Tcl.framework" ; then
+            pgac_test_dirs="$pgac_test_dirs $PG_SYSROOT/System/Library/Frameworks/Tcl.framework"
+        fi
+        set X $pgac_test_dirs; shift
     fi
 
     for pgac_dir do
@@ -18012,6 +18029,70 @@ fi
 
 
     CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
+# check for <perl.h>
+if test "$with_perl" = yes; then
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$CPPFLAGS -I$perl_includedir/CORE"
+  ac_fn_c_check_header_compile "$LINENO" "perl.h" "ac_cv_header_perl_h" "#include <EXTERN.h>
+"
+if test "x$ac_cv_header_perl_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <perl.h> is required for Perl" "$LINENO" 5
+fi
+
+
+  # While we're at it, check that we can link to libperl.
+  # On most platforms, if perl.h is there then libperl.so will be too, but at
+  # this writing Debian packages them separately.  There is no known reason to
+  # waste cycles on separate probes for the Tcl or Python libraries, though.
+  pgac_save_LIBS=$LIBS
+  LIBS="$perl_embed_ldflags"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libperl" >&5
+$as_echo_n "checking for libperl... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <EXTERN.h>
+#include <perl.h>
+
+int
+main ()
+{
+perl_alloc();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+     as_fn_error $? "libperl library is required for Perl" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+  LIBS=$pgac_save_LIBS
+  CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
+# check for <Python.h>
+if test "$with_python" = yes; then
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$python_includespec $CPPFLAGS"
+  ac_fn_c_check_header_mongrel "$LINENO" "Python.h" "ac_cv_header_Python_h" "$ac_includes_default"
+if test "x$ac_cv_header_Python_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <Python.h> is required for Python" "$LINENO" 5
+fi
+
+
+  CPPFLAGS=$ac_save_CPPFLAGS
 fi
 
 #
