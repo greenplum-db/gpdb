@@ -1,0 +1,114 @@
+-- test for heap table
+create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
+CREATE
+insert into tab_update_hashcol select i, i from generate_series(1, 10)i;
+INSERT 10
+
+select * from tab_update_hashcol order by 1;
+c1|c2
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+UPDATE 0
+2: end;
+END
+
+select * from tab_update_hashcol order by 1;
+c1|c2
+--+--
+2 |2 
+2 |1 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+
+drop table tab_update_hashcol;
+DROP
+
+-- test for ao table
+create table tab_update_hashcol (c1 int, c2 int) with(appendonly=true) distributed by(c1);
+CREATE
+insert into tab_update_hashcol select i, i from generate_series(1, 10)i;
+INSERT 10
+
+select * from tab_update_hashcol order by 1;
+c1|c2
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+UPDATE 0
+2: end;
+END
+
+select * from tab_update_hashcol order by 1;
+c1|c2
+--+--
+2 |2 
+2 |1 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+
+drop table tab_update_hashcol;
+DROP
+
+1q: ... <quitting>
+2q: ... <quitting>

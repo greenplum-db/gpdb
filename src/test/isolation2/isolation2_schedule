@@ -1,3 +1,5 @@
+test: concurrent_update_hashcol
+
 # Tests on global deadlock detector
 test: select_for_update
 test: gdd/prepare

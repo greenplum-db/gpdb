@@ -17,10 +17,12 @@
 #include "miscadmin.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbvars.h"
 #include "commands/tablecmds.h"
 #include "executor/execDML.h"
 #include "executor/instrument.h"
 #include "executor/nodeSplitUpdate.h"
+#include "storage/lmgr.h"
 
 #include "utils/memutils.h"
 
@@ -192,6 +194,14 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 			splitupdatestate->ps.cdbexplainfun = ExecSplitUpdateExplainEnd;
 	}
 
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		Assert(estate->es_result_relation_info);
+		Assert(estate->es_result_relation_info->ri_RelationDesc);
+
+		LockRelation(estate->es_result_relation_info->ri_RelationDesc,
+					 ExclusiveLock);
+	}
 	return splitupdatestate;
 }
 
