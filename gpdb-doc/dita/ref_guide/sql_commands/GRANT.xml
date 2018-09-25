@@ -181,7 +181,7 @@ about existing privileges for tables and columns.  There are other
 objects.</p></section><section id="section9"><title>Examples</title><p>Grant insert privilege to all roles on table <codeph>mytable</codeph>: </p><codeblock>GRANT INSERT ON mytable TO PUBLIC;</codeblock><p>Grant all available privileges to role <codeph>sally</codeph> on the view
         <codeph>topten</codeph>. Note that while the command will indeed grant all privileges if
         executed by a superuser or the owner of <codeph>topten</codeph>, when executed by someone
-        else it will only grant those permissions for which the granting role has grant options.</p><codeblock>GRANT ALL PRIVILEGES ON topten TO sally;</codeblock><p>Grant membership in role <codeph>admins</codeph> to user <codeph>joe</codeph>: </p><codeblock>GRANT admins TO joe;</codeblock></section><section id="section10"><title>Compatibility</title><p>The <codeph>PRIVILEGES</codeph> key word in is required in the SQL standard,
+        else it will only grant those permissions for which the granting role has grant options.</p><codeblock>GRANT ALL PRIVILEGES ON topten TO sally;</codeblock><p>Grant membership in role <codeph>admins</codeph> to user <codeph>joe</codeph>: </p><codeblock>GRANT admins TO joe;</codeblock></section><section id="section10"><title>Compatibility</title><p>The <codeph>PRIVILEGES</codeph> key word is required in the SQL standard,
 but optional in Greenplum Database. The SQL standard does not support
 setting the privileges on more than one object per command. </p><p>Greenplum Database allows an object owner to revoke his own ordinary privileges: for example, a
         table owner can make the table read-only to himself by revoking his own
