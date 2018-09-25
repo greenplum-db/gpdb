@@ -159,7 +159,7 @@
     <body>
       <p>Greenplum Database access control corresponds roughly to the Orange Book 'C2' level of
         security, not the 'B1' level. Greenplum Database currently supports access privileges at the
-        object level. Row-level access is not supported, nor is labeled security. </p>
+        object level. Greenplum Database does not support row-level access or row-level, labeled security. </p>
       <p>You can simulate row-level access by using views to restrict the
         rows that are selected. You can simulate row-level labels by adding an extra column
         to the table to store sensitivity information, and then using views to control row-level

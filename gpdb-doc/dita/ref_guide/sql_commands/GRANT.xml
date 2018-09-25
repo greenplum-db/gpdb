@@ -4,7 +4,7 @@
 <topic id="topic1"><title id="ds20941">GRANT</title><body><p id="sql_command_desc">Defines access privileges.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [,...] | ALL [PRIVILEGES] }
     ON { [TABLE] <varname>tablename</varname> [, ...]
-         | ALL TABLES IN SCHEMA schemaname [, ...] }
+         | ALL TABLES IN SCHEMA <varname>schemaname</varname> [, ...] }
     TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <varname>columnname</varname> [, ...] )
@@ -13,8 +13,8 @@ GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <varname>columnname</varname
     TO { <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { {USAGE | SELECT | UPDATE} [,...] | ALL [PRIVILEGES] }
-    ON } SEQUENCE <varname>sequencename</varname> [, ...]
-         | ALL SEQUENCES IN SCHEMA schemaname [, ...] }
+    ON { SEQUENCE <varname>sequencename</varname> [, ...]
+         | ALL SEQUENCES IN SCHEMA <varname>schemaname</varname> [, ...] }
     TO { <varname>rolename</varname> | PUBLIC } [, ...] [WITH GRANT OPTION]
 
 GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [,...] | ALL 
@@ -33,7 +33,7 @@ GRANT { USAGE | ALL [ PRIVILEGES ] }
 GRANT { EXECUTE | ALL [PRIVILEGES] }
     ON { FUNCTION <varname>funcname</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] 
 ] ) [, ...]
-        | ALL FUNCTIONS IN SCHEMA schema_name [, ...] }
+        | ALL FUNCTIONS IN SCHEMA <varname>schemaname</varname> [, ...] }
     TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { USAGE | ALL [PRIVILEGES] }
@@ -64,7 +64,7 @@ to those already granted, if any. </p>
     While this functionality is currently supported only for tables, sequences,
     and functions, note that <codeph>ALL TABLES</codeph> is considered to
     include views and foreign tables.</p>
-  <p>The key word <codeph>PUBLIC</codeph> indicates that the privileges
+  <p>The keyword <codeph>PUBLIC</codeph> indicates that the privileges
 are to be granted to all roles, including those that may be created later.
 <codeph>PUBLIC</codeph> may be thought of as an implicitly defined group-level
 role that always includes all roles. Any particular role will have the
@@ -84,12 +84,15 @@ options for the object, too.</p>
     by default on tables, table columns, sequences, foreign data wrappers,
     foreign servers, large objects, schemas, or tablespaces. For other types
     of objects, the default privileges granted to <codeph>PUBLIC</codeph>
-    are as follows: <codeph>CONNECT</codeph> and <codeph>TEMPORARY</codeph>
-    (create temporary tables) privileges for databases; <codeph>EXECUTE</codeph>
-    privilege for functions; and <codeph>USAGE</codeph> privilege for
-    languages and data types (including domains). The object owner can, of
-     course, <codeph>REVOKE</codeph> both default and expressly granted
-     privileges.</p>
+    are as follows:</p>
+    <ul>
+      <li><codeph>CONNECT</codeph> and <codeph>TEMPORARY</codeph> (create temporary
+        tables) privileges for databases,</li>
+      <li><codeph>EXECUTE</codeph> privilege for functions, and</li>
+      <li><codeph>USAGE</codeph> privilege for languages and data types (including domains).</li>
+    </ul>
+  <p>The object owner can, of course, <codeph>REVOKE</codeph> both default and
+    expressly granted privileges.</p>
 </sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
 in a role to one or more other roles. Membership in a role is significant
 because it conveys the privileges granted to a role to each of its members.
@@ -151,7 +154,7 @@ strict SQL. </pd></plentry><plentry><pt>PUBLIC</pt><pd>A special group-level rol
 be granted to all roles, including those that may be created later. </pd></plentry><plentry><pt>WITH GRANT OPTION</pt><pd>The recipient of the privilege may in turn grant it to others.</pd></plentry><plentry><pt>WITH ADMIN OPTION</pt><pd>The member of a role may in turn grant membership in the role to
 others.</pd></plentry></parml></section><section id="section8"><title>Notes</title>
 <p>A user may perform <codeph>SELECT</codeph>, <codeph>INSERT</codeph>,
-  etc. on a column if he holds that privilege for either the specific
+  and so forth, on a column if he holds that privilege for either the specific
   column or its whole table. Granting the privilege at the table level
   and then revoking it for one column does not do what you might wish:
   the table-level grant is unaffected by a column-level operation.</p>
@@ -191,7 +194,7 @@ setting the privileges on more than one object per command. </p><p>Greenplum Dat
        Greenplum Database supports granting grant options only to roles.</p>
      <p>The SQL standard provides for a <codeph>USAGE</codeph> privilege on
 other kinds of objects: character sets, collations, translations.</p>
-     <p>In the SQL standard, sequences only have a <codeph>USAGE</codeph> privilege,
+     <p>In the SQL standard, sequences only have a <codeph>USAGE</codeph> privilege.
        This privilege controls the use of the <codeph>NEXT VALUE FOR</codeph>
        expression, which is equivalent to the function <codeph>nextval()</codeph>
        in Greenplum Database. The sequence privileges <codeph>SELECT</codeph>
