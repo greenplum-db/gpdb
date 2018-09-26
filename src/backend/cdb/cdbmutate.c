@@ -3320,7 +3320,7 @@ remove_subquery_in_RTEs(Node *node)
 			 * be shared by other objects in the tree.
 			 */
 			pfree(rte->subquery);
-			rte->subquery = makeNode(Query);
+			rte->subquery = NULL;
 		}
 
 		return;
