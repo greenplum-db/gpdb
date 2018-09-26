@@ -141,3 +141,34 @@ WHERE et like '%Hash Cond:%';
    Hash Cond: column1 = column1
 (1 row)
 
+-- github issue 5795. This query failed due to that.
+explain SELECT * from information_schema.key_column_usage;
+                                                                                                                                                                    QUERY PLAN                                                                                                                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=19.18..84.21 rows=12 width=389)
+   Hash Cond: a.attrelid = ss.roid AND a.attnum = (ss.x).x
+   ->  Seq Scan on pg_attribute a  (cost=0.00..43.63 rows=3063 width=70)
+         Filter: NOT attisdropped
+   ->  Hash  (cost=19.10..19.10 rows=2 width=329)
+         ->  Subquery Scan ss  (cost=3.35..19.10 rows=6 width=329)
+               ->  Result  (cost=3.35..19.04 rows=6 width=333)
+                     ->  Hash Join  (cost=3.35..19.04 rows=6 width=333)
+                           Hash Cond: r.relnamespace = nr.oid
+                           ->  Hash Join  (cost=2.20..16.43 rows=7 width=273)
+                                 Hash Cond: r.oid = c.conrelid
+                                 Join Filter: pg_has_role(r.relowner, 'USAGE'::text) OR has_table_privilege(c.conrelid, 'SELECT'::text) OR has_table_privilege(c.conrelid, 'INSERT'::text) OR has_table_privilege(c.conrelid, 'UPDATE'::text) OR has_table_privilege(c.conrelid, 'REFERENCES'::text)
+                                 ->  Seq Scan on pg_class r  (cost=0.00..13.97 rows=71 width=76)
+                                       Filter: NOT pg_is_other_temp_schema(relnamespace) AND relkind = 'r'::"char" AND (pg_has_role(relowner, 'USAGE'::text) OR has_table_privilege(oid, 'SELECT'::text) OR has_table_privilege(oid, 'INSERT'::text) OR has_table_privilege(oid, 'UPDATE'::text) OR has_table_privilege(oid, 'REFERENCES'::text))
+                                 ->  Hash  (cost=2.16..2.16 rows=2 width=205)
+                                       ->  Hash Join  (cost=1.04..2.16 rows=4 width=205)
+                                             Hash Cond: nc.oid = c.connamespace
+                                             ->  Seq Scan on pg_namespace nc  (cost=0.00..1.07 rows=7 width=68)
+                                             ->  Hash  (cost=1.03..1.03 rows=1 width=145)
+                                                   ->  Seq Scan on pg_constraint c  (cost=0.00..1.03 rows=1 width=145)
+                                                         Filter: contype = ANY ('{p,u,f}'::"char"[])
+                           ->  Hash  (cost=1.09..1.09 rows=2 width=68)
+                                 ->  Seq Scan on pg_namespace nr  (cost=0.00..1.09 rows=5 width=68)
+                                       Filter: NOT pg_is_other_temp_schema(oid)
+ Optimizer status: legacy query optimizer
+(25 rows)
+

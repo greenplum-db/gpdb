@@ -105,3 +105,6 @@ SELECT * from
 get_explain_output($$
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
+
+-- github issue 5795. This query failed due to that.
+explain SELECT * from information_schema.key_column_usage;
