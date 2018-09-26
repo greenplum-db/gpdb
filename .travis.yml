@@ -57,7 +57,7 @@ install:
 ## ----------------------------------------------------------------------
 
 env:
-  - APR=apr-1.6.3
+  - APR=apr-1.6.5
     APR_UTIL=apr-util-1.6.1
     APR_TAR=${APR}.tar.gz
     APR_UTIL_TAR=${APR_UTIL}.tar.gz
