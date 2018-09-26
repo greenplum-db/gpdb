@@ -80,6 +80,10 @@
           to remember to always reserve some memory for operating system activities.</p>
 
       <sectiondiv>
+        <p><b>Configuring vm.overcommit_ratio when Resource Group-Based Resource Management is Active</b></p>
+        <p>When resource group-based resource management is active, the operating system <codeph>vm.overcommit_ratio</codeph> default value is a good starting point. Tune as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
+      </sectiondiv>
+      <sectiondiv>
         <p><b>Configuring vm.overcommit_ratio when Resource Queue-Based Resource Management is Active</b></p>
         <p>To calculate a safe value for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, first determine the
           total memory available to Greenplum Database processes, <codeph>gp_vmem_rq</codeph>,
@@ -88,10 +92,6 @@
         <p>where <codeph>SWAP</codeph> is the swap space on the host in GB, and <codeph>RAM</codeph>
           is the number of GB of RAM installed on the host. When resource queue-based resource management is active, use <codeph>gp_vmem_rq</codeph> to calculate the <codeph>vm.overcommit_ratio</codeph> value with this
           formula:<codeblock>vm.overcommit_ratio = (RAM - 0.026 * gp_vmem_rq) / RAM</codeblock></p>
-      </sectiondiv>
-      <sectiondiv>
-        <p><b>Configuring vm.overcommit_ratio when Resource Group-Based Resource Management is Active</b></p>
-        <p>When resource group-based resource management is active, the operating system <codeph>vm.overcommit_ratio</codeph> default value is a good starting point. Tune as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
       </sectiondiv>
       </section>
       <section id="section_nfn_q5r_bs">
@@ -112,6 +112,19 @@
           have a maximum of 11 active primaries, compared to 16 for the default grouping mirror
           configuration.</p>
       <sectiondiv>
+        <p><b>Configuring Segment Memory when Resource Group-Based Resource Management is Active</b></p>
+        <p>When resource group-based resource management is active, the amount of memory allocated
+          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
+          <varname>gp_resource_group_memory_limit</varname> server configuration parameter and
+          divided by the number of active primary segments on the host. Use the following
+          formula to calculate segment memory when using resource groups for
+          resource management.</p>
+        <p><codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
+        <p>Resource groups expose additional configuration parameters that
+           enable you to further control and refine the amount of memory allocated for queries.</p>
+      </sectiondiv>
+      <sectiondiv>
         <p><b>Configuring Segment Memory when Resource Queue-Based Resource Management is Active</b></p>
         <p>When resource queue-based resource management is active, the <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
           identifies the amount of memory to allocate to
@@ -130,19 +143,6 @@ gp_vmem_protect_limit = gp_vmem_rq / max_acting_primary_segments</codeblock></p>
         <p>Resource queues expose additional configuration parameters that
            enable you to further control and refine the amount of memory allocated for queries.</p>
       </sectiondiv>
-      <sectiondiv>
-        <p><b>Configuring Segment Memory when Resource Group-Based Resource Management is Active</b></p>
-        <p>When resource group-based resource management is active, the amount of memory allocated
-          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
-          <varname>gp_resource_group_memory_limit</varname> server configuration parameter and
-          divided by the number of active primary segments on the host. Use the following
-          formula to calculate segment memory when using resource groups for
-          resource management.</p>
-        <p><codeblock>
-rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
-        <p>Resource groups expose additional configuration parameters that
-           enable you to further control and refine the amount of memory allocated for queries.</p>
-      </sectiondiv>
       </section>
       <section id="section_example">
         <title>Example Memory Configuration Calculations</title>
@@ -154,31 +154,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           <li>8 primary segments and 8 mirror segments per host, in blocks of 4 hosts</li>
           <li>Maximum number of primaries per host during failure is 11</li>
         </ul>
-      <sectiondiv>
-        <p><b>Resource Queue Example</b></p>
-        <p>Using the formula identified above, the <codeph>vm.overcommit_ratio</codeph>
-          calculation for the example system when resource queue-based resource management
-          is active in Greenplum Database follows:</p>
-        <codeblock>
-gp_vmem_rq = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7
-        = ((64 + 256) - (7.5 + 0.05 * 256)) / 1.7
-        = 176
-
-vm.overcommit_ratio = (RAM - (0.026 * gp_vmem_rq)) / RAM
-                    = (256 - (0.026 * 176)) / 256
-                    = .982</codeblock>
-        <p>You would set <codeph>vm.overcommit_ratio</codeph> of the example system to 98. </p>
-        <p>The <codeph>gp_vmem_protect_limit</codeph> calculation when resource queue-based
-        resource management is active in Greenplum Database:</p>
-        <codeblock>
-gp_vmem_protect_limit = gp_vmem_rq / maximum_acting_primary_segments
-                      = 176 / 11
-                      = 16GB
-                      = 16384MB
-</codeblock>
-        <p>You would set the <codeph>gp_vmem_protect_limit</codeph> server configuration
-          parameter on the example system to 16384.</p>
-      </sectiondiv>
       <sectiondiv>
         <p><b>Resource Group Example</b></p>
           <p>When resource group-based resource management is active in Greenplum
@@ -205,6 +180,31 @@ gp_seg_memory = total_gp_memory / number_of_active_primary_segments
           <p>Note that when 3 mirror segments switch to primary segments, the per-segment
             memory is still 16.8GB. Total memory usage on the segment host may approach:
             <codeblock>total_gp_memory_with_primaries = 16.8GB * 11 = 184.8GB</codeblock></p>
+      </sectiondiv>
+      <sectiondiv>
+        <p><b>Resource Queue Example</b></p>
+        <p>The <codeph>vm.overcommit_ratio</codeph>
+          calculation for the example system when resource queue-based resource management
+          is active in Greenplum Database follows:</p>
+        <codeblock>
+gp_vmem_rq = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7
+        = ((64 + 256) - (7.5 + 0.05 * 256)) / 1.7
+        = 176
+
+vm.overcommit_ratio = (RAM - (0.026 * gp_vmem_rq)) / RAM
+                    = (256 - (0.026 * 176)) / 256
+                    = .982</codeblock>
+        <p>You would set <codeph>vm.overcommit_ratio</codeph> of the example system to 98. </p>
+        <p>The <codeph>gp_vmem_protect_limit</codeph> calculation when resource queue-based
+        resource management is active in Greenplum Database:</p>
+        <codeblock>
+gp_vmem_protect_limit = gp_vmem_rq / maximum_acting_primary_segments
+                      = 176 / 11
+                      = 16GB
+                      = 16384MB
+</codeblock>
+        <p>You would set the <codeph>gp_vmem_protect_limit</codeph> server configuration
+          parameter on the example system to 16384.</p>
       </sectiondiv>
       </section>
 
