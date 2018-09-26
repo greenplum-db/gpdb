@@ -242,7 +242,6 @@ test_XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len,
 static void
 test_XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 {
-	static XLogSegNo recvSegNo = 0;
 	int			startoff;
 	int			byteswritten;
 
