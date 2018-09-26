@@ -248,3 +248,34 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
  </explain>
 (1 row)
 
+-- github issues 5795. explain fails previously.
+explain SELECT * from information_schema.key_column_usage;
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=102.67..1432.09 rows=13 width=389)
+   Hash Cond: ((ss.roid = a.attrelid) AND ((ss.x).x = a.attnum))
+   Join Filter: (pg_has_role(ss.relowner, 'USAGE'::text) OR has_column_privilege(ss.roid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'::text))
+   ->  Subquery Scan on ss  (cost=3.34..106.09 rows=5825 width=333)
+         ->  Result  (cost=3.34..47.85 rows=5825 width=341)
+               ->  Hash Join  (cost=3.34..47.85 rows=5825 width=341)
+                     Hash Cond: (c.connamespace = nc.oid)
+                     ->  Hash Join  (cost=2.19..16.06 rows=6 width=281)
+                           Hash Cond: (r.relnamespace = nr.oid)
+                           ->  Hash Join  (cost=1.04..14.84 rows=7 width=221)
+                                 Hash Cond: (r.oid = c.conrelid)
+                                 ->  Seq Scan on pg_class r  (cost=0.00..13.41 rows=85 width=76)
+                                       Filter: (relkind = 'r'::"char")
+                                 ->  Hash  (cost=1.03..1.03 rows=1 width=149)
+                                       ->  Seq Scan on pg_constraint c  (cost=0.00..1.03 rows=1 width=149)
+                                             Filter: (contype = ANY ('{p,u,f}'::"char"[]))
+                           ->  Hash  (cost=1.09..1.09 rows=2 width=68)
+                                 ->  Seq Scan on pg_namespace nr  (cost=0.00..1.09 rows=5 width=68)
+                                       Filter: (NOT pg_is_other_temp_schema(oid))
+                     ->  Hash  (cost=1.07..1.07 rows=3 width=68)
+                           ->  Seq Scan on pg_namespace nc  (cost=0.00..1.07 rows=7 width=68)
+   ->  Hash  (cost=49.33..49.33 rows=1111 width=70)
+         ->  Seq Scan on pg_attribute a  (cost=0.00..49.33 rows=3333 width=70)
+               Filter: (NOT attisdropped)
+ Optimizer: legacy query optimizer
+(25 rows)
+

@@ -134,3 +134,6 @@ explain (format yaml, costs off) SELECT * FROM dummy_aotab;
 
 -- DML node (with ORCA)
 explain (format xml, costs off) insert into dummy_aotab values (1);
+
+-- github issues 5795. explain fails previously.
+explain SELECT * from information_schema.key_column_usage;
