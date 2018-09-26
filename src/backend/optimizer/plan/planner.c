@@ -426,12 +426,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	}
 	top_plan = replace_shareinput_targetlists(root, top_plan);
 
-	/*
-	 * To save on memory, and on the network bandwidth when the plan is
-	 * dispatched QEs, strip all subquery RTEs of the original Query objects.
-	 */
-	remove_subquery_in_RTEs((Node *) glob->finalrtable);
-
 	/* build the PlannedStmt result */
 	result = makeNode(PlannedStmt);
 
