@@ -2049,7 +2049,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&wal_keep_segments,
-		0, 0, INT_MAX,
+		5, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
