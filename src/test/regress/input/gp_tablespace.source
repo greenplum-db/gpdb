@@ -52,8 +52,8 @@ drop table aoco_ts_table;
 drop tablespace testspace;
 
 -- Greenplum tablespaces have the option to define tablespace location for specific segments
-CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content9999 '@testtablespace@_otherloc'); -- should fail
-CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content1 '@testtablespace@_otherloc');
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content9999='@testtablespace@_otherloc'); -- should fail
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content1='@testtablespace@_otherloc');
 SELECT gp_segment_id,
        CASE tblspc_loc
             WHEN '@testtablespace@' THEN 'testtablespace'
