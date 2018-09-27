@@ -2491,6 +2491,19 @@ _readCreateTableSpaceStmt(void)
 	READ_DONE();
 }
 
+static AlterTableSpaceOptionsStmt *
+_readAlterTableSpaceOptionsStmt(void)
+{
+	READ_LOCALS(AlterTableSpaceOptionsStmt);
+
+	READ_STRING_FIELD(tablespacename);
+	READ_NODE_FIELD(options);
+	READ_BOOL_FIELD(isReset);
+
+	READ_DONE();
+
+}
+
 static DropTableSpaceStmt *
 _readDropTableSpaceStmt(void)
 {
@@ -3698,7 +3711,9 @@ readNodeBinary(void)
 			case T_CreateTableSpaceStmt:
 				return_value = _readCreateTableSpaceStmt();
 				break;
-
+			case T_AlterTableSpaceOptionsStmt:
+				return_value = _readAlterTableSpaceOptionsStmt();
+				break;
 			case T_DropTableSpaceStmt:
 				return_value = _readDropTableSpaceStmt();
 				break;

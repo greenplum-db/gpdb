@@ -62,6 +62,26 @@ SELECT gp_segment_id,
        END AS tblspc_loc
 FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='testspace_otherloc'));
 
+-- Test alter tablespace: PG does not seem to test these.
+
+-- test SET & OWNER
+ALTER TABLESPACE testspace_otherloc SET (random_page_cost=20.0);
+SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
+CREATE ROLE t_owner;
+ALTER TABLESPACE testspace_otherloc OWNER TO t_owner;
+SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WHERE spcname = 'testspace_otherloc');
+ALTER TABLESPACE testspace_otherloc OWNER TO @gpcurusername@;
+DROP ROLE t_owner;
+
+-- test RENAME
+ALTER TABLESPACE testspace_otherloc RENAME TO testspace_otherloc2;
+SELECT spcname, spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc2';
+ALTER TABLESPACE testspace_otherloc2 RENAME TO testspace_otherloc;
+
+-- test RESET
+ALTER TABLESPACE testspace_otherloc RESET (random_page_cost);
+SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
+
 CREATE TABLE tblspc_otherloc_heap(a int, b text) distributed by (a);
 INSERT INTO tblspc_otherloc_heap select i, 'foo' || i from generate_series(1,10000)i;
 SELECT COUNT(*) FROM tblspc_otherloc_heap;
