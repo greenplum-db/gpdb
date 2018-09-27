@@ -62,6 +62,9 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         hosts for use in operations such as migrating data between clusters or performing a backup.
         Segment data created by the <codeph>ON SEGMENT</codeph> clause can be restored by tools such
         as <codeph>gpfdist</codeph>, which is useful for high speed data loading. </p>
+      <p>Using <codeph>COPY</codeph> with <codeph>ON SEGMENT</codeph> with a replicated table
+          (<codeph>DISTRIBUTED REPLICATED</codeph>) creates target files on all segments containing
+        all table rows.  </p>
       <note type="warning"> Use of the <codeph>ON SEGMENT</codeph> clause is recommended for expert
         users only.</note>
       <p>When <codeph>STDIN</codeph> or <codeph>STDOUT</codeph> is specified, data is transmitted

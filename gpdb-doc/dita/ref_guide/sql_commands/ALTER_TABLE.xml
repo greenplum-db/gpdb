@@ -16,7 +16,8 @@ ALTER TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 ALTER TABLE [ONLY] <varname>name</varname> SET 
      WITH (REORGANIZE=true|false)
    | DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) 
-   | DISTRIBUTED RANDOMLY 
+   | DISTRIBUTED RANDOMLY
+   | DISTRIBUTED REPLICATED 
  
 ALTER TABLE [ONLY] <varname>name</varname> <varname>action</varname> [, ... ]
 
@@ -205,10 +206,11 @@ ALTER TABLE <varname>name</varname>
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
                                         need to rewrite the table to get the desired effects.</li>
-                                <li id="ay141947"><b>SET DISTRIBUTED</b> —Changes the distribution
-                                        policy of a table. Changes to a hash distribution policy
-                                        will cause the table data to be physically redistributed on
-                                        disk, which can be resource intensive.</li>
+                                <li id="ay141947"><b>SET DISTRIBUTED</b> — Changes the distribution
+                                        policy of a table. Changing a hash distribution policy, or
+                                        changing to or from a  replicated policy, will cause the
+                                        table data to be physically redistributed on disk, which can
+                                        be resource intensive.</li>
                                 <li id="ay137232"><b>INHERIT <varname>parent_table</varname> / NO
                                                 INHERIT <varname>parent_table</varname></b> — Adds
                                         or removes the target table as a child of the specified
@@ -412,15 +414,16 @@ ALTER TABLE <varname>name</varname>
                                 </plentry>
                                 <plentry>
                                         <pt>DISTRIBUTED BY (<varname>column</varname>) | DISTRIBUTED
-                                                RANDOMLY</pt>
+                                                RANDOMLY | DISTRIBUTED REPLICATED</pt>
                                         <pd>Specifies the distribution policy for a table. Changing
-                                                a hash distribution policy will cause the table data
-                                                to be physically redistributed on disk, which can be
-                                                resource intensive. If you declare the same hash
-                                                distribution policy or change from hash to random
-                                                distribution, data will not be redistributed unless
-                                                you declare <codeph>SET WITH
-                                                  (REORGANIZE=true)</codeph>.</pd>
+                                                a hash distribution policy causes the table data to
+                                                be physically redistributed, which can be resource
+                                                intensive. If you declare the same hash distribution
+                                                policy or change from hash to random distribution,
+                                                data will not be redistributed unless you declare
+                                                  <codeph>SET WITH (REORGANIZE=true)</codeph>.</pd>
+                                        <pd>Changing to or from a replicated distribution policy
+                                                causes the table data to be redistributed.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>REORGANIZE=true|false</pt>
@@ -788,6 +791,8 @@ ALTER TABLE <varname>name</varname>
 (char_length(zipcode) = 5);</codeblock>
                         <p>Move a table to a different schema:</p>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
+                        <p>Change the distribution policy of a table to replicated:</p>
+                        <codeblock>ALTER TABLE myschema.distributors SET DISTRIBUTED REPLICATED;</codeblock>
                         <p>Add a new partition to a partitioned table:</p>
                         <codeblock>ALTER TABLE sales ADD PARTITION 
             START (date '2017-02-01') INCLUSIVE 
