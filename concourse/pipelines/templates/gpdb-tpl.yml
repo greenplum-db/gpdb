@@ -34,9 +34,6 @@ groups:
 {% if "ubuntu16" in os_types %}
   - compile_gpdb_ubuntu16
 {% endif %}
-{% if "win" in os_types %}
-  - compile_gpdb_windows_cl
-{% endif %}
 {% if "aix7" in os_types %}
   - compile_gpdb_aix7_remote
 {% endif %}
@@ -165,9 +162,6 @@ groups:
 {% if "ubuntu16" in os_types %}
   - compile_gpdb_ubuntu16
 {% endif %}
-{% if "win" in os_types %}
-  - compile_gpdb_windows_cl
-{% endif %}
 {% if "aix7" in os_types %}
   - compile_gpdb_aix7_remote
 {% endif %}
@@ -176,9 +170,6 @@ groups:
 
 - name: ClientsLoaders
   jobs:
-{% if "win" in os_types %}
-  - compile_gpdb_windows_cl
-{% endif %}
 {% if "aix7" in os_types %}
   - compile_gpdb_aix7_remote
   - client_loader_remote_test_aix
@@ -597,31 +588,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_sles11_versioned_file}}
-
-{% endif %}
-{% if "win" in os_types %}
-- name: centos-mingw
-  type: docker-image
-  source:
-    repository: pivotaldata/centos-mingw
-
-- name: bin_gpdb_windows_clients
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: windows-cl/greenplum-clients-(.*)-WinXP-x86_32.msi
-
-- name: bin_gpdb_windows_loaders
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: windows-cl/greenplum-loaders-(.*)-WinXP-x86_32.msi
 
 {% endif %}
 {% if "aix7" in os_types %}
@@ -1053,55 +1019,6 @@ jobs:
     - put: binary_swap_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
-
-{% endif %}
-{% if "win" in os_types %}
-- name: compile_gpdb_windows_cl
-  plan:
-  - aggregate:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
-      tags: ["wix"]
-    - get: gpdb_src
-      trigger: ((gpdb_src-trigger-flag))
-      tags: ["wix"]
-    - get: gpaddon_src
-      tags: ["wix"]
-    - get: centos-mingw
-      tags: ["wix"]
-    - get: centos-gpdb-build-7
-      tags: ["wix"]
-  - task: sync_tools
-    tags: ["wix"]
-    file: gpdb_src/concourse/tasks/sync_tools.yml
-    image: centos-gpdb-build-7
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: win32
-      TARGET_OS_VERSION:
-      TASK_OS: centos
-      TASK_OS_VERSION: 7
-  - task: compile_gpdb
-    tags: ["wix"]
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-mingw
-    params:
-      CONFIGURE_FLAGS: {{configure_flags}}
-      TARGET_OS: win32
-      TARGET_OS_VERSION:
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: bin_gpdb_windows_clients
-      tags: ["wix"]
-      params:
-        file: gpdb_artifacts/greenplum-clients-*-WinXP-x86_32.msi
-    - put: bin_gpdb_windows_loaders
-      tags: ["wix"]
-      params:
-        file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
 
 {% endif %}
 {% if "aix7" in os_types %}
@@ -2434,7 +2351,6 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
-      - compile_gpdb_windows_cl
       - compile_gpdb_aix7_remote
       - icw_planner_centos6
       - icw_gporca_centos6
