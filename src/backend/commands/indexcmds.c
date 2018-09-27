@@ -699,23 +699,25 @@ DefineIndex(IndexStmt *stmt,
 	if (stmt->primary)
 		index_check_primary_key(rel, indexInfo, is_alter_table);
 
-	if ((stmt->primary || stmt->unique) && rel->rd_cdbpolicy)
-		checkPolicyForUniqueIndex(rel,
-								  indexInfo->ii_KeyAttrNumbers,
-								  indexInfo->ii_NumIndexAttrs,
-								  stmt->primary,
-								  list_length(indexInfo->ii_Expressions),
-								  relationHasPrimaryKey(rel),
-								  relationHasUniqueIndex(rel));
+	if (shouldDispatch)
+	{
+		if ((stmt->primary || stmt->unique) && rel->rd_cdbpolicy)
+			checkPolicyForUniqueIndex(rel,
+									  indexInfo->ii_KeyAttrNumbers,
+									  indexInfo->ii_NumIndexAttrs,
+									  stmt->primary,
+									  list_length(indexInfo->ii_Expressions),
+									  relationHasPrimaryKey(rel),
+									  relationHasUniqueIndex(rel));
 
-	/* We don't have to worry about constraints on parts.  Already checked. */
-	if ( stmt->isconstraint && rel_is_partitioned(relationId) )
-		checkUniqueConstraintVsPartitioning(rel,
-											indexInfo->ii_KeyAttrNumbers,
-											indexInfo->ii_NumIndexAttrs,
-											stmt->primary);
-
-	if (Gp_role == GP_ROLE_EXECUTE && stmt)
+		/* We don't have to worry about constraints on parts.  Already checked. */
+		if ( stmt->isconstraint && rel_is_partitioned(relationId) )
+			checkUniqueConstraintVsPartitioning(rel,
+												indexInfo->ii_KeyAttrNumbers,
+												indexInfo->ii_NumIndexAttrs,
+												stmt->primary);
+	}
+	else if (Gp_role == GP_ROLE_EXECUTE && stmt)
 		quiet = true;
 
 	/*
