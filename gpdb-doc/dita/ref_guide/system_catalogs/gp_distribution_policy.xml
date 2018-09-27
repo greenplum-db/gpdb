@@ -39,6 +39,18 @@
             <entry colname="col3">pg_attribute.attnum</entry>
             <entry colname="col4">The column number(s) of the distribution column(s).</entry>
           </row>
+          <row>
+            <entry colname="col1">
+              <codeph id="ey142874">policytype</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"></entry>
+            <entry colname="col4">The table distribution policy:<ul>
+              <li><codeph>p</codeph> - The table has a partitioned
+                distribution policy.</li>
+              <li><codeph>r</codeph> - The table has a replicated distribution
+                policy.</li></ul></entry>
+          </row>
         </tbody>
       </tgroup>
     </table>
