@@ -329,7 +329,7 @@ fi
 
 STANDBY_INIT_OPTS=""
 if [ "${WITH_STANDBY}" == "true" ]; then
-	STANDBY_INIT_OPTS="-s ${LOCALHOST} -P ${STANDBY_DEMO_PORT} -F ${STANDBYDIR}"
+	STANDBY_INIT_OPTS="-s ${LOCALHOST} -P ${STANDBY_DEMO_PORT} -F ${STANDBYDIR} -H"
 fi
 
 if [ ! -z "${EXTRA_CONFIG}" ]; then
@@ -366,6 +366,10 @@ if [ -n "${STATEMENT_MEM}" ]; then
 		statement_mem = ${STATEMENT_MEM}
 	EOF
 fi
+
+cat >> $CLUSTER_CONFIG_POSTGRES_ADDONS<<-EOF
+	wal_level = hot_standby
+EOF
 
 if [ "${ONLY_PREPARE_CLUSTER_ENV}" == "true" ]; then
     echo "ONLY_PREPARE_CLUSTER_ENV set, generated clusterConf file: $CLUSTER_CONFIG, exiting"

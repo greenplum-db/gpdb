@@ -48,6 +48,7 @@ VERBOSE=1
 INTERACTIVE=1
 MIRRORING=0
 INST_COUNT=0
+MASTER_HOT_STANDBY=0
 # Greenplum database specific parameters
 GP_USER=$USER_NAME
 # System table names
@@ -137,6 +138,7 @@ USAGE () {
 		$ECHO "      -h, gp_hostlist_file [optional]"
 		$ECHO "          Contains a list of all segment instance hostnames required to participate in"
 		$ECHO "          the new Greenplum instance. Normally set in gp_config_file."
+		$ECHO "      -H, enable hot standby master"
 		$ECHO "      -I, <input_configuration_file>"
 		$ECHO "          The full path and filename of an input configuration file, which defines the"
 		$ECHO "          Greenplum Database members and segments using the QD_PRIMARY_ARRAY and"
@@ -1527,7 +1529,10 @@ CREATE_STANDBY_QD () {
 			INIT_STANDBY_ARGS+=" -F $STANDBY_DATADIR"
 		fi
 		if [ $HBA_HOSTNAMES -eq 1 ]; then
-		    INIT_STANDBY_ARGS+=" --hba-hostnames"
+			INIT_STANDBY_ARGS+=" --hba-hostnames"
+		fi
+		if [ x"" != x"$MASTER_HOT_STANDBY" ]; then
+			INIT_STANDBY_ARGS+=" -h"
 		fi
 		export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1;$INIT_STANDBY_PROG -s $STANDBY_HOSTNAME $INIT_STANDBY_ARGS -a
 		STANDBY_RET_CODE=$?
@@ -1936,7 +1941,7 @@ SET_DCA_CONFIG_SETTINGS () {
 # Main Section
 #******************************************************************************
 trap 'ERROR_EXIT "[FATAL]:-Received INT or TERM signal" 2' INT TERM
-while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
+while getopts ":vaqe:c:l:-:p:m:Hh:n:s:P:F:b:DB:SI:O:" opt
 		do
 		case $opt in
 				v ) print_version ;;
@@ -1947,6 +1952,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 				e ) GP_PASSWD=$OPTARG ;;
 				p ) PG_CONF_ADD_FILE=$OPTARG ;;
 				h ) MACHINE_LIST_FILE_ALT=$OPTARG ;;
+				H ) set MASTER_HOT_STANDBY ;;
 				m ) MASTER_MAX_CONNECT=$OPTARG ;;
 				b ) NEW_BUFFERS=$OPTARG ;;
 				s ) STANDBY_HOSTNAME=$OPTARG ;;

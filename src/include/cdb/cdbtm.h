@@ -10,6 +10,7 @@
 #include "storage/lwlock.h"
 #include "lib/stringinfo.h"
 #include "access/xlogdefs.h"
+#include "access/xact.h"
 #include "cdb/cdbdistributedsnapshot.h"
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbdtxcontextinfo.h"
@@ -256,7 +257,6 @@ typedef struct TMGALLXACTSTATUS
 typedef struct TmControlBlock
 {
 	LWLockId					ControlLock;
-	slock_t 					ControlSeqnoLock;
 
 	bool						recoverred;
 	DistributedTransactionTimeStamp	distribTimeStamp;
@@ -276,7 +276,6 @@ typedef struct TmControlBlock
 extern DtxContext DistributedTransactionContext;
 
 /* state variables for how much of the log file has been flushed */
-extern volatile bool *shmDtmStarted;
 extern volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
 extern uint32 *shmNextSnapshotId;
 extern TMGXACT_LOG *shmCommittedGxactArray;
@@ -300,7 +299,6 @@ extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
 extern bool notifyCommittedDtxTransactionIsNeeded(void);
 extern void notifyCommittedDtxTransaction(void);
 extern void	rollbackDtxTransaction(void);
-extern DistributedTransactionId getMaxDistributedXid(void);
 
 extern bool includeInCheckpointIsNeeded(TMGXACT *gxact);
 extern void insertingDistributedCommitted(void);
@@ -345,8 +343,14 @@ extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 
 extern bool doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType);
+extern void UpdateStandbyDistributedSnapshot(DistributedSnapshot *ds, DistributedTransactionId *inProgress);
+extern bool CreateDistributedSnapshot(DistributedSnapshot *ds, bool includeSelf);
+extern bool GetDistributedSnapshotForStandby(DistributedSnapshot *ds);
 
 extern void markCurrentGxactWriterGangLost(void);
 
 extern bool currentGxactWriterGangLost(void);
+extern Size StandbyDistributedSnapshotShmemSize(void);
+extern void StandbyDistributedSnapshotInit(void);
+extern void ResetTmForPromotion();
 #endif   /* CDBTM_H */

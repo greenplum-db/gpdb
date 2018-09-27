@@ -124,6 +124,8 @@ def parseargs():
                       help='datadir of standby master')
     optgrp.add_option('-n', '--no-update', action='store_true', dest='no_update',
                       help='do not update system catalog tables')
+    optgrp.add_option('-h', '--hot-standby', action='store_true', dest='hot_standby',
+                      help='enable hot standby')
     optgrp.add_option('-r', '--remove', action='store_true',
                       help='remove current warm master standby.  Use this option '
                       'if the warm master standby host has failed.  This option will '
@@ -399,9 +401,17 @@ def create_standby(options):
         update_pg_hba_conf_on_segments(array, options.standby_host, options.hba_hostnames)
         logger.info('pg_hba.conf files updated successfully.')
 
+        dburl = dbconn.DbURL(dbname="template1")
+        conn = dbconn.connect(dburl, utility=True)
+        sql = "SELECT pg_start_backup('databackup',true)"
+        cur = dbconn.execSQL(conn, sql)
+
         copy_master_datadir_to_standby(options, array, standby_datadir)
         update_postgresql_conf(options, array)
         update_gpdbid_file(options, array)
+
+        sql = "SELECT pg_stop_backup()"
+        cur = dbconn.execSQL(conn, sql)
 
         try:
             dburl = getDbUrlForInitStandby()
@@ -726,6 +736,14 @@ def update_postgresql_conf(options, array):
                                ctxt=gp.REMOTE,
                                remoteHost=standby.getSegmentHostName())
     cmd.run(validateAfter=True)
+    if options.hot_standby:
+        cmd = gp.GpAddConfigScript('update config',
+                               standby.getSegmentDataDirectory(),
+                               'hot_standby',
+                               'on',
+                               ctxt=gp.REMOTE,
+                               remoteHost=standby.getSegmentHostName())
+        cmd.run(validateAfter=True)
 
 #-------------------------------------------------------------------------
 def update_gpdbid_file(options, array):

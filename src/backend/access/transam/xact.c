@@ -63,6 +63,7 @@
 #include "utils/resource_manager.h"
 #include "utils/sharedsnapshot.h"
 #include "access/clog.h"
+#include "utils/snapshot.h"
 #include "utils/snapmgr.h"
 #include "utils/timestamp.h"
 #include "pg_trace.h"
@@ -183,6 +184,7 @@ typedef struct TransactionStateData
 	struct TransactionStateData *parent;		/* back link to parent */
 
 	struct TransactionStateData *fastLink;        /* back link to jump to parent for efficient search */
+	DistributedSnapshot *distributedSnapshot;
 } TransactionStateData;
 
 typedef TransactionStateData *TransactionState;
@@ -1325,7 +1327,7 @@ RecordTransactionCommit(void)
 		if (nrels > 0 || nmsgs > 0 || RelcacheInitFileInval || forceSyncCommit
 				|| isDtxPrepared)
 		{
-			XLogRecData rdata[5];
+			XLogRecData rdata[7];
 			int			lastrdata = 0;
 			xl_xact_commit xlrec;
 
@@ -1383,12 +1385,35 @@ RecordTransactionCommit(void)
 			{
 				/* add global transaction information */
 				getDtxLogInfo(&gxact_log);
-
 				rdata[lastrdata].next = &(rdata[4]);
 				rdata[4].data = (char *) &gxact_log;
 				rdata[4].len = sizeof(gxact_log);
 				rdata[4].buffer = InvalidBuffer;
-				rdata[4].next = NULL;
+				lastrdata = 4;
+
+				if (XLogStandbyInfoActive())
+				{
+					Assert(CurrentTransactionState->distributedSnapshot);
+					LWLockAcquire(ProcArrayLock, LW_SHARED);
+					CreateDistributedSnapshot(CurrentTransactionState->distributedSnapshot, false);
+					LWLockRelease(ProcArrayLock);
+
+					rdata[lastrdata].next = &(rdata[5]);
+					rdata[5].data = (char *)CurrentTransactionState->distributedSnapshot;
+					rdata[5].len = sizeof(DistributedSnapshot);
+					rdata[5].buffer = InvalidBuffer;
+					lastrdata = 5;
+					if (CurrentTransactionState->distributedSnapshot->count > 0)
+					{
+						rdata[lastrdata].next = &(rdata[6]);
+						rdata[6].data = (char *) CurrentTransactionState->distributedSnapshot->inProgressXidArray;
+						rdata[6].len = CurrentTransactionState->distributedSnapshot->count * sizeof(DistributedTransactionId);
+						rdata[6].buffer = InvalidBuffer;
+						lastrdata = 6;
+					}
+				}
+
+				rdata[lastrdata].next = NULL;
 
 				insertingDistributedCommitted();
 
@@ -1565,7 +1590,6 @@ RecordDistributedForgetCommitted(TMGXACT_LOG *gxact_log)
 	XLogRecData rdata[1];
 
 	memcpy(&xlrec.gxact_log, gxact_log, sizeof(TMGXACT_LOG));
-
 	rdata[0].data = (char *) &xlrec;
 	rdata[0].len = sizeof(xl_xact_distributed_forget);
 	rdata[0].buffer = InvalidBuffer;
@@ -2184,13 +2208,6 @@ StartTransaction(void)
 	AtStart_ResourceOwner();
 
 	/*
-	 * Transactions may be started while recovery is in progress, if
-	 * hot standby is enabled.  This mode is not supported in
-	 * Greenplum yet.
-	 */
-	AssertImply(DistributedTransactionContext != DTX_CONTEXT_LOCAL_ONLY,
-				!s->startedInRecovery);
-	/*
 	 * MPP Modification
 	 *
 	 * If we're an executor and don't have a valid QDSentXID, then we're starting
@@ -2584,6 +2601,20 @@ CommitTransaction(void)
 		ereport(ERROR,
 				(errcode(ERRCODE_FAULT_INJECT),
 				 errmsg("Raise an error as directed by Debug_abort_after_distributed_prepared")));
+	}
+
+	if (isPreparedDtxTransaction() && XLogStandbyInfoActive())
+	{
+		CurrentTransactionState->distributedSnapshot = (DistributedSnapshot*)
+				palloc0(sizeof(DistributedSnapshot));
+		if (CurrentTransactionState->distributedSnapshot == NULL)
+			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
+
+		CurrentTransactionState->distributedSnapshot->inProgressXidArray = (DistributedTransactionId*)
+				palloc0(sizeof(DistributedTransactionId) * max_prepared_xacts);
+		if (CurrentTransactionState->distributedSnapshot->inProgressXidArray == NULL)
+			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
+		CurrentTransactionState->distributedSnapshot->maxCount = max_prepared_xacts;
 	}
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -5749,16 +5780,28 @@ xactGetCommittedChildren(TransactionId **ptr)
 /*
  *	XLOG support routines
  */
-static TMGXACT_LOG *
-xact_get_distributed_info_from_commit(xl_xact_commit *xlrec)
+static void
+xact_get_distributed_info_from_commit(xl_xact_commit *xlrec,
+									 TMGXACT_LOG **ppgxact,
+									 DistributedSnapshot **ppds,
+									 DistributedTransactionId **ppInprogress)
 {
 	TransactionId *xacts;
 	SharedInvalidationMessage *msgs;
+	TMGXACT_LOG *gxact;
+	DistributedSnapshot *ds;
+	DistributedTransactionId *inprogress;
+
 
 	xacts = (TransactionId *) &xlrec->xnodes[xlrec->nrels];
 	msgs = (SharedInvalidationMessage *) &xacts[xlrec->nsubxacts];
-
-	return (TMGXACT_LOG *) &msgs[xlrec->nmsgs];
+	gxact = (TMGXACT_LOG *) &msgs[xlrec->nmsgs];
+	ds = (DistributedSnapshot*) &gxact[1];
+	inprogress = (DistributedTransactionId*) &ds[1];
+	*ppgxact = gxact;
+	*ppds = ds;
+	*ppInprogress = inprogress;
+	return;
 }
 
 /*
@@ -5962,21 +6005,20 @@ xact_redo_commit_compact(xl_xact_commit_compact *xlrec,
  * because subtransaction commit is never WAL logged.
  */
 static void
-xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
+xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid, XLogRecPtr lsn)
 {
 	TMGXACT_LOG *gxact_log;
-	
+	DistributedSnapshot *ds;
+	DistributedTransactionId *inProgress;
+
 	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId 		distribXid;
 
-	TransactionId *sub_xids;
-	TransactionId max_xid;
-	int			i;
 
 	/* 
 	 * Get the global transaction information first.
 	 */
-	gxact_log = xact_get_distributed_info_from_commit(xlrec);
+	xact_get_distributed_info_from_commit(xlrec, &gxact_log, &ds, &inProgress);
 
 	/*
 	 * Crack open the gid to get the timestamp.
@@ -5992,69 +6034,9 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 		     gxact_log->gxid, distribXid);
 
 	if (TransactionIdIsValid(xid))
-	{
-		/*
-		 * Mark the distributed transaction committed before we
-		 * update the CLOG in xact_redo_commit.
-		 */
-		/*
-		 * Make room in the DistributedLog, if necessary.
-		 */
-		if (TransactionIdFollowsOrEquals(xid,
-										 ShmemVariableCache->nextXid))
-		{
-			ShmemVariableCache->nextXid = xid;
-			TransactionIdAdvance(ShmemVariableCache->nextXid);
-		}
+		xact_redo_commit(xlrec, xid, lsn, distribXid, distribTimeStamp);
 
-		/*
-		 * Now update the CLOG and do local commit actions.
-		 *
-		 * NOTE: The following logic is a copy of xact_redo_commit, with the
-		 * only addition being redo of DistributeLog updates to subtransaction
-		 * log.
-		 */
-
-		/* Mark the transaction committed in pg_clog */
-		sub_xids = (TransactionId *) &xlrec->xnodes[xlrec->nrels];
-
-		/* Add the committed subtransactions to the DistributedLog, too. */
-		DistributedLog_SetCommittedTree(xid, xlrec->nsubxacts, sub_xids,
-										distribTimeStamp,
-										gxact_log->gxid,
-										/* isRedo */ true);
-
-		TransactionIdCommitTree(xid, xlrec->nsubxacts, sub_xids);
-
-		/* Make sure nextXid is beyond any XID mentioned in the record */
-		max_xid = xid;
-		for (i = 0; i < xlrec->nsubxacts; i++)
-		{
-			if (TransactionIdPrecedes(max_xid, sub_xids[i]))
-				max_xid = sub_xids[i];
-		}
-		if (TransactionIdFollowsOrEquals(max_xid,
-										 ShmemVariableCache->nextXid))
-		{
-			ShmemVariableCache->nextXid = max_xid;
-			TransactionIdAdvance(ShmemVariableCache->nextXid);
-		}
-
-		for (i = 0; i < xlrec->nrels; i++)
-		{
-			SMgrRelation srel = smgropen(xlrec->xnodes[i].node, InvalidBackendId);
-			ForkNumber	fork;
-
-			for (fork = 0; fork <= MAX_FORKNUM; fork++)
-				XLogDropRelation(xlrec->xnodes[i].node, fork);
-			smgrdounlink(srel, true, xlrec->xnodes[i].relstorage);
-			smgrclose(srel);
-		}
-	}
-
-	/*
-	 * End copy of xact_redo_commit logic.
-	 */
+	UpdateStandbyDistributedSnapshot(ds, inProgress);
 	redoDistributedCommitRecord(gxact_log);
 }
 
@@ -6191,7 +6173,7 @@ xact_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 	{
 		xl_xact_commit *xlrec = (xl_xact_commit *) XLogRecGetData(record);
 
-		xact_redo_distributed_commit(xlrec, record->xl_xid);
+		xact_redo_distributed_commit(xlrec, record->xl_xid, lsn);
 	}
 	else if (info == XLOG_XACT_DISTRIBUTED_FORGET)
 	{

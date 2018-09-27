@@ -45,18 +45,24 @@ static void validate_xlog_location(char *str);
  * to tell where the backup dump will be stored) and the starting time and
  * starting WAL location for the dump.
  *
- * **Note :- Currently this functionality is not supported.**
  */
 Datum
 pg_start_backup(PG_FUNCTION_ARGS)
 {
+	text	   *backupid = PG_GETARG_TEXT_P(0);
+	bool		fast = PG_GETARG_BOOL(1);
+	char	   *backupidstr;
 	XLogRecPtr	startpoint = InvalidXLogRecPtr;
 	char		startxlogstr[MAXFNAMELEN];
 
-	ereport(NOTICE,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("pg_start_backup() is not supported in Greenplum Database"),
-			 errhint("Contact support to get more information and resolve the issue")));
+	backupidstr = text_to_cstring(backupid);
+
+	if (!superuser() && !has_rolreplication(GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+		   errmsg("must be superuser or replication role to run a backup")));
+
+	startpoint = do_pg_start_backup(backupidstr, fast, NULL, NULL);
 
 	snprintf(startxlogstr, sizeof(startxlogstr), "%X/%X",
 			 (uint32) (startpoint >> 32), (uint32) startpoint);
@@ -76,7 +82,6 @@ pg_start_backup(PG_FUNCTION_ARGS)
  *
  * Note: different from CancelBackup which just cancels online backup mode.
  *
- * **Note :- Currently this functionality is not supported.**
  */
 Datum
 pg_stop_backup(PG_FUNCTION_ARGS)
@@ -84,10 +89,12 @@ pg_stop_backup(PG_FUNCTION_ARGS)
 	XLogRecPtr	stoppoint = InvalidXLogRecPtr;
 	char		stopxlogstr[MAXFNAMELEN];
 
-	ereport(NOTICE,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("pg_stop_backup() is not supported in Greenplum Database"),
-			 errhint("Contact support to get more information and resolve the issue")));
+	if (!superuser() && !has_rolreplication(GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+		 (errmsg("must be superuser or replication role to run a backup"))));
+
+	stoppoint = do_pg_stop_backup(NULL, true, NULL);
 
 	snprintf(stopxlogstr, sizeof(stopxlogstr), "%X/%X",
 			 (uint32) (stoppoint >> 32), (uint32) stoppoint);

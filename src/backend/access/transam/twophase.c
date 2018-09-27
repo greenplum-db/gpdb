@@ -1244,7 +1244,12 @@ StandbyTransactionIdIsPrepared(TransactionId xid)
 	 * files, so we cannot use ReadTwoPhaseFile() here. Fortunately, this
 	 * isn't needed until we try to use Hot Standby.
 	 */
-	elog(ERROR, "Hot Standby not supported");
+	Assert(standbyState != STANDBY_DISABLED);
+	Assert(IS_QUERY_DISPATCHER());
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(EnableHotStandby);
+	return false;
+
 #if 0
 	char	   *buf;
 	TwoPhaseFileHeader *hdr;
@@ -1827,7 +1832,10 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 void
 StandbyRecoverPreparedTransactions(bool overwriteOK)
 {
-	elog(ERROR, "Hot Standby not supported");
+	Assert(standbyState != STANDBY_DISABLED);
+	Assert(IS_QUERY_DISPATCHER());
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(EnableHotStandby);
 }
 
 /*

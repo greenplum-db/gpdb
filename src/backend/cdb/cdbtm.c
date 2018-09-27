@@ -49,6 +49,7 @@
 #include "utils/fmgroids.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/snapmgr.h"
+#include "port/atomics.h"
 
 extern bool Test_print_direct_dispatch_info;
 
@@ -66,12 +67,11 @@ extern bool Test_print_direct_dispatch_info;
 #define UTILITYMODEDTMREDO_FILE "savedtmredo.file"
 
 static LWLockId shmControlLock;
-static slock_t *shmControlSeqnoLock;
 static volatile bool *shmTmRecoverred;
 volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
 static volatile DistributedTransactionId *shmGIDSeq = NULL;
 
-volatile bool *shmDtmStarted;
+static volatile bool *shmDtmStarted;
 uint32 *shmNextSnapshotId;
 
 /* transactions need recover */
@@ -93,6 +93,7 @@ typedef struct InDoubtDtx
 	char		gid[TMGIDSIZE];
 } InDoubtDtx;
 
+static DistributedSnapshot *StandbyDistributedSnapshot = NULL;
 
 /* here are some flag options relationed to the txnOptions field of
  * PQsendGpQuery
@@ -721,7 +722,7 @@ doInsertForgetCommitted(void)
 
 	if (strlen(currentGxact->gid) >= TMGIDSIZE)
 		elog(PANIC, "Distribute transaction identifier too long (%d)",
-			 (int) strlen(currentGxact->gid));
+				(int) strlen(currentGxact->gid));
 	memcpy(&gxact_log.gid, currentGxact->gid, TMGIDSIZE);
 	gxact_log.gxid = currentGxact->gxid;
 
@@ -868,7 +869,6 @@ doNotifyingCommitPrepared(void)
 		 "succeeded to all the segments for gid = %s.", currentGxact->gid);
 
 	doInsertForgetCommitted();
-
 	clearTransactionState();
 	resetCurrentGxact();
 }
@@ -1568,7 +1568,6 @@ tmShmemInit(void)
 		elog(FATAL, "could not initialize transaction manager share memory");
 
 	shmControlLock = shared->ControlLock;
-	shmControlSeqnoLock = &shared->ControlSeqnoLock;
 	shmTmRecoverred = &shared->recoverred;
 	shmDistribTimeStamp = &shared->distribTimeStamp;
 	shmGIDSeq = &shared->seqno;
@@ -1585,7 +1584,7 @@ tmShmemInit(void)
 		*shmDistribTimeStamp = (DistributedTransactionTimeStamp) t;
 		elog(DEBUG1, "DTM start timestamp %u", *shmDistribTimeStamp);
 
-		*shmGIDSeq = FirstDistributedTransactionId;
+		ShmemVariableCache->latestCompletedDxid = *shmGIDSeq = FirstDistributedTransactionId;
 	}
 	shmDtmStarted = &shared->DtmStarted;
 	shmNextSnapshotId = &shared->NextSnapshotId;
@@ -1598,7 +1597,6 @@ tmShmemInit(void)
 		shared->ControlLock = LWLockAssign();
 		shmControlLock = shared->ControlLock;
 
-		SpinLockInit(shmControlSeqnoLock);
 		*shmNextSnapshotId = 0;
 		*shmDtmStarted = false;
 		*shmTmRecoverred = false;
@@ -1691,15 +1689,15 @@ isMppTxOptions_ExplicitBegin(int txnOptions)
 void
 redoDtxCheckPoint(TMGXACT_CHECKPOINT *gxact_checkpoint)
 {
-	int			committedCount;
+	int	committedCount;
+	int	i;
 
-	int			i;
-
+	if (gxact_checkpoint == NULL)
+		return;
 	/*
 	 * For checkpoint same as REDO, lets add entries to file in utility and
 	 * in-memory if Dispatch.
 	 */
-
 	committedCount = gxact_checkpoint->committedCount;
 	elog(DTM_DEBUG5, "redoDtxCheckPoint has committedCount = %d", committedCount);
 
@@ -1730,6 +1728,7 @@ UtilityModeFindOrCreateDtmRedoFile(void)
 	}
 	GetRedoFileName(path);
 
+	Assert(redoFileFD == -1);
 	redoFileFD = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (redoFileFD < 0)
 	{
@@ -1761,6 +1760,10 @@ UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log)
 		 utilityModeRedo.gxact_log.gid,
 		 utilityModeRedo.gxact_log.gxid);
 
+	if (redoFileFD == -1)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("DTM redo file doesn't exist")));
 	write_len = write(redoFileFD, &utilityModeRedo, sizeof(TMGXACT_UTILITY_MODE_REDO));
 	if (write_len != sizeof(TMGXACT_UTILITY_MODE_REDO))
 	{
@@ -1768,7 +1771,6 @@ UtilityModeSaveRedo(bool committed, TMGXACT_LOG *gxact_log)
 				(errcode_for_file_access(),
 				 errmsg("could not write save DTM redo file : %m")));
 	}
-
 }
 
 void
@@ -1782,6 +1784,7 @@ UtilityModeCloseDtmRedoFile(void)
 	}
 	elog(DTM_DEBUG3, "Closing DTM redo file");
 	close(redoFileFD);
+	redoFileFD = -1;
 }
 
 static void
@@ -1944,6 +1947,7 @@ redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log)
 			return;
 		}
 	}
+
 
 	elog((Debug_print_full_dtm ? WARNING : DEBUG5),
 		 "Crash recovery redo did not find committed distributed transaction gid = %s for forget",
@@ -2239,31 +2243,13 @@ generateGID(void)
 {
 	DistributedTransactionId gxid;
 
-	SpinLockAcquire(shmControlSeqnoLock);
+	gxid = pg_atomic_add_fetch_u32((pg_atomic_uint32*)shmGIDSeq, 1);
+	if (gxid == LastDistributedTransactionId)
+		ereport(PANIC,
+				(errmsg("reached limit of %u global transactions per start",
+						LastDistributedTransactionId)));
 
-	/* tm lock acquired by caller */
-	if (*shmGIDSeq >= LastDistributedTransactionId)
-	{
-		SpinLockRelease(shmControlSeqnoLock);
-		ereport(FATAL,
-				(errmsg("reached limit of %u global transactions per start", LastDistributedTransactionId)));
-	}
-	gxid = ++(*shmGIDSeq);
-
-	SpinLockRelease(shmControlSeqnoLock);
 	return gxid;
-}
-
-/*
- * Return the highest global transaction id that has been generated.
- */
-DistributedTransactionId
-getMaxDistributedXid(void)
-{
-	if (!shmGIDSeq)
-		return 0;
-
-	return *shmGIDSeq;
 }
 
 /*
@@ -2300,12 +2286,10 @@ recoverTM(void)
 	 * and then resolve any remaining in-doubt transactions that the RMs
 	 * have.
 	 */
-	recoverInDoubtTransactions();
+	if (!RecoveryInProgress())
+		recoverInDoubtTransactions();
 
 	/* finished recovery successfully. */
-
-	*shmGIDSeq = 1;
-
 	*shmDtmStarted = true;
 	elog(LOG, "DTM Started");
 }
@@ -3045,7 +3029,7 @@ sendDtxExplicitBegin(void)
 	rememberDtxExplicitBegin();
 
 	dtmPreCommand("sendDtxExplicitBegin", "(none)", NULL,
-				   /* is two-phase */ true, /* withSnapshot */ true, /* inCursor */ false);
+				   /* is two-phase */ !RecoveryInProgress(), /* withSnapshot */ true, /* inCursor */ false);
 
 	/*
 	 * Be explicit about both the isolation level and the access mode since in
@@ -3398,4 +3382,84 @@ bool
 currentGxactWriterGangLost(void)
 {
 	return currentGxact == NULL ? false : currentGxact->writerGangLost;
+}
+
+void UpdateStandbyDistributedSnapshot(DistributedSnapshot *ds, DistributedTransactionId *inProgress)
+{
+	if (standbyState == STANDBY_DISABLED)
+		return;
+	if (!StandbyDistributedSnapshot)
+		return;
+
+	LWLockAcquire(StandbyDistributedSnapshotLock, LW_EXCLUSIVE);
+	StandbyDistributedSnapshot->distribTransactionTimeStamp = ds->distribTransactionTimeStamp;
+	StandbyDistributedSnapshot->xminAllDistributedSnapshots = ds->xminAllDistributedSnapshots;
+	StandbyDistributedSnapshot->xmin = ds->xmin;
+	StandbyDistributedSnapshot->xmax = ds->xmax;
+	StandbyDistributedSnapshot->count = ds->count;
+	StandbyDistributedSnapshot->maxCount = ds->maxCount;
+
+	if(ds->count > 0)
+	{
+		int size = sizeof(DistributedSnapshotId) * ds->count;
+		memcpy(StandbyDistributedSnapshot->inProgressXidArray, inProgress, size);
+	}
+	LWLockRelease(StandbyDistributedSnapshotLock);
+}
+
+bool
+GetDistributedSnapshotForStandby(DistributedSnapshot *ds)
+{
+	if (!StandbyDistributedSnapshot)
+		return false;
+
+	LWLockAcquire(StandbyDistributedSnapshotLock, LW_SHARED);
+	ds->distribSnapshotId = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)shmNextSnapshotId, 1);
+	ds->distribTransactionTimeStamp = StandbyDistributedSnapshot->distribTransactionTimeStamp;
+	ds->xminAllDistributedSnapshots = StandbyDistributedSnapshot->xminAllDistributedSnapshots;
+	ds->xmin = StandbyDistributedSnapshot->xmin;
+	ds->xmax = StandbyDistributedSnapshot->xmax;
+	ds->count = StandbyDistributedSnapshot->count;
+	ds->maxCount = StandbyDistributedSnapshot->maxCount;
+	memcpy(ds->inProgressXidArray, StandbyDistributedSnapshot->inProgressXidArray,
+		   ds->count*sizeof(DistributedSnapshotId));
+	LWLockRelease(StandbyDistributedSnapshotLock);
+	return true;
+}
+
+Size
+StandbyDistributedSnapshotShmemSize(void)
+{
+	Size		size;
+
+	size = sizeof(DistributedSnapshot);
+	size = add_size(size, mul_size(max_prepared_xacts, sizeof(DistributedTransactionId)));
+
+	return size;
+}
+
+void
+StandbyDistributedSnapshotInit(void)
+{
+	bool		found;
+	Size		size;
+
+	size = StandbyDistributedSnapshotShmemSize();
+
+	StandbyDistributedSnapshot = (DistributedSnapshot *)
+		ShmemInitStruct("Standby distributed snapshot ", size, &found);
+
+	if (!found)
+	{
+		MemSet(StandbyDistributedSnapshot, 0, size);
+		StandbyDistributedSnapshot->inProgressXidArray =
+				(DistributedTransactionId*)&StandbyDistributedSnapshot[1];
+	}
+}
+
+void
+ResetTmForPromotion()
+{
+	*shmTmRecoverred = false;
+	*shmDtmStarted = false;
 }
