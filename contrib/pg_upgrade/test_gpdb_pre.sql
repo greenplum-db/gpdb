@@ -118,9 +118,6 @@ DROP TABLE IF EXISTS stat_heap6.stat_part_heap_t6 CASCADE;
 --    No match found in old cluster for new relation with OID 556718 in database "regression": "public.newpart_pkey" which is an index on "public.newpart"
 DROP TABLE IF EXISTS public.newpart CASCADE;
 
--- This view definition changes after upgrade.
-DROP VIEW IF EXISTS v_xpect_triangle_de CASCADE;
-
 -- The dump location for this protocol changes sporadically and causes a false
 -- negative. This may indicate a bug in pg_dump's sort priority for PROTOCOLs.
 DROP PROTOCOL IF EXISTS demoprot_untrusted;
