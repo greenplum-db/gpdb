@@ -1555,6 +1555,12 @@ CTranslatorScalarToDXL::TranslateWindowFuncToDXL
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with FILTER"));
 	}
 
+	// FIXME: DISTINCT-qualified window aggregates are currently broken in ORCA.
+	if (window_func->windistinct)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DISTINCT-qualified Window Aggregate"));
+	}
+
 	ULONG win_spec_pos = (ULONG) 0;
 	if (m_is_query_mode)
 	{

@@ -53,6 +53,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/syscache.h"
+#include "utils/tuplesort.h"
 #include "windowapi.h"
 
 #include "parser/parse_expr.h" // for exprType
@@ -136,6 +137,25 @@ typedef struct WindowStatePerAggData
 	bool		resultValueIsNull;
 
 	/*
+	 * Support for DISTINCT-qualified aggregates. For example:
+	 *
+	 * COUNT(DISTINCT foo) OVER (PARTITION BY bar)
+	 *
+	 * This is only supported for aggregates that take a single argument
+	 * (we checked for that in parse analysis).
+	 */
+	bool		isDistinct;				/* is this a DISTINCT-qualified aggregate? */
+	Oid			distinctType;			/* type of the argument */
+	bool		distinctTypeByVal;
+	Oid			distinctColl;
+	/* support for sorting by the argument type */
+	Oid			distinctLtOper;
+	SortSupportData distinctComparator;
+
+	/* Input values accumulated for this aggregate so far. */
+	Tuplesortstate *distinctSortState;
+
+	/*
 	 * We need the len and byval info for the agg's input, result, and
 	 * transition data types in order to know how to copy/delete values.
 	 */
@@ -170,6 +190,10 @@ static void advance_windowaggregate(WindowAggState *winstate,
 static bool advance_windowaggregate_base(WindowAggState *winstate,
 							 WindowStatePerFunc perfuncstate,
 							 WindowStatePerAgg peraggstate);
+static void call_transfunc(WindowAggState *winstate,
+			   WindowStatePerFunc perfuncstate,
+			   WindowStatePerAgg peraggstate,
+			   FunctionCallInfo fcinfo);
 static void finalize_windowaggregate(WindowAggState *winstate,
 						 WindowStatePerFunc perfuncstate,
 						 WindowStatePerAgg peraggstate,
@@ -243,6 +267,17 @@ initialize_windowaggregate(WindowAggState *winstate,
 	peraggstate->transValueCount = 0;
 	peraggstate->resultValue = (Datum) 0;
 	peraggstate->resultValueIsNull = true;
+
+	if (peraggstate->isDistinct)
+	{
+		peraggstate->distinctSortState =
+			tuplesort_begin_datum(&winstate->ss,
+								  peraggstate->distinctType,
+								  peraggstate->distinctLtOper,
+								  peraggstate->distinctColl,
+								  false, /* nullsFirstFlag */
+								  work_mem, false);
+	}
 }
 
 /*
@@ -255,10 +290,8 @@ advance_windowaggregate(WindowAggState *winstate,
 						WindowStatePerAgg peraggstate)
 {
 	WindowFuncExprState *wfuncstate = perfuncstate->wfuncstate;
-	int			numArguments = perfuncstate->numArguments;
 	FunctionCallInfoData fcinfodata;
 	FunctionCallInfo fcinfo = &fcinfodata;
-	Datum		newVal;
 	ListCell   *arg;
 	int			i;
 	MemoryContext oldContext;
@@ -290,6 +323,59 @@ advance_windowaggregate(WindowAggState *winstate,
 									  &fcinfo->argnull[i], NULL);
 		i++;
 	}
+
+	/*
+	 * If this is a DISTINCT-qualified aggregate, we cannot call the
+	 * transition function yet. Instead, we spool the input into a tuplesort.
+	 * We will perform the sort, deduplicate, and call the transition
+	 * function later, after we have spooled all the input values in this
+	 * partition.
+	 */
+	if (peraggstate->isDistinct)
+	{
+		Assert(list_length(wfuncstate->args) == 1);
+
+		/*
+		 * For a strict transfn, nothing happens when there's a NULL input; we
+		 * just keep the prior transValue.
+		 */
+		if (peraggstate->transfn.fn_strict && fcinfo->argnull[1])
+		{
+			/* skip it */
+		}
+		else
+			tuplesort_putdatum(peraggstate->distinctSortState, fcinfo->arg[1], fcinfo->argnull[1]);
+	}
+	else
+		call_transfunc(winstate, perfuncstate, peraggstate, fcinfo);
+
+	MemoryContextSwitchTo(oldContext);
+}
+
+/*
+ * Helper function to call the transition function.
+ *
+ * The caller must load the arguments into fcinfo->args/argnulls already,
+ * and switch to tmpcontext->ecxt_per_tuple_context.
+ */
+static void
+call_transfunc(WindowAggState *winstate,
+			   WindowStatePerFunc perfuncstate,
+			   WindowStatePerAgg peraggstate,
+			   FunctionCallInfo fcinfo)
+{
+	int			numArguments = perfuncstate->numArguments;
+	Datum		newVal;
+	int			i;
+	MemoryContext oldContext;
+	ExprContext *econtext = winstate->tmpcontext;
+
+	/*
+	 * This may seem weird, but it allows us to keep the code that follows unchanged
+	 * from upstream. In the upstream, this is part of advance_windowaggregate().
+	 */
+	Assert(CurrentMemoryContext == econtext->ecxt_per_tuple_memory);
+	oldContext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 
 	if (peraggstate->transfn.fn_strict)
 	{
@@ -556,6 +642,70 @@ advance_windowaggregate_base(WindowAggState *winstate,
 }
 
 /*
+ * Call transition function for a DISTINCT-qualified aggregate.
+ *
+ * All the input values have been loaded into the tuplesort. Perform the sort,
+ * deduplicate, and call the transition function for each unique value.
+ */
+static void
+perform_distinct_windowaggregate(WindowAggState *winstate,
+								 WindowStatePerFunc perfuncstate,
+								 WindowStatePerAgg peraggstate)
+{
+	FunctionCallInfoData fcinfodata;
+	FunctionCallInfo fcinfo = &fcinfodata;
+	Datum		prevDatum = (Datum) 0;
+	bool		prevNull = true;
+	MemoryContext oldcontext;
+
+	oldcontext = MemoryContextSwitchTo(winstate->tmpcontext->ecxt_per_tuple_memory);
+
+	tuplesort_performsort(peraggstate->distinctSortState);
+
+	/* load the first tuple from spool */
+	if (tuplesort_getdatum(peraggstate->distinctSortState, true,
+						   &fcinfo->arg[1], &fcinfo->argnull[1]))
+	{
+		call_transfunc(winstate, perfuncstate, peraggstate, fcinfo);
+		prevDatum = fcinfo->arg[1];
+		prevNull = fcinfo->argnull[1];
+
+		/* continue loading more tuples */
+		while (tuplesort_getdatum(peraggstate->distinctSortState, true,
+								  &fcinfo->arg[1], &fcinfo->argnull[1]))
+		{
+			int		cmp;
+
+			cmp = ApplySortComparator(prevDatum, prevNull,
+									  fcinfo->arg[1], fcinfo->argnull[1],
+									  &peraggstate->distinctComparator);
+			if (cmp < 0)
+			{
+				call_transfunc(winstate, perfuncstate, peraggstate, fcinfo);
+			}
+			else if (cmp == 0)
+			{
+				/* Equal, skip it */
+			}
+			else
+				elog(ERROR, "value came out in wrong order from sort");
+
+			/* free the previous value, if it's pass-by-ref. */
+			if (!peraggstate->distinctTypeByVal && !prevNull)
+				pfree(DatumGetPointer(prevDatum));
+
+			prevDatum = fcinfo->arg[1];
+			prevNull = fcinfo->argnull[1];
+		}
+	}
+
+	tuplesort_end(peraggstate->distinctSortState);
+	peraggstate->distinctSortState = NULL;
+
+	MemoryContextSwitchTo(oldcontext);
+}
+
+/*
  * finalize_windowaggregate
  * parallel to finalize_aggregate in nodeAgg.c
  */
@@ -566,6 +716,23 @@ finalize_windowaggregate(WindowAggState *winstate,
 						 Datum *result, bool *isnull)
 {
 	MemoryContext oldContext;
+
+	/*
+	 * If this is a distinct-qualified aggregate, then we have only spooled the
+	 * inputs into the sorter so far. We haven't run the transition function over
+	 * the input yet. Perform the sort now, and call the transition function on the
+	 * unique values.
+	 */
+	if (peraggstate->isDistinct)
+	{
+		perform_distinct_windowaggregate(winstate,
+										 perfuncstate,
+										 peraggstate);
+		/*
+		 * Now we have the final transition value in peraggstate->transValue, like
+		 * in the normal, non-DISTINCT, case.
+		 */
+	}
 
 	oldContext = MemoryContextSwitchTo(winstate->ss.ps.ps_ExprContext->ecxt_per_tuple_memory);
 
@@ -2659,6 +2826,39 @@ initialize_peragg(WindowAggState *winstate, WindowFunc *wfunc,
 	else
 		peraggstate->initValue = GetAggInitVal(textInitVal,
 											   aggtranstype);
+
+	/*
+	 * Initialize stuff needed to sort and deduplicate input to a
+	 * DISTINCT-qualified aggregate.
+	 */
+	if (wfunc->windistinct)
+	{
+		/* the parser should have disallowed this case */
+		if (list_length(wfunc->args) != 1)
+			elog(ERROR, "DISTINCT is supported only for single-argument aggregates");
+
+		peraggstate->isDistinct = true;
+
+		peraggstate->distinctType = exprType(linitial(wfunc->args));
+		peraggstate->distinctTypeByVal = get_typbyval(peraggstate->distinctType);
+		peraggstate->distinctColl = exprCollation(linitial(wfunc->args));
+
+		/* initialize support for sorting the argument */
+		get_sort_group_operators(peraggstate->distinctType,
+								 true, false, false,
+								 &peraggstate->distinctLtOper,
+								 NULL,
+								 NULL,
+								 NULL);
+		memset(&peraggstate->distinctComparator, 0, sizeof(SortSupportData));
+
+		peraggstate->distinctComparator.ssup_cxt = CurrentMemoryContext;
+		peraggstate->distinctComparator.ssup_collation = peraggstate->distinctColl;
+		peraggstate->distinctComparator.ssup_nulls_first = false;
+
+		PrepareSortSupportFromOrderingOp(peraggstate->distinctLtOper,
+										 &peraggstate->distinctComparator);
+	}
 
 	/*
 	 * If the transfn is strict and the initval is NULL, make sure input type
