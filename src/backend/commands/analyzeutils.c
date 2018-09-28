@@ -523,8 +523,18 @@ datumHashTableHash(const void *keyPtr, Size keysize)
 {
 	uint32 result = 0;
 	MCVFreqPair *mcvFreqPair = *((MCVFreqPair **)keyPtr);
+	Oid oidType = mcvFreqPair->typinfo->typOid;
+	/*
+	 * if the incoming column type is an array, pass ANYARRAYOID
+	 * as datumhash function handles ANYARRAYOID instead of specific
+	 * array oid to determine the hash to be performed.
+	 */
+	if (typeIsArrayType(oidType))
+	{
+		oidType = ANYARRAYOID;
+	}
 
-	hashDatum(mcvFreqPair->mcv, mcvFreqPair->typinfo->typOid, calculateHashWithHashAny, &result);
+	hashDatum(mcvFreqPair->mcv, oidType, calculateHashWithHashAny, &result);
 
 	return result;
 }
